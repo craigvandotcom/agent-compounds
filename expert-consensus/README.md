@@ -43,14 +43,14 @@ All five models converge on three core principles...
 
 ## Setup
 
-1. `pip install openai`
-2. `export OPENROUTER_API_KEY=sk-or-...` (get one at [openrouter.ai/keys](https://openrouter.ai/keys))
-3. Toggle models in `config.json`
+1. `export OPENROUTER_API_KEY=sk-or-...` (get one at [openrouter.ai/keys](https://openrouter.ai/keys))
+2. `pip install openai`
+3. Toggle models in `expert-panel.json`
 4. Run: `./openrouter.py --all --synthesize "Your question"`
 
 ## Configure
 
-Models are in `config.json`. Toggle `"enabled": true/false` to add or remove models. Any [OpenRouter model ID](https://openrouter.ai/models) works.
+Models are in `expert-panel.json`. Toggle `"enabled": true/false` to add or remove models. Any [OpenRouter model ID](https://openrouter.ai/models) works.
 
 ```json
 {

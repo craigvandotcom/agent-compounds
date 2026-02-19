@@ -2,7 +2,7 @@
 name: expert-consensus
 description: Send one prompt to multiple AI models. Get one synthesized answer.
 version: 1.0.0
-tools: [openrouter.py, config.json]
+tools: [openrouter.py, expert-panel.json]
 ---
 
 # Expert Consensus
@@ -18,7 +18,7 @@ Fan out one prompt to a panel of frontier AI models in parallel, then synthesize
 
 ## Usage
 
-The script is at `openrouter.py` in this skill directory. Configuration is in `config.json`.
+The script is at `openrouter.py` in this skill directory. Configuration is in `expert-panel.json`.
 
 ### Core Commands
 
@@ -55,7 +55,7 @@ python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
 
 ### Models
 
-Run `python3 openrouter.py --panel` to see the current team. All models are configured in `config.json` — edit that file to update model IDs, add new models, or toggle enabled/disabled.
+Run `python3 openrouter.py --panel` to see the current team. All models are configured in `expert-panel.json` — edit that file to update model IDs, add new models, or toggle enabled/disabled.
 
 Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for variants.
 
@@ -70,6 +70,6 @@ Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for v
 ## Configuration
 
 - **API key**: `OPENROUTER_API_KEY` environment variable (get one at https://openrouter.ai/keys)
-- **Models**: `config.json` next to the script — array of models with alias, model ID, enabled flag, and strength description
+- **Models**: `expert-panel.json` next to the script — array of models with alias, model ID, enabled flag, and strength description
 
-To regenerate a fresh default: `python3 openrouter.py --init-config`
+To regenerate a fresh default: `python3 openrouter.py --init-panel`

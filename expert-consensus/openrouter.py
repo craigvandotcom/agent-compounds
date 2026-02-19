@@ -7,7 +7,7 @@ One script, one API key. Configurable expert panel for multi-model consensus.
 Setup:
     pip install openai
     export OPENROUTER_API_KEY=sk-or-...  (get one at https://openrouter.ai/keys)
-    Edit config.json to toggle models.
+    Edit expert-panel.json to toggle models.
 
 Usage:
     openrouter "prompt" -m anthropic/claude-opus-4.6         # Any model ID
@@ -74,15 +74,15 @@ Responses:
 
 
 def _config_path() -> Path:
-    return Path(__file__).resolve().parent / "config.json"
+    return Path(__file__).resolve().parent / "expert-panel.json"
 
 
 def load_config() -> dict:
-    """Load config.json. Returns full config dict."""
+    """Load expert-panel.json. Returns full config dict."""
     path = _config_path()
     if not path.exists():
         print(f"Error: {path} not found.", file=sys.stderr)
-        print("  Run: openrouter --init-config", file=sys.stderr)
+        print("  Run: openrouter --init-panel", file=sys.stderr)
         sys.exit(1)
     try:
         with open(path) as f:
@@ -93,7 +93,7 @@ def load_config() -> dict:
                 raise KeyError(f"Missing 'alias' or 'model' in entry: {entry}")
         return config
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Error: Invalid config.json ({e})", file=sys.stderr)
+        print(f"Error: Invalid expert-panel.json ({e})", file=sys.stderr)
         sys.exit(1)
 
 
@@ -112,7 +112,7 @@ def get_enabled_aliases(panel: list) -> list:
     return [e['alias'] for e in get_enabled(panel)]
 
 
-# Lazy-loaded at first use so --init-config works without config.json
+# Lazy-loaded at first use so --init-panel works without expert-panel.json
 _CONFIG = None
 _MODELS = None
 _MODEL_ALIASES = None
@@ -375,11 +375,11 @@ def show_panel() -> None:
     print(f"Config: {_config_path()}")
 
 
-def init_config() -> None:
-    """Generate a fresh config.json."""
+def init_panel() -> None:
+    """Generate a fresh expert-panel.json."""
     path = _config_path()
     if path.exists():
-        print(f"config.json already exists at {path}", file=sys.stderr)
+        print(f"expert-panel.json already exists at {path}", file=sys.stderr)
         print("Delete it first to regenerate, or edit it directly.", file=sys.stderr)
         sys.exit(1)
     template = {
@@ -415,16 +415,16 @@ Examples:
   openrouter --all "Compare React vs Svelte"
   openrouter --all --synthesize "Best practices for error handling"
   openrouter --panel                         # Show expert team
-  openrouter --init-config                   # Generate config.json
+  openrouter --init-panel                   # Generate expert-panel.json
   openrouter --list-models anthropic --pricing
 
-Models and API key are configured in config.json.
+Models and API key are configured in expert-panel.json.
 Run --panel to see the current team.
 """)
 
     p.add_argument('prompt', nargs='?', help='Prompt (or pipe via stdin)')
     p.add_argument('--file', '-f', help='Load prompt from file')
-    p.add_argument('--model', '-m', default=None, help='Model ID or alias from config.json')
+    p.add_argument('--model', '-m', default=None, help='Model ID or alias from expert-panel.json')
     p.add_argument('--system', '-s', help='System prompt')
     p.add_argument('--image', '-img', action='append', dest='images', help='Image file')
     p.add_argument('--web', '-w', action='store_true', help='Enable web search')
@@ -443,14 +443,14 @@ Run --panel to see the current team.
     p.add_argument('--all', action='store_true', help='Fan out to all enabled models')
     p.add_argument('--synthesize', action='store_true', help='Synthesize fan-out into consensus (use with --all)')
     p.add_argument('--synth-model', default=None, help='Model for synthesis (default: first enabled)')
-    p.add_argument('--init-config', action='store_true', help='Generate config.json')
+    p.add_argument('--init-panel', action='store_true', help='Generate expert-panel.json')
 
     args = p.parse_args()
 
     # ── Info commands (no API key needed) ──
 
-    if args.init_config:
-        init_config()
+    if args.init_panel:
+        init_panel()
         return
 
     if args.panel:

@@ -12,12 +12,9 @@ Drop into `.claude/skills/` for Claude Code, or use standalone from the terminal
 
 ## Quick Start
 
-```bash
-pip install openai
-```
-
 1. `export OPENROUTER_API_KEY=sk-or-...` ([get one here](https://openrouter.ai/keys))
-2. Run:
+2. `pip install openai`
+3. Run:
 
 ```bash
 # Fan out to 5 models + synthesize
@@ -43,7 +40,7 @@ Claude Code discovers the `SKILL.md` automatically.
 - **Compound, don't collect** — each skill should make the next one more valuable
 - **SKILL.md is the interface** — human-readable reference that doubles as AI context
 - **Standalone by default** — no frameworks, no setup wizards
-- **One config file** — `config.json` has everything
+- **One config file** — `expert-panel.json` has everything
 
 ## License
 

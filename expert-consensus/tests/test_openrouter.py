@@ -67,7 +67,7 @@ def test_get_enabled_aliases():
 
 
 def test_load_config():
-    """load_config reads from config.json."""
+    """load_config reads from expert-panel.json."""
     config = openrouter.load_config()
     assert 'models' in config
     models = config['models']
@@ -92,10 +92,10 @@ def test_encode_image(tmp_path):
 
 
 def test_config_json_valid():
-    """config.json is valid JSON with expected structure."""
-    config_path = Path(__file__).resolve().parent.parent / "config.json"
+    """expert-panel.json is valid JSON with expected structure."""
+    config_path = Path(__file__).resolve().parent.parent / "expert-panel.json"
     if not config_path.exists():
-        return  # Skip if no config.json
+        return  # Skip if no expert-panel.json
     with open(config_path) as f:
         config = json.load(f)
     assert isinstance(config, dict)
@@ -110,8 +110,8 @@ def test_config_json_valid():
 
 
 def test_config_json_no_duplicate_aliases():
-    """config.json has no duplicate aliases."""
-    config_path = Path(__file__).resolve().parent.parent / "config.json"
+    """expert-panel.json has no duplicate aliases."""
+    config_path = Path(__file__).resolve().parent.parent / "expert-panel.json"
     if not config_path.exists():
         return
     with open(config_path) as f:
