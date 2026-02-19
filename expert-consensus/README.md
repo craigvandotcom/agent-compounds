@@ -47,8 +47,8 @@ All five models converge on three core principles...
 pip install openai
 export OPENROUTER_API_KEY=sk-or-...  # https://openrouter.ai/keys
 
-# Single model
-./openrouter.py "Your question" -m claude
+# Single model (any OpenRouter model ID or alias from expert-expert-panel.json)
+./openrouter.py "Your question" -m anthropic/claude-opus-4.6
 
 # Fan out to panel
 ./openrouter.py --all "Your question"
@@ -59,11 +59,11 @@ export OPENROUTER_API_KEY=sk-or-...  # https://openrouter.ai/keys
 
 ## Configure Your Panel
 
-Edit `panel.json` to enable/disable models:
+Edit `expert-panel.json` to enable/disable models:
 
 ```bash
 ./openrouter.py --panel           # See current team
-./openrouter.py --init-panel      # Generate fresh panel.json
+./openrouter.py --init-panel      # Generate fresh expert-panel.json
 ```
 
 Default: 5 models enabled. Toggle `"enabled": true/false` to customize.

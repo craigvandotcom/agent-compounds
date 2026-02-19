@@ -19,8 +19,8 @@ export OPENROUTER_API_KEY=sk-or-...  # https://openrouter.ai/keys
 # Fan out to 5 models + synthesize
 ./expert-consensus/openrouter.py --all --synthesize "Your question"
 
-# Ask one model
-./expert-consensus/openrouter.py "Your question" -m claude
+# Ask one model (any OpenRouter model ID works)
+./expert-consensus/openrouter.py "Your question" -m anthropic/claude-opus-4.6
 
 # Configure your expert team
 ./expert-consensus/openrouter.py --panel
@@ -36,7 +36,7 @@ Claude Code discovers the `SKILL.md` automatically.
 
 ### Configure your panel
 
-Edit `expert-consensus/panel.json` to enable/disable models:
+Edit `expert-consensus/expert-panel.json` to enable/disable models:
 
 ```bash
 ./expert-consensus/openrouter.py --init-panel  # Generate fresh config

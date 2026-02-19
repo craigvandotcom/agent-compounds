@@ -9,15 +9,13 @@ Setup:
     export OPENROUTER_API_KEY=sk-or-...
 
 Usage:
-    openrouter "Explain quantum computing" -m claude
+    openrouter "prompt" -m anthropic/claude-opus-4.6         # Any model ID
     openrouter --all "Compare React vs Svelte"              # Fan out to panel
     openrouter --all --synthesize "Best API design patterns" # Fan out + synthesize
     openrouter --panel                                       # Show expert team
-    openrouter --init-panel                                  # Generate panel.json
-    openrouter --aliases
 
 Config:
-    Edit panel.json next to this script to customize your expert team.
+    Edit expert-panel.json next to this script. Any OpenRouter model ID works.
     Toggle "enabled" to add/remove models from the panel.
 """
 
@@ -89,11 +87,11 @@ Responses:
 
 
 def _panel_path() -> Path:
-    return Path(__file__).resolve().parent / 'panel.json'
+    return Path(__file__).resolve().parent / "expert-panel.json"
 
 
 def load_panel() -> list:
-    """Load panel from panel.json. Errors clearly if missing."""
+    """Load panel from expert-panel.json. Errors clearly if missing."""
     config = _panel_path()
     if not config.exists():
         print(f"Error: {config} not found.", file=sys.stderr)
@@ -107,7 +105,7 @@ def load_panel() -> list:
                 raise KeyError(f"Missing 'alias' or 'model' in entry: {entry}")
         return panel
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Error: Invalid panel.json ({e})", file=sys.stderr)
+        print(f"Error: Invalid expert-panel.json ({e})", file=sys.stderr)
         sys.exit(1)
 
 
@@ -126,7 +124,7 @@ def get_enabled_aliases(panel: list) -> list:
     return [e['alias'] for e in get_enabled(panel)]
 
 
-# Lazy-loaded at first use so --init-panel works without panel.json
+# Lazy-loaded at first use so --init-panel works without expert-panel.json
 _PANEL = None
 _MODEL_ALIASES = None
 _DEFAULT_MODEL = None
@@ -137,7 +135,8 @@ def _ensure_panel():
     if _PANEL is None:
         _PANEL = load_panel()
         _MODEL_ALIASES = get_aliases(_PANEL)
-        _DEFAULT_MODEL = next((e['model'] for e in _PANEL if e['alias'] == 'claude'), _PANEL[0]['model'])
+        enabled = get_enabled(_PANEL)
+        _DEFAULT_MODEL = enabled[0]['model'] if enabled else _PANEL[0]['model']
 
 
 def resolve_model(model_str: str) -> str:
@@ -353,7 +352,8 @@ def synthesize(
         responses=responses_text,
     )
 
-    synth_model = resolve_model(model or 'claude')
+    _ensure_panel()
+    synth_model = resolve_model(model) if model else _DEFAULT_MODEL
     if verbose:
         print(f"\nSynthesizing with {synth_model}...", file=sys.stderr)
 
@@ -368,7 +368,7 @@ def synthesize(
 def show_panel() -> None:
     """Display the current expert panel."""
     config = _panel_path()
-    source = "panel.json" if config.exists() else "built-in defaults"
+    source = "expert-panel.json" if config.exists() else "built-in defaults"
     _ensure_panel()
     enabled = get_enabled(_PANEL)
     disabled = [e for e in _PANEL if not e.get('enabled', True)]
@@ -385,13 +385,13 @@ def show_panel() -> None:
 
 
 def init_panel() -> None:
-    """Generate a fresh panel.json from bootstrap template."""
+    """Generate a fresh expert-panel.json from bootstrap template."""
     config = _panel_path()
     if config.exists():
-        print(f"panel.json already exists at {config}", file=sys.stderr)
+        print(f"expert-panel.json already exists at {config}", file=sys.stderr)
         print("Delete it first to regenerate, or edit it directly.", file=sys.stderr)
         sys.exit(1)
-    # Bootstrap template — edit panel.json after generation, not this code.
+    # Bootstrap template — edit expert-panel.json after generation, not this code.
     template = [
         {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": True,  "provider": "Anthropic", "strength": "Deepest reasoning, edge cases"},
         {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": True,  "provider": "OpenAI",    "strength": "Strong all-round, structured output"},
@@ -415,23 +415,21 @@ def main():
         description="Query the world's best AI models from your terminal",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Aliases (configurable via panel.json):
-  claude, gpt, gemini, deepseek, llama, grok, kimi, glm, qwen
-
-Variants (append :suffix): :online :nitro :floor :free :extended
-
 Examples:
-  openrouter "Explain quantum computing" -m claude
+  openrouter "Explain quantum computing" -m anthropic/claude-opus-4.6
   openrouter --all "Compare React vs Svelte"
   openrouter --all --synthesize "Best practices for error handling"
-  openrouter --panel
-  openrouter --init-panel
+  openrouter --panel                         # Show expert team
+  openrouter --init-panel                    # Generate expert-panel.json
   openrouter --list-models anthropic --pricing
+
+Aliases and variants are configured in expert-panel.json.
+Run --panel to see the current team.
 """)
 
     p.add_argument('prompt', nargs='?', help='Prompt (or pipe via stdin)')
     p.add_argument('--file', '-f', help='Load prompt from file')
-    p.add_argument('--model', '-m', default=None, help='Model or alias (default: claude)')
+    p.add_argument('--model', '-m', default=None, help='Model ID or alias from expert-panel.json')
     p.add_argument('--system', '-s', help='System prompt')
     p.add_argument('--image', '-img', action='append', dest='images', help='Image file')
     p.add_argument('--web', '-w', action='store_true', help='Enable web search')
@@ -449,8 +447,8 @@ Examples:
     p.add_argument('--panel', action='store_true', help='Show expert panel')
     p.add_argument('--all', action='store_true', help='Fan out to all enabled models')
     p.add_argument('--synthesize', action='store_true', help='Synthesize fan-out into consensus (use with --all)')
-    p.add_argument('--synth-model', default=None, help='Model for synthesis (default: claude)')
-    p.add_argument('--init-panel', action='store_true', help='Generate panel.json with defaults')
+    p.add_argument('--synth-model', default=None, help='Model for synthesis (default: first enabled)')
+    p.add_argument('--init-panel', action='store_true', help='Generate expert-panel.json')
 
     args = p.parse_args()
 
@@ -525,7 +523,8 @@ Examples:
 
     # ── Single model mode ──
 
-    model = resolve_model(args.model or 'claude')
+    _ensure_panel()
+    model = resolve_model(args.model) if args.model else _DEFAULT_MODEL
     stream = not args.no_stream
 
     if args.verbose:

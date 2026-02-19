@@ -2,7 +2,7 @@
 name: expert-consensus
 description: Send one prompt to multiple AI models. Get one synthesized answer.
 version: 1.0.0
-tools: [openrouter.py, panel.json]
+tools: [openrouter.py, expert-panel.json]
 ---
 
 # Expert Consensus
@@ -60,7 +60,7 @@ python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
 
 Run `python3 openrouter.py --panel` to see the current expert team and which models are enabled.
 
-All aliases and model IDs are configured in `panel.json` — edit that file to update models, add new ones, or toggle enabled/disabled. To check for newer models on OpenRouter: `python3 openrouter.py --list-models <provider> --pricing`
+All aliases and model IDs are configured in `expert-panel.json` — edit that file to update models, add new ones, or toggle enabled/disabled. To check for newer models on OpenRouter: `python3 openrouter.py --list-models <provider> --pricing`
 
 Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for variants.
 
@@ -68,7 +68,7 @@ Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for v
 
 **Quick consensus:** `--all --synthesize "question"` (default 5 models)
 
-**Full panel:** Enable all 9 in `panel.json`, then `--all --synthesize -v "question"`
+**Full panel:** Enable all 9 in `expert-panel.json`, then `--all --synthesize -v "question"`
 
 **Stress test:** Query contrarian models individually — grok for devil's advocate, deepseek for risk analysis, glm for fact-checking.
 
@@ -76,4 +76,4 @@ Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for v
 
 ## Panel Configuration
 
-Edit `panel.json` next to the script. Toggle `"enabled": true/false` per model. To regenerate a fresh default: `python3 openrouter.py --init-panel`
+Edit `expert-panel.json` next to the script. Toggle `"enabled": true/false` per model. To regenerate a fresh default: `python3 openrouter.py --init-panel`

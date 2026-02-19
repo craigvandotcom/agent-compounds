@@ -67,7 +67,7 @@ def test_get_enabled_aliases():
 
 
 def test_load_panel_from_file():
-    """load_panel reads from panel.json."""
+    """load_panel reads from expert-panel.json."""
     panel = openrouter.load_panel()
     assert len(panel) >= 1
     assert all("alias" in e and "model" in e for e in panel)
@@ -90,10 +90,10 @@ def test_encode_image(tmp_path):
 
 
 def test_panel_json_valid():
-    """panel.json is valid JSON with expected structure."""
-    panel_path = Path(__file__).resolve().parent.parent / "panel.json"
+    """expert-panel.json is valid JSON with expected structure."""
+    panel_path = Path(__file__).resolve().parent.parent / "expert-panel.json"
     if not panel_path.exists():
-        return  # Skip if no panel.json
+        return  # Skip if no expert-panel.json
     with open(panel_path) as f:
         panel = json.load(f)
     assert isinstance(panel, list)
@@ -105,8 +105,8 @@ def test_panel_json_valid():
 
 
 def test_panel_json_no_duplicate_aliases():
-    """panel.json has no duplicate aliases."""
-    panel_path = Path(__file__).resolve().parent.parent / "panel.json"
+    """expert-panel.json has no duplicate aliases."""
+    panel_path = Path(__file__).resolve().parent.parent / "expert-panel.json"
     if not panel_path.exists():
         return
     with open(panel_path) as f:
