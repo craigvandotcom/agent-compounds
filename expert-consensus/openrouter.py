@@ -47,23 +47,6 @@ try:
 except ImportError:
     pass
 
-# ── Default Expert Panel ─────────────────────────────────────────────────
-# One per provider. Latest flagship reasoning model.
-# Override by placing panel.json next to this script.
-# Updated: Feb 19, 2026
-
-DEFAULT_PANEL = [
-    {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": True,  "provider": "Anthropic", "strength": "Deepest reasoning, edge cases"},
-    {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": True,  "provider": "OpenAI",    "strength": "Strong all-round, structured output"},
-    {"alias": "gemini",   "model": "google/gemini-3-pro-preview",     "enabled": True,  "provider": "Google",    "strength": "Creative connections, multimodal"},
-    {"alias": "deepseek", "model": "deepseek/deepseek-r1",            "enabled": True,  "provider": "DeepSeek",  "strength": "Best open-source reasoning"},
-    {"alias": "grok",     "model": "x-ai/grok-4",                    "enabled": True,  "provider": "xAI",       "strength": "Contrarian, evidence citations"},
-    {"alias": "llama",    "model": "meta-llama/llama-4-maverick",     "enabled": False, "provider": "Meta",      "strength": "128-expert MoE, multimodal"},
-    {"alias": "kimi",     "model": "moonshotai/kimi-k2.5",           "enabled": False, "provider": "Moonshot",  "strength": "Best value, deep domain knowledge"},
-    {"alias": "glm",      "model": "z-ai/glm-5",                     "enabled": False, "provider": "ZHIPU",     "strength": "Factual accuracy, catches errors"},
-    {"alias": "qwen",     "model": "qwen/qwen3.5-397b-a17b",         "enabled": False, "provider": "Alibaba",   "strength": "Native multimodal, 201 languages"},
-]
-
 # Variant suffixes (append with colon, e.g. "claude:online")
 MODEL_VARIANTS = {
     'online':   ':online',
@@ -110,20 +93,22 @@ def _panel_path() -> Path:
 
 
 def load_panel() -> list:
-    """Load panel from panel.json if it exists, otherwise use defaults."""
+    """Load panel from panel.json. Errors clearly if missing."""
     config = _panel_path()
-    if config.exists():
-        try:
-            with open(config) as f:
-                panel = json.load(f)
-            # Validate entries
-            for entry in panel:
-                if 'alias' not in entry or 'model' not in entry:
-                    raise KeyError(f"Missing 'alias' or 'model' in entry: {entry}")
-            return panel
-        except (json.JSONDecodeError, KeyError) as e:
-            print(f"Warning: Invalid panel.json ({e}), using defaults", file=sys.stderr)
-    return DEFAULT_PANEL
+    if not config.exists():
+        print(f"Error: {config} not found.", file=sys.stderr)
+        print("  Run: openrouter --init-panel", file=sys.stderr)
+        sys.exit(1)
+    try:
+        with open(config) as f:
+            panel = json.load(f)
+        for entry in panel:
+            if 'alias' not in entry or 'model' not in entry:
+                raise KeyError(f"Missing 'alias' or 'model' in entry: {entry}")
+        return panel
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Error: Invalid panel.json ({e})", file=sys.stderr)
+        sys.exit(1)
 
 
 def get_aliases(panel: list) -> dict:
@@ -141,13 +126,23 @@ def get_enabled_aliases(panel: list) -> list:
     return [e['alias'] for e in get_enabled(panel)]
 
 
-PANEL = load_panel()
-MODEL_ALIASES = get_aliases(PANEL)
-DEFAULT_MODEL = next((e['model'] for e in PANEL if e['alias'] == 'claude'), PANEL[0]['model'])
+# Lazy-loaded at first use so --init-panel works without panel.json
+_PANEL = None
+_MODEL_ALIASES = None
+_DEFAULT_MODEL = None
+
+
+def _ensure_panel():
+    global _PANEL, _MODEL_ALIASES, _DEFAULT_MODEL
+    if _PANEL is None:
+        _PANEL = load_panel()
+        _MODEL_ALIASES = get_aliases(_PANEL)
+        _DEFAULT_MODEL = next((e['model'] for e in _PANEL if e['alias'] == 'claude'), _PANEL[0]['model'])
 
 
 def resolve_model(model_str: str) -> str:
     """Resolve alias to full model ID, handling variant suffixes."""
+    _ensure_panel()
     variant_suffix = ''
     if ':' in model_str:
         base, variant = model_str.split(':', 1)
@@ -156,7 +151,7 @@ def resolve_model(model_str: str) -> str:
             model_str = base
         else:
             return model_str
-    return MODEL_ALIASES.get(model_str.lower(), model_str) + variant_suffix
+    return _MODEL_ALIASES.get(model_str.lower(), model_str) + variant_suffix
 
 
 def encode_image(path: Path) -> str:
@@ -217,7 +212,7 @@ class OpenRouterClient:
         fallbacks: Optional[list] = None,
     ) -> dict:
         """Send a prompt to a model and return the response."""
-        model = model or DEFAULT_MODEL
+        model = model or _DEFAULT_MODEL
         try:
             msgs = []
             if system:
@@ -316,7 +311,7 @@ def fan_out(
     for alias in aliases:
         result = results.get(alias, {'ok': False, 'error': 'No response'})
         print(f"\n{'='*60}")
-        print(f"  {alias.upper()} ({MODEL_ALIASES.get(alias, alias)})")
+        print(f"  {alias.upper()} ({_MODEL_ALIASES.get(alias, alias)})")
         print(f"{'='*60}\n")
         if result['ok']:
             print(result['content'])
@@ -349,7 +344,7 @@ def synthesize(
 
     responses_text = ""
     for alias, result in successful.items():
-        responses_text += f"\n### {alias.upper()} ({MODEL_ALIASES.get(alias, alias)})\n"
+        responses_text += f"\n### {alias.upper()} ({_MODEL_ALIASES.get(alias, alias)})\n"
         responses_text += result['content'] + "\n"
 
     synthesis_input = SYNTHESIS_PROMPT.format(
@@ -374,11 +369,12 @@ def show_panel() -> None:
     """Display the current expert panel."""
     config = _panel_path()
     source = "panel.json" if config.exists() else "built-in defaults"
-    enabled = get_enabled(PANEL)
-    disabled = [e for e in PANEL if not e.get('enabled', True)]
+    _ensure_panel()
+    enabled = get_enabled(_PANEL)
+    disabled = [e for e in _PANEL if not e.get('enabled', True)]
 
     print(f"Expert Panel ({len(enabled)} active, from {source}):\n")
-    w = max(len(e['alias']) for e in PANEL)
+    w = max(len(e['alias']) for e in _PANEL)
     for e in enabled:
         print(f"  {e['alias']:<{w+2}} {e['model']:<40} {e.get('strength', '')}")
     if disabled:
@@ -389,17 +385,29 @@ def show_panel() -> None:
 
 
 def init_panel() -> None:
-    """Write default panel.json next to the script."""
+    """Generate a fresh panel.json from bootstrap template."""
     config = _panel_path()
     if config.exists():
         print(f"panel.json already exists at {config}", file=sys.stderr)
         print("Delete it first to regenerate, or edit it directly.", file=sys.stderr)
         sys.exit(1)
+    # Bootstrap template — edit panel.json after generation, not this code.
+    template = [
+        {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": True,  "provider": "Anthropic", "strength": "Deepest reasoning, edge cases"},
+        {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": True,  "provider": "OpenAI",    "strength": "Strong all-round, structured output"},
+        {"alias": "gemini",   "model": "google/gemini-3-pro-preview",     "enabled": True,  "provider": "Google",    "strength": "Creative connections, multimodal"},
+        {"alias": "deepseek", "model": "deepseek/deepseek-r1",            "enabled": True,  "provider": "DeepSeek",  "strength": "Best open-source reasoning"},
+        {"alias": "grok",     "model": "x-ai/grok-4",                    "enabled": True,  "provider": "xAI",       "strength": "Contrarian, evidence citations"},
+        {"alias": "llama",    "model": "meta-llama/llama-4-maverick",     "enabled": False, "provider": "Meta",      "strength": "128-expert MoE, multimodal"},
+        {"alias": "kimi",     "model": "moonshotai/kimi-k2.5",           "enabled": False, "provider": "Moonshot",  "strength": "Best value, deep domain knowledge"},
+        {"alias": "glm",      "model": "z-ai/glm-5",                     "enabled": False, "provider": "ZHIPU",     "strength": "Factual accuracy, catches errors"},
+        {"alias": "qwen",     "model": "qwen/qwen3.5-397b-a17b",         "enabled": False, "provider": "Alibaba",   "strength": "Native multimodal, 201 languages"},
+    ]
     with open(config, 'w') as f:
-        json.dump(DEFAULT_PANEL, f, indent=2)
+        json.dump(template, f, indent=2)
         f.write('\n')
     print(f"Created {config}")
-    print(f"  {len(DEFAULT_PANEL)} models, all enabled. Edit to customize.")
+    print(f"  {len(template)} models ({sum(1 for t in template if t['enabled'])} enabled). Edit to customize.")
 
 
 def main():
@@ -458,8 +466,9 @@ Examples:
 
     if args.aliases:
         print("Model aliases:")
-        w = max(len(a) for a in MODEL_ALIASES)
-        for alias, mid in sorted(MODEL_ALIASES.items()):
+        _ensure_panel()
+        w = max(len(a) for a in _MODEL_ALIASES)
+        for alias, mid in sorted(_MODEL_ALIASES.items()):
             print(f"  {alias:<{w + 2}} -> {mid}")
         print("\nVariants (append with colon, e.g. claude:online):")
         for name in sorted(MODEL_VARIANTS):
@@ -491,7 +500,8 @@ Examples:
     # ── Fan-out mode ──
 
     if args.all:
-        enabled = get_enabled_aliases(PANEL)
+        _ensure_panel()
+        enabled = get_enabled_aliases(_PANEL)
         if not enabled:
             print("Error: No models enabled in panel. Run --panel to check.", file=sys.stderr)
             sys.exit(1)

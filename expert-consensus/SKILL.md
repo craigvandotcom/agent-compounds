@@ -58,19 +58,9 @@ python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
 
 ### Model Aliases
 
-| Alias | Model | Strength |
-|-------|-------|----------|
-| `claude` | anthropic/claude-opus-4.6 | Deepest reasoning, edge cases |
-| `gpt` | openai/gpt-5.2 | Strong all-round, structured output |
-| `gemini` | google/gemini-3-pro-preview | Creative connections, multimodal |
-| `deepseek` | deepseek/deepseek-r1 | Best open-source reasoning |
-| `grok` | x-ai/grok-4 | Contrarian, evidence citations |
-| `llama` | meta-llama/llama-4-maverick | 128-expert MoE, multimodal |
-| `kimi` | moonshotai/kimi-k2.5 | Best value, deep domain knowledge |
-| `glm` | z-ai/glm-5 | Factual accuracy, catches errors |
-| `qwen` | qwen/qwen3.5-397b-a17b | Native multimodal, 201 languages |
+Run `python3 openrouter.py --panel` to see the current expert team and which models are enabled.
 
-Default: 5 enabled (claude, gpt, gemini, deepseek, grok). Configure in `panel.json`.
+All aliases and model IDs are configured in `panel.json` — edit that file to update models, add new ones, or toggle enabled/disabled. To check for newer models on OpenRouter: `python3 openrouter.py --list-models <provider> --pricing`
 
 Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for variants.
 
@@ -86,6 +76,4 @@ Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for v
 
 ## Panel Configuration
 
-Edit `panel.json` next to the script. Toggle `"enabled": true/false` per model.
-
-To check for newer models: `python3 openrouter.py --list-models <provider> --pricing`
+Edit `panel.json` next to the script. Toggle `"enabled": true/false` per model. To regenerate a fresh default: `python3 openrouter.py --init-panel`

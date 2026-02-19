@@ -43,37 +43,31 @@ def test_resolve_model_case_insensitive():
 
 def test_get_aliases():
     """get_aliases returns dict mapping alias -> model ID."""
-    aliases = openrouter.get_aliases(openrouter.PANEL)
+    panel = openrouter.load_panel()
+    aliases = openrouter.get_aliases(panel)
     assert isinstance(aliases, dict)
     assert "claude" in aliases
-    assert aliases["claude"] == "anthropic/claude-opus-4.6"
 
 
 def test_get_enabled():
     """get_enabled filters to only enabled entries."""
-    enabled = openrouter.get_enabled(openrouter.PANEL)
+    panel = openrouter.load_panel()
+    enabled = openrouter.get_enabled(panel)
     for e in enabled:
         assert e.get("enabled", True) is True
 
 
 def test_get_enabled_aliases():
     """get_enabled_aliases returns list of alias strings."""
-    aliases = openrouter.get_enabled_aliases(openrouter.PANEL)
+    panel = openrouter.load_panel()
+    aliases = openrouter.get_enabled_aliases(panel)
     assert isinstance(aliases, list)
     assert all(isinstance(a, str) for a in aliases)
-    assert "claude" in aliases
-
-
-def test_load_panel_default():
-    """With no panel.json, falls back to DEFAULT_PANEL."""
-    panel = openrouter.DEFAULT_PANEL
-    assert len(panel) == 9
-    aliases = {e["alias"] for e in panel}
-    assert aliases == {"claude", "gpt", "gemini", "deepseek", "grok", "llama", "kimi", "glm", "qwen"}
+    assert len(aliases) >= 1
 
 
 def test_load_panel_from_file():
-    """load_panel reads from panel.json when present."""
+    """load_panel reads from panel.json."""
     panel = openrouter.load_panel()
     assert len(panel) >= 1
     assert all("alias" in e and "model" in e for e in panel)
