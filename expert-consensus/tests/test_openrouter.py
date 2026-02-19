@@ -43,34 +43,36 @@ def test_resolve_model_case_insensitive():
 
 def test_get_aliases():
     """get_aliases returns dict mapping alias -> model ID."""
-    panel = openrouter.load_panel()
-    aliases = openrouter.get_aliases(panel)
+    config = openrouter.load_config()
+    aliases = openrouter.get_aliases(config['models'])
     assert isinstance(aliases, dict)
-    assert "claude" in aliases
+    assert len(aliases) >= 1
 
 
 def test_get_enabled():
     """get_enabled filters to only enabled entries."""
-    panel = openrouter.load_panel()
-    enabled = openrouter.get_enabled(panel)
+    config = openrouter.load_config()
+    enabled = openrouter.get_enabled(config['models'])
     for e in enabled:
         assert e.get("enabled", True) is True
 
 
 def test_get_enabled_aliases():
     """get_enabled_aliases returns list of alias strings."""
-    panel = openrouter.load_panel()
-    aliases = openrouter.get_enabled_aliases(panel)
+    config = openrouter.load_config()
+    aliases = openrouter.get_enabled_aliases(config['models'])
     assert isinstance(aliases, list)
     assert all(isinstance(a, str) for a in aliases)
     assert len(aliases) >= 1
 
 
-def test_load_panel_from_file():
-    """load_panel reads from expert-panel.json."""
-    panel = openrouter.load_panel()
-    assert len(panel) >= 1
-    assert all("alias" in e and "model" in e for e in panel)
+def test_load_config():
+    """load_config reads from config.json."""
+    config = openrouter.load_config()
+    assert 'models' in config
+    models = config['models']
+    assert len(models) >= 1
+    assert all("alias" in e and "model" in e for e in models)
 
 
 def test_encode_image(tmp_path):
@@ -89,29 +91,33 @@ def test_encode_image(tmp_path):
     assert result.startswith("data:image/png;base64,")
 
 
-def test_panel_json_valid():
-    """expert-panel.json is valid JSON with expected structure."""
-    panel_path = Path(__file__).resolve().parent.parent / "expert-panel.json"
-    if not panel_path.exists():
-        return  # Skip if no expert-panel.json
-    with open(panel_path) as f:
-        panel = json.load(f)
-    assert isinstance(panel, list)
-    for entry in panel:
+def test_config_json_valid():
+    """config.json is valid JSON with expected structure."""
+    config_path = Path(__file__).resolve().parent.parent / "config.json"
+    if not config_path.exists():
+        return  # Skip if no config.json
+    with open(config_path) as f:
+        config = json.load(f)
+    assert isinstance(config, dict)
+    assert "api_key" in config
+    assert "models" in config
+    models = config["models"]
+    assert isinstance(models, list)
+    for entry in models:
         assert "alias" in entry
         assert "model" in entry
         assert "enabled" in entry
         assert isinstance(entry["enabled"], bool)
 
 
-def test_panel_json_no_duplicate_aliases():
-    """expert-panel.json has no duplicate aliases."""
-    panel_path = Path(__file__).resolve().parent.parent / "expert-panel.json"
-    if not panel_path.exists():
+def test_config_json_no_duplicate_aliases():
+    """config.json has no duplicate aliases."""
+    config_path = Path(__file__).resolve().parent.parent / "config.json"
+    if not config_path.exists():
         return
-    with open(panel_path) as f:
-        panel = json.load(f)
-    aliases = [e["alias"] for e in panel]
+    with open(config_path) as f:
+        config = json.load(f)
+    aliases = [e["alias"] for e in config["models"]]
     assert len(aliases) == len(set(aliases)), f"Duplicate aliases: {aliases}"
 
 

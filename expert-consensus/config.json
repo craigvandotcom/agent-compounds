@@ -1,0 +1,14 @@
+{
+  "api_key": "",
+  "models": [
+    {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": true,  "strength": "Deepest reasoning, edge cases"},
+    {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": true,  "strength": "Strong all-round, structured output"},
+    {"alias": "gemini",   "model": "google/gemini-3-pro-preview",     "enabled": true,  "strength": "Creative connections, multimodal"},
+    {"alias": "deepseek", "model": "deepseek/deepseek-r1",            "enabled": true,  "strength": "Best open-source reasoning"},
+    {"alias": "grok",     "model": "x-ai/grok-4",                    "enabled": true,  "strength": "Contrarian, evidence citations"},
+    {"alias": "llama",    "model": "meta-llama/llama-4-maverick",     "enabled": false, "strength": "128-expert MoE, multimodal"},
+    {"alias": "kimi",     "model": "moonshotai/kimi-k2.5",           "enabled": false, "strength": "Best value, deep domain knowledge"},
+    {"alias": "glm",      "model": "z-ai/glm-5",                     "enabled": false, "strength": "Factual accuracy, catches errors"},
+    {"alias": "qwen",     "model": "qwen/qwen3.5-397b-a17b",         "enabled": false, "strength": "Native multimodal, 201 languages"}
+  ]
+}

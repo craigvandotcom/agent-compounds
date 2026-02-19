@@ -10,13 +10,11 @@ Setup:
 
 Usage:
     openrouter "prompt" -m anthropic/claude-opus-4.6         # Any model ID
-    openrouter --all "Compare React vs Svelte"              # Fan out to panel
     openrouter --all --synthesize "Best API design patterns" # Fan out + synthesize
     openrouter --panel                                       # Show expert team
 
 Config:
-    Edit expert-panel.json next to this script. Any OpenRouter model ID works.
-    Toggle "enabled" to add/remove models from the panel.
+    Edit config.json next to this script. Set your API key and models there.
 """
 
 import os
@@ -35,15 +33,6 @@ try:
 except ImportError:
     print("Error: pip install openai", file=sys.stderr)
     sys.exit(1)
-
-try:
-    from dotenv import load_dotenv
-    for env_path in [Path('.env'), Path.home() / '.env', Path(__file__).resolve().parent / '.env']:
-        if env_path.exists():
-            load_dotenv(env_path)
-            break
-except ImportError:
-    pass
 
 # Variant suffixes (append with colon, e.g. "claude:online")
 MODEL_VARIANTS = {
@@ -86,26 +75,27 @@ Responses:
 {responses}"""
 
 
-def _panel_path() -> Path:
-    return Path(__file__).resolve().parent / "expert-panel.json"
+def _config_path() -> Path:
+    return Path(__file__).resolve().parent / "config.json"
 
 
-def load_panel() -> list:
-    """Load panel from expert-panel.json. Errors clearly if missing."""
-    config = _panel_path()
-    if not config.exists():
-        print(f"Error: {config} not found.", file=sys.stderr)
-        print("  Run: openrouter --init-panel", file=sys.stderr)
+def load_config() -> dict:
+    """Load config.json. Returns full config dict."""
+    path = _config_path()
+    if not path.exists():
+        print(f"Error: {path} not found.", file=sys.stderr)
+        print("  Run: openrouter --init-config", file=sys.stderr)
         sys.exit(1)
     try:
-        with open(config) as f:
-            panel = json.load(f)
-        for entry in panel:
+        with open(path) as f:
+            config = json.load(f)
+        models = config.get('models', [])
+        for entry in models:
             if 'alias' not in entry or 'model' not in entry:
                 raise KeyError(f"Missing 'alias' or 'model' in entry: {entry}")
-        return panel
+        return config
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Error: Invalid expert-panel.json ({e})", file=sys.stderr)
+        print(f"Error: Invalid config.json ({e})", file=sys.stderr)
         sys.exit(1)
 
 
@@ -124,24 +114,26 @@ def get_enabled_aliases(panel: list) -> list:
     return [e['alias'] for e in get_enabled(panel)]
 
 
-# Lazy-loaded at first use so --init-panel works without expert-panel.json
-_PANEL = None
+# Lazy-loaded at first use so --init-config works without config.json
+_CONFIG = None
+_MODELS = None
 _MODEL_ALIASES = None
 _DEFAULT_MODEL = None
 
 
-def _ensure_panel():
-    global _PANEL, _MODEL_ALIASES, _DEFAULT_MODEL
-    if _PANEL is None:
-        _PANEL = load_panel()
-        _MODEL_ALIASES = get_aliases(_PANEL)
-        enabled = get_enabled(_PANEL)
-        _DEFAULT_MODEL = enabled[0]['model'] if enabled else _PANEL[0]['model']
+def _ensure_config():
+    global _CONFIG, _MODELS, _MODEL_ALIASES, _DEFAULT_MODEL
+    if _CONFIG is None:
+        _CONFIG = load_config()
+        _MODELS = _CONFIG.get('models', [])
+        _MODEL_ALIASES = get_aliases(_MODELS)
+        enabled = get_enabled(_MODELS)
+        _DEFAULT_MODEL = enabled[0]['model'] if enabled else _MODELS[0]['model']
 
 
 def resolve_model(model_str: str) -> str:
     """Resolve alias to full model ID, handling variant suffixes."""
-    _ensure_panel()
+    _ensure_config()
     variant_suffix = ''
     if ':' in model_str:
         base, variant = model_str.split(':', 1)
@@ -167,9 +159,11 @@ class OpenRouterClient:
     """Thin wrapper around the OpenRouter API."""
 
     def __init__(self) -> None:
-        self.api_key = os.getenv('OPENROUTER_API_KEY')
+        _ensure_config()
+        self.api_key = _CONFIG.get('api_key', '').strip() or os.getenv('OPENROUTER_API_KEY')
         if not self.api_key:
-            print("Error: OPENROUTER_API_KEY not set.", file=sys.stderr)
+            print("Error: No API key found.", file=sys.stderr)
+            print("  Set \"api_key\" in config.json, or:", file=sys.stderr)
             print("  export OPENROUTER_API_KEY=sk-or-...", file=sys.stderr)
             print("  Get one at: https://openrouter.ai/keys", file=sys.stderr)
             sys.exit(1)
@@ -352,7 +346,7 @@ def synthesize(
         responses=responses_text,
     )
 
-    _ensure_panel()
+    _ensure_config()
     synth_model = resolve_model(model) if model else _DEFAULT_MODEL
     if verbose:
         print(f"\nSynthesizing with {synth_model}...", file=sys.stderr)
@@ -367,47 +361,51 @@ def synthesize(
 
 def show_panel() -> None:
     """Display the current expert panel."""
-    config = _panel_path()
-    source = "expert-panel.json" if config.exists() else "built-in defaults"
-    _ensure_panel()
-    enabled = get_enabled(_PANEL)
-    disabled = [e for e in _PANEL if not e.get('enabled', True)]
+    _ensure_config()
+    enabled = get_enabled(_MODELS)
+    disabled = [e for e in _MODELS if not e.get('enabled', True)]
 
-    print(f"Expert Panel ({len(enabled)} active, from {source}):\n")
-    w = max(len(e['alias']) for e in _PANEL)
+    print(f"Expert Panel ({len(enabled)} active):\n")
+    w = max(len(e['alias']) for e in _MODELS)
     for e in enabled:
         print(f"  {e['alias']:<{w+2}} {e['model']:<40} {e.get('strength', '')}")
     if disabled:
         print(f"\nDisabled ({len(disabled)}):")
         for e in disabled:
             print(f"  {e['alias']:<{w+2}} {e['model']}")
-    print(f"\nConfig: {config}")
+    has_key = bool(_CONFIG.get('api_key', '').strip())
+    print(f"\nAPI key: {'set in config.json' if has_key else 'using env var'}")
+    print(f"Config: {_config_path()}")
 
 
-def init_panel() -> None:
-    """Generate a fresh expert-panel.json from bootstrap template."""
-    config = _panel_path()
-    if config.exists():
-        print(f"expert-panel.json already exists at {config}", file=sys.stderr)
+def init_config() -> None:
+    """Generate a fresh config.json."""
+    path = _config_path()
+    if path.exists():
+        print(f"config.json already exists at {path}", file=sys.stderr)
         print("Delete it first to regenerate, or edit it directly.", file=sys.stderr)
         sys.exit(1)
-    # Bootstrap template — edit expert-panel.json after generation, not this code.
-    template = [
-        {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": True,  "provider": "Anthropic", "strength": "Deepest reasoning, edge cases"},
-        {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": True,  "provider": "OpenAI",    "strength": "Strong all-round, structured output"},
-        {"alias": "gemini",   "model": "google/gemini-3-pro-preview",     "enabled": True,  "provider": "Google",    "strength": "Creative connections, multimodal"},
-        {"alias": "deepseek", "model": "deepseek/deepseek-r1",            "enabled": True,  "provider": "DeepSeek",  "strength": "Best open-source reasoning"},
-        {"alias": "grok",     "model": "x-ai/grok-4",                    "enabled": True,  "provider": "xAI",       "strength": "Contrarian, evidence citations"},
-        {"alias": "llama",    "model": "meta-llama/llama-4-maverick",     "enabled": False, "provider": "Meta",      "strength": "128-expert MoE, multimodal"},
-        {"alias": "kimi",     "model": "moonshotai/kimi-k2.5",           "enabled": False, "provider": "Moonshot",  "strength": "Best value, deep domain knowledge"},
-        {"alias": "glm",      "model": "z-ai/glm-5",                     "enabled": False, "provider": "ZHIPU",     "strength": "Factual accuracy, catches errors"},
-        {"alias": "qwen",     "model": "qwen/qwen3.5-397b-a17b",         "enabled": False, "provider": "Alibaba",   "strength": "Native multimodal, 201 languages"},
-    ]
-    with open(config, 'w') as f:
+    template = {
+        "api_key": "",
+        "models": [
+            {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": True,  "strength": "Deepest reasoning, edge cases"},
+            {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": True,  "strength": "Strong all-round, structured output"},
+            {"alias": "gemini",   "model": "google/gemini-3-pro-preview",     "enabled": True,  "strength": "Creative connections, multimodal"},
+            {"alias": "deepseek", "model": "deepseek/deepseek-r1",            "enabled": True,  "strength": "Best open-source reasoning"},
+            {"alias": "grok",     "model": "x-ai/grok-4",                    "enabled": True,  "strength": "Contrarian, evidence citations"},
+            {"alias": "llama",    "model": "meta-llama/llama-4-maverick",     "enabled": False, "strength": "128-expert MoE, multimodal"},
+            {"alias": "kimi",     "model": "moonshotai/kimi-k2.5",           "enabled": False, "strength": "Best value, deep domain knowledge"},
+            {"alias": "glm",      "model": "z-ai/glm-5",                     "enabled": False, "strength": "Factual accuracy, catches errors"},
+            {"alias": "qwen",     "model": "qwen/qwen3.5-397b-a17b",         "enabled": False, "strength": "Native multimodal, 201 languages"},
+        ],
+    }
+    models = template['models']
+    with open(path, 'w') as f:
         json.dump(template, f, indent=2)
         f.write('\n')
-    print(f"Created {config}")
-    print(f"  {len(template)} models ({sum(1 for t in template if t['enabled'])} enabled). Edit to customize.")
+    print(f"Created {path}")
+    print(f"  Set your API key: https://openrouter.ai/keys")
+    print(f"  {len(models)} models ({sum(1 for m in models if m['enabled'])} enabled)")
 
 
 def main():
@@ -420,16 +418,16 @@ Examples:
   openrouter --all "Compare React vs Svelte"
   openrouter --all --synthesize "Best practices for error handling"
   openrouter --panel                         # Show expert team
-  openrouter --init-panel                    # Generate expert-panel.json
+  openrouter --init-config                   # Generate config.json
   openrouter --list-models anthropic --pricing
 
-Aliases and variants are configured in expert-panel.json.
+Models and API key are configured in config.json.
 Run --panel to see the current team.
 """)
 
     p.add_argument('prompt', nargs='?', help='Prompt (or pipe via stdin)')
     p.add_argument('--file', '-f', help='Load prompt from file')
-    p.add_argument('--model', '-m', default=None, help='Model ID or alias from expert-panel.json')
+    p.add_argument('--model', '-m', default=None, help='Model ID or alias from config.json')
     p.add_argument('--system', '-s', help='System prompt')
     p.add_argument('--image', '-img', action='append', dest='images', help='Image file')
     p.add_argument('--web', '-w', action='store_true', help='Enable web search')
@@ -448,14 +446,14 @@ Run --panel to see the current team.
     p.add_argument('--all', action='store_true', help='Fan out to all enabled models')
     p.add_argument('--synthesize', action='store_true', help='Synthesize fan-out into consensus (use with --all)')
     p.add_argument('--synth-model', default=None, help='Model for synthesis (default: first enabled)')
-    p.add_argument('--init-panel', action='store_true', help='Generate expert-panel.json')
+    p.add_argument('--init-config', action='store_true', help='Generate config.json')
 
     args = p.parse_args()
 
     # ── Info commands (no API key needed) ──
 
-    if args.init_panel:
-        init_panel()
+    if args.init_config:
+        init_config()
         return
 
     if args.panel:
@@ -464,7 +462,7 @@ Run --panel to see the current team.
 
     if args.aliases:
         print("Model aliases:")
-        _ensure_panel()
+        _ensure_config()
         w = max(len(a) for a in _MODEL_ALIASES)
         for alias, mid in sorted(_MODEL_ALIASES.items()):
             print(f"  {alias:<{w + 2}} -> {mid}")
@@ -498,8 +496,8 @@ Run --panel to see the current team.
     # ── Fan-out mode ──
 
     if args.all:
-        _ensure_panel()
-        enabled = get_enabled_aliases(_PANEL)
+        _ensure_config()
+        enabled = get_enabled_aliases(_MODELS)
         if not enabled:
             print("Error: No models enabled in panel. Run --panel to check.", file=sys.stderr)
             sys.exit(1)
@@ -523,7 +521,7 @@ Run --panel to see the current team.
 
     # ── Single model mode ──
 
-    _ensure_panel()
+    _ensure_config()
     model = resolve_model(args.model) if args.model else _DEFAULT_MODEL
     stream = not args.no_stream
 

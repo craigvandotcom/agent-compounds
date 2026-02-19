@@ -41,31 +41,26 @@ All five models converge on three core principles...
 - DeepSeek: Rate limiting as a feature, not just protection
 ```
 
-## Quick Start
+## Setup
 
-```bash
-pip install openai
-export OPENROUTER_API_KEY=sk-or-...  # https://openrouter.ai/keys
+1. `pip install openai`
+2. Set your API key in `config.json` (or `export OPENROUTER_API_KEY=sk-or-...`)
+3. Run: `./openrouter.py --all --synthesize "Your question"`
 
-# Single model (any OpenRouter model ID or alias from expert-expert-panel.json)
-./openrouter.py "Your question" -m anthropic/claude-opus-4.6
+## Configure
 
-# Fan out to panel
-./openrouter.py --all "Your question"
+Everything is in `config.json`:
 
-# Fan out + synthesize into consensus
-./openrouter.py --all --synthesize "Your question"
+```json
+{
+  "api_key": "sk-or-...",
+  "models": [
+    {"alias": "claude", "model": "anthropic/claude-opus-4.6", "enabled": true, ...},
+    {"alias": "llama",  "model": "meta-llama/llama-4-maverick", "enabled": false, ...}
+  ]
+}
 ```
 
-## Configure Your Panel
-
-Edit `expert-panel.json` to enable/disable models:
-
-```bash
-./openrouter.py --panel           # See current team
-./openrouter.py --init-panel      # Generate fresh expert-panel.json
-```
-
-Default: 5 models enabled. Toggle `"enabled": true/false` to customize.
+Toggle `"enabled": true/false` to add or remove models. Any OpenRouter model ID works.
 
 See [SKILL.md](./SKILL.md) for full reference.

@@ -2,7 +2,7 @@
 name: expert-consensus
 description: Send one prompt to multiple AI models. Get one synthesized answer.
 version: 1.0.0
-tools: [openrouter.py, expert-panel.json]
+tools: [openrouter.py, config.json]
 ---
 
 # Expert Consensus
@@ -18,7 +18,7 @@ Fan out one prompt to a panel of frontier AI models in parallel, then synthesize
 
 ## Usage
 
-The script is at `openrouter.py` in this skill directory. Requires `OPENROUTER_API_KEY` env var.
+The script is at `openrouter.py` in this skill directory. Configuration is in `config.json`.
 
 ### Core Commands
 
@@ -26,11 +26,8 @@ The script is at `openrouter.py` in this skill directory. Requires `OPENROUTER_A
 # Fan out to all enabled models + synthesize consensus (most common)
 python3 openrouter.py --all --synthesize "Your question"
 
-# Fan out without synthesis (raw responses only)
-python3 openrouter.py --all "Your question"
-
-# Single model query
-python3 openrouter.py "Your question" -m claude
+# Single model query (any OpenRouter model ID works)
+python3 openrouter.py "Your question" -m anthropic/claude-opus-4.6
 
 # Save all responses + synthesis to directory
 python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
@@ -40,10 +37,10 @@ python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
 
 | Flag | Effect |
 |------|--------|
-| `--all` | Fan out to all enabled panel models |
+| `--all` | Fan out to all enabled models |
 | `--synthesize` | Synthesize fan-out into consensus (use with `--all`) |
-| `--synth-model MODEL` | Override synthesis model (default: claude) |
-| `-m MODEL` | Single model query by alias or full ID |
+| `--synth-model MODEL` | Override synthesis model (default: first enabled) |
+| `-m MODEL` | Single model query by ID or alias |
 | `-o PATH` | Save output to file (single) or directory (`--all`) |
 | `--no-stream` | Wait for full response instead of streaming |
 | `--web` | Enable web search |
@@ -56,24 +53,24 @@ python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
 | `--aliases` | Show all model aliases |
 | `--list-models FILTER --pricing` | Browse available models |
 
-### Model Aliases
+### Models
 
-Run `python3 openrouter.py --panel` to see the current expert team and which models are enabled.
-
-All aliases and model IDs are configured in `expert-panel.json` — edit that file to update models, add new ones, or toggle enabled/disabled. To check for newer models on OpenRouter: `python3 openrouter.py --list-models <provider> --pricing`
+Run `python3 openrouter.py --panel` to see the current team. All models are configured in `config.json` — edit that file to update model IDs, add new models, or toggle enabled/disabled.
 
 Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for variants.
 
 ## Patterns
 
-**Quick consensus:** `--all --synthesize "question"` (default 5 models)
+**Quick consensus:** `--all --synthesize "question"`
 
-**Full panel:** Enable all 9 in `expert-panel.json`, then `--all --synthesize -v "question"`
-
-**Stress test:** Query contrarian models individually — grok for devil's advocate, deepseek for risk analysis, glm for fact-checking.
+**Stress test:** Query contrarian models individually for devil's advocate, risk analysis, fact-checking.
 
 **Custom synthesis model:** `--all --synthesize --synth-model gpt "question"`
 
-## Panel Configuration
+## Configuration
 
-Edit `expert-panel.json` next to the script. Toggle `"enabled": true/false` per model. To regenerate a fresh default: `python3 openrouter.py --init-panel`
+Everything is in `config.json` next to the script:
+- `api_key` — your OpenRouter API key (or leave empty to use `OPENROUTER_API_KEY` env var)
+- `models` — array of models with alias, model ID, enabled flag, and strength description
+
+To regenerate a fresh default: `python3 openrouter.py --init-config`
