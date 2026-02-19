@@ -49,6 +49,7 @@ How you see:
 - When one model confidently states something that contradicts the weight of the others, that is noise. Remove it cleanly.
 - When no model addresses something that obviously matters, fill the gap yourself.
 - When a model's best contribution is its framework — not its facts — adopt the structure.
+- When one model makes a specific factual claim (citation, statistic, date) that no other corroborates, treat it as unverified. Include only if plausible from the other responses.
 
 How you resolve disagreement:
 - First: check if it's real. Most contradictions dissolve when sources are talking about different scopes or levels of abstraction. Find the deeper level where both are true.
@@ -86,13 +87,18 @@ def _config_path() -> Path:
     return Path(__file__).resolve().parent / "expert-panel.json"
 
 
+class ConfigError(Exception):
+    """Raised when expert-panel.json is missing or invalid."""
+
+
 def load_config() -> dict:
-    """Load expert-panel.json. Returns full config dict."""
+    """Load expert-panel.json. Returns full config dict.
+
+    Raises ConfigError if file is missing or invalid.
+    """
     path = _config_path()
     if not path.exists():
-        print(f"Error: {path} not found.", file=sys.stderr)
-        print("  Run: openrouter --init-panel", file=sys.stderr)
-        sys.exit(1)
+        raise ConfigError(f"{path} not found. Run: openrouter --init-panel")
     try:
         with open(path) as f:
             config = json.load(f)
@@ -102,8 +108,7 @@ def load_config() -> dict:
                 raise KeyError(f"Missing 'alias' or 'model' in entry: {entry}")
         return config
     except (json.JSONDecodeError, KeyError) as e:
-        print(f"Error: Invalid expert-panel.json ({e})", file=sys.stderr)
-        sys.exit(1)
+        raise ConfigError(f"Invalid expert-panel.json: {e}") from e
 
 
 def get_aliases(panel: list) -> dict:
@@ -165,15 +170,20 @@ def encode_image(path: Path) -> str:
 class OpenRouterClient:
     """Thin wrapper around the OpenRouter API."""
 
-    def __init__(self) -> None:
+    def __init__(self, timeout: float = 120) -> None:
         _ensure_config()
         self.api_key = os.getenv('OPENROUTER_API_KEY')
         if not self.api_key:
-            print("Error: OPENROUTER_API_KEY environment variable not set.", file=sys.stderr)
-            print("  export OPENROUTER_API_KEY=sk-or-...", file=sys.stderr)
-            print("  Get one at: https://openrouter.ai/keys", file=sys.stderr)
-            sys.exit(1)
-        self.client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.api_key)
+            raise ConfigError(
+                "OPENROUTER_API_KEY environment variable not set.\n"
+                "  export OPENROUTER_API_KEY=sk-or-...\n"
+                "  Get one at: https://openrouter.ai/keys"
+            )
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=self.api_key,
+            timeout=timeout,
+        )
 
     def list_models(self, pricing: bool = False, filter_str: Optional[str] = None) -> list:
         """List available models, optionally with pricing."""
@@ -303,8 +313,12 @@ def fan_out(
     with ThreadPoolExecutor(max_workers=len(aliases)) as executor:
         futures = {executor.submit(query_model, a): a for a in aliases}
         for future in as_completed(futures):
-            alias, result = future.result()
-            results[alias] = result
+            try:
+                alias, result = future.result()
+                results[alias] = result
+            except Exception as e:
+                a = futures[future]
+                results[a] = {'ok': False, 'error': str(e)}
 
     # Print results in panel order
     for alias in aliases:
@@ -388,9 +402,10 @@ def init_panel() -> None:
     """Generate a fresh expert-panel.json."""
     path = _config_path()
     if path.exists():
-        print(f"expert-panel.json already exists at {path}", file=sys.stderr)
-        print("Delete it first to regenerate, or edit it directly.", file=sys.stderr)
-        sys.exit(1)
+        raise ConfigError(
+            f"expert-panel.json already exists at {path}.\n"
+            "Delete it first to regenerate, or edit it directly."
+        )
     template = {
         "_setup": "export OPENROUTER_API_KEY=sk-or-...  (get one at https://openrouter.ai/keys)",
         "models": [
@@ -567,4 +582,8 @@ Run --panel to see the current team.
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ConfigError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)

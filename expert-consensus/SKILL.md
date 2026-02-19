@@ -18,11 +18,13 @@ Fan out one prompt to a panel of frontier AI models in parallel, then synthesize
 
 ## Workflow
 
-1. Run the fan-out (do NOT use `--synthesize` — you are the synthesizer):
+1. Run the fan-out from this skill's directory (do NOT use `--synthesize` — you are the synthesizer):
 
 ```bash
-python3 openrouter.py --all "The user's question"
+python3 {skill_dir}/openrouter.py --all "The user's question"
 ```
+
+Where `{skill_dir}` is the path to this skill directory (e.g., `.claude/skills/expert-consensus`).
 
 2. Read all model responses from stdout.
 
@@ -30,7 +32,7 @@ python3 openrouter.py --all "The user's question"
 
 ## Script Reference
 
-The script is at `openrouter.py` in this skill directory. Configuration is in `expert-panel.json`.
+Both `openrouter.py` and `expert-panel.json` live in this skill directory. The script resolves its config relative to itself, so it works from any working directory.
 
 | Flag | Effect |
 |------|--------|
@@ -64,6 +66,7 @@ You are not combining. You are not averaging. You are not selecting the best res
 - When one model confidently states something that contradicts the weight of the others, that is noise. Remove it cleanly.
 - When no model addresses something that obviously matters, fill the gap yourself.
 - When a model's best contribution is its framework — not its facts — adopt the structure.
+- When one model makes a specific factual claim (citation, statistic, date) that no other corroborates, treat it as unverified. Include only if plausible from the other responses.
 
 ### How You Resolve Disagreement
 
