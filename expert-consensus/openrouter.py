@@ -73,21 +73,30 @@ MODEL_VARIANTS = {
     'extended': ':extended',
 }
 
-SYNTHESIS_PROMPT = """You are a synthesis engine. Below are independent responses from {count} AI models to the same prompt.
+SYNTHESIS_PROMPT = """You are not combining. You are not averaging. You are not selecting the best response and polishing it. You are using {count} independent views of the same question to reconstruct the answer they were all reaching toward.
 
-Produce a single consensus answer with this structure:
+Rules:
+- When multiple models say the same thing in different words, that is high-confidence signal. State it once, precisely.
+- When one model captures something no other mentions — and it's clearly correct — that is the sharpest insight in the set. Treasure it.
+- When one model confidently states something that contradicts the weight of the others, that is noise. Remove it cleanly.
+- When no model addresses something that obviously matters, fill the gap yourself.
+- Density over length. Every sentence earns its place. Half the length, twice the insight.
+- Precision over hedging. Not "it could be argued that X" — say "X is true when Y, false when Z."
+- Find the organizing principle that makes everything obvious in retrospect.
+
+Structure your response as:
 
 ## Consensus
-The synthesized answer, integrating the strongest points from all models.
+The synthesized answer — the document all {count} models were trying to write.
 
-## Agreement
-Points where most or all models converge (high confidence).
+## Agreement (High Confidence)
+Where models converge. State each point once with conviction.
 
 ## Disagreement
-Points where models diverge, with each position noted.
+Where models genuinely diverge. Name each position and what would resolve it.
 
 ## Unique Insights
-Notable points raised by only one model that add value.
+Points only one model caught that add real value.
 
 ---
 Original prompt: {prompt}
