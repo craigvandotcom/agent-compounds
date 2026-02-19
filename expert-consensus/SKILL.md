@@ -16,30 +16,25 @@ Fan out one prompt to a panel of frontier AI models in parallel, then synthesize
 - Stress-testing an idea against diverse reasoning styles
 - Any time you want higher confidence than a single model provides
 
-## Usage
+## Workflow
 
-The script is at `openrouter.py` in this skill directory. Configuration is in `expert-panel.json`.
-
-### Core Commands
+1. Run the fan-out (do NOT use `--synthesize` — you are the synthesizer):
 
 ```bash
-# Fan out to all enabled models + synthesize consensus (most common)
-python3 openrouter.py --all --synthesize "Your question"
-
-# Single model query (any OpenRouter model ID works)
-python3 openrouter.py "Your question" -m anthropic/claude-opus-4.6
-
-# Save all responses + synthesis to directory
-python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
+python3 openrouter.py --all "The user's question"
 ```
 
-### Options
+2. Read all model responses from stdout.
+
+3. Synthesize the responses yourself using the Synthesis Directive below.
+
+## Script Reference
+
+The script is at `openrouter.py` in this skill directory. Configuration is in `expert-panel.json`.
 
 | Flag | Effect |
 |------|--------|
 | `--all` | Fan out to all enabled models |
-| `--synthesize` | Synthesize fan-out into consensus (use with `--all`) |
-| `--synth-model MODEL` | Override synthesis model (default: first enabled) |
 | `-m MODEL` | Single model query by ID or alias |
 | `-o PATH` | Save output to file (single) or directory (`--all`) |
 | `--no-stream` | Wait for full response instead of streaming |
@@ -51,7 +46,6 @@ python3 openrouter.py --all --synthesize "Your question" -o /tmp/results/
 | `-v` | Verbose — show timing and token counts |
 | `--panel` | Show current expert team |
 | `--aliases` | Show all model aliases |
-| `--list-models FILTER --pricing` | Browse available models |
 
 ### Models
 
@@ -59,13 +53,40 @@ Run `python3 openrouter.py --panel` to see the current team. All models are conf
 
 Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for variants.
 
-## Patterns
+## The Synthesis Directive
 
-**Quick consensus:** `--all --synthesize "question"`
+You are not combining. You are not averaging. You are not selecting the best response and polishing it. You are using multiple independent views of the same question to reconstruct the answer they were all reaching toward.
 
-**Stress test:** Query contrarian models individually for devil's advocate, risk analysis, fact-checking.
+### How You See
 
-**Custom synthesis model:** `--all --synthesize --synth-model gpt "question"`
+- When multiple models say the same thing in different words, that is high-confidence signal. State it once, precisely.
+- When one model captures something no other mentions — and it's clearly correct — that is the sharpest insight in the set. Treasure it.
+- When one model confidently states something that contradicts the weight of the others, that is noise. Remove it cleanly.
+- When no model addresses something that obviously matters, fill the gap yourself.
+- When a model's best contribution is its framework — not its facts — adopt the structure.
+
+### How You Resolve Disagreement
+
+- First: check if it's real. Most contradictions dissolve when sources are talking about different scopes or levels of abstraction. Find the deeper level where both are true.
+- If real: which position survives first-principles reasoning and the weight of independent evidence?
+- If genuinely balanced: name the disagreement precisely, explain what would resolve it, and move on. Uncertainty is honest. Vagueness is not.
+
+### How You Write
+
+- Density over length. Every sentence earns its place. Half the length, twice the insight.
+- Precision over hedging. Not "it could be argued that X" — say "X is true when Y, false when Z."
+- Find the organizing principle that makes everything obvious in retrospect.
+- If the truth is surprising or uncomfortable — state it. You are here to be right, not safe.
+
+### Output Structure
+
+**Consensus** — The synthesized answer. The document all models were trying to write.
+
+**Agreement (High Confidence)** — Where models converge. State each point once with conviction.
+
+**Disagreement** — Where models genuinely diverge. Each position, and what resolves it.
+
+**Unique Insights** — Points only one model caught that add real value.
 
 ## Configuration
 
