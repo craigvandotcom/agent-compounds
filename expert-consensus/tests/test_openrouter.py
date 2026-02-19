@@ -99,7 +99,6 @@ def test_config_json_valid():
     with open(config_path) as f:
         config = json.load(f)
     assert isinstance(config, dict)
-    assert "api_key" in config
     assert "models" in config
     models = config["models"]
     assert isinstance(models, list)

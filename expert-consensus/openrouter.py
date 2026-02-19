@@ -6,15 +6,13 @@ One script, one API key. Configurable expert panel for multi-model consensus.
 
 Setup:
     pip install openai
-    export OPENROUTER_API_KEY=sk-or-...
+    export OPENROUTER_API_KEY=sk-or-...  (get one at https://openrouter.ai/keys)
+    Edit config.json to toggle models.
 
 Usage:
     openrouter "prompt" -m anthropic/claude-opus-4.6         # Any model ID
     openrouter --all --synthesize "Best API design patterns" # Fan out + synthesize
     openrouter --panel                                       # Show expert team
-
-Config:
-    Edit config.json next to this script. Set your API key and models there.
 """
 
 import os
@@ -160,10 +158,9 @@ class OpenRouterClient:
 
     def __init__(self) -> None:
         _ensure_config()
-        self.api_key = _CONFIG.get('api_key', '').strip() or os.getenv('OPENROUTER_API_KEY')
+        self.api_key = os.getenv('OPENROUTER_API_KEY')
         if not self.api_key:
-            print("Error: No API key found.", file=sys.stderr)
-            print("  Set \"api_key\" in config.json, or:", file=sys.stderr)
+            print("Error: OPENROUTER_API_KEY environment variable not set.", file=sys.stderr)
             print("  export OPENROUTER_API_KEY=sk-or-...", file=sys.stderr)
             print("  Get one at: https://openrouter.ai/keys", file=sys.stderr)
             sys.exit(1)
@@ -373,8 +370,8 @@ def show_panel() -> None:
         print(f"\nDisabled ({len(disabled)}):")
         for e in disabled:
             print(f"  {e['alias']:<{w+2}} {e['model']}")
-    has_key = bool(_CONFIG.get('api_key', '').strip())
-    print(f"\nAPI key: {'set in config.json' if has_key else 'using env var'}")
+    has_key = bool(os.getenv('OPENROUTER_API_KEY'))
+    print(f"\nAPI key: {'set' if has_key else 'NOT SET — export OPENROUTER_API_KEY=sk-or-...'}")
     print(f"Config: {_config_path()}")
 
 
@@ -386,7 +383,7 @@ def init_config() -> None:
         print("Delete it first to regenerate, or edit it directly.", file=sys.stderr)
         sys.exit(1)
     template = {
-        "api_key": "",
+        "_setup": "export OPENROUTER_API_KEY=sk-or-...  (get one at https://openrouter.ai/keys)",
         "models": [
             {"alias": "claude",   "model": "anthropic/claude-opus-4.6",      "enabled": True,  "strength": "Deepest reasoning, edge cases"},
             {"alias": "gpt",      "model": "openai/gpt-5.2",                 "enabled": True,  "strength": "Strong all-round, structured output"},

@@ -16,7 +16,7 @@ Drop into `.claude/skills/` for Claude Code, or use standalone from the terminal
 pip install openai
 ```
 
-1. Set your API key in `expert-consensus/config.json`
+1. `export OPENROUTER_API_KEY=sk-or-...` ([get one here](https://openrouter.ai/keys))
 2. Run:
 
 ```bash

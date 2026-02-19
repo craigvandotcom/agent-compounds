@@ -44,23 +44,21 @@ All five models converge on three core principles...
 ## Setup
 
 1. `pip install openai`
-2. Set your API key in `config.json` (or `export OPENROUTER_API_KEY=sk-or-...`)
-3. Run: `./openrouter.py --all --synthesize "Your question"`
+2. `export OPENROUTER_API_KEY=sk-or-...` (get one at [openrouter.ai/keys](https://openrouter.ai/keys))
+3. Toggle models in `config.json`
+4. Run: `./openrouter.py --all --synthesize "Your question"`
 
 ## Configure
 
-Everything is in `config.json`:
+Models are in `config.json`. Toggle `"enabled": true/false` to add or remove models. Any [OpenRouter model ID](https://openrouter.ai/models) works.
 
 ```json
 {
-  "api_key": "sk-or-...",
   "models": [
     {"alias": "claude", "model": "anthropic/claude-opus-4.6", "enabled": true, ...},
     {"alias": "llama",  "model": "meta-llama/llama-4-maverick", "enabled": false, ...}
   ]
 }
 ```
-
-Toggle `"enabled": true/false` to add or remove models. Any OpenRouter model ID works.
 
 See [SKILL.md](./SKILL.md) for full reference.

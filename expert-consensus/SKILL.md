@@ -69,8 +69,7 @@ Append `:online`, `:nitro`, `:floor`, `:free`, or `:extended` to any alias for v
 
 ## Configuration
 
-Everything is in `config.json` next to the script:
-- `api_key` — your OpenRouter API key (or leave empty to use `OPENROUTER_API_KEY` env var)
-- `models` — array of models with alias, model ID, enabled flag, and strength description
+- **API key**: `OPENROUTER_API_KEY` environment variable (get one at https://openrouter.ai/keys)
+- **Models**: `config.json` next to the script — array of models with alias, model ID, enabled flag, and strength description
 
 To regenerate a fresh default: `python3 openrouter.py --init-config`
