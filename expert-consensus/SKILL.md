@@ -1,3 +1,10 @@
+---
+name: expert-consensus
+description: Send one prompt to multiple AI models. Get one synthesized answer.
+version: 1.0.0
+tools: [openrouter.py, panel.json]
+---
+
 # Expert Consensus — Multi-Model AI Synthesis
 
 Send one prompt to a panel of the world's best AI models. Get one synthesized answer.
@@ -6,7 +13,7 @@ Send one prompt to a panel of the world's best AI models. Get one synthesized an
 
 1. **Fan out** — your prompt goes to all enabled models in parallel
 2. **Collect** — each model responds independently
-3. **Synthesize** — merge into a single consensus, noting agreement and disagreement
+3. **Synthesize** — `--synthesize` merges into a single consensus, noting agreement and disagreement
 
 ## The Panel (Feb 2026)
 
@@ -16,25 +23,20 @@ Send one prompt to a panel of the world's best AI models. Get one synthesized an
 | `gpt` | GPT-5.2 | OpenAI | Strong all-round, structured output |
 | `gemini` | Gemini 3 Pro | Google | Creative connections, multimodal |
 | `deepseek` | DeepSeek R1 | DeepSeek | Best open-source reasoning |
-| `llama` | Llama 4 Maverick | Meta | 128-expert MoE, multimodal |
 | `grok` | Grok 4 | xAI | Contrarian, evidence citations |
+| `llama` | Llama 4 Maverick | Meta | 128-expert MoE, multimodal |
 | `kimi` | Kimi K2.5 | Moonshot | Best value, deep domain knowledge |
 | `glm` | GLM-5 | ZHIPU | Factual accuracy, catches errors |
 | `qwen` | Qwen 3.5 397B | Alibaba | Native multimodal, 201 languages |
 
-Every alias points to the latest flagship reasoning model from that provider.
+Default: 5 enabled (claude, gpt, gemini, deepseek, grok). Toggle the rest in `panel.json`.
 
 ## Setup
 
 ```bash
 pip install openai
-export OPENROUTER_API_KEY=sk-or-...  # Get one at https://openrouter.ai/keys
+export OPENROUTER_API_KEY=sk-or-...  # https://openrouter.ai/keys
 chmod +x openrouter.py
-```
-
-Optionally add to PATH:
-```bash
-cp openrouter.py ~/.local/bin/openrouter
 ```
 
 ## Quick Start
@@ -45,28 +47,35 @@ cp openrouter.py ~/.local/bin/openrouter
 openrouter "Explain monads in 3 sentences" -m claude
 ```
 
-### Fan out to all 9 (one command)
+### Fan out to the panel
 
 ```bash
 openrouter --all "What are the 3 most important principles of API design?"
 ```
 
-### Save each response to a directory
+### Fan out + synthesize into consensus
 
 ```bash
-openrouter --all "Compare React vs Svelte" -o /tmp/consensus/
-# Creates /tmp/consensus/claude.md, gpt.md, gemini.md, etc.
+openrouter --all --synthesize "What makes a great API?"
 ```
 
-### Show your current panel
+### Save responses to a directory
 
 ```bash
-openrouter --panel
+openrouter --all --synthesize "Compare React vs Svelte" -o /tmp/results/
+# Creates claude.md, gpt.md, ..., synthesis.md
 ```
 
 ## Configuring Your Panel
 
-Edit `panel.json` next to the script. Toggle `enabled` to add/remove models:
+Edit `panel.json` next to the script, or generate a fresh one:
+
+```bash
+openrouter --init-panel    # Generate panel.json with defaults
+openrouter --panel         # Show current team
+```
+
+Toggle `"enabled": true/false` to add/remove models:
 
 ```json
 [
@@ -83,18 +92,20 @@ Edit `panel.json` next to the script. Toggle `enabled` to add/remove models:
 
 ## Consensus Patterns
 
-### Pattern 1: Quick Consensus (3 models)
+### Pattern 1: Quick Consensus
 
 Disable all but your top 3 in `panel.json`, then:
 
 ```bash
-openrouter --all "Your question" -o /tmp/quick/
+openrouter --all --synthesize "Your question"
 ```
 
-### Pattern 2: Full Panel
+### Pattern 2: Full Panel (all 9)
+
+Enable all models in `panel.json`, then:
 
 ```bash
-openrouter --all "Your question" -o /tmp/full/ -v
+openrouter --all --synthesize "Your question" -v
 ```
 
 ### Pattern 3: Stress Test an Idea
@@ -105,11 +116,11 @@ openrouter "What risks does [idea] miss?" -m glm --no-stream
 openrouter "Steel man the case against [idea]" -m deepseek --no-stream
 ```
 
-### Pattern 4: Synthesize (after fan-out)
+### Pattern 4: Custom Synthesis Model
 
-Feed the collected responses to your orchestrator:
-
-> "Synthesize these responses. Note where models agree (high confidence), disagree (flag the debate), and any unique insights only one model caught."
+```bash
+openrouter --all --synthesize --synth-model gpt "Your question"
+```
 
 ## CLI Reference
 
@@ -122,8 +133,10 @@ echo "prompt" | openrouter -m deepseek               # Pipe
 openrouter "prompt" -m claude --fallback gpt deepseek # Fallbacks
 openrouter "prompt" -m gpt --json-mode               # JSON output
 openrouter --all "prompt"                            # Fan out to panel
-openrouter --all "prompt" -o /tmp/results/           # Fan out + save
+openrouter --all --synthesize "prompt"               # Fan out + synthesize
+openrouter --all --synthesize "prompt" -o /tmp/out/  # + save results
 openrouter --panel                                    # Show panel
+openrouter --init-panel                               # Generate panel.json
 openrouter --aliases                                  # Show aliases
 openrouter --list-models anthropic --pricing         # Browse models
 ```
@@ -144,11 +157,6 @@ openrouter --list-models qwen --pricing
 
 If a newer flagship is available, update `panel.json`.
 
-**Signs a model needs updating:**
-- Provider announced a new flagship
-- `--list-models` shows a newer version number
-- A model returns 404 or "deprecated" errors
-
 ## Variants
 
 Append with colon to any alias:
@@ -166,6 +174,7 @@ Example: `openrouter "Search for X" -m claude:online`
 ## Tips
 
 - `--all` runs models in parallel (ThreadPoolExecutor) — fast even with 9 models
+- `--synthesize` feeds all responses to one model to produce structured consensus
 - Use `-v` (verbose) to see timing and token counts per model
 - `-o DIR` with `--all` saves each response as `alias.md` in that directory
 - Diversity beats quantity — 4 different providers > 4 models from one provider

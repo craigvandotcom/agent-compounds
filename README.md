@@ -8,9 +8,23 @@ Drop into `.claude/skills/` for Claude Code, or use standalone from the terminal
 
 | Skill | What it does |
 |-------|-------------|
-| **[expert-consensus](./expert-consensus/)** | Send one prompt to 9 flagship AI models, get synthesized consensus |
+| **[expert-consensus](./expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
-## Usage
+## Quick Start
+
+```bash
+pip install openai
+export OPENROUTER_API_KEY=sk-or-...  # https://openrouter.ai/keys
+
+# Fan out to 5 models + synthesize
+./expert-consensus/openrouter.py --all --synthesize "Your question"
+
+# Ask one model
+./expert-consensus/openrouter.py "Your question" -m claude
+
+# Configure your expert team
+./expert-consensus/openrouter.py --panel
+```
 
 ### As a Claude Code skill
 
@@ -20,26 +34,15 @@ cp -r expert-consensus /path/to/your/project/.claude/skills/
 
 Claude Code discovers the `SKILL.md` automatically.
 
-### Standalone
-
-```bash
-pip install openai
-export OPENROUTER_API_KEY=sk-or-...
-
-# Fan out to all 9 models at once
-./expert-consensus/openrouter.py --all "Your question"
-
-# Or ask one model
-./expert-consensus/openrouter.py "Your question" -m claude
-```
-
 ### Configure your panel
 
 Edit `expert-consensus/panel.json` to enable/disable models:
 
-```json
-{"alias": "llama", "model": "meta-llama/llama-4-maverick", "enabled": false}
+```bash
+./expert-consensus/openrouter.py --init-panel  # Generate fresh config
 ```
+
+Default: 5 models enabled. 9 available. Toggle `"enabled": true/false` to customize.
 
 ## Philosophy
 
