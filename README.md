@@ -14,26 +14,19 @@ Drop into `.claude/skills/` for Claude Code, or use standalone from the terminal
 
 1. `export OPENROUTER_API_KEY=sk-or-...` ([get one here](https://openrouter.ai/keys))
 2. `pip install openai`
-3. Run:
-
-```bash
-# Fan out to 5 models + synthesize
-./expert-consensus/openrouter.py --all --synthesize "Your question"
-
-# Ask one model (any OpenRouter model ID works)
-./expert-consensus/openrouter.py "Your question" -m anthropic/claude-opus-4.6
-
-# See your expert team
-./expert-consensus/openrouter.py --panel
-```
-
-### As a Claude Code skill
+3. Copy into your project:
 
 ```bash
 cp -r expert-consensus /path/to/your/project/.claude/skills/
 ```
 
-Claude Code discovers the `SKILL.md` automatically.
+4. Use in Claude Code:
+
+```
+/expert-consensus What makes a great API?
+```
+
+Claude Code discovers the `SKILL.md` automatically. Toggle models in `expert-panel.json`.
 
 ## Philosophy
 

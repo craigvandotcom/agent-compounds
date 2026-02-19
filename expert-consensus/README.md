@@ -46,7 +46,14 @@ All five models converge on three core principles...
 1. `export OPENROUTER_API_KEY=sk-or-...` (get one at [openrouter.ai/keys](https://openrouter.ai/keys))
 2. `pip install openai`
 3. Toggle models in `expert-panel.json`
-4. Run: `./openrouter.py --all --synthesize "Your question"`
+
+### As a Claude Code skill
+
+```bash
+cp -r expert-consensus /path/to/your/project/.claude/skills/
+```
+
+Then use: `/expert-consensus What makes a great API?`
 
 ## Configure
 
