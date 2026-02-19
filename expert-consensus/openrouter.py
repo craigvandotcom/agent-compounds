@@ -10,9 +10,9 @@ Setup:
     Edit expert-panel.json to toggle models.
 
 Usage:
-    openrouter "prompt" -m anthropic/claude-opus-4.6         # Any model ID
-    openrouter --all --synthesize "Best API design patterns" # Fan out + synthesize
-    openrouter --panel                                       # Show expert team
+    openrouter "prompt" -m anthropic/claude-opus-4.6   # Any model ID
+    openrouter --all "Best API design patterns"        # Fan out to all models
+    openrouter --panel                                 # Show expert team
 """
 
 import os
@@ -40,47 +40,6 @@ MODEL_VARIANTS = {
     'free':     ':free',
     'extended': ':extended',
 }
-
-SYNTHESIS_PROMPT = """You are not combining. You are not averaging. You are not selecting the best response and polishing it. You are using {count} independent views of the same question to reconstruct the answer they were all reaching toward.
-
-How you see:
-- When multiple models say the same thing in different words, that is high-confidence signal. State it once, precisely.
-- When one model captures something no other mentions — and it's clearly correct — that is the sharpest insight in the set. Treasure it.
-- When one model confidently states something that contradicts the weight of the others, that is noise. Remove it cleanly.
-- When no model addresses something that obviously matters, fill the gap yourself.
-- When a model's best contribution is its framework — not its facts — adopt the structure.
-- When one model makes a specific factual claim (citation, statistic, date) that no other corroborates, treat it as unverified. Include only if plausible from the other responses.
-
-How you resolve disagreement:
-- First: check if it's real. Most contradictions dissolve when sources are talking about different scopes or levels of abstraction. Find the deeper level where both are true.
-- If real: which position survives first-principles reasoning and the weight of independent evidence?
-- If genuinely balanced: name the disagreement precisely, explain what would resolve it, and move on. Uncertainty is honest. Vagueness is not.
-
-How you write:
-- Density over length. Every sentence earns its place. Half the length, twice the insight.
-- Precision over hedging. Not "it could be argued that X" — say "X is true when Y, false when Z."
-- Find the organizing principle that makes everything obvious in retrospect.
-- If the truth is surprising or uncomfortable — state it. You are here to be right, not safe.
-
-Structure your response as:
-
-## Consensus
-The synthesized answer — the document all {count} models were trying to write.
-
-## Agreement (High Confidence)
-Where models converge. State each point once with conviction.
-
-## Disagreement
-Where models genuinely diverge. Each position, and what resolves it.
-
-## Unique Insights
-Points only one model caught that add real value.
-
----
-Original prompt: {prompt}
-
-Responses:
-{responses}"""
 
 
 def _config_path() -> Path:
@@ -342,42 +301,6 @@ def fan_out(
     return results
 
 
-def synthesize(
-    client: OpenRouterClient,
-    prompt: str,
-    results: dict,
-    model: Optional[str] = None,
-    verbose: bool = False,
-) -> Optional[str]:
-    """Synthesize fan-out results into a single consensus answer."""
-    successful = {a: r for a, r in results.items() if r.get('ok')}
-    if len(successful) < 2:
-        print("Error: Need at least 2 successful responses to synthesize", file=sys.stderr)
-        return None
-
-    responses_text = ""
-    for alias, result in successful.items():
-        responses_text += f"\n### {alias.upper()} ({_MODEL_ALIASES.get(alias, alias)})\n"
-        responses_text += result['content'] + "\n"
-
-    synthesis_input = SYNTHESIS_PROMPT.format(
-        count=len(successful),
-        prompt=prompt,
-        responses=responses_text,
-    )
-
-    _ensure_config()
-    synth_model = resolve_model(model) if model else _DEFAULT_MODEL
-    if verbose:
-        print(f"\nSynthesizing with {synth_model}...", file=sys.stderr)
-
-    print(f"\n{'='*60}")
-    print(f"  SYNTHESIS ({synth_model})")
-    print(f"{'='*60}\n")
-
-    result = client.generate(prompt=synthesis_input, model=synth_model, stream=True)
-    return result.get('content') if result['ok'] else None
-
 
 def show_panel() -> None:
     """Display the current expert panel."""
@@ -437,7 +360,6 @@ def main():
 Examples:
   openrouter "Explain quantum computing" -m anthropic/claude-opus-4.6
   openrouter --all "Compare React vs Svelte"
-  openrouter --all --synthesize "Best practices for error handling"
   openrouter --panel                         # Show expert team
   openrouter --init-panel                   # Generate expert-panel.json
   openrouter --list-models anthropic --pricing
@@ -465,8 +387,6 @@ Run --panel to see the current team.
     p.add_argument('--aliases', action='store_true', help='Show aliases')
     p.add_argument('--panel', action='store_true', help='Show expert panel')
     p.add_argument('--all', action='store_true', help='Fan out to all enabled models')
-    p.add_argument('--synthesize', action='store_true', help='Synthesize fan-out into consensus (use with --all)')
-    p.add_argument('--synth-model', default=None, help='Model for synthesis (default: first enabled)')
     p.add_argument('--init-panel', action='store_true', help='Generate expert-panel.json')
 
     args = p.parse_args()
@@ -526,18 +446,12 @@ Run --panel to see the current team.
         if output_dir:
             Path(output_dir).mkdir(parents=True, exist_ok=True)
         print(f"Querying {len(enabled)} models: {', '.join(enabled)}", file=sys.stderr)
-        results = fan_out(
+        fan_out(
             client, prompt, enabled, system=args.system, images=args.images,
             temperature=args.temperature, max_tokens=args.max_tokens,
             web_search=args.web, json_mode=args.json_mode,
             reasoning=args.reasoning, output_dir=output_dir, verbose=args.verbose,
         )
-        if args.synthesize:
-            content = synthesize(client, prompt, results, model=args.synth_model, verbose=args.verbose)
-            if content and output_dir:
-                out = Path(output_dir) / "synthesis.md"
-                out.write_text(content)
-                print(f"\nSaved synthesis: {out}", file=sys.stderr)
         return
 
     # ── Single model mode ──

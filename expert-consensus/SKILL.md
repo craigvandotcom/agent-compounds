@@ -18,7 +18,7 @@ Fan out one prompt to a panel of frontier AI models in parallel, then synthesize
 
 ## Workflow
 
-1. Run the fan-out from this skill's directory (do NOT use `--synthesize` — you are the synthesizer):
+1. Run the fan-out from this skill's directory:
 
 ```bash
 python3 {skill_dir}/openrouter.py --all "The user's question"

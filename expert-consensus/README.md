@@ -21,8 +21,8 @@ The agent fans out to all models, reads responses, and synthesizes the consensus
 ### Standalone (terminal)
 
 ```bash
-# Fan out + synthesize via OpenRouter
-./openrouter.py --all --synthesize "What makes a great API?"
+# Fan out to all models
+./openrouter.py --all "What makes a great API?"
 
 # Single model
 ./openrouter.py "Your question" -m anthropic/claude-opus-4.6
