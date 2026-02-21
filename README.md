@@ -2,13 +2,25 @@
 
 Tools and skills that compound. Each builds on the last.
 
-Drop into `.claude/skills/` for Claude Code, or use standalone from the terminal.
+Drop into `.claude/` for Claude Code, or use standalone from the terminal.
 
 ## Skills
 
 | Skill | What it does |
 |-------|-------------|
-| **[expert-consensus](./expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
+| **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
+
+## Commands
+
+_Coming soon._
+
+## Prompts
+
+_Coming soon._
+
+## Sub-Agents
+
+_Coming soon._
 
 ## Quick Start
 
@@ -17,7 +29,7 @@ Drop into `.claude/skills/` for Claude Code, or use standalone from the terminal
 3. Copy into your project:
 
 ```bash
-cp -r expert-consensus /path/to/your/project/.claude/skills/
+cp -r skills/expert-consensus /path/to/your/project/.claude/skills/
 ```
 
 4. Use in Claude Code:
