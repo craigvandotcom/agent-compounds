@@ -13,7 +13,15 @@ Drop into `.claude/` for Claude Code, or use standalone from the terminal.
 
 ## Commands
 
-_Coming soon._
+Agentic engineering workflows. See [`commands/README.md`](./commands/README.md) for full docs.
+
+| Command | What it does |
+|---------|-------------|
+| **[plan-init](./commands/plan-init.md)** | Create implementation plans — 3 parallel explorers, validation baseline |
+| **[bead-work](./commands/bead-work.md)** | Sequential implementation — conductor + engineer sub-agents |
+| **[work-review](./commands/work-review.md)** | Feature-branch code review — 4 parallel reviewers, auto-fix + escalation |
+| **[hygiene](./commands/hygiene.md)** | Iterative codebase review — 3 agents, multiple rounds |
+| + 9 more | Planning refinement, beadification, session landing, idea review |
 
 ## Prompts
 

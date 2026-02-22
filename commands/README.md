@@ -32,10 +32,11 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 | `bead-work` | Sequential implementation — conductor + engineer sub-agents |
 | `bead-land` | Session closure — retrospective learning + system compounding |
 
-### Maintenance
+### Review & Maintenance
 
 | Command | Purpose |
 | ------- | ------- |
+| `work-review` | Feature-branch code review — 4 parallel reviewers, severity-based auto-fix, user-escalated decisions |
 | `hygiene` | Iterative codebase review — 3 agents, multiple rounds until plateau |
 
 ### Ideas
@@ -48,7 +49,7 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 ## Workflow
 
 ```
-plan-init → plan-refine-internal → beadify → bead-refine → bead-work → bead-land
+plan-init → plan-refine-internal → beadify → bead-refine → bead-work → work-review → bead-land
 ```
 
 ## Dependencies
