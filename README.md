@@ -8,6 +8,7 @@ Drop into `.claude/` for Claude Code, or use standalone from the terminal.
 
 | Skill | What it does |
 |-------|-------------|
+| **[openrouter](./skills/openrouter/)** | Access 400+ AI models. Discover, select, and query the right model for any task |
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
 ## Commands
@@ -25,7 +26,7 @@ _Coming soon._
 ## Quick Start
 
 1. `export OPENROUTER_API_KEY=sk-or-...` ([get one here](https://openrouter.ai/keys))
-2. `pip install openai`
+2. `pip install openrouter-cli` (for openrouter skill) or `pip install openai` (for expert-consensus)
 3. Copy into your project:
 
 ```bash
