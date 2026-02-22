@@ -1,6 +1,6 @@
 # Agent Compounds
 
-Tools and skills that compound. Each builds on the last.
+Agentic tools that compound. Each builds on the last.
 
 Drop into `.claude/` for Claude Code, or use standalone from the terminal.
 
