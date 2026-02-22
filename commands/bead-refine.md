@@ -10,8 +10,8 @@ description: Refine bead structure before implementation — iterative rounds un
 
 |                  |                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------ |
-| **Input**        | Beads created via `/my-flywheel:beadify`                                                         |
-| **Output**       | Refined beads ready for `/my-flywheel:bead-work`                                                 |
+| **Input**        | Beads created via `/beadify`                                                         |
+| **Output**       | Refined beads ready for `/bead-work`                                                 |
 | **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`, `br ready --json`                                  |
 
@@ -364,7 +364,7 @@ Verify:
 
 ### Next Steps
 
-1. **Implement** -> `/my-flywheel:bead-work`
+1. **Implement** -> `/bead-work`
 2. **Further refine** -> Run again with updated beads
 3. **Review beads** -> `bv` for visual overview
 ```
@@ -414,4 +414,4 @@ release_file_reservations(project_key, agent_name)
 
 ---
 
-_Bead refine: parallel agents iterate until severity-converged. For implementation: `/my-flywheel:bead-work`. For landing: `/my-flywheel:bead-land`._
+_Bead refine: parallel agents iterate until severity-converged. For implementation: `/bead-work`. For landing: `/bead-land`._

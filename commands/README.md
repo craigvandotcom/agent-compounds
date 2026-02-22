@@ -27,7 +27,7 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 
 | Command | Purpose |
 | ------- | ------- |
-| `bead-create` | Convert refined plan to beads task structure |
+| `beadify` | Convert refined plan to beads task structure |
 | `bead-refine` | Refine bead structure — 3 parallel reviewers, severity-based convergence |
 | `bead-work` | Sequential implementation — conductor + engineer sub-agents |
 | `bead-land` | Session closure — retrospective learning + system compounding |
@@ -48,7 +48,7 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 ## Workflow
 
 ```
-plan-init → plan-refine-internal → bead-create → bead-refine → bead-work → bead-land
+plan-init → plan-refine-internal → beadify → bead-refine → bead-work → bead-land
 ```
 
 ## Dependencies

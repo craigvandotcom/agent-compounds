@@ -21,6 +21,21 @@ description: Multi-model iterative plan refinement - sends plan to 3-4 AI models
 
 **MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting.**
 
+### Register with Agent Mail (if available)
+
+```bash
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+```
+
+```
+macro_start_session(
+  human_key: "$PROJECT_ROOT",
+  program: "claude-code",
+  model: "<your model>",
+  task_description: "plan-refine-external session"
+)
+```
+
 ### Identify Plan File
 
 **Ask user or detect:**
@@ -670,17 +685,17 @@ cat >> "$WORK_DIR/REFINEMENT-LOG.md" <<BREAKDOWN
 
 ## High-Value Contributions by Model
 
-**Claude Sonnet:**
-[Summary of Sonnet's best contributions across rounds]
-
-**Gemini Pro:**
+**Gemini:**
 [Summary of Gemini's best contributions across rounds]
 
 **GPT:**
 [Summary of GPT's best contributions across rounds]
 
-**DeepSeek:**
-[Summary of DeepSeek's best contributions across rounds]
+**Kimi:**
+[Summary of Kimi's best contributions across rounds]
+
+**GLM:**
+[Summary of GLM's best contributions across rounds]
 
 ---
 
@@ -734,20 +749,21 @@ git status --short
 ### Commit Refinement Artifacts
 
 ```bash
-# Add all refinement artifacts
+# Copy refinement log to project for version control
+cp "$WORK_DIR/REFINEMENT-LOG.md" .claude/plans/research/ 2>/dev/null || true
+
+# Commit refined plan + log
 git add "$PLAN_FILE"
-git add "$WORK_DIR"/*.md
+git add .claude/plans/research/REFINEMENT-LOG.md 2>/dev/null || true
 
 # Create commit with detailed message
-git commit -m "$(cat <<'EOF'
+git commit -m "$(cat <<EOF
 docs(plan): multi-model refinement - $CURRENT_ROUND rounds complete
 
 Plan: $PLAN_FILE
-Models: Claude Sonnet, Gemini Pro, GPT, DeepSeek
+Models: ${MODELS[@]}
 Rounds: $CURRENT_ROUND
 Improvements: [X total - Y structural, Z significant]
-
-Refinement log: $WORK_DIR/REFINEMENT-LOG.md
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
@@ -835,7 +851,7 @@ AskUserQuestion(
     multiSelect: false,
     options: [
       { label: "Beadify (Recommended)", description: "Run /beadify — convert refined plan to beads with parallel validation" },
-      { label: "Enhance further", description: "Run /plan-enhancer-alien — alien-level paradigm-breaking improvements" },
+      { label: "Enhance further", description: "Run /plan-transcender-alien — paradigm-breaking alternative perspectives" },
       { label: "Implement directly", description: "Start building from refined plan" },
       { label: "Review artifacts", description: "Inspect model responses and refinement log before deciding" }
     ]
@@ -937,20 +953,20 @@ FOCUS
 
 **Works well BEFORE:**
 
-- `/flywheel:plan-enhancer-alien` - Alien-level enhancement after refinement
+- `/plan-transcender-alien` - Paradigm-breaking alternative perspectives
 - Implementation - Start building from validated plan
 
 **Works well AFTER:**
 
-- `/prompts:brainstorm` - Explore approaches first, refine selected one
+- Initial brainstorming / ideation
 - Manual drafting - Get initial plan down, then refine
 
 **Example workflow:**
 
-1. **Brainstorm** → `/prompts:brainstorm` - Explore approaches
+1. **Brainstorm** → Explore approaches (ideation)
 2. **Draft** → Manual initial plan based on brainstorm recommendation
-3. **Refine** → `/flywheel:plan-refine` (this command) - Multi-model refinement
-4. **Enhance** → `/flywheel:plan-enhancer-alien` - Alien perspective
+3. **Refine** → `/plan-refine-external` (this command) - Multi-model refinement
+4. **Enhance** → `/plan-transcender-alien` - Alien perspective
 5. **Implement** → Execute refined plan
 
 **Complementary commands:**
@@ -1094,4 +1110,4 @@ openrouter --model MODEL_ID --file /path/to/prompt.md --no-stream 2>/dev/null > 
 
 ---
 
-_Inspired by Jeffrey Emanuel's APR (Automated Plan Reviser Pro). Adapted for Claude Code + OpenRouter by PAI System._
+_Inspired by Jeffrey Emanuel's APR (Automated Plan Reviser Pro). Adapted for Claude Code + OpenRouter._

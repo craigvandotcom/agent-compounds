@@ -85,7 +85,7 @@ TaskCreate(subject: "Phase 2: Validation baseline", description: "Capture curren
 
 TaskCreate(subject: "Phase 3: Synthesize plan", description: "Combine exploration findings into actionable implementation plan", activeForm: "Creating plan...")
 
-TaskCreate(subject: "Phase 4: Get approval and commit", description: "Present plan for Craig's approval, then commit artifacts to main", activeForm: "Awaiting approval...")
+TaskCreate(subject: "Phase 4: Get approval and commit", description: "Present plan for user approval, then commit artifacts to main", activeForm: "Awaiting approval...")
 ```
 
 ### Compaction Recovery
@@ -163,7 +163,7 @@ Write findings to .claude/plans/research/YYYY-MM-DD-HHMM-exploration-patterns-[f
 
 For each pattern found:
 ## Pattern N: Title
-**File(s):** path/to/file.ts:line
+**File(s):** path/to/file:line
 **What it does:** {description}
 **Relevance:** How the new feature should use this pattern
 **Evidence:** Code snippet or reference
@@ -197,7 +197,7 @@ For each dependency:
 ## Dependency N: Title
 **Type:** Library | API Route | DB Table | Config | New Requirement
 **Current state:** {exists/needs creation/needs modification}
-**File(s):** path/to/file.ts:line
+**File(s):** path/to/file:line
 **Details:** What's available and what's needed
 **Evidence:** Import paths, function signatures, schema definitions
 
@@ -229,7 +229,7 @@ Write findings to .claude/plans/research/YYYY-MM-DD-HHMM-exploration-constraints
 For each constraint:
 ## Constraint N: Title
 **Type:** Validation | Auth | Performance | Mobile | Testing | Security
-**File(s):** path/to/file.ts:line
+**File(s):** path/to/file:line
 **Impact:** How this constrains the implementation
 **Evidence:** Code reference showing the constraint
 
@@ -334,7 +334,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 [What exactly constitutes success - machine-verifiable]
 
 **Validation Command:**
-[Exact command to run - e.g., pnpm test tests/e2e/camera-capture.spec.ts]
+[Exact command to run - e.g., pytest tests/test_feature.py, pnpm test tests/feature.spec.ts]
 
 **Expected Outcome:**
 [What passing looks like - e.g., "All 3 assertions pass, journey completes"]
@@ -349,7 +349,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 test_specs:
   silver_bullet:
-    file: 'tests/e2e/[feature].spec.ts'
+    file: '[test-file-path]'
     type: 'Journey' # Journey | Screenshot | API | Performance | Custom
     description: '[What this test verifies]'
     assertions:
@@ -359,7 +359,7 @@ test_specs:
 
   supporting_tests:
     - name: '[Test 1 Name]'
-      file: 'tests/unit/[path].test.ts'
+      file: '[unit-test-file-path]'
       type: 'Unit'
       description: '[What it verifies]'
       cases:
@@ -368,7 +368,7 @@ test_specs:
         - '[error case]'
 
     - name: '[Test 2 Name]'
-      file: 'tests/integration/[path].test.ts'
+      file: '[integration-test-file-path]'
       type: 'Integration'
       description: '[What it verifies]'
       cases:
@@ -376,7 +376,7 @@ test_specs:
         - '[case 2]'
 ```
 
-**Why structured YAML:** Machine-parseable by implementation commands. Tests designed before code prevents "cheating". Craig reviews specs. Engineer implements to spec, can't modify requirements.
+**Why structured YAML:** Machine-parseable by implementation commands. Tests designed before code prevents "cheating". User reviews specs. Engineer implements to spec, can't modify requirements.
 
 ### Step 6: Document Baseline vs Target
 
@@ -453,12 +453,13 @@ If any gaps are blocking, use `AskUserQuestion` to clarify before proceeding.
 **Type:** BUILD | IMPROVE | FIX
 **Complexity:** MINIMAL
 
-## Backlog Items
+## Backlog Items (optional)
 
-<!-- Link backlog items this plan addresses -->
+<!-- Link backlog items this plan addresses, if using a backlog system -->
+<!-- e.g., _backlog/XXX-primary-item.md, GitHub issue #123, Jira ticket -->
 
-- `_backlog/XXX-primary-item.md` (primary)
-- `_backlog/YYY-related-item.md` (related, if any)
+- (primary item)
+- (related, if any)
 
 ## Success Criterion
 
@@ -687,14 +688,14 @@ release_file_reservations(project_key, agent_name)
 
 | Complexity | Recommended Next Step                                            |
 | ---------- | ---------------------------------------------------------------- |
-| MINIMAL    | `/bead-work` directly (if beads exist) or `/work` (linear)       |
+| MINIMAL    | `/bead-work` directly (if beads exist) or implement from plan    |
 | MORE       | `/plan-refine-internal` -> `/beadify` -> `/bead-work`            |
 | A LOT      | `/plan-refine-internal` or `/plan-refine-external` -> `/beadify` |
 
 **Flywheel commands:**
 
 - `/plan-refine-internal` - Multi-agent plan refinement (light/medium/heavy tiers)
-- `/plan-refine-external` - Multi-model refinement via OpenRouter (5 external models)
+- `/plan-refine-external` - Multi-model refinement via OpenRouter (multiple external models)
 - `/beadify` - Convert plan to beads with parallel validation
 - `/bead-refine` - Refine bead structure (severity-based convergence)
 - `/bead-work` - Sequential implementation (conductor + engineer sub-agents)
@@ -719,7 +720,7 @@ AskUserQuestion(
     options: [
       { label: "Refine plan (Recommended)", description: "Run /plan-refine-internal — multi-agent refinement before beadification" },
       { label: "Beadify directly", description: "Run /beadify — convert plan to beads (skip refinement for simple plans)" },
-      { label: "External multi-model refine", description: "Run /plan-refine-external — 5 diverse AI models for critical decisions" },
+      { label: "External multi-model refine", description: "Run /plan-refine-external — multiple diverse AI models for critical decisions" },
       { label: "Done for now", description: "Plan saved — pick up implementation later" }
     ]
   }]
@@ -732,7 +733,7 @@ AskUserQuestion(
 
 ## Flexibility & Overrides
 
-### Craig Can Adjust Process
+### User Can Adjust Process
 
 **"Just do a quick plan"**
 -> Skip parallel exploration, use single-pass analysis
@@ -743,7 +744,7 @@ AskUserQuestion(
 **"Skip validation baseline"**
 -> Proceed without tool verification (risky but fast)
 
-**Trust Craig's judgment on when to follow/skip steps.**
+**Trust the user's judgment on when to follow/skip steps.**
 
 ---
 
@@ -756,7 +757,7 @@ AskUserQuestion(
 - **Artifacts survive compaction** — always read from files, not memory
 - **Progress file is compaction recovery** — parse it to know where you left off
 - **Plans commit to main** — low-risk documentation, always pushed
-- **WAIT for approval** — never proceed without Craig's explicit "yes"
+- **WAIT for approval** — never proceed without the user's explicit approval
 
 ---
 

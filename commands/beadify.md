@@ -10,8 +10,8 @@ Convert refined plan to beads task structure using beads_rust.
 
 |                  |                                                                                |
 | ---------------- | ------------------------------------------------------------------------------ |
-| **Input**        | Refined plan file (from `/my-flywheel:plan-refine-internal` or `/plan-review`) |
-| **Output**       | Beads created in `br` with dependencies, ready for `/my-flywheel:bead-refine`  |
+| **Input**        | Refined plan file (from `/plan-refine-internal` or `/plan-review-genius`) |
+| **Output**       | Beads created in `br` with dependencies, ready for `/bead-refine`  |
 | **Artifacts**    | Validation findings in `$ARTIFACTS_DIR/validation-*.md`                        |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`                                   |
 
@@ -361,8 +361,8 @@ bv
 
 ### Next Steps
 
-1. **Refine beads** -> `/my-flywheel:bead-refine` (recommended — severity-based convergence)
-2. **Implement directly** -> `/my-flywheel:bead-work` (if confident in structure)
+1. **Refine beads** -> `/bead-refine` (recommended — severity-based convergence)
+2. **Implement directly** -> `/bead-work` (if confident in structure)
 3. **Review visually** -> `bv` for TUI overview
 ```
 
@@ -399,4 +399,4 @@ release_file_reservations(project_key, agent_name)
 
 ---
 
-_Beadify: plan -> beads with parallel validation. For refinement: `/my-flywheel:bead-refine`. For implementation: `/my-flywheel:bead-work`._
+_Beadify: plan -> beads with parallel validation. For refinement: `/bead-refine`. For implementation: `/bead-work`._

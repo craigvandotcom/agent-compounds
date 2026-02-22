@@ -199,8 +199,8 @@ You are a structural reviewer checking architecture health.
 2. Check dependency health: are imports clean? Any circular deps?
 3. Check test coverage: find test directories/files — are critical paths tested?
 4. Check for:
-   - Components doing too much (SRP violations >150 lines)
-   - Hooks with mixed concerns
+   - Modules/classes doing too much (SRP violations >150 lines)
+   - Functions/modules with mixed concerns
    - API routes missing validation
    - Shared state that should be local (or vice versa)
    - Over-abstraction (wrappers that add nothing)
@@ -409,17 +409,9 @@ release_file_reservations(project_key, agent_name)
 
 ---
 
-## When to Use This vs /work-review
+## When to Use This
 
-|            | `/my-flywheel:hygiene`         | `/work-review`                             |
-| ---------- | ------------------------------ | ------------------------------------------ |
-| **Scope**  | Whole codebase                 | Feature branch diff                        |
-| **When**   | Between sessions, daily        | After `/work` or `/bead-work`              |
-| **Agents** | 3 Opus explorers, multi-round  | 4 specialized Haiku reviewers, single pass |
-| **Fixes**  | Conductor applies directly     | Engineer sub-agent                         |
-| **Focus**  | Bugs, dead code, drift, health | Security, perf, arch, correctness          |
-
-Use both: `hygiene` for general health, `work-review` for pre-merge validation.
+Use `/hygiene` for general codebase health between sessions or as a daily maintenance pass. For feature-specific review before merge, consider a scoped review focused on the feature branch diff.
 
 ---
 
@@ -434,4 +426,4 @@ Use both: `hygiene` for general health, `work-review` for pre-merge validation.
 
 ---
 
-_Hygiene: iterative codebase review for daily maintenance. For feature review: `/work-review`. For session closure: `/my-flywheel:bead-land`._
+_Hygiene: iterative codebase review for daily maintenance. For session closure: `/bead-land`._

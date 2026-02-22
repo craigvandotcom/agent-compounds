@@ -4,7 +4,7 @@ description: Session closure with retrospective learning and system compounding 
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this after `/my-flywheel:bead-work` completes its target beads.
+Run this after `/bead-work` completes its target beads.
 
 ---
 
@@ -31,7 +31,7 @@ macro_start_session(
 ARTIFACTS_DIR=/tmp/bead-work
 ```
 
-Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/my-flywheel:bead-work` first."
+Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/bead-work` first."
 
 Also gather:
 
@@ -154,7 +154,7 @@ git add <specific files>
 git commit -m "chore: bead-work session cleanup
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-````
+```
 
 Only commit if there are uncommitted changes (cleanup, format fixes, etc.).
 

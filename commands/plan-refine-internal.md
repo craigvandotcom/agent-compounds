@@ -10,6 +10,21 @@ Competitive framing: agents compete — only evidence-backed findings count. Cod
 
 ## Phase 0: Initialize
 
+### Register with Agent Mail (if available)
+
+```bash
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+```
+
+```
+macro_start_session(
+  human_key: "$PROJECT_ROOT",
+  program: "claude-code",
+  model: "<your model>",
+  task_description: "plan-refine-internal session"
+)
+```
+
 ### Identify Plan File
 
 `PLAN_FILE`: Check argument, then `.claude/plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
@@ -368,8 +383,8 @@ AskUserQuestion(
     multiSelect: false,
     options: [
       { label: "Beadify (Recommended)", description: "Run /beadify — convert refined plan to beads with parallel validation" },
-      { label: "External multi-model refine", description: "Run /plan-refine-external — 5 diverse AI models for deeper review" },
-      { label: "Implement directly", description: "Run /work or /taskify — skip beadification for simpler plans" },
+      { label: "External multi-model refine", description: "Run /plan-refine-external — multiple diverse AI models for deeper review" },
+      { label: "Implement directly", description: "Skip beadification — implement from plan directly" },
       { label: "Done for now", description: "Plan saved and committed — pick up later" }
     ]
   }]
@@ -389,4 +404,4 @@ AskUserQuestion(
 
 ---
 
-_3-tier plan refinement (light/medium/heavy). For external multi-model: `/my-flywheel:plan-refine`._
+_3-tier plan refinement (light/medium/heavy). For external multi-model: `/plan-refine`._

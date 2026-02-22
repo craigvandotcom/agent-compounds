@@ -4,7 +4,7 @@ description: Sequential bead implementation — conductor reviews, engineers imp
 
 **You are the conductor.** Engineers implement. You review, verify, and commit. One bead at a time. Quality over velocity.
 
-For parallelism, open multiple terminal sessions — each runs `/my-flywheel:bead-work` independently, coordinated via Agent Mail.
+For parallelism, open multiple terminal sessions — each runs `/bead-work` independently, coordinated via Agent Mail.
 
 ---
 
@@ -33,7 +33,7 @@ macro_start_session(
 br ready --json
 ```
 
-If no unblocked beads, STOP: "No unblocked beads. Run `/my-flywheel:bead-refine` first, or check `br list --json` for blocked items."
+If no unblocked beads, STOP: "No unblocked beads. Run `/bead-refine` first, or check `br list --json` for blocked items."
 
 ### Ensure Wave Branch
 
@@ -232,7 +232,7 @@ MANDATORY: Write your implementation report to $ARTIFACTS_DIR/bead-<id>-result.m
 
 3. **Test coverage verification** — confirm the engineer actually wrote new tests:
    - Read the engineer's result file for "Test files created/modified"
-   - If the bead adds new functionality (components, hooks, utils, API routes) there MUST be new test files or new test cases
+   - If the bead adds new functionality (modules, handlers, utilities, etc.) there MUST be new test files or new test cases
    - If the engineer's report lists zero new tests for new code, **re-spawn the engineer** with explicit instructions to add test coverage
    - Pure refactors or config changes may not need new tests — use judgment
 
@@ -245,7 +245,7 @@ MANDATORY: Write your implementation report to $ARTIFACTS_DIR/bead-<id>-result.m
    git diff
    ```
 
-UI validation is deferred to `/my-flywheel:bead-land` where it runs once for the entire session with pre-authenticated browser state. This saves ~N browser-tester agent spawns (one per bead) without reducing coverage.
+UI validation is deferred to `/bead-land` where it runs once for the entire session with pre-authenticated browser state. This saves ~N browser-tester agent spawns (one per bead) without reducing coverage.
 
 **If minor issues:** Fix them directly. You are the conductor — small fixes are faster than re-spawning.
 
@@ -343,7 +343,7 @@ If any fail, fix the issues before proceeding.
 
 ### Next Steps
 
-**Always run `/my-flywheel:bead-land` next.** It handles:
+**Always run `/bead-land` next.** It handles:
 
 - Clean git push
 - Retrospective learning from this session
@@ -387,8 +387,8 @@ AskUserQuestion(
 ## Multi-Session Parallelism
 
 ```
-Terminal 1: /my-flywheel:bead-work   → "target 5 beads"
-Terminal 2: /my-flywheel:bead-work   → "target 5 beads"
+Terminal 1: /bead-work   → "target 5 beads"
+Terminal 2: /bead-work   → "target 5 beads"
 
 Each session independently:
 - Registers with Agent Mail (unique identity)
@@ -407,7 +407,7 @@ Each session independently:
 - **Release file reservations on error paths** (parallel mode)
 - **Temp files survive compaction** — read from `$ARTIFACTS_DIR`, not memory
 - **Progress file is compaction recovery** — parse it on restart for TARGET_BEADS + SESSION_MODE
-- **Per-bead: tests + type-check + lint. Full suite (including build:check) at session end.**
+- **Per-bead: tests + type-check + lint. Full quality gate at session end.**
 - **UI validation runs once at session end** (in bead-land) — not per-bead
 - **No new code without new tests** — verify engineer wrote tests before approving
 - **"Bead X of N" task naming prevents drift** — the task list IS the stop condition
@@ -415,4 +415,4 @@ Each session independently:
 
 ---
 
-_Bead work: sequential implementation with quality gates. For planning: `/my-flywheel:bead-refine`. For landing: `/my-flywheel:bead-land`._
+_Bead work: sequential implementation with quality gates. For planning: `/bead-refine`. For landing: `/bead-land`._
