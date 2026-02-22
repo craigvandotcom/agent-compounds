@@ -4,3 +4,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Plans and research (local only, not shipped)
+_plans/
