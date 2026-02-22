@@ -34,7 +34,7 @@ _Coming soon._
 ## Quick Start
 
 1. `export OPENROUTER_API_KEY=sk-or-...` ([get one here](https://openrouter.ai/keys))
-2. `pip install openrouter-cli` (for openrouter skill) or `pip install openai` (for expert-consensus)
+2. `pip install orcli` (for openrouter skill) or `pip install openai` (for expert-consensus)
 3. Copy into your project:
 
 ```bash
