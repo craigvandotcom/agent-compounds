@@ -41,6 +41,12 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 | `wave-merge` | Merge wave branch to main — PR creation, CI/agent feedback triage, auto-fix, merge |
 | `hygiene` | Iterative codebase review — 3 Opus agents, multiple rounds until plateau |
 
+### Dashboard
+
+| Command | Purpose |
+| ------- | ------- |
+| `next` | Pipeline dashboard — scan backlog/plans/beads, show funnel status, offer next action |
+
 ### Meta
 
 | Command | Purpose |
@@ -57,7 +63,9 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 ## Workflow
 
 ```
-plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-land → work-review → wave-merge
+next → plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-land → work-review → wave-merge
+ ↑                                                                                    |
+ └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Dependencies
