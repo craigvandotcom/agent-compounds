@@ -48,12 +48,15 @@ Categorize every bead into one of:
 
 | Category | Criteria |
 |----------|----------|
-| **Ready** | Appears in `br ready` output (status=open, all deps satisfied) |
+| **Ready (refined)** | In `br ready` output AND does NOT have `unrefined` label |
+| **Ready (unrefined)** | In `br ready` output AND has `unrefined` label — needs `/bead-refine` first |
 | **Blocked** | status=open but NOT in ready list (has unsatisfied deps) |
 | **In Progress** | status=in_progress |
 | **Closed** | status=closed or done |
 
 For each epic (beads with `dependent_count > 3` or "epic" in title), count: total children, ready children, blocked children, closed children.
+
+**Important:** Only beads WITHOUT the `unrefined` label are truly ready for `/bead-work`. Unrefined beads need `/bead-refine` first.
 
 ### Scan B: Plans
 
@@ -62,11 +65,12 @@ For each epic (beads with `dependent_count > 3` or "epic" in title), count: tota
 ls "$PROJECT_ROOT/.claude/plans/"*.md 2>/dev/null
 ```
 
-For each plan file, read the first 50 lines to determine:
+For each plan file, read the frontmatter and first 50 lines to determine:
 
-1. **Has matching beads?** — Check if any bead's `description` field references the plan filename. If yes, mark as "beadified".
-2. **Approval state** — Look for markers like `APPROVED`, `Status: approved`, `## Approval`, or similar in the plan content. If absent, mark as "needs refinement".
+1. **Status from frontmatter** — `status: draft | refined | approved | beadified | done`. This is the primary signal.
+2. **Fallback (no frontmatter):** Check for `## Refinement Log` (→ refined), `Status: Approved` text (→ approved), bead references (→ beadified). Flag as needing frontmatter fix (recommend `/backlog-tidy`).
 3. **Size** — File size as a rough complexity indicator.
+4. **Refinement depth** — `refinement_rounds` from frontmatter (0 = unrefined).
 
 Skip: `README.md`, files in `_done/`, `research/`, `refinement-reports/`, `templates/`, `review/`, `checkpoints/`, `testing/`.
 
@@ -98,11 +102,12 @@ Build a single ordered list by pipeline stage (most actionable first):
 
 ### Priority Order
 
-1. **Ready beads** — can be built right now. Sort by: priority (desc), then dependency_count (asc, prefer leaf beads).
-2. **Plans ready to beadify** — approved plans with no matching beads in `br`. These are one `/beadify` away from implementation.
-3. **Plans needing refinement** — draft plans that need `/plan-refine-internal` or review.
-4. **Backlog needing planning** — captured items not yet covered by any plan. These need `/plan-init`.
-5. **Blocked beads** — shown as epic summaries for awareness, not actionable directly.
+1. **Ready beads (refined)** — can be built right now. No `unrefined` label. Sort by: priority (desc), then dependency_count (asc, prefer leaf beads).
+2. **Unrefined beads** — have `unrefined` label. Need `/bead-refine` before implementation.
+3. **Plans ready to beadify** — frontmatter `status: approved` (or `status: refined` if no further approval needed). These are one `/beadify` away from implementation.
+4. **Plans needing refinement** — frontmatter `status: draft`. Need `/plan-refine-internal`.
+5. **Backlog needing planning** — frontmatter `status: captured`. Need `/plan-init`.
+6. **Blocked beads** — shown as epic summaries for awareness, not actionable directly.
 
 ---
 
@@ -113,11 +118,16 @@ Output a concise funnel report. Use exact counts. No fluff.
 ```
 ## Pipeline Status
 
-### Ready to Build ({count} beads)
+### Ready to Build ({count} beads, refined)
   {id}  {title}  [{priority}, {dep info}]
   {id}  {title}  [{priority}, {dep info}]
   ...
   (show top 8, then "{N} more..." if truncated)
+
+### Needs Bead Refinement ({count} beads, unrefined)
+  {id}  {title}  [{priority}]
+  ...
+  (show top 5, then "{N} more...")
 
 ### In Progress ({count} beads)
   {id}  {title}  [claimed by {user}]
@@ -158,9 +168,10 @@ Generate up to 4 options from the prioritized list. Each option maps to a specif
 
 | Category | Action Label | Suggested Command |
 |----------|-------------|-------------------|
-| Ready beads | "Build: {bead_id} — {title}" | `/bead-work` |
+| Ready beads (refined) | "Build: {bead_id} — {title}" | `/bead-work` |
+| Unrefined beads | "Refine beads: {epic_name}" | `/bead-refine` |
 | Plans to beadify | "Beadify: {filename}" | `/beadify {path}` |
-| Plans to refine | "Refine: {filename}" | `/plan-refine-internal {path}` |
+| Plans to refine | "Refine plan: {filename}" | `/plan-refine-internal {path}` |
 | Backlog to plan | "Plan: {filename}" | `/plan-init` (reference the backlog) |
 
 Present via `AskUserQuestion`:
@@ -204,10 +215,12 @@ Target bead bd-2ec.4 (transition_zone RPC) — it's highest priority with no blo
 
 - **Read-only** — no file writes, no bead mutations, no git operations
 - **Fast** — scan and report, don't analyze deeply. Plans get 50 lines, not full reads
+- **Frontmatter first** — use `status:` field and `unrefined` label as primary signals. Fall back to content parsing only if frontmatter missing
 - **Honest** — if cross-referencing is ambiguous, say so. Don't guess plan↔bead mappings
 - **Stateless** — no artifacts, no temp files, no progress tracking
 - **Omit empty sections** — only show categories that have items
 - **"Just browsing" always available** — not every scan leads to action
+- **Recommend `/backlog-tidy` first** — if many plans lack frontmatter, suggest running tidy before next
 
 ---
 

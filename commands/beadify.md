@@ -192,7 +192,7 @@ You are validating the granularity and sizing of a proposed bead breakdown. You 
 
 ## Your Task
 
-Check that each bead is right-sized for a single engineer session — not too big (needs splitting), not too small (merge candidate).
+Check that each bead is right-sized for a single agent session — not too big (needs splitting), and rich enough to be self-contained. Bias toward MORE detail per bead, not less. Thin beads that lack context force agents back to the plan — that's a failure.
 
 ## Inputs
 
@@ -202,11 +202,12 @@ Check that each bead is right-sized for a single engineer session — not too bi
 ## Check
 
 For each proposed bead:
-1. Can an engineer implement this in one focused session? (If >5 files or >2 concerns -> split)
-2. Is it too trivial? (<30 min with no dependents -> merge candidate)
+1. Can an agent implement this in one focused session? (If >5 files or >2 concerns -> split)
+2. Is it self-contained? (Must include enough context, acceptance criteria, and reasoning that an agent NEVER needs the original plan)
 3. Does it mix backend + frontend work? (-> split candidate)
 4. Is the acceptance criteria clear enough for mechanical implementation?
 5. Are priorities (P0/P1/P2) assigned correctly? (P0 = critical path, P2 = deferrable)
+6. Does it include test requirements? (Every bead should specify what to test)
 
 ## Output
 
@@ -216,8 +217,8 @@ For each issue:
 ## Issue N: Title
 **Severity:** Critical | High | Medium
 **Bead(s):** <which beads>
-**Problem:** Too big / too small / mixed concerns / wrong priority
-**Fix:** Split into X+Y, merge A+B, reassign priority
+**Problem:** Too big / too thin (lacking context) / mixed concerns / wrong priority
+**Fix:** Split into X+Y, enrich A with missing context, reassign priority
 
 Limit: top 5 issues. Under 400 words. If granularity is good, say so.
 """)
@@ -291,8 +292,19 @@ Each bead description must be **self-contained**:
 - Test requirements included
 - No need to reference original plan
 - "So detailed that we never need the plan again"
+- Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context
 
 Use `--description` for the core spec and `br comments add` for supplementary context (background, reasoning, edge cases).
+
+### Label All Beads as Unrefined
+
+**Every bead created by beadify gets the `unrefined` label.** This signals to `/backlog-next` and `/bead-work` that these beads have not yet been through `/bead-refine`.
+
+```bash
+br label add <id> "unrefined"
+```
+
+This label is removed by `/bead-refine` when convergence is reached.
 
 ### Create Commands Reference
 
@@ -337,37 +349,61 @@ br dep tree <epic-id>
 bv
 ```
 
+### Archive Source Plan
+
+**Once beads are created, the plan is a historical artifact.** Beads are now the source of truth. Archive the plan to enforce this.
+
+1. Update plan frontmatter:
+```yaml
+---
+status: beadified
+beadified_at: YYYY-MM-DD
+---
+```
+
+2. Move plan to `_done/`:
+```bash
+mv "$PLAN_FILE" "$PROJECT_ROOT/.claude/plans/_done/$(basename $PLAN_FILE)"
+```
+
+3. Add a reference comment to the epic bead:
+```bash
+br comments add <epic-id> "Source plan archived: .claude/plans/_done/$(basename $PLAN_FILE)"
+```
+
+**Why archive?** If beads still need the plan, they're not self-contained enough. Archiving forces this discipline. The plan is preserved in `_done/` — it's not deleted, just removed from the active workspace.
+
 ### Report
 
 ```markdown
 ## Beadification Complete
 
-**Plan:** {PLAN_FILE}
+**Plan:** {PLAN_FILE} (archived to _done/)
 **Epics created:** {count}
-**Beads created:** {count}
+**Beads created:** {count} (all labeled `unrefined`)
 **Dependencies:** {count}
-**Ready to implement:** {count} (`br ready`)
+**Ready to implement:** {count} (`br ready`) — after refinement
 **Dep cycles:** {clean/issues}
 
-### Next Steps
+### Next Step
 
-1. **Refine beads** -> `/bead-refine` (recommended — severity-based convergence)
-2. **Implement directly** -> `/bead-work` (if confident in structure)
-3. **Review visually** -> `bv` for TUI overview
+**Refine beads** -> `/bead-refine` (severity-based convergence with 3 parallel reviewers)
+
+> "Check your beads N times, implement once." Planning tokens are cheaper than implementation tokens. Bead refinement is not optional — it's where the `unrefined` label gets removed and beads become truly agent-ready.
 ```
 
-**Present next step choice with `AskUserQuestion`:**
+**Proceed directly to `/bead-refine`.** Only skip if the user explicitly opts out:
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Beadification complete. What's next?",
-    header: "Next step",
+    question: "Proceeding to /bead-refine (bead refinement is essential). Skip?",
+    header: "Refine",
     multiSelect: false,
     options: [
-      { label: "Refine beads (Recommended)", description: "Run /bead-refine — severity-based convergence with 3 parallel reviewers" },
-      { label: "Implement directly", description: "Run /bead-work — skip refinement, start building (only if confident in structure)" },
-      { label: "Review visually", description: "Open bv TUI for manual inspection before deciding" }
+      { label: "Refine beads", description: "Run /bead-refine — recommended, ensures beads are self-contained and agent-ready" },
+      { label: "Skip refinement", description: "Go straight to /bead-work — only if you've already refined manually" },
+      { label: "Review visually first", description: "Open bv TUI to inspect before refining" }
     ]
   }]
 )

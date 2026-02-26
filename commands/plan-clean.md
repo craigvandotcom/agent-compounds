@@ -312,6 +312,18 @@ AskUserQuestion(
 
 Apply any user-approved findings using the Edit tool.
 
+### Update Plan Frontmatter
+
+Update the YAML frontmatter to reflect the plan is now clean and approved:
+
+```yaml
+---
+status: approved
+---
+```
+
+Preserve all other existing frontmatter fields (`refinement_rounds`, `refinement_tier`, `source_backlog`, etc.).
+
 ### Safety Check and Commit
 
 ```bash

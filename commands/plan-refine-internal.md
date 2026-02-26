@@ -393,6 +393,20 @@ AskUserQuestion(
 
 **Apply any user-approved findings using the Edit tool.**
 
+### Update Plan Frontmatter
+
+Update the YAML frontmatter at the top of the plan file to reflect refinement state:
+
+```yaml
+---
+status: refined
+refinement_rounds: {CURRENT_ROUND}
+refinement_tier: {TIER}
+---
+```
+
+Preserve all other existing frontmatter fields (`source_backlog`, `approved_at`, etc.).
+
 ### Safety Check and Commit
 
 ```bash

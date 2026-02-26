@@ -13,6 +13,14 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 
 ## Commands
 
+### Backlog Management
+
+| Command | Purpose |
+| ------- | ------- |
+| `backlog-add` | Capture ideas with smart grouping — checks existing files, beads, and plans for duplicates |
+| `backlog-tidy` | Pipeline housekeeping — archive completed items, reconcile statuses, flag orphans, suggest merges |
+| `backlog-next` | Pipeline dashboard — scan backlog/plans/beads, show funnel status, offer next action |
+
 ### Planning
 
 | Command | Purpose |
@@ -28,8 +36,8 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 
 | Command | Purpose |
 | ------- | ------- |
-| `beadify` | Convert refined plan to beads task structure |
-| `bead-refine` | Refine bead structure — 3 parallel reviewers, severity-based convergence |
+| `beadify` | Convert refined plan to beads (labels `unrefined`), archive plan to `_done/` |
+| `bead-refine` | Refine bead structure — removes `unrefined` label on convergence |
 | `bead-work` | Sequential implementation — conductor + engineer sub-agents |
 | `bead-land` | Session closure — retrospective learning + system compounding |
 
@@ -40,12 +48,6 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 | `work-review` | Feature-branch code review — 4 parallel Sonnet reviewers, severity-based auto-fix, user-escalated decisions |
 | `wave-merge` | Merge wave branch to main — PR creation, CI/agent feedback triage, auto-fix, merge |
 | `hygiene` | Iterative codebase review — 3 Opus agents, multiple rounds until plateau |
-
-### Dashboard
-
-| Command | Purpose |
-| ------- | ------- |
-| `next` | Pipeline dashboard — scan backlog/plans/beads, show funnel status, offer next action |
 
 ### Meta
 
@@ -63,10 +65,26 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 ## Workflow
 
 ```
-next → plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-land → work-review → wave-merge
- ↑                                                                                    |
- └────────────────────────────────────────────────────────────────────────────────────────┘
+backlog-add → backlog-tidy → backlog-next → plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-land → work-review → wave-merge
+         ↑                                                                                                                                          |
+         └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Pipeline Lifecycle
+
+Items flow through the pipeline with tracked status at each stage:
+
+```
+Backlog (captured) → Plan (draft → refined → approved) → Beads (unrefined → refined → implemented → closed)
+```
+
+| Stage | Status Field | Tracked In |
+| ----- | ------------ | ---------- |
+| Backlog | `status:` frontmatter (`captured` → `planned` → `complete`) | `_backlog/**/*.md` |
+| Plan | `status:` frontmatter (`draft` → `refined` → `approved` → `beadified`) | `.claude/plans/*.md` |
+| Bead | `unrefined` label (present → removed by `/bead-refine`) | `br` labels |
+
+**Key rule:** Once beads are created, the plan is archived to `_done/`. Beads are the source of truth — if a bead can't stand alone without the plan, it's not ready.
 
 ## Dependencies
 

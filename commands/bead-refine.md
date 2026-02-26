@@ -332,6 +332,19 @@ AskUserQuestion(
 
 **Apply any user-approved findings using `br` commands.**
 
+### Remove `unrefined` Label
+
+**On successful convergence (Phase 5 reached), remove the `unrefined` label from all beads that were reviewed.**
+
+```bash
+# Remove unrefined label from all open beads
+for id in $(br list --json | jq -r '.[] | select(.status == "open") | .id'); do
+    br label remove "$id" "unrefined" 2>/dev/null
+done
+```
+
+This signals to `/backlog-next` and `/bead-work` that these beads have been through refinement and are agent-ready.
+
 ### Verify Final Structure
 
 ```bash
@@ -346,12 +359,13 @@ bv               # Visual TUI overview
 
 Verify:
 
-- [ ] Beads are self-contained (no need to consult original plan)
+- [ ] Beads are self-contained (no need to consult original plan — plan should already be archived)
 - [ ] Dependencies correctly mapped (`br dep cycles` returns clean)
 - [ ] Tasks appropriately granular for mechanical implementation
 - [ ] Test requirements included in each bead
 - [ ] Comments explain reasoning/justification
 - [ ] Acceptance criteria are clear and verifiable
+- [ ] `unrefined` label removed from all reviewed beads
 
 ### Report
 

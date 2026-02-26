@@ -426,6 +426,12 @@ If any gaps are blocking, use `AskUserQuestion` to clarify before proceeding.
 #### For MINIMAL complexity:
 
 ```markdown
+---
+status: draft
+refinement_rounds: 0
+source_backlog: _backlog/{version}/{filename}.md
+---
+
 # [Feature Name]
 
 ## Summary
@@ -465,6 +471,12 @@ If any gaps are blocking, use `AskUserQuestion` to clarify before proceeding.
 #### For MORE complexity:
 
 ```markdown
+---
+status: draft
+refinement_rounds: 0
+source_backlog: _backlog/{version}/{filename}.md
+---
+
 # [Feature Name]
 
 ## Summary
@@ -643,14 +655,18 @@ git push
 
 ### Update Plan Status
 
-Add to plan document:
+Update the YAML frontmatter at the top of the plan file:
 
-```markdown
+```yaml
 ---
-**Status:** Approved - Ready for Implementation
-**Approved:** YYYY-MM-DD
+status: approved
+refinement_rounds: 0
+source_backlog: _backlog/{version}/{filename}.md
+approved_at: YYYY-MM-DD
 ---
 ```
+
+Also update the source backlog file's frontmatter to `status: planned` and add a `plans:` field linking to this plan (if a `source_backlog` was set).
 
 ### Report Completion and Hand-Off
 
