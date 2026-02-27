@@ -18,7 +18,7 @@ description: Pipeline housekeeping — archive completed items, reconcile plans/
 ## Prerequisites
 
 - beads_rust (`br`) installed — verify with `which br`
-- Project has `_backlog/` and/or `.claude/plans/` directories
+- Project has `_backlog/` and/or `_plans/` directories
 
 ---
 
@@ -53,7 +53,7 @@ For each epic: count total children, closed children, open children.
 ### Scan Plans
 
 ```bash
-ls "$PROJECT_ROOT/.claude/plans/"*.md 2>/dev/null
+ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
 ```
 
 For each plan (skip `README.md`, subdirectories):
@@ -112,7 +112,7 @@ For approved items:
 
 Plans that have been fully converted to beads are historical artifacts — beads are now the source of truth.
 
-**Action:** Propose moving to `.claude/plans/_done/`:
+**Action:** Propose moving to `_plans/_done/`:
 
 ```
 AskUserQuestion(
@@ -130,7 +130,7 @@ AskUserQuestion(
 
 For approved items:
 1. Update frontmatter: `status: done`
-2. Move to `.claude/plans/_done/`
+2. Move to `_plans/_done/`
 
 ### 2c: Archive Completed Plans (All Beads Closed)
 
@@ -241,7 +241,7 @@ Present merge suggestions (if any) via `AskUserQuestion`. Only suggest, never fo
 If any files were moved or updated:
 
 ```bash
-git add -A _backlog/ .claude/plans/
+git add -A _backlog/ _plans/
 git commit -m "$(cat <<'EOF'
 chore: backlog-tidy — archive completed items, reconcile pipeline state
 

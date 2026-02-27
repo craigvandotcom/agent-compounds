@@ -16,7 +16,7 @@ description: Multi-model iterative plan refinement - sends plan to 3-4 AI models
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Plan file (from `/plan-init` or `/plan-refine-internal`)                                   |
-| **Output**       | Refined plan (in-place edit), `REFINEMENT-LOG.md` in `.claude/plans/research/`             |
+| **Output**       | Refined plan (in-place edit), `REFINEMENT-LOG.md` in `_plans/research/`             |
 | **Artifacts**    | Model responses in `$WORK_DIR/`, consensus registry                                        |
 | **Verification** | Convergence trend, plan committed                                                          |
 
@@ -45,7 +45,7 @@ PLAN_FILE: [Path to plan.md]
 If not provided, check common locations:
 
 - `PLAN.md` in project root
-- `.claude/plans/*.md`
+- `_plans/*.md`
 - User-specified path
 
 ### Check for Project Context
@@ -789,11 +789,11 @@ git status --short
 
 ```bash
 # Copy refinement log to project for version control
-cp "$WORK_DIR/REFINEMENT-LOG.md" .claude/plans/research/ 2>/dev/null || true
+cp "$WORK_DIR/REFINEMENT-LOG.md" _plans/research/ 2>/dev/null || true
 
 # Commit refined plan + log
 git add "$PLAN_FILE"
-git add .claude/plans/research/REFINEMENT-LOG.md 2>/dev/null || true
+git add _plans/research/REFINEMENT-LOG.md 2>/dev/null || true
 
 # Create commit with detailed message
 git commit -m "$(cat <<EOF

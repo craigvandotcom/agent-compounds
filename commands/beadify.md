@@ -40,7 +40,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ### Identify Plan File
 
-Check argument, then `.claude/plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
+Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
 
 ### Create Workflow Tasks
 
@@ -363,12 +363,12 @@ beadified_at: YYYY-MM-DD
 
 2. Move plan to `_done/`:
 ```bash
-mv "$PLAN_FILE" "$PROJECT_ROOT/.claude/plans/_done/$(basename $PLAN_FILE)"
+mv "$PLAN_FILE" "$PROJECT_ROOT/_plans/_done/$(basename $PLAN_FILE)"
 ```
 
 3. Add a reference comment to the epic bead:
 ```bash
-br comments add <epic-id> "Source plan archived: .claude/plans/_done/$(basename $PLAN_FILE)"
+br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_FILE)"
 ```
 
 **Why archive?** If beads still need the plan, they're not self-contained enough. Archiving forces this discipline. The plan is preserved in `_done/` — it's not deleted, just removed from the active workspace.

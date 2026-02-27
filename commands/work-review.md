@@ -160,7 +160,7 @@ If uncommitted files exist, ask user whether to commit them first or proceed rev
 ### Load Plan Context (if exists)
 
 ```bash
-ls -la .claude/plans/*.md 2>/dev/null | head -5
+ls -la _plans/*.md 2>/dev/null | head -5
 ```
 
 If a plan exists, read it for success criteria, test specifications, and original requirements.

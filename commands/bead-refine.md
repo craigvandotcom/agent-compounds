@@ -60,7 +60,7 @@ If `$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to re
 
 ### Identify Plan File + Skills
 
-Locate the original plan file (check `.claude/plans/*.md`, ask user if unclear). This is needed for cross-referencing during review.
+Locate the original plan file (check `_plans/*.md`, ask user if unclear). This is needed for cross-referencing during review.
 
 **Skill routing:** Read the beads (`br list --json`) and scan for domain keywords. Check `AGENTS.md` > "Available Skills" for relevant skills. Include skill paths in agent prompts.
 

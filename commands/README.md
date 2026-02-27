@@ -81,7 +81,7 @@ Backlog (captured) → Plan (draft → refined → approved) → Beads (unrefine
 | Stage | Status Field | Tracked In |
 | ----- | ------------ | ---------- |
 | Backlog | `status:` frontmatter (`captured` → `planned` → `complete`) | `_backlog/**/*.md` |
-| Plan | `status:` frontmatter (`draft` → `refined` → `approved` → `beadified`) | `.claude/plans/*.md` |
+| Plan | `status:` frontmatter (`draft` → `refined` → `approved` → `beadified`) | `_plans/*.md` |
 | Bead | `unrefined` label (present → removed by `/bead-refine`) | `br` labels |
 
 **Key rule:** Once beads are created, the plan is archived to `_done/`. Beads are the source of truth — if a bead can't stand alone without the plan, it's not ready.

@@ -78,7 +78,7 @@ STOP — item captured.
 ### Check Plans
 
 ```bash
-ls "$PROJECT_ROOT/.claude/plans/"*.md 2>/dev/null
+ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
 ```
 
 Scan plan filenames and first 30 lines for keyword matches. If a matching plan exists, mention it: "Note: plan `{filename}` may cover related work."

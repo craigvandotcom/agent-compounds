@@ -125,7 +125,7 @@ git diff "$BASE_BRANCH"...HEAD --stat > "$ARTIFACTS_DIR/diff-stats.txt"
 ls .claude/reviews/*.md 2>/dev/null | tail -1
 ```
 
-Also read the plan file (`.claude/plans/*.md`) if it exists for the original intent.
+Also read the plan file (`_plans/*.md`) if it exists for the original intent.
 
 ### Build PR Body
 

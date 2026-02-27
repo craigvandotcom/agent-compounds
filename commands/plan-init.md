@@ -11,8 +11,8 @@ description: Create implementation plans with validation baseline — parallel e
 |                  |                                                                                                      |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | **Input**        | User request (feature, fix, improvement) or backlog item                                             |
-| **Output**       | Approved plan in `.claude/plans/YYYY-MM-DD-HHMM-[feature].md`, ready for `/plan-refine-internal`     |
-| **Artifacts**    | Research in `.claude/plans/research/`, validation baseline, progress in `$ARTIFACTS_DIR/progress.md` |
+| **Output**       | Approved plan in `_plans/YYYY-MM-DD-HHMM-[feature].md`, ready for `/plan-refine-internal`     |
+| **Artifacts**    | Research in `_plans/research/`, validation baseline, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | Plan committed to main, success criterion defined, tools verified                                    |
 
 ## Prerequisites
@@ -79,7 +79,7 @@ TaskCreate(subject: "Phase 4: Get approval and commit", description: "Present pl
 
 ### Compaction Recovery
 
-If `$ARTIFACTS_DIR/progress.md` exists, parse its `### Phase N` entries to recover state. If research files already exist in `.claude/plans/research/`, skip to the next incomplete phase.
+If `$ARTIFACTS_DIR/progress.md` exists, parse its `### Phase N` entries to recover state. If research files already exist in `_plans/research/`, skip to the next incomplete phase.
 
 
 ### Classify the Request
@@ -120,7 +120,7 @@ Before spawning agents, check `AGENTS.md` > "Available Skills" for relevant doma
 
 ### Spawn 3 Explorers Simultaneously
 
-**CRITICAL: All 3 agents run IN PARALLEL using a single message with 3 Task calls.** Each writes findings to `.claude/plans/research/`. Competitive framing: agents compete — only evidence-backed findings count.
+**CRITICAL: All 3 agents run IN PARALLEL using a single message with 3 Task calls.** Each writes findings to `_plans/research/`. Competitive framing: agents compete — only evidence-backed findings count.
 
 **Explorer 1: Patterns**
 
@@ -141,7 +141,7 @@ You are finding existing patterns for [feature] in this codebase. You compete wi
 
 ## Output
 
-Write findings to .claude/plans/research/YYYY-MM-DD-HHMM-exploration-patterns-[feature].md
+Write findings to _plans/research/YYYY-MM-DD-HHMM-exploration-patterns-[feature].md
 
 For each pattern found:
 ## Pattern N: Title
@@ -173,7 +173,7 @@ You are identifying dependencies and APIs needed for [feature]. You compete with
 
 ## Output
 
-Write findings to .claude/plans/research/YYYY-MM-DD-HHMM-exploration-dependencies-[feature].md
+Write findings to _plans/research/YYYY-MM-DD-HHMM-exploration-dependencies-[feature].md
 
 For each dependency:
 ## Dependency N: Title
@@ -206,7 +206,7 @@ You are researching constraints for [feature]. You compete with 2 other explorer
 
 ## Output
 
-Write findings to .claude/plans/research/YYYY-MM-DD-HHMM-exploration-constraints-[feature].md
+Write findings to _plans/research/YYYY-MM-DD-HHMM-exploration-constraints-[feature].md
 
 For each constraint:
 ## Constraint N: Title
@@ -269,7 +269,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 **For bug fixes:** Follow reproduction steps, document broken behavior, confirm you can see the bug.
 
-**Save baseline to:** `.claude/plans/research/YYYY-MM-DD-HHMM-baseline-[feature].md`
+**Save baseline to:** `_plans/research/YYYY-MM-DD-HHMM-baseline-[feature].md`
 
 ### Step 3: "Taste the Tools" (Verify Validation Capability)
 
@@ -397,10 +397,10 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 Read the outputs:
 
-- `.claude/plans/research/*-patterns-*.md`
-- `.claude/plans/research/*-dependencies-*.md`
-- `.claude/plans/research/*-constraints-*.md`
-- `.claude/plans/research/*-baseline-*.md`
+- `_plans/research/*-patterns-*.md`
+- `_plans/research/*-dependencies-*.md`
+- `_plans/research/*-constraints-*.md`
+- `_plans/research/*-baseline-*.md`
 
 ### Check for Conflicts/Gaps
 
@@ -413,7 +413,7 @@ If any gaps are blocking, use `AskUserQuestion` to clarify before proceeding.
 
 ### Create Plan Document
 
-**Create plan file:** `.claude/plans/YYYY-MM-DD-HHMM-[feature-name].md`
+**Create plan file:** `_plans/YYYY-MM-DD-HHMM-[feature-name].md`
 
 ### Select Template Based on Complexity
 
@@ -569,8 +569,8 @@ If ambiguities remain, use `AskUserQuestion` to resolve them before presenting.
 ```markdown
 ## Plan Created: [Feature Name]
 
-**Plan:** `.claude/plans/YYYY-MM-DD-HHMM-[feature].md`
-**Research:** `.claude/plans/research/` ({N} files)
+**Plan:** `_plans/YYYY-MM-DD-HHMM-[feature].md`
+**Research:** `_plans/research/` ({N} files)
 
 ### Summary
 
@@ -637,8 +637,8 @@ git status --short
 **Plans are low-risk documentation — commit directly to main.**
 
 ```bash
-git add .claude/plans/research/*.md
-git add .claude/plans/YYYY-MM-DD-HHMM-[feature].md
+git add _plans/research/*.md
+git add _plans/YYYY-MM-DD-HHMM-[feature].md
 git commit -m "$(cat <<'EOF'
 docs(plan): [feature-name] - approved implementation plan
 
@@ -673,7 +673,7 @@ Also update the source backlog file's frontmatter to `status: planned` and add a
 ```markdown
 ## Plan Complete: [Feature Name]
 
-**Plan:** `.claude/plans/YYYY-MM-DD-HHMM-[feature].md`
+**Plan:** `_plans/YYYY-MM-DD-HHMM-[feature].md`
 **Status:** Approved & Committed
 
 ### Ready for Implementation
@@ -694,7 +694,7 @@ Also update the source backlog file's frontmatter to `status: planned` and add a
 
 **Key context:**
 
-- Plan: `.claude/plans/YYYY-MM-DD-HHMM-[feature].md`
+- Plan: `_plans/YYYY-MM-DD-HHMM-[feature].md`
 - Success criterion: [from plan]
 - Watch out for: [one key constraint or pattern discovered]
 

@@ -12,7 +12,7 @@ Run this as the final step before implementation. The plan's strategy and archit
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Approved plan file (`.claude/plans/*.md` or user-specified)                                |
+| **Input**        | Approved plan file (`_plans/*.md` or user-specified)                                |
 | **Output**       | Same plan file, corrected in-place                                                         |
 | **Artifacts**    | Findings in `$ARTIFACTS_DIR/`, consensus registry in `$ARTIFACTS_DIR/consensus-registry.md` |
 | **Verification** | Plan committed after corrections                                                           |
@@ -25,7 +25,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ### Identify Plan File
 
-`PLAN_FILE`: Check argument, then `.claude/plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
+`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
 
 ### Skill Routing
 
