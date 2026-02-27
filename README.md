@@ -2,7 +2,7 @@
 
 Agentic tools that compound. Each builds on the last.
 
-Drop into `.claude/` for Claude Code, or use standalone from the terminal.
+Symlink into any project's `.claude/commands/ac/` for instant access across all your projects.
 
 ## Skills
 
@@ -17,11 +17,13 @@ Agentic engineering workflows. See [`commands/README.md`](./commands/README.md) 
 
 | Command | What it does |
 |---------|-------------|
+| **[pipeline-next](./commands/pipeline-next.md)** | Pipeline dashboard — scan all stages, sequence-reason, offer what to advance toward implementation-ready |
+| **[pipeline-align](./commands/pipeline-align.md)** | Align pipeline against current strategy — audit for fit, sequence, and gaps |
 | **[plan-init](./commands/plan-init.md)** | Create implementation plans — 3 parallel explorers, validation baseline |
-| **[bead-work](./commands/bead-work.md)** | Sequential implementation — conductor + engineer sub-agents |
+| **[bead-work](./commands/bead-work.md)** | Sequential implementation — conductor + engineer sub-agents (loops until wave done) |
 | **[work-review](./commands/work-review.md)** | Feature-branch code review — 4 parallel reviewers, auto-fix + escalation |
 | **[hygiene](./commands/hygiene.md)** | Iterative codebase review — 3 agents, multiple rounds |
-| + 9 more | Planning refinement, beadification, session landing, idea review |
+| + 15 more | Backlog capture, planning refinement, beadification, session landing, idea review |
 
 ## Prompts
 
@@ -33,21 +35,35 @@ _Coming soon._
 
 ## Quick Start
 
-1. `export OPENROUTER_API_KEY=sk-or-...` ([get one here](https://openrouter.ai/keys))
-2. `pip install orcli` (for openrouter skill) or `pip install openai` (for expert-consensus)
-3. Copy into your project:
+### Commands (recommended: symlink)
 
 ```bash
-cp -r skills/expert-consensus /path/to/your/project/.claude/skills/
+# Symlink commands — changes to agent-compounds propagate instantly
+ln -s /path/to/agent-compounds/commands your-project/.claude/commands/ac
+
+# Create standard project structure
+mkdir -p your-project/_backlog your-project/_plans your-project/_strategy
+
+# Copy and fill in the AGENTS.md template
+cp AGENTS.md your-project/AGENTS.md
 ```
 
-4. Use in Claude Code:
+Commands are then available as `/ac/pipeline-next`, `/ac/plan-init`, `/ac/bead-work`, etc.
 
-```
-/expert-consensus What makes a great API?
+### Skills
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...  # get one at https://openrouter.ai/keys
+pip install orcli                     # for openrouter skill
 ```
 
-Claude Code discovers the `SKILL.md` automatically. Toggle models in `expert-panel.json`.
+```bash
+cp -r skills/expert-consensus your-project/.claude/skills/
+```
+
+Use in Claude Code: `/expert-consensus What makes a great API?`
+
+Claude Code discovers `SKILL.md` automatically. Toggle models in `expert-panel.json`.
 
 ## Philosophy
 

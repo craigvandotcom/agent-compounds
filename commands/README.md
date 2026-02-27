@@ -1,25 +1,45 @@
 # Flywheel Commands
 
-Agentic engineering workflows for Claude Code. Drop into any project's `.claude/commands/` directory.
+Agentic engineering workflows for Claude Code. Symlink into any project's `.claude/commands/` directory.
 
 Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planning, 15-20% implementation.
 
 ## Installation
 
-1. Copy `commands/*.md` into your project's `.claude/commands/` (or a subdirectory like `.claude/commands/flywheel/`)
-2. Copy `AGENTS.md` template into your project root
-3. Fill in `AGENTS.md` with your project's commands, architecture, and conventions
-4. Optionally copy `CLAUDE.md` template as a starter
+```bash
+# 1. Symlink commands into your project (recommended — changes propagate instantly)
+ln -s /path/to/agent-compounds/commands your-project/.claude/commands/ac
+
+# 2. Copy AGENTS.md template into your project root and fill it in
+cp AGENTS.md your-project/AGENTS.md
+
+# 3. Create the standard project structure
+mkdir -p your-project/_backlog your-project/_plans your-project/_strategy
+```
+
+Alternatively, copy `commands/*.md` into `.claude/commands/` directly if you prefer a standalone copy.
+
+## Project Structure
+
+Commands expect this layout at the project root:
+
+| Directory | Purpose |
+| --------- | ------- |
+| `_backlog/` | Captured ideas and active work items (`_done/` subdirectory for completed) |
+| `_plans/` | Implementation plans (`_done/` subdirectory for beadified plans) |
+| `_strategy/` | Strategy docs — used by `pipeline-align` (optional but recommended) |
+| `AGENTS.md` | Project context for subagents (commands, architecture, conventions) |
 
 ## Commands
 
-### Backlog Management
+### Pipeline Management
 
 | Command | Purpose |
 | ------- | ------- |
+| `pipeline-next` | Pipeline dashboard — scan all stages, reason about sequence, offer what to advance toward implementation-ready |
+| `pipeline-align` | Align pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps |
 | `backlog-add` | Capture ideas with smart grouping — checks existing files, beads, and plans for duplicates |
 | `backlog-tidy` | Pipeline housekeeping — archive completed items, reconcile statuses, flag orphans, suggest merges |
-| `backlog-next` | Pipeline dashboard — scan backlog/plans/beads, show funnel status, offer next action |
 
 ### Planning
 
@@ -65,10 +85,14 @@ Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planni
 ## Workflow
 
 ```
-backlog-add → backlog-tidy → backlog-next → plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-land → work-review → wave-merge
-         ↑                                                                                                                                          |
-         └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+backlog-add → backlog-tidy → pipeline-next → plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-work → ... → wave-merge
+         ↑                        │                                                                                                    |
+         │                  pipeline-align                                                                                             |
+         │                 (periodic check)                                                                                            |
+         └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+`bead-work` loops until the wave is complete. `work-review` is optional — use before merging when you want explicit review. `pipeline-align` is a periodic strategic check, not a linear step.
 
 ## Pipeline Lifecycle
 
