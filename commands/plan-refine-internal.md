@@ -113,6 +113,8 @@ PLAN_CONTENT = Read(PLAN_FILE)
 
 **Spawn all agents simultaneously in a single message.** Light/Medium -> 3 agents (simple personas). Heavy -> 6 agents (heavy personas).
 
+Each agent has codebase access and should consider the **full pipeline context**: existing code, unimplemented beads (`br list` if beads exist), and other plans in `_plans/`. Flag conflicts, duplication, or sequencing issues with any of these — not just what's already merged.
+
 Each agent receives the plan content and this output format:
 
 ```
@@ -500,7 +502,7 @@ AskUserQuestion(
 - **One human touchpoint:** remaining no-consensus findings presented once in Phase 5, not per-round
 - Trimmer/Simplifier counterbalances other agents — don't let them pile on complexity
 - Evidence over opinion — findings need file citations, not speculation
-- **Refinement checks codebase AND pipeline** — agents should flag conflicts or sequencing issues with other plans in `_plans/`, not just existing code
+- **Refinement checks codebase AND pipeline** — agents should flag conflicts or sequencing issues with other plans in `_plans/` and unimplemented beads (`br list`), not just existing code
 - Findings files + consensus registry in ARTIFACTS_DIR persist through compaction — always read from files, not memory
 - Refinement Log in plan file is your compaction recovery — parse it to know where you left off
 
