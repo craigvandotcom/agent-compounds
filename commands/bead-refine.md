@@ -67,13 +67,13 @@ Locate the original plan file (check `_plans/*.md`, ask user if unclear). This i
 ### Gather Bead Snapshot
 
 ```bash
-# Current bead state
+# Current bead state (ALL beads — all waves/epics)
 br list --json > "$ARTIFACTS_DIR/beads-snapshot.json"
 
 # Dependency health
 br dep cycles
 
-# Full bead details for agent context
+# Full bead details for agent context (all beads across all waves/epics)
 for id in $(br list --json | jq -r '.[].id'); do
     echo "=== Bead $id ==="
     br show "$id"
@@ -81,6 +81,22 @@ for id in $(br list --json | jq -r '.[].id'); do
     echo ""
 done > "$ARTIFACTS_DIR/beads-full-dump.txt"
 ```
+
+**Note:** The dump includes ALL open beads in the system, not just the current wave. Agents should be aware that beads from other waves/epics represent pipeline work ahead and must be checked for conflicts and missing cross-wave dependencies.
+
+### Pipeline Plans Scan
+
+Scan `_plans/*.md` for plans not yet beadified — these represent future scope that may overlap with the current beads:
+
+```bash
+for f in _plans/*.md; do
+  title=$(grep '^# ' "$f" | head -1 | sed 's/^# //')
+  status=$(grep '^status:' "$f" | head -1 | sed 's/status: //')
+  echo "- [$status] $f — $title"
+done
+```
+
+Store the output as `PIPELINE_PLANS_CONTEXT`. If empty, set to `"none"`. Include this in agent prompts as additional forward-looking context.
 
 ### Create Workflow Tasks
 
@@ -198,6 +214,10 @@ Optimize the bead dependency graph, ordering, and granularity. Your only verbs: 
 4. Check priority assignments:
    - P0 beads should be on the critical path
    - P2 beads should genuinely be deferrable
+5. Check cross-wave and pipeline coherence:
+   - The dump includes ALL beads across all waves/epics — do any beads from other waves conflict with or duplicate the current beads?
+   - Are there missing cross-wave dependencies? (Current beads produce output that a later wave's beads consume — is that coupling explicit?)
+   - Pipeline plans context: {PIPELINE_PLANS_CONTEXT}. Do any planned-but-not-yet-beadified features overlap with the current bead set's scope?
 
 ## Output
 
@@ -449,6 +469,8 @@ AskUserQuestion(
 - **Progress file is compaction recovery** — parse it to know where you left off
 - **3 agents per round > 1 pass repeated** — more perspectives, faster convergence
 - **Evidence over opinion** — bead IDs and content citations, not vague concerns
+- **Bead dump is the full pipeline** — `br list` includes all waves/epics; agents should check cross-wave conflicts, not just the current wave
+- **Plans ahead matter too** — pipeline scan in Phase 0 surfaces future scope that current beads must cohere with
 
 ---
 
