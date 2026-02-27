@@ -109,26 +109,6 @@ PLAN_CONTENT = Read(PLAN_FILE)
 
 **Skill routing:** Scan plan content for domain keywords. Check `AGENTS.md` > "Available Skills" for relevant skills. Include a line in each subagent prompt: `"Domain skills relevant to this plan: <list>. Read the corresponding skill file when evaluating sections that touch those domains."`
 
-### Pipeline Context Scan
-
-Before spawning agents, scan `_plans/*.md` for other plans in the pipeline (skip the current plan file). For each, extract the `status` frontmatter field and the first `#` heading:
-
-```bash
-for f in _plans/*.md; do
-  [ "$f" = "$PLAN_FILE" ] && continue
-  title=$(grep '^# ' "$f" | head -1 | sed 's/^# //')
-  status=$(grep '^status:' "$f" | head -1 | sed 's/status: //')
-  echo "- [$status] $f — $title"
-done
-```
-
-Store the output as `PIPELINE_CONTEXT`. If empty (no other plans), set `PIPELINE_CONTEXT="none"`.
-
-Include in each agent prompt:
-
-> **Pipeline context (other plans in `_plans/`):** `{PIPELINE_CONTEXT}`
-> Flag any scope conflicts, overlapping functionality, or missing sequencing between this plan and pipeline work above.
-
 ### Phase 2: Parallel Subagent Review
 
 **Spawn all agents simultaneously in a single message.** Light/Medium -> 3 agents (simple personas). Heavy -> 6 agents (heavy personas).
@@ -520,7 +500,7 @@ AskUserQuestion(
 - **One human touchpoint:** remaining no-consensus findings presented once in Phase 5, not per-round
 - Trimmer/Simplifier counterbalances other agents — don't let them pile on complexity
 - Evidence over opinion — findings need file citations, not speculation
-- **Refinement checks codebase AND pipeline** — other plans in `_plans/` may conflict or need sequencing; scan them before agents run
+- **Refinement checks codebase AND pipeline** — agents should flag conflicts or sequencing issues with other plans in `_plans/`, not just existing code
 - Findings files + consensus registry in ARTIFACTS_DIR persist through compaction — always read from files, not memory
 - Refinement Log in plan file is your compaction recovery — parse it to know where you left off
 
