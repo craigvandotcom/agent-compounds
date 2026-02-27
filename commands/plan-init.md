@@ -600,7 +600,7 @@ If ambiguities remain, use `AskUserQuestion` to resolve them before presenting.
 
 ---
 
-**Proceed with implementation?**
+**Approve to commit — next step is refinement or beadification, not implementation.**
 ```
 
 **Present plan for approval with `AskUserQuestion`:**
@@ -612,7 +612,7 @@ AskUserQuestion(
     header: "Approval",
     multiSelect: false,
     options: [
-      { label: "Approve", description: "Plan looks good — commit and proceed to implementation" },
+      { label: "Approve", description: "Mark plan as approved and commit to main — refinement or beadification comes next, not implementation" },
       { label: "Adjust", description: "Needs changes — specify what to revise (will re-present after edits)" },
       { label: "Reject", description: "Wrong approach — discuss concerns and rethink" }
     ]
@@ -620,7 +620,7 @@ AskUserQuestion(
 )
 ```
 
-- **Approve** -> Commit and proceed to hand-off
+- **Approve** -> Commit plan to main, then choose next step (refinement, beadify, or done)
 - **Adjust** -> Update plan based on feedback, re-present
 - **Reject** -> Discuss concerns, revise approach
 
