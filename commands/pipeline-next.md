@@ -65,7 +65,7 @@ ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
 For each plan, read frontmatter and first 50 lines:
 
 1. **Status** from frontmatter: `draft | refined | approved | beadified`
-2. **Refinement depth** — `refinement_rounds` field (0 = untouched)
+2. **Refinement depth** — `refinement_rounds` frontmatter field if present. Fallback: count `### Round N` headings inside the `## Refinement Log` section (headings only — NOT inline references like "R1 fixes"). Extract tier from first mention of `Light | Medium | Heavy` in the log header. Extract final trajectory from the last `Trajectory:` line in the log. (0 rounds = untouched, no log present)
 3. **Recency** — file modification time (prefer recently worked plans at same level)
 4. **Fallback** (no frontmatter): check for `## Refinement Log` (→ refined), `Status: Approved` text (→ approved). Flag for `/backlog-tidy`.
 
@@ -118,11 +118,11 @@ Ready to build: {N} beads — run /bead-work when you're ready to implement.
   ...  (top 5, then "{N} more...")
 
 ### Plans: Ready to Beadify ({N})
-  {filename}  [approved | refined, {rounds} rounds]
+  {filename}  [approved | refined, {N}r {Tier} → {final_trajectory}]
   ...
 
 ### Plans: Needs Refinement ({N} draft)
-  {filename}  [{size}, {rounds} rounds, last touched {date}]
+  {filename}  [{size}, {N}r {Tier}, last touched {date}]
   ...
 
 ### Backlog: Needs Planning ({N} items, {file_count} files)
