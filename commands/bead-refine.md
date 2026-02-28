@@ -10,14 +10,14 @@ description: Refine bead structure before implementation — iterative rounds un
 
 |                  |                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------ |
-| **Input**        | Beads created via `/beadify`                                                         |
+| **Input**        | Open beads in `br` (from `/beadify` or any other source)                                         |
 | **Output**       | Refined beads ready for `/bead-work`                                                 |
 | **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`, `br ready --json`                                  |
 
 ## Prerequisites
 
-- Beads created via `/beadify`
+- At least one open bead exists in `br`
 - beads_rust (`br`) and beads_viewer (`bv`) installed — verify with `which br && which bv`
 
 ## Phase 0: Initialize
@@ -60,7 +60,7 @@ If `$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to re
 
 ### Identify Plan File + Skills
 
-Locate the original plan file (check `_plans/*.md`, ask user if unclear). This is needed for cross-referencing during review.
+Locate the original plan file if one exists (check `_plans/*.md`, ask user if unclear). Use it for cross-referencing during review when available; if no plan exists, proceed with bead-only review.
 
 **Skill routing:** Read the beads (`br list --json`) and scan for domain keywords. Check `AGENTS.md` > "Available Skills" for relevant skills. Include skill paths in agent prompts.
 
@@ -116,11 +116,11 @@ You are a completeness auditor. You compete with 2 other reviewers — only evid
 
 ## Your Task
 
-Cross-reference every bead against the original plan to ensure NOTHING was lost or oversimplified during beadification.
+Cross-reference every bead against the original plan (if available) to ensure NOTHING was lost or oversimplified. If no plan exists, audit beads for self-containment and completeness.
 
 ## Method
 
-Read the original plan ({PLAN_FILE}) and ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). Cross-reference every plan section against the beads — check that nothing was lost, oversimplified, or omitted during beadification. Also check each bead for self-containment: could an engineer implement it without ever reading the plan? Are acceptance criteria specific and verifiable? Use your judgment on what matters most.
+Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. Either way, check each bead for self-containment: could an engineer implement it without external context? Are acceptance criteria specific and verifiable? Use your judgment on what matters most.
 
 ## Output
 

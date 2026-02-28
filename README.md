@@ -65,6 +65,14 @@ Use in Claude Code: `/expert-consensus What makes a great API?`
 
 Claude Code discovers `SKILL.md` automatically. Toggle models in `expert-panel.json`.
 
+## Dependencies
+
+| Dependency | What it provides | Install |
+|-----------|-----------------|---------|
+| **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install beads` |
+| **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
+| **[orcli](https://pypi.org/project/orcli/)** | OpenRouter CLI for multi-model queries (used by expert-consensus skill) | `pip install orcli` |
+
 ## Philosophy
 
 - **Compound, don't collect** — each skill should make the next one more valuable

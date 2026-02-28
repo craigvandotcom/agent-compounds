@@ -459,6 +459,8 @@ If any gaps are blocking, use `AskUserQuestion` to clarify before proceeding.
 
 **Create plan file:** `_plans/YYYY-MM-DD-HHMM-[feature-name].md`
 
+**The plan must stand on its own.** The source backlog item is archived after plan-init, so capture all relevant context directly in the plan.
+
 ### Select Template Based on Complexity
 
 | Complexity  | Criteria                              | Template Sections                                                            |
@@ -710,7 +712,14 @@ approved_at: YYYY-MM-DD
 ---
 ```
 
-Also update the source backlog file's frontmatter to `status: planned` and add a `plans:` field linking to this plan (if a `source_backlog` was set).
+Also archive the source backlog item (if a `source_backlog` was set):
+
+1. Update its frontmatter to `status: planned` and add a `plans:` field linking to this plan.
+2. Move it to `_done/`:
+```bash
+mkdir -p "$(dirname $SOURCE_BACKLOG)/_done"
+mv "$SOURCE_BACKLOG" "$(dirname $SOURCE_BACKLOG)/_done/$(basename $SOURCE_BACKLOG)"
+```
 
 ### Release Active Work Signal (Agent Mail)
 
