@@ -85,6 +85,50 @@ git add "$PLAN_FILE" && git commit -m "docs(plan): checkpoint before plan-refine
 Co-Authored-By: Claude <noreply@anthropic.com>" || true
 ```
 
+### Mark Active Work
+
+Update the plan file's frontmatter to signal this skill is running:
+
+```yaml
+---
+status: in_progress
+working_skill: plan-refine-internal
+working_since: YYYY-MM-DD
+---
+```
+
+Preserve all other existing frontmatter fields.
+
+### Signal Active Work (Agent Mail)
+
+Use the agent name registered at session start (from `macro_start_session`). Compute `PLAN_REL` = path of `PLAN_FILE` relative to `PROJECT_ROOT` (e.g. `_plans/foo.md`).
+
+**Reserve the plan file:**
+
+```
+mcp__mcp-agent-mail__file_reservation_paths(
+  project_key: PROJECT_ROOT,
+  agent_name: <session agent name>,
+  paths: [PLAN_REL],
+  ttl_seconds: 14400,
+  exclusive: true,
+  reason: "plan-refine-internal — in progress"
+)
+```
+
+**Broadcast WIP signal:**
+
+```
+mcp__mcp-agent-mail__send_message(
+  project_key: PROJECT_ROOT,
+  sender_name: <session agent name>,
+  to: [<session agent name>],
+  subject: "WIP: plan-refine-internal — {PLAN_REL}",
+  body_md: "Starting `plan-refine-internal` on `{PLAN_REL}`.",
+  topic: "pipeline-wip"
+)
+```
+
 ### Create Workflow Tasks
 
 ```
@@ -433,6 +477,31 @@ Remove the temp artifacts directory once the commit is done:
 ```bash
 # Remove temp findings from /tmp (safe -- ARTIFACTS_DIR is always under /tmp)
 find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null || true
+```
+
+### Release Active Work Signal (Agent Mail)
+
+**Release reservation:**
+
+```
+mcp__mcp-agent-mail__release_file_reservations(
+  project_key: PROJECT_ROOT,
+  agent_name: <session agent name>,
+  paths: [PLAN_REL]
+)
+```
+
+**Broadcast DONE signal:**
+
+```
+mcp__mcp-agent-mail__send_message(
+  project_key: PROJECT_ROOT,
+  sender_name: <session agent name>,
+  to: [<session agent name>],
+  subject: "DONE: plan-refine-internal — {PLAN_REL}",
+  body_md: "Completed `plan-refine-internal` on `{PLAN_REL}` ({CURRENT_ROUND} rounds, {TIER} tier).",
+  topic: "pipeline-wip"
+)
 ```
 
 ### Summary

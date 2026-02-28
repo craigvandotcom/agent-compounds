@@ -68,6 +68,50 @@ Tracks single-agent findings across rounds. If a finding recurs in a later round
 EOF
 ```
 
+### Mark Active Work
+
+Update the plan file's frontmatter to signal this skill is running:
+
+```yaml
+---
+status: in_progress
+working_skill: plan-clean
+working_since: YYYY-MM-DD
+---
+```
+
+Preserve all other existing frontmatter fields.
+
+### Signal Active Work (Agent Mail)
+
+Use the agent name registered at session start (from `macro_start_session`). Compute `PLAN_REL` = path of `PLAN_FILE` relative to `PROJECT_ROOT` (e.g. `_plans/foo.md`).
+
+**Reserve the plan file:**
+
+```
+mcp__mcp-agent-mail__file_reservation_paths(
+  project_key: PROJECT_ROOT,
+  agent_name: <session agent name>,
+  paths: [PLAN_REL],
+  ttl_seconds: 14400,
+  exclusive: true,
+  reason: "plan-clean — in progress"
+)
+```
+
+**Broadcast WIP signal:**
+
+```
+mcp__mcp-agent-mail__send_message(
+  project_key: PROJECT_ROOT,
+  sender_name: <session agent name>,
+  to: [<session agent name>],
+  subject: "WIP: plan-clean — {PLAN_REL}",
+  body_md: "Starting `plan-clean` on `{PLAN_REL}`.",
+  topic: "pipeline-wip"
+)
+```
+
 ### Compaction Recovery
 
 If `$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to recover `CURRENT_ROUND` (set to N+1). If `consensus-registry.md` exists, read it to recover the deferred findings pool.
@@ -350,6 +394,31 @@ git push
 
 ```bash
 find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null || true
+```
+
+### Release Active Work Signal (Agent Mail)
+
+**Release reservation:**
+
+```
+mcp__mcp-agent-mail__release_file_reservations(
+  project_key: PROJECT_ROOT,
+  agent_name: <session agent name>,
+  paths: [PLAN_REL]
+)
+```
+
+**Broadcast DONE signal:**
+
+```
+mcp__mcp-agent-mail__send_message(
+  project_key: PROJECT_ROOT,
+  sender_name: <session agent name>,
+  to: [<session agent name>],
+  subject: "DONE: plan-clean — {PLAN_REL}",
+  body_md: "Completed `plan-clean` on `{PLAN_REL}` ({CURRENT_ROUND} rounds).",
+  topic: "pipeline-wip"
+)
 ```
 
 ### Report

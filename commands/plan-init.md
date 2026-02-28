@@ -96,6 +96,50 @@ User request -> Classify:
 - MORE: 3-10 files, some decisions, 2-4 hours work
 - A LOT: >10 files, architectural decisions, 4+ hours work
 
+### Mark Active Work
+
+If a source backlog item was identified, update its frontmatter to signal this skill is running:
+
+```yaml
+---
+status: in_progress
+working_skill: plan-init
+working_since: YYYY-MM-DD
+---
+```
+
+(Skip if no `source_backlog` was identified.)
+
+### Signal Active Work (Agent Mail)
+
+Use the agent name registered at session start (from `macro_start_session`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/v1-0/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
+
+**Reserve the source item:**
+
+```
+mcp__mcp-agent-mail__file_reservation_paths(
+  project_key: PROJECT_ROOT,
+  agent_name: <session agent name>,
+  paths: [BACKLOG_REL],   # or "_plans/new" if no source backlog
+  ttl_seconds: 10800,
+  exclusive: true,
+  reason: "plan-init — creating plan"
+)
+```
+
+**Broadcast WIP signal:**
+
+```
+mcp__mcp-agent-mail__send_message(
+  project_key: PROJECT_ROOT,
+  sender_name: <session agent name>,
+  to: [<session agent name>],
+  subject: "WIP: plan-init — {BACKLOG_REL}",
+  body_md: "Starting `plan-init` for `{BACKLOG_REL}`.",
+  topic: "pipeline-wip"
+)
+```
+
 Append to `$ARTIFACTS_DIR/progress.md`:
 
 ```markdown
@@ -667,6 +711,31 @@ approved_at: YYYY-MM-DD
 ```
 
 Also update the source backlog file's frontmatter to `status: planned` and add a `plans:` field linking to this plan (if a `source_backlog` was set).
+
+### Release Active Work Signal (Agent Mail)
+
+**Release reservation:**
+
+```
+mcp__mcp-agent-mail__release_file_reservations(
+  project_key: PROJECT_ROOT,
+  agent_name: <session agent name>,
+  paths: [BACKLOG_REL]
+)
+```
+
+**Broadcast DONE signal:**
+
+```
+mcp__mcp-agent-mail__send_message(
+  project_key: PROJECT_ROOT,
+  sender_name: <session agent name>,
+  to: [<session agent name>],
+  subject: "DONE: plan-init — {BACKLOG_REL}",
+  body_md: "Completed `plan-init` for `{BACKLOG_REL}`. Plan committed.",
+  topic: "pipeline-wip"
+)
+```
 
 ### Report Completion and Hand-Off
 
