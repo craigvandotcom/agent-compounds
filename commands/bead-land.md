@@ -162,6 +162,16 @@ Read these files:
 2. Any /tmp/bead-work/bead-*-result.md files — engineer implementation reports
 3. AGENTS.md — current project context, conventions, and coding standards
 
+## Workflow & Skill Files
+
+Read the command files that ran during this session so you can identify workflow friction:
+- `.claude/commands/ac/bead-work.md` — the implementation workflow
+- `.claude/commands/ac/bead-land.md` — this landing workflow
+
+Scan the full skill inventory (AGENTS.md > Available Skills) against the beads implemented. Look for:
+- Skill files referenced by beads — read these for domain pattern violations
+- Skills that SHOULD have been used but weren't — e.g., a migration bead that didn't leverage the supabase skill, or a component bead that ignored the design-system skill. Flag these as upgrade opportunities.
+
 ## Git Context
 
 Run these commands to understand the session's work:
@@ -188,8 +198,18 @@ Write your findings to /tmp/bead-work/retrospective.md with these sections:
 - Dependency patterns
 
 ### System Upgrade Opportunities
+
+Look across ALL system files — not just MEMORY.md. Each target type has a purpose:
+
+| Target | What belongs here | Example |
+|--------|------------------|---------|
+| `.claude/commands/*.md` | Workflow steps that caused friction, missing instructions, unclear prompts | "bead-work Phase 1c should remind conductor to scope test runs" |
+| `.claude/skills/*.md` | Domain patterns discovered or violated during implementation | "testing skill should document the dotenv-worker quirk" |
+| `AGENTS.md` | New conventions, quality gate changes, project-wide rules | "Add convention: never hardcode secrets in test files" |
+| `MEMORY.md` | Gotchas and quirks that don't fit the above — last resort, not default | "supabase gen types outputs debug line" |
+
 For each opportunity, provide:
-- **Target:** Which file to update (AGENTS.md, MEMORY.md, skills, commands, etc.)
+- **Target:** The specific file path to update
 - **Change:** What specifically to add, modify, or remove
 - **Severity:** Critical / High / Medium / Low
   - Critical: Prevents failures or fixes broken workflow
@@ -197,6 +217,8 @@ For each opportunity, provide:
   - Medium: Nice-to-have improvement
   - Low: Minor polish
 - **Evidence:** Concrete examples from this session
+
+Prioritize command/skill improvements over MEMORY.md additions. If a learning improves a workflow step, put it in the command file. If it documents a domain pattern, put it in the skill file. MEMORY.md is for one-off quirks only.
 
 Be aggressive — look for meaningful improvements. But every suggestion must have evidence from this session.
 Context bloat is the enemy. Prefer refining existing content over adding new content.
