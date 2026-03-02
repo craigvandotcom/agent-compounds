@@ -25,13 +25,22 @@ For parallelism, open multiple terminal sessions — each runs `/bead-work` inde
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
 
-### Verify Beads Exist
+### Verify Refined Beads Exist
 
 ```bash
 br ready --json
 ```
 
 If no unblocked beads, STOP: "No unblocked beads. Run `/bead-refine` first, or check `br list --json` for blocked items."
+
+**Filter out unrefined beads.** Beads created by `/beadify` carry the `unrefined` label until `/bead-refine` removes it. Only beads WITHOUT this label are eligible for implementation:
+
+```bash
+# Check if any ready beads are refined (no "unrefined" label)
+br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)]'
+```
+
+If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/bead-refine` first to make them implementation-ready."
 
 ### Ensure Wave Branch
 
@@ -123,7 +132,22 @@ Acknowledge any pending messages.
 bv --robot-next
 ```
 
-This returns the top pick AND a claim command. **Run the claim command from the output** — do not use `br start` (it doesn't exist).
+This returns the top pick AND a claim command.
+
+**Guard: verify the selected bead is refined.** Check the bead's labels — if it has `unrefined`, skip it and pick the next one:
+
+```bash
+# Check if the selected bead has the "unrefined" label
+br show <id> --json | jq '.labels | index("unrefined")'
+```
+
+If the bead is unrefined:
+1. Do NOT claim it
+2. Log: "Skipping <id> (unrefined — needs `/bead-refine` first)"
+3. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)] | .[0]'`
+4. If no refined beads remain, STOP the session early
+
+**Once a refined bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
 Then read bead details:
 

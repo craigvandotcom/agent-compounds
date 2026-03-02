@@ -450,6 +450,7 @@ AskUserQuestion(
 - **Progress file is compaction recovery** — parse it to know where you left off
 - **3 agents per round > 1 pass repeated** — more perspectives, faster convergence
 - **Evidence over opinion** — bead IDs and content citations, not vague concerns
+- **Verify function signatures from source** — when a spec references a function call, check argument order against the actual implementation, not from memory or docs
 - **Refinement checks codebase AND pipeline** — agents should flag conflicts with other beads/waves and plans in `_plans/`, not just existing code
 
 ---
