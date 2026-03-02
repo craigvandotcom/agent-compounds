@@ -67,8 +67,12 @@ Ask two questions via `AskUserQuestion`:
 TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
 SESSION_MODE=<solo|parallel>
-ARTIFACTS_DIR=/tmp/bead-work
+ARTIFACTS_DIR=/tmp/bead-work          # solo mode
+# Parallel mode: use session-unique dir to prevent progress.md collisions:
+# ARTIFACTS_DIR=/tmp/bead-work-$$
 ```
+
+> **Parallel mode:** Use a session-unique `ARTIFACTS_DIR` (e.g., `/tmp/bead-work-$$`) to prevent progress.md overwrite collisions with other parallel sessions. Solo mode can use `/tmp/bead-work`.
 
 ```bash
 mkdir -p "$ARTIFACTS_DIR"
@@ -295,6 +299,8 @@ Run the complete suite (this is where the full run happens):
 ```
 
 If any fail, fix the issues before proceeding.
+
+> **Parallel sessions:** If `SESSION_MODE=parallel`, failing tests may originate from other sessions' uncommitted changes in the working tree. Run `git diff --stat HEAD` to identify which files are uncommitted and which session owns them. Failures in files not touched by this session's commits are owned by the other session — note them but do not block landing.
 
 ### Next Steps
 
