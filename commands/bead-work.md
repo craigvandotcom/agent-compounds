@@ -108,6 +108,8 @@ TaskUpdate(task: "Bead {N} of {TARGET_BEADS}", subject: "Bead {N} of {TARGET_BEA
 
 If `$ARTIFACTS_DIR/progress.md` exists, parse its header to recover `TARGET_BEADS` and `SESSION_MODE`. Count entries marked `COMPLETE` to recover `BEADS_COMPLETED`. Skip completed beads.
 
+If `$ARTIFACTS_DIR/` was deleted and recreated mid-session (e.g., by a partial bead-land run), result files for completed beads are lost. Note this in progress.md as "(result file lost — bead completed, committed as <hash>)".
+
 
 Acknowledge any pending messages.
 
@@ -174,7 +176,9 @@ Implement this bead using strict TDD (RED → GREEN).
 
 ### Output
 
-MANDATORY: Write your implementation report to $ARTIFACTS_DIR/bead-<id>-result.md BEFORE reporting done. This is the primary artifact for retrospective analysis. Do NOT skip this step.
+MANDATORY: Write your implementation report to $ARTIFACTS_DIR/bead-<id>-result.md BEFORE reporting done.
+This file is the primary artifact for retrospective analysis and MUST survive until bead-land runs.
+Do NOT delete or overwrite result files from earlier beads in this session.
 - Files created/modified (with paths)
 - Test files created/modified (with paths) — list EVERY new test
 - Verification results (quality checks — all must pass)
