@@ -153,7 +153,7 @@ Can an engineer cold-start on each bead tomorrow and implement it mechanically? 
 
 ## Method
 
-Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}) and put yourself in the implementer's seat. For each bead: could you cold-start on it tomorrow and build it mechanically? If you'd need to ask a question, that's a finding. Check scope clarity, dependency correctness, granularity, and whether you could write RED tests from just the acceptance criteria. You have codebase access — read referenced files to verify functions, types, and patterns actually exist as described. Use your judgment on what blocks implementation.
+Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}) and put yourself in the implementer's seat. For each bead: could you cold-start on it tomorrow and build it mechanically? If you'd need to ask a question, that's a finding. Check scope clarity, dependency correctness, granularity, and whether you could write RED tests from just the acceptance criteria. You have codebase access — read referenced files to verify functions, types, and patterns actually exist as described. **Verify test file existence:** if a bead claims test files do or don't exist, check `__tests__/` directories to confirm — incorrect test file assertions are a common spec defect that wastes engineer time. Use your judgment on what blocks implementation.
 
 ## Output
 
