@@ -58,27 +58,35 @@ If any fail:
 - **Fixable in <5 min:** Fix them now, commit the fix
 - **Larger issues:** Create a P0 bead, document the failure, continue landing
 
-### 1c. UI Validation Suite (Optional)
+### 1c. UI Validation Suite
 
-After code quality gates pass, optionally run UI validation if browser testing tools are available.
+After code quality gates pass, run UI validation for any session that changed runtime code.
 
-**Skip if:**
-- Session was purely docs/config with zero runtime code changes
-- No browser testing tool is available (e.g., `agent-browser`, Playwright MCP)
-- No UI journeys defined in project
+**Skip ONLY if:**
+- Session was purely docs/config with zero runtime code changes (no .tsx/.ts in app/, features/, lib/, components/)
 
-**Run if:**
-- Browser testing tool is available AND the project defines UI journeys (in AGENTS.md or `.claude/skills/`)
-- Runtime code was changed (API routes, UI components, hooks, utils)
+**Run if ANY runtime code was changed** (API routes, UI components, hooks, utils).
 
-#### Step 1: Check Browser Testing Availability
+#### Step 1: Verify Browser Testing Availability (MANDATORY)
+
+You MUST check both paths before concluding browser testing is unavailable:
 
 ```bash
-# Check if browser testing tool is available
-which agent-browser 2>/dev/null || echo "No browser testing tool found — skipping UI validation"
+# Check 1: CLI tool
+which agent-browser 2>/dev/null && echo "AVAILABLE" || echo "NOT FOUND"
 ```
 
-If no browser testing tool is available, skip to Phase 1d (Git Operations).
+```
+# Check 2: Agent type (always available in Claude Code)
+# The `browser-tester` agent type is built-in — check available agent types in your system prompt
+```
+
+```bash
+# Check 3: Journey definitions
+ls .claude/skills/browser-testing/journeys/ 2>/dev/null
+```
+
+**All three must fail** before skipping. If `agent-browser` CLI exists OR `browser-tester` agent type is available, proceed with UI validation. Do NOT assume unavailability without running these checks.
 
 #### Step 2: Route to Relevant Journeys
 
@@ -89,7 +97,7 @@ Use `git diff --stat` against the session's first commit to determine which area
 **One tester per matched journey, all in parallel.** If 2+ journeys match, send all Task calls in a single message for concurrent execution.
 
 ````
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
+Task(subagent_type: "browser-tester", prompt: """
 You are a browser tester. Your job: run a UI journey happy path and report results. You test and report — never edit code.
 
 ## Your Task

@@ -31,7 +31,12 @@ _Coming soon._
 
 ## Sub-Agents
 
-_Coming soon._
+Portable agent definitions for Claude Code's `.claude/agents/` system. Copy into your project or reference directly.
+
+| Sub-Agent | What it does |
+|-----------|-------------|
+| **[browser-tester](./sub-agents/browser-tester.md)** | UI smoke testing — runs journey happy paths via agent-browser, reports PASS/FAIL |
+| **[browser-agent](./sub-agents/browser-agent.md)** | Ad-hoc browser automation — screenshots, scraping, form filling, navigation |
 
 ## Quick Start
 
@@ -72,6 +77,7 @@ Claude Code discovers `SKILL.md` automatically. Toggle models in `expert-panel.j
 | **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install beads` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
 | **[orcli](https://pypi.org/project/orcli/)** | OpenRouter CLI for multi-model queries (used by expert-consensus skill) | `pip install orcli` |
+| **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by browser-tester sub-agent, bead-land, work-review) | `npm install -g agent-browser` |
 
 ## Philosophy
 
