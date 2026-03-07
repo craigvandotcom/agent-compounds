@@ -196,6 +196,7 @@ Implement this bead using strict TDD (RED → GREEN).
 - Follow existing code patterns (read neighboring files first)
 - Follow domain skill guidelines (loaded above)
 - Follow project type discipline (see AGENTS.md > Rules)
+- **Before implementing**, search for existing test files that import or test the files you will modify (`grep -r 'from.*<module>' __tests__/ features/ --include='*.test.*'`). Run these after your changes to confirm no regressions. List any existing test files you verified in your report.
 - Run ALL project quality checks before finishing (see AGENTS.md > Project Commands > Quality gate)
 
 ### Output
@@ -237,7 +238,7 @@ Do NOT delete or overwrite result files from earlier beads in this session.
    - If the engineer's report lists zero new tests for new code, **re-spawn the engineer** with explicit instructions to add test coverage
    - Pure refactors or config changes may not need new tests — use judgment
 
-4. **Acceptance criteria check** — does the implementation match the bead's spec? Tests passing is necessary but not sufficient.
+4. **Acceptance criteria check** — does the implementation match the bead's spec? Tests passing is necessary but not sufficient. If the spec says "move" a file, verify the original is deleted and all imports updated — leaving the original creates dead code.
 
 5. **Fresh-eyes diff scan:**
 
