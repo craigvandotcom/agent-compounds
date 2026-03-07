@@ -236,6 +236,7 @@ Produce a numbered change list. For each item: target bead(s), what to change, t
 - **Critical/High:** Apply immediately — these are defects, regardless of how many agents flagged it
 - **Same-round consensus (2+ agents):** Apply immediately — multi-agent agreement is high-signal
 - **Cross-round consensus:** A single-agent finding from THIS round matches a deferred finding in the consensus registry from a PREVIOUS round — recurrence across rounds is high-signal. Apply immediately.
+- **Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and auto-apply. `DESIGN_DECISION` items are deferred regardless of severity or consensus — they skip the registry and go directly to the user in Phase 5.
 - **Medium/Low + single-agent + no cross-round match:** Defer to consensus registry. Do NOT skip silently.
 
 For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md`:
@@ -307,29 +308,48 @@ IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes in progr
 **TaskUpdate(task: "Phase 1-4: Refinement loop", status: "completed")**
 **TaskUpdate(task: "Phase 5: Finalize", status: "in_progress")**
 
-### Present Remaining No-Consensus Findings (once)
+### Conductor Final Review (Triage)
 
-Read the consensus registry. Any deferred findings that never achieved cross-round consensus are presented to the user in a single batch:
+Read the consensus registry. Collect all remaining items:
 
-**If no remaining deferred findings:** Skip — proceed to verification.
+1. **No-consensus findings:** Single-agent findings that never recurred across rounds
+2. **DESIGN_DECISION items:** Findings deferred during rounds as genuine design decisions
 
-**If deferred findings remain:**
+**If nothing remains:** Skip — proceed to verification.
+
+**Classify each remaining no-consensus finding:**
+
+| Category | Criteria | Action |
+|---|---|---|
+| `AUTO_IMPLEMENT` | There is a clearly superior technical answer — better correctness, robustness, performance, or maintainability. The improvement is unambiguous. | Implement it now. |
+| `DESIGN_DECISION` | No objectively superior answer AND the choice would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and classify as `AUTO_IMPLEMENT`. | Defer to user. |
+| `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change that constitutes a strategic commitment. | Defer to user with scope context. |
+
+**Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it.
+
+**Apply all `AUTO_IMPLEMENT` items using `br` commands.** Log each with rationale.
+
+### Present Decisions to User (if any)
+
+**If no `DESIGN_DECISION` or `SCOPE_ESCALATION` items remain:** Skip — proceed to verification.
+
+**If items remain:**
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "All consensus findings applied across {CURRENT_ROUND} rounds. {N} single-agent findings never confirmed. Apply any of these?",
-    header: "Remaining",
+    question: "Auto-applied {N} fixes (severity + consensus + technical triage). {M} items need your decision:",
+    header: "Decisions",
     multiSelect: true,
     options: [
-      { label: "Fix X: <title>", description: "Round {R}, {severity} — {agent}: Bead {id} — <one-line summary>" },
-      { label: "Fix Y: <title>", description: "Round {R}, {severity} — {agent}: Bead {id} — <one-line summary>" }
+      { label: "Fix X: <title>", description: "DESIGN_DECISION — Round {R}, {severity} — {agent}: Bead {id} — {one-line summary}" },
+      { label: "Fix Y: <title>", description: "SCOPE_ESCALATION — {severity} — {agent}: Bead {id} — {one-line summary}. Scope: {what it entails}" }
     ]
   }]
 )
 ```
 
-**If more than 4 remaining items:** Split across multiple `AskUserQuestion` calls.
+**If more than 4 items:** Split across multiple `AskUserQuestion` calls.
 
 **Apply any user-approved findings using `br` commands.**
 
@@ -395,6 +415,7 @@ Found: {total} across {CURRENT_ROUND} rounds
   ├─ Auto-applied (severity):      {n}  {bars}
   ├─ Auto-applied (same-round):    {n}  {bars}
   ├─ Auto-applied (cross-round):   {n}  {bars}
+  ├─ Auto-implemented (conductor):  {n}  {bars}
   ├─ User-approved:                {n}  {bars}
   └─ Discarded (no consensus):     {n}  {bars}
 
@@ -443,7 +464,8 @@ AskUserQuestion(
 - **YOU synthesize and apply fixes** — agents find issues, you decide and fix
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
 - **Cross-round consensus:** single-agent findings that recur in later rounds are high-signal — auto-apply on match
-- **One human touchpoint:** remaining no-consensus findings presented once in Phase 5, not per-round
+- **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
+- **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
 - **Competitive framing sharpens output** — agents know they compete for relevance
 - **Structure Optimizer counterbalances** — prevents completeness reviewer from piling on complexity
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory

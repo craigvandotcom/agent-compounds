@@ -288,6 +288,10 @@ Apply all consensus findings (both same-round and cross-round) immediately using
 - **Finding Y:** [title] — Auto-applied (cross-round consensus: Round 1 Editor + Round 2 Verifier)
 ```
 
+#### Step 2.5: Design Decision Gate
+
+Before auto-applying any consensus finding, check: does this represent a choice with no objectively superior technical answer? If so, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and auto-apply. `DESIGN_DECISION` items are deferred regardless of consensus — they go directly to the user in Phase 4.
+
 #### Step 3: Update Consensus Registry
 
 For single-agent findings that had no consensus match, append them to the deferred pool:
@@ -330,29 +334,48 @@ IF CURRENT_ROUND >= MAX_ROUNDS
 
 ## Phase 4: Finalize
 
-### Present Remaining No-Consensus Findings (once)
+### Conductor Final Review (Triage)
 
-Read the consensus registry. Any deferred findings that never achieved cross-round consensus are presented to the user in a single batch:
+Read the consensus registry. Collect all remaining items:
 
-**If no remaining deferred findings:** Skip — report a clean result.
+1. **No-consensus findings:** Single-agent findings that never recurred across rounds
+2. **DESIGN_DECISION items:** Findings deferred during rounds as genuine design decisions
 
-**If deferred findings remain:**
+**If nothing remains:** Skip — report a clean result.
+
+**Classify each remaining no-consensus finding:**
+
+| Category | Criteria | Action |
+|---|---|---|
+| `AUTO_IMPLEMENT` | There is a clearly superior technical answer — better correctness, robustness, performance, or maintainability. The improvement is unambiguous. | Implement it now. |
+| `DESIGN_DECISION` | No objectively superior answer AND the choice would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and classify as `AUTO_IMPLEMENT`. | Defer to user. |
+| `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change that constitutes a strategic commitment. | Defer to user with scope context. |
+
+**Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it.
+
+**Apply all `AUTO_IMPLEMENT` items using the Edit tool.** Log each with rationale.
+
+### Present Decisions to User (if any)
+
+**If no `DESIGN_DECISION` or `SCOPE_ESCALATION` items remain:** Skip — proceed to commit.
+
+**If items remain:**
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "All consensus findings applied. {N} single-agent findings never confirmed by another round. Apply any of these?",
-    header: "Remaining",
+    question: "Auto-applied {N} fixes (severity + consensus + technical triage). {M} items need your decision:",
+    header: "Decisions",
     multiSelect: true,
     options: [
-      { label: "Finding X: <title>", description: "Round {R}, {agent}: <section> — <one-line summary>" },
-      { label: "Finding Y: <title>", description: "Round {R}, {agent}: <section> — <one-line summary>" }
+      { label: "Finding X: <title>", description: "DESIGN_DECISION — Round {R}, {agent}: {section} — {one-line summary}" },
+      { label: "Finding Y: <title>", description: "SCOPE_ESCALATION — {agent}: {section} — {one-line summary}. Scope: {what it entails}" }
     ]
   }]
 )
 ```
 
-**If more than 4 remaining items:** Split across multiple `AskUserQuestion` calls.
+**If more than 4 items:** Split across multiple `AskUserQuestion` calls.
 
 Apply any user-approved findings using the Edit tool.
 
@@ -448,6 +471,7 @@ Found: {total} across {CURRENT_ROUND} rounds
   ├─ Auto-applied (severity):      {n}  {bars}
   ├─ Auto-applied (same-round):    {n}  {bars}
   ├─ Auto-applied (cross-round):   {n}  {bars}
+  ├─ Auto-implemented (conductor):  {n}  {bars}
   ├─ User-approved:                {n}  {bars}
   └─ Discarded (no consensus):     {n}  {bars}
 
@@ -484,7 +508,8 @@ AskUserQuestion(
 - **This is a hygiene pass, not a rewrite** — targeted edits only, preserve the plan's intent
 - **Consensus is the gating mechanism** — single-agent findings must be confirmed by recurrence or user approval
 - **Cross-round consensus is novel** — deferred findings that recur in later rounds are high-signal
-- **One human touchpoint** — remaining no-consensus items presented once at the end, not per-round
+- **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
+- **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of consensus
 - **Sonnets are cost-effective** — accuracy/structure/hygiene checks don't need Opus-level reasoning
 - **Findings files survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Consensus registry is compaction recovery** — parse it to know the deferred pool state

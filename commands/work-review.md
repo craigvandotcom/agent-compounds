@@ -461,6 +461,8 @@ For each item: target file, what to change, severity, which reviewers flagged it
 
 Tag these as `AUTO_FIX`.
 
+**Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing values, naming conventions, implementation style) — just pick the better option and auto-apply.
+
 **Defer remaining findings (DO NOT present to user yet):**
 
 Single-reviewer Medium/Low findings with no cross-round match are added to the consensus registry — NOT tagged as NEEDS_DECISION yet. They may achieve cross-round consensus if a verification round runs.
@@ -471,7 +473,7 @@ For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md`:
 | {round} | {reviewer} | {severity} | {file:line} | {one-line summary} |
 ```
 
-**Non-auto-fixable items** (need judgment regardless of consensus) are tagged `NEEDS_DECISION` immediately — these skip the registry.
+**`DESIGN_DECISION` items** (choices that noticeably affect user experience or profoundly change development approach) are deferred regardless of severity or consensus — these skip the registry and go directly to the user in Phase 7.
 
 Append to `$ARTIFACTS_DIR/progress.md`:
 
@@ -682,7 +684,7 @@ git push
 
 ### Collect All Remaining Items
 
-Combine two categories into a single presentation:
+Combine two categories:
 
 1. **NEEDS_DECISION items:** Non-auto-fixable findings that need judgment
 2. **No-consensus findings:** Read the consensus registry — single-reviewer findings that never achieved cross-round consensus
@@ -691,19 +693,52 @@ Combine two categories into a single presentation:
 
 Report auto-fix results and skip to Phase 8.
 
-### If Items Remain
+### Conductor Final Review (Triage)
 
-Present via `AskUserQuestion` (once):
+**You (the conductor) now review each remaining item and classify it:**
+
+| Category | Criteria | Action |
+|---|---|---|
+| `AUTO_IMPLEMENT` | There is a clearly superior technical answer — better correctness, robustness, performance, or maintainability. The improvement is unambiguous. | Implement it now. |
+| `DESIGN_DECISION` | No objectively superior answer AND the choice would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and classify as `AUTO_IMPLEMENT`. | Defer to user. |
+| `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change (new abstractions, large refactors, architectural pivots) that constitutes a strategic commitment. | Defer to user with scope context. |
+
+**Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it. Only classify as `DESIGN_DECISION` when you genuinely cannot determine a superior option on engineering merit AND the impact is user-visible or development-transformative. Only classify as `SCOPE_ESCALATION` when the blast radius is transformative, not merely "more work."
+
+### Apply AUTO_IMPLEMENT Items
+
+Spawn engineer for all `AUTO_IMPLEMENT` items:
+
+```
+Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
+Read AGENTS.md for project context.
+
+Apply these fixes — each has been validated by the conductor as a clear technical improvement:
+
+{numbered list of AUTO_IMPLEMENT items with file, line, and exact change}
+
+Run project checks after changes (from AGENTS.md > Project Commands):
+{CMD_TEST} && {CMD_LINT} && {CMD_TYPECHECK}
+""")
+```
+
+Log each with rationale: why this is a clear technical improvement, not a design choice.
+
+### Present Decisions to User (if any)
+
+**If no DESIGN_DECISION or SCOPE_ESCALATION items remain:** Skip to commit.
+
+**If items remain:**
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Auto-applied {N} fixes (severity + consensus). {M} items remain for your decision:",
+    question: "Auto-applied {N} fixes (severity + consensus + technical triage). {M} items need your decision:",
     header: "Decisions",
     multiSelect: true,
     options: [
-      { label: "Fix A: <title>", description: "NEEDS_DECISION, {severity} — {reviewer}: {file}: {one-line summary}" },
-      { label: "Fix B: <title>", description: "No consensus, Round {R}, {severity} — {reviewer}: {file}: {one-line summary}" }
+      { label: "Fix A: <title>", description: "DESIGN_DECISION — {severity} — {reviewer}: {file}: {one-line summary}" },
+      { label: "Fix B: <title>", description: "SCOPE_ESCALATION — {severity} — {reviewer}: {file}: {one-line summary}. Scope: {what the change entails}" }
     ]
   }]
 )
@@ -711,7 +746,7 @@ AskUserQuestion(
 
 **If more than 4 items:** Split across multiple `AskUserQuestion` calls.
 
-### Apply Chosen Fixes
+### Apply User-Approved Fixes
 
 Spawn engineer for approved items:
 
@@ -721,21 +756,22 @@ Read AGENTS.md for project context.
 
 Apply these changes based on user decisions:
 
-{list of approved NEEDS_DECISION items with specific fixes}
+{list of approved items with specific fixes}
 
 Run project checks after changes (from AGENTS.md > Project Commands):
 {CMD_TEST} && {CMD_LINT} && {CMD_TYPECHECK}
 """)
 ```
 
-### Commit Decision Fixes
+### Commit All Fixes
 
 ```bash
 git add <specific files>
 git commit -m "$(cat <<'EOF'
-review: implement decisions for [feature]
+review: implement fixes + decisions for [feature]
 
-Applied: {list of chosen items}
+Auto-implemented (conductor triage): {count}
+User decisions applied: {count}
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
@@ -777,6 +813,7 @@ Found: {total} across {count} rounds
   ├─ Auto-applied (severity):      {n}  {bars}
   ├─ Auto-applied (same-round):    {n}  {bars}
   ├─ Auto-applied (cross-round):   {n}  {bars}
+  ├─ Auto-implemented (conductor):  {n}  {bars}
   ├─ User-approved:                {n}  {bars}
   └─ Discarded (no consensus):     {n}  {bars}
 
@@ -862,7 +899,7 @@ Use both: `work-review` for pre-merge validation, `hygiene` for general health.
 - **Progress file is compaction recovery** — parse it on restart for phase state
 - **Project commands come from AGENTS.md** — detect from config files only as fallback
 - **Skill routing is dynamic** — check AGENTS.md > Available Skills, don't hardcode paths
-- **No decisions without the user** — architectural choices and trade-offs are NEEDS_DECISION
+- **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions and profound scope changes to the user
 - **Convergence is optional** — only offer verification round for Critical/High auto-fixes
 
 ---

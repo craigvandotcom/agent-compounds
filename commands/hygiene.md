@@ -236,6 +236,8 @@ Produce a numbered change list. For each: target file, what to change, auto-fixa
 2. **Same-round consensus:** 2+ agents independently flagged the same issue (regardless of severity) — multi-agent agreement is high-signal
 3. **Cross-round consensus:** A single-agent finding from THIS round matches a deferred finding in the consensus registry from a PREVIOUS round — recurrence across rounds is high-signal
 
+**Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing values, naming conventions, implementation style) — just pick the better option and auto-apply.
+
 **Apply these immediately. Log them as "Auto-applied" in the progress file with the consensus type.**
 
 After each batch of fixes:
@@ -256,7 +258,7 @@ For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md`:
 | {CURRENT_ROUND} | {agent role} | {severity} | {file:line} | {one-line summary} |
 ```
 
-**Non-auto-fixable items** (need judgment, not just low consensus) are also tracked in the registry with a `NO-AUTOFIX` tag for presentation in Phase 5.
+**`DESIGN_DECISION` items** (choices that noticeably affect user experience or profoundly change development approach) are deferred regardless of severity or consensus — these skip the registry and go directly to the user in Phase 5.
 
 ### Phase 4: Convergence Check + Progress
 
@@ -287,32 +289,48 @@ IF this round found same issues as last round -> force finalize (agents are circ
 
 ## Phase 5: Finalize
 
-### Present Remaining No-Consensus Findings (once)
+### Conductor Final Review (Triage)
 
-Read the consensus registry. Combine two categories into a single presentation:
+Read the consensus registry. Collect all remaining items:
 
 1. **No-consensus findings:** Single-agent findings that never recurred across rounds
-2. **Non-auto-fixable items:** Findings tagged `NO-AUTOFIX` that need judgment regardless of consensus
+2. **DESIGN_DECISION items:** Findings deferred during rounds as genuine design decisions
 
 **If nothing remains:** Skip — proceed to quality gate.
+
+**Classify each remaining no-consensus finding:**
+
+| Category | Criteria | Action |
+|---|---|---|
+| `AUTO_IMPLEMENT` | There is a clearly superior technical answer — better correctness, robustness, performance, or maintainability. The improvement is unambiguous. | Implement it now. |
+| `DESIGN_DECISION` | No objectively superior answer AND the choice would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and classify as `AUTO_IMPLEMENT`. | Defer to user. |
+| `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change that constitutes a strategic commitment. | Defer to user with scope context. |
+
+**Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it.
+
+**Apply all `AUTO_IMPLEMENT` items** using Edit tool. Log each with rationale.
+
+### Present Decisions to User (if any)
+
+**If no `DESIGN_DECISION` or `SCOPE_ESCALATION` items remain:** Skip — proceed to quality gate.
 
 **If items remain:**
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "All consensus findings applied across {CURRENT_ROUND} rounds. {N} items remain for your decision:",
-    header: "Remaining",
+    question: "Auto-applied {N} fixes (severity + consensus + technical triage). {M} items need your decision:",
+    header: "Decisions",
     multiSelect: true,
     options: [
-      { label: "Fix X: <title>", description: "Round {R}, {severity} — {agent}: {file} — <one-line summary>" },
-      { label: "Fix Y: <title>", description: "NO-AUTOFIX, {severity} — {agent}: {file} — <one-line summary>" }
+      { label: "Fix X: <title>", description: "DESIGN_DECISION — Round {R}, {severity} — {agent}: {file} — {one-line summary}" },
+      { label: "Fix Y: <title>", description: "SCOPE_ESCALATION — {severity} — {agent}: {file} — {one-line summary}. Scope: {what it entails}" }
     ]
   }]
 )
 ```
 
-**If more than 4 remaining items:** Split across multiple `AskUserQuestion` calls.
+**If more than 4 items:** Split across multiple `AskUserQuestion` calls.
 
 **Apply any user-approved fixes** using Edit tool.
 
@@ -366,6 +384,7 @@ Found: {total} across {CURRENT_ROUND} rounds
   ├─ Auto-applied (severity):      {n}  {bars}
   ├─ Auto-applied (same-round):    {n}  {bars}
   ├─ Auto-applied (cross-round):   {n}  {bars}
+  ├─ Auto-implemented (conductor):  {n}  {bars}
   ├─ User-approved:                {n}  {bars}
   └─ Discarded (no consensus):     {n}  {bars}
 
@@ -422,7 +441,8 @@ Use `/hygiene` for general codebase health between sessions or as a daily mainte
 - **Fresh eyes each round** — direct agents to unexplored files in subsequent rounds
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
 - **Cross-round consensus:** single-agent findings that recur in later rounds are high-signal — auto-apply on match
-- **One human touchpoint:** remaining no-consensus + non-auto-fixable items presented once in Phase 5, not per-round
+- **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
+- **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
 - **Quality gate before commit** — type-check + lint + test + build must pass
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Don't invent issues** — if the codebase is clean, say so and finish early
