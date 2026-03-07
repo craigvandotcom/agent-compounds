@@ -197,6 +197,7 @@ Implement this bead using strict TDD (RED → GREEN).
 - Follow domain skill guidelines (loaded above)
 - Follow project type discipline (see AGENTS.md > Rules)
 - **Before implementing**, search for existing test files that import or test the files you will modify (`grep -r 'from.*<module>' __tests__/ features/ --include='*.test.*'`). Run these after your changes to confirm no regressions. List any existing test files you verified in your report.
+- **CRITICAL: Run ALL pre-existing tests for modified files.** If any test file imports a module you changed (added exports/imports, changed signatures), run that test and fix failures your changes caused. List each pre-existing test and its result. If none found, state "No pre-existing tests found."
 - Run ALL project quality checks before finishing (see AGENTS.md > Project Commands > Quality gate)
 
 ### Output
@@ -223,7 +224,9 @@ Do NOT delete or overwrite result files from earlier beads in this session.
    # See AGENTS.md > Project Commands > Test
    ```
 
-2. **Lint + type-check** — catch errors early:
+2. **Pre-existing test regression check** — For each file the engineer modified, grep for existing tests (`grep -rl '<module-path>' __tests__/ features/ --include='*.test.*'`). Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
+
+3. **Lint + type-check** — catch errors early:
 
    ```bash
    # Run project lint and type-check commands
@@ -232,15 +235,15 @@ Do NOT delete or overwrite result files from earlier beads in this session.
 
    (Full build deferred to session-end quality gate — too slow per-bead.)
 
-3. **Test coverage verification** — confirm the engineer actually wrote new tests:
+4. **Test coverage verification** — confirm the engineer actually wrote new tests:
    - Read the engineer's result file for "Test files created/modified"
    - If the bead adds new functionality (modules, handlers, utilities, etc.) there MUST be new test files or new test cases
    - If the engineer's report lists zero new tests for new code, **re-spawn the engineer** with explicit instructions to add test coverage
    - Pure refactors or config changes may not need new tests — use judgment
 
-4. **Acceptance criteria check** — does the implementation match the bead's spec? Tests passing is necessary but not sufficient. If the spec says "move" a file, verify the original is deleted and all imports updated — leaving the original creates dead code.
+5. **Acceptance criteria check** — does the implementation match the bead's spec? Tests passing is necessary but not sufficient. If the spec says "move" a file, verify the original is deleted and all imports updated — leaving the original creates dead code.
 
-5. **Fresh-eyes diff scan:**
+6. **Fresh-eyes diff scan:**
 
    ```bash
    git diff --stat
@@ -295,6 +298,8 @@ SESSION_MODE={SESSION_MODE}
 - Status: COMPLETE
 - Commit: <hash>
 - Files: <list of modified files>
+
+COMPLETED: {BEADS_COMPLETED} / {TARGET_BEADS}
 ```
 
 Increment `BEADS_COMPLETED`.
