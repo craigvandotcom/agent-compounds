@@ -63,6 +63,17 @@ git branch --list 'wave/*'
 
 All parallel sessions join the same wave branch. Trunk-based — merge to main when wave is complete.
 
+### Pre-Flight Type-Check
+
+```bash
+pnpm type-check 2>&1 | tail -5
+```
+
+If type-check fails:
+- **Error in a file this session will touch:** Fix it as the first commit before starting beads
+- **Error in a file owned by another agent's reservation:** Note the error in progress.md header, proceed with awareness that `--no-verify` may be needed on push. File a P0 bead if one doesn't exist for the fix.
+- **Error unrelated to any bead scope:** Proceed — note it but don't block the session
+
 ### Ask User
 
 Ask two questions via `AskUserQuestion`:
@@ -147,7 +158,14 @@ If the bead is unrefined:
 3. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)] | .[0]'`
 4. If no refined beads remain, STOP the session early
 
-**Once a refined bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
+**Guard: check for file reservation conflicts.** Before claiming, attempt to reserve the bead's files. If `file_reservation_paths` returns conflicts (another agent holds exclusive reservations on overlapping files), this bead is taken:
+
+1. Do NOT claim it
+2. Log: "Skipping <id> (file conflicts with <agent> — already being worked)"
+3. Get the next candidate from `br ready --json` and repeat both guards (unrefined + conflict)
+4. If no conflict-free beads remain, STOP the session early
+
+**Once a refined, conflict-free bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
 Then read bead details:
 
@@ -196,7 +214,7 @@ Implement this bead using strict TDD (RED → GREEN).
 - Follow existing code patterns (read neighboring files first)
 - Follow domain skill guidelines (loaded above)
 - Follow project type discipline (see AGENTS.md > Rules)
-- **Before implementing**, search for existing test files that import or test the files you will modify (`grep -r 'from.*<module>' __tests__/ features/ --include='*.test.*'`). Run these after your changes to confirm no regressions. List any existing test files you verified in your report.
+- **Before implementing**, search for existing test files that import or test the files you will modify (use the Grep tool with pattern `from.*<module>` and glob `*.test.*` across `__tests__/` and `features/`). Run these after your changes to confirm no regressions. List any existing test files you verified in your report.
 - **CRITICAL: Run ALL pre-existing tests for modified files.** If any test file imports a module you changed (added exports/imports, changed signatures), run that test and fix failures your changes caused. List each pre-existing test and its result. If none found, state "No pre-existing tests found."
 - Run ALL project quality checks before finishing (see AGENTS.md > Project Commands > Quality gate)
 
@@ -217,14 +235,16 @@ Do NOT delete or overwrite result files from earlier beads in this session.
 
 **YOU are the quality gate.** Read the engineer's result file and verify:
 
-1. **Run bead-relevant tests** (not full suite — just what this bead touches):
+**Worktree mode only:** Before copying files from a worktree, verify no uncommitted changes: `git -C <worktree> status --porcelain`. If uncommitted changes exist, commit them in the worktree first. `cp` reads the filesystem (committed state), not the working tree — uncommitted edits will be silently lost.
+
+1. **Run bead-relevant tests IN THE MAIN REPO** (not full suite — just what this bead touches). Do NOT trust worktree test results — module resolution and mock behavior may differ between the worktree and main repo. Run tests AFTER copying files but BEFORE committing:
 
    ```bash
    # Run project test command scoped to relevant test files
    # See AGENTS.md > Project Commands > Test
    ```
 
-2. **Pre-existing test regression check** — For each file the engineer modified, grep for existing tests (`grep -rl '<module-path>' __tests__/ features/ --include='*.test.*'`). Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
+2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
 
 3. **Lint + type-check** — catch errors early:
 
