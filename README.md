@@ -59,7 +59,7 @@ Commands are then available as `/ac/pipeline-next`, `/ac/plan-init`, `/ac/bead-w
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-...  # get one at https://openrouter.ai/keys
-pip install orcli                     # for openrouter skill
+# openrouter CLI provided by infrastructure/tools (already in PATH)
 ```
 
 ```bash
@@ -76,7 +76,7 @@ Claude Code discovers `SKILL.md` automatically. Toggle models in `expert-panel.j
 |-----------|-----------------|---------|
 | **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install beads` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
-| **[orcli](https://pypi.org/project/orcli/)** | OpenRouter CLI for multi-model queries (used by expert-consensus skill) | `pip install orcli` |
+| **openrouter** | OpenRouter CLI for multi-model queries (used by expert-consensus and openrouter skills) | Provided by `infrastructure/tools` (in PATH) |
 | **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by browser-tester sub-agent, bead-land, work-review) | `npm install -g agent-browser` |
 
 ## Philosophy

@@ -1,86 +1,130 @@
 ---
 name: openrouter
 description: Access 400+ AI models from any agent. Discover, select, and query the right model for any task.
-version: 1.0.0
-tools: [orcli (pip)]
+version: 1.2.0
+tools: [openrouter (infrastructure/tools)]
 ---
 
 # OpenRouter
 
 Query any AI model from the terminal. One tool, every model.
 
+## Model Policy
+
+**Approved providers (use ONLY these unless user specifies otherwise):**
+- Anthropic (Claude)
+- Google (Gemini)
+- OpenAI (GPT, o-series)
+- xAI (Grok)
+
+### Configured Models (last verified: 2026-03-24)
+
+#### Quality Tier (complex reasoning, analysis, generation)
+
+| Provider | Model ID | Alias | Released | $/M prompt | $/M completion |
+|----------|----------|-------|----------|-----------|---------------|
+| Anthropic | `anthropic/claude-sonnet-4.6` | `claude` | 2026-03 | $3.00 | $15.00 |
+| Anthropic | `anthropic/claude-opus-4.6` | `opus` | 2026-03 | $5.00 | $25.00 |
+| OpenAI | `openai/gpt-5.4` | `gpt` | 2026-03 | $2.50 | $15.00 |
+| Google | `google/gemini-2.5-pro` | `gemini` | 2025-12 | $1.25 | $10.00 |
+| xAI | `x-ai/grok-4.20-beta` | `grok` | 2026-03 | $2.00 | $6.00 |
+
+#### Speed & Cost Tier (bulk work, simple tasks, scripting)
+
+| Provider | Model ID | Alias | Released | $/M prompt | $/M completion |
+|----------|----------|-------|----------|-----------|---------------|
+| Google | `google/gemini-2.5-flash` | `gemini-flash` | 2025-12 | $0.30 | $2.50 |
+| xAI | `x-ai/grok-4.20-beta` | `grok` | 2026-03 | $2.00 | $6.00 |
+| OpenAI | `openai/gpt-5.4-mini` | `gpt-mini` | 2026-03 | $0.75 | $4.50 |
+
+#### Reasoning Tier (math, logic, multi-step problems)
+
+| Provider | Model ID | Alias | Notes |
+|----------|----------|-------|-------|
+| OpenAI | `openai/o3` | `o3` | Best for pure reasoning |
+| OpenAI | `openai/o4-mini` | `o4-mini` | Fast reasoning, lower cost |
+| Any | Any model + `--reasoning high` | - | Extended thinking on supported models |
+
+### Freshness Check (REQUIRED before each use)
+
+Before calling any model, the agent MUST:
+
+1. Run `openrouter --list-models <provider> --pricing` for the chosen provider
+2. Compare the latest available model against the configured model above
+3. **If a newer model exists from the same provider:**
+   - Ask the user: "Found newer model `<new_id>` from `<provider>` (configured: `<old_id>`). Replace in policy?"
+   - If user approves, use the newer model AND note it needs updating in this file
+   - If user declines, proceed with the configured model
+4. If no newer model exists, proceed with the configured model
+
+**Exception:** For quick/scripted calls where the agent is chaining many requests, skip the freshness check and use the alias directly. The aliases are maintained in `openrouter.py` and updated periodically.
+
+### Default Selection
+
+| Task type | Default pick |
+|-----------|-------------|
+| General quality work | `claude` (Sonnet 4.6) |
+| Budget/bulk processing | `gemini-flash` or `gpt-mini` |
+| Structured extraction / JSON | `gpt-mini` |
+| Reasoning / math | `o3` or `claude --reasoning high` |
+| Web search needed | Any model + `--web` or `:online` variant |
+| Second opinion / consensus | Fan out to one from each provider |
+
 ## Prerequisites
 
 ```bash
-pip install orcli
+# openrouter is provided by infrastructure/tools (already in PATH via tools/bin/)
 export OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
 Get a key at https://openrouter.ai/keys
 
-Verify: `orc --version`
+Verify: `openrouter --aliases`
 
 ## Core Usage
 
 ```bash
 # Query a model
-orc "Your prompt here" -m <model_id> --raw
+openrouter "Your prompt here" -m <model_id> --raw
 
 # Pipe input
-echo "text" | orc -m <model_id> -s "Summarize" --raw
+echo "text" | openrouter -m <model_id> -s "Summarize" --raw
 
 # From file
-orc --file input.md -m <model_id> --raw
+openrouter --file input.md -m <model_id> --raw
 
 # JSON output for structured data
-orc "Extract entities" -m <model_id> --json-mode --raw
+openrouter "Extract entities" -m <model_id> --json-mode --raw
 
 # Full JSON response (includes tokens, cost, timing)
-orc "Query" -m <model_id> --format json
+openrouter "Query" -m <model_id> --format json
 ```
 
 Always use `--raw` when capturing output — it suppresses formatting and metadata, giving clean content for piping or saving.
 
-## Model Selection
-
-**Never hardcode model IDs.** Models change frequently. Use the discovery commands to find the right model at runtime.
-
-### Step 1: Identify what you need
-
-| Need | Selection strategy |
-|------|-------------------|
-| Best quality, cost doesn't matter | `orc --top` → pick from Flagship |
-| Cheapest that works | `orc --list-models --pricing --sort price` → pick cheapest with adequate context |
-| Largest context window | `orc --list-models --pricing --sort context` → pick from top |
-| Specific provider | `orc --list-models <provider> --pricing` (e.g., `anthropic`, `google`, `openai`) |
-| Reasoning/math/logic | `orc --top` → pick from Reasoning |
-| High throughput / low latency | `orc --top` → pick from Speed & Value |
-| Open source / self-hostable | `orc --top` → pick from Open Source |
-| Web search capability | Append `:online` to any model ID |
-
-### Step 2: Discover current best models
+## Model Discovery
 
 ```bash
-# Curated top picks with live pricing — start here
-orc --top
+# Curated top picks with live pricing
+openrouter --top
 
 # Filter to a provider
-orc --list-models anthropic --pricing
+openrouter --list-models anthropic --pricing
 
 # Sort by price (cheapest first)
-orc --list-models --pricing --sort price
+openrouter --list-models --pricing --sort price
 
 # Sort by context window (largest first)
-orc --list-models --pricing --sort context
+openrouter --list-models --pricing --sort context
 
 # Get details on a specific model
-orc --model-info <model_id>
-```
+openrouter --model-info <model_id>
 
-### Step 3: Use the model
+# Show all aliases
+openrouter --aliases
 
-```bash
-orc "Your prompt" -m <model_id_from_discovery> --raw
+# Model variants
+openrouter --variants
 ```
 
 ### Model variants
@@ -95,92 +139,74 @@ Append to any model ID with a colon:
 | `:free` | Zero-cost tier (rate limited) |
 | `:extended` | Need extra-long context |
 
-Example: `orc "Latest news on X" -m google/gemini-2.5-pro:online --raw`
+Example: `openrouter "Latest news on X" -m gemini:online --raw`
 
 ## Agent Patterns
-
-### Pick the best model for a task
-
-```bash
-# 1. Check what's currently top-tier
-orc --top
-
-# 2. Pick model ID from the output
-# 3. Use it
-orc "Your task" -m <chosen_model_id> --raw
-```
 
 ### Multi-model consensus
 
 ```bash
-# Fan out to multiple models in parallel
-for model_id in $(orc --top 2>&1 | grep -oP '^\s{4}\S+/\S+' | head -4 | tr -d ' '); do
-  orc "Your question" -m "$model_id" --raw -o "/tmp/response-$(echo $model_id | tr '/' '-').md" &
+for model_id in claude gemini gpt grok; do
+  openrouter "Your question" -m "$model_id" --raw -o "/tmp/response-$model_id.md" &
 done
 wait
-# Then synthesize the responses
 ```
 
 ### Cost-optimized bulk processing
 
 ```bash
-# Find cheapest model
-cheap_model=$(orc --list-models --pricing --sort price 2>&1 | grep -v 'free\|varies\|Models:' | head -1 | awk '{print $1}')
-
-# Use it for bulk work
 for f in docs/*.md; do
-  orc --file "$f" -m "$cheap_model" -s "Summarize in 3 bullets" --raw -o "summaries/$(basename $f)"
+  openrouter --file "$f" -m gemini-flash -s "Summarize in 3 bullets" --raw -o "summaries/$(basename $f)"
 done
 ```
 
 ### Structured extraction
 
 ```bash
-# JSON mode for structured output
-orc "Extract all names and roles from this text: ..." -m <model_id> --json-mode --raw
-
-# With JSON schema validation
-orc "Extract entities" -m <model_id> --json-schema schema.json --raw
+openrouter "Extract all names and roles" -m gpt-mini --json-mode --raw
+openrouter "Extract entities" -m gpt-mini --json-schema schema.json --raw
 ```
 
 ### Web-augmented queries
 
 ```bash
-# Plugin-based web search
-orc "What happened in AI this week?" -m <model_id> --web --raw
-
-# Provider-native search via variant
-orc "Current weather in Amsterdam" -m <model_id>:online --raw
+openrouter "What happened in AI this week?" -m claude --web --raw
+openrouter "Current weather in Amsterdam" -m gemini:online --raw
 ```
 
 ### Vision / multimodal
 
 ```bash
-orc "Describe this image" --image screenshot.png -m <model_id> --raw
-orc "Compare these designs" --image a.png --image b.png -m <model_id> --raw
+openrouter "Describe this image" --image screenshot.png -m gemini --raw
+openrouter "Compare these designs" --image a.png --image b.png -m claude --raw
 ```
 
 ### PDF analysis
 
 ```bash
-orc "Summarize this paper" --pdf paper.pdf -m <model_id> --raw
+openrouter "Summarize this paper" --pdf paper.pdf -m claude --raw
 ```
 
 ### With reasoning
 
 ```bash
-# Effort levels: xhigh, high, medium, low, minimal, none
-orc "Prove this theorem" -m <model_id> --reasoning high --raw
-
-# Hide reasoning from output (use internally only)
-orc "Solve this" -m <model_id> --reasoning high --reasoning-exclude --raw
+openrouter "Prove this theorem" -m o3 --raw
+openrouter "Solve this" -m claude --reasoning high --raw
+openrouter "Quick logic" -m claude --reasoning high --reasoning-exclude --raw
 ```
 
 ### Fallback chains
 
 ```bash
-# Auto-failover: if primary fails, try next
-orc "Query" -m <primary_model> --fallback <backup1> <backup2> --raw
+openrouter "Query" -m claude --fallback gemini gpt grok --raw
+```
+
+### Account management
+
+```bash
+openrouter --credits
+openrouter --key-info
+openrouter --generation-info gen_abc123
 ```
 
 ## Output Modes
@@ -215,3 +241,6 @@ orc "Query" -m <primary_model> --fallback <backup1> <backup2> --raw
 | `--list-models` | Browse model catalog |
 | `--pricing` | Show prices |
 | `--sort price\|context` | Sort model list |
+| `--credits` | Show account credit balance |
+| `--key-info` | Show API key info and rate limits |
+| `--generation-info ID` | Inspect generation stats |
