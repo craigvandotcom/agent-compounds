@@ -26,7 +26,7 @@ Query any AI model from the terminal. One tool, every model.
 | Anthropic | `anthropic/claude-sonnet-4.6` | `claude` | 2026-03 | $3.00 | $15.00 |
 | Anthropic | `anthropic/claude-opus-4.6` | `opus` | 2026-03 | $5.00 | $25.00 |
 | OpenAI | `openai/gpt-5.4` | `gpt` | 2026-03 | $2.50 | $15.00 |
-| Google | `google/gemini-2.5-pro` | `gemini` | 2025-12 | $1.25 | $10.00 |
+| Google | `google/gemini-3.1-pro-preview` | `gemini` | 2026-03 | $2.00 | $12.00 |
 | xAI | `x-ai/grok-4.20-beta` | `grok` | 2026-03 | $2.00 | $6.00 |
 
 #### Speed & Cost Tier (bulk work, simple tasks, scripting)
