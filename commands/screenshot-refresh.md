@@ -36,7 +36,7 @@ Read each landing page file found above. For every screenshot/image reference, e
 - **filename**: the path referenced (e.g. `/screenshots/step1-foo.png`, `/images/hero.webp`)
 - **context**: what the screenshot depicts — infer from alt text, variable names, adjacent copy text, description strings
 - **section**: which part of the landing page uses it (hero, how-it-works step 1, trust section, etc.)
-- **appRoute**: which app view/route would produce this screenshot (e.g. `/app/insights`, `/dashboard`, `/feed`)
+- **appRoute**: which app view/route would produce this screenshot — check the app's routing structure (`app/`, `pages/`, router config) to map context to routes. If uncertain, flag it in the manifest for user confirmation.
 
 Read any nearby copy/text files (e.g. `_copy.ts`, `content.ts`, `copy.json`) to enrich context.
 
@@ -75,10 +75,10 @@ If no seed script exists, skip this phase and note that screenshots will use wha
 
 ## Phase 3: Capture Screenshots via Browser Agent
 
-Ask the user to confirm or provide:
+First, check for auth details in project files (`.env.local`, `CLAUDE.md`, test fixtures, seed scripts). Then ask the user to confirm or provide:
 
 - **Dev server URL** (default: `http://localhost:3000`)
-- **Auth required?** If yes: login URL, test credentials (email + password)
+- **Auth required?** If yes: login URL, test credentials (email + password) — propose any credentials found in project files
 - **Viewport** (default: 390px wide × 844px tall — iPhone 15 Pro)
 - **Device scale factor** (default: 2 for retina)
 - **Color scheme** (default: dark — adjust if the app uses light theme)
@@ -96,7 +96,7 @@ Dev server: <URL>
 
 Viewport: <width>px × <height>px, deviceScaleFactor <scale>, <color scheme> color scheme.
 
-Before taking any screenshot, run this cleanup in the browser console:
+Before taking any screenshot, execute this cleanup via page.evaluate():
   document.querySelector('nextjs-portal')?.remove()
   document.querySelector('vite-error-overlay')?.remove()
   document.querySelectorAll('[data-dev-indicator],[data-nextjs-toast],[data-testid="dev-tools"]').forEach(el => el.remove())
@@ -106,8 +106,10 @@ Wait for network requests to finish, then wait an additional 3 seconds before ca
 <Natural language description of: what route to navigate to, what interactions to perform,
 what should be visible in the screenshot. Derived from the manifest context + appRoute.>
 
-Save the screenshot to: $PWD/<filename>
+Save the screenshot to: <absolute path to project root>/<filename>
 ```
+
+**Important:** Resolve the absolute project root path (e.g. `/home/user/project`) before constructing agent prompts. Do NOT pass `$PWD` literally — browser agents don't execute shell variables.
 
 ### Guidance for agents
 
@@ -152,6 +154,8 @@ Screenshot Refresh Complete:
 
 Re-run failed screenshots individually with adjusted instructions.
 
+**Note:** Screenshots overwrite existing files in-place at the paths already referenced by the landing page code. No code changes to `<Image src=...>` tags are needed — the filenames stay the same.
+
 ---
 
 ## Phase 5: Dev Indicator Cleanup Reference
@@ -184,4 +188,4 @@ document.querySelector('#react-devtools-backend-installation')?.remove()
 | Dev indicator visible | Add/adjust the cleanup script in the agent prompt |
 | Screenshot blank or tiny | Increase the post-load wait time; check if app needs longer to hydrate |
 | Screenshot shows wrong route | Double-check the `appRoute` in the manifest; adjust agent navigation instructions |
-| File not saved | Confirm `$PWD` resolves correctly; use an absolute path as fallback |
+| File not saved | Ensure the output path is absolute — browser agents cannot resolve shell variables like `$PWD` |
