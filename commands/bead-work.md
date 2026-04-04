@@ -25,6 +25,16 @@ For parallelism, open multiple terminal sessions — each runs `/bead-work` inde
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
 
+### Clean Working Tree (FIRST)
+
+```bash
+git status --short
+```
+
+If uncommitted changes exist, review them and commit in logical groups before proceeding. The goal is granular checkpoints — every commit is a revert point. Group related changes together (e.g., plan updates in one commit, script changes in another). If anything looks like a red flag (unexpected deletions, sensitive files), flag it to the user before committing. Almost always, the right action is to commit — not stash, not ignore.
+
+**Do NOT start bead-work with a dirty working tree.** Engineers see all uncommitted files in their context and may inadvertently include unrelated changes in their diffs, forcing manual selective staging.
+
 ### Verify Refined Beads Exist
 
 ```bash

@@ -216,27 +216,26 @@ Look across ALL system files — not just MEMORY.md. Each target type has a purp
 | `AGENTS.md` | New conventions, quality gate changes, project-wide rules | "Add convention: never hardcode secrets in test files" |
 | `MEMORY.md` | Gotchas and quirks that don't fit the above — last resort, not default | "supabase gen types outputs debug line" |
 
-For each opportunity, provide:
+**MINIMUM BAR for proposing an upgrade:** The issue must have caused measurable waste THIS session — lost time, wasted tokens, incorrect output, or a mistake that had to be fixed. "Sounds like a good idea" or "might help someday" is NOT sufficient. The information must be non-obvious (an experienced engineer wouldn't know it without hitting the problem), and having it documented from the start would have saved real time or resources.
+
+If nothing caused real waste this session, propose zero upgrades. Empty is better than bloat.
+
+For each opportunity that clears the bar, provide:
 - **Target:** The specific file path to update
 - **Change:** What specifically to add, modify, or remove
-- **Severity:** Critical / High / Medium / Low
-  - Critical: Prevents failures or fixes broken workflow
-  - High: Significant efficiency gain or quality improvement
-  - Medium: Nice-to-have improvement
-  - Low: Minor polish
-- **Evidence:** Concrete examples from this session
+- **What it cost us:** Concrete time/resource waste from this session (e.g., "engineer touched 12 unrelated files, conductor spent 10 minutes selectively staging")
+- **Evidence:** Specific examples from this session
 
 Prioritize command/skill improvements over MEMORY.md additions. If a learning improves a workflow step, put it in the command file. If it documents a domain pattern, put it in the skill file. MEMORY.md is for one-off quirks only.
 
-Be aggressive — look for meaningful improvements. But every suggestion must have evidence from this session.
 Context bloat is the enemy. Prefer refining existing content over adding new content.
-If nothing noteworthy happened, say so — don't invent learnings to fill the report.
+If nothing caused real waste, say so — don't invent learnings to fill the report.
 """)
 ```
 
 ### Conductor Reviews Retrospective
 
-Read `/tmp/bead-work/retrospective.md`. Verify findings against your own experience of the session. Remove anything speculative — keep only evidence-backed items.
+Read `/tmp/bead-work/retrospective.md`. Apply the minimum bar: did this issue cause real waste THIS session? Drop anything that's "interesting but theoretical." Keep only items where you can point to a specific moment where time or resources were lost because the information wasn't available upfront.
 
 ---
 
