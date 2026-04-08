@@ -13,11 +13,10 @@ description: Create implementation plans with validation baseline — parallel e
 | **Input**        | User request (feature, fix, improvement) or backlog item                                             |
 | **Output**       | Approved plan in `_plans/YYYY-MM-DD-HHMM-[feature].md`, ready for `/plan-refine-internal`     |
 | **Artifacts**    | Research in `_plans/research/`, validation baseline, progress in `$ARTIFACTS_DIR/progress.md` |
-| **Verification** | Plan committed to main, success criterion defined, tools verified                                    |
+| **Verification** | Plan committed to current branch, success criterion defined, tools verified                         |
 
 ## Prerequisites
 
-- Main directory on `main` branch (plans are documentation, committed to main)
 - Dev server runnable (see AGENTS.md > Project Commands > Dev server)
 
 ## Phase 0: Initialize
@@ -26,32 +25,11 @@ description: Create implementation plans with validation baseline — parallel e
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-```
-
-### Main Branch Enforcement (CRITICAL)
-
-Plans are committed directly to main. The main directory MUST be on main.
-
-```bash
 CURRENT_BRANCH=$(git branch --show-current)
-echo "Current branch: $CURRENT_BRANCH"
+echo "Planning on branch: $CURRENT_BRANCH"
 ```
 
-**If NOT on main: STOP IMMEDIATELY**
-
-```markdown
-**ERROR: Main directory must be on main branch for planning.**
-
-Current branch: [branch]
-
-**Options:**
-
-1. Switch to main: `git checkout main`
-2. If work in progress: stash first (`git stash && git checkout main`)
-3. If feature branch work needs saving: start a NEW session in main directory
-```
-
-STOP and wait for user to fix the state. Do not proceed on a feature branch.
+Plans can be created on any branch — wave branches, feature branches, or main. The plan file is committed wherever you are. Never stash or force a branch switch to satisfy this skill.
 
 ### Configuration
 
@@ -74,7 +52,7 @@ TaskCreate(subject: "Phase 2: Validation baseline", description: "Capture curren
 
 TaskCreate(subject: "Phase 3: Synthesize plan", description: "Combine exploration findings into actionable implementation plan", activeForm: "Creating plan...")
 
-TaskCreate(subject: "Phase 4: Get approval and commit", description: "Present plan for user approval, then commit artifacts to main", activeForm: "Awaiting approval...")
+TaskCreate(subject: "Phase 4: Get approval and commit", description: "Present plan for user approval, then commit artifacts to current branch", activeForm: "Awaiting approval...")
 ```
 
 ### Compaction Recovery
@@ -658,7 +636,7 @@ AskUserQuestion(
     header: "Approval",
     multiSelect: false,
     options: [
-      { label: "Approve", description: "Mark plan as approved and commit to main — refinement or beadification comes next, not implementation" },
+      { label: "Approve", description: "Mark plan as approved and commit to current branch — refinement or beadification comes next, not implementation" },
       { label: "Adjust", description: "Needs changes — specify what to revise (will re-present after edits)" },
       { label: "Reject", description: "Wrong approach — discuss concerns and rethink" }
     ]
@@ -666,7 +644,7 @@ AskUserQuestion(
 )
 ```
 
-- **Approve** -> Commit plan to main, then choose next step (refinement, beadify, or done)
+- **Approve** -> Commit plan to current branch, then choose next step (refinement, beadify, or done)
 - **Adjust** -> Update plan based on feedback, re-present
 - **Reject** -> Discuss concerns, revise approach
 
@@ -680,7 +658,7 @@ git status --short
 
 ### Commit Plan Artifacts
 
-**Plans are low-risk documentation — commit directly to main.**
+**Plans are low-risk documentation — commit directly to the current branch.**
 
 ```bash
 git add _plans/research/*.md
@@ -826,7 +804,7 @@ AskUserQuestion(
 - **Tests are designed in plan, built in implementation** — specs are hardcoded
 - **Artifacts survive compaction** — always read from files, not memory
 - **Progress file is compaction recovery** — parse it to know where you left off
-- **Plans commit to main** — low-risk documentation, always pushed
+- **Plans commit to current branch** — low-risk documentation, always pushed
 - **WAIT for approval** — never proceed without the user's explicit approval
 
 ---
