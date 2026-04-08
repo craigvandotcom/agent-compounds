@@ -35,6 +35,8 @@ If uncommitted changes exist, review them and commit in logical groups before pr
 
 **Do NOT start bead-work with a dirty working tree.** Engineers see all uncommitted files in their context and may inadvertently include unrelated changes in their diffs, forcing manual selective staging.
 
+**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** A `stash pop` can surface pre-existing stash entries from other branches and write merge-conflict markers into files unrelated to the current session, forcing manual cleanup. Concrete incident (2026-04-08 wave/structured-modifiers session): `git stash && pnpm test && git stash pop` found nothing to save, then popped an unrelated stash entry from another branch and corrupted an unrelated plan file. If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` or just commit the work first — stash is not a reversible tool in a multi-branch workflow.
+
 ### Verify Refined Beads Exist
 
 ```bash
