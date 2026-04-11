@@ -1,8 +1,8 @@
 ---
-description: Refresh landing page screenshots — discover what's needed, seed test data, capture via browser agent, verify
+description: Refresh landing page screenshots — discover what's needed, seed test data, capture via Playwright script or browser agent, verify
 ---
 
-**You are the screenshot conductor.** Discover what screenshots the landing page needs, ensure the app has compelling data, then delegate capture to browser agents.
+**You are the screenshot conductor.** Discover what screenshots the landing page needs, ensure the app has compelling data, then capture them.
 
 ---
 
@@ -18,7 +18,22 @@ description: Refresh landing page screenshots — discover what's needed, seed t
 
 ## Phase 1: Discover Screenshot Requirements
 
-### 1a. Find landing page files
+### 1a. Check for existing capture script FIRST
+
+```bash
+# Look for existing capture/screenshot scripts — prefer these over browser agents
+ls scripts/ 2>/dev/null | grep -iE "capture|screenshot"
+```
+
+If a dedicated capture script exists (e.g. `scripts/capture-screenshots.ts`), read it to understand:
+- What screenshots it captures and in what order
+- Auth mechanism (cookie injection, login flow, etc.)
+- Viewport, device scale, color scheme settings
+- Output paths
+
+**A proven capture script is always preferred over spawning browser agents.** It handles auth, navigation, timing, and ordering reliably.
+
+### 1b. Find landing page files
 
 Search the codebase for landing page / homepage components:
 
@@ -29,7 +44,7 @@ grep -rl "landing\|hero\|HomePage\|home-page" src/ app/ components/ pages/ --inc
 grep -rl '\.png\|\.jpg\|\.webp\|/screenshots/\|/images/' src/ app/ components/ pages/ --include="*.tsx" --include="*.ts" -l 2>/dev/null | head -20
 ```
 
-### 1b. Extract screenshot manifest
+### 1c. Extract screenshot manifest
 
 Read each landing page file found above. For every screenshot/image reference, extract:
 
@@ -37,17 +52,18 @@ Read each landing page file found above. For every screenshot/image reference, e
 - **context**: what the screenshot depicts — infer from alt text, variable names, adjacent copy text, description strings
 - **section**: which part of the landing page uses it (hero, how-it-works step 1, trust section, etc.)
 - **appRoute**: which app view/route would produce this screenshot — check the app's routing structure (`app/`, `pages/`, router config) to map context to routes. If uncertain, flag it in the manifest for user confirmation.
+- **reuse**: note if the same file is referenced in multiple sections (e.g. hero AND how-it-works)
 
 Read any nearby copy/text files (e.g. `_copy.ts`, `content.ts`, `copy.json`) to enrich context.
 
 Build a manifest table:
 
 ```
-| # | filename | section | context | appRoute |
-|---|----------|---------|---------|----------|
+| # | filename | section(s) | context | appRoute |
+|---|----------|------------|---------|----------|
 ```
 
-### 1c. Check for seed script
+### 1d. Check for seed script
 
 ```bash
 # Look for seed scripts
@@ -63,17 +79,41 @@ Note what seed command is available (or that none exists).
 
 ## Phase 2: Seed Test Data
 
+**CRITICAL: Seed data uses relative dates (Day 0 = today).** Previously seeded data becomes stale — "Today" views will show empty state unless re-seeded. **Always re-seed before capture.**
+
 If a seed script was found in Phase 1:
 
 1. Ask the user to confirm it should be run (it may reset data)
-2. Run it using the command discovered (e.g. `pnpm exec tsx scripts/seed-test-data.ts`)
+2. Run it using the command discovered (e.g. `pnpm exec tsx scripts/seed-insights-test-data.ts`)
 3. If the script requires credentials or environment variables, ask the user
+4. Verify the seed output — check that today's date has entries
 
 If no seed script exists, skip this phase and note that screenshots will use whatever data is currently in the app.
 
 ---
 
-## Phase 3: Capture Screenshots via Browser Agent
+## Phase 3: Capture Screenshots
+
+### Option A: Dedicated Capture Script (preferred)
+
+If a capture script was found in Phase 1a, use it directly:
+
+```bash
+pnpm exec tsx scripts/capture-screenshots.ts
+```
+
+The script should already handle:
+- Auth (cookie injection / login)
+- Navigation between app views
+- Timing / wait conditions
+- Dev indicator hiding and focus ring removal
+- Output to correct paths
+
+**After running, skip to Phase 4 (Verify).**
+
+### Option B: Browser Agents (fallback)
+
+Only use browser agents if no capture script exists.
 
 First, check for auth details in project files (`.env.local`, `CLAUDE.md`, test fixtures, seed scripts). Then ask the user to confirm or provide:
 
@@ -100,6 +140,17 @@ Before taking any screenshot, execute this cleanup via page.evaluate():
   document.querySelector('nextjs-portal')?.remove()
   document.querySelector('vite-error-overlay')?.remove()
   document.querySelectorAll('[data-dev-indicator],[data-nextjs-toast],[data-testid="dev-tools"]').forEach(el => el.remove())
+  // Remove all focus rings for mobile appearance
+  const style = document.createElement('style');
+  style.textContent = `
+    *:focus, *:focus-visible, *:focus-within {
+      outline: none !important; box-shadow: none !important;
+      --tw-ring-shadow: none !important; --tw-ring-color: transparent !important;
+      --tw-ring-offset-shadow: none !important;
+    }`;
+  document.head.appendChild(style);
+  // Blur any focused element
+  document.activeElement?.blur();
 
 Wait for network requests to finish, then wait an additional 3 seconds before capturing.
 
@@ -141,6 +192,8 @@ Use the Read tool to view each screenshot image and confirm:
 - The expected data/content is visible
 - No loading spinners, error states, or empty states
 - Dev indicators are absent
+- **No focus rings or outlines** (screenshots should mimic real mobile appearance)
+- Today's composition bar is populated (not empty) if the view includes a timeline
 
 ### 4c. Report
 
@@ -158,12 +211,16 @@ Re-run failed screenshots individually with adjusted instructions.
 
 ---
 
-## Phase 5: Dev Indicator Cleanup Reference
+## Phase 5: Mobile Appearance Cleanup Reference
 
-If dev indicators appear in screenshots, include this in the agent prompt (already in the Phase 3 template) or run manually in the browser console before capture:
+Screenshots must mimic real mobile app appearance. All cleanup happens at capture time only — **never modify app component code, global CSS, or framework config.**
+
+### Dev indicators
 
 ```js
-// Next.js dev toolbar
+// Next.js dev toolbar (shadow DOM element — use CSS, not remove())
+// CSS: nextjs-portal { display: none !important; }
+// Or via JS:
 document.querySelector('nextjs-portal')?.remove()
 
 // Vite error overlay
@@ -176,6 +233,34 @@ document.querySelectorAll('[data-dev-indicator], [data-nextjs-toast]').forEach(e
 document.querySelector('#react-devtools-backend-installation')?.remove()
 ```
 
+### Focus rings (Tailwind + native)
+
+Tailwind uses CSS custom properties for ring utilities. Override both native and Tailwind focus styles:
+
+```css
+*:focus, *:focus-visible, *:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-shadow: none !important;
+}
+```
+
+Also blur the active element before capture: `document.activeElement?.blur()`
+
+### Style injection survival
+
+**`page.addStyleTag()` and `document.querySelector().remove()` do NOT survive `page.goto()` navigations.** If the capture script navigates to a new page (e.g. reloading for a different tab state), re-inject styles after each navigation.
+
+Pattern for Playwright scripts:
+```ts
+const injectStyles = () => page.addStyleTag({ content: `...` });
+await injectStyles();           // initial
+await page.goto(url);           // navigates — styles lost
+await injectStyles();           // re-inject
+```
+
 ---
 
 ## Troubleshooting
@@ -183,9 +268,12 @@ document.querySelector('#react-devtools-backend-installation')?.remove()
 | Issue | Fix |
 |-------|-----|
 | Auth fails | Confirm test user exists in the auth provider; ask user for correct credentials |
-| Empty data | Re-run seed script; if none exists, create test data manually or ask user |
+| Empty data / empty "Today" bar | **Re-seed** — seed data uses relative dates and goes stale |
 | Wrong user's data showing | Agent should sign out first, then sign in as test user |
-| Dev indicator visible | Add/adjust the cleanup script in the agent prompt |
+| Dev indicator visible | Use CSS `nextjs-portal { display: none }` — more reliable than `.remove()` for shadow DOM |
+| Focus ring on input | Inject Tailwind ring overrides + `document.activeElement?.blur()` before capture |
+| Styles missing after navigation | Re-inject `addStyleTag()` after every `page.goto()` call |
 | Screenshot blank or tiny | Increase the post-load wait time; check if app needs longer to hydrate |
 | Screenshot shows wrong route | Double-check the `appRoute` in the manifest; adjust agent navigation instructions |
+| Food cards not found | Check component selectors — use `role` and CSS class attributes (e.g. `[role="link"].spring-press-subtle`) instead of text matching |
 | File not saved | Ensure the output path is absolute — browser agents cannot resolve shell variables like `$PWD` |

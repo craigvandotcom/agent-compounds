@@ -83,6 +83,16 @@ find "$PROJECT_ROOT/_backlog" -name "*.md" \
 
 For each file: extract `status` (captured/planned/complete), unchecked task count, version milestone. Skip `status: complete` and items with zero unchecked tasks.
 
+### Scan D: Craig's Manual Backlog
+
+```bash
+find "$PROJECT_ROOT/_backlog-craig" -name "*.md" \
+  -not -name "README.md" -not -path "*/_done/*" \
+  2>/dev/null
+```
+
+These are manual tasks requiring human intervention (account setup, Xcode config, App Store submission). Show them in a separate section in the report — they cannot be advanced by agents but may block agent work. Extract `status`, `blocker`, and `urgency` from frontmatter.
+
 ---
 
 ## Phase 2: Prioritize
@@ -135,7 +145,11 @@ Ready to build: {N} beads — run /bead-work when you're ready to implement.
 ### Blocked ({N} beads across {epic_count} epics)
   {epic_id}  {epic_title}  ({ready}/{total} children ready)
 
-Pipeline: {ready_refined} ready | {unrefined} unrefined | {to_beadify} to beadify | {draft_plans} draft plans | {backlog} backlog
+### Craig's Next (manual tasks — _backlog-craig/)
+  {filename}  [{status}, blocker: {blocker}, urgency: {urgency}]
+  ...
+
+Pipeline: {ready_refined} ready | {unrefined} unrefined | {to_beadify} to beadify | {draft_plans} draft plans | {backlog} backlog | {craig} manual
 ```
 
 Omit sections with zero items.
