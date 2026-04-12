@@ -275,7 +275,9 @@ Do NOT delete or overwrite result files from earlier beads in this session.
 
 5. **Acceptance criteria check** — does the implementation match the bead's spec? Tests passing is necessary but not sufficient. If the spec says "move" a file, verify the original is deleted and all imports updated — leaving the original creates dead code.
 
-6. **Fresh-eyes diff scan:**
+6. **Human-gate check** — if the bead has a `human-gate` label, the conductor MUST present each substantive decision to the user for approval BEFORE committing. Gate decisions, ground truth values, classification rationales, and any domain-knowledge claims require explicit user sign-off. Do NOT auto-close human-gate beads based on passing tests alone — the human review IS the gate.
+
+7. **Fresh-eyes diff scan:**
 
    ```bash
    git diff --stat
