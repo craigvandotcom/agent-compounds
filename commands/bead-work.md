@@ -229,6 +229,7 @@ Implement this bead using strict TDD (RED → GREEN).
 - **Before implementing**, search for existing test files that import or test the files you will modify (use the Grep tool with pattern `from.*<module>` and glob `*.test.*` across `__tests__/` and `features/`). Run these after your changes to confirm no regressions. List any existing test files you verified in your report.
 - **CRITICAL: Run ALL pre-existing tests for modified files.** If any test file imports a module you changed (added exports/imports, changed signatures), run that test and fix failures your changes caused. List each pre-existing test and its result. If none found, state "No pre-existing tests found."
 - Run ALL project quality checks before finishing (see AGENTS.md > Project Commands > Quality gate)
+- **Formatter scope — do NOT run repo-wide `pnpm format` or `prettier --write .`** during a bead. Repo-wide formatting reformats files outside your bead's scope, contaminates the bead's diff with unrelated changes, and forces the conductor to manually restore unrelated files (which is awkward because `git checkout -- path` may be blocked by safety hooks). Format only files you explicitly modified: `pnpm prettier --write <file1> <file2>` or equivalent. The session-end `bead-land` step runs a repo-wide format sweep as a separate commit — that is where whole-repo formatting belongs, not per-bead.
 
 ### Output
 

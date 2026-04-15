@@ -58,6 +58,24 @@ If any fail:
 - **Fixable in <5 min:** Fix them now, commit the fix
 - **Larger issues:** Create a P0 bead, document the failure, continue landing
 
+**Repo-wide format sweep (separate commit).** Bead-work enforces per-bead formatter scope so individual bead diffs stay clean. Bead-land is where the whole-repo formatter runs once, in its own commit, so each bead's PR-level diff remains scope-focused while the tree still ends up consistently formatted. Run it here:
+
+```bash
+pnpm format   # or equivalent repo-wide prettier --write .
+git diff --stat
+```
+
+If the sweep modified any file, commit it on its own:
+
+```bash
+git add -A
+git commit -m "chore: format sweep (prettier)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+```
+
+If nothing changed (tree was already formatted), skip the commit.
+
 ### 1c. UI Validation Suite
 
 After code quality gates pass, run UI validation for any session that changed runtime code.
