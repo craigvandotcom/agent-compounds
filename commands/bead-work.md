@@ -86,6 +86,22 @@ If type-check fails:
 - **Error in a file owned by another agent's reservation:** Note the error in progress.md header, proceed with awareness that `--no-verify` may be needed on push. File a P0 bead if one doesn't exist for the fix.
 - **Error unrelated to any bead scope:** Proceed — note it but don't block the session
 
+### Baseline Full Test Suite
+
+`vitest-affected` (and similar per-bead test filters) can silently mask pre-existing failures during per-bead quality gates, only surfacing them at Phase Final after beads are already committed. Run the full suite ONCE up front to expose the baseline:
+
+```bash
+pnpm test:all 2>&1 | tail -20
+```
+
+**Do not block the session on pre-existing failures.** Record the counts so you can file follow-up beads early and so the final gate can distinguish session-owned regressions from inherited failures:
+
+- **All pass:** Note "Baseline: all tests passing" in progress.md header.
+- **Failures exist and none touch files this session will modify:** Record `Pre-existing failures: N across M files (not owned by this session)` in progress.md header, capture the failing test file list, and consider filing a single follow-up bead if the cluster is substantial (≥ ~10 failures or a clear single theme like a domain rename). Proceed with the session.
+- **Failures include files this session will touch:** Fix as the first commit before starting beads, OR pick a different bead set. Do not start work where your changes will land on top of broken tests in the same files.
+
+Skip this step only if `pnpm test:all` takes > 10 minutes on this machine AND the session targets fewer than 2 beads — in that case the overhead outweighs the signal. Default is to always run.
+
 ### Ask User
 
 Ask two questions via `AskUserQuestion`:
