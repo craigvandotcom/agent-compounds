@@ -106,6 +106,21 @@ ls .claude/skills/browser-testing/journeys/ 2>/dev/null
 
 **All three must fail** before skipping. If `agent-browser` CLI exists OR `browser-tester` agent type is available, proceed with UI validation. Do NOT assume unavailability without running these checks.
 
+#### Step 1b: Pre-Warm Dev Server (before spawning browser agents)
+
+Cold Next.js / Turbopack pages trigger a full compile on first hit. If a browser-tester agent is the first to touch a journey's starting URL, the compile can stall the browser connection long enough that the `agent-browser` daemon hangs (5 minute+ retries, then daemon-busy errors). Pre-warm with curl first:
+
+```bash
+# Hit each journey's starting URL once — forces the compile to complete before agents connect
+curl -s -o /dev/null -w "%{url}: %{http_code} (%{time_total}s)\n" --max-time 60 http://localhost:3000/
+curl -s -o /dev/null -w "%{url}: %{http_code} (%{time_total}s)\n" --max-time 60 http://localhost:3000/login
+# Add curls for any other URLs the journeys will visit (food entry, dashboard, etc.)
+```
+
+A 200/307/308 in <2s means the page is warm. If a curl hangs >30s, that's a real problem to debug before spawning agents. Auth-gated pages (e.g. `/app`) returning 307 to `/login` is fine — testers handle their own auth.
+
+**Why this matters:** During the bd-3utx wave, skipping this cost ~10-15 minutes — first browser-tester agent hung waiting for cold compile, daemon went unresponsive, second agent had to be killed and restarted with manual pre-warm. Cheap to do, expensive to skip.
+
 #### Step 2: Route to Relevant Journeys
 
 Use `git diff --stat` against the session's first commit to determine which areas were changed. Cross-reference with project journey definitions (if any) to identify relevant UI tests.
