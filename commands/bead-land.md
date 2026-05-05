@@ -12,9 +12,21 @@ Run this after `/bead-work` completes its target beads.
 
 ### Gather Session Context
 
+Resolve `ARTIFACTS_DIR` — solo sessions use `/tmp/bead-work`, parallel sessions use a session-unique `/tmp/bead-work-$$`. Detect which one:
+
+```bash
+# Prefer the parallel-session dir if it exists; fall back to solo
+if [ -f /tmp/bead-work/progress.md ] && ! ls /tmp/bead-work-*/progress.md >/dev/null 2>&1; then
+  ARTIFACTS_DIR=/tmp/bead-work
+else
+  # Newest parallel-session dir wins (this session)
+  ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
+  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
+fi
+echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 ```
-ARTIFACTS_DIR=/tmp/bead-work
-```
+
+**You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
 
 Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/bead-work` first."
 
@@ -151,15 +163,17 @@ Run Happy Path steps from the journey definition. Focus on:
 
 ### Output
 
-Write report to /tmp/bead-work/ui-suite-<journey-name>.md
+Write report to <ARTIFACTS_DIR>/ui-suite-<journey-name>.md
 Include screenshots for any failures.
 Happy path only — skip edge cases.
 """)
 ````
 
+> Substitute `<ARTIFACTS_DIR>` with the resolved path from Phase 0 (e.g., `/tmp/bead-work-2939805` for parallel mode, `/tmp/bead-work` for solo).
+
 #### Step 4: Review Results
 
-Read all report files from `/tmp/bead-work/ui-suite-*.md`.
+Read all report files from `<ARTIFACTS_DIR>/ui-suite-*.md` (use the resolved path from Phase 0).
 
 - **All PASS:** Continue to git operations
 - **Any FAIL:** Fix the issue, re-run only the failing journey's tester, then continue
@@ -199,8 +213,8 @@ You are a retrospective analyst reviewing a completed bead-work session.
 ## Session Artifacts
 
 Read these files:
-1. /tmp/bead-work/progress.md — beads completed, commits, files changed
-2. Any /tmp/bead-work/bead-*-result.md files — engineer implementation reports
+1. <ARTIFACTS_DIR>/progress.md — beads completed, commits, files changed
+2. Any <ARTIFACTS_DIR>/bead-*-result.md files — engineer implementation reports
 3. AGENTS.md — current project context, conventions, and coding standards
 
 ## Workflow & Skill Files
@@ -221,7 +235,7 @@ Run these commands to understand the session's work:
 
 ## Your Analysis
 
-Write your findings to /tmp/bead-work/retrospective.md with these sections:
+Write your findings to <ARTIFACTS_DIR>/retrospective.md with these sections:
 
 ### What Worked
 - Patterns that produced clean, fast results
@@ -268,7 +282,7 @@ If nothing caused real waste, say so — don't invent learnings to fill the repo
 
 ### Conductor Reviews Retrospective
 
-Read `/tmp/bead-work/retrospective.md`. Apply the minimum bar: did this issue cause real waste THIS session? Drop anything that's "interesting but theoretical." Keep only items where you can point to a specific moment where time or resources were lost because the information wasn't available upfront.
+Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Apply the minimum bar: did this issue cause real waste THIS session? Drop anything that's "interesting but theoretical." Keep only items where you can point to a specific moment where time or resources were lost because the information wasn't available upfront.
 
 ---
 
@@ -385,6 +399,7 @@ Remove session artifacts (they've been consumed by retrospective). Run each sepa
 
 ```bash
 rm -rf /tmp/bead-work
+rm -rf /tmp/bead-work-*
 rm -rf /tmp/plan-refine-internal-*
 rm -rf /tmp/plan-refine-*
 rm -rf /tmp/plan-clean-*
