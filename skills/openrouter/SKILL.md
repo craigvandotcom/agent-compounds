@@ -104,6 +104,21 @@ Always use `--raw` when capturing output — it suppresses formatting and metada
 
 ## Model Discovery
 
+### Verify before use
+
+**The "Configured Models" table is a curated snapshot, not exhaustive.** OpenRouter has 400+ models and the catalog updates frequently. The codebase config in `lib/ai/models.ts` (or equivalent) is similarly a curated subset. Before invoking any model ID NOT in those tables, verify it exists on the live OpenRouter catalog:
+
+```bash
+# Quick exact-match check
+curl -s -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  https://openrouter.ai/api/v1/models | jq -r '.data[].id' | grep -F "<model-id>"
+
+# Or via the openrouter CLI
+openrouter --model-info <model-id>
+```
+
+Substituting model IDs from codebase config or memory without verifying against the live catalog has caused wasted spend (model 404 → fallback → meaningless comparison run). "Available in codebase" ≠ "available on OpenRouter."
+
 ```bash
 # Curated top picks with live pricing
 openrouter --top
