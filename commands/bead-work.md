@@ -256,6 +256,7 @@ Implement this bead using strict TDD (RED → GREEN).
 - **`vitest.setup.ts` blast radius:** If your changes require updating `__tests__/setup/vitest.setup.ts` (the global mock setup), that change affects ALL test files that use the global supabase/auth/etc. mock — not just files that directly import the production modules you changed. Per-module import sweeps will UNDER-cover. After updating `vitest.setup.ts`, run a broader scoped pass (search for any test importing the global mocked modules, then run the full set) to catch downstream test failures. Concrete cost: bd-9veq.3 engineer scoped 17 files; conductor's broader sweep found 26 (~3 min re-run).
 - **CRITICAL: Run ALL pre-existing tests for modified files.** If any test file imports a module you changed (added exports/imports, changed signatures), run that test and fix failures your changes caused. List each pre-existing test and its result. If none found, state "No pre-existing tests found."
 - Run ALL project quality checks before finishing (see AGENTS.md > Project Commands > Quality gate)
+- **Per-bead test command is `pnpm test`** (vitest-affected, ~30s). Do NOT run `pnpm test:all` — that runs the full 6500+ suite (~10 min) with the affected plugin disabled and is reserved for the conductor's session-end Phase Final gate. If you need to run a single suite directly, use `pnpm vitest run <files>`. Concrete cost: 2026-05-09 wave/hygiene-followups continuation — engineer + conductor each ran test:all per bead, ~20 min wasted before user flagged it. `vitest-affected` exists specifically to make this fast and reliable.
 - **Lint warning baseline is session-state — re-count after adding new files.** When you report `pnpm lint` results, do NOT trust a memorized warning count from earlier in the session. Adding new test files commonly introduces unused-var warnings; always re-count with `pnpm lint 2>&1 | grep "problems"` (or equivalent) and report the actual current count, then diff against the pre-bead baseline you observed at start. Concrete cost: bd-9veq.3 engineer reported "183 warnings unchanged" when actual was 185 (+2 in new test file); conductor caught and cleaned (~4 min).
 - **Formatter scope — do NOT run repo-wide `pnpm format` or `prettier --write .`** during a bead. Repo-wide formatting reformats files outside your bead's scope, contaminates the bead's diff with unrelated changes, and forces the conductor to manually restore unrelated files (which is awkward because `git checkout -- path` may be blocked by safety hooks). Format only files you explicitly modified: `pnpm prettier --write <file1> <file2>` or equivalent. The session-end `bead-land` step runs a repo-wide format sweep as a separate commit — that is where whole-repo formatting belongs, not per-bead.
 
@@ -281,8 +282,12 @@ Do NOT delete or overwrite result files from earlier beads in this session.
 1. **Run bead-relevant tests IN THE MAIN REPO** (not full suite — just what this bead touches). Do NOT trust worktree test results — module resolution and mock behavior may differ between the worktree and main repo. Run tests AFTER copying files but BEFORE committing:
 
    ```bash
-   # Run project test command scoped to relevant test files
-   # See AGENTS.md > Project Commands > Test
+   pnpm test    # vitest-affected (~30s) — per-bead canonical
+   # Or scoped: pnpm vitest run <specific test files> for targeted verification.
+   #
+   # NEVER `pnpm test:all` per-bead — that runs the full 6500+ suite (~10 min)
+   # with the affected plugin disabled. test:all is reserved for Phase Final
+   # (session-end quality gate) and merge.
    ```
 
 2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
