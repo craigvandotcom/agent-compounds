@@ -167,6 +167,16 @@ Acknowledge any pending messages.
 
 ### Phase 1a: Select Bead
 
+**Re-verify branch context BEFORE claiming.** Branch state is dynamic in this workflow — multiple Claude sessions sharing one git checkout can switch the branch between operations via serial hand-off. Phase 0's branch check is a snapshot; treat it as stale on every loop iteration.
+
+```bash
+git branch --show-current
+```
+
+If the branch is NOT the wave branch you started on, STOP. Do not silently `git checkout` back (that would clobber the other session's work). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — that is not the workflow this repo uses (see `feedback_no_worktrees.md` in body-compass-app memory for the durable rationale).
+
+Concrete prior incident (2026-05-09 wave/research-curator-prereqs / between bd-nxtl and bd-yvhn): conductor's spawned engineer detected the branch had flipped to `wave/loading-coherence` mid-session. Engineer correctly aborted; conductor wasted ~15 min recovering by inappropriately creating a worktree. Re-verifying branch in Phase 1a (this step) eliminates the failure mode entirely.
+
 ```bash
 bv --robot-next
 ```
@@ -238,6 +248,8 @@ Implement this bead using strict TDD (RED → GREEN).
 <paste full br show + br comments output here>
 
 ### Requirements
+
+> **STRICTLY FORBIDDEN — `git stash` / `git stash pop`**, at any point, for any reason. A `stash pop` can surface pre-existing stash entries from other branches and overwrite unrelated files with merge-conflict markers. Concrete prior incident (2026-04-08 wave/structured-modifiers, repeated 2026-05-09 wave/research-curator-prereqs / bd-nxtl): an engineer ran `git stash` "to set aside changes briefly" and the pop overwrote unrelated work. Engineer had to re-apply modifications "from memory" — verifiable data-loss risk. If you need to set aside changes, COMMIT them first (a temp commit on a temp branch is safe and reversible). If you need to compare working-tree vs HEAD, use `git diff HEAD`. Sub-agents do not read MEMORY.md, so this rule lives here.
 
 > **NEVER prefix comments or variable names with bead/task IDs** (e.g., `// bd-9veq.5:`, `// TODO(bd-...):`). Comments must be timeless — bead references become noise the moment the bead closes. Applies to production code, tests, and config. Explain the WHY (the invariant, the rationale) without naming the bead. Concrete cost: bd-9veq.5 (B3) added 4 such prefixes despite this rule being in the prompt; conductor stripped them in 4 edits + reformat (~2 min).
 
