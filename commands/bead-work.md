@@ -94,11 +94,37 @@ If type-check fails:
 pnpm test:all 2>&1 | tail -20
 ```
 
-**Do not block the session on pre-existing failures.** Record the counts so you can file follow-up beads early and so the final gate can distinguish session-owned regressions from inherited failures:
+**Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them. Concrete prior incident (2026-05-14 wave/curator): conductor recorded `13 failed across 3 files (3 known-pre-existing)` in progress.md and proceeded silently; user pushed back hard at land time ("why do we have failures? we should have none — why were they not addressed? and why do you persist in not addressing them?"). The 13 failures sorted into two clearly fixable buckets (env-override gap → production rate-limit, and schema-drift after migration rename) — neither was a mystery, both had deterministic fix paths. The "pre-existing = OK" framing collapsed under user scrutiny.
 
-- **All pass:** Note "Baseline: all tests passing" in progress.md header.
-- **Failures exist and none touch files this session will modify:** Record `Pre-existing failures: N across M files (not owned by this session)` in progress.md header, capture the failing test file list, and consider filing a single follow-up bead if the cluster is substantial (≥ ~10 failures or a clear single theme like a domain rename). Proceed with the session.
-- **Failures include files this session will touch:** Fix as the first commit before starting beads, OR pick a different bead set. Do not start work where your changes will land on top of broken tests in the same files.
+Behavior:
+
+- **All pass:** Note "Baseline: all tests passing" in progress.md header. Proceed.
+- **Any failures:** Capture for each failing test file:
+  - Test file path
+  - Failure category (production-state / schema-drift / flake / unknown — one-line judgment)
+  - 1-line root-cause hypothesis if obvious
+  - Whether the file overlaps the session's target bead scope
+
+  Then surface to the user via `AskUserQuestion`:
+
+  ```
+  question: "Baseline test run shows N failures across M files: <one-line summary per file>. How to handle?"
+  options:
+    - "File P1 follow-up bead now and proceed" — captures debt, doesn't block session (recommended for >5 failures or substantive schema-drift)
+    - "Fix first as a pre-bead commit" — pause session, fix, re-baseline (recommended for ≤2 quick wins like env-override toggles)
+    - "Proceed without filing — I have an existing bead tracking these" — explicit acknowledgment; user MUST cite the bead ID
+    - "Stop and let me investigate" — abort session
+  ```
+
+  Record the user's decision (and any cited bead ID) in progress.md header. Do NOT proceed silently.
+
+- **Failures include files this session will touch:** Always fix as the first commit before starting beads, OR pick a different bead set. Do not start work where your changes will land on top of broken tests in the same files.
+
+Specifically REJECT these failure modes from being treated as "acceptable baseline" without a fix plan:
+
+- **Production rate-limit / egress quota errors** (`exceed_egress_quota`, 429s from external APIs) — almost always fixable via env-override to local stack, the same pattern existing tests use.
+- **Schema-drift errors after migrations** (column "X" does not exist; SQLSTATE mismatches between expected CHECK and actual NOT NULL) — fixable by updating column references / assertions to match current schema.
+- **"Known pre-existing" without a specific bead ID tracking the fix** — this is an evasion phrase. Either it has a bead, or it needs one filed now.
 
 Skip this step only if `pnpm test:all` takes > 10 minutes on this machine AND the session targets fewer than 2 beads — in that case the overhead outweighs the signal. Default is to always run.
 
