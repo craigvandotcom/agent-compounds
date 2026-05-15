@@ -229,7 +229,25 @@ If the bead is unrefined:
 3. Get the next candidate from `br ready --json` and repeat both guards (unrefined + conflict)
 4. If no conflict-free beads remain, STOP the session early
 
-**Once a refined, conflict-free bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
+**Guard: verify environment prerequisites.** Bead specs sometimes assume infrastructure that isn't available in the current session (Mac/Xcode for iOS native, local Supabase for integration tests, Android emulator for ADB-driven tests). `bv --robot-next` does NOT check this — it scores by priority and unblocks only, and it will happily recommend `in_progress` beads whose remaining ACs are Mac-only or whose specs reference local infra that was never set up.
+
+After `br show <id>` + `br comments <id>` but BEFORE claiming, scan the spec's Files / Steps / Acceptance Criteria for these signals:
+
+| Signal in bead spec | Required env |
+|---|---|
+| `*.swift`, `*.metal`, `xcodebuild`, `npx cap open ios`, "Mac-only", "TestFlight" | macOS + Xcode |
+| `supabase migration up --local`, `pnpm test:integration`, `supabase_db_*` container, `supabase status` | Local Supabase stack |
+| `*.kt`, `gradle`, `adb`, "emulator" | Android SDK + emulator |
+
+If the bead requires absent infrastructure:
+1. Do NOT claim it
+2. Add a comment via `br comments add <id> "Env-blocked: <reason>. Needs <required-env> or a /bead-refine round to pick an alternative path."`
+3. Get the next candidate from `br ready --json`
+4. Burning a bead slot on a no-op attempt is equivalent to claiming an unrefined bead — skip it.
+
+Concrete prior incident (2026-05-15 wave/v1-bootstrap): conductor claimed `owr.3` (P0) before recognising its spec called for `supabase migration up --local` against a local stack that doesn't exist on the project. One of the session's 8 bead slots was consumed before the env mismatch surfaced. Separately, `bv --robot-next` repeatedly recommended `n6a.2` whose remaining ACs are Mac-only — conductor had to manually filter via `br ready --json` jq each Phase 1a loop, ~4–6 min wasted across the session.
+
+**Once a refined, conflict-free, env-supported bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
 Then read bead details:
 
