@@ -303,7 +303,28 @@ Implement this bead using strict TDD (RED → GREEN).
 
 ### Requirements
 
-> **STRICTLY FORBIDDEN — `git stash` / `git stash pop`**, at any point, for any reason. A `stash pop` can surface pre-existing stash entries from other branches and overwrite unrelated files with merge-conflict markers. Concrete prior incident (2026-04-08 wave/structured-modifiers, repeated 2026-05-09 wave/research-curator-prereqs / bd-nxtl): an engineer ran `git stash` "to set aside changes briefly" and the pop overwrote unrelated work. Engineer had to re-apply modifications "from memory" — verifiable data-loss risk. If you need to set aside changes, COMMIT them first (a temp commit on a temp branch is safe and reversible). If you need to compare working-tree vs HEAD, use `git diff HEAD`. Sub-agents do not read MEMORY.md, so this rule lives here.
+> ## ⛔ RULE #1 — NEVER `git stash`, AT ANY POINT, FOR ANY REASON ⛔
+>
+> Not even briefly. Not even "just to test something". Not even when you think you'll pop it right back. **This rule has been violated three times on this repo despite being in the prompt** — most recently on bd-a3l6.4 (2026-05-20) where an orphan stash now sits permanently in the repo.
+>
+> **Why this is non-negotiable:** `git stash pop` is NOT a reversible inverse of `git stash`. The repo has multiple pre-existing stash entries from other branches/sessions (run `git stash list` to see — typically 8+ entries deep). A `pop` can:
+> - Surface a STALE entry from an unrelated branch and overwrite working-tree files with conflict markers (incidents: 2026-04-08 wave/structured-modifiers, 2026-05-09 wave/research-curator-prereqs / bd-nxtl).
+> - Leave a "did-you-mean" orphan that you can't tell apart from real WIP (incident: 2026-05-20 wave/app-first-feel / bd-a3l6.4).
+> - Trigger merge logic against an unexpected base, corrupting files you didn't touch.
+>
+> The husky `lint-staged` hook already creates "lint-staged automatic backup" stashes on every commit; these are noise, NOT recoverable WIP. Your own stashes would be indistinguishable from those.
+>
+> **What to do instead (pick the right tool for the use case):**
+>
+> | Use case | Do this instead of `git stash` |
+> |---|---|
+> | "I want to set aside changes briefly" | `git commit -m "wip" -- <files>` on the current branch. Reverse later with `git reset HEAD~` (keeps working tree). |
+> | "I need to compare working tree vs HEAD" | `git diff HEAD` |
+> | "I need to see a file's HEAD version" | `git show HEAD:<path>` |
+> | "I need a clean working tree to run a test" | Just commit. Tests run against working tree; the committed snapshot IS the clean test target. |
+> | "I'm worried about losing work" | Commit. A commit is the most reversible state in git. |
+>
+> **If you genuinely believe stash is the only solution:** STOP. Document why in your result file under "Issues Encountered". Ask the conductor before proceeding. Do not assume the rule has an exception you haven't been told about.
 
 > **NEVER prefix comments or variable names with bead/task IDs** (e.g., `// bd-9veq.5:`, `// TODO(bd-...):`). Comments must be timeless — bead references become noise the moment the bead closes. Applies to production code, tests, and config. Explain the WHY (the invariant, the rationale) without naming the bead. Concrete cost: bd-9veq.5 (B3) added 4 such prefixes despite this rule being in the prompt; conductor stripped them in 4 edits + reformat (~2 min).
 
