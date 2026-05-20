@@ -62,8 +62,18 @@ git diff --stat
 ### 1b. Quality Gates
 
 ```bash
-# Run full project quality gate (see AGENTS.md > Project Commands > Quality gate)
+# Format / lint / type-check run fast — terminal-only output is fine.
+pnpm format && pnpm lint && pnpm type-check
+
+# pnpm test:all takes ~10 min on this project; tee to a log so failure detail
+# survives the tail-truncation that destroys diagnostic context.
+pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
+
+# Build check (fast — terminal-only).
+pnpm build:check
 ```
+
+> **Why `tee`, not bare `tail`:** vitest's reporter buffers nontrivially and the final summary doesn't necessarily land in the last 20 lines if failures occurred earlier. A bare `pnpm test:all 2>&1 | tail -15` discards mid-run failure detail and forces a second 10-minute re-run to diagnose. Concrete cost (wave/app-first-feel 2026-05-19 bead-land): conductor ran `tail -15` first, lost the failure detail, had to re-run with output redirected to a file — ~10 min wasted. The full log at `$ARTIFACTS_DIR/test-all.log` is grep-addressable for `FAIL`, `❯`, `×`, `AssertionError`, etc.
 
 If any fail:
 

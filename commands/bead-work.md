@@ -307,6 +307,10 @@ Implement this bead using strict TDD (RED → GREEN).
 
 > **NEVER prefix comments or variable names with bead/task IDs** (e.g., `// bd-9veq.5:`, `// TODO(bd-...):`). Comments must be timeless — bead references become noise the moment the bead closes. Applies to production code, tests, and config. Explain the WHY (the invariant, the rationale) without naming the bead. Concrete cost: bd-9veq.5 (B3) added 4 such prefixes despite this rule being in the prompt; conductor stripped them in 4 edits + reformat (~2 min).
 
+> **SCOPE CONTRACT — declare BEFORE editing, report violations EXPLICITLY.** Before your first edit, write out the exhaustive file list you will modify or create (the conductor's prompt already gives you this list under "Files you may touch"). If during implementation you discover a file outside that list MUST be touched (e.g., a layout component needs a `data-testid`, a config file needs updating to satisfy a build), STOP, document the discovery in your result file, and ASK the conductor for permission before editing. Do NOT silently edit out-of-scope files and omit them from "Files Modified" — the conductor catches this via `git status` anyway, and the omission destroys trust in the result file as a primary audit artifact. The result-file "Files Modified" / "Files in git status NOT touched by this bead" sections are a CONTRACT: every single dirty file in the working tree must appear in exactly one section. Concrete cost (wave/app-first-feel 2026-05-19): bd-gizv.2 engineer silently edited 3 out-of-scope files + committed without permission + omitted them from the result — only caught by conductor's `git status` post-hoc, ~10–15 min cumulative cleanup across bd-gizv.1/.2/.3.
+
+> **CROSS-BEAD SHARED INVARIANTS — export, never duplicate.** If your bead introduces a constant, mark name, schema, `data-testid` value, SWR key, or string token that another bead in this wave will consume, export it as a `const` from a single canonical module. Do NOT inline string literals in tests, specs, or other consumers — that is how the bd-gizv.5 `bc:`-prefixed `performance.mark` names landed in production code while bd-gizv.8's silver-bullet Playwright spec used bare names (caught at bead-land UI smoke; would have silently passed the test against the fallback wall-clock budget gate — defeating the entire acceptance-gate purpose). Playwright specs that cannot `import` TS modules MUST reference the canonical file in a comment so a string-search keeps the two in sync.
+
 - Follow existing code patterns (read neighboring files first)
 - Follow domain skill guidelines (loaded above)
 - Follow project type discipline (see AGENTS.md > Rules)
@@ -397,14 +401,21 @@ UI validation is deferred to `/bead-land` where it runs once for the entire sess
 
 ### Phase 1d: Commit + Close Bead
 
+**Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** This is mandatory in parallel mode (a second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` — see commit `f64db219` in wave/app-first-feel history for the canonical incident). In solo mode it's still preferred because it's atomic and self-documenting — there's no window between staging and committing where state can drift.
+
 ```bash
-git add <specific files>
 git commit -m "feat(<scope>): <bead title>
 
 Bead: <id>
-Co-Authored-By: Claude <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>" -- <file1> <file2> <file3>
 git push
 ```
+
+The `--` separator tells git: "ignore the index, commit exactly these working-tree paths." Your `git add` work and any other session's `git add` work both stay isolated.
+
+For many files at once, globs work in the pathspec: `git commit -m "..." -- 'features/auth/**/*.ts' '.beads/issues.jsonl'`.
+
+> Note: pathspec commits bypass `lint-staged` (which hooks the index). This repo's `lint-staged` config has been a no-op in practice — every commit this session reported "could not find any staged files matching configured tasks" — so practical impact is zero. The pre-push `pnpm build` hook still runs on the committed snapshot regardless.
 
 Push after every bead commit prevents stranded work if the session crashes before bead-land.
 
