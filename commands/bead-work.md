@@ -54,26 +54,36 @@ br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)]'
 
 If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/bead-refine` first to make them implementation-ready."
 
-### Ensure Wave Branch
+### Ensure Wave Branch (single-branch rule)
 
-Check if a `wave/` branch exists for this work:
+**There is always exactly ONE active wave branch in this repo.** Whatever bead-work runs joins it — a wave is a release/merge unit, not a feature unit. Never create a second wave while one is open. Multiple Claude sessions also share that single wave branch.
 
 ```bash
-git branch --list 'wave/*'
+git fetch origin --prune
+LOCAL_WAVE=$(git branch --list 'wave/*' --format='%(refname:short)' | head -1)
+REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1)
 ```
 
-- **No wave branch exists:** Ask user for a wave name, then create it:
+- **A wave exists (local or remote):** join it. Do NOT create a second wave.
   ```bash
-  git checkout -b wave/<feature-name>
+  WAVE=${LOCAL_WAVE:-$REMOTE_WAVE}
+  git checkout "$WAVE" && git pull --rebase
   ```
-- **One wave branch exists:** Switch to it if not already on it:
-  ```bash
-  git checkout wave/<feature-name>
-  git pull --rebase
-  ```
-- **Multiple wave branches:** Ask user which to join via `AskUserQuestion`.
 
-All parallel sessions join the same wave branch. Trunk-based — merge to main when wave is complete.
+- **No wave exists anywhere:** create the next numbered wave. Compute the next 3-digit counter from existing remote refs:
+  ```bash
+  HIGHEST=$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/ \
+            | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
+  NEXT=$(printf "%03d" $(( ${HIGHEST:-000} + 1 )))
+  git checkout -b "wave/$NEXT" main
+  git push -u origin "wave/$NEXT"
+  ```
+
+- **Multiple waves found (defensive guard):** STOP and surface to user. The single-branch rule was violated upstream — let the user decide which to keep before claiming any beads.
+
+Trunk-based: `/ac/wave-merge` ships the wave to main and bumps the app version based on the commits.
+
+> **Migration note (2026-05-19→):** the previous thematic naming (`wave/<feature-name>`) is being phased out. Pre-existing thematic waves finish under their current names; only newly created waves use `wave/NNN`. Once the current open wave merges, all subsequent waves follow `wave/NNN` exclusively. Do NOT propose renaming an in-flight thematic wave — let it complete naturally.
 
 ### Pre-Flight Type-Check
 
@@ -499,16 +509,17 @@ AskUserQuestion(
 ```
 Terminal 1: /bead-work   → "target 5 beads"
 Terminal 2: /bead-work   → "target 5 beads"
-
-Each session independently:
-- bv --robot-next picks best available bead (no pre-assigned ranges)
-- Sessions may work on interleaved bead numbers — that's fine
 ```
+
+Both sessions join the **same wave branch** (single-branch rule above — never create a second wave). They pick beads with non-overlapping file footprints, not by epic/wave-affinity. `bv --robot-next` is global-priority, not wave-aware; conductor must filter to the wave's labels OR pick from a different epic when the wave's chain is sequentially gated.
+
+Coordination via Agent Mail file reservations BEFORE editing is mandatory in parallel mode. Commit with `git commit -- <pathspec>` (limits scope) since lint-staged's stash dance can bundle the other session's WIP into your commit otherwise. Pre-push `pnpm build` reads the working tree — the other session's broken WIP can block your push.
 
 ---
 
 ## Remember
 
+- **Single-branch rule** — always exactly one active `wave/*` branch in this repo. If one exists, join it. Never create a second wave while one is open. New waves use `wave/NNN` (3-digit counter); thematic names are legacy only.
 - **YOU review, YOU commit** — engineers implement, you verify
 - **Be extremely strict** — bead must be fully complete before moving on
 - **Minor fixes: do them yourself. Major gaps: re-spawn engineer.**

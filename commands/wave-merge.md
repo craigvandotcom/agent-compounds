@@ -82,6 +82,59 @@ git rebase origin/main
 
 **If conflicts:** Resolve them, run quality gate again, then continue.
 
+### Version Bump
+
+Scan the wave's commits for conventional-commit prefixes and suggest the next semver bump. The version-bump commit lands on the wave branch BEFORE the push, so the PR shows it as part of the merge unit.
+
+```bash
+BASE_BRANCH=main
+COMMIT_LOG=$(git log "$BASE_BRANCH"..HEAD --format="%s%n%b")
+
+# Detect any breaking change footer or `!:` in subject
+if printf '%s' "$COMMIT_LOG" | grep -qE "^[a-zA-Z]+(\([^)]+\))?!:|BREAKING[ -]CHANGE"; then
+    SUGGESTED_BUMP=major
+elif printf '%s' "$COMMIT_LOG" | grep -qE "^feat(\([^)]+\))?:"; then
+    SUGGESTED_BUMP=minor
+else
+    SUGGESTED_BUMP=patch
+fi
+
+CURRENT_VERSION=$(node -p "require('./package.json').version")
+echo "Current version: $CURRENT_VERSION → suggested bump: $SUGGESTED_BUMP"
+```
+
+Confirm with the user (suggested bump as the recommended option):
+
+```
+AskUserQuestion(
+  questions: [{
+    question: "Wave commits suggest {SUGGESTED_BUMP} bump from v{CURRENT_VERSION}. Apply?",
+    header: "Version bump",
+    multiSelect: false,
+    options: [
+      { label: "{SUGGESTED_BUMP} (Recommended)", description: "Derived from commit prefixes (feat→minor, fix-only→patch, !→major)" },
+      { label: "patch", description: "Force patch — bug fixes / non-feature changes only" },
+      { label: "minor", description: "Force minor — new features (backward compatible)" },
+      { label: "major", description: "Force major — breaking changes" },
+      { label: "skip — no bump this wave", description: "Don't touch package.json (rare; use when shipping a doc-only or experiment-only wave)" }
+    ]
+  }]
+)
+```
+
+Apply the chosen bump (unless skipped):
+
+```bash
+pnpm version "$CHOSEN_BUMP" --no-git-tag-version
+NEW_VERSION=$(node -p "require('./package.json').version")
+git add package.json pnpm-lock.yaml 2>/dev/null
+git commit -m "chore(release): v$NEW_VERSION"
+```
+
+The tag is created on the merge commit in Phase 3 (after merge to main), not here — that way `v$NEW_VERSION` points at the actual shipped state.
+
+### Push
+
 ```bash
 git push --force-with-lease
 ```
@@ -159,9 +212,11 @@ Construct a structured PR body from the gathered context:
 
 ### Create PR
 
+The wave branch name (e.g. `wave/042`) is just an identifier — it doesn't describe content. Derive the PR title from the version bump + a 4-7 word summary of what actually changed, scanned from commit subjects + the bead list.
+
 ```bash
-gh pr create --title "{wave name}: {short description}" --body "$(cat <<'EOF'
-{constructed PR body}
+gh pr create --title "v{NEW_VERSION}: {short summary derived from commits}" --body "$(cat <<'EOF'
+{constructed PR body — include the version bump as the first line}
 EOF
 )"
 ```
@@ -349,18 +404,28 @@ gh pr merge "$PR_NUMBER" --merge --delete-branch
 
 Uses merge commit to preserve per-bead commit history.
 
-### Switch to Main
+### Switch to Main + Tag the Release
 
 ```bash
 git checkout main
 git pull
 ```
 
+Tag the merge commit with the version that was bumped in Phase 0. Skip this step if the user chose "skip — no bump this wave".
+
+```bash
+# NEW_VERSION captured in Phase 0; if not in scope, re-read from package.json on main
+NEW_VERSION=$(node -p "require('./package.json').version")
+git tag "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+git push origin "v$NEW_VERSION"
+```
+
 ### Verify
 
 ```bash
-git log --oneline -5   # Confirm merge commit visible
-git branch -d "wave/${WAVE_NAME}" 2>/dev/null || true   # Clean local branch
+git log --oneline -5            # Confirm merge commit visible
+git tag --points-at HEAD        # Confirm v$NEW_VERSION on the merge commit
+git branch -d "$WAVE" 2>/dev/null || true   # Clean local wave branch
 ```
 
 ---
@@ -415,8 +480,10 @@ rm -rf "$ARTIFACTS_DIR"
 
 ## Remember
 
-- **This is per-feature, not per-session** — run once when all beads are done, not after each bead-work session
-- **bead-land handles session closure** — wave-merge handles feature closure. No overlap.
+- **This is per-wave, not per-session** — run once when all beads are done, not after each bead-work session
+- **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN`) is opaque.
+- **Version bump scans commits** — feat→minor, fix-only→patch, `!:` or BREAKING CHANGE→major. User confirms before the bump commit lands; tag is created on the merge commit after merge.
+- **bead-land handles session closure** — wave-merge handles wave closure. No overlap.
 - **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
 - **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)
