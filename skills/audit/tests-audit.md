@@ -1,6 +1,6 @@
 # Tests Audit Checklist
 
-**Purpose:** Comprehensive test quality verification for Body Compass
+**Purpose:** Comprehensive test quality verification for any web/mobile application
 **Domain:** Unit tests, component tests, E2E tests, coverage, CI/CD reliability
 **Tech Stack:** Vitest, React Testing Library, Playwright, MSW, TypeScript
 
@@ -70,7 +70,7 @@ time pnpm test
 **Verification:**
 
 1. Review coverage report for critical files
-2. Check: `lib/services/food-submission.ts`, `lib/services/zoning.ts`, auth flows
+2. Check: primary service files, core business logic, auth flows
 3. Verify critical paths have >90% coverage
 4. Look for uncovered branches in error handling
 5. Prioritize: authentication, data integrity, AI integration
@@ -304,7 +304,7 @@ time pnpm test
 
 1. Count E2E tests: `find __tests__/e2e -name "*.spec.ts" | wc -l`
 2. Verify <15 E2E tests (only critical paths)
-3. Check tests cover: login, add food, view dashboard, offline mode
+3. Check tests cover: login, primary create flow, main dashboard, offline mode
 4. Look for tests that should be component tests
 5. Verify no duplication with lower-level tests
 
@@ -471,7 +471,7 @@ time pnpm test
 **Verification:**
 
 1. Check for test data factories: `__tests__/fixtures/` or similar
-2. Verify factories for: users, foods, symptoms
+2. Verify factories for: users, primary domain entities, secondary records
 3. Look for repeated test data setup (DRY violation)
 4. Check factories provide realistic data
 5. Verify factories are easy to customize
@@ -618,7 +618,7 @@ time pnpm test
 **Verification:**
 
 1. Check `scripts/db-seed.ts` for seed data
-2. Verify seed data covers: all zones, edge cases, empty states
+2. Verify seed data covers: all relevant categories/states, edge cases, empty states
 3. Check seed data is realistic (not "test user 1")
 4. Verify seed script is idempotent (can run multiple times)
 5. Test: run seed, verify app works with seed data
@@ -779,18 +779,18 @@ time pnpm test
 
 ---
 
-### [TEST-036] Implement Claude API Mocking for Food Analysis
+### [TEST-036] Implement Claude API Mocking for AI Features
 
-**Description:** Mock AI responses for deterministic testing of food analysis features
+**Description:** Mock AI responses for deterministic testing of AI-powered features
 **Severity:** CRITICAL
 **Auto-fixable:** YES
 **Parallel Group:** TEST-Mocking
 
 **Verification:**
 
-1. Create mock handlers for: analyze-image, generate-meal-name, zone-ingredients
+1. Create mock handlers for your app's AI/LLM API routes (e.g. image-analysis, content-generation, classification)
 2. Mock location: `__tests__/mocks/anthropic.ts` or MSW handlers
-3. Verify mock responses match actual Zod schemas (FoodAnalysisResult, etc.)
+3. Verify mock responses match actual Zod schemas (e.g. AnalysisResult, etc.)
 4. Test error scenarios: rate limit (429), invalid response, timeout, malformed JSON
 5. Verify no real API calls during test suite: `grep -r "ANTHROPIC_API_KEY" .env.test`
 6. Check test isolation: mocks reset between tests
@@ -803,9 +803,9 @@ time pnpm test
 
 ```typescript
 // __tests__/mocks/anthropic.ts
-export const mockFoodAnalysis = {
-  ingredients: [{ name: 'apple', zone: 'green', confidence: 0.95 }],
-  meal_name: 'Apple Snack',
+export const mockAnalysisResult = {
+  items: [{ name: 'example-item', category: 'a', confidence: 0.95 }],
+  label: 'Example Result',
   total_confidence: 0.92,
 };
 ```
@@ -848,7 +848,7 @@ export const mockFoodAnalysis = {
 1. Install: `pnpm add -D @axe-core/playwright`
 2. Add to Playwright tests: `await expect(page).toHaveNoViolations()`
 3. Configure axe rules: WCAG 2.1 AA level
-4. Run on critical pages: login, dashboard, food entry, settings
+4. Run on critical pages: login, dashboard, primary create flow, settings
 5. Set CI to fail on critical/serious violations
 6. Generate accessibility report artifact
 
@@ -884,7 +884,7 @@ test('dashboard has no accessibility violations', async ({ page }) => {
 
 1. Review `__tests__/fixtures/` for factory patterns
 2. Check factories use minimal required fields only
-3. Verify no unnecessary associations (user → foods when not needed)
+3. Verify no unnecessary associations (e.g. user → records when not needed)
 4. Check factories are customizable via overrides
 5. Verify realistic but minimal data (not "test user 1")
 6. Test: create entity with factory, verify only essential fields populated
@@ -906,7 +906,7 @@ After completing audit items, generate this summary:
 
 **Date:** YYYY-MM-DD
 **Auditor:** [Name/Tool]
-**Scope:** Body Compass App - Full Test Suite
+**Scope:** [App Name] - Full Test Suite
 
 ### Test Coverage Metrics
 

@@ -1,6 +1,6 @@
 # Security Audit Checklist
 
-**Purpose:** Comprehensive OWASP Top 10 security verification for Body Compass
+**Purpose:** Comprehensive OWASP Top 10 security verification for any web/mobile application
 **Domain:** Authentication, input validation, data protection, AI security, dependencies
 **Tech Stack:** Next.js 15, Supabase, Anthropic SDK, TypeScript, Zod
 
@@ -47,7 +47,7 @@ grep -r "supabase\.\(from\|rpc\)" app/ lib/ --include="*.ts"
 4. Check policies: `SELECT * FROM pg_policies WHERE schemaname = 'public';`
 5. Test bypassing RLS with service role key (should fail for user data)
 
-**Expected Output:** All tables (foods, food_entries, symptoms, user_settings) have RLS enabled with user-specific policies
+**Expected Output:** All user data tables have RLS enabled with user-specific policies
 
 **Deliverable:** RLS status report with any missing policies documented
 
@@ -190,7 +190,7 @@ grep -r "supabase\.\(from\|rpc\)" app/ lib/ --include="*.ts"
 **Verification:**
 
 1. Find AI integration: `grep -r "anthropic\|messages\|claude" app/api/ lib/ --include="*.ts"`
-2. Identify all AI routes (analyze-image, generate-meal-name, zone-ingredients)
+2. Identify all AI routes (e.g. image-analysis, content-generation, classification)
 3. **Input validation:** Verify user input validated (Zod) before prompt construction
 4. **Prompt structure:** Check clear role separation (system/user), delimiters for user content
 5. **Output validation:** Verify AI responses validated with Zod schemas before use
@@ -236,7 +236,7 @@ grep -r "supabase\.\(from\|rpc\)" app/ lib/ --include="*.ts"
 **Verification:**
 
 1. Check for rate limiting: `grep -r "ratelimit\|Ratelimit" app/api/ --include="*.ts"`
-2. Verify AI routes (analyze-image, generate-meal-name, zone-ingredients) have rate limits
+2. Verify AI/LLM routes have rate limits (e.g. image-analysis, content-generation, classification)
 3. Check login rate limit: reasonable attempts per time window
 4. Verify successful logins don't count toward limit
 5. Check fingerprinting: User-Agent + Accept-Language hash for additional identification
@@ -505,7 +505,7 @@ grep -r "supabase\.\(from\|rpc\)" app/ lib/ --include="*.ts"
 
 ### [SEC-023] Validate Authorization at Resource Level
 
-**Description:** Ensure users can only access their own resources (foods, symptoms)
+**Description:** Ensure users can only access their own resources (e.g. entries, records, settings)
 **Severity:** CRITICAL
 **Auto-fixable:** NO
 **Parallel Group:** SEC-Authorization
@@ -705,7 +705,7 @@ grep -r "supabase\.\(from\|rpc\)" app/ lib/ --include="*.ts"
 
 **Verification:**
 
-1. Map all multi-step workflows: signup, food submission, data export, account deletion
+1. Map all multi-step workflows: signup, primary data submission, data export, account deletion
 2. Test out-of-order step execution (skip validation, replay final step)
 3. Check race conditions: `for i in {1..10}; do curl -X POST /api/submit & done`
 4. Verify privilege checks at EACH workflow step (not just entry)
@@ -801,7 +801,7 @@ After completing audit items, generate this summary:
 
 **Date:** YYYY-MM-DD
 **Auditor:** [Name/Tool]
-**Scope:** Body Compass App - Full Application
+**Scope:** [App Name] - Full Application
 
 ### Findings by Severity
 

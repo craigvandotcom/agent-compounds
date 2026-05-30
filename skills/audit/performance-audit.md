@@ -1,6 +1,6 @@
 # Performance Audit Checklist
 
-**Purpose:** Comprehensive performance optimization verification for Body Compass
+**Purpose:** Comprehensive performance optimization verification for any web/mobile application
 **Domain:** Build size, Core Web Vitals, database queries, mobile performance, PWA
 **Tech Stack:** Next.js 15, React 19, Supabase, Vercel, PWA
 
@@ -191,7 +191,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 **Verification:**
 
 1. Connect to Supabase and check indexes: `\di` in psql
-2. Identify frequently queried columns: user_id, created_at, zone_classification
+2. Identify frequently queried columns: user_id, created_at, and any app-specific classification columns
 3. Verify indexes exist for WHERE, ORDER BY, JOIN columns
 4. Check index usage in query plans: `EXPLAIN ANALYZE`
 5. Test query speed before/after adding indexes
@@ -255,7 +255,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 
 1. Run dev server: `pnpm dev`
 2. Open React DevTools > Profiler
-3. Interact with app (add food, navigate)
+3. Interact with app (use primary create flow, navigate)
 4. Identify components re-rendering frequently
 5. Check for missing `memo`, `useCallback`, `useMemo`
 
@@ -296,7 +296,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 **Verification:**
 
 1. Use Lighthouse in Chrome DevTools
-2. Test key pages: /app (dashboard), /app/foods/[id]
+2. Test key pages: /app (dashboard), and other primary detail routes
 3. Check TTI metric (should be < 3.8s on mobile)
 4. Identify blocking scripts or large components
 5. Profile with React DevTools to find slow mounts
@@ -401,7 +401,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 
 **Verification:**
 
-1. Check AI routes: `app/api/analyze-image/route.ts`, `app/api/generate-meal-name/route.ts`
+1. Check your app's AI/LLM API routes (e.g. `app/api/image-analysis/route.ts`, `app/api/content-generation/route.ts`)
 2. Determine current implementation (streaming vs non-streaming)
 3. Measure current AI response times
 4. Assess UX impact: does user perceive wait? Would streaming help?
@@ -788,7 +788,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 **Verification:**
 
 1. Run Lighthouse, check INP score (target: ≤200ms at 75th percentile)
-2. Profile high-interaction features: food entry, camera capture, signal logging
+2. Profile high-interaction features: primary data entry, media capture, secondary logging
 3. Use Chrome DevTools > Performance panel > Interactions track
 4. Identify long-running event handlers (>50ms = potential INP issue)
 5. Test with throttled CPU (4x slowdown in DevTools)
@@ -850,7 +850,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 **Verification:**
 
 1. Open Chrome DevTools > Network > Slow 3G preset
-2. Test critical flows: login, food entry, image capture, dashboard load
+2. Test critical flows: login, primary create flow, media capture, dashboard load
 3. Measure: TTFB, LCP, full page load under throttling
 4. Verify offline fallback triggers appropriately
 5. Test with Playwright network emulation in E2E tests
@@ -875,7 +875,7 @@ find app/ public/ -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" \)
 **Verification:**
 
 1. Add TTFT logging to AI routes: `console.time('ttft'); ... console.timeEnd('ttft')`
-2. Measure: analyze-image, generate-meal-name, zone-ingredients routes
+2. Measure: your app's AI/LLM API routes (e.g. image-analysis, content-generation, classification)
 3. Check TTFT thresholds: <500ms (snappy), <1500ms (acceptable), >1500ms (poor)
 4. Verify streaming implementation if TTFT is high
 5. Monitor Vercel function logs for AI response patterns
@@ -897,7 +897,7 @@ After completing audit items, generate this summary:
 
 **Date:** YYYY-MM-DD
 **Auditor:** [Name/Tool]
-**Scope:** Body Compass App - Full Application
+**Scope:** [App Name] - Full Application
 
 ### Core Web Vitals
 

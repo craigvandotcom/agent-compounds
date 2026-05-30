@@ -1,6 +1,6 @@
 # UI/UX Audit Checklist
 
-**Purpose:** Comprehensive UI/UX quality verification for Body Compass
+**Purpose:** Comprehensive UI/UX quality verification for any web/mobile application
 **Domain:** Accessibility, mobile design, touch interactions, design system compliance, PWA
 **Tech Stack:** Next.js 15, React 19, Tailwind CSS, Radix UI, Mobile-first
 
@@ -87,7 +87,7 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 
 1. Search for hover: `grep -r "hover:" app/ --include="*.tsx" --include="*.css"`
 2. Check Tailwind classes: `hover:bg-`, `hover:text-`, etc.
-3. Verify state-driven styling instead: `isActive ? 'bg-zone-green' : ...`
+3. Verify state-driven styling instead: `isActive ? 'bg-active' : ...`
 4. Test on mobile: tap element, verify visual feedback
 5. Check for CSS `:hover` in style files
 
@@ -150,7 +150,7 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 
 1. Search for hardcoded colors: `grep -r "text-gray-\|bg-red-\|border-blue-" app/ --include="*.tsx"`
 2. Verify using semantic tokens: `text-muted-foreground`, `bg-destructive`, etc.
-3. Check zone colors used correctly: `bg-zone-green`, `text-zone-yellow`
+3. Check app-specific semantic colors used correctly (e.g. status/category colors defined in your design system)
 4. Review design tokens: `.claude/skills/design-system/reference/design-tokens.md`
 5. Test: verify colors update if theme changes
 
@@ -160,24 +160,24 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 
 ---
 
-### [UI-007] Verify Zone Color Consistency
+### [UI-007] Verify Status/Category Color Consistency
 
-**Description:** Ensure zone colors (green/yellow/red) used consistently for food classification
+**Description:** Ensure app-specific status or category colors are used consistently and not repurposed for unrelated UI
 **Severity:** MEDIUM
 **Auto-fixable:** NO
 **Parallel Group:** UI-Design-System
 
 **Verification:**
 
-1. Find zone color usage: `grep -r "zone-green\|zone-yellow\|zone-red" app/ --include="*.tsx"`
-2. Verify only used for food-related UI (not general-purpose)
-3. Check consistency: green = nutritious, yellow = context-dependent, red = inflammatory
-4. Test: add food in each zone, verify color matches classification
+1. Find app-specific color token usage: search for your design system's semantic color classes
+2. Verify each color is only used for its intended semantic meaning (not general-purpose)
+3. Check consistency: each status/category color maps to a single, documented meaning
+4. Test: trigger each status/category, verify color matches the documented meaning
 5. Verify color contrast meets WCAG AA (4.5:1)
 
-**Expected Output:** Zone colors used consistently and appropriately
+**Expected Output:** Status/category colors used consistently and appropriately
 
-**Deliverable:** Audit report of zone color usage
+**Deliverable:** Audit report of semantic color usage
 
 ---
 
@@ -275,9 +275,9 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 **Verification:**
 
 1. Use Chrome DevTools > Lighthouse > Accessibility
-2. Run visual contrast audit: `agent-browser --url "http://localhost:3000" --task "Check all text for WCAG AA contrast compliance. Verify: text-muted-foreground on bg-background (4.5:1 minimum), zone colors on white background (4.5:1), small text <18pt (4.5:1), large text ≥18pt (3:1). Report all contrast violations with actual ratios."`
+2. Run visual contrast audit: `agent-browser --url "http://localhost:3000" --task "Check all text for WCAG AA contrast compliance. Verify: text-muted-foreground on bg-background (4.5:1 minimum), app-specific semantic colors on white background (4.5:1), small text <18pt (4.5:1), large text ≥18pt (3:1). Report all contrast violations with actual ratios."`
 3. Check disabled states still readable (if needed)
-4. Verify zone colors meet requirements across all uses
+4. Verify app-specific semantic colors meet contrast requirements across all uses
 
 **Expected Output:** All text meets WCAG AA contrast requirements
 
@@ -611,7 +611,7 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 
 1. Find empty state handling: `grep -r "length === 0\|isEmpty" app/ --include="*.tsx"`
 2. Check for helpful messaging (not just "No data")
-3. Verify call-to-action (e.g., "Add your first food")
+3. Verify call-to-action (e.g., "Add your first item" or equivalent primary action)
 4. Test: view page with no data, verify good UX
 5. Check empty state is visually distinct
 
@@ -804,9 +804,9 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 2. Add text summaries explaining key trends (not just visual data)
 3. Verify chart elements meet 3:1 contrast with neighbors
 4. Ensure keyboard navigation for interactive charts
-5. Include pattern differentiation (stripes, dots) not just color for zones
+5. Include pattern differentiation (stripes, dots) not just color for categorical data
 6. Verify screen reader can access all data points via ARIA
-7. Test with zone colors: users should understand meaning without seeing color
+7. Test with semantic colors: users should understand meaning without seeing color
 
 **Expected Output:** All visualizations have text alternatives, patterns, and keyboard access
 
@@ -867,7 +867,7 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 3. Add visual indicator for pending sync items (badge, icon)
 4. Show confirmation when sync completes after reconnection
 5. Handle sync conflicts gracefully with user feedback
-6. Test: add food offline, go online, verify sync feedback shown
+6. Test: create item offline, go online, verify sync feedback shown
 
 **Expected Output:** Users always know sync state of their data
 
@@ -889,7 +889,7 @@ grep -r "aria-\|role=" app/ --include="*.tsx"
 2. Verify no horizontal scrolling required
 3. Check all content readable without zooming
 4. Verify touch targets still meet 44px minimum at 320px
-5. Test critical flows: login, food entry, dashboard
+5. Test critical flows: login, primary create flow, dashboard
 6. Check no content cut off or overlapping
 
 **Expected Output:** Full app functionality at 320px width
@@ -943,7 +943,7 @@ After completing audit items, generate this summary:
 
 **Date:** YYYY-MM-DD
 **Auditor:** [Name/Tool]
-**Scope:** Body Compass App - Full Application
+**Scope:** [App Name] - Full Application
 
 ### Accessibility Metrics
 

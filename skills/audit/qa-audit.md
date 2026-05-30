@@ -1,6 +1,6 @@
 # QA Audit Checklist
 
-**Purpose:** Code quality, maintainability, and architectural verification for Body Compass
+**Purpose:** Code quality, maintainability, and architectural verification for any web/mobile application
 **Domain:** Code smells, technical debt, TypeScript quality, architecture, readability, documentation
 **Tech Stack:** Next.js 15, React 19, TypeScript, ESLint, Prettier
 
@@ -320,15 +320,15 @@ catch (error) {
 
 **Naming Conventions:**
 
-| Type               | Convention      | Example              |
-| ------------------ | --------------- | -------------------- |
-| Components         | PascalCase      | `FoodEntryCard`      |
-| Functions          | camelCase       | `calculateZoneScore` |
-| Hooks              | useCamelCase    | `useFoodAnalysis`    |
-| Constants          | SCREAMING_SNAKE | `MAX_FILE_SIZE`      |
-| Types/Interfaces   | PascalCase      | `FoodAnalysisResult` |
-| Files (components) | PascalCase      | `FoodEntryCard.tsx`  |
-| Files (utilities)  | kebab-case      | `food-utils.ts`      |
+| Type               | Convention      | Example                |
+| ------------------ | --------------- | ---------------------- |
+| Components         | PascalCase      | `UserProfileCard`      |
+| Functions          | camelCase       | `calculateItemScore`   |
+| Hooks              | useCamelCase    | `useItemAnalysis`      |
+| Constants          | SCREAMING_SNAKE | `MAX_FILE_SIZE`        |
+| Types/Interfaces   | PascalCase      | `UserProfile`          |
+| Files (components) | PascalCase      | `UserProfileCard.tsx`  |
+| Files (utilities)  | kebab-case      | `item-utils.ts`        |
 
 ---
 
@@ -356,10 +356,10 @@ catch (error) {
 ```typescript
 // Bad: Deep nesting
 if (user) {
-  if (user.foods) {
-    if (user.foods.length > 0) {
-      user.foods.forEach(food => {
-        if (food.zone === 'green') {
+  if (user.items) {
+    if (user.items.length > 0) {
+      user.items.forEach(item => {
+        if (item.status === 'active') {
           // process
         }
       });
@@ -368,10 +368,10 @@ if (user) {
 }
 
 // Good: Early returns + extraction
-if (!user?.foods?.length) return;
+if (!user?.items?.length) return;
 
-const greenFoods = user.foods.filter(f => f.zone === 'green');
-greenFoods.forEach(processGreenFood);
+const activeItems = user.items.filter(i => i.status === 'active');
+activeItems.forEach(processActiveItem);
 ```
 
 ---
@@ -509,11 +509,11 @@ import { format } from 'date-fns';
 
 // 2. Internal absolute imports
 import { Button } from '@/components/ui/button';
-import { FoodService } from '@/lib/services/food';
+import { ItemService } from '@/lib/services/item';
 
 // 3. Relative imports (same feature)
-import { FoodCard } from './FoodCard';
-import type { FoodEntry } from './types';
+import { ItemCard } from './ItemCard';
+import type { ItemEntry } from './types';
 ```
 
 ---
@@ -1017,21 +1017,21 @@ type Status = 'pending' | 'active' | 'completed';
 
 ```typescript
 // Bad: Primitive obsession
-function processFood(
+function processItem(
   name: string,
-  zone: string,
-  calories: number,
-  protein: number,
+  category: string,
+  score: number,
+  rank: number,
   userId: string
 ) {}
 
 // Good: Domain types
-interface FoodData {
+interface ItemData {
   name: string;
-  zone: Zone;
-  nutrition: NutritionInfo;
+  category: Category;
+  metrics: MetricsInfo;
 }
-function processFood(food: FoodData, userId: string) {}
+function processItem(item: ItemData, userId: string) {}
 ```
 
 ---
@@ -1059,14 +1059,14 @@ function processFood(food: FoodData, userId: string) {}
 
 ```typescript
 // Bad: Mutates parameter
-function addTag(food: Food, tag: string) {
-  food.tags.push(tag); // Mutation!
-  return food;
+function addTag(item: Item, tag: string) {
+  item.tags.push(tag); // Mutation!
+  return item;
 }
 
 // Good: Returns new object
-function addTag(food: Food, tag: string): Food {
-  return { ...food, tags: [...food.tags, tag] };
+function addTag(item: Item, tag: string): Item {
+  return { ...item, tags: [...item.tags, tag] };
 }
 ```
 
@@ -1095,12 +1095,12 @@ function addTag(food: Food, tag: string): Food {
 
 ```typescript
 // Bad: Train wreck
-const zone = user.profile.foods[0].analysis.zoneClassification;
+const status = user.profile.items[0].analysis.statusClassification;
 
 // Good: Encapsulated
-const zone = user.getLatestFoodZone();
+const status = user.getLatestItemStatus();
 // or
-const zone = foodService.getZoneForUser(userId);
+const status = itemService.getStatusForUser(userId);
 ```
 
 ---
@@ -1128,24 +1128,24 @@ const zone = foodService.getZoneForUser(userId);
 
 ```typescript
 // Bad: Type switching (must edit for new types)
-function processZone(zone: string) {
-  if (zone === 'green') {
+function processCategory(category: string) {
+  if (category === 'a') {
     /* ... */
-  } else if (zone === 'yellow') {
+  } else if (category === 'b') {
     /* ... */
-  } else if (zone === 'red') {
+  } else if (category === 'c') {
     /* ... */
   }
 }
 
 // Good: Polymorphism (extend without editing)
-interface ZoneProcessor {
-  process(data: FoodData): void;
+interface CategoryProcessor {
+  process(data: ItemData): void;
 }
-const processors: Record<Zone, ZoneProcessor> = {
-  green: new GreenZoneProcessor(),
-  yellow: new YellowZoneProcessor(),
-  red: new RedZoneProcessor(),
+const processors: Record<Category, CategoryProcessor> = {
+  a: new CategoryAProcessor(),
+  b: new CategoryBProcessor(),
+  c: new CategoryCProcessor(),
 };
 ```
 
@@ -1250,7 +1250,7 @@ catch (error) {
 
 // Good: Contextual error
 catch (error) {
-  throw new Error(`Failed to analyze food ${foodId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  throw new Error(`Failed to process item ${itemId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
 }
 ```
 
@@ -1279,12 +1279,12 @@ catch (error) {
 
 ```typescript
 // Bad: Deep nesting
-function processFood(food: Food | null) {
-  if (food) {
-    if (food.isValid) {
-      if (food.zone) {
+function processItem(item: Item | null) {
+  if (item) {
+    if (item.isValid) {
+      if (item.category) {
         // actual logic buried here
-        return analyzeZone(food);
+        return analyzeItem(item);
       }
     }
   }
@@ -1292,12 +1292,12 @@ function processFood(food: Food | null) {
 }
 
 // Good: Guard clauses
-function processFood(food: Food | null) {
-  if (!food) return null;
-  if (!food.isValid) return null;
-  if (!food.zone) return null;
+function processItem(item: Item | null) {
+  if (!item) return null;
+  if (!item.isValid) return null;
+  if (!item.category) return null;
 
-  return analyzeZone(food);
+  return analyzeItem(item);
 }
 ```
 
@@ -1326,17 +1326,17 @@ function processFood(food: Food | null) {
 
 ```typescript
 // Bad: Command-query violation
-function addFoodAndGetCount(food: Food): number {
-  foods.push(food); // Command
-  return foods.length; // Query
+function addItemAndGetCount(item: Item): number {
+  items.push(item); // Command
+  return items.length; // Query
 }
 
 // Good: Separated
-function addFood(food: Food): void {
-  foods.push(food);
+function addItem(item: Item): void {
+  items.push(item);
 }
-function getFoodCount(): number {
-  return foods.length;
+function getItemCount(): number {
+  return items.length;
 }
 ```
 
@@ -1434,7 +1434,7 @@ After completing audit items, generate this summary:
 
 **Date:** YYYY-MM-DD
 **Auditor:** [Name/Tool]
-**Scope:** Body Compass App - Full Application
+**Scope:** [App Name] - Full Application
 
 ### Code Quality Metrics
 
