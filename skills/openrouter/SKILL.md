@@ -5,6 +5,13 @@ version: 1.2.0
 tools: [openrouter (infrastructure/tools)]
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # OpenRouter
 
 Query any AI model from the terminal. One tool, every model.

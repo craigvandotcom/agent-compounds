@@ -3,6 +3,13 @@ name: flywheel
 description: Use when building software with AI agents, planning with beads (br/bv), spawning agent swarms (ntm), coordinating multi-agent work, or converting plans to beads. Triggers on mentions of flywheel, beads, agent swarm, bv, br, ntm, AGENTS.md, beadify, agent coordination, or multi-agent development.
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # Agentic Coding Flywheel
 
 **Purpose:** Knowledge gateway for Jeffrey Emanuel's agentic coding methodology

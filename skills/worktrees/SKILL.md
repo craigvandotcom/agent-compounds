@@ -3,6 +3,13 @@ name: worktrees
 description: Manage git worktrees for parallel development with Claude Code agents. Use when setting up isolated development environments, running parallel agents on different features, or recovering from interrupted sessions.
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # Worktrees Skill
 
 **Purpose:** Manage git worktrees for parallel development with Claude Code agents.

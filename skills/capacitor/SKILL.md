@@ -3,6 +3,13 @@ name: capacitor
 description: Use for TypeScript development in Capacitor projects. Activate when user mentions "Capacitor", "native app", "iOS build", "Android build", "type-safe plugin", "cross-platform", or works on Capacitor config/native bridge code. Provides patterns for type-safe native bridges, plugin integration, and cross-platform workflows.
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # Capacitor TypeScript Skill
 
 Guides writing, reviewing, and refactoring TypeScript code for Capacitor apps. Focus on type safety, cross-platform compatibility (iOS/Android/Web), and integration with React/Next.js. Always prioritize strict TS configs (noImplicitAny, strictNullChecks).

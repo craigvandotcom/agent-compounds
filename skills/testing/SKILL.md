@@ -3,6 +3,13 @@ name: testing
 description: Use when writing tests for TypeScript/Next.js code. Handles unit tests (Vitest), component tests (RTL), integration tests, and E2E tests (Playwright). Triggers on test, spec, coverage, mock, assertion.
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # TypeScript Testing Skill
 
 **Purpose:** Guide writing high-quality tests for the body-compass-app

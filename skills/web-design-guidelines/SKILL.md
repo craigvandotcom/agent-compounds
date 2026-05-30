@@ -3,6 +3,13 @@ name: web-design-guidelines
 description: Web interface best practices for accessibility, forms, animations, typography, and UX. Use when reviewing UI code, checking accessibility, auditing design patterns, or fixing UX issues.
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # Web Design Guidelines
 
 **Purpose:** Audit UI code against 100+ web interface best practices

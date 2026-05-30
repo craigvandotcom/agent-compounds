@@ -3,6 +3,13 @@ name: ui-brainstorm
 description: Multi-model UI design critique using consensus ranking. Use when user mentions UI improvements, design critique, interface redesign, or wants multiple perspectives on visual/UX changes. Triggers on "ui brainstorm", "design critique", "improve this interface", "multiple design ideas".
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # UI Brainstorm Skill
 
 **Purpose:** Multi-model AI consensus for UI/UX design ideation and critique using cutting-edge vision models
