@@ -3,6 +3,13 @@ name: supabase
 description: Supabase development with CLI, migrations, SDK patterns, and Postgres best practices. Use when writing SQL, designing schemas, running migrations, working with RLS, optimizing queries, or touching any Supabase integration code.
 ---
 
+> **Generic skill — method only, zero app facts.** This skill is symlinked from
+> agent-compounds and shared across all neoMeta apps. It contains technique and
+> patterns, not project specifics. **App specifics (project refs, schema names,
+> domain rules, feature flows, env values) → read this app's
+> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
+> Do not add app-specific facts to this file — they belong in CORE.
+
 # Supabase
 
 **Purpose:** CLI-driven Supabase development, migrations, SDK patterns, Postgres best practices
@@ -27,48 +34,41 @@ description: Supabase development with CLI, migrations, SDK patterns, and Postgr
 
 - UI component work (use `design-system`)
 - General React patterns (use `react-best-practices`)
-- Auth UI flows (use CORE + `_docs/specs/supabase-auth.md`)
+- Auth UI flows (use the app's CORE + its auth spec)
 
 ---
 
 ## CLI Quick Reference
 
-Supabase CLI v2.75.0 installed at `/home/van/.local/bin/supabase`.
+The Supabase CLI is installed on the developer machine (verify version with
+`supabase --version`). Per-app environment specifics (project ref, region, link
+target, local-vs-prod strategy) live in that app's `CORE/supabase.md`.
 
 ### Prerequisites — Link to Remote
 
-**We do NOT run a local Supabase Docker stack for development.** All development targets production directly.
+Most CLI commands require linking to a project. If you see `Cannot find project
+ref. Have you run supabase link?`, run the app's link command (per its CORE).
+Linking state is stored in `supabase/.temp/`.
 
-**Exception — integration tests use a local stack.** `pnpm test:integration` (`__tests__/supabase-integration/`) runs against a local Supabase instance, not production. Before running these tests on a branch that adds migrations, sync local: `pnpm supabase db push --local`. Without this, tests will fail with "relation does not exist". The `--local` flag is safe — local-only writes, no production impact. The "no Docker stack" rule applies to feature/dev work; integration tests are the documented exception.
+Authentication is stored at `~/.supabase/access-token` (via `supabase login`). If
+you see `Access token not provided`, the user must run `supabase login`
+interactively.
 
-**Single-project strategy:** We use one production Supabase project. Migrations are written locally, reviewed by the agent, approved by the user, and pushed directly to production. Point-in-time recovery (PITR) on the Pro plan is the safety net for disasters.
-
-| Project        | Ref                    | Name              | Region                 |
-| -------------- | ---------------------- | ----------------- | ---------------------- |
-| **Production** | `spilwpcqjncrxptqdggn` | body-compass-prod | Central EU (Frankfurt) |
-
-> **Legacy dev project** (`ecvbexxmqlghzosgoiww`, body-compass-dev) exists but is not actively used. Available as a disposable sandbox if needed for destructive migration testing.
-
-**Link to production** (most CLI commands require linking):
-
-```bash
-pnpm supabase:link
-```
-
-If you see `Cannot find project ref. Have you run supabase link?`, run the command above. Linking state is stored in `supabase/.temp/`.
-
-Authentication is stored at `~/.supabase/access-token` (via `supabase login`). If you see `Access token not provided`, the user must run `supabase login` interactively.
+> **Local vs. production strategy is per-app.** Some apps run a local Docker
+> stack; some target production directly with PITR as the safety net. Read the
+> app's `CORE/supabase.md` before deciding whether a command is safe to run.
 
 ### Agent Safety Rules
 
-**All CLI commands target production directly.** There is no local DB safety net. PITR is the disaster recovery mechanism. Agents must follow these rules strictly.
+Treat the connected database as authoritative. When an app targets production
+directly there is no local safety net, so the rules below are strict by default.
 
 **Run freely (read-only, no confirmation needed):**
 
 - `supabase inspect db *` — performance stats, index usage, bloat, locks
 - `supabase migration list` — compare local vs remote migration status
-- `pnpm supabase:types` — regenerate TypeScript types from production schema
-- `supabase db dump --schema-only` — export current production schema
+- `supabase gen types typescript --linked` — regenerate TypeScript types
+- `supabase db dump --schema-only` — export current schema
 
 **Run freely (local-only writes):**
 
@@ -76,15 +76,15 @@ Authentication is stored at `~/.supabase/access-token` (via `supabase login`). I
 
 **ASK USER FIRST (production writes — present SQL and wait for approval):**
 
-- `pnpm supabase:push` — applies pending migrations to production (irreversible)
-- `supabase db pull` — overwrites local migration files with production schema
+- `supabase db push` — applies pending migrations to the linked project (irreversible)
+- `supabase db pull` — overwrites local migration files with remote schema
 - `supabase migration squash` — rewrites local migration history
 - `supabase migration repair` — modifies remote migration history table
-- `supabase functions deploy` — deploys edge functions to production
+- `supabase functions deploy` — deploys edge functions
 
 **NEVER run without explicit user request:**
 
-- Any raw SQL against the production database
+- Any raw SQL against a production database
 - Dropping tables, columns, or RLS policies
 - Modifying auth configuration
 
@@ -94,14 +94,21 @@ Authentication is stored at `~/.supabase/access-token` (via `supabase login`). I
 2. Create the file with `supabase migration new`
 3. Write the SQL into the file
 4. Present the complete migration for review
-5. Only run `pnpm supabase:push` after explicit user approval
-6. After push, regenerate types with `pnpm supabase:types`
+5. Only run the push after explicit user approval
+6. After push, regenerate types
 
 ### Migrations
 
-**Filename rule — numeric prefix only.** Migration files must start with a plain integer (e.g. `060_backfill.sql`), not a letter-suffixed variant like `060a_backfill.sql`. The Supabase CLI silently skips files whose prefix is not a pure integer — no error, no warning, they simply don't run on `db reset` or `db push`. If you need paired migrations (e.g. dry-run + apply), use consecutive integers (`060_dry_run.sql`, `061_apply.sql`). Always verify with `ls supabase/migrations/ | sort` before authoring a new file — the next free number is your target.
+**Filename rule — timestamp prefix for new files.** New migration files use a
+14-digit timestamp prefix (`YYYYMMDDHHMMSS_<name>.sql`). `supabase migration new
+<name>` generates this format by default. Timestamps are globally unique, sort
+chronologically, and never collide between apps sharing a migrations directory.
 
-**Ingredient-name parsing lives in `fn_parse_ingredient_name()`** (migration 062). Future modifier backfills call this function instead of re-inlining the parsing state machine. Migrations 060 and 061 were deleted in bead bd-lw5m (never applied to production); the backfill itself is pending a separate, explicitly-approved migration since production is the only environment.
+> Some apps have legacy integer-prefixed migrations (`NNN_*.sql`) that are
+> grandfathered. The CLI **silently skips** files whose prefix is neither a pure
+> integer nor a valid timestamp — no error, no warning. Always verify with
+> `ls supabase/migrations/ | sort` before authoring a new file. Any app-specific
+> legacy-prefix gotchas live in that app's `CORE/supabase.md`.
 
 | Command                         | Purpose                                               |
 | ------------------------------- | ----------------------------------------------------- |
@@ -119,17 +126,13 @@ Authentication is stored at `~/.supabase/access-token` (via `supabase login`). I
 | ---------------------------------------- | ----------------------------------------- |
 | `supabase gen types typescript --linked` | Generate types from linked remote project |
 
-Output goes to stdout - redirect to `lib/supabase/types.ts`:
+Output goes to stdout — redirect to the app's generated-types file:
 
 ```bash
 supabase gen types typescript --linked > lib/supabase/types.ts
 ```
 
-Or use the npm script:
-
-```bash
-pnpm supabase:types
-```
+(The app's CORE documents the exact output path and any npm-script wrapper.)
 
 ### Inspection & Debugging
 
@@ -151,31 +154,9 @@ All inspect commands run against the linked remote project by default (requires 
 
 | Command                            | Purpose                        |
 | ---------------------------------- | ------------------------------ |
-| `pnpm supabase:link`               | Link CLI to production project |
+| `supabase link`                    | Link CLI to a project          |
 | `supabase functions deploy <name>` | Deploy edge function           |
 | `supabase functions serve`         | Serve edge functions locally   |
-
-### NPM Scripts
-
-| Script                 | Purpose                                         |
-| ---------------------- | ----------------------------------------------- |
-| `pnpm supabase:link`   | Link CLI to production (`spilwpcqjncrxptqdggn`) |
-| `pnpm supabase:push`   | Push pending migrations to production           |
-| `pnpm supabase:types`  | Generate TS types from production schema        |
-| `pnpm supabase:status` | List all projects in account                    |
-
-**Workflow:**
-
-```bash
-# 1. Write migration
-supabase migration new my_change
-# 2. Edit the SQL file in supabase/migrations/
-# 3. Review with agent, get user approval
-# 4. Push to production
-pnpm supabase:push
-# 5. Regenerate types
-pnpm supabase:types
-```
 
 ---
 
@@ -183,48 +164,51 @@ pnpm supabase:types
 
 ### Creating a New Migration
 
-**Always run `supabase migration new` from BCA's directory** (this repo). `body-compass-app/supabase/migrations/` is the canonical migration host for ALL neoMeta apps on the shared Supabase project — ASA, USA, and MFA each have `supabase/migrations` as a symlink (mode 120000) pointing here. New files appear in their symlinked dirs immediately. (Locked 2026-05-23 by bd-c6gp epic; see `software/CLAUDE.md` > Cross-App Migrations.)
-
 ```bash
-# 1. Create the migration file (always from body-compass-app/)
-cd body-compass-app
+# 1. Create the migration file
 supabase migration new add_food_tags
 
 # 2. Edit the generated file in supabase/migrations/
 
-# 3. Push to production (after user approval)
-pnpm supabase:push
+# 3. Push to remote (after user approval)
+supabase db push
 
-# 4. Generate updated types from production
-pnpm supabase:types
+# 4. Generate updated types from remote
+supabase gen types typescript --linked > lib/supabase/types.ts
 ```
 
-**Filename convention:** `<timestamp>_<app-abbrev>_<name>.sql` for non-BCA migrations (e.g. `20260523190237_usa_initial.sql`). Three-letter app abbreviation makes ownership unambiguous when many apps land migrations to the same dir. BCA's own migrations may omit the prefix (`<timestamp>_<name>.sql`). Social-contract only — not CLI-enforced.
+> **Shared-project / cross-app migration hosting is per-ecosystem.** When several
+> apps share one Supabase project, one app is typically designated the canonical
+> migration host and siblings symlink to it; `supabase config push` is forbidden
+> because it clobbers other apps' schema exposure. The host designation, symlink
+> layout, and `<timestamp>_<app-abbrev>_<name>.sql` naming convention are
+> documented per-app in `CORE/supabase.md` and in the ecosystem's
+> `software/CLAUDE.md`. This generic skill does not name a host.
 
-**Timestamp collisions:** If two engineers run `supabase migration new` in the same second, the second invocation fails loudly with filename collision. Engineer just retries — no allocator infrastructure needed.
-
-**NNN\_ legacy files:** BCA's `001_*.sql` through `085_*.sql` stay as-is (renaming would break `schema_migrations` tracking). Mixed-format dir sorts correctly because 14-digit timestamps lexicographically follow 3-digit NNN\_ prefixes.
+**Timestamp collisions:** If two engineers run `supabase migration new` in the
+same second, the second invocation fails loudly with a filename collision.
+Engineer just retries — no allocator infrastructure needed.
 
 ### Rules for Migrations
 
-- **Never edit applied migrations** - create new ones to fix issues
+- **Never edit applied migrations** — create new ones to fix issues
 - **Include RLS policies** in the same migration as the table they protect
 - **Use `IF NOT EXISTS`** for idempotent DDL where appropriate
 - **Name migrations descriptively:** `add_food_tags`, `fix_symptom_rls`, `create_correlations_table`
-- **Keep migrations small and focused** - one logical change per file
+- **Keep migrations small and focused** — one logical change per file
 - **Use transactions** (migrations run in a transaction by default)
-- **Review SQL carefully before `db push`** - no local DB to test against
-- **Before dropping/altering constraints:** Verify exact constraint name against the source migration file — names frequently differ from assumptions. Run `grep -r "CONSTRAINT" supabase/migrations/ | grep <table_name>` to confirm.
-- **Smoke-testing a UNIQUE constraint in prod:** Don't enumerate insert columns by hand — you'll miss NOT NULL fields and trip 23502 (`not_null_violation`) before reaching the constraint. Copy an existing row via `%ROWTYPE` so every NOT NULL column is populated automatically:
+- **Review SQL carefully before `db push`** when there is no local DB to test against
+- **Before dropping/altering constraints:** Verify the exact constraint name against the source migration file — names frequently differ from assumptions. Run `grep -r "CONSTRAINT" supabase/migrations/ | grep <table_name>` to confirm.
+- **Smoke-testing a UNIQUE constraint against a populated DB:** Don't enumerate insert columns by hand — you'll miss NOT NULL fields and trip `23502` (`not_null_violation`) before reaching the constraint. Copy an existing row via `%ROWTYPE` so every NOT NULL column is populated automatically:
 
   ```sql
   DO $$
-  DECLARE r tier_transitions%ROWTYPE;
+  DECLARE r my_table%ROWTYPE;
   BEGIN
-    SELECT * INTO r FROM tier_transitions LIMIT 1;
+    SELECT * INTO r FROM my_table LIMIT 1;
     r.id := gen_random_uuid();  -- only override the PK
     BEGIN
-      INSERT INTO tier_transitions VALUES (r.*);
+      INSERT INTO my_table VALUES (r.*);
       RAISE EXCEPTION 'SMOKE FAIL: duplicate insert succeeded';
     EXCEPTION WHEN unique_violation THEN
       NULL;  -- expected: 23505
@@ -232,7 +216,7 @@ pnpm supabase:types
   END $$;
   ```
 
-  This proves the unique constraint actually fires (rather than failing on something else first). Concrete cost: bd-9veq.8 first smoke-test attempt enumerated keyspace + remembered NOT NULL columns; missed `lift_value, food_days, reaction_count, forward_rate`; hit 23502 in prod (~2 min retry). `%ROWTYPE` is robust to schema additions.
+  This proves the unique constraint actually fires (rather than failing on something else first). Enumerating columns by hand routinely misses NOT NULL fields and hits `23502` before the constraint is reached; `%ROWTYPE` is robust to schema additions.
 
 ### Rolling Back
 
@@ -244,58 +228,27 @@ supabase migration new revert_food_tags
 
 ---
 
-## Project Context
+## Local Supabase keys in integration tests
 
-### Environment
+Apps that run integration tests against a **local** Supabase stack use the local
+CLI's well-known dev keys (visible via `supabase status -o env`). These are NOT
+production secrets and are identical across every developer's machine.
 
-- **Project:** Body Compass (bodycompass.app)
-- **Production Ref:** `spilwpcqjncrxptqdggn` (single-project strategy, direct to prod)
-- **Stack:** Next.js 15 + `@supabase/ssr` + TypeScript
-- **Database:** PostgreSQL 17 (remote only, no local Docker)
-- **Migrations:** Check current highest before creating: `ls supabase/migrations/*.sql | sort | tail -1` (numbering has gaps — never assume sequential)
-- **Auth:** Email signup, no anonymous signups, JWT 1hr expiry
-- **Safety net:** PITR (point-in-time recovery) on Pro plan
+**BUT:** gitleaks (pre-commit hook) cannot distinguish well-known local keys from
+real secrets. Any `sb_secret_*` or `sb_publishable_*` literal in committed code
+will block the commit.
 
-### Key Files
-
-| File                         | Purpose                                                   |
-| ---------------------------- | --------------------------------------------------------- |
-| `lib/supabase/client.ts`     | Browser client (singleton, dual web/Capacitor strategy)   |
-| `lib/supabase/server.ts`     | Server client (Next.js cookie-based)                      |
-| `lib/supabase/middleware.ts` | Session refresh via `updateSession()`                     |
-| `lib/supabase/types.ts`      | Auto-generated types (`Database`, `Tables<>`, etc.)       |
-| `lib/db.ts`                  | All CRUD operations (foods, symptoms, users, preferences) |
-| `supabase/config.toml`       | Project configuration (project_id, auth settings)         |
-
-### Environment Variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL=""              # Public API URL (production)
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=""  # Anon/publishable key (client-safe)
-SUPABASE_SECRET_KEY=""                   # Service role key (server-only, never ship to client)
-
-# Integration-test-only — local Supabase stack keys (see "Local Supabase keys in tests" below)
-LOCAL_SUPABASE_SERVICE_KEY=""            # Local-stack service-role key from `supabase status -o env`
-LOCAL_SUPABASE_PUBLISHABLE_KEY=""        # Local-stack anon key (optional; default-fallback in tests)
-LOCAL_SUPABASE_URL=""                    # Defaults to http://127.0.0.1:54321
-```
-
-### Local Supabase keys in tests
-
-`__tests__/supabase-integration/*.test.ts` files run against the local stack. The local Supabase CLI's docker image uses well-known dev keys (visible via `supabase status -o env`) — they are NOT production secrets and are identical across every developer's machine.
-
-**BUT:** gitleaks (pre-commit hook) cannot distinguish well-known local keys from real secrets. Any `sb_secret_*` or `sb_publishable_*` literal in committed code will block the commit.
-
-**Convention** (matches all existing `__tests__/supabase-integration/*.test.ts` files):
+**Convention — read local-stack keys from env, NEVER hardcode literals:**
 
 ```ts
-// Read local-stack keys from env — NEVER hardcode literals
 const LOCAL_SUPABASE_URL =
   process.env.LOCAL_SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const LOCAL_SERVICE_ROLE_KEY = process.env.LOCAL_SUPABASE_SERVICE_KEY ?? '';
 ```
 
-When a test needs to override the production-pointing `NEXT_PUBLIC_SUPABASE_*` env vars (because `__tests__/supabase-integration/setup.ts` loads `.env.local` which points at production), reassign from these LOCAL\_\* vars BEFORE any client construction:
+When a test needs to override production-pointing `NEXT_PUBLIC_SUPABASE_*` env
+vars (because the test setup loads an `.env.local` that points at production),
+reassign from the `LOCAL_*` vars BEFORE any client construction:
 
 ```ts
 // Force local stack BEFORE any createClient() call
@@ -306,34 +259,39 @@ process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
   process.env.LOCAL_SUPABASE_PUBLISHABLE_KEY ?? '';
 ```
 
-`.env.local` must already contain `LOCAL_SUPABASE_SERVICE_KEY` (and optionally the others) — copy from `supabase status -o env` output once after `supabase start`.
+`.env.local` must already contain `LOCAL_SUPABASE_SERVICE_KEY` (and optionally the
+others) — copy from `supabase status -o env` output once after `supabase start`.
 
-**Never hardcode `sb_secret_*` / `sb_publishable_*` literals in committed code.** Gitleaks will block the commit. This has happened three times on this repo (bd-odwe.5 on 2026-05-20 was the most recent — recovery cost ~5 min).
+**Never hardcode `sb_secret_*` / `sb_publishable_*` literals in committed code** —
+gitleaks will block the commit.
 
-### SDK Patterns We Follow
+---
+
+## SDK Patterns
 
 **Singleton browser client:**
 
 ```typescript
-// lib/supabase/client.ts - cached at module scope
+// Cache the browser client at module scope.
 // Web: createBrowserClient from @supabase/ssr
-// Native: createClient with Capacitor Preferences storage adapter
+// Native (Capacitor): createClient with a Preferences storage adapter
 ```
 
-**All DB operations through `lib/db.ts`:**
+**Route all DB operations through a single data-access module:**
 
 ```typescript
-// Never create ad-hoc Supabase calls in components
-// Always use lib/db.ts functions which handle:
-// - Column selection via FOOD_COLUMNS / SYMPTOM_COLUMNS constants
+// Never create ad-hoc Supabase calls in components.
+// A central db module should handle:
+// - Column selection via shared column constants
 // - User ID from supabase.auth.getUser() (never from request params)
 // - Structured error objects preserving Supabase error details
-// - Input sanitization (sanitizeUserNote for text fields)
+// - Input sanitization for text fields
 ```
 
 **Upsert + `.select()` (CRITICAL):**
 
-`.upsert()` without `.select()` returns `PostgrestResponse<never>` — `data` is always `null`. You MUST chain `.select()` to get the inserted/updated row back:
+`.upsert()` without `.select()` returns `PostgrestResponse<never>` — `data` is
+always `null`. You MUST chain `.select()` to get the inserted/updated row back:
 
 ```typescript
 const { data, error } = await supabase
@@ -361,13 +319,15 @@ mockFrom.mockReturnValue({ upsert: upsertMock });
 
 ```typescript
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types';
-type Food = Tables<'foods'>;
-type NewFood = TablesInsert<'foods'>;
+type Row = Tables<'my_table'>;
+type NewRow = TablesInsert<'my_table'>;
 ```
 
-### RLS Pattern
+---
 
-All tables enforce user isolation via `auth.uid() = user_id`:
+## RLS Pattern
+
+Standard pattern for user-owned tables — enforce isolation via `auth.uid() = user_id`:
 
 ```sql
 -- Standard pattern for every user-owned table
