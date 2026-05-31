@@ -10,7 +10,7 @@ agent-browser --session [name] set viewport 390 844
 agent-browser --session [name] wait --load networkidle
 ```
 
-Mobile viewport (390x844) is **mandatory** — this is a mobile-first PWA targeting 320-428px. Only use desktop viewport when explicitly requested.
+Mobile viewport (390x844) is **recommended for mobile-first apps** targeting 320–428px. Check the consuming app's CORE for its viewport policy. Only use desktop viewport when explicitly requested.
 
 ## Standard Assertions
 

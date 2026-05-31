@@ -1,13 +1,16 @@
 # Browser Testing Environments
 
+> **Generic template.** Fill in the values below for each app. App-specific URLs,
+> credentials, and route tables belong in the consuming app's CORE — not here.
+
 ## Environment Configuration
 
 ### Local Development
 
 ```yaml
 name: local
-base_url: http://localhost:3000
-supabase: prod (spilwpcqjncrxptqdggn)
+base_url: http://localhost:<port>         # typically 3000
+auth_backend: <dev or prod — check app>
 credentials_source: .env.local
 start_command: pnpm dev
 ```
@@ -28,9 +31,9 @@ start_command: pnpm dev
 
 ```yaml
 name: preview
-base_url: https://[deployment-id]-craigvandotcoms-projects.vercel.app
-supabase: prod (spilwpcqjncrxptqdggn)
-credentials_source: Vercel env vars
+base_url: https://[deployment-id]-<team>.vercel.app
+auth_backend: prod (same as production)
+credentials_source: Vercel env vars / app CORE
 ```
 
 **Get preview URL:**
@@ -39,10 +42,8 @@ credentials_source: Vercel env vars
 vercel ls --yes 2>&1 | grep "Preview" | head -1 | awk '{print $2}'
 ```
 
-**Credentials:**
-
-- Email: `test@bodycompass.app`
-- Password: `12345abcde`
+**Credentials:** See the consuming app's CORE (`environments.md` or `SKILL.md`) for
+the test account email/password used in preview/production.
 
 **Pre-requisites:**
 
@@ -55,16 +56,12 @@ vercel ls --yes 2>&1 | grep "Preview" | head -1 | awk '{print $2}'
 
 ```yaml
 name: production
-base_url: https://www.bodycompass.app
-supabase: prod (spilwpcqjncrxptqdggn)
-credentials_source: Vercel env vars
+base_url: https://<app-production-url>
+auth_backend: prod
+credentials_source: Vercel env vars / app CORE
 ```
 
-**Credentials:**
-
-- Same as preview (prod Supabase)
-
-**Caution:** Production testing should be read-only or use dedicated test account.
+**Caution:** Production testing should be read-only or use a dedicated test account.
 
 ---
 
@@ -76,51 +73,33 @@ Claude can read `.env.local` directly:
 
 ```bash
 # In .env.local:
-TEST_USER_EMAIL="craigvh89@gmail.com"
-TEST_USER_PASSWORD="..."
+TEST_USER_EMAIL="<your-test-email>"
+TEST_USER_PASSWORD="<your-test-password>"
 ```
 
-When executing browser tests, read these values and use them in agent-browser commands.
+When executing browser tests, read these values and use them in `agent-browser` commands.
 
-### Preview/Production Credentials
+### Preview / Production Credentials
 
-Hardcoded in this file for Claude's reference:
-
-- **Email:** `test@bodycompass.app`
-- **Password:** `12345abcde`
-
-These are set in Vercel environment variables for the TEST*USER*\* vars.
+Stored in the consuming app's CORE (`.claude/skills/CORE/SKILL.md` or a dedicated
+`environments.md` inside CORE). Never store live credentials in this generic skill.
 
 ---
 
 ## Route Classification
 
-### Public Routes (No Auth Required)
+Route tables (which routes are public vs protected, what query params control tab
+state, etc.) are app-specific. Read the consuming app's CORE for its route map.
 
-| Route      | Description      |
-| ---------- | ---------------- |
-| `/`        | Landing page     |
-| `/login`   | Login form       |
-| `/signup`  | Signup form      |
-| `/about`   | About page       |
-| `/privacy` | Privacy policy   |
-| `/terms`   | Terms of service |
-| `/offline` | Offline fallback |
+**Pattern to follow in each app's CORE:**
 
-### Protected Routes (Auth Required)
-
-| Route                     | Description                      |
-| ------------------------- | -------------------------------- |
-| `/app`                    | Dashboard (Insights tab default) |
-| `/app?view=entries`       | Dashboard - Entries tab          |
-| `/app?view=settings`      | Dashboard - Settings tab         |
-| `/app/foods/new`          | New food entry                   |
-| `/app/foods/[id]`         | Edit food entry                  |
-| `/app/foods/[id]/camera`  | Camera capture for food entry    |
-| `/app/symptoms/add`       | Add signal                       |
-| `/app/symptoms/edit/[id]` | Edit signal                      |
-
-**Note:** Settings is a tab within `/app`, not a separate `/settings` route. Use `?view=settings` to navigate directly.
+| Route        | Auth required | Description        |
+| ------------ | ------------- | ------------------ |
+| `/`          | No            | Landing / home     |
+| `/login`     | No            | Login form         |
+| `/signup`    | No            | Registration form  |
+| `/app`       | Yes           | Main app entry     |
+| `...`        | ...           | (app-specific)     |
 
 ---
 
