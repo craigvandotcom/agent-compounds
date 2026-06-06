@@ -1,6 +1,6 @@
 ---
-name: ac-prompts
-description: A curated library of high-leverage one-shot prompts (debugging, performance, refactoring, planning, ideation, review, UI, workflow). Invoke with a hint of what you want and load the best-matching prompt. Triggers: "/prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "find a prompt".
+name: jef-prompts
+description: A curated library of high-leverage one-shot prompts (debugging, performance, refactoring, planning, ideation, review, UI, workflow) — the Jeffrey-Emanuel "jef" pack plus local additions. Invoke with a hint of what you want and load the best-matching prompt. Triggers: "/jef-prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "find a prompt".
 ---
 
 # Prompts Library
@@ -9,7 +9,7 @@ A catalog of battle-tested prompts (the "jef" library, after Jeffrey Emanuel, pl
 
 ## How to use
 
-1. The user invokes `/prompts <hint>` (e.g. `/prompts find a deep bug`, `/prompts make the UI world-class`).
+1. The user invokes `/jef-prompts <hint>` (e.g. `/jef-prompts find a deep bug`, `/jef-prompts make the UI world-class`).
 2. Match the hint against the catalog below.
 3. **Load the single best-matching `references/<name>.md`** and run it. If 2–3 are plausible, name them and ask which (or run the closest and mention the alternatives).
 4. If nothing matches well, say so and suggest the nearest options — don't force a poor fit.

@@ -1,7 +1,7 @@
 # AGENTS.md — Subagent Context Template
 
 > **This is a template.** Copy it into your project root and fill in each section.
-> Subagents spawned by flywheel commands read this file for project context.
+> Subagents spawned by flywheel skills read this file for project context.
 > Delete this instructions block after filling in.
 
 ## Project Overview

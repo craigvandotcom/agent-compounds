@@ -1,6 +1,6 @@
 ---
-name: flywheel
-description: Use when building software with AI agents, planning with beads (br/bv), spawning agent swarms (ntm), coordinating multi-agent work, or converting plans to beads. Triggers on mentions of flywheel, beads, agent swarm, bv, br, ntm, AGENTS.md, beadify, agent coordination, or multi-agent development.
+name: jef-flywheel
+description: Use when learning or applying the agentic build methodology end-to-end — building software with AI agents, the beads (br/bv) and agent-swarm (ntm) setup, coordinating multi-agent work, AGENTS.md conventions. The conceptual/setup layer, not the per-stage pipeline skills. Triggers on mentions of flywheel, agent swarm, ntm, br/bv setup, agent coordination, or multi-agent development. To convert a plan into beads use ac-beadify; to run a pipeline stage use the ac-* skills.
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

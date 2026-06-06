@@ -11,15 +11,17 @@
 #   ./deploy.sh <target-project-dir> [options]
 #
 # Options:
-#   --commands              symlink the jef command pack (the flywheel is now skills/ac-*)
 #   --skills a,b,c | all    symlink the named skills (or every skill)
 #   --agents a,b | all      symlink the named agents (or every agent)
-#   --all                   commands + all skills + all agents
+#   --all                   all skills + all agents
 #   --list                  print what's available and exit
 #   -n, --dry-run           show what would happen, change nothing
 #
+# Note: the old `--commands` flag is retired — the jef prompt pack is now the
+# `jef-prompts` skill, deployed like any other skill (--skills jef-prompts).
+#
 # Examples:
-#   ./deploy.sh ../simil8 --commands --skills supabase,testing,react-best-practices,planning --agents engineer,reviewer
+#   ./deploy.sh ../simil8 --skills supabase,testing,react-best-practices,planning --agents engineer,reviewer
 #   ./deploy.sh ../unsit-app --all
 #   ./deploy.sh --list
 
@@ -28,7 +30,6 @@ set -euo pipefail
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DRY=0
-DO_COMMANDS=0
 SKILLS_REQ=""
 AGENTS_REQ=""
 TARGET=""
@@ -42,16 +43,15 @@ list_agents() { (cd "$AC_ROOT/agents" 2>/dev/null && find . -name '*.md' | sed '
 list_available() {
   echo "Skills:"; list_skills | sed 's/^/  /'
   echo "Agents:"; list_agents | sed 's/^/  /'
-  echo "Command packs:  jef"
 }
 
 # --- parse args ---
 while [ $# -gt 0 ]; do
   case "$1" in
-    --commands) DO_COMMANDS=1; shift ;;
     --skills)   SKILLS_REQ="$2"; shift 2 ;;
     --agents)   AGENTS_REQ="$2"; shift 2 ;;
-    --all)      DO_COMMANDS=1; SKILLS_REQ="all"; AGENTS_REQ="all"; shift ;;
+    --all)      SKILLS_REQ="all"; AGENTS_REQ="all"; shift ;;
+    --commands) echo "note: --commands is retired; jef is now the 'jef-prompts' skill (--skills jef-prompts)" >&2; shift ;;
     --list)     list_available; exit 0 ;;
     -n|--dry-run) DRY=1; shift ;;
     -*)         echo "unknown option: $1" >&2; exit 2 ;;
@@ -86,12 +86,6 @@ link() {
 }
 
 echo "Deploying agent-compounds -> $TARGET"
-
-# --- commands ---
-if [ "$DO_COMMANDS" = 1 ]; then
-  echo "Commands (jef pack):"
-  link "$AC_ROOT/commands/jef" "$TARGET/.claude/commands/jef"
-fi
 
 # --- skills ---
 if [ -n "$SKILLS_REQ" ]; then
