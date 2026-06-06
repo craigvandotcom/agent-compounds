@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 **You are the conductor closing a feature wave.** Create the PR, wait for CI and agent feedback, triage and fix issues, merge when clean.
 
-Run this after `/bead-land` when all beads are complete. This is per-feature (not per-session like bead-land).
+Run this after `/ac-land` when all beads are complete. This is per-feature (not per-session like bead-land).
 
 ---
 
@@ -15,7 +15,7 @@ Run this after `/bead-land` when all beads are complete. This is per-feature (no
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Wave branch with all beads complete, pushed (post `/bead-land`)                            |
+| **Input**        | Wave branch with all beads complete, pushed (post `/ac-land`)                            |
 | **Output**       | PR merged to main, wave branch deleted, feature shipped                                    |
 | **Artifacts**    | PR on GitHub, feedback triage in `$ARTIFACTS_DIR/`                                         |
 | **Verification** | All CI checks green, PR merged, on main branch                                            |
@@ -61,7 +61,7 @@ AskUserQuestion(
     header: "Open beads",
     multiSelect: false,
     options: [
-      { label: "Stop — close beads first", description: "Run /bead-work to finish remaining beads" },
+      { label: "Stop — close beads first", description: "Run /ac-implement to finish remaining beads" },
       { label: "Merge anyway", description: "Open beads will remain for a future wave" }
     ]
   }]
@@ -132,31 +132,9 @@ pnpm version "$CHOSEN_BUMP" --no-git-tag-version
 NEW_VERSION=$(node -p "require('./package.json').version")
 ```
 
-#### Propagate the version (iOS + native build number)
+#### Propagate the version to native build surfaces
 
-`package.json` alone does not reach the App Store binary or the client/Sentry telemetry header. Three additional surfaces need to move in lockstep — only iOS files are touched at this step; the JS surface (`NEXT_PUBLIC_APP_VERSION`) is auto-derived from `package.json` at build time via `next.config.mjs` and needs no script.
-
-```bash
-# iOS marketing version (CFBundleShortVersionString) — visible in App Store + Settings.app
-# Four occurrences in project.pbxproj (Debug + Release × App + Pods/share-extension target groups).
-sed -i.bak -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+(;)/MARKETING_VERSION = ${NEW_VERSION}\1/g" \
-  ios/App/App.xcodeproj/project.pbxproj
-rm -f ios/App/App.xcodeproj/project.pbxproj.bak
-
-# iOS build number (CFBundleVersion) — App Store Connect requires monotonic increment
-# per upload, INDEPENDENT of semver. Bump even on a patch release.
-CURRENT_BUILD=$(grep -m1 -oE 'CURRENT_PROJECT_VERSION = [0-9]+' ios/App/App.xcodeproj/project.pbxproj | grep -oE '[0-9]+')
-NEW_BUILD=$((CURRENT_BUILD + 1))
-sed -i.bak -E "s/CURRENT_PROJECT_VERSION = ${CURRENT_BUILD};/CURRENT_PROJECT_VERSION = ${NEW_BUILD};/g" \
-  ios/App/App.xcodeproj/project.pbxproj
-rm -f ios/App/App.xcodeproj/project.pbxproj.bak
-
-# Verify all four MARKETING_VERSION + CURRENT_PROJECT_VERSION refs updated
-grep -c "MARKETING_VERSION = ${NEW_VERSION};" ios/App/App.xcodeproj/project.pbxproj   # expect 4
-grep -c "CURRENT_PROJECT_VERSION = ${NEW_BUILD};" ios/App/App.xcodeproj/project.pbxproj  # expect 4
-```
-
-If either grep returns less than 4, STOP and surface to user — pbxproj layout has changed and the sed pattern needs updating.
+`package.json` alone doesn't reach the App Store binary. Propagate to the native build surfaces (iOS pbxproj `MARKETING_VERSION` ×4 + monotonic `CURRENT_PROJECT_VERSION`; Android `build.gradle` when added; the JS `NEXT_PUBLIC_APP_VERSION` is auto-derived, no script) following **`references/version-bump.md`**. Web-only projects skip this.
 
 #### Commit the bump
 
@@ -166,10 +144,6 @@ git commit -m "chore(release): v${NEW_VERSION} (iOS build ${NEW_BUILD})"
 ```
 
 The tag is created on the merge commit in Phase 3 (after merge to main), not here — that way `v$NEW_VERSION` points at the actual shipped state.
-
-> **JS surface (no script needed):** `next.config.mjs` injects `NEXT_PUBLIC_APP_VERSION` from `package.json` at build time, which feeds the `X-Client-Version` HTTP header (`lib/utils/api-client.ts`) and the Sentry `client_version` tag (`sentry.client.config.ts`). If those references move, this assumption breaks — re-verify when touching either file.
->
-> **Android (when added):** `android/app/build.gradle` will have `versionName` (semver) + `versionCode` (monotonic int). Add the parallel sed block here when the Android target is introduced.
 
 ### Push
 
@@ -220,33 +194,7 @@ Also read the plan file (`_plans/*.md`) if it exists for the original intent.
 
 ### Build PR Body
 
-Construct a structured PR body from the gathered context:
-
-```markdown
-## Summary
-
-{1-3 sentence description of what this wave implements, derived from plan + beads}
-
-## Beads Completed
-
-{list of beads with IDs and titles from br list}
-
-## Changes
-
-{diff stats summary — files changed, insertions, deletions}
-
-## Test Coverage
-
-{quality gate results — tests passing, lint clean, type-check clean}
-
-## Review
-
-{link to .claude/reviews/ report if exists, or "Local review via /work-review"}
-
----
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-```
+Construct a structured PR body from the gathered context using the template in **`references/pr-body-template.md`** (Summary, Beads Completed, Changes, Test Coverage, Review).
 
 ### Create PR
 
@@ -500,8 +448,8 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Start new feature (Recommended)", description: "Run /plan-init — begin planning the next wave" },
-      { label: "Hygiene pass", description: "Run /hygiene — codebase health check after the merge" },
+      { label: "Start new feature (Recommended)", description: "Run /ac-plan — begin planning the next wave" },
+      { label: "Hygiene pass", description: "Run /ac-hygiene — codebase health check after the merge" },
       { label: "Done", description: "Feature shipped — nothing more to do" }
     ]
   }]
@@ -531,4 +479,4 @@ rm -rf "$ARTIFACTS_DIR"
 
 ---
 
-_Wave merge: create PR, triage feedback, fix, ship. For session closure: `/bead-land`. For next feature: `/plan-init`._
+_Wave merge: create PR, triage feedback, fix, ship. For session closure: `/ac-land`. For next feature: `/ac-plan`._
