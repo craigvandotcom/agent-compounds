@@ -1,6 +1,6 @@
 ---
-name: ac-plan
-description: Create and refine implementation plans — parallel explorers + validation baseline, then optional multi-agent/multi-model refinement, correctness check, and first-principles review. Triggers: 'make a plan', 'plan this feature', 'plan init', 'refine the plan', 'review the plan', 'plan refinement'.
+name: ac-plan-init
+description: Use to CREATE a first-draft implementation plan from a backlog item or feature request — parallel explorers investigate, you synthesize an actionable plan with test specs. The entry point of the planning chain. Triggers: 'make a plan', 'plan this feature', 'plan init', 'start a plan for X'. To improve an existing draft use ac-plan-clean / ac-plan-refine-internal / ac-plan-refine-external; to pressure-test it use ac-plan-review-genius / ac-plan-transcender-alien.
 ---
 
 
@@ -13,7 +13,7 @@ description: Create and refine implementation plans — parallel explorers + val
 |                  |                                                                                                      |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | **Input**        | User request (feature, fix, improvement) or backlog item                                             |
-| **Output**       | Approved plan in `_plans/YYYY-MM-DD-HHMM-[feature].md`, ready for `/ac-plan`     |
+| **Output**       | Approved plan in `_plans/YYYY-MM-DD-HHMM-[feature].md`, ready for refinement (`/ac-plan-clean`, `/ac-plan-refine-*`) or `/ac-beadify`     |
 | **Artifacts**    | Research in `_plans/research/`, validation baseline, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | Plan committed to current branch, success criterion defined, tools verified                         |
 
@@ -83,7 +83,7 @@ If a source backlog item was identified, update its frontmatter to signal this s
 ```yaml
 ---
 status: in_progress
-working_skill: plan-init
+working_skill: ac-plan-init
 working_since: YYYY-MM-DD
 ---
 ```
@@ -103,7 +103,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
   paths: [BACKLOG_REL],   # or "_plans/new" if no source backlog
   ttl_seconds: 10800,
   exclusive: true,
-  reason: "plan-init — creating plan"
+  reason: "ac-plan-init — creating plan"
 )
 ```
 
@@ -114,8 +114,8 @@ mcp__mcp-agent-mail__send_message(
   project_key: PROJECT_ROOT,
   sender_name: <session agent name>,
   to: [<session agent name>],
-  subject: "WIP: plan-init — {BACKLOG_REL}",
-  body_md: "Starting `plan-init` for `{BACKLOG_REL}`.",
+  subject: "WIP: ac-plan-init — {BACKLOG_REL}",
+  body_md: "Starting `ac-plan-init` for `{BACKLOG_REL}`.",
   topic: "pipeline-wip"
 )
 ```
@@ -503,8 +503,8 @@ mcp__mcp-agent-mail__send_message(
   project_key: PROJECT_ROOT,
   sender_name: <session agent name>,
   to: [<session agent name>],
-  subject: "DONE: plan-init — {BACKLOG_REL}",
-  body_md: "Completed `plan-init` for `{BACKLOG_REL}`. Plan committed.",
+  subject: "DONE: ac-plan-init — {BACKLOG_REL}",
+  body_md: "Completed `ac-plan-init` for `{BACKLOG_REL}`. Plan committed.",
   topic: "pipeline-wip"
 )
 ```
@@ -521,14 +521,17 @@ mcp__mcp-agent-mail__send_message(
 
 | Complexity | Recommended Next Step                                            |
 | ---------- | ---------------------------------------------------------------- |
-| MINIMAL    | `/ac-implement` directly (if beads exist) or implement from plan |
-| MORE       | refine the plan (`/ac-plan` internal mode) -> `/ac-beadify` -> `/ac-implement` |
-| A LOT      | refine the plan (`/ac-plan` internal or external mode) -> `/ac-beadify` -> `/ac-implement` |
+| MINIMAL    | `/ac-beadify` directly, then `/ac-bead-refine` -> `/ac-implement` |
+| MORE       | `/ac-plan-refine-internal` -> `/ac-plan-clean` -> `/ac-beadify` |
+| A LOT      | `/ac-plan-refine-internal` or `/ac-plan-refine-external` -> `/ac-plan-clean` -> `/ac-beadify` |
 
-**Pipeline next steps:**
+**Pipeline next steps (each is now its own skill):**
 
-- `/ac-plan` **refine modes** — multi-agent (internal) or multi-model/OpenRouter (external) refinement; also `clean`, `genius`, `transcender` review (see the modes table at the end of this skill)
-- `/ac-beadify` — convert plan to beads with parallel validation (and bead refinement via its refine mode)
+- `/ac-plan-refine-internal` — multi-agent refinement (no external models)
+- `/ac-plan-refine-external` — multi-model/OpenRouter refinement for high-stakes plans
+- `/ac-plan-clean` — correctness/structure hygiene pass (final polish)
+- `/ac-plan-review-genius` / `/ac-plan-transcender-alien` — forensic / paradigm-breaking review
+- `/ac-beadify` — convert plan to beads with parallel validation (then `/ac-bead-refine`)
 - `/ac-implement` — sequential implementation (conductor + engineer sub-agents)
 
 **Key context:**
@@ -549,9 +552,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Refine plan (Recommended)", description: "Run /ac-plan — multi-agent refinement before beadification" },
+      { label: "Refine plan (Recommended)", description: "Run /ac-plan-refine-internal — multi-agent refinement before beadification" },
       { label: "Beadify directly", description: "Run /ac-beadify — convert plan to beads (skip refinement for simple plans)" },
-      { label: "External multi-model refine", description: "Run /ac-plan — multiple diverse AI models for critical decisions" },
+      { label: "External multi-model refine", description: "Run /ac-plan-refine-external — multiple diverse AI models for critical decisions" },
       { label: "Done for now", description: "Plan saved — pick up implementation later" }
     ]
   }]
@@ -592,20 +595,20 @@ AskUserQuestion(
 
 ---
 
-_Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/ac-plan`. For beadification: `/ac-beadify`._
+_Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/ac-plan-refine-internal`. For beadification: `/ac-beadify`._
 
 ---
 
-## Refinement & review modes (load on demand)
+## Refinement & review — now separate skills
 
-Plan creation (above) gets you to a first draft. These modes deepen, verify, and pressure-test it — load the matching reference only when invoked:
+Plan creation (above) gets you to a first draft. Deepening, verifying, and pressure-testing it are now **distinct skills** (split out of the old monolithic `/ac-plan`), each invokable on its own:
 
-| Mode | When | Reference |
-| --- | --- | --- |
-| **Internal refinement** | Multi-agent refinement (light/medium/heavy), no external AI | `references/refine-internal.md` |
-| **External refinement** | Multi-model iterative refinement via 3–4 external AI models (OpenRouter) | `references/refine-external.md` |
-| **Clean / correctness** | 3 Sonnet agents verify accuracy, structure, completeness | `references/clean.md` |
-| **Genius review** | Multi-disciplinary first-principles forensic review of the plan | `references/review-genius.md` |
-| **Transcender (alien)** | Push the plan beyond human cognitive defaults — paradigm-breaking angles | `references/transcender-alien.md` |
+| Skill | When |
+| --- | --- |
+| `/ac-plan-refine-internal` | Multi-agent refinement (light/medium/heavy), no external AI |
+| `/ac-plan-refine-external` | Multi-model iterative refinement via 3–4 external AI models (OpenRouter) |
+| `/ac-plan-clean` | 3 Sonnet agents verify accuracy, structure, completeness (final polish) |
+| `/ac-plan-review-genius` | Multi-disciplinary first-principles forensic review of the plan |
+| `/ac-plan-transcender-alien` | Push the plan beyond human cognitive defaults — paradigm-breaking angles |
 
-Typical order: init → internal refine → clean → (external refine / genius / transcender as warranted) → ready for `beadify`.
+Typical order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` → (`/ac-plan-refine-external` / `/ac-plan-review-genius` / `/ac-plan-transcender-alien` as warranted) → `/ac-beadify`.

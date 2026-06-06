@@ -12,7 +12,7 @@
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Plan file (from `/ac-plan` or `/ac-plan`)                                   |
+| **Input**        | Plan file (from `/ac-plan-init` or `/ac-plan-refine-internal`)                                   |
 | **Output**       | Refined plan (in-place edit), `REFINEMENT-LOG.md` in `_plans/research/`             |
 | **Artifacts**    | Model responses in `$WORK_DIR/`, consensus registry                                        |
 | **Verification** | Convergence trend, plan committed                                                          |

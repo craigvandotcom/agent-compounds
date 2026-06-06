@@ -1,6 +1,6 @@
 ---
 name: ac-beadify
-description: Convert a refined plan into a beads task structure (beads_rust). Triggers: 'beadify', 'turn plan into beads', 'create beads from plan', 'break plan into tasks'.
+description: Use to CONVERT an approved/refined plan into a beads task structure (create only). Triggers: 'beadify', 'turn plan into beads', 'create beads from plan', 'break plan into tasks'. Requires an existing plan; to refine the resulting beads afterward use ac-bead-refine.
 ---
 
 
@@ -12,14 +12,14 @@ Convert refined plan to beads task structure using beads_rust.
 
 |                  |                                                                                |
 | ---------------- | ------------------------------------------------------------------------------ |
-| **Input**        | Refined plan file (from `/ac-plan`) |
-| **Output**       | Beads created in `br` with dependencies, ready for `/ac-beadify`  |
+| **Input**        | Refined plan file (from `/ac-plan-init`, optionally refined via the `ac-plan-*` skills) |
+| **Output**       | Beads created in `br` with dependencies, ready for `/ac-bead-refine`  |
 | **Artifacts**    | Validation findings in `$ARTIFACTS_DIR/validation-*.md`                        |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`                                   |
 
 ## Prerequisites
 
-- Refined plan from `/ac-plan` (steady state reached)
+- Refined plan from `/ac-plan-init` (steady state reached, optionally via `ac-plan-clean` / `ac-plan-refine-internal` / `ac-plan-refine-external`)
 - beads_rust (`br`) and beads_viewer (`bv`) installed — verify with `which br && which bv`
 
 ## Phase 0: Initialize
@@ -42,7 +42,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ### Identify Plan File
 
-Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan first."
+Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan-init first."
 
 ### Create Workflow Tasks
 
@@ -178,13 +178,13 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 
 ### Label All Beads as Unrefined
 
-**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-next` and `/ac-implement` that these beads have not yet been through `/ac-beadify`.
+**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-next` and `/ac-implement` that these beads have not yet been through `/ac-bead-refine`.
 
 ```bash
 br label add <id> "unrefined"
 ```
 
-This label is removed by `/ac-beadify` when convergence is reached.
+This label is removed by `/ac-bead-refine` when convergence is reached.
 
 ### Create Commands Reference
 
@@ -267,21 +267,21 @@ br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_F
 
 ### Next Step
 
-**Refine beads** -> `/ac-beadify` (severity-based convergence with 3 parallel reviewers)
+**Refine beads** -> `/ac-bead-refine` (severity-based convergence with 3 parallel reviewers)
 
 > "Check your beads N times, implement once." Planning tokens are cheaper than implementation tokens. Bead refinement is not optional — it's where the `unrefined` label gets removed and beads become truly agent-ready.
 ```
 
-**Proceed directly to `/ac-beadify`.** Only skip if the user explicitly opts out:
+**Proceed to `/ac-bead-refine`.** Only skip if the user explicitly opts out:
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Proceeding to /ac-beadify (bead refinement is essential). Skip?",
+    question: "Proceeding to /ac-bead-refine (bead refinement is essential). Skip?",
     header: "Refine",
     multiSelect: false,
     options: [
-      { label: "Refine beads", description: "Run /ac-beadify — recommended, ensures beads are self-contained and agent-ready" },
+      { label: "Refine beads", description: "Run /ac-bead-refine — recommended, ensures beads are self-contained and agent-ready" },
       { label: "Skip refinement", description: "Go straight to /ac-implement — only if you've already refined manually" },
       { label: "Review visually first", description: "Open bv TUI to inspect before refining" }
     ]
@@ -299,10 +299,10 @@ AskUserQuestion(
 
 ---
 
-_Beadify: plan -> beads with parallel validation. For refinement: `/ac-beadify`. For implementation: `/ac-implement`._
+_Beadify: plan -> beads with parallel validation. For refinement: `/ac-bead-refine`. For implementation: `/ac-implement`._
 
 ---
 
-## Refining bead structure
+## Next: refine the beads
 
-Before implementation, bead structure can be iteratively refined (sizing, dependencies, acceptance criteria) — load `references/refine.md` when invoked to "refine the beads".
+Beadify creates the structure; refinement makes each bead self-contained and agent-ready. That is now a **separate skill** — run **`/ac-bead-refine`** (3 parallel reviewers, severity-based convergence, removes the `unrefined` label). Do not skip it.

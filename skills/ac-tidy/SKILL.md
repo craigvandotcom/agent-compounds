@@ -47,7 +47,7 @@ br list --json
 Categorize:
 - **Closed beads** — status=closed or done
 - **Open beads** — status=open
-- **Beads with `unrefined` label** — not yet through `/ac-beadify` (refine mode)
+- **Beads with `unrefined` label** — not yet through `/ac-bead-refine`
 - **Epic beads** — have dependents (track child completion ratios)
 
 For each epic: count total children, closed children, open children.

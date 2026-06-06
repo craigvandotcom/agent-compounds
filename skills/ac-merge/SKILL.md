@@ -447,7 +447,7 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Start new feature (Recommended)", description: "Run /ac-plan — begin planning the next wave" },
+      { label: "Start new feature (Recommended)", description: "Run /ac-plan-init — begin planning the next wave" },
       { label: "Hygiene pass", description: "Run /ac-hygiene — codebase health check after the merge" },
       { label: "Done", description: "Feature shipped — nothing more to do" }
     ]
@@ -478,4 +478,4 @@ rm -rf "$ARTIFACTS_DIR"
 
 ---
 
-_Wave merge: create PR, triage feedback, fix, ship. For session closure: `/ac-land`. For next feature: `/ac-plan`._
+_Wave merge: create PR, triage feedback, fix, ship. For session closure: `/ac-land`. For next feature: `/ac-plan-init`._

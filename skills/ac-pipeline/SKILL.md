@@ -10,7 +10,7 @@ This is a **thin conductor**, not an implementation. It owns *ordering, gates, a
 ## The chain
 
 ```
-ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review → ac-merge → (ac-land)
+ac-align → ac-next → ac-plan-init → ac-beadify → ac-implement → ac-review → ac-merge → (ac-land)
                                        ↑_________________________|   ac-hygiene (anytime)
 ```
 
@@ -18,7 +18,7 @@ ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review �
 |---|-------|-------|----------------------------|
 | 1 | Align | `ac-align` | Pipeline reconciled with strategy; no orphaned/missequenced work |
 | 2 | Next | `ac-next` | A chosen item to advance toward implementation-ready |
-| 3 | Plan | `ac-plan` | An approved plan file (`_plans/…`) |
+| 3 | Plan | `ac-plan-init` | An approved plan file (`_plans/…`) |
 | 4 | Beadify | `ac-beadify` | Beads created from the plan (`br list` shows the wave) |
 | 5 | Implement | `ac-implement` | Wave implemented; per-bead quality gates green |
 | 6 | Review | `ac-review` | Branch reviewed; blocking findings fixed or escalated |
@@ -35,7 +35,7 @@ ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review �
 
 1. **One stage at a time, in order.** Announce the stage, delegate to its skill, then verify the gate before advancing.
 2. **Gates are hard.** Do not start stage N+1 until stage N's artifact exists and is verified (e.g. a plan file must exist before `ac-beadify`; `br list` must show beads before `ac-implement`). If a gate fails, stop and surface it — never paper over it.
-3. **Checkpoint with the human at stage boundaries** unless told to run hands-off. Default to pausing after `ac-plan` (approve the plan) and before `ac-merge` (approve the PR).
+3. **Checkpoint with the human at stage boundaries** unless told to run hands-off. Default to pausing after `ac-plan-init` (approve the plan) and before `ac-merge` (approve the PR).
 4. **Partial runs are first-class.** "Run the pipeline from plan to review" → start at stage 3, end at stage 6. "Just plan and beadify" → stages 3–4.
 5. **Failure handling.** If `ac-implement` or `ac-review` surfaces blocking issues, loop within that stage (or drop back one stage) rather than pushing a broken artifact forward. Cap auto-fix loops; escalate to the human past the cap.
 6. **Stay thin.** Do not re-implement stage logic here. If a stage needs to change, change that stage's skill.
@@ -44,8 +44,8 @@ ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review �
 
 ```
 /ac-pipeline <goal>                   # full chain from the current state
-/ac-pipeline from ac-plan             # start at plan (assumes 1–2 done)
-/ac-pipeline ac-plan..ac-review       # run a slice
+/ac-pipeline from ac-plan-init             # start at plan (assumes 1–2 done)
+/ac-pipeline ac-plan-init..ac-review       # run a slice
 /ac-pipeline --hands-off <goal>       # skip boundary checkpoints (trust the gates)
 ```
 

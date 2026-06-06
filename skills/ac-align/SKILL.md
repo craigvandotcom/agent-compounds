@@ -136,7 +136,7 @@ Look across the full pipeline and assess ordering:
 ### Missing Execution ({N} gaps)
 | Strategy Demand | Missing Item | Suggested Action |
 |----------------|--------------|-----------------|
-| {demand} | nothing in pipeline | Add to _backlog or /ac-plan |
+| {demand} | nothing in pipeline | Add to _backlog or /ac-plan-init |
 
 ### Missequenced Items ({N} items)
 | Item | Current Position | Should Be | Reason |

@@ -9,7 +9,7 @@ Competitive framing: agents compete — only evidence-backed findings count. Cod
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Approved plan file (from `/ac-plan`)                                                     |
+| **Input**        | Approved plan file (from `/ac-plan-init`)                                                     |
 | **Output**       | Refined plan (in-place edit), Refinement Log appended                                      |
 | **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, consensus registry                 |
 | **Verification** | Convergence trend (fewer findings each round), plan committed                              |

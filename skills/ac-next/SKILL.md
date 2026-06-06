@@ -51,7 +51,7 @@ Categorize every bead:
 | Category | Criteria |
 |----------|----------|
 | **Ready (refined)** | In `br ready` AND does NOT have `unrefined` label |
-| **Unrefined** | Has `unrefined` label — needs `/ac-beadify` (refine mode) |
+| **Unrefined** | Has `unrefined` label — needs `/ac-bead-refine` |
 | **Blocked** | status=open, NOT in ready list |
 | **In Progress** | status=in_progress |
 | **Closed** | status=closed/done |
@@ -103,11 +103,11 @@ Order by closeness to implementation-ready (nearest first):
 
 | Priority | Stage | Action |
 |----------|-------|--------|
-| **1** | Unrefined beads | `/ac-beadify` (refine mode) — one step from ready |
+| **1** | Unrefined beads | `/ac-bead-refine` — one step from ready |
 | **2** | Plans: approved | `/ac-beadify {path}` — one step from beads |
-| **3** | Plans: refined | `/ac-beadify {path}` (or `/ac-plan` clean mode if final polish needed) |
-| **4** | Plans: draft | `/ac-plan` (refine mode) `{path}` |
-| **5** | Backlog: captured | `/ac-plan` (reference the backlog item) |
+| **3** | Plans: refined | `/ac-beadify {path}` (or `/ac-plan-clean` if final polish needed) |
+| **4** | Plans: draft | `/ac-plan-refine-internal` `{path}` |
+| **5** | Backlog: captured | `/ac-plan-init` (reference the backlog item) |
 
 Within each level, sort by:
 1. Refinement depth (desc) — more work invested = do it first (continuity of context)
@@ -182,10 +182,10 @@ AskUserQuestion(
     header: "Pipeline Next",
     multiSelect: false,
     options: [
-      { label: "Refine beads: {epic_or_count}", description: "/ac-beadify (refine mode)" },
+      { label: "Refine beads: {epic_or_count}", description: "/ac-bead-refine" },
       { label: "Beadify: {plan_filename}", description: "/ac-beadify _plans/{filename}" },
-      { label: "Refine plan: {plan_filename}", description: "/ac-plan (refine mode) _plans/{filename}" },
-      { label: "Plan: {backlog_item}", description: "/ac-plan (reference _backlog/{filename})" },
+      { label: "Refine plan: {plan_filename}", description: "/ac-plan-refine-internal _plans/{filename}" },
+      { label: "Plan: {backlog_item}", description: "/ac-plan-init (reference _backlog/{filename})" },
       { label: "Just browsing", description: "No action — I wanted the status report" }
     ]
   }]

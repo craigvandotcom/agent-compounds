@@ -1,6 +1,6 @@
 ---
-name: idea-transcender-alien
-description: Use when pushing an idea beyond conventional analysis into deeper paradigm-level insight — removing cognitive defaults to find structural, cross-domain, and temporal opportunities missed by human-scale review. Triggers on "transcend this idea", "go deeper", "push beyond analysis", "think outside the paradigm", "alien perspective", "escape local optima", "what am I missing at a deeper level".
+name: ac-idea-transcender-alien
+description: Use when pushing a raw IDEA or concept beyond conventional analysis into deeper paradigm-level insight — removing cognitive defaults to find structural, cross-domain, and temporal opportunities missed by human-scale review. Triggers on "transcend this idea", "go deeper", "push beyond analysis", "think outside the paradigm", "alien perspective", "escape local optima", "what am I missing at a deeper level". For a written implementation plan use ac-plan-transcender-alien.
 ---
 
 # Idea Transcender Alien
@@ -105,7 +105,7 @@ Execute the selected insights, then output the complete transcended version with
 
 ## When to Use
 
-- After running idea-review-genius and wanting to push further
+- After running ac-idea-review-genius and wanting to push further
 - When conventional analysis feels complete but insufficient
 - When you suspect the real insight lives outside the current frame
 - To escape local optima in thinking
@@ -115,7 +115,7 @@ Execute the selected insights, then output the complete transcended version with
 - Best results when the idea has already been rigorously analyzed first
 - Paradigm dissolution (step 1) is the highest-leverage step - if the frame is wrong, everything inside it is wrong
 - Cross-domain transplants (step 3) work best with specific structural claims, not loose analogies
-- Pair with idea-review-genius for a two-stage pipeline: perfect within the paradigm, then transcend it
+- Pair with ac-idea-review-genius for a two-stage pipeline: perfect within the paradigm, then transcend it
 
 ---
 

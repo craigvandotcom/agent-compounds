@@ -14,7 +14,7 @@ For parallelism, open multiple terminal sessions — each runs `/ac-implement` i
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Unblocked beads (from `/ac-beadify` or `/ac-beadify`)                                       |
+| **Input**        | Unblocked beads (from `/ac-bead-refine`)                                       |
 | **Output**       | Implemented code, committed per bead, pushed to wave branch                                |
 | **Artifacts**    | Per-bead results in `/tmp/bead-work/bead-{id}-result.md`, progress in `/tmp/bead-work/progress.md` |
 | **Verification** | Per-bead quality gate (test, lint, type-check), beads closed in `br`                       |
@@ -47,14 +47,14 @@ br ready --json
 
 If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or check `br list --json` for blocked items."
 
-**Filter out unrefined beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-beadify` removes it. Only beads WITHOUT this label are eligible for implementation:
+**Filter out unrefined beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` removes it. Only beads WITHOUT this label are eligible for implementation:
 
 ```bash
 # Check if any ready beads are refined (no "unrefined" label)
 br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)]'
 ```
 
-If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-beadify` first to make them implementation-ready."
+If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready."
 
 ### Ensure Wave Branch (single-branch rule)
 
@@ -230,7 +230,7 @@ br show <id> --json | jq '.labels | index("unrefined")'
 
 If the bead is unrefined:
 1. Do NOT claim it
-2. Log: "Skipping <id> (unrefined — needs `/ac-beadify` first)"
+2. Log: "Skipping <id> (unrefined — needs `/ac-bead-refine` first)"
 3. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)] | .[0]'`
 4. If no refined beads remain, STOP the session early
 
@@ -253,7 +253,7 @@ After `br show <id>` + `br comments <id>` but BEFORE claiming, scan the spec's F
 
 If the bead requires absent infrastructure:
 1. Do NOT claim it
-2. Add a comment via `br comments add <id> "Env-blocked: <reason>. Needs <required-env> or a /ac-beadify round to pick an alternative path."`
+2. Add a comment via `br comments add <id> "Env-blocked: <reason>. Needs <required-env> or a /ac-bead-refine round to pick an alternative path."`
 3. Get the next candidate from `br ready --json`
 4. Burning a bead slot on a no-op attempt is equivalent to claiming an unrefined bead — skip it.
 
@@ -479,4 +479,4 @@ Coordination via Agent Mail file reservations BEFORE editing is mandatory in par
 
 ---
 
-_Bead work: sequential implementation with quality gates. For planning: `/ac-beadify`. For landing: `/ac-land`._
+_Bead work: sequential implementation with quality gates. For bead prep: `/ac-beadify` → `/ac-bead-refine`. For landing: `/ac-land`._

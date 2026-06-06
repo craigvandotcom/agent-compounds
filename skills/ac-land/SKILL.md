@@ -300,7 +300,7 @@ AskUserQuestion(
     options: [
       { label: "Review & merge (Recommended)", description: "Run /ac-review then /ac-merge — review code, create PR, ship to main" },
       { label: "Continue bead-work", description: "Run /ac-implement — {M} beads remaining" },
-      { label: "Refine remaining beads", description: "Run /ac-beadify — revise remaining beads before implementing" },
+      { label: "Refine remaining beads", description: "Run /ac-bead-refine — revise remaining beads before implementing" },
       { label: "Done for now", description: "Close session — pick up later" }
     ]
   }]
