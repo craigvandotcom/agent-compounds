@@ -9,7 +9,7 @@ Competitive framing: agents compete — only evidence-backed findings count. Cod
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Approved plan file (from `/plan-init`)                                                     |
+| **Input**        | Approved plan file (from `/ac-plan`)                                                     |
 | **Output**       | Refined plan (in-place edit), Refinement Log appended                                      |
 | **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, consensus registry                 |
 | **Verification** | Convergence trend (fewer findings each round), plan committed                              |
@@ -22,7 +22,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ### Identify Plan File
 
-`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
+`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan first."
 
 ### Select Intensity Tier
 
@@ -573,9 +573,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Plan clean (Recommended)", description: "Run /plan-clean — final correctness check before beadification" },
-      { label: "Beadify directly", description: "Run /beadify — skip correctness check, convert to beads now" },
-      { label: "External multi-model refine", description: "Run /plan-refine-external — multiple diverse AI models for deeper review" },
+      { label: "Plan clean (Recommended)", description: "Run /ac-plan — final correctness check before beadification" },
+      { label: "Beadify directly", description: "Run /ac-beadify — skip correctness check, convert to beads now" },
+      { label: "External multi-model refine", description: "Run /ac-plan — multiple diverse AI models for deeper review" },
       { label: "Done for now", description: "Plan saved and committed — pick up later" }
     ]
   }]
@@ -599,4 +599,4 @@ AskUserQuestion(
 
 ---
 
-_3-tier plan refinement (light/medium/heavy). For external multi-model: `/plan-refine`._
+_3-tier plan refinement (light/medium/heavy). For external multi-model: `/ac-plan`._

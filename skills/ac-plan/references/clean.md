@@ -22,7 +22,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ### Identify Plan File
 
-`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
+`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan first."
 
 ### Skill Routing
 
@@ -490,7 +490,7 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Beadify (Recommended)", description: "Run /beadify — convert plan to beads with parallel validation" },
+      { label: "Beadify (Recommended)", description: "Run /ac-beadify — convert plan to beads with parallel validation" },
       { label: "Implement directly", description: "Start building from the corrected plan" },
       { label: "Done for now", description: "Plan saved — pick up later" }
     ]

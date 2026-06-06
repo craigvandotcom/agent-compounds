@@ -12,7 +12,7 @@
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Plan file (from `/plan-init` or `/plan-refine-internal`)                                   |
+| **Input**        | Plan file (from `/ac-plan` or `/ac-plan`)                                   |
 | **Output**       | Refined plan (in-place edit), `REFINEMENT-LOG.md` in `_plans/research/`             |
 | **Artifacts**    | Model responses in `$WORK_DIR/`, consensus registry                                        |
 | **Verification** | Convergence trend, plan committed                                                          |
@@ -865,9 +865,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Plan clean (Recommended)", description: "Run /plan-clean — final correctness check before beadification" },
-      { label: "Beadify directly", description: "Run /beadify — skip correctness check, convert to beads now" },
-      { label: "Enhance further", description: "Run /plan-transcender-alien — paradigm-breaking alternative perspectives" },
+      { label: "Plan clean (Recommended)", description: "Run /ac-plan — final correctness check before beadification" },
+      { label: "Beadify directly", description: "Run /ac-beadify — skip correctness check, convert to beads now" },
+      { label: "Enhance further", description: "Run /ac-plan — paradigm-breaking alternative perspectives" },
       { label: "Done for now", description: "Plan saved — pick up later" }
     ]
   }]
@@ -968,7 +968,7 @@ FOCUS
 
 **Works well BEFORE:**
 
-- `/plan-transcender-alien` - Paradigm-breaking alternative perspectives
+- `/ac-plan` - Paradigm-breaking alternative perspectives
 - Implementation - Start building from validated plan
 
 **Works well AFTER:**
@@ -980,8 +980,8 @@ FOCUS
 
 1. **Brainstorm** → Explore approaches (ideation)
 2. **Draft** → Manual initial plan based on brainstorm recommendation
-3. **Refine** → `/plan-refine-external` (this command) - Multi-model refinement
-4. **Enhance** → `/plan-transcender-alien` - Alien perspective
+3. **Refine** → `/ac-plan` (this command) - Multi-model refinement
+4. **Enhance** → `/ac-plan` - Alien perspective
 5. **Implement** → Execute refined plan
 
 **Complementary commands:**

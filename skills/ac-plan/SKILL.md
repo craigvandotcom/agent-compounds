@@ -14,7 +14,7 @@ disable-model-invocation: true
 |                  |                                                                                                      |
 | ---------------- | ---------------------------------------------------------------------------------------------------- |
 | **Input**        | User request (feature, fix, improvement) or backlog item                                             |
-| **Output**       | Approved plan in `_plans/YYYY-MM-DD-HHMM-[feature].md`, ready for `/plan-refine-internal`     |
+| **Output**       | Approved plan in `_plans/YYYY-MM-DD-HHMM-[feature].md`, ready for `/ac-plan`     |
 | **Artifacts**    | Research in `_plans/research/`, validation baseline, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | Plan committed to current branch, success criterion defined, tools verified                         |
 
@@ -147,102 +147,7 @@ Before spawning agents, check `AGENTS.md` > "Available Skills" for relevant doma
 
 **CRITICAL: All 3 agents run IN PARALLEL using a single message with 3 Task calls.** Each writes findings to `_plans/research/`. Competitive framing: agents compete — only evidence-backed findings count.
 
-**Explorer 1: Patterns**
-
-```
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
-First: Read AGENTS.md for project context and conventions.
-{If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
-
-You are finding existing patterns for [feature] in this codebase. You compete with 2 other explorers — only evidence-backed findings with file paths count.
-
-## Method
-
-1. Search project source directories (see AGENTS.md > Architecture) for similar components and utilities
-2. Read neighboring files to understand established patterns
-3. Note naming conventions, file structure, import patterns
-4. Identify reusable code (hooks, utils, components) that the new feature should use
-5. Check for similar features that were implemented before — what patterns did they follow?
-
-## Output
-
-Write findings to _plans/research/YYYY-MM-DD-HHMM-exploration-patterns-[feature].md
-
-For each pattern found:
-## Pattern N: Title
-**File(s):** path/to/file:line
-**What it does:** {description}
-**Relevance:** How the new feature should use this pattern
-**Evidence:** Code snippet or reference
-
-Limit: top 7 patterns. Under 500 words. Cite files, not guesses.
-""")
-```
-
-**Explorer 2: Dependencies**
-
-```
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
-First: Read AGENTS.md for project context and conventions.
-{If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
-
-You are identifying dependencies and APIs needed for [feature]. You compete with 2 other explorers — only evidence-backed findings count.
-
-## Method
-
-1. Check project dependency manifest for relevant libraries already available
-2. Search for imports of key libraries used in this project
-3. Identify API routes and server actions that exist or need creation
-4. Check database schema or data layer for relevant tables/models
-5. Note any environment variables or config needed
-
-## Output
-
-Write findings to _plans/research/YYYY-MM-DD-HHMM-exploration-dependencies-[feature].md
-
-For each dependency:
-## Dependency N: Title
-**Type:** Library | API Route | DB Table | Config | New Requirement
-**Current state:** {exists/needs creation/needs modification}
-**File(s):** path/to/file:line
-**Details:** What's available and what's needed
-**Evidence:** Import paths, function signatures, schema definitions
-
-Limit: top 7 dependencies. Under 500 words. Cite files, not guesses.
-""")
-```
-
-**Explorer 3: Constraints**
-
-```
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
-First: Read AGENTS.md for project context and conventions.
-{If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
-
-You are researching constraints for [feature]. You compete with 2 other explorers — only evidence-backed constraints with file citations count.
-
-## Method
-
-1. Search for validation patterns, error handling, auth checks
-2. Check for platform-specific constraints (offline sync, mobile, PWA, etc.)
-3. Look at existing test patterns for similar features
-4. Check for rate limiting, access policies, security boundaries
-5. Identify potential conflicts with existing functionality
-
-## Output
-
-Write findings to _plans/research/YYYY-MM-DD-HHMM-exploration-constraints-[feature].md
-
-For each constraint:
-## Constraint N: Title
-**Type:** Validation | Auth | Performance | Mobile | Testing | Security
-**File(s):** path/to/file:line
-**Impact:** How this constrains the implementation
-**Evidence:** Code reference showing the constraint
-
-Limit: top 7 constraints. Under 500 words. Cite files, not guesses.
-""")
-```
+Use the prompts in **`references/explorers.md`** (Patterns, Dependencies, Constraints — all Haiku), substituting `[feature]` and the optional skill-hint line. Each writes to `_plans/research/…-exploration-{role}-[feature].md`.
 
 **Wait for all 3 agents to complete. Read their output files.**
 
@@ -444,129 +349,7 @@ If any gaps are blocking, use `AskUserQuestion` to clarify before proceeding.
 
 ### Select Template Based on Complexity
 
-| Complexity  | Criteria                              | Template Sections                                                            |
-| ----------- | ------------------------------------- | ---------------------------------------------------------------------------- |
-| **MINIMAL** | <3 files, clear pattern, 1-2 hours    | Summary, Success Criterion, Implementation, Validation                       |
-| **MORE**    | 3-10 files, some decisions, 2-4 hours | All 7 sections (Context, Outcome, Journey, Spec, Success, Phases, Risks)     |
-| **A LOT**   | >10 files, architectural, 4+ hours    | All MORE sections + Decision Log, Alternatives, Phased Rollout, Dependencies |
-
-#### For MINIMAL complexity:
-
-```markdown
----
-status: draft
-refinement_rounds: 0
-source_backlog: _backlog/{version}/{filename}.md
----
-
-# [Feature Name]
-
-## Summary
-
-[1-2 sentences]
-
-**Type:** BUILD | IMPROVE | FIX
-**Complexity:** MINIMAL
-
-## Backlog Items (optional)
-
-<!-- Link backlog items this plan addresses, if using a backlog system -->
-<!-- e.g., _backlog/XXX-primary-item.md, GitHub issue #123, Jira ticket -->
-
-- (primary item)
-- (related, if any)
-
-## Success Criterion
-
-[From Phase 2]
-
-## Test Specifications
-
-[YAML test specs from Phase 2]
-
-## Implementation
-
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-## Validation
-
-[How to verify success]
-```
-
-#### For MORE complexity:
-
-```markdown
----
-status: draft
-refinement_rounds: 0
-source_backlog: _backlog/{version}/{filename}.md
----
-
-# [Feature Name]
-
-## Summary
-
-[1-2 sentences]
-
-**Type:** BUILD | IMPROVE | FIX
-**Complexity:** MORE
-
-## Backlog Items
-
-- `_backlog/XXX-primary-item.md` (primary)
-- `_backlog/YYY-related-item.md` (related, if any)
-
-## Context & Research
-
-[Synthesized from 3 exploration reports]
-
-## Outcome Definition
-
-[What success looks like - from Phase 2 baseline]
-
-## User Journey (if UI)
-
-[Flow description]
-
-## Technical Specification
-
-- API contracts
-- Data model changes
-- Component structure
-
-## Success Criteria
-
-[From Phase 2 - measurable!]
-
-## Test Specifications
-
-[YAML test specs from Phase 2]
-
-## Implementation Phases
-
-### Phase 1: [Foundation]
-
-### Phase 2: [Core Logic]
-
-### Phase 3: [UI/Integration]
-
-### Phase 4: [Testing]
-
-## Risks & Mitigations
-
-[What could go wrong]
-```
-
-#### For A LOT complexity:
-
-All sections from MORE, plus:
-
-- Decision log (alternatives considered)
-- Phased rollout plan
-- Detailed test matrix
-- Dependencies/blockers
+Pick the template matching the Phase-0 complexity (MINIMAL / MORE / A LOT) from **`references/plan-templates.md`** and write `_plans/YYYY-MM-DD-HHMM-[feature].md` from it. The reference has the selection table + the full markdown skeleton for each tier.
 
 Append to `$ARTIFACTS_DIR/progress.md`:
 
@@ -739,17 +522,15 @@ mcp__mcp-agent-mail__send_message(
 
 | Complexity | Recommended Next Step                                            |
 | ---------- | ---------------------------------------------------------------- |
-| MINIMAL    | `/bead-work` directly (if beads exist) or implement from plan    |
-| MORE       | `/plan-refine-internal` -> `/beadify` -> `/bead-work`            |
-| A LOT      | `/plan-refine-internal` or `/plan-refine-external` -> `/beadify` |
+| MINIMAL    | `/ac-implement` directly (if beads exist) or implement from plan |
+| MORE       | refine the plan (`/ac-plan` internal mode) -> `/ac-beadify` -> `/ac-implement` |
+| A LOT      | refine the plan (`/ac-plan` internal or external mode) -> `/ac-beadify` -> `/ac-implement` |
 
-**Flywheel commands:**
+**Pipeline next steps:**
 
-- `/plan-refine-internal` - Multi-agent plan refinement (light/medium/heavy tiers)
-- `/plan-refine-external` - Multi-model refinement via OpenRouter (multiple external models)
-- `/beadify` - Convert plan to beads with parallel validation
-- `/bead-refine` - Refine bead structure (severity-based convergence)
-- `/bead-work` - Sequential implementation (conductor + engineer sub-agents)
+- `/ac-plan` **refine modes** — multi-agent (internal) or multi-model/OpenRouter (external) refinement; also `clean`, `genius`, `transcender` review (see the modes table at the end of this skill)
+- `/ac-beadify` — convert plan to beads with parallel validation (and bead refinement via its refine mode)
+- `/ac-implement` — sequential implementation (conductor + engineer sub-agents)
 
 **Key context:**
 
@@ -769,9 +550,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Refine plan (Recommended)", description: "Run /plan-refine-internal — multi-agent refinement before beadification" },
-      { label: "Beadify directly", description: "Run /beadify — convert plan to beads (skip refinement for simple plans)" },
-      { label: "External multi-model refine", description: "Run /plan-refine-external — multiple diverse AI models for critical decisions" },
+      { label: "Refine plan (Recommended)", description: "Run /ac-plan — multi-agent refinement before beadification" },
+      { label: "Beadify directly", description: "Run /ac-beadify — convert plan to beads (skip refinement for simple plans)" },
+      { label: "External multi-model refine", description: "Run /ac-plan — multiple diverse AI models for critical decisions" },
       { label: "Done for now", description: "Plan saved — pick up implementation later" }
     ]
   }]
@@ -812,7 +593,7 @@ AskUserQuestion(
 
 ---
 
-_Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/plan-refine-internal`. For beadification: `/beadify`._
+_Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/ac-plan`. For beadification: `/ac-beadify`._
 
 ---
 
