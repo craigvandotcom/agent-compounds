@@ -18,6 +18,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | Skill | What it does |
 |-------|-------------|
 | **[ac-pipeline](./skills/ac-pipeline/)** | Orchestrator — chains the stages below with gates (`ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review → ac-merge → ac-land`) |
+| **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-align** | Reconcile the pipeline with current strategy |
 | **ac-next** | Pipeline dashboard — what to advance toward implementation-ready |
 | **ac-plan** | Create + refine implementation plans (refine/clean/review modes in `references/`) |
@@ -26,7 +27,9 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
 | **ac-merge** | Merge a wave to main — PR, CI triage, version bump |
 | **ac-land** | Session closure — retrospective learning + system compounding |
+| **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
+| **ac-human-next** | Human action dashboard — what needs your decision/attention |
 
 **Engineering** (promoted from body-compass-app, the canonical donor)
 | Skill | What it does |

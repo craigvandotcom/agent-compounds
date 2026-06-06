@@ -26,7 +26,11 @@ ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review �
 | 7 | Merge | `ac-merge` | PR merged to main; version/build bumped |
 | 8 | Land | `ac-land` | Session closed; learnings captured; system compounded |
 
-`ac-hygiene` is an out-of-band cleanup pass — run it between waves, not inside the chain.
+**Adjuncts (not inside the gated chain):**
+- `ac-backlog` — capture ideas at the front, before `ac-align`/`ac-next`.
+- `ac-tidy` — pipeline housekeeping (archive done items, reconcile backlog/plans/beads). Run between waves.
+- `ac-hygiene` — codebase cleanup pass. Run between waves.
+- `ac-human-next` — the human-facing counterpart to `ac-next` (surfaces what needs *your* decision).
 
 ## Operating rules
 
