@@ -7,8 +7,8 @@
 
 |                  |                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------ |
-| **Input**        | Open beads in `br` (from `/beadify` or any other source)                                         |
-| **Output**       | Refined beads ready for `/bead-work`                                                 |
+| **Input**        | Open beads in `br` (from `/ac-beadify` or any other source)                                         |
+| **Output**       | Refined beads ready for `/ac-implement`                                                 |
 | **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`, `br ready --json`                                  |
 
@@ -361,7 +361,7 @@ for id in $(br list --json | jq -r '.[] | select(.status == "open") | .id'); do
 done
 ```
 
-This signals to `/backlog-next` and `/bead-work` that these beads have been through refinement and are agent-ready.
+This signals to `/ac-next` and `/ac-implement` that these beads have been through refinement and are agent-ready.
 
 ### Verify Final Structure
 
@@ -424,7 +424,7 @@ Found: {total} across {CURRENT_ROUND} rounds
 
 ### Next Steps
 
-1. **Implement** -> `/bead-work`
+1. **Implement** -> `/ac-implement`
 2. **Further refine** -> Run again with updated beads
 3. **Review beads** -> `bv` for visual overview
 ```
@@ -438,8 +438,8 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Implement (Recommended)", description: "Run /bead-work — sequential implementation with conductor + engineer sub-agents" },
-      { label: "Further refine", description: "Run /bead-refine again — another round of 3 parallel reviewers" },
+      { label: "Implement (Recommended)", description: "Run /ac-implement — sequential implementation with conductor + engineer sub-agents" },
+      { label: "Further refine", description: "Run /ac-beadify again — another round of 3 parallel reviewers" },
       { label: "Review visually", description: "Open bv TUI for manual inspection before deciding" }
     ]
   }]
@@ -474,4 +474,4 @@ AskUserQuestion(
 
 ---
 
-_Bead refine: parallel agents iterate until severity-converged. For implementation: `/bead-work`. For landing: `/bead-land`._
+_Bead refine: parallel agents iterate until severity-converged. For implementation: `/ac-implement`. For landing: `/ac-land`._

@@ -13,14 +13,14 @@ Convert refined plan to beads task structure using beads_rust.
 
 |                  |                                                                                |
 | ---------------- | ------------------------------------------------------------------------------ |
-| **Input**        | Refined plan file (from `/plan-refine-internal` or `/plan-review-genius`) |
-| **Output**       | Beads created in `br` with dependencies, ready for `/bead-refine`  |
+| **Input**        | Refined plan file (from `/ac-plan`) |
+| **Output**       | Beads created in `br` with dependencies, ready for `/ac-beadify`  |
 | **Artifacts**    | Validation findings in `$ARTIFACTS_DIR/validation-*.md`                        |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`                                   |
 
 ## Prerequisites
 
-- Refined plan from `/plan-refine-internal` or `/plan-review` (steady state reached)
+- Refined plan from `/ac-plan` (steady state reached)
 - beads_rust (`br`) and beads_viewer (`bv`) installed — verify with `which br && which bv`
 
 ## Phase 0: Initialize
@@ -43,7 +43,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ### Identify Plan File
 
-Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /plan-init first."
+Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan first."
 
 ### Create Workflow Tasks
 
@@ -103,129 +103,7 @@ Epic: Dashboard
 
 **TaskUpdate(task: "Phase 2", status: "in_progress")**
 
-**Spawn all 3 validators in a single message for parallel execution.** Each writes findings to `$ARTIFACTS_DIR/validation-{role}.md`.
-
-**Validator 1: Completeness Checker**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-
-You are validating a proposed bead structure against its source plan. You compete with 2 other validators — only evidence-backed findings count.
-
-## Your Task
-
-Cross-reference every section of the plan against the proposed beads. Flag anything dropped, oversimplified, or missing.
-
-## Inputs
-
-### Original Plan
-{PLAN_CONTENT}
-
-### Proposed Bead Structure
-{PROPOSED_STRUCTURE from artifacts}
-
-## Check
-
-For each plan section/feature:
-- Is it fully represented in at least one proposed bead?
-- Were any details, edge cases, or requirements lost?
-- Are test requirements from the plan captured?
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/validation-completeness.md
-
-For each issue:
-## Issue N: Title
-**Severity:** Critical | High | Medium
-**Plan section:** <which section>
-**Problem:** What's missing or oversimplified
-**Fix:** Add bead X, or expand bead Y to include Z
-
-Limit: top 5 issues. Under 400 words. If nothing missing, say so.
-""")
-```
-
-**Validator 2: Dependency Checker**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-
-You are validating the dependency structure of a proposed bead breakdown. You compete with 2 other validators — only evidence-backed findings count.
-
-## Your Task
-
-Check the proposed dependency graph for correctness — missing links, wrong ordering, potential cycles.
-
-## Inputs
-
-### Proposed Bead Structure
-{PROPOSED_STRUCTURE from artifacts}
-
-## Check
-
-Trace the dependency graph for correctness: are links genuine? Are any missing or unnecessary? Could reordering unblock more parallel work? Any cycles? Is the critical path reasonable?
-
-You have codebase access. Read referenced files to verify what actually exists vs what needs to be created. Use your judgment on what matters most for a sound dependency structure.
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/validation-dependencies.md
-
-For each issue:
-## Issue N: Title
-**Severity:** Critical | High | Medium
-**Bead(s):** <which beads>
-**Problem:** Missing/wrong/unnecessary dependency
-**Fix:** Add dep X->Y, remove dep A->B, reorder C before D
-
-Limit: top 5 issues. Under 400 words. If structure is sound, say so.
-""")
-```
-
-**Validator 3: Granularity Reviewer**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-
-You are validating the granularity and sizing of a proposed bead breakdown. You compete with 2 other validators — only evidence-backed findings count.
-
-## Your Task
-
-Check that each bead is right-sized for a single agent session — not too big (needs splitting), and rich enough to be self-contained. Bias toward MORE detail per bead, not less. Thin beads that lack context force agents back to the plan — that's a failure.
-
-## Inputs
-
-### Proposed Bead Structure
-{PROPOSED_STRUCTURE from artifacts}
-
-## Check
-
-For each proposed bead:
-1. Can an agent implement this in one focused session? (If >5 files or >2 concerns -> split)
-2. Is it self-contained? (Must include enough context, acceptance criteria, and reasoning that an agent NEVER needs the original plan)
-3. Does it mix backend + frontend work? (-> split candidate)
-4. Is the acceptance criteria clear enough for mechanical implementation?
-5. Are priorities (P0/P1/P2) assigned correctly? (P0 = critical path, P2 = deferrable)
-6. Does it include test requirements? (Every bead should specify what to test)
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/validation-granularity.md
-
-For each issue:
-## Issue N: Title
-**Severity:** Critical | High | Medium
-**Bead(s):** <which beads>
-**Problem:** Too big / too thin (lacking context) / mixed concerns / wrong priority
-**Fix:** Split into X+Y, enrich A with missing context, reassign priority
-
-Limit: top 5 issues. Under 400 words. If granularity is good, say so.
-""")
-```
+**Spawn all 3 validators in a single message for parallel execution.** Use the prompts in **`references/validators.md`** (Completeness, Dependency, Granularity — all Sonnet), substituting `{PLAN_CONTENT}`, `{PROPOSED_STRUCTURE}`, and `{ARTIFACTS_DIR}`. Each writes findings to `$ARTIFACTS_DIR/validation-{role}.md`.
 
 ### Synthesize Validation Results
 
@@ -301,13 +179,13 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 
 ### Label All Beads as Unrefined
 
-**Every bead created by beadify gets the `unrefined` label.** This signals to `/backlog-next` and `/bead-work` that these beads have not yet been through `/bead-refine`.
+**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-next` and `/ac-implement` that these beads have not yet been through `/ac-beadify`.
 
 ```bash
 br label add <id> "unrefined"
 ```
 
-This label is removed by `/bead-refine` when convergence is reached.
+This label is removed by `/ac-beadify` when convergence is reached.
 
 ### Create Commands Reference
 
@@ -390,22 +268,22 @@ br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_F
 
 ### Next Step
 
-**Refine beads** -> `/bead-refine` (severity-based convergence with 3 parallel reviewers)
+**Refine beads** -> `/ac-beadify` (severity-based convergence with 3 parallel reviewers)
 
 > "Check your beads N times, implement once." Planning tokens are cheaper than implementation tokens. Bead refinement is not optional — it's where the `unrefined` label gets removed and beads become truly agent-ready.
 ```
 
-**Proceed directly to `/bead-refine`.** Only skip if the user explicitly opts out:
+**Proceed directly to `/ac-beadify`.** Only skip if the user explicitly opts out:
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Proceeding to /bead-refine (bead refinement is essential). Skip?",
+    question: "Proceeding to /ac-beadify (bead refinement is essential). Skip?",
     header: "Refine",
     multiSelect: false,
     options: [
-      { label: "Refine beads", description: "Run /bead-refine — recommended, ensures beads are self-contained and agent-ready" },
-      { label: "Skip refinement", description: "Go straight to /bead-work — only if you've already refined manually" },
+      { label: "Refine beads", description: "Run /ac-beadify — recommended, ensures beads are self-contained and agent-ready" },
+      { label: "Skip refinement", description: "Go straight to /ac-implement — only if you've already refined manually" },
       { label: "Review visually first", description: "Open bv TUI to inspect before refining" }
     ]
   }]
@@ -422,7 +300,7 @@ AskUserQuestion(
 
 ---
 
-_Beadify: plan -> beads with parallel validation. For refinement: `/bead-refine`. For implementation: `/bead-work`._
+_Beadify: plan -> beads with parallel validation. For refinement: `/ac-beadify`. For implementation: `/ac-implement`._
 
 ---
 
