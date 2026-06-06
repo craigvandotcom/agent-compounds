@@ -4,7 +4,7 @@ description: Use when writing tests for TypeScript/Next.js code. Handles unit te
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
-> agent-compounds and shared across all neoMeta apps. It contains technique and
+> agent-compounds and shared across consuming apps. It contains technique and
 > patterns, not project specifics. **App specifics (project refs, schema names,
 > domain rules, feature flows, env values) → read this app's
 > `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
