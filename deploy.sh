@@ -33,9 +33,15 @@ SKILLS_REQ=""
 AGENTS_REQ=""
 TARGET=""
 
+# Recursive-safe enumeration: a skill is any dir containing SKILL.md; an agent is
+# any .md file. Names are paths relative to skills/ or agents/ (e.g. "ac-plan" or,
+# if ever nested, "group/sub") so they keep working if assets are grouped into subdirs.
+list_skills() { (cd "$AC_ROOT/skills" 2>/dev/null && find . -name SKILL.md | sed 's#^\./##;s#/SKILL\.md$##' | sort); }
+list_agents() { (cd "$AC_ROOT/agents" 2>/dev/null && find . -name '*.md' | sed 's#^\./##;s#\.md$##' | sort); }
+
 list_available() {
-  echo "Skills:"; (cd "$AC_ROOT/skills" && ls -1d */ 2>/dev/null | sed 's#/##;s/^/  /')
-  echo "Agents:"; (cd "$AC_ROOT/agents" && ls -1 *.md 2>/dev/null | sed 's/\.md$//;s/^/  /')
+  echo "Skills:"; list_skills | sed 's/^/  /'
+  echo "Agents:"; list_agents | sed 's/^/  /'
   echo "Command packs:  jef"
 }
 
@@ -91,7 +97,7 @@ fi
 if [ -n "$SKILLS_REQ" ]; then
   echo "Skills:"
   if [ "$SKILLS_REQ" = "all" ]; then
-    SKILLS_REQ="$(cd "$AC_ROOT/skills" && ls -1d */ | sed 's#/##' | paste -sd, -)"
+    SKILLS_REQ="$(list_skills | paste -sd, -)"
   fi
   IFS=',' read -ra arr <<< "$SKILLS_REQ"
   for s in "${arr[@]}"; do
@@ -107,7 +113,7 @@ fi
 if [ -n "$AGENTS_REQ" ]; then
   echo "Agents:"
   if [ "$AGENTS_REQ" = "all" ]; then
-    AGENTS_REQ="$(cd "$AC_ROOT/agents" && ls -1 *.md | sed 's/\.md$//' | paste -sd, -)"
+    AGENTS_REQ="$(list_agents | paste -sd, -)"
   fi
   IFS=',' read -ra arr <<< "$AGENTS_REQ"
   for a in "${arr[@]}"; do
