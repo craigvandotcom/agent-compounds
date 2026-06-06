@@ -13,7 +13,8 @@ Read `AGENTS.md` at the project root for project context.
 
 ## Skill Loading
 
-- **If you need journey definitions or testing patterns:** Load `browser-testing` (`.claude/skills/browser-testing/SKILL.md`)
+- **Testing mechanics / patterns (the "how"):** Load `browser-testing` (`.claude/skills/browser-testing/SKILL.md`)
+- **App-specific journeys, flows, environments (the "what"):** live in the consuming app's CORE under `.claude/skills/CORE/journeys/` (see Reference Files below)
 
 ## Core Principle
 
@@ -21,22 +22,23 @@ Read `AGENTS.md` at the project root for project context.
 
 ## Capabilities
 
-1. **Journey testing** -- Read markdown journey files from `.claude/skills/browser-testing/journeys/` and execute the Happy Path steps
+1. **Journey testing** -- Read markdown journey files from the app's `.claude/skills/CORE/journeys/` and execute the Happy Path steps
 2. **YAML story testing** -- Read YAML story files from `browser-stories/` and execute structured steps
 3. **Smoke testing** -- Quick validation that core flows work (login, navigate, interact, verify)
 
 ## Setup Protocol
 
-Every test session starts the same way:
+Every test session starts the same way. Viewport and dev-server command are app-specific -- check the app's CORE (`CORE/journeys/environments.md`, `CORE/journeys/README.md`) for its viewport policy and start command.
 
 ```bash
-# 1. Ensure dev server is running
+# 1. Ensure dev server is running (command per the app's CORE/AGENTS -- typically `pnpm dev`)
 pnpm dev &
 sleep 5
 
-# 2. Open browser with mobile viewport (CRITICAL -- mobile-first PWA)
+# 2. Open browser; set viewport per the app's CORE viewport policy
+#    (mobile-first apps: 390x844 -- mandatory for mobile-first PWAs)
 agent-browser --session <session-name> open "<BASE_URL>"
-agent-browser --session <session-name> set viewport 390 844
+agent-browser --session <session-name> set viewport 390 844   # omit/adjust per app policy
 agent-browser --session <session-name> wait --load networkidle
 ```
 
@@ -81,7 +83,7 @@ failed_at: <step description> (if FAIL)
 ## Rules
 
 - **Never use Write or Edit tools** -- you are read-only + bash execution
-- **Always set mobile viewport (390x844)** before testing
+- **Set the viewport per the app's CORE policy** before testing (mobile-first apps: 390x844)
 - **Always close the browser session** when done or on error
 - **Always check console errors**
 - **Use `snapshot -i`** to discover elements before interacting
@@ -89,7 +91,13 @@ failed_at: <step description> (if FAIL)
 
 ## Reference Files
 
+**Generic (shared skill -- the "how"):**
 - `.claude/skills/browser-testing/SKILL.md` -- full testing guide
-- `.claude/skills/browser-testing/environments.md` -- URLs, credentials
-- `.claude/skills/browser-testing/flows/` -- auth, dashboard, common patterns
-- `.claude/skills/browser-testing/journeys/*.md` -- journey definitions
+- `.claude/skills/browser-testing/flows/common.md` -- reusable assertions, waits, session/error patterns
+- `.claude/skills/browser-testing/environments.md` -- environment template
+
+**App-specific (consuming app's CORE -- the "what"):**
+- `.claude/skills/CORE/journeys/*.md` -- journey definitions
+- `.claude/skills/CORE/journeys/flows/*.md` -- app-specific flow recipes (login, dashboard, ...)
+- `.claude/skills/CORE/journeys/environments.md` -- the app's real URLs, credentials, routes, viewport policy
+- `.claude/skills/CORE/journeys/README.md` -- journey index + viewport policy

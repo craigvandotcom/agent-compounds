@@ -139,9 +139,13 @@ App-specific journeys (what routes to test, what features to exercise, entry flo
 
 ```
 <app-root>/.claude/skills/CORE/journeys/
+├── *.md                 # journey definitions (the "what")
+├── flows/*.md           # app-specific flow recipes (login, dashboard, ...)
+├── environments.md      # the app's real URLs, credentials, routes
+└── README.md            # journey index + viewport policy
 ```
 
-This skill provides the **how** (CLI mechanics, assertions, patterns). The app's CORE provides the **what** (which journeys exist, which routes are protected, what the login button is labelled, etc.).
+This skill provides the **how** (CLI mechanics, assertions, patterns, the `environments.md` template, `flows/common.md`). The app's CORE provides the **what** (which journeys exist, which routes are protected, what the login button is labelled, the real URLs/credentials, and whether mobile viewport is mandatory).
 
 ## Related Files
 
