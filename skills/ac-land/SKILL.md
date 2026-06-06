@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this after `/bead-work` completes its target beads.
+Run this after `/ac-implement` completes its target beads.
 
 ---
 
@@ -31,7 +31,7 @@ echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 
 **You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
 
-Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/bead-work` first."
+Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac-implement` first."
 
 Also gather:
 
@@ -126,7 +126,7 @@ which agent-browser 2>/dev/null && echo "AVAILABLE" || echo "NOT FOUND"
 
 ```bash
 # Check 3: Journey definitions
-ls .claude/skills/browser-testing/journeys/ 2>/dev/null
+ls .claude/skills/CORE/journeys/ 2>/dev/null
 ```
 
 **All three must fail** before skipping. If `agent-browser` CLI exists OR `browser-tester` agent type is available, proceed with UI validation. Do NOT assume unavailability without running these checks.
@@ -154,33 +154,7 @@ Use `git diff --stat` against the session's first commit to determine which area
 
 **One tester per matched journey, all in parallel.** If 2+ journeys match, send all Task calls in a single message for concurrent execution.
 
-````
-Task(subagent_type: "browser-tester", prompt: """
-You are a browser tester. Your job: run a UI journey happy path and report results. You test and report — never edit code.
-
-## Your Task
-Run the <journey-name> journey happy path. This is session closure smoke testing.
-
-### Setup
-1. Dev server is already running
-2. Open the journey's starting URL using the project's browser testing tool
-
-### Test
-
-Run Happy Path steps from the journey definition. Focus on:
-
-- Elements render correctly
-- Interactions work (clicks, form fills, navigation)
-- No console errors
-- Correct data flow (saves, displays, updates)
-
-### Output
-
-Write report to <ARTIFACTS_DIR>/ui-suite-<journey-name>.md
-Include screenshots for any failures.
-Happy path only — skip edge cases.
-""")
-````
+Use the prompt in **`references/ui-tester-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>` from Phase 0).
 
 > Substitute `<ARTIFACTS_DIR>` with the resolved path from Phase 0 (e.g., `/tmp/bead-work-2939805` for parallel mode, `/tmp/bead-work` for solo).
 
@@ -219,79 +193,7 @@ git status   # Must show "up to date with origin"
 
 ### Spawn Retrospective Sub-Agent
 
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-You are a retrospective analyst reviewing a completed bead-work session.
-
-## Session Artifacts
-
-Read these files:
-1. <ARTIFACTS_DIR>/progress.md — beads completed, commits, files changed
-2. Any <ARTIFACTS_DIR>/bead-*-result.md files — engineer implementation reports
-3. AGENTS.md — current project context, conventions, and coding standards
-
-## Workflow & Skill Files
-
-Read the command files that ran during this session so you can identify workflow friction:
-- `.claude/commands/ac/bead-work.md` — the implementation workflow
-- `.claude/commands/ac/bead-land.md` — this landing workflow
-
-Scan the full skill inventory (AGENTS.md > Available Skills) against the beads implemented. Look for:
-- Skill files referenced by beads — read these for domain pattern violations
-- Skills that SHOULD have been used but weren't — e.g., a migration bead that didn't leverage the supabase skill, or a component bead that ignored the design-system skill. Flag these as upgrade opportunities.
-
-## Git Context
-
-Run these commands to understand the session's work:
-- `git log --oneline -20` — recent commits
-- `git diff HEAD~N..HEAD --stat` (where N = number of session commits) — files changed
-
-## Your Analysis
-
-Write your findings to <ARTIFACTS_DIR>/retrospective.md with these sections:
-
-### What Worked
-- Patterns that produced clean, fast results
-- Bead specs that led to good implementations
-- Tools/commands that worked smoothly
-
-### What Didn't Work
-- Beads that needed multiple engineer attempts (and why)
-- Quality gate failures and their causes
-- Friction points in the workflow
-
-### Patterns Observed
-- Recurring code patterns across beads
-- Common test patterns
-- Dependency patterns
-
-### System Upgrade Opportunities
-
-Look across ALL system files — not just MEMORY.md. Each target type has a purpose:
-
-| Target | What belongs here | Example |
-|--------|------------------|---------|
-| `.claude/commands/*.md` | Workflow steps that caused friction, missing instructions, unclear prompts | "bead-work Phase 1c should remind conductor to scope test runs" |
-| `.claude/skills/*.md` | Domain patterns discovered or violated during implementation | "testing skill should document the dotenv-worker quirk" |
-| `AGENTS.md` | New conventions, quality gate changes, project-wide rules | "Add convention: never hardcode secrets in test files" |
-| `MEMORY.md` | Gotchas and quirks that don't fit the above — last resort, not default | "supabase gen types outputs debug line" |
-
-**MINIMUM BAR for proposing an upgrade:** The issue must have caused measurable waste THIS session — lost time, wasted tokens, incorrect output, or a mistake that had to be fixed. "Sounds like a good idea" or "might help someday" is NOT sufficient. The information must be non-obvious (an experienced engineer wouldn't know it without hitting the problem), and having it documented from the start would have saved real time or resources.
-
-If nothing caused real waste this session, propose zero upgrades. Empty is better than bloat.
-
-For each opportunity that clears the bar, provide:
-- **Target:** The specific file path to update
-- **Change:** What specifically to add, modify, or remove
-- **What it cost us:** Concrete time/resource waste from this session (e.g., "engineer touched 12 unrelated files, conductor spent 10 minutes selectively staging")
-- **Evidence:** Specific examples from this session
-
-Prioritize command/skill improvements over MEMORY.md additions. If a learning improves a workflow step, put it in the command file. If it documents a domain pattern, put it in the skill file. MEMORY.md is for one-off quirks only.
-
-Context bloat is the enemy. Prefer refining existing content over adding new content.
-If nothing caused real waste, say so — don't invent learnings to fill the report.
-""")
-```
+Spawn the retrospective analyst using the prompt in **`references/retrospective-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>`). It reads session artifacts + the workflow/skill files, reports what worked / what did not / patterns, and proposes evidence-backed system-upgrade opportunities under a strict minimum-waste bar.
 
 ### Conductor Reviews Retrospective
 
@@ -303,7 +205,7 @@ Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Ap
 
 **Goal:** Turn learnings into system improvements. User decides what ships.
 
-**NO AUTO-APPLY.** Unlike review commands (`plan-clean`, `hygiene`, `work-review`, `bead-refine`) which auto-apply consensus findings, bead-land presents ALL upgrade proposals to the user. System compounding changes identity and workflow — every change needs explicit approval.
+**NO AUTO-APPLY.** Unlike review commands (`ac-plan`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land presents ALL upgrade proposals to the user. System compounding changes identity and workflow — every change needs explicit approval.
 
 ### Present Upgrades to User
 
@@ -348,7 +250,7 @@ For each approved upgrade, apply the edit directly. Common targets:
 | ----------------------------------- | -------------------------------------- |
 | `AGENTS.md`                         | Workflow improvements, new conventions |
 | `CLAUDE.md`                         | Orchestrator context updates           |
-| `.claude/commands/*.md`             | Command improvements based on friction |
+| `.claude/skills/*.md`             | Command improvements based on friction |
 | `MEMORY.md`                         | New patterns, gotchas, workflow notes  |
 
 ### Commit Compound Changes
@@ -397,9 +299,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Review & merge (Recommended)", description: "Run /work-review then /wave-merge — review code, create PR, ship to main" },
-      { label: "Continue bead-work", description: "Run /bead-work — {M} beads remaining" },
-      { label: "Refine remaining beads", description: "Run /bead-refine — revise remaining beads before implementing" },
+      { label: "Review & merge (Recommended)", description: "Run /ac-review then /ac-merge — review code, create PR, ship to main" },
+      { label: "Continue bead-work", description: "Run /ac-implement — {M} beads remaining" },
+      { label: "Refine remaining beads", description: "Run /ac-beadify — revise remaining beads before implementing" },
       { label: "Done for now", description: "Close session — pick up later" }
     ]
   }]
