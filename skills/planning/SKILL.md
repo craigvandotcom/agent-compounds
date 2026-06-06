@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Plan creation and iterative refinement using scope oscillation methodology
+description: Plan creation and iterative refinement using scope oscillation methodology. Use when creating or refining an implementation plan; triggers on "plan this", "write a plan", "refine the plan", "scope a feature".
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

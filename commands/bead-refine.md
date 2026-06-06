@@ -364,7 +364,7 @@ for id in $(br list --json | jq -r '.[] | select(.status == "open") | .id'); do
 done
 ```
 
-This signals to `/backlog-next` and `/bead-work` that these beads have been through refinement and are agent-ready.
+This signals to `/pipeline-next` and `/bead-work` that these beads have been through refinement and are agent-ready.
 
 ### Verify Final Structure
 

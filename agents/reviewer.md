@@ -43,7 +43,7 @@ Load skills based on what you are reviewing. Read the skill's SKILL.md file befo
 
 - Implement fixes (report them)
 - Rewrite code (suggest improvements)
-- Make architectural decisions (flag for Craig)
+- Make architectural decisions (flag for the user)
 - Approve/reject PRs (inform orchestrator)
 
 ---

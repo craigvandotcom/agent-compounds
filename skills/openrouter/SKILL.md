@@ -1,6 +1,6 @@
 ---
 name: openrouter
-description: Access 400+ AI models from any agent. Discover, select, and query the right model for any task.
+description: Access 400+ AI models from any agent. Discover, select, and query the right model for any task. Use when you need a specific or non-default model; triggers on "query a model", "which model for", "use OpenRouter", "list available models".
 version: 1.2.0
 tools: [openrouter (infrastructure/tools)]
 ---

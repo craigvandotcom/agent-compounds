@@ -315,6 +315,8 @@ Remove session artifacts (they've been consumed by retrospective). Run each sepa
 ```bash
 rm -rf /tmp/bead-work
 rm -rf /tmp/bead-work-*
+rm -rf /tmp/plan-init-*
+rm -rf /tmp/wave-merge-*
 rm -rf /tmp/plan-refine-internal-*
 rm -rf /tmp/plan-refine-*
 rm -rf /tmp/plan-clean-*

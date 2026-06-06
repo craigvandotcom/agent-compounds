@@ -244,4 +244,4 @@ If a related plan or bead was noted, remind: "Related: plan `{name}` / bead `{id
 
 ---
 
-_Fast capture with grouping intelligence. For planning: `/plan-init`. For pipeline status: `/backlog-next`._
+_Fast capture with grouping intelligence. For planning: `/plan-init`. For pipeline status: `/pipeline-next`._

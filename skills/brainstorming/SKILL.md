@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Pre-planning exploration and ideation using divergent-convergent methodology
+description: Pre-planning exploration and ideation using divergent-convergent methodology. Use when exploring ideas before committing to a plan; triggers on "brainstorm", "explore ideas", "what are the options", "think through approaches".
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

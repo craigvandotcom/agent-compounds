@@ -40,6 +40,7 @@ Commands expect this layout at the project root:
 | `pipeline-align` | Align pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps |
 | `backlog-add` | Capture ideas with smart grouping — checks existing files, beads, and plans for duplicates |
 | `backlog-tidy` | Pipeline housekeeping — archive completed items, reconcile statuses, flag orphans, suggest merges |
+| `human-next` | Human action dashboard — surface manual tasks, decisions, blockers, and reviews that need the human's attention |
 
 ### Planning
 
@@ -74,6 +75,8 @@ Commands expect this layout at the project root:
 | Command | Purpose |
 | ------- | ------- |
 | `prompt-enhance` | Analyze and enhance subagent prompts — score against pattern rubric, diagnose gaps, rewrite |
+| `screenshot-refresh` | Refresh landing page / App Store screenshots — discover what's needed, seed test data, capture via browser agent, verify |
+| `vm-heavy-prep` | Prepare VM for heavy parallel work — assess state, free resources, restart leaky processes, report capacity |
 
 ### Ideas
 

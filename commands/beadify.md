@@ -298,7 +298,7 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 
 ### Label All Beads as Unrefined
 
-**Every bead created by beadify gets the `unrefined` label.** This signals to `/backlog-next` and `/bead-work` that these beads have not yet been through `/bead-refine`.
+**Every bead created by beadify gets the `unrefined` label.** This signals to `/pipeline-next` and `/bead-work` that these beads have not yet been through `/bead-refine`.
 
 ```bash
 br label add <id> "unrefined"

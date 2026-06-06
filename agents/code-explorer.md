@@ -94,7 +94,7 @@ Save to: `.claude/plans/research/YYYY-MM-DD-HHMM-exploration-[topic].md`
 
 [Numbered list of concrete guidance]
 
-## Questions for Craig
+## Questions for the User
 
 [Only if ambiguities require a decision]
 ```

@@ -31,10 +31,10 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 Run all scans simultaneously. Each scan produces candidate items.
 
-### A. Craig's Manual Backlog
+### A. User's Manual Backlog
 
 ```bash
-find "$PROJECT_ROOT/_backlog-craig" -name "*.md" \
+find "$PROJECT_ROOT/_backlog-manual" -name "*.md" \
   -not -name "README.md" -not -path "*/_done/*" \
   2>/dev/null
 ```
@@ -47,7 +47,7 @@ Read each file. Extract frontmatter (`status`, `blocker`, `urgency`, `est`) and 
 br list --json 2>/dev/null
 ```
 
-Find beads or tasks with status `blocked` or notes mentioning "waiting on", "needs manual", "requires account", "needs Craig", "human decision".
+Find beads or tasks with status `blocked` or notes mentioning "waiting on", "needs manual", "requires account", "needs the user", "human decision".
 
 ### C. Open PRs Needing Review
 
@@ -132,19 +132,19 @@ Format as a concise, scannable dashboard:
 Nothing blocking — agents can proceed autonomously.
 
 ### High Impact (2 items)
-1. Apple Developer enrollment — unblocks App Store submission, TestFlight, RevenueCat
-   Source: _backlog-craig/ > "Blocked on Apple Developer Enrollment"
+1. Unblock external dependency — unblocks downstream agent work
+   Source: _backlog-manual/ > "Blocked on external dependency"
 
-2. Review landing page screenshots on production
-   Source: _backlog-craig/ > "Landing Page Screenshots"
+2. Review production deployment artifacts
+   Source: _backlog-manual/ > "Review Production Artifacts"
 
 ### Quick Wins (1 item)
-1. Configure Sentry alert rules (~5 min)
-   Source: _backlog-craig/ > "Sentry Alert Configuration"
+1. Configure third-party service alert rules (~5 min)
+   Source: _backlog-manual/ > "Third-party service configuration"
 
 ### Backlog (1 item)
 1. Create launch ops runbook (~15 min)
-   Source: _backlog-craig/ > "Launch Ops Runbook"
+   Source: _backlog-manual/ > "Launch Ops Runbook"
 
 ---
 Total: 4 items needing human attention

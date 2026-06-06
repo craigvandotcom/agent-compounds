@@ -1,6 +1,6 @@
 ---
 name: app-store-screenshots
-description: Generate production-ready App Store screenshots for iOS by capturing real app screens via agent-browser and wrapping them in branded marketing slides
+description: Generate production-ready App Store screenshots for iOS by capturing real app screens via agent-browser and wrapping them in branded marketing slides. Use when preparing App Store / Play Store listing assets; triggers on "app store screenshots", "store listing images", "marketing screenshots", "generate app store assets".
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

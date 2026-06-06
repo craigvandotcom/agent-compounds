@@ -86,10 +86,10 @@ find "$PROJECT_ROOT/_backlog" -name "*.md" \
 
 For each file: extract `status` (captured/planned/complete), unchecked task count, version milestone. Skip `status: complete` and items with zero unchecked tasks.
 
-### Scan D: Craig's Manual Backlog
+### Scan D: User's Manual Backlog
 
 ```bash
-find "$PROJECT_ROOT/_backlog-craig" -name "*.md" \
+find "$PROJECT_ROOT/_backlog-manual" -name "*.md" \
   -not -name "README.md" -not -path "*/_done/*" \
   2>/dev/null
 ```
@@ -148,11 +148,11 @@ Ready to build: {N} beads — run /bead-work when you're ready to implement.
 ### Blocked ({N} beads across {epic_count} epics)
   {epic_id}  {epic_title}  ({ready}/{total} children ready)
 
-### Craig's Next (manual tasks — _backlog-craig/)
+### User's Next (manual tasks — _backlog-manual/)
   {filename}  [{status}, blocker: {blocker}, urgency: {urgency}]
   ...
 
-Pipeline: {ready_refined} ready | {unrefined} unrefined | {to_beadify} to beadify | {draft_plans} draft plans | {backlog} backlog | {craig} manual
+Pipeline: {ready_refined} ready | {unrefined} unrefined | {to_beadify} to beadify | {draft_plans} draft plans | {backlog} backlog | {manual} manual
 ```
 
 Omit sections with zero items.

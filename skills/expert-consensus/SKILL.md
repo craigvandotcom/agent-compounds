@@ -1,6 +1,6 @@
 ---
 name: expert-consensus
-description: Send one prompt to multiple AI models. Get one synthesized answer.
+description: Send one prompt to multiple AI models. Get one synthesized answer. Use when you want multiple models to weigh in; triggers on "ask the experts", "model consensus", "what do other models think", "get a second opinion from other AIs".
 version: 1.0.0
 tools: [openrouter.py, expert-panel.json]
 ---
