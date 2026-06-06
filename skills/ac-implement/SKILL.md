@@ -351,6 +351,15 @@ The `--` separator tells git: "ignore the index, commit exactly these working-tr
 
 For many files at once, globs work in the pathspec: `git commit -m "..." -- 'features/auth/**/*.ts' '.beads/issues.jsonl'`.
 
+> **New (untracked) files need `git add` first.** Pathspec commits only operate on git-tracked paths. For a brand-new file (a new test guard, a new module), `git commit -- <newfile>` fails with `pathspec did not match any file(s) known to git` and exits non-zero. Stage it first, then pathspec-commit exactly that path — still scope-safe, since the pathspec limits the commit to your file regardless of what else is staged:
+> ```bash
+> git add path/to/new-file.ts
+> git commit -m "..." -- path/to/new-file.ts
+> ```
+> Concrete cost (wave/001, bd-al8p.8): the new `ci-hygiene.test.ts` failed its pathspec commit; the `br close` in the SAME bash block then ran anyway and closed the bead before any commit landed.
+>
+> **NEVER put `br close` in the same bash block as the `git commit`.** Bash continues past a failed commit, so a chained `br close` closes the bead in the tracker with no matching commit — a silent correctness hazard. Run the commit in one call, verify it landed (`git log --oneline -1` shows your commit, or check `$?`), then `br close` in a separate call.
+
 > Note: pathspec commits bypass `lint-staged` (which hooks the index). This repo's `lint-staged` config has been a no-op in practice — every commit this session reported "could not find any staged files matching configured tasks" — so practical impact is zero. The pre-push `pnpm build` hook still runs on the committed snapshot regardless.
 
 Push after every bead commit prevents stranded work if the session crashes before bead-land.
