@@ -1,6 +1,6 @@
 # Mocking Guide
 
-Patterns and examples for mocking in body-compass-app tests.
+Patterns and examples for mocking in tests (Supabase / Next.js).
 
 ---
 
@@ -59,7 +59,7 @@ const mockSupabaseClient = {
 
 ---
 
-## Common Mocks for body-compass-app
+## Common Mocks (Supabase / Next.js)
 
 ### Supabase Client
 

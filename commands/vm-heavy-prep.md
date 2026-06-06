@@ -18,14 +18,14 @@ description: Prepare VM for heavy parallel work — assess state, free resources
 ## Prerequisites
 
 - Linux VM with `/proc` filesystem
-- PM2 processes managed via `/home/van/.npm-global/bin/pm2`
+- PM2 processes managed via `pm2`
 
 ---
 
 ## Configuration
 
 ```
-PM2=/home/van/.npm-global/bin/pm2
+PM2=pm2
 
 # Processes that are ALWAYS needed during heavy work
 ESSENTIAL_PM2="qmd-mcp mcp-agent-mail"

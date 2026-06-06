@@ -1,6 +1,6 @@
 # Unit Test Workflow
 
-Step-by-step guide for writing unit tests in body-compass-app.
+Step-by-step guide for writing unit tests.
 
 ---
 

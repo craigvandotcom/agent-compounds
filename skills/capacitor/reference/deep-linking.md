@@ -29,10 +29,10 @@ if (url) {
 
 ```bash
 # iOS simulator
-xcrun simctl openurl booted "bodycompass://food/123"
+xcrun simctl openurl booted "myapp://food/123"
 
 # Android emulator/device
-adb shell am start -a android.intent.action.VIEW -d "bodycompass://food/123"
+adb shell am start -a android.intent.action.VIEW -d "myapp://food/123"
 ```
 
 ---
@@ -40,8 +40,8 @@ adb shell am start -a android.intent.action.VIEW -d "bodycompass://food/123"
 ## Verify Associated Domains
 
 ```bash
-curl https://bodycompass.app/.well-known/apple-app-site-association
-curl https://bodycompass.app/.well-known/assetlinks.json
+curl https://myapp.example/.well-known/apple-app-site-association
+curl https://myapp.example/.well-known/assetlinks.json
 ```
 
 Both files must be reachable and valid for universal links (iOS) and app links (Android) to work.

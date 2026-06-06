@@ -1,16 +1,19 @@
-# Craig's Actual Setup (3-Agent Scale)
+# Example Setup (3-Agent Scale)
+
+A worked example of a small, cost-effective multi-agent setup. Substitute your own
+plan tiers and VPS provider — the point is the shape, not the exact numbers.
 
 ## Agents
 
-- **Agent 1:** Claude Code (Max plan) -- $200/month
-- **Agent 2:** Codex CLI (OpenAI $20/mo tier) -- $20/month
-- **Agent 3:** Gemini CLI (free tier) -- $0/month
+- **Agent 1:** Claude Code (subscription plan)
+- **Agent 2:** Codex CLI (entry tier)
+- **Agent 3:** Gemini CLI (free tier)
 
 ## Infrastructure
 
-**VPS:** Hetzner CX32 (16GB RAM, 4 vCPU) -- ~$10-15/month
+**VPS:** a 16GB / 4 vCPU instance (e.g. Hetzner CX32) — low-cost tier
 
-**Total Cost:** ~$225-235/month
+**Total cost:** roughly one premium coding subscription + a small VPS.
 
 ## Why 16GB RAM is Enough
 

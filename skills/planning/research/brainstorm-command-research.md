@@ -375,10 +375,10 @@ Phase 3: OUTPUT
 
 ### Primary
 
-- [Jeffrey Emanuel Ideation Methodology](/Users/craigvanheerden/Repos/knowledge/1-active/agentic-engineering/research/jeffrey-emanuel-ideation-methodology.md)
-- [Jeffrey Emanuel Planning Methodology](/Users/craigvanheerden/Repos/knowledge/1-active/agentic-engineering/research/jeffrey-emanuel-planning-methodology.md)
-- [Kieran Swarm Orchestration Skill](/Users/craigvanheerden/Repos/knowledge/1-active/agentic-engineering/research/kieran-swarm-orchestration-skill.md)
-- [Existing DIVERGE Prompt](/Users/craigvanheerden/Repos/software/body-compass-app/.claude/skills/planning/prompts/round-3-diverge.md)
+- Jeffrey Emanuel — Ideation Methodology (agentic-engineering research notes)
+- Jeffrey Emanuel — Planning Methodology (agentic-engineering research notes)
+- Kieran — Swarm Orchestration Skill (agentic-engineering research notes)
+- The DIVERGE prompt — see `prompts/round-3-diverge.md` in the planning skill
 
 ### Web Sources
 

@@ -12,7 +12,7 @@ description: Use when writing tests for TypeScript/Next.js code. Handles unit te
 
 # TypeScript Testing Skill
 
-**Purpose:** Guide writing high-quality tests for the body-compass-app
+**Purpose:** Guide writing high-quality tests for TypeScript/Next.js code
 **Stack:** Vitest, React Testing Library, Playwright, MSW, TypeScript
 
 ---

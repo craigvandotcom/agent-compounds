@@ -30,10 +30,9 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
 | **web-design-guidelines** | Accessibility, forms, animation, typography UX |
-| **writing-guidelines** | neoMeta brand voice + style (neoMeta projects) |
 | **app-store-screenshots** | Generate iOS App Store screenshots from real screens |
 
-> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `curate` — these are project/brand-specific and can't have one shared version.
+> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
 
 ## Commands
 
@@ -55,7 +54,7 @@ _Coming soon._
 
 ## Agents
 
-Portable agent definitions, symlinked into `.claude/agents/`. (`sub-agents/` is the legacy OSS snapshot; `agents/` is the canonical set.)
+Portable agent definitions, symlinked into `.claude/agents/`.
 
 | Agent | What it does |
 |-------|-------------|
@@ -109,7 +108,7 @@ Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus
 |-----------|-----------------|---------|
 | **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install beads` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
-| **openrouter** | OpenRouter CLI for multi-model queries (used by expert-consensus and openrouter skills) | Provided by `infrastructure/tools` (in PATH) |
+| **openrouter** | OpenRouter CLI for multi-model queries (used by expert-consensus and openrouter skills) | Install the `openrouter` CLI and ensure it's on your `PATH` |
 | **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by browser-tester sub-agent, bead-land, work-review) | `npm install -g agent-browser` |
 
 ## Philosophy

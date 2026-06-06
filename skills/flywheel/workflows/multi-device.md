@@ -1,16 +1,16 @@
 # Multi-Device Setup: MacBook + VM + Phone
 
-## Craig's Architecture
+## Reference Architecture
 
 ```
 Repos/                          ← parent git repo (GitHub)
-├── .claude/                    ← PAI system, skills, plans
+├── .claude/                    ← agent system, skills, plans
 ├── knowledge/                  ← PKM vault
-├── infrastructure/             ← schedulers, telegram, etc
+├── infrastructure/             ← schedulers, notifications, etc
 └── software/
-    ├── body-compass-app/       ← separate git repo
-    ├── unsit-your-back-app/    ← separate git repo
-    ├── frankentui/             ← separate git repo
+    ├── app-one/                ← separate git repo
+    ├── app-two/                ← separate git repo
+    ├── some-lib/               ← separate git repo
     └── ...
 ```
 
@@ -98,9 +98,9 @@ Don't just clone individual projects. Clone the full `Repos/` structure so `.cla
 
 ```bash
 # On VM
-git clone git@github.com:craigvandotcom/Repos.git ~/Repos
-cd ~/Repos/software/body-compass-app
-git clone git@github.com:craigvandotcom/body-compass-app.git .  # or git pull
+git clone git@github.com:<your-username>/Repos.git ~/Repos
+cd ~/Repos/software/<your-app>
+git clone git@github.com:<your-username>/<your-app>.git .  # or git pull
 ```
 
 ## Recommended Workflows

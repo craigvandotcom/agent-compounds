@@ -347,7 +347,7 @@ AskUserQuestion(
 This rubric was derived from analysis of:
 
 1. **Agent-compounds commands** (15 commands, ~40 subagent prompts) — structural consistency patterns
-2. **Jeffrey Emanuel's BCA commands** (30+ commands) — competitive framing, persona-as-authority, silver bullet criterion, compaction recovery
+2. **Jeffrey Emanuel's command library** (30+ commands) — competitive framing, persona-as-authority, silver bullet criterion, compaction recovery
 3. **Jeffrey Emanuel's public posts** (Feb 2026) — "fresh eyes" loop, "overprompting trap" thesis, intent-over-specification philosophy
 4. **Flywheel CORE skill** — delegation rules, progressive disclosure, model selection guidance
 

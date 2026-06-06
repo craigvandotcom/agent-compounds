@@ -4,7 +4,7 @@
 
 ---
 
-## Vitest Mocking (BCA uses Vitest)
+## Vitest Mocking
 
 ```typescript
 import { vi, describe, it, expect } from 'vitest';
@@ -74,5 +74,5 @@ adb logcat *:E | grep -i "fatal\|crash"
 
 ## E2E Testing
 
-- **Playwright** — web simulation (already in BCA testing skill)
+- **Playwright** — web simulation (see the testing skill)
 - **Appium/WebdriverIO** — native E2E on device/emulator (for true native validation)

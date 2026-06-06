@@ -309,7 +309,7 @@ openrouter --file prompt.txt --image screenshot.png --model google/gemini-3.1-pr
 
 ```
 knowledge/2-areas/software/design-critiques/
-├── 2026-01-31-body-compass-login.md
+├── 2026-01-31-login-flow.md
 ├── 2026-02-05-newsletter-header.md
 └── _index.md (summary of all critiques)
 ```

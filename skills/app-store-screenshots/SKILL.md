@@ -14,7 +14,7 @@ description: Generate production-ready App Store screenshots for iOS by capturin
 
 **Trigger:** "build app store screenshots", "generate store images", "marketing screenshots"
 
-**Implementation:** `tools/screenshot-generator/` — shipped 2026-05-18, BCA v1.0 submission. See its `README.md` for full mechanics.
+**Implementation:** `tools/screenshot-generator/` — the reference implementation lives in the consuming app. See its `README.md` for full mechanics.
 
 ## What it does
 
@@ -25,7 +25,7 @@ Two-stage pipeline:
 
 End-to-end re-run after a copy or capture change: **~5 seconds**.
 
-## Apple's actual requirements (verified 2026-05-18 during BCA submission)
+## Apple's actual requirements (verified during a real App Store submission)
 
 **Each upload slot in App Store Connect is strict about its own dimensions.** Apple's marketing language says "newer classes auto-derive from the largest" but in the actual upload UI, each slot accepts only specific pixel sizes. If you upload 1290×2796 (6.7") to the 6.5" slot, you'll get: _"The dimensions of one or more screenshots are wrong."_
 
@@ -56,7 +56,7 @@ End-to-end re-run after a copy or capture change: **~5 seconds**.
 - **Don't use the Parth Jadhav Next.js scaffold** the older skill version recommended. Tried it 2026-05-18; full Next.js scaffold is heavy overhead for 4 slides. The HTML approach in `tools/screenshot-generator/` produces equivalent output with zero install time and is editable in any text editor.
 - **Don't use a native iPhone frame PNG asset.** Modern apps trend toward minimal frames (rounded-corner glow vs full iPhone bezel). The template uses a CSS-only frame which is more flexible.
 
-## Usage (BCA, already shipped)
+## Usage
 
 ```bash
 # Re-capture all 4 slides at 6.7":
@@ -75,12 +75,12 @@ python3 tools/screenshot-generator/downscale.py
 
 ## Adapting for a new app
 
-When extending to `unsit-app`, `move-free-app`, or `art-still-app`:
+When extending to another app:
 
 1. **First time:** copy `tools/screenshot-generator/` into the new app
-2. **Change brand colors** in `index.html` (`--accent`, `--accent-2`, `--bg`) to that app's pillar color from `@neometa/brand` (blue for move/unsit, deep gold for art-still)
+2. **Change brand colors** in `index.html` (`--accent`, `--accent-2`, `--bg`) to your app's brand accent color
 3. **Reshoot raws** via `agent-browser` against that app's production URL + reviewer demo account, save to `_assets/app-store-screenshots/raw/`
-4. **Edit `slides.js`** with that app's captions (sourced from its equivalent of BCA's `_backlog-craig/05b-paste-sheet.md`)
+4. **Edit `slides.js`** with that app's captions (sourced from the app's caption paste-sheet)
 5. **Run capture + downscale**
 
 When two or more apps consume the generator, **promote it** to a shared location at `software/_tools/screenshot-generator/` and accept per-app config (brand colors + raws dir + captions). Don't promote prematurely with only one consumer.
@@ -88,14 +88,11 @@ When two or more apps consume the generator, **promote it** to a shared location
 ## Pre-submission risks to know
 
 - **PWA-vs-native chrome:** raws captured from the web PWA lack the iOS system status bar at top. Apple rarely rejects on this, but the safe alternative is to reshoot raws from the iOS simulator on a Mac, then re-run `capture.sh` (frame + captions stay identical).
-- **Caption-vs-screen mismatch:** reviewers compare caption text to what the screen actually shows. If the paste-sheet caption names features/axes that don't match the captured screen exactly, update the caption to match (e.g., BCA slide 2 changed paste-sheet's "Energy, digestion, mood, sleep" → app's actual "Digestion, Energy, Clarity, Recovery, Skin").
+- **Caption-vs-screen mismatch:** reviewers compare caption text to what the screen actually shows. If the paste-sheet caption names features/axes that don't match the captured screen exactly, update the caption to match (e.g., a caption that lists data axes the rendered screen doesn't actually display — rewrite it to match the real screen).
 
-## Body Compass canonical config (reference)
+## App-specific config
 
-- Brand accent: `#5ee6b0`
-- Gradient: `linear-gradient(140deg, #5ee6b0, #34d399)`
-- Background: `#06090b`
-- Font: Inter (loaded from Google Fonts)
-- Demo account: `review@appstore.com` (credential in 1Password / `_assets/app-store/launch-metadata.md`)
-- Production URL: `https://www.bodycompass.app`
-- 4 slides chosen: food-detail / signal-axes / pattern-card / day-composition (see `_backlog-craig/05b-paste-sheet.md` §SECTION 7)
+Brand colors, fonts, the reviewer demo account, the production URL, and the chosen
+slide set are **app facts** — keep them in the consuming app's
+`.claude/skills/CORE/` (e.g. `CORE/app-store.md`), not here. This skill stays
+method-only.
