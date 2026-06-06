@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 **You are the conductor.** Four reviewers hunt independently. You synthesize, auto-fix, and escalate. Feature-branch scoped — run after implementation, before merge.
 
-For codebase-wide health checks, use `/hygiene` instead.
+For codebase-wide health checks, use `/ac-hygiene` instead.
 
 ---
 
@@ -15,7 +15,7 @@ For codebase-wide health checks, use `/hygiene` instead.
 
 |                  |                                                                                                            |
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Input**        | Feature branch with implementation commits (from `/bead-work`, `/work`, or manual coding)                  |
+| **Input**        | Feature branch with implementation commits (from `/ac-implement` or manual coding)                  |
 | **Output**       | Review report in `.claude/reviews/`, auto-fixed issues committed, NEEDS_DECISION items presented           |
 | **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.md`, progress in `$ARTIFACTS_DIR/progress.md`              |
 | **Verification** | All project checks pass (test, lint, type-check), fixes committed, decisions resolved or documented        |
@@ -237,185 +237,11 @@ Read project config files and `AGENTS.md` to build context for reviewers. Extrac
 
 **CRITICAL: All 4 agents run IN PARALLEL using a single message with 4 Task calls.**
 
-Competitive framing: "You compete with 3 other reviewers — only evidence-backed findings with file paths count."
+Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** (security, performance, architecture, correctness). Substitute `{DIFF}` (the Phase-2 diff) and `{ARTIFACTS_DIR}` into each.
 
-Each agent writes findings to `$ARTIFACTS_DIR/round-1-{role}.md`.
-
-**Agent 1: Security Reviewer**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-{If project has security skills: "Read .claude/skills/<security-skill>/SKILL.md for security patterns."}
-
-You are a security reviewer. You compete with 3 other reviewers — only evidence-backed findings with file paths count.
-
-## Diff to Review
-```diff
-{DIFF CONTENT}
-```
-
-## Examples of What to Look For (not exhaustive)
-
-- OWASP Top 10 vulnerabilities (injection, XSS, CSRF, SSRF)
-- Auth/authz bypass opportunities
-- Hardcoded secrets or credentials
-- Data exposure risks (PII leaks, verbose errors)
-- Input validation gaps at system boundaries
-- Insecure defaults (permissive CORS, missing rate limits)
-- Dependency vulnerabilities (known CVEs in new deps)
-
-Use your judgment — these are starting points, not a complete list. If you spot something security-relevant not listed here, report it.
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/round-1-security.md
-
-For each finding:
-## Finding N: Title
-**Severity:** Critical | High | Medium
-**File:** path/to/file:line
-**Evidence:** What you read, what's wrong, why it's exploitable
-**Fix:** Specific change needed
-**Auto-fixable:** YES | NO (YES = unambiguous single fix, NO = needs judgment)
-
-Limit: top 7 findings. Skip Low severity. Under 600 words total.
-If nothing found, say so — don't invent issues.
-""")
-```
-
-**Agent 2: Performance Reviewer**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-{If project has performance skills: "Read .claude/skills/<perf-skill>/SKILL.md for optimization patterns."}
-
-You are a performance reviewer. You compete with 3 other reviewers — only evidence-backed findings with file paths count.
-
-## Diff to Review
-```diff
-{DIFF CONTENT}
-```
-
-## Examples of What to Look For (not exhaustive)
-
-- N+1 queries or sequential awaits (waterfalls)
-- Missing caching opportunities
-- Unnecessary re-renders or recomputations
-- Heavy imports that should be lazy/dynamic
-- Missing pagination or unbounded queries
-- Inefficient algorithms (O(n^2) where O(n) suffices)
-- Bundle size impact (barrel imports, large deps)
-- Missing indexes on queried columns
-
-Use your judgment — these are starting points, not a complete list. If you spot something performance-relevant not listed here, report it.
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/round-1-performance.md
-
-For each finding:
-## Finding N: Title
-**Severity:** Critical | High | Medium
-**File:** path/to/file:line
-**Evidence:** What you measured/traced, why it's slow, what the impact is
-**Fix:** Specific change needed
-**Auto-fixable:** YES | NO
-
-Limit: top 7 findings. Skip Low severity. Under 600 words total.
-If nothing found, say so — don't invent issues.
-""")
-```
-
-**Agent 3: Architecture Reviewer**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-{If project has architecture/coding skills: "Read .claude/skills/<arch-skill>/SKILL.md for patterns."}
-
-You are an architecture reviewer. You compete with 3 other reviewers — only evidence-backed findings with file paths count.
-
-## Diff to Review
-```diff
-{DIFF CONTENT}
-```
-
-## Examples of What to Look For (not exhaustive)
-
-- Pattern misalignment with existing codebase
-- Single Responsibility Principle violations
-- YAGNI violations (over-engineering, premature abstraction)
-- Tight coupling between modules
-- Circular dependencies or import cycles
-- Wrong abstraction level (under/over-abstraction)
-- Missing error handling at system boundaries
-- Naming inconsistencies
-
-Use your judgment — these are starting points, not a complete list. If you spot architectural issues not listed here, report them.
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/round-1-architecture.md
-
-For each finding:
-## Finding N: Title
-**Severity:** Critical | High | Medium
-**File:** path/to/file:line
-**Evidence:** What pattern is broken, how it deviates from codebase conventions
-**Fix:** Specific change needed
-**Auto-fixable:** YES | NO
-
-Limit: top 7 findings. Skip Low severity. Under 600 words total.
-If nothing found, say so — don't invent issues.
-""")
-```
-
-**Agent 4: Correctness Reviewer**
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-{If project has testing skills: "Read .claude/skills/<testing-skill>/SKILL.md for test patterns."}
-
-You are a correctness reviewer. You compete with 3 other reviewers — only evidence-backed findings with file paths count.
-
-## Diff to Review
-```diff
-{DIFF CONTENT}
-```
-
-## Examples of What to Look For (not exhaustive)
-
-- Logic errors and off-by-one mistakes
-- Silent failures (wrong results without errors)
-- Race conditions on shared state
-- Null/undefined hazards
-- Error paths that swallow exceptions
-- Type assertions hiding real issues (as any, ! operator abuse)
-- Edge cases not handled (empty arrays, zero values, unicode)
-- State management issues (stale closures, missing cleanup)
-- Missing test coverage for new functionality
-
-Use your judgment — these are starting points, not a complete list. If you spot correctness issues not listed here, report them.
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/round-1-correctness.md
-
-For each finding:
-## Finding N: Title
-**Severity:** Critical | High | Medium
-**File:** path/to/file:line
-**Evidence:** What you traced, the scenario that breaks, expected vs actual behavior
-**Fix:** Specific change needed
-**Auto-fixable:** YES | NO
-
-Limit: top 7 findings. Skip Low severity. Under 600 words total.
-If nothing found, say so — don't invent issues.
-""")
-```
+- Each agent writes to `$ARTIFACTS_DIR/round-1-{role}.md` (`round-1-security.md`, …).
+- Include a dimension's `SKILL_HINT` line only if Phase-1 skill routing found a relevant skill.
+- Competitive framing, the finding format, and limits (top 7, skip Low, <600 words) are baked into the template — don't restate them.
 
 **Wait for all 4 reviewers to complete.**
 
@@ -504,34 +330,7 @@ Skip to Phase 5.
 
 ### If AUTO_FIX Items Exist
 
-Spawn engineer with the specific fix list:
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-Read AGENTS.md for project context.
-
-## Your Task
-
-Apply these fixes exactly as specified. Do NOT modify NEEDS_DECISION items.
-
-## Fixes to Apply
-
-{numbered list of AUTO_FIX items with file, line, and exact change}
-
-## After All Fixes
-
-Run the project's checks (from AGENTS.md > Project Commands):
-{CMD_TEST} && {CMD_LINT} && {CMD_TYPECHECK}
-
-## Output
-
-Write results to {ARTIFACTS_DIR}/auto-fix-result.md:
-- Files modified (with paths)
-- Fixes applied (reference finding numbers)
-- Check results (test, lint, type-check — all must pass)
-- Any fixes that couldn't be applied (and why)
-""")
-```
+Spawn engineer with the AUTO_FIX list, using the prompt in **`references/engineer-fix-prompt.md`** with the Phase-4 `INTENT` ("Apply these fixes exactly as specified. Do NOT modify NEEDS_DECISION items.") and the `## Output` block kept (the result file is read back below).
 
 ### Verify Fixes
 
@@ -599,58 +398,7 @@ AskUserQuestion(
 
 ### Generate Review Report
 
-Create file: `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`
-
-```markdown
-# Code Review: [Feature/Branch Name]
-
-**Date:** YYYY-MM-DD
-**Branch:** {CURRENT_BRANCH}
-**Base:** {BASE_BRANCH}
-**Plan:** {plan path or "none"}
-**Reviewers:** Security, Performance, Architecture, Correctness
-**Rounds:** {count}
-
----
-
-## Summary
-
-| Category     | Critical | High | Medium | Auto-Fixed |
-| ------------ | -------- | ---- | ------ | ---------- |
-| Security     | X        | Y    | Z      | A          |
-| Performance  | X        | Y    | Z      | B          |
-| Architecture | X        | Y    | Z      | C          |
-| Correctness  | X        | Y    | Z      | D          |
-| **Total**    | X        | Y    | Z      | E          |
-
----
-
-## Auto-Fixed Issues
-
-{list of issues auto-applied with finding IDs}
-
----
-
-## Needs Decision
-
-{list of NEEDS_DECISION items}
-
----
-
-## All Findings
-
-### Security
-{findings}
-
-### Performance
-{findings}
-
-### Architecture
-{findings}
-
-### Correctness
-{findings}
-```
+Create `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings).
 
 ### Safety Check
 
@@ -710,20 +458,7 @@ Report auto-fix results and skip to Phase 8.
 
 ### Apply AUTO_IMPLEMENT Items
 
-Spawn engineer for all `AUTO_IMPLEMENT` items:
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-Read AGENTS.md for project context.
-
-Apply these fixes — each has been validated by the conductor as a clear technical improvement:
-
-{numbered list of AUTO_IMPLEMENT items with file, line, and exact change}
-
-Run project checks after changes (from AGENTS.md > Project Commands):
-{CMD_TEST} && {CMD_LINT} && {CMD_TYPECHECK}
-""")
-```
+Spawn engineer for all `AUTO_IMPLEMENT` items using **`references/engineer-fix-prompt.md`** with the AUTO_IMPLEMENT `INTENT` ("each has been validated by the conductor as a clear technical improvement"). The `## Output` block is optional here — the conductor commits directly below.
 
 Log each with rationale: why this is a clear technical improvement, not a design choice.
 
@@ -751,20 +486,7 @@ AskUserQuestion(
 
 ### Apply User-Approved Fixes
 
-Spawn engineer for approved items:
-
-```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-Read AGENTS.md for project context.
-
-Apply these changes based on user decisions:
-
-{list of approved items with specific fixes}
-
-Run project checks after changes (from AGENTS.md > Project Commands):
-{CMD_TEST} && {CMD_LINT} && {CMD_TYPECHECK}
-""")
-```
+Spawn engineer for approved items using **`references/engineer-fix-prompt.md`** with the user-approved `INTENT` ("Apply these changes based on user decisions").
 
 ### Commit All Fixes
 
@@ -840,8 +562,8 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Merge (Recommended)", description: "Run /wave-merge — create PR, triage CI/agent feedback, ship to main" },
-      { label: "Another review pass", description: "Run /work-review again — fresh eyes on the updated code" },
+      { label: "Merge (Recommended)", description: "Run /ac-merge — create PR, triage CI/agent feedback, ship to main" },
+      { label: "Another review pass", description: "Run /ac-review again — fresh eyes on the updated code" },
       { label: "Manual review", description: "Done with automated review — you'll review manually" },
       { label: "Done for now", description: "Review saved — pick up later" }
     ]
@@ -878,12 +600,12 @@ rm -rf "$ARTIFACTS_DIR"
 
 ---
 
-## When to Use This vs /hygiene
+## When to Use This vs /ac-hygiene
 
-|            | `/work-review`                            | `/hygiene`                             |
+|            | `/ac-review`                            | `/ac-hygiene`                             |
 | ---------- | ----------------------------------------- | -------------------------------------- |
 | **Scope**  | Feature branch diff                       | Whole codebase                         |
-| **When**   | After `/bead-work` or `/work`             | Between sessions, daily maintenance    |
+| **When**   | After `/ac-implement` or `/ac-implement`             | Between sessions, daily maintenance    |
 | **Agents** | 4 specialized Sonnet reviewers, 1-2 rounds | 3 Opus explorers, multi-round          |
 | **Fixes**  | Engineer sub-agent                        | Conductor applies directly             |
 | **Focus**  | Security, perf, arch, correctness         | Bugs, dead code, drift, health         |
@@ -907,4 +629,4 @@ Use both: `work-review` for pre-merge validation, `hygiene` for general health.
 
 ---
 
-_Work review: parallel reviewers, severity-based auto-fix, user-gated decisions. For codebase health: `/hygiene`. For implementation: `/bead-work`._
+_Work review: parallel reviewers, severity-based auto-fix, user-gated decisions. For codebase health: `/ac-hygiene`. For implementation: `/ac-implement`._

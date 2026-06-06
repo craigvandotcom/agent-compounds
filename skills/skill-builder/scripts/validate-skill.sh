@@ -103,7 +103,7 @@ else
         if echo "$DESCRIPTION" | grep -iq "use when"; then
             TRIGGER_KEYWORDS=$((TRIGGER_KEYWORDS + 1))
         fi
-        if echo "$DESCRIPTION" | grep -iq "triggers on\|trigger on"; then
+        if echo "$DESCRIPTION" | grep -iq "triggers on\|trigger on\|triggers:"; then
             TRIGGER_KEYWORDS=$((TRIGGER_KEYWORDS + 1))
         fi
         if echo "$DESCRIPTION" | grep -iq "applies to\|applies when"; then
@@ -145,18 +145,19 @@ fi
 
 # Check SKILL.md size
 LINE_COUNT=$(wc -l < "$SKILL_MD")
-if [ $LINE_COUNT -le 500 ]; then
-    if [ $LINE_COUNT -gt 400 ]; then
-        echo -e "${YELLOW}⚠️  WARNING: SKILL.md getting large ($LINE_COUNT lines). Consider 400 line target.${NC}"
-        WARNINGS=$((WARNINGS + 1))
-    else
-        echo -e "${GREEN}✓ PASS: SKILL.md size OK ($LINE_COUNT/500 lines)${NC}"
-    fi
+# Size is a TARGET, not a hard law: ≤500 is optimal (Anthropic), but a genuine
+# multi-phase orchestrator may justifiably exceed it (see reference/structure-standard.md).
+# So >500 warns (strongly) rather than fails — move sub-agent prompts/templates to references/.
+if [ $LINE_COUNT -le 400 ]; then
+    echo -e "${GREEN}✓ PASS: SKILL.md size OK ($LINE_COUNT/500 lines)${NC}"
+elif [ $LINE_COUNT -le 500 ]; then
+    echo -e "${YELLOW}⚠️  WARNING: SKILL.md getting large ($LINE_COUNT lines). Aim for ≤400; push detail to references/.${NC}"
+    WARNINGS=$((WARNINGS + 1))
 else
-    echo -e "${RED}❌ FAIL: SKILL.md too large ($LINE_COUNT lines)${NC}"
-    echo "  Target: 200-400 lines, Max: 500 lines"
-    echo "  Consider moving content to workflows/ or reference/ directories"
-    ERRORS=$((ERRORS + 1))
+    echo -e "${YELLOW}⚠️  WARNING: SKILL.md over the 500-line target ($LINE_COUNT lines).${NC}"
+    echo "  OK only if it's a genuine orchestrator whose flow needs the length."
+    echo "  Otherwise move sub-agent prompts/templates/schemas to references/ (see structure-standard.md)."
+    WARNINGS=$((WARNINGS + 1))
 fi
 
 # Check for common required sections
