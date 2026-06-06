@@ -1,0 +1,3 @@
+# E2E Pipeline Validator
+
+We really need to have totally complete, totally comprehensive, granular, perfect end to end testing coverage without ANY mocks or fake data, fake api calls, etc., that prove that our entire system from start to finish works perfectly in a provable, ultra rigorous way. That means testing with real inputs, real data flows, real external service calls for EVERYTHING (not just one or two paths) across a comprehensive set of test cases. Basically, the WHOLE thing, from "soup to nuts" - every user-facing workflow and critical system path must be proven to work with real-world conditions.
