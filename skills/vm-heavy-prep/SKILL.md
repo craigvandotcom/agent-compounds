@@ -1,7 +1,6 @@
 ---
 name: vm-heavy-prep
 description: Use when preparing a Linux VM or machine for heavy parallel work — multiple Claude Code sessions, intensive agents, or demanding workloads. Triggers on "prepare VM", "free up memory", "prep for heavy work", "optimize machine for parallel sessions", "vm prep", "clear memory before sessions".
-disable-model-invocation: true
 ---
 
 **You are the operations engineer.** Prepare this machine for a demanding parallel workload. Assess current state, free what you can, restart anything leaky, and report final capacity. Be conservative — only stop things that are clearly unnecessary for the session.

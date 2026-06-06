@@ -1,7 +1,6 @@
 ---
 name: ac-human-next
 description: Human action dashboard — surface manual tasks, decisions, blockers, and reviews that need the human's attention. Triggers: 'what needs me', 'human next', 'my action items', 'what's blocked on me', 'what needs my decision'.
-disable-model-invocation: true
 ---
 
 

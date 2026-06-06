@@ -1,7 +1,6 @@
 ---
 name: ac-plan
 description: Create and refine implementation plans — parallel explorers + validation baseline, then optional multi-agent/multi-model refinement, correctness check, and first-principles review. Triggers: 'make a plan', 'plan this feature', 'plan init', 'refine the plan', 'review the plan', 'plan refinement'.
-disable-model-invocation: true
 ---
 
 

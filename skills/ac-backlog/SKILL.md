@@ -1,7 +1,6 @@
 ---
 name: ac-backlog
 description: Capture ideas into grouped backlog files — smart grouping, plan/bead awareness, version targeting. Triggers: 'add to backlog', 'capture idea', 'backlog this', 'note for later', 'park this'.
-disable-model-invocation: true
 ---
 
 

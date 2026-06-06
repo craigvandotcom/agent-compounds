@@ -1,7 +1,6 @@
 ---
 name: idea-transcender-alien
 description: Use when pushing an idea beyond conventional analysis into deeper paradigm-level insight — removing cognitive defaults to find structural, cross-domain, and temporal opportunities missed by human-scale review. Triggers on "transcend this idea", "go deeper", "push beyond analysis", "think outside the paradigm", "alien perspective", "escape local optima", "what am I missing at a deeper level".
-disable-model-invocation: true
 ---
 
 # Idea Transcender Alien

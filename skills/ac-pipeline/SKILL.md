@@ -1,7 +1,6 @@
 ---
 name: ac-pipeline
 description: End-to-end engineering pipeline orchestrator — chains align → next → plan → beadify → implement → review → merge with gates between stages. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".
-disable-model-invocation: true
 ---
 
 # Pipeline Orchestrator

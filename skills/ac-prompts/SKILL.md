@@ -1,7 +1,6 @@
 ---
 name: ac-prompts
 description: A curated library of high-leverage one-shot prompts (debugging, performance, refactoring, planning, ideation, review, UI, workflow). Invoke with a hint of what you want and load the best-matching prompt. Triggers: "/prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "find a prompt".
-disable-model-invocation: true
 ---
 
 # Prompts Library
