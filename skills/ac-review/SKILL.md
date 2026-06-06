@@ -610,7 +610,7 @@ rm -rf "$ARTIFACTS_DIR"
 | **Fixes**  | Engineer sub-agent                        | Conductor applies directly             |
 | **Focus**  | Security, perf, arch, correctness         | Bugs, dead code, drift, health         |
 
-Use both: `work-review` for pre-merge validation, `hygiene` for general health.
+Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
 
 ---
 

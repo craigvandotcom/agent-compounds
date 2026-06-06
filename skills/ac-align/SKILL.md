@@ -137,7 +137,7 @@ Look across the full pipeline and assess ordering:
 ### Missing Execution ({N} gaps)
 | Strategy Demand | Missing Item | Suggested Action |
 |----------------|--------------|-----------------|
-| {demand} | nothing in pipeline | Add to _backlog or /plan-init |
+| {demand} | nothing in pipeline | Add to _backlog or /ac-plan |
 
 ### Missequenced Items ({N} items)
 | Item | Current Position | Should Be | Reason |
@@ -189,4 +189,4 @@ Apply approved changes. Do NOT modify files without explicit user confirmation.
 
 ---
 
-_Align the pipeline. For tactical next step: `/pipeline-next`. For implementation: `/bead-work`._
+_Align the pipeline. For tactical next step: `/ac-next`. For implementation: `/ac-implement`._

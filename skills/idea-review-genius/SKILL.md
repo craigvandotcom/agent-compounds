@@ -1,5 +1,7 @@
 ---
-description: Multi-disciplinary first-principles forensic review of any idea, framework, architecture, or strategy
+name: idea-review-genius
+description: Use when stress-testing an idea, framework, architecture, plan, or strategy through rigorous first-principles forensic review. Triggers on "review this idea", "stress-test this", "devil's advocate", "find flaws in", "critique this architecture", "challenge this plan", "first-principles review".
+disable-model-invocation: true
 ---
 
 # Idea Review Genius

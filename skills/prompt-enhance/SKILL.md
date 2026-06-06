@@ -1,8 +1,10 @@
 ---
-description: Analyze and enhance subagent prompts against a pattern rubric — score, diagnose, and rewrite
+name: prompt-enhance
+description: Use when auditing, scoring, or improving subagent prompts in skill/command files against a research-backed pattern rubric. Triggers on "enhance prompts", "improve subagent prompts", "score my prompts", "audit command prompts", "prompt quality review", "fix subagent prompts".
+disable-model-invocation: true
 ---
 
-**You are the prompt engineer.** You analyze subagent prompts in command files, score them against a research-backed pattern rubric, and apply targeted enhancements. You work directly — no delegation.
+**You are the prompt engineer.** You analyze subagent prompts in skill/command files, score them against a research-backed pattern rubric, and apply targeted enhancements. You work directly — no delegation.
 
 ---
 
@@ -10,14 +12,14 @@ description: Analyze and enhance subagent prompts against a pattern rubric — s
 
 |                  |                                                                                          |
 | ---------------- | ---------------------------------------------------------------------------------------- |
-| **Input**        | Command file(s) containing `Task(` subagent prompt blocks                                |
+| **Input**        | Skill/command file(s) containing `Task(` subagent prompt blocks                          |
 | **Output**       | Enhanced prompts with scorecard report                                                   |
 | **Artifacts**    | Scorecard in `$ARTIFACTS_DIR/`, enhanced files committed                                 |
 | **Verification** | Re-score shows improvement, no broken formatting                                         |
 
 ## Prerequisites
 
-- Command files with `Task(` prompt blocks (typically `.claude/commands/*.md`)
+- Skill or command files with `Task(` prompt blocks (typically `.claude/skills/*/SKILL.md` or `.claude/commands/*.md`)
 - No external tools required
 
 ---
@@ -38,8 +40,8 @@ AskUserQuestion(
     header: "Target",
     multiSelect: false,
     options: [
-      { label: "All commands (Recommended)", description: "Scan all .md files in current commands/ directory" },
-      { label: "Specific file", description: "Enhance one command file" },
+      { label: "All skills/commands (Recommended)", description: "Scan all SKILL.md files in current skills/ directory (or .md files in commands/)" },
+      { label: "Specific file", description: "Enhance one skill or command file" },
       { label: "Directory path", description: "Scan .md files in a custom directory" }
     ]
   }]
@@ -53,9 +55,9 @@ AskUserQuestion(
 For each target file:
 1. Read the file
 2. Extract every `Task(` block — the full prompt text between triple-quote delimiters
-3. For each prompt, capture: **command name**, **agent role** (from persona), **model**, and **full prompt text**
+3. For each prompt, capture: **skill/command name**, **agent role** (from persona), **model**, and **full prompt text**
 
-**Skip:** Files with no `Task(` blocks (e.g., `README.md`, single-agent commands like `plan-review-genius`)
+**Skip:** Files with no `Task(` blocks (e.g., `README.md`, single-agent skills like `idea-review-genius`)
 
 ---
 
@@ -80,7 +82,7 @@ Score each extracted prompt against these tiers. **Be mechanical — check for l
 
 | ID | Pattern | Check | Score |
 |----|---------|-------|-------|
-| **Q1** | Competitive Framing | "You compete with N" (only score for multi-agent commands; mark N/A for single-agent) | PASS / N/A / FAIL |
+| **Q1** | Competitive Framing | "You compete with N" (only score for multi-agent skills; mark N/A for single-agent) | PASS / N/A / FAIL |
 | **Q2** | Scope Constraint | "Your only verbs:" or explicit boundary on what agent should NOT do | PASS / FAIL |
 | **Q3** | Reconstruction | Fix field is required in output format — critique must propose solution | PASS / FAIL |
 | **Q4** | Scenario Format | For adversarial/breaker roles: "given [X], when [Y], then [Z]" pattern | PASS / N/A / FAIL |
@@ -106,7 +108,7 @@ Score each extracted prompt against these tiers. **Be mechanical — check for l
 For each prompt, produce:
 
 ```markdown
-### [Command] → [Agent Role] ([model])
+### [Skill/Command] → [Agent Role] ([model])
 
 | ID | Pattern | Score | Notes |
 |----|---------|-------|-------|
@@ -121,7 +123,7 @@ For each prompt, produce:
 ### Summary Table
 
 ```markdown
-| Command | Agent | Model | S-Score | Q-Score | Flags | Overall |
+| Skill/Command | Agent | Model | S-Score | Q-Score | Flags | Overall |
 |---------|-------|-------|---------|---------|-------|---------|
 | hygiene | Bug Hunter | opus | 7/8 | 5/6 | 0 | 92% |
 | hygiene | Explorer | opus | 6/8 | 4/6 | 1 | 79% |
@@ -145,7 +147,7 @@ When a pattern scores FAIL or WEAK, apply these specific fixes:
 First: read AGENTS.md for project context, coding standards, and conventions.
 ```
 
-If the command has skill routing, also add:
+If the skill has skill routing, also add:
 ```
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 ```
@@ -192,7 +194,7 @@ If nothing found: say so honestly. Do not invent issues to fill the report.
 
 ### Q1 Fix: Competitive Framing
 
-**Add after persona line (multi-agent commands only):**
+**Add after persona line (multi-agent skills only):**
 ```
 You compete with N other [role-type] — only evidence-backed findings count.
 ```
@@ -272,7 +274,7 @@ AskUserQuestion(
 )
 ```
 
-Apply approved fixes using the Edit tool. **Apply fixes to the SOURCE command file directly.** Work through one prompt at a time, one fix at a time, to avoid merge conflicts.
+Apply approved fixes using the Edit tool. **Apply fixes to the SOURCE skill/command file directly.** Work through one prompt at a time, one fix at a time, to avoid merge conflicts.
 
 **After all fixes applied:**
 
@@ -282,7 +284,7 @@ Apply approved fixes using the Edit tool. **Apply fixes to the SOURCE command fi
 ```markdown
 ## Enhancement Results
 
-| Command | Before | After | Delta |
+| Skill/Command | Before | After | Delta |
 |---------|--------|-------|-------|
 | hygiene | 79% | 95% | +16% |
 | bead-refine | 83% | 96% | +13% |
@@ -298,18 +300,18 @@ Apply approved fixes using the Edit tool. **Apply fixes to the SOURCE command fi
 If working in agent-compounds and a sync target exists (e.g., vitest-affected):
 
 ```bash
-# Sync enhanced commands
-cp commands/*.md /path/to/target/.claude/commands/
+# Sync enhanced skills/commands
+cp skills/*/SKILL.md /path/to/target/.claude/skills/
 ```
 
 Commit changes:
 
 ```bash
-git add commands/*.md
+git add skills/ commands/
 git commit -m "$(cat <<'EOF'
 chore: enhance subagent prompts against pattern rubric
 
-Applied prompt-enhance across N commands:
+Applied prompt-enhance across N skills/commands:
 - Added context loading (S1) to M prompts
 - Added honesty gates (S8) to K prompts
 - Trimmed over-specified methods (A1) in L prompts
@@ -332,8 +334,8 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Review enhanced prompts (Recommended)", description: "Read through the modified command files to verify quality" },
-      { label: "Run a workflow", description: "Test the enhanced prompts by running a command like /hygiene or /bead-refine" },
+      { label: "Review enhanced prompts (Recommended)", description: "Read through the modified skill/command files to verify quality" },
+      { label: "Run a workflow", description: "Test the enhanced prompts by running a skill like /ac-hygiene or /ac-bead-refine" },
       { label: "Done", description: "Enhancements complete" }
     ]
   }]
@@ -346,7 +348,7 @@ AskUserQuestion(
 
 This rubric was derived from analysis of:
 
-1. **Agent-compounds commands** (15 commands, ~40 subagent prompts) — structural consistency patterns
+1. **Agent-compounds skills/commands** (15 commands, ~40 subagent prompts) — structural consistency patterns
 2. **Jeffrey Emanuel's command library** (30+ commands) — competitive framing, persona-as-authority, silver bullet criterion, compaction recovery
 3. **Jeffrey Emanuel's public posts** (Feb 2026) — "fresh eyes" loop, "overprompting trap" thesis, intent-over-specification philosophy
 4. **Flywheel CORE skill** — delegation rules, progressive disclosure, model selection guidance

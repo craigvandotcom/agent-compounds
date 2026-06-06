@@ -5,7 +5,7 @@ disable-model-invocation: true
 ---
 
 
-**You are a pipeline advancement scanner.** Read-only. Scan all three data stores, show the funnel, reason briefly about sequencing, then ask what to move forward. Your job is advancing items *toward* implementation-ready — not deciding what to build. Ready beads go to `/bead-work`.
+**You are a pipeline advancement scanner.** Read-only. Scan all three data stores, show the funnel, reason briefly about sequencing, then ask what to move forward. Your job is advancing items *toward* implementation-ready — not deciding what to build. Ready beads go to `/ac-implement`.
 
 ---
 
@@ -52,7 +52,7 @@ Categorize every bead:
 | Category | Criteria |
 |----------|----------|
 | **Ready (refined)** | In `br ready` AND does NOT have `unrefined` label |
-| **Unrefined** | Has `unrefined` label — needs `/bead-refine` |
+| **Unrefined** | Has `unrefined` label — needs `/ac-beadify` (refine mode) |
 | **Blocked** | status=open, NOT in ready list |
 | **In Progress** | status=in_progress |
 | **Closed** | status=closed/done |
@@ -70,7 +70,7 @@ For each plan, read frontmatter and first 50 lines:
 1. **Status** from frontmatter: `draft | refined | approved | beadified`
 2. **Refinement depth** — `refinement_rounds` frontmatter field if present. Fallback: count `### Round N` headings inside the `## Refinement Log` section (headings only — NOT inline references like "R1 fixes"). Extract tier from first mention of `Light | Medium | Heavy` in the log header. Extract final trajectory from the last `Trajectory:` line in the log. (0 rounds = untouched, no log present)
 3. **Recency** — file modification time (prefer recently worked plans at same level)
-4. **Fallback** (no frontmatter): check for `## Refinement Log` (→ refined), `Status: Approved` text (→ approved). Flag for `/backlog-tidy`.
+4. **Fallback** (no frontmatter): check for `## Refinement Log` (→ refined), `Status: Approved` text (→ approved). Flag for `/ac-tidy`.
 
 Skip: `README.md`, files in `_done/`, `research/`, `templates/`, `checkpoints/`.
 
@@ -104,18 +104,18 @@ Order by closeness to implementation-ready (nearest first):
 
 | Priority | Stage | Action |
 |----------|-------|--------|
-| **1** | Unrefined beads | `/bead-refine` — one step from ready |
-| **2** | Plans: approved | `/beadify {path}` — one step from beads |
-| **3** | Plans: refined | `/beadify {path}` (or `/plan-clean` if final polish needed) |
-| **4** | Plans: draft | `/plan-refine-internal {path}` |
-| **5** | Backlog: captured | `/plan-init` (reference the backlog item) |
+| **1** | Unrefined beads | `/ac-beadify` (refine mode) — one step from ready |
+| **2** | Plans: approved | `/ac-beadify {path}` — one step from beads |
+| **3** | Plans: refined | `/ac-beadify {path}` (or `/ac-plan` clean mode if final polish needed) |
+| **4** | Plans: draft | `/ac-plan` (refine mode) `{path}` |
+| **5** | Backlog: captured | `/ac-plan` (reference the backlog item) |
 
 Within each level, sort by:
 1. Refinement depth (desc) — more work invested = do it first (continuity of context)
 2. Modification time (desc) — recently touched = active thread, continue it
 3. Explicit priority field (desc)
 
-**Ready beads (refined, no `unrefined` label):** surfaced in the summary header only. They are NOT offered as action options — use `/bead-work` for those.
+**Ready beads (refined, no `unrefined` label):** surfaced in the summary header only. They are NOT offered as action options — use `/ac-implement` for those.
 
 ---
 
@@ -124,7 +124,7 @@ Within each level, sort by:
 ```
 ## Pipeline Status
 
-Ready to build: {N} beads — run /bead-work when you're ready to implement.
+Ready to build: {N} beads — run /ac-implement when you're ready to implement.
 
 ### Needs Bead Refinement ({N} unrefined)
   {id}  {title}  [{priority}]
@@ -183,10 +183,10 @@ AskUserQuestion(
     header: "Pipeline Next",
     multiSelect: false,
     options: [
-      { label: "Refine beads: {epic_or_count}", description: "/bead-refine" },
-      { label: "Beadify: {plan_filename}", description: "/beadify _plans/{filename}" },
-      { label: "Refine plan: {plan_filename}", description: "/plan-refine-internal _plans/{filename}" },
-      { label: "Plan: {backlog_item}", description: "/plan-init (reference _backlog/{filename})" },
+      { label: "Refine beads: {epic_or_count}", description: "/ac-beadify (refine mode)" },
+      { label: "Beadify: {plan_filename}", description: "/ac-beadify _plans/{filename}" },
+      { label: "Refine plan: {plan_filename}", description: "/ac-plan (refine mode) _plans/{filename}" },
+      { label: "Plan: {backlog_item}", description: "/ac-plan (reference _backlog/{filename})" },
       { label: "Just browsing", description: "No action — I wanted the status report" }
     ]
   }]
@@ -200,7 +200,7 @@ After selection, print the exact command to run with arguments. Do NOT run it �
 ## Remember
 
 - **Nearest to ready goes first** — unrefined beads before plans before backlog
-- **Ready beads are not options here** — they go to `/bead-work`, show count only
+- **Ready beads are not options here** — they go to `/ac-implement`, show count only
 - **Within a level, prefer the most invested item** — continuity of context beats fresh starts
 - **Sequence note only when warranted** — silence is correct when order is fine
 - **Read-only, stateless** — no writes, no mutations, no git ops
@@ -209,4 +209,4 @@ After selection, print the exact command to run with arguments. Do NOT run it �
 
 ---
 
-_Advance the pipeline. For implementation: `/bead-work`. For strategic alignment: `/pipeline-align`._
+_Advance the pipeline. For implementation: `/ac-implement`. For strategic alignment: `/ac-align`._

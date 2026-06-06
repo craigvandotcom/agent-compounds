@@ -237,7 +237,7 @@ If a related plan or bead was noted, remind: "Related: plan `{name}` / bead `{id
 
 ## Principles
 
-1. **Speed over perfection** — capture now, refine in `/plan-init`
+1. **Speed over perfection** — capture now, refine in `/ac-plan`
 2. **Group aggressively** — check existing files first, argue for consolidation
 3. **No duplicates** — check beads and plans before creating backlog items
 4. **Session-sized scope** — each file should be plannable in one session
@@ -247,4 +247,4 @@ If a related plan or bead was noted, remind: "Related: plan `{name}` / bead `{id
 
 ---
 
-_Fast capture with grouping intelligence. For planning: `/plan-init`. For pipeline status: `/ac-next`._
+_Fast capture with grouping intelligence. For planning: `/ac-plan`. For pipeline status: `/ac-next`._

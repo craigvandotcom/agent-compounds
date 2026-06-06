@@ -11,7 +11,7 @@
 #   ./deploy.sh <target-project-dir> [options]
 #
 # Options:
-#   --commands              symlink ac/ and jef/ command packs
+#   --commands              symlink the jef command pack (the flywheel is now skills/ac-*)
 #   --skills a,b,c | all    symlink the named skills (or every skill)
 #   --agents a,b | all      symlink the named agents (or every agent)
 #   --all                   commands + all skills + all agents
@@ -36,7 +36,7 @@ TARGET=""
 list_available() {
   echo "Skills:"; (cd "$AC_ROOT/skills" && ls -1d */ 2>/dev/null | sed 's#/##;s/^/  /')
   echo "Agents:"; (cd "$AC_ROOT/agents" && ls -1 *.md 2>/dev/null | sed 's/\.md$//;s/^/  /')
-  echo "Command packs:  ac  jef"
+  echo "Command packs:  jef"
 }
 
 # --- parse args ---
@@ -83,8 +83,7 @@ echo "Deploying agent-compounds -> $TARGET"
 
 # --- commands ---
 if [ "$DO_COMMANDS" = 1 ]; then
-  echo "Commands:"
-  link "$AC_ROOT/commands"     "$TARGET/.claude/commands/ac"
+  echo "Commands (jef pack):"
   link "$AC_ROOT/commands/jef" "$TARGET/.claude/commands/jef"
 fi
 

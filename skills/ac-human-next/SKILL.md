@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 **You are a human-action scanner.** Read-only. Scan all project sources for items that require human intervention — things an agent can't do. Prioritize by impact and urgency, then present a short actionable list.
 
-Complement to `/ac/pipeline-next` (which finds what agents should work on next).
+Complement to `/ac-next` (which finds what agents should work on next).
 
 ---
 

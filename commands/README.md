@@ -1,101 +1,79 @@
-# Flywheel Commands
+# Flywheel — now Skills
 
-Agentic engineering workflows for Claude Code. Symlink into any project's `.claude/commands/` directory.
+The agentic engineering flywheel (inspired by Jeffrey Emanuel's methodology: 80-85%
+planning, 15-20% implementation) **used to live here as slash commands**. It now lives
+as **skills** under `agent-compounds/skills/ac-*`, invoked as `/ac-*`.
 
-Inspired by Jeffrey Emanuel's Agentic Coding Flywheel methodology: 80-85% planning, 15-20% implementation.
+This `commands/` directory now holds **only the `jef` prompt pack** (see below). The
+flywheel command files were removed once their content was fully ported to skills.
+
+## Why skills, not commands
+
+Commands and skills were maintained as parallel copies and drifted. Skills are now the
+single source of truth — one copy, deployed via `deploy.sh`, no duplication to keep in sync.
+
+## Old command → new skill
+
+| Old command | New skill (invoke as) |
+| ----------- | --------------------- |
+| `/backlog-add` | `/ac-backlog` |
+| `/backlog-tidy` | `/ac-tidy` |
+| `/pipeline-next` | `/ac-next` |
+| `/pipeline-align` | `/ac-align` |
+| `/plan-init`, `/plan-refine-*`, `/plan-clean`, `/plan-review-genius`, `/plan-transcender-alien` | `/ac-plan` (these are now modes of one skill) |
+| `/beadify`, `/bead-refine` | `/ac-beadify` |
+| `/bead-work` | `/ac-implement` |
+| `/work-review` | `/ac-review` |
+| `/wave-merge` | `/ac-merge` |
+| `/bead-land` | `/ac-land` |
+| `/hygiene` | `/ac-hygiene` |
+| `/human-next` | `/ac-human-next` |
+| (orchestrator) | `/ac-pipeline` |
+| `/prompt-enhance`, `/idea-review-genius`, `/idea-transcender-alien`, `/screenshot-refresh`, `/vm-heavy-prep` | unchanged (same name, now skills) |
 
 ## Installation
 
-```bash
-# 1. Symlink commands into your project (recommended — changes propagate instantly)
-ln -s /path/to/agent-compounds/commands your-project/.claude/commands/ac
+Deploy skills into a project with `deploy.sh` (symlinks — changes propagate instantly):
 
-# 2. Copy AGENTS.md template into your project root and fill it in
+```bash
+# Flywheel skills + the jef command pack + standard agents
+./deploy.sh your-project --all
+
+# Or a curated set
+./deploy.sh your-project --skills ac-plan,ac-implement,ac-review,ac-merge --commands
+
+# 2. Copy the AGENTS.md template into your project root and fill it in
 cp AGENTS.md your-project/AGENTS.md
 
 # 3. Create the standard project structure
 mkdir -p your-project/_backlog your-project/_plans your-project/_strategy
 ```
 
-Alternatively, copy `commands/*.md` into `.claude/commands/` directly if you prefer a standalone copy.
+`--commands` now symlinks the `jef` pack only (`.claude/commands/jef`).
 
 ## Project Structure
 
-Commands expect this layout at the project root:
+The flywheel skills expect this layout at the project root:
 
 | Directory | Purpose |
 | --------- | ------- |
 | `_backlog/` | Captured ideas and active work items (`_done/` subdirectory for completed) |
 | `_plans/` | Implementation plans (`_done/` subdirectory for beadified plans) |
-| `_strategy/` | Strategy docs — used by `pipeline-align` (optional but recommended) |
+| `_strategy/` | Strategy docs — used by `/ac-align` (optional but recommended) |
 | `AGENTS.md` | Project context for subagents (commands, architecture, conventions) |
-
-## Commands
-
-### Pipeline Management
-
-| Command | Purpose |
-| ------- | ------- |
-| `pipeline-next` | Pipeline dashboard — scan all stages, reason about sequence, offer what to advance toward implementation-ready |
-| `pipeline-align` | Align pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps |
-| `backlog-add` | Capture ideas with smart grouping — checks existing files, beads, and plans for duplicates |
-| `backlog-tidy` | Pipeline housekeeping — archive completed items, reconcile statuses, flag orphans, suggest merges |
-| `human-next` | Human action dashboard — surface manual tasks, decisions, blockers, and reviews that need the human's attention |
-
-### Planning
-
-| Command | Purpose |
-| ------- | ------- |
-| `plan-init` | Create implementation plans — 3 parallel explorers, validation baseline, test specs, user-gated approval |
-| `plan-refine-internal` | Multi-agent plan refinement — 3-tier (light/medium/heavy), no external API |
-| `plan-refine-external` | Multi-model refinement via OpenRouter — 4 diverse external models |
-| `plan-review-genius` | Single-model deep forensic review |
-| `plan-transcender-alien` | Paradigm-breaking alternative perspectives |
-| `plan-clean` | Final correctness check — 3 Sonnets verify accuracy, structure, and polish with cross-round consensus |
-
-### Beads (Implementation)
-
-| Command | Purpose |
-| ------- | ------- |
-| `beadify` | Convert refined plan to beads (labels `unrefined`), archive plan to `_done/` |
-| `bead-refine` | Refine bead structure — removes `unrefined` label on convergence |
-| `bead-work` | Sequential implementation — conductor + engineer sub-agents |
-| `bead-land` | Session closure — retrospective learning + system compounding |
-
-### Review & Ship
-
-| Command | Purpose |
-| ------- | ------- |
-| `work-review` | Feature-branch code review — 4 parallel Sonnet reviewers, severity-based auto-fix, user-escalated decisions |
-| `wave-merge` | Merge wave branch to main — PR creation, CI/agent feedback triage, auto-fix, merge |
-| `hygiene` | Iterative codebase review — 3 Opus agents, multiple rounds until plateau |
-
-### Meta
-
-| Command | Purpose |
-| ------- | ------- |
-| `prompt-enhance` | Analyze and enhance subagent prompts — score against pattern rubric, diagnose gaps, rewrite |
-| `screenshot-refresh` | Refresh landing page / App Store screenshots — discover what's needed, seed test data, capture via browser agent, verify |
-| `vm-heavy-prep` | Prepare VM for heavy parallel work — assess state, free resources, restart leaky processes, report capacity |
-
-### Ideas
-
-| Command | Purpose |
-| ------- | ------- |
-| `idea-review-genius` | Deep review of specific ideas |
-| `idea-transcender-alien` | Alien-perspective idea enhancement |
 
 ## Workflow
 
+The canonical pipeline and stage sequence is documented in
+[`skills/ac-pipeline/SKILL.md`](../skills/ac-pipeline/SKILL.md):
+
 ```
-backlog-add → backlog-tidy → pipeline-next → plan-init → plan-refine-internal → plan-clean → beadify → bead-refine → bead-work → bead-work → ... → wave-merge
-         ↑                        │                                                                                                    |
-         │                  pipeline-align                                                                                             |
-         │                 (periodic check)                                                                                            |
-         └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+/ac-align → /ac-next → /ac-plan → /ac-beadify → /ac-implement → /ac-review → /ac-merge → /ac-land
 ```
 
-`bead-work` loops until the wave is complete. `work-review` is optional — use before merging when you want explicit review. `pipeline-align` is a periodic strategic check, not a linear step.
+`/ac-implement` loops until the wave is complete. `/ac-review` is optional — use before
+merging when you want explicit review. `/ac-align` is a periodic strategic check, not a
+linear step.
 
 ## Pipeline Lifecycle
 
@@ -109,33 +87,34 @@ Backlog (captured) → Plan (draft → refined → approved) → Beads (unrefine
 | ----- | ------------ | ---------- |
 | Backlog | `status:` frontmatter (`captured` → `planned` → `complete`) | `_backlog/**/*.md` |
 | Plan | `status:` frontmatter (`draft` → `refined` → `approved` → `beadified`) | `_plans/*.md` |
-| Bead | `unrefined` label (present → removed by `/bead-refine`) | `br` labels |
+| Bead | `unrefined` label (present → removed by `/ac-beadify` refine mode) | `br` labels |
 
-**Key rule:** Once beads are created, the plan is archived to `_done/`. Beads are the source of truth — if a bead can't stand alone without the plan, it's not ready.
+**Key rule:** Once beads are created, the plan is archived to `_done/`. Beads are the
+source of truth — if a bead can't stand alone without the plan, it's not ready.
 
 ## Dependencies
 
-### Required (for bead-* commands)
+### Required (for bead-* skills)
 
 - **beads_rust** (`br`) — bead task management
 - **beads_viewer** (`bv`) — TUI viewer + AI-driven work selection
 
 ### Optional
 
-- **GitHub CLI** (`gh`) — required for `wave-merge` (PR creation, CI checks, merge)
-- **OpenRouter** (`openrouter` CLI) — required only for `plan-refine-external`
-- **Browser testing tool** (e.g., `agent-browser`) — optional UI validation in `bead-land`
+- **GitHub CLI** (`gh`) — required for `/ac-merge` (PR creation, CI checks, merge)
+- **OpenRouter** (`openrouter` CLI) — required only for `/ac-plan` external-refine mode
+- **Browser testing tool** (e.g., `agent-browser`) — optional UI validation in `/ac-land`
 
-## Key Files
+## The `jef` command pack
 
-| File | Purpose |
-| ---- | ------- |
-| `AGENTS.md` | **Template** — project context for subagents (commands, architecture, skills, rules) |
-| `CLAUDE.md` | **Template** — minimal pointer for main orchestrator |
+`commands/jef/` is a separate library of standalone prompts (bug hunters, optimizers,
+reorganizers, etc.), unrelated to the flywheel pipeline. It is still deployed as slash
+commands via `deploy.sh --commands` (→ `.claude/commands/jef`).
 
 ## Philosophy
 
 > "Planning tokens are cheaper than implementation tokens"
 > — Jeffrey Emanuel
 
-Each cycle improves the next. `bead-land` extracts learnings and proposes system upgrades, making subsequent sessions faster and higher quality.
+Each cycle improves the next. `/ac-land` extracts learnings and proposes system upgrades,
+making subsequent sessions faster and higher quality.

@@ -16,7 +16,7 @@ Strategic planning for features and fixes using Jeffrey Emanuel's iterative refi
 
 ## When to Load This Skill
 
-- Creating implementation plans (`/plan-init`)
+- Creating implementation plans (`/ac-plan`)
 - Refining plans through review cycles (`/plan-review`)
 - Any task requiring structured planning before implementation
 
@@ -96,7 +96,7 @@ For simpler plans, compress to:
 
 | Command        | Uses This Skill For                      |
 | -------------- | ---------------------------------------- |
-| `/plan-init`   | Initial plan creation using templates    |
+| `/ac-plan`     | Initial plan creation using templates    |
 | `/plan-review` | Iterative refinement using round prompts |
 
 ---

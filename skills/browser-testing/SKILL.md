@@ -16,7 +16,7 @@ Validate UI functionality using the `agent-browser` CLI. Supports local dev, Ver
 
 ## When to Use
 
-- `/work-review` preview validation phase
+- `/ac-review` preview validation phase
 - Manual UI testing requests
 - Smoke tests after deployments
 - Auth flow verification

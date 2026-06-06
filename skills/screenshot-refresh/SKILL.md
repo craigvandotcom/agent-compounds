@@ -1,5 +1,7 @@
 ---
-description: Refresh landing page screenshots — discover what's needed, seed test data, capture via Playwright script or browser agent, verify
+name: screenshot-refresh
+description: Use when refreshing, recapturing, or updating landing page screenshots — discovers what's needed, seeds test data, captures via Playwright script or browser agent, then verifies results. Triggers on "refresh screenshots", "update screenshots", "recapture landing page screenshots", "screenshot the app", "landing page images are stale".
+disable-model-invocation: true
 ---
 
 **You are the screenshot conductor.** Discover what screenshots the landing page needs, ensure the app has compelling data, then capture them.
