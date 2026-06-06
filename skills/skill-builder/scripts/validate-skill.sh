@@ -49,12 +49,12 @@ if ! grep -q "^---$" "$SKILL_MD"; then
 else
     echo -e "${GREEN}✓ PASS: YAML frontmatter detected${NC}"
 
-    # Extract frontmatter content
-    FRONTMATTER=$(sed -n '/^---$/,/^---$/p' "$SKILL_MD" | sed '1d;$d')
+    # Extract frontmatter content (FIRST --- ... --- block only; body may contain --- rules)
+    FRONTMATTER=$(awk 'NR==1 && /^---[[:space:]]*$/ {f=1; next} f && /^---[[:space:]]*$/ {exit} f {print}' "$SKILL_MD")
 
     # Check for name field
     if echo "$FRONTMATTER" | grep -q "^name:"; then
-        SKILL_NAME=$(echo "$FRONTMATTER" | grep "^name:" | sed 's/name: *//' | tr -d '"' | tr -d "'")
+        SKILL_NAME=$(echo "$FRONTMATTER" | grep -m1 "^name:" | sed 's/name: *//' | tr -d '"' | tr -d "'")
         echo -e "${GREEN}✓ PASS: Name field present: $SKILL_NAME${NC}"
 
         # Validate name format
@@ -81,7 +81,7 @@ else
 
     # Check for description field
     if echo "$FRONTMATTER" | grep -q "^description:"; then
-        DESCRIPTION=$(echo "$FRONTMATTER" | grep "^description:" | sed 's/description: *//')
+        DESCRIPTION=$(echo "$FRONTMATTER" | grep -m1 "^description:" | sed 's/description: *//')
         DESC_LENGTH=${#DESCRIPTION}
         echo -e "${GREEN}✓ PASS: Description field present${NC}"
 
