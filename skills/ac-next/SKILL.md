@@ -1,5 +1,5 @@
 ---
-name: next
+name: ac-next
 description: Pipeline dashboard — scan all stages (backlog→plan→bead→wave), reason about sequence, recommend what to advance toward implementation-ready. Triggers: 'what's next', 'pipeline status', 'pipeline next', 'what should I work on'.
 disable-model-invocation: true
 ---

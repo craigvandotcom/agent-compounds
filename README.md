@@ -14,19 +14,19 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **[openrouter](./skills/openrouter/)** | Access 400+ AI models. Discover, select, and query the right model for any task |
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
-**Pipeline** — the engineering workflow, one skill per stage (chain them with `pipeline`)
+**Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed (chain them with `ac-pipeline`)
 | Skill | What it does |
 |-------|-------------|
-| **[pipeline](./skills/pipeline/)** | Orchestrator — chains the stages below with gates (`align → next → plan → beadify → implement → review → merge → land`) |
-| **align** | Reconcile the pipeline with current strategy |
-| **next** | Pipeline dashboard — what to advance toward implementation-ready |
-| **plan** | Create + refine implementation plans (refine/clean/review modes in `references/`) |
-| **beadify** | Convert a refined plan into a beads task structure |
-| **implement** | Sequential bead implementation — conductor + engineer sub-agents |
-| **review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
-| **merge** | Merge a wave to main — PR, CI triage, version bump |
-| **land** | Session closure — retrospective learning + system compounding |
-| **hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
+| **[ac-pipeline](./skills/ac-pipeline/)** | Orchestrator — chains the stages below with gates (`ac-align → ac-next → ac-plan → ac-beadify → ac-implement → ac-review → ac-merge → ac-land`) |
+| **ac-align** | Reconcile the pipeline with current strategy |
+| **ac-next** | Pipeline dashboard — what to advance toward implementation-ready |
+| **ac-plan** | Create + refine implementation plans (refine/clean/review modes in `references/`) |
+| **ac-beadify** | Convert a refined plan into a beads task structure |
+| **ac-implement** | Sequential bead implementation — conductor + engineer sub-agents |
+| **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
+| **ac-merge** | Merge a wave to main — PR, CI triage, version bump |
+| **ac-land** | Session closure — retrospective learning + system compounding |
+| **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
 
 **Engineering** (promoted from body-compass-app, the canonical donor)
 | Skill | What it does |
@@ -54,7 +54,7 @@ Anthropic merged custom commands into skills (a `commands/x.md` and a `skills/x/
 
 ## Prompts
 
-The **[prompts](./skills/prompts/)** skill is a curated library of high-leverage one-shot prompts (debugging, performance, refactor, planning, ideation, review, UI, workflow). Invoke `/prompts <hint>` and it loads the best-matching prompt from `skills/prompts/references/`. Add new ones with the `prompt-add` skill.
+The **[ac-prompts](./skills/ac-prompts/)** skill is a curated library of high-leverage one-shot prompts (debugging, performance, refactor, planning, ideation, review, UI, workflow). Invoke `/ac-prompts <hint>` and it loads the best-matching prompt from `skills/ac-prompts/references/`. Add new ones with the `prompt-add` skill.
 
 ## Agents
 

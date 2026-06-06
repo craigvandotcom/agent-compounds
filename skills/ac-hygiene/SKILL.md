@@ -1,5 +1,5 @@
 ---
-name: hygiene
+name: ac-hygiene
 description: Iterative codebase review — 3 agents, multiple rounds until plateau — surfaces reuse/simplification/correctness cleanups. Triggers: 'hygiene', 'clean up the codebase', 'iterative review', 'tidy the code'.
 disable-model-invocation: true
 ---

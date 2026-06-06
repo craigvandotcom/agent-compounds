@@ -1,5 +1,5 @@
 ---
-name: beadify
+name: ac-beadify
 description: Convert a refined plan into a beads task structure (beads_rust). Triggers: 'beadify', 'turn plan into beads', 'create beads from plan', 'break plan into tasks'.
 disable-model-invocation: true
 ---
