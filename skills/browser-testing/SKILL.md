@@ -52,7 +52,7 @@ agent-browser --session [name] wait --load networkidle
 | `console`                 | Get console logs             |
 | `errors`                  | Get console errors           |
 | `screenshot [path]`       | Capture screenshot           |
-| `close`                   | End session                  |
+| `close`                   | End session (MANDATORY — see Teardown) |
 
 ### Environment Selection
 
@@ -101,9 +101,61 @@ agent-browser --session test wait --url "/[post-login-path]"
 agent-browser --session test snapshot -i
 agent-browser --session test errors
 
-# 4. Cleanup
+# 4. Cleanup (MANDATORY — see Teardown below)
 agent-browser --session test close
 ```
+
+## Teardown
+
+**Scoped teardown is mandatory: always close the named session(s) you opened, by
+name, as the final step of any browser work. Never leave a session open.**
+`agent-browser` runs a long-lived daemon per session that spawns a headless
+Chrome with `--remote-debugging-port`. Pair every `open` with a matching `close`
+for the same session name:
+
+```bash
+agent-browser --session [name] close   # tears down THIS session's daemon + Chrome
+```
+
+- One `close` per `open`, every time — even when a test fails (use a trap or a
+  `finally`-style cleanup step so `close` runs on the error path too).
+- Close only the session(s) **you** opened, by name. Do not use `close --all` —
+  it is unsafe under concurrent sessions and will tear down browsers other agents
+  are actively using. Closing your own named sessions is the correct, scoped
+  behavior.
+- Use a distinct, predictable `--session` name so your cleanup is unambiguous.
+- Never assume the session "timed out" — daemon idle-shutdown is **disabled by
+  default**. If you do not `close`, the session stays alive.
+
+### Why scoped teardown matters (the runaway-CPU failure mode)
+
+If a session's daemon dies without closing Chrome — a crashed test, an agent that
+forgot to `close`, or a session server killed mid-run — the headless Chrome is
+**reparented to launchd (PPID 1) and keeps spinning at ~100% CPU indefinitely**.
+Quitting the Chrome.app does NOT kill these detached automation instances, and
+they are invisible to `agent-browser session list` (the dead daemon no longer
+answers), so they will not self-heal. In one incident three orphaned instances
+ran for **four days**, pinning a 10-core machine to a load average of 54.
+Disciplined `close` on the normal exit path prevents the common case.
+
+### Manual escape hatch (abnormal-exit only)
+
+Discipline cannot cover the abnormal-exit path (crash, killed test, daemon
+death). On the rare occasion you spot a runaway (sluggish machine, fans spinning,
+high load), force-kill the orphaned automation Chromes by hand:
+
+```bash
+# Inspect: orphaned remote-debugging Chrome (PPID 1 = daemon already dead)
+ps -axo pid,ppid,command | grep -- --remote-debugging-port | grep -v -- --type=
+
+# Force-kill every agent-browser Chrome:
+pkill -9 -f "remote-debugging-port"
+```
+
+> **Caution:** `pkill -9 -f "remote-debugging-port"` kills **ALL** agent-browser
+> Chromes, including other live sessions. Use it only when you know no other
+> session is active — i.e. when you have spotted a genuine runaway. There is no
+> automation for this; it is a deliberate manual step.
 
 ## Validation Outputs
 

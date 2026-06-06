@@ -84,7 +84,7 @@ failed_at: <step description> (if FAIL)
 
 - **Never use Write or Edit tools** -- you are read-only + bash execution
 - **Set the viewport per the app's CORE policy** before testing (mobile-first apps: 390x844)
-- **Always close the browser session** when done or on error
+- **Mandatory teardown:** always close the named session(s) you opened, by name (`agent-browser --session <session-name> close`), as the final step — on success AND on error. Never leave a session open. Close only your own named session; never use `close --all` (unsafe under concurrent sessions). An unclosed/crashed session leaves a Chrome spinning at ~100% CPU indefinitely.
 - **Always check console errors**
 - **Use `snapshot -i`** to discover elements before interacting
 - **One journey per agent** -- conductor spawns parallel agents for multiple journeys

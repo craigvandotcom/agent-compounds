@@ -34,7 +34,7 @@ agent-browser --session <session-name> close
 
 ## Rules
 
-- Always close the session when the task is complete or if an error occurs
+- **Mandatory teardown:** before finishing, always close the named session(s) you opened, by name (`agent-browser --session <session-name> close`) — on success AND on error. Never leave a session open. Close only your own named session; never use `close --all` (unsafe under concurrent sessions). An unclosed/crashed session leaves a Chrome spinning at ~100% CPU indefinitely.
 - Use `snapshot -i -c` to discover elements before interacting
 - Use `find label/role/text` for element targeting (semantic, not CSS)
 - Capture a screenshot as evidence for any visual task
