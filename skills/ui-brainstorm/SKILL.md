@@ -1,6 +1,6 @@
 ---
 name: ui-brainstorm
-description: Multi-model UI design critique using consensus ranking. Use when user mentions UI improvements, design critique, interface redesign, or wants multiple perspectives on visual/UX changes. Triggers on "ui brainstorm", "design critique", "improve this interface", "multiple design ideas".
+description: Use ONLY when the user explicitly wants MULTIPLE divergent design options or several AI models' opinions on a UI — design ideation, exploring alternatives, or cross-model consensus ranking. Heavyweight: 3 external vision-model calls, ~$0.45, ~10 min. Triggers on "ui brainstorm", "design options", "multiple ideas", "explore alternatives", "what would different models suggest", "consensus on this design". NOT for single-track polish of existing UI (use ui-elevate), objective accessibility/compliance audits (use web-design-guidelines), or fixing visual/CSS bugs (use ui-debug).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -13,9 +13,9 @@ description: Multi-model UI design critique using consensus ranking. Use when us
 # UI Brainstorm Skill
 
 **Purpose:** Multi-model AI consensus for UI/UX design ideation and critique using cutting-edge vision models
-**Tools:** Claude Opus 4.6 (native), openrouter (Gemini 3.1 Pro, Grok 4.20)
+**Tools:** Claude Opus 4.8 (native), openrouter (Gemini 3.1 Pro, Grok 4.20)
 **Domain:** Interface design, UX optimization, visual critique
-**Status:** MVP
+**Status:** Active
 
 ---
 
@@ -50,7 +50,7 @@ description: Multi-model UI design critique using consensus ranking. Use when us
 
 1. **Input** - Screenshot(s) + context
 2. **Parallel Brainstorm** - 3 vision models generate improvement ideas
-   - Claude Opus 4.6 (native vision)
+   - Claude Opus 4.8 (native vision)
    - Gemini 3.1 Pro (vision via openrouter)
    - Grok 4.20 (via openrouter)
 3. **Cross-Pollinate** - Each model ranks all ideas anonymously
@@ -74,7 +74,7 @@ description: Multi-model UI design critique using consensus ranking. Use when us
 
 **All 3 models receive the actual screenshot:**
 
-- **Claude Opus 4.6:** Native vision in conversation
+- **Claude Opus 4.8:** Native vision in conversation
 - **Gemini 3.1 Pro:** `google/gemini-3.1-pro-preview` via openrouter
 - **Grok 4.20:** `x-ai/grok-4.20-beta` via openrouter
 
@@ -158,7 +158,13 @@ Each generates 5 improvement ideas scored against design rubric.
 
 ## Cutting-Edge Vision Models
 
-### Model 1: Claude Opus 4.6 (Native)
+> **Model IDs drift — verify before running.** The OpenRouter model IDs below are
+> last-known examples, not guaranteed-current. Before a session, confirm the top
+> vision models currently available (check via the `openrouter` skill / CLI model
+> list) and substitute the strongest current Gemini, Grok, and GPT vision models.
+> The Claude native model tracks this session's model (currently Opus 4.8).
+
+### Model 1: Claude Opus 4.8 (Native)
 
 **Access:** Built into Claude Code conversation
 **Vision:** Native - attach screenshot directly

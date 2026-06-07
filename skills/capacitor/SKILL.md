@@ -69,9 +69,15 @@ Load on-demand based on task:
 | `reference/nextjs-static-export.md` | Configuring static export, dynamic routes, Server Component errors  |
 | `reference/pwa-migration.md`        | Migrating PWA features, iOS storage issues, CORS, WKWebView gotchas |
 | `reference/plugin-catalog.md`       | Choosing a plugin, looking up package names                         |
+| `reference/advanced-native-patterns.md` | §2/§3 — custom plugin bridge (4-layer) + typed `safeNativeCall` wrapper |
+| `reference/build-deploy.md`         | §13 — cap sync/run commands, App Store checklist, Privacy Manifest  |
 | `reference/testing-debugging.md`    | Vitest mocks for Capacitor, crash diagnosis, WebView debugging      |
 | `reference/deep-linking.md`         | Deep link listeners, testing commands, associated domains           |
 | `reference/security-capsec.md`      | Running Capsec scanner, security rules, production checklist        |
+| `reference/cold-start-auth.md`      | §16 — cold-start bootstrap gate, 6-case contract, splash handoff, 401 modal |
+| `reference/supabase-lifecycle.md`   | §17 — realtime setAuth, WKWebView suspension, sign-out wipe ordering |
+| `reference/optimistic-writes.md`    | §18 — SWR optimistic writes + thin repo indirection                 |
+| `reference/distribution-stage.md`   | §19 — what NOT to build per stage; IDB-delete trap                  |
 
 ---
 
@@ -129,44 +135,7 @@ async function getLocation(): Promise<Location> {
 
 ### Custom Plugin Bridge Pattern
 
-For native plugins not available as npm packages, follow this 4-layer pattern:
-
-1. **Swift plugin** (`ios/App/App/YourPlugin.swift`):
-
-   ```swift
-   import Capacitor
-   @objc(YourPlugin)
-   public class YourPlugin: CAPPlugin, CAPBridgedPlugin {
-       public let identifier = "YourPlugin"
-       public let jsName = "YourPlugin"
-       public let pluginMethods: [CAPPluginMethod] = []
-       func handleEvent(_ data: SomeType) {
-           notifyListeners("eventName", data: ["key": data.value])
-       }
-   }
-   ```
-
-2. **ObjC registration** (`ios/App/App/YourPlugin.m`):
-
-   ```objc
-   #import <Capacitor/Capacitor.h>
-   CAP_PLUGIN(YourPlugin, "YourPlugin",)
-   ```
-
-3. **TypeScript interface** — `registerPlugin()` returns `unknown` without a type parameter:
-
-   ```typescript
-   import { registerPlugin, type Plugin } from '@capacitor/core';
-   interface YourPlugin extends Plugin {
-     addListener(
-       eventName: 'eventName',
-       fn: (data: { key: string }) => void
-     ): Promise<{ remove: () => Promise<void> }>;
-   }
-   const YourPlugin = registerPlugin<YourPlugin>('YourPlugin');
-   ```
-
-4. **React hook** — register listener inside `useEffect` with `isNativePlatform()` guard and cleanup via `handle.remove()`
+For native plugins not available as npm packages, use the 4-layer pattern (Swift plugin → ObjC registration → typed `registerPlugin<T>()` interface → React hook with `isNativePlatform()` guard + cleanup). **→ Full code: `reference/advanced-native-patterns.md`.**
 
 ### Type Guidelines
 
@@ -204,45 +173,7 @@ switch (Capacitor.getPlatform()) {
 
 ### Error Handling
 
-```typescript
-class CapacitorError extends Error {
-  constructor(
-    message: string,
-    public readonly plugin: string,
-    public readonly platform: string
-  ) {
-    super(`[${plugin}@${platform}] ${message}`);
-    this.name = 'CapacitorError';
-  }
-}
-
-async function safeNativeCall<T>(
-  plugin: string,
-  fn: () => Promise<T>,
-  fallback?: T
-): Promise<T> {
-  try {
-    if (!Capacitor.isPluginAvailable(plugin)) {
-      if (fallback !== undefined) return fallback;
-      throw new CapacitorError(
-        'Plugin not available',
-        plugin,
-        Capacitor.getPlatform()
-      );
-    }
-    return await fn();
-  } catch (error) {
-    if (error instanceof CapacitorError) throw error;
-    const platform = Capacitor.getPlatform();
-    if (fallback !== undefined) return fallback;
-    throw new CapacitorError(
-      error instanceof Error ? error.message : String(error),
-      plugin,
-      platform
-    );
-  }
-}
-```
+Use a typed `CapacitorError` + `safeNativeCall<T>(plugin, fn, fallback?)` wrapper so every native call gets consistent availability gating, fallback, and error context. **→ Full code: `reference/advanced-native-patterns.md`.**
 
 ### Modular Platform Separation
 
@@ -470,39 +401,9 @@ CapacitorUpdater.notifyAppReady();
 
 ## 13. Build & Deployment
 
-```bash
-# Sync web assets to native projects
-npx cap sync
+Key flow: `pnpm build && npx cap sync` → `npx cap open ios|android`; device live-reload via `npx cap run ios --livereload --external`. Plus the App Store checklist (signing, icons, splash, `viewport-fit=cover`) and the Apple Privacy Manifest (`PrivacyInfo.xcprivacy`) — whose collected-data-types list is **app-specific and lives in CORE**.
 
-# Open native IDE
-npx cap open ios
-npx cap open android
-
-# Build web first, then sync
-pnpm build && npx cap sync
-
-# Run on device (with live reload)
-npx cap run ios --livereload --external
-npx cap run android --livereload --external
-```
-
-**App Store Checklist:**
-
-- Splash screen configured (`capacitor.config.ts`)
-- Icons generated for all sizes (1024x1024 source)
-- Bundle ID / package name set
-- Signing certificates configured (iOS: provisioning profile, Android: keystore)
-- Privacy manifest (iOS) / permissions declared
-- `viewport-fit=cover` in meta tag for edge-to-edge
-
-**Apple Privacy Manifest** (`ios/App/App/PrivacyInfo.xcprivacy`):
-Required for App Store submission (Spring 2024+). Structure:
-
-- `NSPrivacyTracking` — `false` if no tracking
-- `NSPrivacyCollectedDataTypes` — array of collected data type dicts (linked, not tracked, purpose)
-- `NSPrivacyAccessedAPITypes` — array with reason codes (e.g., UserDefaults → CA92.1)
-
-This project's collected types: Photos (meal images), Health (symptom/food data), OtherUserContent (meal descriptions). Accessed APIs: UserDefaults (CA92.1 — `@capacitor/preferences`). Update when adding plugins that access required-reason APIs or collecting new data types.
+**→ Commands, full checklist, Privacy Manifest structure: `reference/build-deploy.md`.**
 
 ---
 
@@ -539,275 +440,30 @@ Origin check: production grants `origin.protocol == "capacitor" && origin.host =
 
 ## 16. Cold-Start & Auth Bootstrap (CRITICAL)
 
-For Next.js `output: 'export'` Capacitor apps with auth, **middleware does NOT run** — there is no server to run it on. Without a bootstrap gate, the first paint resolves to whichever route the router thinks matches the URL _before_ auth state settles, which for `~90% authed users` is the **login skeleton flashing for 200–600ms** before the dashboard. This is structural, not a styling bug.
+For `output: 'export'` apps with auth, middleware doesn't run — the login skeleton flashes before auth settles. The fix is one sticky `isBootstrapped` gate at the route-tree root, a 6-case failure contract, splash→JS handoff, a 401 session-expired interceptor, and the server-safe three-file module split.
 
-### The fix: one `isBootstrapped` gate at the route-tree root
-
-```typescript
-// features/auth/components/auth-provider.tsx
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isBootstrapped, setIsBootstrapped] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-      } catch {
-        // Network unreachable — render optimistically; RLS protects data
-      } finally {
-        setIsBootstrapped(true); // STICKY: never set back to false
-      }
-    })();
-  }, []);
-
-  return <Ctx.Provider value={{ user, isBootstrapped }}>{children}</Ctx.Provider>;
-}
-```
-
-```tsx
-// app/layout.tsx
-<AuthProvider>{isBootstrapped ? children : <BrandedLoader />}</AuthProvider>
-```
-
-### The 6-case failure-mode contract (encode in tests)
-
-1. **Happy path (authed):** cached-authed flag = true → loader → `getUser()` returns user → `isBootstrapped=true` → route tree mounts → `/app`. **No login chrome paints.**
-2. **Token expired:** cached-authed flag = true → `getUser()` returns null → clear cached flag → `/login`. User briefly sees loader, then login — acceptable; rare.
-3. **Network unreachable on cold start:** `getUser()` throws → **render `/app` shell optimistically** (last-known-authed). Subsequent API calls trigger normal error UI; RLS prevents data corruption. Do NOT bounce to `/login` (that's the bug we're fixing). Retry on `@capacitor/network` `networkStatusChange` or `App.resume`.
-4. **No cached flag:** never logged in → `isBootstrapped=true` immediately → `/login`.
-5. **Token-refresh racing the bootstrap:** Supabase JS handles refresh internally; bootstrap waits on `getUser()` outcome. Belt-and-braces: skip retry if `supabase.auth.onAuthStateChange` is mid-`TOKEN_REFRESHED`.
-6. **Stickiness invariant — `isBootstrapped` NEVER transitions back to false.** A late `getUser()` resolving null does not yank the user mid-interaction. Instead, a 401 interceptor catches failing API calls and surfaces a "session expired" modal (below).
-
-### Splash → JS handoff
-
-In `capacitor.config.ts`:
-
-```typescript
-plugins: {
-  SplashScreen: {
-    launchAutoHide: false,        // KEY: hold splash until JS dismisses
-    backgroundColor: '#<brand>',  // match your branded loader so the handoff is invisible
-    androidScaleType: 'CENTER_CROP',
-  },
-},
-```
-
-Then in your app's bootstrap, dismiss the splash _after_ React has mounted the branded loader, so the user never sees a blank WKWebView:
-
-```typescript
-import { SplashScreen } from '@capacitor/splash-screen';
-import { Capacitor } from '@capacitor/core';
-
-useEffect(() => {
-  if (Capacitor.isPluginAvailable('SplashScreen')) {
-    SplashScreen.hide(); // After loader is on screen
-  }
-}, []);
-```
-
-### 401 interceptor + session-expired modal (supports case 6)
-
-Wrap your SWR fetcher / Supabase client to detect 401 responses. On first 401 after `isBootstrapped=true`:
-
-- Set a global `sessionExpired` state.
-- Suppress further toasts (avoid 401 toast storm on every refetch).
-- Mount a single `<SessionExpiredModal />` at the route-tree root with a "Sign in again" button.
-- **Do NOT navigate immediately** — preserve any in-progress form state.
-- Also triggered by `onAuthStateChange('SIGNED_OUT')` from another tab/window.
-
-### Server-safe module split (the three-file pattern)
-
-Any module implementing bootstrap / auth / instrumentation state is transitively imported from `lib/utils/api-client.ts` — which itself is imported by server-side API route handlers. Importing React or any client-only dep at the top of such a module crashes the production build with "React hook in server context" or "Export X doesn't exist in target module."
-
-The canonical split:
-
-| File                           | Directive            | What lives here                                                                                                                                               |
-| ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lib/<feature>/<thing>.ts`     | (none — server-safe) | Module-level state, `_subscribe`/`_getSnapshot` bridge, imperative API (`markX`, `resetX`). No React imports. No top-level `swr`, `@capacitor/*`, `window.*`. |
-| `lib/<feature>/use-<thing>.ts` | `'use client'`       | `useSyncExternalStore` hook over (1). React consumers import this.                                                                                            |
-| Client-only deps in (1)        | —                    | Dynamic-import inside function bodies: `const { mutate } = await import('swr')`. Never at module top.                                                         |
-
-**Why:** the same module is reachable from both a React tree (needs hooks) AND an API-route execution graph (no React, no DOM). Splitting by directive boundary preserves both call paths.
-
-**Canonical examples in this codebase (all from the app-first-feel wave):**
-
-- `lib/instrumentation/cold-start.ts` (server-safe) + `lib/instrumentation/use-cold-start-measures.ts` (`'use client'` hook).
-- `lib/auth/session-expired-interceptor.ts` (server-safe) + `lib/auth/use-session-expired.ts` (`'use client'` hook).
-- `session-expired-interceptor.ts:wipeAllLocalData` dynamic-imports `swr` and `@capacitor/preferences` inside the function body rather than at module top.
-
-**Trip-wire diagnostic:** if `pnpm build` fails after adding a hook/state module under `lib/auth/`, `lib/instrumentation/`, or any auth-bootstrap path, but `pnpm test` and `pnpm type-check` pass, this is almost certainly the bug. `pnpm test` passes because vitest doesn't exercise the server-side import graph. Look for top-level imports of React, `swr`, `@capacitor/preferences`, or anything that reads `window` / `document` / `localStorage` synchronously at module scope.
-
-### Acceptance test (silver bullet)
-
-A Playwright test that boots with a cached-authed flag set + a mocked `getUser()` and asserts **zero paints** of login chrome before the dashboard renders. This is the regression gate for the whole pattern; ship it with the first implementation.
+**→ Full pattern + code + acceptance test: `reference/cold-start-auth.md`.**
 
 ---
 
 ## 17. Supabase + Capacitor Lifecycle (CRITICAL)
 
-Two non-obvious gotchas that bite every Capacitor + Supabase app:
+Three gotchas that bite every Capacitor + Supabase app: global `realtime.setAuth()` on `TOKEN_REFRESHED` (else realtime silently dies ~1h after sign-in); iOS WKWebView suspends JS ~30s after backgrounding (no background timers/network — `App.resume` refetch instead); and JWT-first sign-out wipe ordering (+ SWR static-key cross-user contamination).
 
-### Realtime `setAuth` on `TOKEN_REFRESHED`
-
-Supabase JS v2 has **ONE global `realtime.setAuth()`**, not a per-channel version. Without wiring it up, every realtime channel keeps the JWT it had when it was created, and ~1h after sign-in the server stops pushing messages with no client-side error — users see stale data forever.
-
-```typescript
-// lib/supabase/client.ts (module-scope side effect, ONCE per app)
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'TOKEN_REFRESHED' && session) {
-    supabase.realtime.setAuth(session.access_token);
-  }
-});
-```
-
-Add a regression test: `features/auth/__tests__/realtime-token-refresh.test.ts` asserts `setAuth` is called exactly once on `TOKEN_REFRESHED`.
-
-### iOS WKWebView background suspension reality
-
-**iOS suspends WKWebView's JavaScript runtime ~30 seconds after backgrounding.** Consequences:
-
-- `@capacitor/network` `networkStatusChange` CANNOT fire while suspended.
-- `setInterval` / `setTimeout` do NOT run.
-- Any "writes reach server within N minutes regardless of app state" SLO is unachievable.
-
-This forces an honest sync model:
-
-| User state            | Queue drain timing                                |
-| --------------------- | ------------------------------------------------- |
-| Foregrounded + online | Within seconds                                    |
-| Backgrounded          | On next foreground (`App.resume` event), N/A here |
-| Offline → online (bg) | Drains on next foreground, NOT on reconnect       |
-
-**Explicitly NOT supported without native code:** background fetch, periodic fetch, or any "data reaches server within N minutes regardless of app state." Adding background fetch invites Apple-review battery scrutiny and platform-specific code without proportional benefit at Stage 0–2.
-
-Wire `App.resume` to refetch on return:
-
-```typescript
-useEffect(() => {
-  const listener = App.addListener('resume', () => {
-    mutate(/* dashboard keys */); // SWR refetch
-  });
-  return () => {
-    listener.then(l => l.remove());
-  };
-}, []);
-```
-
-### JWT-first sign-out wipe (order matters)
-
-If the app is killed mid-wipe, the order determines what's left behind. Clear the JWT FIRST so even a half-wiped state cannot operate as the prior user:
-
-```typescript
-async function signOut() {
-  // 1. JWT first — after this, the app cannot operate as the prior user
-  await supabase.auth.signOut({ scope: 'local' });
-  await Preferences.remove({ key: 'last-known-authed' });
-
-  // 2. SWR cache flush — clear ALL keys (prevents cross-user contamination)
-  await mutate(() => true, undefined, { revalidate: false });
-
-  // 3. session/localStorage UI state
-  sessionStorage.clear();
-  // localStorage: only clear app-owned keys, not user-agent-owned ones
-
-  // 4. If you have IDB: closeAll() → deleteDatabase() → onblocked 2s timeout
-  //    (see §19 — only relevant once you actually ship local-first storage)
-}
-```
-
-**Trigger from all paths:** explicit logout button, `onAuthStateChange('USER_DELETED')`, `onAuthStateChange('SIGNED_OUT')` (covers cross-tab).
-
-**Common landmine — SWR static keys cross-user contamination:** If SWR fetcher keys are static strings like `'dashboard-data'`, signing out + signing in as a different user on the same device briefly renders the PREVIOUS user's cached data. Either flush ALL SWR keys on sign-out (above), or scope every fetcher key by `user.id`. Allow-list keys that legitimately stay global (`canonical-ingredient-list`, etc.) and fail the build on un-scoped data keys.
+**→ Full patterns + code: `reference/supabase-lifecycle.md`.**
 
 ---
 
 ## 18. Optimistic Writes + Thin Repo Pattern (HIGH)
 
-The pattern that makes an app feel native without a sync engine. SWR provides everything needed.
+Makes the app feel native without a sync engine, using SWR `mutate` with `optimisticData` + `rollbackOnError`, behind a `<domain>Repo` indirection introduced from day one so internals can later swap to local-first without touching callsites.
 
-### The pattern
-
-```typescript
-import useSWR, { useSWRConfig } from 'swr';
-
-await mutate(swrKey, async () => foodsRepo.create(payload), {
-  optimisticData: current => [...(current ?? []), optimisticEntry],
-  rollbackOnError: true,
-  revalidate: false,
-});
-```
-
-- Entry appears instantly in the UI (`optimisticData`).
-- On server reject, SWR rolls back automatically (`rollbackOnError`).
-- Honest rollback toast: **"Couldn't save — your input was not preserved. Try again."** Do NOT offer a "try again" button unless you actually saved the draft — the optimistic rollback removed it.
-
-### Thin repo abstraction — introduce it FROM THE START
-
-Even if the implementation is just Supabase passthrough today, introduce a `<domain>Repo` indirection from day one:
-
-```typescript
-// lib/data/repos/foods-repo.ts
-export const foodsRepo = {
-  list: () => supabase.from('foods').select('*'),
-  create: payload => supabase.from('foods').insert(payload),
-  update: (id, patch) => supabase.from('foods').update(patch).eq('id', id),
-  delete: id => supabase.from('foods').delete().eq('id', id),
-};
-```
-
-**Why it matters:** when you later swap the internals for IDB-backed local-first (§19), every action hook keeps working — internals-only swap. Without the indirection, every callsite has to change.
-
-**API matches the SERVICE, not generic CRUD.** If a domain has upsert semantics (single row per user per day, etc.), the repo mirrors that — don't pretend it's a CRUD log table.
+**→ Full pattern + code: `reference/optimistic-writes.md`.**
 
 ---
 
 ## 19. Distribution-Stage Discipline (MEDIUM-HIGH)
 
-Per `software/CLAUDE.md` and `alignment/distribution-philosophy.md`, work sequences by distribution stage. **Don't pre-build for later stages** — that's how solo-built apps die under their own complexity before getting a single user.
+Don't pre-build Stage 3-4 infrastructure (IDB sync engine, DLQ, wipe ledger, background fetch, partner dashboards) at Stage 0-1. The right "feels native" surface at Stage 0-1 is just: cold-start bootstrap (§16) + optimistic writes (§18) + native polish.
 
-The patterns below are tempting from day one but are **canonical Stage 3-4 infrastructure**. Only reach for them when cohort signal validates the pain:
-
-| Pattern                                | Earliest stage to build     | Trigger to reactivate                                               |
-| -------------------------------------- | --------------------------- | ------------------------------------------------------------------- |
-| IndexedDB local-first + sync engine    | Stage 3                     | ≥10 WAU report concrete offline-write pain OR cold-cache >300ms P50 |
-| Dead-letter queue for sync failures    | Stage 3                     | Real-world data shows constraint drift fires often enough           |
-| `_wipe_intent` ledger + resume-on-boot | Stage 3                     | Sub-second kill mid-wipe becomes a real reported issue              |
-| IDB epoch + backfill-on-eviction       | Stage 3                     | Eviction proves real in cohort telemetry                            |
-| Background fetch / periodic sync       | Stage 3+ (and never on iOS) | Apple-review battery scrutiny worth the cost                        |
-| Affiliate / partner dashboards         | Stage 3                     | Active creator deals in flight                                      |
-| Custom analytics / observability       | Stage 2+                    | Manual measurement no longer scales                                 |
-
-**At Stage 0–1**, the right Capacitor "feels native" surface area is:
-
-1. The cold-start auth bootstrap (§16) — kills the worst visible bug.
-2. Optimistic writes on top of server-first (§18) — delivers ~70% of the perceived "app feel" gain at ~40% of the work.
-3. Native polish: haptics, page transitions, swipe-to-delete, pull-to-refresh, keyboard avoidance, 44pt touch targets, `:hover` suppression in native build, `App.resume` SWR refetch.
-
-That's it. If you find yourself designing a sync queue + DLQ + wipe ledger at Stage 0, **stop** — you're solving a problem you don't have yet.
-
-### IndexedDB delete blocks indefinitely (when you eventually ship it)
-
-When/if Stage 3 work activates IDB, this is the one trap that bites everybody:
-
-```typescript
-// indexedDB.deleteDatabase BLOCKS indefinitely if any other connection holds the DB.
-// Module-scope handles, service workers — anything.
-async function wipeIDB() {
-  await idbAdapter.closeAll(); // close all known module-scope connections first
-  return new Promise(resolve => {
-    const req = indexedDB.deleteDatabase('app-db');
-    req.onsuccess = resolve;
-    req.onblocked = () => {
-      // Don't hang forever — log + continue. Orphan DB cleans up on next boot.
-      setTimeout(() => {
-        Sentry.captureMessage('IDB delete blocked');
-        resolve();
-      }, 2000);
-    };
-  });
-}
-```
-
-Without `closeAll()`, the delete sits there forever; without the `onblocked` timeout, your sign-out flow deadlocks.
+**→ Stage table + reactivation triggers + IDB-delete trap: `reference/distribution-stage.md`.**
