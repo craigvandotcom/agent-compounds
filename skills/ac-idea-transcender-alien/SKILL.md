@@ -1,7 +1,6 @@
 ---
 name: ac-idea-transcender-alien
 description: Use when pushing a raw IDEA or concept beyond conventional analysis into deeper paradigm-level insight — removing cognitive defaults to find structural, cross-domain, and temporal opportunities missed by human-scale review. Triggers on "transcend this idea", "go deeper", "push beyond analysis", "think outside the paradigm", "alien perspective", "escape local optima", "what am I missing at a deeper level". For a written implementation plan use ac-plan-transcender-alien.
-disable-model-invocation: true
 ---
 
 # Idea Transcender Alien
