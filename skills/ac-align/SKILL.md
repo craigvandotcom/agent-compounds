@@ -1,6 +1,7 @@
 ---
 name: ac-align
 description: Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps. Triggers: 'align pipeline', 'pipeline alignment', 'is my pipeline on strategy', 'audit backlog against goals'.
+disable-model-invocation: true
 ---
 
 

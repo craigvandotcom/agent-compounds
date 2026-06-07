@@ -1,6 +1,7 @@
 ---
 name: ac-plan-review-genius
 description: Use to forensically pressure-test an implementation PLAN, strategy, or roadmap for flaws, risks, and weak assumptions via multi-disciplinary first-principles review. Triggers: 'genius review the plan', 'pressure-test this plan', 'find flaws in the plan', 'forensic plan review'. For a raw idea or concept (not a written plan) use ac-idea-review-genius.
+disable-model-invocation: true
 ---
 
 # Plan Review Genius

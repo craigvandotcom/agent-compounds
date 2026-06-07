@@ -1,6 +1,7 @@
 ---
 name: ac-merge
 description: Merge a wave branch to main — PR creation, CI/agent feedback triage, version + build bump, land. Triggers: 'merge the wave', 'wave merge', 'ship the branch', 'merge to main'.
+disable-model-invocation: true
 ---
 
 

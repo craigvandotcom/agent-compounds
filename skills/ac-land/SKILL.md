@@ -1,6 +1,7 @@
 ---
 name: ac-land
 description: Session closure with retrospective learning and system compounding — land work, capture lessons, update skills/commands. Triggers: 'land the session', 'bead land', 'close out', 'capture learnings', 'wrap up session'.
+disable-model-invocation: true
 ---
 
 

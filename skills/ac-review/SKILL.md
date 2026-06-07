@@ -1,6 +1,7 @@
 ---
 name: ac-review
 description: Feature-branch code review — parallel reviewers (correctness/security/perf/architecture), severity-based auto-fix + escalation. Triggers: 'review the branch', 'work review', 'code review this feature', 'pre-merge review'.
+disable-model-invocation: true
 ---
 
 
