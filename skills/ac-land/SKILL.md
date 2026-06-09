@@ -206,6 +206,18 @@ Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Ap
 
 **NO AUTO-APPLY.** Unlike review commands (`ac-plan`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land presents ALL upgrade proposals to the user. System compounding changes identity and workflow — every change needs explicit approval.
 
+### Step 0: Capture durable lessons via `reflect`
+
+Before proposing system-file upgrades, invoke the **`reflect`** skill to capture this
+session's durable learnings (facts / decisions / recipes) into the typed, domain-routed,
+git-tracked memory substrate. `reflect` handles `{type, domain}` routing + dedupe-over-append:
+it writes low-risk lessons directly and **gates** any skill-improvement for approval (same
+discipline as below). This closes the write loop — a lesson learned here becomes retrievable
+from a different app/machine next week instead of being stranded in this transcript. Pass it
+the retrospective findings from Phase 2 as the candidate lessons.
+
+Then continue with the system-file upgrade proposals below.
+
 ### Present Upgrades to User
 
 First, output each upgrade opportunity so the user can see the details:
