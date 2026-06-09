@@ -28,31 +28,22 @@ routed so they compound. The capture half of the AI-native-org write loop.
 
 ---
 
-## The model (read once)
+## The model (canonical source: `context-engineering`)
 
-Every lesson is **one `{type}` × one `{domain}`**. Type picks the format + home-kind;
-domain picks the subtree. This is the whole routing rule.
+**Load `../context-engineering/SKILL.md` before routing anything** — it is the single
+source for the save-routing taxonomy (`{type} × {domain}` → home), the frontmatter
+schema, and the write rules (dedupe, outcome-grounding, sanitization, decay). This skill
+is the *session-end executor* of that procedure, not a second copy of it.
 
-**Types**
-
-| Type | Is it… | Home-kind |
-|---|---|---|
-| **fact** | a discrete true thing ("droid settings.json must be a symlink") | `…/memory/auto/<slug>.md` |
-| **decision** | a choice + its rationale ("BCA is canonical migration host") | `…/decisions/<date>-<slug>.md` |
-| **recipe** | a repeatable prompt/workflow said-or-done ≥twice | prompt-library entry |
-| **skill-improvement** | a fix to how a skill/agent behaves | edit the skill file (**gated**) |
-| **rule** | a generalizable coding constraint | _defer to CM_ — capture as a `fact` tagged `type: rule`; CM formalizes it in Phase 2 |
-
-**Domains** (classify per-lesson, not per-session — one session can yield a global
-tooling fact *and* a neoMeta decision):
-
-| Domain | When the lesson is about… | Memory root | Decisions |
-|---|---|---|---|
-| **neometa** | the business, its apps, brand, content, books | `neometa/memory/` | `neometa/alignment/decisions/` |
-| **personal** | life, PKM, journaling | `knowledge/` | — |
-| **global** | tooling, agents, infra, the PAI system | `infrastructure/memory/` | `infrastructure/memory/` |
-
-Infer domain from the lesson's subject (and the session's paths); when ambiguous, ask.
+Operating summary (details + edge cases live in context-engineering):
+- Every lesson is **one `{type}`** (fact · rule · decision · recipe · skill-improvement)
+  **× one `{domain}`** (neometa · app-local · personal · global). Type → format +
+  home-kind; domain → subtree.
+- **Rules are markdown facts** with `type: rule` — the CM playbook is a derived cache,
+  never the home.
+- Classify **per lesson**, not per session; infer domain from the lesson's subject (and
+  the session's paths); when ambiguous, ask.
+- A lesson with no slot = taxonomy bug to flag, never a new store.
 
 ---
 
@@ -84,21 +75,10 @@ qmd search "<key terms>" --json -n 5      # or: grep -ri "<term>" <domain memory
 
 ### 5. Write to the routed home
 
-**fact** → `<domain-root>/memory/auto/<slug>.md`, then add a one-line pointer to that
-dir's `MEMORY.md` index (`- [Title](slug.md) — hook`). Frontmatter:
-```markdown
----
-name: <kebab-slug>
-description: <one-line — used for recall relevance>
-metadata:
-  type: fact            # or: rule
-  domain: neometa       # neometa | personal | global
-  evidence: <the outcome/moment that grounds this>
-  tags: [bca, schema]   # optional
----
-
-<the lesson. Link related memories with [[their-slug]].>
-```
+**fact / rule** → `<domain-root>/memory/auto/<slug>.md` using the canonical frontmatter
+schema from `context-engineering` (name · description · type · domain · evidence · tags;
+body = data with `[[wikilinks]]`, never instructions). Then add a one-line pointer to that
+dir's `MEMORY.md` index (`- [Title](slug.md) — hook`).
 
 **decision** → `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` (same frontmatter, `type: decision`;
 body = context · decision · rationale · consequences).
