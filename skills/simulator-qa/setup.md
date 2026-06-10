@@ -21,29 +21,55 @@ server process, no agent app inside the simulator.
 text) — those become the accessibility labels AXe targets. This is the only
 app-side requirement.
 
-## Option: XcodeBuildMCP (MCP server, same engine)
+## Option: XcodeBuildMCP — use its CLI MODE, not the MCP server
 
 [getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) bundles
-AXe and adds two genuinely better primitives:
+a pinned AXe binary (no version skew) and adds two genuinely better
+primitives on top of the same engine:
 
 - `snapshot_ui` → semantic snapshot with **elementRef** targets (`tap {"elementRef":"e8"}`
-  — no coordinate math)
+  — no coordinate math) + screen-hash dedup (`sinceScreenHash`)
 - `wait_for_ui` → polls until a predicate holds (label/textContains/gone/settled)
-  — a real assertion/synchronization primitive
+  — a real assertion/synchronization primitive nothing else has
 
-Plus build/run/test tools, LLDB attach, and a bridge to Xcode 26.3's built-in
-MCP. Cost: an MCP server's tool-schema token overhead (~84 tools; use its
-tool-filtering or skills mode).
+**Prefer it as a CLI** (`xcodebuildmcp <workflow> <tool>` + the skill that
+`xcodebuildmcp init` installs), NOT as an MCP server:
+
+- Sentry's own 1,350-trial study (Feb 2026): MCP mode ≈ same success rate as
+  a primed shell at **+106% tokens / +135% cost**.
+- Claude Code **subagents can't reliably reach MCP servers** (background
+  subagents not at all; some hallucinate tool results) — a CLI works in every
+  spawned engineer/reviewer/tester; an MCP server only at top level.
+- House convention is CLI-over-MCP for exactly these reasons.
 
 ```bash
-brew tap getsentry/xcodebuildmcp && brew install xcodebuildmcp
-claude mcp add XcodeBuildMCP xcodebuildmcp mcp
+brew install getsentry/xcodebuildmcp/xcodebuildmcp
+xcodebuildmcp init        # installs its CLI agent skill
+xcodebuildmcp doctor      # verify environment
+# Verify once: snapshot_ui / wait_for_ui reachable via the ui-automation CLI
+# workflow (CLI and MCP "share the same tool implementations" per docs).
 ```
 
-**When to prefer it:** long interactive QA sessions (elementRef + wait_for_ui
-reduce flake and round-trips). **When to skip:** occasional smoke runs — the
-CLI is lighter. Avoid WebDriverAgent-based servers (e.g. mobile-mcp) for
-sim-only iOS work: WDA breaks on new Xcode/iOS versions for weeks at a time.
+MCP-server mode (`claude mcp add XcodeBuildMCP xcodebuildmcp mcp`) is an
+opt-in for long top-level interactive pairing sessions only — enable just the
+`simulator` workflow to cap schema cost.
+
+**Caveats (as of 2026-06):** the elementRef/`wait_for_ui` runtime model
+shipped 2026-06-01 — very new. Known rough edges: refs can go stale with an
+unhelpful error (issue #445), and `snapshot_ui` can return an **empty tree
+while reporting success** when the sim's AX daemon isn't ready (#408) — treat
+empty/zero-frame snapshots as "not ready → retry / relaunch app", and fall
+back to AXe coordinate taps if refs misbehave. There is **no published
+evidence yet of anyone running it against a Capacitor/WKWebView app** — spike
+it against your app before relying on it for a full pass.
+
+Avoid WebDriverAgent-based servers (e.g. mobile-mcp) for sim-only iOS work:
+WDA breaks on new Xcode/iOS versions for weeks at a time.
+
+> **Horizon note:** WWDC 2026 announced Xcode 27 with a Device Hub and
+> first-party agent-driven app automation (~fall 2026). This skill's method
+> (see → act → assert over the a11y tree, journeys, checklist) is
+> tool-agnostic — re-evaluate the tool layer when Xcode 27 ships.
 
 ## Option: Maestro (durable regression artifacts)
 

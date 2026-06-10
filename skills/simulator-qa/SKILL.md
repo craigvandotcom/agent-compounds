@@ -64,9 +64,11 @@ brew install cameroncooke/axe/axe   # see + act (accessibility tree, HID taps)
 # simctl ships with Xcode — nothing to install
 ```
 
-Optional MCP alternative: **XcodeBuildMCP** (Sentry) — same engine (AXe), adds
-`snapshot_ui` elementRefs + `wait_for_ui` predicates. Use it if already
-configured; otherwise the CLI below is lighter. See `setup.md`.
+Optional upgrade: **XcodeBuildMCP in CLI mode** (Sentry) — same engine (AXe,
+bundled+pinned), adds `snapshot_ui` elementRefs + `wait_for_ui` predicates
+through plain Bash. Prefer its CLI over its MCP server (token cost; Claude
+Code subagents can't reliably reach MCP servers). New + unproven on webview
+apps as of 2026-06 — spike before relying on it. See `setup.md`.
 
 ## Core loop
 
