@@ -90,6 +90,19 @@ C xbm-cli:       gate(CLI-reachable)=Y/N  fidelity=  runs= /3  calls≈  notes:
 DECISION:
 ```
 
+## Related — while on the Mac (NOT part of the bake-off)
+
+Optional follow-up, separate decision: the **App Store Connect skill pack**
+(`npx skills add rorkai/app-store-connect-cli-skills` + the `asc` CLI) covers
+the distribution half this skill doesn't — TestFlight orchestration, crash
+triage, release flow, build/upload, store screenshots. Standalone (the Blitz
+GUI app is NOT required; only its 4 internal-API skills need it — relevant
+for first-time submissions of unsit/move-free, not BCA). Cherry-pick
+`asc-testflight-orchestration`, `asc-crash-triage`, `asc-release-flow` first
+rather than all 23. Note: its `asc-shots-pipeline` drives the sim with AXe
+(production evidence for candidate A) and may supersede the browser-based
+`app-store-screenshots` skill — evaluate at next screenshot refresh.
+
 ## Finalization checklist (after deciding)
 
 - [ ] SKILL.md: rewrite Toolchain + Core loop for the winner; remove the temp banner
