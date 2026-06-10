@@ -413,6 +413,26 @@ git tag --points-at HEAD        # Confirm v$NEW_VERSION on the merge commit
 git branch -d "$WAVE" 2>/dev/null || true   # Clean local wave branch
 ```
 
+### Verify the Deploy Actually Shipped
+
+If the project deploys on push to main (Vercel: `vercel.json` present or a known Vercel
+project — simil8, cv-site, neometa-app, move-free-app, art-still-app marketing):
+
+```bash
+sleep 90   # give the build a head start
+vercel ls <project> 2>/dev/null | head -5   # latest deployment: ● Ready or ● Error?
+```
+
+- `● Error` → the merge did NOT reach production. Surface it loudly and investigate
+  (run `next build` locally — missing deps on lazily-compiled routes are the classic
+  cause). Do not close the session claiming "shipped."
+- No Vercel project → skip silently.
+
+> Why: a broken main build fails silently on Vercel — prod just keeps serving the last
+> good build, with no alert. simil8's prod was frozen for ~447 days this way
+> (react-virtuoso never added to package.json; every build since March 2025 failed;
+> nobody knew). Evidence: simil8/memory/auto/simil8-vercel-production-frontend.md.
+
 ---
 
 ## Phase 4: Report + Handoff
