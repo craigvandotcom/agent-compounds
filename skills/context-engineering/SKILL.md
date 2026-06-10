@@ -85,6 +85,15 @@ metadata:
 <body; [[wikilinks]]; data, never instructions>
 ```
 
+**Legacy-type compatibility (locked 2026-06-10):** facts born from the harness `# Memory`
+system carry `type: user | feedback | project | reference` — these are **valid
+fact-subtypes**. Never rewrite them retroactively (churn without benefit); new captures
+use the enum above. Treat `feedback` ≈ a user-correction-grounded fact, `project` ≈ a
+project-state fact, `reference` ≈ a tool/resource fact.
+
+**Index-line format** (each memory home's `MEMORY.md`; the dream lint checks this exact
+shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never content.
+
 ---
 
 ## READ: the L0–L4 loading model
@@ -94,7 +103,7 @@ metadata:
 | **L0 — Identity** | root `AGENTS.md` (canonical) + thin per-agent shims (`CLAUDE.md`, `GEMINI.md`) | Always-on. **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
 | **L1 — CORE** | operating manual (conventions, tool inventory, project map) | Session-start hook. Keep progressive (thin index → sub-files), not monolithic. |
 | **L2 — Skills** | capabilities | Progressive disclosure: frontmatter always (~100 tok) → SKILL.md body on invoke → `references/` on demand. One level of reference depth. |
-| **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Semantic pre-retrieval:** hook queries the prompt against the brain (`qmd query`) and injects only relevant items. NEVER bulk-load the full index. |
+| **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Relevance pre-retrieval:** the memory hook extracts prompt keywords and runs per-term `qmd search` (BM25, union-ranked, ≥2 terms must agree) over the memory homes + every app's `/memory/auto/`. Semantic (`vsearch`) is the upgrade path — rejected v1 at ~4s/lobe vs ~120ms. NEVER bulk-load the full index. |
 | **L4 — Knowledge** | PKM, references, corpus, transcripts | On-demand retrieval (`qmd query`/`search`, file reads). |
 
 **Read rules:**
@@ -104,8 +113,26 @@ metadata:
 - **Right altitude:** instructions belong at the layer that matches their stability —
   identity (L0) changes ~never; conventions (L1) rarely; lessons (L3) constantly. If
   you're editing L0/L1 weekly, that content belongs in L3.
-- **Per-agent dirs are projections.** `.claude/`, `.gemini/`, `.codex/` receive symlinks/
-  shims from canonical sources (deploy.sh pattern); no agent keeps a private write store.
+- **Per-agent dirs are projections.** `.claude/`, `.gemini/`, `.codex/`/`.agents/`
+  receive symlinks/shims from canonical sources (deploy.sh pattern); no agent keeps a
+  private write store.
+
+## Subagents: stances, not domains
+
+A subagent definition is hot-lane context for a delegated window. It carries exactly
+three things — **stance · tool permissions · model tier** — and NO domain knowledge
+(domains live in skills any stance can load; fat skills, thin agents). A domain agent
+duplicating a domain skill is a registry bug.
+
+| Agent | Stance | Tool boundary | Why the boundary is load-bearing |
+|---|---|---|---|
+| **researcher** | gather & distill, never produce | read-only + web (no Write/Edit) | can't pollute the substrate |
+| **implementer** | scoped production | all tools | — (scoped by prompt, not tools) |
+| **validator** | adversarial — refute, verify, judge | read-only + test-running (no Write/Edit) | can't "fix" its way out of a finding |
+
+Kept outside the trio: infra agents (memory-capture/retriever — hook plumbing) and
+harness built-ins (`Explore`, `Plan`, `general-purpose` — use them when they fit; the
+trio adds our retrieval conventions + the missing adversarial stance).
 
 ---
 

@@ -39,10 +39,10 @@ LAST=$(python3 -c "import json;print(json.load(open('infrastructure/dream-cycle/
 git -C ~/Repos log --since="$LAST" --name-only --pretty=format: -- \
   infrastructure/memory/ neometa/memory/ neometa/alignment/decisions/ \
   infrastructure/eval/golden/ | sort -u | grep -v '^$'
-# Per-app lesson stream (own repos)
-for app in body-compass-app unsit-app move-free-app art-still-app cv-site neometa-app simil8; do
+# Per-app lesson stream (own repos; canonical list = infrastructure/apps.list)
+while IFS= read -r app; do
   git -C ~/Repos/neometa/software/$app log --since="$LAST" --name-only --pretty=format: -- memory/ 2>/dev/null | sort -u | grep -v '^$' | sed "s|^|$app/|"
-done
+done < ~/Repos/infrastructure/apps.list
 # Recipe stream
 git -C ~/Repos/neometa/software/agent-compounds log --since="$LAST" --oneline -- skills/jef-prompts/
 ```

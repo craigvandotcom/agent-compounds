@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Writes typed, domain-routed, deduped lessons (facts/decisions/recipes) into git-tracked, qmd-indexed homes so the next session — on any machine, any agent — is faster. Called by ac-land; also runs standalone. NOT for mid-task notes (that is the memory-capture agent) or full bead-work closure (that is ac-land).
+description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Writes typed, domain-routed, deduped lessons (facts/decisions/recipes) into git-tracked, qmd-indexed homes so the next session — on any machine, any agent — is faster. Called by ac-land; also runs standalone. NOT for mid-task notes (that is the memory-capture agent), full bead-work closure (that is ac-land), or cross-session synthesis/lint (that is dream).
 ---
 
 # reflect — close the write loop
@@ -83,18 +83,28 @@ dir's `MEMORY.md` index (`- [Title](slug.md) — hook`).
 **decision** → `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` (same frontmatter, `type: decision`;
 body = context · decision · rationale · consequences).
 
-**recipe** → the prompt-library: add `agent-compounds/skills/jef-prompts/references/<slug>.md`
-(the full prompt verbatim + parameters + when-to-use) **and** a catalog line in
-`jef-prompts/SKILL.md`. That skill is the canonical recipe home — never start a parallel one.
+**recipe** → the prompt-library (one canonical location, in the root monorepo:
+`~/Repos/neometa/software/agent-compounds/skills/jef-prompts/`): add
+`references/<slug>.md` (the full prompt verbatim + parameters + when-to-use) **and** a
+catalog line in its `SKILL.md`. Even when reflecting inside an app repo, recipes go
+there — never start a parallel library.
 
 **skill-improvement** → **GATED.** Do not auto-apply. Present the exact proposed
 edit (target file + diff + the session evidence) and get explicit approval before writing
 — system behaviour changes need a human merge (consistent with ac-land's no-auto-apply rule).
 
-### 6. Report
+### 6. Golden-set check (optional, rare)
+If the session produced a clearly-above-bar exemplar (a sharp plan, clean diff, good
+review), offer to save it to `infrastructure/eval/golden/` per that README's format —
+quality over volume; most sessions add nothing here.
+
+### 7. Report
 Output a compact summary: each lesson → `{type, domain}` → file written/updated. Note any
 skill-improvements awaiting approval. If nothing cleared the bar, say "nothing worth
 capturing this session" — that's a valid outcome.
+
+> **Deploy dependency:** this skill loads `../context-engineering/SKILL.md` (sibling).
+> When deploying to an app via `deploy.sh`, always deploy both together.
 
 ---
 
