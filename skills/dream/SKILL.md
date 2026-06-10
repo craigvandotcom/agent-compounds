@@ -73,9 +73,11 @@ Each finding becomes a candidate proposal (usually `type: lint-fix`, low-risk).
 
 ### Phase 4 — Judge (the quality bar)
 
-Spawn an **independent judge subagent** (general-purpose; prompt in
-`references/judge-rubric.md`) over the candidate list. No subagent available (rare,
-headless edge) → apply the rubric inline, strictly, after re-reading it. Each candidate
+Spawn an **independent judge subagent** — the **`validator`** stance agent (its
+read-only adversarial posture is built for this; fall back to general-purpose if
+validator isn't deployed) with the prompt in `references/judge-rubric.md` over the
+candidate list. No subagent available (rare, headless edge) → apply the rubric inline,
+strictly, after re-reading it. Each candidate
 gets `score` (0–10) + `verdict` + one-line reason. **Only candidates scoring ≥7 become
 proposals.** Drop the rest into the run's `INDEX.md` under "Considered & cut" (one line
 each — auditability without queue noise).
