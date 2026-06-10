@@ -13,6 +13,12 @@ description: Use when QA-ing the NATIVE app build in the iOS Simulator — full 
 
 # Simulator QA Skill
 
+> **⚠ TEMP — primary tool choice is PENDING a Mac bake-off.** Before the
+> first real QA run on the Mac, execute **`_DECISION-tool-bakeoff.md`**
+> (AXe vs agent-device vs XcodeBuildMCP-CLI against Body Compass), finalize
+> this skill per its checklist, and delete that file. Until then, the AXe
+> default below is provisional.
+
 Drive the **real native app** in the iOS Simulator with an accessibility-tree
 see → act → assert loop. Tooling: **AXe** (see/tap/type/swipe — taps go through
 the real native touch pipeline) + **`xcrun simctl`** (lifecycle, screenshots,
