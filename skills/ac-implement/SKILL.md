@@ -299,6 +299,12 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
    # (session-end quality gate) and merge.
    ```
 
+   **For beads with e2e specs or bundle-exclusion ACs: always re-run independently, regardless of what the engineer's result file claims.**
+   - E2e: `pnpm playwright test tests/e2e/<spec>.spec.ts --reporter=line`
+   - Bundle exclusion: `pnpm build && pnpm verify:no-scripted` (fresh build, not cached `.next/`)
+
+   These two claim types had a 2/2 false-green rate on first engineer rounds (2026-06-10 session: s1p.1 bundle claim, s1p.2 e2e claims — both caught only by conductor re-runs, ~75 min combined re-spawn cost). Do NOT approve until you have personally observed green output.
+
 2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
 
 3. **Lint + type-check** — catch errors early:
