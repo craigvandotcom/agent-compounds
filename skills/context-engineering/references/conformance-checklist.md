@@ -64,6 +64,14 @@ re-established. Every item is checkable; an auditor must cite file+line for a vi
 - [ ] Machine-agnostic hooks live in TRACKED settings.json (not settings.local.json);
       scripts fail-safe (any error → exit 0, no output) and are latency-budgeted
       (blocking hooks ≲1.5s).
+- [ ] Hook CONTENT audited, not just wiring — injected-every-prompt files
+      (delegation-reminder-style) are hot-lane context; stale instructions there
+      propagate to every session (B6 found one mandating a deactivated memory system
+      and retired agents months after both changed).
+- [ ] Every index line resolves to a real file, and every claimed loader mechanism
+      ("hook X loads file Y") actually exists in a tracked settings/hook — phantom
+      structure is worse than no structure (B6: 5 dead scoped-index links + a
+      never-committed fact, with no loader anywhere).
 
 ## Projections (`.gemini/`, `.codex/`, `.agents/`, per-app `.claude/`)
 - [ ] Projections are symlinks/generated from ONE canonical source — never hand-drifted
