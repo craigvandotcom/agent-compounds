@@ -1,57 +1,44 @@
-# AGENTS.md — Subagent Context Template
-
-> **This is a template.** Copy it into your project root and fill in each section.
-> Subagents spawned by flywheel skills read this file for project context.
-> Delete this instructions block after filling in.
+# agent-compounds — Agent Entry Point
 
 ## Project Overview
 
-| Field     | Value                          |
-| --------- | ------------------------------ |
-| **Name**  | <!-- e.g. my-saas-app -->      |
-| **Stack** | <!-- e.g. Python/FastAPI/Postgres, TypeScript/Next.js/Supabase --> |
-| **Type**  | <!-- e.g. web app, CLI tool, library, mobile app --> |
-| **Purpose** | <!-- one sentence --> |
+| Field | Value |
+|---|---|
+| **Name** | agent-compounds |
+| **Stack** | Markdown skills/agents + bash (`deploy.sh`); no app runtime |
+| **Type** | Shared engineering tooling registry (skills, agents, prompt library, plans) |
+| **Purpose** | Canonical source of the neoMeta engineering skill/agent registry, symlink-deployed into every app |
 
 ## Project Commands
 
-> Map each operation to the actual command in this project.
-> Leave blank if not applicable. Commands are referenced by flywheel workflows.
-
-| Operation      | Command                        |
-| -------------- | ------------------------------ |
-| **Dev server** | <!-- e.g. pnpm dev, cargo run, python manage.py runserver --> |
-| **Test**       | <!-- e.g. pnpm test, pytest, cargo test --> |
-| **Lint**       | <!-- e.g. pnpm lint, ruff check ., cargo clippy --> |
-| **Type-check** | <!-- e.g. pnpm type-check, mypy ., N/A --> |
-| **Format**     | <!-- e.g. pnpm format, ruff format ., cargo fmt --> |
-| **Build**      | <!-- e.g. pnpm build, cargo build --release --> |
-| **Quality gate** | <!-- full pipeline, e.g. pnpm format && pnpm lint && pnpm type-check && pnpm test --> |
+| Operation | Command |
+|---|---|
+| **List deployables** | `./deploy.sh --list` |
+| **Deploy to an app** | `./deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
+| **Dry run** | `./deploy.sh <target> --all -n` |
+| Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
 ## Architecture
 
-> Show the source layout so agents know where to find things.
-
 ```
-project-root/
-├── src/           # <!-- describe -->
-├── tests/         # <!-- describe -->
-├── ...
+agent-compounds/
+├── skills/        # the registry — each dir = one skill (SKILL.md + references/ + workflows/)
+│   ├── ac-*       # the compounding-engineering pipeline (plan→beadify→implement→review→merge→land)
+│   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
+│   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
+├── agents/        # subagent definitions (engineer, reviewer, browser-agent, browser-tester)
+│   └── sub-agents/  # FROZEN legacy OSS snapshot — never symlink from here
+├── deploy.sh      # symlinks (never copies) skills/agents into a target's .claude/
+├── templates/     # AGENTS.md template for NEW projects (the boilerplate lives there, not here)
+└── _plans/        # working plans (context-architecture, …)
 ```
-
-## Available Skills (optional)
-
-> If the project has `.claude/skills/`, list them here so agents know what domain context is available.
-
-| Skill | Path | Load when |
-| ----- | ---- | --------- |
-| <!-- e.g. supabase --> | <!-- .claude/skills/supabase/SKILL.md --> | <!-- DB/schema/migration work --> |
 
 ## Rules
 
-> Project-specific constraints agents must follow.
-
-- <!-- e.g. TypeScript strict — no `any` types -->
-- <!-- e.g. All new code must have tests -->
-- <!-- e.g. Never force push -->
-- <!-- e.g. Follow existing patterns in neighboring files -->
+- **Symlink, never copy** — deploy.sh refuses to overwrite real files; canonical lives here.
+- **Skills carry domain knowledge; agents carry stance + tool permissions only**
+  (constitution: `skills/context-engineering/SKILL.md`).
+- **Deploy-together dependency:** `reflect` loads `context-engineering` — always ship both.
+- New skills pass the selectability test (description = WHEN, not HOW) and the overlap
+  check against this registry before landing.
+- Recipes go in `skills/jef-prompts/` — never a parallel prompt library.

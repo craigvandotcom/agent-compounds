@@ -31,6 +31,13 @@ re-established. Every item is checkable; an auditor must cite file+line for a vi
       action in code — not the reverse.
 
 ## L3 — memory substrate
+> Auditor calibration (from the 1.6.1 wave): the L3 home is **`<repo-root>/memory/auto/`**
+> for each own-repo app and `infrastructure/memory/auto/` / `neometa/memory/auto/` at root
+> — NOT `.claude/memory/` (that's the legacy curated store, slated for B6 migration).
+> Legacy harness body format (`**Why:** / **How to apply:**` lines) is VALID per the
+> compatibility map — not poisoning. Re-verify every HIGH finding against disk before
+> reporting: the wave produced 10 rejected findings (hallucinated quotes, wrong paths).
+
 - [ ] Markdown is the source of truth; every index/cache (CM playbook, qmd sqlite) is
       derived + rebuildable; nothing durable exists ONLY in a tool-specific format.
 - [ ] Every home is git-tracked, non-dot, qmd-indexed; harness-keyed dirs are symlinks
