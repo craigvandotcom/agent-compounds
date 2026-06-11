@@ -474,7 +474,21 @@ Log each with rationale: why this is a clear technical improvement, not a design
 
 **If no DESIGN_DECISION or SCOPE_ESCALATION items remain:** Skip to commit.
 
-**If items remain:**
+**Exhaust rule (see `skills/_shared/bead-conventions.md`):** nothing actionable
+leaves this phase as prose. Before (or instead of) asking:
+
+- Confirmed defect, out of this wave's scope → `br create -t bug --labels review-finding`
+- Plausible-but-unverified concern an agent could chase → `br create -t investigation --labels review-finding`
+- Genuine taste/product/risk fork AND the user is not interactively present
+  (autonomous run) → `br create -t decision --labels human-gate` with a
+  pre-staged memo (context, options + trade-offs, recommendation), block any
+  dependent beads on it, and continue. AskUserQuestion is only for
+  synchronous forks with the user present.
+
+Apply the anti-inflation rules: dedupe via `br search` first; nits stay in
+the report.
+
+**If items remain (user present):**
 
 ```
 AskUserQuestion(

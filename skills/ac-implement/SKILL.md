@@ -47,14 +47,14 @@ br ready --json
 
 If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or check `br list --json` for blocked items."
 
-**Filter out unrefined beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` removes it. Only beads WITHOUT this label are eligible for implementation:
+**Filter out unrefined and human-gated beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` removes it. Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads WITHOUT both labels are eligible:
 
 ```bash
-# Check if any ready beads are refined (no "unrefined" label)
-br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)]'
+# Ready beads that are refined AND not human-gated
+br ready --json | jq '[.[] | select((.labels | index("unrefined") | not) and (.labels | index("human-gate") | not))]'
 ```
 
-If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready."
+If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-next` for the decision docket."
 
 ### Ensure Wave Branch (single-branch rule)
 
@@ -221,11 +221,11 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
-**Guard: verify the selected bead is refined.** Check the bead's labels — if it has `unrefined`, skip it and pick the next one:
+**Guard: verify the selected bead is refined and not human-gated.** Check the bead's labels — if it has `unrefined` or `human-gate`, skip it and pick the next one:
 
 ```bash
-# Check if the selected bead has the "unrefined" label
-br show <id> --json | jq '.labels | index("unrefined")'
+# Check the selected bead's labels for either exclusion
+br show <id> --json | jq '.labels | (index("unrefined") // index("human-gate"))'
 ```
 
 If the bead is unrefined:

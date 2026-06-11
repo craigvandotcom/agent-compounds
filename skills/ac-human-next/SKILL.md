@@ -33,6 +33,30 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 Run all scans simultaneously. Each scan produces candidate items.
 
+### A0. The Decision Docket (PRIMARY source)
+
+Human-gated beads are the first-class channel for human-required work (see
+`skills/_shared/bead-conventions.md`): agents file `-t decision` beads with
+the `human-gate` label, pre-staged with a decision memo (context, options +
+trade-offs, recommendation). Agents may enrich them but never close them —
+they survive every autonomous sweep until the human decides.
+
+```bash
+br list --json | jq '[.[] | select(.labels // [] | index("human-gate")) | select(.status != "closed")]'
+```
+
+Present these FIRST, each with its memo summary. The sit-down flow per item:
+human reads memo → states the decision → agent records it
+(`br comments add <id> "DECISION (<human>): <choice> — <why>"`) → agent
+executes consequences → closes the bead → downstream blocked beads unblock
+automatically.
+
+**Migration duty:** any human-pending item found in the legacy file scans
+below (B–E) that is NOT yet a bead should be converted into a `human-gate`
+bead during this run (with `-t decision` for choices, `-t task` for manual
+actions like account setups/store submissions), referencing the source file.
+The file scans are a safety net, not the system of record.
+
 ### A. User's Manual Backlog
 
 ```bash

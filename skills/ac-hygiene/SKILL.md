@@ -214,7 +214,15 @@ Read the consensus registry. Collect all remaining items:
 
 **If no `DESIGN_DECISION` or `SCOPE_ESCALATION` items remain:** Skip — proceed to quality gate.
 
-**If items remain:**
+**Exhaust rule (see `skills/_shared/bead-conventions.md`):** nothing actionable
+leaves as prose. Out-of-scope confirmed issues → `br create -t bug --labels
+hygiene-finding`. Worth-chasing uncertainties → `-t investigation`. Genuine
+taste/product forks in an autonomous run (user not present) → `-t decision
+--labels human-gate` with a pre-staged memo, then continue — never stall the
+sweep on a question. Dedupe via `br search` first; nits stay in the report
+(hygiene is the highest inflation risk — a bead is something you'd schedule).
+
+**If items remain (user present):**
 
 ```
 AskUserQuestion(
