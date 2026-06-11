@@ -60,7 +60,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-qa-simulator** | QA the native iOS build in the Simulator — journeys, appearance matrix, screenshots/video |
 | **vm-heavy-prep** | Prepare a Linux VM for heavy parallel work — free memory, restart leaky processes, report capacity |
 
-> **Not a deployable skill:** `app-distribution/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill.
+> **Not a deployable skill:** `ac-distribute/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill — the pipeline's SHIP lane (TestFlight push, feedback triage, store release), downstream of merge.
 
 > **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
 
