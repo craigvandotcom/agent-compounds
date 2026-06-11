@@ -5,63 +5,72 @@
 ```bash
 # One-time
 xcode-select -p                          # verify Xcode CLT present
-brew install cameroncooke/axe/axe        # see/act CLI (accessibility + HID)
-brew install jq                          # JSON parsing for simctl/axe output
+npm install -g agent-device              # see/act CLI (XCUITest engine)
+brew install jq                          # JSON parsing for simctl output
 
 # Verify
 xcrun simctl list devices | head
-axe --help
+agent-device devices --platform ios
 ```
 
-That's the whole stack. AXe rides Apple's private accessibility + HID APIs
-(the same frameworks Meta's idb uses) — no WebDriverAgent to build/re-sign, no
-server process, no agent app inside the simulator.
+First `snapshot` after `open` builds the XCUITest runner app into the target
+simulator (one-time per sim, ~seconds on a warm machine). No WebDriverAgent
+to re-sign, no server process to babysit — the runner is rebuilt automatically
+when needed (`agent-device prepare ios-runner --platform ios` forces it).
 
-**For hybrid apps:** ensure web controls carry `aria-label`s (or visible
-text) — those become the accessibility labels AXe targets. This is the only
-app-side requirement.
+**Gotchas (hit in the 2026-06 bake-off):**
 
-## Option: XcodeBuildMCP — use its CLI MODE, not the MCP server
+- **Duplicate sim names**: agent-device selects devices by *name* and will
+  happily boot a same-named sim on an older iOS runtime. Rename duplicates:
+  `xcrun simctl rename <udid> "iPhone 17 Pro (26.4)"`.
+- **iOS keyboard**: cannot be dismissed by the tool (`keyboard dismiss` →
+  `UNSUPPORTED_OPERATION`). Plan flows around it — `type $'\n'` to submit,
+  blur via a sheet round-trip. See SKILL.md discipline rule 3.
+- **For hybrid apps:** ensure web controls carry `aria-label`s (or visible
+  text) — those become the accessibility labels agent-device targets. This is
+  the only app-side requirement.
 
-[getsentry/XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) bundles
-a pinned AXe binary (no version skew) and adds two genuinely better
-primitives on top of the same engine:
+Useful extras that come free with agent-device: `.ad` session replays
+(`open --save-script`, `replay`, `test` for suites — covers the durable
+regression-artifact need), `alert` handling, `push` payload delivery,
+`record start/stop` video, `network log`, `perf`.
 
-- `snapshot_ui` → semantic snapshot with **elementRef** targets (`tap {"elementRef":"e8"}`
-  — no coordinate math) + screen-hash dedup (`sinceScreenHash`)
-- `wait_for_ui` → polls until a predicate holds (label/textContains/gone/settled)
-  — a real assertion/synchronization primitive nothing else has
-
-**Prefer it as a CLI** (`xcodebuildmcp <workflow> <tool>` + the skill that
-`xcodebuildmcp init` installs), NOT as an MCP server:
-
-- Sentry's own 1,350-trial study (Feb 2026): MCP mode ≈ same success rate as
-  a primed shell at **+106% tokens / +135% cost**.
-- Claude Code **subagents can't reliably reach MCP servers** (background
-  subagents not at all; some hallucinate tool results) — a CLI works in every
-  spawned engineer/reviewer/tester; an MCP server only at top level.
-- House convention is CLI-over-MCP for exactly these reasons.
+## Fallback: AXe + simctl (engine diversity)
 
 ```bash
-brew install getsentry/xcodebuildmcp/xcodebuildmcp
-xcodebuildmcp init        # installs its CLI agent skill
-xcodebuildmcp doctor      # verify environment
-# Verify once: snapshot_ui / wait_for_ui reachable via the ui-automation CLI
-# workflow (CLI and MCP "share the same tool implementations" per docs).
+brew install cameroncooke/axe/axe
 ```
 
-MCP-server mode (`claude mcp add XcodeBuildMCP xcodebuildmcp mcp`) is an
-opt-in for long top-level interactive pairing sessions only — enable just the
-`simulator` workflow to cap schema cost.
+AXe rides Apple's private accessibility + HID APIs — a *different* failure
+class than the XCUITest runner. When an Xcode update breaks one, the other
+usually still works. Keep it installed; reach for it when agent-device's
+runner is broken.
 
-**Caveats (as of 2026-06):** the elementRef/`wait_for_ui` runtime model
-shipped 2026-06-01 — very new. Known rough edges: refs can go stale with an
-unhelpful error (issue #445), and `snapshot_ui` can return an **empty tree
-while reporting success** when the sim's AX daemon isn't ready (#408) — treat
-empty/zero-frame snapshots as "not ready → retry / relaunch app", and fall
-back to AXe coordinate taps if refs misbehave. There is **no published
-evidence yet of anyone running it against a Capacitor/WKWebView app** — spike
-it against your app before relying on it for a full pass.
+**Hard limit on webview apps (verified on iOS 26.5, AXe 1.7.1):**
+`axe describe-ui` returns **empty Groups for all WKWebView content** — full
+tree enumeration is impossible. Only two things still work:
+
+- `axe describe-ui --point x,y` — correct role/label/frame for the element at
+  a point (probe-then-tap, guided by a screenshot)
+- HID primitives: `axe tap/type/swipe/key` (key 40 = Return) — fine once a
+  field is focused
+
+That makes AXe a **smoke/stopgap tool, not a journey driver**, for hybrid
+apps: screenshot → point-probe → tap loops are slow, blind to toasts/layout
+shifts, and violate tree-first discipline. Native-UI apps are unaffected.
+
+## Eliminated: XcodeBuildMCP (for webview apps)
+
+Bake-off result (2026-06, v2.6.2): its CLI mode passes the transport gate
+(`ui-automation snapshot-ui` / `wait-for-ui` are CLI-reachable), but it
+bundles the AXe engine and inherits the same webview blindness — `snapshot_ui`
+sees 0 targets on every webview screen, so its elementRef/`wait_for_ui`
+primitives never engage. It does report honestly ("no likely interaction
+targets found") rather than empty-tree-as-success. **Re-evaluate only for
+native-UI (SwiftUI/UIKit) apps**, where its `wait_for_ui` predicates and
+screen-hash dedup are genuinely better primitives than raw AXe — and prefer
+its CLI over its MCP server (Sentry's own data: MCP ≈ same success at +106%
+tokens; Claude Code subagents can't reliably reach MCP servers).
 
 Avoid WebDriverAgent-based servers (e.g. mobile-mcp) for sim-only iOS work:
 WDA breaks on new Xcode/iOS versions for weeks at a time.
@@ -70,15 +79,6 @@ WDA breaks on new Xcode/iOS versions for weeks at a time.
 > first-party agent-driven app automation (~fall 2026). This skill's method
 > (see → act → assert over the a11y tree, journeys, checklist) is
 > tool-agnostic — re-evaluate the tool layer when Xcode 27 ships.
-
-## Option: Maestro (durable regression artifacts)
-
-If a QA pass should leave behind a *repeatable* test, Maestro YAML flows
-(`tapOn: "Label"`, `assertVisible`, built-in retry/wait) run on sims and in
-CI, and Maestro ships an official MCP (`claude mcp add maestro -- maestro mcp`,
-needs Java). Webview content is reachable via the same accessibility tree.
-Pattern: explore with AXe interactively → commit the validated flow as
-Maestro YAML → `maestro test flows/` in CI.
 
 ## Appendix: Linux → Mac remote driving (idb)
 
@@ -97,10 +97,10 @@ idb ui swipe <x1> <y1> <x2> <y2>
 
 Works, but: Meta maintains idb at a slow burn (expect lag after Xcode
 releases), the companion must be (re)started on the Mac out-of-band, and
-screenshots/video still need `simctl` on the Mac side. **Default remains: run
-simulator QA from a Mac session; use this only when a Mac session is
-impossible.** Builds can't run from Linux either way — the Mac is required
-regardless.
+screenshots/video still need `simctl` on the Mac side. idb shares AXe's
+private-AX-API plane, so expect the same webview blindness on tree dumps.
+**Default remains: run simulator QA from a Mac session.** Builds can't run
+from Linux either way — the Mac is required regardless.
 
 ## Appendix: Layer 3 — DOM-in-shell (Appium webview context)
 

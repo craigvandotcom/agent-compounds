@@ -13,20 +13,20 @@ description: Use when QA-ing the NATIVE app build in the iOS Simulator — full 
 
 # Simulator QA Skill
 
-> **⚠ TEMP — primary tool choice is PENDING a Mac bake-off.** Before the
-> first real QA run on the Mac, execute **`_DECISION-tool-bakeoff.md`**
-> (AXe vs agent-device vs XcodeBuildMCP-CLI against Body Compass), finalize
-> this skill per its checklist, and delete that file. Until then, the AXe
-> default below is provisional.
-
 Drive the **real native app** in the iOS Simulator with an accessibility-tree
-see → act → assert loop. Tooling: **AXe** (see/tap/type/swipe — taps go through
-the real native touch pipeline) + **`xcrun simctl`** (lifecycle, screenshots,
-video, push payloads, deep links, permissions, appearance). No WebDriverAgent,
-no agent app inside the simulator, nothing to re-sign per Xcode release.
+see → act → assert loop. Tooling: **agent-device** (Callstack; XCUITest engine —
+sees the full webview tree, @ref targeting, wait/is/find primitives, real HID
+taps) + **`xcrun simctl`** (lifecycle, screenshots, video, push payloads, deep
+links, permissions, appearance). AXe is the engine-diverse fallback (point-probe
+only on webview apps — see `setup.md`).
 
-Android (emulator) support: planned. This skill is iOS-first; the structure
-(layers, checklist, journey reuse) is platform-agnostic and will be copied.
+> Tool decision settled 2026-06-11 by bake-off against a Capacitor app on
+> iOS 26.5: AXe/XcodeBuildMCP tree dumps are **webview-blind** (empty Groups);
+> agent-device's XCUITest snapshot sees everything. Re-evaluate the tool layer
+> when Xcode 27's first-party agent automation ships (~fall 2026).
+
+Android (emulator) support: planned — agent-device drives Android with the same
+commands, so the structure (layers, checklist, journey reuse) carries over.
 
 ## Platform Gate (read first)
 
@@ -40,7 +40,7 @@ friction-prone — see `setup.md` appendix; don't attempt it ad hoc.
 | Layer | Tool | Coverage | Cost |
 | ----- | ---- | -------- | ---- |
 | 1. Browser (DOM) | `browser-testing` skill (agent-browser) | Exhaustive: every page, button, state, edge case | Cheap, fast |
-| 2. **Simulator (this skill)** | AXe + simctl | Every journey happy-path with REAL native taps + the native-shell checklist | Slower per action |
+| 2. **Simulator (this skill)** | agent-device + simctl | Every journey happy-path with REAL native taps + the native-shell checklist | Slower per action |
 | 3. DOM-in-shell | Appium webview context | DOM truth inside the real shell (origin/cookies/storage) | Flaky; escape hatch only (`setup.md`) |
 
 For hybrid (Capacitor) apps the webview renders the **same bundle** as the
@@ -66,15 +66,13 @@ sparingly.
 ## Toolchain
 
 ```bash
-brew install cameroncooke/axe/axe   # see + act (accessibility tree, HID taps)
+npm install -g agent-device   # see + act (XCUITest runner; first snapshot builds it)
+brew install jq               # JSON parsing for simctl output
 # simctl ships with Xcode — nothing to install
 ```
 
-Optional upgrade: **XcodeBuildMCP in CLI mode** (Sentry) — same engine (AXe,
-bundled+pinned), adds `snapshot_ui` elementRefs + `wait_for_ui` predicates
-through plain Bash. Prefer its CLI over its MCP server (token cost; Claude
-Code subagents can't reliably reach MCP servers). New + unproven on webview
-apps as of 2026-06 — spike before relying on it. See `setup.md`.
+agent-device matches simulators **by name** — if two sims share a name it can
+boot the wrong one. Rename duplicates first (`xcrun simctl rename <udid> "<name (os)>"`).
 
 ## Core loop
 
@@ -86,68 +84,92 @@ apps as of 2026-06 — spike before relying on it. See `setup.md`.
 # 1. Simulator up (keep it warm between runs — cold boot is 20–60s)
 xcrun simctl boot "<sim-name>" 2>/dev/null || true
 xcrun simctl bootstatus "<sim-name>"        # WAIT for this, not the Booted flag
-UDID=$(xcrun simctl list devices booted -j | jq -r '[.devices[][]|select(.state=="Booted")][0].udid')
 
-# 2. Launch with console logs
-xcrun simctl launch --console-pty booted <bundle-id> &   # or plain `launch` + log stream
+# 2. Open an app session (binds device + app; --relaunch for a clean restart)
+agent-device open <bundle-id> --platform ios --device "<sim-name>"
 
-# 3. SEE — accessibility tree: labels, roles, frames (JSON)
-axe describe-ui --udid $UDID
+# 3. SEE — full accessibility tree with @ref targets, roles, labels, values
+agent-device snapshot -i                    # add --raw for frames + hittability
 
-# 4. ACT — tap the CENTER of an element's frame from step 3
-axe tap -x <cx> -y <cy> --udid $UDID
-axe type "text to enter" --udid $UDID
-axe swipe --start-x 200 --start-y 600 --end-x 200 --end-y 200 --udid $UDID
+# 4. ACT — target by @ref from the LATEST snapshot (refs renumber every snapshot)
+agent-device click @e24
+agent-device fill @e19 "text"               # REPLACES field content (no clear needed)
+agent-device type $'\n'                     # types into the FOCUSED field
+agent-device scroll down 200 | swipe 200 600 200 250
 
-# 5. ASSERT — re-run describe-ui, check expected label/value appeared;
-#    poll with short sleeps for async transitions (2–10s budget)
+# 5. ASSERT / SYNC — built-in waits beat sleep-and-resnapshot
+agent-device wait "Dashboard" 15000         # text/ref/selector, with timeout
+agent-device is visible "<selector>"        # predicate assert
 
 # 6. EVIDENCE
 xcrun simctl io booted screenshot /tmp/qa-<step>.png
-xcrun simctl io booted recordVideo --codec h264 /tmp/qa-flow.mp4 &  # kill -INT to stop
+agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
 ```
 
 ### Discipline rules (non-negotiable)
 
-1. **Tree first, pixels second.** Act only on frames from `describe-ui`. Never
-   guess coordinates from a screenshot. Screenshots are for *visual
-   confirmation* of a state the tree already proved.
-2. **Re-snapshot after every navigation, sheet, scroll, or animation.** Frames
-   go stale; taps on stale frames are the top flake source.
-3. **Element not in the tree?** Scroll it into view first (the tree only
+1. **Tree first, pixels second.** Act only on @refs from the latest
+   `snapshot -i`. Never guess coordinates from a screenshot. Screenshots are
+   for *visual confirmation* of a state the tree already proved.
+2. **Refs renumber on every snapshot.** Re-snapshot after every navigation,
+   sheet, scroll, keyboard event, or animation — then use the NEW refs. Taps
+   on stale refs are the top flake source.
+3. **The iOS keyboard is the #1 mis-tap source.** agent-device cannot dismiss
+   it (`keyboard dismiss` is unsupported without a native dismiss control).
+   While the keyboard is up, frames of elements under it are stale/unhittable —
+   a tap there hits keyboard keys and **types characters into your form**.
+   - NEVER tap an element whose frame center sits in the keyboard's region.
+   - Submit forms / commit inputs with `type $'\n'` (fires the web form/input
+     Enter handler) instead of hunting for a button under the keyboard.
+   - To blur: tap a verified non-interactive node, or round-trip a top-of-form
+     control that opens its own sheet (open → close = input blurred, keyboard
+     gone). Verify with a fresh snapshot containing no `[key]` nodes.
+4. **Checkpoint your fills.** After `fill`, verify the value landed (snapshot
+   grep) before submitting — fills can race screen transitions and land
+   nowhere. A wait on the *previous* screen's disappearance is cheaper than
+   diagnosing a cascade.
+5. **Empty/keyboard-only snapshot ⇒ retry.** Rarely (~1/50) the snapshot
+   returns only keyboard nodes or a near-empty tree while reporting success.
+   Treat as "not ready": retry once or twice before concluding anything.
+6. **Element not in the tree?** Scroll it into view first (the tree only
    exposes renderable content). Still missing → that's an **accessibility bug
    in the app** (unlabeled control) — report it as a finding, don't hack
    around it with coordinates.
-4. **System UI is tappable too.** Permission alerts, native OAuth sheets,
-   share sheets all appear in the tree — handle them like any element.
-5. **Animations:** if taps mis-land during transitions, wait for the tree to
-   stabilize (two identical consecutive snapshots = settled).
+7. **System UI is tappable too.** Permission alerts, native OAuth sheets,
+   share sheets, keyboard-education overlays (QuickPath tips) all appear in
+   the tree — handle them like any element (`alert` inspects/handles platform
+   alerts directly).
+8. **Prefer @refs over semantic label clicks.** `click "Label"` resolves
+   internally but failed silently in testing; `click @ref` from a fresh
+   snapshot is deterministic. `hittable:false` in `--raw` output is advisory,
+   not authoritative — verify by outcome (wait/assert), not by flag.
 
 ## Seeing the WebView (hybrid/Capacitor apps)
 
-WebKit projects the DOM's accessibility tree into UIAccessibility, so web
-content appears natively typed: `Button`, `StaticText`, `TextField`, `Link`.
+XCUITest projects the DOM's accessibility tree fully: web content appears as
+`[button]`, `[text]`, `[text-field]`, `[securetextfield]`, `[link]`,
+`[switch]`, with `[off-screen below]` summaries for scrolled-out content.
 
 - Labels come from **visible text, `aria-label`, `alt`, `placeholder`** — the
   app's existing journey button-labels usually work verbatim.
 - `data-testid`, CSS selectors, DOM attributes are **invisible** on this
   plane. If a control is unreachable, the fix is an `aria-label` (which is
   also an a11y win) — not Layer 3.
-- Element-dense pages snapshot slowly; prefer targeted scroll + re-snapshot
-  over dumping huge trees repeatedly.
+- Element-dense pages still snapshot fast (sub-second for 300+ node trees);
+  visible-node listing + off-screen summary keeps output compact.
 
 ## State control quick reference (simctl)
 
 | Need | Command |
 | ---- | ------- |
-| Deep link / OAuth callback | `xcrun simctl openurl booted "<scheme>://<path>"` |
-| Push notification payload | `xcrun simctl push booted <bundle-id> payload.apns` |
+| Deep link / OAuth callback | `xcrun simctl openurl booted "<scheme>://<path>"` (or `agent-device open <url>`) |
+| Push notification payload | `xcrun simctl push booted <bundle-id> payload.apns` (or `agent-device push`) |
 | Pre-grant/revoke permission | `xcrun simctl privacy booted grant photos <bundle-id>` (camera, location, …) |
 | Dark / light mode | `xcrun simctl ui booted appearance dark` |
 | Dynamic Type | `xcrun simctl ui booted content_size accessibility-extra-extra-extra-large` |
 | GPS | `xcrun simctl location booted set 51.5,-0.12` |
 | Deterministic screenshots | `xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4` (clear when done) |
-| App logs | `xcrun simctl spawn booted log stream --predicate 'subsystem CONTAINS "<bundle-id>"'` |
+| App logs | `xcrun simctl spawn booted log stream --predicate 'subsystem CONTAINS "<bundle-id>"'` (or `agent-device logs`) |
 | Reset app state | `xcrun simctl uninstall booted <bundle-id>` then reinstall |
 | Face ID match/no-match | see `perf-and-limits.md` (notifyutil pattern) |
 
@@ -156,7 +178,11 @@ content appears natively typed: `Button`, `StaticText`, `TextField`, `Link`.
 The app's `CORE/journeys/*.md` files are the **what** (flows, exact button
 labels, checkpoints, edge cases). This skill is the **how**. To run a journey
 natively: follow its happy path step-by-step, locating each step's button
-label in `describe-ui` output instead of a DOM ref.
+label in `snapshot -i` output instead of a DOM ref.
+
+**Journey docs drift.** When a label/flow in the doc doesn't match the tree,
+trust the tree, complete the journey via the real UI, and fix the doc as part
+of the QA pass (that's a finding, not a blocker).
 
 The app's CORE must also provide **`journeys/native.md`** with the native
 facts this skill needs:
@@ -168,6 +194,7 @@ facts this skill needs:
 - native-only flows (OAuth sheets, plugin calls) and how to exercise them
 - sim-impossible flows (camera, Bluetooth, …) and their stand-ins
 - app-specific native hot spots (keyboard config, splash behavior, …)
+- validated act/assert idioms for the app's tricky screens
 ```
 
 If `native.md` doesn't exist in the consuming app yet, create it from the
@@ -207,14 +234,15 @@ a11y_findings: [unlabeled controls discovered via the tree]
 perf_observations: [qualitative only — hangs, freezes, leaks]
 evidence: [screenshot/video paths]
 status: PASS | FAIL
-notes: [issues, sim-impossible flows skipped and why]
+notes: [issues, sim-impossible flows skipped and why, journey-doc drift fixed]
 ```
 
 ## Teardown
 
-- Stop any `recordVideo` processes (`kill -INT`).
+- Stop any recordings (`agent-device record stop`, `kill -INT` simctl video).
 - `xcrun simctl status_bar booted clear` if you overrode it.
 - Reset appearance/content-size if you changed them.
+- Delete test entries/data the run created (leave the account as found).
 - **Leave the simulator booted** (warm sim = fast next run). Do NOT shutdown
   or erase unless state pollution is suspected.
 
@@ -223,21 +251,27 @@ notes: [issues, sim-impossible flows skipped and why]
 - **Stale UI / missing recent changes** → web assets weren't synced; rerun the
   app's full build command (never bare `xcodebuild`). Check bundle freshness
   before blaming the code.
-- **`describe-ui` missing an element** → not rendered yet (wait), offscreen
+- **`SESSION_NOT_FOUND`** → run `agent-device open <bundle-id>` first; a
+  session binds device + app.
+- **"App bundle is not installed"** → agent-device matched a different sim
+  with the same name; rename duplicates and retarget.
+- **Snapshot missing an element** → not rendered yet (use `wait`), offscreen
   (scroll), or unlabeled (file a11y finding).
-- **Taps mis-land** → stale frames; re-snapshot, wait for settle.
-- **Sim "Booted" but unresponsive** → you didn't wait for `bootstatus`.
-- **AXe breaks after Xcode update** → `brew upgrade axe`; known lag of days,
-  fall back to XcodeBuildMCP or `idb` if urgent.
+- **Taps type characters instead of tapping** → element was under the
+  keyboard; see discipline rule 3.
+- **Snapshot returns only keyboard/near-empty tree** → transient; retry.
+- **XCUITest runner breaks after Xcode update** → `npm update -g agent-device`,
+  re-run `agent-device prepare ios-runner --platform ios`; AXe point-probes
+  are the engine-diverse stopgap (`setup.md`).
 - **Permission dialog blocks flow unexpectedly** → pre-grant with
-  `simctl privacy` in setup, or handle the alert via the tree.
+  `simctl privacy` in setup, or handle via `agent-device alert`.
 
 ## Related files
 
 - `native-shell-checklist.md` — what ONLY the simulator/native shell can catch
 - `perf-and-limits.md` — CAN/MISLEADING/CANNOT taxonomy, hardware matrix,
   xctrace recipes, visual regression, automation speed tricks
-- `setup.md` — Mac setup, XcodeBuildMCP option, Linux→Mac remote appendix,
+- `setup.md` — Mac setup, AXe fallback, Linux→Mac remote appendix,
   Appium webview escape hatch (Layer 3)
 - `browser-testing/SKILL.md` — Layer 1 (exhaustive DOM coverage)
 - Consuming app's `CORE/journeys/` + `CORE/journeys/native.md` — the what
