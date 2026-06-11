@@ -150,7 +150,11 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    EVERY mutation (save/upload/delete/submit), poll that region's children
    for ~5s at sub-second cadence before declaring the step clean — toast
    text present = a finding, even when the operation eventually succeeded.
-10. **Screenshot hygiene for long sessions.** Downscale before reading —
+10. **Empty ≠ clean.** Before interpreting an empty list/zero-count grep as
+   success, check the tree for error-state nodes (error boundaries, "Retry"
+   buttons, error toasts). A view in an error state greps exactly like an
+   empty view — the canonical false-clean.
+11. **Screenshot hygiene for long sessions.** Downscale before reading —
    `sips -Z 1500 <png>` — BEFORE the first Read. The model API caps images
    at 2000px/side once a conversation carries many images; raw modern-iPhone
    screenshots (2622px tall) read fine early in a session and then ALL new
