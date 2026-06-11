@@ -84,6 +84,37 @@ git rebase origin/main
 
 **If conflicts:** Resolve them, run quality gate again, then continue.
 
+### Native Sim QA Smoke Gate (conditional)
+
+Hybrid/native apps only. Runs the post-rebase state — the thing that actually merges.
+Three conditions, all must hold; otherwise skip silently:
+
+```bash
+# 1. Project has a native app at all
+[ -d ios ] || SKIP_SIM_SMOKE=1
+
+# 2. The wave touched native-adjacent surface
+git diff main...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capacitor' \
+  || git diff main...HEAD -- package.json | grep -qE '@capacitor|capacitor' \
+  || SKIP_SIM_SMOKE=1
+
+# 3. We're on a Mac (simulators need Xcode)
+[ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed
+```
+
+- **All hold** → load **`ac-qa-simulator/SKILL.md`** and run a **smoke** pass
+  (build via the app's own build command, launch, auth, primary journey —
+  facts in the app's `CORE/journeys/native.md`). ~2–3 min on a warm sim.
+- **Smoke FAILS** → STOP before creating the PR. Report the `SIM_QA_VALIDATION`
+  block and ask: abort (fix first) vs merge anyway (not recommended).
+- **`SKIP_SIM_SMOKE=mac-needed`** (native-touching wave, but not on a Mac) →
+  do NOT block the merge; surface a loud note in the Phase 4 report:
+  "native-touching wave merged without sim QA — run `ac-qa-simulator` smoke
+  from a Mac session before the next TestFlight push."
+
+The user can also trigger a smoke/full pass manually at any time, independent
+of this gate ("run a simulator QA smoke").
+
 ### Version Bump
 
 Scan the wave's commits for conventional-commit prefixes and suggest the next semver bump. The version-bump commit lands on the wave branch BEFORE the push, so the PR shows it as part of the merge unit.
@@ -492,6 +523,7 @@ rm -rf "$ARTIFACTS_DIR"
 - **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
 - **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)
+- **Sim smoke gate is conditional** — only for native-touching waves on a Mac; never blocks from Linux, but the report must flag the skipped gate
 - **Auto-fix obvious issues, ask about the rest** — same triage philosophy as the review commands
 - **Re-poll is short** — 5 minutes max after pushing fixes, don't loop forever
 - **Abort is always an option** — if checks keep failing, let the user decide
