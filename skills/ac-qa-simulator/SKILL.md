@@ -227,15 +227,30 @@ or "note for later" — **file each one as a bead the moment it's confirmed**,
 in the same session:
 
 ```bash
-br create "fix(<area>): <finding title>" \
+# CONFIRMED finding (you have root cause or a solid repro) → a fix bead:
+br create "fix(<area>): <finding title>" -t bug \
   -d "QA finding (<date>, sim QA): <repro + evidence + journey ref>" \
   --labels qa-finding
 # User-facing break or trapped state? Add the blocker label:
 #   --labels qa-finding,qa-blocker
+
+# SUSPECTED finding (cause unknown, weak repro) → an investigation bead:
+br create "investigate: <symptom>" -t investigation \
+  -d "QA finding (<date>, sim QA): <what was observed, repro attempt>" \
+  --labels qa-finding
 ```
 
-- **qa-blocker** = gates the next merge (ac-merge refuses while open).
-- **qa-finding** alone = real but shippable — normal backlog priority.
+**Type + label semantics (they compose, not compete):**
+
+- **Type** = kind of work. `bug` when confirmed — file the fix directly; do
+  NOT add a "confirm this" ceremony bead when the QA run already diagnosed
+  it. `investigation` when genuinely unconfirmed — its acceptance is
+  "reproduce → spawn fix beads or document-and-close".
+- **Label** = gating. `qa-blocker` gates the next merge (ac-merge refuses
+  while open). `qa-finding` alone = real but shippable, normal priority.
+- **Lineage**: fix beads spawned by an investigation carry a typed dep —
+  `br dep add <fix-id> <investigation-id> -t discovered-from` — then close
+  the investigation. `br dep tree` shows the full issue→fixes trail.
 - **Journey-doc drift is NOT a finding** — fix the doc inline during the run.
 - A finding that turns out to be intended behavior is resolved by updating
   the journey doc and closing the bead — an expectation change, exactly like
