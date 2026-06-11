@@ -143,6 +143,19 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    internally but failed silently in testing; `click @ref` from a fresh
    snapshot is deterministic. `hittable:false` in `--raw` output is advisory,
    not authoritative — verify by outcome (wait/assert), not by flag.
+9. **Catch toasts — success waits race past them.** Toasts are transient
+   (~4s) and a `wait "<next screen>"` that passes can still have skipped an
+   error toast the user would have seen. The toast container IS in the tree
+   (web toast libraries label a region, e.g. "Notifications alt+T"). After
+   EVERY mutation (save/upload/delete/submit), poll that region's children
+   for ~5s at sub-second cadence before declaring the step clean — toast
+   text present = a finding, even when the operation eventually succeeded.
+10. **Screenshot hygiene for long sessions.** Downscale before reading —
+   `sips -Z 1500 <png>` — BEFORE the first Read. The model API caps images
+   at 2000px/side once a conversation carries many images; raw modern-iPhone
+   screenshots (2622px tall) read fine early in a session and then ALL new
+   image reads fail late in it. Tree-first keeps screenshot count low to
+   begin with.
 
 ## Seeing the WebView (hybrid/Capacitor apps)
 
