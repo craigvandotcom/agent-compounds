@@ -179,6 +179,15 @@ Scan changed files for domain keywords. Check `AGENTS.md > Available Skills` for
 
 Include relevant skill paths in each reviewer prompt: `"Read .claude/skills/<skill>/SKILL.md for domain patterns."`
 
+### Journey-Doc Sync Check (projects with CORE/journeys/)
+
+If `.claude/skills/CORE/journeys/README.md` exists, compare the branch's
+changed files against its "Mapping Changes to Journeys" table. For every
+mapped path that changed, the matching journey doc should have been updated
+in the same wave (journey docs are test artifacts — the QA agent validates
+against them). Mapped UI change + untouched journey doc = a **finding**
+(severity: medium), same class as a missing test update.
+
 ### Save Context
 
 Append to `$ARTIFACTS_DIR/progress.md`:

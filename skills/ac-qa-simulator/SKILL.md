@@ -219,6 +219,28 @@ The headlines:
   ≥0.5s, wrong state order, layout pops = real findings. Frame-timing claims
   from sim video = noise, never report.
 
+## Findings = beads (file immediately, like failing tests)
+
+A finding is anything where the app diverges from the journey docs' expected
+behavior, plus a11y gaps and native-shell bugs. Do NOT bury findings in prose
+or "note for later" — **file each one as a bead the moment it's confirmed**,
+in the same session:
+
+```bash
+br create "fix(<area>): <finding title>" \
+  -d "QA finding (<date>, sim QA): <repro + evidence + journey ref>" \
+  --labels qa-finding
+# User-facing break or trapped state? Add the blocker label:
+#   --labels qa-finding,qa-blocker
+```
+
+- **qa-blocker** = gates the next merge (ac-merge refuses while open).
+- **qa-finding** alone = real but shippable — normal backlog priority.
+- **Journey-doc drift is NOT a finding** — fix the doc inline during the run.
+- A finding that turns out to be intended behavior is resolved by updating
+  the journey doc and closing the bead — an expectation change, exactly like
+  updating a test.
+
 ## Reporting
 
 ```markdown
@@ -230,6 +252,7 @@ depth: smoke | full | exhaustive
 journeys_tested: [list, with PASS/FAIL each]
 native_checklist: [items checked, PASS/FAIL each — see native-shell-checklist.md]
 appearance_matrix: [combos checked]
+findings_filed: [bead ids created this run, qa-blocker flagged]
 a11y_findings: [unlabeled controls discovered via the tree]
 perf_observations: [qualitative only — hangs, freezes, leaks]
 evidence: [screenshot/video paths]

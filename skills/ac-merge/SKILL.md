@@ -115,6 +115,17 @@ git diff main...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@
 The user can also trigger a smoke/full pass manually at any time, independent
 of this gate ("run a simulator QA smoke").
 
+**QA-blocker check (beads projects, runs regardless of platform):**
+
+```bash
+br list --json | jq '[.[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
+```
+
+Open `qa-blocker` beads are unresolved user-facing breaks filed by QA runs —
+treat exactly like failing required checks: STOP and ask (fix first vs merge
+anyway with explicit override). The two valid resolutions: fix the bug, or —
+if the behavior is intended — update the journey doc and close the bead.
+
 ### Version Bump
 
 Scan the wave's commits for conventional-commit prefixes and suggest the next semver bump. The version-bump commit lands on the wave branch BEFORE the push, so the PR shows it as part of the merge unit.

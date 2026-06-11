@@ -23,6 +23,13 @@ Implement this bead using strict TDD (RED → GREEN).
 3. **Implement the code** — minimal code to make tests pass
 4. **Run tests — confirm GREEN** (all tests pass)
 5. **Only modify tests if you're certain there's a bug in the test itself** — not to make failing tests pass
+6. **Journey docs are test artifacts too.** If the project has
+   `.claude/skills/CORE/journeys/` and your diff touches a path in its
+   README's "Mapping Changes to Journeys" table (or visibly changes a UI
+   surface a journey documents — labels, flows, button placement), update the
+   matching journey doc **in the same bead**, exactly as you would a test
+   file. QA agents validate the app against these docs; stale docs = false
+   QA failures later. List updated journey files in your result.
 
 ### Bead Spec
 
