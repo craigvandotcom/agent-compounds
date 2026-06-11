@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Production stance — scoped execution of approved plans/specs (code, content, config). Full write tools. DO NOT use for planning/architecture (Plan), investigation (researcher), or verification (validator). Formerly named "engineer" (alias kept).
+description: Production stance — scoped execution of approved plans/specs (code, content, config). Full write tools. DO NOT use for planning/architecture (Plan), investigation (researcher), or verification (validator). Formerly named "engineer".
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 permissionMode: acceptEdits
