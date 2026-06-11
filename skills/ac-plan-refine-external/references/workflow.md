@@ -968,7 +968,7 @@ FOCUS
 
 **Works well BEFORE:**
 
-- `/ac-plan` - Paradigm-breaking alternative perspectives
+- `/ac-plan-transcender-alien` - Paradigm-breaking alternative perspectives
 - Implementation - Start building from validated plan
 
 **Works well AFTER:**
@@ -980,8 +980,8 @@ FOCUS
 
 1. **Brainstorm** → Explore approaches (ideation)
 2. **Draft** → Manual initial plan based on brainstorm recommendation
-3. **Refine** → `/ac-plan` (this command) - Multi-model refinement
-4. **Enhance** → `/ac-plan` - Alien perspective
+3. **Refine** → `/ac-plan-refine-external` (this command) - Multi-model refinement
+4. **Enhance** → `/ac-plan-transcender-alien` - Alien perspective
 5. **Implement** → Execute refined plan
 
 **Complementary commands:**

@@ -69,7 +69,10 @@ Sweep the memory homes for: contradictions between notes · stale facts (evidenc
 predates a known change; flag, don't guess) · near-duplicates to merge · taxonomy
 violations (missing `type`/`domain`/`evidence`) · index drift (`MEMORY.md` lines vs
 actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]`.
-Each finding becomes a candidate proposal (usually `type: lint-fix`, low-risk).
+Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
+(dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
+lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
+low-risk).
 
 ### Phase 4 — Judge (the quality bar)
 

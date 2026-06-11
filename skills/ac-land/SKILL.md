@@ -204,7 +204,7 @@ Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Ap
 
 **Goal:** Turn learnings into system improvements. User decides what ships.
 
-**NO AUTO-APPLY.** Unlike review commands (`ac-plan`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land presents ALL upgrade proposals to the user. System compounding changes identity and workflow — every change needs explicit approval.
+**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land presents ALL upgrade proposals to the user. System compounding changes identity and workflow — every change needs explicit approval.
 
 ### Step 0: Capture durable lessons via `reflect`
 

@@ -41,3 +41,6 @@ agent-compounds/
 - New skills pass the selectability test (description = WHEN, not HOW) and the overlap
   check against this registry before landing.
 - Recipes go in `skills/jef-prompts/` — never a parallel prompt library.
+- **`./lint.sh` before committing registry changes** (exit 0 = clean): dead refs,
+  frontmatter/README/disk conformance, portability greps, consumer symlink health,
+  deploy.sh dry-run inertness.

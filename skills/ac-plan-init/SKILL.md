@@ -601,7 +601,7 @@ _Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/
 
 ## Refinement & review — now separate skills
 
-Plan creation (above) gets you to a first draft. Deepening, verifying, and pressure-testing it are now **distinct skills** (split out of the old monolithic `/ac-plan`), each invokable on its own:
+Plan creation (above) gets you to a first draft. Deepening, verifying, and pressure-testing it are now **distinct skills** (split out of the old monolithic plan skill), each invokable on its own:
 
 | Skill | When |
 | --- | --- |
