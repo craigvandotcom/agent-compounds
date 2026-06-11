@@ -28,7 +28,7 @@ Interactive workflow for creating a new Claude Code skill from scratch.
    - With tools (external integrations)?
 
 5. **Have you checked existing implementations?**
-   - Review the structure standard: `reference/structure-standard.md`
+   - Review the structure standard: `references/structure-standard.md`
    - Search for similar skills in Fabric/AI Template Library/Composio
    - Study 2-3 examples before writing
 
@@ -93,7 +93,7 @@ mkdir -p .claude/skills/[skill-name]/workflows
 
 ### 3.2 Write SKILL.md
 
-Start from template: `reference/skill-template.md`
+Start from template: `references/skill-template.md`
 
 **Required sections:**
 1. YAML frontmatter (name, description)
@@ -109,7 +109,7 @@ Start from template: `reference/skill-template.md`
 
 - `workflows/*.md` - Step-by-step procedures
 - `tools/*.md` - MCP/API documentation
-- `reference/*.md` - Background knowledge
+- `references/*.md` - Background knowledge
 
 ---
 

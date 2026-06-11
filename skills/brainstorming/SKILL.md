@@ -203,6 +203,6 @@ Located in `prompts/`:
 
 ## Sources
 
-- [Jeffrey Emanuel Ideation Methodology](../../planning/research/brainstorm-command-research.md)
+- Jeffrey Emanuel Ideation Methodology — Source: `skills/planning/research/brainstorm-command-research.md` (agent-compounds)
 - Six Thinking Hats (Edward de Bono)
 - Double Diamond Design Process

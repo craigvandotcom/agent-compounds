@@ -1,6 +1,6 @@
 ---
 name: ac-pipeline
-description: End-to-end engineering pipeline orchestrator — chains align → next → plan → beadify → implement → review → merge with gates between stages. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".
+description: End-to-end engineering pipeline orchestrator — chains align → next → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".
 ---
 
 # Pipeline Orchestrator
@@ -10,9 +10,17 @@ This is a **thin conductor**, not an implementation. It owns *ordering, gates, a
 ## The chain
 
 ```
-ac-align → ac-next → ac-plan-init → ac-beadify → ac-implement → ac-review → ac-merge → (ac-land)
-                                       ↑_________________________|   ac-hygiene (anytime)
+ac-align → ac-next → ac-plan-init → ac-beadify → ac-implement → ac-land ┐
+                                       ↑__________________________|       ├→ ac-merge
+                                                                  ac-review ┘
+                                                                  ac-hygiene (anytime)
 ```
+
+**Two-path model (pre-merge gates):**
+- `ac-land` is per-session closure — push, retrospective, system compounding. Runs once per implement session.
+- `ac-review` is per-feature-branch review — PR code review, blocking findings. Runs once per wave.
+- Both must complete before `ac-merge`. Their mutual order is flexible: run review then land, or land then review — either is valid.
+- `ac-merge` always comes last (after both land and review have completed for the wave).
 
 | # | Stage | Skill | Produces (gate to advance) |
 |---|-------|-------|----------------------------|
@@ -21,9 +29,11 @@ ac-align → ac-next → ac-plan-init → ac-beadify → ac-implement → ac-rev
 | 3 | Plan | `ac-plan-init` | An approved plan file (`_plans/…`) |
 | 4 | Beadify | `ac-beadify` | Beads created from the plan (`br list` shows the wave) |
 | 5 | Implement | `ac-implement` | Wave implemented; per-bead quality gates green |
-| 6 | Review | `ac-review` | Branch reviewed; blocking findings fixed or escalated |
-| 7 | Merge | `ac-merge` | PR merged to main; version/build bumped |
-| 8 | Land | `ac-land` | Session closed; learnings captured; system compounded |
+| 6a | Land | `ac-land` | Session closed; learnings captured; system compounded (pre-merge gate) |
+| 6b | Review | `ac-review` | Branch reviewed; blocking findings fixed or escalated (pre-merge gate) |
+| 7 | Merge | `ac-merge` | PR merged to main; version/build bumped (runs after both 6a and 6b) |
+
+**Stages 6a and 6b are both required before stage 7. Their mutual order is flexible.**
 
 **Adjuncts (not inside the gated chain):**
 - `ac-backlog` — capture ideas at the front, before `ac-align`/`ac-next`.

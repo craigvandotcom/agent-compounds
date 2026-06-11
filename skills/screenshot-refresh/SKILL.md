@@ -85,7 +85,7 @@ Note what seed command is available (or that none exists).
 If a seed script was found in Phase 1:
 
 1. Ask the user to confirm it should be run (it may reset data)
-2. Run it using the command discovered (e.g. `pnpm exec tsx scripts/seed-insights-test-data.ts`)
+2. Run it using the command discovered (e.g. `pnpm exec tsx scripts/seed-test-data.ts`)
 3. If the script requires credentials or environment variables, ask the user
 4. Verify the seed output — check that today's date has entries
 

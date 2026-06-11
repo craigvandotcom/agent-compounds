@@ -21,7 +21,7 @@ routed so they compound. The capture half of the AI-native-org write loop.
 "save lessons", "remember this", "compound this session".
 
 **When NOT to use:**
-- Mid-task fact capture → the continuous **memory-capture agent** already does this.
+- Mid-task fact capture → the continuous **memory-capture agent** already does this (root-repo harness only); in app sessions just capture at session end.
 - Full bead-work closure (land + quality gates + retrospective) → **ac-land** (which
   calls this skill for its capture step).
 - Pure conversation with no reusable learning → nothing to capture; say so and stop.

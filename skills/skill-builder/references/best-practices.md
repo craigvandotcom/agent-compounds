@@ -83,7 +83,7 @@ Skills should leverage command-line tools and scripting:
 
 File and folder names should explain purpose:
 - `workflows/create-skill.md` not `workflows/cs.md`
-- `reference/best-practices.md` not `reference/bp.md`
+- `references/best-practices.md` not `references/bp.md`
 
 ### Convert Subagents to Skills
 
@@ -165,13 +165,13 @@ With progressive disclosure:
 | File | When to Read |
 |------|--------------|
 | `workflows/procedure.md` | When executing [task] |
-| `reference/details.md` | When needing [info] |
+| `references/details.md` | When needing [info] |
 ```
 
 **NOT in SKILL.md:**
 - Full procedures (put in workflows/)
 - Complete tool docs (put in tools/)
-- Extended background (put in reference/)
+- Extended background (put in references/)
 
 ---
 

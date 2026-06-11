@@ -39,7 +39,7 @@ Initialize new skill from template with proper structure and frontmatter.
 skill-name/
 ├── SKILL.md           # With YAML frontmatter pre-filled
 ├── workflows/         # Empty directory for step-by-step processes
-├── reference/         # Empty directory for deep documentation
+├── references/         # Empty directory for deep documentation
 └── README.md          # Next steps checklist
 ```
 
@@ -84,7 +84,7 @@ Validate skill meets standards and best practices.
 
 **Size Constraints:**
 - SKILL.md under 500 lines (warns if >400)
-- Recommends moving content to workflows/ or reference/ if too large
+- Recommends moving content to workflows/ or references/ if too large
 
 **Recommended Sections:**
 - "When to Use" section
@@ -200,7 +200,7 @@ Avoid sequential language:
 
 Move content to:
 - `workflows/*.md` for step-by-step procedures
-- `reference/*.md` for deep documentation
+- `references/*.md` for deep documentation
 - `tools/*.md` for MCP/API details
 
 ---
@@ -223,5 +223,5 @@ Requirements:
 
 - `../SKILL.md` - Main skill-builder documentation
 - `../workflows/create-skill.md` - Interactive creation workflow
-- `../reference/best-practices.md` - Skill design patterns
-- `../reference/testing-patterns.md` - RED-GREEN-REFACTOR methodology
+- `../references/best-practices.md` - Skill design patterns
+- `../references/testing-patterns.md` - RED-GREEN-REFACTOR methodology

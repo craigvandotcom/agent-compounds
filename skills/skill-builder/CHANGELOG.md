@@ -62,7 +62,7 @@ Based on research from:
 **`scripts/init-skill.sh`:**
 - Initialize new skill from template
 - Auto-generates YAML frontmatter with name and description
-- Creates directory structure (workflows/, reference/)
+- Creates directory structure (workflows/, references/)
 - Generates README.md with next steps checklist
 - Validates name format and description length
 - Cross-platform compatible (macOS, Linux, Windows via Git Bash)
@@ -85,7 +85,7 @@ Based on research from:
 
 #### 6. Testing Patterns Reference Added
 
-**New file:** `reference/testing-patterns.md`
+**New file:** `references/testing-patterns.md`
 
 **Contents:**
 - The Iron Law ("watch agent fail without skill")
@@ -117,7 +117,7 @@ Based on research from:
 
 #### References Updated
 
-**`reference/best-practices.md`:**
+**`references/best-practices.md`:**
 - Added CRITICAL PRINCIPLE about WHEN vs HOW
 - Added workflow summary anti-pattern example
 - Updated size constraints (200-400 lines)
@@ -147,7 +147,7 @@ Based on research from:
 │   ├── init-skill.sh           # NEW
 │   ├── validate-skill.sh       # NEW
 │   └── README.md               # NEW
-├── reference/
+├── references/
 │   ├── testing-patterns.md     # NEW
 │   └── best-practices.md       # UPDATED
 ├── workflows/
@@ -160,7 +160,7 @@ Based on research from:
 
 - `SKILL.md` - 189 lines → 353 lines (still within 200-400 target)
 - `workflows/create-skill.md` - Enhanced testing phase
-- `reference/best-practices.md` - Strengthened description guidance
+- `references/best-practices.md` - Strengthened description guidance
 
 ### Validation Status
 
@@ -172,7 +172,7 @@ Based on research from:
 
 All new content follows progressive disclosure principles:
 - Core guidance in SKILL.md
-- Deep methodology in reference/testing-patterns.md
+- Deep methodology in references/testing-patterns.md
 - Automation in scripts/
 - Workflows for procedures
 

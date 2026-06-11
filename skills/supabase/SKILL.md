@@ -242,7 +242,7 @@ will block the commit.
 
 ```ts
 const LOCAL_SUPABASE_URL =
-  process.env.LOCAL_SUPABASE_URL ?? 'http://127.0.0.1:54321';
+  process.env.LOCAL_SUPABASE_URL ?? ''; // no default port — each app uses a distinct local Supabase port range (org rule); hardcoding cross-wires apps
 const LOCAL_SERVICE_ROLE_KEY = process.env.LOCAL_SUPABASE_SERVICE_KEY ?? '';
 ```
 
@@ -253,7 +253,7 @@ reassign from the `LOCAL_*` vars BEFORE any client construction:
 ```ts
 // Force local stack BEFORE any createClient() call
 process.env.NEXT_PUBLIC_SUPABASE_URL =
-  process.env.LOCAL_SUPABASE_URL ?? 'http://127.0.0.1:54321';
+  process.env.LOCAL_SUPABASE_URL ?? ''; // no default port — each app uses a distinct local Supabase port range (org rule); hardcoding cross-wires apps
 process.env.SUPABASE_SECRET_KEY = process.env.LOCAL_SUPABASE_SERVICE_KEY ?? '';
 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY =
   process.env.LOCAL_SUPABASE_PUBLISHABLE_KEY ?? '';

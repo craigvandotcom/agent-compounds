@@ -431,13 +431,15 @@ If any fail, fix the issues before proceeding.
 
 ### Next Steps
 
-**Always run `/ac-land` next.** It handles:
+**Run `/ac-land` next (recommended).** It handles:
 
 - Clean git push
 - Retrospective learning from this session
 - System upgrades (user-gated) that make the next session better
 
 This is what makes the flywheel accelerate — don't skip it.
+
+**Pipeline context:** Both `/ac-land` (per-session closure) and `/ac-review` (per-feature-branch review) are pre-merge gates — both must complete before `/ac-merge`. Their mutual order is flexible. The typical flow after implementing is: land the session, then run review (or vice versa), then merge. Do NOT run `/ac-merge` until both have completed.
 
 **Present next step with `AskUserQuestion`:**
 
@@ -488,4 +490,4 @@ Coordination via Agent Mail file reservations BEFORE editing is mandatory in par
 
 ---
 
-_Bead work: sequential implementation with quality gates. For bead prep: `/ac-beadify` → `/ac-bead-refine`. For landing: `/ac-land`._
+_Bead work: sequential implementation with quality gates. For bead prep: `/ac-beadify` → `/ac-bead-refine`. After implementing: `/ac-land` (session closure) + `/ac-review` (branch review), both before `/ac-merge`._

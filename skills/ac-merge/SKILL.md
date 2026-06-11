@@ -6,7 +6,7 @@ description: Merge a wave branch to main — PR creation, CI/agent feedback tria
 
 **You are the conductor closing a feature wave.** Create the PR, wait for CI and agent feedback, triage and fix issues, merge when clean.
 
-Run this after `/ac-land` when all beads are complete. This is per-feature (not per-session like bead-land).
+Run after both `/ac-land` and `/ac-review` have completed for the wave (their order is flexible). This is per-wave (not per-session like bead-land).
 
 ---
 
@@ -14,7 +14,7 @@ Run this after `/ac-land` when all beads are complete. This is per-feature (not 
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Wave branch with all beads complete, pushed (post `/ac-land`)                            |
+| **Input**        | Wave branch with all beads complete, pushed (post `/ac-land` and `/ac-review`)           |
 | **Output**       | PR merged to main, wave branch deleted, feature shipped                                    |
 | **Artifacts**    | PR on GitHub, feedback triage in `$ARTIFACTS_DIR/`                                         |
 | **Verification** | All CI checks green, PR merged, on main branch                                            |
@@ -519,7 +519,7 @@ rm -rf "$ARTIFACTS_DIR"
 - **This is per-wave, not per-session** — run once when all beads are done, not after each bead-work session
 - **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN`) is opaque.
 - **Version bump scans commits** — feat→minor, fix-only→patch, `!:` or BREAKING CHANGE→major. User confirms before the bump commit lands; tag is created on the merge commit after merge.
-- **bead-land handles session closure** — wave-merge handles wave closure. No overlap.
+- **Both pre-merge gates required** — `ac-land` (session closure) and `ac-review` (branch review) must both complete before running this; their order relative to each other is flexible.
 - **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
 - **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)

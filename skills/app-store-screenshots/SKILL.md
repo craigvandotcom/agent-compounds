@@ -59,7 +59,8 @@ End-to-end re-run after a copy or capture change: **~5 seconds**.
 ## Usage
 
 ```bash
-# Re-capture all 4 slides at 6.7":
+# NOTE: BCA has 4 slides; your app's count will differ (Apple allows 3-10).
+# Re-capture all slides at 6.7":
 ./tools/screenshot-generator/capture.sh
 
 # Single slide:
@@ -68,7 +69,7 @@ End-to-end re-run after a copy or capture change: **~5 seconds**.
 # After capture, derive 6.1":
 python3 tools/screenshot-generator/downscale.py
 
-# Live preview (gallery view of all 4 slides at 28% scale):
+# Live preview (gallery view of all slides at 28% scale):
 ./tools/screenshot-generator/capture.sh --preview
 # then visit: http://127.0.0.1:8421/tools/screenshot-generator/index.html?gallery=1
 ```

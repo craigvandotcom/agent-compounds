@@ -604,7 +604,7 @@ rm -rf "$ARTIFACTS_DIR"
 |            | `/ac-review`                            | `/ac-hygiene`                             |
 | ---------- | ----------------------------------------- | -------------------------------------- |
 | **Scope**  | Feature branch diff                       | Whole codebase                         |
-| **When**   | After `/ac-implement` or `/ac-implement`             | Between sessions, daily maintenance    |
+| **When**   | After `/ac-implement` or manual coding              | Between sessions, daily maintenance    |
 | **Agents** | 4 specialized Sonnet reviewers, 1-2 rounds | 3 Opus explorers, multi-round          |
 | **Fixes**  | Engineer sub-agent                        | Conductor applies directly             |
 | **Focus**  | Security, perf, arch, correctness         | Bugs, dead code, drift, health         |

@@ -4,7 +4,7 @@
 #
 # Creates skill directory structure with:
 # - SKILL.md with YAML frontmatter
-# - Empty workflows/ and reference/ directories
+# - Empty workflows/ and references/ directories
 # - Optional scripts/ directory
 
 set -e
@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 SKILLS_BASE="$REPO_ROOT/.claude/skills"
 # Self-contained: scaffold from the inline template below. (For a richer starting
-# point, copy reference/skill-template.md by hand.)
+# point, copy references/skill-template.md by hand.)
 TEMPLATE_PATH=""
 
 # Parse arguments
@@ -102,7 +102,7 @@ fi
 # Create directory structure
 echo -e "${GREEN}📁 Creating skill directory structure...${NC}"
 mkdir -p "$TARGET_PATH/workflows"
-mkdir -p "$TARGET_PATH/reference"
+mkdir -p "$TARGET_PATH/references"
 
 # Scaffold SKILL.md (inline template unless an external one is provided)
 if [ ! -f "$TEMPLATE_PATH" ]; then
@@ -160,7 +160,7 @@ description: $DESCRIPTION
 | File | When to Read |
 |------|--------------|
 | \`workflows/example.md\` | When executing [specific task] |
-| \`reference/details.md\` | When needing [specific information] |
+| \`references/details.md\` | When needing [specific information] |
 
 ---
 
@@ -212,7 +212,7 @@ Created: $(date +%Y-%m-%d)
 $SKILL_NAME/
 ├── SKILL.md           # Main skill definition (200-400 lines target)
 ├── workflows/         # Optional: step-by-step procedures
-├── reference/         # Optional: deep documentation
+├── references/         # Optional: deep documentation
 └── README.md          # This file
 \`\`\`
 EOF
@@ -225,7 +225,7 @@ echo ""
 echo "Next steps:"
 echo "1. Edit $TARGET_PATH/SKILL.md"
 echo "2. Add workflows to workflows/ if needed"
-echo "3. Add reference docs to reference/ if needed"
+echo "3. Add reference docs to references/ if needed"
 echo "4. Test with verification gate protocol"
 echo ""
 echo -e "${YELLOW}📋 Remember: Description focuses on WHEN (triggers), not HOW (workflow)${NC}"

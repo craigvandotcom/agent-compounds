@@ -74,7 +74,7 @@ If SKILL.md > 250 lines:
 **Should be in supporting files:**
 - Detailed procedures (workflows/)
 - Full tool documentation (tools/)
-- Background knowledge (reference/)
+- Background knowledge (references/)
 
 ### 3.3 Quick Reference Addition
 

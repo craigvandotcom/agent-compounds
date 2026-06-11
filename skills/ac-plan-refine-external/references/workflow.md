@@ -865,9 +865,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Plan clean (Recommended)", description: "Run /ac-plan — final correctness check before beadification" },
+      { label: "Plan clean (Recommended)", description: "Run /ac-plan-clean — final correctness check before beadification" },
       { label: "Beadify directly", description: "Run /ac-beadify — skip correctness check, convert to beads now" },
-      { label: "Enhance further", description: "Run /ac-plan — paradigm-breaking alternative perspectives" },
+      { label: "Enhance further", description: "Run /ac-plan-transcender-alien — paradigm-breaking alternative perspectives" },
       { label: "Done for now", description: "Plan saved — pick up later" }
     ]
   }]

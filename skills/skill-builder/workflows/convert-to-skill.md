@@ -103,7 +103,7 @@ description: Use when [triggers from source]. Handles [capabilities].
 | "How it works" | Core Pattern |
 | Step-by-step | workflows/*.md |
 | Tool details | tools/*.md |
-| Background info | reference/*.md |
+| Background info | references/*.md |
 
 ---
 
@@ -122,14 +122,14 @@ description: Use when [triggers from source]. Handles [capabilities].
 **Exclude from SKILL.md:**
 - Full step-by-step procedures → workflows/
 - Complete tool documentation → tools/
-- Extended background → reference/
+- Extended background → references/
 
 ### 3.2 Create Supporting Files
 
 Only if needed:
 - `workflows/[name].md` - Detailed procedures
 - `tools/[name].md` - Tool documentation
-- `reference/[name].md` - Background knowledge
+- `references/[name].md` - Background knowledge
 
 ### 3.3 Add References
 

@@ -75,7 +75,7 @@ A non-trivial skill is a **lean spine that routes to references**, not a wall of
 
 **The discriminator:** *Does the orchestrator itself need this to decide what to do next, or does only a spawned sub-agent / one stage consume it?* Orchestrator → spine. Sub-agent/stage → `references/`.
 
-Full rulebook (spine vs references, pointer syntax, ToC rule, refactor procedure): **[reference/structure-standard.md](reference/structure-standard.md)**. Read it before writing a large skill or refactoring an oversized one.
+Full rulebook (spine vs references, pointer syntax, ToC rule, refactor procedure): **[references/structure-standard.md](references/structure-standard.md)**. Read it before writing a large skill or refactoring an oversized one.
 
 ---
 
@@ -152,7 +152,7 @@ description: Use when...  # Max 1024 chars, third-person, concrete triggers
 | SKILL.md | 200-400 lines | Split to supporting files |
 | workflows/*.md | <500 lines | Break into smaller workflows |
 | tools/*.md | <1000 lines | Split by tool group |
-| reference/*.md | varies | Keep focused on single topic |
+| references/*.md | varies | Keep focused on single topic |
 
 **Note:** Anthropic's actual average is ~2,200 words (1,500-2,000 optimal). Target 200-400 lines for balance between completeness and context efficiency.
 
@@ -292,7 +292,7 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 
 **init-skill.sh** creates:
 - SKILL.md with YAML frontmatter pre-filled
-- Empty workflows/ and reference/ directories
+- Empty workflows/ and references/ directories
 - README.md with next steps checklist
 
 **validate-skill.sh** checks:
@@ -318,10 +318,10 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 
 | File | Contents |
 |------|----------|
-| `reference/structure-standard.md` | **The spine+references rulebook** — read before writing/refactoring a large skill |
-| `reference/skill-template.md` | Copy-paste starting template for a new SKILL.md |
-| `reference/best-practices.md` | Anthropic + community patterns (description, naming, progressive disclosure) |
-| `reference/testing-patterns.md` | RED-GREEN-REFACTOR testing methodology |
+| `references/structure-standard.md` | **The spine+references rulebook** — read before writing/refactoring a large skill |
+| `references/skill-template.md` | Copy-paste starting template for a new SKILL.md |
+| `references/best-practices.md` | Anthropic + community patterns (description, naming, progressive disclosure) |
+| `references/testing-patterns.md` | RED-GREEN-REFACTOR testing methodology |
 
 ---
 

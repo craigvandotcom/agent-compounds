@@ -303,6 +303,8 @@ Output for the user and next session:
 
 **Present next session choice with `AskUserQuestion`:**
 
+Note: `ac-land` (this step) and `ac-review` are both pre-merge gates. Both must complete before `ac-merge`. Their mutual order is flexible — you can run review before landing or after; merge always comes last.
+
 ```
 AskUserQuestion(
   questions: [{
@@ -310,10 +312,10 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Review & merge (Recommended)", description: "Run /ac-review then /ac-merge — review code, create PR, ship to main" },
+      { label: "Review (Recommended)", description: "Run /ac-review — code review for the wave branch. Then /ac-merge once review is done." },
       { label: "Continue bead-work", description: "Run /ac-implement — {M} beads remaining" },
       { label: "Refine remaining beads", description: "Run /ac-bead-refine — revise remaining beads before implementing" },
-      { label: "Done for now", description: "Close session — pick up later" }
+      { label: "Done for now", description: "Close session — pick up later (run /ac-review before /ac-merge)" }
     ]
   }]
 )

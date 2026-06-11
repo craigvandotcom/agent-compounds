@@ -31,6 +31,9 @@ PM2=pm2
 # Processes that are ALWAYS needed during heavy work
 ESSENTIAL_PM2="qmd-mcp mcp-agent-mail"
 
+# Processes to confirm with user before stopping (app-specific, may be needed)
+ASK_USER_PM2="pai-slack-bot"  # Slack notifications — keep if monitoring from phone
+
 # Processes that CAN be stopped safely (restart after session)
 STOPPABLE_PM2="happy-daemon pai-scheduler"
 
@@ -104,24 +107,11 @@ Evaluate what's running and decide actions. Use these rules:
 **Keep** — processes in `ESSENTIAL_PM2`:
 - `qmd-mcp`: needed for search
 - `mcp-agent-mail`: needed for agent coordination
-- `pai-slack-bot`: notifications — ask user
 
-Ask the user:
+**Ask user** — processes in `ASK_USER_PM2` (keep only if they confirm it's needed):
+- `pai-slack-bot`: Slack notifications — useful if monitoring from phone
 
-```
-AskUserQuestion(
-  questions: [{
-    question: "Which optional services should we keep running?",
-    header: "Keep alive",
-    multiSelect: true,
-    options: [
-      { label: "pai-slack-bot", description: "Slack notifications — useful if monitoring from phone" },
-      { label: "pai-scheduler", description: "Scheduled jobs — safe to stop for a few hours" },
-      { label: "happy-daemon", description: "Code indexer — not needed for bead-work" }
-    ]
-  }]
-)
-```
+Ask the user which optional services to keep: pai-slack-bot (Slack notifications), pai-scheduler (scheduled jobs), happy-daemon (code indexer).
 
 ---
 

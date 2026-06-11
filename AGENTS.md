@@ -26,11 +26,10 @@ agent-compounds/
 │   ├── ac-*       # the compounding-engineering pipeline (plan→beadify→implement→review→merge→land)
 │   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
 │   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
-├── agents/        # subagent definitions (engineer, reviewer, browser-agent, browser-tester)
-│   └── sub-agents/  # FROZEN legacy OSS snapshot — never symlink from here
+├── agents/        # subagent definitions (researcher, implementer, validator — the 3 stances — plus tester, code-explorer, browser-tester, browser-agent)
 ├── deploy.sh      # symlinks (never copies) skills/agents into a target's .claude/
-├── templates/     # AGENTS.md template for NEW projects (the boilerplate lives there, not here)
-└── _plans/        # working plans (context-architecture, …)
+├── templates/     # project-AGENTS.md — new-project L0 template (copy to your project root)
+└── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)
 ```
 
 ## Rules

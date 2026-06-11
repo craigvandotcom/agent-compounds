@@ -34,7 +34,7 @@ Load skills based on what you are reviewing. Read the skill's SKILL.md file befo
 
 ## Core Principle
 
-**AUDIT, DON'T FIX.** You identify problems and suggest improvements--the engineer agent implements fixes.
+**AUDIT, DON'T FIX.** You identify problems and suggest improvements--the implementer agent implements fixes.
 
 ## Responsibilities
 

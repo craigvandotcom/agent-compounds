@@ -18,6 +18,15 @@ description: Debug UI bugs, CSS styling issues, and unexpected visual behavior. 
 
 ---
 
+## When to Use This Skill
+
+- UI element not rendering as expected
+- Styles working in one context but not another
+- Component looks different from documentation/examples
+- Mobile vs desktop rendering differences
+
+---
+
 ## First Steps (Always Do These)
 
 1. **Inspect element** - Check computed styles in dev tools, not just defined styles
@@ -100,12 +109,3 @@ button:not([role='switch']) { ... }
 ```
 
 **Lesson:** Always inspect computed styles first. Would have immediately shown `min-height: 44px` being applied from an external rule.
-
----
-
-## When to Use This Skill
-
-- UI element not rendering as expected
-- Styles working in one context but not another
-- Component looks different from documentation/examples
-- Mobile vs desktop rendering differences

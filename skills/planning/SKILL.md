@@ -64,7 +64,7 @@ Located in `prompts/`:
 
 ### Templates
 
-Located in `.claude/plans/templates/`:
+Located in the project's plan-templates directory — path varies by app (`.claude/plans/templates/` or `_plans/templates/`); check the consuming app's CORE/AGENTS.md:
 
 | Template            | Use For      |
 | ------------------- | ------------ |

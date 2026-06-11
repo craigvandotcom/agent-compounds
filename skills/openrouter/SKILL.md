@@ -1,7 +1,6 @@
 ---
 name: openrouter
 description: Access 400+ AI models from any agent. Discover, select, and query the right model for any task. Use when you need a specific or non-default model; triggers on "query a model", "which model for", "use OpenRouter", "list available models".
-version: 1.2.0
 tools: [openrouter (infrastructure/tools)]
 ---
 
@@ -23,8 +22,9 @@ Query any AI model from the terminal. One tool, every model.
 - Google (Gemini)
 - OpenAI (GPT, o-series)
 - xAI (Grok)
+- DeepSeek (consensus-diversity panelist via expert-consensus)
 
-### Configured Models (last verified: 2026-03-24)
+### Configured Models (last verified: 2026-06-11)
 
 #### Quality Tier (complex reasoning, analysis, generation)
 
@@ -34,14 +34,14 @@ Query any AI model from the terminal. One tool, every model.
 | Anthropic | `anthropic/claude-opus-4.6` | `opus` | 2026-03 | $5.00 | $25.00 |
 | OpenAI | `openai/gpt-5.4` | `gpt` | 2026-03 | $2.50 | $15.00 |
 | Google | `google/gemini-3.1-pro-preview` | `gemini` | 2026-03 | $2.00 | $12.00 |
-| xAI | `x-ai/grok-4.20-beta` | `grok` | 2026-03 | $2.00 | $6.00 |
+| xAI | `x-ai/grok-4.20` | `grok` | 2026-03 | $2.00 | $6.00 |
 
 #### Speed & Cost Tier (bulk work, simple tasks, scripting)
 
 | Provider | Model ID | Alias | Released | $/M prompt | $/M completion |
 |----------|----------|-------|----------|-----------|---------------|
 | Google | `google/gemini-2.5-flash` | `gemini-flash` | 2025-12 | $0.30 | $2.50 |
-| xAI | `x-ai/grok-4.20-beta` | `grok` | 2026-03 | $2.00 | $6.00 |
+| xAI | `x-ai/grok-4.20` | `grok` | 2026-03 | $2.00 | $6.00 |
 | OpenAI | `openai/gpt-5.4-mini` | `gpt-mini` | 2026-03 | $0.75 | $4.50 |
 
 #### Reasoning Tier (math, logic, multi-step problems)
