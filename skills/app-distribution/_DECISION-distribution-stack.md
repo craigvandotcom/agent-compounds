@@ -1,10 +1,10 @@
 # ⚠ TEMP — Distribution Stack Setup (pending, run on Mac)
 
 **Status:** PENDING — Phase 1 runs in a Mac session (after, or independent of,
-the simulator-qa bake-off). This directory becomes the real `app-distribution`
+the ac-qa-simulator bake-off). This directory becomes the real `app-distribution`
 skill in Phase 2; until then this file is the only content.
 
-**Created:** 2026-06-10. Pipeline position: downstream of simulator-qa —
+**Created:** 2026-06-10. Pipeline position: downstream of ac-qa-simulator —
 this is the SHIP lane (TestFlight, crash triage, App Store submission),
 not the QA lane.
 
@@ -39,7 +39,7 @@ npx skills add rorkai/app-store-connect-cli-skills   # then keep only:
 ```
 
 Gate: a sim QA smoke PASS before the upload step (the lanes compose:
-simulator-qa proves the build, this lane ships it).
+ac-qa-simulator proves the build, this lane ships it).
 
 ## Phase 2 — wrap into a real skill (after 2–3 cycles)
 

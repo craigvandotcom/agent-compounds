@@ -1,5 +1,5 @@
 ---
-name: simulator-qa
+name: ac-qa-simulator
 description: Use when QA-ing the NATIVE app build in the iOS Simulator — full journey validation against the real native shell (keyboard, safe-area, splash, deep links, OAuth sheets, plugin calls, push payloads), appearance matrix, screenshots/video evidence, and perf sanity. Triggers on "test native app", "simulator QA", "QA in simulator", "test on iOS", "validate native build", "native smoke test". macOS only — see Platform Gate.
 ---
 
