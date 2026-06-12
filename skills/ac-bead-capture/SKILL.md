@@ -1,0 +1,70 @@
+---
+name: ac-bead-capture
+description: Use to CAPTURE a raw idea, bug, observation, or decision fork from the user as a properly typed bead — on the go, minimal ceremony. Triggers: 'bead this', 'capture this idea', 'new bead', 'log a bug', 'add to the backlog', 'remember to do X'. The agent classifies, routes to the right repo's db, and dedupes; for decomposing a whole plan use ac-beadify, for refining existing beads use ac-bead-refine.
+---
+
+# Capture → Bead
+
+Turn one raw utterance into one well-filed bead (occasionally a small cluster).
+**Speed is the point** — the user is capturing on the go; every second of
+ceremony costs future captures. Conventions authority:
+`../_shared/bead-conventions.md` (types, labels, lifecycle, public-db rule).
+
+## I/O Contract
+
+|                  |                                                                       |
+| ---------------- | --------------------------------------------------------------------- |
+| **Input**        | A raw idea / bug report / observation / decision fork (one line or fuzzy) |
+| **Output**       | Bead id(s) + one-line confirmation of where it landed and as what     |
+| **Artifacts**    | The bead(s); `.beads/` committed in the target repo                   |
+| **Verification** | `br show <id>` renders with all template sections                     |
+
+## Phase 1 — Clarify (at most ONE round, often zero)
+
+Capture beats interrogation. Ask only if you cannot determine **what done looks
+like** OR **which repo it belongs to** — one `AskUserQuestion`, max 2 questions,
+then commit to an interpretation. Still fuzzy after that → file it anyway as
+`investigation` + `unrefined` with the raw words preserved verbatim in the
+description; refinement is ac-bead-refine's job, not capture's.
+
+## Phase 2 — Route (which db?)
+
+Beads live with the work (see conventions §Where beads live). Infer from the
+subject first, current repo second: app feature/bug → that app's db · skill/
+pipeline/registry → agent-compounds (`ac` prefix) · org/infra/memory → root
+repo (`org` prefix). No `.beads/` where it belongs → say so and file in the
+nearest parent that has one, noting the intended home.
+
+## Phase 3 — Classify & create
+
+1. **Dedupe:** `br search "<keywords>"` in the target db — hit → enrich the
+   existing bead (`br comments add`) instead of creating; tell the user.
+2. **Type** per conventions: `task` (work) · `feature` (capability) · `bug`
+   (CONFIRMED defect — repro/cause in hand, else `investigation`) ·
+   `investigation` (open question an agent can resolve) · `decision` (fork only
+   the human can resolve → label `human-gate` + pre-stage the memo: context,
+   options, trade-offs, recommendation).
+3. **Labels:** `unrefined` unless genuinely implementation-ready (capture
+   usually isn't); provenance labels only where true.
+4. **Create:** `br create "<imperative title>" -t <type> --labels "<labels>"
+   --description "<context: what/why/where, user's words preserved>"` — set
+   `--priority` only if the user signaled urgency; default is fine.
+5. **Public-db rule:** agent-compounds beads publish — neutral title,
+   pointer-only for anything sensitive (conventions §Public-repo rule).
+6. **Commit** `.beads/` in the target repo (own repo, own commit).
+
+## Phase 4 — Confirm (one line)
+
+`<id> filed in <repo> as <type>[ +labels] — refine with /ac-bead-refine when
+scheduling.` Nothing more; the user is mid-thought.
+
+## Common Mistakes
+
+| Mistake | Fix |
+|---|---|
+| Interrogating the user (3+ questions) | One round max; `unrefined` exists for a reason |
+| Decomposing the idea into an epic + children | That's ac-beadify, on an approved plan — capture files ONE bead |
+| Filing a hunch as `bug` | `bug` = confirmed; suspicion = `investigation` |
+| Skipping dedupe | `br search` first — enrich beats duplicate |
+| Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + private pointer |
+| Forgetting the `.beads/` commit | The jsonl is the sync surface — uncommitted = invisible cross-machine |

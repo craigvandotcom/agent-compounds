@@ -61,6 +61,21 @@ Fix beads spawned by an investigation/decision carry a typed dep:
 `br dep add <fix-id> <origin-id> -t discovered-from`. Then close the origin.
 `br dep tree` shows the full trail.
 
+## Where beads live
+
+Every repo where work happens has its own `.beads/` (tracked `issues.jsonl` +
+`config.yaml`; `.db` is a local cache, gitignored). Distinct issue prefixes
+per db where set (`ac` = agent-compounds, `org` = root repo, `bd` = apps).
+Beads live **with the work** — deps only gate within one db, so a bead
+belongs in the repo whose code/files it changes. Cross-repo visibility is
+ac-human-next's job (docket sweep), not a central database's.
+
+**Public-repo rule:** some beads dbs are world-readable (agent-compounds is
+a public repo — its `issues.jsonl` publishes). Beads there carry **no
+strategy, money, personal, or credential content**. A decision whose memo is
+sensitive keeps the memo in a private home (`_plans/`, root repo) and the
+bead carries only a pointer + neutral title.
+
 ## Anti-inflation rules (beads are scheduled work, not a notebook)
 
 1. **File only what survived verification** — a reviewer hunch that didn't

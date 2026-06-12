@@ -24,6 +24,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-plan-init** | Create a first-draft implementation plan |
 | **ac-plan-clean** / **ac-plan-refine-internal** / **ac-plan-refine-external** | Verify / deepen a plan (correctness pass · multi-agent · multi-model) |
 | **ac-plan-review-genius** / **ac-plan-transcender-alien** | Forensic / paradigm-breaking review of a plan |
+| **ac-bead-capture** | Capture a raw idea/bug/decision on the go as one properly typed, routed bead |
 | **ac-beadify** | Convert a refined plan into a beads task structure (create) |
 | **ac-bead-refine** | Refine beads to convergence — self-contained, agent-ready |
 | **ac-implement** | Sequential bead implementation — conductor + engineer sub-agents |

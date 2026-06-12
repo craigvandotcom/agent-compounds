@@ -41,11 +41,26 @@ the `human-gate` label, pre-staged with a decision memo (context, options +
 trade-offs, recommendation). Agents may enrich them but never close them —
 they survive every autonomous sweep until the human decides.
 
+**Scope:** invoked inside a project → that repo's db is the docket. Invoked at
+org level (root / software lead session) or asked "across everything" → sweep
+ALL beads repos — the docket is the org's single place to action decisions:
+
 ```bash
+# Current repo only:
 br list --json | jq '[.[] | select(.labels // [] | index("human-gate")) | select(.status != "closed")]'
+
+# Org-wide sweep (root + agent-compounds + apps with a .beads/):
+for repo in ~/Repos ~/Repos/neometa/software/agent-compounds \
+            $(while IFS= read -r a; do echo ~/Repos/neometa/software/$a; done < ~/Repos/infrastructure/apps.list); do
+  [ -d "$repo/.beads" ] || continue
+  (cd "$repo" && br list --json 2>/dev/null) | \
+    jq --arg repo "$(basename $repo)" '[.[] | select(.labels // [] | index("human-gate")) | select(.status != "closed") | . + {repo: $repo}]'
+done
 ```
 
-Present these FIRST, each with its memo summary. The sit-down flow per item:
+Present these FIRST (org sweep: grouped by repo), each with its memo summary.
+Dream proposals appear here too (`dream-proposal` label — memo is the proposal
+file its description points at). The sit-down flow per item:
 human reads memo → states the decision → agent records it
 (`br comments add <id> "DECISION (<human>): <choice> — <why>"`) → agent
 executes consequences → closes the bead → downstream blocked beads unblock
