@@ -276,6 +276,8 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 ### Phase 1b: Identify Skills + Spawn Engineer Sub-Agent
 
+**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Bead specs go stale between refine and implement — refine verifies against the codebase as of ITS run, and intervening beads invalidate claims. Concrete cost (2026-06-12 session, 10-bead env-mac run): fwb's spec ordered deletion of the entire dead scoring layer — impossible for 2 of its 3 sublayers (no live web twin existed; ~30 min engineer detour); 081.12's spec said "PluginHostSmokeTests currently has 2 UIDevice tests — extend it" — the file did not exist at all. Both were non-E9 beads; do this for every bead, not just ones the native-testing skill flags.
+
 **Skill routing (conductor's job):** Read the bead spec and identify relevant domain skills from `AGENTS.md` > "Available Skills". Include the relevant skill paths in the engineer prompt below.
 
 Give the engineer the bead's full spec (self-contained — no plan reference needed):
