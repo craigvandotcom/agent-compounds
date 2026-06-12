@@ -221,6 +221,8 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
+> ⚠️ **The claim command robot-next prints uses `bd`, but this repo's binary is `br`.** `bv --robot-next` emits `bd update <id> --status=in_progress`; running it verbatim fails with `command not found: bd`. Translate to **`br update <id> --status=in_progress`**. (Incident 2026-06-12 wave/004: ran the emitted `bd` command, hit the error, re-ran with `br` — one wasted round-trip.)
+
 **Guard: verify the selected bead is refined and not human-gated.** Check the bead's labels — if it has `unrefined` or `human-gate`, skip it and pick the next one:
 
 ```bash
