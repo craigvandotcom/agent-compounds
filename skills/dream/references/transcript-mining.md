@@ -8,21 +8,26 @@ is reused; two things change — a deterministic pre-flight runs first, and `gat
 raw transcripts + git outcomes. Signal types: `signal-taxonomy.md`. Constitution (taxonomy,
 homes, poisoning rule): `../context-engineering/SKILL.md`. Plan: roadmap Phase 2.v2.
 
-## Two stages
+## Separation of concerns: hygiene cleans, dream remembers
 
-### Stage 1 — Pre-flight (deterministic, autonomous, runs BEFORE dreaming)
-Mechanical, read-only-or-reversible → safe to run unattended. Two jobs at once: keep the
-system healthy AND manufacture fresh outcome-grounded signal about its own operation.
-- **Refresh the derived indexes:** `qmd update && qmd embed` · `cass index` (each machine
-  rebuilds its own — never sync an index; raw is the source of truth).
-- **Health/hygiene checks:** disk · PM2 process health · oomd kills (`journalctl --user |
-  grep oomd`) · backup/replication integrity (transcripts converged?) · `gitleaks` scan ·
-  the Phase-3 lint sweep · dead-link + staleness scan.
-- **A Stage-1 *failure* is a high-priority learning signal** Stage 2 then mines: a stale
-  index, an oomd kill, a leaked secret, a sync that didn't converge. Emit it as a finding,
-  not just an alert.
+dream does **not** do infra maintenance. Cleaning (caches, tmp, stale headless browsers/dev
+servers, log rotation), index refresh (`qmd`/`cass`), and health checks belong to the
+separate **`infra-hygiene`** job. The sleep analogy is the *architecture*, not a reason to
+merge: biological sleep runs two distinct processes — glymphatic *clearance* and memory
+*consolidation* — in one orchestrated window, in sequence, where cleaning enables and feeds
+remembering. So: **separate jobs, one nightly window, sequenced** (scheduler runs
+`infra-hygiene` → `dream`); the cleaning's output *feeds* the dreaming, it doesn't become it.
 
-### Stage 2 — Mine (review-only — the funnel)
+`infra-hygiene` emits a structured **health report** (the seam between the two processes).
+dream **consumes** it as an outcome-signal source; dream never performs the maintenance.
+
+### Precondition (verify, don't clean)
+Before mining, confirm inputs are usable — indexes fresh within the window (`qmd status`,
+`cass status`), the night's health report present, replication converged. **On failure, do
+NOT fix** — record it as a finding (a stale index / oomd kill / leaked secret / non-converged
+sync is itself high-priority mineable signal) and proceed with what's available.
+
+### Mine (review-only — the funnel)
 Never feed whole transcripts to the LLM. Funnel, cheapest stage first:
 1. **Segment** — only the window since the last run (`last-run.json` timestamp).
 2. **Cheap pre-filter** — grep candidate segments by marker: tool-error strings,
@@ -40,9 +45,11 @@ Never feed whole transcripts to the LLM. Funnel, cheapest stage first:
 - **Intent** (what was attempted + reasoned): `~/.claude/projects/` + `~/.codex/sessions/`
   (the full replica, post v2-a) + agent-mail coordination.
 - **Outcome** (what actually resulted): **git** — the grounding layer that validates a
-  transcript lesson (transcript: "I'll fix X"; git: did X ship?). **v2.1 sockets** (architect
-  `gather` to accept them now, wire later): CI/deploy pass-fail · Sentry/PostHog telemetry ·
-  PM2/oomd/disk infra state · beads (a *reopened* bead = a lesson that didn't stick).
+  transcript lesson (transcript: "I'll fix X"; git: did X ship?) · **the `infra-hygiene`
+  health report** (oomd kills, disk-pressure events, leaked-secret hits, non-converged sync —
+  the night's operational truth). **v2.1 sockets** (architect `gather` to accept them now,
+  wire later): CI/deploy pass-fail · Sentry/PostHog telemetry · beads (a *reopened* bead = a
+  lesson that didn't stick).
 - The richest lessons live at the **join** of the two axes.
 
 ## Guardrails
@@ -57,7 +64,9 @@ Never feed whole transcripts to the LLM. Funnel, cheapest stage first:
 
 ## Trigger + rollout
 - Daily `pai-scheduler` job on the VM (watchdog + Discord alerts + heartbeat — never a raw
-  PM2 cron; the dead-`qmd-watcher` lesson). Runs Stage 1 → Stage 2 over the converged replica.
+  PM2 cron; the dead-`qmd-watcher` lesson), scheduled *after* the `infra-hygiene` job so the
+  health report + fresh indexes are ready. Runs the precondition check → mining funnel over
+  the converged replica.
 - **Replaces the weekly CYCLE once daily coverage is proven.** Sequence discipline: don't
   retire `/reflect` from `ac-land`'s forced flow until the daily cycle demonstrably surfaces
   proposals from non-pipeline conversations.
