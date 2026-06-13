@@ -21,7 +21,7 @@ DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a
 | Mode | Trigger | What happens |
 |---|---|---|
 | **CYCLE** | scheduler heartbeat, "run the dream cycle" | Phases 1–6 below: gather → synthesize → lint → judge → emit → heartbeat |
-| **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Precondition check (verify, don't clean) → raw-transcript mining funnel → reuses Phases 2/4/5; consumes the `infra-hygiene` health report. See the mode section below |
+| **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Precondition check (verify, don't clean) → raw-transcript mining funnel → reuses Phases 2/4/5; consumes the `infra-maintain` health report. See the mode section below |
 | **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
 
 ---
@@ -154,12 +154,12 @@ widens to raw transcripts + git outcomes** (every agent, every day, incl. non-pi
 conversations — the coverage win over the curated v1 stream).
 
 **dream does NOT do infra maintenance.** Cleaning, index refresh, and health checks belong
-to the separate **`infra-hygiene`** job (the "cleaning" process — distinct from the
+to the separate **`infra-maintain`** job (the "cleaning" process — distinct from the
 "remembering" one; sleep runs both in one nightly window, in sequence). The scheduler runs
 hygiene *before* dream; dream **consumes hygiene's health report**, it does not perform the work.
 
 **Precondition (not maintenance — verify, don't clean).** Confirm inputs are fresh: indexes
-updated within the window (`qmd status`, `cass status`) and the night's `infra-hygiene` health
+updated within the window (`qmd status`, `cass status`) and the night's `infra-maintain` health
 report exists. If a precondition fails (stale index, hygiene didn't run, replication didn't
 converge), do NOT fix it — **record it as a finding** (it's a high-priority learning signal)
 and proceed with what's available.
@@ -169,7 +169,7 @@ segment delta (since `last-run.json`) → **cheap pre-filter** (grep error/negat
 markers) → **redaction filter** (scrub into the LLM input; raw canon stays pristine) →
 **LLM-extract** candidate segments via the **signal taxonomy** → **CASS dedup** →
 **Phase 4 judge** → **Phase 5 emit**. Sources span two axes — intent (transcripts + agent-mail)
-and outcome (git + **the `infra-hygiene` health report** + v2.1 sockets: CI/Sentry/PM2/beads).
+and outcome (git + **the `infra-maintain` health report** + v2.1 sockets: CI/Sentry/PM2/beads).
 A hygiene-detected problem (oomd kill, leaked secret, disk-pressure event) is mineable signal.
 
 **Sources — two axes:** intent = `~/.claude/projects/` + `~/.codex/sessions/` (the replica) +
