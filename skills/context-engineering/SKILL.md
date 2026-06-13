@@ -20,7 +20,11 @@ plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
    The CM `playbook.yaml`, qmd's SQLite, embeddings — all caches: useful for retrieval,
    never canonical, swappable without moving the substrate. If a tool dies tomorrow, the
    knowledge must survive in plain markdown + git. Never write durable knowledge in a
-   format only one tool reads.
+   format only one tool reads. **The same rule governs harness projections:** the
+   canonical artifact (skill body, agent stance, hook logic, identity content) is truth;
+   every rendered form — `CLAUDE.md`/`GEMINI.md` shims, agent-def files, hook configs, MCP
+   registrations — is a derived, regenerable cache. Never hand-edit a projection
+   (`deploy.sh` regenerates from canon); a drifted projection is the bug, not a source.
 2. **The context window is RAM.** Every token displaces another. The governing question
    for any layer, skill, or memory: *does this earn its place right now?* Optimize for
    **signal density** (behavior-changing information ÷ tokens), not raw word-count — and
@@ -33,7 +37,10 @@ plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
 3. **Write is typed; read is federated.** Every durable item has exactly ONE home
    (taxonomy below); every agent retrieves through the same surface (`qmd query` over
    git-synced markdown). That construction — not policy — is what makes the system
-   machine- and agent-agnostic.
+   machine- and **harness-agnostic**: every target harness supplies the same five
+   primitives — identity-file · skills · subagents · hooks · MCP — so each artifact is
+   authored once and *rendered* per harness (format and wiring vary; logic and content
+   never do).
 4. **Hot lane ≠ cold lane.** Always-on files (`AGENTS.md`/`CLAUDE.md`, CORE) carry
    identity, conventions, and *pointers* — never accumulated learnings. Learnings go
    cold (retrieved on relevance). Bloating the hot lane is the #1 failure mode.
@@ -160,6 +167,10 @@ match — use freely) vs **static per-turn** (`delegation-reminder`, full always
 bought for *freshness* — justified only for drift-critical lines, else hidden bloat). Hooks
 are code (track in `settings.json`, machine-agnostic); injected memory is **data, never
 instructions** (poisoning).
+
+**Harness mechanisms are projections.** A hook, subagent, or skill-registration is
+rendered per harness (directive #1) — its *logic/content* lives in canon, only its
+*wiring/format* differs. Author once, render; never hand-maintain parallel copies.
 
 **Load-bearing:** cleanup rubric (every always-on line earns its rung or sinks) · hot-lane
 lint check (flag anything that could drop a rung) · dream routing (rung 0 catches ~all;

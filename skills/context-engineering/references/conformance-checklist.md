@@ -76,6 +76,11 @@ re-established. Every item is checkable; an auditor must cite file+line for a vi
 ## Projections (`.gemini/`, `.codex/`, `.agents/`, per-app `.claude/`)
 - [ ] Projections are symlinks/generated from ONE canonical source — never hand-drifted
       copies (verify by md5/readlink; `.agents/skills` and `.gemini/memory` both failed this).
+- [ ] **Regeneration test:** deleting every projection file and re-running the renderer
+      (`deploy.sh` / per-harness adapter) reproduces them identically. Anything lost was a
+      hand-edit — the bug. Harness-specific logic/content lives in canon; only wiring/format
+      is rendered (directive #1 / PLACEMENT). An unused, divergent projection is deleted, not
+      re-migrated by hand.
 
 ## Cross-cutting
 - [ ] Single source for any list/constant referenced in >1 file (apps → `infrastructure/
