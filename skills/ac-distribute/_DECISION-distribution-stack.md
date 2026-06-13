@@ -95,16 +95,43 @@ Consuming apps add `CORE/distribution.md` (mirror of `journeys/native.md`):
 ASC app id, bundle id, TestFlight group names, demo account for review,
 version conventions + build-number owner, screenshot specs, .p8 pointer.
 
-## Phase 1 results (fill in on the Mac)
+## Phase 1 results (cycle 1 — art-still-app, 2026-06-13)
 
 ```
-date / asc version:
-auth setup friction:
-testflight push: PASS/FAIL  — notes:
-skills kept / dropped:
-missing operations (candidates for Phase 2 wrapper):
-DECISION on Phase 2 scope:
+date / tooling:  2026-06-13. fastlane 2.236.1 on Homebrew Ruby 4.0 (system Ruby 2.6 too old).
+auth setup:      ASC Admin API key (key 4BDSRVV64D, issuer 7c951934-…). HEADLESS — no Apple
+                 2FA at any point. match created the distribution cert + app-store profile
+                 via the API key and stored them in a private git repo (neometa-ios-signing).
+testflight push: PASS — build 2 (v1.0, App 6778303129) uploaded to closed TestFlight.
 ```
+
+**MAJOR DEVIATION from the "Foundation" decision — reconcile in Phase 2:** this cycle did
+NOT use the `asc` CLI or the upstream rorkai skills. art-still-app already carried a fastlane
+lane from its own rrk.1 work (`ios/App/fastlane/`), so the fastest validated path was to
+**fix + use that fastlane lane**, not introduce a second tool. The doc's "NOT fastlane"
+stance predates discovering an app already standardized on fastlane. **Phase-2 decision
+needed:** standardize the org on `asc`-CLI and rip fastlane out of art-still, OR keep
+fastlane where it already exists and scope `ac-distribute` as a thin wrapper over *whatever
+each app already uses*. Recommendation: the latter — fastlane match's git-stored signing is
+genuinely good, and rewriting a working lane to asc-CLI is churn for no user value.
+
+**Gaps fixed in the rrk.1 fastlane scaffolding (all real, would have failed CI):**
+1. The lane never built `app_store_connect_api_key` — would have fallen back to Apple-ID/2FA.
+2. `APP_STORE_CONNECT_API_KEY_PATH` env name auto-maps onto `match.api_key_path` →
+   "Unresolved conflict between api_key_path and api_key". Renamed to custom `ASC_API_KEY_*`.
+3. `codesign --verify` ran on the `.xcarchive` container ("not signed at all") instead of the
+   signed `.app` inside it.
+4. The Sentry dSYM gate hard-failed with no Sentry creds → made conditional.
+
+**missing operations (Phase-2 wrapper candidates):** web-build+cap-sync is a manual
+precondition (lane assumes assets pre-synced; and prod-env injection is needed because
+`.env.local` is backend-less); build-number bump is manual; What-to-Test from git log not
+wired; feedback-triage (crashes/beta feedback → beads) not built.
+
+**remaining for CI tag-push (art-still):** GitHub secrets `MATCH_GIT_BASIC_AUTHORIZATION`
+(PAT), `APPLE_ID`, and Sentry trio. 7 of 10 secrets already set.
+
+Per-app facts recorded in art-still: `.claude/skills/CORE/distribution.md`.
 
 ## Cleanup
 
