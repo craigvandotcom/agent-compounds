@@ -11,7 +11,8 @@ gated behind human judgment.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there). Plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` Phase 2.
 **Queue:** `infrastructure/dream-cycle/proposals/` · **Heartbeat:** `infrastructure/dream-cycle/last-run.json`
-**Status:** v1 (weekly, structured stream only — no raw transcripts)
+**Status:** v1 LIVE (weekly, structured stream only) · v2 daily raw-transcript mining
+DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a lands)
 
 ---
 
@@ -20,6 +21,7 @@ hygiene rules all come from there). Plan: `neometa/alignment/roadmaps/ai-native-
 | Mode | Trigger | What happens |
 |---|---|---|
 | **CYCLE** | scheduler heartbeat, "run the dream cycle" | Phases 1–6 below: gather → synthesize → lint → judge → emit → heartbeat |
+| **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Stage 1 deterministic pre-flight → Stage 2 raw-transcript mining funnel → reuses Phases 2/4/5. See the mode section below |
 | **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
 
 ---
@@ -137,6 +139,44 @@ Write `infrastructure/dream-cycle/last-run.json`:
 `{"timestamp": "<ISO now>", "window_start": "<LAST>", "lessons_read": N, "candidates": N, "proposals": N, "machine": "<hostname>"}`
 (include in the Phase-5 commit). Then output a compact run report. If the run produced
 zero proposals, say so plainly — a quiet week is a valid outcome, not a failure.
+
+---
+
+## Mode: CYCLE-DAILY  (v2 — raw-transcript mining)
+
+**Status:** DESIGNED (roadmap Phase 2.v2); activates once transcript replication (v2-a)
+lands. Until then the weekly **CYCLE** above is the live path. Full how-to:
+`references/transcript-mining.md` · signal types: `references/signal-taxonomy.md`.
+
+An **evolution of CYCLE, not a rewrite** — Phases 2 (synthesize) / 4 (judge) / 5 (emit)
+are reused unchanged. Two changes: a deterministic **pre-flight** runs first, and **gather
+widens to raw transcripts + git outcomes** (every agent, every day, incl. non-pipeline
+conversations — the coverage win over the curated v1 stream).
+
+**Stage 1 — Pre-flight (deterministic, autonomous, before dreaming).** Refresh derived
+indexes (`qmd update && qmd embed`; `cass index` — each machine rebuilds its own, never sync
+an index) + health/hygiene checks (disk · PM2 · oomd · replication-converged? · `gitleaks`
+scan · the Phase-3 lint sweep · dead-link/staleness). Safe unattended. A **Stage-1 failure is
+itself a high-priority learning signal** Stage 2 mines (stale index, oomd kill, leaked secret).
+
+**Stage 2 — Mine (review-only — the funnel; never feed whole transcripts to the LLM):**
+segment delta (since `last-run.json`) → **cheap pre-filter** (grep error/negation/outcome
+markers) → **redaction filter** (scrub into the LLM input; raw canon stays pristine) →
+**LLM-extract** candidate segments via the **signal taxonomy** → **CASS dedup** →
+**Phase 4 judge** → **Phase 5 emit**. Ground each candidate by joining intent (transcript)
+with outcome (git; v2.1 sockets: CI/Sentry/PM2/beads).
+
+**Sources — two axes:** intent = `~/.claude/projects/` + `~/.codex/sessions/` (the replica) +
+agent-mail · outcome = git (grounding layer) + [v2.1 sockets]. Richest lessons at the join.
+
+**Guardrails:** `gitleaks` gates **emit** (proposals are the only thing reaching a shared
+remote; transcripts replicate privately, never touch git) · mine the cycle's own **review
+outcomes**, not its deliberation (self-reference) · review-only stands — Stage 1 autonomy is
+deterministic hygiene only; judgment-laden work is always a proposal.
+
+**Trigger:** daily `pai-scheduler` job on the VM (never a raw PM2 cron — the dead-`qmd-watcher`
+lesson). **Replaces the weekly CYCLE once daily coverage is proven** — and only then is
+`/reflect` retired from `ac-land`'s forced flow (don't remove old capture before new is proven).
 
 ---
 
