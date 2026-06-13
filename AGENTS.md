@@ -18,6 +18,24 @@
 | **Dry run** | `./deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
+## Distribution policy (2026-06-13, Craig-approved)
+
+**Full set everywhere, auto-synced — no per-project exclude list.** Every INTERNAL neoMeta
+app gets the entire registry (all skills + all agents) via `deploy.sh --all`. There is no
+selective per-app skill list anymore — availability is uniform.
+
+**Auto-propagation:** `infra-sync.sh` re-runs `deploy.sh --all` against each app in
+`infrastructure/ac-deploy-targets.list` on every sync. A newly added registry skill therefore
+lands in every internal app on the next sync with **no manual re-stamp** (deploy is idempotent:
+creates/refreshes symlinks only, never clobbers a real file — so local customizations like
+art-still's `design-system` survive).
+
+**Exclusion (the one exception):** public OSS libraries that are cloned standalone are NOT
+stamped — e.g. `vitest-affected`. Symlinks into `../../../agent-compounds` would dangle for
+external cloners and leak internal tooling structure. The "no exclude" rule is scoped to
+internal neoMeta product apps, not published OSS. To add/remove a target, edit
+`infrastructure/ac-deploy-targets.list` (not deploy.sh).
+
 ## Architecture
 
 ```
