@@ -54,9 +54,6 @@ Python/bash utilities that get **run**, not loaded — validators, analyzers, ge
 Use plain markdown links and imperative prose. Do **not** use `@./references/x.md` — that auto-inline syntax is a compound-engineering *plugin* extension, not the Anthropic spec, and won't behave portably in a symlink-deployed skill.
 
 ```markdown
-# Always-relevant supporting doc:
-**Persona catalog**: see [references/persona-catalog.md](references/persona-catalog.md)
-
 # Demand-loaded at a specific stage (preferred for stage-specific detail):
 When the review reaches Stage 6, read `references/review-output-template.md` for the report skeleton.
 

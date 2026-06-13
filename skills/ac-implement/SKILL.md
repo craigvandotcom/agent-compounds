@@ -47,14 +47,14 @@ br ready --json
 
 If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or check `br list --json` for blocked items."
 
-**Filter out unrefined beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` removes it. Only beads WITHOUT this label are eligible for implementation:
+**Filter out unrefined and human-gated beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` removes it. Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads WITHOUT both labels are eligible:
 
 ```bash
-# Check if any ready beads are refined (no "unrefined" label)
-br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)]'
+# Ready beads that are refined AND not human-gated
+br ready --json | jq '[.[] | select((.labels | index("unrefined") | not) and (.labels | index("human-gate") | not))]'
 ```
 
-If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready."
+If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-next` for the decision docket."
 
 ### Ensure Wave Branch (single-branch rule)
 
@@ -221,11 +221,13 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
-**Guard: verify the selected bead is refined.** Check the bead's labels — if it has `unrefined`, skip it and pick the next one:
+> ⚠️ **The claim command robot-next prints uses `bd`, but this repo's binary is `br`.** `bv --robot-next` emits `bd update <id> --status=in_progress`; running it verbatim fails with `command not found: bd`. Translate to **`br update <id> --status=in_progress`**. (Incident 2026-06-12 wave/004: ran the emitted `bd` command, hit the error, re-ran with `br` — one wasted round-trip.)
+
+**Guard: verify the selected bead is refined and not human-gated.** Check the bead's labels — if it has `unrefined` or `human-gate`, skip it and pick the next one:
 
 ```bash
-# Check if the selected bead has the "unrefined" label
-br show <id> --json | jq '.labels | index("unrefined")'
+# Check the selected bead's labels for either exclusion
+br show <id> --json | jq '.labels | (index("unrefined") // index("human-gate"))'
 ```
 
 If the bead is unrefined:
@@ -275,6 +277,8 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 ```
 
 ### Phase 1b: Identify Skills + Spawn Engineer Sub-Agent
+
+**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Bead specs go stale between refine and implement — refine verifies against the codebase as of ITS run, and intervening beads invalidate claims. Concrete cost (2026-06-12 session, 10-bead env-mac run): fwb's spec ordered deletion of the entire dead scoring layer — impossible for 2 of its 3 sublayers (no live web twin existed; ~30 min engineer detour); 081.12's spec said "PluginHostSmokeTests currently has 2 UIDevice tests — extend it" — the file did not exist at all. Both were non-E9 beads; do this for every bead, not just ones the native-testing skill flags.
 
 **Skill routing (conductor's job):** Read the bead spec and identify relevant domain skills from `AGENTS.md` > "Available Skills". Include the relevant skill paths in the engineer prompt below.
 
@@ -437,13 +441,15 @@ If any fail, fix the issues before proceeding.
 
 ### Next Steps
 
-**Always run `/ac-land` next.** It handles:
+**Run `/ac-land` next (recommended).** It handles:
 
 - Clean git push
 - Retrospective learning from this session
 - System upgrades (user-gated) that make the next session better
 
 This is what makes the flywheel accelerate — don't skip it.
+
+**Pipeline context:** Both `/ac-land` (per-session closure) and `/ac-review` (per-feature-branch review) are pre-merge gates — both must complete before `/ac-merge`. Their mutual order is flexible. The typical flow after implementing is: land the session, then run review (or vice versa), then merge. Do NOT run `/ac-merge` until both have completed.
 
 **Present next step with `AskUserQuestion`:**
 
@@ -494,4 +500,4 @@ Coordination via Agent Mail file reservations BEFORE editing is mandatory in par
 
 ---
 
-_Bead work: sequential implementation with quality gates. For bead prep: `/ac-beadify` → `/ac-bead-refine`. For landing: `/ac-land`._
+_Bead work: sequential implementation with quality gates. For bead prep: `/ac-beadify` → `/ac-bead-refine`. After implementing: `/ac-land` (session closure) + `/ac-review` (branch review), both before `/ac-merge`._

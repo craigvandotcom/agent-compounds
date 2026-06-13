@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduler heartbeat; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". Reads the git-synced lesson stream, synthesizes cross-session patterns, lints for contradictions/staleness/duplicates, judges candidates against a quality bar, and emits PR-style proposals to a review queue. REVIEW-ONLY: it never applies changes itself — humans merge. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduler heartbeat; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". Reads the git-synced lesson stream, synthesizes cross-session patterns, lints for contradictions/staleness/duplicates, judges candidates against a quality bar, and emits PR-style proposals to a review queue. CYCLE mode emits proposals only — never applies; REVIEW mode applies human-approved proposals to target repos. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — synthesize · lint · judge · propose
@@ -69,7 +69,10 @@ Sweep the memory homes for: contradictions between notes · stale facts (evidenc
 predates a known change; flag, don't guess) · near-duplicates to merge · taxonomy
 violations (missing `type`/`domain`/`evidence`) · index drift (`MEMORY.md` lines vs
 actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]`.
-Each finding becomes a candidate proposal (usually `type: lint-fix`, low-risk).
+Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
+(dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
+lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
+low-risk).
 
 ### Phase 4 — Judge (the quality bar)
 
@@ -91,7 +94,8 @@ Create `infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`:
 
 ```markdown
 ---
-status: pending            # pending | approved | rejected | applied
+status: pending            # mirror of the bead — bead is status authority
+bead: <id>                 # decision bead in target_repo's db (set at emit)
 category: rule | recipe | skill-improvement | lint-fix | re-home
 target_repo: root | agent-compounds | <app>
 target_file: <path within that repo>
@@ -105,8 +109,27 @@ judge: {score: N, reason: "<one line>"}
 <which future sessions get faster, citing the evidence>
 ```
 
+**Register each proposal as a decision bead** in its `target_repo`'s beads db
+(the proposal FILE is the memo artifact; the BEAD is the action handle — status
+authority lives in the bead, the docket is the single action surface; see
+`../_shared/bead-conventions.md`). Repo → path: `root` = `~/Repos` ·
+`agent-compounds` = `~/Repos/neometa/software/agent-compounds` · `<app>` =
+`~/Repos/neometa/software/<app>`:
+
+```bash
+cd <target_repo_path> && br create "dream: <slug>" -t decision \
+  --labels "human-gate,dream-proposal" \
+  --description "Memo: <abs path to NN-<slug>.md>. <one-line What>. Judge: <score>/10."
+```
+
+Public-db caution: agent-compounds beads publish — neutral titles, pointer-only
+descriptions (the conventions file has the rule). Record the bead id in the
+proposal's frontmatter (`bead: <id>`).
+
 Commit (root repo, these paths only) + push — the queue must be visible cross-machine:
 `git add infrastructure/dream-cycle && git commit -m "dream: <date> cycle — N proposals" && git push`
+(target-repo bead dbs: commit `.beads/` in each target repo touched, separately —
+never across repo boundaries.)
 
 ### Phase 6 — Heartbeat + report
 
@@ -119,14 +142,27 @@ zero proposals, say so plainly — a quiet week is a valid outcome, not a failur
 
 ## Mode: REVIEW
 
-1. List `status: pending` across `proposals/*/` (oldest first). Nothing pending → say so.
-2. Per proposal: show What/Why/evidence/judge verdict. Collect decisions via
-   `AskUserQuestion` (multiSelect, batches of ≤4: approve / reject / skip).
+Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
+**decision docket** (`/ac-human-next` surfaces the same beads org-wide; either
+entry point works, the contract is identical).
+
+1. List open `dream-proposal` beads across the beads repos (root, agent-compounds,
+   apps): per repo `br list --json | jq '[.[] | select(.labels // [] |
+   index("dream-proposal")) | select(.status != "closed")]'` — oldest first.
+   Legacy fallback: `status: pending` proposal files with no `bead:` id (pre-docket
+   runs) — review them the same way, and file the missing bead. Nothing open → say so.
+2. Per proposal: read the memo file (What/Why/evidence/judge verdict), present.
+   Collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
+   approve / reject / skip).
 3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
-   (adjust mechanically if the target drifted; if it drifted *semantically*, flip back to
-   pending with a note instead of guessing). Respect repo boundaries — commit in the
-   target repo with message `dream: apply <slug>`, push.
-4. Flip frontmatter `status:` (`applied` / `rejected`), commit the queue (root), push.
+   (adjust mechanically if the target drifted; if it drifted *semantically*, leave the
+   bead open with an enrichment comment instead of guessing). Respect repo boundaries —
+   commit in the target repo with message `dream: apply <slug>`, push.
+4. **Close out per bead-conventions:** record the decision
+   (`br comments add <id> "DECISION (<human>): <choice> — <why>"`), close the bead
+   (approved-and-applied or rejected alike — the comment trail is the record), mirror
+   the file's frontmatter `status:`, commit the queue (root) + each touched `.beads/`
+   (own repo), push.
 5. Report: applied / rejected / remaining — and note acceptance-rate (the cycle's own
    quality metric; persistently low → propose a judge-bar fix next cycle).
 
@@ -142,3 +178,5 @@ zero proposals, say so plainly — a quiet week is a valid outcome, not a failur
 | Editing another repo from the root commit | Apply + commit inside the target repo |
 | Treating an empty week as failure | Lint still runs; "0 proposals" is a valid report |
 | Skipping the heartbeat | Always write last-run.json — silent death is the enemy |
+| Emitting a proposal file without its decision bead | The bead IS the action handle — a file alone is invisible to the docket |
+| Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + pointer; memo stays private |

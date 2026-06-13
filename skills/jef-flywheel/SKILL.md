@@ -206,7 +206,7 @@ Logical commit groupings with detailed messages. Consider a dedicated commit age
 
 | File                             | When to Read                                    |
 | -------------------------------- | ----------------------------------------------- |
-| `reference/craigs-setup.md`      | Craig's 3-agent scale, costs, tool priority     |
+| `reference/example-setup.md`     | Worked example: 3-agent scale, VPS specs, cost shape |
 | `reference/model-selection.md`   | Which AI model for which role                   |
 | `reference/workflow-cadence.md`  | Wave vs continuous workflow patterns            |
 | `reference/resources.md`         | Complete source index (repos, tweets, articles) |

@@ -102,6 +102,7 @@ it('should validate JPEG magic numbers', () => {
 import { render, screen, waitFor } from '@/__tests__/setup/test-utils';
 import userEvent from '@testing-library/user-event';
 
+// NOTE: FoodEntryForm / "add food" is a BCA example — substitute your app's component and labels.
 it('should submit form without blocking', async () => {
   const user = userEvent.setup();
   render(<FoodEntryForm onAddFood={mockOnAddFood} />);
@@ -136,7 +137,7 @@ it('should submit form without blocking', async () => {
 **Standard mock patterns:**
 
 ```typescript
-// Mock service
+// NOTE: food-submission is a BCA-specific example — substitute your app's service module.
 vi.mock('@/lib/services/food-submission', () => ({
   processFoodSubmission: vi.fn(),
 }));
@@ -238,25 +239,11 @@ describe.skipIf(!process.env.OPENROUTER_API_KEY)('live model check', () => {
 });
 ```
 
-Existing examples in this repo: `__tests__/integration/compound-check-golden.test.ts`, `__tests__/integration/diagnose-script-audit.test.ts`, `__tests__/integration/ingredient-lifecycle-reliability.test.ts`, `__tests__/integration/environment.test.ts`.
+Find existing examples: `/usr/bin/find __tests__ -name '*.test.ts' | head` — layouts differ per app.
 
 If a live integration test passes deterministically but the underlying SDK should be making network calls, suspect this annotation is missing.
 
-### Admin API Route Pattern (Repeated Structure)
-
-Admin PATCH/POST routes in `app/api/admin/ingredients/[slug]/` follow this order:
-
-1. Auth: `checkAdminAuth({ rateLimitKey: '<route>', maxPerMin: 30 })`
-2. Slug validation: `/^[a-z0-9-]{1,200}$/` → 404 if invalid
-3. Body parse + zod validation → 400 if missing/invalid
-4. Domain validation: check value against known vocabulary/enum → 400 if unknown
-5. Fetch ingredient: `.from('canonical_ingredients').select('*').eq('slug', slug).single()` → 404
-6. Pipeline guard: reject if `processing | zone_complete | tags_complete` → 409
-7. Mutate: update `research_output` nested field + set `manual_override = true`
-8. Return: structured response with `{ updated_item, changed_flag, current_state }`
-
-Test pattern: `vi.hoisted()` + `setupReadChain()`/`setupWriteChain()` + per-test dynamic `import()`.
-Reference: `gates/route.ts`, `tags/route.ts`, `retrigger/route.ts`.
+When multiple admin routes share the same auth → validate → fetch → guard → mutate → respond structure, factor a helper rather than repeating the sequence inline.
 
 ---
 
@@ -288,10 +275,7 @@ pnpm test:ci           # CI mode (coverage, limited workers)
 pnpm test:e2e          # Playwright E2E tests
 ```
 
-> **NEVER run `npx vitest` directly.** All `pnpm test*` commands route
-> through `scripts/test.sh` which sets `--max-old-space-size=2048`.
-> Without this cap, Vite's transform engine can balloon to 12GB+ and
-> trigger the kernel cgroup OOM killer, killing the entire tmux pane.
+> **Check `package.json` first.** If the app has a `scripts/test.sh` wrapper (BCA does), use the `pnpm test*` aliases — they set `--max-old-space-size` to prevent Vite's transform engine from consuming unbounded heap and triggering the kernel OOM killer. If no such wrapper exists, `npx vitest run` is fine.
 
 ### RTL Queries (Priority Order)
 
@@ -333,7 +317,7 @@ When testing SSE streaming routes or hooks that consume SSE streams:
 - **Route tests:** Use `readSseEvents()` helper to consume `response.body` ReadableStream and parse `event:` + `data:` blocks. Reference: `__tests__/unit/resolve-endpoint.test.ts`.
 - **Hook tests:** Use controlled `ReadableStream` with captured `enqueue`/`close` refs to verify intermediate state (e.g., earlyZones populated before resolved clears it). Reference: `__tests__/unit/use-ingredient-zoning-sse.test.ts`.
 - **SWR mock:** Use `vi.mock('swr', async (importOriginal) => ({ ...(await importOriginal()), mutate: mockMutate }))` to replace only `mutate` without breaking SWR cache internals.
-- **Wire-contract guard:** A handler test that injects mock events with a hardcoded event name does NOT validate the wire contract. When bd-8nse.1 landed, its client-side Layer 4 handler listened for event name `compound_defer` while the server emitted the event as `resolved` with `{status:'compound_defer'}` in the payload — the handler would have been completely dead code in production. Tests passed because they fed fake `compound_defer` events into the mock stream on the same side of the wire. Fix: (a) share the event name as an exported constant imported by BOTH the server route and the client handler, so a rename would break both tests simultaneously, OR (b) make the server-side test file cover event-name emission (e.g. `expect(events[0].event).toBe('compound_defer')`) and land it in the same bead as the client handler, never a follow-up.
+- **Wire-contract guard:** A handler test that injects mock events with a hardcoded event name does NOT validate the wire contract. In one incident, a client-side SSE handler listened for a different event name than the server emitted — completely dead code in production, yet tests were green because they fed mock events directly into the client mock stream, bypassing the wire entirely. Fix: (a) share the event name as an exported constant imported by BOTH the server route and the client handler, so a rename would break both tests simultaneously, OR (b) make the server-side test file cover event-name emission (e.g. `expect(events[0].event).toBe('compound_defer')`) and land it in the same bead as the client handler, never a follow-up.
 
 ## Common Mistakes
 
@@ -354,4 +338,4 @@ When testing SSE streaming routes or hooks that consume SSE streams:
 | Using `require()` inside functions expecting `vi.mock()` to intercept | Vitest with Vite only intercepts module-level ESM `import` statements and top-level `require()`. `require()` inside function bodies is NOT intercepted. Move to top-level ESM `import` for mockability. Safe for plugins with web fallbacks (e.g., `@capacitor/preferences`).                                                                                                                                                                                                                                                      |
 | Missing mock updates after behavior change                            | When changing a function's contract (e.g., direct-write → read-merge-write, new parameters, different return type), grep `__tests__/` and `features/` for all test files that mock or import that function. Update ALL of them in the same change. Run `pnpm test:all` to catch downstream breakage — `pnpm test` (affected-only) will miss integration tests that don't directly import the changed file.                                                                                                                         |
 | Mocking recursive functions with a global resolved value              | Use `mockImplementation((arg) => arg === target ? targetReturn : safeDefault)`. A global `mockResolvedValue` on a function that is called recursively on its own outputs makes every recursive call return the trigger condition, causing infinite loops and worker hangs. Scope the mock by argument so non-target inputs return a terminal value. Example: `checkCompound` returns `is_compound:true` only for the parent name; sub-ingredient recursive calls get `is_compound:false`.                                          |
-| Trusting a memorized lint warning baseline after adding new files     | Re-count warnings explicitly each pass: `pnpm lint 2>&1 \| grep "problems"`. The warning count is session-state — adding new test files commonly introduces unused-var warnings that won't surface in `0 errors` checks. Report the actual current count and diff against the pre-bead baseline you observed at start, not a number remembered from earlier in the session (especially after compaction). Concrete cost: bd-9veq.3 reported "183 unchanged" when actual was 185 (+2 in new file); ~4 min to investigate and clean. |
+| Trusting a memorized lint warning baseline after adding new files     | Re-count warnings explicitly each pass: `pnpm lint 2>&1 \| grep "problems"`. The warning count is session-state — adding new test files commonly introduces unused-var warnings that won't surface in `0 errors` checks. Report the actual current count and diff against the pre-bead baseline you observed at start, not a number remembered from earlier in the session (especially after compaction). Concrete cost: in one incident an engineer reported "183 unchanged" when the actual count was 185 (+2 in a new file); ~4 min to investigate and clean. |

@@ -1,6 +1,6 @@
 ---
 name: validator
-description: Adversarial verification stance — reviews/audits/judges work against rubrics, tests, and checklists. Read-only + test-running; FINDS issues and renders verdicts, NEVER fixes. Use for code review, dream-cycle judging, conformance audits, claim verification. Formerly named "reviewer" (alias kept).
+description: Adversarial verification stance — reviews/audits/judges work against rubrics, tests, and checklists. Read-only + test-running; FINDS issues and renders verdicts, NEVER fixes. Use for code review, dream-cycle judging, conformance audits, claim verification. Formerly named "reviewer".
 tools: Read, Grep, Glob, Bash
 model: sonnet
 memory: project
@@ -34,7 +34,7 @@ Load skills based on what you are reviewing. Read the skill's SKILL.md file befo
 
 ## Core Principle
 
-**AUDIT, DON'T FIX.** You identify problems and suggest improvements--the engineer agent implements fixes.
+**AUDIT, DON'T FIX.** You identify problems and suggest improvements--the implementer agent implements fixes.
 
 ## Responsibilities
 

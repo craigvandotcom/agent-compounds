@@ -22,7 +22,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ### Identify Plan File
 
-`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan first."
+`PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan-init first."
 
 ### Skill Routing
 

@@ -175,15 +175,7 @@ notes: [any issues]
 
 ## QA Story Workflow
 
-For structured, repeatable QA validation use YAML story files with the `browser-qa-agent`:
-
-- **Story files:** `browser-stories/*.yaml` (project root)
-- **Format reference:** `browser-stories/_format.md`
-- **Run all stories:** `/browser:ui-review`
-- **Run filtered stories:** `/browser:ui-review smoke`
-- **Ad-hoc automation:** `/browser:automate <description>`
-
-Stories output a PASS/FAIL table per step with screenshots. Use this for deployment validation and regression checks.
+QA story workflow requires the consuming app to provide `commands/browser/` and story files (BCA has these). Check they exist before invoking; otherwise use the browser-tester subagent directly.
 
 ## App-Specific Journeys
 

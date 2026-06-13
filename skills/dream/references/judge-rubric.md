@@ -1,6 +1,6 @@
 # Dream-cycle judge — subagent prompt + rubric
 
-Spawn a general-purpose subagent with this prompt (substitute the candidate list).
+Spawn a `validator` stance agent with this prompt (fall back to general-purpose if validator isn't deployed) (substitute the candidate list).
 Independence matters: the judge must NOT be the context that generated the candidates.
 
 ---

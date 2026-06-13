@@ -302,7 +302,7 @@ Or use our `/commit` command which follows the same pattern.
 | ------------ | --------- | ---------------- | ------------------------------------------------ |
 | Idea         | 5 min     | Any editor       | -                                                |
 | Initial Plan | 30-60 min | GPT Pro / Claude | -                                                |
-| Refine Plan  | 1-3 hours | GPT Pro + Claude | `/ac-plan` (genius review mode), `/ac-plan` (transcender-alien mode) |
+| Refine Plan  | 1-3 hours | GPT Pro + Claude | `/ac-plan-review-genius`, `/ac-plan-transcender-alien` |
 | Beadify      | 20-30 min | Claude Code + br | (beadification prompt above)                     |
 | Polish Beads | 30-60 min | Claude Code      | (bead refinement prompt above)                   |
 | Execute      | varies    | Agents + bv      | `/agent-swarm-launcher`                          |

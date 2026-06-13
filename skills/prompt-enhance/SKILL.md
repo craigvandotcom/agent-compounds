@@ -299,8 +299,8 @@ Apply approved fixes using the Edit tool. **Apply fixes to the SOURCE skill/comm
 If working in agent-compounds and a sync target exists (e.g., vitest-affected):
 
 ```bash
-# Sync enhanced skills/commands
-cp skills/*/SKILL.md /path/to/target/.claude/skills/
+# Deploy updated skills via symlink (symlink, never copy — canonical lives in agent-compounds)
+./deploy.sh <target> --skills <name>
 ```
 
 Commit changes:

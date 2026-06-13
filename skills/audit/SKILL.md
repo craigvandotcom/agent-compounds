@@ -14,7 +14,6 @@ description: Comprehensive audit framework for systematic code quality verificat
 
 **Purpose:** Orchestrate systematic, parallelizable audits across security, performance, UI/UX, and testing domains
 **Domain:** Quality assurance, pre-deployment verification, continuous improvement
-**Tech Stack:** Next.js 15, React 19, TypeScript, Supabase, Vitest, Playwright
 **Status:** Complete
 
 ---

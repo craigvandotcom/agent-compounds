@@ -13,7 +13,7 @@ description: Use ONLY when the user explicitly wants MULTIPLE divergent design o
 # UI Brainstorm Skill
 
 **Purpose:** Multi-model AI consensus for UI/UX design ideation and critique using cutting-edge vision models
-**Tools:** Claude Opus 4.8 (native), openrouter (Gemini 3.1 Pro, Grok 4.20)
+**Tools:** Claude Opus 4.8 (native), openrouter (Gemini 3.1 Pro, Grok 4.20) (verify: `openrouter --list-models`)
 **Domain:** Interface design, UX optimization, visual critique
 **Status:** Active
 
@@ -303,22 +303,7 @@ openrouter --file prompt.txt --image screenshot.png --model google/gemini-3.1-pr
 
 ### Output Location
 
-**Primary:** `knowledge/2-areas/software/design-critiques/YYYY-MM-DD-[project].md`
-
-**Rationale:**
-
-- Centralized design history
-- Cross-project learning
-- Searchable via Grep/PKM
-
-**Structure:**
-
-```
-knowledge/2-areas/software/design-critiques/
-├── 2026-01-31-login-flow.md
-├── 2026-02-05-newsletter-header.md
-└── _index.md (summary of all critiques)
-```
+Persist via the reflect/context-engineering route (memory substrate), or the user's personal knowledge base — NOT inside the app repo.
 
 ### Memory Integration
 
@@ -328,7 +313,7 @@ knowledge/2-areas/software/design-critiques/
 - Model performance (which model's ideas win most)
 - Rubric refinements (adjust weights based on outcomes)
 
-**Command:** `cm context "ui brainstorm" --json` retrieves past design critique learnings
+**Command:** `cm context "ui brainstorm" --json` retrieves past design critique learnings (verified: `cm context` with `--json` flag works as of 2026-06-11)
 
 ---
 
@@ -349,8 +334,7 @@ knowledge/2-areas/software/design-critiques/
 
 **Cross-Skill Usage:**
 
-- `brand` skill loads for brand alignment rubric scoring
-- `research` skill can analyze competitor designs pre-brainstorm
+- `brand-system` skill (app/portfolio-local — not in this registry; must be present in the consuming workspace) loads for brand alignment rubric scoring
 - `openrouter` tool provides multi-model access
 
 **Subagent delegation:**

@@ -44,11 +44,10 @@ agent-compounds/
 │   ├── ac-*       # the compounding-engineering pipeline (plan→beadify→implement→review→merge→land)
 │   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
 │   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
-├── agents/        # subagent definitions (engineer, reviewer, browser-agent, browser-tester)
-│   └── sub-agents/  # FROZEN legacy OSS snapshot — never symlink from here
+├── agents/        # subagent definitions (researcher, implementer, validator — the 3 stances — plus tester, code-explorer, browser-tester, browser-agent)
 ├── deploy.sh      # symlinks (never copies) skills/agents into a target's .claude/
-├── templates/     # AGENTS.md template for NEW projects (the boilerplate lives there, not here)
-└── _plans/        # working plans (context-architecture, …)
+├── templates/     # project-AGENTS.md — new-project L0 template (copy to your project root)
+└── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)
 ```
 
 ## Rules
@@ -60,3 +59,6 @@ agent-compounds/
 - New skills pass the selectability test (description = WHEN, not HOW) and the overlap
   check against this registry before landing.
 - Recipes go in `skills/jef-prompts/` — never a parallel prompt library.
+- **`./lint.sh` before committing registry changes** (exit 0 = clean): dead refs,
+  frontmatter/README/disk conformance, portability greps, consumer symlink health,
+  deploy.sh dry-run inertness.

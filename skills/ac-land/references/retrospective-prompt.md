@@ -54,8 +54,8 @@ Look across ALL system files — not just MEMORY.md. Each target type has a purp
 
 | Target | What belongs here | Example |
 |--------|------------------|---------|
-| `.claude/skills/*.md` | Workflow steps that caused friction, missing instructions, unclear prompts | "bead-work Phase 1c should remind conductor to scope test runs" |
-| `.claude/skills/*.md` | Domain patterns discovered or violated during implementation | "testing skill should document the dotenv-worker quirk" |
+| `.claude/skills/*.md` | Workflow steps that caused friction, missing instructions, unclear prompts | "bead-work Phase 1c should remind conductor to scope test runs" — NOTE: shared skills are symlinks into agent-compounds — an edit here changes EVERY app. Confirm scope; app-specific lessons go to the app's CORE instead. |
+| `.claude/skills/*.md` | Domain patterns discovered or violated during implementation | "testing skill should document the dotenv-worker quirk" — NOTE: shared skills are symlinks into agent-compounds — an edit here changes EVERY app. Confirm scope; app-specific lessons go to the app's CORE instead. |
 | `AGENTS.md` | New conventions, quality gate changes, project-wide rules | "Add convention: never hardcode secrets in test files" |
 | `MEMORY.md` | Gotchas and quirks that don't fit the above — last resort, not default | "supabase gen types outputs debug line" |
 

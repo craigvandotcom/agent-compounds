@@ -24,6 +24,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-plan-init** | Create a first-draft implementation plan |
 | **ac-plan-clean** / **ac-plan-refine-internal** / **ac-plan-refine-external** | Verify / deepen a plan (correctness pass · multi-agent · multi-model) |
 | **ac-plan-review-genius** / **ac-plan-transcender-alien** | Forensic / paradigm-breaking review of a plan |
+| **ac-bead-capture** | Capture a raw idea/bug/decision on the go as one properly typed, routed bead |
 | **ac-beadify** | Convert a refined plan into a beads task structure (create) |
 | **ac-bead-refine** | Refine beads to convergence — self-contained, agent-ready |
 | **ac-implement** | Sequential bead implementation — conductor + engineer sub-agents |
@@ -51,10 +52,25 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **browser-testing** | UI/login/flow validation via agent-browser |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
+| **ui-elevate** | Polish existing UI to premium quality — hierarchy, spacing, micro-interactions, anti-slop audit |
 | **web-design-guidelines** | Accessibility, forms, animation, typography UX |
 | **app-store-screenshots** | Generate iOS App Store screenshots from real screens |
+| **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
+| **seo-metadata** | Add or audit SEO and social-share metadata (OG, Twitter cards, JSON-LD, sitemaps) |
+| **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
+| **ac-qa-simulator** | QA the native iOS build in the Simulator — journeys, appearance matrix, screenshots/video |
+| **vm-heavy-prep** | Prepare a Linux VM for heavy parallel work — free memory, restart leaky processes, report capacity |
+
+> **Not a deployable skill:** `ac-distribute/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill — the pipeline's SHIP lane (TestFlight push, feedback triage, store release), downstream of merge.
 
 > **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
+
+**Substrate** — the AI-native-org memory trio (deploy together)
+| Skill | What it does |
+|-------|-------------|
+| **context-engineering** | Canonical save-routing taxonomy and L0–L4 loading model — where durable knowledge goes and what loads when |
+| **reflect** | Capture session learnings into the memory substrate — facts, decisions, recipes, domain-routed and git-tracked |
+| **dream** | The org's self-improvement engine — synthesize cross-session patterns, lint the substrate, emit PR-style proposals |
 
 ## Commands → Skills (migration complete)
 
@@ -70,12 +86,15 @@ Portable agent definitions, symlinked into `.claude/agents/`.
 
 | Agent | What it does |
 |-------|-------------|
-| **[engineer](./agents/engineer.md)** | Implementation sub-agent for bead/wave work |
-| **[reviewer](./agents/reviewer.md)** | Code review sub-agent |
-| **[tester](./agents/tester.md)** | Test authoring / verification sub-agent |
-| **[code-explorer](./agents/code-explorer.md)** | Read-only codebase exploration + mapping |
-| **[browser-tester](./agents/browser-tester.md)** | UI smoke testing via agent-browser — PASS/FAIL |
-| **[browser-agent](./agents/browser-agent.md)** | Ad-hoc browser automation — screenshots, scraping, forms |
+| **[researcher](./agents/researcher.md)** | Read-only gather-and-distill stance — investigates the brain, codebase, and web; never writes |
+| **[implementer](./agents/implementer.md)** | Production stance — scoped execution of approved plans/specs (code, content, config) |
+| **[validator](./agents/validator.md)** | Adversarial verification stance — audits/judges work against rubrics, finds issues, never fixes |
+| **[tester](./agents/tester.md)** | Test coverage and validation specialist — verifies test quality and runs automated suites |
+| **[code-explorer](./agents/code-explorer.md)** | Read-only codebase exploration + mapping, pattern discovery before building |
+| **[browser-tester](./agents/browser-tester.md)** | UI smoke testing via agent-browser — runs user journey story files and reports PASS/FAIL |
+| **[browser-agent](./agents/browser-agent.md)** | General-purpose headless browser automation — screenshots, scraping, forms, navigation |
+
+> **Note:** `implementer` and `validator` were formerly named `engineer` and `reviewer` — those aliases are retired.
 
 ## Quick Start
 
@@ -101,7 +120,7 @@ Portable agent definitions, symlinked into `.claude/agents/`.
 Then create the project's context file:
 
 ```bash
-cp AGENTS.md ../my-project/AGENTS.md   # fill in stack + conventions
+cp templates/project-AGENTS.md ../my-project/AGENTS.md   # fill in stack + conventions
 mkdir -p ../my-project/_backlog ../my-project/_plans ../my-project/_strategy
 ```
 
@@ -111,13 +130,13 @@ mkdir -p ../my-project/_backlog ../my-project/_plans ../my-project/_strategy
 export OPENROUTER_API_KEY=sk-or-...  # for openrouter / expert-consensus
 ```
 
-Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus What makes a great API?` — toggle models in `expert-panel.json`.
+Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus What makes a great API?` — toggle models in `skills/expert-consensus/expert-panel.json`.
 
 ## Dependencies
 
 | Dependency | What it provides | Install |
 |-----------|-----------------|---------|
-| **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install beads` |
+| **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install --git https://github.com/Dicklesworthstone/beads_rust.git` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
 | **openrouter** | OpenRouter CLI for multi-model queries (used by expert-consensus and openrouter skills) | Install the `openrouter` CLI and ensure it's on your `PATH` |
 | **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by browser-tester sub-agent, ac-land, ac-review) | `npm install -g agent-browser` |
@@ -127,7 +146,7 @@ Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus
 - **Compound, don't collect** — each skill should make the next one more valuable
 - **SKILL.md is the interface** — human-readable reference that doubles as AI context
 - **Standalone by default** — no frameworks, no setup wizards
-- **One config file** — `expert-panel.json` has everything
+- **One config file per skill** — e.g. `skills/expert-consensus/expert-panel.json`
 
 ## License
 

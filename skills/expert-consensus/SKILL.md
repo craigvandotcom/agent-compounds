@@ -1,9 +1,10 @@
 ---
 name: expert-consensus
 description: Send one prompt to multiple AI models. Get one synthesized answer. Use when you want multiple models to weigh in; triggers on "ask the experts", "model consensus", "what do other models think", "get a second opinion from other AIs".
-version: 1.0.0
 tools: [openrouter.py, expert-panel.json]
 ---
+
+**Standalone by design: this skill bundles its own `openrouter.py` and is NOT the infrastructure OpenRouter CLI — external consumers copy this directory; internal consumers deploy via deploy.sh.**
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and

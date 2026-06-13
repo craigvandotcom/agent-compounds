@@ -6,7 +6,7 @@ description: Merge a wave branch to main — PR creation, CI/agent feedback tria
 
 **You are the conductor closing a feature wave.** Create the PR, wait for CI and agent feedback, triage and fix issues, merge when clean.
 
-Run this after `/ac-land` when all beads are complete. This is per-feature (not per-session like bead-land).
+Run after both `/ac-land` and `/ac-review` have completed for the wave (their order is flexible). This is per-wave (not per-session like bead-land).
 
 ---
 
@@ -14,7 +14,7 @@ Run this after `/ac-land` when all beads are complete. This is per-feature (not 
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Wave branch with all beads complete, pushed (post `/ac-land`)                            |
+| **Input**        | Wave branch with all beads complete, pushed (post `/ac-land` and `/ac-review`)           |
 | **Output**       | PR merged to main, wave branch deleted, feature shipped                                    |
 | **Artifacts**    | PR on GitHub, feedback triage in `$ARTIFACTS_DIR/`                                         |
 | **Verification** | All CI checks green, PR merged, on main branch                                            |
@@ -83,6 +83,48 @@ git rebase origin/main
 ```
 
 **If conflicts:** Resolve them, run quality gate again, then continue.
+
+### Native Sim QA Smoke Gate (conditional)
+
+Hybrid/native apps only. Runs the post-rebase state — the thing that actually merges.
+Three conditions, all must hold; otherwise skip silently:
+
+```bash
+# 1. Project has a native app at all
+[ -d ios ] || SKIP_SIM_SMOKE=1
+
+# 2. The wave touched native-adjacent surface
+git diff main...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capacitor' \
+  || git diff main...HEAD -- package.json | grep -qE '@capacitor|capacitor' \
+  || SKIP_SIM_SMOKE=1
+
+# 3. We're on a Mac (simulators need Xcode)
+[ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed
+```
+
+- **All hold** → load **`ac-qa-simulator/SKILL.md`** and run a **smoke** pass
+  (build via the app's own build command, launch, auth, primary journey —
+  facts in the app's `CORE/journeys/native.md`). ~2–3 min on a warm sim.
+- **Smoke FAILS** → STOP before creating the PR. Report the `SIM_QA_VALIDATION`
+  block and ask: abort (fix first) vs merge anyway (not recommended).
+- **`SKIP_SIM_SMOKE=mac-needed`** (native-touching wave, but not on a Mac) →
+  do NOT block the merge; surface a loud note in the Phase 4 report:
+  "native-touching wave merged without sim QA — run `ac-qa-simulator` smoke
+  from a Mac session before the next TestFlight push."
+
+The user can also trigger a smoke/full pass manually at any time, independent
+of this gate ("run a simulator QA smoke").
+
+**QA-blocker check (beads projects, runs regardless of platform):**
+
+```bash
+br list --json | jq '[.[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
+```
+
+Open `qa-blocker` beads are unresolved user-facing breaks filed by QA runs —
+treat exactly like failing required checks: STOP and ask (fix first vs merge
+anyway with explicit override). The two valid resolutions: fix the bug, or —
+if the behavior is intended — update the journey doc and close the bead.
 
 ### Version Bump
 
@@ -311,6 +353,12 @@ git push
 
 ### Present Uncertain Items to User
 
+**Exhaust rule (see `skills/_shared/bead-conventions.md`):** review feedback
+that won't be acted on in this merge leaves as a typed bead, not a skipped
+list item — `-t bug`/`-t investigation` with `--labels review-finding`, or
+`-t decision --labels human-gate` (pre-staged memo) for taste/product forks
+when running autonomously. Don't block the merge on non-blocking exhaust.
+
 **If uncertain items remain:**
 
 ```
@@ -488,10 +536,11 @@ rm -rf "$ARTIFACTS_DIR"
 - **This is per-wave, not per-session** — run once when all beads are done, not after each bead-work session
 - **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN`) is opaque.
 - **Version bump scans commits** — feat→minor, fix-only→patch, `!:` or BREAKING CHANGE→major. User confirms before the bump commit lands; tag is created on the merge commit after merge.
-- **bead-land handles session closure** — wave-merge handles wave closure. No overlap.
+- **Both pre-merge gates required** — `ac-land` (session closure) and `ac-review` (branch review) must both complete before running this; their order relative to each other is flexible.
 - **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
 - **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)
+- **Sim smoke gate is conditional** — only for native-touching waves on a Mac; never blocks from Linux, but the report must flag the skipped gate
 - **Auto-fix obvious issues, ask about the rest** — same triage philosophy as the review commands
 - **Re-poll is short** — 5 minutes max after pushing fixes, don't loop forever
 - **Abort is always an option** — if checks keep failing, let the user decide

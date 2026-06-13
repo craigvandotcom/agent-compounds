@@ -207,7 +207,24 @@ Scan active backlog files for merge opportunities:
 - Backlog items that describe the same work in different words
 - Propose: "Possible duplicate: {file1} task '{task}' ≈ {file2} task '{task}'?"
 
-Present merge suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
+### Stale Finding-Bead Pruning
+
+Finding beads (`qa-finding`, `review-finding`, `hygiene-finding` labels — see
+`skills/_shared/bead-conventions.md`) are the main inflation risk: the
+pipeline stages file them automatically. As janitor, ac-tidy is their pruner.
+
+```bash
+br list --json | jq -r '.[] | select(.labels // [] | (index("qa-finding") or index("review-finding") or index("hygiene-finding"))) | select(.status != "closed") | "\(.id) \(.status) \(.title)"'
+br stale --json 2>/dev/null   # age-based staleness
+```
+
+Flag for the user (never auto-close): finding beads that are (a) duplicates of
+each other or of an existing bug, (b) stale with no activity and no longer
+reproducible, or (c) superseded by a fix that already merged. Propose
+close/merge per item. **Never touch `human-gate` or `qa-blocker` beads** —
+those are gated, not housekeeping.
+
+Present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
 
 ---
 

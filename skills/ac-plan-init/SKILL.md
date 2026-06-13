@@ -48,7 +48,7 @@ mkdir -p "$ARTIFACTS_DIR"
 ```
 TaskCreate(subject: "Phase 0: Initialize and classify", description: "Verify branch, classify request type and complexity", activeForm: "Initializing plan session...")
 
-TaskCreate(subject: "Phase 1: Parallel code exploration", description: "Spawn 3 code-explorer agents: patterns, dependencies, constraints", activeForm: "Exploring codebase...")
+TaskCreate(subject: "Phase 1: Parallel code exploration", description: "Spawn 3 parallel code exploration agents (Haiku, general-purpose): patterns, dependencies, constraints", activeForm: "Exploring codebase...")
 
 TaskCreate(subject: "Phase 2: Validation baseline", description: "Capture current state, verify tools, define success criterion and test specs", activeForm: "Establishing baseline...")
 
@@ -601,7 +601,7 @@ _Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/
 
 ## Refinement & review — now separate skills
 
-Plan creation (above) gets you to a first draft. Deepening, verifying, and pressure-testing it are now **distinct skills** (split out of the old monolithic `/ac-plan`), each invokable on its own:
+Plan creation (above) gets you to a first draft. Deepening, verifying, and pressure-testing it are now **distinct skills** (split out of the old monolithic plan skill), each invokable on its own:
 
 | Skill | When |
 | --- | --- |

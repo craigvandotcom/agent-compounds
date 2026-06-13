@@ -146,7 +146,7 @@ fi
 # Check SKILL.md size
 LINE_COUNT=$(wc -l < "$SKILL_MD")
 # Size is a TARGET, not a hard law: ≤500 is optimal (Anthropic), but a genuine
-# multi-phase orchestrator may justifiably exceed it (see reference/structure-standard.md).
+# multi-phase orchestrator may justifiably exceed it (see references/structure-standard.md).
 # So >500 warns (strongly) rather than fails — move sub-agent prompts/templates to references/.
 if [ $LINE_COUNT -le 400 ]; then
     echo -e "${GREEN}✓ PASS: SKILL.md size OK ($LINE_COUNT/500 lines)${NC}"

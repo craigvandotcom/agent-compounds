@@ -7,3 +7,9 @@ build/
 
 # Plans and research (local only, not shipped)
 _plans/
+
+# Agent-local scratch memory — not shared-repo content
+.claude/agent-memory/
+
+# Idea inbox — local only, same convention as _plans/
+_ideas/
