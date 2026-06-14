@@ -176,6 +176,41 @@ rendered per harness (directive #1) — its *logic/content* lives in canon, only
 lint check (flag anything that could drop a rung) · dream routing (rung 0 catches ~all;
 L0–L2 changes are gated, rare). One procedure, three consumers — change it HERE.
 
+## ALTITUDE: which directory level does it live at  *(the second placement axis)*
+
+PLACEMENT sets the *layer* (how it loads); ALTITUDE sets the *scope* (how widely it applies)
+— orthogonal axes. A rule can be L0 (always-on) **and** sub-domain-altitude (applies to every
+project in `software/`). Wrong altitude causes the two commonest context bugs: **duplication**
+(same rule restated in every app) and **pollution** (an app/domain-specific rule raised so
+high it loads into unrelated sessions).
+
+**Rule: place context at the *narrowest directory subtree that contains all its consumers*.**
+
+| Applies to… | Lives at | Example |
+|---|---|---|
+| One project | the app's own `AGENTS.md` / CORE / memory | an app-specific build quirk |
+| All projects in a sub-domain | the sub-domain `AGENTS.md` (e.g. `software/`) | "never commit across repo boundaries" |
+| A whole domain | the domain L0 (e.g. `neometa/`) | the flywheel, the pillars |
+| Everything, every domain | repo-root L0 | the agent identity shim |
+
+Cascade-aware: hot-lane files load from cwd up to root, so a sub-domain `AGENTS.md` is already
+in context for every project beneath it — state shared conventions there **once** and have the
+projects beneath **point, not restate** (single-source). Same dial as L0-vs-CORE: too high =
+pollution, too low = duplication.
+
+## PROMOTION & DEMOTION: context moves over time
+
+Placement isn't once-and-for-all — context earns its layer continuously, in **both** directions:
+- **Demotion (default gravity = late binding):** editing an always-on (L0/L1) line weekly means
+  it's volatile → it belongs in L3. Push down.
+- **Promotion (the exception — needs evidence):** an L3 lesson that is **recurring + stable +
+  broadly applicable** has outgrown retrieval → escalate to a skill (L2) or a context file
+  (L0/L1) **at the right altitude**. The bar is high — promotion buys always-on cost, so demand
+  proof (recalled/applied repeatedly; ≥N occurrences; not situational). **The dream cycle runs
+  the promotion check (review-only)** — it never fires automatically.
+- **Promotion is MOVE, not copy** — on promoting, reduce the L3 fact to a pointer (or remove
+  it). Two live copies = drift; single-source survives the move.
+
 ## Subagents: stances, not domains  *(PLACEMENT rung 3)*
 
 A subagent definition is hot-lane context for a delegated window. It carries exactly
