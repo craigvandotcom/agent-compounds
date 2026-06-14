@@ -30,6 +30,11 @@ compounding errors. Staleness is silent.
    a note worth writing).
 8. **Evergreen check** — evergreen rules/facts lacking a "what would invalidate this"
    hint where one is cheap to add.
+9. **Cross-altitude duplication** — the same rule/convention restated at multiple directory
+   levels (e.g. an app `AGENTS.md` repeating a `software/`-wide rule). Propose: collapse to
+   the **narrowest subtree covering all consumers** + leave pointers in the lower levels
+   (the ALTITUDE rule in context-engineering). Detect by grepping the shared rule's keywords
+   across the AGENTS/CORE files at each level.
 
 ## Mechanics
 

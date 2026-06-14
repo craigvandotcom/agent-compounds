@@ -64,13 +64,23 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   truth → candidate re-homed/generalized lesson.
 - **Trajectory:** lessons that together imply a missing capability → candidate new
   recipe or (rarely, Phase-3-gated) new skill — check the registry for overlap first.
+- **Promotion → escalation (the L3-outgrows-retrieval check; see context-engineering
+  PROMOTION & DEMOTION):** an L3 lesson that is **recurring + stable + broadly applicable**
+  has outgrown retrieval → propose escalating it UP a layer — to a skill (L2) or a context
+  file (L0/L1) **at the right ALTITUDE** (narrowest subtree covering its consumers). High bar
+  (promotion buys always-on cost); **MOVE not copy** (the proposal must reduce the L3 fact to
+  a pointer). Also scan non-memory git edits — a fix repeated across commits, a hand-rolled
+  procedure — for the same escalation. Inverse: an always-on line edited repeatedly → propose
+  **demotion** to L3.
 
 ### Phase 3 — Lint (hygiene; see `references/lint-checks.md` for the full checklist)
 
 Sweep the memory homes for: contradictions between notes · stale facts (evidence
 predates a known change; flag, don't guess) · near-duplicates to merge · taxonomy
 violations (missing `type`/`domain`/`evidence`) · index drift (`MEMORY.md` lines vs
-actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]`.
+actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]` ·
+**cross-altitude duplication** (the same rule restated at app *and* sub-domain/root level →
+propose collapsing to the narrowest covering level + pointers, per the ALTITUDE rule).
 Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
 (dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
 lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
