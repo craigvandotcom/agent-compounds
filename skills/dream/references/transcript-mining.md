@@ -42,6 +42,25 @@ Never feed whole transcripts to the LLM. Funnel, cheapest stage first:
 5. **Dedup** — CASS retrieval against the existing substrate; drop anything already known.
 6. **Judge (Phase 4) → Emit (Phase 5)** — unchanged from v1; `gitleaks` gates emit.
 
+## Validated tuning (dry-run 2026-06-14, ASA session f81dde6c — 26 MB/10,291 lines)
+The funnel narrowed to 50 human turns + 57 errors → 1 strong new lesson; dedup correctly
+suppressed 3 known ones. Findings that must be built in:
+1. **Dedup MUST use hardened retrieval, not naive `qmd search`.** Raw search false-negatived
+   on existing facts (FTS hyphen/common-term quirks + no memory-path filter) → would re-propose
+   known lessons. **Reuse `memory-retrieval.py`'s per-term, alnum-tokenized, memory-filtered
+   logic** (the `repos-6u6` CLI). This is how `repos-6u6` feeds v2 — via shared search logic,
+   not hooks.
+2. **Tighten the negation pre-filter** — bare `no` matches "now/note/no problem" (huge noise).
+   Require user-role + strong phrases ("no,", "actually", "don't", "that's wrong", "instead of").
+3. **Filter harness artifacts** from the human-directive lane: `[Request interrupted…]`,
+   `**You are…`(command templates), `Base directory for this skill`, `[Image:`, continuation
+   summaries, `A session-scoped Stop hook…`, `Goal set:`, `# Autonomous loop check`. (Extends
+   the hook's existing skip of `/`- and `<`-prefixed prompts.)
+4. **Hook-injected content is dual-natured** — `Stop hook feedback` lines are noise as
+   "directives" but ARE a friction signal (the thrashing lesson came from them). Categorize, don't drop.
+5. **Subagent transcripts** (`subagents/agent-*.jsonl`) belong to a parent session — mine as a
+   unit to avoid double-counting.
+
 ## Sources — two axes
 - **Intent** (what was attempted + reasoned): `~/.claude/projects/` + `~/.codex/sessions/`
   (the full replica, post v2-a) + agent-mail coordination.
