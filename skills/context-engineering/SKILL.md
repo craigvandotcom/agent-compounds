@@ -72,6 +72,11 @@ flag, never a new folder to invent.*
 | **personal** | life, PKM, journaling | `knowledge/` | — |
 | **global** | tooling, agents, infra, PAI | `infrastructure/memory/` | `infrastructure/memory/` |
 
+> **Public-skill boundary:** this skill is the **method**; the example paths above are
+> illustrative. The deployment's **actual** homes, altitudes, and lobes live in the internal
+> instance-map (neoMeta: the `neometa-context-map` memory fact) — keep deployment specifics
+> there, not here, so the skill stays generic/reusable.
+
 **Write rules (always):**
 - **Dedupe-over-append:** search first (`qmd search`/`grep`); update the existing note
   rather than creating a near-duplicate.
