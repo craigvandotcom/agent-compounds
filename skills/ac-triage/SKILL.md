@@ -1,6 +1,6 @@
 ---
 name: ac-triage
-description: Use to pull operational signal BACK IN from production — crashes, errors, logs, beta feedback — cluster it, and route real findings to beads. Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, PostHog. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled.
+description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings to beads. Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled.
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -11,16 +11,28 @@ description: Use to pull operational signal BACK IN from production — crashes,
 
 # ac-triage — the signal-IN lane
 
-**You pull production signal back in and turn the real ones into beads.** This is the
-machine-signal sibling to **`ac-bead-capture`** (which intakes *human* signal). It closes
-the Discovery→beads flywheel: real-user breakage becomes tracked work without a human
-having to notice and report it.
+**You poll external systems for signal and turn the real findings into beads.** This is the
+**external-systems sibling** to **`ac-bead-capture`**. The dividing line is NOT machine-vs-
+human — it's **polled-from-a-system vs handed-to-you-in-conversation**:
 
-**Scope boundary:** ac-triage FETCHES + clusters external machine signal and routes each
-confirmed finding to **`ac-bead-capture`** (which owns classification, repo-routing, and
-dedupe). It does NOT ship builds (that's `ac-distribute`) and does NOT itself reimplement
-the bead-side conventions — it hands off. Headless, source-agnostic, cross-app; only the
-*sources* are app-specific.
+- `ac-bead-capture` — signal you hold right now and type ("bead this idea / log this bug").
+- `ac-triage` — signal sitting in an **external system** you must FETCH or you'll miss it:
+  Sentry (machine), Supabase logs (machine), **ASC beta feedback (human)**, **GitHub Issues
+  (human)**, store reviews (human). Author type is irrelevant; the *fetch* is what unites them.
+
+It closes the Discovery→beads flywheel: real-user breakage becomes tracked work without a
+human having to notice and report it.
+
+**Scope boundary:** ac-triage FETCHES + clusters external signal and routes each confirmed
+finding to **`ac-bead-capture`** (which owns classification, repo-routing, and dedupe). It
+does NOT ship builds (that's `ac-distribute`) and does NOT itself reimplement the bead-side
+conventions — it hands off. Headless, source-agnostic, cross-app; only the *sources* are
+app-specific.
+
+**Loop guard:** beads created by triage carry a `triage,<source>` label + the source record
+id (e.g. the Sentry issue id / GitHub issue number) in the bead. NEVER re-import a finding
+whose source id already maps to a bead — and if beads also sync OUT to GitHub issues, exclude
+triage-authored issues by that marker so the loop can't feed itself.
 
 ## Sources (pluggable adapters — enable per app in CORE/triage.md)
 
@@ -29,13 +41,18 @@ the bead-side conventions — it hands off. Headless, source-agnostic, cross-app
 | 1   | **Sentry**              | symbolicated crashes + JS/native errors, freq.  | `SENTRY_AUTH_TOKEN` + org/proj |
 | 2   | **App Store Connect**   | TestFlight beta feedback (notes + screenshots), crash submissions | ASC API key (`.p8`) |
 | 3   | **Supabase**            | edge-function logs, Postgres errors, auth failures | service-role / mgmt API |
-| 4   | PostHog (later)         | funnel drop-off, error events, session signal    | project API key            |
+| 4   | **GitHub Issues**       | externally-filed bug reports / feature requests (matters for public/OSS repos) | `gh` CLI / token |
+| 5   | PostHog (later)         | funnel drop-off, error events, session signal    | project API key            |
+| 6   | store reviews (later)   | App Store / Play user reviews                     | ASC / Play API             |
 
 **Sentry is source #1** — symbolicated native + JS stacks are the highest-signal, lowest-
-noise input, and (unlike ASC's sparse beta-crash API) it captures crashes whether or not a
-tester taps "report." ASC #2 adds the human texture (tester notes/screenshots Sentry can't
-see). Light up sources as they're wired; a source that isn't configured is skipped, not an
-error.
+noise input, and it captures crashes whether or not a tester taps "report." **ASC #2 is
+validated** (2026-06-13): `GET /v1/apps/{appId}/betaFeedbackCrashSubmissions` (JWT from the
+`.p8`, no `sort` param on the nested path) returns tester crash submissions with
+comment/email/deviceModel/os — it adds the human texture Sentry can't see. **GitHub Issues
+#4** is per-repo: high value on public/OSS repos (vitest-affected, neometa-brand) where
+outsiders file; near-N/A on private app repos with no external filers — enable per app. Light
+up sources as they're wired; a source that isn't configured is skipped, not an error.
 
 ## Method (per run)
 
@@ -51,9 +68,11 @@ Pull signal since the watermark via each source's API (pointer-auth from CORE):
 
 - **Sentry:** issues sorted by `lastSeen`, with `count`, `userCount`, culprit, latest
   event stack, release. Prefer unresolved + regression issues.
-- **ASC:** `betaFeedbackCrashSubmissions` + `betaFeedbackScreenshotSubmissions` for the app,
-  newest builds first.
+- **ASC:** `GET /v1/apps/{appId}/betaFeedbackCrashSubmissions` (+ `…ScreenshotSubmissions`),
+  JWT from the `.p8`; filter to records newer than the watermark `createdDate`.
 - **Supabase:** error-level logs / failed-request rows since watermark.
+- **GitHub Issues:** `gh issue list --state open --search "updated:>=<watermark>"`; EXCLUDE
+  triage-authored issues (loop guard) and issues already linked to a bead.
 
 Record the new watermark per source AFTER a successful fetch.
 
