@@ -1,9 +1,15 @@
+---
+template_version: 1
+---
+
 # Distribution — {{APP_NAME}} (per-app facts for `ac-distribute`)
 
 > **TEMPLATE.** Copy to the consuming app's `.claude/skills/CORE/distribution.md` and fill in
 > every `{{…}}`. Delete rows/sections that don't apply. The METHOD lives in
 > `ac-distribute/SKILL.md`; this file is ONLY this app's facts. **Secrets are POINTED TO,
-> never stored here.**
+> never stored here.** **On copy, replace the frontmatter above with:**
+> `derived_from: ac-distribute/distribution.template.md` + `template_version: <the version you
+> copied>` — that stamp is how `infra-sync` detects when this file has drifted behind the template.
 
 ## App identity
 
@@ -59,3 +65,12 @@ precondition (ac-qa-simulator) and the build-number bump.}}
 - [ ] `ITSAppUsesNonExemptEncryption` set (HTTPS-only) so builds auto-clear compliance
 - [ ] Admin ASC API key (headless, no 2FA)
 - [ ] prod backend baked into the web build before archiving
+
+## Maintaining this file
+
+This is a **real file**, not a symlink — `deploy.sh` never overwrites it, so your filled values
+are safe. It also means it does **not** auto-update: when `template_version` advances upstream,
+`infra-sync` flags this file as stale. To reconcile, **graft the new template sections in by
+hand/agent, PRESERVE every filled value, then bump `template_version`** — never auto-overwrite.
+App-specific facts live here; method improvements belong in `ac-distribute/SKILL.md` (symlinked —
+edit there, which propagates to all apps; NEVER edit a symlinked file per-app).

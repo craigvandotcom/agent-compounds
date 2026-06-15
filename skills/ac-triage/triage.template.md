@@ -1,8 +1,14 @@
+---
+template_version: 1
+---
+
 # Triage — {{APP_NAME}} (per-app facts for `ac-triage`)
 
 > **TEMPLATE.** Copy to the consuming app's `.claude/skills/CORE/triage.md` and fill in every
 > `{{…}}`. The METHOD lives in `ac-triage/SKILL.md`; this file is ONLY this app's sources +
 > bar. **Secrets are POINTED TO, never stored here.** Beads route to THIS repo's db.
+> **On copy, replace the frontmatter above with:** `derived_from: ac-triage/triage.template.md`
+> + `template_version: <version copied>` — the stamp `infra-sync` uses to detect drift.
 
 ## Enabled sources
 
@@ -43,3 +49,11 @@ guard).
 ## Cadence
 
 {{Headless / VM-hosted; schedule once source #1 is live; run on demand until then.}}
+
+## Maintaining this file
+
+A **real file**, not a symlink — `deploy.sh` never overwrites it (filled values safe), so it
+does **not** auto-update. When `template_version` advances upstream, `infra-sync` flags it as
+stale. Reconcile by **grafting the new template sections in, PRESERVING every filled value, then
+bumping `template_version`** — never auto-overwrite. App facts live here; method goes in
+`ac-triage/SKILL.md` (symlinked — edit there, never per-app).

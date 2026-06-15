@@ -127,7 +127,13 @@ team's own ideas.
 ## Per-app facts → CORE/triage.md
 
 **Onboarding a new app:** copy `triage.template.md` (this skill dir) → the app's
-`.claude/skills/CORE/triage.md` and fill every `{{…}}`. Enable whichever sources the app has.
+`.claude/skills/CORE/triage.md` and fill every `{{…}}` (incl. the `template_version` stamp).
+Enable whichever sources the app has.
+
+**Keeping it current:** the CORE file is app-owned and never auto-overwritten. `infra-sync`
+flags `template_version` drift; reconcile by grafting new template sections in while PRESERVING
+filled values, then bump the stamp (see the template's *Maintaining this file* note). Never
+edit this symlinked SKILL.md per-app — method changes land HERE and propagate everywhere.
 
 Enabled sources + their org/project/ref ids, secret POINTERS (never the secrets), the
 per-app severity bar, the dedupe-fingerprint convention, and any source-specific quirks.

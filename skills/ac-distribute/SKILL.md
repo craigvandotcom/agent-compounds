@@ -117,8 +117,14 @@ this workflow out on the first real submission — don't speculatively wrap it n
 ## Per-app facts → CORE/distribution.md
 
 **Onboarding a new app:** copy `distribution.template.md` (this skill dir) → the app's
-`.claude/skills/CORE/distribution.md` and fill every `{{…}}`. ~30 min if the app already has a
-build lane; longer if it needs one stood up first.
+`.claude/skills/CORE/distribution.md` and fill every `{{…}}` (incl. the `template_version`
+stamp). ~30 min if the app already has a build lane; longer if it needs one stood up first.
+
+**Keeping it current:** the CORE file is a real, app-owned copy — `deploy.sh` never overwrites
+it, so it does NOT auto-update. `infra-sync` flags `template_version` drift; reconcile by
+grafting new template sections in while PRESERVING filled values, then bump the stamp (see the
+template's *Maintaining this file* note). Never edit this symlinked SKILL.md per-app — method
+changes land HERE and propagate to every app.
 
 Each consuming app carries a `CORE/distribution.md` (mirror of `journeys/native.md`):
 bundle id, ASC app id + team id, signing setup, TestFlight group, demo account,
