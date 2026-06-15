@@ -116,6 +116,10 @@ this workflow out on the first real submission — don't speculatively wrap it n
 
 ## Per-app facts → CORE/distribution.md
 
+**Onboarding a new app:** copy `distribution.template.md` (this skill dir) → the app's
+`.claude/skills/CORE/distribution.md` and fill every `{{…}}`. ~30 min if the app already has a
+build lane; longer if it needs one stood up first.
+
 Each consuming app carries a `CORE/distribution.md` (mirror of `journeys/native.md`):
 bundle id, ASC app id + team id, signing setup, TestFlight group, demo account,
 **version + build-number owner/convention**, the exact ship command, screenshot specs,

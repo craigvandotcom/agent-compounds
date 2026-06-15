@@ -126,6 +126,9 @@ team's own ideas.
 
 ## Per-app facts → CORE/triage.md
 
+**Onboarding a new app:** copy `triage.template.md` (this skill dir) → the app's
+`.claude/skills/CORE/triage.md` and fill every `{{…}}`. Enable whichever sources the app has.
+
 Enabled sources + their org/project/ref ids, secret POINTERS (never the secrets), the
 per-app severity bar, the dedupe-fingerprint convention, and any source-specific quirks.
 
