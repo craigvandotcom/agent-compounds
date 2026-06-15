@@ -203,6 +203,14 @@ in context for every project beneath it — state shared conventions there **onc
 projects beneath **point, not restate** (single-source). Same dial as L0-vs-CORE: too high =
 pollution, too low = duplication.
 
+**Capability availability (the access invariant).** Skills are L2 *capabilities* placed by
+altitude too — and **execution contexts are consumers**: a scheduled job or agent heartbeat
+running at `cwd=X` can only invoke skills/scripts **projected (deploy.sh) to X or above it**.
+So before wiring a job/heartbeat, verify every capability its workflow invokes is deployed at
+its cwd — a heartbeat that references an absent skill fails *unattended, at 3am*. The
+mechanics of wiring jobs live in the scheduler skill; this invariant — *required capabilities
+must be reachable at the consumer's altitude* — lives here, and the scheduler skill cites it.
+
 ## PROMOTION & DEMOTION: context moves over time
 
 Placement isn't once-and-for-all — context earns its layer continuously, in **both** directions:
