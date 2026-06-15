@@ -40,13 +40,25 @@ encode "B after A" by clock time + a precondition check in B, not a dependency g
 | `model_name` | — | e.g. `"opus"` |
 | `prompt_file` (rel to cwd→root) / `prompt` / `command` | one of | the workflow (`command` for shell jobs) |
 | `cwd` | — | run dir (must stay within ROOT_REPO) |
-| `enabled_on` `[hostnames]` | — | machine filter (substring match; the VM is `"openclaw"`) |
+| `enabled_on` `[hostnames]` | — | machine filter (substring match; the VM is `"openclaw"`, the laptop `"Craigs-MacBook-Air"`) |
 | `timeout` | — | seconds (default 2400 AI / 900 shell) |
+| `misfire_grace_time` | — | seconds a missed fire may still run late (default 3600). **Raise it for jobs on intermittent machines** (a laptop that sleeps): a fire missed while asleep then runs on wake instead of being skipped. |
 
 Notes: times are **Europe/Amsterdam** (engine forces tz regardless of host). YAML frontmatter
-in a `prompt_file` is stripped (a leading `---` breaks the CLI). `misfire_grace_time` = 1h.
-Same-name concurrent runs are locked; a lock older than `timeout+60s` is treated as a dead
-prior run and taken over.
+in a `prompt_file` is stripped (a leading `---` breaks the CLI). Same-name concurrent runs are
+locked; a lock older than `timeout+60s` is treated as a dead prior run and taken over.
+
+**Platform split (one system, two host profiles):**
+- **VM (`openclaw`, always-on):** pai-scheduler under PM2 (`pm2/pai-scheduler.config.js`); jobs
+  fire on time. The default home for scheduled work.
+- **Mac (laptop, intermittent):** *also* pai-scheduler under PM2 — same engine, same
+  `jobs/*.json` (hostname-filtered, so each host runs only its `enabled_on` jobs). Because a
+  laptop sleeps, give Mac jobs a **generous `misfire_grace_time`** (e.g. 12h) so a fire missed
+  during sleep runs on wake (apscheduler coalesces to one run). Residual: after a full
+  *shutdown* (vs sleep) there's no while-off catch-up (in-memory jobstore) — it resumes at the
+  next interval after PM2 relaunches at login. We use this instead of launchd to keep ALL
+  scheduling in one git-tracked system. The PM2 config picks a per-machine `.venv` python if
+  present (the Mac needs apscheduler installed there), else system `python3` (the VM).
 
 ## Pre-flight: capability availability  *(the access invariant — context-engineering)*
 
