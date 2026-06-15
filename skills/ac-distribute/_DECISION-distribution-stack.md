@@ -1,14 +1,52 @@
-# ⚠ TEMP — Distribution Stack Setup (pending, run on Mac)
+# Distribution + Triage — Architecture & Setup Record
 
-**Status:** PENDING — Phase 1 runs in a Mac session (ac-qa-simulator bake-off is
-DONE, 2026-06-11 — the QA lane this composes with now exists). This directory
-becomes the real `ac-distribute` skill in Phase 2; until then this file is the
-only content.
+**Status (2026-06-15):** Phase 2 LANDED. After 5 live headless ship cycles on
+art-still (builds 2→6), two decisions are ratified (below). `ac-distribute/SKILL.md`
+is now written (ship-OUT lane); the feedback leg is SPLIT OUT into a new sibling
+skill **`ac-triage`** (signal-IN lane). Sentry wiring is teed up to a single human
+gate (create the Sentry project). The historical Phase-1 plan + results are retained
+below as the record.
 
-**Created:** 2026-06-10 · amended 2026-06-11. Pipeline position: the last mile
-of the ac-* pipeline — implement → land/review → merge → **distribute**. This is
-the SHIP lane (TestFlight, crash triage, App Store submission), not the QA lane
-(that's ac-qa-simulator; the lanes compose — QA proves the build, this ships it).
+**Created:** 2026-06-10 · amended 2026-06-11 · re-factored 2026-06-15. Pipeline
+position: the last mile of the ac-* pipeline — implement → land/review → merge →
+**distribute**. ac-distribute is the SHIP lane; it composes with `ac-qa-simulator`
+(QA proves the build) upstream and `ac-triage` (pulls real-user signal back to beads)
+as its inbound counterpart.
+
+---
+
+## Decision update (2026-06-15) — RATIFIED after 5 live cycles
+
+### 1. KEEP fastlane (hybrid) — do NOT rip it out
+
+The original "NOT fastlane, use the `asc` CLI" stance predated discovering that
+art-still already standardized on fastlane. After 5 headless cycles (fastlane
+**match** git-stored signing + Admin ASC API key, **no Apple 2FA at any point**),
+the lane is proven. Ratified: **fastlane owns the BUILD mile (archive → sign →
+upload); the ASC API owns the read + submit miles.** They are NOT competitors —
+they cover different miles. `ac-distribute` is therefore a thin wrapper over
+**whatever each app already uses** for the build (fastlane here; could differ for a
+future app). Rewriting a working lane to the asc-CLI is churn for zero user value.
+The `asc` CLI / upstream rorkai skills are NOT adopted; revisit only if a future app
+arrives with no lane of its own.
+
+### 2. SPLIT feedback-triage OUT into a new `ac-triage` skill
+
+The old doc's "feedback-triage" conflated a *capability* (triage operational signal
+→ beads) with *one source* (ASC TestFlight feedback). That work is **inbound** (pull
+signal), continuous/scheduled, **headless-anywhere**, **source-agnostic** (Sentry,
+Supabase, ASC, PostHog), and **cross-app** (works for web-only apps too) — orthogonal
+to ac-distribute's **outbound**, event-driven, Mac-bound shipping. So it gets its own
+skill, **`ac-triage`**: it FETCHES + clusters machine signal, then routes each finding
+to **`ac-bead-capture`** (which already classifies / routes-to-repo / dedupes). It is
+the *machine-signal sibling* to ac-bead-capture's *human-signal intake*. ASC beta
+feedback is merely ac-triage's ASC source adapter; **Sentry is source #1**.
+
+### 3. `ac-distribute` scope = ship OUT only
+
+Two workflows: **testflight-push** (≈ built — art-still's `pnpm ship:testflight`) and
+**store-release** (future; ASC API; human-gated at submit). feedback-triage REMOVED
+from this skill (now `ac-triage`).
 
 ## Decided
 
