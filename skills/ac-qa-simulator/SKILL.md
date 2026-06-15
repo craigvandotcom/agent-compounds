@@ -74,6 +74,27 @@ brew install jq               # JSON parsing for simctl output
 agent-device matches simulators **by name** — if two sims share a name it can
 boot the wrong one. Rename duplicates first (`xcrun simctl rename <udid> "<name (os)>"`).
 
+### Parallel QA on a shared Mac (multiple apps at once)
+
+Several apps may QA on one Mac concurrently. They collide ONLY if they share a
+sim, a sim NAME, or an agent-device session. Isolate with three layers:
+
+1. **A dedicated, uniquely-named sim per app** — e.g. `<APP>-QA-iPhone17Pro`.
+   NEVER drive the bare "iPhone 17 Pro"; two apps asking for that name grab the
+   same device. The app's build script should auto-provision its own sim
+   (`simctl create`) and target it **by UDID** (not name) so the build is immune
+   to the CoreSimulator name-match race that fires when another app boots/renames
+   sims concurrently. (Symptom of the race: `xcodebuild: error: Unable to find a
+   device matching…` while that exact name IS in the available list.)
+2. **A named agent-device session per app** — pass `--session <app>` to EVERY
+   `agent-device` call. One daemon per machine multiplexes named sessions;
+   `--tenant`/`--state-dir` give full daemon isolation if needed.
+3. **Ownership rule (non-negotiable):** only ever rename/boot/shutdown a sim your
+   app owns (`<APP>-QA-*`). Hijacking a shared sim mid-session breaks BOTH apps —
+   the build (name race) and agent-device (wrong-device match). Documented
+   incident: 2026-06-15, art-still + Body Compass both defaulting to "iPhone 17
+   Pro".
+
 ## Core loop
 
 ```bash
@@ -295,11 +316,20 @@ notes: [issues, sim-impossible flows skipped and why, journey-doc drift fixed]
 ## Teardown
 
 - Stop any recordings (`agent-device record stop`, `kill -INT` simctl video).
-- `xcrun simctl status_bar booted clear` if you overrode it.
+- **Close your agent-device session** (`agent-device close --session <app>`) —
+  a lingering session stays bound to its device and can collide later (a stale
+  `default` session bound to a device another app then claimed broke a run on
+  2026-06-15).
+- `xcrun simctl status_bar <udid> clear` if you overrode it (target YOUR sim's
+  UDID, not `booted` — multiple sims may be booted on a shared Mac).
 - Reset appearance/content-size if you changed them.
 - Delete test entries/data the run created (leave the account as found).
-- **Leave the simulator booted** (warm sim = fast next run). Do NOT shutdown
-  or erase unless state pollution is suspected.
+- **Solo Mac:** leave the sim booted (warm = fast next run). **Shared Mac
+  (multiple apps QA'ing):** shut down YOUR OWN sim
+  (`xcrun simctl shutdown <udid>`) so booted sims don't pile up — but NEVER touch
+  another app's sim. A per-app `sim-clean` teardown command (close session →
+  reset overrides → shutdown own sim) is the clean pattern; see the app's build
+  script.
 
 ## Troubleshooting
 
