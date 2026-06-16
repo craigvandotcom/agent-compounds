@@ -9,7 +9,14 @@ relevant sections on a **full** or **exhaustive** pass; the consuming app's
 ## Viewport & chrome
 
 - [ ] Safe-area insets: `env(safe-area-inset-*)` with `viewport-fit=cover` —
-      no notch/Dynamic Island/home-indicator overlap (desktop reports 0 for all)
+      no notch/Dynamic Island/home-indicator overlap (desktop reports 0 for all).
+      ⚠ `env(safe-area-inset-*)` resolves to **0** unless the viewport sets
+      `viewport-fit=cover` (Next: `viewportFit:'cover'` in the `viewport` export) —
+      so `pb-safe`/`calc(env(...))` CSS is a **silent no-op** without it, and a
+      className/unit test will false-green while the element is still mis-placed.
+      VERIFY BY RECT, not by class: an element pinned near a screen edge must have
+      its `snapshot -i --raw` rect **inside** the screen bounds AND `hittable:true`
+      (a control rendered just off the bottom edge reads `hittable:false`).
 - [ ] Status-bar style per screen, light AND dark appearance
 - [ ] Cold start: native splash → branded splash → first paint, no white/wrong-color flash
 - [ ] Orientation behavior (locked? rotation relayout?)
