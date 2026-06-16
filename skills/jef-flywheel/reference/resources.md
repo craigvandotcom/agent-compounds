@@ -97,11 +97,11 @@ All resources used in building this knowledge base.
 
 | File                                                                                      | Date     | Content                                     |
 | ----------------------------------------------------------------------------------------- | -------- | ------------------------------------------- |
-| `knowledge/1-active/agentic-engineering/advanced/05-jeffrey-emmanuel-agentic-flywheel.md` | Jan 2026 | Full flywheel overview with 7 tools         |
-| `knowledge/1-active/agentic-engineering/research/jeffrey-emanuel-planning-methodology.md` | Jan 2026 | Detailed planning methodology from X thread |
-| `knowledge/1-active/agentic-engineering/research/jeffrey-emanuel-ideation-methodology.md` | Jan 2026 | Competitive brainstorming + idea scoring    |
-| `knowledge/1-active/agentic-engineering/research/beads-workflow-comparison.md`            | Jan 2026 | Beads vs Jira/Linear comparison             |
-| `knowledge/1-active/agentic-engineering/advanced/jeffrey-emmanuel-workflow.md`            | Dec 2025 | Earlier workflow notes                      |
+| `knowledge/2-areas/agentic-engineering/advanced/05-jeffrey-emmanuel-agentic-flywheel.md` | Jan 2026 | Full flywheel overview with 7 tools         |
+| `knowledge/2-areas/agentic-engineering/research/jeffrey-emanuel-planning-methodology.md` | Jan 2026 | Detailed planning methodology from X thread |
+| `knowledge/2-areas/agentic-engineering/research/jeffrey-emanuel-ideation-methodology.md` | Jan 2026 | Competitive brainstorming + idea scoring    |
+| `knowledge/2-areas/agentic-engineering/research/beads-workflow-comparison.md`            | Jan 2026 | Beads vs Jira/Linear comparison             |
+| `knowledge/2-areas/agentic-engineering/advanced/jeffrey-emmanuel-workflow.md`            | Dec 2025 | Earlier workflow notes                      |
 
 ## External Analysis
 
