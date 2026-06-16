@@ -91,6 +91,13 @@ dsym:         uploaded ✓ | SKIPPED (Sentry not wired — see ac-triage)
   Info.plist so builds auto-clear "Missing Compliance" instead of being hidden from testers.
 - **Headless auth:** an **Admin** ASC API key (not Apple-ID/2FA). Admin is needed so match
   can create certs/profiles via the API. The `.p8` NEVER touches any repo — pointer only.
+- **Ruby toolchain:** modern fastlane/bundler (`Gemfile.lock` `BUNDLED WITH 4.x`) needs
+  **Ruby 3.x+** (e.g. Homebrew `/opt/homebrew/opt/ruby/bin`), NOT macOS system Ruby 2.6
+  (`/usr/bin`). Non-login/background shells (incl. agent-run commands) default to system
+  Ruby and die with `Could not find 'bundler' (4.x)`. Prefix the lane with the right Ruby on
+  PATH; pin the exact path + any vendored-gem `BUNDLE_PATH` in CORE/distribution.md.
+- **Sync the web bundle FIRST** (`pnpm cap:build` / the app's equivalent) before the lane —
+  fastlane's archive step does NOT run it, so skipping ships a stale bundle silently.
 
 ---
 
