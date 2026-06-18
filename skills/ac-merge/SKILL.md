@@ -102,18 +102,25 @@ git diff main...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@
 [ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed
 ```
 
-- **All hold** → load **`ac-qa-simulator/SKILL.md`** and run a **smoke** pass
+- **All hold** → load **`ac-qa-device/SKILL.md`** and run a **smoke** pass
   (build via the app's own build command, launch, auth, primary journey —
   facts in the app's `CORE/journeys/native.md`). ~2–3 min on a warm sim.
-- **Smoke FAILS** → STOP before creating the PR. Report the `SIM_QA_VALIDATION`
-  block and ask: abort (fix first) vs merge anyway (not recommended).
+- **Smoke FAILS** → STOP before creating the PR. Report the `QA_VALIDATION`
+  block (`platform: ios-simulator`) and ask: abort (fix first) vs merge anyway
+  (not recommended).
 - **`SKIP_SIM_SMOKE=mac-needed`** (native-touching wave, but not on a Mac) →
   do NOT block the merge; surface a loud note in the Phase 4 report:
-  "native-touching wave merged without sim QA — run `ac-qa-simulator` smoke
+  "native-touching wave merged without device QA — run `ac-qa-device` smoke
   from a Mac session before the next TestFlight push."
 
-The user can also trigger a smoke/full pass manually at any time, independent
-of this gate ("run a simulator QA smoke").
+**Web-shell smoke (the browser twin, any OS):** if the wave touched web UI
+(`git diff main...HEAD --name-only | grep -qE '\.(tsx|jsx|css)$|app/|components/'`)
+load **`ac-qa-browser/SKILL.md`** and run a **smoke** pass against the dev server.
+A FAIL reports the `QA_VALIDATION` block (`platform: browser-local`) and STOPs the
+same way. This branch needs no Mac, so it has no `mac-needed` escape.
+
+The user can also trigger a smoke/full pass on either twin manually at any time,
+independent of this gate ("run a device QA smoke", "run a browser QA smoke").
 
 **QA-blocker check (beads projects, runs regardless of platform):**
 

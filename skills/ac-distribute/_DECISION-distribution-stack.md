@@ -9,7 +9,7 @@ below as the record.
 
 **Created:** 2026-06-10 · amended 2026-06-11 · re-factored 2026-06-15. Pipeline
 position: the last mile of the ac-* pipeline — implement → land/review → merge →
-**distribute**. ac-distribute is the SHIP lane; it composes with `ac-qa-simulator`
+**distribute**. ac-distribute is the SHIP lane; it composes with `ac-qa-device`
 (QA proves the build) upstream and `ac-triage` (pulls real-user signal back to beads)
 as its inbound counterpart.
 
@@ -51,7 +51,7 @@ from this skill (now `ac-triage`).
 ## Decided
 
 - **Name: `ac-distribute`** (was `app-distribution`). Pipeline stage → ac- prefix
-  (precedent: ac-qa-simulator). NOT platform-suffixed (`-ios`): Capacitor
+  (precedent: ac-qa-device). NOT platform-suffixed (`-ios`): Capacitor
   dual-build means Play Store later, and all three workflows have direct Android
   analogs (internal testing track, Play Console ANRs/reviews, store release).
   Platform handled by an internal **per-workflow gate**, not the name or a
@@ -81,7 +81,7 @@ from this skill (now `ac-triage`).
   agent-compounds (public repo, upstream license, wouldn't pass registry
   conventions). The Phase 2 wrapper replaces them; delete at cleanup.
 - **The sim-QA gate is mechanical, not vibes:** testflight-push REQUIRES the
-  ac-qa-simulator report artifact (its `journeys_tested` PASS block), fresh
+  ac-qa-device report artifact (its `journeys_tested` PASS block), fresh
   relative to the commit being shipped — not the session's memory that "QA
   passed".
 - **Build-number source of truth:** pick ONE owner + bump convention per app
@@ -108,7 +108,7 @@ npx skills add rorkai/app-store-connect-cli-skills   # then keep only:
 # 5. Record below what worked / what was missing
 ```
 
-Gate: a sim QA smoke PASS (ac-qa-simulator report artifact) before the upload
+Gate: a sim QA smoke PASS (ac-qa-device report artifact) before the upload
 step.
 
 ## Phase 2 — wrap into a real skill (after 2–3 cycles)

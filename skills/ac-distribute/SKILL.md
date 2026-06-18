@@ -1,6 +1,6 @@
 ---
 name: ac-distribute
-description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The outbound last mile of the ac-* pipeline (implement → land → review → merge → QA → DISTRIBUTE). Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa-simulator.
+description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The outbound last mile of the ac-* pipeline (implement → land → review → merge → QA → DISTRIBUTE). Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa-device.
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -20,7 +20,7 @@ description: Use to SHIP a built app out the door — push a signed build to Tes
 
 **Scope boundary:** this skill gets the artifact OUT. It does NOT pull crashes/feedback
 back in — that's **`ac-triage`** (inbound, headless, source-agnostic). It does NOT prove
-the build — that's **`ac-qa-simulator`** (run it first; this gates on its report).
+the build — that's **`ac-qa-device`** (run it first; this gates on its report).
 
 **Foundation (Decision 2026-06-15):** thin wrapper over **whatever the app already uses
 for the build mile**. art-still uses **fastlane** (match git-stored signing + Admin ASC
@@ -41,10 +41,12 @@ The fast, repeatable closed-beta push. art-still has reduced this to **one comma
    this step is a Mac ritual.)
 2. **Clean wave merge.** The commit being shipped is merged/landed (via `ac-merge`), not a
    dirty tree. Build from the integration branch's HEAD.
-3. **Fresh sim-QA PASS.** A `ac-qa-simulator` report artifact exists whose `status: PASS`
-   and `journeys_tested` block is **fresh relative to the commit being shipped** — not the
-   session's memory that "QA passed." Mechanical gate, not vibes. No artifact ⇒ run
-   `ac-qa-simulator` (smoke at minimum) first.
+3. **Fresh native-QA PASS.** A `ac-qa-device` `QA_VALIDATION` report artifact exists whose
+   **`platform:` is `ios-simulator` (or `android-emulator`)**, `status: PASS`, and
+   `journeys_tested` block is **fresh relative to the commit being shipped** — not the
+   session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
+   proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
+   artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
 4. **Signing reachable.** match (or the app's signing) resolves headlessly — see
    CORE/distribution.md.
 5. **Prod backend baked in.** If the app's `.env.local` is intentionally backendless (a
@@ -180,7 +182,7 @@ themselves.
 
 ## Remember
 
-- **This skill ships OUT. `ac-triage` pulls signal IN. `ac-qa-simulator` proves the build.**
+- **This skill ships OUT. `ac-triage` pulls signal IN. `ac-qa-device` proves the build.**
   Three skills, three concerns — don't merge them.
 - **Wrap what the app already uses** for the build — don't impose a tool.
 - **The sim-QA gate is mechanical** — a fresh PASS artifact, not a memory.
@@ -189,4 +191,4 @@ themselves.
 
 ---
 
-_The outbound last mile. Prove it (ac-qa-simulator) → ship it (here) → listen (ac-triage)._
+_The outbound last mile. Prove it (ac-qa-device) → ship it (here) → listen (ac-triage)._

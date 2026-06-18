@@ -52,13 +52,14 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **browser-testing** | UI/login/flow validation via agent-browser |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
-| **ui-elevate** | Polish existing UI to premium quality — hierarchy, spacing, micro-interactions, anti-slop audit |
+| **ac-ui-polish** | Conform UI to the app's design.md then polish to premium — whole-app crawl or one screen; anti-slop audit (was ui-elevate) |
 | **web-design-guidelines** | Accessibility, forms, animation, typography UX |
 | **app-store-screenshots** | Generate iOS App Store screenshots from real screens |
 | **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
 | **seo-metadata** | Add or audit SEO and social-share metadata (OG, Twitter cards, JSON-LD, sitemaps) |
 | **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
-| **ac-qa-simulator** | QA the native iOS build in the Simulator — journeys, appearance matrix, screenshots/video |
+| **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
+| **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 | **vm-heavy-prep** | Prepare a Linux VM for heavy parallel work — free memory, restart leaky processes, report capacity |
 
 > **Not a deployable skill:** `ac-distribute/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill — the pipeline's SHIP lane (TestFlight push, feedback triage, store release), downstream of merge.

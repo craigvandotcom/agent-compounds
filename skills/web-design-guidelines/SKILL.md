@@ -1,6 +1,6 @@
 ---
 name: web-design-guidelines
-description: Use when auditing UI code for objective correctness and compliance during implementation or PR review — accessibility (ARIA, labels, keyboard, semantics, focus states), forms, motion-safety, typography mechanics, image dimensions, hydration safety, touch interactions. A binary best-practices checklist (mirrors vercel-labs/web-interface-guidelines). Triggers on "is this accessible", "a11y", "check this for best practices", "audit this form", "review this UI code", "WCAG", "fix UX issues". NOT for subjective premium polish or anti-slop (use ui-elevate), React performance (use react-best-practices), or multi-model design ideation (use ui-brainstorm).
+description: Use when auditing UI code for objective correctness and compliance during implementation or PR review — accessibility (ARIA, labels, keyboard, semantics, focus states), forms, motion-safety, typography mechanics, image dimensions, hydration safety, touch interactions. A binary best-practices checklist (mirrors vercel-labs/web-interface-guidelines). Triggers on "is this accessible", "a11y", "check this for best practices", "audit this form", "review this UI code", "WCAG", "fix UX issues". NOT for subjective premium polish or anti-slop (use ac-ui-polish), React performance (use react-best-practices), or multi-model design ideation (use ui-brainstorm).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -18,7 +18,7 @@ description: Use when auditing UI code for objective correctness and compliance 
 
 This skill answers **"is it correct?"** (a checklist that passes or fails). For
 **"is it premium?"** (subjective taste / anti-slop polish of working UI) use
-`ui-elevate`. The two compose: `ui-elevate` runs this skill as its objective gate,
+`ac-ui-polish`. The two compose: `ac-ui-polish` runs this skill as its objective gate,
 then adds the taste layer on top.
 
 ---
@@ -36,7 +36,7 @@ then adds the taste layer on top.
 
 **When NOT to Use:**
 
-- Subjective premium polish / "make it feel high-end" → `ui-elevate`
+- Subjective premium polish / "make it feel high-end" → `ac-ui-polish`
 - React performance (waterfalls, bundle, re-renders) → `react-best-practices`
 - Multi-model design ideation / exploring options → `ui-brainstorm`
 - Visual/CSS *defects* (style not applying, broken layout) → `ui-debug`

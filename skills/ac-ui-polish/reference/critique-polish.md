@@ -105,7 +105,7 @@ Score each item. Cite `file:line` and a concrete fix.
 Use this to run the gate in one shot (yourself or via `ui-brainstorm`):
 
 ```
-Audit this UI against ui-elevate/reference/critique-polish.md.
+Audit this UI against ac-ui-polish/reference/critique-polish.md.
 Context — house style: <paste Phase-0 house-style note + brand pillar>.
 For every issue: severity (blocker/high/medium/low), axis (consistency/
 appearance/feel/perf/copy/ai-tell), location (file:line), and a concrete fix.

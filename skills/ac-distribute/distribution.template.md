@@ -56,7 +56,7 @@ template_version: 1
 ```
 
 {{Describe the one-command path if one exists, and the underlying lane. Note the sim-QA-PASS
-precondition (ac-qa-simulator) and the build-number bump.}}
+precondition (ac-qa-device) and the build-number bump.}}
 
 ## Footguns checklist (verify against ac-distribute/SKILL.md)
 
