@@ -99,25 +99,64 @@ dsym:         uploaded ✓ | SKIPPED (Sentry not wired — see ac-triage)
 - **Sync the web bundle FIRST** (`pnpm cap:build` / the app's equivalent) before the lane —
   fastlane's archive step does NOT run it, so skipping ships a stale bundle silently.
 
+Store-submit footguns (validated on BCA's first headless submit, 2026-06-17):
+
+- **A stuck rejected `reviewSubmission` blocks a new one** — "Cannot submit for review – a
+  review submission is already in progress." A prior rejection sits in `UNRESOLVED_ISSUES`
+  occupying the app's single review slot. Cancel it via the ASC API:
+  `PATCH /v1/reviewSubmissions/{id}` body `{data:{type:"reviewSubmissions",id,attributes:{canceled:true}}}`
+  → `CANCELING`→`COMPLETE`, slot frees.
+- **An empty / incomplete localization blocks review** — "missing required attribute
+  description/keywords/supportUrl." Know the app's **primary locale** (it is NOT always
+  `en-US` — pin it in CORE/distribution.md). `deliver` defaults to `en-US` and will *create*
+  a stray empty `en-US` localization from a local metadata mirror — which then blocks review.
+  Prefer **`skip_metadata: true`** (manage the listing in ASC web); delete a stray empty
+  locale: `DELETE /v1/appStoreVersionLocalizations/{id}`.
+- **`whatsNew` is not settable for the first *released* version** (`PATCH` → 409
+  `STATE_ERROR`) and isn't required. (If v1.0 was rejected/never approved, the next version
+  is effectively first-release.)
+- **Apple build PROCESSING can hang indefinitely** (90+ min, esp. with a WidgetKit
+  extension). A fresh **re-upload** (new build number, identical source) unsticks it — often
+  processes in minutes. Don't wait forever; re-ship. Poll `builds.processingState == VALID`.
+- **Submit-lane version resolution must be path-independent** — read `MARKETING_VERSION`
+  from the pbxproj via a `__dir__`-relative path, NOT `Dir.pwd`→package.json (which silently
+  falls back to a default like `1.0.0` and submits the wrong version + build 1).
+
 ---
 
-## Workflow B — store-release (FUTURE — outline, not yet validated)
+## Workflow B — store-release (VALIDATED — BCA first headless submit 2026-06-17)
 
-Production App Store submission. ASC **API** work — runs anywhere `asc`/the API key exist;
-NOT Mac-bound (the build it submits was already produced by testflight-push). **Human-gated
-at submit.** Stages:
+Production App Store submission. ASC **API** work — runs anywhere the API key exists; NOT
+Mac-bound (the build it submits was already produced by testflight-push). **Human-gated at
+submit** (it enters Apple's review queue; release is manual). The repetitive part is fully
+headless via a fastlane `submit` lane (`upload_to_app_store`, `skip_metadata: true`,
+`submit_for_review: true`, `automatic_release: false`) + a read-only ASC-API preflight.
 
-1. **Submission-health checks** — metadata completeness, screenshots present for required
-   device classes, age rating, privacy nutrition labels, demo account for review.
-2. **Metadata + screenshots sync** — localized; see the `app-store-screenshots` /
-   `screenshot-refresh` skills for the asset side.
-3. **Release notes** — from the release's changelog.
-4. **Pre-screen** — optional review-readiness pass.
-5. **Submit → monitor** — `upload_to_app_store` / ASC submission, then poll review state.
+Flow (per app, wired in CORE/distribution.md):
+`cap:build → testflight-push → wait for build to process → submit-preflight (read-only) →
+submit → click Release in ASC after approval`.
 
-First real submission for an app does one-time human setup (app record, privacy labels).
-BCA is already live; art-still/unsit/move-free hit this when they leave closed beta. Build
-this workflow out on the first real submission — don't speculatively wrap it now.
+Stages:
+
+1. **Submission-health / preflight (read-only)** — latest build `VALID`? App Store version
+   editable? review info present? Pure ASC-API reads, mutate nothing (BCA: `pnpm submit:preflight`).
+2. **Listing + screenshots** — managed in **ASC web** (standing config: description,
+   keywords, supportUrl, screenshots, demo account). The submit lane leaves these alone
+   (`skip_metadata`). Asset side: `app-store-screenshots` / `screenshot-refresh` skills.
+3. **Demo account** — comp it to a trial/active subscription so the reviewer can exercise
+   paid features (Guideline 2.1(b)); never commit its password. The business-model reply is
+   a committed text file pasted into App Review Information.
+4. **Submit → monitor** — the lane attaches the latest processed build to the current
+   version and `submit_for_review`; then poll review state (`WAITING_FOR_REVIEW` →
+   `IN_REVIEW` → ...). Clear any stuck prior submission first (footgun above).
+
+**ASC API client:** a dependency-free ES256-JWT script (sign with the Admin `.p8`) handles
+builds, reviewSubmissions, appStoreVersionLocalizations, ciBuildRuns. One small script
+covers read (status/preflight) + the surgical writes (cancel stuck submission, delete empty
+locale) that `deliver` can't do cleanly. Pin the app id + script path in CORE/distribution.md.
+
+First real submission does one-time human setup (app record, privacy labels, primary-locale
+listing). art-still/unsit/move-free inherit this validated shape when they leave closed beta.
 
 ---
 
