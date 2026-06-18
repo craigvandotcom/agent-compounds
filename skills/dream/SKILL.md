@@ -11,7 +11,8 @@ gated behind human judgment.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there). Plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` Phase 2.
 **Queue:** `infrastructure/dream-cycle/proposals/` · **Heartbeat:** `infrastructure/dream-cycle/last-run.json`
-**Status:** v1 (weekly, structured stream only — no raw transcripts)
+**Status:** v1 LIVE (weekly, structured stream only) · v2 daily raw-transcript mining
+DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a lands)
 
 ---
 
@@ -20,6 +21,7 @@ hygiene rules all come from there). Plan: `neometa/alignment/roadmaps/ai-native-
 | Mode | Trigger | What happens |
 |---|---|---|
 | **CYCLE** | scheduler heartbeat, "run the dream cycle" | Phases 1–6 below: gather → synthesize → lint → judge → emit → heartbeat |
+| **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Precondition check (verify, don't clean) → raw-transcript mining funnel → reuses Phases 2/4/5; consumes the `infra-maintain` health report. See the mode section below |
 | **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
 
 ---
@@ -62,13 +64,23 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   truth → candidate re-homed/generalized lesson.
 - **Trajectory:** lessons that together imply a missing capability → candidate new
   recipe or (rarely, Phase-3-gated) new skill — check the registry for overlap first.
+- **Promotion → escalation (the L3-outgrows-retrieval check; see context-engineering
+  PROMOTION & DEMOTION):** an L3 lesson that is **recurring + stable + broadly applicable**
+  has outgrown retrieval → propose escalating it UP a layer — to a skill (L2) or a context
+  file (L0/L1) **at the right ALTITUDE** (narrowest subtree covering its consumers). High bar
+  (promotion buys always-on cost); **MOVE not copy** (the proposal must reduce the L3 fact to
+  a pointer). Also scan non-memory git edits — a fix repeated across commits, a hand-rolled
+  procedure — for the same escalation. Inverse: an always-on line edited repeatedly → propose
+  **demotion** to L3.
 
 ### Phase 3 — Lint (hygiene; see `references/lint-checks.md` for the full checklist)
 
 Sweep the memory homes for: contradictions between notes · stale facts (evidence
 predates a known change; flag, don't guess) · near-duplicates to merge · taxonomy
 violations (missing `type`/`domain`/`evidence`) · index drift (`MEMORY.md` lines vs
-actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]`.
+actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]` ·
+**cross-altitude duplication** (the same rule restated at app *and* sub-domain/root level →
+propose collapsing to the narrowest covering level + pointers, per the ALTITUDE rule).
 Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
 (dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
 lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
@@ -140,6 +152,50 @@ zero proposals, say so plainly — a quiet week is a valid outcome, not a failur
 
 ---
 
+## Mode: CYCLE-DAILY  (v2 — raw-transcript mining)
+
+**Status:** DESIGNED (roadmap Phase 2.v2); activates once transcript replication (v2-a)
+lands. Until then the weekly **CYCLE** above is the live path. Full how-to:
+`references/transcript-mining.md` · signal types: `references/signal-taxonomy.md`.
+
+An **evolution of CYCLE, not a rewrite** — Phases 2 (synthesize) / 4 (judge) / 5 (emit)
+are reused unchanged. Two changes: a cheap **precondition check** runs first, and **gather
+widens to raw transcripts + git outcomes** (every agent, every day, incl. non-pipeline
+conversations — the coverage win over the curated v1 stream).
+
+**dream does NOT do infra maintenance.** Cleaning, index refresh, and health checks belong
+to the separate **`infra-maintain`** job (the "cleaning" process — distinct from the
+"remembering" one; sleep runs both in one nightly window, in sequence). The scheduler runs
+hygiene *before* dream; dream **consumes hygiene's health report**, it does not perform the work.
+
+**Precondition (not maintenance — verify, don't clean).** Confirm inputs are fresh: indexes
+updated within the window (`qmd status`, `cass status`) and the night's `infra-maintain` health
+report exists. If a precondition fails (stale index, hygiene didn't run, replication didn't
+converge), do NOT fix it — **record it as a finding** (it's a high-priority learning signal)
+and proceed with what's available.
+
+**Mine (review-only — the funnel; never feed whole transcripts to the LLM):**
+segment delta (since `last-run.json`) → **cheap pre-filter** (grep error/negation/outcome
+markers) → **redaction filter** (scrub into the LLM input; raw canon stays pristine) →
+**LLM-extract** candidate segments via the **signal taxonomy** → **CASS dedup** →
+**Phase 4 judge** → **Phase 5 emit**. Sources span two axes — intent (transcripts + agent-mail)
+and outcome (git + **the `infra-maintain` health report** + v2.1 sockets: CI/Sentry/PM2/beads).
+A hygiene-detected problem (oomd kill, leaked secret, disk-pressure event) is mineable signal.
+
+**Sources — two axes:** intent = `~/.claude/projects/` + `~/.codex/sessions/` (the replica) +
+agent-mail · outcome = git (grounding layer) + [v2.1 sockets]. Richest lessons at the join.
+
+**Guardrails:** `gitleaks` gates **emit** (proposals are the only thing reaching a shared
+remote; transcripts replicate privately, never touch git) · mine the cycle's own **review
+outcomes**, not its deliberation (self-reference) · review-only stands — Stage 1 autonomy is
+deterministic hygiene only; judgment-laden work is always a proposal.
+
+**Trigger:** daily `pai-scheduler` job on the VM (never a raw PM2 cron — the dead-`qmd-watcher`
+lesson). **Replaces the weekly CYCLE once daily coverage is proven** — and only then is
+`/reflect` retired from `ac-land`'s forced flow (don't remove old capture before new is proven).
+
+---
+
 ## Mode: REVIEW
 
 Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
@@ -150,9 +206,14 @@ entry point works, the contract is identical).
    apps): per repo `br list --json | jq '[.[] | select(.labels // [] |
    index("dream-proposal")) | select(.status != "closed")]'` — oldest first.
    Legacy fallback: `status: pending` proposal files with no `bead:` id (pre-docket
-   runs) — review them the same way, and file the missing bead. Nothing open → say so.
+   runs) — review them the same way, and file the missing bead. **Also pick up files
+   already carrying `status: approved` / `status: rejected`** — those were pre-decided by
+   Craig via the Slack triage buttons (Increment 3, `infrastructure/slack/post-proposals.py`).
+   Nothing open and nothing pre-decided → say so.
 2. Per proposal: read the memo file (What/Why/evidence/judge verdict), present.
-   Collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
+   **Pre-decided proposals (`status: approved`/`rejected` from the Slack buttons) skip the
+   question** — the human already chose: apply the approved, record the rejected, no re-ask.
+   For the rest, collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
    approve / reject / skip).
 3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
    (adjust mechanically if the target drifted; if it drifted *semantically*, leave the

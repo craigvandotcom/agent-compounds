@@ -1,7 +1,13 @@
 ---
-name: ac-qa-simulator
-description: Use when QA-ing the NATIVE app build in the iOS Simulator — full journey validation against the real native shell (keyboard, safe-area, splash, deep links, OAuth sheets, plugin calls, push payloads), appearance matrix, screenshots/video evidence, and perf sanity. Triggers on "test native app", "simulator QA", "QA in simulator", "test on iOS", "validate native build", "native smoke test". macOS only — see Platform Gate.
+name: ac-qa-device
+description: Use when QA-ing the NATIVE app build on a device/simulator — full journey validation against the real native shell (keyboard, safe-area, splash, deep links, OAuth sheets, plugin calls, push payloads), appearance matrix, screenshots/video evidence, and perf sanity. The native twin of ac-qa-browser. Triggers on "test native app", "device QA", "simulator QA", "QA on device", "test on iOS", "validate native build", "native smoke test". macOS/iOS Simulator today (Android emulator planned) — see Platform Gate.
 ---
+
+> **The native twin.** `ac-qa-device` proves the native shell; `ac-qa-browser`
+> proves the web shell. Shared conventions — **depth levels, journey reuse,
+> findings=beads, and the `QA_VALIDATION` report** — live in
+> **`_shared/qa-shared.md`**; both twins reference it so they stay in lockstep.
+> This file owns the native/simulator specifics only.
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and
@@ -11,7 +17,7 @@ description: Use when QA-ing the NATIVE app build in the iOS Simulator — full 
 > `CORE/journeys/`, native facts in `CORE/journeys/native.md`.
 > Do not add app-specific facts to this file — they belong in CORE.
 
-# Simulator QA Skill
+# Device / Simulator QA Skill
 
 Drive the **real native app** in the iOS Simulator with an accessibility-tree
 see → act → assert loop. Tooling: **agent-device** (Callstack; XCUITest engine —
@@ -55,13 +61,12 @@ sparingly.
 
 ## Depth levels
 
-- **smoke** — build, install, launch, splash→first-paint, auth, primary
-  journey. Run after native-touching changes, before TestFlight pushes.
-- **full** — every journey in the app's `CORE/journeys/` walked natively + the
-  native-shell checklist + appearance spot-checks.
-- **exhaustive** — full + walk every screen/control reachable, appearance
-  matrix (dark/light × 2–3 Dynamic Type sizes), deep-link matrix, lifecycle
-  (background/resume), perf sanity pass (`perf-and-limits.md`). Release-grade.
+Defined in **`_shared/qa-shared.md`** (smoke / full / exhaustive). Native specifics
+per level: **smoke** = build→install→launch→splash→first-paint→auth→primary journey
+(run before TestFlight pushes); **full** adds the `native-shell-checklist.md` +
+appearance spot-checks; **exhaustive** adds the appearance matrix (dark/light ×
+2–3 Dynamic Type sizes), deep-link matrix, lifecycle (background/resume), and a
+perf sanity pass (`perf-and-limits.md`).
 
 ## Toolchain
 
@@ -73,6 +78,27 @@ brew install jq               # JSON parsing for simctl output
 
 agent-device matches simulators **by name** — if two sims share a name it can
 boot the wrong one. Rename duplicates first (`xcrun simctl rename <udid> "<name (os)>"`).
+
+### Parallel QA on a shared Mac (multiple apps at once)
+
+Several apps may QA on one Mac concurrently. They collide ONLY if they share a
+sim, a sim NAME, or an agent-device session. Isolate with three layers:
+
+1. **A dedicated, uniquely-named sim per app** — e.g. `<APP>-QA-iPhone17Pro`.
+   NEVER drive the bare "iPhone 17 Pro"; two apps asking for that name grab the
+   same device. The app's build script should auto-provision its own sim
+   (`simctl create`) and target it **by UDID** (not name) so the build is immune
+   to the CoreSimulator name-match race that fires when another app boots/renames
+   sims concurrently. (Symptom of the race: `xcodebuild: error: Unable to find a
+   device matching…` while that exact name IS in the available list.)
+2. **A named agent-device session per app** — pass `--session <app>` to EVERY
+   `agent-device` call. One daemon per machine multiplexes named sessions;
+   `--tenant`/`--state-dir` give full daemon isolation if needed.
+3. **Ownership rule (non-negotiable):** only ever rename/boot/shutdown a sim your
+   app owns (`<APP>-QA-*`). Hijacking a shared sim mid-session breaks BOTH apps —
+   the build (name race) and agent-device (wrong-device match). Documented
+   incident: 2026-06-15, art-still + Body Compass both defaulting to "iPhone 17
+   Pro".
 
 ## Core loop
 
@@ -192,14 +218,9 @@ XCUITest projects the DOM's accessibility tree fully: web content appears as
 
 ## Reusing the app's journeys
 
-The app's `CORE/journeys/*.md` files are the **what** (flows, exact button
-labels, checkpoints, edge cases). This skill is the **how**. To run a journey
-natively: follow its happy path step-by-step, locating each step's button
-label in `snapshot -i` output instead of a DOM ref.
-
-**Journey docs drift.** When a label/flow in the doc doesn't match the tree,
-trust the tree, complete the journey via the real UI, and fix the doc as part
-of the QA pass (that's a finding, not a blocker).
+The what/how split and journey-drift rule are in **`_shared/qa-shared.md`**.
+Native specifics: locate each step's control by its button label in
+`snapshot -i` output (not a DOM ref).
 
 The app's CORE must also provide **`journeys/native.md`** with the native
 facts this skill needs:
@@ -236,70 +257,43 @@ The headlines:
   ≥0.5s, wrong state order, layout pops = real findings. Frame-timing claims
   from sim video = noise, never report.
 
-## Findings = beads (file immediately, like failing tests)
+## Findings = beads
 
-A finding is anything where the app diverges from the journey docs' expected
-behavior, plus a11y gaps and native-shell bugs. Do NOT bury findings in prose
-or "note for later" — **file each one as a bead the moment it's confirmed**,
-in the same session:
-
-```bash
-# CONFIRMED finding (you have root cause or a solid repro) → a fix bead:
-br create "fix(<area>): <finding title>" -t bug \
-  -d "QA finding (<date>, sim QA): <repro + evidence + journey ref>" \
-  --labels qa-finding
-# User-facing break or trapped state? Add the blocker label:
-#   --labels qa-finding,qa-blocker
-
-# SUSPECTED finding (cause unknown, weak repro) → an investigation bead:
-br create "investigate: <symptom>" -t investigation \
-  -d "QA finding (<date>, sim QA): <what was observed, repro attempt>" \
-  --labels qa-finding
-```
-
-**Type + label semantics (they compose, not compete):**
-
-- **Type** = kind of work. `bug` when confirmed — file the fix directly; do
-  NOT add a "confirm this" ceremony bead when the QA run already diagnosed
-  it. `investigation` when genuinely unconfirmed — its acceptance is
-  "reproduce → spawn fix beads or document-and-close".
-- **Label** = gating. `qa-blocker` gates the next merge (ac-merge refuses
-  while open). `qa-finding` alone = real but shippable, normal priority.
-- **Lineage**: fix beads spawned by an investigation carry a typed dep —
-  `br dep add <fix-id> <investigation-id> -t discovered-from` — then close
-  the investigation. `br dep tree` shows the full issue→fixes trail.
-- **Journey-doc drift is NOT a finding** — fix the doc inline during the run.
-- A finding that turns out to be intended behavior is resolved by updating
-  the journey doc and closing the bead — an expectation change, exactly like
-  updating a test.
+File each finding as a bead the moment it's confirmed — conventions, types, and
+labels (`qa-finding` / `qa-blocker`) are in **`_shared/qa-shared.md`**. A native
+finding is any divergence from the journey docs' expected behavior, plus a11y
+gaps and native-shell bugs. Tag bead descriptions with `device QA`.
 
 ## Reporting
 
-```markdown
-SIM_QA_VALIDATION:
-platform: ios-simulator
-device: [sim model + iOS version]
-app_build: [how built — command + branch/commit]
-depth: smoke | full | exhaustive
-journeys_tested: [list, with PASS/FAIL each]
-native_checklist: [items checked, PASS/FAIL each — see native-shell-checklist.md]
-appearance_matrix: [combos checked]
-findings_filed: [bead ids created this run, qa-blocker flagged]
-a11y_findings: [unlabeled controls discovered via the tree]
-perf_observations: [qualitative only — hangs, freezes, leaks]
-evidence: [screenshot/video paths]
-status: PASS | FAIL
-notes: [issues, sim-impossible flows skipped and why, journey-doc drift fixed]
-```
+Emit the **`QA_VALIDATION`** block from `_shared/qa-shared.md` with:
+
+- `platform: ios-simulator` (or `android-emulator`)
+- `target:` sim model + OS version
+- `shell_checklist:` items from `native-shell-checklist.md`
+- `appearance_matrix:` dark/light × Dynamic Type combos
+- `perf_observations:` qualitative only — hangs, freezes, leaks
+
+Consumed by `ac-merge` (gates the PR) and `ac-distribute` (the native ship gate
+keys on `platform:`).
 
 ## Teardown
 
 - Stop any recordings (`agent-device record stop`, `kill -INT` simctl video).
-- `xcrun simctl status_bar booted clear` if you overrode it.
+- **Close your agent-device session** (`agent-device close --session <app>`) —
+  a lingering session stays bound to its device and can collide later (a stale
+  `default` session bound to a device another app then claimed broke a run on
+  2026-06-15).
+- `xcrun simctl status_bar <udid> clear` if you overrode it (target YOUR sim's
+  UDID, not `booted` — multiple sims may be booted on a shared Mac).
 - Reset appearance/content-size if you changed them.
 - Delete test entries/data the run created (leave the account as found).
-- **Leave the simulator booted** (warm sim = fast next run). Do NOT shutdown
-  or erase unless state pollution is suspected.
+- **Solo Mac:** leave the sim booted (warm = fast next run). **Shared Mac
+  (multiple apps QA'ing):** shut down YOUR OWN sim
+  (`xcrun simctl shutdown <udid>`) so booted sims don't pile up — but NEVER touch
+  another app's sim. A per-app `sim-clean` teardown command (close session →
+  reset overrides → shutdown own sim) is the clean pattern; see the app's build
+  script.
 
 ## Troubleshooting
 
@@ -323,10 +317,12 @@ notes: [issues, sim-impossible flows skipped and why, journey-doc drift fixed]
 
 ## Related files
 
+- `_shared/qa-shared.md` — depth levels, journey reuse, findings=beads, `QA_VALIDATION` schema (shared with the twin)
 - `native-shell-checklist.md` — what ONLY the simulator/native shell can catch
 - `perf-and-limits.md` — CAN/MISLEADING/CANNOT taxonomy, hardware matrix,
   xctrace recipes, visual regression, automation speed tricks
 - `setup.md` — Mac setup, AXe fallback, Linux→Mac remote appendix,
   Appium webview escape hatch (Layer 3)
-- `browser-testing/SKILL.md` — Layer 1 (exhaustive DOM coverage)
+- `ac-qa-browser/SKILL.md` — the web-shell twin (Layer 1, exhaustive DOM coverage)
+- `browser-testing/SKILL.md` — the low-level `agent-browser` mechanics the twin wraps
 - Consuming app's `CORE/journeys/` + `CORE/journeys/native.md` — the what

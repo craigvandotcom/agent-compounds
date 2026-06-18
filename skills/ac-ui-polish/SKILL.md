@@ -1,13 +1,21 @@
 ---
-name: ui-elevate
-description: Use when elevating already-coded UI to next-level quality — polishing existing screens, components, or flows so they look and feel premium while staying consistent with the app's own design language. Triggers on "polish this UI", "make this feel premium", "level up the design", "this looks like AI slop", "elevate this", "bring it up to standard", "tighten the visuals", "make it production-quality", "improve the feel". Covers appearance (hierarchy, type, spacing, depth, imagery), perceived performance (skeletons, optimistic UI, 60fps motion, no layout shift), and interaction feel (micro-interactions, states, gestures, haptics). Audits against an anti-slop rubric, then applies fixes (the subjective, taste layer). NOT for: objective accessibility/compliance audits (use web-design-guidelines), multi-model design ideation or exploring alternatives (use ui-brainstorm), React data/bundle perf internals (use react-best-practices), visual/CSS defects (use ui-debug), or greenfield generation from scratch.
+name: ac-ui-polish
+description: Use when polishing already-coded UI to premium quality and/or checking it conforms to the app's design spec — one screen, or a whole-app crawl of every page. Two modes; both anchor on the app's CORE/design.md. Triggers on "polish this UI", "make this feel premium", "ui polish", "ac-ui-polish", "level up the design", "this looks like AI slop", "elevate this", "audit the whole app against the design spec", "check design conformance", "tighten the visuals", "make it production-quality", "improve the feel". Covers design-spec conformance (does each page match design.md?) then elevation (appearance, perceived performance, interaction feel) — audits against design.md + an anti-slop rubric, files deviations as beads, then applies fixes bounded to the spec's tokens. NOT for: objective accessibility/compliance audits (use web-design-guidelines), multi-model design ideation or exploring alternatives (use ui-brainstorm), React data/bundle perf internals (use react-best-practices), visual/CSS defects (use ui-debug), or greenfield generation from scratch.
 ---
 
-# UI Elevate
+# UI Polish
 
-**Purpose:** Take already-coded UI and raise it to next-level quality — bring it inline with the app's design language, then push appearance, feel, and perceived performance to a premium standard.
-**Domain:** Frontend craft, UX/UI polish, anti-slop critique
-**Status:** Complete
+**Purpose:** Take already-coded UI and (1) verify it conforms to the app's design spec (`CORE/design.md`), then (2) raise it to premium quality — bounded to that spec so polish never drifts into redesign. Works on one screen or a whole-app crawl.
+**Domain:** Frontend craft, design-spec conformance, UX/UI polish, anti-slop critique
+**Status:** Complete (the elevation engine formerly named `ui-elevate`, extended with whole-app spec-anchored conformance)
+
+> **The third member of the "verify the built app" triad** — alongside
+> `ac-qa-device` (native functional QA) and `ac-qa-browser` (web functional QA).
+> Those prove *does it work*; this proves *does it match the spec and look premium*.
+> Visual polish is bundle-determined (identical pixels in browser and native
+> webview), so this skill runs **once through the browser** — it does NOT split
+> into device/browser twins. Device-specific visual breakage (safe-area, splash,
+> keyboard overlap) is a functional check owned by `ac-qa-device`.
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and
@@ -38,6 +46,45 @@ see the delegation map. This skill owns the layer the **user perceives**.
 
 ---
 
+## Two modes
+
+| Mode | Input | What runs |
+|------|-------|-----------|
+| **Scoped** (default) | one screen / component / flow named by the user | the elevation loop below, anchored on `design.md` |
+| **Whole-app** | "audit the whole app against the design spec" | crawl every route → **Phase A conformance** (each page vs `design.md`, file deviations) → **Phase B elevation** (the same loop, per page) |
+
+**Whole-app mode** uses the shared **`_tools/crawl-and-capture`** primitive over the
+app's **`CORE/journeys/routes.md`** manifest to screenshot every route at the app's
+viewport set (the same captures `ac-qa-browser` produces — capture once, consume
+twice). Then:
+
+- **Phase A — Conformance (read-only).** For each page, compare the rendered result
+  to `CORE/design.md`: token usage (colors/spacing/radius/type off the scale),
+  the Do's/Don'ts, required interaction states. File each deviation as a bead
+  (`qa-finding`, + `qa-blocker` if it breaks the spec materially). **Be specific:**
+  "change X to Y because design.md says Z" — never vague "feels off." This phase
+  does not edit code; it produces the deviation list.
+- **Phase B — Elevation.** On confirmed-conformant pages, run the elevation loop —
+  **bounded to `design.md`'s tokens** (no new fonts/colors/components). Apply the
+  highest-impact, lowest-risk fixes first.
+
+Gains plateau after ~3 elevation cycles per surface — don't loop past diminishing returns.
+
+## The spec anchor — `CORE/design.md`
+
+The **baseline is the app's `CORE/design.md`** (Google `design.md` format: token
+YAML + prose Do's/Don'ts), which itself references the neoMeta-level brand spec.
+Read it FIRST, before any audit, and scope every suggestion to it — this is the
+guardrail against redesigning instead of polishing.
+
+- If `design.md` is absent (app not yet migrated), fall back to the app's local
+  `design-system` skill + `brand-system` + the live tokens — but flag that the app
+  lacks a `design.md` so it can be generated.
+- On a brand-layer conflict, `brand-system` wins (it's the authority); `design.md`
+  owns app-specific implementation.
+
+---
+
 ## When to Use This Skill
 
 **Intent Triggers:**
@@ -63,9 +110,10 @@ The whole skill runs through one loop. **Read `workflows/audit-and-elevate.md`**
 before starting — it is the operating procedure. In short:
 
 ```
-0. BASELINE   Learn the app's design language (brand-system + app CORE +
-              existing tokens/components). Establish the "house style."
-1. INVENTORY  Pin down exactly what's in scope (which screens/components).
+0. BASELINE   Read CORE/design.md (the spec) — token YAML + Do's/Don'ts. Fall back
+              to brand-system + the app's design-system skill if design.md is absent.
+1. INVENTORY  Pin down exactly what's in scope (which screens/components, or the
+              full route manifest for whole-app mode).
 2. AUDIT      Score the target against the anti-slop rubric across appearance,
               feel, perceived perf, AND consistency-with-app.
 3. ELEVATE    Apply fixes — highest impact / lowest risk first. Reuse existing
@@ -106,6 +154,8 @@ the rubric in `reference/critique-polish.md` AND be seen running.
 | Native bridge / cross-platform plumbing | `capacitor` |
 | Want multiple independent design opinions / consensus critique | `ui-brainstorm` |
 | A style genuinely *isn't applying* / layout is broken (a defect) | `ui-debug` |
+| Crawl every route + screenshot the whole app (whole-app mode) | `_tools/crawl-and-capture` + `CORE/journeys/routes.md` |
+| Functional QA (does it work / native shell / console) | `ac-qa-browser`, `ac-qa-device` |
 | See it running / screenshot / confirm the change | `run`, `verify` |
 
 This skill *orchestrates* — it calls these in, it doesn't duplicate their content.

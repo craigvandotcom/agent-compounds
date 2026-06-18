@@ -1,6 +1,6 @@
 # Bead Conventions — types, labels, lifecycle
 
-Shared by the pipeline skills (ac-qa-simulator, ac-review, ac-hygiene,
+Shared by the pipeline skills (ac-qa-device, ac-qa-browser, ac-review, ac-hygiene,
 ac-merge, ac-implement, ac-human-next, ac-tidy). One principle drives all of
 it:
 

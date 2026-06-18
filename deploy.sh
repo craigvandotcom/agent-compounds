@@ -15,7 +15,15 @@
 #   --agents a,b | all      symlink the named agents (or every agent)
 #   --all                   all skills + all agents
 #   --list                  print what's available and exit
+#   --no-prune              keep orphaned symlinks (default: prune them)
 #   -n, --dry-run           show what would happen, change nothing
+#
+# Prune (default ON): after linking, any symlink under the target's
+# .claude/skills or .claude/agents that points INSIDE agent-compounds but no
+# longer resolves (a dangling orphan — e.g. left behind when a skill is renamed
+# or removed upstream) is deleted. Always safe: a dangling inside-AC symlink
+# points at nothing. This is the fix for the "rename strands a symlink in every
+# consumer repo" failure mode. Foreign symlinks and real files are never touched.
 #
 # Examples:
 #   ./deploy.sh ../simil8 --skills supabase,testing,react-best-practices,planning --agents implementer,validator
@@ -27,6 +35,7 @@ set -euo pipefail
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DRY=0
+PRUNE=1
 SKILLS_REQ=""
 AGENTS_REQ=""
 TARGET=""
@@ -49,6 +58,7 @@ while [ $# -gt 0 ]; do
     --agents)   AGENTS_REQ="$2"; shift 2 ;;
     --all)      SKILLS_REQ="all"; AGENTS_REQ="all"; shift ;;
     --list)     list_available; exit 0 ;;
+    --no-prune) PRUNE=0; shift ;;
     -n|--dry-run) DRY=1; shift ;;
     -*)         echo "unknown option: $1" >&2; exit 2 ;;
     *)          TARGET="$1"; shift ;;
@@ -121,6 +131,32 @@ print(os.path.normpath(t))
   fi
 }
 
+# prune_orphans <dir>  -> delete dangling symlinks in <dir> that point inside AC_ROOT
+# (orphans from an upstream rename/removal). Real files + foreign symlinks untouched.
+prune_orphans() {
+  local dir="$1" link current_target resolved
+  [ -d "$dir" ] || return 0
+  while IFS= read -r link; do
+    [ -n "$link" ] || continue
+    [ -e "$link" ] && continue   # still resolves → not an orphan
+    current_target="$(readlink "$link")"
+    resolved="$(cd "$(dirname "$link")" && python3 -c '
+import os, sys
+t = sys.argv[1]
+if not os.path.isabs(t):
+    t = os.path.join(os.getcwd(), t)
+print(os.path.normpath(t))
+' "$current_target" 2>/dev/null || true)"
+    is_inside_ac "$resolved" || continue   # foreign dangling link → leave it
+    if [ "$DRY" = 1 ]; then
+      echo "  prune (orphan) ${link#$TARGET/} -> $current_target"
+    else
+      rm "$link"
+      echo "  pruned (orphan) ${link#$TARGET/} -> $current_target"
+    fi
+  done < <(find "$dir" -maxdepth 1 -type l)
+}
+
 echo "Deploying agent-compounds -> $TARGET"
 
 # --- skills ---
@@ -157,6 +193,12 @@ if [ -n "$AGENTS_REQ" ]; then
       echo "  MISSING in agent-compounds: agent '$a'"
     fi
   done
+fi
+
+if [ "$PRUNE" = 1 ]; then
+  echo "Prune (orphaned inside-AC symlinks):"
+  prune_orphans "$TARGET/.claude/skills"
+  prune_orphans "$TARGET/.claude/agents"
 fi
 
 echo "Done."

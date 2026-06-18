@@ -3,7 +3,7 @@
 Objective patterns. Read when auditing image attributes, loading strategy, virtualization, or layout thrashing.
 
 > Deep React/Next perf engineering (waterfalls, bundle, re-renders) → `react-best-practices`.
-> Perceived-speed *feel* (skeletons, optimistic UI) → `ui-elevate`.
+> Perceived-speed *feel* (skeletons, optimistic UI) → `ac-ui-polish`.
 
 ## 7. Images
 

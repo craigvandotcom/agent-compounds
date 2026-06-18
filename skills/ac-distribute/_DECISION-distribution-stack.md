@@ -1,19 +1,57 @@
-# ⚠ TEMP — Distribution Stack Setup (pending, run on Mac)
+# Distribution + Triage — Architecture & Setup Record
 
-**Status:** PENDING — Phase 1 runs in a Mac session (ac-qa-simulator bake-off is
-DONE, 2026-06-11 — the QA lane this composes with now exists). This directory
-becomes the real `ac-distribute` skill in Phase 2; until then this file is the
-only content.
+**Status (2026-06-15):** Phase 2 LANDED. After 5 live headless ship cycles on
+art-still (builds 2→6), two decisions are ratified (below). `ac-distribute/SKILL.md`
+is now written (ship-OUT lane); the feedback leg is SPLIT OUT into a new sibling
+skill **`ac-triage`** (signal-IN lane). Sentry wiring is teed up to a single human
+gate (create the Sentry project). The historical Phase-1 plan + results are retained
+below as the record.
 
-**Created:** 2026-06-10 · amended 2026-06-11. Pipeline position: the last mile
-of the ac-* pipeline — implement → land/review → merge → **distribute**. This is
-the SHIP lane (TestFlight, crash triage, App Store submission), not the QA lane
-(that's ac-qa-simulator; the lanes compose — QA proves the build, this ships it).
+**Created:** 2026-06-10 · amended 2026-06-11 · re-factored 2026-06-15. Pipeline
+position: the last mile of the ac-* pipeline — implement → land/review → merge →
+**distribute**. ac-distribute is the SHIP lane; it composes with `ac-qa-device`
+(QA proves the build) upstream and `ac-triage` (pulls real-user signal back to beads)
+as its inbound counterpart.
+
+---
+
+## Decision update (2026-06-15) — RATIFIED after 5 live cycles
+
+### 1. KEEP fastlane (hybrid) — do NOT rip it out
+
+The original "NOT fastlane, use the `asc` CLI" stance predated discovering that
+art-still already standardized on fastlane. After 5 headless cycles (fastlane
+**match** git-stored signing + Admin ASC API key, **no Apple 2FA at any point**),
+the lane is proven. Ratified: **fastlane owns the BUILD mile (archive → sign →
+upload); the ASC API owns the read + submit miles.** They are NOT competitors —
+they cover different miles. `ac-distribute` is therefore a thin wrapper over
+**whatever each app already uses** for the build (fastlane here; could differ for a
+future app). Rewriting a working lane to the asc-CLI is churn for zero user value.
+The `asc` CLI / upstream rorkai skills are NOT adopted; revisit only if a future app
+arrives with no lane of its own.
+
+### 2. SPLIT feedback-triage OUT into a new `ac-triage` skill
+
+The old doc's "feedback-triage" conflated a *capability* (triage operational signal
+→ beads) with *one source* (ASC TestFlight feedback). That work is **inbound** (pull
+signal), continuous/scheduled, **headless-anywhere**, **source-agnostic** (Sentry,
+Supabase, ASC, PostHog), and **cross-app** (works for web-only apps too) — orthogonal
+to ac-distribute's **outbound**, event-driven, Mac-bound shipping. So it gets its own
+skill, **`ac-triage`**: it FETCHES + clusters machine signal, then routes each finding
+to **`ac-bead-capture`** (which already classifies / routes-to-repo / dedupes). It is
+the *machine-signal sibling* to ac-bead-capture's *human-signal intake*. ASC beta
+feedback is merely ac-triage's ASC source adapter; **Sentry is source #1**.
+
+### 3. `ac-distribute` scope = ship OUT only
+
+Two workflows: **testflight-push** (≈ built — art-still's `pnpm ship:testflight`) and
+**store-release** (future; ASC API; human-gated at submit). feedback-triage REMOVED
+from this skill (now `ac-triage`).
 
 ## Decided
 
 - **Name: `ac-distribute`** (was `app-distribution`). Pipeline stage → ac- prefix
-  (precedent: ac-qa-simulator). NOT platform-suffixed (`-ios`): Capacitor
+  (precedent: ac-qa-device). NOT platform-suffixed (`-ios`): Capacitor
   dual-build means Play Store later, and all three workflows have direct Android
   analogs (internal testing track, Play Console ANRs/reviews, store release).
   Platform handled by an internal **per-workflow gate**, not the name or a
@@ -43,7 +81,7 @@ the SHIP lane (TestFlight, crash triage, App Store submission), not the QA lane
   agent-compounds (public repo, upstream license, wouldn't pass registry
   conventions). The Phase 2 wrapper replaces them; delete at cleanup.
 - **The sim-QA gate is mechanical, not vibes:** testflight-push REQUIRES the
-  ac-qa-simulator report artifact (its `journeys_tested` PASS block), fresh
+  ac-qa-device report artifact (its `journeys_tested` PASS block), fresh
   relative to the commit being shipped — not the session's memory that "QA
   passed".
 - **Build-number source of truth:** pick ONE owner + bump convention per app
@@ -70,7 +108,7 @@ npx skills add rorkai/app-store-connect-cli-skills   # then keep only:
 # 5. Record below what worked / what was missing
 ```
 
-Gate: a sim QA smoke PASS (ac-qa-simulator report artifact) before the upload
+Gate: a sim QA smoke PASS (ac-qa-device report artifact) before the upload
 step.
 
 ## Phase 2 — wrap into a real skill (after 2–3 cycles)
@@ -95,16 +133,43 @@ Consuming apps add `CORE/distribution.md` (mirror of `journeys/native.md`):
 ASC app id, bundle id, TestFlight group names, demo account for review,
 version conventions + build-number owner, screenshot specs, .p8 pointer.
 
-## Phase 1 results (fill in on the Mac)
+## Phase 1 results (cycle 1 — art-still-app, 2026-06-13)
 
 ```
-date / asc version:
-auth setup friction:
-testflight push: PASS/FAIL  — notes:
-skills kept / dropped:
-missing operations (candidates for Phase 2 wrapper):
-DECISION on Phase 2 scope:
+date / tooling:  2026-06-13. fastlane 2.236.1 on Homebrew Ruby 4.0 (system Ruby 2.6 too old).
+auth setup:      ASC Admin API key (key 4BDSRVV64D, issuer 7c951934-…). HEADLESS — no Apple
+                 2FA at any point. match created the distribution cert + app-store profile
+                 via the API key and stored them in a private git repo (neometa-ios-signing).
+testflight push: PASS — build 2 (v1.0, App 6778303129) uploaded to closed TestFlight.
 ```
+
+**MAJOR DEVIATION from the "Foundation" decision — reconcile in Phase 2:** this cycle did
+NOT use the `asc` CLI or the upstream rorkai skills. art-still-app already carried a fastlane
+lane from its own rrk.1 work (`ios/App/fastlane/`), so the fastest validated path was to
+**fix + use that fastlane lane**, not introduce a second tool. The doc's "NOT fastlane"
+stance predates discovering an app already standardized on fastlane. **Phase-2 decision
+needed:** standardize the org on `asc`-CLI and rip fastlane out of art-still, OR keep
+fastlane where it already exists and scope `ac-distribute` as a thin wrapper over *whatever
+each app already uses*. Recommendation: the latter — fastlane match's git-stored signing is
+genuinely good, and rewriting a working lane to asc-CLI is churn for no user value.
+
+**Gaps fixed in the rrk.1 fastlane scaffolding (all real, would have failed CI):**
+1. The lane never built `app_store_connect_api_key` — would have fallen back to Apple-ID/2FA.
+2. `APP_STORE_CONNECT_API_KEY_PATH` env name auto-maps onto `match.api_key_path` →
+   "Unresolved conflict between api_key_path and api_key". Renamed to custom `ASC_API_KEY_*`.
+3. `codesign --verify` ran on the `.xcarchive` container ("not signed at all") instead of the
+   signed `.app` inside it.
+4. The Sentry dSYM gate hard-failed with no Sentry creds → made conditional.
+
+**missing operations (Phase-2 wrapper candidates):** web-build+cap-sync is a manual
+precondition (lane assumes assets pre-synced; and prod-env injection is needed because
+`.env.local` is backend-less); build-number bump is manual; What-to-Test from git log not
+wired; feedback-triage (crashes/beta feedback → beads) not built.
+
+**remaining for CI tag-push (art-still):** GitHub secrets `MATCH_GIT_BASIC_AUTHORIZATION`
+(PAT), `APPLE_ID`, and Sentry trio. 7 of 10 secrets already set.
+
+Per-app facts recorded in art-still: `.claude/skills/CORE/distribution.md`.
 
 ## Cleanup
 

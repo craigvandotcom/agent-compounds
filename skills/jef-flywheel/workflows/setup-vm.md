@@ -214,7 +214,7 @@ Optional cron for automated weekly updates:
 
 ## Our Existing Research
 
-- `knowledge/1-active/agentic-engineering/advanced/05-jeffrey-emmanuel-agentic-flywheel.md`
-- `knowledge/1-active/agentic-engineering/research/jeffrey-emanuel-planning-methodology.md`
-- `knowledge/1-active/agentic-engineering/research/jeffrey-emanuel-ideation-methodology.md`
-- `knowledge/1-active/agentic-engineering/research/beads-workflow-comparison.md`
+- `knowledge/2-areas/agentic-engineering/advanced/05-jeffrey-emmanuel-agentic-flywheel.md`
+- `knowledge/2-areas/agentic-engineering/research/jeffrey-emanuel-planning-methodology.md`
+- `knowledge/2-areas/agentic-engineering/research/jeffrey-emanuel-ideation-methodology.md`
+- `knowledge/2-areas/agentic-engineering/research/beads-workflow-comparison.md`

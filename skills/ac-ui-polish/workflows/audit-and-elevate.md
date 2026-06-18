@@ -1,6 +1,6 @@
 # Workflow: Audit & Elevate
 
-The operating procedure for `ui-elevate`. Input is **existing, working UI**.
+The operating procedure for `ac-ui-polish`. Input is **existing, working UI**.
 Output is the same UI brought inline with the app and pushed to premium quality,
 proven against the rubric and seen running.
 
