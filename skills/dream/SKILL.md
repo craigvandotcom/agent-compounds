@@ -206,9 +206,14 @@ entry point works, the contract is identical).
    apps): per repo `br list --json | jq '[.[] | select(.labels // [] |
    index("dream-proposal")) | select(.status != "closed")]'` — oldest first.
    Legacy fallback: `status: pending` proposal files with no `bead:` id (pre-docket
-   runs) — review them the same way, and file the missing bead. Nothing open → say so.
+   runs) — review them the same way, and file the missing bead. **Also pick up files
+   already carrying `status: approved` / `status: rejected`** — those were pre-decided by
+   Craig via the Slack triage buttons (Increment 3, `infrastructure/slack/post-proposals.py`).
+   Nothing open and nothing pre-decided → say so.
 2. Per proposal: read the memo file (What/Why/evidence/judge verdict), present.
-   Collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
+   **Pre-decided proposals (`status: approved`/`rejected` from the Slack buttons) skip the
+   question** — the human already chose: apply the approved, record the rejected, no re-ask.
+   For the rest, collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
    approve / reject / skip).
 3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
    (adjust mechanically if the target drifted; if it drifted *semantically*, leave the
