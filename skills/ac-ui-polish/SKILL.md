@@ -51,12 +51,15 @@ see the delegation map. This skill owns the layer the **user perceives**.
 | Mode | Input | What runs |
 |------|-------|-----------|
 | **Scoped** (default) | one screen / component / flow named by the user | the elevation loop below, anchored on `design.md` |
-| **Whole-app** | "audit the whole app against the design spec" | crawl every route → **Phase A conformance** (each page vs `design.md`, file deviations) → **Phase B elevation** (the same loop, per page) |
+| **Whole-app** | "audit the whole app against the design spec" | build the **coverage matrix** (route × theme × viewport × data-state) → **sensors + Phase A conformance** per cell → **Phase B elevation** (two ledgers, per surface) |
 
 **Whole-app mode** uses the shared **`_tools/crawl-and-capture`** primitive over the
-app's **`CORE/journeys/routes.md`** manifest to screenshot every route at the app's
-viewport set (the same captures `ac-qa-browser` produces — capture once, consume
-twice). Then:
+app's **`CORE/journeys/routes.md`** manifest to screenshot every route **in every
+theme (`--themes light,dark`)** at the app's viewport set (the same captures
+`ac-qa-browser` produces — capture once, consume twice). With **explicit multi-agent
+opt-in**, run it as the fan-out in `workflows/whole-app-workflow.md` (one agent per
+cell, adversarially verified) so coverage is exhaustive and no "pass" is inferred.
+Then:
 
 - **Phase A — Conformance (read-only).** For each page, compare the rendered result
   to `CORE/design.md`: token usage (colors/spacing/radius/type off the scale),
@@ -110,20 +113,29 @@ The whole skill runs through one loop. **Read `workflows/audit-and-elevate.md`**
 before starting — it is the operating procedure. In short:
 
 ```
-0. BASELINE   Read CORE/design.md (the spec) — token YAML + Do's/Don'ts. Fall back
-              to brand-system + the app's design-system skill if design.md is absent.
-1. INVENTORY  Pin down exactly what's in scope (which screens/components, or the
-              full route manifest for whole-app mode).
-2. AUDIT      Score the target against the anti-slop rubric across appearance,
-              feel, perceived perf, AND consistency-with-app.
-3. ELEVATE    Apply fixes — highest impact / lowest risk first. Reuse existing
-              tokens & primitives; don't invent new ones without justification.
-4. RE-AUDIT   Loop until zero blocker/high findings remain.
-5. VERIFY     See it running (run/verify skills); confirm no visual regressions.
+0. BASELINE   Read CORE/design.md + its design.<theme>.md siblings + CORE/ui-audit.md
+              (theme toggle, seed recipe, deployed URL, auth, component dirs).
+0.5 SEED      Populate realistic data (CORE names the script). Empty ≠ audited.
+1. MATRIX     Build the coverage matrix: route × theme × viewport × data-state.
+              The cell — not the screen — is the unit of "done."
+2. SENSE      Run reference/sensors.md FIRST on every cell: contrast sweep (per
+              theme), hardcoded-colour grep, token symmetry. Eyes miss these.
+3. AUDIT      Then score reference/critique-polish.md per surface (taste layer),
+              with file:line. Capture an artifact for every cell.
+4. ELEVATE    Two ledgers — Conformance (fix defects) + Elevation (score every
+              surface; change ONLY with a cited gap; "no change" is a pass).
+5. RE-AUDIT   Re-run sensors + rubric. Pass = zero sensor fails / blocker / high,
+              IN EVERY THEME.
+6. VERIFY     See it running in every theme + data-state changed; before/after
+              artifacts; tests pass; no sibling regressions.
 ```
 
-**Non-negotiable:** never declare UI "elevated" on inspection alone. It must pass
-the rubric in `reference/critique-polish.md` AND be seen running.
+**Five non-negotiables (each maps to a real escaped defect — see Common Mistakes):**
+**sensors run before eyes** · **audit every theme, never one** · **audit seeded
+data, not just empty** · **verify don't infer** (a route you didn't render is not
+audited — use the deployed URL when local auth blocks it) · **never change working
+code just to have a diff**. Fill the **Definition of Done** checklist in
+`workflows/audit-and-elevate.md` before declaring anything elevated.
 
 ---
 
@@ -154,7 +166,8 @@ the rubric in `reference/critique-polish.md` AND be seen running.
 | Native bridge / cross-platform plumbing | `capacitor` |
 | Want multiple independent design opinions / consensus critique | `ui-brainstorm` |
 | A style genuinely *isn't applying* / layout is broken (a defect) | `ui-debug` |
-| Crawl every route + screenshot the whole app (whole-app mode) | `_tools/crawl-and-capture` + `CORE/journeys/routes.md` |
+| Crawl every route + screenshot the whole app, all themes (whole-app mode) | `_tools/crawl-and-capture --themes light,dark` + `CORE/journeys/routes.md` |
+| Programmatic correctness checks (contrast / hardcoded colour / token symmetry) | `reference/sensors.md` (run before the visual rubric) |
 | Functional QA (does it work / native shell / console) | `ac-qa-browser`, `ac-qa-device` |
 | See it running / screenshot / confirm the change | `run`, `verify` |
 
@@ -166,8 +179,10 @@ This skill *orchestrates* — it calls these in, it doesn't duplicate their cont
 
 | File | When to Read |
 |------|--------------|
-| `workflows/audit-and-elevate.md` | **Always** — the operating procedure |
-| `reference/critique-polish.md` | At AUDIT — the anti-slop checklist + scoring rubric |
+| `workflows/audit-and-elevate.md` | **Always** — the operating procedure (+ the Definition of Done) |
+| `reference/sensors.md` | **At AUDIT, before eyes** — contrast sweep, hardcoded-colour grep, token symmetry |
+| `workflows/whole-app-workflow.md` | Whole-app mode **with multi-agent opt-in** — the fan-out Workflow template |
+| `reference/critique-polish.md` | At AUDIT — the anti-slop checklist + scoring rubric (the taste layer) |
 | `reference/visual-craft.md` | When elevating appearance: type, spacing, depth, imagery, layout |
 | `reference/interaction-and-feel.md` | When elevating micro-interactions, states, motion, gestures, haptics |
 | `reference/perceived-performance.md` | When the UI feels slow/janky despite being functionally fine |
@@ -202,3 +217,8 @@ Run these as ordered sweeps over the target (detail in the reference files):
 | Polishing only the happy path | Design empty/loading/error/overflow states too |
 | Re-deriving brand palette/voice here | Defer to `brand-system`; this skill owns craft, not brand law |
 | Chasing micro-perf the user can't feel | Optimize *perceived* speed; send real perf work to `react-best-practices` |
+| **Auditing one theme** (dark only) | Every theme is a matrix axis. Hardcoded dark/white values look fine in one theme and break in the other — run the contrast sweep **per theme** (`sensors.md`) |
+| **Auditing an empty account** | Seed realistic data first (Phase 0.5). Lists/cards/rows only exist with data — that's where defects hide |
+| **Inferring quality without rendering** | A route you didn't see is not audited. Capture it (deployed URL if local auth blocks it) before calling it conformant |
+| **Visual-only audit** (no sensors) | Eyes can't see a 3.9:1 ratio or a raw `#0c1014`. Run `sensors.md` *before* the rubric |
+| **Changing code to have a diff** | "Already at the bar → no change" is a passing outcome. Elevation needs a cited gap, never churn |

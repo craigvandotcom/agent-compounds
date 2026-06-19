@@ -2,98 +2,143 @@
 
 The operating procedure for `ac-ui-polish`. Input is **existing, working UI**.
 Output is the same UI brought inline with the app and pushed to premium quality,
-proven against the rubric and seen running.
+proven by **sensors + rubric + captured evidence** — not by inspection alone.
 
 > Two axes, in order: **(1) bring inline** with the app's design language, then
 > **(2) elevate** to premium. Never elevate before you've conformed.
+
+> **Hard lessons baked into this procedure** (do not skip — each maps to a real
+> escaped defect): audit **both themes**, audit **seeded (not empty) data**, run
+> **sensors before eyes**, **verify don't infer** (a route you didn't render is
+> not audited), and **never change code just to have something to change**.
 
 ---
 
 ## Phase 0 — Establish the baseline (the "house style")
 
-You cannot make something "consistent with the app" until you know the app. Do
-not skip this even under time pressure — it is what separates polish from a
-rogue redesign.
+You cannot make something "consistent with the app" until you know the app.
 
-Gather, in this order:
-1. **Brand law** → invoke `brand-system` for this app's pillar color, voice
-   register, and banned phrases. This is non-negotiable law, not preference.
-2. **App design facts** → read this app's `.claude/skills/CORE/SKILL.md` (and its
-   `AGENTS.md` index) and any local `design-system` skill. Capture: design tokens,
-   spacing scale, type ramp, radii, shadow/elevation system, motion durations.
-3. **Existing primitives** → grep the codebase for the component library in use
-   (e.g. shared `components/ui/*`, Tailwind config `theme.extend`, CSS variables).
-   Note the patterns already in production — buttons, cards, inputs, modals.
+1. **Brand law** → `brand-system` for pillar colour, voice, banned phrases.
+2. **App design facts** → the app's `CORE/design.md` (the spec) **and its
+   `design.<theme>.md` siblings** (every theme is first-class), plus the app's
+   `CORE/ui-audit.md` (or equivalent) for the **operational facts you will need
+   below**: how to toggle each theme, how to seed realistic data, the deployed
+   URL, auth/login, and which dirs hold components + the CSS token file.
+3. **Existing primitives** → the component library, tokens, `theme.extend`, CSS
+   variables. Note the production patterns (buttons, cards, inputs, modals).
 
-Write a short **house-style note** (a few bullets): the scale, the type ramp, the
-elevation logic, the motion vocabulary, the pillar. This is your conformance
-target for Phase 3.
+Write a short **house-style note**: scale, type ramp, elevation logic, motion
+vocabulary, pillar, **and the list of themes**. This is your conformance target.
 
----
+## Phase 0.5 — Seed realistic data (precondition, not optional)
 
-## Phase 1 — Inventory the target
+Empty states are **one cell** of the audit, not the audit. Most UI (lists, cards,
+populated rows, long names, overflow) only exists with data, and that is where
+defects hide. Before capturing anything:
 
-Pin the scope precisely. Vague scope ("polish the app") produces shallow work.
-- Which exact screens / components / flows are in scope?
-- What are their **states**? (default, empty, loading, error, success, disabled,
-  long-content/overflow, offline). List them — most slop hides in unhandled states.
-- What real data will flow through? (Not lorem — realistic worst cases: long
-  names, missing avatars, huge numbers, zero items.)
+- Run the app's seed recipe (CORE names the script) to populate a realistic
+  account: foods/ingredients, entries, signals, whatever the app's domain is.
+- If you genuinely cannot seed, **say so loudly** — "populated states UNVERIFIED"
+  — and treat every populated surface as un-audited. Do not let an empty-account
+  pass masquerade as coverage.
 
----
+## Phase 1 — Build the coverage matrix (the unit of "done")
 
-## Phase 2 — Audit (score, don't vibe)
+Pin scope as an explicit **matrix**, not a vague "the app." The cell, not the
+screen, is the unit of work:
 
-Run `reference/critique-polish.md` across the target. Score every finding by
-severity (**blocker / high / medium / low**) and tag its axis:
+```
+cell = route × theme × viewport × data-state
+       route:      every entry in the route manifest (incl. auth + dynamic)
+       theme:      EVERY theme (light AND dark — never one)
+       viewport:   the app's set (e.g. 320 / 390 / 428 for mobile-only)
+       data-state: { empty, seeded }  (and error/loading where reachable)
+```
 
-- **Consistency** — deviates from the house style (wrong scale, ad-hoc color,
-  one-off component, off-pillar). *Consistency breaks are at least `high`.*
-- **Appearance** — `reference/visual-craft.md` (type, spacing, depth, imagery, layout)
-- **Feel** — `reference/interaction-and-feel.md` (states, micro-interactions, motion, gestures)
-- **Perceived performance** — `reference/perceived-performance.md` (skeletons, optimistic UI, 60fps, layout shift)
+List the cells. **A cell is not audited until it has a captured artifact.**
+For routes blocked locally (auth redirect, dev auto-login), capture against the
+**deployed URL** (CORE documents it) — *code-reading a route does not count as
+auditing it.* If a cell cannot be captured anywhere, mark it `UNVERIFIED`, never
+"pass."
 
-Produce a findings table: `severity | axis | location (file:line) | issue | fix`.
-If you want independent perspectives on subjective calls, fan out via
-`ui-brainstorm` and reconcile.
+Also list each surface's **states**: default / empty / loading / error / success /
+disabled / long-content / offline.
 
----
+## Phase 2 — Audit each cell: SENSORS FIRST, then the rubric
 
-## Phase 3 — Elevate (apply fixes)
+For every cell, in this order:
 
-Order: **highest impact / lowest risk first.** Conformance fixes (Phase 0
-violations) come before net-new flourishes.
+1. **Sensors** (`reference/sensors.md`) — run *before* you look:
+   - **Contrast sweep** per theme (catches "text too light to see").
+   - **Hardcoded-colour grep** over components (catches raw `#hex`/`rgba`/
+     `text-white`/`bg-black` on theme-flipping surfaces).
+   - **Token-symmetry** check (catches a token defined in only one theme).
+   Sensor hits are findings (correctness, usually ≥ High) and they point at exact
+   lines before you render anything.
+2. **Visual rubric** (`reference/critique-polish.md`) — now judge *taste* on the
+   captured artifact: consistency, typography, spacing, depth, imagery, states,
+   feel, perceived perf, copy, AI-tells. Score every item with `file:line` + a
+   concrete fix. Do not summarise "looks good" — answer the checklist.
+
+Produce a **findings table**: `severity | axis | cell | location (file:line) |
+issue | fix`. Severity per `critique-polish.md` (consistency/contrast/hardcoded
+breaks are ≥ High). Want independent taste opinions → fan out via `ui-brainstorm`.
+
+## Phase 3 — Elevate (apply fixes) — two ledgers, zero churn
+
+Keep **two ledgers**, both required in the report:
+
+- **Conformance ledger** — defects: sensor failures + rubric blockers/highs.
+  Fix these, highest-impact / lowest-risk first.
+- **Elevation ledger** — the premium axis. For **every surface**, record a rubric
+  **score** and a decision: *elevate* or *leave as-is*.
+
+**Anti-churn law (non-negotiable):**
+- An elevation entry is valid **only** if it cites a specific rubric gap or named
+  premium principle it violates, with `file:line`. "Tweak something" is not valid.
+- **"Already at the bar → no change" is a PASSING outcome**, reported as success.
+  A surface that needs nothing is a good result, not a gap to fill.
+- Elevation proposals are **impact-ranked and capped**; below the impact bar,
+  leave it alone. Never edit working code merely to produce a diff.
 
 Rules of engagement:
-- **Reuse the app's tokens and primitives.** Do not introduce a new spacing value,
-  shadow, color, or component when an existing one fits. New primitives require an
-  explicit, stated justification (and ideally belong in the design-system, not here).
-- **Change the least that achieves premium.** Elevation is surgical, not a rewrite.
-- **One axis at a time** per component when practical — easier to verify, easier to revert.
-- For brand-voice copy edits, stay within `brand-system`'s register and banned list.
-- Defer real perf work (bundle, data fetch) to `react-best-practices`; here you
-  only fix *perceived* speed.
-
----
+- **Reuse the app's tokens and primitives.** A new spacing/shadow/colour/component
+  needs explicit, stated justification (and usually belongs in the design system).
+- **Change the least that achieves premium.** Elevation is surgical.
+- **One axis at a time** per component when practical — easier to verify/revert.
+- Brand-voice copy stays within `brand-system`'s register + banned list.
+- Real perf (bundle, data fetch) → `react-best-practices`; here, only *perceived* speed.
 
 ## Phase 4 — Re-audit (loop to clean)
 
-Re-run `reference/critique-polish.md` on the changed UI. **Pass = zero `blocker`
-and zero `high` findings.** Mediums/lows are logged with a recommendation; ship or
-defer per the user. If a fix introduced a new finding, loop back to Phase 3.
-
----
+Re-run **sensors + rubric** on every changed cell. **Pass = zero sensor failures,
+zero Blocker, zero High, in every theme.** A fix that introduces a new finding
+loops back to Phase 3. Mediums/lows are logged with a recommendation.
 
 ## Phase 5 — Verify (see it, don't assume it)
 
-- See it **running** — use the `run` skill (or `verify`) to launch the app and
-  view the actual rendered result, including the non-happy states from Phase 1.
-- If anything renders wrong (style not applying, layout broken), that's a defect →
-  hand to `ui-debug`, fix, return here.
-- Check responsive breakpoints and, for Capacitor builds, native concerns (safe
-  areas, momentum scroll, touch targets) per `reference/interaction-and-feel.md`.
-- Confirm **no regressions** elsewhere — elevation must not break sibling screens
-  that share the touched primitives.
+- See it **running** in **every theme and data-state you changed** (`run`/`verify`),
+  including the non-happy states from Phase 1. Capture before/after artifacts for
+  every elevation claim.
+- Style not applying / layout broken → defect → `ui-debug`, fix, return.
+- Check responsive breakpoints and (Capacitor) native concerns — but device-only
+  visual breakage (safe-area, splash, keyboard) is `ac-qa-device`'s job, not this.
+- Confirm **no regressions** on sibling screens sharing touched primitives, and
+  re-run the app's tests for changed components.
 
-Only after a clean re-audit **and** a real running view do you report the work as
-elevated. State what changed and what the before/after rubric scores were.
+## Definition of Done (machine-checkable — print and fill)
+
+Do not report "elevated" until ALL are true:
+
+- [ ] Coverage matrix built; **every cell has a captured artifact** (or explicit `UNVERIFIED`).
+- [ ] **Both themes** captured for every route; logged-out/auth routes captured (deployed URL if needed).
+- [ ] **Seeded data** used; populated states audited (or `UNVERIFIED` declared loudly).
+- [ ] Sensor 1 (contrast) clean in **every theme**.
+- [ ] Sensor 2 (hardcoded colour) triaged; no raw colour on a theme-flipping surface.
+- [ ] Sensor 3 (token symmetry) clean.
+- [ ] `critique-polish.md` scored **per surface** with `file:line` (not a vibe summary).
+- [ ] Conformance ledger: zero Blocker/High remaining.
+- [ ] Elevation ledger: every surface scored + a decision; each change cites a gap; "no change" allowed.
+- [ ] Before/after artifacts exist for every elevation change; tests pass; no sibling regressions.
+
+Only then state the work as elevated, with the before/after rubric scores.
