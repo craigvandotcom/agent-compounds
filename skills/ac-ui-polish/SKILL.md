@@ -53,13 +53,14 @@ see the delegation map. This skill owns the layer the **user perceives**.
 | **Scoped** (default) | one screen / component / flow named by the user | the elevation loop below, anchored on `design.md` |
 | **Whole-app** | "audit the whole app against the design spec" | build the **coverage matrix** (route × theme × viewport × data-state) → **sensors + Phase A conformance** per cell → **Phase B elevation** (two ledgers, per surface) |
 
-**Whole-app mode** uses the shared **`_tools/crawl-and-capture`** primitive over the
-app's **`CORE/journeys/routes.md`** manifest to screenshot every route **in every
-theme (`--themes light,dark`)** at the app's viewport set (the same captures
-`ac-qa-browser` produces — capture once, consume twice). With **explicit multi-agent
-opt-in**, run it as the fan-out in `workflows/whole-app-workflow.md` (one agent per
-cell, adversarially verified) so coverage is exhaustive and no "pass" is inferred.
-Then:
+**Whole-app mode** crawls the app's **`CORE/journeys/routes.md`** manifest at the app's
+viewport set, **in every theme**. The shared **`_tools/crawl-and-capture`** primitive
+can produce a quick static-screenshot index (same captures `ac-qa-browser` uses), but
+note it emits PNGs only and has **no theme switch** — the contrast/false-clean sensors
+are `eval` on a *live* DOM, so the actual audit drives a live browser per cell (force
+theme + cold-navigate + eval). With **explicit multi-agent opt-in**, run it as the
+fan-out in `workflows/whole-app-workflow.md` (one agent per route × theme, adversarially
+verified) so coverage is exhaustive and no "pass" is inferred. Then:
 
 - **Phase A — Conformance (read-only).** For each page, compare the rendered result
   to `CORE/design.md`: token usage (colors/spacing/radius/type off the scale),
@@ -168,7 +169,7 @@ diff**. Fill the **Definition of Done** checklist in
 | Native bridge / cross-platform plumbing | `capacitor` |
 | Want multiple independent design opinions / consensus critique | `ui-brainstorm` |
 | A style genuinely *isn't applying* / layout is broken (a defect) | `ui-debug` |
-| Crawl every route + screenshot the whole app, all themes (whole-app mode) | `_tools/crawl-and-capture --themes light,dark` + `CORE/journeys/routes.md` |
+| Static screenshot index of every route (whole-app mode; PNGs only, single theme, no live eval) | `_tools/crawl-and-capture` + `CORE/journeys/routes.md` |
 | Programmatic correctness checks (contrast / hardcoded colour / token symmetry) | `reference/sensors.md` (run before the visual rubric) |
 | Functional QA (does it work / native shell / console) | `ac-qa-browser`, `ac-qa-device` |
 | See it running / screenshot / confirm the change | `run`, `verify` |

@@ -17,26 +17,37 @@ dark screens, declared the rest good without looking" failure). When the user ha
 - **Sensors are deterministic** — perfect for parallel agents returning structured
   findings, then a synthesis pass.
 - **Adversarial verification** — a validator agent re-checks each "conformant"
-  claim against the captured artifact. This structurally kills *verify-don't-infer*
-  violations: an agent cannot pass a route it didn't actually render.
+  claim by re-rendering the cell (re-navigate + re-run the eval) and reading its
+  screenshot. This structurally kills *verify-don't-infer* violations: an agent
+  cannot pass a route it didn't actually render.
 
 ## Prerequisites (do these in the main context first — cheap, scoping)
 
 1. **Seed** realistic data (Phase 0.5) — once, shared by all cells.
-2. **Capture** all routes × themes × viewports up front via the shared
-   `_tools/crawl-and-capture` primitive (`--themes light,dark`), incl. the
-   deployed URL for auth-blocked routes. Produces the artifact index the workflow
-   consumes — capture once, consume many.
-3. Build the **cell list** from the route manifest × themes × viewports.
+2. **Prove the capture recipe on ONE cell first** (theme toggle, auth, cold-navigate,
+   the eval sensor, screenshot). All agents inherit it — a broken recipe fails them
+   identically. The contrast / false-clean sensors are `eval` on a **live DOM**, so a
+   static screenshot is NOT enough: each audit agent drives its own browser session.
+   `_tools/crawl-and-capture` emits static PNGs only and does **not** theme-switch
+   (there is no `--themes` flag) — use it for a quick screenshot index if you like, but
+   the live eval has to happen in the agent.
+3. Build the **cell list** from the route manifest. Decide the theme axis: if the app
+   gives each browser session its own theme (e.g. `prefers-color-scheme` emulation),
+   one agent can cover **both themes** per route; if theme is a shared/global setting,
+   split into per-theme cells or sequence the themes. (See the app's CORE UI-audit doc
+   for the exact theme + auth mechanism.)
 
 ## Phase structure (pipeline, not barriers)
 
 ```
-phase('Sense')    static sensors over the codebase (color grep, token symmetry) — once
-phase('Audit')    one agent per cell: run contrast sweep on its artifact + score
-                  critique-polish.md → structured findings {cell, sensorFails, rubric}
-phase('Verify')   adversarial validator per "conformant" claim: re-open the artifact,
-                  try to REFUTE the pass (default to fail-if-uncertain). Kills inferred passes.
+phase('Sense')    static sensors over the CODEBASE (color grep, token symmetry) — once
+phase('Audit')    one agent per cell: drive a live browser session (force theme +
+                  cold-navigate to the route), run the contrast + false-clean evals
+                  from sensors.md on the LIVE page, screenshot, then score
+                  critique-polish.md from the screenshot → structured findings
+phase('Verify')   adversarial validator per "conformant" claim: re-navigate + re-run
+                  the eval (and read the screenshot), try to REFUTE the pass (default
+                  fail-if-uncertain). Kills inferred passes.
 phase('Synthesize') dedupe findings across cells; AGGREGATE recurrence — the same
                   issue on ≥2 cells is systemic → elevate to High, fix at source;
                   produce the two ledgers + the Definition-of-Done checklist
@@ -53,7 +64,9 @@ export const meta = {
   description: 'Audit every route×theme cell with sensors+rubric, adversarially verify, synthesize ledgers',
   phases: [{ title: 'Audit' }, { title: 'Verify' }, { title: 'Synthesize' }],
 }
-const CELLS = args.cells // [{route, theme, viewport, artifact}] built in the main context
+// `args` can arrive as a JSON STRING, not the parsed object — guard or pipeline() throws.
+const _a = typeof args === 'string' ? JSON.parse(args) : args
+const CELLS = Array.isArray(_a) ? _a : _a.cells // [{route, base, slug}] built in the main context
 const FINDING = { type:'object', properties:{ cell:{type:'string'}, contrastFails:{type:'number'},
   blockers:{type:'array'}, highs:{type:'array'}, score:{type:'number'}, conformant:{type:'boolean'} },
   required:['cell','conformant','score'] }
@@ -61,17 +74,22 @@ const VERDICT = { type:'object', properties:{ upheld:{type:'boolean'}, why:{type
 
 const results = await pipeline(CELLS,
   c => agent(
-    `Audit cell ${c.route} [${c.theme}/${c.viewport}], artifact ${c.artifact}.
-     Run the contrast sweep + false-clean check from ac-ui-polish/reference/sensors.md
-     on it, then score ac-ui-polish/reference/critique-polish.md.
-     You COMPETE with the agents auditing other cells — only evidence-backed findings
+    `Audit route ${c.route} (base ${c.base}) in BOTH themes. Use --session ui-${c.slug} (unique to you).
+     FIRST read the app recipe (theme toggle + auth + cold-navigate + the sensor eval) and
+     ac-ui-polish/reference/sensors.md + reference/critique-polish.md.
+     For each theme: force it, COLD-navigate to the route on a LIVE browser, confirm the theme
+     actually applied, run the contrast + false-clean evals on the live DOM, screenshot, then READ
+     the screenshot and score critique-polish.md. (Static screenshots can't be eval'd — drive the
+     browser yourself.) You COMPETE with agents auditing other routes — only evidence-backed findings
      with file:line + a concrete fix count. Top 5 findings; skip Low. Return findings.`,
-    { label: `audit:${c.route}:${c.theme}`, phase: 'Audit', schema: FINDING }),
+    { label: `audit:${c.slug}`, phase: 'Audit', schema: FINDING }),
   (f, c) => f?.conformant
     ? agent(
-        `Adversarially verify the PASS for ${c.route} [${c.theme}] against artifact ${c.artifact}.
-         Try to refute it (contrast, hardcoded color on a flipping surface, slop). Default upheld=false if unsure.`,
-        { label: `verify:${c.route}:${c.theme}`, phase: 'Verify', schema: VERDICT })
+        `Adversarially verify the PASS for ${c.route} (base ${c.base}). Re-navigate it LIVE in both
+         themes (--session vfy-${c.slug}) and re-run the contrast eval yourself; read the screenshots.
+         Try to refute it (a missed contrast fail, a hardcoded color on a flipping surface, an errored
+         view passed as empty, slop). Default upheld=false if unsure.`,
+        { label: `verify:${c.slug}`, phase: 'Verify', schema: VERDICT })
         .then(v => ({ ...f, verified: v }))
     : f
 )
