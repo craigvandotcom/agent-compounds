@@ -130,11 +130,13 @@ before starting — it is the operating procedure. In short:
               artifacts; tests pass; no sibling regressions.
 ```
 
-**Five non-negotiables (each maps to a real escaped defect — see Common Mistakes):**
+**Six non-negotiables (each maps to a real escaped defect — see Common Mistakes):**
 **sensors run before eyes** · **audit every theme, never one** · **audit seeded
 data, not just empty** · **verify don't infer** (a route you didn't render is not
-audited — use the deployed URL when local auth blocks it) · **never change working
-code just to have a diff**. Fill the **Definition of Done** checklist in
+audited — use the deployed URL when local auth blocks it; cold-navigate, don't
+warm-click) · **refute every "conformant" verdict** (empty ≠ clean — an errored
+view renders like an empty one) · **never change working code just to have a
+diff**. Fill the **Definition of Done** checklist in
 `workflows/audit-and-elevate.md` before declaring anything elevated.
 
 ---

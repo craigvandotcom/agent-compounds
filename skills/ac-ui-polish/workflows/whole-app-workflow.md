@@ -37,8 +37,9 @@ phase('Audit')    one agent per cell: run contrast sweep on its artifact + score
                   critique-polish.md → structured findings {cell, sensorFails, rubric}
 phase('Verify')   adversarial validator per "conformant" claim: re-open the artifact,
                   try to REFUTE the pass (default to fail-if-uncertain). Kills inferred passes.
-phase('Synthesize') dedupe findings across cells; produce the two ledgers
-                  (conformance + elevation) and the Definition-of-Done checklist
+phase('Synthesize') dedupe findings across cells; AGGREGATE recurrence — the same
+                  issue on ≥2 cells is systemic → elevate to High, fix at source;
+                  produce the two ledgers + the Definition-of-Done checklist
 ```
 
 Use `pipeline()` so each cell flows Audit→Verify independently; reserve a barrier
@@ -61,8 +62,10 @@ const VERDICT = { type:'object', properties:{ upheld:{type:'boolean'}, why:{type
 const results = await pipeline(CELLS,
   c => agent(
     `Audit cell ${c.route} [${c.theme}/${c.viewport}], artifact ${c.artifact}.
-     Run the contrast sweep from ac-ui-polish/reference/sensors.md on it, then score
-     ac-ui-polish/reference/critique-polish.md. Return findings.`,
+     Run the contrast sweep + false-clean check from ac-ui-polish/reference/sensors.md
+     on it, then score ac-ui-polish/reference/critique-polish.md.
+     You COMPETE with the agents auditing other cells — only evidence-backed findings
+     with file:line + a concrete fix count. Top 5 findings; skip Low. Return findings.`,
     { label: `audit:${c.route}:${c.theme}`, phase: 'Audit', schema: FINDING }),
   (f, c) => f?.conformant
     ? agent(

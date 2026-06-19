@@ -61,6 +61,13 @@ For routes blocked locally (auth redirect, dev auto-login), capture against the
 auditing it.* If a cell cannot be captured anywhere, mark it `UNVERIFIED`, never
 "pass."
 
+**Cold-navigate, don't warm-click.** Capture each route by direct-navigating to
+its URL (`open <base>/<route>`), not by clicking through from another in-scope
+page. A component can resolve a token (e.g. `var(--surface)`) inherited from a
+parent that only happens to be mounted during warm navigation, and break on a
+cold deep-link with a different theme/state. Any cell captured only via warm
+in-app nav carries `UNVERIFIED: cold-navigate` until re-captured cold.
+
 Also list each surface's **states**: default / empty / loading / error / success /
 disabled / long-content / offline.
 
@@ -115,6 +122,17 @@ Re-run **sensors + rubric** on every changed cell. **Pass = zero sensor failures
 zero Blocker, zero High, in every theme.** A fix that introduces a new finding
 loops back to Phase 3. Mediums/lows are logged with a recommendation.
 
+**Refute every "conformant" verdict** (adversarial pass — empty ≠ clean). A cell
+marked "no findings / no change" must survive a *deliberate second look that tries
+to disprove the pass*: re-open the artifact, run Sensor 4, default to "fails" if
+uncertain. A single tired pass writing "looks fine" is not a pass. (In whole-app
+mode this is the `Verify` agent in `whole-app-workflow.md`.)
+
+**Aggregate recurring findings across cells.** A medium that appears on one cell is
+a medium; the *same* issue (same token misused, same pattern) recurring across ≥2
+cells is **systemic → elevate to High** and fix at the source, not per-cell. Don't
+report the same root cause as N isolated mediums.
+
 ## Phase 5 — Verify (see it, don't assume it)
 
 - See it **running** in **every theme and data-state you changed** (`run`/`verify`),
@@ -125,6 +143,10 @@ loops back to Phase 3. Mediums/lows are logged with a recommendation.
   visual breakage (safe-area, splash, keyboard) is `ac-qa-device`'s job, not this.
 - Confirm **no regressions** on sibling screens sharing touched primitives, and
   re-run the app's tests for changed components.
+- **Compound the session.** If the run hit real friction or exposed a rubric/sensor
+  gap (a defect class no sensor caught, a false-clean that slipped through), route
+  that lesson via `reflect` / `ac-land` — evidence-gated, user-approved. Refine the
+  skill, don't append to it; context bloat is the enemy.
 
 ## Definition of Done (machine-checkable — print and fill)
 
@@ -132,10 +154,13 @@ Do not report "elevated" until ALL are true:
 
 - [ ] Coverage matrix built; **every cell has a captured artifact** (or explicit `UNVERIFIED`).
 - [ ] **Both themes** captured for every route; logged-out/auth routes captured (deployed URL if needed).
+- [ ] Every route **cold-navigated**; no cell left `UNVERIFIED: cold-navigate`.
 - [ ] **Seeded data** used; populated states audited (or `UNVERIFIED` declared loudly).
 - [ ] Sensor 1 (contrast) clean in **every theme**.
 - [ ] Sensor 2 (hardcoded colour) triaged; no raw colour on a theme-flipping surface.
 - [ ] Sensor 3 (token symmetry) clean.
+- [ ] Sensor 4 (false-clean) run on every empty/zero-count cell; no errored view passed as "empty".
+- [ ] Every "conformant / no-change" verdict survived an **adversarial refute** (not a single tired pass).
 - [ ] `critique-polish.md` scored **per surface** with `file:line` (not a vibe summary).
 - [ ] Conformance ledger: zero Blocker/High remaining.
 - [ ] Elevation ledger: every surface scored + a decision; each change cites a gap; "no change" allowed.

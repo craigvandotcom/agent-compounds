@@ -112,13 +112,42 @@ step over `app/globals.css`):
 deliberately theme-independent, which should live in the shared `:root` and never
 encode a surface/text colour).
 
+## Sensor 4 — False-clean check — "empty ≠ clean"
+
+*(from `ac-qa-browser`/`ac-qa-device` discipline rules — empty ≠ clean; a toast
+is a finding.)* An errored view renders almost identically to a designed empty
+state, so a silent data-fetch failure sails through as "empty state: OK." Before
+marking any zero-content / empty-list cell audited, run:
+
+```js
+(() => {
+  const txt = document.body.innerText;
+  return JSON.stringify({
+    errorBoundary: !!document.querySelector('[data-error-boundary], [role="alert"]'),
+    retryButton: [...document.querySelectorAll('button,a')].some(b => /retry|try again|reload/i.test(b.textContent)),
+    errorText: /(something went wrong|failed to load|couldn'?t load|error)/i.test(txt),
+    consoleNote: 'also check the captured console-errors for this route',
+  });
+})()
+```
+
+- **A zero-count view that is actually errored is a ≥ High finding** — the error
+  state was never *designed*, so the screen the user hits on failure is unstyled.
+  It is NOT an "empty state" pass.
+- **Toast text after a mutation is a finding** even if the operation succeeded —
+  transient (~4 s) and easy to miss in a single screenshot; capture the state
+  *during* the toast, or re-trigger to read it.
+- Pair with the captured **console errors** for the route (the crawl primitive
+  emits them): console noise on a "clean" screen is a finding.
+
 ---
 
 ## Running the sensors
 
-1. **Per theme.** Force each theme (CORE documents the mechanism — localStorage
-   key + root class, or `prefers-color-scheme` emulation), then run Sensor 1 on
-   each captured route. Never audit a single theme.
+1. **Per theme, per route.** Force each theme (CORE documents the mechanism —
+   localStorage key + root class, or `prefers-color-scheme` emulation), then run
+   Sensor 1 (contrast) and Sensor 4 (false-clean) on each captured route. Never
+   audit a single theme.
 2. **Once at repo level.** Sensors 2 and 3 are static — run them over the codebase
    before touching the browser; they point you straight at the offending lines.
 3. **Feed the visual pass.** Sensor output is the *first* set of findings on the
