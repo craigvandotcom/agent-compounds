@@ -59,8 +59,10 @@ can produce a quick static-screenshot index (same captures `ac-qa-browser` uses)
 note it emits PNGs only and has **no theme switch** — the contrast/false-clean sensors
 are `eval` on a *live* DOM, so the actual audit drives a live browser per cell (force
 theme + cold-navigate + eval). With **explicit multi-agent opt-in**, run it as the
-fan-out in `workflows/whole-app-workflow.md` (one agent per route × theme, adversarially
-verified) so coverage is exhaustive and no "pass" is inferred. Then:
+fan-out in `workflows/whole-app-workflow.md` — **one agent per route, each owning that
+route's full theme × viewport × data-state sub-matrix** (the cell stays the 4-axis unit;
+the agent owns a route's slice of cells), adversarially verified — so coverage is
+exhaustive and no "pass" is inferred. Then:
 
 - **Phase A — Conformance (read-only).** For each page, compare the rendered result
   to `CORE/design.md`: token usage (colors/spacing/radius/type off the scale),

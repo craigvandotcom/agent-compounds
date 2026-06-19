@@ -6,6 +6,29 @@ dark screens, declared the rest good without looking" failure). When the user ha
 **explicitly opted into multi-agent orchestration**, run whole-app mode as a
 `Workflow` so coverage is exhaustive and every "pass" is independently re-checked.
 
+## Fan-out granularity — one agent per route, owning that route's full sub-matrix
+
+The **cell stays the 4-axis unit** (`route × theme × viewport × data-state`) — that
+definition is fixed in `audit-and-elevate.md` and does not change here. What the fan-out
+chooses is *how cells are grouped onto agents*: **the default is one agent per route, and
+that agent owns every cell of its route** — all themes, all viewports in the app's set,
+and all reachable data-states (empty / seeded / error / overflow). Theme/viewport/
+data-state are **folded into the agent's mandatory sweep, not dropped** — the agent must
+exercise each combination it owns, not just the seeded happy path in one theme at one
+width. (`data-state ≠ just empty` is a stated non-negotiable; this is where it gets
+structurally enforced — it's in the agent's prompt and its returned schema, not only in
+prose.)
+
+**Escape hatch — promote an axis to its own cell (split a route across agents) when:**
+- a route is heavy (many components / long page) and one agent would steam out across
+  its full sub-matrix — the very failure the fan-out exists to prevent;
+- a data-state needs **distinct setup** the shared Phase-0.5 seed can't produce
+  (e.g. an error or empty state requires per-cell DB manipulation);
+- theme is a **shared/global** setting (not per-session emulation), so two themes can't
+  coexist in one browser session — then split per-theme cells (see prerequisite 3).
+
+When you split, make the `slug` unique per sub-cell so browser sessions don't collide.
+
 > **Opt-in only.** Author/run a `Workflow` for this *only* when the user has asked
 > for multi-agent orchestration (the keyword, an on session, or "use a workflow").
 > Otherwise run the single-context procedure in `audit-and-elevate.md`. Whole-app
@@ -31,23 +54,32 @@ dark screens, declared the rest good without looking" failure). When the user ha
    `_tools/crawl-and-capture` emits static PNGs only and does **not** theme-switch
    (there is no `--themes` flag) — use it for a quick screenshot index if you like, but
    the live eval has to happen in the agent.
-3. Build the **cell list** from the route manifest. Decide the theme axis: if the app
-   gives each browser session its own theme (e.g. `prefers-color-scheme` emulation),
-   one agent can cover **both themes** per route; if theme is a shared/global setting,
-   split into per-theme cells or sequence the themes. (See the app's CORE UI-audit doc
-   for the exact theme + auth mechanism.)
+3. Build the **per-route work list** from the route manifest — one entry per route,
+   each carrying the axes its agent must sweep: `themes`, `viewports` (the app's set),
+   and the `states` actually **reachable** for that route (`seeded`, plus `empty`/`error`
+   wherever the route can show them). Then decide the **theme axis** specifically: if the
+   app gives each browser session its own theme (e.g. `prefers-color-scheme` emulation),
+   one agent covers **both themes** in its sweep; if theme is a shared/global setting,
+   two themes can't coexist in one session — split into per-theme entries (unique `slug`)
+   or sequence the themes. Likewise, if a route is heavy or a data-state needs distinct
+   setup the shared seed can't give, **split that route across agents** (the escape hatch
+   above). (See the app's CORE UI-audit doc for the exact theme / viewport / auth /
+   data-state mechanisms.)
 
 ## Phase structure (pipeline, not barriers)
 
 ```
 phase('Sense')    static sensors over the CODEBASE (color grep, token symmetry) — once
-phase('Audit')    one agent per cell: drive a live browser session (force theme +
-                  cold-navigate to the route), run the contrast + false-clean evals
-                  from sensors.md on the LIVE page, screenshot, then score
-                  critique-polish.md from the screenshot → structured findings
+phase('Audit')    one agent per route, owning that route's sub-matrix: for EACH
+                  theme × viewport × reachable data-state it owns, drive a live browser
+                  session (force theme, set viewport, reach the data-state,
+                  cold-navigate), run the contrast + false-clean evals from sensors.md
+                  on the LIVE page, screenshot, then score critique-polish.md from the
+                  screenshot → structured findings (carrying which combos it covered)
 phase('Verify')   adversarial validator per "conformant" claim: re-navigate + re-run
-                  the eval (and read the screenshot), try to REFUTE the pass (default
-                  fail-if-uncertain). Kills inferred passes.
+                  the eval (and read the screenshot) for a SAMPLE of the agent's
+                  combos — including a non-seeded data-state — try to REFUTE the pass
+                  (default fail-if-uncertain). Kills inferred passes.
 phase('Synthesize') dedupe findings across cells; AGGREGATE recurrence — the same
                   issue on ≥2 cells is systemic → elevate to High, fix at source;
                   produce the two ledgers + the Definition-of-Done checklist
@@ -66,29 +98,41 @@ export const meta = {
 }
 // `args` can arrive as a JSON STRING, not the parsed object — guard or pipeline() throws.
 const _a = typeof args === 'string' ? JSON.parse(args) : args
-const CELLS = Array.isArray(_a) ? _a : _a.cells // [{route, base, slug}] built in the main context
-const FINDING = { type:'object', properties:{ cell:{type:'string'}, contrastFails:{type:'number'},
-  blockers:{type:'array'}, highs:{type:'array'}, score:{type:'number'}, conformant:{type:'boolean'} },
-  required:['cell','conformant','score'] }
+// Each ROUTE carries the axes its agent must sweep. Build these in the main context from
+// CORE/journeys/routes.md + CORE/ui-audit.md (theme list, viewport set, reachable states).
+// themes:['light','dark']  viewports:[390,1280]  states:['seeded','empty','error'] (only reachable ones)
+const CELLS = Array.isArray(_a) ? _a : _a.cells // [{route, base, slug, themes, viewports, states}]
+const FINDING = { type:'object', properties:{ route:{type:'string'},
+  covered:{type:'array', items:{type:'string'}}, // e.g. "dark·390·empty" — the combos actually rendered
+  contrastFails:{type:'number'}, blockers:{type:'array'}, highs:{type:'array'},
+  score:{type:'number'}, conformant:{type:'boolean'} },
+  required:['route','covered','conformant','score'] }
 const VERDICT = { type:'object', properties:{ upheld:{type:'boolean'}, why:{type:'string'} }, required:['upheld','why'] }
 
 const results = await pipeline(CELLS,
   c => agent(
-    `Audit route ${c.route} (base ${c.base}) in BOTH themes. Use --session ui-${c.slug} (unique to you).
-     FIRST read the app recipe (theme toggle + auth + cold-navigate + the sensor eval) and
-     ac-ui-polish/reference/sensors.md + reference/critique-polish.md.
-     For each theme: force it, COLD-navigate to the route on a LIVE browser, confirm the theme
-     actually applied, run the contrast + false-clean evals on the live DOM, screenshot, then READ
-     the screenshot and score critique-polish.md. (Static screenshots can't be eval'd — drive the
-     browser yourself.) You COMPETE with agents auditing other routes — only evidence-backed findings
-     with file:line + a concrete fix count. Top 5 findings; skip Low. Return findings.`,
+    `Audit route ${c.route} (base ${c.base}) across its FULL sub-matrix. Use --session ui-${c.slug}.
+     Themes: ${JSON.stringify(c.themes)}. Viewports: ${JSON.stringify(c.viewports)}.
+     Data-states: ${JSON.stringify(c.states)} (only the ones reachable for this route).
+     FIRST read the app recipe (theme toggle + viewport set + how to reach each data-state + auth +
+     cold-navigate + the sensor eval) and ac-ui-polish/reference/sensors.md + reference/critique-polish.md.
+     For EVERY theme × viewport × data-state combination: force the theme, set the viewport, reach the
+     data-state, COLD-navigate to the route on a LIVE browser, confirm theme+state actually applied,
+     run the contrast + false-clean evals on the live DOM, screenshot, then READ the screenshot and
+     score critique-polish.md. (Static screenshots can't be eval'd — drive the browser yourself.)
+     Empty/seeded are DIFFERENT cells — a list only shows its defects with data; an errored view looks
+     like an empty one (false-clean sensor catches that). Return \`covered\` listing every combo you
+     actually rendered — a combo you didn't render is NOT audited. You COMPETE with agents on other
+     routes — only evidence-backed findings with file:line + a concrete fix count. Top 5; skip Low.`,
     { label: `audit:${c.slug}`, phase: 'Audit', schema: FINDING }),
   (f, c) => f?.conformant
     ? agent(
-        `Adversarially verify the PASS for ${c.route} (base ${c.base}). Re-navigate it LIVE in both
-         themes (--session vfy-${c.slug}) and re-run the contrast eval yourself; read the screenshots.
-         Try to refute it (a missed contrast fail, a hardcoded color on a flipping surface, an errored
-         view passed as empty, slop). Default upheld=false if unsure.`,
+        `Adversarially verify the PASS for ${c.route} (base ${c.base}). The audit claims it covered:
+         ${JSON.stringify(f.covered)}. Re-navigate a SAMPLE LIVE (--session vfy-${c.slug}) — pick at
+         least one non-seeded data-state and both extremes of the viewport set — and re-run the
+         contrast eval yourself; read the screenshots. Try to refute it (a missed contrast fail, a
+         hardcoded color on a flipping surface, an errored view passed as empty, a combo claimed in
+         \`covered\` but clearly not rendered, slop). Default upheld=false if unsure.`,
         { label: `verify:${c.slug}`, phase: 'Verify', schema: VERDICT })
         .then(v => ({ ...f, verified: v }))
     : f
