@@ -861,17 +861,28 @@ Found: {total} across {CURRENT_ROUND} rounds
 ```
 AskUserQuestion(
   questions: [{
-    question: "Multi-model refinement complete ({CURRENT_ROUND} rounds). What's next?",
-    header: "Next step",
+    question: "Multi-model refinement complete ({CURRENT_ROUND} rounds). Mark as loop-ready?",
+    header: "Loop-ready?",
     multiSelect: false,
     options: [
-      { label: "Plan clean (Recommended)", description: "Run /ac-plan-clean — final correctness check before beadification" },
-      { label: "Beadify directly", description: "Run /ac-beadify — skip correctness check, convert to beads now" },
-      { label: "Enhance further", description: "Run /ac-plan-transcender-alien — paradigm-breaking alternative perspectives" },
-      { label: "Done for now", description: "Plan saved — pick up later" }
+      { label: "Loop-ready — run plan-clean first (Recommended)", description: "Run /ac-plan-clean correctness check, then mark loop-ready so ac-loop picks it up" },
+      { label: "Loop-ready — skip clean", description: "Mark loop-ready now — ac-loop will beadify and ship it autonomously" },
+      { label: "Enhance further", description: "Run /ac-plan-transcender-alien — paradigm-breaking alternative perspectives before deciding" },
+      { label: "Done for now", description: "Plan saved — mark loop-ready later when you're ready" }
     ]
   }]
 )
+```
+
+**If user chose either loop-ready option:** update the plan frontmatter and commit:
+
+```bash
+# Update status to loop-ready (signals ac-loop to pick this plan up)
+# Edit the plan file's YAML frontmatter: status: loop-ready
+git add "$PLAN_FILE"
+git commit -m "docs(plan): mark loop-ready
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 **TaskUpdate(subject: "Phase 5: Finalize", status: "completed")**

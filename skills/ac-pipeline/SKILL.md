@@ -40,6 +40,7 @@ ac-align → ac-next → ac-plan-init → ac-beadify → ac-implement → ac-lan
 - `ac-tidy` — pipeline housekeeping (archive done items, reconcile backlog/plans/beads). Run between waves.
 - `ac-hygiene` — codebase cleanup pass. Run between waves.
 - `ac-human-next` — the human-facing counterpart to `ac-next` (surfaces what needs *your* decision).
+- `ac-loop` — **scheduled autonomous conductor**: ships orphan beads + plan waves without human checkpoints, pauses on simple decisions via Slack buttons, nudges human about remaining blocks. Use instead of `ac-pipeline` for unattended runs.
 
 ## Operating rules
 

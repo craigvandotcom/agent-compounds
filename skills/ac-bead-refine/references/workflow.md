@@ -432,7 +432,9 @@ Found: {total} across {CURRENT_ROUND} rounds
 3. **Review beads** -> `bv` for visual overview
 ```
 
-**Present next step choice with `AskUserQuestion`:**
+**If called from `ac-loop` (autonomous run):** Skip the next-step question entirely. Print the summary above and exit — the loop chains directly to `ac-implement`. Detect loop context from the delegation prompt (look for "ac-loop", "autonomous", "headless", or `TARGET_BEADS=` in the invocation context).
+
+**If called interactively (human present):** Present the next-step choice:
 
 ```
 AskUserQuestion(

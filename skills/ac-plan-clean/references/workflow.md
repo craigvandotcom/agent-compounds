@@ -378,11 +378,11 @@ Apply any user-approved findings using the Edit tool.
 
 ### Update Plan Frontmatter
 
-Update the YAML frontmatter to reflect the plan is now clean and approved:
+Update the YAML frontmatter to reflect the plan is clean and loop-ready:
 
 ```yaml
 ---
-status: approved
+status: loop-ready
 ---
 ```
 
@@ -486,13 +486,13 @@ Found: {total} across {CURRENT_ROUND} rounds
 ```
 AskUserQuestion(
   questions: [{
-    question: "Plan correctness check complete ({CURRENT_ROUND} rounds). What's next?",
+    question: "Plan correctness check complete ({CURRENT_ROUND} rounds). Plan is now marked loop-ready — ac-loop will pick it up on the next run. Anything else?",
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Beadify (Recommended)", description: "Run /ac-beadify — convert plan to beads with parallel validation" },
-      { label: "Implement directly", description: "Start building from the corrected plan" },
-      { label: "Done for now", description: "Plan saved — pick up later" }
+      { label: "Nothing — let the loop handle it (Recommended)", description: "ac-loop will beadify and ship this plan autonomously on its next run" },
+      { label: "Beadify now", description: "Run /ac-beadify immediately — don't wait for the loop" },
+      { label: "Done for now", description: "Plan saved as loop-ready — loop will pick it up" }
     ]
   }]
 )

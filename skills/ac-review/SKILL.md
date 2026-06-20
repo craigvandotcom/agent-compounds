@@ -488,7 +488,19 @@ leaves this phase as prose. Before (or instead of) asking:
 Apply the anti-inflation rules: dedupe via `br search` first; nits stay in
 the report.
 
-**If items remain (user present):**
+**Default (including all autonomous/headless runs): apply the Exhaust Rule.** Create a `decision` bead for each remaining item — do NOT ask:
+
+```bash
+br create -t decision --labels "human-gate,review-finding" \
+  -t "DESIGN_DECISION: <title>" \
+  --description "Context: <finding>\nOptions: <A vs B>\nRecommendation: <agent pick>"
+# Block any downstream wave beads on it:
+br dep add <downstream-bead-id> <decision-bead-id>
+```
+
+Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-next` when Craig reviews the docket.
+
+**Only use AskUserQuestion when explicitly in an interactive session** (human is present at the terminal, NOT a scheduled or headless run):
 
 ```
 AskUserQuestion(
@@ -504,7 +516,7 @@ AskUserQuestion(
 )
 ```
 
-**If more than 4 items:** Split across multiple `AskUserQuestion` calls.
+**If more than 4 items:** Split across multiple `AskUserQuestion` calls (interactive only).
 
 ### Apply User-Approved Fixes
 
@@ -539,6 +551,7 @@ git push
 ```markdown
 ## Review Complete: [Feature]
 
+**VERDICT:** APPROVED
 **Status:** APPROVED
 **Report:** `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`
 **Rounds:** {count}
@@ -576,6 +589,10 @@ Found: {total} across {count} rounds
 ```
 
 ### Next Step
+
+**If called from `ac-loop` (autonomous run):** Skip — exit after the summary. The loop reads `VERDICT:` from the output and chains to `ac-merge` (APPROVED) or stops (NEEDS_DECISION with open blockers).
+
+**If called interactively (human present):**
 
 ```
 AskUserQuestion(
