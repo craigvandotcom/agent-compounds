@@ -488,6 +488,23 @@ vercel ls <project> 2>/dev/null | head -5   # latest deployment: ● Ready or �
 > (react-virtuoso never added to package.json; every build since March 2025 failed;
 > nobody knew). Evidence: simil8/memory/auto/simil8-vercel-production-frontend.md.
 
+**Native (iOS) build — the same boundary, the same check.** If the app's merge to main ALSO
+triggers a native build (Xcode Cloud archive on push, or a self-hosted-runner release lane),
+verify it here too — it's the iOS twin of the Vercel check, because the build is *triggered by
+the merge*. This is `ac-merge`'s job, NOT `ac-distribute`'s: merge proves the build was
+**produced**; distribute proves it's **ready to submit** (its own preflight). The app's
+`CORE/distribution.md` names a **HEAD-anchored, blocking** check command (BCA:
+`pnpm archive:watch-head`). It MUST key on the merge commit — "the latest build SUCCEEDED" is
+the silent-failure trap (a *stale prior* build passes while your commit never built). It blocks
+until terminal with **two deadlines so an autonomous loop can't hang**: the archive must APPEAR
+(else it never triggered — a silent stop: pending PLA / compute quota / SCM grant / disabled
+workflow) and must COMPLETE (else assume failed).
+
+- exit ≠ 0 → the merge did NOT produce a shippable build. Surface loudly; do NOT advance the
+  pipeline to `ac-distribute` on a build that doesn't exist. The check prints which failure it
+  is (never-triggered vs failed vs timed-out).
+- No native-build-on-merge → skip silently.
+
 ---
 
 ## Phase 4: Report + Handoff
