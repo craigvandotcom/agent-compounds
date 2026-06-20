@@ -2,7 +2,7 @@
 name: code-explorer
 description: Explores codebase for existing patterns, dependencies, and architectural decisions. Use for code research before building features.
 tools: Read, Grep, Glob
-model: haiku
+model: sonnet
 permissionMode: dontAsk
 ---
 

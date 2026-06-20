@@ -9,7 +9,7 @@ Spawn 3 parallel code-explorer agents to gather codebase context before running 
 ````markdown
 Task(
 subagent_type: "code-explorer",
-model: "haiku",
+model: "sonnet",
 prompt: "# Fetch Referenced Files
 
 Read and summarize the following files mentioned in the plan:
@@ -52,7 +52,7 @@ Read and summarize the following files mentioned in the plan:
 ```markdown
 Task(
   subagent_type: "code-explorer",
-  model: "haiku",
+  model: "sonnet",
   prompt: "# Find Existing Patterns
 
 Search the codebase for patterns relevant to this plan:
@@ -99,7 +99,7 @@ Search the codebase for patterns relevant to this plan:
 ```markdown
 Task(
   subagent_type: "code-explorer",
-  model: "haiku",
+  model: "sonnet",
   prompt: "# Analyze Impact Scope
 
 Analyze what the plan's changes will affect:

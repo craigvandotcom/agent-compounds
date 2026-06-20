@@ -435,7 +435,7 @@ Instructions:
 Spawn sequentially:
 
 ```
-Task(subagent_type: "general-purpose", model: "haiku", description: "Edit: {change title}")
+Task(subagent_type: "general-purpose", model: "sonnet", description: "Edit: {change title}")
 → Wait for completion
 → Spawn next Task for next change
 → Repeat until all changes applied

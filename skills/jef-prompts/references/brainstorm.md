@@ -78,7 +78,7 @@ TaskCreate(subject: "Phase 4: SYNTHESIZE - Decision brief", description: "Create
 ### Spawn 3 Parallel Explorers (Single Message, 3 Task Calls)
 
 ```markdown
-Task(code-explorer, model: haiku, "CONTEXT PATTERNS EXPLORER
+Task(code-explorer, model: sonnet, "CONTEXT PATTERNS EXPLORER
 
 **Topic:** [TOPIC]
 **Challenge:** [CONTEXT]
@@ -121,7 +121,7 @@ Format:
 - [Any previous attempts or related implementations]
   ")
 
-Task(code-explorer, model: haiku, "PROBLEM SPACE EXPLORER
+Task(code-explorer, model: sonnet, "PROBLEM SPACE EXPLORER
 
 **Topic:** [TOPIC]
 **Challenge:** [CONTEXT]
@@ -163,7 +163,7 @@ Format:
 - [Similar problems in this domain]
   ")
 
-Task(code-explorer, model: haiku, "SOLUTION SPACE EXPLORER
+Task(code-explorer, model: sonnet, "SOLUTION SPACE EXPLORER
 
 **Topic:** [TOPIC]
 **Challenge:** [CONTEXT]

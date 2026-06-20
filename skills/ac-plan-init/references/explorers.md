@@ -10,7 +10,7 @@ compete — only evidence-backed findings count.
 ## Explorer 1: Patterns
 
 ```
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
+Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 First: Read AGENTS.md for project context and conventions.
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 
@@ -42,7 +42,7 @@ Limit: top 7 patterns. Under 500 words. Cite files, not guesses.
 ## Explorer 2: Dependencies
 
 ```
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
+Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 First: Read AGENTS.md for project context and conventions.
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 
@@ -75,7 +75,7 @@ Limit: top 7 dependencies. Under 500 words. Cite files, not guesses.
 ## Explorer 3: Constraints
 
 ```
-Task(subagent_type: "general-purpose", model: "haiku", prompt: """
+Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 First: Read AGENTS.md for project context and conventions.
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 
