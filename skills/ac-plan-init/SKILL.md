@@ -140,7 +140,9 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 ### Skill Routing
 
-Before spawning agents, check `AGENTS.md` > "Available Skills" for relevant domain skills. Include relevant skill paths in each agent prompt.
+**Engineering skill first.** Before routing to domain-specific skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps this is `capacitor-native` (`capacitor/SKILL.md`). Read it now if any aspect of the plan touches UI, navigation, data fetching, auth, storage, lifecycle, or build — which is almost always.
+
+After loading the engineering skill, check `AGENTS.md` > "Available Skills" for additional domain skills. Include relevant skill paths in each agent prompt.
 
 ### Spawn 3 Explorers Simultaneously
 

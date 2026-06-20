@@ -1,469 +1,462 @@
 ---
-name: capacitor
-description: Use for TypeScript development in Capacitor projects. Activate when user mentions "Capacitor", "native app", "iOS build", "Android build", "type-safe plugin", "cross-platform", or works on Capacitor config/native bridge code. Provides patterns for type-safe native bridges, plugin integration, and cross-platform workflows.
+name: capacitor-native
+description: Use for ALL engineering decisions when building Capacitor native apps on the neoMeta stack (Next.js static export + React + SWR + Supabase + TypeScript + Tailwind). Load BEFORE planning or implementing any UI, navigation, data fetching, auth, storage, lifecycle, or build work. Triggers on "capacitor", "native app", "iOS", "Android", "native feel", "tab switch", "keep-mounted", "WKWebView", "skeleton flash", "SWR cache", "static export", "cold start", "app lifecycle", "Preferences storage", "plugin", "native performance", "background", "app resume", "safe area", "tab navigation", "plugin bridge", "MainActor", "visibility hidden", "display none".
 ---
 
-> **Generic skill — method only, zero app facts.** This skill is symlinked from
-> agent-compounds and shared across consuming apps. It contains technique and
-> patterns, not project specifics. **App specifics (project refs, schema names,
-> domain rules, feature flows, env values) → read this app's
-> `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
-> Do not add app-specific facts to this file — they belong in CORE.
+# Capacitor Native — Engineering Reference
 
-# Capacitor TypeScript Skill
+> **Generic skill — method only, zero app facts.** App specifics (bundle IDs, schema names, domain rules, feature flows, env values) → read this app's `.claude/skills/CORE/SKILL.md`. Do not add app-specific facts here.
 
-Guides writing, reviewing, and refactoring TypeScript code for Capacitor apps. Focus on type safety, cross-platform compatibility (iOS/Android/Web), and integration with React/Next.js. Always prioritize strict TS configs (noImplicitAny, strictNullChecks).
-
-**Source:** Adapted from [capgo-skills](https://github.com/Cap-go/capgo-skills) (24 skills), official [Capacitor plugin patterns](https://capacitorjs.com/docs/plugins), and TypeScript best practices
+**The founding constraint:** This is a web app running inside a native shell. Users judge by *native app* standards — instant tab switches, no skeleton flashes, no animation replays, no random logouts, no battery drain. Every decision in this skill exists because of that constraint.
 
 ---
 
 ## When to Use
 
-**Intent Triggers:**
+Load at the START of any session touching:
 
-- Writing TS code for Capacitor plugins or native bridges
-- Reviewing for type errors, native API mismatches
-- Migrating web TS code to Capacitor native
-- iOS/Android build and deployment workflows
-- Plugin integration and configuration
-- Cross-platform performance/accessibility optimization
-- Safe area / notch handling
-- OTA live update setup
+- Navigation, tab switching, routing, or view transitions
+- Data fetching hooks, SWR configuration, or cache strategy
+- Auth flows, session handling, or cold start
+- Storage decisions (localStorage vs Preferences vs IndexedDB vs SQLite)
+- iOS/Android app lifecycle, backgrounding, or App.resume
+- Native plugin integration, feature gating, or custom Swift/Kotlin bridges
+- Build, deployment, or App Store work
+- **Planning any feature** — load before `ac-plan-init` or `ac-plan-refine-internal`
 
-**When NOT to Use:**
+**Scope — `(protected)/app/*` routes only.** This skill does not apply to web landing/marketing pages. In the BCA codebase, `app/(public)/*` routes (`about`, `blog`, `privacy`, `terms`, `foods`) are served by the full Next.js Vercel deployment — not WKWebView. For those routes: hover states are valid, `next/image` optimization is active, Server Components and middleware work, Core Web Vitals are the performance target, and `revalidateOnFocus: false` / `App.resume` patterns are irrelevant. `app/(auth)/*` is a mixed context — auth flows must work on both web and native (OAuth deep links).
 
-- Pure web UI styling (use `design-system`)
-- React component optimization without native context (use `react-best-practices`)
-- Testing without Capacitor specifics (use `testing`)
+**Not for:** Backend/API code with no native context; `(public)/*` landing/marketing pages; styling without native implications.
 
 ---
 
 ## Priority Guide
 
-| Category                       | Impact      | When to Apply                                     |
-| ------------------------------ | ----------- | ------------------------------------------------- |
-| Plugin Availability Gating     | CRITICAL    | Every native call — prevents crashes              |
-| Type-Safe Native Bridges       | CRITICAL    | Always — prevents runtime crashes on device       |
-| Platform-Specific Guards       | CRITICAL    | Always — web vs iOS vs Android divergence         |
-| Safe Area Handling             | CRITICAL    | Any UI touching screen edges                      |
-| Cold-Start Auth Bootstrap      | CRITICAL    | Any app using `output: 'export'` + auth           |
-| Supabase + Capacitor Lifecycle | CRITICAL    | Any app using Supabase auth/realtime on Capacitor |
-| Plugin Integration             | HIGH        | Adding native features (camera, geo, push)        |
-| Optimistic Writes + Repos      | HIGH        | Any "feels-native" write surface                  |
-| Cross-Platform Testing         | HIGH        | Before any release                                |
-| OTA Live Updates               | HIGH        | Deployment without app store review               |
-| Build & Deployment             | MEDIUM-HIGH | CI/CD, app store submission                       |
-| Distribution-Stage Discipline  | MEDIUM-HIGH | Before scoping any heavyweight pattern            |
-| Performance Optimization       | MEDIUM      | Large lists, animations, offline-first            |
-| Security                       | MEDIUM      | Secrets, secure storage, network                  |
+| Category | Impact | See |
+|---|---|---|
+| Plugin Availability Gating | CRITICAL | §1 |
+| Keep-Mounted Tab Architecture | CRITICAL | §2 + `reference/navigation-architecture.md` |
+| iOS WKWebView Lifecycle | CRITICAL | §3 |
+| iOS Plugin Threading (MainActor) | CRITICAL | §4 |
+| Cold-Start Auth Bootstrap | CRITICAL | `reference/cold-start-auth.md` |
+| Supabase + Capacitor Lifecycle | CRITICAL | §8 + `reference/supabase-lifecycle.md` |
+| Next.js Static Export Constraints | CRITICAL | §6 |
+| Mobile Touch Rules | CRITICAL | §5 |
+| isMountedRef in React Strict Mode | CRITICAL | §13 |
+| SWR Discipline for Native Feel | HIGH | §7 + `reference/swr-native-discipline.md` |
+| Storage Hierarchy | HIGH | §9 |
+| Optimistic Writes + Thin Repo | HIGH | `reference/optimistic-writes.md` |
+| Safe Area Handling | HIGH | §10 |
+| Type-Safe Native Bridges | HIGH | `reference/advanced-native-patterns.md` |
+| Parallel Data Fetching | CRITICAL | §15 + `reference/react-performance.md` |
+| Bundle Size | CRITICAL | §15 + `reference/react-performance.md` |
+| Re-render Optimization | MEDIUM-HIGH | `reference/react-performance.md` |
+| Security | MEDIUM | `reference/security-capsec.md` |
+| Distribution Stage Discipline | MEDIUM | §11 + `reference/distribution-stage.md` |
+| Performance Targets | MEDIUM | §12 |
+| Build & Deployment | MEDIUM | `reference/build-deploy.md` |
+| Deep Linking | LOW-MEDIUM | `reference/deep-linking.md` |
+| Plugin Ecosystem | LOW | `reference/plugin-catalog.md` |
+| OTA Live Updates | LOW | §16 |
 
 ---
 
-## Reference Documentation
+## Reference Files — Load On-Demand
 
-Load on-demand based on task:
-
-| File                                | When to Read                                                        |
-| ----------------------------------- | ------------------------------------------------------------------- |
-| `reference/nextjs-static-export.md` | Configuring static export, dynamic routes, Server Component errors  |
-| `reference/pwa-migration.md`        | Migrating PWA features, iOS storage issues, CORS, WKWebView gotchas |
-| `reference/plugin-catalog.md`       | Choosing a plugin, looking up package names                         |
-| `reference/advanced-native-patterns.md` | §2/§3 — custom plugin bridge (4-layer) + typed `safeNativeCall` wrapper |
-| `reference/build-deploy.md`         | §13 — cap sync/run commands, App Store checklist, Privacy Manifest  |
-| `reference/testing-debugging.md`    | Vitest mocks for Capacitor, crash diagnosis, WebView debugging      |
-| `reference/deep-linking.md`         | Deep link listeners, testing commands, associated domains           |
-| `reference/security-capsec.md`      | Running Capsec scanner, security rules, production checklist        |
-| `reference/cold-start-auth.md`      | §16 — cold-start bootstrap gate, 6-case contract, splash handoff, 401 modal |
-| `reference/supabase-lifecycle.md`   | §17 — realtime setAuth, WKWebView suspension, sign-out wipe ordering |
-| `reference/optimistic-writes.md`    | §18 — SWR optimistic writes + thin repo indirection                 |
-| `reference/distribution-stage.md`   | §19 — what NOT to build per stage; IDB-delete trap                  |
+| File | When to Read |
+|---|---|
+| `reference/navigation-architecture.md` | Full keep-mounted pattern, visitedTabs Set, visibility:hidden vs display:none, React 19 Activity upgrade path |
+| `reference/swr-native-discipline.md` | Complete SWR cache strategy — dedup, pre-warming, key alignment, App.resume integration |
+| `reference/cold-start-auth.md` | 6-case bootstrap contract, splash → JS handoff, 401 interceptor, 3-file module split |
+| `reference/supabase-lifecycle.md` | Realtime setAuth, WKWebView suspension, JWT sign-out wipe ordering, cross-tab SIGNED_OUT |
+| `reference/optimistic-writes.md` | SWR optimistic writes + rollback, thin repo indirection pattern |
+| `reference/nextjs-static-export.md` | Static export config, what breaks, useParams workaround, dynamic imports |
+| `reference/build-deploy.md` | Build commands, App Store checklist, Privacy Manifest, fastlane |
+| `reference/advanced-native-patterns.md` | 4-layer custom plugin bridge, typed safeNativeCall wrapper |
+| `reference/testing-debugging.md` | Capacitor plugin mocks, keep-mounted test patterns, crash diagnosis, WebView debugging |
+| `reference/security-capsec.md` | Capsec scanner, WKWebView origin validation, production checklist |
+| `reference/distribution-stage.md` | Stage table, IDB-delete trap, what NOT to build at Stage 0–1 |
+| `reference/pwa-migration.md` | localStorage → Preferences adapter, CORS config, storage eviction, PKCE fix |
+| `reference/plugin-catalog.md` | Full plugin list, install commands |
+| `reference/react-performance.md` | Parallel fetching, bundle size, re-render optimisation, JS perf — all adapted for static export + Capacitor (no RSC/server patterns) |
+| `reference/deep-linking.md` | Deep link listeners, test commands, associated domains |
 
 ---
 
-## 1. Plugin Availability Gating (CRITICAL)
+## §1. Plugin Availability Gating (CRITICAL)
 
-**Always check plugin availability before calling native APIs.** This is the single most important Capacitor pattern — prevents crashes when a plugin is not available on the current platform.
+Every native plugin call must be gated. Never assume a plugin is available:
 
 ```typescript
 import { Capacitor } from '@capacitor/core';
-import { Camera, CameraResultType } from '@capacitor/camera';
 
 async function takePhoto() {
   if (!Capacitor.isPluginAvailable('Camera')) {
-    // Fallback: use <input type="file" accept="image/*"> on web
-    return null;
+    return null; // web fallback — use <input type="file"> instead
   }
-  return Camera.getPhoto({
-    quality: 80,
-    width: 1024,
-    resultType: CameraResultType.Uri,
-  });
+  return Camera.getPhoto({ quality: 80, resultType: CameraResultType.Uri });
 }
 ```
 
-**Rule:** Every native plugin call must be wrapped in `isPluginAvailable()` or `isNativePlatform()`.
+**Camera:** Always `CameraResultType.Uri` on native — never Base64. WKWebView heap ceiling ~200MB; Base64 of full-resolution images causes OOM crashes. Fetch the blob at upload time only.
+
+**Image picker on native:** `<input type="file">` returns an empty file list inside WKWebView PHPicker. Branch on `isNativePlatform()` and use `Camera.pickImages()` for multi-select flows.
+
+**`safeNativeCall<T>(plugin, fn, fallback?)`** — typed wrapper with consistent availability gating, fallback, and structured error context. Use for all native calls in production code. Full pattern → `reference/advanced-native-patterns.md`.
 
 ---
 
-## 2. Type Design for Capacitor (CRITICAL)
+## §2. Keep-Mounted Tab Architecture (CRITICAL)
 
-Use interfaces for plugin APIs. Generics for reusable hooks. Never use `any` — use `unknown` with type guards for native responses.
+**Never `{currentView === 'X' && <View />}` for tab navigation.** Conditional unmount causes: stagger animation replay on every switch, SWR re-fetches when dedupe window elapsed, scroll position loss, state reset.
 
-### Plugin API Typing
+**Pattern — mount-on-first-visit, CSS-hidden thereafter:**
+
+```tsx
+const [visitedTabs, setVisitedTabs] = useState<Set<ViewType>>(
+  () => new Set([currentView] as ViewType[])
+);
+
+const handleViewChange = useCallback((newView: ViewType) => {
+  setVisitedTabs(prev =>
+    prev.has(newView) ? prev : new Set([...prev, newView])
+  );
+  setCurrentView(newView);
+}, [setCurrentView]);
+
+const tabVisible = (view: ViewType) => currentView === view;
+const tabMounted = (view: ViewType) => visitedTabs.has(view);
+
+// In JSX:
+{tabMounted('insights') && (
+  <div hidden={!tabVisible('insights')} aria-hidden={!tabVisible('insights')}>
+    <ErrorBoundary fallback={<SupabaseErrorFallback />}>
+      <InsightsView ... />
+    </ErrorBoundary>
+  </div>
+)}
+```
+
+**`hidden` attribute** sets `display: none !important` natively and hides from the accessibility tree via `aria-hidden`. Use `visibility: hidden` (Tailwind `invisible`) when the tab has a scrollable container whose scroll position must survive hide/show — `display: none` resets scroll on re-show; `visibility: hidden` preserves it.
+
+**Animation:** Remove Framer Motion stagger from any keep-mounted view. Replace `<motion.div initial="hidden" animate="show">` wrappers with plain `<div>`. The animation plays on first visit and is preserved by keep-alive — replaying on every tab switch is the source of the flash.
+
+**React 19 `<Activity>`:** Correct long-term solution (suspends effects in hidden mode, preserves state). As of React 19.2.x the API is `unstable_Activity` — check stability before adopting. Activity also uses `display: none` internally; use manual `visibility: hidden` if scroll preservation is required. Full upgrade path and test patterns → `reference/navigation-architecture.md`.
+
+---
+
+## §3. App Lifecycle — WKWebView (CRITICAL)
+
+iOS suspends the JS runtime ~30s after backgrounding. No timers, no network, no background fetch. **Any "sync within N minutes regardless of app state" SLO is impossible without native code.**
+
+**Wire ONCE at app root — never in a component:**
 
 ```typescript
-import { Capacitor } from '@capacitor/core';
-import { Geolocation } from '@capacitor/geolocation';
+import { App } from '@capacitor/app';
+import { mutate } from 'swr';
 
-interface Location {
-  coords: { latitude: number; longitude: number };
-}
-
-async function getLocation(): Promise<Location> {
-  if (!Capacitor.isPluginAvailable('Geolocation')) {
-    throw new CapacitorError(
-      'Geolocation not available',
-      'Geolocation',
-      Capacitor.getPlatform()
-    );
-  }
-  const position = await Geolocation.getCurrentPosition();
-  return { coords: position.coords };
-}
+App.addListener('resume', async () => {
+  await supabase.auth.getSession(); // refreshes expired token
+  mutate(() => true);               // revalidate ALL SWR keys
+});
 ```
 
-### Custom Plugin Bridge Pattern
+**`revalidateOnFocus: false` globally.** SWR's focus handler fires on BOTH the browser Visibility API AND Capacitor foreground — double-fetches on every tab switch inside the app. Revalidate explicitly via `App.resume` only.
 
-For native plugins not available as npm packages, use the 4-layer pattern (Swift plugin → ObjC registration → typed `registerPlugin<T>()` interface → React hook with `isNativePlatform()` guard + cleanup). **→ Full code: `reference/advanced-native-patterns.md`.**
+**WKWebView process kill (white screen):** iOS kills the WebView under memory pressure; the user sees white. Guard in `AppDelegate.swift`: record `backgroundDate` on `applicationDidEnterBackground`, call `bridge.webView.reload()` on `applicationWillEnterForeground` if `elapsed > 600s`. The `resume` event fires before the WebView is ready after a kill — debounce or guard handlers with a `webView.isLoaded` check.
 
-### Type Guidelines
-
-- Use `Partial<Options>` for configurable plugin params
-- Use `readonly` for device state objects
-- Use discriminated unions: `{ platform: 'ios' | 'android' | 'web' }`
-- Use utility types (Pick, Omit) for plugin config subsets
-- JSDoc with `@since` on every method when authoring plugins
+**Supabase Realtime** drops WebSocket connections on extended background. Re-subscribe channels on `App.resume`. Full lifecycle → `reference/supabase-lifecycle.md`.
 
 ---
 
-## 3. Cross-Platform Patterns (CRITICAL)
+## §4. iOS Plugin Threading — MainActor Trap (CRITICAL)
 
-### Platform Detection
+Capacitor invokes every `@objc` plugin method on a **background bridge queue**, not main. Any plugin touching UIKit, ARKit, CoreData, or `MainActor`-isolated Swift must dispatch to main first:
+
+```swift
+// WRONG — crashes on device (simulator may pass):
+@objc func myMethod(_ call: CAPPluginCall) {
+    MainActor.assumeIsolated { uiKitStuff() }  // 💥
+}
+
+// CORRECT:
+@objc func myMethod(_ call: CAPPluginCall) {
+    DispatchQueue.main.async {
+        MainActor.assumeIsolated { uiKitStuff() }  // ✓
+    }
+}
+```
+
+**Diagnostic signature:** Simulator tests pass; device crashes → threading violation. Checklist before shipping any custom plugin: every `MainActor.assumeIsolated`, `UIView`, `UIViewController`, `ARKit`, or `@MainActor`-annotated call inside a plugin method needs `DispatchQueue.main.async`.
+
+---
+
+## §5. Mobile Touch Rules (CRITICAL)
+
+**Never `:hover` CSS** — touch devices have no hover state. Use `:active` for press feedback; use React state for conditional styling:
 
 ```typescript
-import { Capacitor } from '@capacitor/core';
+// Never:
+'hover:bg-brand-primary'
 
-const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
-const isNative = Capacitor.isNativePlatform();
-
-// Three-way branching when platforms diverge
-switch (Capacitor.getPlatform()) {
-  case 'ios':
-    // iOS-specific behavior
-    break;
-  case 'android':
-    // Android-specific behavior
-    break;
-  case 'web':
-    // Web fallback
-    break;
-}
+// Always:
+cn(isActive ? 'text-brand-primary' : 'text-muted-foreground', 'active:scale-95')
 ```
 
-### Error Handling
-
-Use a typed `CapacitorError` + `safeNativeCall<T>(plugin, fn, fallback?)` wrapper so every native call gets consistent availability gating, fallback, and error context. **→ Full code: `reference/advanced-native-patterns.md`.**
-
-### Modular Platform Separation
-
-- Separate web/native logic: `device.native.ts` and `device.web.ts`
-- Use barrel exports with platform detection
-- Keep platform-specific code behind clear boundaries
-- Never mix native and web logic in the same function
+- **Minimum touch target:** 44×44px (iOS HIG) — enforce on every interactive element
+- **Never `transition-all`** on toggles — delays color feedback by the full duration. Use `transition-transform` or `transition-[transform,opacity]` only
+- **Never override `color` in hover media queries** — blocks React's className-based dynamic color updates
+- **60 FPS animations:** Only `transform` + `opacity`. Never animate `height`, `width`, `top`, `left`, `box-shadow` — these trigger layout recalculation every frame
+- **Hardware acceleration:** `will-change: transform` on animated elements; remove after animation completes to free GPU memory
 
 ---
 
-## 4. Safe Area Handling (CRITICAL)
+## §6. Next.js Static Export — What Breaks (CRITICAL)
 
-Critical for devices with notches, Dynamic Island, rounded corners, and home indicators.
+`output: 'export'` makes Next.js a pure SPA with no runtime server. Unavailable at runtime:
 
-### HTML Meta Tag (Required)
+| Feature | Status | Fix |
+|---|---|---|
+| Server Actions | ✗ | Direct Supabase calls |
+| `cookies()`, `headers()` at runtime | ✗ | Client-side Supabase auth |
+| Middleware | ✗ | Cold-start bootstrap gate in layout |
+| `useParams()` in App Router | ✗ (issue #64660) | `useSearchParams()` + query params |
+| ISR / `revalidate` | ✗ | SWR client-side revalidation |
+| Image optimization | ✗ | `images: { unoptimized: true }` |
+| `dynamicParams: true` | ✗ | `generateStaticParams()` returning `[]` |
 
-```html
-<meta
-  name="viewport"
-  content="viewport-fit=cover, width=device-width, initial-scale=1.0"
-/>
+**Required `next.config.ts`:**
+```typescript
+output: 'export',
+trailingSlash: true,           // Prevents 404s in WebView file-based routing
+images: { unoptimized: true }, // No optimization server
 ```
 
-### CSS Environment Variables
+**Dynamic route workaround:** Replace `/app/foods/[id]` with `/app/foods?id=123` read via `useSearchParams()`. Wrap in `<Suspense>` to prevent static build bailout.
+
+**Node-only modules:** `dynamic(() => import('...'), { ssr: false })` prevents evaluation during `next build` prerendering.
+
+**Build command:** `BUILD_TARGET=capacitor pnpm build && npx cap sync`
+
+Full config, edge cases, dynamic import patterns → `reference/nextjs-static-export.md`.
+
+---
+
+## §7. SWR Discipline for Native Feel (HIGH)
+
+**Standard dedup interval: 30 000 ms.** Default 2s causes re-fetches on rapid tab switches. Post-save invalidation uses explicit `mutate()` — the dedup window is NOT the cache-bust mechanism.
+
+```typescript
+// Standard config for every hook in a Capacitor app:
+{
+  dedupingInterval: 30_000,
+  keepPreviousData: true,    // No skeleton flash on key change or revalidation
+  revalidateOnFocus: false,  // Handled by App.resume (§3)
+}
+```
+
+**Pre-warming:** Call child hooks at the parent level (discard return value) so SWR populates the cache before the user navigates. First visit becomes instant, not just tab returns.
+
+**Key alignment — the silent cache miss:** If Dashboard calls `useInsightsData()` and InsightsView calls `useInsightsData({ dateRange })`, they produce different SWR keys → separate cache slots → pre-warm is wasted. Lift the key-defining computation to the parent OR compute identically in both. Different `new Date()` calls produce different ISO strings.
+
+**Never raw `useEffect` + fetch for shared state.** Raw effects don't dedupe, can't be pre-warmed, and fall outside the cache strategy. Every `preferencesRepo.get()` in a raw effect is a re-fetch on every mount.
+
+Full SWR config, `focusThrottleInterval` vs `dedupingInterval`, `preload` API, App.resume integration → `reference/swr-native-discipline.md`.
+
+---
+
+## §8. Supabase Integration (CRITICAL)
+
+**Realtime `setAuth` — wire ONCE at app root, never in components:**
+
+```typescript
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+    supabase.realtime.setAuth(session?.access_token ?? null);
+  }
+  if (event === 'SIGNED_OUT') {
+    supabase.realtime.setAuth(null);
+  }
+});
+```
+
+Without this, realtime channels carry a stale JWT ~1h after sign-in. Silent data staleness with no client-side error.
+
+**Channel name uniqueness:** Duplicate channel names on remount cause `"cannot add postgres_changes callbacks after subscribe()"` render throws. Suffix channel names with `useId()` per component instance.
+
+**Sign-out wipe order:** JWT clear → SWR cache flush → Preferences clear → IDB (if present). Never flush SWR before JWT — stale renders may re-subscribe with wrong keys.
+
+**All DB operations through `lib/db.ts`** — never ad-hoc Supabase calls in components.
+
+Full lifecycle, WKWebView suspension patterns, cross-tab SIGNED_OUT → `reference/supabase-lifecycle.md`.
+
+---
+
+## §9. Storage Hierarchy (HIGH)
+
+| Tier | Mechanism | Reliability | When to Use |
+|---|---|---|---|
+| 1 | `@capacitor/preferences` | High (UserDefaults / SharedPrefs) | Auth token references, settings, critical small config |
+| 2 | SWR in-memory cache | Session only — lost on WKWebView kill | Active API responses, current session data |
+| 3 | `localStorage` | Low — iOS evicts on low disk | Non-critical UI state, draft content only |
+| 4 | IndexedDB | Low on iOS (co-evicted) | Do not use until Stage 3+ |
+| 5 | `@capacitor-community/sqlite` | High (native FS) | Stage 3+: large datasets, offline queue |
+
+**Auth tokens:** Never `localStorage` on iOS — evicted on low storage, causing random logouts. Use Preferences storage adapter for Supabase:
+
+```typescript
+auth: {
+  storage: isNativePlatform() ? capacitorStorage : undefined,
+  storageKey: 'sb-native-auth',
+  detectSessionInUrl: false, // Prevents deep link conflicts
+  flowType: 'pkce',
+}
+```
+
+**`@capacitor/preferences` is async** — preload critical values on app start into React context. Never call in synchronous render paths.
+
+**PKCE + SFSafariViewController:** iOS clears cookies when SFSafariViewController opens for OAuth. The `@supabase/ssr` cookie-based adapter loses the PKCE code verifier at that moment. Use explicit `localStorage`-backed storage adapter (not cookies) for the verifier to survive. Full adapter code → `reference/pwa-migration.md`.
+
+---
+
+## §10. Safe Area Handling (HIGH)
+
+Required on any layout touching screen edges (notch, Dynamic Island, home indicator):
 
 ```css
 :root {
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-area-left: env(safe-area-inset-left, 0px);
-  --safe-area-right: env(safe-area-inset-right, 0px);
 }
-
-.app-header {
-  padding-top: calc(var(--safe-area-top) + 12px);
-}
-
-.bottom-nav {
-  padding-bottom: calc(var(--safe-area-bottom) + 8px);
-}
+.app-header { padding-top: calc(var(--safe-area-top) + 12px); }
+.bottom-nav { padding-bottom: calc(var(--safe-area-bottom) + 8px); }
 ```
 
-### Tailwind Utilities
+**Required viewport meta in root layout:**
+```html
+<meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0" />
+```
 
+**iOS keyboard accessory bar (Previous / Next / Done):** Adds ~44px above the system keyboard. Bottom nav buttons below the keyboard become unreachable. Wire `Keyboard.addListener('keyboardWillShow')` from `@capacitor/keyboard` to shift layout, or use CSS `env(keyboard-inset-height)`.
+
+**Tailwind utilities:**
 ```css
 @layer utilities {
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .pl-safe {
-    padding-left: env(safe-area-inset-left);
-  }
-  .pr-safe {
-    padding-right: env(safe-area-inset-right);
-  }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
 ```
 
 ---
 
-## 5. Next.js Static Export
+## §11. Distribution Stage Discipline (MEDIUM-HIGH)
 
-See `reference/nextjs-static-export.md`.
+"Native feel" at Stage 0–1 = exactly three things:
+1. Cold-start auth bootstrap — no login skeleton flash
+2. Optimistic writes + thin repo — writes feel instant
+3. Keep-mounted nav + touch polish — 44pt targets, `:active` states, `App.resume` refetch, safe areas
 
-Key: `output: 'export'` required; `useParams()` broken in static export (use `useSearchParams()`); Server Actions incompatible; build with `BUILD_TARGET=capacitor pnpm build && npx cap sync`.
+**Never build at Stage 0–1:** sync engine, DLQ, IDB wipe ledger, background fetch, partner dashboards, custom analytics, SQLite local-first. These solve problems not yet evidenced by real usage.
 
----
-
-## 6. PWA to Native Migration
-
-See `reference/pwa-migration.md`.
-
-Key: Service workers not supported in WKWebView; `localStorage` evictable on iOS (use `@capacitor/preferences` for tokens); CORS must allow `capacitor://localhost` and `http://localhost`; always `await` async work before `router.push()`.
+Full stage table, activation triggers, IDB-delete trap → `reference/distribution-stage.md`.
 
 ---
 
-## 7. React/Next.js Integration
+## §12. Performance Targets
 
-### Reusable Native Hook Pattern
+| Metric | Target | Notes |
+|---|---|---|
+| Tab switch | <16ms (one paint) | Keep-mounted makes this a CSS class toggle |
+| Cold start → first interactive | ≤1500ms P50 | Mid-tier device: Pixel 6a / iPhone 13-class |
+| Splash → JS handoff | Invisible | Match splash colour to branded loader; `launchAutoHide: false` |
+| FPS during animations | 60 FPS steady | Only `transform` + `opacity`; no layout props |
+| First Load JS (gzip) | Baseline + ≤10% per phase | Capture from `next build` output — NOT `du -h` on chunks |
+| Supabase query round trip | <500ms | Global P50 ~434ms; optimistic writes bridge the gap |
+| Vitest suite | <5s | Never `npx vitest` directly — use `pnpm test` to respect memory cap |
 
-```typescript
-import { useState, useEffect } from 'react';
-import { App } from '@capacitor/app';
+**Profiling:** Real devices only for accuracy. iOS: Xcode Instruments (Core Animation, Time Profiler). Android: Android Studio Profiler. Simulator ≠ device performance.
 
-function useAppState(): 'active' | 'background' {
-  const [state, setState] = useState<'active' | 'background'>('active');
-  useEffect(() => {
-    const listener = App.addListener('appStateChange', ({ isActive }) => {
-      setState(isActive ? 'active' : 'background');
-    });
-    return () => {
-      listener.then(l => l.remove());
-    };
-  }, []);
-  return state;
-}
-```
+**`performance.mark` scope:** JS-bootstrap onwards only. Splash → WKWebView handoff is NOT measurable from JS — use real-device stopwatch for that window.
 
-### Listener Cleanup (Memory Leak Prevention)
+---
 
-Always clean up listeners in useEffect returns. Capacitor `addListener` returns a Promise:
+## §13. isMountedRef in React Strict Mode (CRITICAL)
+
+React Strict Mode runs mount → unmount → remount in development. Without resetting the ref on each mount, it stays `false` after the first unmount and silently breaks all guards:
 
 ```typescript
+// WRONG — ref stays false after Strict Mode's first unmount:
+const isMountedRef = useRef(true);
 useEffect(() => {
-  const listener = SomePlugin.addListener('event', handler);
-  return () => {
-    listener.then(l => l.remove());
-  };
+  return () => { isMountedRef.current = false; };
+}, []);
+
+// CORRECT — reset to true on every mount:
+const isMountedRef = useRef(true);
+useEffect(() => {
+  isMountedRef.current = true;   // Required
+  return () => { isMountedRef.current = false; };
 }, []);
 ```
 
-### Typed Camera Hook
+---
+
+## §14. Type Design for Capacitor (HIGH)
+
+- No `any` — use `unknown` with type guards for native responses
+- `Partial<Options>` for configurable plugin params
+- `readonly` for device state objects (GPS coords, camera results)
+- Discriminated unions: `{ platform: 'ios' | 'android' | 'web' }`
+- `registerPlugin<YourPlugin>('YourPlugin')` — always supply the type parameter
+
+Custom 4-layer plugin bridge (Swift → ObjC registration → TS interface → React hook) → `reference/advanced-native-patterns.md`.
+
+---
+
+## §15. React Performance (CRITICAL + HIGH)
+
+Full patterns with code → `reference/react-performance.md`. **§3 (Server-Side) in generic React guides does not exist on `output: 'export'` — `React.cache()`, `after()`, RSC serialization, Server Actions auth are all N/A. Skip them.**
+
+**Waterfalls (CRITICAL):** Independent fetches must run in parallel. `Promise.all()` in utility functions; parallel SWR hooks at the parent level for pre-warming. Full SWR pre-warming → `reference/swr-native-discipline.md`.
+
+**Bundle (CRITICAL):**
+- No barrel imports: `from '@/components'` → `from '@/components/ui/button'`
+- Heavy components: `dynamic(() => import('...'), { ssr: false })` — `ssr: false` required for any import using browser or Capacitor APIs
+- Defer non-critical third-party libs to interaction-time: `const x = await import('lib')`
+
+**Re-renders (MEDIUM-HIGH):**
+- Always functional setState: `setCount(c => c + 1)` not `setCount(count + 1)`
+- `memo()` on expensive list children; `useTransition` for heavy synchronous state updates
+- `useMemo` only for genuine heavy ops (sort, filter large arrays) — never for simple math or string concat
+
+**Anti-patterns to flag on every PR:**
+
+| Pattern | Problem |
+|---|---|
+| Sequential `await` for independent ops | Waterfall |
+| `import { x } from 'feature-barrel'` | Bundle bloat |
+| `useState(expensiveCall())` | Runs every render |
+| `useMemo` for simple math/concat | Overhead > benefit |
+| `useEffect` + `fetch` without SWR | No dedup, re-fetches on mount |
+| `transition: all` on interactive elements | Delays color (also §5) |
+
+---
+
+## §16. OTA Live Updates (LOW)
 
 ```typescript
-import { useState, useCallback } from 'react';
-import { Camera, CameraResultType, type Photo } from '@capacitor/camera';
-import { Capacitor } from '@capacitor/core';
-
-function useCamera() {
-  const [photo, setPhoto] = useState<Photo | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const takePhoto = useCallback(async () => {
-    if (!Capacitor.isPluginAvailable('Camera')) {
-      setError('Camera not available on this platform');
-      return;
-    }
-    try {
-      const result = await Camera.getPhoto({
-        quality: 80,
-        width: 1024,
-        resultType: CameraResultType.Uri,
-      });
-      setPhoto(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Camera failed');
-    }
-  }, []);
-
-  return { photo, error, takePhoto };
-}
-```
-
----
-
-## 8. Capacitor Configuration
-
-### capacitor.config.ts (Preferred over JSON)
-
-```typescript
-import type { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  appId: 'com.example.app',
-  appName: 'My App',
-  webDir: 'out', // Next.js static export directory
-  server: {
-    // Dev server URL — only in development
-    ...(process.env.NODE_ENV === 'development' && {
-      url: 'http://localhost:3000',
-      cleartext: true,
-    }),
-  },
-  plugins: {
-    SplashScreen: {
-      launchAutoHide: false, // see §16 — required for the splash → JS handoff pattern
-      backgroundColor: '#<brand>', // match the JS-side branded loader to make the handoff invisible
-      androidScaleType: 'CENTER_CROP',
-    },
-    StatusBar: {
-      style: 'dark',
-    },
-  },
-};
-
-export default config;
-```
-
-Use `capacitor.config.ts` (not `.json`) for type safety and environment conditionals.
-
----
-
-## 9. Plugin Ecosystem
-
-See `reference/plugin-catalog.md`. Install: `pnpm add @capacitor/plugin-name && npx cap sync`
-
----
-
-## 10. Testing & Debugging
-
-See `reference/testing-debugging.md` for Vitest mocking, WebView debugging, crash diagnosis, and E2E options.
-
----
-
-## 11. Deep Linking
-
-See `reference/deep-linking.md` for listener patterns, test commands, and associated domain verification.
-
----
-
-## 12. OTA Live Updates (Capgo)
-
-Skip app store review for JS/HTML/CSS updates.
-
-```typescript
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
-
-// MUST be called within 10 seconds of app start
-// If not called, Capgo auto-rolls back to previous version
+// Must call within 10s of app start or Capgo auto-rolls back:
 CapacitorUpdater.notifyAppReady();
 ```
 
-**Channel strategy:**
-
-- `production` — stable releases
-- `beta` — pre-release testing
-- `dev` — internal testing
-
-**CI/CD upload:** `bunx @capgo/cli upload --channel production`
+Channels: `production`, `beta`, `dev`. Upload: `bunx @capgo/cli upload --channel production`. Only JS/HTML/CSS changes qualify — any native code change requires a full app store build.
 
 ---
 
-## 13. Build & Deployment
+## Supporting Skills
 
-Key flow: `pnpm build && npx cap sync` → `npx cap open ios|android`; device live-reload via `npx cap run ios --livereload --external`. Plus the App Store checklist (signing, icons, splash, `viewport-fit=cover`) and the Apple Privacy Manifest (`PrivacyInfo.xcprivacy`) — whose collected-data-types list is **app-specific and lives in CORE**.
-
-**→ Commands, full checklist, Privacy Manifest structure: `reference/build-deploy.md`.**
-
----
-
-## 14. Security
-
-See `reference/security-capsec.md`. Run: `bunx capsec scan` (62+ rules, zero config).
-
-**WKWebView Media Permission Origin Validation:**
-iOS 15+ requires explicit delegate handling for `getUserMedia` — without it, camera/mic silently fails. `CustomViewController.swift` subclasses `CAPBridgeViewController` and implements `webView(_:requestMediaCapturePermissionFor:...)`.
-
-Origin check: production grants `origin.protocol == "capacitor" && origin.host == "localhost"` only. Debug builds also allow `http://localhost` (dev server). All other origins denied. Key gotcha: `WKSecurityOrigin.protocol` returns the bare scheme name (`"capacitor"`), NOT `"capacitor://"`.
-
----
-
-## 15. Performance
-
-- **Lazy-load plugins:** Dynamic import at call site, not module top
-  ```typescript
-  async function vibrate() {
-    const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
-    await Haptics.impact({ style: ImpactStyle.Light });
-  }
-  ```
-- **Batch bridge calls:** Consolidate multiple native calls to reduce overhead
-- **Targets:** First Paint < 1s, TTI < 3s, 60fps. Cold-start tap-icon → first-interactive-paint ≤ 1500ms P50 on a mid-tier device (Pixel 6a / iPhone 13-class).
-- **Bundle gate — relative, not absolute:** capture a baseline from `next build` (the "First Load JS" output line — this is gzipped first-load JS, the metric that matters) and enforce **baseline + ≤10% growth** per phase. The classic "<500KB gz" absolute target is the wrong shape: it ignores starting size and punishes apps for being measured. Commit the baseline number to a research file; each PR description carries the post-build "First Load JS" line.
-- **Wrong shape:** `du -h .next/static/chunks/*.js` — that's uncompressed disk of all chunks, not first-load.
-- **Image quality:** 80 (not max), width: 1024 — reduces memory and transfer
-- **Cold-start instrumentation — honest scope:** `performance.mark('js-bootstrap-begin' | 'auth-resolved' | 'first-route-paint')` measures **JS-bootstrap onwards only**, NOT the native splash → WKWebView handoff window. Real-device stopwatch is the primary truth for the splash → interactive measurement; CI marks are a proxy budget.
-- **Offline-first:** Service Workers + IndexedDB for data persistence (see §19 distribution-stage discipline before reaching for this)
-- **Profile on real devices:** Xcode Instruments (iOS), Android Profiler
-
----
-
-## 16. Cold-Start & Auth Bootstrap (CRITICAL)
-
-For `output: 'export'` apps with auth, middleware doesn't run — the login skeleton flashes before auth settles. The fix is one sticky `isBootstrapped` gate at the route-tree root, a 6-case failure contract, splash→JS handoff, a 401 session-expired interceptor, and the server-safe three-file module split.
-
-**→ Full pattern + code + acceptance test: `reference/cold-start-auth.md`.**
-
----
-
-## 17. Supabase + Capacitor Lifecycle (CRITICAL)
-
-Three gotchas that bite every Capacitor + Supabase app: global `realtime.setAuth()` on `TOKEN_REFRESHED` (else realtime silently dies ~1h after sign-in); iOS WKWebView suspends JS ~30s after backgrounding (no background timers/network — `App.resume` refetch instead); and JWT-first sign-out wipe ordering (+ SWR static-key cross-user contamination).
-
-**→ Full patterns + code: `reference/supabase-lifecycle.md`.**
-
----
-
-## 18. Optimistic Writes + Thin Repo Pattern (HIGH)
-
-Makes the app feel native without a sync engine, using SWR `mutate` with `optimisticData` + `rollbackOnError`, behind a `<domain>Repo` indirection introduced from day one so internals can later swap to local-first without touching callsites.
-
-**→ Full pattern + code: `reference/optimistic-writes.md`.**
-
----
-
-## 19. Distribution-Stage Discipline (MEDIUM-HIGH)
-
-Don't pre-build Stage 3-4 infrastructure (IDB sync engine, DLQ, wipe ledger, background fetch, partner dashboards) at Stage 0-1. The right "feels native" surface at Stage 0-1 is just: cold-start bootstrap (§16) + optimistic writes (§18) + native polish.
-
-**→ Stage table + reactivation triggers + IDB-delete trap: `reference/distribution-stage.md`.**
+- `supabase` — SDK patterns, migrations, RLS, type generation
+- `testing` — Vitest, RTL, Playwright; native plugin mock patterns in `reference/testing-debugging.md`
+- `ac-qa-device` — device/simulator QA automation
+- `ui-debug` — CSS/visual defect diagnosis
+- `ui-brainstorm` — design alternatives and native UI ideation

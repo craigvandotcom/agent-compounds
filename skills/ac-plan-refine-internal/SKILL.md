@@ -22,6 +22,10 @@ description: Use to DEEPEN an existing plan via multi-agent (internal, no extern
 | **Output** | Refined plan (in-place edit), Refinement Log appended        |
 | **Next**   | `/ac-plan-clean` (optional) → `/ac-beadify`                  |
 
+## Engineering Skill
+
+**Before refining:** load this project's engineering standard from `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps: `capacitor-native` (`capacitor/SKILL.md`). Reviewers must evaluate plan decisions against these engineering constraints — not just correctness and completeness.
+
 ## Procedure
 
 This is a multi-agent conductor workflow. **Load and follow [`references/workflow.md`](references/workflow.md)** — it holds the full phased procedure (lens prompts, round structure, consensus registry, convergence).
