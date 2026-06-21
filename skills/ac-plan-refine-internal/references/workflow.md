@@ -26,19 +26,11 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ### Select Intensity Tier
 
-Ask user with `AskUserQuestion`:
+Infer from the invocation prompt — **do NOT ask**:
 
-```
-question: "Which refinement intensity?"
-header: "Tier"
-options:
-  - label: "Light"
-    description: "3 Sonnet agents (Builder/Breaker/Trimmer), 1-4 rounds — fast sanity check"
-  - label: "Medium (Recommended)"
-    description: "3 Opus agents (Builder/Breaker/Trimmer), 1-4 rounds — deep review, simple personas"
-  - label: "Heavy"
-    description: "6 Opus agents (Architect/Adversary/Devil's Advocate/Implementer/Spec Auditor/Simplifier), 3-6 rounds — thorough validation"
-```
+- **Light** — user said "light", "quick", or "fast refine" → Sonnet agents, 1–4 rounds
+- **Heavy** — user said "heavy", "thorough", "deep", "full", or "exhaustive" → 6 Opus agents, 3–6 rounds
+- **Medium** — anything else (default) → 3 Opus agents, 1–4 rounds
 
 ### Configuration
 
@@ -72,6 +64,19 @@ Tracks single-agent findings across rounds. If a finding recurs in a later round
 
 <!-- Format: | Round | Agent | Severity | Summary | Section | -->
 EOF
+```
+
+### Ensure on main
+
+Plan refinement is doc work — always runs on main (branch policy: only code on wave branches):
+
+```bash
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "On $CURRENT_BRANCH — switching to main before plan-refine commits"
+  git checkout main
+  git pull --rebase --autostash
+fi
 ```
 
 ### Checkpoint Original Plan

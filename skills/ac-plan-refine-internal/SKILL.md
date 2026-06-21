@@ -1,6 +1,6 @@
 ---
 name: ac-plan-refine-internal
-description: Use to DEEPEN an existing plan via multi-agent (internal, no external models) refinement — focused-lens reviewers compete, the conductor synthesizes and edits until convergence. Triggers: 'refine the plan', 'refine internal', 'improve this plan with subagents', 'multi-agent plan refinement'. Requires an existing plan; for external multi-model refinement use ac-plan-refine-external.
+description: Use to DEEPEN an existing plan via multi-agent (internal, no external models) refinement — focused-lens reviewers compete, the conductor synthesizes and edits until convergence. Default tier is Medium (3 Opus agents); say "light" or "heavy" in the prompt to override — no pause to ask. Triggers: 'refine the plan', 'refine internal', 'improve this plan with subagents', 'multi-agent plan refinement'. Requires an existing plan; for external multi-model refinement use ac-plan-refine-external.
 ---
 
 # Plan Refine (Internal)
