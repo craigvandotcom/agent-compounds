@@ -78,7 +78,7 @@ find "$PROJECT_ROOT/_backlog" -name "*.md" \
 For each backlog file:
 1. Read frontmatter `status` and `plans` fields
 2. Count unchecked tasks (`- [ ]`) vs checked (`- [x]`)
-3. Note version folder
+3. Note which folder it's in — `active/` (committed) vs `pool/` (candidate). (Legacy `v*/` folders, if any remain, are pre-migration — flag them for the one-time `{active/, pool/}` migration that `/ac-align` offers.)
 
 ---
 

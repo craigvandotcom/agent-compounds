@@ -83,7 +83,7 @@ find "$PROJECT_ROOT/_backlog" -name "*.md" \
   2>/dev/null
 ```
 
-For each file: extract `status` (captured/planned/complete), unchecked task count, version milestone. Skip `status: complete` and items with zero unchecked tasks.
+For each file: extract `status` (captured/planned/complete), unchecked task count, and **which folder it's in** — `active/` (committed scope, plannable now) vs `pool/` (candidate, needs `/ac-align` promotion first). Skip `status: complete` and items with zero unchecked tasks.
 
 ### Scan D: User's Manual Backlog
 
@@ -107,7 +107,8 @@ Order by closeness to implementation-ready (nearest first):
 | **2** | Plans: approved | `/ac-beadify {path}` — one step from beads |
 | **3** | Plans: refined | `/ac-beadify {path}` (or `/ac-plan-clean` if final polish needed) |
 | **4** | Plans: draft | `/ac-plan-refine-internal` `{path}` |
-| **5** | Backlog: captured | `/ac-plan-init` (reference the backlog item) |
+| **5** | Backlog: `active/` captured | `/ac-plan-init` (reference the active item) |
+| **6** | Backlog: `pool/` candidate | `/ac-align` (promote `pool → active` against strategy first) |
 
 Within each level, sort by:
 1. Refinement depth (desc) — more work invested = do it first (continuity of context)
@@ -137,8 +138,12 @@ Ready to build: {N} beads — run /ac-implement when you're ready to implement.
   {filename}  [{size}, {N}r {Tier}, last touched {date}]
   ...
 
-### Backlog: Needs Planning ({N} items, {file_count} files)
-  {version}/{filename}  [{task_count} tasks]
+### Backlog — active/ (plannable now) ({N} items)
+  active/{filename}  [{task_count} tasks]
+  ...
+
+### Backlog — pool/ (needs /ac-align promotion) ({N} items)
+  pool/{filename}  [{task_count} tasks, {horizon}]
   ...
 
 ### In Progress ({N} beads)
@@ -185,7 +190,8 @@ AskUserQuestion(
       { label: "Refine beads: {epic_or_count}", description: "/ac-bead-refine" },
       { label: "Beadify: {plan_filename}", description: "/ac-beadify _plans/{filename}" },
       { label: "Refine plan: {plan_filename}", description: "/ac-plan-refine-internal _plans/{filename}" },
-      { label: "Plan: {backlog_item}", description: "/ac-plan-init (reference _backlog/{filename})" },
+      { label: "Plan: {active_item}", description: "/ac-plan-init (reference _backlog/active/{filename})" },
+      { label: "Promote pool: {N} candidates", description: "/ac-align (sequence pool → active against strategy)" },
       { label: "Just browsing", description: "No action — I wanted the status report" }
     ]
   }]
