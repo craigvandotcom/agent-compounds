@@ -6,7 +6,7 @@ description: Sequential bead implementation — conductor reviews, engineer sub-
 
 **You are the conductor.** Engineers implement. You review, verify, and commit. One bead at a time. Quality over velocity.
 
-For parallelism, open multiple terminal sessions — each runs `/ac-implement` independently.
+Multiple sessions can safely share a wave — file reservations via Agent Mail prevent conflicts.
 
 ---
 
@@ -16,7 +16,7 @@ For parallelism, open multiple terminal sessions — each runs `/ac-implement` i
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Unblocked beads (from `/ac-bead-refine`)                                       |
 | **Output**       | Implemented code, committed per bead, pushed to wave branch                                |
-| **Artifacts**    | Per-bead results in `/tmp/bead-work/bead-{id}-result.md`, progress in `/tmp/bead-work/progress.md` |
+| **Artifacts**    | Per-bead results in `/tmp/bead-work-<wave-slug>/bead-{id}-result.md`, progress in `/tmp/bead-work-<wave-slug>/progress.md` |
 | **Verification** | Per-bead quality gate (test, lint, type-check), beads closed in `br`                       |
 
 ## Phase 0: Initialize
@@ -54,7 +54,7 @@ If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or ch
 br ready --json | jq '[.[] | select((.labels | index("unrefined") | not) and (.labels | index("human-gate") | not))]'
 ```
 
-If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-next` for the decision docket."
+If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-session` for the decision docket."
 
 ### Ensure Wave Branch (single-branch rule)
 
@@ -86,6 +86,17 @@ REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)
 Trunk-based: `/ac-merge` ships the wave to main and bumps the app version based on the commits.
 
 > **Migration note (2026-05-19→):** the previous thematic naming (`wave/<feature-name>`) is being phased out. Pre-existing thematic waves finish under their current names; only newly created waves use `wave/NNN`. Once the current open wave merges, all subsequent waves follow `wave/NNN` exclusively. Do NOT propose renaming an in-flight thematic wave — let it complete naturally.
+
+### Install Pre-Commit Guard
+
+```
+mcp__mcp-agent-mail__install_precommit_guard(
+  project_key: PROJECT_ROOT,
+  code_repo_path: PROJECT_ROOT
+)
+```
+
+Idempotent — safe to re-run every session. Installs a git hook that blocks commits to files reserved by another agent. Closes the window between Phase 1a's conflict check and the actual commit — a second enforcement layer on top of the reservation.
 
 ### Pre-Flight Type-Check
 
@@ -142,23 +153,41 @@ Skip this step only if `pnpm test:all` takes > 10 minutes on this machine AND th
 
 ### Ask User
 
-Ask two questions via `AskUserQuestion`:
+Ask one question via `AskUserQuestion`:
 
 1. "How many beads to target this session?" (default: all unblocked)
-2. "Session mode?" → **Solo** (single terminal, default) or **Parallel** (multiple terminals)
 
 ### Configuration
 
-```
+```bash
 TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
-SESSION_MODE=<solo|parallel>
-ARTIFACTS_DIR=/tmp/bead-work          # solo mode
-# Parallel mode: use session-unique dir to prevent progress.md collisions:
-# ARTIFACTS_DIR=/tmp/bead-work-$$
+# Wave-branch-named dir — stable across compaction, unique per wave, safe for parallel sessions
+WAVE_SLUG=$(git branch --show-current | tr '/' '-')
+ARTIFACTS_DIR="/tmp/bead-work-${WAVE_SLUG}"   # e.g. /tmp/bead-work-wave-004
 ```
 
-> **Parallel mode:** Use a session-unique `ARTIFACTS_DIR` (e.g., `/tmp/bead-work-$$`) to prevent progress.md overwrite collisions with other parallel sessions. Solo mode can use `/tmp/bead-work`.
+### Register Session Identity
+
+Register a unique identity for this implement session — used for file reservations and pre-commit guard attribution:
+
+```
+mcp__mcp-agent-mail__macro_start_session(
+  project_key: PROJECT_ROOT,
+  program: "claude-code",
+  model: "claude-opus-4-8"
+)
+```
+
+Capture the returned `name` field:
+
+```bash
+# Export so the pre-commit guard reads AGENT_NAME and WORKTREES_ENABLED at commit time
+export WORKTREES_ENABLED=1
+export AGENT_NAME=<returned-name>   # e.g. "SunnyBear" — unique per session
+```
+
+Each parallel ac-implement session runs its own `macro_start_session` and gets a distinct adjective+noun — no manual discriminators needed.
 
 ```bash
 mkdir -p "$ARTIFACTS_DIR"
@@ -170,7 +199,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ```
 # Session config — always completed, serves as compaction-resilient state
-TaskCreate(subject: "Session config: {SESSION_MODE} | {TARGET_BEADS} beads", description: "SESSION_MODE={SESSION_MODE}. TARGET_BEADS={TARGET_BEADS}. Stop after {TARGET_BEADS} beads.", activeForm: "Configuring session...")
+TaskCreate(subject: "Session config: {TARGET_BEADS} beads | {WAVE_SLUG}", description: "TARGET_BEADS={TARGET_BEADS}. ARTIFACTS_DIR={ARTIFACTS_DIR}. Stop after {TARGET_BEADS} beads.", activeForm: "Configuring session...")
 TaskUpdate(task: "Session config", status: "completed")
 
 TaskCreate(subject: "Phase 0: Initialize bead-work session", description: "Verify beads, ensure wave branch, create tasks", activeForm: "Initializing session...")
@@ -192,16 +221,13 @@ TaskUpdate(task: "Bead {N} of {TARGET_BEADS}", subject: "Bead {N} of {TARGET_BEA
 
 ### Compaction Recovery
 
-If `$ARTIFACTS_DIR/progress.md` exists, parse its header to recover `TARGET_BEADS` and `SESSION_MODE`. Count entries marked `COMPLETE` to recover `BEADS_COMPLETED`. Skip completed beads.
+If `$ARTIFACTS_DIR/progress.md` exists, parse its header to recover `TARGET_BEADS`. Count entries marked `COMPLETE` to recover `BEADS_COMPLETED`. Skip completed beads. The wave-branch-based `ARTIFACTS_DIR` is stable across compaction — re-derive it with `git branch --show-current | tr '/' '-'` if the variable is lost.
 
 If `$ARTIFACTS_DIR/` was deleted and recreated mid-session (e.g., by a partial bead-land run), result files for completed beads are lost. Note this in progress.md as "(result file lost — bead completed, committed as <hash>)".
 
-
-Acknowledge any pending messages.
-
 ---
 
-## BEAD LOOP: Phases 1a–1f
+## BEAD LOOP: Phases 1a–1e
 
 ### Phase 1a: Select Bead
 
@@ -236,12 +262,27 @@ If the bead is unrefined:
 3. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)] | .[0]'`
 4. If no refined beads remain, STOP the session early
 
-**Guard: check for file reservation conflicts.** Before claiming, attempt to reserve the bead's files. If `file_reservation_paths` returns conflicts (another agent holds exclusive reservations on overlapping files), this bead is taken:
+**Guard: reserve bead files via Agent Mail.** Before claiming, reserve the bead's files using `AGENT_NAME` (registered via `macro_start_session` in Phase 0 — unique per session). If the call returns a conflict, this bead is taken:
 
+```
+mcp__mcp-agent-mail__file_reservation_paths(
+  project_key: PROJECT_ROOT,
+  agent_name: AGENT_NAME,
+  paths: ["<files listed in bead spec>"],
+  ttl_seconds: 7200,
+  exclusive: true
+)
+```
+
+> **Parallel sessions on the same wave:** Each `/ac-implement` session calls `macro_start_session` independently and receives a distinct adjective+noun as `AGENT_NAME` — no manual discriminators needed. The pre-commit guard enforces reservations at commit time regardless.
+
+On `FILE_RESERVATION_CONFLICT`:
 1. Do NOT claim it
-2. Log: "Skipping <id> (file conflicts with <agent> — already being worked)"
+2. Log: "Skipping <id> (file conflict with <agent> — already being worked)"
 3. Get the next candidate from `br ready --json` and repeat both guards (unrefined + conflict)
 4. If no conflict-free beads remain, STOP the session early
+
+On success: reservation is held. The pre-commit guard (installed in Phase 0) will enforce it at commit time as a second layer.
 
 **Guard: verify environment prerequisites.** Bead specs sometimes assume infrastructure that isn't available in the current session (Mac/Xcode for iOS native, local Supabase for integration tests, Android emulator for ADB-driven tests). `bv --robot-next` does NOT check this — it scores by priority and unblocks only, and it will happily recommend `in_progress` beads whose remaining ACs are Mac-only or whose specs reference local infra that was never set up.
 
@@ -349,7 +390,7 @@ UI validation is deferred to `/ac-land` where it runs once for the entire sessio
 
 ### Phase 1d: Commit + Close Bead
 
-**Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** This is mandatory in parallel mode (a second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` — see commit `f64db219` in wave/app-first-feel history for the canonical incident). In solo mode it's still preferred because it's atomic and self-documenting — there's no window between staging and committing where state can drift.
+**Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** A second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` (see commit `f64db219` in wave/app-first-feel history for the canonical incident). Pathspec commits are atomic and self-documenting — there's no window between staging and committing where state can drift.
 
 ```bash
 git commit -m "feat(<scope>): <bead title>
@@ -376,11 +417,25 @@ For many files at once, globs work in the pathspec: `git commit -m "..." -- 'fea
 
 Push after every bead commit prevents stranded work if the session crashes before bead-land.
 
+**Verify commit landed before closing.** (`git log --oneline -1` shows your commit hash, confirming it succeeded.) Only then:
+
 Close the bead:
 
 ```bash
 br close <id> --reason "Implemented and tested"
 ```
+
+Release the file reservation using the **same paths reserved in Phase 1a** (the bead spec file list, not just the files committed — releasing over-reserved paths is harmless; leaving them locked starves parallel sessions):
+
+```
+mcp__mcp-agent-mail__release_file_reservations(
+  project_key: PROJECT_ROOT,
+  agent_name: AGENT_NAME,
+  paths: ["<same paths passed to file_reservation_paths in Phase 1a>"]
+)
+```
+
+> **If the commit failed:** do NOT release reservations. The files still need to be worked. Fix the commit issue first (see the pathspec note above), then release after a verified commit.
 
 ### Phase 1e: Update Progress
 
@@ -396,7 +451,7 @@ Append to `$ARTIFACTS_DIR/progress.md` (include header on first write):
 <!-- Header (first bead only) -->
 
 TARGET_BEADS={TARGET_BEADS}
-SESSION_MODE={SESSION_MODE}
+WAVE={WAVE_SLUG}
 
 ### Bead <id>: <title>
 
@@ -439,7 +494,7 @@ Run the complete suite (this is where the full run happens):
 
 If any fail, fix the issues before proceeding.
 
-> **Parallel sessions:** If `SESSION_MODE=parallel`, failing tests may originate from other sessions' uncommitted changes in the working tree. Run `git diff --stat HEAD` to identify which files are uncommitted and which session owns them. Failures in files not touched by this session's commits are owned by the other session — note them but do not block landing.
+> **Parallel sessions:** Failing tests may originate from another session's uncommitted changes in the working tree. Run `git diff --stat HEAD` to identify which files are uncommitted — check their Agent Mail reservations to determine which session owns them. Failures in files not touched by this session's commits are owned by the other session — note them but do not block landing.
 
 ### Next Steps
 
@@ -481,9 +536,16 @@ Terminal 1: /ac-implement   → "target 5 beads"
 Terminal 2: /ac-implement   → "target 5 beads"
 ```
 
-Both sessions join the **same wave branch** (single-branch rule above — never create a second wave). They pick beads with non-overlapping file footprints, not by epic/wave-affinity. `bv --robot-next` is global-priority, not wave-aware; conductor must filter to the wave's labels OR pick from a different epic when the wave's chain is sequentially gated.
+This skill is parallel-by-design — no mode switch needed:
 
-Coordination via Agent Mail file reservations BEFORE editing is mandatory in parallel mode. Commit with `git commit -- <pathspec>` (limits scope) since lint-staged's stash dance can bundle the other session's WIP into your commit otherwise. Pre-push `pnpm build` reads the working tree — the other session's broken WIP can block your push.
+- Both sessions join the **same wave branch** (single-branch rule — never create a second wave)
+- Agent Mail file reservations (Phase 1a) prevent file-level conflicts; the pre-commit guard (Phase 0) enforces them at commit time
+- Pathspec commits (`git commit -- <pathspec>`) keep each session's scope isolated
+- Wave-branch-named `ARTIFACTS_DIR` is per-wave, not per-session — parallel sessions share it, but progress.md is append-only and result files are per-bead, so no collision
+
+`bv --robot-next` is global-priority, not wave-aware; conductor must filter to the wave's labels OR pick from a different epic when the wave's chain is sequentially gated.
+
+Pre-push `pnpm build` reads the working tree — another session's uncommitted WIP can block your push. If this happens, identify the conflicting files via `git diff --stat HEAD` and check their Agent Mail reservations.
 
 ---
 
@@ -493,8 +555,8 @@ Coordination via Agent Mail file reservations BEFORE editing is mandatory in par
 - **YOU review, YOU commit** — engineers implement, you verify
 - **Be extremely strict** — bead must be fully complete before moving on
 - **Minor fixes: do them yourself. Major gaps: re-spawn engineer.**
-- **Temp files survive compaction** — read from `$ARTIFACTS_DIR`, not memory
-- **Progress file is compaction recovery** — parse it on restart for TARGET_BEADS + SESSION_MODE
+- **Temp files survive compaction** — re-derive `ARTIFACTS_DIR` from `git branch --show-current | tr '/' '-'` if lost
+- **Progress file is compaction recovery** — parse it on restart for TARGET_BEADS; count COMPLETE entries for BEADS_COMPLETED
 - **Per-bead: tests + type-check + lint. Full quality gate at session end.**
 - **UI validation runs once at session end** (in bead-land) — not per-bead
 - **No new code without new tests** — verify engineer wrote tests before approving

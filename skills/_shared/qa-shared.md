@@ -17,6 +17,12 @@ browser, so visual/DOM-matrix coverage stays cheap in the browser (`ac-qa-browse
 the device twin proves only what the native shell adds. Don't QA the same DOM logic
 twice — route by plane.
 
+> **Whether to run a twin at all (and how deep)** is decided upstream by
+> **`_shared/verification-gate.md`** — it classifies the wave diff and selects passes +
+> depth so a one-line fix doesn't trigger a simulator boot. This file owns the *how*;
+> that gate owns the *whether*. Conductors (`ac-pipeline` Verify stage, `ac-loop`,
+> `ac-merge`'s smoke net) consult the gate, not this file, to decide selection.
+
 ## Depth levels
 
 - **smoke** — build/serve, launch, first-paint, auth, primary journey. Run after

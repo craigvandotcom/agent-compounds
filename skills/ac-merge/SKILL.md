@@ -84,7 +84,19 @@ git rebase origin/main
 
 **If conflicts:** Resolve them, run quality gate again, then continue.
 
-### Native Sim QA Smoke Gate (conditional)
+### QA Smoke Gate (conditional — safety net)
+
+This is the **post-rebase smoke net**: it re-proves the exact state that merges, using
+the **same classifier as `_shared/verification-gate.md`** (the diff-class greps below are
+that gate's `native` / `webui` classes). The Verify stage in `ac-pipeline`/`ac-loop`
+already ran the gate-selected passes at full depth pre-land; this net re-checks at
+**smoke** depth because a rebase can change what merges. If a fresh gate-selected PASS
+exists for the current `HEAD` SHA, note-and-skip; otherwise run the smoke pass below.
+
+> Selection/depth logic is single-sourced in `_shared/verification-gate.md` — keep these
+> greps in sync with it (or, when editing, lift the classification there and reference it).
+> Note: this net covers the **QA twins** only; `ac-ui-polish` is a Verify-stage pass, not
+> re-run at merge.
 
 Hybrid/native apps only. Runs the post-rebase state — the thing that actually merges.
 Three conditions, all must hold; otherwise skip silently:

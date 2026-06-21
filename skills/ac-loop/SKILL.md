@@ -1,6 +1,6 @@
 ---
 name: ac-loop
-description: Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, pauses on genuine decisions via Slack buttons, nudges human about remaining blocks until acted on. Stop conditions: completeness, critical regression, token budget, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".
+description: Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, pauses on genuine decisions via Slack buttons, nudges human about remaining blocks until acted on. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".
 ---
 
 # ac-loop — Autonomous Shipping Loop
@@ -26,17 +26,17 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 ## Execution Order
 
 ```
-[If plan has no beads yet]
-  ac-beadify → ac-bead-refine
-                    ↓
 EACH ITERATION:
-  1. Orphan beads  (refined, no plan wave, fixes ship fast)
-      └─ ac-implement → ac-ui-polish → ac-qa-browser [+ac-qa-device on macOS/native]
-              → ac-land → ac-review → ac-merge → Slack notify
-  2. Next plan's wave  (pick highest-priority plan with refined ready beads)
+  1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships FIRST)
+      └─ ac-implement → VERIFY-GATE → ac-land → ac-review → ac-merge → Slack notify
+  2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
+      ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
+      │      (prep — only now, AFTER the maintenance wave has shipped)
       └─ ensure wave branch (loop owns this, not ac-implement) →
-         ac-implement → ac-ui-polish → ac-qa-browser [+ac-qa-device on macOS/native]
-              → ac-land → ac-review → ac-merge → Slack notify
+         ac-implement → VERIFY-GATE → ac-land → ac-review → ac-merge → Slack notify
+
+  VERIFY-GATE = consult _shared/verification-gate.md → run only the selected
+                passes (ui-polish / qa-browser / qa-device) at the selected depth.
   3. Loop — check for more orphans or plans
   4. Nothing left → Phase ARIA (unlock human blocks, then stop)
 
@@ -47,10 +47,36 @@ STOP CONDITIONS checked before each iteration (see below).
 
 ## Phase 0: Orient
 
-Read the current state of the board. This is the map you navigate by.
+### Register Loop Identity
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
+```
+
+Register a unique identity for this loop run — gives the conductor a readable name in the agent registry and pre-commit attribution:
+
+```
+mcp__mcp-agent-mail__macro_start_session(
+  project_key: PROJECT_ROOT,
+  program: "claude-code",
+  model: "claude-opus-4-8"
+)
+```
+
+Capture the returned `name` field:
+
+```bash
+export WORKTREES_ENABLED=1
+export AGENT_NAME=<returned-name>   # e.g. "BlueLake" — unique per loop run
+```
+
+Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fresh sessions and self-register independently — the loop's `AGENT_NAME` is not inherited.
+
+### Read Current Board State
+
+Read the current state of the board. This is the map you navigate by.
+
+```bash
 
 # All refined, ready, non-human-gated beads
 br ready --json | jq '[.[] | select(
@@ -76,18 +102,29 @@ Also check for loop-ready plans and unrefined beads:
 grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 
 # Unrefined beads from loop-ready plans (need ac-bead-refine before implement)
-br ready --json | jq '[.[] | select(.labels | index("unrefined"))]'
+br ready --json | jq '[.[] | select(
+  (.labels | index("unrefined")) and
+  (.labels | map(startswith("wave/")) | any)
+)]'
+
+# Unrefined ORPHAN beads (unrefined, no wave/plan) — NOT auto-refined; ARIA nudge only
+br ready --json | jq '[.[] | select(
+  (.labels | index("unrefined")) and
+  (.labels | map(startswith("wave/")) | any | not)
+)]'
 ```
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
-Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined beads needing refine.
+Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined plan beads needing refine, O **unrefined orphan beads** (surfaced in ARIA, never auto-refined).
 
-**Work priority order:**
-1. Unrefined beads (from loop-ready plans) → run `ac-bead-refine` (delegation: "ac-loop autonomous run, skip next-step question")
-2. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
-3. Orphan refined beads → Phase 1
+**Work priority order** — ship ready maintenance before doing prep for feature waves:
+1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
+2. Unrefined beads (from loop-ready plans) → run `ac-bead-refine` (prep for a feature wave) (delegation: "ac-loop autonomous run, skip next-step question")
+3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
 4. Plan wave refined beads → Phase 2
+
+> **Why orphans before prep:** `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, and a feature wave is a long haul. Ship the cheap, ready, often time-sensitive orphan fixes FIRST so a session that ends early (compaction, human override, iteration cap) has still delivered the ready work. Maintenance wave first; prep for the next feature wave second.
 
 If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready plans to beadify, and no human-gated beads** → go straight to Phase ARIA.
 
@@ -124,19 +161,17 @@ If orphans exist:
    fi
    ```
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions:
-   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). SESSION_MODE=solo. TARGET_BEADS=N. Skip the bead-count and session-mode setup questions — answers are pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Advance to ac-land when complete."
-3. **Invoke `ac-ui-polish`** — design conformance pass. Beads it files feed the retrospective.
-4. **Invoke `ac-qa-browser`** — web journey validation.
-5. **Invoke `ac-qa-device`** — native validation (macOS only; skip on Linux/CI).
-6. **Invoke `ac-land`** — use this delegation prompt:
+   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Advance to ac-land when complete."
+3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
+4. **Invoke `ac-land`** — use this delegation prompt:
    > "Run ac-land for this session. This is an autonomous loop run. For system upgrade proposals: capture them as a Slack card for Craig to review separately — do NOT block landing. Next step after landing is ac-review (do not ask)."
-7. **Invoke `ac-review`** — use this delegation prompt:
+5. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review on branch `<WAVE>`. This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
-8. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-9. **Invoke `ac-merge`** — use this delegation prompt:
+6. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
+7. **Invoke `ac-merge`** — use this delegation prompt:
    > "Run ac-merge on branch `<WAVE>`. CI config for this project: `<cached-answer>`. Version bump: accept recommended default without asking. For uncertain PR feedback items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after merge."
-10. **Slack notify** (see Milestone Notifications).
-11. **Loop** — return to Phase 0 check after merge.
+8. **Slack notify** (see Milestone Notifications).
+9. **Loop** — return to Phase 0 check after merge.
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -166,19 +201,17 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 1. **Pre-allocate wave branch (loop's job)** — same logic as Phase 1 step 1. If a wave is already open from the orphan pass, join it. Single-branch rule: never create a second wave while one is open.
 2. **Invoke `ac-implement`** with delegation prompt:
-   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). SESSION_MODE=solo. TARGET_BEADS=N. Skip bead-count and session-mode setup questions. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Advance to ac-land when complete."
-3. **Invoke `ac-ui-polish`** — design conformance pass.
-4. **Invoke `ac-qa-browser`** — web journey validation.
-5. **Invoke `ac-qa-device`** — native validation (macOS only).
-6. **Invoke `ac-land`** with delegation prompt:
+   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Advance to ac-land when complete."
+3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
+4. **Invoke `ac-land`** with delegation prompt:
    > "Run ac-land for this session (ac-loop autonomous run). System upgrade proposals: capture as Slack card for Craig, do NOT block landing. Next step is ac-review."
-7. **Invoke `ac-review`** with delegation prompt:
+5. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review on branch `<WAVE>` (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
-8. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-9. **Invoke `ac-merge`** with delegation prompt:
+6. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
+7. **Invoke `ac-merge`** with delegation prompt:
    > "Run ac-merge on `<WAVE>` (ac-loop autonomous run). CI config: `<cached>`. Version bump: accept recommended default. Uncertain feedback: Exhaust Rule — decision beads. No next-step question after merge."
-10. **Slack notify** — wave shipped.
-11. **Check stop conditions** — then loop back to Phase 0.
+8. **Slack notify** — wave shipped.
+9. **Check stop conditions** — then loop back to Phase 0.
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -197,6 +230,7 @@ This phase persists. The loop does not exit after a nudge — it re-checks at in
 | `human-gate` bead with ≤3 options, question answerable in ≤10 words | `AskUserQuestion` (Slack buttons) → session pauses → resumes on click |
 | `human-gate` bead with complex/open-ended answer | Advisory Slack nudge (card) — do NOT pause |
 | Plan exists but all beads are `unrefined` | Advisory nudge: "Plan X has N beads awaiting refinement — run `/ac-bead-refine`" |
+| `unrefined` **orphan** bead (no plan, no wave) | Advisory nudge: "N captured fix(es) awaiting refinement — run `/ac-bead-refine` or attach to a plan." The loop will NOT auto-refine these (no plan-level sign-off — see Scope contract); surface, don't touch. |
 | Refined plans exist but no beads yet | Advisory nudge: "Plan X is ready for `/ac-beadify`" |
 | Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
 | Nothing at all (no backlog, no plans, no beads) | Session-end notify: "Pipeline clear — nothing waiting" |
@@ -251,11 +285,19 @@ Check before each iteration begins.
 |---|-----------|--------|
 | **C1** | No eligible work and no human-gate unblocks remaining | End session cleanly. Notify Slack: "Pipeline clear." |
 | **C2** | `ac-review` returns a Critical blocking finding (regression) | Hard stop. Do NOT merge. Notify Slack with the finding. File a P0 bead. Wait for human. |
-| **C3** | Token budget approaching (estimate: <30k tokens remaining) | Finish the current bead, land, then stop. Notify Slack: "Stopping — token budget low. N beads remain." |
-| **C4** | Iteration cap reached (default: 3 plan waves per session) | Stop after current merge. Notify Slack: "Iteration cap reached." |
-| **C5** | Human override (Slack message "stop" / "pause the loop") | Honour immediately after current bead. Notify confirmation. |
+| **C3** | Iteration cap reached (default: 3 plan waves per session) | Stop after current merge. Notify Slack: "Iteration cap reached." |
+| **C4** | Human override (Slack message "stop" / "pause the loop") | Honour immediately after current bead. Notify confirmation. |
 
-C2 is the only **hard** stop — it never merges a regression. C1/C3/C4/C5 are clean stops (current work finishes, then exit).
+C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clean stops (current work finishes, then exit).
+
+> **No token-budget stop.** A "running low on tokens" condition was removed deliberately:
+> the loop cannot reliably measure its own remaining budget, and with no explicit target
+> there is nothing to bound against — so it only ever became a vague excuse to quit early.
+> The loop is bounded by the **measurable** conditions instead: it stops when the pipeline
+> is empty (C1) or the iteration cap is hit (C3). Context-window pressure is handled by
+> compaction (the loop survives it — see Compaction Recovery), not by guessing at a token
+> count. If a run needs a hard ceiling, give it one explicitly (an iteration cap or a
+> stated goal) — don't infer it from an unreadable budget.
 
 ---
 
@@ -268,7 +310,6 @@ Always notify on Slack at meaningful milestones. Use `slack-send --channel sofi 
 | Orphan beads shipped | "✅ Shipped <N> orphan fix(es) — <bead titles> — merged to main." |
 | Plan wave shipped | "🚀 Wave for *<plan name>* merged — <N> beads shipped. Branch: `wave/NNN`." |
 | Critical regression found | "🛑 Loop stopped — ac-review found a critical regression in `<file>`. Needs your review before merge." |
-| Token budget low | "⚠️ Loop pausing — token budget low. <N> beads remain in queue." |
 | Iteration cap | "⏹️ Iteration cap reached (<N> waves this session). Remaining work queued for next run." |
 | Pipeline clear | "✓ Pipeline clear — no eligible work remaining. <H> human-gate items waiting if you want to review." |
 | ARIA nudge | See Phase ARIA advisory format above. |

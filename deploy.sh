@@ -43,7 +43,14 @@ TARGET=""
 # Recursive-safe enumeration: a skill is any dir containing SKILL.md; an agent is
 # any .md file. Names are paths relative to skills/ or agents/ (e.g. "ac-plan" or,
 # if ever nested, "group/sub") so they keep working if assets are grouped into subdirs.
-list_skills() { (cd "$AC_ROOT/skills" 2>/dev/null && find . -name SKILL.md | sed 's#^\./##;s#/SKILL\.md$##' | sort); }
+# _-prefixed top-level dirs (e.g. _shared) are shared reference dirs — no SKILL.md,
+# but always included so skills that reference them find them at the expected path.
+list_skills() {
+  (cd "$AC_ROOT/skills" 2>/dev/null && {
+    find . -name SKILL.md | sed 's#^\./##;s#/SKILL\.md$##'
+    find . -maxdepth 1 -mindepth 1 -type d -name '_*' | sed 's#^\./##'
+  } | sort -u)
+}
 list_agents() { (cd "$AC_ROOT/agents" 2>/dev/null && find . -name '*.md' | sed 's#^\./##;s#\.md$##' | sort); }
 
 list_available() {
