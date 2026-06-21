@@ -203,7 +203,7 @@ Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
 entry point works, the contract is identical).
 
 1. List open `dream-proposal` beads across the beads repos (root, agent-compounds,
-   apps): per repo `br list --json | jq '[.[] | select(.labels // [] |
+   apps): per repo `br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] |
    index("dream-proposal")) | select(.status != "closed")]'` — oldest first.
    Legacy fallback: `status: pending` proposal files with no `bead:` id (pre-docket
    runs) — review them the same way, and file the missing bead. **Also pick up files

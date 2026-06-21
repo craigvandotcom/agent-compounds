@@ -21,9 +21,16 @@ Run scans A, B, C **in parallel** (they're independent).
 ## Scan A — beads
 
 ```bash
-br list --json     # all beads
-br ready --json    # unblocked + ready
+br list  --json --limit 1000   # ALL beads → object {issues:[...], total, has_more, limit}
+br ready --json                # unblocked + ready → a FLAT array
 ```
+
+> **`br` JSON shape differs by subcommand — don't conflate them:**
+> - `br list --json` returns a **paginated object** (`default limit 50`). Always pass
+>   `--limit 1000` (or page on `has_more`) and iterate **`.issues[]`**, not `.[]`.
+> - `br ready --json` returns a **bare array** — iterate **`.[]`**.
+> Getting this wrong fails silently-ish (`jq: Cannot index array with string …`, or
+> a truncated list at 50). Verified against `br` 2026-06.
 
 Categorize every bead:
 

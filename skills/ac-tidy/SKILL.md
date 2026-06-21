@@ -178,7 +178,7 @@ Finding beads (`qa-finding`, `review-finding`, `hygiene-finding` labels — see
 pipeline stages file them automatically. As janitor, ac-tidy is their pruner.
 
 ```bash
-br list --json | jq -r '.[] | select(.labels // [] | (index("qa-finding") or index("review-finding") or index("hygiene-finding"))) | select(.status != "closed") | "\(.id) \(.status) \(.title)"'
+br list --json --limit 1000 | jq -r '.issues[] | select(.labels // [] | (index("qa-finding") or index("review-finding") or index("hygiene-finding"))) | select(.status != "closed") | "\(.id) \(.status) \(.title)"'
 br stale --json 2>/dev/null   # age-based staleness
 ```
 

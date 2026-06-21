@@ -137,7 +137,7 @@ independent of this gate ("run a device QA smoke", "run a browser QA smoke").
 **QA-blocker check (beads projects, runs regardless of platform):**
 
 ```bash
-br list --json | jq '[.[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
+br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
 ```
 
 Open `qa-blocker` beads are unresolved user-facing breaks filed by QA runs —

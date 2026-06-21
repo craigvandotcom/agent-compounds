@@ -86,8 +86,8 @@ The Decision Docket is the org's single place to action decisions. At org level 
 for repo in ~/Repos ~/Repos/neometa/software/agent-compounds \
             $(while IFS= read -r a; do echo ~/Repos/neometa/software/$a; done < ~/Repos/infrastructure/apps.list); do
   [ -d "$repo/.beads" ] || continue
-  (cd "$repo" && br list --json 2>/dev/null) | \
-    jq --arg repo "$(basename $repo)" '[.[] | select(.labels // [] | index("human-gate")) | select(.status != "closed") | . + {repo: $repo}]'
+  (cd "$repo" && br list --json --limit 1000 2>/dev/null) | \
+    jq --arg repo "$(basename $repo)" '[.issues[] | select(.labels // [] | index("human-gate")) | select(.status != "closed") | . + {repo: $repo}]'
 done
 ```
 
