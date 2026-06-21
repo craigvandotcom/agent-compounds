@@ -1,10 +1,10 @@
 ---
 name: ac-backlog
-description: Capture ideas into grouped backlog files — smart grouping, plan/bead awareness, version targeting. Triggers: 'add to backlog', 'capture idea', 'backlog this', 'note for later', 'park this'.
+description: Capture ideas into the backlog pool — cohesive grouping (one theme = one wave), shape-routing (small+clear goes straight to a bead), strategy-aware horizon, no version guessing at capture. Triggers: 'add to backlog', 'capture idea', 'backlog this', 'note for later', 'park this'.
 ---
 
 
-**You are a fast-capture agent with grouping intelligence.** Capture backlog items quickly, but actively seek opportunities to group related items. Bigger coherent groups make better plans.
+**You are a fast-capture agent with cohesion intelligence.** Capture ideas quickly into the backlog *pool*. Group only items that belong to the **same wave** — never batch unrelated work to make a "bigger" item. Route small, clear items straight to beads. Do **not** assign a version at capture — `ac-align` sequences the pool against live strategy when it's time to plan.
 
 ---
 
@@ -12,15 +12,15 @@ description: Capture ideas into grouped backlog files — smart grouping, plan/b
 
 |                  |                                                                     |
 | ---------------- | ------------------------------------------------------------------- |
-| **Input**        | User's idea, bug, feature request, or improvement                   |
-| **Output**       | Item added to existing or new backlog file in `_backlog/`           |
+| **Input**        | User's idea, feature request, or improvement                        |
+| **Output**       | Item added to `_backlog/pool/` (or routed to a bead / existing theme)|
 | **Artifacts**    | None (stateless)                                                    |
 | **Verification** | File written, item confirmed                                        |
 
 ## Prerequisites
 
-- Project has `_backlog/` directory (create if missing)
-- beads_rust (`br`) installed — for duplicate detection (optional, graceful fallback)
+- Project has `_backlog/` directory (create `_backlog/pool/` if missing)
+- `br` installed — for duplicate detection (optional, graceful fallback)
 
 ---
 
@@ -28,25 +28,53 @@ description: Capture ideas into grouped backlog files — smart grouping, plan/b
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
+mkdir -p "$PROJECT_ROOT/_backlog/pool"
 ```
 
-Read `AGENTS.md` for project context.
+Read `AGENTS.md` for project context. If `_strategy/` exists, note its presence — it is read *lightly* in Phase 5 to infer channel/horizon (never to assign a version, never blocking).
 
 ---
 
-## Phase 1: Parse Input
+## Phase 1: Parse + Shape Check
 
 Identify from the user's message:
 
 - **What** they want to capture (the core idea)
 - **Domain** — frontend, backend, pipeline, devops, testing, UI, database, etc.
-- **Keywords** — for matching against existing backlog files and beads
+- **Keywords** — for matching against existing backlog, plans, and beads
+
+Then assess the item's **shape** — this decides whether it belongs in the backlog at all:
+
+| Shape | Goes to | Why |
+|-------|---------|-----|
+| **Small + clear** — a specific bug, a one-line chore, an obvious tiny tweak | **a bead** (route to `ac-bead-capture`) | No planning needed; it's already an execution unit |
+| **Big or fuzzy** — a feature, a redesign, anything needing design thinking | **the backlog pool** | Needs to be thought through in a plan first |
+
+**Route by shape, not by source.** A small, well-specified item is a bead whether a human or triage found it.
+
+If the item looks small + clear, offer to route it:
+
+```
+AskUserQuestion(
+  questions: [{
+    question: "This looks small and well-specified — it could go straight to a bead and skip planning. Capture as a bead instead?",
+    header: "Shape",
+    multiSelect: false,
+    options: [
+      { label: "Capture as bead (Recommended)", description: "Route to /ac-bead-capture — execution-ready, no plan needed" },
+      { label: "Keep in backlog", description: "It's bigger than it looks / needs design — pool it" }
+    ]
+  }]
+)
+```
+
+If "Capture as bead": tell the user to run `/ac-bead-capture` with the item (or hand off directly). STOP — not a backlog item.
 
 ---
 
 ## Phase 2: Check for Existing Coverage
 
-Before creating backlog items, check if this work already exists somewhere in the pipeline.
+Before creating anything, check the work doesn't already exist downstream.
 
 ### Check Beads
 
@@ -54,7 +82,7 @@ Before creating backlog items, check if this work already exists somewhere in th
 br list --json 2>/dev/null
 ```
 
-Scan bead titles and descriptions for keyword matches against the user's input. If a matching bead exists:
+Scan bead titles/descriptions for keyword matches. If a matching bead exists:
 
 ```
 AskUserQuestion(
@@ -65,13 +93,13 @@ AskUserQuestion(
     options: [
       { label: "Skip — already covered", description: "The existing bead handles this" },
       { label: "Add anyway", description: "Different enough to warrant a separate backlog item" },
-      { label: "Add as comment to bead", description: "Append this as additional context to bead {id}" }
+      { label: "Add as comment to bead", description: "Append this as context to bead {id}" }
     ]
   }]
 )
 ```
 
-If user chooses "Add as comment to bead":
+If "Add as comment to bead":
 ```bash
 br comments add <id> "Additional context from backlog capture: <user's input>"
 ```
@@ -87,9 +115,10 @@ Scan plan filenames and first 30 lines for keyword matches. If a matching plan e
 
 ---
 
-## Phase 3: Scan Existing Backlogs
+## Phase 3: Scan Backlog for Cohesive Grouping
 
 ```bash
+# Pool + active (target structure) AND legacy version folders (transition-tolerant)
 find "$PROJECT_ROOT/_backlog" -name "*.md" \
   -not -name "_*" -not -name "ROADMAP.md" -not -name "BUSINESS-STRATEGY.md" \
   -not -path "*/_done/*" -not -path "*/_shipped/*" -not -path "*/complete/*" \
@@ -97,153 +126,115 @@ find "$PROJECT_ROOT/_backlog" -name "*.md" \
   2>/dev/null
 ```
 
-For each backlog file, read it and check:
+For each backlog file, read it and assess whether the new item belongs to the **same wave**.
 
-1. **Domain match** — same area (frontend, backend, pipeline, etc.)
-2. **Feature match** — related component or capability
-3. **Logical grouping** — could be tackled in the same planning session
+### The Cohesion Test
 
-### Grouping Bias
+**Group ONLY if the new item would be planned and shipped as part of the same wave** as an existing file — i.e. they:
 
-**Actively argue for consolidation.** The principle: bigger coherent groups make better plans because the planner can reason about relationships between items at once.
+- touch the same surface / flow / subsystem, **or**
+- share a data model, schema, or dependency, **or**
+- tell one coherent story a single plan can reason about end-to-end.
 
-Good groups:
-- Multiple UI improvements to the same page/flow
-- Several API changes to the same domain
-- Related bugs in the same subsystem
-- Features that share data models or dependencies
+**Bigger is NOT better — cohesive is better.** If grouping two items would produce a plan that does two unrelated things, keep them separate. A Frankenstein backlog item becomes a Frankenstein plan becomes a wave that can't be reviewed, QA'd, or merged as one unit.
 
-Bad groups (don't merge):
-- UI work with database schema changes
-- Unrelated features that happen to be the same priority
-- Items targeting different version milestones
+**Exception — maintenance:** pure chores, small bugs, and housekeeping *can* batch into a shared `maintenance` item. They ship as a maintenance wave and need no coherent plan, so cohesion doesn't apply to them.
+
+Good groups (one wave): several UI changes to the same page; multiple API changes to one domain; features sharing a data model.
+Bad groups (split them): UI work + schema changes; two unrelated features at the same priority; anything spanning different surfaces.
 
 ---
 
 ## Phase 4: Decide — Add or Create
 
-### If Related Backlog Found
-
-Show the file, its current tasks, and why you think they're related:
+### If a Cohesive Match Exists
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Related backlog: {filename} ({task_count} tasks, {domain}). Group together?",
-    header: "Backlog Grouping",
+    question: "This belongs to the same wave as {filename} ({domain}). Group them?",
+    header: "Grouping",
     multiSelect: false,
     options: [
-      { label: "Add to {filename} (Recommended)", description: "Group with existing items — makes a more coherent plan" },
-      { label: "Create new file", description: "Keep separate — different enough to plan independently" }
+      { label: "Add to {filename} (Recommended)", description: "Same wave — one coherent plan" },
+      { label: "Create new item", description: "Different enough to plan as its own wave" }
     ]
   }]
 )
 ```
 
-### If Multiple Potential Matches
+If multiple candidates, present the top 2–3 and let the user choose, with "Create new item" always available.
 
-Present the top 2-3 matches and let the user choose:
+### If No Cohesive Match
 
-```
-AskUserQuestion(
-  questions: [{
-    question: "Multiple related backlogs found. Where does this belong?",
-    header: "Backlog Grouping",
-    multiSelect: false,
-    options: [
-      { label: "Add to {file1}", description: "{reason for match}" },
-      { label: "Add to {file2}", description: "{reason for match}" },
-      { label: "Create new file", description: "None of these are related enough" }
-    ]
-  }]
-)
-```
-
-### If No Match
-
-Create a new file. Determine the version folder:
-
-- Check if the domain/feature makes the version obvious (e.g., native features → v1-1)
-- If ambiguous, ask:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Which version milestone?",
-    header: "Version",
-    multiSelect: false,
-    options: [
-      { label: "v1-0", description: "Core app functionality — current focus" },
-      { label: "v1-1", description: "Post-launch improvements" },
-      { label: "v1-2", description: "Advanced features" },
-      { label: "v2-0", description: "Future — everything else" }
-    ]
-  }]
-)
-```
+Create a new item in `_backlog/pool/`. **Do not ask which version** — it goes in the pool unsequenced.
 
 ---
 
 ## Phase 5: Write the Entry
 
-### For New File
+### New item
 
-Use sequential numbering within the version folder. Filename: `NNN-descriptive-name.md`
+Sequential numbering across `pool/` + `active/` (+ legacy folders during transition). Filename: `_backlog/pool/NNN-descriptive-name.md`
 
 ```markdown
 ---
 status: captured
-size: MEDIUM
-priority: medium
-version: {version}
+type: feature          # feature | maintenance | bug
+size: M                # S | M | L
+channel: product       # product | discovery | content — omit if unclear
+horizon: later         # next | later (coarse only — ac-align sets real sequence; NOT a version)
+source: human          # human | triage:<source>
 dependencies: []
 ---
 
-# {Category} — {Description}
+# {Theme} — {Short description}
 
-Brief one-line summary of what this backlog aggregates.
+One-line intent: what this is and why it matters.
 
-## Tasks
+## Scope
 
-- [ ] {Main task/idea}
-- [ ] {Sub-task if mentioned}
+- {the cohesive set of work this theme covers}
 
 ## Notes
 
-{Context, references, or session notes}
+{context, references, related plan/bead if noted}
 ```
 
-### For Existing File
+**Inferring `channel` and `horizon` (light, never blocking):**
 
-Append new task(s) to the `## Tasks` section. If the new items change the scope significantly, update the `size` in frontmatter.
+- **channel** — map the domain to the three-channel strategy (product / discovery / content). Omit the field if it isn't obvious. Don't ask.
+- **horizon** — if `_strategy/` exists, skim the definition-of-done / roadmap: if the item clearly serves the *current* milestone, set `horizon: next`; otherwise `horizon: later`. **Default to `later` when unclear.** Never ask, never assign a version number.
+
+### Existing item
+
+Append to the matched file's `## Scope`. If scope grew materially, bump `size` in frontmatter.
 
 ---
 
 ## Phase 6: Confirm
 
-Report what was captured:
-
 ```
-Added to _backlog/{version}/{filename}:
-  - {task description}
-  - Version: {version}
-  - Status: captured
+Captured → _backlog/pool/{filename}
+  - {one-line intent}
+  - type: {type} | size: {size} | horizon: {horizon}{ | channel: {channel}}
+  - status: captured
 ```
 
-If a related plan or bead was noted, remind: "Related: plan `{name}` / bead `{id}` covers adjacent work."
+If a related plan or bead was noted: "Related: plan `{name}` / bead `{id}` covers adjacent work."
 
 ---
 
 ## Principles
 
-1. **Speed over perfection** — capture now, refine in `/ac-plan-init`
-2. **Group aggressively** — check existing files first, argue for consolidation
-3. **No duplicates** — check beads and plans before creating backlog items
-4. **Session-sized scope** — each file should be plannable in one session
-5. **Minimal questions** — only ask if genuinely unclear
-6. **Version targeting** — know which milestone it belongs to
-7. **Frontmatter is sacred** — always include `status: captured` for pipeline tracking
+1. **Speed over perfection** — capture now, think it through in `/ac-plan-init`.
+2. **Cohesion over volume** — group only into same-wave themes; never batch unrelated work (maintenance excepted).
+3. **Route by shape** — small + clear goes straight to a bead, not the backlog.
+4. **No version at capture** — write to `pool/`; `/ac-align` sequences it against live strategy when it's time to plan.
+5. **No duplicates** — check beads and plans before creating an item.
+6. **Strategy-aware, lightly** — infer `channel`/`horizon`, never block capture on them.
+7. **Frontmatter is the API** — always include `status: captured` for pipeline tracking.
 
 ---
 
-_Fast capture with grouping intelligence. For planning: `/ac-plan-init`. For pipeline status: `/ac-next`._
+_Fast capture into the pool. For planning: `/ac-plan-init`. For sequencing against strategy: `/ac-align`. For the human command center: `/ac-human-session`._

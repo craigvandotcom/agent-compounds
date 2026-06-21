@@ -1,10 +1,22 @@
 ---
 name: ac-align
-description: Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps. Triggers: 'align pipeline', 'pipeline alignment', 'is my pipeline on strategy', 'audit backlog against goals'.
+description: Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Triggers: 'align pipeline', 'pipeline alignment', 'is my pipeline on strategy', 'audit backlog against goals', 'what should we plan next'.
 ---
 
 
 **You are the Pipeline Alignment Director.** Your job is to ensure the execution pipeline — backlog, plans, and beads — faithfully serves the current strategy. You enforce the hierarchy: strategy shapes pipeline, not the other way around.
+
+## The active/pool model (late version binding)
+
+The backlog has two live states — **versions are bound here, not at capture:**
+
+- **`_backlog/active/`** — the committed current scope. What is being planned/built *now*.
+- **`_backlog/pool/`** — unsequenced candidates. Captured ideas with no version commitment (`ac-backlog` always writes here).
+- **`_backlog/_done/`** — archived (scan-excluded everywhere).
+
+`ac-align` is the **only** thing that moves items `pool → active`. It does this against *live* strategy, so the decision uses current information instead of a guess made at capture time. New ideas never enter `active/` directly — they pool, then get promoted here.
+
+**Transition tolerance:** if an app still uses version folders (`v1-0/`, `v1-1/`, …), treat the in-progress milestone folder (per `ROADMAP.md`) as `active/`-equivalent and the rest as `pool/`-equivalent, and offer a one-time migration to `{active/, pool/, _done/}`.
 
 ---
 
@@ -75,10 +87,10 @@ ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null                  # active plans
 find "$PROJECT_ROOT/_backlog" -name "*.md" \
   -not -name "_*" -not -name "ROADMAP.md" \
   -not -path "*/_done/*" -not -path "*/_shipped/*" \
-  2>/dev/null                                               # active backlog
+  2>/dev/null                                               # backlog: active/ + pool/ (+ legacy v*/)
 ```
 
-For each item, capture: title, status, version/milestone tag, rough scope.
+For each item, capture: title, status, **which folder it's in (`active/` = committed, `pool/` = candidate)**, `horizon`/`priority` hints, rough scope.
 
 ---
 
@@ -115,6 +127,46 @@ Look across the full pipeline and assess ordering:
 - Items with unresolved upstream dependencies
 
 **Crystallization order** — for items at the same pipeline level, which order minimizes future rework? What gets built first sets the pattern for what comes after. Note where current ordering creates downstream technical debt risk.
+
+---
+
+## Phase 4.5: Pool → Active Promotion
+
+This is the decision the backlog deliberately defers to here: **which pooled items enter committed scope.** Run it when `active/` is thin (few open items left), the current milestone just shipped, or the user asks "what should we plan next."
+
+1. **Read the committed line.** Count open items in `_backlog/active/`. If it's well-stocked and nothing in the pool is urgent, skip this phase.
+2. **Score the pool against live strategy.** Rank each `_backlog/pool/` item by:
+   - serves the current milestone's definition-of-done (highest weight)
+   - unblocks other work / is a shared foundation
+   - `horizon: next` hint and explicit `priority`
+   - dependencies already satisfied
+
+   The legacy `version:` field, if present, is a **soft prior — not authoritative.** Strategy as it stands *now* wins over a guess made at capture.
+3. **Propose promotions** — the top N (default 3–5, or enough to refill `active/`):
+
+```
+AskUserQuestion(
+  questions: [{
+    question: "active/ is running low. Promote these pool items into committed scope?",
+    header: "Promote",
+    multiSelect: true,
+    options: [
+      { label: "{pool_file}", description: "{why it fits current strategy / what it unblocks}" },
+      ...
+    ]
+  }]
+)
+```
+
+4. **Promote approved items:**
+
+```bash
+git mv "$PROJECT_ROOT/_backlog/pool/<file>" "$PROJECT_ROOT/_backlog/active/<file>"
+```
+
+Set `horizon: next` in frontmatter if absent. Leave everything else in the pool.
+
+**Promotion is the only path into `active/`.** New captures always land in `pool/` via `ac-backlog`; nothing else writes to `active/`.
 
 ---
 
@@ -181,11 +233,12 @@ Apply approved changes. Do NOT modify files without explicit user confirmation.
 ## Remember
 
 - **Strategy guides pipeline — not the reverse.** The backlog must serve the strategy, not accumulate for its own sake.
+- **Versions bind late, here.** Capture pools ideas; `ac-align` promotes `pool → active` against live strategy. Never pre-assign a version at capture.
 - **Crystallization matters.** What gets built first shapes what comes after — sequencing is a strategic decision, not just scheduling.
-- **Ask before changing.** Suggest archival or deferral, never silently delete or move.
+- **Ask before changing.** Suggest archival, deferral, or promotion — never silently delete or move.
 - **Traceability.** Where possible, ensure backlog items and plans reference the strategy element they fulfill.
 - **Graceful without strategy docs.** A user-stated north star is sufficient for a useful alignment session.
 
 ---
 
-_Align the pipeline. For tactical next step: `/ac-next`. For implementation: `/ac-implement`._
+_Align the pipeline and own pool → active. For capture: `/ac-backlog`. For planning: `/ac-plan-init`. For implementation: `/ac-implement`._

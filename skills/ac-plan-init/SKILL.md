@@ -31,7 +31,15 @@ CURRENT_BRANCH=$(git branch --show-current)
 echo "Planning on branch: $CURRENT_BRANCH"
 ```
 
-Plans can be created on any branch — wave branches, feature branches, or main. The plan file is committed wherever you are. Never stash or force a branch switch to satisfy this skill.
+**Plans always commit to main.** If on a wave branch, switch to main before doing any git work:
+
+```bash
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "On branch $CURRENT_BRANCH — switching to main (plans are docs, never branch work)"
+  git checkout main
+  git pull --rebase --autostash
+fi
+```
 
 ### Configuration
 
@@ -92,7 +100,7 @@ working_since: YYYY-MM-DD
 
 ### Signal Active Work (Agent Mail)
 
-Use the agent name registered at session start (from `macro_start_session`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/v1-0/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
+Use the agent name registered at session start (from `macro_start_session`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/active/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
 
 **Reserve the source item:**
 
@@ -445,7 +453,7 @@ git status --short
 
 ### Commit Plan Artifacts
 
-**Plans are low-risk documentation — commit directly to the current branch.**
+**Plans are docs — always commit to main** (branch policy: only code on wave branches).
 
 ```bash
 git add _plans/research/*.md
@@ -592,7 +600,7 @@ AskUserQuestion(
 - **Tests are designed in plan, built in implementation** — specs are hardcoded
 - **Artifacts survive compaction** — always read from files, not memory
 - **Progress file is compaction recovery** — parse it to know where you left off
-- **Plans commit to current branch** — low-risk documentation, always pushed
+- **Plans always commit to main** — docs never live on wave branches; switch to main in Phase 0 if needed
 - **WAIT for approval** — never proceed without the user's explicit approval
 
 ---
