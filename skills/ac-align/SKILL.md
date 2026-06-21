@@ -79,18 +79,9 @@ Identify internal gaps or inconsistencies in the strategy itself (e.g., a premiu
 
 ## Phase 2: Pipeline Scan
 
-Run simultaneously:
+**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog, in parallel) — that is the single, shared definition of how pipeline state is read; don't re-specify it here.
 
-```bash
-br list --json                                              # all beads
-ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null                  # active plans
-find "$PROJECT_ROOT/_backlog" -name "*.md" \
-  -not -name "_*" -not -name "ROADMAP.md" \
-  -not -path "*/_done/*" -not -path "*/_shipped/*" \
-  2>/dev/null                                               # backlog: active/ + pool/ (+ legacy v*/)
-```
-
-For each item, capture: title, status, **which folder it's in (`active/` = committed, `pool/` = candidate)**, `horizon`/`priority` hints, rough scope.
+Your lens on the board: for every backlog item, plan, and bead, note **which folder it's in** (`active/` = committed · `pool/` = candidate · legacy `v*/` = pre-migration), the `horizon`/`priority` hints, `status` (esp. `candidate` vs `captured` — see Phase 4.5), and rough scope — the inputs to the alignment audit and to promotion.
 
 ---
 

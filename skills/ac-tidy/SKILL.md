@@ -36,49 +36,13 @@ Read `AGENTS.md` for project context.
 
 ## Phase 1: Scan Everything
 
-Run all three scans. Collect structured data for reconciliation.
+**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog) — the single shared definition of how pipeline state is read. Collect it once; the rest of this skill reconciles it.
 
-### Scan Beads
+Your lens (the reconciliation inputs to pull from the board):
 
-```bash
-br list --json
-```
-
-Categorize:
-- **Closed beads** — status=closed or done
-- **Open beads** — status=open
-- **Beads with `unrefined` label** — not yet through `/ac-bead-refine`
-- **Epic beads** — have dependents (track child completion ratios)
-
-For each epic: count total children, closed children, open children.
-
-### Scan Plans
-
-```bash
-ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
-```
-
-For each plan (skip `README.md`, subdirectories):
-
-1. Read frontmatter for `status` field
-2. Check for `## Refinement Log` (indicates refinement has occurred)
-3. Check if referenced by any bead description (indicates beadified)
-4. Note `source_backlog` field if present
-
-### Scan Backlog
-
-```bash
-find "$PROJECT_ROOT/_backlog" -name "*.md" \
-  -not -name "_*" -not -name "ROADMAP.md" -not -name "BUSINESS-STRATEGY.md" \
-  -not -path "*/_done/*" -not -path "*/_shipped/*" -not -path "*/complete/*" \
-  -not -path "*/assets/*" -not -path "*/audits/*" \
-  2>/dev/null
-```
-
-For each backlog file:
-1. Read frontmatter `status` and `plans` fields
-2. Count unchecked tasks (`- [ ]`) vs checked (`- [x]`)
-3. Note which folder it's in — `active/` (committed) vs `pool/` (candidate). (Legacy `v*/` folders, if any remain, are pre-migration — flag them for the one-time `{active/, pool/}` migration that `/ac-align` offers.)
+- **Beads** — closed vs open; `unrefined`-labelled; epics with child completion ratios (total / closed / open); finding labels (`qa-finding` / `review-finding` / `hygiene-finding`) for the prune pass (Phase 4).
+- **Plans** — `status` (and infer it if frontmatter is missing → Phase 2e); whether each plan is **referenced by a bead** (= beadified → Phase 2b) and whether those beads are all closed (→ Phase 2c); `source_backlog` (→ Phase 2d).
+- **Backlog** — `status` + `plans` fields; checked vs unchecked task counts; which folder (`active/` = committed · `pool/` = candidate; flag any legacy `v*/` for the `{active/, pool/}` migration `/ac-align` offers).
 
 ---
 

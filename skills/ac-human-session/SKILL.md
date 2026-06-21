@@ -69,17 +69,20 @@ Run the chosen pre-passes (tidy before align), then proceed.
 
 ## Phase 2: Scan (parallel), then apply the loop boundary
 
-Gather state, **then filter out everything past the loop boundary** before presenting.
+**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply the human-session lens below, add the non-board reads, then **filter out everything past the loop boundary before presenting** (drop ready beads, in-flight waves, `loop-ready` plans — the loop owns those).
 
-### 2A. Decision Docket (PRIMARY — human-gate beads)
+### Your lens on the board
 
-The first-class channel for human-required work: `-t decision`/`-t task` beads with the `human-gate` label, pre-staged with a memo (context, options + trade-offs, recommendation). Agents enrich but never close them — they survive every autonomous sweep until the human decides.
+- **🔴 Decision Docket (PRIMARY)** = board beads with the `human-gate` label, open. The first-class channel for human-required work — pre-staged with a memo (context, options + trade-offs, recommendation); agents enrich but **never** close them, so they survive every autonomous sweep until the human decides. Covers decision beads (`-t decision`) **and dream proposals** (`dream-proposal` beads carry `human-gate` too — the memo is the proposal file). (`qa-blocker` is a *merge* gate, agent-resolvable — NOT human-gate, so it never appears here.)
+- **🟡 Plans awaiting sign-off** = board plans with `status: draft | refined` and **NOT** `loop-ready`. Most-invested first. (Drop every `loop-ready` plan — the loop owns it.)
+- **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan-init`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
+- **Loop awareness (count only)** = board ready beads + `loop-ready` plans + in-progress waves → a single header line, never itemized (tells the human the factory is running).
+
+### Extend the docket org-wide
+
+The Decision Docket is the org's single place to action decisions. At org level (root / software-lead session) or asked "across everything", sweep ALL `.beads/` repos, not just this one:
 
 ```bash
-# Current repo:
-br list --json | jq '[.[] | select(.labels // [] | index("human-gate")) | select(.status != "closed")]'
-
-# Org-wide (root + agent-compounds + apps with a .beads/):
 for repo in ~/Repos ~/Repos/neometa/software/agent-compounds \
             $(while IFS= read -r a; do echo ~/Repos/neometa/software/$a; done < ~/Repos/infrastructure/apps.list); do
   [ -d "$repo/.beads" ] || continue
@@ -88,41 +91,15 @@ for repo in ~/Repos ~/Repos/neometa/software/agent-compounds \
 done
 ```
 
-Dream proposals surface here too (`dream-proposal` label — the memo is the proposal file).
-
-### 2B. Other blocked-on-human
+### Non-board reads (session-specific — not in board-scan)
 
 ```bash
-br ready --json 2>/dev/null | jq '[.[] | select(.labels // [] | index("human-gate") | not)]'  # for the loop-awareness count only — NOT surfaced
-gh pr list --state open --json number,title,createdAt,labels 2>/dev/null   # PRs needing review/merge
-gh run list --limit 3 --json status,conclusion,name,createdAt 2>/dev/null  # failed CI
-curl -s -o /dev/null -w "%{http_code}" https://www.eat.zone 2>/dev/null    # prod health
+gh pr list --state open --json number,title,createdAt,labels 2>/dev/null   # 🔴 PRs needing review/merge
+gh run list --limit 3 --json status,conclusion,name,createdAt 2>/dev/null  # 🔴 failed CI
+curl -s -o /dev/null -w "%{http_code}" https://www.eat.zone 2>/dev/null    # 🔴 prod health
 ```
 
-Also scan `br list` for open beads explicitly blocked on a human (notes mentioning "waiting on", "needs manual", "requires account", "human decision") that are **not** already `human-gate` beads.
-
-### 2C. Plans awaiting sign-off
-
-```bash
-ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
-```
-
-For each plan read frontmatter. Keep ONLY those with `status: draft | refined` **and NOT `loop-ready`**. **Drop every `loop-ready` plan — the loop owns it.** Note refinement depth + recency (most-invested first).
-
-### 2D. Hopper (what enters planning next)
-
-```bash
-find "$PROJECT_ROOT/_backlog/active" -maxdepth 1 -name "*.md" 2>/dev/null   # ready to plan
-find "$PROJECT_ROOT/_backlog/pool"   -maxdepth 1 -name "*.md" 2>/dev/null   # promotion candidates
-```
-
-- **`active/` items** with `status: captured` and no plan yet → ready for `/ac-plan-init`.
-- **`pool/` items** → only relevant if `active/` is thin (offer `/ac-align` to promote).
-- **Triage candidates** — pool items with `status: candidate` (+ `source: triage:*`) awaiting human approval into the pool (the triage→backlog promotion path). Approve → `status: captured` (now a normal pool item `ac-align` can promote); or discard.
-
-### 2E. Loop awareness (count only)
-
-Count ready beads + `loop-ready` plans + in-progress waves. **This is a single header line, never itemized** — it tells the human what's flowing autonomously so they know the factory is running.
+Also flag open beads explicitly blocked on a human (notes "waiting on" / "needs manual" / "requires account" / "human decision") that aren't already `human-gate`.
 
 ---
 
