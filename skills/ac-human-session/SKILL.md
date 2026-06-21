@@ -118,7 +118,7 @@ find "$PROJECT_ROOT/_backlog/pool"   -maxdepth 1 -name "*.md" 2>/dev/null   # pr
 
 - **`active/` items** with `status: captured` and no plan yet → ready for `/ac-plan-init`.
 - **`pool/` items** → only relevant if `active/` is thin (offer `/ac-align` to promote).
-- **Triage candidates** — pool items with `source: triage:*` awaiting human approval into the pool (the triage→backlog promotion path).
+- **Triage candidates** — pool items with `status: candidate` (+ `source: triage:*`) awaiting human approval into the pool (the triage→backlog promotion path). Approve → `status: captured` (now a normal pool item `ac-align` can promote); or discard.
 
 ### 2E. Loop awareness (count only)
 

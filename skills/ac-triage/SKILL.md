@@ -1,6 +1,6 @@
 ---
 name: ac-triage
-description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings to beads. Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled.
+description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled.
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -24,10 +24,17 @@ It closes the Discovery→beads flywheel: real-user breakage becomes tracked wor
 human having to notice and report it.
 
 **Scope boundary:** ac-triage FETCHES + clusters external signal and routes each confirmed
-finding to **`ac-bead-capture`** (which owns classification, repo-routing, and dedupe). It
+finding **by shape** — defects to **`ac-bead-capture`** (which owns classification, repo-
+routing, and dedupe), feature/experience themes to the **backlog pool** as candidates. It
 does NOT ship builds (that's `ac-distribute`) and does NOT itself reimplement the bead-side
 conventions — it hands off. Headless, source-agnostic, cross-app; only the *sources* are
 app-specific.
+
+**Route by shape, not by source** (the same rule `ac-backlog` uses): a *defect* — something
+broken, a specific reproducible crash/error — becomes a **bead** (execution-ready). A *desire
+or pattern* — a feature request, a recurring UX friction across reports, anything needing
+design — becomes a **backlog candidate** (it needs planning, not a thin bead). Crashes/errors
+are almost always defects; beta feedback / filed issues / store reviews are often desires.
 
 **Loop guard:** beads created by triage carry a `triage,<source>` label + the source record
 id (e.g. the Sentry issue id / GitHub issue number) in the bead. NEVER re-import a finding
@@ -84,13 +91,17 @@ Record the new watermark per source AFTER a successful fetch.
   finding's first-seen release) — a crash that appeared right after wave X is a strong lead.
 - **Severity** per the app's bar: frequency × user-count × crash-vs-error × is-it-on-a-
   primary-journey. Drop noise (single-occurrence transient, known-3rd-party, sub-threshold).
-- **Dedupe against existing beads** BEFORE creating: search the repo's db for an open bead
-  with the same fingerprint/signature. Recurrence updates the existing bead (bump a
-  count/comment), it does NOT create a duplicate.
+- **Shape** each surviving finding → **defect** (broken → bead, Phase 3a) or **desire/pattern**
+  (feature request, recurring friction, needs-design → backlog candidate, Phase 3b). When
+  several feedback items express the *same* desire, cluster them into ONE theme.
+- **Dedupe before creating** — search BOTH stores: open beads with the same
+  fingerprint/signature (for defects) AND open `status: candidate` pool items covering the
+  same theme (for desires). Recurrence updates the existing bead/candidate (bump count /
+  append evidence), it does NOT create a duplicate.
 
-### Phase 3 — route to beads (hand off to ac-bead-capture)
+### Phase 3a — route DEFECTS to beads (hand off to ac-bead-capture)
 
-For each confirmed, deduped finding, create a typed bead via the `ac-bead-capture`
+For each confirmed, deduped **defect**, create a typed bead via the `ac-bead-capture`
 conventions (authority: `_shared/bead-conventions.md`):
 
 ```
@@ -105,21 +116,65 @@ br create -t bug --labels triage,<source>  \
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.
 
+### Phase 3b — route THEMES to the backlog pool (feature requests + recurring patterns)
+
+For each confirmed, deduped **desire/pattern**, write a backlog **candidate** directly into
+`_backlog/pool/` (headless — no interactive grouping; the human approves it into the pool from
+`ac-human-session`'s 🟢 hopper, where grouping/refinement intent is confirmed). This is the
+triage→backlog promotion path: real-user *desire* becomes a planning candidate without a human
+having to notice and file it.
+
+Filename `_backlog/pool/NNN-<slug>.md` (NNN = max+1 across `pool/` + `active/`):
+
+```markdown
+---
+status: candidate          # awaiting human approval into the pool (surfaced in ac-human-session 🟢)
+type: feature
+size: M                    # S | M | L
+channel: discovery         # product | discovery | content
+horizon: later
+source: triage:<source>
+source_ids: [<feedback/issue id>, ...]   # loop-guard — never re-promote these records
+dependencies: []
+---
+
+# <Theme> — <short description>
+
+One-line intent, synthesized from {N} reports.
+
+## Scope
+- <the requested capability / the recurring friction — one cohesive theme>
+
+## Evidence
+- {N}× since {date} · {source permalink(s)} · representative quote(s)
+
+## Notes
+```
+
+- **Loop-guard (same as beads):** record every contributing `source_id`; never re-promote a
+  record already mapped to a candidate OR a bead. Recurrence appends evidence to the existing
+  candidate — it does not create a second.
+- **Cohesion (same as ac-backlog):** one candidate = one coherent theme = one future wave.
+  Don't bundle unrelated desires; do cluster many reports of the *same* desire into one.
+- A candidate is NOT yet committed work — `ac-align` promotes it `pool → active` only after the
+  human approves it (`status: candidate → captured`).
+
 ### Phase 4 — report
 
 ```
 TRIAGE RUN  (<date>)
-sources:   sentry ✓ (12 new issues)  ·  asc ✓ (2 feedback)  ·  supabase — (not wired)
-clustered: 14 raw → 5 findings
-beads:     3 created (bd-xxxx bug, bd-yyyy bug, bd-zzzz investigation), 2 deduped to existing
-dropped:   9 (sub-threshold / known-3rd-party — listed)
+sources:    sentry ✓ (12 new issues)  ·  asc ✓ (2 feedback)  ·  supabase — (not wired)
+clustered:  14 raw → 5 findings (3 defects · 2 themes)
+beads:      3 created (bd-xxxx bug, bd-yyyy bug, bd-zzzz investigation), 1 deduped to existing
+candidates: 1 created (pool/061-offline-logging.md, from 4 feedback items) — awaiting approval in ac-human-session 🟢
+dropped:    9 (sub-threshold / known-3rd-party — listed)
 watermarks updated.
 ```
 
 ## Cadence
 
 Designed to run **scheduled + headless** (the VM is the natural host — it's pure API work,
-no Mac). A heartbeat/cron invokes it; findings land as beads the loop picks up (human-gate escalations surface in `/ac-human-session`).
+no Mac). A heartbeat/cron invokes it; defect findings land as beads the loop picks up, theme findings land as backlog candidates the human approves in `/ac-human-session`'s 🟢 hopper (human-gate escalations surface there too).
 Also runnable on demand ("triage crashes"). The high-leverage automation in the whole
 pipeline: it's the only step that manufactures work from *real users* instead of from the
 team's own ideas.
@@ -142,7 +197,10 @@ per-app severity bar, the dedupe-fingerprint convention, and any source-specific
 
 - **Fetch + cluster here; classify/route/dedupe via `ac-bead-capture`.** Don't reimplement
   the bead side.
-- **Dedupe against existing beads BEFORE creating** — recurrence updates, never duplicates.
+- **Route by shape, not source** — defects → beads (3a); feature/experience themes →
+  backlog candidates (3b). The same rule `ac-backlog` uses for human-captured ideas.
+- **Dedupe against existing beads AND candidates BEFORE creating** — recurrence updates
+  (bump count / append evidence), never duplicates.
 - **One bead per fingerprint**, with a source link + suspected wave. No cold trails.
 - **Sentry first** — symbolicated stacks beat sparse beta-crash APIs.
 - **A source not configured is skipped, not an error** — light them up as they're wired.

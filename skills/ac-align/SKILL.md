@@ -135,7 +135,7 @@ Look across the full pipeline and assess ordering:
 This is the decision the backlog deliberately defers to here: **which pooled items enter committed scope.** Run it when `active/` is thin (few open items left), the current milestone just shipped, or the user asks "what should we plan next."
 
 1. **Read the committed line.** Count open items in `_backlog/active/`. If it's well-stocked and nothing in the pool is urgent, skip this phase.
-2. **Score the pool against live strategy.** Rank each `_backlog/pool/` item by:
+2. **Score the pool against live strategy.** Consider only `status: captured` pool items — **skip `status: candidate`** (triage-promoted items not yet approved by the human in `ac-human-session`'s 🟢 hopper; they aren't committable until approved). Rank each remaining `_backlog/pool/` item by:
    - serves the current milestone's definition-of-done (highest weight)
    - unblocks other work / is a shared foundation
    - `horizon: next` hint and explicit `priority`
