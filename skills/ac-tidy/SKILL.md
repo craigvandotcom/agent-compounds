@@ -281,8 +281,8 @@ git push
 - **Beads are source of truth** — once beadified, the plan is archival
 - **Frontmatter is the API** — pipeline tracking depends on structured metadata
 - **Suggest, don't force merges** — consolidation is a recommendation
-- **Run before `/ac-next`** — clean pipeline makes better recommendations
+- **Run before `/ac-align` or `/ac-human-session`** — a clean pipeline makes better recommendations
 
 ---
 
-_Pipeline janitor — archive, reconcile, flag, suggest. For capturing: `/ac-backlog`. For next action: `/ac-next`._
+_Pipeline janitor — archive, reconcile, flag, suggest. For capturing: `/ac-backlog`. For the human command center: `/ac-human-session`._

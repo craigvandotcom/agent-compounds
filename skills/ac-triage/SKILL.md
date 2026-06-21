@@ -119,7 +119,7 @@ watermarks updated.
 ## Cadence
 
 Designed to run **scheduled + headless** (the VM is the natural host — it's pure API work,
-no Mac). A heartbeat/cron invokes it; findings land as beads the next `ac-next` surfaces.
+no Mac). A heartbeat/cron invokes it; findings land as beads the loop picks up (human-gate escalations surface in `/ac-human-session`).
 Also runnable on demand ("triage crashes"). The high-leverage automation in the whole
 pipeline: it's the only step that manufactures work from *real users* instead of from the
 team's own ideas.

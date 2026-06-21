@@ -199,7 +199,7 @@ lesson). **Replaces the weekly CYCLE once daily coverage is proven** — and onl
 ## Mode: REVIEW
 
 Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
-**decision docket** (`/ac-human-next` surfaces the same beads org-wide; either
+**decision docket** (`/ac-human-session` surfaces the same beads org-wide; either
 entry point works, the contract is identical).
 
 1. List open `dream-proposal` beads across the beads repos (root, agent-compounds,

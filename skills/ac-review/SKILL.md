@@ -498,7 +498,7 @@ br create -t decision --labels "human-gate,review-finding" \
 br dep add <downstream-bead-id> <decision-bead-id>
 ```
 
-Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-next` when Craig reviews the docket.
+Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-session` when Craig reviews the docket.
 
 **Only use AskUserQuestion when explicitly in an interactive session** (human is present at the terminal, NOT a scheduled or headless run):
 

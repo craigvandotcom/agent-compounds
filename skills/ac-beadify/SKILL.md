@@ -178,7 +178,7 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 
 ### Label All Beads as Unrefined
 
-**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-next` and `/ac-implement` that these beads have not yet been through `/ac-bead-refine`.
+**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-implement` (and the loop's prep step) that these beads have not yet been through `/ac-bead-refine`.
 
 ```bash
 br label add <id> "unrefined"
