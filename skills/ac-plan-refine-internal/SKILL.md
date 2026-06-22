@@ -7,6 +7,8 @@ description: Use to DEEPEN an existing plan via multi-agent (internal, no extern
 
 **Purpose:** Iterative multi-agent refinement of a plan using internal Claude subagents as focused lenses. Evidence-backed findings only; codebase verification mandatory; repeat until convergence.
 
+**Method:** the scope-oscillation lenses (in-the-small / in-the-large / diverge / premortem / synthesize) — see the `planning` skill for the methodology this stage applies.
+
 ## When to Use
 
 - A drafted plan needs to get sharper and deeper, without external models.

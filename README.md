@@ -43,7 +43,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **supabase** | Supabase CLI, migrations, RLS, Postgres patterns |
 | **testing** | Vitest unit/component/integration test authoring |
 | **capacitor** | TypeScript dev in Capacitor (native wrap) projects |
-| **planning** | Plan creation + iterative refinement (scope oscillation) |
+| **planning** | Scope-oscillation methodology reference (the lenses the `ac-plan-*` chain applies — not a direct entry point) |
 | **brainstorming** | Divergent–convergent pre-planning ideation |
 | **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |

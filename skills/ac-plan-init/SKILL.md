@@ -6,6 +6,8 @@ description: Use to CREATE a first-draft implementation plan from a backlog item
 
 **You are the orchestrator creating implementation plans.** Three explorers investigate in parallel. You synthesize findings into an actionable plan with test specs. **DO NOT implement code — only plan.**
 
+> **Method:** this chain applies the scope-oscillation planning methodology — see the `planning` skill for the underlying lenses.
+
 ---
 
 ## I/O Contract
