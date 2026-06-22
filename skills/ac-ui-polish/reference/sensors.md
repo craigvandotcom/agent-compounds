@@ -216,6 +216,50 @@ rg -n --glob '*.tsx' -e 'rounded-(sm|md|lg|xl|2xl|3xl)\b' <component-dirs> \
 Identical radius on a tightly-padded (`p-1`/`p-2`/`p-3`) parent+child is the bug;
 large padding (> ~24px / `p-6`+) is exempt (treat as separate surfaces).
 
+## Sensor 9 — Webfont actually renders — catches "the brand font silently never loaded"
+
+The spec names a font (`design.md` `typography.*.fontFamily`). Whether that font is
+**declared** is not whether it **renders** — a dropped `@import`, a build that strips a
+manual `<link>`, a CDN that fails offline, or a wrong family name all leave the app on its
+fallback while every naive check says "fine." **`document.fonts.check('16px "X"')` and
+`getComputedStyle(el).fontFamily` are FALSE-POSITIVE traps** — `check()` returns true when
+no matching face needs loading (i.e. it resolved via fallback), and computed style only
+echoes the CSS *declaration*, not what painted. (This shipped a real regression: a brand
+font declared via a second `@import` that the bundle dropped — every naive check passed,
+the app rendered the system font app-wide, caught only by the measurement below.)
+
+**Ground truth = glyph-width.** Render a string in the target family backed by a
+known-different fallback; if the width equals the *pure fallback*, the webfont didn't load.
+Use **two** different fallbacks (monospace AND serif) so a coincidental width match can't
+fool it. Run once per route on the LIVE DOM (font is theme-independent — no need to sweep
+themes), after `document.fonts.ready`:
+
+```js
+(async () => {
+  await document.fonts.ready;
+  // FAMILIES = the app's declared fonts from CORE/design.md typography.fontFamily
+  const FAMILIES = ['General Sans'];           // ← replace per app
+  const measure = (family) => { const s = document.createElement('span');
+    s.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:100px ' + family;
+    s.textContent = 'WwMmIl1 mgqypj 0123'; document.body.appendChild(s);
+    const w = s.getBoundingClientRect().width; s.remove(); return w; };
+  const out = FAMILIES.map(f => {
+    const vsMono = Math.abs(measure(`"${f}", monospace`) - measure('monospace'));
+    const vsSerif = Math.abs(measure(`"${f}", serif`) - measure('serif'));
+    return { family: f, renders: vsMono > 1 && vsSerif > 1,    // differs from BOTH fallbacks
+             fontsCheckSays: document.fonts.check(`16px "${f}"`) };  // the lying signal, for contrast
+  });
+  return JSON.stringify({ fonts: out });
+})()
+```
+
+- **Pass = `renders: true` for every declared font.** `renders:false` while `fontsCheckSays:true`
+  is the exact false-positive footprint → ≥ High (the app is not on its specified typeface).
+- Corroborate: `[...document.fonts].map(f=>f.family+':'+f.status)` should list the font as
+  `loaded`; `performance.getEntriesByType('resource')` should show its file fetched.
+- Fix path when it fails: prefer **`next/font/local`** (self-host) over a CDN `@import`/`<link>` —
+  build-safe and offline-correct (`recipes.md` §11).
+
 ---
 
 ## Running the sensors
@@ -224,6 +268,9 @@ large padding (> ~24px / `p-6`+) is exempt (treat as separate surfaces).
    localStorage key + root class, or `prefers-color-scheme` emulation), then run
    Sensor 1 (contrast) and Sensor 4 (false-clean) on each captured route. Never
    audit a single theme.
+1b. **Once per route (live, theme-independent).** Sensor 9 (webfont renders) — run it
+   on the first rendered route; the font is global, so a single `renders:false` is an
+   app-wide finding. Cheap insurance against shipping on the fallback font.
 2. **Once at repo level.** Sensors 2, 3, 5, 6, 7, and 8 are static greps — run them
    over the codebase before touching the browser; they point you straight at the
    offending lines. (5–8 enforce the canonical values in `recipes.md`.)

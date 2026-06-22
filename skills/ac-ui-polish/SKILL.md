@@ -233,3 +233,4 @@ inventing one — but the app's `design.md` token always overrides it:
 | **Changing code to have a diff** | "Already at the bar → no change" is a passing outcome. Elevation needs a cited gap, never churn |
 | **Inventing a value** (radius / press-scale / shadow / easing / stagger) when a canonical one exists | Pull the constant from `reference/recipes.md`; deviate only with a cited app `design.md` token |
 | **Identical radius on nested padded surfaces** | Concentric: `outer = inner + padding` — the #1 "feels off" tell (`recipes.md` §1, greppable via Sensor 8) |
+| **"The brand font is set" without measuring it render** | `document.fonts.check()` and computed `fontFamily` are FALSE-POSITIVE traps — both pass on a silent fallback. Prove the font actually *renders* with the glyph-width test (`sensors.md` Sensor 9). Load via `next/font/local` (self-host), not a CDN `@import`/`<link>` that the build can drop |

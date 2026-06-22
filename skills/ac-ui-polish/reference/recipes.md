@@ -232,6 +232,13 @@ blanket it.
   past ~6 lines** (Chromium) / ~10 (Firefox); it's for short text only.
   **`text-wrap: pretty`** (`text-pretty`) is the default for short-to-medium body —
   kills last-line orphans at any length. **Long text (10+ lines): neither.**
+- **Load the app font via `next/font/local`** (self-hosted woff2), not a CDN
+  `@import`/`<link>`: a second bare `@import` is silently dropped from the compiled
+  bundle, an App-Router `<head>` `<link>` isn't reliably emitted, and a CDN fails
+  offline in a Capacitor shell. Expose it as a CSS var, set it as the Tailwind `sans`
+  family, and **verify it actually renders** with the glyph-width test (`sensors.md`
+  Sensor 9) — never trust `fonts.check()` / computed `fontFamily` (both pass on a
+  fallback).
 
 ## 12. Minimum hit area
 
