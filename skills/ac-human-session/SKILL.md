@@ -112,7 +112,8 @@ Order = distance from a stall: clear what's stopped, then feed backward. Omit an
 ```
 ### 🔴 Blocking — the line has stopped ({N})
    For each: {what} · {one-line memo/why} · → {action}
-   • {bead id} {decision title} — {memo summary}           → decide
+   • {bead id} {decision title} — {memo summary}           → decide        (tap-ready)
+   • {bead id} {decision title} ⚠ no memo                  → frame, then decide
    • CI {run} failed                                        → investigate
    • {N} dependabot/grouped PRs                             → review as ONE batch
    • PR #{n} {substantive title}                            → review/merge (one each)
@@ -150,17 +151,27 @@ AskUserQuestion(
 
 **Per item type — present, then one tap:**
 
-- **🔴 Decision (human-gate bead):** show the memo in 2–4 lines (context · options · recommendation), then put the memo's **options as buttons**, recommendation first + `(Recommended)`:
-  ```
-  AskUserQuestion(question: "{decision title}", options: [{memo option A (Recommended)}, {B}, {C}, {Defer}])
-  ```
-  On tap → record + execute + close + **confirm the ripple**, then auto-advance:
+- **🔴 Decision (human-gate bead) — check the memo first:** a tap-able decision needs a *pre-staged memo* — context · options with trade-offs · a recommendation (the `-t decision` contract in `_shared/bead-conventions.md`). Assess the bead's description + comments:
+    - **Memo present** → show it in 2–4 lines, then put its **options as buttons**, recommendation first + `(Recommended)`:
+      ```
+      AskUserQuestion(question: "{decision title}", options: [{option A (Recommended)}, {B}, {C}, {Defer}])
+      ```
+    - **Memo missing/thin** (a bare "CRAIG: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer:
+      ```
+      AskUserQuestion(question: "{title} has no decision memo. Handle how?", options: [
+        { label: "Frame it now (Recommended)", description: "I research the fork + draft options + a recommendation, then you tap" },
+        { label: "Decide raw",                 description: "Skip the memo — tell me the call directly" },
+        { label: "Skip",                        description: "Leave it for later" } ])
+      ```
+      On **Frame it** → research the fork, write a proper memo onto the bead (`br comments add <id> "MEMO: …"` or update its description, per the convention), then present its options as buttons (above). The dashboard **self-heals** bare beads into tap-ready ones.
+  On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance:
   ```bash
   br comments add <id> "DECISION (<human>): <choice> — <why>"
   # ...carry out consequences...
   br close <id> --reason "<what was decided/done>"
   ```
   Report: `✓ closed bd-<id> — unblocked bd-<x>, bd-<y>`.
+  **Upstream is the real fix:** decision beads should *arrive* pre-staged (bead-conventions §Decision beads). Frame-on-demand is the catch-net, not the norm — if a filer keeps shipping bare decisions, fix the filer, not just the symptom here.
 - **🔴 PRs — batch the trivial:** dependabot/grouped bumps → ONE prompt ("Merge the N green dependabot PRs?"), not N. Substantive PRs → one each.
 - **🔴 CI / prod:** summarize the failure in a line, then `AskUserQuestion`: "Investigate now / File a bead / Skip."
 - **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-plan-refine-internal {path}`.

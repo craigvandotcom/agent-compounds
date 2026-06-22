@@ -52,8 +52,10 @@ The contract that keeps autonomous sweeps safe:
    fork becomes a decision bead + blocked downstream, and the sweep
    continues elsewhere.
 
-Batching: `ac-human-next` presents all open `human-gate` beads as the
-**decision docket** for focused sit-down sessions.
+Batching: `ac-human-session` presents all open `human-gate` beads as the
+**decision docket** for focused sit-down sessions — and enforces this contract
+at the dashboard: a decision arriving without a memo is flagged `⚠ no memo` and
+framed on demand (it cannot be a one-tap choice without staged options).
 
 ## Lineage
 
