@@ -44,26 +44,11 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ---
 
-## Phase 1: Freshen the Board (gated, optional)
+## Phase 1: Render first — freshen is an action, not a gate
 
-A stale or off-strategy board makes the docket noisy and the hopper wrong. Offer to freshen first — **these are writes, so confirm; never run them silently** (exception: headless/scheduled runs skip the offer and go straight to Phase 2 read-only):
+Sit-down speed matters: **show the board before asking anything.** The human came to see what needs them, not to answer a setup question. Go straight to Scan (Phase 2) → render (Phase 3/4).
 
-```
-AskUserQuestion(
-  questions: [{
-    question: "Freshen the board before we start?",
-    header: "Pre-pass",
-    multiSelect: true,
-    options: [
-      { label: "Tidy (Recommended)", description: "/ac-tidy — archive done items, reconcile pipeline state" },
-      { label: "Align", description: "/ac-align — reconcile to strategy + promote pool → active if active is thin" },
-      { label: "Skip — straight to the board", description: "Scan as-is" }
-    ]
-  }]
-)
-```
-
-Run the chosen pre-passes (tidy before align), then proceed.
+Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option inside the action loop** (Phase 5), never an upfront gate. Proactively suggest it only when the board looks **stale** — open beads that look done, a fat finding-bead pile, or `active/` empty while `pool/` is full — as a one-line header hint (`⚠ board may be stale — /ac-tidy`). Headless runs skip freshen entirely.
 
 ---
 
@@ -110,13 +95,13 @@ Salvaged from the old `ac-next` funnel view — give the human the whole board a
 ```
 ## Command Center — {project | org-wide}
 
-Funnel:  {active_ready} ready-to-plan · {plans_pending} plans awaiting you · {pool} pooled · {docket} decisions
-🤖 Loop:  {ready_beads} beads + {loop_ready_plans} plans flowing autonomously{, {in_progress} in-flight}
+Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ stale hint, if any}
+🤖 Loop:   {ready_beads} beads + {loop_ready_plans} plans flowing autonomously{, {in_progress} in-flight} — you don't touch these
 
 ⚡ {one-line sequence note IF reordering is warranted — e.g. "approve plan X before promoting pool, it unblocks 3 items"; omit if order is fine}
 ```
 
-No analysis theater. The `⚡` line appears only when there's a real sequencing call to make.
+The first line is the whole sit-down in one glance (lead with it). Rough the `~{est} min` from item counts (decision ≈ 1–2 min, plan approve ≈ 2 min, CI ≈ 5). No analysis theater — the `⚡` line appears only when there's a real sequencing call to make.
 
 ---
 
@@ -128,9 +113,10 @@ Order = distance from a stall: clear what's stopped, then feed backward. Omit an
 ### 🔴 Blocking — the line has stopped ({N})
    For each: {what} · {one-line memo/why} · → {action}
    • {bead id} {decision title} — {memo summary}           → decide
-   • PR #{n} {title}                                        → review/merge
    • CI {run} failed                                        → investigate
-   (org-wide: group by repo)
+   • {N} dependabot/grouped PRs                             → review as ONE batch
+   • PR #{n} {substantive title}                            → review/merge (one each)
+   (org-wide: group by repo · batch trivial, itemize substantive)
 
 ### 🟡 Feed the builders — next batch needs your sign-off ({N})
    Plans waiting on you; approving makes them loop-ready and they leave your view.
@@ -144,19 +130,43 @@ Order = distance from a stall: clear what's stopped, then feed backward. Omit an
 
 ---
 
-## Phase 5: Act (walk the platter)
+## Phase 5: Drive the action loop (interactive · exit-first · auto-advance)
 
-For the chosen item, execute its silver-platter action:
+**Don't dump the dashboard and wait.** After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically. The dashboard is for seeing; this loop is for doing.
 
-- **🔴 Decision (human-gate bead):** present the memo → human states the decision → record it → execute consequences → close the bead; downstream blocked beads unblock automatically.
+**Pick-next prompt** (when several items remain — `AskUserQuestion`, max 4 options, so offer the top of the queue + escape hatches):
+
+```
+AskUserQuestion(
+  question: "Next? (clearing 🔴 first)",
+  options: [
+    { label: "{top 🔴 item, short}",  description: "{what acting does}" },
+    { label: "{next 🔴/🟡 item}",     description: "..." },
+    { label: "Freshen (tidy/align)",  description: "Board looks stale — reconcile first" },   // include only if stale
+    { label: "Done for now",          description: "Stop — hand off to the loop" }
+  ]
+)
+```
+
+**Per item type — present, then one tap:**
+
+- **🔴 Decision (human-gate bead):** show the memo in 2–4 lines (context · options · recommendation), then put the memo's **options as buttons**, recommendation first + `(Recommended)`:
+  ```
+  AskUserQuestion(question: "{decision title}", options: [{memo option A (Recommended)}, {B}, {C}, {Defer}])
+  ```
+  On tap → record + execute + close + **confirm the ripple**, then auto-advance:
   ```bash
   br comments add <id> "DECISION (<human>): <choice> — <why>"
   # ...carry out consequences...
   br close <id> --reason "<what was decided/done>"
   ```
-- **🔴 PR / CI / prod:** review & merge the PR, investigate the failed run, or escalate the outage.
-- **🟡 Plan — approve:** present a tight summary → on approval set `loop-ready` in frontmatter (the explicit hand-off signal; the plan now leaves this view and the loop will beadify + implement it). On "needs work" → `/ac-plan-refine-internal {path}` (or `/ac-plan-clean`).
-- **🟢 Hopper:** active item → `/ac-plan-init` (reference `_backlog/active/{file}`); replenish → `/ac-align` (promote `pool → active`); triage candidate → approve into the pool (keep) or discard.
+  Report: `✓ closed bd-<id> — unblocked bd-<x>, bd-<y>`.
+- **🔴 PRs — batch the trivial:** dependabot/grouped bumps → ONE prompt ("Merge the N green dependabot PRs?"), not N. Substantive PRs → one each.
+- **🔴 CI / prod:** summarize the failure in a line, then `AskUserQuestion`: "Investigate now / File a bead / Skip."
+- **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-plan-refine-internal {path}`.
+- **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac-plan-init`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
+
+**Auto-advance:** after each action, confirm the result + ripple, then immediately present the next item — never re-render the whole dashboard mid-flow. Stop when the human picks "Done" or every tier is empty.
 
 **Migration duty:** any human-pending item found in a legacy file scan (e.g. `_backlog-manual/`, plan `needs-approval`) that is NOT yet a bead → convert to a `human-gate` bead (`-t decision` for choices, `-t task` for manual actions) so the docket stays the system of record. File scans are a safety net, not the source of truth.
 
@@ -191,11 +201,12 @@ AskUserQuestion(
 
 1. **The loop boundary is sacred** — never surface ready beads, in-flight waves, or loop-ready plans. If the loop can handle it, it's not your concern.
 2. **Exit-first ordering** — clear what's stalled (🔴), then feed the builders (🟡), then stock the hopper (🟢). Distance from a stall, not category neatness.
-3. **Human time is scarce** — only surface what genuinely needs a human. If a tier is empty, say so and move on. No nag.
-4. **Silver platter** — every item carries its one-click next action; the human decides, you execute.
-5. **Writes are gated** — tidy/align/approve/promote are offered and confirmed, never silent (except headless runs).
-6. **Capture is a separate moment** — parking a new idea is `/ac-backlog`, not this session.
-7. **The docket is the system of record** — migrate stray human-pending file items into `human-gate` beads as you find them.
+3. **Human time is scarce** — only surface what genuinely needs a human. Lead with the one-line "needs you" + a time estimate. If a tier is empty, say so and move on. No nag.
+4. **Tap, not type** — every action is a button (`AskUserQuestion`), never "tell me your choice." Decisions show the memo's options with the recommendation pre-marked; the human taps and you execute. Batch the trivial (dependabot PRs, chores) into one tap.
+5. **Drive, don't dump** — render the board, then *conduct* it: act on one item, confirm the ripple, auto-advance to the next. Don't print a wall and wait.
+6. **Writes are gated** — tidy/align/approve/promote are offered and confirmed, never silent (except headless runs). Freshen is an in-loop action, not an upfront gate — show the board first.
+7. **Capture is a separate moment** — parking a new idea is `/ac-backlog`, not this session.
+8. **The docket is the system of record** — migrate stray human-pending file items into `human-gate` beads as you find them.
 
 ---
 
