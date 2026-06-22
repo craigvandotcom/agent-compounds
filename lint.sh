@@ -279,8 +279,14 @@ if [ -z "$FIRST_SKILL" ]; then
   fail "deploy.sh dry-run self-test: could not find any skill to test with"
 else
   DRYRUN_TMP=$(mktemp -d)
-  "$AC_ROOT/deploy.sh" "$DRYRUN_TMP" --skills "$FIRST_SKILL" -n >/dev/null 2>&1
+  DRYRUN_EXIT=0
+  "$AC_ROOT/deploy.sh" "$DRYRUN_TMP" --skills "$FIRST_SKILL" -n >/dev/null 2>&1 || DRYRUN_EXIT=$?
   DRYRUN_CONTENTS=$(ls -A "$DRYRUN_TMP" 2>/dev/null || true)
+  # A crash before any write would also leave the dir empty — so check exit code
+  # too, or the inertness test passes for a broken deploy.sh.
+  if [ "$DRYRUN_EXIT" -ne 0 ]; then
+    fail "deploy.sh --dry-run exited $DRYRUN_EXIT (expected 0)"
+  fi
   # clean up temp dir (use rmdir on empty or remove files only if truly empty)
   if [ -z "$DRYRUN_CONTENTS" ]; then
     rmdir "$DRYRUN_TMP" 2>/dev/null || true

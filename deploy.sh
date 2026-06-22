@@ -161,8 +161,13 @@ print(os.path.normpath(t))
       rm "$link"
       echo "  pruned (orphan) ${link#$TARGET/} -> $current_target"
     fi
-  done < <(find "$dir" -maxdepth 1 -type l)
+  done < <(/usr/bin/find "$dir" -maxdepth 1 -type l)
 }
+
+# Fail loud if the source tree is missing — otherwise list_skills/list_agents
+# return empty and we'd silently deploy nothing (e.g. AC_ROOT misdetected).
+[ -d "$AC_ROOT/skills" ] || { echo "error: $AC_ROOT/skills not found — is AC_ROOT correct?" >&2; exit 2; }
+[ -d "$AC_ROOT/agents" ] || { echo "error: $AC_ROOT/agents not found — is AC_ROOT correct?" >&2; exit 2; }
 
 echo "Deploying agent-compounds -> $TARGET"
 
