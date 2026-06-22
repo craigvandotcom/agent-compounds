@@ -188,6 +188,7 @@ This skill *orchestrates* — it calls these in, it doesn't duplicate their cont
 | `reference/sensors.md` | **At AUDIT, before eyes** — contrast sweep, hardcoded-colour grep, token symmetry |
 | `workflows/whole-app-workflow.md` | Whole-app mode **with multi-agent opt-in** — the fan-out Workflow template |
 | `reference/critique-polish.md` | At AUDIT — the anti-slop checklist + scoring rubric (the taste layer) |
+| `reference/recipes.md` | **At ELEVATE — the canonical paste-able values** (concentric radius, shadow-as-border, press-scale, icon-swap, enter/exit, image outline, hit-area, transition/will-change). The token-override rule lives here: app token > generic constant. |
 | `reference/visual-craft.md` | When elevating appearance: type, spacing, depth, imagery, layout |
 | `reference/interaction-and-feel.md` | When elevating micro-interactions, states, motion, gestures, haptics |
 | `reference/perceived-performance.md` | When the UI feels slow/janky despite being functionally fine |
@@ -196,7 +197,10 @@ This skill *orchestrates* — it calls these in, it doesn't duplicate their cont
 
 ## Quick Reference — the elevation passes
 
-Run these as ordered sweeps over the target (detail in the reference files):
+Run these as ordered sweeps over the target (detail in the reference files). When a
+pass calls for a specific value (a radius, press-scale, shadow, easing, stagger
+delay), pull the canonical constant from **`reference/recipes.md`** rather than
+inventing one — but the app's `design.md` token always overrides it:
 
 1. **Consistency** — does it use the app's tokens, scale, primitives, pillar?
 2. **Typography** — ramp, line-height, measure, letter-spacing, weight contrast
@@ -227,3 +231,5 @@ Run these as ordered sweeps over the target (detail in the reference files):
 | **Inferring quality without rendering** | A route you didn't see is not audited. Capture it (deployed URL if local auth blocks it) before calling it conformant |
 | **Visual-only audit** (no sensors) | Eyes can't see a 3.9:1 ratio or a raw `#0c1014`. Run `sensors.md` *before* the rubric |
 | **Changing code to have a diff** | "Already at the bar → no change" is a passing outcome. Elevation needs a cited gap, never churn |
+| **Inventing a value** (radius / press-scale / shadow / easing / stagger) when a canonical one exists | Pull the constant from `reference/recipes.md`; deviate only with a cited app `design.md` token |
+| **Identical radius on nested padded surfaces** | Concentric: `outer = inner + padding` — the #1 "feels off" tell (`recipes.md` §1, greppable via Sensor 8) |

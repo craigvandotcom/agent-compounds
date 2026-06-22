@@ -60,19 +60,23 @@ Score each item. Cite `file:line` and a concrete fix.
 - [ ] Restrained color — accent used with intent, not rainbow
 - [ ] No default-template gradient (the purple/blue 45° AI-default look)
 - [ ] Borders/dividers subtle (low-contrast hairlines), not heavy black lines
+- [ ] Nested rounded surfaces are concentric (`outer = inner + padding`) — not identical radii (`recipes.md` §1)
+- [ ] Elevation borders use a layered shadow, not a solid line, where appropriate (`recipes.md` §2)
 - [ ] Sufficient contrast for text (defer the math to `web-design-guidelines`)
 
 ### E. Imagery & iconography
 - [ ] Real / owned imagery over generic stock or obviously-AI images
 - [ ] No mismatched art styles mixed in one view
 - [ ] Single icon family at a consistent weight/size; no mixed sets
-- [ ] Icons carry meaning, optically aligned with their labels
+- [ ] Icons carry meaning, optically aligned with their labels (`recipes.md` §7)
 - [ ] Images have correct aspect ratios; no squish/stretch/blurry upscaling
+- [ ] Content images have a `1px` pure-black/white /10 outline — never tinted (`recipes.md` §3)
 
 ### F. Interaction & states (see `interaction-and-feel.md`)
-- [ ] Interactive elements have hover/press/focus feedback
+- [ ] Interactive elements have hover/press/focus feedback (press-scale `0.96`, never <`0.95` — `recipes.md` §4)
 - [ ] Empty, loading, error, success states all designed (not just happy path)
-- [ ] Transitions explain state changes; nothing pops in/out abruptly
+- [ ] Transitions explain state changes; nothing pops in/out abruptly; no `transition: all` (`recipes.md` §9)
+- [ ] Interactive state uses interruptible CSS transitions, not one-shot keyframes (`recipes.md` §8)
 - [ ] Touch targets ≥ 44×44px; adequate spacing between tap targets
 - [ ] Disabled states clearly distinct; destructive actions clearly marked
 

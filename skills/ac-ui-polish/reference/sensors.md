@@ -140,6 +140,82 @@ marking any zero-content / empty-list cell audited, run:
 - Pair with the captured **console errors** for the route (the crawl primitive
   emits them): console noise on a "clean" screen is a finding.
 
+## Sensor 5 — Transition specificity — catches `transition: all`
+
+`transition: all` (and Tailwind's bare `transition`) makes the browser watch every
+property and fires unintended transitions on colour/padding/shadow. Every recipe in
+`recipes.md` names its properties; this finds the violations.
+
+```bash
+# CSS: literal `transition: all` / `transition-property: all`
+rg -n --glob '*.css' --glob '*.scss' -e 'transition(-property)?\s*:\s*all' <component-dirs>
+
+# Tailwind: bare `transition` token (= transition-property: all).
+# Allowed forms have a suffix/bracket: transition-transform, transition-colors,
+# transition-[scale,opacity], transition-none — those must NOT match.
+rg -n --glob '*.tsx' -e '(^|["\s])transition(?=["\s])' <component-dirs>
+
+# will-change misuse: `all`, or non-compositable props (background/color/etc.)
+rg -n --glob '*.{css,scss,tsx}' -e 'will-change:\s*all' \
+  -e 'will-change:\s*(background|border|color|width|height|top|left|margin|padding)' <component-dirs>
+```
+
+**Pass = zero hits.** A bare-`transition` hit is ≥ Medium; `transition: all` on an
+interactive element that also changes colour/shadow is ≥ High (visible unwanted
+fades). Fix → name the properties (`recipes.md` §9–10).
+
+## Sensor 6 — Image outline — catches missing / tinted edges
+
+`recipes.md` §3: every content `<img>`/`Image` gets a `1px` **pure black/white** /10
+outline, never tinted. Both halves are greppable.
+
+```bash
+# Tinted outline = always wrong (picks up surface colour, reads as dirt)
+rg -n --glob '*.tsx' -e 'outline-(slate|zinc|neutral|gray|stone)-' <component-dirs>
+
+# Images — eyeball the hits for a missing or non-black/white outline class.
+# (Presence is heuristic; flag any <img>/<Image> with no outline-*/-outline-offset.)
+rg -n --glob '*.tsx' -e '<(img|Image)\b' <component-dirs>
+```
+
+**Triage:** a tinted-outline hit is a finding (≥ Medium) — switch to
+`outline-black/10 dark:outline-white/10`. A content image with **no** outline is a
+Low/Medium polish gap (decorative/full-bleed/avatar-with-own-treatment are
+legitimate exceptions — judgement call, not auto-fail).
+
+## Sensor 7 — Press-scale — catches exaggerated / missing tactile feedback
+
+`recipes.md` §4: press-scale defaults to `0.96`, **never below `0.95`**.
+
+```bash
+# Sub-0.95 press scale (active:scale-[0.9], scale-90, whileTap scale 0.9, …)
+rg -n --glob '*.tsx' \
+  -e 'active:scale-\[0\.(9[0-4]|[0-8][0-9])\]' \
+  -e 'active:scale-(75|80|90)\b' \
+  -e 'whileTap=\{\{[^}]*scale:\s*0\.(9[0-4]|[0-8])' <component-dirs>
+```
+
+**Pass = zero hits.** Each is a finding (≥ Low): raise to `0.96` (or the app's
+press-scale token). *Missing* press feedback on primary buttons is a taste-layer
+call for the rubric, not this grep.
+
+## Sensor 8 — Concentric radius (heuristic) — catches drifting nested corners
+
+`recipes.md` §1: nested rounded surfaces need `outer = inner + padding`. Not fully
+static-decidable, but the common slop pattern — **identical `rounded-*` on a padded
+parent and its direct child** — is a strong candidate flag.
+
+```bash
+# Padded element whose own class set repeats a rounded-* token on a child nearby.
+# Heuristic: list every rounded-* + p-* co-occurrence, then eyeball parent/child pairs.
+rg -n --glob '*.tsx' -e 'rounded-(sm|md|lg|xl|2xl|3xl)\b' <component-dirs> \
+  | rg 'p-[0-9]'
+```
+
+**Triage only** — confirm the parent/child relationship visually before filing.
+Identical radius on a tightly-padded (`p-1`/`p-2`/`p-3`) parent+child is the bug;
+large padding (> ~24px / `p-6`+) is exempt (treat as separate surfaces).
+
 ---
 
 ## Running the sensors
@@ -148,12 +224,15 @@ marking any zero-content / empty-list cell audited, run:
    localStorage key + root class, or `prefers-color-scheme` emulation), then run
    Sensor 1 (contrast) and Sensor 4 (false-clean) on each captured route. Never
    audit a single theme.
-2. **Once at repo level.** Sensors 2 and 3 are static — run them over the codebase
-   before touching the browser; they point you straight at the offending lines.
+2. **Once at repo level.** Sensors 2, 3, 5, 6, 7, and 8 are static greps — run them
+   over the codebase before touching the browser; they point you straight at the
+   offending lines. (5–8 enforce the canonical values in `recipes.md`.)
 3. **Feed the visual pass.** Sensor output is the *first* set of findings on the
    matrix; the visual rubric adds taste findings on top. A cell is not "audited"
    until both have run and its artifact is captured.
 
 **Sensors are necessary, not sufficient.** They catch correctness (contrast,
-hardcoded values, token gaps). They do **not** judge hierarchy, rhythm, depth, or
-slop — that is `critique-polish.md` + the craft references. Run both.
+hardcoded values, token gaps) and canonical-value violations (transition/will-change
+specificity, image outlines, press-scale, nested radii). They do **not** judge
+hierarchy, rhythm, depth, or slop — that is `critique-polish.md` + the craft
+references. Run both.

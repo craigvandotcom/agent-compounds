@@ -55,8 +55,12 @@ Content that jumps is the strongest "cheap" tell. Eliminate shift:
 - **Animate only `transform` and `opacity`.** These run on the compositor and stay
   smooth. Animating `width`, `height`, `top/left`, `margin`, `box-shadow`, or
   anything triggering layout/paint causes jank.
-- **`will-change` sparingly** on elements about to animate; remove it after — it's a
-  cost, not a free win.
+- **Name the properties — never `transition: all`** (nor Tailwind's bare
+  `transition`): it watches everything and fires unintended fades on colour/padding/
+  shadow → **`recipes.md` §9** (greppable: `sensors.md` Sensor 5).
+- **`will-change` sparingly** on elements about to animate (compositor-only props;
+  `will-change: all` is always wrong), and only when you observe first-frame stutter
+  — remove it after; it's a cost, not a free win → **`recipes.md` §10**.
 - **Avoid layout thrash:** batch DOM reads then writes; don't read geometry in a
   loop that also mutates it.
 - **Off-main-thread heavy work:** keep the main thread free during interaction;

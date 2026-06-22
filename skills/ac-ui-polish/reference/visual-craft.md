@@ -20,9 +20,13 @@ about how type, space, depth, imagery, and layout are *composed*.
   leave default. Tuning tracking is one of the highest-signal premium moves.
 - **Weight contrast** carries hierarchy alongside size. Pair a heavier heading with
   a regular body; don't make everything semibold (a common AI default).
-- **Numerals:** use tabular/lining figures for aligned columns of numbers.
+- **Numerals:** `tabular-nums` for any **dynamically updating** numbers (counters,
+  timers, prices, columns) to kill width jitter / layout shift → **`recipes.md` §11**.
 - **Avoid orphans/widows** in headings; prevent key phrases from wrapping badly
-  (`text-balance` for headings, `text-pretty` for body where supported).
+  (`text-balance` for headings — note it's silently ignored past ~6 lines;
+  `text-pretty` for short-to-medium body; neither on 10+ line text → `recipes.md` §11).
+- **Font smoothing (macOS):** `-webkit-font-smoothing: antialiased` once at the root
+  — macOS otherwise renders text heavier than intended; safe universally.
 
 ## Spacing & rhythm
 
@@ -54,10 +58,18 @@ about how type, space, depth, imagery, and layout are *composed*.
   it. Higher elements cast softer, larger, lower-opacity shadows. Don't mix shadow
   languages within one screen.
 - **Soft, layered shadows** (often two stacked: a tight contact shadow + a soft
-  ambient one) read as premium; a single harsh `box-shadow` reads as default.
+  ambient one) read as premium; a single harsh `box-shadow` reads as default. For
+  *elevation* borders (cards/buttons/containers), a layered transparent shadow beats
+  a solid 1px line — it adapts to any background → **canonical 3-layer recipe (+ the
+  dark-mode single-ring simplification): `recipes.md` §2**. Dividers/separators stay
+  borders.
 - **Borders as hairlines.** Prefer low-contrast 1px dividers / subtle borders over
   heavy black lines. Consider borderless separation via spacing or background tint.
 - **Radii consistent** with the app's token; don't mix 4px and 16px arbitrarily.
+- **Concentric nesting.** When rounded surfaces nest, the outer radius must equal
+  the inner radius + the padding (`outer = inner + padding`). Identical radii on a
+  tightly-padded parent and child is the single most common "feels off" tell →
+  **`recipes.md` §1** (map the result onto the app's radius scale).
 
 ## Color application (composition, not palette)
 
@@ -77,3 +89,6 @@ about how type, space, depth, imagery, and layout are *composed*.
   Icons should be optically aligned with their text and carry real meaning.
 - **Correct aspect ratios.** Never squish/stretch; never upscale a small asset.
   Use `aspect-ratio` + `object-fit` to keep media crisp and stable.
+- **Subtle outline on content images** for consistent depth — `1px` at /10 opacity,
+  **pure black (light) / pure white (dark), never tinted** (a tinted edge picks up
+  the surface beneath and reads as dirt) → **`recipes.md` §3**.

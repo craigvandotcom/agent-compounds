@@ -20,7 +20,8 @@ Every interactive surface needs all of its states designed, not just the default
 - **Hover** (pointer devices) — subtle elevation, tint, or cursor affordance
 - **Focus** — visible, on-brand focus ring (never `outline: none` with no
   replacement; a11y mechanics → `web-design-guidelines`)
-- **Active / pressed** — immediate visual response (scale down ~0.97, darken)
+- **Active / pressed** — immediate visual response (press-scale `0.96`, never below
+  `0.95`; darken) → **`recipes.md` §4** (use the app's press-scale token if defined)
 - **Disabled** — clearly distinct, reduced affordance, no hover/press response
 - **Loading** — inline spinner/skeleton on the element acting (not a full-page block)
 - **Empty** — designed empty states with guidance + a primary action, not blank space
@@ -49,9 +50,16 @@ A screen that only handles the happy path with perfect data is unfinished.
   Too slow feels sluggish; instant feels broken. Use the app's duration tokens.
 - **Easing:** ease-out for entrances (fast→settle), ease-in for exits, standard/
   ease-in-out for moves. Avoid linear for UI (feels robotic). Springs for playful,
-  physical interactions.
-- **Choreograph, don't cascade chaos.** Stagger related elements subtly; don't
-  animate everything at once or with conflicting curves.
+  physical interactions (keep `bounce: 0` unless the surface is genuinely playful).
+- **Interruptible by default.** Interactive state changes (hover, toggle, open/close)
+  use **CSS transitions** — they retarget mid-flight so a reversed intent stays
+  smooth. Reserve **keyframes** for one-shot sequences (enter, loading); a keyframe on
+  an interactive element snaps/restarts and feels broken → **`recipes.md` §8**.
+- **Choreograph, don't cascade chaos.** Split enters into semantic chunks and stagger
+  (~100ms groups, ~80ms words) with `opacity+translateY+blur`; **exits are softer and
+  shorter** than enters (small fixed `translateY`, ~150ms). Don't animate everything
+  at once or with conflicting curves → **`recipes.md` §5**. Icon swaps (play↔pause,
+  like↔liked) cross-fade with scale+blur, not a visibility toggle → **§6**.
 - **Respect `prefers-reduced-motion`** — provide a calm fallback.
 - **Animate the cheap properties** (`transform`, `opacity`) — see
   `perceived-performance.md`. Animating layout properties causes jank.
@@ -68,7 +76,9 @@ A screen that only handles the happy path with perfect data is unfinished.
 ## Touch & ergonomics
 
 - **Touch targets ≥ 44×44px** (iOS HIG) / ~48dp (Android); spacing between targets
-  to prevent mis-taps.
+  to prevent mis-taps. When the *visible* control is smaller (a 20px checkbox/icon),
+  **expand the hit area with a pseudo-element**, not the visual — and never let two
+  targets' hit areas overlap → **`recipes.md` §12**.
 - **Thumb reachability:** primary actions within comfortable thumb zones on mobile;
   avoid critical actions in hard-to-reach top corners.
 - **Safe areas:** respect notches, dynamic island, home indicator, and status bar
