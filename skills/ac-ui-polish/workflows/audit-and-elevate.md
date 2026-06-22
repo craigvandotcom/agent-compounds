@@ -114,7 +114,7 @@ Rules of engagement:
 - **Change the least that achieves premium.** Elevation is surgical.
 - **One axis at a time** per component when practical — easier to verify/revert.
 - Brand-voice copy stays within `brand-system`'s register + banned list.
-- Real perf (bundle, data fetch) → `react-best-practices`; here, only *perceived* speed.
+- Real perf (bundle, data fetch) → `capacitor`; here, only *perceived* speed.
 
 ## Phase 4 — Re-audit (loop to clean)
 

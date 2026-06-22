@@ -1,6 +1,6 @@
 ---
 name: seo-metadata
-description: Use when adding or auditing SEO and social-share metadata on web/marketing surfaces — page titles, meta descriptions, Open Graph / Twitter cards, canonical URLs, sitemaps, robots, structured data (JSON-LD), and hreflang. Next.js App Router Metadata API focused. Triggers on "SEO", "meta tags", "Open Graph", "OG image", "social preview", "sitemap", "robots.txt", "structured data", "JSON-LD", "schema.org", "canonical URL", "search ranking", "meta description", "discoverability". NOT for Core Web Vitals / render performance (use react-best-practices and web-design-guidelines) or native Capacitor app shells (SEO applies to web surfaces only).
+description: Use when adding or auditing SEO and social-share metadata on web/marketing surfaces — page titles, meta descriptions, Open Graph / Twitter cards, canonical URLs, sitemaps, robots, structured data (JSON-LD), and hreflang. Next.js App Router Metadata API focused. Triggers on "SEO", "meta tags", "Open Graph", "OG image", "social preview", "sitemap", "robots.txt", "structured data", "JSON-LD", "schema.org", "canonical URL", "search ranking", "meta description", "discoverability". NOT for Core Web Vitals / render performance (use capacitor and web-design-guidelines) or native Capacitor app shells (SEO applies to web surfaces only).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -43,7 +43,7 @@ schema details) live in the app's **CORE**. Pull them from there; never hardcode
 - Adding `hreflang` / locale alternates
 
 **When NOT to Use:**
-- Core Web Vitals / LCP / CLS / render speed → `react-best-practices` + `web-design-guidelines` (these *influence* ranking but are perf work, not metadata)
+- Core Web Vitals / LCP / CLS / render speed → `capacitor` + `web-design-guidelines` (these *influence* ranking but are perf work, not metadata)
 - Native app shell screens → out of scope (see scope gate)
 - Brand voice of the copy itself → `brand-system`
 
@@ -109,7 +109,7 @@ export const metadata: Metadata = {
 | Indexing auth/staging/private routes | `robots: { index: false }` on those segments |
 | Applying SEO to native app screens | Out of scope — see the scope gate |
 | Hardcoding domain/brand here | Pull from the app's CORE; this skill is generic |
-| Treating Core Web Vitals as this skill's job | Real ranking factor, but it's perf work → `react-best-practices` |
+| Treating Core Web Vitals as this skill's job | Real ranking factor, but it's perf work → `capacitor` |
 
 ---
 

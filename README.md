@@ -42,7 +42,6 @@ Symlinked into a project as `.claude/skills/<name>/`.
 |-------|-------------|
 | **supabase** | Supabase CLI, migrations, RLS, Postgres patterns |
 | **testing** | Vitest unit/component/integration test authoring |
-| **react-best-practices** | React + Next.js performance and patterns |
 | **capacitor** | TypeScript dev in Capacitor (native wrap) projects |
 | **planning** | Plan creation + iterative refinement (scope oscillation) |
 | **brainstorming** | Divergent–convergent pre-planning ideation |

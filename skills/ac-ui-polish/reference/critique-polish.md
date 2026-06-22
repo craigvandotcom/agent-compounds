@@ -25,7 +25,7 @@ Score each item. Cite `file:line` and a concrete fix.
 > **Objective vs. subjective.** Sections A–E and the AI-tell sweep are this skill's
 > own taste layer. The mechanical items in **F (states/a11y)** and **G (perceived
 > perf)** are authoritatively covered by `web-design-guidelines` (compliance) and
-> `react-best-practices` (perf engineering) — run those for the binary pass/fail,
+> `capacitor` (perf engineering) — run those for the binary pass/fail,
 > and use this rubric to judge whether the *felt* result is premium. Don't
 > re-derive their rules here; cite them.
 

@@ -42,7 +42,11 @@ import { join } from 'node:path';
 const argv = process.argv.slice(2);
 const arg = (name, def) => {
   const i = argv.indexOf('--' + name);
-  return i >= 0 && argv[i + 1] ? argv[i + 1] : def;
+  if (i < 0) return def;
+  const v = argv[i + 1];
+  // guard against the next token being another flag (e.g. `--base-url --manifest x`)
+  if (v === undefined || v.startsWith('--')) return def;
+  return v;
 };
 const has = name => argv.includes('--' + name);
 
@@ -97,7 +101,10 @@ const ab = (...args) =>
   });
 
 function slug(p) {
-  const s = p.replace(/^\/+|\/+$/g, '').replace(/[^a-zA-Z0-9]+/g, '-');
+  // path separators → underscore so `/a/b` and `/a-b` don't collide to the same file
+  const s = p.replace(/^\/+|\/+$/g, '')
+             .replace(/\//g, '_')
+             .replace(/[^a-zA-Z0-9_-]+/g, '-');
   return s || 'home';
 }
 
