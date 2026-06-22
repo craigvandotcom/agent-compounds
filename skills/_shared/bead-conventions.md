@@ -1,7 +1,7 @@
 # Bead Conventions — types, labels, lifecycle
 
 Shared by the pipeline skills (ac-qa-device, ac-qa-browser, ac-review, ac-hygiene,
-ac-merge, ac-implement, ac-human-next, ac-tidy). One principle drives all of
+ac-merge, ac-implement, ac-human-session, ac-tidy). One principle drives all of
 it:
 
 > **No pipeline stage may produce prose exhaust.** Anything actionable that a
@@ -70,7 +70,7 @@ Every repo where work happens has its own `.beads/` (tracked `issues.jsonl` +
 per db where set (`ac` = agent-compounds, `org` = root repo, `bd` = apps).
 Beads live **with the work** — deps only gate within one db, so a bead
 belongs in the repo whose code/files it changes. Cross-repo visibility is
-ac-human-next's job (docket sweep), not a central database's.
+ac-human-session's job (docket sweep), not a central database's.
 
 **Public-repo rule:** some beads dbs are world-readable (agent-compounds is
 a public repo — its `issues.jsonl` publishes). Beads there carry **no

@@ -1,6 +1,6 @@
 ---
 name: ac-tidy
-description: Pipeline housekeeping — archive completed items, reconcile backlog/plans/beads, flag orphans, suggest consolidation. Triggers: 'tidy', 'tidy the pipeline', 'clean up backlog', 'reconcile plans and beads', 'pipeline housekeeping'.
+description: Pipeline housekeeping — archive completed items, reconcile backlog/plans/beads, flag orphans, suggest consolidation. Triggers: 'tidy the pipeline', 'clean up backlog', 'reconcile plans and beads', 'pipeline housekeeping'. For codebase code review/cleanup use ac-hygiene.
 ---
 
 

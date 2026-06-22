@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Plan creation and iterative refinement using scope oscillation methodology. Use when creating or refining an implementation plan; triggers on "plan this", "write a plan", "refine the plan", "scope a feature".
+description: Plan creation and iterative refinement using scope oscillation methodology. Use when creating or refining an implementation plan; triggers on "plan this", "write a plan", "scope a feature".
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -17,7 +17,7 @@ Strategic planning for features and fixes using Jeffrey Emanuel's iterative refi
 ## When to Load This Skill
 
 - Creating implementation plans (`/ac-plan-init`)
-- Refining plans through review cycles (`/plan-review`)
+- Refining plans through review cycles (`/ac-plan-refine-internal`, `/ac-plan-refine-external`)
 - Any task requiring structured planning before implementation
 
 ## Core Principle
@@ -97,7 +97,9 @@ For simpler plans, compress to:
 | Command        | Uses This Skill For                      |
 | -------------- | ---------------------------------------- |
 | `/ac-plan-init`     | Initial plan creation using templates    |
-| `/plan-review` | Iterative refinement using round prompts |
+| `/ac-plan-refine-internal` | Iterative multi-agent refinement to convergence |
+| `/ac-plan-refine-external` | High-stakes refinement across external models |
+| `/ac-plan-clean` | Final correctness/hygiene pass on a plan |
 
 ---
 
