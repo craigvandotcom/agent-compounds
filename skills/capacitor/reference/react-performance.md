@@ -325,7 +325,7 @@ const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 const isSelected = selectedSet.has(id);
 ```
 
-`visitedTabs` in the keep-mounted nav pattern (§2 of `capacitor-native`) uses exactly this — a `Set` for O(1) tab mount checks.
+`visitedTabs` in the keep-mounted nav pattern (§2 of `capacitor`) uses exactly this — a `Set` for O(1) tab mount checks.
 
 ### Guard Clauses Over Nested Conditions
 

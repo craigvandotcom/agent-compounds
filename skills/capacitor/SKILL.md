@@ -1,5 +1,5 @@
 ---
-name: capacitor-native
+name: capacitor
 description: Use for ALL engineering decisions when building Capacitor native apps on the neoMeta stack (Next.js static export + React + SWR + Supabase + TypeScript + Tailwind). Load BEFORE planning or implementing any UI, navigation, data fetching, auth, storage, lifecycle, or build work. Triggers on "capacitor", "native app", "iOS", "Android", "native feel", "tab switch", "keep-mounted", "WKWebView", "skeleton flash", "SWR cache", "static export", "cold start", "app lifecycle", "Preferences storage", "plugin", "native performance", "background", "app resume", "safe area", "tab navigation", "plugin bridge", "MainActor", "visibility hidden", "display none".
 ---
 
