@@ -50,6 +50,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-idea-review-genius** / **ac-idea-transcender-alien** | Forensic / paradigm-breaking review of a raw idea |
 | **audit** | Systematic code-quality verification framework |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
+| **ac-registry-audit** | Make the registry itself watertight — audit the prompt corpus for trigger collisions, divergent duplicates, dangling refs, doc↔disk drift; mechanical fixes + gated judgment calls (lint.sh → dedup/drift workflow) |
 | **browser-testing** | UI/login/flow validation via agent-browser |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
