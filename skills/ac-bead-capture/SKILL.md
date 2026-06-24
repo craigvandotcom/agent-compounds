@@ -1,6 +1,6 @@
 ---
 name: ac-bead-capture
-description: Use to CAPTURE a raw idea, bug, observation, or decision fork from the user as a properly typed bead — on the go, minimal ceremony. Triggers: 'bead this', 'capture this idea', 'new bead', 'log a bug', 'add to the backlog', 'remember to do X'. The agent classifies, routes to the right repo's db, and dedupes; for decomposing a whole plan use ac-beadify, for refining existing beads use ac-bead-refine.
+description: Use to CAPTURE a raw idea, bug, observation, or decision fork from the user as a properly typed bead — on the go, minimal ceremony. Triggers: 'bead this', 'file this as a bead', 'new bead', 'log a bug', 'track this item', 'remember to do X'. The agent classifies, routes to the right repo's db, and dedupes; for parking an idea in the grouped backlog pool use ac-backlog, for decomposing a whole plan use ac-beadify, for refining existing beads use ac-bead-refine.
 ---
 
 # Capture → Bead

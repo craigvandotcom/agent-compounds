@@ -33,7 +33,7 @@ description: Supabase development with CLI, migrations, SDK patterns, and Postgr
 **When NOT to Use:**
 
 - UI component work (use `design-system`)
-- General React patterns (use `react-best-practices`)
+- General React patterns (use `capacitor`)
 - Auth UI flows (use the app's CORE + its auth spec)
 
 ---

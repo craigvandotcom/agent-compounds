@@ -1,6 +1,6 @@
 ---
 name: browser-testing
-description: Use when testing UI, validating browser behavior, checking login flows, or verifying deployments. Triggers on "test UI", "validate browser", "check login", "test flow", "preview validation", environment testing (local/preview/production). Handles browser automation via agent-browser CLI for manual testing requests, smoke tests, and auth flow verification.
+description: Use for ad-hoc (not pipeline-gated) browser checks — quick post-deploy smoke tests, login/auth flows, validating browser behavior. Triggers on "test UI", "validate browser", "check login", "test flow", "preview validation", environment testing (local/preview/production). Handles browser automation via agent-browser CLI for manual testing requests, smoke tests, and auth flow verification. NOT for structured full-app QA with depth levels, QA_VALIDATION reporting, web-shell checklist, or ac-merge gating (use ac-qa-browser).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

@@ -1,6 +1,6 @@
 ---
 name: ac-land
-description: Session closure with retrospective learning and system compounding — land work, capture lessons, update skills/commands. Triggers: 'land the session', 'bead land', 'close out', 'capture learnings', 'wrap up session'.
+description: Session closure with retrospective learning and system compounding — land work, capture lessons, update skills/commands. Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session'. NOT for standalone lesson capture without bead-work context (that is reflect).
 ---
 
 

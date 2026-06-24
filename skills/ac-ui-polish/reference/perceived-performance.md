@@ -3,7 +3,7 @@
 The speed the user *feels* — not the speed a profiler measures. A UI can be fast
 on paper and feel slow, or slower on paper and feel instant. This skill owns the
 felt layer. **Deep perf work — bundle size, data-fetch waterfalls, hydration,
-memoization — belongs to `react-best-practices`; defer there.** The objective
+memoization — belongs to `capacitor`; defer there.** The objective
 CLS / virtualization / image-dimension *rules* are the authoritative job of
 `web-design-guidelines`; this file is the felt layer that assumes those pass.
 
@@ -64,7 +64,7 @@ Content that jumps is the strongest "cheap" tell. Eliminate shift:
 - **Avoid layout thrash:** batch DOM reads then writes; don't read geometry in a
   loop that also mutates it.
 - **Off-main-thread heavy work:** keep the main thread free during interaction;
-  defer non-urgent work (the *how* of scheduling → `react-best-practices`).
+  defer non-urgent work (the *how* of scheduling → `capacitor`).
 - **Test on real/throttled mid-tier mobile**, not just a fast laptop — that's where
   jank shows.
 
@@ -80,7 +80,7 @@ Content that jumps is the strongest "cheap" tell. Eliminate shift:
 ## Navigation & transitions
 
 - **Prefetch likely-next routes/data** on hover/focus/visible so navigation feels
-  instant (mechanics → `react-best-practices`).
+  instant (mechanics → `capacitor`).
 - **Keep transition shells stable** — animate between screens with the chrome
   persistent so the app never feels like it "reloads."
 - **Persist and restore scroll position** on back-navigation.
@@ -96,4 +96,4 @@ Content that jumps is the strongest "cheap" tell. Eliminate shift:
 | Animation stutters | Animating layout props | Move to transform/opacity; check on throttled mobile |
 | Long list scroll lags | Rendering all rows | Virtualize |
 | Spinner flickers | No min-display delay | Delay loader ~150ms; prefer skeleton |
-| Genuinely slow data/bundle | Backend / JS payload | **Hand to `react-best-practices`** |
+| Genuinely slow data/bundle | Backend / JS payload | **Hand to `capacitor`** |

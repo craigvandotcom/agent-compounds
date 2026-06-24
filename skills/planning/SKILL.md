@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Plan creation and iterative refinement using scope oscillation methodology. Use when creating or refining an implementation plan; triggers on "plan this", "write a plan", "refine the plan", "scope a feature".
+description: The scope-oscillation planning methodology (Jeffrey Emanuel) — the divergent-convergent refinement lenses the ac-plan-* pipeline skills draw on. This is a reference/methodology, NOT a direct entry point: to create a plan use ac-plan-init; to refine one use ac-plan-refine-internal (routine) or ac-plan-refine-external (high-stakes); for a final correctness pass use ac-plan-clean. Load this when you want the underlying lenses or are planning outside the pipeline.
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -10,15 +10,23 @@ description: Plan creation and iterative refinement using scope oscillation meth
 > `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
 > Do not add app-specific facts to this file — they belong in CORE.
 
-# Planning Skill
+# Planning Skill — methodology reference
 
-Strategic planning for features and fixes using Jeffrey Emanuel's iterative refinement methodology.
+Strategic planning for features and fixes using Jeffrey Emanuel's iterative
+refinement methodology (scope oscillation).
+
+> **This is the methodology layer, not the entry point.** The live pipeline owns
+> the *doing*: `ac-plan-init` creates plans, `ac-plan-refine-internal` /
+> `ac-plan-refine-external` refine them, `ac-plan-clean` does the correctness
+> pass. This skill is the underlying *method* those stages draw on — load it for
+> the scope-oscillation lenses, or when planning outside the pipeline. It is not
+> auto-invoked for "plan this feature" (that routes to `ac-plan-init`).
 
 ## When to Load This Skill
 
-- Creating implementation plans (`/ac-plan-init`)
-- Refining plans through review cycles (`/plan-review`)
-- Any task requiring structured planning before implementation
+- You want the scope-oscillation lenses themselves (the *how* behind the pipeline)
+- Structured planning outside the `ac-plan-*` pipeline
+- A pipeline stage (`ac-plan-init` / `ac-plan-refine-*`) cites this as its method
 
 ## Core Principle
 
@@ -97,7 +105,9 @@ For simpler plans, compress to:
 | Command        | Uses This Skill For                      |
 | -------------- | ---------------------------------------- |
 | `/ac-plan-init`     | Initial plan creation using templates    |
-| `/plan-review` | Iterative refinement using round prompts |
+| `/ac-plan-refine-internal` | Iterative multi-agent refinement to convergence |
+| `/ac-plan-refine-external` | High-stakes refinement across external models |
+| `/ac-plan-clean` | Final correctness/hygiene pass on a plan |
 
 ---
 

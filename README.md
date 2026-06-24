@@ -17,10 +17,11 @@ Symlinked into a project as `.claude/skills/<name>/`.
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed (chain them with `ac-pipeline`)
 | Skill | What it does |
 |-------|-------------|
-| **[ac-pipeline](./skills/ac-pipeline/)** | Orchestrator — chains the stages below with gates (`ac-align → ac-next → ac-plan-init → ac-beadify → ac-implement → ac-review → ac-merge → ac-land`) |
+| **[ac-pipeline](./skills/ac-pipeline/)** | Orchestrator — chains the stages below with gates (`ac-align → ac-plan-init → ac-beadify → ac-implement → ac-review → ac-merge → ac-land`) |
+| **ac-pipeline-builder** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants (the design behind `ac-pipeline`) |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
+| **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy |
-| **ac-next** | Pipeline dashboard — what to advance toward implementation-ready |
 | **ac-plan-init** | Create a first-draft implementation plan |
 | **ac-plan-clean** / **ac-plan-refine-internal** / **ac-plan-refine-external** | Verify / deepen a plan (correctness pass · multi-agent · multi-model) |
 | **ac-plan-review-genius** / **ac-plan-transcender-alien** | Forensic / paradigm-breaking review of a plan |
@@ -31,24 +32,25 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
 | **ac-merge** | Merge a wave to main — PR, CI triage, version bump |
 | **ac-land** | Session closure — retrospective learning + system compounding |
+| **ac-loop** | Autonomous bead-shipping loop — drives orphan fixes + plan waves to merge unattended, pauses on genuine decisions via Slack |
 | **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
-| **ac-human-next** | Human action dashboard — what needs your decision/attention |
+| **ac-human-session** | Human command center — surfaces only work at a human gate (blockers, plans to approve, hopper), conducts the sit-down |
 
 **Engineering** (promoted from body-compass-app, the canonical donor)
 | Skill | What it does |
 |-------|-------------|
 | **supabase** | Supabase CLI, migrations, RLS, Postgres patterns |
 | **testing** | Vitest unit/component/integration test authoring |
-| **react-best-practices** | React + Next.js performance and patterns |
 | **capacitor** | TypeScript dev in Capacitor (native wrap) projects |
-| **planning** | Plan creation + iterative refinement (scope oscillation) |
+| **planning** | Scope-oscillation methodology reference (the lenses the `ac-plan-*` chain applies — not a direct entry point) |
 | **brainstorming** | Divergent–convergent pre-planning ideation |
 | **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
 | **ac-idea-review-genius** / **ac-idea-transcender-alien** | Forensic / paradigm-breaking review of a raw idea |
 | **audit** | Systematic code-quality verification framework |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
+| **ac-registry-audit** | Make the registry itself watertight — audit the prompt corpus for trigger collisions, divergent duplicates, dangling refs, doc↔disk drift; mechanical fixes + gated judgment calls (lint.sh → dedup/drift workflow) |
 | **browser-testing** | UI/login/flow validation via agent-browser |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
@@ -60,7 +62,6 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
-| **vm-heavy-prep** | Prepare a Linux VM for heavy parallel work — free memory, restart leaky processes, report capacity |
 
 > **Not a deployable skill:** `ac-distribute/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill — the pipeline's SHIP lane (TestFlight push, feedback triage, store release), downstream of merge.
 

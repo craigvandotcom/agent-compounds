@@ -1,5 +1,13 @@
 # agent-compounds — Agent Entry Point
 
+> **This registry _is_ `code-pipe`** — the software factory (the `ac-*` production line
+> + code QC + code-domain skills), one half of the agentic-factory pair alongside
+> **`content-pipe`** (the publishing house, at `neometa/content/content-pipe/`). Both
+> consume one shared substrate (`context-engineering`/`reflect`/`dream`) so they write to
+> a single memory ledger. A literal `code-pipe` rename + any monorepo convergence are
+> deferred future-state — see `_plans/2026-06-23-factory-split-refactor.md`. Ops skills
+> (scheduler, vm-heavy-prep) live in `infrastructure/`, not here.
+
 ## Project Overview
 
 | Field | Value |

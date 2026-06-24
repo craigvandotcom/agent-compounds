@@ -1,6 +1,6 @@
 ---
 name: ac-ui-polish
-description: Use when polishing already-coded UI to premium quality and/or checking it conforms to the app's design spec — one screen, or a whole-app crawl of every page. Two modes; both anchor on the app's CORE/design.md. Triggers on "polish this UI", "make this feel premium", "ui polish", "ac-ui-polish", "level up the design", "this looks like AI slop", "elevate this", "audit the whole app against the design spec", "check design conformance", "tighten the visuals", "make it production-quality", "improve the feel". Covers design-spec conformance (does each page match design.md?) then elevation (appearance, perceived performance, interaction feel) — audits against design.md + an anti-slop rubric, files deviations as beads, then applies fixes bounded to the spec's tokens. NOT for: objective accessibility/compliance audits (use web-design-guidelines), multi-model design ideation or exploring alternatives (use ui-brainstorm), React data/bundle perf internals (use react-best-practices), visual/CSS defects (use ui-debug), or greenfield generation from scratch.
+description: Use when polishing already-coded UI to premium quality and/or checking it conforms to the app's design spec — one screen, or a whole-app crawl of every page. Two modes; both anchor on the app's CORE/design.md. Triggers on "polish this UI", "make this feel premium", "ui polish", "ac-ui-polish", "level up the design", "this looks like AI slop", "elevate this", "audit the whole app against the design spec", "check design conformance", "tighten the visuals", "make it production-quality", "improve the feel". Covers design-spec conformance (does each page match design.md?) then elevation (appearance, perceived performance, interaction feel) — audits against design.md + an anti-slop rubric, files deviations as beads, then applies fixes bounded to the spec's tokens. NOT for: objective accessibility/compliance audits (use web-design-guidelines), multi-model design ideation or exploring alternatives (use ui-brainstorm), React data/bundle perf internals (use capacitor), visual/CSS defects (use ui-debug), or greenfield generation from scratch.
 ---
 
 # UI Polish
@@ -105,7 +105,7 @@ guardrail against redesigning instead of polishing.
 - Building a brand-new UI from nothing → that's design/generation work, not elevation
 - The bug is a *defect* (style not applying, broken layout) → use `ui-debug`
 - The ask is purely brand palette/voice → use `brand-system`
-- The ask is data-fetch waterfalls / bundle size / hydration internals → use `react-best-practices`
+- The ask is data-fetch waterfalls / bundle size / hydration internals → use `capacitor`
 - The ask is a11y compliance mechanics (ARIA, focus traps, form semantics) → use `web-design-guidelines`
 
 ---
@@ -167,7 +167,7 @@ diff**. Fill the **Definition of Done** checklist in
 |------|-------------------|
 | Brand palette, pillar color, voice/copy register, banned phrases | `brand-system` |
 | Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `web-design-guidelines` |
-| React/Next perf internals (waterfalls, bundle, data fetching, memoization) | `react-best-practices` |
+| React/Next perf internals (waterfalls, bundle, data fetching, memoization) | `capacitor` |
 | Native bridge / cross-platform plumbing | `capacitor` |
 | Want multiple independent design opinions / consensus critique | `ui-brainstorm` |
 | A style genuinely *isn't applying* / layout is broken (a defect) | `ui-debug` |
@@ -225,7 +225,7 @@ inventing one — but the app's `design.md` token always overrides it:
 | "Looks good" without running it | Mandatory: see it running + pass the rubric before declaring done |
 | Polishing only the happy path | Design empty/loading/error/overflow states too |
 | Re-deriving brand palette/voice here | Defer to `brand-system`; this skill owns craft, not brand law |
-| Chasing micro-perf the user can't feel | Optimize *perceived* speed; send real perf work to `react-best-practices` |
+| Chasing micro-perf the user can't feel | Optimize *perceived* speed; send real perf work to `capacitor` |
 | **Auditing one theme** (dark only) | Every theme is a matrix axis. Hardcoded dark/white values look fine in one theme and break in the other — run the contrast sweep **per theme** (`sensors.md`) |
 | **Auditing an empty account** | Seed realistic data first (Phase 0.5). Lists/cards/rows only exist with data — that's where defects hide |
 | **Inferring quality without rendering** | A route you didn't see is not audited. Capture it (deployed URL if local auth blocks it) before calling it conformant |
