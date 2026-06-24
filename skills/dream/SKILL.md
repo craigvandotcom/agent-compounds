@@ -24,6 +24,14 @@ DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a
 | **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Precondition check (verify, don't clean) → raw-transcript mining funnel → reuses Phases 2/4/5; consumes the `infra-maintain` health report. See the mode section below |
 | **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
 
+**Auto-act tier (the gate-skip).** Not every proposal needs Craig's tap. The daily queue job
+(`_agent-pi/workflows/dream-daily.md`) classifies each proposal **deterministically**
+(`infrastructure/dream-cycle/classify.py`) into `auto` (a pure new-memory-note ADD to root,
+judge ≥9 — append-only, revertible) or `gated` (everything judgment-laden). It applies the
+`auto` tier unattended and posts only `gated` ones as Slack cards. Policy + the exact
+predicate: `references/auto-act-rubric.md`. CYCLE itself still **never applies** — it only
+emits; the auto-apply lives in the daily job (Stage-1 autonomy = deterministic hygiene only).
+
 ---
 
 ## Mode: CYCLE
@@ -106,9 +114,10 @@ Create `infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`:
 
 ```markdown
 ---
-status: pending            # mirror of the bead — bead is status authority
+status: pending            # pending → approved|rejected (Slack) → applied (terminal success)
 bead: <id>                 # decision bead in target_repo's db (set at emit)
 category: rule | recipe | skill-improvement | lint-fix | re-home
+summary: <ONE plain-English line — what approving this DOES; this is the Slack card body>
 target_repo: root | agent-compounds | <app>
 target_file: <path within that repo>
 evidence: [<lesson files / commits / moments>]
@@ -120,6 +129,11 @@ judge: {score: N, reason: "<one line>"}
 ## Why (compounding case)
 <which future sessions get faster, citing the evidence>
 ```
+
+Always write `summary:` — it is what Craig reads on the Slack card. State the *effect*
+("Adds a memory rule so future X stops re-debugging Y"), not the file path. The card falls
+back to the `## Why` first paragraph if `summary:` is absent, but a purpose-built line is
+the difference between a graspable card and an opaque one.
 
 **Register each proposal as a decision bead** in its `target_repo`'s beads db
 (the proposal FILE is the memo artifact; the BEAD is the action handle — status
@@ -221,9 +235,11 @@ entry point works, the contract is identical).
    commit in the target repo with message `dream: apply <slug>`, push.
 4. **Close out per bead-conventions:** record the decision
    (`br comments add <id> "DECISION (<human>): <choice> — <why>"`), close the bead
-   (approved-and-applied or rejected alike — the comment trail is the record), mirror
-   the file's frontmatter `status:`, commit the queue (root) + each touched `.beads/`
-   (own repo), push.
+   (approved-and-applied or rejected alike — the comment trail is the record), set the
+   file's frontmatter `status:` to **`applied`** (terminal success — distinguishes
+   "approved" from "actually landed") or `rejected`, commit the queue (root) + each touched
+   `.beads/` (own repo), push. (Note: the daily queue job applies the `auto` tier and any
+   `status: approved` backlog automatically — REVIEW is the interactive path for `gated`.)
 5. Report: applied / rejected / remaining — and note acceptance-rate (the cycle's own
    quality metric; persistently low → propose a judge-bar fix next cycle).
 
