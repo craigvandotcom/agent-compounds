@@ -62,8 +62,6 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
-| **scheduler** | Add/edit/debug a scheduled job or agent heartbeat on pai-scheduler — job schema, enabled_on/timezone, agent↔level↔cwd ownership |
-| **vm-heavy-prep** | Prepare a Linux VM for heavy parallel work — free memory, restart leaky processes, report capacity |
 
 > **Not a deployable skill:** `ac-distribute/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill — the pipeline's SHIP lane (TestFlight push, feedback triage, store release), downstream of merge.
 
