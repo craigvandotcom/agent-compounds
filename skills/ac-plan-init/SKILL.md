@@ -86,6 +86,16 @@ User request -> Classify:
 - MORE: 3-10 files, some decisions, 2-4 hours work
 - A LOT: >10 files, architectural decisions, 4+ hours work
 
+### Surface Assumptions & Clarify (interview before you plan)
+
+**Highest-leverage step for non-trivial work** — a wrong starting assumption compounds through every later refinement round, so surface it *now*, before exploration.
+
+- **Human present + MORE/A-LOT or ambiguous:** ask the sharpest clarifying questions via `AskUserQuestion` — scope boundaries, the non-obvious constraints, UX/edge-case calls, and any either/or fork that would change the plan. Limit to the 2–4 questions whose answers most change the design.
+- **Always record an `## Assumptions` log** in the plan: the decisions you're making *absent* an answer, plus the questions that would change the plan if answered differently. For autonomous runs (no human), this *replaces* the interview — state assumptions explicitly instead of guessing silently.
+- **MINIMAL with a clear one-sentence diff:** skip the interview; note any single load-bearing assumption (or "none").
+
+Refinement and review then pressure-test the *stated* assumptions, not hidden ones.
+
 ### Mark Active Work
 
 If a source backlog item was identified, update its frontmatter to signal this skill is running:

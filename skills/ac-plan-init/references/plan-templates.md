@@ -26,6 +26,10 @@ source_backlog: _backlog/{version}/{filename}.md
 **Type:** BUILD | IMPROVE | FIX
 **Complexity:** MINIMAL
 
+## Assumptions
+
+<!-- From the clarify step: decisions made absent an answer + any question that would change the plan. For MINIMAL, often one load-bearing assumption — or "none; the diff is unambiguous". -->
+
 ## Backlog Items (optional)
 
 <!-- Link backlog items this plan addresses, if using a backlog system -->
@@ -44,9 +48,11 @@ source_backlog: _backlog/{version}/{filename}.md
 
 ## Implementation
 
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
+Each step states its own **Done when:** — a verifiable check (a test, a command, an observable result), not "looks done."
+
+1. [Step 1] — **Done when:** [verifiable check]
+2. [Step 2] — **Done when:** [verifiable check]
+3. [Step 3] — **Done when:** [verifiable check]
 
 ## Validation
 
@@ -70,6 +76,10 @@ source_backlog: _backlog/{version}/{filename}.md
 
 **Type:** BUILD | IMPROVE | FIX
 **Complexity:** MORE
+
+## Assumptions
+
+<!-- From the clarify step (ac-plan-init): decisions made absent an answer + the questions that would change the plan if answered differently. Refinement/review pressure-test THESE, not hidden assumptions. -->
 
 ## Backlog Items
 
@@ -104,13 +114,19 @@ source_backlog: _backlog/{version}/{filename}.md
 
 ## Implementation Phases
 
+Each phase states a **Done when:** — a verifiable completion check (a test passing, a command's output, an observable behavior) the implementer can self-check, not a judgment call.
+
 ### Phase 1: [Foundation]
+**Done when:** [verifiable check]
 
 ### Phase 2: [Core Logic]
+**Done when:** [verifiable check]
 
 ### Phase 3: [UI/Integration]
+**Done when:** [verifiable check]
 
 ### Phase 4: [Testing]
+**Done when:** [verifiable check]
 
 ## Risks & Mitigations
 
