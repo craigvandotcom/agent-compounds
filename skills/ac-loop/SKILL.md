@@ -9,7 +9,7 @@ description: Autonomous bead-shipping loop — runs scheduled, drives orphan fix
 
 When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal. When invoked by the scheduler (headless), `AskUserQuestion` posts to Slack as interactive buttons — the session suspends and resumes when Craig clicks. Either way, the behaviour is identical; the transport differs.
 
-> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items, unrefined plans, or unrefined beads. Craig controls what enters the pipeline — you drive what's already in it. Human-gated beads (`human-gate` label) are surfaced, not auto-closed.
+> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items or unrefined *plans*. But unrefined **beads** that are already *in* the pipeline — beadified epics (parent+children) or beads traceable to a plan (`_plans/` or `_plans/_done/`) — you DO refine-and-finish; only a truly raw lone capture stays gated. Craig controls what *enters* the pipeline (via beadify/plan sign-off); you drive everything already in it to merge, furthest-advanced first. Human-gated beads (`human-gate` label) are surfaced, not auto-closed.
 
 ---
 
@@ -107,20 +107,36 @@ br ready --json | jq '[.[] | select(
   (.labels | map(startswith("wave/")) | any)
 )]'
 
-# Unrefined ORPHAN beads (unrefined, no wave/plan) — NOT auto-refined; ARIA nudge only
+# Unrefined beads with NO wave label — split by pipeline depth (see classification below):
+#   (a) part of a beadified EPIC or a plan-traceable group → AUTO-REFINE (signed-off work)
+#   (b) truly RAW lone captures (no parent, no epic group, no source plan) → ARIA gate
 br ready --json | jq '[.[] | select(
   (.labels | index("unrefined")) and
   (.labels | map(startswith("wave/")) | any | not)
 )]'
+# Then classify each: does it have a parent-child dep (epic child), children (epic parent),
+# or ≥1 label-sibling under a shared non-wave epic label (e.g. "tailwind-v4")? → (a) auto-refine.
+# A lone unrefined bead with no parent, no children, no epic-label siblings → (b) raw capture, gate.
+# Cross-check (a) against _plans/ AND _plans/_done/ — an archived source plan IS the sign-off.
 ```
+
+> **"Unrefined orphan" ≠ "raw capture" — classify by pipeline depth, not just the missing
+> `wave/` label.** A bead that has been *beadified into an epic* (parent + children, or a shared
+> epic label) is signed-off **by construction** — Craig deliberately beadified it — and is
+> *further down the pipeline* than an un-beadified loop-ready plan. **Auto-refine-and-finish it.**
+> Its source plan is often already archived in `_plans/_done/` (that's the sign-off), so the
+> "no plan-level sign-off" gate must check `_done/` too, not just live plans. Only a **truly raw
+> lone capture** (single bead, no parent, no epic-label siblings, no traceable plan — the
+> `ac-bead-capture` quick-idea case) stays gated. Pushing the *furthest-advanced* work to merge
+> first means refinement state counts: a beadified epic outranks an un-beadified plan.
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
-Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined plan beads needing refine, O **unrefined orphan beads** (surfaced in ARIA, never auto-refined).
+Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined **signed-off** beads needing refine (plan-beads + beadified epics + plan-traceable groups → auto-refine), O **truly-raw** unrefined captures (lone, no epic/plan → ARIA gate only).
 
-**Work priority order** — ship ready maintenance before doing prep for feature waves:
+**Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling new raw work in:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined beads (from loop-ready plans) → run `ac-bead-refine` (prep for a feature wave) (delegation: "ac-loop autonomous run, skip next-step question")
+2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave/` label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
 3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
 4. Plan wave refined beads → Phase 2
 
@@ -230,7 +246,7 @@ This phase persists. The loop does not exit after a nudge — it re-checks at in
 | `human-gate` bead with ≤3 options, question answerable in ≤10 words | `AskUserQuestion` (Slack buttons) → session pauses → resumes on click |
 | `human-gate` bead with complex/open-ended answer | Advisory Slack nudge (card) — do NOT pause |
 | Plan exists but all beads are `unrefined` | Advisory nudge: "Plan X has N beads awaiting refinement — run `/ac-bead-refine`" |
-| `unrefined` **orphan** bead (no plan, no wave) | Advisory nudge: "N captured fix(es) awaiting refinement — run `/ac-bead-refine` or attach to a plan." The loop will NOT auto-refine these (no plan-level sign-off — see Scope contract); surface, don't touch. |
+| **Truly raw** unrefined bead (lone — no parent, no epic-label siblings, no plan in `_plans/` or `_plans/_done/`) | Advisory nudge: "N captured idea(s) awaiting refinement — run `/ac-bead-refine` or attach to a plan." The loop will NOT auto-refine a raw capture (no sign-off); surface, don't touch. **NOTE:** a beadified epic or plan-traceable unrefined bead is NOT this — it's signed-off pipeline work → auto-refine-and-finish per Work priority #2, don't nudge. |
 | Refined plans exist but no beads yet | Advisory nudge: "Plan X is ready for `/ac-beadify`" |
 | Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
 | Nothing at all (no backlog, no plans, no beads) | Session-end notify: "Pipeline clear — nothing waiting" |
