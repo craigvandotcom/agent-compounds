@@ -62,8 +62,11 @@ npm install -g agent-browser     # session-scoped headless Chrome; see browser-t
 
 ```bash
 S=qa-browser-<app>               # distinct, predictable session name (for unambiguous teardown)
+DEV_STARTED=                     # set to 1 iff THIS skill starts the dev server (leave empty for a deployed URL)
 
-# 0. Serve — start the app's dev server (or target a deployed URL)
+# 0. Serve — start the app's dev server, backgrounded (skip when targeting a deployed URL)
+#    pnpm dev >/tmp/qa-dev-$S.log 2>&1 &   # or the command in the app's AGENTS.md
+#    DEV_STARTED=1 ; then wait until it's listening (curl/wait) before step 1
 
 # 1. Open + set the app's viewport (mobile-first apps: check CORE viewport policy)
 agent-browser --session $S open "<BASE_URL>"
@@ -86,6 +89,9 @@ agent-browser --session $S screenshot /tmp/qa-<route>.png
 
 # 6. TEARDOWN — MANDATORY, even on the failure path (see below)
 agent-browser --session $S close
+# Kill the dev server THIS skill started. Subagent shells don't persist $! across
+# tool calls, so match by process, not PID (use the app's dev command):
+[ -n "$DEV_STARTED" ] && pkill -f "next dev" 2>/dev/null
 ```
 
 ### Discipline rules (non-negotiable)
@@ -95,6 +101,13 @@ agent-browser --session $S close
    `close --all`. A daemon that dies without closing leaves a headless Chrome
    reparented to launchd spinning at ~100% CPU indefinitely (the 4-day / load-54
    incident). Full rationale + manual escape hatch: `browser-testing/SKILL.md`.
+   **The same applies to the dev server you start in step 0** — a subagent's shell
+   does not persist `$!` across tool calls, so an orphaned `next dev` (≈200% CPU)
+   outlives the agent and starves a single-runner CI host (the 2026-06-24 load-30 /
+   34-min-vitest-stall incident). Kill it by process on both paths:
+   `pkill -f "next dev"` (use the app's dev command). Caveat — like the Chrome
+   escape hatch, this kills ALL matching dev servers: fine when the agent is the
+   only one running it; skip if a human has their own `pnpm dev` up.
 2. **Refs renumber on every snapshot.** Re-snapshot after every navigation, route
    change, modal, or async state change — then use the NEW refs. Stale-ref taps are
    the top flake source.
