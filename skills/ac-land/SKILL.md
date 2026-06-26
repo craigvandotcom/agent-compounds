@@ -1,6 +1,6 @@
 ---
 name: ac-land
-description: Session closure with retrospective learning and system compounding — land work, capture lessons, update skills/commands. Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session'. NOT for standalone lesson capture without bead-work context (that is reflect).
+description: The closing ritual — runs LAST, after merge. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect).
 ---
 
 
@@ -62,6 +62,13 @@ git diff --stat
   ```
 
 ### 1b. Quality Gates
+
+> **Skip-if-fresh (loop / post-merge context).** If a GREEN `test:all` / CI Quality Gate
+> already exists for the current HEAD — e.g. `ac-merge` just shipped it — **note-and-skip**
+> the `test:all` + `build:check` re-run here; they are redundant and cost ~45-50 min on the
+> shared self-hosted runner. Re-run them ONLY when no fresh pass exists (standalone landing,
+> or local changes since the gate). Format / lint / type-check are cheap — always run.
+> (Mirrors `ac-merge`'s QA-gate skip-if-fresh; don't validate the same HEAD twice.)
 
 ```bash
 # Format / lint / type-check run fast — terminal-only output is fine.
@@ -303,7 +310,7 @@ Output for the user and next session:
 
 **Present next session choice with `AskUserQuestion`:**
 
-Note: `ac-land` (this step) and `ac-review` are both pre-merge gates. Both must complete before `ac-merge`. Their mutual order is flexible — you can run review before landing or after; merge always comes last.
+Note: `ac-land` runs **LAST** — after `ac-review` AND `ac-merge`. Review and merge are the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. (Older guidance positioned land as a pre-merge gate — that was wrong; it left teardown and learning stranded when the loop stopped after merge.)
 
 ```
 AskUserQuestion(
@@ -339,6 +346,32 @@ rm -rf /tmp/hygiene-*
 rm -rf /tmp/work-review-*
 ```
 
+### Teardown (operational — part of landing)
+
+Landing means leaving NO live debris. Run this regardless of how the session reached land
+(clean finish, iteration cap, regression stop, human "stop", or error):
+
+1. **Kill spawned background tasks/waiters.** Long-running poll/wait loops are the classic
+   zombie — a `until cond; do sleep N; done` whose condition never fires runs forever (a
+   prior session left one alive ~16.5h). Stop them by IDENTITY, not a broad sweep:
+   - For harness-tracked background tasks: `TaskStop` each one you started this session.
+   - For stray shells, list candidates and confirm each is yours before killing — match the
+     specific command, never a blanket pattern:
+     ```bash
+     ps -Ao pid,etime,command | grep -iE "until .*sleep|seq 1 .*gh (run|pr)|pnpm test:all" | grep -v grep
+     # kill -TERM <pid> ONLY for loops you recognize as this session's. Do NOT kill the
+     # self-hosted Actions runner, the dev server someone else owns, or unrelated jobs.
+     ```
+   - Then confirm none survive: re-run the `ps … grep` → expect empty.
+   - **Prevention:** every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
+     `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie.
+2. **Agent Mail:** `release_file_reservations` (all paths for your agent), then
+   `deregister_agent` (or `retire_agent`). Don't leave reservations to TTL-expire.
+3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session
+   trips over is a teardown failure. If concurrent-session files are present and not yours
+   (unmerged `UU`, stray staged files), surface them in the summary — don't silently leave
+   them, and don't blindly discard another agent's uncommitted work.
+
 ### Final Verification
 
 ```bash
@@ -351,7 +384,8 @@ br ready --json     # What's left
 
 ## Remember
 
-- **Land is NON-NEGOTIABLE** — push before learning
+- **Land is NON-NEGOTIABLE and runs LAST** — after merge; it is `ac-loop`'s guaranteed exit
+- **To land = clean AND wise** — teardown (no live processes, no leaked Agent Mail reservations, clean tree, temp cleared) is as much "landing" as the retrospective. A session that leaves zombies running did not land, no matter how much it shipped
 - **Learn from evidence, not speculation** — every finding needs a concrete example from this session
 - **Compound aggressively but ALWAYS user-gated** — no auto-apply, every upgrade needs explicit approval (unlike review commands)
 - **Context bloat is the enemy** — refine existing content, don't just append
