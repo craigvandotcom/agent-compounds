@@ -373,7 +373,9 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
 
 6. **Human-gate check** — if the bead has a `human-gate` label, the conductor MUST present each substantive decision to the user for approval BEFORE committing. Gate decisions, ground truth values, classification rationales, and any domain-knowledge claims require explicit user sign-off. Do NOT auto-close human-gate beads based on passing tests alone — the human review IS the gate.
 
-7. **Fresh-eyes diff scan:**
+7. **Migration-validate gate (detection-by-artifact)** — if the bead's diff adds or changes a `supabase/migrations/*.sql` file AND the app's `CORE/supabase.md` documents a local-validate requirement, the bead is NOT "done" until the app's local-validate gate is green (typically `pnpm db:verify` = `supabase db reset` replay-from-zero + local integration tests). This is the one place an RLS/escalation bug surfaces before it touches shared prod — passing units is not sufficient. Trigger on the migration FILE in the diff, not a label (labels get forgotten). Skip silently for apps with no local stack or for purely additive/reversible migrations the app's doctrine exempts. The prod `db push` itself stays a separate, human-approved step (handled at merge, never auto-run here). See the `supabase` skill § "Local-validate gate (risk-tiered)".
+
+8. **Fresh-eyes diff scan:**
 
    ```bash
    git diff --stat

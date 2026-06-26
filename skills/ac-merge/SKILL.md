@@ -480,6 +480,17 @@ git tag --points-at HEAD        # Confirm v$NEW_VERSION on the merge commit
 git branch -d "$WAVE" 2>/dev/null || true   # Clean local wave branch
 ```
 
+### Database migrations are a SEPARATE, human-approved push — not part of merge
+
+If the wave includes a `supabase/migrations/*.sql` file, merging to main does **NOT**
+apply it to production. The prod `db push` is a deliberate, human-approved, collision-aware
+step (the `supabase` skill gates `db push` as ASK-USER-FIRST), run AFTER the local-validate
+gate passed pre-merge (ac-implement Phase 1c). For apps on a **shared** Supabase project,
+push collision-aware: `supabase migration fetch` → review the diff → `db push` → verify —
+**never blind-repair** (multiple apps push to one prod). Surface the pending prod migration
+in the merge summary so it isn't silently forgotten; do not claim the schema change "shipped"
+until the push is done and verified.
+
 ### Verify the Deploy Actually Shipped
 
 If the project deploys on push to main (Vercel: `vercel.json` present or a known Vercel
