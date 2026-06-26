@@ -28,12 +28,12 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 ```
 EACH ITERATION:
   1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships FIRST)
-      └─ ac-implement → VERIFY-GATE → ac-land → ac-review → ac-merge → Slack notify
+      └─ ac-implement → VERIFY-GATE → ac-review → ac-merge → Slack notify
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
       │      (prep — only now, AFTER the maintenance wave has shipped)
       └─ ensure wave branch (loop owns this, not ac-implement) →
-         ac-implement → VERIFY-GATE → ac-land → ac-review → ac-merge → Slack notify
+         ac-implement → VERIFY-GATE → ac-review → ac-merge → Slack notify
 
   VERIFY-GATE = consult _shared/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
@@ -41,6 +41,14 @@ EACH ITERATION:
   4. Nothing left → Phase ARIA (unlock human blocks, then stop)
 
 STOP CONDITIONS checked before each iteration (see below).
+
+ON EXIT — ALWAYS, every stop path (C1/C2/C3/C4, Phase ARIA, or an error):
+  run ac-land. Land is the loop's single closing ritual — it TEARS DOWN (kills
+  spawned tasks, sweeps orphaned waiters, releases+deregisters Agent Mail, clears
+  temp, asserts a clean tree) AND LEARNS (reflect + system upgrades). ac-land runs
+  LAST, after the final wave's merge — not per-wave (it was wrongly in the per-wave
+  path before). The loop is NOT done until it has landed: a run that ships waves but
+  never lands leaves zombies + strands every lesson in the transcript.
 ```
 
 ---
@@ -277,6 +285,44 @@ After a nudge, re-check on the next scheduled loop fire. If the block persists: 
 
 ---
 
+## Efficiency & Validators (cost discipline)
+
+The loop is expensive when validators run too often, at the wrong boundary, or while
+fighting the machine. Hold these:
+
+**Pushing**
+- Push loop commits with `git push --no-verify`. The husky pre-push `pnpm build` is
+  redundant with CI and, in a backgrounded/piped shell, **silently swallows the push** —
+  the commit lands locally, origin never moves, and `… | tail` masks the real exit code.
+  After EVERY push assert `git rev-parse origin/<branch>` == local HEAD before moving on.
+  (See memory `prepush-build-hook-swallows-background-pushes`.)
+
+**Validators — each fires ONCE, at its correct boundary**
+- Per-bead correctness → `pnpm test` (the affected runner). NEVER `test:all` per bead.
+- `test:all` runs **exactly once per wave**: after the LAST code change, before handing to
+  `ac-merge`/CI. Not during implementation (affected runner covers that), not to "prove" a flake.
+- "Is this a flake?" is a CHEAP question → re-run the ONE failing file in isolation. Never
+  answer it with a full-suite re-run — that's the heaviest tool on the cheapest question.
+- The wave-level `ac-review` is scoped to **cross-bead integration** (per-bead conductor
+  reviews already cover each bead's internals). If a dedicated pass already cleared a
+  dimension on a bead (e.g. a `security-reviewer` on a privacy keystone), the wave review
+  **skips that dimension** instead of re-deriving the same verdict.
+
+**Pacing & contention**
+- Match the wakeup to the wait. A known ~5-min job → poll ~270s (stay in the prompt-cache
+  window); reserve 1200–1800s for genuinely idle ticks. Don't sleep 20 min on a 5-min job.
+- **The CI runner IS this Mac** (self-hosted). Do NOT run local `test:all`/builds while a
+  CI job is live on the runner — you starve your own runner and triple every duration
+  (a ~21-min suite became ~50 min at load-68). See `bca-ci-and-ios-build-ops`.
+
+**Parallelism (judgment, not a blanket rule)**
+- When ≥2 ready beads have NO dependency between them, spawn their engineers concurrently.
+  When a chain exists (A blocks B), stay sequential. Pull heavy sub-steps (e2e / prod-build)
+  OUT of the implementer into their own gated step so they're visible and pace-able — don't
+  let one bead's engineer run 100+ min hidden inside a sub-agent.
+
+---
+
 ## Stop Conditions
 
 Check before each iteration begins.
@@ -289,6 +335,8 @@ Check before each iteration begins.
 | **C4** | Human override (Slack message "stop" / "pause the loop") | Honour immediately after current bead. Notify confirmation. |
 
 C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clean stops (current work finishes, then exit).
+
+**Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
 
 > **No token-budget stop.** A "running low on tokens" condition was removed deliberately:
 > the loop cannot reliably measure its own remaining budget, and with no explicit target
