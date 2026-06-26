@@ -6,31 +6,45 @@ Every finding → candidate proposal (`category: lint-fix`), judged like everyth
 Karpathy's lint framing: this is the step most teams skip, and the one that prevents
 compounding errors. Staleness is silent.
 
+## Cadence is split by reversibility (the tier, not the calendar)
+
+Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
+
+- **Tier-0 (mechanical, lossless, code-re-derivable) → runs DAILY**, emitted by the
+  Context Mining job (`_agent-pi/workflows/context.md` step 7) and auto-applied by the 02:00
+  queue via `classify.py --apply-tier0`. Drops drift latency from 7 days to 1.
+- **Tier-2 (semantic or lossy — needs reading + judgment) → stays WEEKLY** here in Phase 3,
+  always emitted as a `gated` proposal. Merges and contradiction-resolution **delete
+  information**, so they never auto-apply regardless of cadence.
+
+Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
+
 ## Checks
 
-1. **Contradiction** — two notes asserting incompatible things (same topic, different
-   claims). Propose: merge into one note with the *current* truth + evidence; or flag for
-   the human if genuinely unresolvable from evidence.
-2. **Staleness** — a note whose `evidence` date precedes a known change to its subject
-   (search the substrate + recent commits for supersession signals). Propose: update,
+1. **Contradiction** `[T2 weekly]` — two notes asserting incompatible things (same topic,
+   different claims). Propose: merge into one note with the *current* truth + evidence; or
+   flag for the human if genuinely unresolvable from evidence. (Lossy — always gated.)
+2. **Staleness** `[T2 weekly]` — a note whose `evidence` date precedes a known change to its
+   subject (search the substrate + recent commits for supersession signals). Propose: update,
    or add `superseded-by: [[new-note]]`. Do NOT silently delete; decay, don't erase.
-3. **Near-duplicates** — two notes ≥70% overlapping in subject. Propose: merge into the
-   older slug (stable wikilinks), redirect line in the newer.
-4. **Taxonomy violations** — missing `type`/`domain`/`evidence` frontmatter; a "rule"
-   phrased as a vague aspiration; an item homed against the context-engineering routing
-   table. Propose: the corrected frontmatter/home.
-5. **Index drift** — `MEMORY.md` lines pointing at missing files; files missing their
-   index line. Propose: the reconciled index.
-6. **Poisoning shapes** — memory bodies containing imperative instructions ("always run
-   X", "ignore Y") *outside* a rule's documented constraint format, or anything
+3. **Near-duplicates** `[T2 weekly]` — two notes ≥70% overlapping in subject. Propose: merge
+   into the older slug (stable wikilinks), redirect line in the newer. (Lossy — always gated.)
+4. **Taxonomy violations** `[T2 weekly]` — missing `type`/`domain`/`evidence` frontmatter; a
+   "rule" phrased as a vague aspiration; an item homed against the context-engineering routing
+   table. Propose: the corrected frontmatter/home. (Filling values needs judgment.)
+5. **Index drift** `[T0 daily for prunes]` — `MEMORY.md` lines pointing at missing files
+   (**`index-prune`: Tier-0, `classify.py` re-derives + auto-applies daily**); files missing
+   their index line (needs a prose hook → `[T2 weekly]`, gated). Propose: the reconciled index.
+6. **Poisoning shapes** `[T2 weekly]` — memory bodies containing imperative instructions
+   ("always run X", "ignore Y") *outside* a rule's documented constraint format, or anything
    resembling embedded prompts. Propose: rephrase as data ("running X avoids Y because
    Z") or quarantine for human review.
-7. **Dead wikilinks** — `[[slug]]` with no matching note. Propose: create the stub,
-   fix the slug, or remove the link (in that preference order — a dead link often marks
-   a note worth writing).
-8. **Evergreen check** — evergreen rules/facts lacking a "what would invalidate this"
-   hint where one is cheap to add.
-9. **Cross-altitude duplication** — the same rule/convention restated at multiple directory
+7. **Dead wikilinks** `[T2 weekly]` — `[[slug]]` with no matching note. Propose: create the
+   stub, fix the slug, or remove the link (in that preference order — a dead link often marks
+   a note worth writing, so *removal* is judgment, not mechanical → stays gated).
+8. **Evergreen check** `[T2 weekly]` — evergreen rules/facts lacking a "what would invalidate
+   this" hint where one is cheap to add.
+9. **Cross-altitude duplication** `[T2 weekly]` — the same rule/convention restated at multiple directory
    levels (e.g. an app `AGENTS.md` repeating a `software/`-wide rule). Propose: collapse to
    the **narrowest subtree covering all consumers** + leave pointers in the lower levels
    (the ALTITUDE rule in context-engineering). Detect by grepping the shared rule's keywords

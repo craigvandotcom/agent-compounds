@@ -26,11 +26,15 @@ DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a
 
 **Auto-act tier (the gate-skip).** Not every proposal needs Craig's tap. The daily queue job
 (`_agent-pi/workflows/dream-daily.md`) classifies each proposal **deterministically**
-(`infrastructure/dream-cycle/classify.py`) into `auto` (a pure new-memory-note ADD to root,
-judge ≥9 — append-only, revertible) or `gated` (everything judgment-laden). It applies the
-`auto` tier unattended and posts only `gated` ones as Slack cards. Policy + the exact
-predicate: `references/auto-act-rubric.md`. CYCLE itself still **never applies** — it only
-emits; the auto-apply lives in the daily job (Stage-1 autonomy = deterministic hygiene only).
+(`infrastructure/dream-cycle/classify.py`) into `auto` or `gated` (everything judgment-laden).
+`auto` has two shapes: **Tier-1** (a pure new-memory-note ADD to root, judge ≥9 — append-only)
+and **Tier-0** (a `lint-fix` the script can *re-derive and apply itself* — e.g. `index-prune`;
+zero LLM trust, verification is the gate). It applies the `auto` tier unattended and posts only
+`gated` ones as Slack cards. The autonomy axis is **reversibility × judgment, not cadence** —
+lossless/mechanical → auto; lossy (merge/summarise) or judgment-laden → gated. Policy + the
+exact predicate: `references/auto-act-rubric.md`; architecture:
+`neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`. CYCLE itself still **never
+applies** — it only emits; the auto-apply lives in the daily job (Stage-1 autonomy = deterministic hygiene only).
 
 ---
 
@@ -82,6 +86,13 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   **demotion** to L3.
 
 ### Phase 3 — Lint (hygiene; see `references/lint-checks.md` for the full checklist)
+
+**Scope note (since 2026-06-26):** the **mechanical, lossless** checks (Tier-0 — e.g.
+`index-prune`) now run **daily** in the Context Mining job and auto-apply via the 02:00 queue.
+Phase 3's weekly job covers the **semantic / lossy** checks (Tier-2 — contradiction, staleness,
+near-duplicate *merges*, cross-altitude duplication), all emitted `gated`. Don't re-do the
+daily mechanical sweep here; if you notice mechanical drift the daily job missed, that's a
+finding about the daily job.
 
 Sweep the memory homes for: contradictions between notes · stale facts (evidence
 predates a known change; flag, don't guess) · near-duplicates to merge · taxonomy
@@ -168,9 +179,20 @@ zero proposals, say so plainly — a quiet week is a valid outcome, not a failur
 
 ## Mode: CYCLE-DAILY  (v2 — raw-transcript mining)
 
-**Status:** DESIGNED (roadmap Phase 2.v2); activates once transcript replication (v2-a)
-lands. Until then the weekly **CYCLE** above is the live path. Full how-to:
-`references/transcript-mining.md` · signal types: `references/signal-taxonomy.md`.
+**Status:** DESIGNED (roadmap Phase 2.v2); the **full** transcript-mining funnel activates
+once transcript replication (v2-a) lands. Until then the weekly **CYCLE** above is the live
+synthesis path. Full how-to: `references/transcript-mining.md` · signal types:
+`references/signal-taxonomy.md`.
+
+**LIVE today — the reflect-gap backstop (the cheap half of the coverage win).** The daily
+Context Mining job already closes the biggest hole without waiting on v2-a:
+`infrastructure/dream-cycle/reflect_gap.py` deterministically lists *substantive but
+unreflected* sessions from the day's transcripts (a session that did work — or decided
+something in pure conversation, leaving zero git signal — yet never ran `reflect`). The job
+**mines exactly those transcripts** (the transcript is the only remaining context; a finished
+session's live window is gone — mine it, never "re-run reflect"). This + the existing git-diff
+pass is the daily capture backstop; the full marker-funnel over *all* transcripts is the v2-a
+upgrade. Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
 
 An **evolution of CYCLE, not a rewrite** — Phases 2 (synthesize) / 4 (judge) / 5 (emit)
 are reused unchanged. Two changes: a cheap **precondition check** runs first, and **gather
