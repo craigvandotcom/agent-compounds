@@ -290,21 +290,25 @@ For each item: target file, what to change, severity, which reviewers flagged it
 
 ### Auto-Apply Rules
 
-**Auto-apply a fix if ANY condition is met:**
+Apply the canonical **cascade, design-decision gate, and deferred-finding lifecycle in
+`_shared/review-consensus.md`** — single-sourced so `ac-review` and `ac-hygiene` can't diverge.
+In brief:
 
-1. **Severity-based:** The issue is Critical or High severity — these are defects, not preferences
-2. **Same-round consensus:** 2+ reviewers independently flagged the same issue (regardless of severity) — multi-agent agreement is high-signal
-3. **Cross-round consensus:** A single-reviewer finding from THIS round matches a deferred finding in the consensus registry from a PREVIOUS round — recurrence across rounds is high-signal
+1. **Severity-based:** Critical or High → `AUTO_FIX` (defects, not preferences).
+2. **Same-round consensus:** 2+ reviewers flagged the same issue (any severity) → `AUTO_FIX`.
+3. **Cross-round consensus:** a single-reviewer finding THIS round matches a deferred finding in the consensus registry from a prior round → `AUTO_FIX`.
 
-Tag these as `AUTO_FIX`.
+**Design-decision gate (before the cascade):** a choice with no objectively superior technical
+answer → resolve it yourself, pick the better option. Defer as `DESIGN_DECISION` only if it
+**noticeably affects end-user experience** or **profoundly changes the development approach**;
+minor choices (spacing, naming, style) → just pick the better one.
 
-**Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing values, naming conventions, implementation style) — just pick the better option and auto-apply.
+**Defer remaining findings (DO NOT present to user yet):** single-reviewer Medium/Low with no
+cross-round match → add to the consensus registry, NOT tagged `NEEDS_DECISION` yet; may reach
+cross-round consensus if a verification round runs.
 
-**Defer remaining findings (DO NOT present to user yet):**
-
-Single-reviewer Medium/Low findings with no cross-round match are added to the consensus registry — NOT tagged as NEEDS_DECISION yet. They may achieve cross-round consensus if a verification round runs.
-
-For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md`:
+For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md` (format per
+`_shared/review-consensus.md`):
 
 ```markdown
 | {round} | {reviewer} | {severity} | {file:line} | {one-line summary} |
@@ -357,17 +361,25 @@ Read the engineer's result file. Confirm:
 
 **TaskUpdate(task: "Phase 5", status: "in_progress")**
 
-Run all discovered project commands:
+Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
+risk using the shared classifier in `_shared/verification-gate.md` (Step 1). ac-review is a
+branch review, **not** the green-main boundary — the exhaustive run happens at `ac-merge`
+post-rebase — so running a full FORMAT+LINT+TYPECHECK+TEST+BUILD battery on every wave
+(including docs-only ones) violates *proportional effort: incremental in the loop, exhaustive
+at the boundary*.
 
 ```bash
-{CMD_FORMAT}    # if exists
-{CMD_LINT}      # if exists
-{CMD_TYPECHECK} # if exists
-{CMD_TEST}      # if exists
-{CMD_BUILD}     # if exists — full build check
+{CMD_FORMAT}    # always (cheap)
+{CMD_LINT}      # always (cheap)
+{CMD_TYPECHECK} # always (cheap)
 ```
 
-**If all pass:** Continue to Phase 6.
+Then, by diff class (from the classifier):
+- **`CLASS_RUNTIME` unset** (docs / tests / CI only) → skip `{CMD_TEST}` and `{CMD_BUILD}`; cheap checks suffice.
+- **Runtime code, normal risk** → `{CMD_TEST}` (affected/standard); skip `{CMD_BUILD}` unless the wave touches build config or `CLASS_WEBUI`.
+- **High-risk** (migration/`.sql`, auth, payments, release/version — the gate's high-risk row) → full `{CMD_TEST}` + `{CMD_BUILD}`.
+
+**If all selected checks pass:** Continue to Phase 6.
 
 **If any fail:**
 - Fix the issue (small fixes directly, larger ones via engineer sub-agent)

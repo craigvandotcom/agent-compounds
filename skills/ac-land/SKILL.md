@@ -17,8 +17,11 @@ Run this after `/ac-implement` completes its target beads.
 Resolve `ARTIFACTS_DIR` — solo sessions use `/tmp/bead-work`, parallel sessions use a session-unique `/tmp/bead-work-$$`. Detect which one:
 
 ```bash
-# Prefer the parallel-session dir if it exists; fall back to solo
-if [ -f /tmp/bead-work/progress.md ] && ! ls /tmp/bead-work-*/progress.md >/dev/null 2>&1; then
+# Prefer the parallel-session dir if it exists; fall back to solo.
+# Test for parallel session DIRS (-d), not for a progress.md inside them — a sibling session
+# whose dir exists but hasn't written progress.md yet must still count as "parallel present",
+# else this picks /tmp/bead-work and lands the wrong session's work.
+if [ -f /tmp/bead-work/progress.md ] && ! ls -d /tmp/bead-work-*/ >/dev/null 2>&1; then
   ARTIFACTS_DIR=/tmp/bead-work
 else
   # Newest parallel-session dir wins (this session)
@@ -45,6 +48,28 @@ git log --oneline -20
 git status
 git diff --stat
 ```
+
+### Declare the Run Ledger
+
+ac-land runs LAST and can compact mid-flight (a slow `test:all` in Phase 1b, a hung browser
+tester) — and teardown that never runs leaves zombies. Declare a run ledger so a resumed
+session re-enters at the right phase instead of re-running quality gates or, worse, skipping
+teardown:
+
+```
+TaskCreate (one per phase):
+  1. Initialize                          in_progress
+  2. Land the plane (gates + UI + git)   pending
+  3. Learn (retrospective)               pending
+  4. Compound (system upgrades)          pending
+  5. Hand off                            pending
+  6. Teardown                            pending
+```
+
+`TaskUpdate` at each phase boundary; mark task 1 `completed` now. `progress.md` remains the
+artifact-of-record for *what was accomplished*; the ledger tracks *where the run is* — so a
+compacted conductor knows whether teardown (task 6) still owes work. The ledger tracks the
+RUN; beads stay the work atom.
 
 ---
 
@@ -154,7 +179,15 @@ A 200/307/308 in <2s means the page is warm. If a curl hangs >30s, that's a real
 
 #### Step 2: Route to Relevant Journeys
 
-Use `git diff --stat` against the session's first commit to determine which areas were changed. Cross-reference with project journey definitions (if any) to identify relevant UI tests.
+Classify the session diff with the **shared classifier in `_shared/verification-gate.md`**
+(Step 1) — the same `CLASS_WEBUI` / `CLASS_WEBRT` greps `ac-merge` and the Verify gate use.
+Don't re-derive the classification in prose here; single-sourcing it keeps ac-land from
+over-testing non-UI `.ts` changes (e.g. a `lib/` util) that the gate would skip:
+
+- `CLASS_WEBUI` or `CLASS_WEBRT` set → route to the matched journeys below.
+- Neither set (backend/logic-only or docs) → skip UI validation, note why.
+
+Cross-reference the set classes with the project's journey definitions to pick which testers to run.
 
 #### Step 3: Spawn Testers
 
@@ -363,8 +396,10 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
      # self-hosted Actions runner, the dev server someone else owns, or unrelated jobs.
      ```
    - Then confirm none survive: re-run the `ps … grep` → expect empty.
-   - **Prevention:** every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
-     `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie.
+   - **Prevention** (the *Fail safe; leave no live debris* law — `ac-pipeline-builder`
+     through-threads): every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
+     `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie —
+     and the rule binds when you *write* the loop, not just when teardown sweeps for it here.
 2. **Agent Mail:** `release_file_reservations` (all paths for your agent), then
    `deregister_agent` (or `retire_agent`). Don't leave reservations to TTL-expire.
 3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session

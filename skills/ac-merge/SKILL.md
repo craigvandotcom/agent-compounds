@@ -32,9 +32,32 @@ Run after both `/ac-land` and `/ac-review` have completed for the wave (their or
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-ARTIFACTS_DIR=/tmp/wave-merge-$(date +%Y%m%d-%H%M%S)
+WAVE=$(git branch --show-current)
+# Stable per-wave artifacts dir → a session dropped during a 10-min CI poll finds the SAME dir
+# on resume (a fresh timestamped dir would orphan the prior state). ac-land sweeps /tmp/wave-merge-*.
+ARTIFACTS_DIR="/tmp/wave-merge-${WAVE//\//-}"
 mkdir -p "$ARTIFACTS_DIR"
+STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VERSION, WAIT_FOR_FEEDBACK
+[ -f "$STATE" ] && . "$STATE"         # on resume, reload instead of re-asking
 ```
+
+### Declare the Run Ledger
+
+ac-merge spans 10-min CI polls where a session can drop. Declare a run ledger so a resumed
+run re-enters at the right phase instead of re-polling from scratch or re-asking PR#/version:
+
+```
+TaskCreate (one per phase):
+  1. Pre-flight — branch, beads, QA, rebase, version bump   in_progress
+  2. Create PR                                               pending
+  3. Wait for PR feedback + triage                           pending
+  4. Merge + tag + verify deploy shipped                     pending
+  5. Report + finalize                                       pending
+```
+
+`TaskUpdate` at each phase boundary. As you capture `PR_NUMBER`, `NEW_VERSION`, and
+`WAIT_FOR_FEEDBACK`, append them to `$STATE` (e.g. `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`)
+so a dropped session reloads them on resume. The ledger tracks the RUN; beads stay the work atom.
 
 ### Verify Wave Branch
 
@@ -197,6 +220,7 @@ Apply the chosen bump (unless skipped):
 ```bash
 pnpm version "$CHOSEN_BUMP" --no-git-tag-version
 NEW_VERSION=$(node -p "require('./package.json').version")
+echo "NEW_VERSION=$NEW_VERSION" >> "$STATE"   # persist so a dropped session doesn't re-ask the bump
 ```
 
 #### Propagate the version to native build surfaces
@@ -234,7 +258,7 @@ AskUserQuestion(
 )
 ```
 
-Save as `WAIT_FOR_FEEDBACK` (true/false).
+Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FOR_FEEDBACK=$WAIT_FOR_FEEDBACK" >> "$STATE"`. Mark ledger task 1 `completed`.
 
 ---
 
@@ -274,7 +298,7 @@ EOF
 )"
 ```
 
-Save the PR number and URL.
+Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`. Mark ledger task 2 `completed`.
 
 **If `WAIT_FOR_FEEDBACK` is false:** Skip to Phase 3 (Merge).
 
@@ -577,10 +601,16 @@ AskUserQuestion(
 )
 ```
 
-### Cleanup
+### Finalize
+
+Mark the run ledger's final task `completed`. Then clean up — but only on the clean "Done"
+path. If the user chose a follow-up (new feature / hygiene) or the Phase-3 deploy-verify
+flagged an error, **leave `$ARTIFACTS_DIR`** — the report points at it for investigation, and
+`ac-land`'s teardown sweeps `/tmp/wave-merge-*` later anyway. Don't delete state a follow-up
+still needs.
 
 ```bash
-rm -rf "$ARTIFACTS_DIR"
+rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 ```
 
 ---

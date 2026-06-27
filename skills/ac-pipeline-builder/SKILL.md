@@ -72,7 +72,7 @@ re-examine the change — not the law.
 | **Proportional effort: incremental in the loop, exhaustive at the boundary.** Affected-only during dev; green-main makes this sound; "don't invent issues, finish early if clean." (See Invariant 2 for the full per-surface table.) | verification-gate, ac-hygiene, ac-human-session |
 | **You can't self-validate — confidence requires independence.** The agent that did the work cannot fully review it; the model that found a bug can rationalize it away. Independent agents/models, same-round and cross-round consensus, is the only reliable signal. | ac-review, ac-hygiene, ac-plan-refine |
 | **One concern, one home; compose, don't duplicate.** "Don't reimplement the bead side." "Three skills, three concerns — don't merge them." Doctrine = map not territory. | ac-triage, ac-distribute, ac-pipeline-builder |
-| **Fail safe; never silently destroy.** Idempotent ops; confirm before archive/move/delete; abort always available; never chain `br close` to a commit. | ac-tidy, ac-align, ac-merge, ac-implement |
+| **Fail safe; never silently destroy — and leave no live debris.** Idempotent ops; confirm before archive/move/delete; abort always available; never chain `br close` to a commit. **Every background waiter you spawn needs a hard cap (`for`/`seq`, `timeout`) — never an unbounded `until`; a waiter that can't time out is a future zombie.** This binds at the moment you *write* the loop (a stage-authoring constraint), not only at teardown. | ac-tidy, ac-align, ac-merge, ac-implement, ac-land, ac-loop |
 | **Minimize WIP; prefer nearest-to-done.** Single active wave; nearest-to-ready first; a half-shipped bead has zero compound value. | ac-implement, ac-human-session, ac-loop |
 
 ---
