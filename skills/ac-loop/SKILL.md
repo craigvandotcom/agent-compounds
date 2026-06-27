@@ -51,6 +51,10 @@ ON EXIT — ALWAYS, every stop path (C1/C2/C3/C4, Phase ARIA, or an error):
   never lands leaves zombies + strands every lesson in the transcript.
 ```
 
+> The run's progress through these phases is tracked in the Phase 0 **run ledger**
+> (`TaskCreate`) — update it at each phase boundary; it is the anti-early-exit anchor
+> and the resume point after compaction.
+
 ---
 
 ## Phase 0: Orient
@@ -149,6 +153,24 @@ Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H huma
 4. Plan wave refined beads → Phase 2
 
 > **Why orphans before prep:** `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, and a feature wave is a long haul. Ship the cheap, ready, often time-sensitive orphan fixes FIRST so a session that ends early (compaction, human override, iteration cap) has still delivered the ready work. Maintenance wave first; prep for the next feature wave second.
+
+### Create the Run Ledger
+
+Once you've oriented and know what's queued, lay down a **run-level task list** with `TaskCreate` — the loop's own progress, made legible and resumable. This is the anti-early-exit anchor and the "where is the loop right now" view a headless operator otherwise lacks.
+
+```
+TaskCreate — one task per run phase; add a Plan-wave task per queued loop-ready wave (up to the iteration cap):
+  1. Orient + read board                  → in_progress  (this pass)
+  2. Orphan / maintenance wave → merge     → pending      (omit if no orphans)
+  3. Plan wave: <plan-name> → merge        → pending      (one per queued wave, cap 3)
+  4. Phase ARIA + ac-land                  → pending
+```
+
+`TaskUpdate` each task to `in_progress` when its phase starts and `completed` at its merge/exit; mark task 1 `completed` when this orient pass finishes. If the board is empty, the ledger is just task 1 + task 4.
+
+> **The ledger tracks the RUN, never the work.** It holds *phases and iterations* — orient, which wave, ARIA/land — and nothing else. Work items stay **beads**: the bead board is the single source of truth for *what* ships (`ac-pipeline-builder` axiom 1, *the bead is the atom*). The ledger is a navigation aid over the run, not a second copy of the queue — never put bead IDs or per-bead state in it, or the two will drift.
+
+> **On resume (compaction / restart):** read the ledger first — it's your resume *anchor* (which phase you were in). Then reconcile against live board state, which remains ground truth: a wave the ledger calls `in_progress` may have merged in the moments before compaction. Trust the **board** for work state; trust the **ledger** for run position.
 
 If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready plans to beadify, and no human-gated beads** → go straight to Phase ARIA.
 
@@ -419,6 +441,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Single-branch rule** — join the open wave, never create a second
 - **Delegate, don't re-implement** — call `ac-implement`, `ac-land`, `ac-review`, `ac-merge`
+- **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
 - **ARIA gating** — `AskUserQuestion` only for simple, bounded forks. Everything else is advisory
 - **Persistent nudge** — re-nudge every session until Craig acts. Silence enables bottlenecks
 - **C2 is the only hard stop** — critical regression never merges
