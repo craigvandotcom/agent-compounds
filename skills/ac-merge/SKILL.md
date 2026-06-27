@@ -147,39 +147,46 @@ if the behavior is intended — update the journey doc and close the bead.
 
 ### Version Bump
 
-Scan the wave's commits for conventional-commit prefixes and suggest the next semver bump. The version-bump commit lands on the wave branch BEFORE the push, so the PR shows it as part of the merge unit.
+**The default bump is ALWAYS `patch`.** These app versions are a build / marketing
+number, not a published-library API contract — so a feature wave does NOT auto-escalate
+to minor. `minor` and `major` are **deliberate, explicitly-chosen** bumps that a human
+directs for a milestone or an announced breaking release; they are NEVER auto-derived from
+commit prefixes. The version-bump commit lands on the wave branch BEFORE the push, so the
+PR shows it as part of the merge unit.
 
 ```bash
 BASE_BRANCH=main
 COMMIT_LOG=$(git log "$BASE_BRANCH"..HEAD --format="%s%n%b")
 
-# Detect any breaking change footer or `!:` in subject
+# DEFAULT IS PATCH for every wave — features included.
+SUGGESTED_BUMP=patch
+
+# Signal only: surface a breaking-change marker so a human can CHOOSE major.
+# Do NOT auto-escalate the default off patch.
 if printf '%s' "$COMMIT_LOG" | grep -qE "^[a-zA-Z]+(\([^)]+\))?!:|BREAKING[ -]CHANGE"; then
-    SUGGESTED_BUMP=major
-elif printf '%s' "$COMMIT_LOG" | grep -qE "^feat(\([^)]+\))?:"; then
-    SUGGESTED_BUMP=minor
-else
-    SUGGESTED_BUMP=patch
+    echo "NOTE: wave carries a breaking-change marker — pick 'major' explicitly only if truly warranted."
 fi
 
 CURRENT_VERSION=$(node -p "require('./package.json').version")
-echo "Current version: $CURRENT_VERSION → suggested bump: $SUGGESTED_BUMP"
+echo "Current version: $CURRENT_VERSION → default bump: patch"
 ```
 
-Confirm with the user (suggested bump as the recommended option):
+**Autonomous / loop mode (ac-loop): always take `patch`** — never auto-select minor/major
+without an explicit human instruction passed in the loop directive.
+
+Confirm with the user (patch is the recommended default):
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Wave commits suggest {SUGGESTED_BUMP} bump from v{CURRENT_VERSION}. Apply?",
+    question: "Bump v{CURRENT_VERSION} → patch (default)? Choose minor/major only for a deliberate milestone.",
     header: "Version bump",
     multiSelect: false,
     options: [
-      { label: "{SUGGESTED_BUMP} (Recommended)", description: "Derived from commit prefixes (feat→minor, fix-only→patch, !→major)" },
-      { label: "patch", description: "Force patch — bug fixes / non-feature changes only" },
-      { label: "minor", description: "Force minor — new features (backward compatible)" },
-      { label: "major", description: "Force major — breaking changes" },
-      { label: "skip — no bump this wave", description: "Don't touch package.json (rare; use when shipping a doc-only or experiment-only wave)" }
+      { label: "patch (Recommended)", description: "Default for EVERY wave — fixes and features alike. App version is a build number, not a library API contract." },
+      { label: "minor", description: "Explicit opt-in only — a deliberate feature-milestone release you are choosing now." },
+      { label: "major", description: "Explicit opt-in only — a deliberate, announced breaking/milestone release." },
+      { label: "skip — no bump this wave", description: "Don't touch package.json (rare; doc-only or experiment-only wave)." }
     ]
   }]
 )
