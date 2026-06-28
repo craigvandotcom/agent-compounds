@@ -170,12 +170,50 @@ supabase migration new add_food_tags
 
 # 2. Edit the generated file in supabase/migrations/
 
-# 3. Push to remote (after user approval)
+# 3. (apps with a local stack) Local-validate first — see the gate below
+
+# 4. Push to remote (after user approval)
 supabase db push
 
-# 4. Generate updated types from remote
-supabase gen types typescript --linked > lib/supabase/types.ts
+# 5. Generate updated types
+supabase gen types typescript --linked > lib/supabase/types.ts   # or --local for the local stack
 ```
+
+### Local-validate gate (risk-tiered) — for apps that run a local stack
+
+The asymmetry: a migration's first execution against real data should never also
+be its first execution *ever*. Where a local Docker stack exists, validate there
+before `db push`. **Tier the discipline by blast radius — don't gate everything:**
+
+| Migration class | Gate |
+| --- | --- |
+| RLS / privilege / `GRANT` · destructive (`DROP`, type changes) · data backfill | **REQUIRED** — local-validate must pass before `db push` |
+| Additive + reversible (nullable column, new index, new table no one reads yet) | **Optional** — direct-to-prod-with-PITR is acceptable; forcing ceremony here is process for its own sake |
+
+The gate (an app encodes this as one script — e.g. `pnpm db:verify`):
+
+```bash
+supabase db reset      # ← replay ALL migrations from zero on a fresh local DB.
+                       #   THIS is the reproducibility signal: green = the migration
+                       #   applies in-sequence on a clean DB, not just on your drifted local.
+<app local integration tests>   # RLS/escalation correctness — only surfaces against real Postgres
+# then, separately: regenerate types (a tracked-file mutation — keep it OUT of the pass/fail gate)
+```
+
+Two principles keep this from rotting into false confidence:
+
+- **Ephemeral, not warm.** Trust the *replay* (`db reset`), never the *contents*. A
+  long-lived local DB that accretes state you start believing drifts from prod and
+  gives you green-locally-red-in-prod. Reset before validating; treat local data as
+  disposable.
+- **Name the coverage hole.** Local can't cover everything — e.g. where local
+  storage is disabled, bucket/`storage.objects` RLS is *not* locally testable and
+  stays a Dashboard/runbook step. Local-green ≠ feature-safe; say what the gate does
+  not cover. A disposable cloud dev project is the fallback for destructive tests
+  local can't model.
+
+Whether the gate is **required** for this app (and the exact script + local-stack
+facts) is documented per-app in `CORE/supabase.md`.
 
 > **Shared-project / cross-app migration hosting is per-ecosystem.** When several
 > apps share one Supabase project, one app is typically designated the canonical
@@ -197,7 +235,7 @@ Engineer just retries — no allocator infrastructure needed.
 - **Name migrations descriptively:** `add_food_tags`, `fix_symptom_rls`, `create_correlations_table`
 - **Keep migrations small and focused** — one logical change per file
 - **Use transactions** (migrations run in a transaction by default)
-- **Review SQL carefully before `db push`** when there is no local DB to test against
+- **Before `db push`:** if a local stack exists, run the local-validate gate above (required for RLS/destructive/backfill); if there is no local DB, review the SQL carefully by hand — it is the only check
 - **Before dropping/altering constraints:** Verify the exact constraint name against the source migration file — names frequently differ from assumptions. Run `grep -r "CONSTRAINT" supabase/migrations/ | grep <table_name>` to confirm.
 - **Smoke-testing a UNIQUE constraint against a populated DB:** Don't enumerate insert columns by hand — you'll miss NOT NULL fields and trip `23502` (`not_null_violation`) before reaching the constraint. Copy an existing row via `%ROWTYPE` so every NOT NULL column is populated automatically:
 

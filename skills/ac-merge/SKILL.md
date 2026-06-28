@@ -32,9 +32,32 @@ Run after both `/ac-land` and `/ac-review` have completed for the wave (their or
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-ARTIFACTS_DIR=/tmp/wave-merge-$(date +%Y%m%d-%H%M%S)
+WAVE=$(git branch --show-current)
+# Stable per-wave artifacts dir → a session dropped during a 10-min CI poll finds the SAME dir
+# on resume (a fresh timestamped dir would orphan the prior state). ac-land sweeps /tmp/wave-merge-*.
+ARTIFACTS_DIR="/tmp/wave-merge-${WAVE//\//-}"
 mkdir -p "$ARTIFACTS_DIR"
+STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VERSION, WAIT_FOR_FEEDBACK
+[ -f "$STATE" ] && . "$STATE"         # on resume, reload instead of re-asking
 ```
+
+### Declare the Run Ledger
+
+ac-merge spans 10-min CI polls where a session can drop. Declare a run ledger so a resumed
+run re-enters at the right phase instead of re-polling from scratch or re-asking PR#/version:
+
+```
+TaskCreate (one per phase):
+  1. Pre-flight — branch, beads, QA, rebase, version bump   in_progress
+  2. Create PR                                               pending
+  3. Wait for PR feedback + triage                           pending
+  4. Merge + tag + verify deploy shipped                     pending
+  5. Report + finalize                                       pending
+```
+
+`TaskUpdate` at each phase boundary. As you capture `PR_NUMBER`, `NEW_VERSION`, and
+`WAIT_FOR_FEEDBACK`, append them to `$STATE` (e.g. `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`)
+so a dropped session reloads them on resume. The ledger tracks the RUN; beads stay the work atom.
 
 ### Verify Wave Branch
 
@@ -147,39 +170,46 @@ if the behavior is intended — update the journey doc and close the bead.
 
 ### Version Bump
 
-Scan the wave's commits for conventional-commit prefixes and suggest the next semver bump. The version-bump commit lands on the wave branch BEFORE the push, so the PR shows it as part of the merge unit.
+**The default bump is ALWAYS `patch`.** These app versions are a build / marketing
+number, not a published-library API contract — so a feature wave does NOT auto-escalate
+to minor. `minor` and `major` are **deliberate, explicitly-chosen** bumps that a human
+directs for a milestone or an announced breaking release; they are NEVER auto-derived from
+commit prefixes. The version-bump commit lands on the wave branch BEFORE the push, so the
+PR shows it as part of the merge unit.
 
 ```bash
 BASE_BRANCH=main
 COMMIT_LOG=$(git log "$BASE_BRANCH"..HEAD --format="%s%n%b")
 
-# Detect any breaking change footer or `!:` in subject
+# DEFAULT IS PATCH for every wave — features included.
+SUGGESTED_BUMP=patch
+
+# Signal only: surface a breaking-change marker so a human can CHOOSE major.
+# Do NOT auto-escalate the default off patch.
 if printf '%s' "$COMMIT_LOG" | grep -qE "^[a-zA-Z]+(\([^)]+\))?!:|BREAKING[ -]CHANGE"; then
-    SUGGESTED_BUMP=major
-elif printf '%s' "$COMMIT_LOG" | grep -qE "^feat(\([^)]+\))?:"; then
-    SUGGESTED_BUMP=minor
-else
-    SUGGESTED_BUMP=patch
+    echo "NOTE: wave carries a breaking-change marker — pick 'major' explicitly only if truly warranted."
 fi
 
 CURRENT_VERSION=$(node -p "require('./package.json').version")
-echo "Current version: $CURRENT_VERSION → suggested bump: $SUGGESTED_BUMP"
+echo "Current version: $CURRENT_VERSION → default bump: patch"
 ```
 
-Confirm with the user (suggested bump as the recommended option):
+**Autonomous / loop mode (ac-loop): always take `patch`** — never auto-select minor/major
+without an explicit human instruction passed in the loop directive.
+
+Confirm with the user (patch is the recommended default):
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Wave commits suggest {SUGGESTED_BUMP} bump from v{CURRENT_VERSION}. Apply?",
+    question: "Bump v{CURRENT_VERSION} → patch (default)? Choose minor/major only for a deliberate milestone.",
     header: "Version bump",
     multiSelect: false,
     options: [
-      { label: "{SUGGESTED_BUMP} (Recommended)", description: "Derived from commit prefixes (feat→minor, fix-only→patch, !→major)" },
-      { label: "patch", description: "Force patch — bug fixes / non-feature changes only" },
-      { label: "minor", description: "Force minor — new features (backward compatible)" },
-      { label: "major", description: "Force major — breaking changes" },
-      { label: "skip — no bump this wave", description: "Don't touch package.json (rare; use when shipping a doc-only or experiment-only wave)" }
+      { label: "patch (Recommended)", description: "Default for EVERY wave — fixes and features alike. App version is a build number, not a library API contract." },
+      { label: "minor", description: "Explicit opt-in only — a deliberate feature-milestone release you are choosing now." },
+      { label: "major", description: "Explicit opt-in only — a deliberate, announced breaking/milestone release." },
+      { label: "skip — no bump this wave", description: "Don't touch package.json (rare; doc-only or experiment-only wave)." }
     ]
   }]
 )
@@ -190,6 +220,7 @@ Apply the chosen bump (unless skipped):
 ```bash
 pnpm version "$CHOSEN_BUMP" --no-git-tag-version
 NEW_VERSION=$(node -p "require('./package.json').version")
+echo "NEW_VERSION=$NEW_VERSION" >> "$STATE"   # persist so a dropped session doesn't re-ask the bump
 ```
 
 #### Propagate the version to native build surfaces
@@ -259,7 +290,7 @@ AskUserQuestion(
 )
 ```
 
-Save as `WAIT_FOR_FEEDBACK` (true/false).
+Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FOR_FEEDBACK=$WAIT_FOR_FEEDBACK" >> "$STATE"`. Mark ledger task 1 `completed`.
 
 ---
 
@@ -299,7 +330,7 @@ EOF
 )"
 ```
 
-Save the PR number and URL.
+Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`. Mark ledger task 2 `completed`.
 
 **If `WAIT_FOR_FEEDBACK` is false:** Skip to Phase 3 (Merge).
 
@@ -512,6 +543,17 @@ git tag --points-at HEAD        # Confirm v$NEW_VERSION on the merge commit
 git branch -d "$WAVE" 2>/dev/null || true   # Clean local wave branch
 ```
 
+### Database migrations are a SEPARATE, human-approved push — not part of merge
+
+If the wave includes a `supabase/migrations/*.sql` file, merging to main does **NOT**
+apply it to production. The prod `db push` is a deliberate, human-approved, collision-aware
+step (the `supabase` skill gates `db push` as ASK-USER-FIRST), run AFTER the local-validate
+gate passed pre-merge (ac-implement Phase 1c). For apps on a **shared** Supabase project,
+push collision-aware: `supabase migration fetch` → review the diff → `db push` → verify —
+**never blind-repair** (multiple apps push to one prod). Surface the pending prod migration
+in the merge summary so it isn't silently forgotten; do not claim the schema change "shipped"
+until the push is done and verified.
+
 ### Verify the Deploy Actually Shipped
 
 If the project deploys on push to main (Vercel: `vercel.json` present or a known Vercel
@@ -591,10 +633,16 @@ AskUserQuestion(
 )
 ```
 
-### Cleanup
+### Finalize
+
+Mark the run ledger's final task `completed`. Then clean up — but only on the clean "Done"
+path. If the user chose a follow-up (new feature / hygiene) or the Phase-3 deploy-verify
+flagged an error, **leave `$ARTIFACTS_DIR`** — the report points at it for investigation, and
+`ac-land`'s teardown sweeps `/tmp/wave-merge-*` later anyway. Don't delete state a follow-up
+still needs.
 
 ```bash
-rm -rf "$ARTIFACTS_DIR"
+rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 ```
 
 ---

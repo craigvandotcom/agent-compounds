@@ -16,7 +16,7 @@ For codebase-wide health checks, use `/ac-hygiene` instead.
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Input**        | Feature branch with implementation commits (from `/ac-implement` or manual coding)                  |
 | **Output**       | Review report in `.claude/reviews/`, auto-fixed issues committed, NEEDS_DECISION items presented           |
-| **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.md`, progress in `$ARTIFACTS_DIR/progress.md`              |
+| **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.json`, consensus in `consensus-round-1.json` + `consensus-registry.json`, progress in `progress.md` |
 | **Verification** | All project checks pass (test, lint, type-check), fixes committed, decisions resolved or documented        |
 
 ## Prerequisites
@@ -100,23 +100,18 @@ TaskCreate(subject: "Phase 7: Present decisions", description: "NEEDS_DECISION i
 TaskCreate(subject: "Phase 8: Final report + hand-off", description: "Summary, next step choice, cleanup", activeForm: "Generating final report...")
 ```
 
-### Initialize Consensus Registry
+### Consensus Registry — owned by the script
 
-```bash
-cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
-# Consensus Registry
-
-Tracks single-reviewer findings across rounds. If a finding recurs in a verification round, it achieves cross-round consensus and is auto-fixed.
-
-## Deferred Findings
-
-<!-- Format: | Round | Reviewer | Severity | File | Summary | -->
-EOF
-```
+No manual init. The Phase-3 consensus script (`scripts/consensus.py`) creates and maintains
+`$ARTIFACTS_DIR/consensus-registry.json` — the cross-round memory of deferred single-reviewer
+findings. Don't hand-keep a markdown table; the JSON registry is the source of truth.
 
 ### Compaction Recovery
 
-If `$ARTIFACTS_DIR/progress.md` exists, parse its `### Phase N` entries to recover state. If reviewer findings files exist, skip to Phase 3 (synthesis). If `$ARTIFACTS_DIR/consensus-registry.md` exists, read it to recover the deferred findings pool for cross-round consensus detection.
+If `$ARTIFACTS_DIR/progress.md` exists, parse its `### Phase N` entries to recover state. If
+reviewer findings files (`round-*-*.json`) exist, skip to Phase 3 and (re-)run the consensus
+script. `consensus-registry.json`, if present, already holds the deferred pool for cross-round
+detection — the script reads it automatically.
 
 **TaskUpdate(task: "Phase 0", status: "completed")**
 
@@ -245,9 +240,9 @@ Read project config files and `AGENTS.md` to build context for reviewers. Extrac
 
 **CRITICAL: All 4 agents run IN PARALLEL using a single message with 4 Task calls.**
 
-Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** (security, performance, architecture, correctness). Substitute `{DIFF}` (the Phase-2 diff) and `{ARTIFACTS_DIR}` into each.
+Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** (security, performance, architecture, correctness). Substitute `{DIFF}` (the Phase-2 diff), `{ARTIFACTS_DIR}`, and `{ROUND}` (`1` here) into each.
 
-- Each agent writes to `$ARTIFACTS_DIR/round-1-{role}.md` (`round-1-security.md`, …).
+- Each agent writes **JSON** to `$ARTIFACTS_DIR/round-1-{role}.json` (`round-1-security.json`, …) — machine-read by the Phase-3 consensus script, so the schema in the template is load-bearing.
 - Include a dimension's `SKILL_HINT` line only if Phase-1 skill routing found a relevant skill.
 - Competitive framing, the finding format, and limits (top 7, skip Low, <600 words) are baked into the template — don't restate them.
 
@@ -263,54 +258,46 @@ Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, 
 
 **THIS IS YOUR CORE WORK. Do not delegate synthesis.**
 
-### Read All Findings Files
+### Run Deterministic Consensus
 
-Read from `$ARTIFACTS_DIR/`:
-- `round-1-security.md`
-- `round-1-performance.md`
-- `round-1-architecture.md`
-- `round-1-correctness.md`
+The mechanical synthesis — dedup, same-round + cross-round consensus, the severity/consensus
+auto-apply cascade, and partial-failure detection — runs in **code**, not prose, so consensus
+can't be hallucinated over markdown. It implements `_shared/review-consensus.md`:
 
-### Synthesis Principles
+```bash
+CONSENSUS="$(git rev-parse --show-toplevel)/.claude/skills/ac-review/scripts/consensus.py"
+python3 "$CONSENSUS" --artifacts-dir "$ARTIFACTS_DIR" --round 1   # --round 2 for a Phase-5.5 round
+```
 
-- **Consensus is high-signal** — 2+ reviewers flagging the same area is almost certainly real
-- **Evidence over opinion** — findings need file paths and line numbers
-- **Don't pile on** — if one reviewer flags dead code and another flags architecture, those are different fixes
-- **Critical/High first** — skip Medium unless trivial to fix
+It reads the `round-1-{role}.json` reviewer files, writes `consensus-round-1.json` + updates
+`consensus-registry.json` (the cross-round memory — no manual table-keeping), and prints a
+summary. Harness-agnostic: plain `python3`, stdlib only.
 
-### Deduplicate
+**Read the result (`consensus-round-1.json`) and act on each field:**
 
-If the same issue is found by multiple reviewers:
-- Keep the most detailed description
-- Note which reviewers flagged it (consensus signal)
+- **`reviewers_missing` non-empty → partial failure.** A missing dimension is the silent-PASS
+  trap — never auto-fix-and-approve around it. **Retry once:** re-spawn the missing reviewer(s)
+  (Phase 2, same `{ROUND}`) and re-run consensus. **If still missing:**
+  - *Autonomous (`ac-loop`) run:* this is a **blocker** — `br create -t bug --labels qa-blocker`
+    for the un-reviewed dimension, and emit **`VERDICT: NEEDS_DECISION`** (never `APPROVED`).
+    The loop must not merge a wave a review dimension never saw.
+  - *Interactive run:* surface the gap and let the user decide whether to proceed.
+
+  A reviewer that emits malformed JSON degrades to this same path (the script's per-file
+  parse-guard counts it as missing) — so ignoring the schema can never silently pass.
+- **`auto_fix`** — the cascade is already applied (severity Critical/High, same-round consensus,
+  or cross-round consensus). These go to Phase 4 as-is.
+- **`deferred`** — single-reviewer Medium/Low, no consensus; the script has already carried them
+  into `consensus-registry.json` for cross-round matching. **Apply the design-decision gate
+  yourself** — the one judgment the script can't make: a choice with no objectively superior
+  answer → pick the better option and move it into the change list; defer as `DESIGN_DECISION`
+  (→ user in Phase 7) only if it **noticeably affects end-user experience** or **profoundly
+  changes the development approach**. Minor choices (spacing, naming, style) → just pick the better one.
 
 ### Produce Numbered Change List
 
-For each item: target file, what to change, severity, which reviewers flagged it, auto-fixable or not.
-
-### Auto-Apply Rules
-
-**Auto-apply a fix if ANY condition is met:**
-
-1. **Severity-based:** The issue is Critical or High severity — these are defects, not preferences
-2. **Same-round consensus:** 2+ reviewers independently flagged the same issue (regardless of severity) — multi-agent agreement is high-signal
-3. **Cross-round consensus:** A single-reviewer finding from THIS round matches a deferred finding in the consensus registry from a PREVIOUS round — recurrence across rounds is high-signal
-
-Tag these as `AUTO_FIX`.
-
-**Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing values, naming conventions, implementation style) — just pick the better option and auto-apply.
-
-**Defer remaining findings (DO NOT present to user yet):**
-
-Single-reviewer Medium/Low findings with no cross-round match are added to the consensus registry — NOT tagged as NEEDS_DECISION yet. They may achieve cross-round consensus if a verification round runs.
-
-For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md`:
-
-```markdown
-| {round} | {reviewer} | {severity} | {file:line} | {one-line summary} |
-```
-
-**`DESIGN_DECISION` items** (choices that noticeably affect user experience or profoundly change development approach) are deferred regardless of severity or consensus — these skip the registry and go directly to the user in Phase 7.
+From the script's `auto_fix` plus any `deferred` items you resolved: target file, what to
+change, severity, which reviewers flagged it (`reviewers`), auto-fixable or not. This is Phase 4's input.
 
 Append to `$ARTIFACTS_DIR/progress.md`:
 
@@ -357,17 +344,25 @@ Read the engineer's result file. Confirm:
 
 **TaskUpdate(task: "Phase 5", status: "in_progress")**
 
-Run all discovered project commands:
+Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
+risk using the shared classifier in `_shared/verification-gate.md` (Step 1). ac-review is a
+branch review, **not** the green-main boundary — the exhaustive run happens at `ac-merge`
+post-rebase — so running a full FORMAT+LINT+TYPECHECK+TEST+BUILD battery on every wave
+(including docs-only ones) violates *proportional effort: incremental in the loop, exhaustive
+at the boundary*.
 
 ```bash
-{CMD_FORMAT}    # if exists
-{CMD_LINT}      # if exists
-{CMD_TYPECHECK} # if exists
-{CMD_TEST}      # if exists
-{CMD_BUILD}     # if exists — full build check
+{CMD_FORMAT}    # always (cheap)
+{CMD_LINT}      # always (cheap)
+{CMD_TYPECHECK} # always (cheap)
 ```
 
-**If all pass:** Continue to Phase 6.
+Then, by diff class (from the classifier):
+- **`CLASS_RUNTIME` unset** (docs / tests / CI only) → skip `{CMD_TEST}` and `{CMD_BUILD}`; cheap checks suffice.
+- **Runtime code, normal risk** → `{CMD_TEST}` (affected/standard); skip `{CMD_BUILD}` unless the wave touches build config or `CLASS_WEBUI`.
+- **High-risk** (migration/`.sql`, auth, payments, release/version — the gate's high-risk row) → full `{CMD_TEST}` + `{CMD_BUILD}`.
+
+**If all selected checks pass:** Continue to Phase 6.
 
 **If any fail:**
 - Fix the issue (small fixes directly, larger ones via engineer sub-agent)
@@ -396,7 +391,7 @@ AskUserQuestion(
 )
 ```
 
-**If verification round:** Re-run Phase 2-5 with the updated diff. Include in reviewer prompts: "Previous round found and fixed: {list}. Check if fixes are correct and look for NEW issues only." Max 2 total rounds. During Phase 3 of the verification round, check new findings against the consensus registry for cross-round matches — any match auto-applies.
+**If verification round:** Re-run Phase 2-5 with the updated diff, spawning reviewers with `{ROUND}` = `2` so they write `round-2-{role}.json`. Include in reviewer prompts: "Previous round found and fixed: {list}. Check if fixes are correct and look for NEW issues only." Max 2 total rounds. In Phase 3, run `consensus.py --round 2` — it reads `consensus-registry.json` and auto-applies any finding that matches a prior-round deferred entry (cross-round consensus), with no manual registry-checking.
 
 ---
 
@@ -545,6 +540,11 @@ git push
 ## Phase 8: Final Report + Hand-Off
 
 **TaskUpdate(task: "Phase 8", status: "in_progress")**
+
+> **VERDICT gate.** Emit `VERDICT: APPROVED` only if **every** holds: the last consensus run had
+> `reviewers_missing` empty (all four dimensions reviewed, after at most one retry), all `auto_fix`
+> items were applied and the validation gate passed, and no open `qa-blocker`/blocking decision
+> bead remains. Otherwise emit `VERDICT: NEEDS_DECISION` — `ac-loop` stops instead of merging.
 
 ### Summary
 

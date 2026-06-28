@@ -132,6 +132,13 @@ xcrun simctl io booted screenshot /tmp/qa-<step>.png
 agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
 ```
 
+> **Screenshots / screen recordings as deliverables** (App Review evidence, bug
+> repros, demos) → the **`device-testing`** skill owns the capture recipe,
+> including the simulator-VFR video gotcha (raw `simctl recordVideo` is
+> variable-frame-rate; seek-trimming it plays back as black + a one-frame flash —
+> re-encode to CFR with `ffmpeg -vf fps=30` and verify playback, not just
+> frames). Don't hand-roll capture here.
+
 ### Discipline rules (non-negotiable)
 
 1. **Tree first, pixels second.** Act only on @refs from the latest

@@ -9,7 +9,7 @@ description: Autonomous bead-shipping loop — runs scheduled, drives orphan fix
 
 When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal. When invoked by the scheduler (headless), `AskUserQuestion` posts to Slack as interactive buttons — the session suspends and resumes when Craig clicks. Either way, the behaviour is identical; the transport differs.
 
-> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items, unrefined plans, or unrefined beads. Craig controls what enters the pipeline — you drive what's already in it. Human-gated beads (`human-gate` label) are surfaced, not auto-closed.
+> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items or unrefined *plans*. But unrefined **beads** that are already *in* the pipeline — beadified epics (parent+children) or beads traceable to a plan (`_plans/` or `_plans/_done/`) — you DO refine-and-finish; only a truly raw lone capture stays gated. Craig controls what *enters* the pipeline (via beadify/plan sign-off); you drive everything already in it to merge, furthest-advanced first. Human-gated beads (`human-gate` label) are surfaced, not auto-closed.
 
 ---
 
@@ -51,6 +51,10 @@ ON EXIT — ALWAYS, every stop path (C1/C2/C3/C4, Phase ARIA, or an error):
   never lands leaves zombies + strands every lesson in the transcript.
 ```
 
+> The run's progress through these phases is tracked in the Phase 0 **run ledger**
+> (`TaskCreate`) — update it at each phase boundary; it is the anti-early-exit anchor
+> and the resume point after compaction.
+
 ---
 
 ## Phase 0: Orient
@@ -76,6 +80,7 @@ Capture the returned `name` field:
 ```bash
 export WORKTREES_ENABLED=1
 export AGENT_NAME=<returned-name>   # e.g. "BlueLake" — unique per loop run
+export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dirs; passed to every spawned stage (_shared/run-id.md)
 ```
 
 Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fresh sessions and self-register independently — the loop's `AGENT_NAME` is not inherited.
@@ -115,24 +120,58 @@ br ready --json | jq '[.[] | select(
   (.labels | map(startswith("wave/")) | any)
 )]'
 
-# Unrefined ORPHAN beads (unrefined, no wave/plan) — NOT auto-refined; ARIA nudge only
+# Unrefined beads with NO wave label — split by pipeline depth (see classification below):
+#   (a) part of a beadified EPIC or a plan-traceable group → AUTO-REFINE (signed-off work)
+#   (b) truly RAW lone captures (no parent, no epic group, no source plan) → ARIA gate
 br ready --json | jq '[.[] | select(
   (.labels | index("unrefined")) and
   (.labels | map(startswith("wave/")) | any | not)
 )]'
+# Then classify each: does it have a parent-child dep (epic child), children (epic parent),
+# or ≥1 label-sibling under a shared non-wave epic label (e.g. "tailwind-v4")? → (a) auto-refine.
+# A lone unrefined bead with no parent, no children, no epic-label siblings → (b) raw capture, gate.
+# Cross-check (a) against _plans/ AND _plans/_done/ — an archived source plan IS the sign-off.
 ```
+
+> **"Unrefined orphan" ≠ "raw capture" — classify by pipeline depth, not just the missing
+> `wave/` label.** A bead that has been *beadified into an epic* (parent + children, or a shared
+> epic label) is signed-off **by construction** — Craig deliberately beadified it — and is
+> *further down the pipeline* than an un-beadified loop-ready plan. **Auto-refine-and-finish it.**
+> Its source plan is often already archived in `_plans/_done/` (that's the sign-off), so the
+> "no plan-level sign-off" gate must check `_done/` too, not just live plans. Only a **truly raw
+> lone capture** (single bead, no parent, no epic-label siblings, no traceable plan — the
+> `ac-bead-capture` quick-idea case) stays gated. Pushing the *furthest-advanced* work to merge
+> first means refinement state counts: a beadified epic outranks an un-beadified plan.
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
-Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined plan beads needing refine, O **unrefined orphan beads** (surfaced in ARIA, never auto-refined).
+Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined **signed-off** beads needing refine (plan-beads + beadified epics + plan-traceable groups → auto-refine), O **truly-raw** unrefined captures (lone, no epic/plan → ARIA gate only).
 
-**Work priority order** — ship ready maintenance before doing prep for feature waves:
+**Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling new raw work in:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined beads (from loop-ready plans) → run `ac-bead-refine` (prep for a feature wave) (delegation: "ac-loop autonomous run, skip next-step question")
+2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave/` label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
 3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
 4. Plan wave refined beads → Phase 2
 
 > **Why orphans before prep:** `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, and a feature wave is a long haul. Ship the cheap, ready, often time-sensitive orphan fixes FIRST so a session that ends early (compaction, human override, iteration cap) has still delivered the ready work. Maintenance wave first; prep for the next feature wave second.
+
+### Create the Run Ledger
+
+Once you've oriented and know what's queued, lay down a **run-level task list** with `TaskCreate` — the loop's own progress, made legible and resumable. This is the anti-early-exit anchor and the "where is the loop right now" view a headless operator otherwise lacks.
+
+```
+TaskCreate — one task per run phase; add a Plan-wave task per queued loop-ready wave (up to the iteration cap):
+  1. Orient + read board                  → in_progress  (this pass)
+  2. Orphan / maintenance wave → merge     → pending      (omit if no orphans)
+  3. Plan wave: <plan-name> → merge        → pending      (one per queued wave, cap 3)
+  4. Phase ARIA + ac-land                  → pending
+```
+
+`TaskUpdate` each task to `in_progress` when its phase starts and `completed` at its merge/exit; mark task 1 `completed` when this orient pass finishes. If the board is empty, the ledger is just task 1 + task 4.
+
+> **The ledger tracks the RUN, never the work.** It holds *phases and iterations* — orient, which wave, ARIA/land — and nothing else. Work items stay **beads**: the bead board is the single source of truth for *what* ships (`ac-pipeline-builder` axiom 1, *the bead is the atom*). The ledger is a navigation aid over the run, not a second copy of the queue — never put bead IDs or per-bead state in it, or the two will drift.
+
+> **On resume (compaction / restart):** read the ledger first — it's your resume *anchor* (which phase you were in). Then reconcile against live board state, which remains ground truth: a wave the ledger calls `in_progress` may have merged in the moments before compaction. Trust the **board** for work state; trust the **ledger** for run position.
 
 If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready plans to beadify, and no human-gated beads** → go straight to Phase ARIA.
 
@@ -169,17 +208,15 @@ If orphans exist:
    fi
    ```
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions:
-   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Advance to ac-land when complete."
+   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`). Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Report when complete — the loop advances to verify → review → merge."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
-4. **Invoke `ac-land`** — use this delegation prompt:
-   > "Run ac-land for this session. This is an autonomous loop run. For system upgrade proposals: capture them as a Slack card for Craig to review separately — do NOT block landing. Next step after landing is ac-review (do not ask)."
-5. **Invoke `ac-review`** — use this delegation prompt:
+4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review on branch `<WAVE>`. This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
-6. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-7. **Invoke `ac-merge`** — use this delegation prompt:
+5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
+6. **Invoke `ac-merge`** — use this delegation prompt:
    > "Run ac-merge on branch `<WAVE>`. CI config for this project: `<cached-answer>`. Version bump: accept recommended default without asking. For uncertain PR feedback items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after merge."
-8. **Slack notify** (see Milestone Notifications).
-9. **Loop** — return to Phase 0 check after merge.
+7. **Slack notify** (see Milestone Notifications).
+8. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land); per-wave landing was the leftover the "land runs LAST" reconciliation retired.
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -209,17 +246,15 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 1. **Pre-allocate wave branch (loop's job)** — same logic as Phase 1 step 1. If a wave is already open from the orphan pass, join it. Single-branch rule: never create a second wave while one is open.
 2. **Invoke `ac-implement`** with delegation prompt:
-   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Advance to ac-land when complete."
+   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Report when complete — the loop advances to verify → review → merge."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
-4. **Invoke `ac-land`** with delegation prompt:
-   > "Run ac-land for this session (ac-loop autonomous run). System upgrade proposals: capture as Slack card for Craig, do NOT block landing. Next step is ac-review."
-5. **Invoke `ac-review`** with delegation prompt:
+4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review on branch `<WAVE>` (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
-6. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-7. **Invoke `ac-merge`** with delegation prompt:
+5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
+6. **Invoke `ac-merge`** with delegation prompt:
    > "Run ac-merge on `<WAVE>` (ac-loop autonomous run). CI config: `<cached>`. Version bump: accept recommended default. Uncertain feedback: Exhaust Rule — decision beads. No next-step question after merge."
-8. **Slack notify** — wave shipped.
-9. **Check stop conditions** — then loop back to Phase 0.
+7. **Slack notify** — wave shipped.
+8. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -238,7 +273,7 @@ This phase persists. The loop does not exit after a nudge — it re-checks at in
 | `human-gate` bead with ≤3 options, question answerable in ≤10 words | `AskUserQuestion` (Slack buttons) → session pauses → resumes on click |
 | `human-gate` bead with complex/open-ended answer | Advisory Slack nudge (card) — do NOT pause |
 | Plan exists but all beads are `unrefined` | Advisory nudge: "Plan X has N beads awaiting refinement — run `/ac-bead-refine`" |
-| `unrefined` **orphan** bead (no plan, no wave) | Advisory nudge: "N captured fix(es) awaiting refinement — run `/ac-bead-refine` or attach to a plan." The loop will NOT auto-refine these (no plan-level sign-off — see Scope contract); surface, don't touch. |
+| **Truly raw** unrefined bead (lone — no parent, no epic-label siblings, no plan in `_plans/` or `_plans/_done/`) | Advisory nudge: "N captured idea(s) awaiting refinement — run `/ac-bead-refine` or attach to a plan." The loop will NOT auto-refine a raw capture (no sign-off); surface, don't touch. **NOTE:** a beadified epic or plan-traceable unrefined bead is NOT this — it's signed-off pipeline work → auto-refine-and-finish per Work priority #2, don't nudge. |
 | Refined plans exist but no beads yet | Advisory nudge: "Plan X is ready for `/ac-beadify`" |
 | Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
 | Nothing at all (no backlog, no plans, no beads) | Session-end notify: "Pipeline clear — nothing waiting" |
@@ -338,6 +373,18 @@ C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clea
 
 **Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
 
+### Exit-Land — the loop's single closing invocation
+
+ac-land runs **once here**, not per-wave. The loop shipped one or more waves, each writing
+`/tmp/bead-work-<wave-slug>-<RUN_ID>`; land closes the whole **session**. Pass `RUN_ID` so land
+scopes to *this run's* dirs (never a stale or foreign one) and learns from **every** wave shipped:
+
+> "Run ac-land to close this loop session (autonomous run). `RUN_ID=<RUN_ID>`. Land the WHOLE
+> session, not one wave: the retrospective reads every `/tmp/bead-work-*-<RUN_ID>/progress.md`
+> (all waves this run shipped — `RUN_ID` scopes them safely), and teardown sweeps all of them.
+> You are post-merge on `main`. System-upgrade proposals: Slack card for Craig, do NOT block.
+> This is the loop's final step — exit after landing." (`_shared/run-id.md`)
+
 > **No token-budget stop.** A "running low on tokens" condition was removed deliberately:
 > the loop cannot reliably measure its own remaining budget, and with no explicit target
 > there is nothing to bound against — so it only ever became a vague excuse to quit early.
@@ -403,6 +450,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Single-branch rule** — join the open wave, never create a second
 - **Delegate, don't re-implement** — call `ac-implement`, `ac-land`, `ac-review`, `ac-merge`
+- **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
 - **ARIA gating** — `AskUserQuestion` only for simple, bounded forks. Everything else is advisory
 - **Persistent nudge** — re-nudge every session until Craig acts. Silence enables bottlenecks
 - **C2 is the only hard stop** — critical regression never merges

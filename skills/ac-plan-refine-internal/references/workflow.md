@@ -406,10 +406,19 @@ These deferred findings serve two purposes:
 
 ### Phase 4: Convergence Check
 
-**Rule: if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes.** Fixes are unverified until the next round's agents confirm no new Critical/High issues emerge. Only finalize after a round where all findings are Medium or lower.
+**First, record an explicit convergence verdict for this round** — don't just run to MAX_ROUNDS. Score the magnitude of *this round's applied changes*:
+
+- **major** — a structural change (approach, phase ordering, a new risk that reshapes the plan). **Resets** the convergence count — the plan is still moving.
+- **minor** — sharpening, added detail, small corrections.
+- **cosmetic** — wording, formatting.
+
+Log `convergence: {major|minor|cosmetic}` in the round entry. The plan has **steadied** when two consecutive rounds are minor-or-cosmetic with no open Critical/High — improvements are now marginal and further rounds burn tokens without changing the plan.
+
+**Severity gate (overrides early-stop):** if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes — fixes are unverified until the next round confirms no new Critical/High emerge.
 
 ```
 IF agents found any Critical or High issues -> apply fixes, continue (increment CURRENT_ROUND, loop to Phase 1)
+IF two consecutive rounds are minor/cosmetic AND no Critical/High -> finalize (converged — proceed to Phase 5)
 IF 3+ Medium issues across agents -> continue
 IF only few Medium or no issues -> finalize (proceed to Phase 5)
 IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes in Refinement Log)

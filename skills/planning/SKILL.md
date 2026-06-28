@@ -100,6 +100,16 @@ For simpler plans, compress to:
 
 ---
 
+## Pipeline integration (modern additions)
+
+The live `ac-plan-*` chain applies three upgrades on top of the scope-oscillation core — each *preserves* the lens cycle, none replaces it:
+
+1. **Clarify before Round 1** (`ac-plan-init`) — a short interview surfaces ambiguity and records an `## Assumptions` log *before* exploration, so the rounds refine a grounded draft rather than a wrong one (a wrong starting assumption compounds through every round).
+2. **Per-task acceptance criteria** — each plan step/phase carries a **Done when:** verifiable check, so the implementer self-verifies instead of asserting "looks done".
+3. **Explicit convergence verdict** (`ac-plan-refine-internal`) — each round is scored major/minor/cosmetic; refinement stops when two consecutive rounds are minor-or-cosmetic with no open Critical/High, instead of always running to MAX_ROUNDS. Operationalizes the "steady-state detection" this methodology has always described.
+
+---
+
 ## Related Commands
 
 | Command        | Uses This Skill For                      |

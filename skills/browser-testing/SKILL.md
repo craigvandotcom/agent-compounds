@@ -157,6 +157,24 @@ pkill -9 -f "remote-debugging-port"
 > session is active — i.e. when you have spotted a genuine runaway. There is no
 > automation for this; it is a deliberate manual step.
 
+### The dev server is the same failure mode (kill it too)
+
+If your test targets a **local dev server you started** (`pnpm dev` / `next dev`),
+that process is a second orphan class: a subagent's shell does not persist `$!`
+across tool calls, so a background `next dev` (≈200% CPU) outlives the agent and
+keeps running. On a machine that also hosts a single self-hosted CI runner this is
+not cosmetic — one orphaned `next-server` drove a Mac to **load ~30** and stalled a
+CI vitest step at **34 min** (2026-06-24). Kill the dev server you started, by
+process, as the final teardown step on both the success and error paths:
+
+```bash
+pkill -f "next dev"        # or the app's dev command from AGENTS.md
+```
+
+> **Caution (same as the Chrome hatch):** this matches ALL dev servers. Safe when
+> the agent is the only one running it; skip if a human has their own `pnpm dev` up.
+> Targeting a deployed preview/production URL? You started no server — nothing to kill.
+
 ## Validation Outputs
 
 Always report:

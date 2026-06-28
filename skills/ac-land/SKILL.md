@@ -14,18 +14,31 @@ Run this after `/ac-implement` completes its target beads.
 
 ### Gather Session Context
 
-Resolve `ARTIFACTS_DIR` — solo sessions use `/tmp/bead-work`, parallel sessions use a session-unique `/tmp/bead-work-$$`. Detect which one:
+Resolve `ARTIFACTS_DIR` **deterministically**, per `_shared/run-id.md`. ac-land runs at
+loop-exit (post-merge, on `main`, wave branch gone), so it CANNOT derive the wave slug itself —
+the orchestrator hands it the key. Never glob as the primary path.
 
 ```bash
-# Prefer the parallel-session dir if it exists; fall back to solo
-if [ -f /tmp/bead-work/progress.md ] && ! ls /tmp/bead-work-*/progress.md >/dev/null 2>&1; then
-  ARTIFACTS_DIR=/tmp/bead-work
+# 0. Loop-exit: RUN_ID set → ALL this run's wave dirs (scoped glob is SAFE — RUN_ID excludes
+#    foreign/stale dirs). The retrospective spans every wave; teardown sweeps them all.
+# 1. Handed ARTIFACTS_DIR (single bead-work session) → use verbatim.
+# 2. Standalone on a wave branch → derive.
+# 3. Last resort → newest dir, with a logged warning (it was guessed).
+if [ -n "$RUN_ID" ]; then
+  ARTIFACTS_DIRS=$(ls -1dt /tmp/bead-work-*-"$RUN_ID"/ 2>/dev/null | sed 's:/$::')
+  ARTIFACTS_DIR=$(printf '%s\n' "$ARTIFACTS_DIRS" | head -1)   # primary (newest wave) for single-dir steps
+  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work     # run shipped nothing landable
+elif [ -n "$ARTIFACTS_DIR" ]; then
+  :                                                   # handed by orchestrator — use verbatim
+elif git rev-parse --abbrev-ref HEAD 2>/dev/null | grep -q '^wave/'; then
+  ARTIFACTS_DIR="/tmp/bead-work-$(git branch --show-current | tr '/' '-')"
 else
-  # Newest parallel-session dir wins (this session)
   ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
   [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
+  echo "WARN: ARTIFACTS_DIR not handed and not on a wave branch — GUESSED $ARTIFACTS_DIR" >&2
 fi
 echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
+[ -n "$ARTIFACTS_DIRS" ] && echo "ARTIFACTS_DIRS (all waves this run, retrospective spans all): $ARTIFACTS_DIRS"
 ```
 
 **You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
@@ -45,6 +58,28 @@ git log --oneline -20
 git status
 git diff --stat
 ```
+
+### Declare the Run Ledger
+
+ac-land runs LAST and can compact mid-flight (a slow `test:all` in Phase 1b, a hung browser
+tester) — and teardown that never runs leaves zombies. Declare a run ledger so a resumed
+session re-enters at the right phase instead of re-running quality gates or, worse, skipping
+teardown:
+
+```
+TaskCreate (one per phase):
+  1. Initialize                          in_progress
+  2. Land the plane (gates + UI + git)   pending
+  3. Learn (retrospective)               pending
+  4. Compound (system upgrades)          pending
+  5. Hand off                            pending
+  6. Teardown                            pending
+```
+
+`TaskUpdate` at each phase boundary; mark task 1 `completed` now. `progress.md` remains the
+artifact-of-record for *what was accomplished*; the ledger tracks *where the run is* — so a
+compacted conductor knows whether teardown (task 6) still owes work. The ledger tracks the
+RUN; beads stay the work atom.
 
 ---
 
@@ -154,7 +189,15 @@ A 200/307/308 in <2s means the page is warm. If a curl hangs >30s, that's a real
 
 #### Step 2: Route to Relevant Journeys
 
-Use `git diff --stat` against the session's first commit to determine which areas were changed. Cross-reference with project journey definitions (if any) to identify relevant UI tests.
+Classify the session diff with the **shared classifier in `_shared/verification-gate.md`**
+(Step 1) — the same `CLASS_WEBUI` / `CLASS_WEBRT` greps `ac-merge` and the Verify gate use.
+Don't re-derive the classification in prose here; single-sourcing it keeps ac-land from
+over-testing non-UI `.ts` changes (e.g. a `lib/` util) that the gate would skip:
+
+- `CLASS_WEBUI` or `CLASS_WEBRT` set → route to the matched journeys below.
+- Neither set (backend/logic-only or docs) → skip UI validation, note why.
+
+Cross-reference the set classes with the project's journey definitions to pick which testers to run.
 
 #### Step 3: Spawn Testers
 
@@ -200,6 +243,8 @@ git status   # Must show "up to date with origin"
 ### Spawn Retrospective Sub-Agent
 
 Spawn the retrospective analyst using the prompt in **`references/retrospective-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>`). It reads session artifacts + the workflow/skill files, reports what worked / what did not / patterns, and proposes evidence-backed system-upgrade opportunities under a strict minimum-waste bar.
+
+> **Loop-exit (multi-wave):** when `$ARTIFACTS_DIRS` is set (Phase 0 found several wave dirs for this `RUN_ID`), substitute **all** of them so the retrospective spans the whole loop session — every wave's `progress.md` — not just the last wave. A single-wave land has one dir and behaves as before.
 
 ### Conductor Reviews Retrospective
 
@@ -363,8 +408,10 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
      # self-hosted Actions runner, the dev server someone else owns, or unrelated jobs.
      ```
    - Then confirm none survive: re-run the `ps … grep` → expect empty.
-   - **Prevention:** every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
-     `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie.
+   - **Prevention** (the *Fail safe; leave no live debris* law — `ac-pipeline-builder`
+     through-threads): every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
+     `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie —
+     and the rule binds when you *write* the loop, not just when teardown sweeps for it here.
 2. **Agent Mail:** `release_file_reservations` (all paths for your agent), then
    `deregister_agent` (or `retire_agent`). Don't leave reservations to TTL-expire.
 3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session
