@@ -19,19 +19,26 @@ loop-exit (post-merge, on `main`, wave branch gone), so it CANNOT derive the wav
 the orchestrator hands it the key. Never glob as the primary path.
 
 ```bash
-# 1. Handed key wins — ac-loop passes ARTIFACTS_DIR in the delegation prompt.
-# 2. Standalone fallback — run directly after implement, still on the wave branch.
-# 3. Last resort — newest dir, with a logged warning (it was guessed).
-if [ -n "$ARTIFACTS_DIR" ]; then
+# 0. Loop-exit: RUN_ID set → ALL this run's wave dirs (scoped glob is SAFE — RUN_ID excludes
+#    foreign/stale dirs). The retrospective spans every wave; teardown sweeps them all.
+# 1. Handed ARTIFACTS_DIR (single bead-work session) → use verbatim.
+# 2. Standalone on a wave branch → derive.
+# 3. Last resort → newest dir, with a logged warning (it was guessed).
+if [ -n "$RUN_ID" ]; then
+  ARTIFACTS_DIRS=$(ls -1dt /tmp/bead-work-*-"$RUN_ID"/ 2>/dev/null | sed 's:/$::')
+  ARTIFACTS_DIR=$(printf '%s\n' "$ARTIFACTS_DIRS" | head -1)   # primary (newest wave) for single-dir steps
+  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work     # run shipped nothing landable
+elif [ -n "$ARTIFACTS_DIR" ]; then
   :                                                   # handed by orchestrator — use verbatim
 elif git rev-parse --abbrev-ref HEAD 2>/dev/null | grep -q '^wave/'; then
-  ARTIFACTS_DIR="/tmp/bead-work-$(git branch --show-current | tr '/' '-')${RUN_ID:+-$RUN_ID}"
+  ARTIFACTS_DIR="/tmp/bead-work-$(git branch --show-current | tr '/' '-')"
 else
   ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
   [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
   echo "WARN: ARTIFACTS_DIR not handed and not on a wave branch — GUESSED $ARTIFACTS_DIR" >&2
 fi
 echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
+[ -n "$ARTIFACTS_DIRS" ] && echo "ARTIFACTS_DIRS (all waves this run, retrospective spans all): $ARTIFACTS_DIRS"
 ```
 
 **You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
@@ -236,6 +243,8 @@ git status   # Must show "up to date with origin"
 ### Spawn Retrospective Sub-Agent
 
 Spawn the retrospective analyst using the prompt in **`references/retrospective-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>`). It reads session artifacts + the workflow/skill files, reports what worked / what did not / patterns, and proposes evidence-backed system-upgrade opportunities under a strict minimum-waste bar.
+
+> **Loop-exit (multi-wave):** when `$ARTIFACTS_DIRS` is set (Phase 0 found several wave dirs for this `RUN_ID`), substitute **all** of them so the retrospective spans the whole loop session — every wave's `progress.md` — not just the last wave. A single-wave land has one dir and behaves as before.
 
 ### Conductor Reviews Retrospective
 

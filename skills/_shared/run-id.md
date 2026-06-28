@@ -21,18 +21,20 @@ mkdir -p "$ARTIFACTS_DIR"
 - **No globbing, no newest-wins, no detection.** Stable across compaction (re-derive from the
   branch). ac-land finds ac-implement's `progress.md` because they compute the same path.
 
-## RUN_ID: only for parallel sessions on the SAME wave
+## RUN_ID: the orchestrator's run scope (two jobs)
 
-The wave slug disambiguates *different waves*. It does **not** disambiguate two sessions working
-the *same* wave concurrently (both would compute `/tmp/bead-work-wave-004`). That is the only
-case needing more — and only an **orchestrator** knows it is spawning parallel work, so it
-supplies the discriminator:
+An **orchestrator always mints one `RUN_ID` per run** (ac-loop Phase 0:
+`RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"`) and passes it (`RUN_ID=<id>`) to every stage it spawns.
+It does two jobs:
 
-- The orchestrator (ac-loop) mints `RUN_ID` and passes it in the delegation prompt (`RUN_ID=<id>`)
-  to each session in a parallel set. Readable, collision-free: `RUN_ID="$(date +%H%M%S)-$$"`.
-- `${RUN_ID:+-$RUN_ID}` appends it when present, nothing when absent.
-- A consumer (ac-land) that must read a specific parallel session's dir is handed the **same
-  RUN_ID** in its delegation prompt — so it lands the right session, deterministically.
+1. **Parallel disambiguation** — two sessions on the *same* wave would otherwise both compute
+   `/tmp/bead-work-wave-004`; distinct RUN_IDs keep them apart.
+2. **Run scoping** — every dir this run created carries the RUN_ID suffix, so a consumer can
+   safely gather *exactly this run's* dirs with a scoped glob (`/tmp/bead-work-*-$RUN_ID`),
+   never a stale or foreign one. This is what lets **exit-land learn from all of a multi-wave run**.
+
+`${RUN_ID:+-$RUN_ID}` appends it when present, nothing when absent. A standalone human run has no
+RUN_ID and needs neither job (one session, one wave).
 
 ## Prefixes
 
@@ -56,10 +58,10 @@ ac-land runs **at loop-exit, after the final merge** — by then ac-merge has sw
 and deleted the wave branch, so ac-land **cannot derive the wave slug from the current branch.**
 This is precisely why it used to glob. Resolution order for ac-land:
 
-1. **Handed key wins.** The orchestrator MUST pass ac-land the dir(s) it should land —
-   `ARTIFACTS_DIR=/tmp/bead-work-<wave-slug>[-<run-id>]` in the delegation prompt. ac-land uses
-   it verbatim. (When a loop shipped multiple waves, ac-loop hands the set; see the open
-   consolidation question in ac-loop.)
+1. **RUN_ID scopes it (loop exit).** ac-loop passes `RUN_ID`; ac-land gathers **all** of this
+   run's wave dirs with the scoped glob `/tmp/bead-work-*-$RUN_ID` — safe because RUN_ID excludes
+   foreign/stale dirs. The retrospective spans every wave the run shipped; teardown sweeps them.
+   A single-wave run yields one dir on the same code path.
 2. **Standalone fallback:** no key handed AND still on the wave branch (land run directly after
    implement) → derive `/tmp/bead-work-$(git branch --show-current | tr '/' '-')`.
 3. **Last resort only:** neither available → newest `/tmp/bead-work-*` dir, with a logged warning

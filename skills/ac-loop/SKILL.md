@@ -80,6 +80,7 @@ Capture the returned `name` field:
 ```bash
 export WORKTREES_ENABLED=1
 export AGENT_NAME=<returned-name>   # e.g. "BlueLake" — unique per loop run
+export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dirs; passed to every spawned stage (_shared/run-id.md)
 ```
 
 Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fresh sessions and self-register independently — the loop's `AGENT_NAME` is not inherited.
@@ -207,17 +208,15 @@ If orphans exist:
    fi
    ```
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions:
-   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Advance to ac-land when complete."
+   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`). Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Report when complete — the loop advances to verify → review → merge."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
-4. **Invoke `ac-land`** — use this delegation prompt:
-   > "Run ac-land for this session. `ARTIFACTS_DIR=/tmp/bead-work-$(echo '<WAVE>' | tr '/' '-')` — land THIS dir (the one ac-implement wrote for `<WAVE>`); do not glob/guess, you are post-merge on main where the wave slug isn't derivable (`_shared/run-id.md`). This is an autonomous loop run. For system upgrade proposals: capture them as a Slack card for Craig to review separately — do NOT block landing. Next step after landing is ac-review (do not ask)."
-5. **Invoke `ac-review`** — use this delegation prompt:
+4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review on branch `<WAVE>`. This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
-6. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-7. **Invoke `ac-merge`** — use this delegation prompt:
+5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
+6. **Invoke `ac-merge`** — use this delegation prompt:
    > "Run ac-merge on branch `<WAVE>`. CI config for this project: `<cached-answer>`. Version bump: accept recommended default without asking. For uncertain PR feedback items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after merge."
-8. **Slack notify** (see Milestone Notifications).
-9. **Loop** — return to Phase 0 check after merge.
+7. **Slack notify** (see Milestone Notifications).
+8. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land); per-wave landing was the leftover the "land runs LAST" reconciliation retired.
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -247,17 +246,15 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 1. **Pre-allocate wave branch (loop's job)** — same logic as Phase 1 step 1. If a wave is already open from the orphan pass, join it. Single-branch rule: never create a second wave while one is open.
 2. **Invoke `ac-implement`** with delegation prompt:
-   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Advance to ac-land when complete."
+   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Report when complete — the loop advances to verify → review → merge."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
-4. **Invoke `ac-land`** with delegation prompt:
-   > "Run ac-land for this session (ac-loop autonomous run). `ARTIFACTS_DIR=/tmp/bead-work-$(echo '<WAVE>' | tr '/' '-')` — land THIS dir (ac-implement's dir for `<WAVE>`); do not glob/guess (`_shared/run-id.md`). System upgrade proposals: capture as Slack card for Craig, do NOT block landing. Next step is ac-review."
-5. **Invoke `ac-review`** with delegation prompt:
+4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review on branch `<WAVE>` (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
-6. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-7. **Invoke `ac-merge`** with delegation prompt:
+5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
+6. **Invoke `ac-merge`** with delegation prompt:
    > "Run ac-merge on `<WAVE>` (ac-loop autonomous run). CI config: `<cached>`. Version bump: accept recommended default. Uncertain feedback: Exhaust Rule — decision beads. No next-step question after merge."
-8. **Slack notify** — wave shipped.
-9. **Check stop conditions** — then loop back to Phase 0.
+7. **Slack notify** — wave shipped.
+8. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -375,6 +372,18 @@ Check before each iteration begins.
 C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clean stops (current work finishes, then exit).
 
 **Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
+
+### Exit-Land — the loop's single closing invocation
+
+ac-land runs **once here**, not per-wave. The loop shipped one or more waves, each writing
+`/tmp/bead-work-<wave-slug>-<RUN_ID>`; land closes the whole **session**. Pass `RUN_ID` so land
+scopes to *this run's* dirs (never a stale or foreign one) and learns from **every** wave shipped:
+
+> "Run ac-land to close this loop session (autonomous run). `RUN_ID=<RUN_ID>`. Land the WHOLE
+> session, not one wave: the retrospective reads every `/tmp/bead-work-*-<RUN_ID>/progress.md`
+> (all waves this run shipped — `RUN_ID` scopes them safely), and teardown sweeps all of them.
+> You are post-merge on `main`. System-upgrade proposals: Slack card for Craig, do NOT block.
+> This is the loop's final step — exit after landing." (`_shared/run-id.md`)
 
 > **No token-budget stop.** A "running low on tokens" condition was removed deliberately:
 > the loop cannot reliably measure its own remaining budget, and with no explicit target
