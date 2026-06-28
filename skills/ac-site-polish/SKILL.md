@@ -20,9 +20,10 @@ spec so polish never drifts into redesign. Adds the marketing-specific axes ac-u
 > — no device/native twin.
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and shared across
-> apps. It carries technique, not project specifics. **App specifics (design tokens, routes, env,
-> seed scripts, deployed URL) → this app's `CORE/SKILL.md`**, `CORE/design.site.md`, and
-> `CORE/journeys/routes.public.md`. Do not add app-specific facts to this file.
+> apps. It carries technique, not project specifics. **App specifics:** the spec → `CORE/design.site.md`;
+> routes → `CORE/journeys/routes.public.md`; the **runnable operational facts (deployed URL, seed
+> commands, capture quirks) → `CORE/ui-audit.md`** (or `CORE/site-audit.md` if present), NOT
+> `CORE/SKILL.md` (which holds only the surface map). Do not add app-specific facts to this file.
 
 > **Reuses ac-ui-polish's craft engine — never forks it.** The visual-craft, interaction, perceived-
 > performance, sensors, anti-slop rubric, and recipes are identical for a webpage. This skill is a
@@ -95,8 +96,9 @@ it is the operating procedure (loop, the 4 site axes, inline SEO/a11y sequencing
 In short:
 
 ```
-0. BASELINE  Read CORE/design.site.md (or bootstrap a DRAFT). Read CORE/SKILL.md for
-             routes.public.md, seed recipe, deployed URL, auth, viewport set.
+0. BASELINE  Read CORE/design.site.md (or bootstrap a DRAFT). Read CORE/ui-audit.md for the
+             RUNNABLE facts (deployed-URL fallback, seed cmds, mobile-capture quirk); CORE/SKILL.md
+             only for the surface map + routes.public.md pointer.
 0.5 SEED     Populate realistic data where pages have data (foods). For genuinely empty
              pages (e.g. an empty blog), the LIVE-EMPTY state IS the real visitor state —
              audit it as-is; don't fabricate content.

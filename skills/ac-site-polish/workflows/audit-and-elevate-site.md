@@ -12,9 +12,12 @@ is the unit of "done" — **no theme axis** for the marketing surface.
    `CORE/journeys/routes.public.md`; if not, **redirect to `ac-ui-polish`** and stop.
 2. Read **`CORE/design.site.md`**. If absent, **bootstrap a DRAFT** (`status: draft`) from the live
    tokens + landing sections — but do not let it self-bless (see Phase 4 ledgers).
-3. Read **`CORE/SKILL.md`** for app facts: the deployed URL, dev-server command, seed recipe, the
-   viewport set (default desktop + mobile), and any auth needed for gated *previews* (the marketing
-   surface itself is not auth-gated).
+3. Read **`CORE/ui-audit.md`** for the runnable operational facts (this is where they live, NOT in
+   `CORE/SKILL.md`): the **deployed-URL fallback** (audit logged-out/marketing pages against the
+   deployed site when local dev is off — often the *more correct* target for a marketing audit), the
+   **seed commands**, the **mobile-capture quirk** (`set viewport W H`), and theme-forcing. Read
+   `CORE/SKILL.md` only for the high-level surface map. If the app has a `CORE/site-audit.md`, prefer
+   it for site-specific facts; otherwise `ui-audit.md`'s logged-out-capture guidance applies.
 
 ## Phase 0.5 — Seed
 
@@ -29,10 +32,32 @@ Build `route × viewport × data-state` from `routes.public.md` (whole-site) or 
 (scoped). Viewports: desktop-first AND mobile. Data-states per route: seeded vs empty vs long-text /
 overflow vs error/404 where reachable. **The cell is the unit of done** — one captured artifact each.
 
+> **Capture hygiene — disable scroll-reveal before capturing (marketing sites animate in).** Landing
+> pages commonly gate sections behind scroll-triggered reveal (`opacity:0` + IntersectionObserver),
+> so a single **full-page** screenshot renders the middle of the page **blank** — and you will
+> misread "animated in" as "missing/broken". Before capturing, neutralize entrance animations (same
+> spirit as `screenshot-refresh` killing focus rings):
+> ```js
+> const s = document.createElement('style');
+> s.textContent = `*,*::before,*::after{opacity:1!important;transform:none!important;
+>   animation:none!important;transition:none!important;visibility:visible!important;}`;
+> document.head.appendChild(s);
+> ```
+> Then either capture full-page, or **scroll through and capture per section** (more reliable on very
+> tall pages). If the blank persists after disabling animations, THAT is a real defect (broken render
+> / content-gated-behind-JS) — investigate, don't assume.
+
 ## Phase 2 — Sense (before eyes)
 
 Run **`../ac-ui-polish/reference/sensors.md`** on every cell FIRST: contrast sweep, hardcoded-colour
 grep, token symmetry. These are programmatic; eyes can't see a 3.9:1 ratio or a raw `#0c1014`.
+
+> **Static grep is a first pass, not the verdict — confirm against the RENDERED DOM.** A source grep
+> undercounts multi-line JSX (e.g. an `<Image>` whose `alt=` sits on a later line reads as "no alt"),
+> and can't see computed contrast or an accessible name assembled at runtime. For anything that
+> depends on rendered output (alt/accessible-name coverage, contrast ratios, focus order), run the
+> check **in the live DOM via `page.evaluate`** (e.g. `document.querySelectorAll('img')` → flag those
+> with no `alt` AND no `aria-label`/`aria-hidden`). Grep narrows; the DOM decides.
 
 ## Phase 3 — Audit
 
