@@ -205,6 +205,38 @@ git commit -m "chore(release): v${NEW_VERSION} (iOS build ${NEW_BUILD})"
 
 The tag is created on the merge commit in Phase 3 (after merge to main), not here — that way `v$NEW_VERSION` points at the actual shipped state.
 
+### Feedback write-back (post-build-bump)
+
+**Run immediately after the bump commit, before the push.** This step requires `NEW_BUILD`
+(set in Version Bump above) — if the bump was skipped, use the current build number from
+the pbxproj; `fixed_in_build` must never be empty.
+
+Scan the wave's merged beads for any with the `triage,feedback` label:
+
+```bash
+br list --json | jq '[.issues[] | select((.labels // []) | (index("triage") and index("feedback"))) | select(.status == "closed")]'
+```
+
+For each matching bead, resolve its `linked_bead` field (the source `bca.feedback_reports`
+row id) and write back via the service-role client:
+
+```sql
+UPDATE bca.feedback_reports
+SET status        = 'fixed',
+    fixed_in_build = '<NEW_BUILD>'
+WHERE id          = '<linked_bead>'
+  AND linked_bead IS NOT NULL   -- only update claimed rows (safety guard)
+```
+
+- `NEW_BUILD` = the integer incremented in Version Bump (iOS `CURRENT_PROJECT_VERSION`).
+  Web-only waves with no native build bump: use `NEW_VERSION` (semver string) as the
+  build identifier — `fixed_in_build` is `text`, not `int`.
+- If a bead's `linked_bead` field is unset or the row is not found, log a warning and
+  continue — do NOT abort the merge for a write-back failure.
+- If no `triage,feedback` beads are in this wave, skip silently.
+
+Full spec, error-handling policy, and unit test cases: `references/feedback-writeback-hook.md`.
+
 ### Push
 
 ```bash
