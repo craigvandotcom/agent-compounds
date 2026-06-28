@@ -120,6 +120,28 @@ hardcoded path in the script, fix it to `path.join(process.cwd(), ...)` before r
 
 **After running, skip to Phase 4 (Verify).**
 
+### Option C: Native device capture (when the screenshots are of a NATIVE app)
+
+If the embedded images are screenshots of a **native mobile app** (e.g. landing-page phone mockups
+of an iOS app), capture from the **real app on a simulator/device** via `agent-device` — this gives
+authentic native rendering, and it is often the *only* path that works:
+
+> **Why the browser script can fail for a native app:** a local `pnpm dev` web server may render
+> **demo/mock data** and/or **auto-authenticate a fixed dev user**, so DB seeding has no effect on
+> what renders. The native app build hits the real (prod) backend, so a seeded account shows real
+> data there. Seed the **account the native app auto-uses**, in the backend the app actually points
+> at (usually prod), not whatever the web default is.
+
+Flow: seed the right account → drive the app with `agent-device` (set theme to match the marketing
+aesthetic) → `xcrun simctl io <UDID> screenshot` per view → post-process to the embedded format
+(crop the OS status bar / notch, resize to the referenced dimensions). Gotcha: `agent-device click`
+uses **logical points**, not native pixels (divide native coords by the device scale, ~3×).
+**App-specific recipe (accounts, views, dims, sim) lives in the app's `CORE/ui-audit.md`.**
+
+> This reverses an earlier "no device capture" stance that was correct only for *web* surfaces:
+> auditing the marketing *site pages* is browser work, but refreshing the *app-screen mockups*
+> embedded in them is native-app work.
+
 ### Option B: Browser Agents (fallback)
 
 Only use browser agents if no capture script exists.

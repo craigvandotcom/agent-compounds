@@ -83,7 +83,10 @@ every "conformant" verdict** — an errored page renders like an empty one.
    conformance defect.
 4. **Screenshot freshness** — Embedded app screenshots are current, on-brand, correctly seeded (no
    stale data / empty states / dev chrome), and match the live app. When stale, **hand off to
-   `screenshot-refresh`** to reseed + recapture; re-audit the page after.
+   `screenshot-refresh`** to reseed + recapture; re-audit the page after. **If the mockups are of a
+   NATIVE app, use screenshot-refresh's Option C (device capture) — not the browser path:** a local
+   web dev server often renders demo/mock data + auto-auth, so only the native app on device shows
+   real seeded data. Match the marketing theme (e.g. dark) and crop OS chrome to the embedded format.
 
 ## Phase 4 — Elevate (two ledgers)
 
