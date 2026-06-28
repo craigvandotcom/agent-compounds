@@ -14,19 +14,22 @@ Run this after `/ac-implement` completes its target beads.
 
 ### Gather Session Context
 
-Resolve `ARTIFACTS_DIR` — solo sessions use `/tmp/bead-work`, parallel sessions use a session-unique `/tmp/bead-work-$$`. Detect which one:
+Resolve `ARTIFACTS_DIR` **deterministically**, per `_shared/run-id.md`. ac-land runs at
+loop-exit (post-merge, on `main`, wave branch gone), so it CANNOT derive the wave slug itself —
+the orchestrator hands it the key. Never glob as the primary path.
 
 ```bash
-# Prefer the parallel-session dir if it exists; fall back to solo.
-# Test for parallel session DIRS (-d), not for a progress.md inside them — a sibling session
-# whose dir exists but hasn't written progress.md yet must still count as "parallel present",
-# else this picks /tmp/bead-work and lands the wrong session's work.
-if [ -f /tmp/bead-work/progress.md ] && ! ls -d /tmp/bead-work-*/ >/dev/null 2>&1; then
-  ARTIFACTS_DIR=/tmp/bead-work
+# 1. Handed key wins — ac-loop passes ARTIFACTS_DIR in the delegation prompt.
+# 2. Standalone fallback — run directly after implement, still on the wave branch.
+# 3. Last resort — newest dir, with a logged warning (it was guessed).
+if [ -n "$ARTIFACTS_DIR" ]; then
+  :                                                   # handed by orchestrator — use verbatim
+elif git rev-parse --abbrev-ref HEAD 2>/dev/null | grep -q '^wave/'; then
+  ARTIFACTS_DIR="/tmp/bead-work-$(git branch --show-current | tr '/' '-')${RUN_ID:+-$RUN_ID}"
 else
-  # Newest parallel-session dir wins (this session)
   ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
   [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
+  echo "WARN: ARTIFACTS_DIR not handed and not on a wave branch — GUESSED $ARTIFACTS_DIR" >&2
 fi
 echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 ```

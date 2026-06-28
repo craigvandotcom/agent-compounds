@@ -210,7 +210,7 @@ If orphans exist:
    > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Advance to ac-land when complete."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
 4. **Invoke `ac-land`** — use this delegation prompt:
-   > "Run ac-land for this session. This is an autonomous loop run. For system upgrade proposals: capture them as a Slack card for Craig to review separately — do NOT block landing. Next step after landing is ac-review (do not ask)."
+   > "Run ac-land for this session. `ARTIFACTS_DIR=/tmp/bead-work-$(echo '<WAVE>' | tr '/' '-')` — land THIS dir (the one ac-implement wrote for `<WAVE>`); do not glob/guess, you are post-merge on main where the wave slug isn't derivable (`_shared/run-id.md`). This is an autonomous loop run. For system upgrade proposals: capture them as a Slack card for Craig to review separately — do NOT block landing. Next step after landing is ac-review (do not ask)."
 5. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review on branch `<WAVE>`. This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
 6. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
@@ -250,7 +250,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Advance to ac-land when complete."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-land`** with delegation prompt:
-   > "Run ac-land for this session (ac-loop autonomous run). System upgrade proposals: capture as Slack card for Craig, do NOT block landing. Next step is ac-review."
+   > "Run ac-land for this session (ac-loop autonomous run). `ARTIFACTS_DIR=/tmp/bead-work-$(echo '<WAVE>' | tr '/' '-')` — land THIS dir (ac-implement's dir for `<WAVE>`); do not glob/guess (`_shared/run-id.md`). System upgrade proposals: capture as Slack card for Craig, do NOT block landing. Next step is ac-review."
 5. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review on branch `<WAVE>` (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
 6. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.

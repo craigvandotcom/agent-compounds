@@ -162,9 +162,10 @@ Ask one question via `AskUserQuestion`:
 ```bash
 TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
-# Wave-branch-named dir — stable across compaction, unique per wave, safe for parallel sessions
+# Deterministic dir keyed on the wave slug (+ RUN_ID for parallel same-wave sessions).
+# Contract: _shared/run-id.md. Stable across compaction; ac-land lands this same path.
 WAVE_SLUG=$(git branch --show-current | tr '/' '-')
-ARTIFACTS_DIR="/tmp/bead-work-${WAVE_SLUG}"   # e.g. /tmp/bead-work-wave-004
+ARTIFACTS_DIR="/tmp/bead-work-${WAVE_SLUG}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-wave-004
 ```
 
 ### Register Session Identity
