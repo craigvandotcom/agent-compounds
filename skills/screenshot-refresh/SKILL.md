@@ -110,6 +110,14 @@ The script should already handle:
 - Dev indicator hiding and focus ring removal
 - Output to correct paths
 
+**Dynamic-path doctrine (do this before trusting an existing script):** a capture script must
+resolve the project root **dynamically** — `process.cwd()` (the script runs via
+`pnpm exec tsx scripts/...` from the app root, so cwd === app root) or
+`git rev-parse --show-toplevel`. **Never hardcode an absolute path** (e.g. `/home/<user>/Repos/...`)
+— it silently breaks on any other machine/OS and writes screenshots nowhere useful. Do **not** use
+`import.meta.url` for the root — it resolves to the `scripts/` dir, off by one. If you find a
+hardcoded path in the script, fix it to `path.join(process.cwd(), ...)` before running.
+
 **After running, skip to Phase 4 (Verify).**
 
 ### Option B: Browser Agents (fallback)
@@ -278,3 +286,4 @@ await injectStyles();           // re-inject
 | Screenshot shows wrong route | Double-check the `appRoute` in the manifest; adjust agent navigation instructions |
 | Food cards not found | Check component selectors — use `role` and CSS class attributes (e.g. `[role="link"].spring-press-subtle`) instead of text matching |
 | File not saved | Ensure the output path is absolute — browser agents cannot resolve shell variables like `$PWD` |
+| Capture script writes nowhere / `ENOENT` on output dir | The script hardcodes an absolute path from another machine. Replace with `path.join(process.cwd(), ...)` (cwd === app root under `pnpm exec tsx`); do NOT use `import.meta.url` (resolves to `scripts/`). |

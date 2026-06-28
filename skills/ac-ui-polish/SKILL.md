@@ -1,6 +1,6 @@
 ---
 name: ac-ui-polish
-description: Use when polishing already-coded UI to premium quality and/or checking it conforms to the app's design spec — one screen, or a whole-app crawl of every page. Two modes; both anchor on the app's CORE/design.md. Triggers on "polish this UI", "make this feel premium", "ui polish", "ac-ui-polish", "level up the design", "this looks like AI slop", "elevate this", "audit the whole app against the design spec", "check design conformance", "tighten the visuals", "make it production-quality", "improve the feel". Covers design-spec conformance (does each page match design.md?) then elevation (appearance, perceived performance, interaction feel) — audits against design.md + an anti-slop rubric, files deviations as beads, then applies fixes bounded to the spec's tokens. NOT for: objective accessibility/compliance audits (use web-design-guidelines), multi-model design ideation or exploring alternatives (use ui-brainstorm), React data/bundle perf internals (use capacitor), visual/CSS defects (use ui-debug), or greenfield generation from scratch.
+description: Use when polishing already-coded UI to premium quality and/or checking it conforms to the app's design spec — one screen, or a whole-app crawl of every page. Two modes; both anchor on the app's CORE/design.md. Triggers on "polish this UI", "make this feel premium", "ui polish", "ac-ui-polish", "level up the design", "this looks like AI slop", "elevate this", "audit the whole app against the design spec", "check design conformance", "tighten the visuals", "make it production-quality", "improve the feel". Covers design-spec conformance (does each page match design.md?) then elevation (appearance, perceived performance, interaction feel) — audits against design.md + an anti-slop rubric, files deviations as beads, then applies fixes bounded to the spec's tokens. NOT for: the public marketing/landing site (use ac-site-polish — it owns the public surface, anchored on design.site.md), objective accessibility/compliance audits (use web-design-guidelines), multi-model design ideation or exploring alternatives (use ui-brainstorm), React data/bundle perf internals (use capacitor), visual/CSS defects (use ui-debug), or greenfield generation from scratch.
 ---
 
 # UI Polish
@@ -54,7 +54,9 @@ see the delegation map. This skill owns the layer the **user perceives**.
 | **Whole-app** | "audit the whole app against the design spec" | build the **coverage matrix** (route × theme × viewport × data-state) → **sensors + Phase A conformance** per cell → **Phase B elevation** (two ledgers, per surface) |
 
 **Whole-app mode** crawls the app's **`CORE/journeys/routes.md`** manifest at the app's
-viewport set, **in every theme**. The shared **`_tools/crawl-and-capture`** primitive
+viewport set, **in every theme**. This manifest is the **authenticated app + auth surface** only —
+the public marketing routes live in `CORE/journeys/routes.public.md` and are owned by `ac-site-polish`
+(do not crawl them here). The shared **`_tools/crawl-and-capture`** primitive
 can produce a quick static-screenshot index (same captures `ac-qa-browser` uses), but
 note it emits PNGs only and has **no theme switch** — the contrast/false-clean sensors
 are `eval` on a *live* DOM, so the actual audit drives a live browser per cell (force
@@ -102,6 +104,12 @@ guardrail against redesigning instead of polishing.
 - "Tighten the visuals", "the spacing feels off", "it feels janky"
 
 **When NOT to Use:**
+- The target is a **public marketing/landing route** → use `ac-site-polish` (it owns the public
+  surface, anchored on `design.site.md`). **Surface guard (both modes):** a route is ac-site-polish's
+  iff it is listed in `CORE/journeys/routes.public.md`. If the named/derived target is in that
+  manifest, **stop and redirect to `ac-site-polish`** — do not audit it here (the public site uses a
+  different spec; auditing it against `design.md` files the wrong findings). Keyed off manifest
+  membership, NOT path geometry (the landing `/` is `app/page.tsx`, outside `app/(public)/`).
 - Building a brand-new UI from nothing → that's design/generation work, not elevation
 - The bug is a *defect* (style not applying, broken layout) → use `ui-debug`
 - The ask is purely brand palette/voice → use `brand-system`

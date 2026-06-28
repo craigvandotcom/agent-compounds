@@ -1,0 +1,184 @@
+---
+name: ac-site-polish
+description: Use when polishing the PUBLIC marketing website (landing page + public routes) to premium quality and/or checking it conforms to the site's design spec — one page or a whole-site crawl. The public twin of ac-ui-polish (which owns the authenticated app). Both anchor on a CORE design spec; this one on CORE/design.site.md. Triggers on "polish the website", "site polish", "ac-site-polish", "polish the landing page", "marketing page polish", "elevate the homepage", "the website looks like AI slop", "make the marketing site premium", "audit the public site", "tighten the landing page", "improve the website feel". Covers conversion/copy hierarchy, desktop+mobile responsive craft, link/CTA integrity, and embedded-screenshot freshness, then design-spec conformance + elevation — runs SEO and a11y inline as composed stages. NOT for: the authenticated app (use ac-ui-polish — it owns app routes, anchored on design.md), pure SEO/metadata work alone (use seo-metadata), objective accessibility audits alone (use web-design-guidelines), React data/bundle perf internals (use capacitor), visual/CSS defects (use ui-debug), or multi-model design ideation (use ui-brainstorm).
+---
+
+# Site Polish
+
+**Purpose:** Take the already-coded **public marketing website** and (1) verify it conforms to the
+site's design spec (`CORE/design.site.md`), then (2) raise it to premium quality — bounded to that
+spec so polish never drifts into redesign. Adds the marketing-specific axes ac-ui-polish lacks
+(conversion, copy hierarchy, desktop responsive, link integrity, screenshot freshness) and runs SEO
++ a11y inline. Works on one page or a whole-site crawl.
+
+**Domain:** Frontend craft, conversion/marketing UX, design-spec conformance, anti-slop critique.
+
+> **The public twin of `ac-ui-polish`.** ac-ui-polish owns the **authenticated app** surface
+> (anchored on `CORE/design.md`); this skill owns the **public marketing** surface (anchored on
+> `CORE/design.site.md`). Same craft engine, different surface + spec + matrix. The marketing site
+> is browser-only (the native build ignores public pages), so this skill runs **through the browser**
+> — no device/native twin.
+
+> **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and shared across
+> apps. It carries technique, not project specifics. **App specifics (design tokens, routes, env,
+> seed scripts, deployed URL) → this app's `CORE/SKILL.md`**, `CORE/design.site.md`, and
+> `CORE/journeys/routes.public.md`. Do not add app-specific facts to this file.
+
+> **Reuses ac-ui-polish's craft engine — never forks it.** The visual-craft, interaction, perceived-
+> performance, sensors, anti-slop rubric, and recipes are identical for a webpage. This skill is a
+> **thin spine** that points into ac-ui-polish's reference files and adds only the marketing layer.
+
+---
+
+## Surface ownership — the boundary with ac-ui-polish
+
+`CORE/journeys/routes.public.md` is the **single ownership oracle**: a route belongs to this skill
+**iff it is listed there**. The authenticated app + auth routes live in `routes.md` (ac-ui-polish's).
+
+**In-body surface guard (run first, both modes):** if the target route is **NOT listed in
+`routes.public.md`**, this is ac-ui-polish's surface — **stop and redirect to `ac-ui-polish`**. Key
+off manifest membership, **not path geometry** (the landing `/` is `app/page.tsx`, outside
+`app/(public)/`; auth routes live in `(auth)`). ac-ui-polish carries the symmetric guard.
+
+---
+
+## The spec anchor — `CORE/design.site.md`
+
+The baseline is the app's `CORE/design.site.md` — the site twin of `design.md`, same **hand-authored**
+two-part format (there is **no** `designmd-gen`/linter; it is hand-authored):
+
+1. **Token YAML block** — colors, spacing, radius, type ramp the marketing surface uses.
+2. **Do's/Don'ts prose** — plus the **marketing-only sections** ac-ui-polish's `design.md` lacks:
+   conversion hierarchy (hero promise, CTA priority, social-proof placement), copy register (defer
+   voice to `brand-system`), desktop-responsive breakpoints, hover-as-primary-affordance rules, and a
+   single-theme caveat where applicable (e.g. "site authored dark-only — no theme axis").
+
+Plus a frontmatter field: **`status: draft | ratified`**.
+
+**Bootstrap without self-blessing.** If `design.site.md` is **absent**, generate a **DRAFT** (write
+`status: draft`) from the live tokens + the landing sections — but a spec derived from un-audited code
+cannot bless itself. So while `status: draft`:
+- The **Conformance ledger reads "N/A — unratified"** (no hollow pass).
+- **ELEVATE + the 4 site axes + SEO/a11y still run**, but bounded to **the anti-slop rubric
+  (`../ac-ui-polish/reference/critique-polish.md`) + `brand-system` tokens** — NOT the draft (else
+  you entrench current styling).
+- Surface the draft for a human to review; once they flip it to `status: ratified`, Conformance
+  turns on and ELEVATE binds to `design.site.md` as ac-ui-polish does.
+
+If `design.site.md` is missing entirely and you cannot bootstrap, fall back to `design.md` +
+`brand-system` and flag the absence.
+
+---
+
+## Two modes
+
+| Mode | Input | What runs |
+|------|-------|-----------|
+| **Scoped** (default) | one page / section named by the user | the loop in `workflows/audit-and-elevate-site.md`, anchored on `design.site.md` |
+| **Whole-site** | "audit the whole site" / "polish the marketing site" | build the coverage matrix from `routes.public.md` → sensors + conformance per cell → elevation → inline SEO/a11y → final re-audit |
+
+**Coverage matrix = `route × viewport × data-state`** — **no theme axis** (marketing surfaces are
+typically single-theme; confirm in `design.site.md`). Viewport set = **desktop-first AND mobile**
+(state defaults in `CORE`; marketing is desktop-primary, unlike the mobile-first app). The **cell** is
+the unit of "done" — capture an artifact for every cell; a route you didn't render is not audited.
+
+Whole-site mode discovers routes **from `routes.public.md`** (Phase 1 of the build). If that manifest
+is absent, **halt and prompt** — do not fall back to a directory scan (path geometry mis-classifies
+`/` and the auth routes).
+
+---
+
+## Core workflow
+
+The whole skill runs through one loop. **Read `workflows/audit-and-elevate-site.md` before starting** —
+it is the operating procedure (loop, the 4 site axes, inline SEO/a11y sequencing, Definition of Done).
+In short:
+
+```
+0. BASELINE  Read CORE/design.site.md (or bootstrap a DRAFT). Read CORE/SKILL.md for
+             routes.public.md, seed recipe, deployed URL, auth, viewport set.
+0.5 SEED     Populate realistic data where pages have data (foods). For genuinely empty
+             pages (e.g. an empty blog), the LIVE-EMPTY state IS the real visitor state —
+             audit it as-is; don't fabricate content.
+1. MATRIX    route (routes.public.md) × viewport × data-state. The cell is the unit of done.
+2. SENSE     Run ../ac-ui-polish/reference/sensors.md FIRST on every cell (contrast,
+             hardcoded colour, token symmetry) — eyes miss these.
+3. AUDIT     Score ../ac-ui-polish/reference/critique-polish.md (taste) + the 4 SITE AXES
+             (conversion/copy, desktop-responsive, link/CTA integrity, screenshot freshness)
+             — with file:line. Capture an artifact per cell.
+4. ELEVATE   Two ledgers — Conformance (fix defects; "N/A" while spec is draft) + Elevation
+             (score every surface; change ONLY with a cited gap; "no change" is a pass).
+5. SEO+A11Y  Run seo-metadata + web-design-guidelines INLINE (before the final re-audit).
+6. RE-AUDIT  Re-run sensors + rubric + axes. Pass = zero sensor fails / blocker / high.
+7. VERIFY    See it running at every viewport + data-state; before/after artifacts;
+             tests pass; no sibling regressions; Definition of Done complete.
+```
+
+**Six non-negotiables** (adapted from ac-ui-polish; each maps to a real escaped defect):
+**sensors run before eyes** · **audit every data-state, never just the happy path** (no theme axis
+here, so data-state is the matrix axis that catches escaped defects) · **audit seeded/real data, not
+a blank page** · **verify don't infer** (render every route — use the deployed URL if local blocks
+it; cold-navigate, don't warm-click) · **refute every "conformant" verdict** (empty ≠ clean — an
+errored page renders like an empty one) · **never change working code just to have a diff**.
+
+---
+
+## Reuse-by-reference — the craft engine
+
+The craft layer lives in **ac-ui-polish's reference files**, reused **by reference, never copied**.
+
+- **Literal path:** reference shared craft as **`../ac-ui-polish/reference/<file>.md`**. Per-skill
+  symlinks make this sibling-dir offset resolve in both the canonical agent-compounds tree and each
+  app's symlinked `.claude/skills/`.
+- **Two-namespace rule:** bare `<file>` = this skill's own files (`workflows/...`);
+  `../ac-ui-polish/<file>` = shared craft.
+- **Required ac-ui-polish reference files** (this skill breaks if any is renamed/removed):
+  `sensors.md`, `critique-polish.md`, `recipes.md`, `visual-craft.md`, `interaction-and-feel.md`,
+  `perceived-performance.md`. Confirm each resolves before relying on it (see the workflow's DoD).
+- **Site-specific adaptations** when reading those files: `interaction-and-feel.md`'s native sections
+  (gestures/haptics/safe-area) are **N/A** for a webpage; **hover flips from forbidden (mobile app)
+  to a primary affordance** on desktop site surfaces.
+
+---
+
+## Delegation map (orchestrate — don't reimplement)
+
+| Need | Defer to |
+|------|----------|
+| Visual craft, perceived performance, interaction feel, anti-slop rubric, recipes, sensors | `../ac-ui-polish/reference/*.md` (reuse) |
+| SEO / metadata / OG + Twitter cards / sitemap / robots / JSON-LD | `seo-metadata` — **run inline** as a composed stage |
+| Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `web-design-guidelines` — **run inline** |
+| Refreshing embedded app screenshots (seed → capture → verify) | `screenshot-refresh` |
+| Brand palette, pillar colour, voice/copy register, banned phrases | `brand-system` |
+| React/Next perf internals (waterfalls, bundle, hydration) | `capacitor` |
+| A style genuinely isn't applying / layout broken (a defect) | `ui-debug` |
+| Static screenshot index of every route | `_tools/crawl-and-capture` + `CORE/journeys/routes.public.md` |
+| The authenticated app surface | `ac-ui-polish` |
+
+---
+
+## Supporting documentation
+
+| File | When to read |
+|------|--------------|
+| `workflows/audit-and-elevate-site.md` | **Always** — the operating procedure + the 4 site axes + Definition of Done |
+| `../ac-ui-polish/reference/sensors.md` | **At SENSE, before eyes** — contrast / hardcoded-colour / token symmetry |
+| `../ac-ui-polish/reference/critique-polish.md` | At AUDIT — the anti-slop checklist + scoring rubric |
+| `../ac-ui-polish/reference/recipes.md` | At ELEVATE — canonical paste-able values (radius, shadow, press-scale, easing) |
+| `../ac-ui-polish/reference/visual-craft.md` | Elevating appearance: type, spacing, depth, imagery, layout |
+| `../ac-ui-polish/reference/interaction-and-feel.md` | Elevating micro-interactions (hover = primary on desktop; native sections N/A) |
+| `../ac-ui-polish/reference/perceived-performance.md` | When the page feels slow/janky despite being functional |
+
+---
+
+## Common mistakes
+
+| Mistake | Fix |
+|---------|-----|
+| Auditing a public route against `design.md` | Public routes anchor on `design.site.md`; if the route isn't in `routes.public.md`, it's ac-ui-polish's — redirect |
+| Letting a freshly-bootstrapped draft "bless" the current site | While `status: draft`, Conformance = N/A; ELEVATE binds to the rubric + brand-system, not the draft |
+| Treating it like the mobile app (mobile-only, no hover) | Marketing is desktop-primary; hover is a primary affordance; audit desktop AND mobile |
+| Fabricating content for an empty page | The live-empty state IS the real visitor state — audit it as-is; mark routes with no instances (e.g. unpublished `[slug]`) N/A |
+| Copying ac-ui-polish's reference files in | Reuse by `../ac-ui-polish/reference/<file>.md`; never fork the craft engine |
+| Skipping SEO/a11y or running them after the final re-audit | Run them inline, **before** the final re-audit, so changes they trigger get re-audited |
+| Redesigning instead of elevating | Conform to `design.site.md` first; change the least that achieves premium |
