@@ -50,7 +50,19 @@ triage-authored issues by that marker so the loop can't feed itself.
 | 3   | **Supabase**            | edge-function logs, Postgres errors, auth failures | service-role / mgmt API |
 | 4   | **GitHub Issues**       | externally-filed bug reports / feature requests (matters for public/OSS repos) | `gh` CLI / token |
 | 5   | PostHog (later)         | funnel drop-off, error events, session signal    | project API key            |
-| 6   | store reviews (later)   | App Store / Play user reviews                     | ASC / Play API             |
+| 6   | **Feedback reports**    | solicited in-app user feedback (structured, owned table) | service-role (see adapter spec) |
+| 7   | store reviews (later)   | App Store / Play user reviews                     | ASC / Play API             |
+
+Source numbers 1–5 are fixed across all apps. Source #6 (feedback reports) applies to apps
+with a structured in-app feedback UI writing to an owned table. Source #7 (store reviews) is
+deferred. Per-app CORE/triage.md assigns and enables sources; the number is per-app, not
+global — if your app needs a different slot, use the CORE/triage.md table as the authority.
+
+**Feedback reports (source #6):** solicited in-app feedback stored in a service-controlled
+Supabase table (e.g. `bca.feedback_reports`). Distinct from source #3 (error-log clustering)
+— this reads VOLUNTARY structured reports, not machine-generated errors. Full adapter spec
+(query, dedup, evidence-guard, write-back, unit test cases):
+`references/feedback-adapter.md`.
 
 **Sentry is source #1** — symbolicated native + JS stacks are the highest-signal, lowest-
 noise input, and it captures crashes whether or not a tester taps "report." **ASC #2 is

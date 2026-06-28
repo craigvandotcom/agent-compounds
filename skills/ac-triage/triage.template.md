@@ -1,5 +1,5 @@
 ---
-template_version: 1
+template_version: 2
 ---
 
 # Triage — {{APP_NAME}} (per-app facts for `ac-triage`)
@@ -12,13 +12,14 @@ template_version: 1
 
 ## Enabled sources
 
-| #   | Source              | Status                                  | Auth pointer                          |
-| --- | ------------------- | --------------------------------------- | ------------------------------------- |
-| 1   | **Sentry**          | {{✅ live / ⏳ teed up / ⬜ off}}        | `SENTRY_AUTH_TOKEN` + org/proj slugs  |
-| 2   | **App Store Connect** | {{✅ / ⬜}} {{(native app only)}}      | Admin ASC API key — see `distribution.md` |
-| 3   | **Supabase**        | {{✅ / ⬜}} schema `{{schema}}`          | service-role — see `supabase.md`      |
-| 4   | **GitHub Issues**   | {{⬜ N/A private / ✅ OSS}}              | `gh` CLI                              |
-| 5   | PostHog             | {{⬜ deferred}}                          | project key                           |
+| #   | Source                | Status                                  | Auth pointer                          |
+| --- | --------------------- | --------------------------------------- | ------------------------------------- |
+| 1   | **Sentry**            | {{✅ live / ⏳ teed up / ⬜ off}}        | `SENTRY_AUTH_TOKEN` + org/proj slugs  |
+| 2   | **App Store Connect** | {{✅ / ⬜}} {{(native app only)}}        | Admin ASC API key — see `distribution.md` |
+| 3   | **Supabase**          | {{✅ / ⬜}} schema `{{schema}}`          | service-role — see `supabase.md`      |
+| 4   | **GitHub Issues**     | {{⬜ N/A private / ✅ OSS}}              | `gh` CLI                              |
+| 5   | PostHog               | {{⬜ deferred}}                          | project key                           |
+| 6   | **Feedback reports**  | {{⬜ adapter pending / ✅ live}}          | service-role — see `supabase.md`      |
 
 A source that isn't configured is **skipped, not an error**. Flip to ✅ when its auth lands.
 
@@ -32,6 +33,13 @@ A source that isn't configured is **skipped, not an error**. Flip to ✅ when it
   {{Only if it's a native/TestFlight app.}}
 - **Supabase (source #3):** error-level logs + auth failures for schema `{{schema}}`.
 - **GitHub Issues (source #4):** {{private repo → N/A; OSS → `gh issue list`, loop-guarded.}}
+- **Feedback reports (source #6):** solicited in-app user feedback in `{{schema}}.feedback_reports`.
+  Query: `SELECT ... WHERE linked_bead IS NULL AND created_at > <watermark>`.
+  Fingerprint dedup on `user_id + normalized(message) + category` (not id-only — client retries re-INSERT).
+  Evidence guard: skip bug rows where `context` claims a screenshot but `screenshot_path IS NULL`.
+  Write-back: `SET linked_bead, status='triaged'` after each bead (loop-guard).
+  `status='fixed' + fixed_in_build` written by the ac-merge hook (bd-vbmre.16).
+  Full spec: `ac-triage/references/feedback-adapter.md`.
 
 ## Severity bar (drop below this)
 
