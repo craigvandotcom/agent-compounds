@@ -132,6 +132,17 @@ authentic native rendering, and it is often the *only* path that works:
 > data there. Seed the **account the native app auto-uses**, in the backend the app actually points
 > at (usually prod), not whatever the web default is.
 
+> **MANDATORY protocol (each maps to a real escaped defect):**
+> 1. **Seed FIRST, always** — relative-date seed data goes stale; re-seed before every capture run.
+> 2. **Verify data is CURRENT *in the app* before capturing** — seeding the DB is not enough: the app
+>    may show a cached/pre-seed state (e.g. recent days blank, wrong streak count). After seeding,
+>    **relaunch/refresh the app** and confirm the latest data is visible (timeline/bars populated
+>    through *today*, no blank recent stretch) BEFORE taking the shot. A capture taken before the
+>    fresh data loads ships blank recent days.
+> 3. **Capture EVERY screenshot in the Phase-1 manifest — never skip a slot.** "This one's awkward to
+>    reach" is not a reason to leave a stale image; find the right screen (each landing slot maps to a
+>    specific app view — honour that mapping) and refresh all of them in one run.
+
 Flow: seed the right account → drive the app with `agent-device` (set theme to match the marketing
 aesthetic) → `xcrun simctl io <UDID> screenshot` per view → post-process to the embedded format
 (crop the OS status bar / notch, resize to the referenced dimensions).
@@ -234,6 +245,11 @@ Use the Read tool to view each screenshot image and confirm:
 - Dev indicators are absent
 - **No focus rings or outlines** (screenshots should mimic real mobile appearance)
 - Today's composition bar is populated (not empty) if the view includes a timeline
+- **Data is CURRENT, not just present** — for any time-series view (daily bars, streak, timeline),
+  the data must run **through today with no blank recent stretch**. Blank trailing days = a stale
+  pre-seed/cached capture (re-seed, relaunch, re-verify, re-capture). This is the #1 silent defect.
+- **Every manifest slot was refreshed** — cross-check the captured set against the Phase-1 manifest;
+  no referenced screenshot left stale.
 
 ### 4c. Report
 
