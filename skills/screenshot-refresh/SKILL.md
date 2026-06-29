@@ -134,8 +134,17 @@ authentic native rendering, and it is often the *only* path that works:
 
 Flow: seed the right account → drive the app with `agent-device` (set theme to match the marketing
 aesthetic) → `xcrun simctl io <UDID> screenshot` per view → post-process to the embedded format
-(crop the OS status bar / notch, resize to the referenced dimensions). Gotcha: `agent-device click`
-uses **logical points**, not native pixels (divide native coords by the device scale, ~3×).
+(crop the OS status bar / notch, resize to the referenced dimensions).
+
+> **Post-process: preserve full width — never cover-crop the sides.** Resize to the target *width*
+> and pad top/bottom (the app bg colour) to the target height; do NOT use a cover-fit
+> (`-resize WxH^ -extent`) — it trims the sides and eats the app's horizontal padding, so cards run
+> edge-to-edge in the mockup frame. The frames are usually `object-contain`, so a few px of dark
+> top/bottom letterbox is invisible, but lost side margin is glaring. Verify the inset:
+> `magick out.png -fuzz 8% -trim info:` and check the content bbox keeps a sensible left/right offset.
+
+Gotcha: `agent-device click` uses **logical points**, not native pixels (divide native coords by the
+device scale, ~3×).
 **App-specific recipe (accounts, views, dims, sim) lives in the app's `CORE/ui-audit.md`.**
 
 > This reverses an earlier "no device capture" stance that was correct only for *web* surfaces:
