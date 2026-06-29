@@ -66,13 +66,27 @@ under this model; ac-land deregisters the inherited top identity once, at loop e
   the lock — that blind spot is exactly what a SessionStart auto-mint closes.
 - **Parallel = parallel invocations** (distinct identities), never parallel writers under one name.
 
+## Implementation notes (confirmed)
+
+- **Marker key = `CLAUDE_CODE_SESSION_ID`** (env-exposed to spawned commands incl. hooks).
+  **In-process subagents share the parent's `session_id`** (probe-verified) — so one marker
+  resolves every engineer/reviewer subagent to its session's identity, no per-subagent
+  propagation. `SessionStart` fires per *real* session, not per subagent — minting happens once.
+  Separate `claude -p` sub-sessions get their own id → env-propagated `AGENT_NAME` → their own
+  marker (`MINTED=0`).
+- **The edit guard reads ALL reservations and filters by the absolute `project` field**, never
+  by the project *dir* name — robust against the project-keying gotcha (one app has several
+  inconsistently-keyed dirs). Built + unit-tested: `~/.local/bin/am-edit-guard.py` (fail-open;
+  `AM_EDIT_GUARD_MODE=advisory|enforce`; degrades to advisory when identity is unresolved, so it
+  is **safe to install standalone** — it can't block until markers exist).
+
 ## Conformance status
 
-**Design doctrine — not yet wired.** Current skills still mint per-stage
-(`ac-implement`/`ac-land` each call `macro_start_session`). Target: the **top-level invocation
-mints; stages inherit** via the delegation prompt; ac-land deregisters the one inherited top
-identity at loop exit. Migration is deliberate + tested; until then the per-stage names still
-function (just coarser-grained than needed). The edit hook is likewise to-build.
+**Partially built — not yet wired.** The **edit guard is built + tested** (above); the
+SessionStart/PostToolUse/SessionEnd hooks + the global `settings.json` install + the skill
+rewire (stages inherit instead of `macro_start_session`; **ac-land drops `deregister_agent`**;
+ac-loop propagates `AGENT_NAME` into sub-stage spawns + a Phase-0 stale-identity sweep) remain.
+Until wired, per-stage `macro_start_session` still functions (just coarser-grained than needed).
 
 **Cross-refs:** artifacts-dir scoping → `run-id.md` · bead lifecycle → `bead-conventions.md` ·
 edit hook → `edit-reservation-hook` (to build).

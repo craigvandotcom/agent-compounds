@@ -189,6 +189,27 @@ Wave branches protect main from in-progress code and make the green-main invaria
 
 ---
 
+## Coordination & identity (how sessions don't collide)
+
+The pipeline shares one checkout (no worktrees), so concurrent work is kept safe by **identity-scoped file reservations**, not branch isolation. Two invariants govern it:
+
+- **Identity is minted at the top-level invocation and inherited by everything it spawns.** One
+  Agent Mail name per invocation (an `ac-loop` run · a human `/ac-command` · a casual editor
+  session); all its sub-stages and subagents share it. The **reservation lock is grained at the
+  identity**, so the protection boundary is the *invocation* — two invocations exclude each
+  other; *inside* one, there is no lock granularity, so **the conductor serializes writers**
+  (ac-implement is one-bead-at-a-time). To parallelize, spawn a *separate invocation* (its own
+  identity), never a second writer under one name. Full contract: `_shared/agent-identity.md`.
+- **Enforcement is edit-time, not just commit-time.** Reservations are advisory; the
+  global `PreToolUse(Edit\|Write)` guard blocks editing a file held by a *different* identity
+  before the write lands (fail-open), with the pre-commit guard as the commit-time backstop.
+  Private scratch (`$ARTIFACTS_DIR`) is keyed deterministically, never guessed: `_shared/run-id.md`.
+
+> Worktrees are deliberately rejected (filesystem multiplication, cross-worktree edits corrupt
+> state — `jef-flywheel` lesson 21). Single checkout + identity reservations is the chosen model.
+
+---
+
 ## Standards for changing the pipeline
 
 - **Edit the spec first.** Change the chain *here*, then bring the stage skills into
