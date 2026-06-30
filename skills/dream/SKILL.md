@@ -29,8 +29,10 @@ DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a
 (`infrastructure/dream-cycle/classify.py`) into `auto` or `gated` (everything judgment-laden).
 `auto` has two shapes: **Tier-1** (a pure new-memory-note ADD to root, judge ≥9 — append-only)
 and **Tier-0** (a `lint-fix` the script can *re-derive and apply itself* — e.g. `index-prune`;
-zero LLM trust, verification is the gate). It applies the `auto` tier unattended and posts only
-`gated` ones as Slack cards. The autonomy axis is **reversibility × judgment, not cadence** —
+zero LLM trust, verification is the gate). It applies the `auto` tier unattended and files
+`gated` ones as `human-gate` decision beads in their target repos (`file-beads.py`), worked via
+`ac-human-session` (the decision docket); Slack is a digest nudge, not the decision surface. The
+autonomy axis is **reversibility × judgment, not cadence** —
 lossless/mechanical → auto; lossy (merge/summarise) or judgment-laden → gated. Policy + the
 exact predicate: `references/auto-act-rubric.md`; architecture:
 `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`. CYCLE itself still **never
@@ -125,8 +127,8 @@ Create `infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`:
 
 ```markdown
 ---
-status: pending            # pending → approved|rejected (Slack) → applied (terminal success)
-bead: <id>                 # decision bead in target_repo's db (set at emit)
+status: pending            # auto: pending→applied · gated: pending→(bead filed)→applied|rejected
+bead: <id>                 # decision bead in target_repo's db (filed by the daily file-beads.py)
 category: rule | recipe | skill-improvement | lint-fix | re-home
 summary: <ONE plain-English line — what approving this DOES; this is the Slack card body>
 target_repo: root | agent-compounds | <app>
@@ -141,17 +143,22 @@ judge: {score: N, reason: "<one line>"}
 <which future sessions get faster, citing the evidence>
 ```
 
-Always write `summary:` — it is what Craig reads on the Slack card. State the *effect*
-("Adds a memory rule so future X stops re-debugging Y"), not the file path. The card falls
-back to the `## Why` first paragraph if `summary:` is absent, but a purpose-built line is
-the difference between a graspable card and an opaque one.
+Always write `summary:` — it seeds the decision bead's framing and the digest nudge. State
+the *effect* ("Adds a memory rule so future X stops re-debugging Y"), not the file path. A
+purpose-built line is the difference between a graspable docket item and an opaque one.
 
-**Register each proposal as a decision bead** in its `target_repo`'s beads db
-(the proposal FILE is the memo artifact; the BEAD is the action handle — status
-authority lives in the bead, the docket is the single action surface; see
-`../_shared/bead-conventions.md`). Repo → path: `root` = `~/Repos` ·
-`agent-compounds` = `~/Repos/neometa/software/agent-compounds` · `<app>` =
-`~/Repos/neometa/software/<app>`:
+**Each gated proposal becomes a decision bead** in its `target_repo`'s beads db (the proposal
+FILE is the memo artifact; the BEAD is the action handle — status authority lives in the bead,
+the docket is the single action surface; see `../_shared/bead-conventions.md`). **Filing is
+deterministic and headless:** the daily queue job runs `infrastructure/dream-cycle/file-beads.py`,
+which files only `gated` + `pending` + unfiled proposals (full memo inline for private repos,
+pointer-only for the public agent-compounds db), writes the bead id back into `bead:`, and
+commits per-repo. So **CYCLE does not file beads itself** — emit the proposal files with an empty
+`bead:` slot and the daily filer picks them up (auto-tier proposals are applied, never filed).
+This closes the old "headless cycle left beads unfiled" gap — the filer is the safety net, not
+an interactive REVIEW that rarely runs. Repo → path: `root` = `~/Repos` · `agent-compounds` =
+`~/Repos/neometa/software/agent-compounds` · `<app>` = `~/Repos/neometa/software/<app>`. The
+equivalent manual command, if you ever file one interactively:
 
 ```bash
 cd <target_repo_path> && br create "dream: <slug>" -t decision \
@@ -159,9 +166,8 @@ cd <target_repo_path> && br create "dream: <slug>" -t decision \
   --description "Memo: <abs path to NN-<slug>.md>. <one-line What>. Judge: <score>/10."
 ```
 
-Public-db caution: agent-compounds beads publish — neutral titles, pointer-only
-descriptions (the conventions file has the rule). Record the bead id in the
-proposal's frontmatter (`bead: <id>`).
+Public-db caution (already handled by `file-beads.py`): agent-compounds beads publish —
+neutral titles, pointer-only descriptions (the conventions file has the rule).
 
 Commit (root repo, these paths only) + push — the queue must be visible cross-machine:
 `git add infrastructure/dream-cycle && git commit -m "dream: <date> cycle — N proposals" && git push`

@@ -19,7 +19,7 @@ cadence** — architecture: `neometa/alignment/decisions/2026-06-26-tiered-memor
 ## The tiers
 
 Two tiers earn `auto` (applied unattended by the daily queue job, reported in the digest);
-everything else is `gated` (one-tap Slack Approve/Reject).
+everything else is `gated` (filed as a decision bead in its target repo, worked via the docket).
 
 ### `auto` · Tier-1 — additive: a pure ADD of a new memory note
 
@@ -61,7 +61,7 @@ Candidates to add later (each needs an independent re-derivation in the script f
 dead-wikilink *removal* (ambiguous — a dead link often marks a note worth writing, so it
 stays gated for now), frontmatter-field normalization.
 
-### `gated` — posted to Slack as a one-tap Approve/Reject card (the existing flow)
+### `gated` — filed as a decision bead in its target repo (worked via the docket)
 
 Everything else, explicitly including:
 
@@ -90,17 +90,25 @@ writes unreviewed content. The asymmetry is intentional.
 3. **Approved backlog → apply now:** any proposal already at `status: approved` (Craig
    tapped Approve on a prior card) is applied the same way — this closes the
    approve-but-never-applied gap.
-4. **Gated + still pending → card:** `post-proposals.sh` posts the improved card (Why +
-   judge score + plain-English action). `post-proposals.py` itself re-checks the predicate,
-   so a manual run never posts an auto-tier item.
-5. **Digest:** one summary card — *N auto-applied (listed) · M awaiting your decision · P
-   approved→applied*.
+4. **Gated + still pending + unfiled → decision bead:** `file-beads.py` files each as a
+   `-t decision` + `human-gate,dream-proposal` bead in its target repo (full memo inline for
+   private repos; pointer-only for the public agent-compounds db) and records the bead id in
+   the proposal's `bead:` frontmatter (the dedup marker). It re-checks the predicate, so a
+   manual run never files an auto-tier item. Decisions are worked via `ac-human-session` (the
+   decision docket), not a Slack tap.
+5. **Digest nudge:** one summary card — *N auto-applied (listed) · M filed as beads · K open
+   in the docket* — pointing at `br ready --label dream-proposal`. Slack notifies; the bead
+   docket decides.
 
 ## Status vocabulary
 
-`pending` → (`approved` | `rejected` via Slack button) → `applied` (REVIEW or auto wrote the
-target) — or `pending` → `applied` directly for the auto-tier. `applied` is the terminal
-success state; it distinguishes "Craig approved it" from "it actually landed in the substrate".
+Auto-tier: `pending` → `applied` directly (the daily job wrote the target). Gated: `pending`
+→ a decision bead is filed (the `bead:` field becomes the filed marker; the **bead's** open/
+closed status is the live authority, per `_shared/bead-conventions.md`) → `applied` | `rejected`
+when the docket session works the bead and writes the target. `applied` is the terminal success
+state — it distinguishes "decided" from "it actually landed in the substrate". (Legacy:
+pre-cutover `approved`/`rejected`-via-Slack-button files are still drained by the daily job's
+approved backlog.)
 
 ## Tuning
 
