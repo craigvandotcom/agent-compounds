@@ -4,7 +4,31 @@ description: Pipeline housekeeping — archive completed items, reconcile backlo
 ---
 
 
-**You are the pipeline janitor.** Scan all three data stores, reconcile lifecycle state, archive completed work, flag orphans, suggest consolidation. All moves require user confirmation.
+**You are the pipeline janitor.** Scan all three data stores, reconcile lifecycle state, archive completed work, flag orphans, suggest consolidation.
+
+## Modes
+
+| Mode | Invocation | Confirmation | Writes |
+|---|---|---|---|
+| **INTERACTIVE** (default) | direct human / `ac-human-session` | `AskUserQuestion` throughout | applies on approval |
+| **NIGHTLY** (headless) | scheduled `workflows/nightly.md` heartbeat | none (no human present) | auto-applies the sanctioned subset; emits proposals for the rest |
+
+In **NIGHTLY** mode:
+
+- **Tier 1 — auto-apply** (non-destructive reconciliation): Phase 2d (`captured → planned`) + Phase 2e (fix/infer plan frontmatter) + adding missing `plans:` fields. Always runs.
+- **Tier 2 — auto-apply provably-done archive** (Phases 2b/2c): ONLY when the Tier-2 toggle is ON *and* the positive-proof gate passes (see NIGHTLY Guardrails). Otherwise the item falls through to a Tier-3 proposal.
+- **Tier 3 — propose only** (Phases 3–4: orphans, consolidation, dedup, finding-bead prune): emit a proposal file + a `human-gate,pipeline-proposal` bead. **Never** `AskUserQuestion` — there is no human. `ac-human-session` applies approved proposals later by re-invoking this skill's INTERACTIVE flow.
+
+INTERACTIVE mode is unchanged from the sections below — every move requires user confirmation.
+
+## NIGHTLY Guardrails
+
+*(This exact header is the deterministic marker the `nightly.md` heartbeat greps to read the toggle.)*
+
+- **Tier-2 auto-archive: OFF** — the toggle. Default OFF for the pilot. It lives here in the SKILL **body** (never YAML frontmatter — the scheduler strips frontmatter before the agent sees the prompt). Flip to ON only via the post-observation sign-off; because it is an agent-compounds edit, it takes effect only after re-sync + `pm2 restart pai-scheduler`.
+- **Positive proof, never empty-parse.** Before any Tier-2 archive: require `N_matching > 0` **and** `N_closed == N_matching` **and** the `br list --json` result parsed to a non-empty, expected shape. `br` output shape varies (`{issues:[]}` vs a bare array — `bca-br-tooling-flaky`); an empty or misparsed result MUST abort the archive and fall through to a Tier-3 proposal — never read emptiness as "done".
+- **Never touch `human-gate` or `qa-blocker` beads** — gated, not housekeeping.
+- **Provable, never heuristic** — keyword/similarity-inferred "looks done" is a Tier-3 proposal, never an auto-move.
 
 ---
 
@@ -74,6 +98,8 @@ For approved items:
 
 ### 2b: Archive Beadified Plans
 
+> **NIGHTLY:** auto-archive ONLY if the Tier-2 toggle is ON and the positive-proof gate passes (see NIGHTLY Guardrails); otherwise emit a Tier-3 proposal instead of asking. INTERACTIVE: confirm via `AskUserQuestion` as below.
+
 **Condition:** Plan frontmatter `status: beadified` OR plan is referenced by beads in `br` AND all those beads exist
 
 Plans that have been fully converted to beads are historical artifacts — beads are now the source of truth.
@@ -100,6 +126,8 @@ For approved items:
 
 ### 2c: Archive Completed Plans (All Beads Closed)
 
+> **NIGHTLY:** same as 2b — auto-archive only under the Tier-2 toggle + positive-proof gate; else Tier-3 proposal.
+
 **Condition:** Plan has matching beads AND all matching beads are closed
 
 **Action:** Same archive flow as 2b, but with different description:
@@ -110,6 +138,8 @@ For approved items:
 
 ### 2d: Update Backlog Status for Planned Items
 
+> **NIGHTLY (Tier 1):** auto-applies in both modes — non-destructive reconciliation, no confirmation needed.
+
 **Condition:** Backlog file has `status: captured` but a matching plan exists (either via `plans:` frontmatter field or keyword matching)
 
 **Action:** Update frontmatter to `status: planned` and add `plans:` field if missing.
@@ -117,6 +147,8 @@ For approved items:
 Report: "Updated {filename}: status → planned (plan: {plan_name})"
 
 ### 2e: Fix Missing Plan Frontmatter
+
+> **NIGHTLY (Tier 1):** auto-applies in both modes — inferring + adding frontmatter is non-destructive; report the inference.
 
 **Condition:** Plan files that lack YAML frontmatter entirely
 
@@ -188,7 +220,9 @@ reproducible, or (c) superseded by a fix that already merged. Propose
 close/merge per item. **Never touch `human-gate` or `qa-blocker` beads** —
 those are gated, not housekeeping.
 
-Present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
+**INTERACTIVE:** present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
+
+**NIGHTLY (Tier 3):** do NOT `AskUserQuestion` (no human present). Instead emit a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`) + one `human-gate,pipeline-proposal` bead per cluster, per `workflows/nightly.md`. Before emitting, **dedup**: skip any cluster already covered by an open `pipeline-proposal` bead (the populated-`bead:` slot is the idempotency marker). `ac-human-session` applies approved proposals by re-invoking this skill's INTERACTIVE flow.
 
 ---
 
@@ -240,7 +274,7 @@ git push
 
 ## Remember
 
-- **All moves require confirmation** — never archive without asking
+- **All moves require confirmation in INTERACTIVE** — never archive without asking. In NIGHTLY, only the sanctioned auto-tiers apply (Tier 1 always; Tier 2 under the toggle + positive-proof gate); everything else is a proposal, never a silent move.
 - **Infer conservatively** — when in doubt about status, flag rather than change
 - **Beads are source of truth** — once beadified, the plan is archival
 - **Frontmatter is the API** — pipeline tracking depends on structured metadata
