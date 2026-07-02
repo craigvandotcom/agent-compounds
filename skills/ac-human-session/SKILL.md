@@ -48,7 +48,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 Sit-down speed matters: **show the board before asking anything.** The human came to see what needs them, not to answer a setup question. Go straight to Scan (Phase 2) → render (Phase 3/4).
 
-Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option inside the action loop** (Phase 5), never an upfront gate. Proactively suggest it only when the board looks **stale** — open beads that look done, a fat finding-bead pile, or `active/` empty while `pool/` is full — as a one-line header hint (`⚠ board may be stale — /ac-tidy`). Headless runs skip freshen entirely.
+Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option inside the action loop** (Phase 5), never an upfront gate. The scheduled nightly tidy + weekly align runs now keep the board fresh and file `pipeline-proposal` beads for anything needing a human — so the primary signal is **proposals pending in the Docket**, not a staleness guess. Surface a one-line header hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist; fall back to the legacy heuristic (open beads that look done, a fat finding-bead pile, or `active/` empty while `pool/` is full) only if no nightly has run recently. Headless runs skip freshen entirely.
 
 ---
 
@@ -58,7 +58,9 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
 
 ### Your lens on the board
 
-- **🔴 Decision Docket (PRIMARY)** = board beads with the `human-gate` label, open. The first-class channel for human-required work — pre-staged with a memo (context, options + trade-offs, recommendation); agents enrich but **never** close them, so they survive every autonomous sweep until the human decides. Covers decision beads (`-t decision`) **and dream proposals** (`dream-proposal` beads carry `human-gate` too — the memo is the proposal file). (`qa-blocker` is a *merge* gate, agent-resolvable — NOT human-gate, so it never appears here.)
+- **🔴 Decision Docket (PRIMARY)** = board beads with the `human-gate` label, open. The first-class channel for human-required work — pre-staged with a memo (context, options + trade-offs, recommendation); agents enrich but **never** close them, so they survive every autonomous sweep until the human decides. Covers decision beads (`-t decision`) **and dream proposals** (`dream-proposal` beads carry `human-gate` too — the memo is the proposal file) **and pipeline proposals** (`pipeline-proposal` beads from the scheduled nightly tidy / weekly align also carry `human-gate` — sub-filter on the `pipeline-proposal` label to render them distinctly). (`qa-blocker` is a *merge* gate, agent-resolvable — NOT human-gate, so it never appears here.)
+  - **Applying a pipeline proposal:** invoke the owning skill (`ac-tidy` or `ac-align`) via the Skill tool in its INTERACTIVE flow (the same cross-skill delegation `ac-loop` uses for its stage skills). The skill's own gate re-confirms the moves against the *current* board — for `ac-align` this re-scores the slate against live strategy, so a stale item self-skips; this re-prompt is intended late-binding re-confirmation, not a bug (do NOT add a bypass). Then set the proposal file `status: applied` + `br close` the bead.
+  - **Discarding one:** set the proposal file `status: rejected` + `br close` the bead; do NOT invoke the owning skill.
 - **🟡 Plans awaiting sign-off** = board plans with `status: draft | refined` and **NOT** `loop-ready`. Most-invested first. (Drop every `loop-ready` plan — the loop owns it.)
 - **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan-init`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
 - **Loop awareness (count only)** = board ready beads + `loop-ready` plans + in-progress waves → a single header line, never itemized (tells the human the factory is running).
@@ -95,7 +97,7 @@ Salvaged from the old `ac-next` funnel view — give the human the whole board a
 ```
 ## Command Center — {project | org-wide}
 
-Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ stale hint, if any}
+Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any}
 🤖 Loop:   {ready_beads} beads + {loop_ready_plans} plans flowing autonomously{, {in_progress} in-flight} — you don't touch these
 
 ⚡ {one-line sequence note IF reordering is warranted — e.g. "approve plan X before promoting pool, it unblocks 3 items"; omit if order is fine}
@@ -127,6 +129,7 @@ Order = distance from a stall: clear what's stopped, then feed backward. Omit an
    • {active item} [{size}]                                 → plan
    • {triage candidate} (from {source})                    → approve into pool / discard
    • Replenish: {pool_count} pooled, active/ is thin        → promote (ac-align)
+   • {N} pipeline proposals pending (nightly/weekly)        → review in Docket → apply/discard
 ```
 
 ---
@@ -143,7 +146,8 @@ AskUserQuestion(
   options: [
     { label: "{top 🔴 item, short}",  description: "{what acting does}" },
     { label: "{next 🔴/🟡 item}",     description: "..." },
-    { label: "Freshen (tidy/align)",  description: "Board looks stale — reconcile first" },   // include only if stale
+    { label: "Apply pending proposals",  description: "Review + apply/discard pending pipeline-proposal beads (nightly tidy / weekly align)" },   // include only if pipeline-proposal beads pending
+    { label: "Freshen (tidy/align)",  description: "Board looks stale — reconcile first" },   // include only if stale (legacy heuristic; nightly tidy usually covers this)
     { label: "Done for now",          description: "Stop — hand off to the loop" }
   ]
 )
