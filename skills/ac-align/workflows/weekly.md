@@ -67,7 +67,7 @@ with the stranded SHA. (No auto-apply to strand, but still confirm the proposal 
 ### 7. Notify — MANDATORY, do this last
 
 ```bash
-infrastructure/tools/bin/slack-send --channel sofi --card \
+"$HOME/Repos/infrastructure/tools/bin/slack-send" --channel sofi --card \
   --status <healthy|degraded> --title "Pipeline Alignment — $(date +%Y-%m-%d)" \
   --body "<one-line: N pooled items proposed for promotion, M sequencing findings>"
 ```

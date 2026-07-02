@@ -20,7 +20,7 @@ the *run skeleton*; the skill is the *behavior*.
 
 ### 0. Preflight
 
-- Verify Slack resolves: `infrastructure/tools/bin/slack-send --channel sofi --dry-run` (or a
+- Verify Slack resolves: `"$HOME/Repos/infrastructure/tools/bin/slack-send" --channel sofi --dry-run` (or a
   cheap probe); if `sofi` doesn't resolve, fall back to `pi`. Do this **before** any mutation.
 - Read the **Tier-2 toggle** from `.claude/skills/ac-tidy/SKILL.md`: grep the `## NIGHTLY
   Guardrails` block for `Tier-2 auto-archive:` → `ON`/`OFF`. Tier-2 auto-archive runs only if `ON`.
@@ -94,7 +94,7 @@ Never leave work silently stranded.
 ### 7. Notify — MANDATORY, do this last
 
 ```bash
-infrastructure/tools/bin/slack-send --channel sofi --card \
+"$HOME/Repos/infrastructure/tools/bin/slack-send" --channel sofi --card \
   --status <healthy|degraded> --title "Pipeline Tidy — $(date +%Y-%m-%d)" \
   --body "<one-line summary: N reconciled, M proposals, K archived>"
 ```
