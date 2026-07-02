@@ -6,6 +6,15 @@ description: Align the execution pipeline against current strategy — audit bac
 
 **You are the Pipeline Alignment Director.** Your job is to ensure the execution pipeline — backlog, plans, and beads — faithfully serves the current strategy. You enforce the hierarchy: strategy shapes pipeline, not the other way around.
 
+## Modes
+
+| Mode | Invocation | Phase 4.5 (promotion) | Phase 6 |
+|---|---|---|---|
+| **INTERACTIVE** (default) | direct human / `ac-human-session` | `AskUserQuestion` → `git mv` on approval | present decisions, apply on approval |
+| **REVIEW** (headless) | scheduled `workflows/weekly.md` heartbeat | **emit** a scored slate as a proposal + `human-gate,pipeline-proposal` bead — NO `AskUserQuestion`, NO `git mv` | **skipped entirely** |
+
+REVIEW mode runs Phases 1–4 exactly as below, then diverges only at 4.5 (emit, don't move) and skips Phase 6. It applies **nothing** — pure propose. A human applies an approved slate later in `ac-human-session`, which re-invokes this skill's INTERACTIVE promotion; that re-scores `pool → active` against **live** strategy at apply time (the late-binding intent — a stale slate self-skips because the board is read fresh).
+
 ## The active/pool model (late version binding)
 
 The backlog has two live states — **versions are bound here, not at capture:**
@@ -135,6 +144,14 @@ This is the decision the backlog deliberately defers to here: **which pooled ite
    The legacy `version:` field, if present, is a **soft prior — not authoritative.** Strategy as it stands *now* wins over a guess made at capture.
 3. **Propose promotions** — the top N (default 3–5, or enough to refill `active/`):
 
+> **REVIEW mode (headless):** do NOT run the `AskUserQuestion` below and do NOT `git mv`.
+> Instead write the scored slate as a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`;
+> frontmatter `status: pending` · `bead: <id>` · `source: ac-align` · `summary`; `## What` = the
+> scored slate, `## Why` = rationale + the orphan/gap/sequencing findings from Phases 3–4) and
+> file one `human-gate,pipeline-proposal` bead pointing at it (dedup: skip a cluster already
+> covered by an open such bead). Then return — REVIEW applies nothing. The steps below are
+> **INTERACTIVE only.**
+
 ```
 AskUserQuestion(
   questions: [{
@@ -149,7 +166,7 @@ AskUserQuestion(
 )
 ```
 
-4. **Promote approved items:**
+4. **Promote approved items** *(INTERACTIVE only — REVIEW never reaches here):*
 
 ```bash
 git mv "$PROJECT_ROOT/_backlog/pool/<file>" "$PROJECT_ROOT/_backlog/active/<file>"
@@ -199,6 +216,8 @@ Omit sections with zero items.
 
 ## Phase 6: User Decisions
 
+> **INTERACTIVE only — REVIEW mode skips this entire phase** (it emits proposals, never applies).
+
 For each category with recommended changes, present via `AskUserQuestion`. Group by type (orphans, reprioritization, gaps) — don't ask about each item individually unless there are fewer than 3.
 
 Example:
@@ -226,7 +245,7 @@ Apply approved changes. Do NOT modify files without explicit user confirmation.
 - **Strategy guides pipeline — not the reverse.** The backlog must serve the strategy, not accumulate for its own sake.
 - **Versions bind late, here.** Capture pools ideas; `ac-align` promotes `pool → active` against live strategy. Never pre-assign a version at capture.
 - **Crystallization matters.** What gets built first shapes what comes after — sequencing is a strategic decision, not just scheduling.
-- **Ask before changing.** Suggest archival, deferral, or promotion — never silently delete or move.
+- **Ask before changing (INTERACTIVE).** Suggest archival, deferral, or promotion — never silently delete or move. In **REVIEW** mode there is no human to ask: emit a proposal instead and apply nothing.
 - **Traceability.** Where possible, ensure backlog items and plans reference the strategy element they fulfill.
 - **Graceful without strategy docs.** A user-stated north star is sufficient for a useful alignment session.
 
