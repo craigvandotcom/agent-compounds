@@ -96,12 +96,18 @@ Sophistication is balancing opposites. Each tension has a named mechanism that r
   Works both headless (scheduled) and interactive (terminal). Consults this doctrine for
   order + gates.
 - **`ac-pipeline-builder` = the blueprint.** This file. Design, audit, evolve the pipeline.
+- **`ac-tidy` / `ac-align` = the scheduled propose-half.** Both gain a headless mode (nightly
+  tidy, weekly align REVIEW) that *emits proposals* (dream-style `human-gate` beads) on a
+  schedule without executing intent-bearing writes. This is a disciplined split of a single
+  stage: the *propose* half is schedulable; the *apply* half stays human-gated.
 
-**Front of funnel is human-gated — no conductor.** `align → next → plan-init → beadify`
-are decisions about *what enters the pipeline*; invoke those stage skills directly. The
-conductor only drives the mechanical back of the funnel — the front is human-gated because
-errors in *intent* are an order of magnitude harder to correct than errors in *execution*.
-A bug in code costs a bead; building the wrong thing costs a wave.
+**Front of funnel is human-gated — no conductor for apply.** `align → plan-init → beadify`
+are decisions about *what enters the pipeline*; invoke those stage skills directly for any
+write. `ac-tidy` and `ac-align` now have a scheduled *propose* pass (headless, emits
+`human-gate` proposal beads, no writes) — that half runs on a schedule. The *apply* half
+(archiving, `pool → active` promotion) stays human-gated: errors in *intent* are an order of
+magnitude harder to correct than errors in *execution*. A bug in code costs a bead; building
+the wrong thing costs a wave.
 
 ---
 
@@ -111,6 +117,9 @@ A bug in code costs a bead; building the wrong thing costs a wave.
    (human-gated, invoke directly)            (conducted by ac-loop)
 ac-align → ac-plan-init → ac-beadify ┃ implement → verify → review → merge → land
 ```
+
+(†) `ac-tidy` and `ac-align` also have a scheduled *propose* pass that runs headless before
+the human-gated apply; the chain above shows the apply half, which stays human-gated.
 
 | Stage | Owns | Gate to advance | Skill |
 |-------|------|-----------------|-------|
