@@ -180,6 +180,29 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 
 ---
 
+## Cross-cadence schedule (the single home for scheduling rules)
+
+Several stages also run **headless, on a schedule**, independent of any single pipeline
+invocation. Their cadences are cross-cutting (they interleave with every wave in flight),
+so this table is the **single home** for "when does X run" — consumers (job configs, stage
+skills) point here rather than restating times in more than one place.
+
+| Job | Cadence | Mode | Skill |
+|---|---|---|---|
+| Curator | Daily ~23:00 | scheduled run (ingredient review/amend) | `curate` |
+| Tidy | Nightly ~00:45 (after the 00:30 maintenance job) | NIGHTLY — propose + bounded auto-act | `ac-tidy` |
+| Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` |
+| Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
+| Triage | Must fire **≥30 min before** any `ac-loop` run | scheduled, feeds beads ahead of shipping | `ac-triage` |
+
+**Triage-before-loop ordering** is the one cadence rule with a *hard dependency* on another
+job (it must feed the board before the loop consumes it) rather than a fixed wall-clock slot.
+It's enforced today at `ac-loop`'s own "Scheduling" section — decoupled on purpose so a triage
+failure never blocks shipping — this table is the cross-cutting reference point for that rule;
+`ac-loop` remains the owner of the enforcement mechanism.
+
+---
+
 ## Branch policy (the single rule)
 
 **Only code changes live on wave branches. Everything else commits directly to main.**
