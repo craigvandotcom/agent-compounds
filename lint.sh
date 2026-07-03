@@ -340,6 +340,125 @@ if [ -f "$AC_ROOT/agents/reviewer.md" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Check 10 — pipeline conformance (D-series doctrine landings)
+# ---------------------------------------------------------------------------
+echo "--- Check 10: pipeline conformance (D-series) ---"
+
+# D1: ac-pipeline/SKILL.md carries the deprecation banner (presence only — the
+# old chain text is deliberately kept readable, so we do NOT assert its absence).
+check
+if ! grep -q "DEPRECATED — superseded by" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
+  fail "D1: skills/ac-pipeline/SKILL.md missing deprecation banner ('DEPRECATED — superseded by')"
+fi
+
+# D2: ac-pipeline-builder conformance checklist has both ticked items with their
+# "(this sweep, 2026-07-03)" annotation — content match, not line numbers.
+check
+D2_COUNT=$(grep -c "this sweep, 2026-07-03" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null || echo 0)
+if [ "$D2_COUNT" -lt 2 ]; then
+  fail "D2: skills/ac-pipeline-builder/SKILL.md expected >=2 '(this sweep, 2026-07-03)' ticks, found $D2_COUNT"
+fi
+
+# D3: zero _backlog/{version} occurrences in ac-plan-init/SKILL.md
+check
+if grep -q '_backlog/{version}' "$AC_ROOT/skills/ac-plan-init/SKILL.md" 2>/dev/null; then
+  fail "D3: skills/ac-plan-init/SKILL.md still contains '_backlog/{version}'"
+fi
+
+# D4: ac-beadify plan-status gate — allowed-status set (approved/loop-ready/refined)
+# AND a STOP semantic for anything else.
+check
+BEADIFY_MD="$AC_ROOT/skills/ac-beadify/SKILL.md"
+if ! { grep -q '`approved`' "$BEADIFY_MD" 2>/dev/null \
+    && grep -q '`loop-ready`' "$BEADIFY_MD" 2>/dev/null \
+    && grep -q '`refined`' "$BEADIFY_MD" 2>/dev/null \
+    && grep -qi 'STOP condition' "$BEADIFY_MD" 2>/dev/null; }; then
+  fail "D4: skills/ac-beadify/SKILL.md missing the approved/loop-ready/refined status gate or its STOP semantic"
+fi
+
+# D5: BOTH ac-plan-review-genius and ac-plan-transcender-alien carry a write-back
+# section (Write Back header, or the genius_reviewed/transcended frontmatter flags).
+for d5_skill in ac-plan-review-genius ac-plan-transcender-alien; do
+  check
+  d5_target="$AC_ROOT/skills/$d5_skill/SKILL.md"
+  if ! grep -qE "Write Back|genius_reviewed|transcended" "$d5_target" 2>/dev/null; then
+    fail "D5: skills/$d5_skill/SKILL.md missing write-back section (Write Back / genius_reviewed / transcended)"
+  fi
+done
+
+# D6: zero stale "pre-merge gate" claims ABOUT LAND in ac-implement + ac-merge.
+# "pre-merge gate" legitimately appears describing review as the sole gate — filter
+# those out (lines with "NOT a pre-merge gate" or "sole pre-merge gate" nearby) and
+# only fail on a leftover line that mentions land AND pre-merge gate unqualified.
+check
+D6_BAD=$(grep -hn "pre-merge gate" "$AC_ROOT/skills/ac-implement/SKILL.md" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null \
+  | grep -i "land" \
+  | grep -vi "NOT a pre-merge gate\|sole pre-merge gate" || true)
+if [ -n "$D6_BAD" ]; then
+  fail "D6: stale 'land is a pre-merge gate' claim found: $D6_BAD"
+fi
+
+# D7: zero "Version bump scans commits" in ac-merge/SKILL.md
+check
+if grep -q "Version bump scans commits" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null; then
+  fail "D7: skills/ac-merge/SKILL.md still contains stale 'Version bump scans commits' claim"
+fi
+
+# D8: version-bump.md contains the sole-owner statement AND ac-distribute defers to it.
+check
+if ! grep -qi "sole.*owner" "$AC_ROOT/skills/ac-merge/references/version-bump.md" 2>/dev/null; then
+  fail "D8: skills/ac-merge/references/version-bump.md missing the sole-owner statement"
+fi
+check
+if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
+  fail "D8: skills/ac-distribute/SKILL.md missing defer-to-ac-merge language"
+fi
+
+# D9: BOTH ac-loop and ac-implement allocators contain the highest-ever union pattern.
+for d9_skill in ac-loop ac-implement; do
+  check
+  d9_target="$AC_ROOT/skills/$d9_skill/SKILL.md"
+  if ! grep -qE "git log origin/main --oneline \| grep -oE" "$d9_target" 2>/dev/null; then
+    fail "D9: skills/$d9_skill/SKILL.md missing the highest-ever union allocator pattern"
+  fi
+done
+
+# D9b: zero startswith("wave/") in ac-loop/SKILL.md
+check
+if grep -q 'startswith("wave/")' "$AC_ROOT/skills/ac-loop/SKILL.md" 2>/dev/null; then
+  fail "D9b: skills/ac-loop/SKILL.md still contains stale 'startswith(\"wave/\")' pattern"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 11 — pipeline conformance (G-series doctrine landings)
+# ---------------------------------------------------------------------------
+echo "--- Check 11: pipeline conformance (G-series) ---"
+
+# G1: cross-cadence schedule table present in ac-pipeline-builder
+check
+if ! grep -qE "23:00|Cross-cadence" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null; then
+  fail "G1: skills/ac-pipeline-builder/SKILL.md missing the cross-cadence schedule table"
+fi
+
+# G2: reverse shape-check present in ac-bead-capture (routing-to-backlog language)
+check
+if ! grep -qi "backlog" "$AC_ROOT/skills/ac-bead-capture/SKILL.md" 2>/dev/null; then
+  fail "G2: skills/ac-bead-capture/SKILL.md missing the reverse shape-check routing-to-backlog language"
+fi
+
+# G4: QA-freshness equivalence rule present in ac-distribute
+check
+if ! grep -q "fast-forward-equivalent" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
+  fail "G4: skills/ac-distribute/SKILL.md missing the fast-forward-equivalent QA-freshness rule"
+fi
+
+# G5: VERDICT-read step present in ac-merge
+check
+if ! grep -q "VERDICT: APPROVED" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null; then
+  fail "G5: skills/ac-merge/SKILL.md missing the VERDICT: APPROVED read step"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
