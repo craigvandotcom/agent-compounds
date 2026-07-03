@@ -27,6 +27,23 @@ then commit to an interpretation. Still fuzzy after that → file it anyway as
 `investigation` + `unrefined` with the raw words preserved verbatim in the
 description; refinement is ac-bead-refine's job, not capture's.
 
+**Reverse shape-check (the mirror of ac-backlog's routing):** `ac-backlog` routes
+small+clear items straight to a bead; this phase does the opposite check — if what's
+being captured is actually **big or fuzzy** (multi-concern, spans more than one
+surface, no single deliverable a bead can express — a feature, a redesign, anything
+needing design thinking), it doesn't belong here as one bead. Route it to
+`ac-backlog` instead of force-fitting it into a bead or an epic-shaped description:
+
+| Shape | Goes to | Why |
+|-------|---------|-----|
+| Small + clear — one deliverable, one surface | **a bead** (stay in this skill) | Already an execution unit |
+| Big or fuzzy — multi-concern, no single deliverable, needs design thinking | **`ac-backlog`** | Needs to be thought through in a plan first, not force-fit into one bead |
+
+Route by shape, not by source — a fuzzy multi-concern capture is a fuzzy multi-concern
+capture whether the user typed it fast or slow. Say so and hand off: "This spans more
+than one bead's worth of work — routing to `ac-backlog` instead of filing it here."
+STOP — not a bead capture.
+
 ## Phase 2 — Route (which db?)
 
 Beads live with the work (see conventions §Where beads live). Infer from the
