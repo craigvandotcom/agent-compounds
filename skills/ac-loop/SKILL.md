@@ -117,15 +117,15 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 # Unrefined beads from loop-ready plans (need ac-bead-refine before implement)
 br ready --json | jq '[.[] | select(
   (.labels | index("unrefined")) and
-  (.labels | map(startswith("wave/")) | any)
+  (.labels | map(test("^wave-[0-9]+$")) | any)
 )]'
 
-# Unrefined beads with NO wave label — split by pipeline depth (see classification below):
+# Unrefined beads with NO wave-NNN marker label — split by pipeline depth (see classification below):
 #   (a) part of a beadified EPIC or a plan-traceable group → AUTO-REFINE (signed-off work)
 #   (b) truly RAW lone captures (no parent, no epic group, no source plan) → ARIA gate
 br ready --json | jq '[.[] | select(
   (.labels | index("unrefined")) and
-  (.labels | map(startswith("wave/")) | any | not)
+  (.labels | map(test("^wave-[0-9]+$")) | any | not)
 )]'
 # Then classify each: does it have a parent-child dep (epic child), children (epic parent),
 # or ≥1 label-sibling under a shared non-wave epic label (e.g. "tailwind-v4")? → (a) auto-refine.
@@ -134,7 +134,7 @@ br ready --json | jq '[.[] | select(
 ```
 
 > **"Unrefined orphan" ≠ "raw capture" — classify by pipeline depth, not just the missing
-> `wave/` label.** A bead that has been *beadified into an epic* (parent + children, or a shared
+> `wave-NNN` marker label.** A bead that has been *beadified into an epic* (parent + children, or a shared
 > epic label) is signed-off **by construction** — Craig deliberately beadified it — and is
 > *further down the pipeline* than an un-beadified loop-ready plan. **Auto-refine-and-finish it.**
 > Its source plan is often already archived in `_plans/_done/` (that's the sign-off), so the
@@ -149,7 +149,7 @@ Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H huma
 
 **Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling new raw work in:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave/` label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
+2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave-NNN` marker label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
 3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
 4. Plan wave refined beads → Phase 2
 
@@ -182,11 +182,11 @@ If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready p
 **Orphans = refined, non-human-gate beads with no wave affinity.** These are typically bugs and quick fixes surfaced by `ac-triage` or `ac-bead-capture`. Ship them first — they often unblock other work or are time-sensitive production fixes.
 
 ```bash
-# Orphan beads: refined, no wave label, no human-gate
+# Orphan beads: refined, no wave-NNN marker label, no human-gate
 br ready --json | jq '[.[] | select(
   (.labels | index("unrefined") | not) and
   (.labels | index("human-gate") | not) and
-  (.labels | map(startswith("wave/")) | any | not)
+  (.labels | map(test("^wave-[0-9]+$")) | any | not)
 )]'
 ```
 
@@ -199,9 +199,16 @@ If orphans exist:
    REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1)
    WAVE=${LOCAL_WAVE:-$REMOTE_WAVE}
    if [ -z "$WAVE" ]; then
-     HIGHEST=$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/ \
+     # Highest-EVER wave number: live refs ∪ merge messages on main ∪ tags — not refs alone.
+     # `git fetch --prune` drops merged waves' refs, so a refs-only scan reuses a shipped
+     # number (hit 2026-06-26, produced a triple wave/001 collision).
+     HIGHEST=$( { git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/;
+                  git log origin/main --oneline | grep -oE 'wave/[0-9]{3}' | cut -d/ -f2;
+                  git tag -l 'wave/*' | cut -d/ -f2; } \
                | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
      WAVE="wave/$(printf "%03d" $(( ${HIGHEST:-000} + 1 )))"
+     # Guard: never reuse a number that ever existed in history.
+     git log origin/main --oneline | grep -q "$WAVE" && { echo "collision: $WAVE already in history"; exit 1; }
      git checkout -b "$WAVE" main && git push -u origin "$WAVE"
    else
      git checkout "$WAVE" && git pull --rebase
@@ -236,8 +243,8 @@ LOOP_READY_PLANS=$(grep -l "status: loop-ready" _plans/*.md 2>/dev/null)
 br ready --json | jq '[.[] | select(
   (.labels | index("unrefined") | not) and
   (.labels | index("human-gate") | not) and
-  (.labels | map(startswith("wave/")) | any)
-)] | group_by(.labels[] | select(startswith("wave/"))) | sort_by(.[0].priority) | .[0]'
+  (.labels | map(test("^wave-[0-9]+$")) | any)
+)] | group_by(.labels[] | select(test("^wave-[0-9]+$"))) | sort_by(.[0].priority) | .[0]'
 ```
 
 Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its parent plan file has `status: loop-ready`. If no loop-ready plan waves exist, skip to Phase ARIA.

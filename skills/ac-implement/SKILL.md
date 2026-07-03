@@ -72,11 +72,18 @@ REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)
   git checkout "$WAVE" && git pull --rebase
   ```
 
-- **No wave exists anywhere:** create the next numbered wave. Compute the next 3-digit counter from existing remote refs:
+- **No wave exists anywhere:** create the next numbered wave. Compute the next 3-digit counter
+  from the highest-EVER wave number — live refs ∪ merge messages on main ∪ tags, not refs alone
+  (`git fetch --prune` drops merged waves' refs, so a refs-only scan reuses a shipped number —
+  hit 2026-06-26, produced a triple wave/001 collision):
   ```bash
-  HIGHEST=$(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/ \
-            | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
+  HIGHEST=$( { git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/;
+               git log origin/main --oneline | grep -oE 'wave/[0-9]{3}' | cut -d/ -f2;
+               git tag -l 'wave/*' | cut -d/ -f2; } \
+             | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
   NEXT=$(printf "%03d" $(( ${HIGHEST:-000} + 1 )))
+  # Guard: never reuse a number that ever existed in history.
+  git log origin/main --oneline | grep -q "wave/$NEXT" && { echo "collision: wave/$NEXT already in history"; exit 1; }
   git checkout -b "wave/$NEXT" main
   git push -u origin "wave/$NEXT"
   ```
