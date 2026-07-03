@@ -459,6 +459,57 @@ if ! grep -q "VERDICT: APPROVED" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null
 fi
 
 # ---------------------------------------------------------------------------
+# Check 12 — deployed-app conformance (C-series)
+# ---------------------------------------------------------------------------
+echo "--- Check 12: deployed-app conformance (C-series) ---"
+
+# Probes deployed apps' every-prompt context (hook files + AGENTS.md) for dead
+# pipeline/skill/tool names left behind by the doctrine-landing sweep. Reuses the
+# CONSUMER_DIRS union Check 7 built above (org-level dirs ∪ ac-deploy-targets.list
+# apps) — still in scope, not recomputed. Each consumer dir IS the app's .claude/
+# (or org-level .claude/); app root = its parent. Scope is deliberately narrow —
+# only the three named every-prompt files — so this never fires on documentation
+# (lint.sh's own dead-pattern lists, BCA's _plans/research write-ups, etc.) that
+# legitimately mentions these strings as history/examples rather than live guidance.
+C1_PATTERN='/ac/bead-work|/ac/wave-merge|/ac/backlog-add|/ac/bead-land|/ac/work-review'
+C2_PATTERN='cm context|cass search'
+C3_PATTERN='bead-work|wave-merge'
+
+for dir in "${CONSUMER_DIRS[@]}"; do
+  [ -d "$dir" ] || continue
+  app_root="$(dirname "$dir")"
+
+  # C1 + C2: hook files under the consumer's own hooks/ dir, and its .codex/hooks/
+  # twin where present (synced alongside .claude/ for some consumers, e.g. BCA).
+  for hooks_dir in "$dir/hooks" "$app_root/.codex/hooks"; do
+    wr="$hooks_dir/workflow-reminder.md"
+    if [ -f "$wr" ]; then
+      check
+      if grep -qE "$C1_PATTERN" "$wr" 2>/dev/null; then
+        fail "C1: ${wr#$HOME/} still contains dead pipeline command name(s)"
+      fi
+    fi
+
+    dr="$hooks_dir/delegation-reminder.md"
+    if [ -f "$dr" ]; then
+      check
+      if grep -qE "$C2_PATTERN" "$dr" 2>/dev/null; then
+        fail "C2: ${dr#$HOME/} still contains dead delegation tool name(s)"
+      fi
+    fi
+  done
+
+  # C3: AGENTS.md at the app root (parent of .claude/).
+  agents_md="$app_root/AGENTS.md"
+  if [ -f "$agents_md" ]; then
+    check
+    if grep -qE "$C3_PATTERN" "$agents_md" 2>/dev/null; then
+      fail "C3: ${agents_md#$HOME/} still contains dead pipeline stage name(s)"
+    fi
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
