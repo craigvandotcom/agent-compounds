@@ -96,6 +96,10 @@ User request -> Classify:
 
 Refinement and review then pressure-test the *stated* assumptions, not hidden ones.
 
+### Locate Backlog Item (if applicable)
+
+If the input names a backlog item (rather than a fresh feature request), list `_backlog/active/` to locate the matching file — that is the current pool of unversioned, ready-to-plan items (version binds late, at plan-approval, not at capture).
+
 ### Mark Active Work
 
 If a source backlog item was identified, update its frontmatter to signal this skill is running:
@@ -492,7 +496,7 @@ Update the YAML frontmatter at the top of the plan file:
 ---
 status: approved
 refinement_rounds: 0
-source_backlog: _backlog/{version}/{filename}.md
+source_backlog: _backlog/active/{filename}.md
 approved_at: YYYY-MM-DD
 ---
 ```
