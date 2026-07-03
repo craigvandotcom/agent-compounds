@@ -203,8 +203,8 @@ Wave branches protect main from in-progress code and make the green-main invaria
 The pipeline shares one checkout (no worktrees), so concurrent work is kept safe by **identity-scoped file reservations**, not branch isolation. Two invariants govern it:
 
 - **Identity is minted at the top-level invocation and inherited by everything it spawns.** One
-  Agent Mail name per invocation (an `ac-loop` run · a human `/ac-command` · a casual editor
-  session); all its sub-stages and subagents share it. The **reservation lock is grained at the
+  Agent Mail name per invocation (an `ac-loop` run · a human `/ac-<skill>` invocation · a casual
+  editor session); all its sub-stages and subagents share it. The **reservation lock is grained at the
   identity**, so the protection boundary is the *invocation* — two invocations exclude each
   other; *inside* one, there is no lock granularity, so **the conductor serializes writers**
   (ac-implement is one-bead-at-a-time). To parallelize, spawn a *separate invocation* (its own

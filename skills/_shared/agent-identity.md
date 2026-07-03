@@ -8,7 +8,7 @@ own `macro_start_session` name.
 ## The principle
 
 - The reservation lock is grained at the **identity**, and identity = the **top-level
-  invocation**: one `ac-loop` run · one human `/ac-command` · one casual editor session.
+  invocation**: one `ac-loop` run · one human `/ac-<skill>` invocation · one casual editor session.
 - Everything that invocation spawns — sub-stages (implement/land/review/merge) and their
   engineer/reviewer subagents — **shares the one identity**.
 - **Protection boundary = the invocation.** Two invocations (loop vs loop, loop vs human) have
@@ -59,8 +59,8 @@ under this model; ac-land deregisters the inherited top identity once, at loop e
 
 ## Standalone / casual / parallel
 
-- **Standalone `/ac-command` (human)** → its own top-level invocation → mints its own name →
-  distinct from any loop → protected.
+- **Standalone `/ac-<skill>` invocation (human)** → its own top-level invocation → mints its own
+  name → distinct from any loop → protected.
 - **Casual editor session (no skill)** → a `SessionStart` hook still mints an identity (if
   installed), so the edit hook protects it both ways. *Without* registration it's invisible to
   the lock — that blind spot is exactly what a SessionStart auto-mint closes.

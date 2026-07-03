@@ -242,19 +242,47 @@ done
 # ---------------------------------------------------------------------------
 echo "--- Check 7: consumer symlink health ---"
 
-CONSUMER_DIRS=(
+# Org-level consumers: fixed repo-root paths, not app deploy targets — stay hardcoded.
+ORG_CONSUMER_DIRS=(
   "$HOME/Repos/.claude"
   "$HOME/Repos/neometa/content/.claude"
   "$HOME/Repos/neometa/books/.claude"
   "$HOME/Repos/neometa/software/.claude"
-  "$HOME/Repos/neometa/software/body-compass-app/.claude"
-  "$HOME/Repos/neometa/software/unsit-app/.claude"
-  "$HOME/Repos/neometa/software/art-still-app/.claude"
-  "$HOME/Repos/neometa/software/cv-site/.claude"
-  "$HOME/Repos/neometa/software/move-free-app/.claude"
-  "$HOME/Repos/neometa/software/neometa-app/.claude"
-  "$HOME/Repos/neometa/software/vitest-affected/.claude"
 )
+
+# App consumers: sourced from infrastructure/ac-deploy-targets.list — the single source of
+# truth infra-sync.sh uses to propagate the full registry (see AGENTS.md "Auto-propagation").
+# Reading it here means a newly added deploy target is automatically covered by Check 7 with
+# no manual re-stamp of this script. Falls back to the last-known app list if the file is
+# unreachable (e.g. a standalone checkout of this repo), so coverage degrades gracefully
+# instead of silently dropping to zero.
+DEPLOY_TARGETS_LIST="$AC_ROOT/../../../infrastructure/ac-deploy-targets.list"
+APP_CONSUMER_DIRS=()
+if [ -f "$DEPLOY_TARGETS_LIST" ]; then
+  while IFS= read -r line; do
+    line="${line%%#*}"                      # strip trailing/whole-line comments
+    line="$(printf '%s' "$line" | xargs)"   # trim whitespace; empty if comment/blank
+    [ -n "$line" ] || continue
+    APP_CONSUMER_DIRS+=("$HOME/Repos/neometa/software/$line/.claude")
+  done < "$DEPLOY_TARGETS_LIST"
+else
+  APP_CONSUMER_DIRS=(
+    "$HOME/Repos/neometa/software/body-compass-app/.claude"
+    "$HOME/Repos/neometa/software/unsit-app/.claude"
+    "$HOME/Repos/neometa/software/art-still-app/.claude"
+    "$HOME/Repos/neometa/software/cv-site/.claude"
+    "$HOME/Repos/neometa/software/move-free-app/.claude"
+    "$HOME/Repos/neometa/software/neometa-app/.claude"
+  )
+fi
+
+# vitest-affected is DELIBERATELY EXCLUDED from ac-deploy-targets.list (public OSS library,
+# self-contained real skills only — see that file's own header comment) but was covered by
+# this check before the union existed; keep it explicit so coverage never regresses.
+APP_CONSUMER_DIRS+=("$HOME/Repos/neometa/software/vitest-affected/.claude")
+
+# Union, de-duplicated (org-level ∪ app-level).
+CONSUMER_DIRS=($(printf '%s\n' "${ORG_CONSUMER_DIRS[@]}" "${APP_CONSUMER_DIRS[@]}" | sort -u))
 
 for dir in "${CONSUMER_DIRS[@]}"; do
   [ -d "$dir" ] || continue   # skip non-existent dirs silently

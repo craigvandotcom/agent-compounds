@@ -50,11 +50,14 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-idea-review-genius** / **ac-idea-transcender-alien** | Forensic / paradigm-breaking review of a raw idea |
 | **audit** | Systematic code-quality verification framework |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
+| **workflow-builder** | Build a new orchestrated multi-step `/command` workflow — 6-phase build process, run-ledger + phase-skeleton + quality-gate standards |
 | **ac-registry-audit** | Make the registry itself watertight — audit the prompt corpus for trigger collisions, divergent duplicates, dangling refs, doc↔disk drift; mechanical fixes + gated judgment calls (lint.sh → dedup/drift workflow) |
 | **browser-testing** | UI/login/flow validation via agent-browser |
+| **device-testing** | Ad-hoc native iOS-simulator driving via agent-device, with screenshot/video capture — the native twin of browser-testing |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
 | **ac-ui-polish** | Conform UI to the app's design.md then polish to premium — whole-app crawl or one screen; anti-slop audit (was ui-elevate) |
+| **ac-site-polish** | Conform the public marketing site to design.site.md then polish to premium — the public twin of ac-ui-polish |
 | **web-design-guidelines** | Accessibility, forms, animation, typography UX |
 | **app-store-screenshots** | Generate iOS App Store screenshots from real screens |
 | **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
