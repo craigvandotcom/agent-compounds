@@ -3,6 +3,13 @@ name: ac-pipeline
 description: End-to-end engineering pipeline orchestrator — chains align → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Single named goal, human gates at plan-approval and pre-merge; for unattended multi-item queue clearance use ac-loop. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".
 ---
 
+> **DEPRECATED — superseded by `ac-loop` (runtime conductor) and `ac-pipeline-builder` (doctrine).**
+> This file's stage chain below is stale: it describes `ac-land` as a pre-merge gate
+> alongside `ac-review`. That is no longer correct — `ac-review` is the sole pre-merge
+> gate; `ac-land` is the closing ritual that runs LAST, after `ac-merge`. Do not treat
+> the chain diagram or the "Two-path model" section below as current doctrine. Kept
+> readable for historical/archival reference; nothing below has been deleted.
+
 # Pipeline Orchestrator
 
 This is a **thin conductor**, not an implementation. It owns *ordering, gates, and handoffs* — each stage's intelligence lives in its own skill. Invoke a stage skill directly when you only want that stage; invoke `ac-pipeline` when you want the chain run with enforced gates.

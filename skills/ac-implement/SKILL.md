@@ -508,15 +508,9 @@ If any fail, fix the issues before proceeding.
 
 ### Next Steps
 
-**Run `/ac-land` next (recommended).** It handles:
+**Run `/ac-review` next (recommended).** `/ac-review` is the sole pre-merge gate — it must complete before `/ac-merge`. `/ac-land` is NOT a pre-merge gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has merged to main.
 
-- Clean git push
-- Retrospective learning from this session
-- System upgrades (user-gated) that make the next session better
-
-This is what makes the flywheel accelerate — don't skip it.
-
-**Pipeline context:** Both `/ac-land` (per-session closure) and `/ac-review` (per-feature-branch review) are pre-merge gates — both must complete before `/ac-merge`. Their mutual order is flexible. The typical flow after implementing is: land the session, then run review (or vice versa), then merge. Do NOT run `/ac-merge` until both have completed.
+**Pipeline context:** `→ /ac-review → /ac-merge; run /ac-land manually after merge when not driven by /ac-loop.` Do NOT run `/ac-merge` until review has completed. Do NOT run `/ac-land` before merge — it has nothing to close out yet.
 
 **Present next step with `AskUserQuestion`:**
 
@@ -527,9 +521,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Land session (Recommended)", description: "Run /ac-land — push, retrospective, system upgrades. Don't skip this." },
-      { label: "Continue implementing", description: "Run /ac-implement again for more beads (land later)" },
-      { label: "Done for now", description: "Stop here — remember to run /ac-land before closing" }
+      { label: "Review branch (Recommended)", description: "Run /ac-review — the pre-merge gate. Then /ac-merge." },
+      { label: "Continue implementing", description: "Run /ac-implement again for more beads (review + merge later)" },
+      { label: "Done for now", description: "Stop here — remember to run /ac-review then /ac-merge before closing; /ac-land runs after merge" }
     ]
   }]
 )

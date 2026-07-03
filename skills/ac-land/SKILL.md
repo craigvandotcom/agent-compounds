@@ -6,7 +6,7 @@ description: The closing ritual — runs LAST, after merge. To land = leave it c
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this after `/ac-implement` completes its target beads.
+Run this LAST, after merge — invoked at loop-exit (post-merge, on `main`, wave branch gone) or manually once a wave has shipped. See Phase 0 below for how it resolves session context in that post-merge state.
 
 ---
 
@@ -355,7 +355,7 @@ Output for the user and next session:
 
 **Present next session choice with `AskUserQuestion`:**
 
-Note: `ac-land` runs **LAST** — after `ac-review` AND `ac-merge`. Review and merge are the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. (Older guidance positioned land as a pre-merge gate — that was wrong; it left teardown and learning stranded when the loop stopped after merge.)
+Note: `ac-land` runs **LAST** — after `ac-review` AND `ac-merge`. Review and merge are the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to review or merge for it. The only next steps are starting the next wave or stopping.
 
 ```
 AskUserQuestion(
@@ -364,10 +364,9 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Review (Recommended)", description: "Run /ac-review — code review for the wave branch. Then /ac-merge once review is done." },
-      { label: "Continue bead-work", description: "Run /ac-implement — {M} beads remaining" },
-      { label: "Refine remaining beads", description: "Run /ac-bead-refine — revise remaining beads before implementing" },
-      { label: "Done for now", description: "Close session — pick up later (run /ac-review before /ac-merge)" }
+      { label: "Start next wave", description: "Run /ac-plan-init or /ac-implement — {M} beads remaining, pick up the next wave" },
+      { label: "Refine remaining beads", description: "Run /ac-bead-refine — revise remaining beads before implementing the next wave" },
+      { label: "Done for now", description: "Session over — nothing more to do until the next wave is picked up" }
     ]
   }]
 )
