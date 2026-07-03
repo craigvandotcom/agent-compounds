@@ -44,6 +44,34 @@ mkdir -p "$ARTIFACTS_DIR"
 
 Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan-init first."
 
+### Plan-Status Gate
+
+Read the plan file's YAML frontmatter `status` field. Only proceed automatically if it is one of:
+
+- `approved`
+- `loop-ready`
+- `refined`
+
+**Any other value — including `draft`, `in_progress`, or a missing/absent `status` field — is a STOP condition.** A plan that crashed mid-refinement is otherwise indistinguishable from one that reached convergence deliberately; beadifying it bakes half-finished thinking into the beads as if it were settled.
+
+STOP and ask via `AskUserQuestion`:
+
+```
+AskUserQuestion(
+  questions: [{
+    question: "Plan status is '{status}' (expected approved/loop-ready/refined). This plan may be mid-refinement or unfinished — beadifying it now risks converting incomplete thinking into beads. Proceed anyway?",
+    header: "Status gate",
+    multiSelect: false,
+    options: [
+      { label: "Override — beadify anyway", description: "I've confirmed this plan is actually ready despite the status field" },
+      { label: "Abort", description: "Stop here — run /ac-plan-clean or /ac-plan-refine-internal first, or fix the frontmatter" }
+    ]
+  }]
+)
+```
+
+Only continue past this gate on explicit user override.
+
 ### Create Workflow Tasks
 
 ```
