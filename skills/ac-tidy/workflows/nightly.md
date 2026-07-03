@@ -20,6 +20,10 @@ the *run skeleton*; the skill is the *behavior*.
 
 ### 0. Preflight
 
+- **Branch guard (first, before any reads or writes):** `git branch --show-current` must equal
+  `main`. If it doesn't — **ABORT the entire run**: Slack `degraded` with reason
+  `branch-guard: <branch> checked out`, zero writes, retry next cycle. A wave branch left
+  checked out on the scheduler's cwd overnight must never receive a nightly-tidy commit.
 - Verify Slack resolves: `"$HOME/Repos/infrastructure/tools/bin/slack-send" --channel sofi --dry-run` (or a
   cheap probe); if `sofi` doesn't resolve, fall back to `pi`. Do this **before** any mutation.
 - Read the **Tier-2 toggle** from `.claude/skills/ac-tidy/SKILL.md`: grep the `## NIGHTLY
@@ -74,6 +78,11 @@ Body: `## What` (the concrete list) + `## Why`. Write a per-run `INDEX.md` ONLY 
 emits several proposals.
 
 ### 5. Commit + push (pathspec-scoped, BCA repo only)
+
+Re-verify the branch guard immediately before committing: `git branch --show-current` must
+still equal `main`. A concurrent session can switch the checked-out branch between preflight
+(step 0) and this step (TOCTOU) — if it's no longer `main`, **ABORT**: Slack `degraded` with
+reason `branch-guard: <branch> checked out`, zero writes, retry next cycle.
 
 ```bash
 AGENT_NAME=FoggyCreek git commit -m "chore(tidy): nightly reconcile + proposals" -- <exact files touched>
