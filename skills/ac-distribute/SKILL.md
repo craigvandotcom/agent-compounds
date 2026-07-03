@@ -47,6 +47,12 @@ The fast, repeatable closed-beta push. art-still has reduced this to **one comma
    session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
    proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
    artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
+   **QA-freshness equivalence:** a PASS artifact captured *pre-merge* still satisfies this
+   gate post-merge **iff no commits landed on main between the QA run and the merge commit
+   being shipped** (i.e. the merge was fast-forward-equivalent — the version/build-bump
+   commit only, no other diffs). Any intervening commit invalidates freshness and requires
+   a re-run. This is a stated equivalence, not yet mechanized — verify by commit range, not
+   by assumption.
 4. **Signing reachable — PROBE, don't assume.** Before any signed build, run the 5-second
    codesign probe: `cp /bin/ls /tmp/csp && codesign --force --sign "<distribution identity>"
    /tmp/csp`. On `errSecInternalComponent`, classify by CONTEXT before touching key ACLs —
@@ -67,12 +73,19 @@ The fast, repeatable closed-beta push. art-still has reduced this to **one comma
 
 ### Steps
 
-1. **Bump the build number.** `CURRENT_PROJECT_VERSION` (iOS) / `versionCode` (Android)
-   MUST increment every upload — ASC/Play reject duplicates. This is INDEPENDENT of the
-   marketing version and of `package.json`. **Pick ONE owner + bump convention per app and
-   record it in CORE/distribution.md** before the first push — the classic Capacitor
-   duplicate-build footgun. (art-still: monotonic `CURRENT_PROJECT_VERSION` ×4 in pbxproj,
-   bumped by the ship script.)
+1. **Verify the build number was already bumped at merge — do not re-bump here.**
+   `CURRENT_PROJECT_VERSION` (iOS) / `versionCode` (Android) MUST increment every upload —
+   ASC/Play reject duplicates. **`ac-merge` (`skills/ac-merge/references/version-bump.md`)
+   is the SOLE owner of this counter**, bumping it once per wave in lockstep with
+   `MARKETING_VERSION` before the merge commit. This step is a check, not a mutation:
+   confirm the commit being shipped already carries the bumped `CURRENT_PROJECT_VERSION`
+   (`git show <SHA>:ios/App/App.xcodeproj/project.pbxproj | grep CURRENT_PROJECT_VERSION`
+   vs. the last-shipped build) — if it wasn't bumped, that's an `ac-merge` gap to fix
+   upstream, not something to patch here. The **only** exception `ac-distribute` may own
+   is a same-version **upload-retry** bump (a rejected/stuck build that must move without a
+   new marketing version) — record that narrow convention, if used, in
+   `CORE/distribution.md`; it must defer to `ac-merge`'s owner ship for every normal push.
+   (art-still: monotonic `CURRENT_PROJECT_VERSION` ×4 in pbxproj, bumped by `ac-merge`.)
 2. **Build the web bundle** for the native target (e.g. `BUILD_TARGET=capacitor pnpm
    build`) with prod env, then sync to native (`npx cap sync ios`).
 3. **Archive → sign → upload** via the app's lane (fastlane `release`: match → gym →
@@ -199,10 +212,11 @@ template's *Maintaining this file* note). Never edit this symlinked SKILL.md per
 changes land HERE and propagate to every app.
 
 Each consuming app carries a `CORE/distribution.md` (mirror of `journeys/native.md`):
-bundle id, ASC app id + team id, signing setup, TestFlight group, demo account,
-**version + build-number owner/convention**, the exact ship command, screenshot specs,
-and **pointers** to secrets (key id, issuer id, where the `.p8` lives) — never the secrets
-themselves.
+bundle id, ASC app id + team id, signing setup, TestFlight group, demo account, the exact
+ship command, screenshot specs, and **pointers** to secrets (key id, issuer id, where the
+`.p8` lives) — never the secrets themselves. Build-number ownership is NOT per-app
+configurable — it's `ac-merge` (`skills/ac-merge/references/version-bump.md`) for every
+app; only document a same-version upload-retry exception here if the app uses one.
 
 ## Remember
 
@@ -210,7 +224,8 @@ themselves.
   Three skills, three concerns — don't merge them.
 - **Wrap what the app already uses** for the build — don't impose a tool.
 - **The sim-QA gate is mechanical** — a fresh PASS artifact, not a memory.
-- **Build number is the footgun** — increment every upload; own it per app.
+- **Build number is the footgun** — increment every upload; owned by `ac-merge`
+  (`skills/ac-merge/references/version-bump.md`), never re-bumped here.
 - **Only the build mile is Mac-bound** — submit/monitor/triage all run headless.
 
 ---
