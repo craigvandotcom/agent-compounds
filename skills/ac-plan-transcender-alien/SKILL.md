@@ -160,6 +160,35 @@ If user needs to cherry-pick specific numbers, they can select "Other" and speci
 
 After receiving user selection, output the complete transcended plan with selected insights integrated. Include a section documenting what paradigm was transcended and what new dimensions were added.
 
+### Step 5: Write Back to the Plan File
+
+This is a gate in the planning chain, not a standalone chat exercise — the transcended plan must land back in the plan file, or the next stage never sees it.
+
+1. **Edit the plan file in place** (Edit tool, not a rewrite) with the integrated insights from Step 4 — auto-applied critical insights plus any user-selected items. Append a brief `## Transcendence Findings` section (or update it if present) documenting what paradigm was transcended and what new dimensions were added, so a future reader doesn't need this session's transcript.
+2. **Update the plan's YAML frontmatter** — add or update:
+   ```yaml
+   ---
+   transcended: YYYY-MM-DD
+   ---
+   ```
+   Preserve all other existing frontmatter fields (`status`, `source_backlog`, `refinement_rounds`, `genius_reviewed`, etc.) as-is.
+3. **Safety check and commit:**
+   ```bash
+   git status --short
+   ```
+   If any deletions (`D`) appear that you didn't intend, STOP and confirm with the user before proceeding.
+   ```bash
+   git add "$PLAN_FILE"
+   git commit -m "docs(plan): alien transcendence — {N} insights integrated
+
+   Plan: {PLAN_FILE}
+   Auto-applied: {critical insight count}
+   User-selected: {selected count}
+
+   Co-Authored-By: Claude <noreply@anthropic.com>"
+   git push
+   ```
+
 ---
 
 ## When to Use
@@ -169,6 +198,7 @@ After receiving user selection, output the complete transcended plan with select
 - When you suspect the real leverage lives outside the current frame
 - To escape local optima in strategic thinking
 - When building long-lived systems that need to evolve
+- **Ordering:** runs AFTER `/ac-plan-refine-internal` / `/ac-plan-clean` (and typically after `/ac-plan-review-genius`) and BEFORE `/ac-beadify` (beads are cut from the transcended version) — it is a review gate in the planning chain, not a detour.
 
 ## Tips
 
