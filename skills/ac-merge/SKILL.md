@@ -589,6 +589,11 @@ workflow) and must COMPLETE (else assume failed).
 - exit ≠ 0 → the merge did NOT produce a shippable build. Surface loudly; do NOT advance the
   pipeline to `ac-distribute` on a build that doesn't exist. The check prints which failure it
   is (never-triggered vs failed vs timed-out).
+- **Produced ≠ uploaded.** The merge-triggered build may be an archive-only HEALTH CHECK that
+  never reaches TestFlight (BCA's Xcode Cloud archive is exactly this). CORE/distribution.md
+  must say which it is; when it's health-check-only, report "archive health-check green — no
+  TestFlight build produced; ship via the app's release lane" instead of implying a shippable
+  build exists (the wording that cost BCA an evening, 2026-07-02).
 - No native-build-on-merge → skip silently.
 
 ---

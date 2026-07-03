@@ -47,8 +47,18 @@ The fast, repeatable closed-beta push. art-still has reduced this to **one comma
    session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
    proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
    artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
-4. **Signing reachable.** match (or the app's signing) resolves headlessly — see
-   CORE/distribution.md.
+4. **Signing reachable — PROBE, don't assume.** Before any signed build, run the 5-second
+   codesign probe: `cp /bin/ls /tmp/csp && codesign --force --sign "<distribution identity>"
+   /tmp/csp`. On `errSecInternalComponent`, classify by CONTEXT before touching key ACLs —
+   the same error means different things in different places: (a) **agent/automation shells
+   and CI runner services are often OUTSIDE the user's GUI security session** — keychain
+   private keys are unusable there regardless of ACLs (`security show-keychain-info` saying
+   "User interaction is not allowed" is the tell); route the build through the app's CI ship
+   lane (`setup_ci` temp keychain) or the user's real terminal instead. (b) If the probe
+   fails in the USER's own terminal too, it's a real key-ACL break (Xcode/macOS updates
+   reset these): `security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k <pw>`
+   then re-probe. Never start a 20-minute archive to discover what the probe tells you in 5s.
+   match details per app → CORE/distribution.md.
 5. **Prod backend baked in.** If the app's `.env.local` is intentionally backendless (a
    fail-soft test pattern), the prod env MUST be injected into the web build BEFORE
    archiving, else you ship a backendless binary. Verify the prod ref appears in the build
@@ -100,6 +110,20 @@ dsym:         uploaded ✓ | SKIPPED (Sentry not wired — see ac-triage)
   PATH; pin the exact path + any vendored-gem `BUNDLE_PATH` in CORE/distribution.md.
 - **Sync the web bundle FIRST** (`pnpm cap:build` / the app's equivalent) before the lane —
   fastlane's archive step does NOT run it, so skipping ships a stale bundle silently.
+- **A merge-triggered archive workflow is NOT a store upload.** Some apps run an
+  archive-only build-health check on main (Xcode Cloud or CI) that never uploads to
+  TestFlight — its green run proves the commit still archives, nothing more. Never claim
+  "build shipped" from an archive success; the proof is the build appearing in ASC with
+  `processingState == VALID`. CORE/distribution.md must state explicitly whether the
+  merge-triggered native build UPLOADS or is health-check-only (BCA burned an evening on
+  this ambiguity, 2026-07-02).
+- **`setup_ci` on a PERSONAL-Mac runner hijacks the user's keychain** — it makes
+  `fastlane_tmp_keychain` the user's DEFAULT keychain and drops login from the search list.
+  Fine on ephemeral CI VMs; on a self-hosted personal Mac it breaks the owner's GUI session
+  (system dialogs demanding the tmp keychain's password — which is the empty string). Any
+  lane using `setup_ci` on such a runner MUST restore in `after_all` AND `error` hooks:
+  `security list-keychains -s ~/Library/Keychains/login.keychain-db` + `default-keychain -s`
+  + `delete_keychain`. (BCA Fastfile is the reference implementation, 2026-07-03.)
 
 Store-submit footguns (validated on BCA's first headless submit, 2026-06-17):
 

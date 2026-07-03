@@ -76,6 +76,13 @@ br create "investigate: <symptom>" -t investigation \
 - **Journey-doc drift is NOT a finding** — fix the doc inline during the run.
 - A finding that turns out to be intended behavior is resolved by updating the
   journey doc and closing the bead (an expectation change, like updating a test).
+- **In-wave fixes re-enter the unit gate.** When a QA finding is fixed in the same
+  wave, the fix commit must re-run the touched path's unit tests **including the
+  SIBLING test files that exercise that path** — not just the new spec written for
+  the finding. A late fix that adds a gate/guard breaks the siblings that assumed
+  the old behavior, and only CI catches it (BCA wave/023: footer-Upload gate fix →
+  6 sibling specs red on the PR, 2026-07-02). Cheapest form: re-run the app's full
+  affected-test command after the LAST commit, not the first.
 
 ## Reporting — the QA_VALIDATION block
 
