@@ -109,7 +109,7 @@ Use the agent name registered at session start (from `macro_start_session`). Com
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   agent_name: <session agent name>,
   paths: [PLAN_REL],
   ttl_seconds: 14400,
@@ -122,7 +122,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "WIP: plan-refine-internal — {PLAN_REL}",
@@ -519,7 +519,7 @@ find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   agent_name: <session agent name>,
   paths: [PLAN_REL]
 )
@@ -529,7 +529,7 @@ mcp__mcp-agent-mail__release_file_reservations(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "DONE: plan-refine-internal — {PLAN_REL}",

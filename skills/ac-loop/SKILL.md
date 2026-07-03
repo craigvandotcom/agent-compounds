@@ -69,7 +69,7 @@ Register a unique identity for this loop run — gives the conductor a readable 
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   program: "claude-code",
   model: "claude-opus-4-8"
 )

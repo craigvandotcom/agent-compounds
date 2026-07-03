@@ -98,7 +98,7 @@ Trunk-based: `/ac-merge` ships the wave to main and bumps the app version based 
 
 ```
 mcp__mcp-agent-mail__install_precommit_guard(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   code_repo_path: PROJECT_ROOT
 )
 ```
@@ -181,7 +181,7 @@ Register a unique identity for this implement session — used for file reservat
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   program: "claude-code",
   model: "claude-opus-4-8"
 )
@@ -274,7 +274,7 @@ If the bead is unrefined:
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   agent_name: AGENT_NAME,
   paths: ["<files listed in bead spec>"],
   ttl_seconds: 7200,
@@ -439,7 +439,7 @@ Release the file reservation using the **same paths reserved in Phase 1a** (the 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: PROJECT_ROOT,
+  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   agent_name: AGENT_NAME,
   paths: ["<same paths passed to file_reservation_paths in Phase 1a>"]
 )
