@@ -15,16 +15,16 @@ Usage:
     openrouter --panel                                 # Show expert team
 """
 
+import argparse
+import base64
+import json
+import mimetypes
 import os
 import sys
-import argparse
-import json
-import base64
-import mimetypes
-from pathlib import Path
-from typing import Optional
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Optional
 
 try:
     from openai import OpenAI
@@ -348,7 +348,7 @@ def init_panel() -> None:
         json.dump(template, f, indent=2)
         f.write('\n')
     print(f"Created {path}")
-    print(f"  Set your API key: https://openrouter.ai/keys")
+    print("  Set your API key: https://openrouter.ai/keys")
     print(f"  {len(models)} models ({sum(1 for m in models if m['enabled'])} enabled)")
 
 

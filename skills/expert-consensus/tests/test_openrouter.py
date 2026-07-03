@@ -1,7 +1,6 @@
 """Tests for openrouter.py pure functions."""
 
 import json
-import os
 import sys
 import tempfile
 from pathlib import Path

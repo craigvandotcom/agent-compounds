@@ -3,8 +3,16 @@ name: Lint
 on:
   push:
     branches: [main]
+    paths:
+      - "**/*.py"
+      - "skills/expert-consensus/pyproject.toml"
+      - ".github/workflows/lint.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "**/*.py"
+      - "skills/expert-consensus/pyproject.toml"
+      - ".github/workflows/lint.yml"
 
 jobs:
   lint:
@@ -15,7 +23,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install ruff
-      - run: ruff check expert-consensus/
+      - run: ruff check skills/expert-consensus/ skills/ac-review/scripts/
 
   test:
     runs-on: ubuntu-latest
@@ -25,4 +33,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install openai
-      - run: python expert-consensus/tests/test_openrouter.py
+      - run: python skills/expert-consensus/tests/test_openrouter.py

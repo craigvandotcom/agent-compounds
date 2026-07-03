@@ -13,3 +13,8 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# openrouter.py holds a column-aligned model table (the config template) whose
+# aligned rows intentionally exceed the line limit — don't wrap the table.
+"openrouter.py" = ["E501"]
