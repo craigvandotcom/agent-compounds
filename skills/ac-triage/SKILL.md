@@ -59,7 +59,7 @@ deferred. Per-app CORE/triage.md assigns and enables sources; the number is per-
 global — if your app needs a different slot, use the CORE/triage.md table as the authority.
 
 **Feedback reports (source #6):** solicited in-app feedback stored in a service-controlled
-Supabase table (e.g. `bca.feedback_reports`). Distinct from source #3 (error-log clustering)
+Supabase table (e.g. `public.feedback_reports`). Distinct from source #3 (error-log clustering)
 — this reads VOLUNTARY structured reports, not machine-generated errors. Full adapter spec
 (query, dedup, evidence-guard, write-back, unit test cases):
 `references/feedback-adapter.md`.

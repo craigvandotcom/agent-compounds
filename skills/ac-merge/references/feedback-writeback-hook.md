@@ -4,7 +4,7 @@
 
 Closes the in-app feedback loop: when a wave merges and a `triage,feedback` bead ships,
 this hook writes `status='fixed'` + `fixed_in_build=<build>` back to the originating
-`bca.feedback_reports` row so the user's client can pick it up on the next resume poll
+`public.feedback_reports` row so the user's client can pick it up on the next resume poll
 and deliver a "fixed in build N" local notification.
 
 This is net-new in agent-compounds — ac-merge/ac-land today only check/close beads; they
@@ -63,7 +63,7 @@ For each bead in `WAVE_BEADS`:
 
 1. Extract `linked_bead` from the bead's description or a dedicated field. The ac-triage
    feedback adapter writes the source row id into the bead description as:
-   `Source: bca.feedback_reports / id=<uuid>`. Parse it:
+   `Source: public.feedback_reports / id=<uuid>`. Parse it:
 
    ```bash
    SOURCE_ROW_ID=$(echo "<bead description>" | grep -oP 'id=\K[0-9a-f-]{36}')
@@ -76,7 +76,7 @@ For each bead in `WAVE_BEADS`:
 ### Step 3 — Write status='fixed' + fixed_in_build to the source row
 
 ```sql
-UPDATE bca.feedback_reports
+UPDATE public.feedback_reports
 SET status         = 'fixed',
     fixed_in_build = '<NEW_BUILD>'
 WHERE id           = '<SOURCE_ROW_ID>'
@@ -151,8 +151,8 @@ authoring the tests in body-compass-app.
 
 **Setup:**
 - One closed bead with labels `['triage', 'feedback']`.
-- Bead description contains `Source: bca.feedback_reports / id=<uuid>`.
-- Source row in `bca.feedback_reports` has `linked_bead` set (claimed), `status='triaged'`.
+- Bead description contains `Source: public.feedback_reports / id=<uuid>`.
+- Source row in `public.feedback_reports` has `linked_bead` set (claimed), `status='triaged'`.
 - `NEW_BUILD = 17`.
 
 **Expected behavior:**
@@ -196,5 +196,5 @@ authoring the tests in body-compass-app.
 
 - Source adapter spec: `ac-triage/references/feedback-adapter.md`
 - BCA triage source registration: `body-compass-app/.claude/skills/CORE/triage.md` (source #6)
-- Data model: `bca.feedback_reports` — schema in the feedback-loop plan (`_plans/_done/2026-06-20-1734-feedback-learning-loop.md`)
+- Data model: `public.feedback_reports` — schema in the feedback-loop plan (`_plans/_done/2026-06-20-1734-feedback-learning-loop.md`)
 - Client loop-back delivery: `features/feedback/lib/loopback.ts` in body-compass-app

@@ -294,11 +294,11 @@ Scan the wave's merged beads for any with the `triage,feedback` label:
 br list --json | jq '[.issues[] | select((.labels // []) | (index("triage") and index("feedback"))) | select(.status == "closed")]'
 ```
 
-For each matching bead, resolve its `linked_bead` field (the source `bca.feedback_reports`
+For each matching bead, resolve its `linked_bead` field (the source `public.feedback_reports`
 row id) and write back via the service-role client:
 
 ```sql
-UPDATE bca.feedback_reports
+UPDATE public.feedback_reports
 SET status        = 'fixed',
     fixed_in_build = '<NEW_BUILD>'
 WHERE id          = '<linked_bead>'

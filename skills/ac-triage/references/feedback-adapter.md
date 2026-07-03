@@ -2,7 +2,7 @@
 
 **Bead:** bd-vbmre.15 · **App:** Body Compass (schema `bca`, source #6 in `CORE/triage.md`)
 
-Adapter spec for ingesting solicited in-app feedback from `bca.feedback_reports` into the
+Adapter spec for ingesting solicited in-app feedback from `public.feedback_reports` into the
 beads pipeline. Distinct from source #3 (Supabase error-log clustering) — this reads
 structured reports submitted voluntarily by users via the feedback UI.
 
@@ -10,7 +10,7 @@ structured reports submitted voluntarily by users via the feedback UI.
 
 ## DB Contract
 
-Table: `bca.feedback_reports` (Supabase project `spilwpcqjncrxptqdggn`, schema `bca`)
+Table: `public.feedback_reports` (Supabase project `spilwpcqjncrxptqdggn`, schema `public` — moved from `bca` 2026-07-03 (BCA bd-k1b9v): `bca` is service_role-only, clients could never INSERT)
 
 | Column            | Type                              | Notes                                                        |
 | ----------------- | --------------------------------- | ------------------------------------------------------------ |
@@ -44,7 +44,7 @@ Store the watermark in the triage run state alongside other source watermarks.
 
 ```sql
 SELECT id, user_id, category, severity, message, context, screenshot_path, created_at
-FROM bca.feedback_reports
+FROM public.feedback_reports
 WHERE linked_bead IS NULL
   AND created_at > <watermark>
 ORDER BY created_at
@@ -106,7 +106,7 @@ br create \
   --labels triage,feedback \
   --title "<category>: <first 80 chars of message>" \
   --description "$(cat <<'EOF'
-Source: bca.feedback_reports / id=<id>
+Source: public.feedback_reports / id=<id>
 User: <user_id> (anonymized in title)
 Category: <category> | Severity: <severity or 'n/a'>
 Context: <context as compact JSON>
@@ -128,7 +128,7 @@ EOF
 After the bead is created, write `linked_bead` and update `status` back to the source row:
 
 ```sql
-UPDATE bca.feedback_reports
+UPDATE public.feedback_reports
 SET linked_bead = '<bead-id>',
     status      = 'triaged'
 WHERE id = '<row-id>'
@@ -173,12 +173,12 @@ consuming app (body-compass-app). Reference this spec when authoring the tests.
 
 ### (a) New row → bead created + linked_bead set
 
-**Setup:** `bca.feedback_reports` contains one row with `linked_bead IS NULL`, `category='bug'`,
+**Setup:** `public.feedback_reports` contains one row with `linked_bead IS NULL`, `category='bug'`,
 `screenshot_path` populated (or non-bug), `created_at > watermark`.
 
 **Expected behavior:**
 - `br create` called exactly once with `-t bug --labels triage,feedback`.
-- `UPDATE bca.feedback_reports SET linked_bead = '<bead-id>', status = 'triaged' WHERE id = '<row-id>'` executed.
+- `UPDATE public.feedback_reports SET linked_bead = '<bead-id>', status = 'triaged' WHERE id = '<row-id>'` executed.
 - Run report shows `claimed: 1`.
 
 ### (b) Row with linked_bead already set → skipped
