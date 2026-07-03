@@ -68,13 +68,59 @@ echo "Current branch: $CURRENT_BRANCH"
 
 **If not on a `wave/*` branch:** STOP. "You must be on a wave branch. Current: {CURRENT_BRANCH}"
 
+### Verify Review Verdict (standalone-mode gate)
+
+`ac-loop` already enforces "review before merge" as part of its own chain (it reads
+`VERDICT:` straight from `ac-review`'s Phase 8 output and only chains to merge on
+`APPROVED`). This step closes the hole where `/ac-merge` is invoked **standalone** by a
+human, with no loop in front of it to guarantee review actually ran first — read the
+verdict mechanically off disk instead of trusting memory of "I think review passed."
+
+```bash
+LATEST_REVIEW=$(ls -t .claude/reviews/*.md 2>/dev/null | head -1)
+```
+
+- **Missing** (no file in `.claude/reviews/`) → STOP. "No review found in
+  `.claude/reviews/` — run `/ac-review` on this branch before merging."
+- **Stale** (the review file's mtime/commit predates the branch's last non-review
+  commit — i.e. code changed after the review ran):
+  ```bash
+  git log -1 --format=%ct -- . ':!.claude/reviews' > /tmp/last-code-commit-ts
+  ```
+  compare against `LATEST_REVIEW`'s modification time → if the last code commit is
+  newer, STOP. "Latest review (`$LATEST_REVIEW`) predates the newest code commit on
+  this branch — re-run `/ac-review`."
+- **Present and fresh but not `VERDICT: APPROVED`** (e.g. `VERDICT: NEEDS_DECISION`, or
+  no `VERDICT:` line at all):
+  ```bash
+  grep -m1 "^\*\*VERDICT:\*\*\|^VERDICT:" "$LATEST_REVIEW"
+  ```
+  → STOP. Surface the verdict line (or "no VERDICT line found") and the review file
+  path; do not proceed to the Quality Gate.
+- **`VERDICT: APPROVED`** and fresher than the last code commit → proceed.
+
 ### Verify All Beads Closed
 
 ```bash
 br list --json
 ```
 
-Check for any open/in-progress beads. **If open beads remain:**
+Beads labeled `post-merge` are **excluded** from this gate — they're deliberately
+un-closeable until after the code they track has shipped and gone live (prod
+verification, follow-up monitoring, a check that only makes sense once the merge
+commit is running in production). Blocking the merge on them would be circular: the
+bead can't close until the merge happens, so it can never close. Instead of blocking,
+they're carried forward as known tails, listed explicitly in the PR body (see
+`references/pr-body-template.md` § Known post-merge tails) so they're never silently
+dropped — the gate below narrows to beads that genuinely should be closed pre-merge:
+
+```bash
+br list --json --limit 1000 | jq '[.issues[]
+  | select(.status != "closed")
+  | select((.labels // []) | index("post-merge") | not)]'
+```
+
+Check for any open/in-progress beads in that filtered set. **If open beads remain:**
 
 ```
 AskUserQuestion(
