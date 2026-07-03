@@ -1,5 +1,14 @@
 # Version Propagation (native build surfaces)
 
+**This file is the SOLE named owner of `CURRENT_PROJECT_VERSION` (the iOS build number)
+bumping.** It happens once per wave, at merge time, in lockstep with the marketing-version
+(`MARKETING_VERSION`) bump below. `ac-distribute` does NOT own or re-bump this counter — its
+ship gate verifies the merge already bumped it and defers here (see
+`skills/ac-distribute/SKILL.md` Workflow A Step 1). The only bump `ac-distribute`/
+`CORE/distribution.md` may own is a same-version **upload-retry** increment, when a build
+number is rejected/stuck and must move without a new marketing version — that is a narrow,
+per-app exception, not a competing owner.
+
 After `pnpm version <bump> --no-git-tag-version` updates `package.json`, propagate to
 the surfaces that `package.json` alone doesn't reach, then commit (see SKILL Phase 0).
 

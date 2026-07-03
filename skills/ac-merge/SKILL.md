@@ -656,7 +656,7 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 - **This is per-wave, not per-session** — run once when all beads are done, not after each bead-work session
 - **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN`) is opaque.
-- **Version bump scans commits** — feat→minor, fix-only→patch, `!:` or BREAKING CHANGE→major. User confirms before the bump commit lands; tag is created on the merge commit after merge.
+- **The default bump is ALWAYS `patch`** — minor/major are explicit, deliberate human choices, never derived from commit prefixes. User confirms before the bump commit lands; tag is created on the merge commit after merge.
 - **`ac-review` is the sole pre-merge gate** — branch review must complete before running this. `ac-land` is NOT a pre-merge gate; it runs after this merge as session closure.
 - **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
 - **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
