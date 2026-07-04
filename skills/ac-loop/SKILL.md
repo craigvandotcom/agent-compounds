@@ -203,7 +203,7 @@ br ready --json | jq '[.[] | select(
 > If no wave is open, all refined ready beads are orphans.
 
 If orphans exist:
-1. **Pre-allocate wave branch (loop's job, not ac-implement's)** — check for an existing open wave first. If none, create `wave/NNN`:
+1. **Pre-allocate wave branch (loop's job, not ac-implement's)** — check for an existing open wave first (if >1 is open — shouldn't happen under merge-per-wave, but a crashed loop + a sibling's can coexist — resume the **highest-priority unfinished** one and drain the rest before starting new work; don't `head -1` blindly). If none, create `wave/NNN`:
    ```bash
    LOCAL_WAVE=$(git branch --list 'wave/*' --format='%(refname:short)' | head -1)
    REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1)
@@ -465,7 +465,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 ## Remember
 
 - **Orphans first** — fixes and production bugs ship before new feature waves
-- **Single-branch rule** — join the open wave, never create a second
+- **Single-branch rule** — join the open wave, never create a second. If >1 is somehow open, resume the highest-priority unfinished one and drain the rest before new work
 - **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-merge`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
 - **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
 - **ARIA gating** — `AskUserQuestion` only for simple, bounded forks. Everything else is advisory

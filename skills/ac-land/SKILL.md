@@ -105,12 +105,22 @@ RUN; beads stay the work atom.
 > or local changes since the gate). Format / lint / type-check are cheap — always run.
 > (Mirrors `ac-merge`'s QA-gate skip-if-fresh; don't validate the same HEAD twice.)
 
+> **Tiered-testing model (parallel-execution doctrine §5).** Wave merges now run **affected-only**
+> CI, so at loop-close there is no fresh *full* `test:all` for HEAD. Do NOT run a blocking local
+> `test:all` here — it's the exact full run the doctrine keeps OFF the loop's critical path, and it
+> starves the shared self-hosted runner. Instead **Phase 1d fires the async loop-close full run on
+> CI** (`gh workflow run quality-gate.yml -f reason=loop-close`), non-blocking; a red result
+> auto-files a bead (§5) and blocks `publish`. Run a local `test:all` here ONLY for a standalone
+> landing with no CI path.
+
 ```bash
 # Format / lint / type-check run fast — terminal-only output is fine.
 pnpm format && pnpm lint && pnpm type-check
 
-# pnpm test:all takes ~10 min on this project; tee to a log so failure detail
-# survives the tail-truncation that destroys diagnostic context.
+# Full test:all — STANDALONE landing only. In a loop/tiered close, SKIP this: the async
+# loop-close CI run (Phase 1d) is the integration gate, and a blocking local full run here is
+# the very run §5 moves off the critical path. tee to a log so failure detail survives
+# tail-truncation when you do run it.
 pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
 
 # Build check (fast — terminal-only).
@@ -233,6 +243,18 @@ git status   # Must show "up to date with origin"
 ```
 
 **If push fails:** Resolve and retry. Do not proceed until pushed.
+
+**Fire the loop-close integration run (tiered testing, doctrine §5).** With `main` pushed and up to
+date, kick off the full `test:all` on CI for this exact HEAD — **non-blocking**; continue to Phase 2
+without waiting:
+
+```bash
+gh workflow run quality-gate.yml -f reason=loop-close   # async full-suite integration gate that publish reads (§6)
+```
+
+Affected-only ran per wave; this one full run is the doctrine's single loop-close `test:all`
+(§5 Tier 2), covering everything the loop merged. Red → auto-file a P1 bead (first pick for the next
+`ac-loop` run) and it blocks `publish`. Skip only for a standalone landing with no CI path.
 
 ---
 
