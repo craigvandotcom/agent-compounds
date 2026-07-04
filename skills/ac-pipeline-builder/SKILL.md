@@ -129,7 +129,7 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 | **Implement** | code + per-bead **affected** tests; safety-push at session end | per-bead gate green | `ac-implement` |
 | **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `_shared/verification-gate.md` |
 | **Review** | code correctness; blocking findings | VERDICT: APPROVED | `ac-review` |
-| **Merge** | rebase → **full `test:all` post-rebase (local)** → version bump → push → PR → CI-confirm → merge → tag | green + checks pass | `ac-merge` |
+| **Merge** | rebase → **affected tests post-rebase (local)** → version bump → push → PR → CI-confirm → merge → tag | affected green + checks pass | `ac-merge` |
 | **Land** | close stragglers · session teardown/cleanup · reflect/compound | session closed cleanly | `ac-land` |
 | **Publish** *(manual, post-loop)* | SHA-pinned full-CI read + full device/browser QA + migration expand/contract → ship web + native | green-for-this-SHA + QA pass + migration-safe | `ac-publish` |
 
@@ -144,17 +144,21 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 
 > Through-threads are universal — they apply to any pipeline. Invariants are specific structural choices *this* pipeline made, each with an explicit justification. Change an invariant here first; then bring stage skills into conformance.
 
-1. **Green-main.** The full suite passes at the merge gate → main is always green → every
-   branch starts green → **affected-only runs are sound during the branch's life** (the only
-   thing that can be red is what this branch touched). The single full run at merge is what
-   *makes the cheap runs valid* — it is the keystone, not mere dedup.
+1. **Green-main.** A **trustworthy** affected-runner (`vitest-affected`, post fixture-cascade
+   upgrade) + a full suite at **loop-close** keep main green: each loop starts from a
+   loop-close-green main, every branch starts green, and **affected-only runs are sound during the
+   branch's life** (a trustworthy affected set covers everything the branch could break). The
+   keystone is the *pairing* — trustworthy affected per wave **plus** one full run at loop-close
+   (relocated off the per-wave path, parallel-execution doctrine §5); `ac-publish` reads that full
+   run SHA-pinned as the final backstop. **If the affected runner is NOT trustworthy this inverts** —
+   the full run must move back onto the per-wave (merge) path.
 
 2. **Incremental in the loop; exhaustive once, at the boundary, on shipping code.** Every
    validation surface follows this shape:
 
    | Surface | In the loop (incremental) | Exhaustive once, at… |
    |---|---|---|
-   | Unit tests | `vitest-affected` (per-bead) | **merge**, post-rebase, local |
+   | Unit tests | `vitest-affected` (per-bead + per-wave) | **loop-close** (CI `workflow_dispatch`, async) |
    | Browser QA | affected journeys / smoke (verify gate) | **merge** (full crawl) |
    | Device QA | smoke iff native-touched (verify gate) | **`ac-distribute`** |
    | ui-polish | scoped to changed surfaces | release boundary (whole-app) |

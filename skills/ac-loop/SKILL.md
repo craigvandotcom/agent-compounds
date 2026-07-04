@@ -352,9 +352,12 @@ fighting the machine. Hold these:
   (See memory `prepush-build-hook-swallows-background-pushes`.)
 
 **Validators — each fires ONCE, at its correct boundary**
-- Per-bead correctness → `pnpm test` (the affected runner). NEVER `test:all` per bead.
-- `test:all` runs **exactly once per wave**: after the LAST code change, before handing to
-  `ac-merge`/CI. Not during implementation (affected runner covers that), not to "prove" a flake.
+- Per-bead AND per-wave correctness → `pnpm test` (the affected runner). NEVER `test:all` per bead
+  or per wave.
+- Full `test:all` runs **exactly once per loop-close** — the async CI run `ac-land` fires
+  (`gh workflow run quality-gate.yml -f reason=loop-close`), off the loop's critical path (doctrine
+  §5 Tier 2). Waves merge on affected only; the loop-close run is the integration/masking backstop
+  and `ac-publish` reads it SHA-pinned. Not per bead, not per wave, not to "prove" a flake.
 - "Is this a flake?" is a CHEAP question → re-run the ONE failing file in isolation. Never
   answer it with a full-suite re-run — that's the heaviest tool on the cheapest question.
 - The wave-level `ac-review` is scoped to **cross-bead integration** (per-bead conductor

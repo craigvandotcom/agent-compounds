@@ -116,13 +116,22 @@ If type-check fails:
 - **Error in a file owned by another agent's reservation:** Note the error in progress.md header, proceed with awareness that `--no-verify` may be needed on push. File a P0 bead if one doesn't exist for the fix.
 - **Error unrelated to any bead scope:** Proceed — note it but don't block the session
 
-### Baseline Full Test Suite
+### Baseline Check (read the loop-close run; don't re-run full per wave)
 
-`vitest-affected` (and similar per-bead test filters) can silently mask pre-existing failures during per-bead quality gates, only surfacing them at Phase Final after beads are already committed. Run the full suite ONCE up front to expose the baseline:
+Confirm you're starting from a green `main` before building on it. With the `vitest-affected`
+fixture-cascade upgrade, affected-mode is trustworthy, so the full-suite masking-catch is
+**relocated to the loop-close CI run** (`ac-land` fires it; `ac-publish` reads it SHA-pinned —
+parallel-execution doctrine §5 Tier 2). Read that result instead of re-running the suite per wave:
 
 ```bash
-pnpm test:all 2>&1 | tail -20
+gh run list --workflow=quality-gate.yml --branch main --event workflow_dispatch \
+  --limit 1 --json conclusion,headSha,createdAt
 ```
+
+- **Green (recent)** → baseline clean; proceed.
+- **Red** → `main` carries a failure; handle it BEFORE building (flow below).
+- **No recent loop-close run** (standalone use, or `main` advanced since) → run the full suite once
+  locally to establish the baseline: `pnpm test:all 2>&1 | tail -20`.
 
 **Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them. Concrete prior incident (2026-05-14 wave/curator): conductor recorded `13 failed across 3 files (3 known-pre-existing)` in progress.md and proceeded silently; user pushed back hard at land time ("why do we have failures? we should have none — why were they not addressed? and why do you persist in not addressing them?"). The 13 failures sorted into two clearly fixable buckets (env-override gap → production rate-limit, and schema-drift after migration rename) — neither was a mystery, both had deterministic fix paths. The "pre-existing = OK" framing collapsed under user scrutiny.
 
@@ -156,7 +165,7 @@ Specifically REJECT these failure modes from being treated as "acceptable baseli
 - **Schema-drift errors after migrations** (column "X" does not exist; SQLSTATE mismatches between expected CHECK and actual NOT NULL) — fixable by updating column references / assertions to match current schema.
 - **"Known pre-existing" without a specific bead ID tracking the fix** — this is an evasion phrase. Either it has a bead, or it needs one filed now.
 
-Skip this step only if `pnpm test:all` takes > 10 minutes on this machine AND the session targets fewer than 2 beads — in that case the overhead outweighs the signal. Default is to always run.
+The baseline read is cheap — always do it. Only the fallback full run (when no loop-close run is available) is expensive; skip that fallback only if it takes > 10 minutes AND the session targets fewer than 2 beads.
 
 ### Ask User
 
@@ -494,15 +503,18 @@ Output summary:
 - Beads remaining (`br ready --json`)
 - Any issues encountered
 
-### Full Quality Gate
+### Wave Quality Gate (affected)
 
-Run the complete suite (this is where the full run happens):
+Run the wave's **affected** tests — the full suite is relocated to the loop-close CI run
+(`ac-land` fires it; parallel-execution doctrine §5 Tier 2), so it no longer runs per wave:
 
 ```bash
-# Run full project quality gate (see AGENTS.md > Project Commands > Quality gate)
+pnpm test 2>&1 | tail -20     # vitest-affected across the whole wave's diff vs main
 ```
 
-If any fail, fix the issues before proceeding.
+If any fail, fix the issues before proceeding. **Standalone, non-loop use:** if you will NOT run
+`ac-land` / a loop-close full run before shipping this wave, run `pnpm test:all` here instead —
+nothing else will run the full suite.
 
 > **Parallel sessions:** Failing tests may originate from another session's uncommitted changes in the working tree. Run `git diff --stat HEAD` to identify which files are uncommitted — check their Agent Mail reservations to determine which session owns them. Failures in files not touched by this session's commits are owned by the other session — note them but do not block landing.
 
