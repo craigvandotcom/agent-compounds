@@ -13,3 +13,6 @@ _plans/
 
 # Idea inbox — local only, same convention as _plans/
 _ideas/
+
+# Machine-local harness manifest overlay (template: harnesses.local.json.example)
+harnesses.local.json

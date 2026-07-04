@@ -1,0 +1,31 @@
+{
+  "_doc": "harness-sync manifest (committed base — PORTABLE values only). Machine-specific overrides go in harnesses.local.json (gitignored; template: harnesses.local.json.example). harness-sync.sh deep-merges local over this base. Env vars beat both where noted.",
+  "repos_root": "~/Repos",
+  "harnesses": {
+    "claude": {
+      "enabled": true,
+      "_doc": "The .claude/ layer is rendered by deploy.sh (skills+agents symlinks); harness-sync invokes it for app targets and mirrors FROM it for the other harnesses."
+    },
+    "codex": {
+      "enabled": true,
+      "skills_mirror_dir": ".agents/skills",
+      "agents_gen_dir": ".codex/agents",
+      "_doc": "Skills via the vendor-neutral .agents/skills path (also read by Pi). Agent TOMLs are GENERATED, not symlinked — Codex does not follow symlinked agent TOMLs (openai/codex#15345). Never touch config.toml [hooks.state] trusted_hash entries."
+    },
+    "droid": {
+      "enabled": true,
+      "skills_mirror_dir": ".factory/skills",
+      "agents_gen_dir": ".factory/droids",
+      "home": "~/.factory",
+      "tracked_farm_skills": "tools/droid/skills",
+      "tracked_farm_droids": "tools/droid/droids",
+      "_doc": "No FACTORY_HOME env override exists — ~/.factory is wired via symlinks into the tracked tools/droid/ dir (setup.sh pattern). App-level .factory/ dirs are projected directly."
+    },
+    "pi": {
+      "enabled": true,
+      "home_env": "PI_CODING_AGENT_DIR",
+      "home_default": "~/.pi/agent",
+      "_doc": "Pi reads .agents/skills up the cwd tree (covered by the codex mirror) + <home>/skills globally. No declarative agents/hooks/MCP surfaces — those are skipped with a warning, never silently."
+    }
+  }
+}

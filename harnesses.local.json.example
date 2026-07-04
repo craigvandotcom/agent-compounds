@@ -1,0 +1,11 @@
+{
+  "_doc": "Machine-local overrides for harnesses.json. Copy to harnesses.local.json (gitignored) and edit. Only include keys you override — harness-sync deep-merges this over the committed base. Typical uses: disable a harness not installed on this machine, point Pi at a relocated home.",
+  "harnesses": {
+    "pi": {
+      "home_default": "~/Repos/tools/pi/agent"
+    },
+    "droid": {
+      "enabled": true
+    }
+  }
+}
