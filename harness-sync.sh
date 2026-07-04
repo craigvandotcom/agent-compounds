@@ -233,6 +233,109 @@ $A_BODY")"
   done
 }
 
+# --- hooks + MCP projections (root-level, Phase 2/3) -------------------------------
+# write_file_if_changed <dest> <content> — for wholesale-projection files (wiring
+# dialects declared regenerable by doctrine; unlike write_generated, no stamp gate)
+write_file_if_changed() {
+  local dest="$1" content="$2"
+  if [ -f "$dest" ] && [ "$(cat "$dest")" = "$content" ]; then return; fi
+  if [ "$DRY" = 1 ]; then
+    echo "  render ${dest/#$HOME/~}"
+  else
+    mkdir -p "$(dirname "$dest")"
+    printf '%s\n' "$content" > "$dest"
+    echo "  rendered ${dest/#$HOME/~}"
+  fi
+  note_change
+}
+
+HOOKS_MANIFEST="$AC_ROOT/hooks/hooks.json"
+# literal-$HOME path so rendered configs stay portable across machines
+HOOKS_PATH_LIT='$HOME/Repos/neometa/software/agent-compounds/hooks'
+
+# build_hooks_obj <harness> — manifest -> harness's hooks object (shared JSON dialect)
+build_hooks_obj() {
+  jq --arg h "$1" --arg hooks "$HOOKS_PATH_LIT" '
+    def subst: (if type == "object" then .[$h] else . end)
+      | gsub("\\{HOOKS\\}"; $hooks)
+      | gsub("\\{HOME\\}"; "$HOME")
+      | gsub("\\{PROJECT\\}"; "$CLAUDE_PROJECT_DIR");
+    reduce (.wiring[] | select(.harnesses | index($h))) as $e ({};
+      .[$e.event] += [
+        (if $e.matcher then {matcher: $e.matcher} else {} end)
+        + {hooks: [{type: "command", command: ($e.command | subst)}]}
+      ])' "$HOOKS_MANIFEST"
+}
+
+render_hooks_root() {
+  [ -f "$HOOKS_MANIFEST" ] || { echo "  WARN: $HOOKS_MANIFEST missing — hooks skipped"; return 0; }
+  local obj settings="$REPOS_ROOT/.claude/settings.json"
+
+  if [ "$EN_CLAUDE" = "true" ] && [ -f "$settings" ]; then
+    echo "  -- claude hooks (.claude/settings.json#hooks)"
+    obj="$(build_hooks_obj claude)"
+    write_file_if_changed "$settings" "$(jq --argjson h "$obj" '.hooks = $h' "$settings")"
+  fi
+  if [ "$EN_CODEX" = "true" ]; then
+    echo "  -- codex hooks (.codex/hooks.json)"
+    obj="$(build_hooks_obj codex)"
+    local before=$CHANGES
+    write_file_if_changed "$REPOS_ROOT/.codex/hooks.json" "$(jq -n --argjson h "$obj" '{hooks: $h}')"
+    [ "$CHANGES" -gt "$before" ] && [ "$DRY" = 0 ] && \
+      echo "  NOTE: codex hooks.json changed — re-trust once via /hooks in the Codex TUI"
+  fi
+  if [ "$EN_DROID" = "true" ]; then
+    echo "  -- droid hooks (tools/droid/hooks.json -> ~/.factory/hooks.json)"
+    obj="$(build_hooks_obj droid)"
+    write_file_if_changed "$REPOS_ROOT/tools/droid/hooks.json" "$(jq -n --argjson h "$obj" '{hooks: $h}')"
+    ensure_home_link "$DROID_HOME/hooks.json" "$REPOS_ROOT/tools/droid/hooks.json"
+  fi
+  if [ "$EN_PI" = "true" ]; then
+    echo "  NOTE: pi hooks skipped by design (TS-extension surface only)"
+  fi
+}
+
+render_mcp_root() {
+  local src="$REPOS_ROOT/.mcp.json"
+  [ -f "$src" ] || { echo "  WARN: $src missing — MCP projection skipped"; return 0; }
+
+  if [ "$EN_CODEX" = "true" ]; then
+    echo "  -- codex MCP (.codex/config.toml [mcp_servers], generated)"
+    write_generated "$REPOS_ROOT/.codex/config.toml" "$(printf '%s\n%s' \
+"# $STAMP — do not hand-edit (source: .mcp.json). Loaded only when this project is trusted in ~/.codex/config.toml." \
+"$(jq -r '.mcpServers | to_entries[] |
+  "[mcp_servers.\(.key)]"
+  + (if .value.command then "\ncommand = \(.value.command | tojson)" else "" end)
+  + (if .value.args then "\nargs = \(.value.args | tojson)" else "" end)
+  + (if .value.url then "\nurl = \(.value.url | tojson)" else "" end)
+  + (if .value.env then "\n[mcp_servers.\(.key).env]\n"
+      + (.value.env | to_entries | map("\(.key) = \(.value | tojson)") | join("\n")) else "" end)
+  + "\n"' "$src")")"
+  fi
+  if [ "$EN_DROID" = "true" ]; then
+    echo "  -- droid MCP (tools/droid/mcp.json -> ~/.factory/mcp.json)"
+    write_file_if_changed "$REPOS_ROOT/tools/droid/mcp.json" \
+      "$(jq '{mcpServers: (.mcpServers | with_entries(.value |= (if .command then ({type:"stdio"} + .) else . end)))}' "$src")"
+    ensure_home_link "$DROID_HOME/mcp.json" "$REPOS_ROOT/tools/droid/mcp.json"
+  fi
+  if [ "$EN_PI" = "true" ]; then
+    echo "  NOTE: pi MCP skipped by design (no MCP support in harness)"
+  fi
+}
+
+# ensure_home_link <link> <target-abs> — machine-local absolute symlink (setup.sh pattern)
+ensure_home_link() {
+  local dest="$1" target="$2"
+  [ -d "$(dirname "$dest")" ] || { echo "  WARN: $(dirname "$dest") missing — skipping link"; return 0; }
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    echo "  SKIP (real file present): ${dest/#$HOME/~}"; return 0
+  fi
+  [ "$(readlink "$dest" 2>/dev/null)" = "$target" ] && return 0
+  if [ "$DRY" = 1 ]; then echo "  link ${dest/#$HOME/~} -> $target";
+  else ln -sfn "$target" "$dest"; echo "  linked ${dest/#$HOME/~} -> $target"; fi
+  note_change
+}
+
 # --- target renderers -------------------------------------------------------------
 sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude layer)
   local base="$1" mode="${2:-app}"
@@ -302,6 +405,9 @@ sync_root() {
       echo "  WARN: pi home $PI_HOME missing — skipping (set $PI_HOME_ENV or harnesses.local.json)"
     fi
   fi
+
+  render_hooks_root
+  render_mcp_root
 }
 
 # --- run ---------------------------------------------------------------------------

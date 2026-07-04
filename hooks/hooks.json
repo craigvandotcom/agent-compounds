@@ -1,0 +1,47 @@
+{
+  "_doc": "Canonical hook WIRING manifest (Phase 2 of the harness-sync plan). Hook LOGIC lives beside this file (scripts/md payloads — the canon; per-harness copies are dead). harness-sync.sh renders this into each harness's dialect: the `hooks` key of <repos>/.claude/settings.json (Claude), <repos>/.codex/hooks.json (Codex), tools/droid/hooks.json → ~/.factory/hooks.json (Droid). Pi has no declarative hooks (TS extensions only) — skipped with a warning. Placeholders: {HOOKS} = this dir via $HOME/Repos path · {HOME} = $HOME literal · {PROJECT} = $CLAUDE_PROJECT_DIR (claude only). Event names are shared verbatim by Claude/Codex/Droid — no mapping table needed since Gemini's decommission. Per-harness `command` objects express capability-gated content variants (e.g. delegation-reminder: Claude assumes the memory-injection hook + Task-tool stances; harnesses without those get the manual-recall variant). NOTE: regenerating Codex's hooks.json invalidates its trusted_hash — re-trust once via /hooks in the Codex TUI.",
+  "wiring": [
+    {
+      "id": "session-start-context",
+      "event": "SessionStart",
+      "command": "cat {HOOKS}/session-start.md",
+      "harnesses": ["claude", "codex", "droid"]
+    },
+    {
+      "id": "memory-recall",
+      "event": "UserPromptSubmit",
+      "command": "python3 {PROJECT}/.claude/hooks/memory-retrieval-adaptive.py",
+      "harnesses": ["claude"],
+      "_doc": "Claude-only: emits Claude hook-JSON; script stays in .claude/hooks/. Other harnesses compensate via the manual-recall reminder below."
+    },
+    {
+      "id": "pre-prompt-reminder",
+      "event": "UserPromptSubmit",
+      "command": {
+        "claude": "cat {HOOKS}/delegation-reminder.md",
+        "codex": "cat {HOOKS}/delegation-reminder.manual-recall.md",
+        "droid": "cat {HOOKS}/delegation-reminder.manual-recall.md"
+      },
+      "harnesses": ["claude", "codex", "droid"]
+    },
+    {
+      "id": "trauma-guard",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "{HOOKS}/trauma_guard.py",
+      "harnesses": ["claude", "codex", "droid"]
+    },
+    {
+      "id": "activity-logger",
+      "event": "PostToolUse",
+      "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
+      "harnesses": ["claude", "codex", "droid"]
+    },
+    {
+      "id": "activity-logger-subagent",
+      "event": "SubagentStop",
+      "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
+      "harnesses": ["claude", "codex", "droid"]
+    }
+  ]
+}
