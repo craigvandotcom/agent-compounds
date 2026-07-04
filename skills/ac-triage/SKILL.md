@@ -71,29 +71,46 @@ validated** (2026-06-13): `GET /v1/apps/{appId}/betaFeedbackCrashSubmissions` (J
 comment/email/deviceModel/os — it adds the human texture Sentry can't see. **GitHub Issues
 #4** is per-repo: high value on public/OSS repos (vitest-affected, neometa-brand) where
 outsiders file; near-N/A on private app repos with no external filers — enable per app. Light
-up sources as they're wired; a source that isn't configured is skipped, not an error.
+up sources as they're wired; a source that isn't configured is skipped, not an error — but a
+source that IS wired and fails to fetch escalates (see Phase 1).
 
 ## Method (per run)
 
 ### Phase 0 — scope + watermark
 
 Read `CORE/triage.md` for enabled sources + per-app severity bar. Load the **last-run
-watermark per source** (timestamp / last issue id / cursor) so each run only pulls NEW
-signal. First run: bounded lookback (e.g. last 7 days) to avoid a flood.
+watermark per source** (timestamp / last issue id / cursor) from the app's
+**`.claude/state/triage-watermarks.json`** (committed, one key per source:
+`{"sentry": {"watermark": "<ISO ts / cursor>", "updated": "<ISO ts>"}, …}`) so each run
+only pulls NEW signal. Missing file or missing key = first run for that source: bounded
+lookback (e.g. last 7 days) to avoid a flood, then write the entry.
 
 ### Phase 1 — fetch (per enabled source, in parallel)
 
 Pull signal since the watermark via each source's API (pointer-auth from CORE):
 
 - **Sentry:** issues sorted by `lastSeen`, with `count`, `userCount`, culprit, latest
-  event stack, release. Prefer unresolved + regression issues.
+  event stack, release. Prefer unresolved + regression issues. Canonical fetch (region
+  API host from CORE/triage.md — EU-region orgs live on `de.sentry.io`, and calls to
+  `sentry.io` fail there even with a valid token):
+  `curl -sf -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" "https://<region-host>/api/0/projects/<org>/<project>/issues/?query=is:unresolved&sort=date&statsPeriod=14d"`
 - **ASC:** `GET /v1/apps/{appId}/betaFeedbackCrashSubmissions` (+ `…ScreenshotSubmissions`),
   JWT from the `.p8`; filter to records newer than the watermark `createdDate`.
 - **Supabase:** error-level logs / failed-request rows since watermark.
 - **GitHub Issues:** `gh issue list --state open --search "updated:>=<watermark>"`; EXCLUDE
-  triage-authored issues (loop guard) and issues already linked to a bead.
+  triage-authored issues (loop guard) and issues already linked to a bead — linkage marker
+  = a `bead:<id>` line in the issue body (write it when the bead is created) or a `triaged`
+  issue label.
 
-Record the new watermark per source AFTER a successful fetch.
+Record the new watermark per source AFTER a successful fetch — NEVER advance a watermark
+on a failed or partial fetch.
+
+**Configured-but-failing ≠ not-configured.** A source that CORE/triage.md marks live but
+that errors at fetch (auth 401, network, schema change) is an **escalation**, not a skip:
+mark it `✗ FAILING (<error>)` in the Phase-4 report and file ONE ops bead
+(`br create -t task --labels triage,ops,human-gate`) so it surfaces in `ac-human-session`
+— dedupe first, update the existing open ops bead if one already tracks this failure.
+Silent-skip is reserved for sources that were never wired.
 
 ### Phase 2 — cluster + dedupe (your core work — do NOT delegate)
 
@@ -124,6 +141,14 @@ br create -t bug --labels triage,<source>  \
 
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
+- **Readiness gate (the ac-loop seam):** the loop treats any ready bead WITHOUT the
+  `unrefined` label as shippable and hands it straight to `ac-implement` — no
+  `ac-bead-refine` pass. So omit `unrefined` ONLY when the bead is refined-by-construction:
+  source permalink, first-seen release, suspected wave/commit, stack frames/repro, AND a
+  verification path (how the implementer proves the fix). Anything vaguer — no repro,
+  unclear cause, cross-cutting blast radius — gets `--labels triage,<source>,unrefined` so
+  the loop routes it through `ac-bead-refine` instead of burning an implement slot on a
+  cold trail. `-t investigation` beads are ALWAYS `unrefined` — they are questions, not specs.
 - Always include the **source permalink** (Sentry issue URL / ASC feedback id) and the
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.
@@ -183,6 +208,11 @@ dropped:    9 (sub-threshold / known-3rd-party — listed)
 watermarks updated.
 ```
 
+The report must OUTLIVE the session — headless runs otherwise report to nobody. Write it
+to the app's **`.claude/state/triage-last-run.md`** and, when the app has a Slack channel
+configured, post it via `slack-send`. A run that found nothing new still writes the report
+(proof-of-life beats silence — an empty report and a dead scheduler look identical otherwise).
+
 ## Cadence
 
 Designed to run **scheduled + headless** (the VM is the natural host — it's pure API work,
@@ -215,7 +245,10 @@ per-app severity bar, the dedupe-fingerprint convention, and any source-specific
   (bump count / append evidence), never duplicates.
 - **One bead per fingerprint**, with a source link + suspected wave. No cold trails.
 - **Sentry first** — symbolicated stacks beat sparse beta-crash APIs.
-- **A source not configured is skipped, not an error** — light them up as they're wired.
+- **A source not configured is skipped; a source configured-but-FAILING is an escalation**
+  — file/update the ops bead, never silently skip a wired source, never advance its watermark.
+- **Respect the ac-loop seam** — no `unrefined` label means the bead ships without any
+  refinement pass; only refined-by-construction defects may omit it.
 - **Inbound counterpart to `ac-distribute`** — it ships out, this listens back.
 
 ---

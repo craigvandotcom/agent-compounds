@@ -191,6 +191,8 @@ If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready p
 
 **Orphans = refined, non-human-gate beads with no wave affinity.** These are typically bugs and quick fixes surfaced by `ac-triage` or `ac-bead-capture`. Ship them first — they often unblock other work or are time-sensitive production fixes.
 
+> **Seam contract with `ac-triage`:** triage omits `unrefined` only on refined-by-construction defects (source permalink + suspected wave/commit + repro + verification path — its Phase 3a readiness gate); vaguer findings arrive labeled `unrefined` and route through `ac-bead-refine` like any raw capture. If an orphan turns out to be a cold trail mid-implement, that's a triage-side readiness bug — kick it back to `unrefined` with a note rather than guessing at a fix.
+
 ```bash
 # Orphan beads: refined, no wave-NNN marker label, no human-gate
 br ready --json | jq '[.[] | select(
