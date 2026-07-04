@@ -16,6 +16,12 @@ release-safe, fix anything that surfaces **in-session**, then ship web + native.
 (`skills/ac-merge/references/version-bump.md`) — you **verify** it, never re-bump. The native
 build/sign/upload is owned by `ac-distribute` — you **call** it, never inline it.
 
+> **⚠ Web already deploys at merge.** `ac-merge` triggers a Vercel prod deploy on every wave merge,
+> autonomously — so **web content is already live** by the time you run. You are the definitive gate
+> for the **native** ship and the migration/QA **checkpoint**; you do NOT gate web content. A
+> migration that must be gated for web has to be caught pre-merge (this asymmetry is an open
+> doctrine question — see the plan §6 note).
+
 ---
 
 ## I/O Contract
@@ -42,27 +48,39 @@ If `main` is not clean/current, stop — publish releases exactly what is on `or
 
 **1a — Read the full-suite CI result, SHA-pinned to `RELEASE_SHA`.** Only a **full** run counts —
 that is a `workflow_dispatch` run (loop-close or a prior publish); `push`/`pull_request` runs are
-affected-only (§5) and must NOT satisfy this gate.
+affected-only (§5) and must NOT satisfy this gate. **Guard first** — only body-compass-app has
+this workflow today; if `quality-gate.yml` doesn't exist in this repo, fall back to a local full
+run as the confidence gate.
 
 ```bash
-gh run list --workflow=quality-gate.yml --commit "$RELEASE_SHA" \
-  --json databaseId,event,status,conclusion,headSha \
-  --jq '[.[] | select(.event=="workflow_dispatch")]'
+if gh workflow list --json name --jq '.[].name' 2>/dev/null | grep -qi quality-gate; then
+  gh run list --workflow=quality-gate.yml --commit "$RELEASE_SHA" \
+    --json databaseId,event,status,conclusion,headSha \
+    --jq '[.[] | select(.event=="workflow_dispatch")]'
+else
+  echo "No quality-gate.yml workflow — running local full suite as the confidence gate."
+  pnpm test:all 2>&1 | tail -30
+fi
 ```
 
 - **A `success` `workflow_dispatch` run exists for `RELEASE_SHA`** → gate passes; do not re-run.
 - **None exists, or `main` moved since loop-close, or it's `failure`** → fire a fresh full run for
-  the current HEAD and wait (this is the only re-run, and only when the SHA-pinned read misses):
+  the current HEAD and wait (this is the only re-run, and only when the SHA-pinned read misses);
+  no CI workflow → re-run the local full suite instead:
 
   ```bash
-  gh workflow run quality-gate.yml -f reason=publish --ref main
-  # poll until a workflow_dispatch run for RELEASE_SHA reports conclusion=success
+  if gh workflow list --json name --jq '.[].name' 2>/dev/null | grep -qi quality-gate; then
+    gh workflow run quality-gate.yml -f reason=publish --ref main
+    # poll until a workflow_dispatch run for RELEASE_SHA reports conclusion=success
+  else
+    pnpm test:all 2>&1 | tail -30
+  fi
   ```
 
 Red → Phase 3 (fix-in-session). Never trust a stale prior-SHA green.
 
 **1b — Full QA (device + browser).** This is the one genuinely-new expensive thing at publish
-(`qa-gating-craig-owns-visual`): run `ac-qa-device` + `ac-qa-browser` at full depth against the
+(`qa-gating-craig-owns-visual-agent-functional`): run `ac-qa-device` + `ac-qa-browser` at full depth against the
 release build. Agent runs functional QA; Craig owns visual sign-off. Any blocker → Phase 3.
 
 ## Phase 2: Migration safety (expand/contract)

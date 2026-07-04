@@ -61,8 +61,9 @@ git diff --stat
 
 ### Declare the Run Ledger
 
-ac-land runs LAST and can compact mid-flight (a slow `test:all` in Phase 1b, a hung browser
-tester) — and teardown that never runs leaves zombies. Declare a run ledger so a resumed
+ac-land runs LAST and can compact mid-flight (a slow standalone-fallback `test:all` in Phase 1b —
+rare, only when no loop-close CI path exists — a hung browser tester) — and teardown that never
+runs leaves zombies. Declare a run ledger so a resumed
 session re-enters at the right phase instead of re-running quality gates or, worse, skipping
 teardown:
 
@@ -117,15 +118,20 @@ RUN; beads stay the work atom.
 # Format / lint / type-check run fast — terminal-only output is fine.
 pnpm format && pnpm lint && pnpm type-check
 
-# Full test:all — STANDALONE landing only. In a loop/tiered close, SKIP this: the async
-# loop-close CI run (Phase 1d) is the integration gate, and a blocking local full run here is
-# the very run §5 moves off the critical path. tee to a log so failure detail survives
-# tail-truncation when you do run it.
-pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
-
 # Build check (fast — terminal-only).
 pnpm build:check
 ```
+
+> **STANDALONE ONLY — else SKIP.** Only run the block below if this is a standalone landing with
+> no loop-close CI path (no `quality-gate.yml` workflow in this repo, or a manual land with no
+> Phase 1d to follow). In the normal loop/tiered close, SKIP entirely: Phase 1d fires the async
+> loop-close CI run, and a blocking local full run here is the exact run §5 moves off the critical
+> path.
+>
+> ```bash
+> # tee to a log so failure detail survives tail-truncation.
+> pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
+> ```
 
 > **Why `tee`, not bare `tail`:** vitest's reporter buffers nontrivially and the final summary doesn't necessarily land in the last 20 lines if failures occurred earlier. A bare `pnpm test:all 2>&1 | tail -15` discards mid-run failure detail and forces a second 10-minute re-run to diagnose. Concrete cost (wave/app-first-feel 2026-05-19 bead-land): conductor ran `tail -15` first, lost the failure detail, had to re-run with output redirected to a file — ~10 min wasted. The full log at `$ARTIFACTS_DIR/test-all.log` is grep-addressable for `FAIL`, `❯`, `×`, `AssertionError`, etc.
 
@@ -246,10 +252,16 @@ git status   # Must show "up to date with origin"
 
 **Fire the loop-close integration run (tiered testing, doctrine §5).** With `main` pushed and up to
 date, kick off the full `test:all` on CI for this exact HEAD — **non-blocking**; continue to Phase 2
-without waiting:
+without waiting. **Guard first** — only body-compass-app has this workflow today; if
+`quality-gate.yml` doesn't exist in this repo, fall back to a local full run as the loop-close gate:
 
 ```bash
-gh workflow run quality-gate.yml -f reason=loop-close   # async full-suite integration gate that publish reads (§6)
+if gh workflow list --json name --jq '.[].name' 2>/dev/null | grep -qi quality-gate; then
+  gh workflow run quality-gate.yml -f reason=loop-close   # async full-suite integration gate that publish reads (§6)
+else
+  echo "No quality-gate.yml workflow — running local full suite as the loop-close gate instead."
+  pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
+fi
 ```
 
 Affected-only ran per wave; this one full run is the doctrine's single loop-close `test:all`

@@ -129,7 +129,7 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 | **Implement** | code + per-bead **affected** tests; safety-push at session end | per-bead gate green | `ac-implement` |
 | **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `_shared/verification-gate.md` |
 | **Review** | code correctness; blocking findings | VERDICT: APPROVED | `ac-review` |
-| **Merge** | rebase → **affected tests post-rebase (local)** → version bump → push → PR → CI-confirm → merge → tag | affected green + checks pass | `ac-merge` |
+| **Merge** | rebase → **affected tests (local)** → version bump → push → PR → CI-confirm → merge → tag | affected green + checks pass | `ac-merge` |
 | **Land** | close stragglers · session teardown/cleanup · reflect/compound | session closed cleanly | `ac-land` |
 | **Publish** *(manual, post-loop)* | SHA-pinned full-CI read + full device/browser QA + migration expand/contract → ship web + native | green-for-this-SHA + QA pass + migration-safe | `ac-publish` |
 
@@ -159,8 +159,8 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
    | Surface | In the loop (incremental) | Exhaustive once, at… |
    |---|---|---|
    | Unit tests | `vitest-affected` (per-bead + per-wave) | **loop-close** (CI `workflow_dispatch`, async) |
-   | Browser QA | affected journeys / smoke (verify gate) | **merge** (full crawl) |
-   | Device QA | smoke iff native-touched (verify gate) | **`ac-distribute`** |
+   | Browser QA | affected journeys / smoke (verify gate) | **publish** (full crawl) |
+   | Device QA | smoke iff native-touched (verify gate) | **publish** |
    | ui-polish | scoped to changed surfaces | release boundary (whole-app) |
    | Build | deferred per-bead | **merge** (shipping code) |
    | Format | per-bead scoped | **land** (repo-wide sweep, own commit) |
@@ -169,11 +169,14 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 3. **Post-rebase truth.** The exhaustive run tests the *rebased* code (your changes + latest
    main = what actually ships), never the isolated branch. So it runs **after** the rebase.
 
-4. **In-session catch; CI confirms.** The exhaustive run is **local at merge** so the agent
-   that did the work fixes failures with full context. CI (where it exists) is the *hermetic
-   backstop* — a clean-env confirm + un-fudgeable gate, not the debug loop. Reality today:
-   only **body-compass-app** has a live CI full-test gate (self-hosted macOS); ASA + the rest
-   rely on the local merge run. So: **local-at-merge is universal; CI confirms where present.**
+4. **In-session catch; CI confirms.** The exhaustive run is the **async loop-close CI run**
+   (Invariant 1), relocated off the per-wave path so it never blocks a merge. The in-session/
+   local principle still governs what actually runs *in* the loop — affected tests + smoke QA
+   at merge, fixed with full context by the agent that did the work. Reality today: only
+   **body-compass-app** has a live CI full-test gate (self-hosted macOS); ASA + the rest have
+   no loop-close CI path yet and fall back to a local full run there instead. So:
+   **exhaustive-at-loop-close is universal; CI executes it where present, local fallback where
+   not.**
 
 5. **Verify = selection, not caching.** The verification gate reasons *forward* from the diff
    (which passes can this change affect?), it does not cache results. No SHA-keyed
@@ -273,8 +276,8 @@ The doctrine is the target; these stage edits bring reality into line:
 - [x] **Verify gate** — `_shared/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
 - [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner (this sweep, 2026-07-03).
 - [ ] **Land refocus** — strip 1b `test:all` + 1c UI suite; add scoped `_shared/session-teardown.md`; reassign push to merge. (tracked: Wave B plan — land refocus — restructure, not sweep)
-- [ ] **Test placement** — `ac-implement` final → affected; `ac-merge` full `test:all` → post-rebase, local. (tracked: Wave B plan — land refocus — restructure, not sweep)
-- [ ] **QA placement** — retire `ac-land` 1c; one exhaustive browser crawl at merge. (tracked: Wave B plan — land refocus — restructure, not sweep)
+- [ ] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (tracked: Wave B plan — land refocus — restructure, not sweep)
+- [ ] **QA placement** — retire `ac-land` 1c; one exhaustive browser crawl at publish. (tracked: Wave B plan — land refocus — restructure, not sweep)
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
 
 ---

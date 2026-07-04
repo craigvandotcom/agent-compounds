@@ -121,17 +121,24 @@ If type-check fails:
 Confirm you're starting from a green `main` before building on it. With the `vitest-affected`
 fixture-cascade upgrade, affected-mode is trustworthy, so the full-suite masking-catch is
 **relocated to the loop-close CI run** (`ac-land` fires it; `ac-publish` reads it SHA-pinned —
-parallel-execution doctrine §5 Tier 2). Read that result instead of re-running the suite per wave:
+parallel-execution doctrine §5 Tier 2). Read that result instead of re-running the suite per wave.
+**Guard first** — only body-compass-app has this workflow today; if `quality-gate.yml` doesn't
+exist in this repo, skip straight to the local fallback:
 
 ```bash
-gh run list --workflow=quality-gate.yml --branch main --event workflow_dispatch \
-  --limit 1 --json conclusion,headSha,createdAt
+if gh workflow list --json name --jq '.[].name' 2>/dev/null | grep -qi quality-gate; then
+  gh run list --workflow=quality-gate.yml --branch main --event workflow_dispatch \
+    --limit 1 --json conclusion,headSha,createdAt
+else
+  echo "No quality-gate.yml workflow — falling back to local baseline."
+fi
 ```
 
 - **Green (recent)** → baseline clean; proceed.
 - **Red** → `main` carries a failure; handle it BEFORE building (flow below).
-- **No recent loop-close run** (standalone use, or `main` advanced since) → run the full suite once
-  locally to establish the baseline: `pnpm test:all 2>&1 | tail -20`.
+- **No recent loop-close run, or no CI workflow** (standalone use, `main` advanced since, or the
+  app has no full-test CI gate) → run the full suite once locally to establish the baseline:
+  `pnpm test:all 2>&1 | tail -20`.
 
 **Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them. Concrete prior incident (2026-05-14 wave/curator): conductor recorded `13 failed across 3 files (3 known-pre-existing)` in progress.md and proceeded silently; user pushed back hard at land time ("why do we have failures? we should have none — why were they not addressed? and why do you persist in not addressing them?"). The 13 failures sorted into two clearly fixable buckets (env-override gap → production rate-limit, and schema-drift after migration rename) — neither was a mystery, both had deterministic fix paths. The "pre-existing = OK" framing collapsed under user scrutiny.
 

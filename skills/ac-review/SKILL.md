@@ -346,10 +346,10 @@ Read the engineer's result file. Confirm:
 
 Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
 risk using the shared classifier in `_shared/verification-gate.md` (Step 1). ac-review is a
-branch review, **not** the green-main boundary — the exhaustive run happens at `ac-merge`
-post-rebase — so running a full FORMAT+LINT+TYPECHECK+TEST+BUILD battery on every wave
-(including docs-only ones) violates *proportional effort: incremental in the loop, exhaustive
-at the boundary*.
+branch review, **not** the green-main boundary — the exhaustive run is the loop-close CI full
+`test:all` (parallel-execution doctrine §5) — so running a full FORMAT+LINT+TYPECHECK+TEST+BUILD
+battery on every wave (including docs-only ones) violates *proportional effort: incremental in
+the loop, exhaustive at the boundary*.
 
 ```bash
 {CMD_FORMAT}    # always (cheap)
@@ -360,7 +360,7 @@ at the boundary*.
 Then, by diff class (from the classifier):
 - **`CLASS_RUNTIME` unset** (docs / tests / CI only) → skip `{CMD_TEST}` and `{CMD_BUILD}`; cheap checks suffice.
 - **Runtime code, normal risk** → `{CMD_TEST}` (affected/standard); skip `{CMD_BUILD}` unless the wave touches build config or `CLASS_WEBUI`.
-- **High-risk** (migration/`.sql`, auth, payments, release/version — the gate's high-risk row) → full `{CMD_TEST}` + `{CMD_BUILD}`.
+- **High-risk** (migration/`.sql`, auth, payments, release/version — the gate's high-risk row) → `{CMD_TEST}` scoped to the risk surface (never the full suite — that's the loop-close CI run) + `{CMD_BUILD}`.
 
 **If all selected checks pass:** Continue to Phase 6.
 
