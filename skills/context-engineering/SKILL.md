@@ -22,7 +22,7 @@ plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
    knowledge must survive in plain markdown + git. Never write durable knowledge in a
    format only one tool reads. **The same rule governs harness projections:** the
    canonical artifact (skill body, agent stance, hook logic, identity content) is truth;
-   every rendered form — `CLAUDE.md`/`GEMINI.md` shims, agent-def files, hook configs, MCP
+   every rendered form — `CLAUDE.md` shims, agent-def files, hook configs, MCP
    registrations — is a derived, regenerable cache. Never hand-edit a projection
    (`deploy.sh` regenerates from canon); a drifted projection is the bug, not a source.
 2. **The context window is RAM.** Every token displaces another. The governing question
@@ -117,7 +117,7 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
 
 | Layer | Content | Loading discipline |
 |---|---|---|
-| **L0 — Identity** | root `AGENTS.md` (canonical) + thin per-agent shims (`CLAUDE.md`, `GEMINI.md`) | Always-on. **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
+| **L0 — Identity** | root `AGENTS.md` (canonical; read natively by Codex/Droid/Pi) + thin shims for harnesses that need one (`CLAUDE.md`) | Always-on. **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
 | **L1 — CORE** | operating manual (conventions, tool inventory, project map) | Session-start hook. Keep progressive (thin index → sub-files), not monolithic. |
 | **L2 — Skills** | capabilities | Progressive disclosure: frontmatter always (~100 tok) → SKILL.md body on invoke → `references/` on demand. One level of reference depth. |
 | **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Relevance pre-retrieval:** the memory hook extracts prompt keywords and runs per-term `qmd search` (BM25, union-ranked, ≥2 terms must agree) over the memory homes + every app's `/memory/auto/`. Semantic (`vsearch`) is the upgrade path — rejected v1 at ~4s/lobe vs ~120ms. NEVER bulk-load the full index. |
@@ -130,7 +130,7 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
 - **Right altitude:** instructions belong at the layer that matches their stability —
   identity (L0) changes ~never; conventions (L1) rarely; lessons (L3) constantly. If
   you're editing L0/L1 weekly, that content belongs in L3.
-- **Per-agent dirs are projections.** `.claude/`, `.gemini/`, `.codex/`/`.agents/`
+- **Per-agent dirs are projections.** `.claude/`, `.codex/`/`.agents/`, `.factory/`
   receive symlinks/shims from canonical sources (deploy.sh pattern); no agent keeps a
   private write store.
 

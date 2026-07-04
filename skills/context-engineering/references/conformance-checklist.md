@@ -5,7 +5,7 @@ The permanent standard every level of the stack is held to (born in Phase 1.6.0,
 and the **dream cycle's lint phase thereafter** — alignment is maintained, never
 re-established. Every item is checkable; an auditor must cite file+line for a violation.
 
-## L0 — entry files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md` at any level)
+## L0 — entry files (`AGENTS.md`, `CLAUDE.md` at any level)
 - [ ] One canonical entry per level (`AGENTS.md`); per-agent files are thin shims that
       import it + name only the agent home. No forked near-copies.
 - [ ] <150 lines; pointers, not content. No accumulated learnings, incident write-ups,
@@ -73,9 +73,10 @@ re-established. Every item is checkable; an auditor must cite file+line for a vi
       structure is worse than no structure (B6: 5 dead scoped-index links + a
       never-committed fact, with no loader anywhere).
 
-## Projections (`.gemini/`, `.codex/`, `.agents/`, per-app `.claude/`)
+## Projections (`.codex/`, `.agents/`, `.factory/`, per-app `.claude/`)
 - [ ] Projections are symlinks/generated from ONE canonical source — never hand-drifted
-      copies (verify by md5/readlink; `.agents/skills` and `.gemini/memory` both failed this).
+      copies (verify by md5/readlink; `.agents/skills` and the retired `.gemini/memory`
+      both failed this).
 - [ ] **Regeneration test:** deleting every projection file and re-running the renderer
       (`deploy.sh` / per-harness adapter) reproduces them identically. Anything lost was a
       hand-edit — the bug. Harness-specific logic/content lives in canon; only wiring/format
