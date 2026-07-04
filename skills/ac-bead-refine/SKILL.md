@@ -1,6 +1,6 @@
 ---
 name: ac-bead-refine
-description: Use to REFINE existing beads to convergence — 3 parallel reviewers hunt for gaps, the conductor makes each bead self-contained and agent-ready, then removes the 'unrefined' label. Triggers: 'refine the beads', 'bead refine', 'make beads implementation-ready', 'refine bead structure'. Requires beads already created (by ac-beadify); to create beads use ac-beadify.
+description: 'Use to REFINE existing beads to convergence — 3 parallel reviewers hunt for gaps, the conductor makes each bead self-contained and agent-ready, then removes the ''unrefined'' label. Triggers: ''refine the beads'', ''bead refine'', ''make beads implementation-ready'', ''refine bead structure''. Requires beads already created (by ac-beadify); to create beads use ac-beadify.'
 ---
 
 # Bead Refine

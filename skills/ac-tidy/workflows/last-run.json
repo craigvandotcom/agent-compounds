@@ -1,0 +1,21 @@
+{
+  "status": "done",
+  "mode": "nightly",
+  "date": "2026-07-04",
+  "machine": "darwin",
+  "branch": "main",
+  "commit": "12c4e70d0b4653c57731446d4ee82772eafba222",
+  "tier2_toggle": "OFF",
+  "counts": {
+    "tier1_reconciled": 0,
+    "tier2_archived": 0,
+    "tier3_proposals": 3
+  },
+  "proposals": [
+    { "file": "_plans/_proposals/2026-07-04/01-archive-admin-user-role-plan.md", "bead": "bd-3bbct" },
+    { "file": "_plans/_proposals/2026-07-04/02-anomalous-ready-unrefined-bead.md", "bead": "bd-fihkd" },
+    { "file": "_plans/_proposals/2026-07-04/03-stale-marketing-skills-backlog.md", "bead": "bd-ovcfc" },
+    { "file": "_plans/_proposals/2026-07-04/INDEX.md" }
+  ],
+  "slack": { "channel": "sofi", "status": "healthy", "ts": "1783119233.594329" }
+}

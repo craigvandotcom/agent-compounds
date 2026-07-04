@@ -1,6 +1,6 @@
 ---
 name: ac-pipeline
-description: End-to-end engineering pipeline orchestrator — chains align → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Single named goal, human gates at plan-approval and pre-merge; for unattended multi-item queue clearance use ac-loop. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".
+description: 'End-to-end engineering pipeline orchestrator — chains align → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Single named goal, human gates at plan-approval and pre-merge; for unattended multi-item queue clearance use ac-loop. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".'
 ---
 
 > **DEPRECATED — superseded by `ac-loop` (runtime conductor) and `ac-pipeline-builder` (doctrine).**

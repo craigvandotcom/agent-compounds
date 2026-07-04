@@ -1,6 +1,6 @@
 ---
 name: ac-registry-audit
-description: Make the skill/agent REGISTRY itself watertight — audit the prompt corpus (agent-compounds) for trigger collisions, divergent duplicates, dangling cross-refs, and doc↔disk drift, then apply mechanical fixes and gate the judgment calls. Triggers: 'registry audit', 'audit the skill registry', 'registry hygiene', 'watertight the registry', 'dedup the skills', 'skill collision check', 'clean up agent-compounds'. NOT for app source code (use ac-hygiene for codebase health, ac-review for a feature branch), pipeline state / beads / backlog (use ac-tidy), or a single domain audit of app code (use audit).
+description: 'Make the skill/agent REGISTRY itself watertight — audit the prompt corpus (agent-compounds) for trigger collisions, divergent duplicates, dangling cross-refs, and doc↔disk drift, then apply mechanical fixes and gate the judgment calls. Triggers: ''registry audit'', ''audit the skill registry'', ''registry hygiene'', ''watertight the registry'', ''dedup the skills'', ''skill collision check'', ''clean up agent-compounds''. NOT for app source code (use ac-hygiene for codebase health, ac-review for a feature branch), pipeline state / beads / backlog (use ac-tidy), or a single domain audit of app code (use audit).'
 ---
 
 **You are the conductor.** The target is the *registry itself* — the prompt/skill

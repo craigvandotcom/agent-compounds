@@ -1,6 +1,6 @@
 ---
 name: planning
-description: The scope-oscillation planning methodology (Jeffrey Emanuel) — the divergent-convergent refinement lenses the ac-plan-* pipeline skills draw on. This is a reference/methodology, NOT a direct entry point: to create a plan use ac-plan-init; to refine one use ac-plan-refine-internal (routine) or ac-plan-refine-external (high-stakes); for a final correctness pass use ac-plan-clean. Load this when you want the underlying lenses or are planning outside the pipeline.
+description: 'The scope-oscillation planning methodology (Jeffrey Emanuel) — the divergent-convergent refinement lenses the ac-plan-* pipeline skills draw on. This is a reference/methodology, NOT a direct entry point: to create a plan use ac-plan-init; to refine one use ac-plan-refine-internal (routine) or ac-plan-refine-external (high-stakes); for a final correctness pass use ac-plan-clean. Load this when you want the underlying lenses or are planning outside the pipeline.'
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

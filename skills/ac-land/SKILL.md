@@ -1,6 +1,6 @@
 ---
 name: ac-land
-description: The closing ritual — runs LAST, after merge. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect).
+description: 'The closing ritual — runs LAST, after merge. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: ''land the session'', ''bead land'', ''close out the bead work'', ''wrap up session'', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect).'
 ---
 
 
