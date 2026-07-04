@@ -131,6 +131,12 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 | **Review** | code correctness; blocking findings | VERDICT: APPROVED | `ac-review` |
 | **Merge** | rebase → **full `test:all` post-rebase (local)** → version bump → push → PR → CI-confirm → merge → tag | green + checks pass | `ac-merge` |
 | **Land** | close stragglers · session teardown/cleanup · reflect/compound | session closed cleanly | `ac-land` |
+| **Publish** *(manual, post-loop)* | SHA-pinned full-CI read + full device/browser QA + migration expand/contract → ship web + native | green-for-this-SHA + QA pass + migration-safe | `ac-publish` |
+
+> **Publish is NOT part of the autonomous loop.** The loop ends at Land; `ac-publish` is a separate,
+> **human-triggered** release gate (parallel-execution doctrine §6) — Craig decides when production
+> ships. It reads the loop-close full `test:all` (fired by `ac-land`) SHA-pinned to `main`; it never
+> bumps (that is `ac-merge`'s sole ownership) and never re-runs affected tests.
 
 ---
 
