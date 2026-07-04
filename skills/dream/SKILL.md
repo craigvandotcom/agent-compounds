@@ -74,6 +74,11 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   candidate *rule* (markdown fact `type: rule`) or *recipe* (jef-prompts entry).
 - **Cluster → skill-improvement:** several lessons orbiting one skill's friction →
   candidate edit to that skill.
+- **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
+  broken-intermediate commits, bad bead-sequencing, or work-breakdowns that needed
+  re-partitioning → target `ac-beadify` / `ac-bead-refine` (bead-level) or the `planning` /
+  `ac-plan-*` skills (plan-level). These own how work is split, so baking the fix here compounds
+  far more than a memory fact (parallel-execution doctrine §7).
 - **Cross-domain echo:** an app-local lesson that is really a neometa- or global-domain
   truth → candidate re-homed/generalized lesson.
 - **Trajectory:** lessons that together imply a missing capability → candidate new

@@ -60,6 +60,11 @@ Operating summary (details + edge cases live in context-engineering):
   made. Drop "interesting but theoretical."
 - **DRY signal:** anything the user said or corrected **twice** → it's a `recipe` or a
   `skill-improvement`, not just a fact.
+- **Decomposition signal:** a broken-intermediate commit, a bad bead-sequence, or a
+  work-breakdown that had to be re-partitioned mid-implementation → this is a
+  `skill-improvement` for the decomposition skills (`ac-beadify` / `ac-bead-refine`, or the
+  `planning` / `ac-plan-*` skills), **not** a one-off fact. These are the highest-leverage
+  upgrade targets — route the lesson INTO the skill, not into a memory note.
 
 ### 3. Classify each: `{type, domain}`
 Use the tables above. A lesson that fits no `{type, domain}` slot is a signal the taxonomy
