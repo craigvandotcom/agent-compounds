@@ -78,7 +78,8 @@ re-established. Every item is checkable; an auditor must cite file+line for a vi
       copies (verify by md5/readlink; `.agents/skills` and the retired `.gemini/memory`
       both failed this).
 - [ ] **Regeneration test:** deleting every projection file and re-running the renderer
-      (`deploy.sh` / per-harness adapter) reproduces them identically. Anything lost was a
+      (`harness-sync.sh --all`, which drives `deploy.sh` for the `.claude/` layer)
+      reproduces them identically — automated as `harness-sync.sh --all --check`. Anything lost was a
       hand-edit — the bug. Harness-specific logic/content lives in canon; only wiring/format
       is rendered (directive #1 / PLACEMENT). An unused, divergent projection is deleted, not
       re-migrated by hand.

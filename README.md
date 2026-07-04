@@ -104,7 +104,12 @@ Portable agent definitions, symlinked into `.claude/agents/`.
 
 ## Quick Start
 
-### Deploy with `deploy.sh` (recommended)
+### Deploy with `deploy.sh` (selective one-offs)
+
+> For the standard full sync — all targets, all harnesses (Claude/Codex/Droid/Pi skills,
+> agents, hooks, MCP) — use **`./harness-sync.sh --all`** instead; it drives deploy.sh
+> internally and runs daily via infra-sync. deploy.sh alone is for stamping a chosen
+> subset into one project's `.claude/`.
 
 ```bash
 # See everything available

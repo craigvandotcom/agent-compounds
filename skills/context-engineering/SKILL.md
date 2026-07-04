@@ -24,7 +24,8 @@ plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
    canonical artifact (skill body, agent stance, hook logic, identity content) is truth;
    every rendered form — `CLAUDE.md` shims, agent-def files, hook configs, MCP
    registrations — is a derived, regenerable cache. Never hand-edit a projection
-   (`deploy.sh` regenerates from canon); a drifted projection is the bug, not a source.
+   (`harness-sync.sh` — driving `deploy.sh` for the `.claude/` layer — regenerates from
+   canon); a drifted projection is the bug, not a source.
 2. **The context window is RAM.** Every token displaces another. The governing question
    for any layer, skill, or memory: *does this earn its place right now?* Optimize for
    **signal density** (behavior-changing information ÷ tokens), not raw word-count — and
@@ -131,8 +132,8 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
   identity (L0) changes ~never; conventions (L1) rarely; lessons (L3) constantly. If
   you're editing L0/L1 weekly, that content belongs in L3.
 - **Per-agent dirs are projections.** `.claude/`, `.codex/`/`.agents/`, `.factory/`
-  receive symlinks/shims from canonical sources (deploy.sh pattern); no agent keeps a
-  private write store.
+  receive symlinks/shims from canonical sources (`harness-sync.sh`, manifest-driven);
+  no agent keeps a private write store.
 
 ## PLACEMENT: which layer does an instruction go in
 

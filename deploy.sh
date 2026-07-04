@@ -2,6 +2,11 @@
 #
 # deploy.sh — stamp a project's .claude/ with agent-compounds tooling via symlinks.
 #
+# ROLE (since 2026-07-04): the .claude-LAYER renderer, driven by harness-sync.sh
+# (which then mirrors .claude into the Codex/Droid/Pi homes). For full-target syncs
+# use ./harness-sync.sh --all; call deploy.sh directly only for selective one-off
+# stamps on projects outside ac-deploy-targets.list (e.g. --skills a,b on simil8).
+#
 # Symlinks (never copies) so the canonical agent-compounds version is the single
 # source of truth. Refuses to overwrite a real file/dir already present at the
 # target (so an app's customized skill is never clobbered) — it only creates or

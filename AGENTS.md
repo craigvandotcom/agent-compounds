@@ -13,7 +13,7 @@
 | Field | Value |
 |---|---|
 | **Name** | agent-compounds |
-| **Stack** | Markdown skills/agents + bash (`deploy.sh`); no app runtime |
+| **Stack** | Markdown skills/agents + bash (`harness-sync.sh` → `deploy.sh`); no app runtime |
 | **Type** | Shared engineering tooling registry (skills, agents, prompt library, plans) |
 | **Purpose** | Canonical source of the neoMeta engineering skill/agent registry, symlink-deployed into every app |
 
@@ -21,9 +21,10 @@
 
 | Operation | Command |
 |---|---|
+| **Sync ALL harness homes (root + apps)** | `./harness-sync.sh --all` (drift check: `--check`) |
 | **List deployables** | `./deploy.sh --list` |
-| **Deploy to an app** | `./deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
-| **Dry run** | `./deploy.sh <target> --all -n` |
+| **Selective one-off stamp (non-target project)** | `./deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
+| **Dry run** | `./harness-sync.sh --all -n` / `./deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
 ## Distribution policy (2026-06-13, Craig-approved)
@@ -32,11 +33,15 @@
 app gets the entire registry (all skills + all agents) via `deploy.sh --all`. There is no
 selective per-app skill list anymore — availability is uniform.
 
-**Auto-propagation:** `infra-sync.sh` re-runs `deploy.sh --all` against each app in
-`infrastructure/ac-deploy-targets.list` on every sync. A newly added registry skill therefore
-lands in every internal app on the next sync with **no manual re-stamp** (deploy is idempotent:
+**Auto-propagation:** `infra-sync.sh` runs `harness-sync.sh --all` daily (06:30): for root +
+each app in `infrastructure/ac-deploy-targets.list` it runs `deploy.sh --all` (the `.claude/`
+layer) and then projects that layer into every other harness home — `.agents/skills`
+(Codex+Pi), `.factory/` (Droid, skills+droids+hooks+MCP), `.codex/` (generated agent TOMLs,
+hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored `harnesses.local.json`);
+hook wiring canon: `hooks/hooks.json`. A newly added registry skill therefore lands in every
+app AND every harness on the next sync with **no manual re-stamp** (idempotent:
 creates/refreshes symlinks only, never clobbers a real file — so local customizations like
-art-still's `design-system` survive).
+art-still's `design-system` survive; generated files are stamp-gated).
 
 **Exclusion (the one exception):** public OSS libraries that are cloned standalone are NOT
 stamped — e.g. `vitest-affected`. Symlinks into `../../../agent-compounds` would dangle for
