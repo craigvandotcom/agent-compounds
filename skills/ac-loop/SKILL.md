@@ -5,11 +5,21 @@ description: Autonomous bead-shipping loop — runs scheduled, drives orphan fix
 
 # ac-loop — Autonomous Shipping Loop
 
-**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same skills `ac-pipeline` uses, but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly. You pause only for genuine forks — decisions only Craig can make — and only when those are simple enough for Slack buttons.
+**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same skills `ac-pipeline` uses, but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only when those are simple enough for Slack buttons.
 
 When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal. When invoked by the scheduler (headless), `AskUserQuestion` posts to Slack as interactive buttons — the session suspends and resumes when Craig clicks. Either way, the behaviour is identical; the transport differs.
 
 > **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items or unrefined *plans*. But unrefined **beads** that are already *in* the pipeline — beadified epics (parent+children) or beads traceable to a plan (`_plans/` or `_plans/_done/`) — you DO refine-and-finish; only a truly raw lone capture stays gated. Craig controls what *enters* the pipeline (via beadify/plan sign-off); you drive everything already in it to merge, furthest-advanced first. Human-gated beads (`human-gate` label) are surfaced, not auto-closed.
+
+> **Orchestration contract — 3-level, non-negotiable.** You are a *conductor*, not a doer. Every
+> "Invoke `<skill>`" / "Run `<skill>`" step in this file means **spawn a fresh sub-session
+> (Task/subagent) whose prompt is the delegation text** — let it load that skill and run its own
+> workers, and you keep only the returned summary. You **never** read a phase skill's `SKILL.md`
+> (`ac-implement`, `ac-review`, `ac-merge`, `ac-beadify`, `ac-bead-refine`, `ac-land`) into your
+> OWN context — that collapses to 2-level and bloats the conductor with every phase's skill +
+> working detail until it compacts mid-run. Orchestrator holds *decisions*; sub-sessions hold
+> *skills + file contents* (`context-engineering`). If you catch yourself about to Read a phase
+> skill, stop and spawn instead.
 
 ---
 
@@ -456,7 +466,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Single-branch rule** — join the open wave, never create a second
-- **Delegate, don't re-implement** — call `ac-implement`, `ac-land`, `ac-review`, `ac-merge`
+- **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-merge`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
 - **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
 - **ARIA gating** — `AskUserQuestion` only for simple, bounded forks. Everything else is advisory
 - **Persistent nudge** — re-nudge every session until Craig acts. Silence enables bottlenecks
