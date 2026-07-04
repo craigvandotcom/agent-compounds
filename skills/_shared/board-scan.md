@@ -1,8 +1,8 @@
 # Shared board scan (the pipeline read layer)
 
 **The single way to read pipeline state — beads + plans + backlog — into a structured
-"board."** `ac-align`, `ac-tidy`, and `ac-human-session` all read THIS, then apply their own
-lens. **Share the read; never the judgment.** The three scans are defined ONCE here so they
+"board."** `ac-align`, `ac-tidy`, `ac-human-session`, and `ac-dashboard` all read THIS, then
+apply their own lens. **Share the read; never the judgment.** The three scans are defined ONCE here so they
 can't drift across the skills that consume them.
 
 This file owns the *read* (what to scan, how to categorize). Each consumer owns the *lens*
@@ -97,6 +97,7 @@ backlog:  { active[], pool[], candidates[] }   # candidates = status:candidate
 | **`ac-align`** | strategy fit · `pool → active` promotion · sequencing | `_strategy/` |
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), CI (`gh run list`), prod health, org-wide `human-gate` sweep |
+| **`ac-dashboard`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), CI (`gh run list`) |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.

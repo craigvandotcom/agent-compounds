@@ -36,6 +36,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
 | **ac-human-session** | Human command center — surfaces only work at a human gate (blockers, plans to approve, hopper), conducts the sit-down |
+| **ac-dashboard** | Read-only full-board dashboard — backlog/plans/beads/WIP at a glance, both sides of the loop boundary; renders, never acts |
 
 **Engineering** (promoted from body-compass-app, the canonical donor)
 | Skill | What it does |

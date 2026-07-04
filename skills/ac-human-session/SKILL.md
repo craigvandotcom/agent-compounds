@@ -226,4 +226,4 @@ AskUserQuestion(
 
 ---
 
-_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-loop`. To run the agent pipeline: `/ac-pipeline`._
+_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-loop`. To run the agent pipeline: `/ac-pipeline`. To just SEE the whole board (read-only, loop side included): `/ac-dashboard`._
