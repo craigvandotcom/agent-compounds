@@ -191,6 +191,7 @@ Optimize the bead dependency graph, ordering, and granularity. Your only verbs: 
    - Are there unnecessary dependencies? (Bead A depends on B but doesn't actually need it)
    - Is the critical path optimal? Could reordering unblock more parallel work?
    - **Inverted-scope check (read the AC *text*, not just the graph):** does a bead's acceptance criteria describe state or behavior that can only exist AFTER one of its own *dependents* ships, or that is ALREADY implemented in landed code? This is a topology-invisible defect — the graph looks acyclic, but the bead is hollow as ordered. Trace each AC to the file/type that owns it (you have codebase access — grep it). If the owning code lives in a downstream bead, the dependency is **backwards**: flag Critical and propose reversing the edge + repartitioning the ACs (move the behavior-owning ACs to the bead that owns the code; strike ACs whose code already shipped). Concrete cost: l73.11 (event source) blocked l73.12 (coordinator) but l73.11's headline ACs (stale-finalise, interruptionStartedAt persistence) were owned by l73.12 or already shipped in l73.8/l73.9 — missed in the prior refine pass, surfaced only at implement-time pre-flight, and cost a mid-session dependency-reversal refinement.
+   - **Commit-safety check (apply beads in dependency order):** does every bead leave the branch green + shippable? A bead that removes-before-adding, or whose commit would leave `main` broken until a *later* bead lands, is mis-sequenced → flag High and propose a reorder (add-new-before-remove-old; migrations additive-first) or a feature-flag / short-lived sub-branch escape hatch.
 3. Check granularity:
    - Beads that touch >5 files or span multiple concerns -> split candidate
    - Beads that are trivial (<30 min) with no dependents -> merge candidate
@@ -383,7 +384,8 @@ Verify:
 - [ ] Beads are self-contained (no need to consult original plan — plan should already be archived)
 - [ ] Dependencies correctly mapped (`br dep cycles` returns clean)
 - [ ] Tasks appropriately granular for mechanical implementation
-- [ ] Test requirements included in each bead
+- [ ] Test requirements included in each bead — with a declared **test scope** (paths/globs for affected-tests)
+- [ ] Each bead is independently **green + shippable**; bead order is **commit-safe** (add-before-remove; migrations additive-first)
 - [ ] Comments explain reasoning/justification
 - [ ] Acceptance criteria are clear and verifiable
 - [ ] `unrefined` label removed from all reviewed beads

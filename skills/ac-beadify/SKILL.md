@@ -100,6 +100,10 @@ If `$ARTIFACTS_DIR/progress.md` exists, parse it to recover state. If beads alre
 3. Identify task-level items within each epic
 4. Identify dependencies between tasks
 5. Identify priority indicators (P0/P1/P2)
+6. Order beads so each commits safely in sequence — every bead independently green +
+   shippable (branch/user-surface never left half-wired), add-new-before-remove-old,
+   migrations additive-first. Atomic-change escape hatch: a feature flag, or (rare) a
+   short-lived sub-branch.
 ```
 
 ### Present Proposed Structure
@@ -197,7 +201,8 @@ Use only the `br` tool to create and modify beads and add dependencies.
 Each bead description must be **self-contained**:
 
 - Clear acceptance criteria
-- Test requirements included
+- Test requirements included — **plus a declared test scope**: the file paths/globs this bead
+  touches, so its per-bead (Tier-1) check runs only the affected tests (feeds `vitest-affected`)
 - No need to reference original plan
 - "So detailed that we never need the plan again"
 - Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context

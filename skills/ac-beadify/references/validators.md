@@ -68,7 +68,7 @@ Check the proposed dependency graph for correctness — missing links, wrong ord
 
 ## Check
 
-Trace the dependency graph for correctness: are links genuine? Are any missing or unnecessary? Could reordering unblock more parallel work? Any cycles? Is the critical path reasonable?
+Trace the dependency graph for correctness: are links genuine? Are any missing or unnecessary? Could reordering unblock more parallel work? Any cycles? Is the critical path reasonable? **Is the commit order safe** — applied in dependency order, does every bead leave the branch green + shippable (add-new-before-remove-old, migrations additive-first)? Flag any ordering that would leave `main` broken between beads.
 
 You have codebase access. Read referenced files to verify what actually exists vs what needs to be created. Use your judgment on what matters most for a sound dependency structure.
 
