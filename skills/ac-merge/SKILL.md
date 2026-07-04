@@ -136,22 +136,25 @@ AskUserQuestion(
 )
 ```
 
-### Quality Gate
+### Rebase on Main (first — post-rebase truth)
 
-```bash
-# Run project quality gate (see AGENTS.md > Project Commands > Quality gate)
-```
-
-**If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
-
-### Rebase on Main
+Rebase BEFORE the quality gate: `main` is what actually merges, so the gate must run on the
+rebased state, not the pre-rebase branch (through-thread: post-rebase truth).
 
 ```bash
 git fetch origin main
 git rebase origin/main
 ```
 
-**If conflicts:** Resolve them, run quality gate again, then continue.
+**If conflicts:** Resolve them, then run the quality gate below.
+
+### Quality Gate (post-rebase)
+
+```bash
+# Run project quality gate (see AGENTS.md > Project Commands > Quality gate)
+```
+
+**If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
 
 ### QA Smoke Gate (conditional — safety net)
 

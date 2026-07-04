@@ -263,7 +263,8 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
   changes here once; the conductor reads it.
 - **Stay thin / map not territory.** This doc names stages and gates; it never restates a
   stage's internal logic. Selection logic lives in `_shared/verification-gate.md`; QA method
-  in `_shared/qa-shared.md`; session teardown in `_shared/session-teardown.md`.
+  in `_shared/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
+  `_shared/session-teardown.md` is *planned* — see the conformance checklist, not yet built).
 - **Naming.** `ac-*` = the pipeline family; `-builder` = the doctrine/method meta-skill
   (cf. `skill-builder`, `agent-builder`).
 
@@ -286,5 +287,5 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - Runtime conductor: `ac-loop/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
-- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · `_shared/session-teardown.md` (cleanup)
+- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · `_shared/session-teardown.md` (cleanup — *planned*, not yet built)
 - Context/memory doctrine (sibling): `context-engineering`
