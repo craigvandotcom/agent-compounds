@@ -94,11 +94,20 @@ LAST_RELEASE=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null || git de
 git diff --name-only "$LAST_RELEASE"..main -- supabase/migrations/
 ```
 
-Read each new migration. It must be **expand/contract** — additive and backward-compatible: add new,
-keep old; a column/table an *older* still-live native build reads must NOT be dropped, renamed,
-narrowed, or made `NOT NULL` without a default in this range. Any backward-incompatible change →
-**stop**, split into an expand-now / contract-later pair, and hold the contract until old builds age
-out. This gate blocks the ship; it is not a warning.
+Read each new migration and classify it per `rule-migrations-expand-contract`:
+
+- **Expand (additive):** must already be **applied to prod** (it was required before/at the merge of
+  its dependent code — `ac-merge`'s apply-timing gate). If one is merged-but-unpushed, apply it now
+  (collision-aware: `migration fetch` → review → `db push` → verify) before shipping.
+- **Contract (drop / rename / narrow / `NOT NULL` without default):** allowed **only as a deliberate,
+  explicitly-approved step after old native builds have aged out** — check the oldest still-live
+  native build version against what the contract removes; Craig approves the push. A contract that
+  hasn't met the aged-out bar stays **held** (merged, unapplied) — do not push it as part of this
+  release.
+- **Backward-incompatible change bundled into one migration:** → **stop**, split into an expand-now /
+  contract-later pair.
+
+This gate blocks the ship; it is not a warning.
 
 ## Phase 3: Fix-in-session
 

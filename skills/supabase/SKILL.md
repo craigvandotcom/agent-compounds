@@ -190,6 +190,11 @@ before `db push`. **Tier the discipline by blast radius — don't gate everythin
 | RLS / privilege / `GRANT` · destructive (`DROP`, type changes) · data backfill | **REQUIRED** — local-validate must pass before `db push` |
 | Additive + reversible (nullable column, new index, new table no one reads yet) | **Optional** — direct-to-prod-with-PITR is acceptable; forcing ceremony here is process for its own sake |
 
+**Apply-timing (WHEN to push — `rule-migrations-expand-contract`):** EXPAND (additive) is pushed
+**before/at the merge** of the code that depends on it (web deploys at merge against live prod
+schema); CONTRACT (destructive) is **held** and applied only after old native builds age out, via
+`ac-publish`'s migration gate. `db push` stays ASK-USER-FIRST either way — the rule times the ask.
+
 The gate (an app encodes this as one script — e.g. `pnpm db:verify`):
 
 ```bash

@@ -603,6 +603,17 @@ push collision-aware: `supabase migration fetch` → review the diff → `db pus
 in the merge summary so it isn't silently forgotten; do not claim the schema change "shipped"
 until the push is done and verified.
 
+**Apply-timing gate (expand/contract — `rule-migrations-expand-contract`).** Web deploys to
+prod AT merge, so code that *depends* on a migration must not go live before its schema does:
+
+- **EXPAND (additive) migration that merged code depends on:** it must be applied **before or
+  at this merge**. If still unpushed, ask (headless loop → Slack buttons): *"Wave depends on
+  unpushed expand migration `<file>` — Push to prod now / Merge anyway (dependent code path is
+  flag-gated OFF) / Hold the wave."* Do not merge live-dependent code over an unpushed schema.
+- **CONTRACT (drop/rename/narrow/NOT NULL-no-default):** never apply at merge. It merges as a
+  *held* migration and is applied later via `ac-publish`'s migration gate, after old native
+  builds age out. If a wave bundles contract DDL into an expand migration, split it first.
+
 ### Verify the Deploy Actually Shipped
 
 If the project deploys on push to main (Vercel: `vercel.json` present or a known Vercel
