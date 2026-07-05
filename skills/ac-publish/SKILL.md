@@ -18,9 +18,10 @@ build/sign/upload is owned by `ac-distribute` — you **call** it, never inline 
 
 > **⚠ Web already deploys at merge.** `ac-merge` triggers a Vercel prod deploy on every wave merge,
 > autonomously — so **web content is already live** by the time you run. You are the definitive gate
-> for the **native** ship and the migration/QA **checkpoint**; you do NOT gate web content. A
-> migration that must be gated for web has to be caught pre-merge (this asymmetry is an open
-> doctrine question — see the plan §6 note).
+> for the **native** ship and the migration/QA **checkpoint**; you do NOT gate web content. Web is
+> protected upstream instead: `ac-merge`'s apply-timing gate (`rule-migrations-expand-contract`)
+> ensures an EXPAND migration is pushed before/at the merge of code that depends on it, so live web
+> code never runs ahead of prod schema.
 
 ---
 

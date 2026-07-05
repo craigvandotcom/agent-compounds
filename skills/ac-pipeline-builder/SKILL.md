@@ -277,7 +277,7 @@ The doctrine is the target; these stage edits bring reality into line:
 - [x] **Verify gate** — `_shared/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
 - [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner (this sweep, 2026-07-03).
 - [ ] **Land refocus** — strip 1b `test:all` + 1c UI suite; add scoped `_shared/session-teardown.md`; reassign push to merge. (tracked: Wave B plan — land refocus — restructure, not sweep)
-- [ ] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (tracked: Wave B plan — land refocus — restructure, not sweep)
+- [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
 - [ ] **QA placement** — retire `ac-land` 1c; one exhaustive browser crawl at publish. (tracked: Wave B plan — land refocus — restructure, not sweep)
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
 
