@@ -285,6 +285,14 @@ taste/product forks in an autonomous run (user not present) → `-t decision
 sweep on a question. Dedupe via `br search` first; nits stay in the report
 (hygiene is the highest inflation risk — a bead is something you'd schedule).
 
+**Bead bodies follow the template at creation** (bead-conventions § Body
+template): typed headers (`## Steps to Reproduce` for bugs, `## Acceptance
+Criteria`, `## Test Scope` with grep-verified anchors, `## Success Criteria` on
+the epic) plus a durable evidence pointer (the run's PR, not `$ARTIFACTS_DIR`
+paths — those are deleted at Cleanup). You hold the finding's evidence RIGHT NOW;
+writing the full body costs a minute here and a full refine round later. The
+in-session refine step then verifies instead of authoring.
+
 **Per-run epic:** if this run created 2+ beads, group them under one epic
 (`br create -t epic "Hygiene <date> — deferred findings"`, children linked) so the
 batch is refined together in-session (see "Refine the Run's Beads" below) and

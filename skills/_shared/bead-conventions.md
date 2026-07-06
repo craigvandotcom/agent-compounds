@@ -32,6 +32,32 @@ file the `bug` directly. `investigation` is only for genuine unknowns.
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `tooling` | Infra/toolchain work, not app code |
 
+## Body template (the `br lint` contract)
+
+`br lint` checks each bead's DESCRIPTION for per-type template sections (fuzzy
+phrase match — a literal markdown header is the reliable form). **Emit these at
+CREATION time** — a later refine pass verifies them, it must not have to author
+them (that's how a 2026-07-06 refine run spent its whole first round doing
+creation's job):
+
+| Type | Required header(s) |
+| ---- | ------------------ |
+| `bug` | `## Steps to Reproduce` + `## Acceptance Criteria` |
+| `task` / `feature` | `## Acceptance Criteria` |
+| `investigation` | the open question + `## Acceptance Criteria` (exit criteria: what answers it) |
+| `decision` | the pre-staged memo (context · options · recommendation — see below) |
+| `epic` | `## Success Criteria` |
+
+Plus, for every implementable bead (finding-sourced ones especially):
+
+- **`## Test Scope`** — the file(s)/describe(s) a validator runs. Name real
+  anchors: grep first, never cite a describe block you haven't seen (three
+  beads in the same refine run cited nonexistent blocks).
+- **Evidence** — file:line refs verified against the CURRENT default branch,
+  plus a durable pointer (PR URL, commit sha) — never a run-temp artifact path.
+- **Falsifiable ACs** — a criterion that both branches of a choice satisfy
+  gates nothing; pick the branch or split the criterion.
+
 ## Decision beads (`-t decision` + `human-gate` + assignee)
 
 The contract that keeps autonomous sweeps safe:
