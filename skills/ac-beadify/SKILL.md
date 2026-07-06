@@ -198,9 +198,14 @@ Use only the `br` tool to create and modify beads and add dependencies.
 
 ### Bead Content Requirements
 
-Each bead description must be **self-contained**:
+Each bead description must be **self-contained** (typed headers per
+`_shared/bead-conventions.md` §Body template — `## Acceptance Criteria`,
+`## Test Scope`, `## Steps to Reproduce` on bugs — emitted at creation, so
+`br lint` passes and refine verifies instead of authoring):
 
-- Clear acceptance criteria
+- Clear acceptance criteria — each one with a **nameable check** (the command,
+  test, or observation that verifies it; an AC no one can name a check for is
+  not an AC)
 - Test requirements included — **plus a declared test scope**: the file paths/globs this bead
   touches, so its per-bead (Tier-1) check runs only the affected tests (feeds `vitest-affected`)
 - No need to reference original plan

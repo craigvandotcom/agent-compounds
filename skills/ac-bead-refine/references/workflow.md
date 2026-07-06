@@ -117,7 +117,7 @@ Cross-reference every bead against the original plan (if available) to ensure NO
 
 ## Method
 
-Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. Either way, check each bead for self-containment: could an engineer implement it without external context? Are acceptance criteria specific and verifiable? Use your judgment on what matters most.
+Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). Named test anchors (files, describe blocks) must exist — grep before citing. Use your judgment on what matters most.
 
 ## Output
 

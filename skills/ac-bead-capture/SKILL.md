@@ -65,7 +65,9 @@ nearest parent that has one, noting the intended home.
    usually isn't); provenance labels only where true.
 4. **Create:** `br create "<imperative title>" -t <type> --labels "<labels>"
    --description "<context: what/why/where, user's words preserved>"` — set
-   `--priority` only if the user signaled urgency; default is fine.
+   `--priority` only if the user signaled urgency; default is fine. Body carries
+   the typed headers from conventions §Body template (`## Steps to Reproduce`
+   for bugs, `## Acceptance Criteria`, …) — emit them at creation.
 5. **Public-db rule:** agent-compounds beads publish — neutral title,
    pointer-only for anything sensitive (conventions §Public-repo rule).
 6. **Commit** `.beads/` in the target repo (own repo, own commit).

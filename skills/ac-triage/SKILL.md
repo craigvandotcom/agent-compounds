@@ -136,7 +136,11 @@ conventions (authority: `_shared/bead-conventions.md`):
 ```
 br create -t bug --labels triage,<source>  \
   --title "<crash culprit / error signature> (<freq>× / <users> users)" \
-  --description "<source link · first-seen release · suspected wave · top stack frames · repro hints>"
+  --description "<source link · first-seen release · suspected wave · top stack frames
+                 ## Steps to Reproduce (repro hints / crash path)
+                 ## Acceptance Criteria (crash signature gone in next release's source)>"
+# body headers per _shared/bead-conventions.md §Body template — emit at creation
+
 ```
 
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
