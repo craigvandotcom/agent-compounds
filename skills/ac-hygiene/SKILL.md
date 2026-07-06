@@ -287,7 +287,7 @@ sweep on a question. Dedupe via `br search` first; nits stay in the report
 
 **Per-run epic:** if this run created 2+ beads, group them under one epic
 (`br create -t epic "Hygiene <date> — deferred findings"`, children linked) so the
-batch is refined together later (`ac-bead-refine` drops the `unrefined` labels) and
+batch is refined together in-session (see "Refine the Run's Beads" below) and
 shipped by the loop as orphan fixes. 0–1 beads → no epic (don't inflate).
 
 **If items remain (user present):**
@@ -350,6 +350,23 @@ git switch main && git pull
   locally (`git switch main && git merge --ff-only hygiene/{date}`) and delete the branch.
 - CI fails → fix on the branch and re-push; if unfixable this session, leave the PR open,
   file a `qa-blocker`-style bead, and report it — never merge red, never delete unmerged work.
+
+### Refine the Run's Beads (in-session, after the merge)
+
+If this run created an epic (2+ beads), run **`ac-bead-refine`** scoped to that epic NOW —
+before the report, not "later." The conductor still holds every finding, verdict, and triage
+rationale in context; that is exactly what refinement needs, and a deferred refine session
+re-derives it from cold (or worse, can't). Two run-specific notes for the reviewer prompts:
+
+- Bead descriptions were written mid-run — file/line references predate the merged fixes.
+  Reviewers must re-verify every reference against merged `main` and correct drift.
+- The refine reviewers work in the MAIN checkout (post-merge), not the hygiene worktree
+  (already removed by now).
+
+Headless runs included — refinement is agent-satisfiable (genuine design forks already went
+through this run's decision gates or carry `human-gate`). 0–1 beads → skip (nothing to
+converge). On convergence the `unrefined` labels come off, leaving the epic implement-ready
+for the loop.
 
 ### Report
 
@@ -421,7 +438,7 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
 - **Incremental in the loop, exhaustive at the boundary** — rounds gate on type-check + lint + affected tests; the FULL suite runs exactly once, at Phase 5 pre-merge (BLOCKING)
-- **Deferred beads get an epic per run** (2+ beads) — batch-refined later, shipped as orphans by the loop
+- **Deferred beads get an epic per run** (2+ beads) — refined in-session post-merge (`ac-bead-refine` while the findings are still in context), shipped as orphans by the loop
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Don't invent issues** — if the codebase is clean, say so and finish early
 
