@@ -62,17 +62,29 @@ ARTIFACTS_DIR=/tmp/hygiene-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$ARTIFACTS_DIR"
 ```
 
-### Create the Hygiene Branch
+### Isolate in a Worktree, then Create the Hygiene Branch
 
-All auto-applied fixes ride a run branch, never main directly (branch policy:
-`ac-pipeline-builder` § Branch policy):
+**Run in a git worktree.** A full run holds HEAD on its branch for *hours*; in a shared repo a
+human or a scheduled agent (triage/loop) will commit to the same checkout and their commits
+land on the hygiene branch, entangling the PR. A worktree gives the run its own checkout so
+that can't happen. (Learned the hard way 2026-07-06: a run's branch absorbed 4 concurrent
+human commits.)
 
 ```bash
-git status --porcelain   # must be clean — if not, STOP and surface to user (blocking)
-git switch -c hygiene/$(date +%Y%m%d)
+# Scoped dirty-tree check — only SOURCE paths block; harness/memory/state files are always dirty
+git status --porcelain -- '*.ts' '*.tsx' '*.js' '*.sql' '*.css' package.json   # must be clean, else STOP (blocking)
 ```
 
-If the branch already exists (re-run same day): append `-2`, `-3`, ….
+All auto-applied fixes ride a run branch, never main directly (branch policy:
+`ac-pipeline-builder` § Branch policy). Create it in an isolated worktree:
+
+```bash
+git worktree add -b hygiene/$(date +%Y%m%d) ../hygiene-run origin/main   # isolated checkout off fresh main
+cd ../hygiene-run
+```
+
+If the harness supplies worktree isolation directly, use that instead. If the branch already
+exists (re-run same day): append `-2`, `-3`, ….
 
 ### Initialize Consensus Registry
 
@@ -182,9 +194,14 @@ If checks fail, revert the breaking fix and note it as non-auto-fixable.
 Then commit the round's fixes on the hygiene branch (small, revert-friendly commits):
 
 ```bash
-git add <specific files>
+git add <specific files>   # NEVER `git add -A` / `git add .` — it sweeps untracked orphans
 git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}"
 ```
+
+> **Stage the exact files you changed — never `git add -A`.** A run may sit next to untracked
+> orphans (a stale `.next.stale-*` build dir, scratch output); `git add -A` commits them. On
+> 2026-07-06 that swept a 2.4 GB build dir into a commit and broke the Turbopack build. Track
+> your changed paths (from the implementer reports) and stage those explicitly.
 
 **Defer remaining findings (DO NOT ask user per-round):**
 

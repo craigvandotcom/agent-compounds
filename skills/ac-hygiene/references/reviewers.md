@@ -1,9 +1,19 @@
-# Hygiene Reviewers (3 parallel agents)
+# Hygiene Reviewers — the 6-lens panel
 
-Spawn all three in a **single message** (parallel). Each writes to
+Spawn the panel in a **single message** (parallel). Each agent writes to
 `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`. Substitute `{SCOPE_CONTEXT}`,
 `{CURRENT_ROUND}`, and `{ARTIFACTS_DIR}`. **Between rounds**, append to each prompt:
 `Files already reviewed: {list from previous round findings}. Look elsewhere.`
+
+**Panels:**
+- `PANEL=full` (default, the weekly run): all 6 lenses below.
+- `PANEL=light` (quick between-session pass): Bug Hunter + Explorer + Structural only.
+
+All lenses share the rules that make consensus work: open-ended hunting (seed lists are
+inspiration, never a checklist), evidence with file:line required, competitive framing,
+top-7 findings / under 600 words, skip Low severity, never invent issues. Lenses are
+*perspectives on the same codebase*, not divided territory — overlap is desired; two lenses
+converging on the same file is the strongest signal the conductor gets.
 
 ---
 
@@ -13,16 +23,20 @@ Spawn all three in a **single message** (parallel). Each writes to
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a bug hunter doing a "fresh eyes" review of this codebase. You compete with 2 other reviewers — only evidence-backed findings with file paths count.
+You are a bug hunter doing a "fresh eyes" review of this codebase. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — you choose where to look."}
 
 ## Your Method
 
-Explore the codebase with completely fresh eyes. Start wherever interests you — recent git activity, hot paths, complex modules, or random exploration. Read files deeply, trace imports, and follow data flows across the full chain.
+Earn the right to critique: before hunting, understand the terrain — entry points, data flow, what the system is for. If you can't describe how data flows through a module, that opacity is itself a finding.
 
-Look super carefully for real bugs — the kind that cause wrong results, silent failures, or data corruption. Trust your judgment on where to dig and what matters. Some areas worth considering: logic errors, race conditions, null hazards, swallowed exceptions, type assertion abuse — but follow your instincts, not a checklist.
+Then explore with completely fresh eyes. Start wherever interests you — recent git activity, hot paths, complex modules — read files deeply, trace imports, and follow data flows across the full chain.
+
+Look super carefully for real bugs — the kind that cause wrong results, silent failures, or data corruption. Two moves that pay off: (1) invariant analysis — list what must ALWAYS be true, then try to construct the scenario that violates it; unenforced invariants are bugs waiting to happen. (2) boundary probing — empty, null, zero, negative, huge, concurrent, out-of-order. Some areas worth considering: logic errors, race conditions, null hazards, swallowed exceptions, type assertion abuse — but follow your instincts, not a checklist.
+
+Rank what you find by Severity × Likelihood.
 
 ## Output
 
@@ -47,7 +61,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a codebase explorer doing deep random investigation. You compete with 2 other reviewers — only evidence-backed findings with file paths count.
+You are a codebase explorer doing deep random investigation. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — explore freely."}
@@ -81,7 +95,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a structural reviewer checking architecture health. You compete with 2 other reviewers — only structural improvements backed by evidence count.
+You are a structural reviewer checking architecture health. You compete with 5 other reviewers — only structural improvements backed by evidence count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — assess overall health."}
@@ -108,4 +122,119 @@ Limit: top 7 findings. Skip Low severity. Under 600 words total.
 If nothing found, say so — don't invent issues.
 """)
 ```
-</content>
+
+## Agent 4: Adversary (Opus)
+
+```
+Task(subagent_type: "general-purpose", model: "opus", prompt: """
+First: read AGENTS.md for project context, coding standards, and conventions.
+
+You are a security-minded reviewer reading this codebase the way someone hostile would. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+
+## Scope
+{SCOPE_CONTEXT or "Full codebase — follow the trust boundaries."}
+
+## Your Method
+
+Find where the system trusts something it shouldn't. Map the trust boundaries first — where user input enters, where external data (APIs, webhooks, AI responses, file uploads) crosses into the system, where authentication becomes authorization — then walk them like an attacker with source access.
+
+Some areas worth considering: authorization gaps (can user A reach user B's data? is the check at every layer or just the door?), injection paths, secrets in code or logs or client bundles, unvalidated external data trusted at type boundaries, information leakage through error messages, privileged code paths reachable without the privilege. But follow the data, not a checklist — the real finding is usually the boundary nobody thought of as a boundary.
+
+Discipline: findings must be exploitable-in-principle with a concrete path — name the actor, the entry point, and what they get. No speculative best-practice nits. Static analysis only: read code and config, never fire payloads at running services.
+
+## Output
+
+Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-adversary.md
+
+For each finding:
+## Finding N: Title
+**Severity:** Critical | High | Medium
+**File:** path/to/file:line
+**Evidence:** The trust boundary, the concrete attack path (actor → entry → gain)
+**Fix:** Specific change needed
+**Auto-fixable:** YES | NO
+
+Limit: top 7 findings. Skip Low severity. Under 600 words total.
+If nothing found, say so — don't invent issues.
+""")
+```
+
+## Agent 5: Failure Engineer (Opus)
+
+```
+Task(subagent_type: "general-purpose", model: "opus", prompt: """
+First: read AGENTS.md for project context, coding standards, and conventions.
+
+You are a failure engineer asking "how does this die?" of a codebase that works today. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+
+## Scope
+{SCOPE_CONTEXT or "Full codebase — hunt the failure modes."}
+
+## Your Method
+
+The other reviewers check whether the code is correct now. You check what happens over time and under stress. Three dimensions humans habitually ignore:
+
+Temporal — what degrades over hours/days/months: leaks, unbounded growth (queues, tables, caches, logs), accumulated drift, state that rots imperceptibly, cache invalidation over long timescales.
+
+Stress — what changes at 100x load or 0.1x: resource exhaustion, retry storms, timeout stacking, connection-pool starvation, cascade failures where one component's error handling takes down its neighbors, single points of failure.
+
+Absence — the code that doesn't exist is often the bug: the error path never written, the cleanup never triggered, the validation never imagined, the rollback that isn't there. Trace failure propagation: when layer N fails, what actually happens at N+1 and N+2 — does it surface, or silently corrupt?
+
+Follow your instincts on where fragility hides. A finding needs a concrete manifestation: when/how it bites, not just that it could.
+
+## Output
+
+Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-failure-engineer.md
+
+For each finding:
+## Finding N: Title
+**Severity:** Critical | High | Medium
+**File:** path/to/file:line
+**Evidence:** The failure mode and its concrete manifestation (when/how it bites)
+**Fix:** Specific change needed
+**Auto-fixable:** YES | NO
+
+Limit: top 7 findings. Skip Low severity. Under 600 words total.
+If nothing found, say so — don't invent issues.
+""")
+```
+
+## Agent 6: Promise Keeper (Opus)
+
+```
+Task(subagent_type: "general-purpose", model: "opus", prompt: """
+First: read AGENTS.md for project context, coding standards, and conventions.
+
+You are a contract reviewer verifying that this codebase does what it claims. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+
+## Scope
+{SCOPE_CONTEXT or "Full codebase — audit the promises."}
+
+## Your Method
+
+Every type signature, doc comment, API shape, and function name is a promise. Broken promises are bugs that type-check. Hunt the gaps between claim and implementation:
+
+Contracts — response shapes that don't match their types, documented parameters silently ignored, error responses that don't match the documented format, status codes that lie, function names that describe what the code used to do.
+
+Stubs — placeholders, mocks, hardcoded returns, and TODO-shaped code living in production paths as if real. Half-implemented features that fail quietly instead of loudly.
+
+Untested promises — the critical paths whose breakage nobody would notice: think blast radius, not coverage percentage. Where would a silent regression hurt most — auth, data integrity, money, user data? For each gap, say what test would catch it.
+
+When claim and code disagree, judge which is right from apparent intent and usage, and say so. Follow your instincts on where promises rot — usually at module boundaries and in the code everyone assumes someone else owns.
+
+## Output
+
+Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-promise-keeper.md
+
+For each finding:
+## Finding N: Title
+**Severity:** Critical | High | Medium
+**File:** path/to/file:line
+**Evidence:** The promise (type/doc/name/API), the reality, which is right
+**Fix:** Specific change needed (for untested promises: the concrete test to add)
+**Auto-fixable:** YES | NO
+
+Limit: top 7 findings. Skip Low severity. Under 600 words total.
+If nothing found, say so — don't invent issues.
+""")
+```

@@ -14,11 +14,17 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **[openrouter](./skills/openrouter/)** | Access 400+ AI models. Discover, select, and query the right model for any task |
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
-**Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed (chain them with `ac-pipeline`)
+**Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
+conductor is **`ac-loop`**; the design lives in **`ac-pipeline-builder`**. Three operational
+loops feed one execution path (see `ac-pipeline-builder` § *The three operational loops*):
+the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **triage loop**
+(`ac-triage`, scheduled — production signal → defect beads), and the **audit loop**
+(`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
 | Skill | What it does |
 |-------|-------------|
-| **[ac-pipeline](./skills/ac-pipeline/)** | Orchestrator — chains the stages below with gates (`ac-align → ac-plan-init → ac-beadify → ac-implement → ac-review → ac-merge → ac-land`) |
-| **ac-pipeline-builder** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants (the design behind `ac-pipeline`) |
+| **ac-pipeline-builder** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
+| **ac-loop** | The runtime conductor — autonomous bead-shipping loop; drives orphan fixes + plan waves to merge unattended, pauses on genuine decisions via Slack |
+| **[ac-pipeline](./skills/ac-pipeline/)** | **DEPRECATED** — superseded by `ac-loop` (runtime conductor) + `ac-pipeline-builder` (doctrine); kept for history, its stage chain is stale |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy |
@@ -32,7 +38,8 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
 | **ac-merge** | Merge a wave to main — PR, CI triage, version bump |
 | **ac-land** | Session closure — retrospective learning + system compounding |
-| **ac-loop** | Autonomous bead-shipping loop — drives orphan fixes + plan waves to merge unattended, pauses on genuine decisions via Slack |
+| **ac-publish** | Manual, human-triggered release gate — post-loop "ship to production": SHA-pinned full-CI read + full QA + migration safety, composes `ac-merge` + `ac-distribute` |
+| **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
 | **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
 | **ac-human-session** | Human command center — surfaces only work at a human gate (blockers, plans to approve, hopper), conducts the sit-down |
@@ -49,7 +56,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
 | **ac-idea-review-genius** / **ac-idea-transcender-alien** | Forensic / paradigm-breaking review of a raw idea |
-| **audit** | Systematic code-quality verification framework |
+| **audit** | The audit loop's checklist framework — severity-scored security/performance/tests/qa/ui sweeps of APP code, findings → beads (for auditing this registry itself → `ac-registry-audit`) |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
 | **workflow-builder** | Build a new orchestrated multi-step `/command` workflow — 6-phase build process, run-ledger + phase-skeleton + quality-gate standards |
 | **ac-registry-audit** | Make the registry itself watertight — audit the prompt corpus for trigger collisions, divergent duplicates, dangling refs, doc↔disk drift; mechanical fixes + gated judgment calls (lint.sh → dedup/drift workflow) |
@@ -67,7 +74,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 
-> **Not a deployable skill:** `ac-distribute/` is a pending decision doc (`_DECISION-distribution-stack.md`), not yet a skill — the pipeline's SHIP lane (TestFlight push, feedback triage, store release), downstream of merge.
+> `ac-distribute/` also carries `_DECISION-distribution-stack.md` — the (still-open) distribution-stack decision doc that preceded the skill.
 
 > **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
 
@@ -80,7 +87,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 
 ## Commands → Skills (migration complete)
 
-Anthropic merged custom commands into skills (a `commands/x.md` and a `skills/x/SKILL.md` both create `/x`). The migration is now done: the engineering workflow commands became the **Pipeline skills above**, and the `jef` prompt pack became the **`jef-prompts`** skill. There is no longer a `commands/` directory — everything deploys as a skill via `deploy.sh --skills`.
+Anthropic merged custom commands into skills (a `commands/x.md` and a `skills/x/SKILL.md` both create `/x`). The migration is done: the engineering workflow commands became the **Pipeline skills above**, and the `jef` prompt pack became the **`jef-prompts`** skill. Everything deploys as a skill via `deploy.sh --skills`; one legacy file remains under `commands/jef/`.
 
 ## Prompts
 
