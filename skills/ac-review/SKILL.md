@@ -286,7 +286,15 @@ summary. Harness-agnostic: plain `python3`, stdlib only.
   A reviewer that emits malformed JSON degrades to this same path (the script's per-file
   parse-guard counts it as missing) — so ignoring the schema can never silently pass.
 - **`auto_fix`** — the cascade is already applied (severity Critical/High, same-round consensus,
-  or cross-round consensus). These go to Phase 4 as-is.
+  or cross-round consensus). These go to Phase 4 as-is — with ONE conductor check:
+  a **performance** finding rated Critical/High whose evidence carries no quantified
+  impact estimate (N × unit cost weighed against the operation's real budget) is
+  DOWNGRADED to Medium and re-routed through the deferred/design-decision gate, with
+  the downgrade noted in the report. Perf severities are the least grounded — reviewers
+  pattern-match allocation/loop shapes without estimating magnitude (observed
+  2026-07-04: "Critical" on a ~sub-millisecond map copy whose own cited numbers
+  contradicted the rating, riding the cascade unchallenged). Correctness/security
+  severities are not subject to this check.
 - **`deferred`** — single-reviewer Medium/Low, no consensus; the script has already carried them
   into `consensus-registry.json` for cross-round matching. **Apply the design-decision gate
   yourself** — the one judgment the script can't make: a choice with no objectively superior

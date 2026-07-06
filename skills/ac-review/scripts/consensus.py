@@ -3,7 +3,9 @@
 
 Harness-agnostic (stdlib only, runs under bare /usr/bin/python3). Reads the
 round-{N}-{role}.json finding files emitted by the Phase-2 reviewers, dedups on
-file:line+category, detects same-round and cross-round consensus, applies the
+file:line+category (plus a same-location any-category secondary check —
+reviewers describe one defect with different slugs), detects same-round and
+cross-round consensus, applies the
 MECHANICAL auto-apply cascade from `_shared/review-consensus.md`, carries deferred
 findings forward in a consensus registry, and surfaces any missing reviewer
 (partial-failure) instead of silently dropping it.
@@ -84,6 +86,16 @@ def build(artifacts_dir, rnd):
     for f in findings:
         by_key.setdefault(f["_key"], []).append(f)
 
+    # Same-location secondary index: reviewers invent category slugs
+    # independently, so genuine multi-reviewer agreement on one file:line can
+    # hide behind three different slugs (observed 2026-07-04: normalize.ts:36
+    # flagged by 3 reviewers under 3 categories — the category-keyed pass left
+    # all three deferred). Location = the file:line half of the key.
+    by_loc = {}
+    for f in findings:
+        loc = f["_key"].rsplit("|", 1)[0]
+        by_loc.setdefault(loc, set()).add(f["_reviewer"])
+
     auto_fix, deferred = [], []
     for key, group in by_key.items():
         rep = max(group, key=lambda x: sev_rank(x.get("severity")))
@@ -93,6 +105,11 @@ def build(artifacts_dir, rnd):
             reasons.append("severity:{}".format(rep.get("severity")))
         if len(reviewers) >= 2:
             reasons.append("same-round-consensus:{}".format(",".join(reviewers)))
+        loc_reviewers = by_loc.get(key.rsplit("|", 1)[0], set())
+        if len(reviewers) < 2 and len(loc_reviewers) >= 2:
+            reasons.append(
+                "same-location-consensus:{}".format(",".join(sorted(loc_reviewers)))
+            )
         if key in prior_keys:
             reasons.append("cross-round-consensus:round-{}".format(prior_keys[key].get("round")))
         entry = {
