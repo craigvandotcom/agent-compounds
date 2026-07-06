@@ -368,6 +368,17 @@ Also read the plan file (`_plans/*.md`) if it exists for the original intent.
 
 Construct a structured PR body from the gathered context using the template in **`references/pr-body-template.md`** (Summary, Beads Completed, Changes, Test Coverage, Review).
 
+**The branch is the merge unit — include by default, gate on the full diff, surface the extras**
+(pipeline-builder Invariant 8). This wave branch may carry commits you didn't author — a
+concurrent session's fix, a scheduled triage/ops commit landed on the checked-out branch. Do
+**not** drop them because they're "not yours": the merge validates the *entire* branch diff as a
+unit (CI + review + gitleaks are the gate, not authorship). Before writing the body, diff the
+whole branch against main (`git diff --stat main...HEAD`) and **name any change beyond this
+wave's headline scope** — an `.env`/secret edit, a migration, a foreign commit — in a
+**"Also carried"** line of the PR body, so a human sees what actually shipped. Exclude a change
+only on a real signal (`WIP`/`DO-NOT-MERGE` marker, CI failure, gitleaks hit, explicit scope
+conflict), and when you do, **say so in the PR body** — never a silent drop.
+
 ### Create PR
 
 The wave branch name (e.g. `wave/042`) is just an identifier — it doesn't describe content. Derive the PR title from the version bump + a 4-7 word summary of what actually changed, scanned from commit subjects + the bead list.

@@ -140,6 +140,35 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 
 ---
 
+## The three operational loops
+
+Axiom 4's outer loop (product compounds) decomposes operationally into **three concurrent
+loops at different cadences and altitudes**. All three converge on beads (axiom 1) and are
+consumed by the same single conductor (`ac-loop`) — they differ in *what puts work on the
+board* and *how often*.
+
+| Loop | Altitude | Cadence | Puts work on the board via | Skills |
+|---|---|---|---|---|
+| **1 · Dev loop** | Build what we decided to build | Continuous (per human session / loop run) | human intent: strategy → plans → waves | `ac-align → ac-plan-* → ac-beadify` ┃ `ac-loop` conducts implement → verify → review → merge → land |
+| **2 · Triage loop** | Fix what reality reports | Scheduled daily (≥30 min before any loop run) | production signal: Sentry, TestFlight/ASC feedback, feedback reports (Supabase logs, PostHog, store reviews — planned) → defect beads / backlog candidates | `ac-triage` (inbound counterpart of `ac-distribute`) |
+| **3 · Audit loop** | Harden what we built | Periodic, human-triggered today (target: recurring — cadence TBD) | proactive senior-engineer sweeps: severity-scored findings → beads (epic → child beads, per the `ac-hygiene` pattern) | `audit` (security · performance · tests · qa · ui) + `ac-hygiene` (reuse/simplification) |
+
+- **Loop 1 is intent-driven** (the human decides what), **loop 2 is reactive** (users and
+  production decide what), **loop 3 is proactive** (the standard decides what — resilience,
+  reliability, security, performance beyond any single wave's scope).
+- **Find-and-file is the default.** Triage and audit *find and file* (beads with severity +
+  source labels); the dev loop ships the fixes. One sanctioned exception: `ac-hygiene`
+  auto-applies bounded cleanups (its severity/consensus rules) on a `hygiene/*` branch,
+  merged behind the full quality gate + CI; everything else it finds becomes a per-run
+  epic of beads.
+- The **inner loop** (axiom 4: land → reflect → dream) is orthogonal to all three — it
+  improves the *factory*, not the product. `ac-registry-audit` belongs to the inner loop
+  (it audits the skill corpus, not app code).
+- Housekeeping (`ac-tidy`) is not a fourth loop — it keeps the board itself clean so the
+  three loops read true state.
+
+---
+
 ## Invariants (load-bearing structural decisions)
 
 > Through-threads are universal — they apply to any pipeline. Invariants are specific structural choices *this* pipeline made, each with an explicit justification. Change an invariant here first; then bring stage skills into conformance.
@@ -191,6 +220,22 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 7. **Orphans before prep.** The orphan "maintenance wave" (ready fixes) ships before any
    expensive prep (`ac-beadify`/`ac-bead-refine`) for the next feature wave.
 
+8. **The branch is the merge unit; gate on the full diff, not authorship.** In a batched,
+   multi-agent flow most legitimate changes on a branch were **not** authored by whoever merges
+   it — concurrent sessions share the checkout, and a scheduled job (triage, an ops fix) commits
+   onto whatever branch happens to be checked out. So a merge **includes the whole branch by
+   default** and validates it *as a unit*: CI + full-diff review + secret-scan are the gate —
+   never "did I make this change." **Exclusion is a positive, logged exception**, triggered by a
+   real signal (a `WIP`/`DO-NOT-MERGE` marker, a CI failure, a gitleaks hit, or an explicit
+   scope conflict) — never a hunch about authorship. And **surface, don't silently decide**: the
+   PR body must name the cross-cutting changes the branch carries beyond its headline scope (an
+   `.env`/secret edit, a migration, a foreign commit from another session) so a human sees what
+   actually shipped. *Rationale — the asymmetry:* excluding a good change loses **recoverable**
+   work (it's still on the branch, the author notices); including a bad change ships a **defect**
+   silently. That asymmetry is defused by the gate + the visible manifest, **not** by trusting
+   authorship — which is why include-by-default is correct only when paired with a real gate and
+   a surfaced manifest. Binds `ac-merge`, `ac-hygiene`, `ac-review`, `ac-loop`.
+
 ---
 
 ## Cross-cadence schedule (the single home for scheduling rules)
@@ -207,6 +252,8 @@ skills) point here rather than restating times in more than one place.
 | Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` |
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-loop` run | scheduled, feeds beads ahead of shipping | `ac-triage` |
+| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 6-lens panel; fixes via `hygiene/*` branch + PR; deferred → epic beads | `ac-hygiene` |
+| Audit | **Not yet scheduled** — human-triggered today; checklists serve as reference depth behind the weekly hygiene panel | findings → beads, never fixes in place | `audit` |
 
 **Triage-before-loop ordering** is the one cadence rule with a *hard dependency* on another
 job (it must feed the board before the loop consumes it) rather than a fixed wall-clock slot.
@@ -223,6 +270,7 @@ failure never blocks shipping — this table is the cross-cutting reference poin
 | Work type | Branch | Who manages it |
 |---|---|---|
 | Code — implement → verify → review → merge | `wave/NNN` | ac-loop only |
+| Hygiene auto-fixes | `hygiene/YYYYMMDD` → PR → squash-merge (no version bump) | ac-hygiene only |
 | Plans, docs, backlog, bead captures | `main` — always | No branch, ever |
 
 Wave branches protect main from in-progress code and make the green-main invariant hold. That protection is code-specific — plans are markdown, they can't break a test. Branching for docs creates two parallel histories that need reconciling and is the source of the "simultaneous plan session created another branch" problem.

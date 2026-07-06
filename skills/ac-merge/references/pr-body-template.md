@@ -32,6 +32,16 @@ listed here instead of silently dropped. Populate with `br list --json --limit 1
 index("post-merge")) | {id, title}]'` — format as a checklist: `- [ ] {id}: {title}`.
 Omit this section entirely if the query returns an empty list.}
 
+## Also carried (beyond wave scope)
+
+{pipeline-builder Invariant 8 — the branch is the merge unit, so it may carry changes
+this wave didn't author (a concurrent session's fix, a scheduled triage/ops commit).
+Include them by default; surface them here so nothing ships unseen. Derive from
+`git diff --stat main...HEAD` + `git log --oneline main..HEAD` — list any change beyond
+the wave's headline scope: `- {commit-or-file}: {what it is} ({why it's here / bead})`.
+Note any deliberate EXCLUSION here too, with its reason (`WIP`/CI-fail/gitleaks/scope).
+Omit this section entirely if the branch carries nothing beyond its own beads.}
+
 ---
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
