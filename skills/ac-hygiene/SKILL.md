@@ -370,6 +370,10 @@ re-derives it from cold (or worse, can't). Two run-specific notes for the review
   Reviewers must re-verify every reference against merged `main` and correct drift.
 - The refine reviewers work in the MAIN checkout (post-merge), not the hygiene worktree
   (already removed by now).
+- Give reviewers the evidence, not just the beads: `$ARTIFACTS_DIR` still exists (Cleanup
+  runs later) — point the refine reviewers at the round findings files and consensus
+  registry so they verify beads against the ORIGINAL evidence and severity rationale,
+  not only against code.
 
 Headless runs included — refinement is agent-satisfiable (genuine design forks already went
 through this run's decision gates or carry `human-gate`). 0–1 beads → skip (nothing to
