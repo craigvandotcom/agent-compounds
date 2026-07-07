@@ -78,6 +78,29 @@ exhaustive and no "pass" is inferred. Then:
 
 Gains plateau after ~3 elevation cycles per surface — don't loop past diminishing returns.
 
+### Run tasks (whole-app mode)
+
+**Not the Conformance/Elevation ledgers above** — those are the audit's *findings* output
+(defects + scored surfaces). This is a separate, runtime **progress list** (`TaskCreate` /
+`TaskUpdate`) so a glance shows where a long whole-app crawl actually is — call it "run tasks"
+here to avoid colliding with the "ledger" term already owned by Conformance/Elevation. One task
+per major section, created at the start of the run:
+
+```
+TaskCreate("Baseline — read design.md + theme siblings + ui-audit.md")
+TaskCreate("Seed data — populate realistic account state")
+TaskCreate("Build coverage matrix — route × theme × viewport × data-state")
+TaskCreate("Sense — sensors per cell (contrast, hardcoded colour, token symmetry)")
+TaskCreate("Audit vs design.md — Phase A conformance + rubric, per cell")
+TaskCreate("Elevate — Phase B, two ledgers (Conformance + Elevation)")
+TaskCreate("Re-audit — re-run sensors + rubric on changed cells")
+TaskCreate("Verify — running in every theme/data-state; before/after artifacts; DoD checklist")
+```
+
+`TaskUpdate` each to `in_progress` on start and `completed` on finish; carry live detail (cell
+counts, finding counts) in the description. **Scoped (single-screen) mode is exempt** — it's a
+short, single-context loop where a run-tasks list would be ceremony, not clarity.
+
 ## The spec anchor — `CORE/design.md`
 
 The **baseline is the app's `CORE/design.md`** (Google `design.md` format: token

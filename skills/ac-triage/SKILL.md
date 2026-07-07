@@ -76,7 +76,26 @@ source that IS wired and fails to fetch escalates (see Phase 1).
 
 ## Method (per run)
 
+### Create Workflow Tasks (run ledger)
+
+**One task per phase below — headless runs still keep the ledger (proof-of-life for the
+run itself, not just its report).** Create these upfront; `TaskUpdate` each to
+`in_progress` when its phase starts and `completed` when it ends. `ac-bead-refine`,
+invoked mid-run in Phase 3c, keeps its own ledger — don't duplicate its rounds here.
+
+```
+TaskCreate("Scope + watermark — read CORE/triage.md, load per-source watermarks")
+TaskCreate("Fetch — pull new signal from enabled sources in parallel")
+TaskCreate("Cluster + dedupe — fingerprint raw events into findings")
+TaskCreate("Route defects → beads")
+TaskCreate("Route themes → backlog pool")
+TaskCreate("Group + refine — epic + ac-bead-refine in-session")
+TaskCreate("Report — write + Slack the run summary")
+```
+
 ### Phase 0 — scope + watermark
+
+**TaskUpdate("Scope + watermark", in_progress)**
 
 Read `CORE/triage.md` for enabled sources + per-app severity bar. Load the **last-run
 watermark per source** (timestamp / last issue id / cursor) from the app's
@@ -85,7 +104,11 @@ watermark per source** (timestamp / last issue id / cursor) from the app's
 only pulls NEW signal. Missing file or missing key = first run for that source: bounded
 lookback (e.g. last 7 days) to avoid a flood, then write the entry.
 
+**TaskUpdate("Scope + watermark", completed)**
+
 ### Phase 1 — fetch (per enabled source, in parallel)
+
+**TaskUpdate("Fetch", in_progress)**
 
 Pull signal since the watermark via each source's API (pointer-auth from CORE):
 
@@ -112,7 +135,11 @@ mark it `✗ FAILING (<error>)` in the Phase-4 report and file ONE ops bead
 — dedupe first, update the existing open ops bead if one already tracks this failure.
 Silent-skip is reserved for sources that were never wired.
 
+**TaskUpdate("Fetch", completed)**
+
 ### Phase 2 — cluster + dedupe (your core work — do NOT delegate)
+
+**TaskUpdate("Cluster + dedupe", in_progress)**
 
 - **Cluster** raw events into issues by fingerprint (Sentry already does this; do it for
   ASC/Supabase by error signature + location). N crash events of one bug = ONE finding.
@@ -127,6 +154,9 @@ Silent-skip is reserved for sources that were never wired.
   fingerprint/signature (for defects) AND open `status: candidate` pool items covering the
   same theme (for desires). Recurrence updates the existing bead/candidate (bump count /
   append evidence), it does NOT create a duplicate.
+
+**TaskUpdate("Cluster + dedupe", completed)**
+**TaskUpdate("Route defects → beads", in_progress)**
 
 ### Phase 3a — route DEFECTS to beads
 
@@ -162,6 +192,9 @@ br create -t bug --labels triage,<source>  \
 - Always include the **source permalink** (Sentry issue URL / ASC feedback id) and the
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.
+
+**TaskUpdate("Route defects → beads", completed)**
+**TaskUpdate("Route themes → backlog pool", in_progress)**
 
 ### Phase 3b — route THEMES to the backlog pool (feature requests + recurring patterns)
 
@@ -206,6 +239,9 @@ One-line intent, synthesized from {N} reports.
 - A candidate is NOT yet committed work — `ac-align` promotes it `pool → active` only after the
   human approves it (`status: candidate → captured`).
 
+**TaskUpdate("Route themes → backlog pool", completed)**
+**TaskUpdate("Group + refine", in_progress)**
+
 ### Phase 3c — group + refine (before the report)
 
 **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
@@ -224,6 +260,9 @@ that label comes from **this `ac-bead-refine` invocation**, on its own convergen
 like any other bead; triage's role is to run it in-session while the evidence is hot, not
 to earn the stamp on its behalf.
 
+**TaskUpdate("Group + refine", completed)**
+**TaskUpdate("Report", in_progress)**
+
 ### Phase 4 — report
 
 ```
@@ -240,6 +279,8 @@ The report must OUTLIVE the session — headless runs otherwise report to nobody
 to the app's **`.claude/state/triage-last-run.md`** and, when the app has a Slack channel
 configured, post it via `slack-send`. A run that found nothing new still writes the report
 (proof-of-life beats silence — an empty report and a dead scheduler look identical otherwise).
+
+**TaskUpdate("Report", completed)**
 
 ## Cadence
 

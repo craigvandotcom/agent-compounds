@@ -74,14 +74,22 @@ Only continue past this gate on explicit user override.
 
 ### Create Workflow Tasks
 
+**One task per major section — every section you'd report on gets its own ledger line.**
+
 ```
-TaskCreate(subject: "Phase 1: Analyze plan and propose structure", description: "Read plan, identify epics/tasks/deps, propose bead structure to user", activeForm: "Analyzing plan...")
+TaskCreate(subject: "Analyze plan and propose structure", description: "Read plan, identify epics/tasks/deps, propose bead structure to user", activeForm: "Analyzing plan...")
 
-TaskCreate(subject: "Phase 2: Validate proposed structure (parallel agents)", description: "Spawn 3 validators to check completeness, dependencies, and granularity", activeForm: "Validating structure...")
+TaskCreate(subject: "Validate proposed structure (3 parallel agents) + synthesize", description: "Spawn Completeness/Dependency/Granularity validators, read all findings, auto-apply Critical/High + consensus fixes", activeForm: "Validating structure...")
 
-TaskCreate(subject: "Phase 3: Create beads", description: "Execute br commands to create all beads with descriptions, deps, and comments", activeForm: "Creating beads...")
+TaskCreate(subject: "Present structure for user approval", description: "Ask about remaining single-validator findings, apply selections, gate on explicit approval before creating beads", activeForm: "Awaiting approval...")
 
-TaskCreate(subject: "Phase 4: Verify and report", description: "Run br list, dep cycles, lint, ready. Present summary.", activeForm: "Verifying beads...")
+TaskCreate(subject: "Create beads", description: "Execute br commands to create all beads with descriptions, deps, comments, and the unrefined label", activeForm: "Creating beads...")
+
+TaskCreate(subject: "Verify bead structure", description: "Run br list, dep cycles, lint, ready, dep tree, bv", activeForm: "Verifying beads...")
+
+TaskCreate(subject: "Archive source plan", description: "Update plan frontmatter to beadified, move to _plans/_done/, reference from epic bead", activeForm: "Archiving source plan...")
+
+TaskCreate(subject: "Report + handoff to ac-bead-refine", description: "Present beadification summary, proceed to bead refinement unless user opts out", activeForm: "Reporting...")
 ```
 
 ### Compaction Recovery
@@ -92,7 +100,7 @@ If `$ARTIFACTS_DIR/progress.md` exists, parse it to recover state. If beads alre
 
 ## Phase 1: Analyze Plan and Propose Structure
 
-**TaskUpdate(task: "Phase 1", status: "in_progress")**
+**TaskUpdate(task: "Analyze plan and propose structure", status: "in_progress")**
 
 ```
 1. Read the refined plan file
@@ -126,13 +134,13 @@ Epic: Dashboard
 
 **Save proposed structure to `$ARTIFACTS_DIR/proposed-structure.md` for validator reference.**
 
-**TaskUpdate(task: "Phase 1", status: "completed")**
+**TaskUpdate(task: "Analyze plan and propose structure", status: "completed")**
 
 ---
 
 ## Phase 2: Validate Proposed Structure (Parallel Agents)
 
-**TaskUpdate(task: "Phase 2", status: "in_progress")**
+**TaskUpdate(task: "Validate proposed structure (3 parallel agents) + synthesize", status: "in_progress")**
 
 **Spawn all 3 validators in a single message for parallel execution.** Use the prompts in **`references/validators.md`** (Completeness, Dependency, Granularity — all Sonnet), substituting `{PLAN_CONTENT}`, `{PROPOSED_STRUCTURE}`, and `{ARTIFACTS_DIR}`. Each writes findings to `$ARTIFACTS_DIR/validation-{role}.md`.
 
@@ -152,6 +160,9 @@ If validators found Critical/High issues, **revise the proposed structure** and 
 2. **Consensus-based:** 2+ validators independently flagged the same issue (regardless of severity) — multi-validator agreement is high-signal
 
 **Apply these immediately. Log them as "Auto-applied".**
+
+**TaskUpdate(task: "Validate proposed structure (3 parallel agents) + synthesize", status: "completed")**
+**TaskUpdate(task: "Present structure for user approval", status: "in_progress")**
 
 **Ask only about remaining items (Medium/Low AND single-validator):**
 
@@ -175,13 +186,13 @@ AskUserQuestion(
 
 Apply selected fixes to the proposed structure. Re-present updated version if structural changes were significant. Only proceed to Phase 3 after the user approves.
 
-**TaskUpdate(task: "Phase 2", status: "completed")**
+**TaskUpdate(task: "Present structure for user approval", status: "completed")**
 
 ---
 
 ## Phase 3: Create Beads
 
-**TaskUpdate(task: "Phase 3", status: "in_progress")**
+**TaskUpdate(task: "Create beads", status: "in_progress")**
 
 After approval, execute using the conversion prompt approach:
 
@@ -246,13 +257,13 @@ br comments add <id> "Background: ..."
 
 Save progress to `$ARTIFACTS_DIR/progress.md` after each epic is created (compaction recovery).
 
-**TaskUpdate(task: "Phase 3", status: "completed")**
+**TaskUpdate(task: "Create beads", status: "completed")**
 
 ---
 
 ## Phase 4: Verify and Report
 
-**TaskUpdate(task: "Phase 4", status: "in_progress")**
+**TaskUpdate(task: "Verify bead structure", status: "in_progress")**
 
 ```bash
 # Verify structure
@@ -269,6 +280,9 @@ br dep tree <epic-id>
 # Visual TUI overview
 bv
 ```
+
+**TaskUpdate(task: "Verify bead structure", status: "completed")**
+**TaskUpdate(task: "Archive source plan", status: "in_progress")**
 
 ### Archive Source Plan
 
@@ -293,6 +307,9 @@ br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_F
 ```
 
 **Why archive?** If beads still need the plan, they're not self-contained enough. Archiving forces this discipline. The plan is preserved in `_done/` — it's not deleted, just removed from the active workspace.
+
+**TaskUpdate(task: "Archive source plan", status: "completed")**
+**TaskUpdate(task: "Report + handoff to ac-bead-refine", status: "in_progress")**
 
 ### Report
 
@@ -330,7 +347,7 @@ AskUserQuestion(
 )
 ```
 
-**TaskUpdate(task: "Phase 4", status: "completed")**
+**TaskUpdate(task: "Report + handoff to ac-bead-refine", status: "completed")**
 
 ---
 

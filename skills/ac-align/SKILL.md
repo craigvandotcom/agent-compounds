@@ -49,6 +49,26 @@ The backlog has two live states — **versions are bound here, not at capture:**
 
 ## Phase 0: Initialize
 
+### Create Workflow Tasks (run ledger)
+
+**One task per phase — every section you'd report on gets its own line.** Create these
+upfront; `TaskUpdate` each to `in_progress` when its phase starts and `completed` when it
+ends. **"Present user decisions" is INTERACTIVE-only** — REVIEW mode skips Phase 6
+entirely (it emits proposals, never asks), so don't create that task on a REVIEW run.
+
+```
+TaskCreate("Init — resolve _strategy/ or a stated north star")
+TaskCreate("Strategy ingestion — synthesize value prop, user, milestone, launch sequence")
+TaskCreate("Pipeline scan — read the board (beads/plans/backlog)")
+TaskCreate("Alignment audit — strategic necessity, timing, missing execution")
+TaskCreate("Sequencing review — pull-forward/push-back/crystallization order")
+TaskCreate("Pool → active promotion")
+TaskCreate("Report — alignment findings")
+TaskCreate("Present user decisions")   # INTERACTIVE only — omit for REVIEW mode
+```
+
+**TaskUpdate("Init", in_progress)**
+
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
@@ -70,9 +90,13 @@ AskUserQuestion(
 
 If user provides a free-text goal, treat it as the alignment target for this session. Note in the report that a `_strategy/` directory would make future alignment more rigorous.
 
+**TaskUpdate("Init", completed)**
+
 ---
 
 ## Phase 1: Strategy Ingestion
+
+**TaskUpdate("Strategy ingestion", in_progress)**
 
 Read all files in `_strategy/`. Synthesize:
 
@@ -84,17 +108,25 @@ Read all files in `_strategy/`. Synthesize:
 
 Identify internal gaps or inconsistencies in the strategy itself (e.g., a premium tier mentioned but no pricing model defined). Note these — do not halt on them.
 
+**TaskUpdate("Strategy ingestion", completed)**
+
 ---
 
 ## Phase 2: Pipeline Scan
+
+**TaskUpdate("Pipeline scan", in_progress)**
 
 **Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog, in parallel) — that is the single, shared definition of how pipeline state is read; don't re-specify it here.
 
 Your lens on the board: for every backlog item, plan, and bead, note **which folder it's in** (`active/` = committed · `pool/` = candidate · legacy `v*/` = pre-migration), the `horizon`/`priority` hints, `status` (esp. `candidate` vs `captured` — see Phase 4.5), and rough scope — the inputs to the alignment audit and to promotion.
 
+**TaskUpdate("Pipeline scan", completed)**
+
 ---
 
 ## Phase 3: Alignment Audit
+
+**TaskUpdate("Alignment audit", in_progress)**
 
 For every active backlog item, plan, and bead, evaluate:
 
@@ -110,9 +142,13 @@ Is this item sequenced correctly? Watch for:
 **3. Missing execution**
 Does the strategy demand something that has no corresponding backlog item, plan, or bead? List these gaps.
 
+**TaskUpdate("Alignment audit", completed)**
+
 ---
 
 ## Phase 4: Sequencing Review
+
+**TaskUpdate("Sequencing review", in_progress)**
 
 Look across the full pipeline and assess ordering:
 
@@ -128,9 +164,13 @@ Look across the full pipeline and assess ordering:
 
 **Crystallization order** — for items at the same pipeline level, which order minimizes future rework? What gets built first sets the pattern for what comes after. Note where current ordering creates downstream technical debt risk.
 
+**TaskUpdate("Sequencing review", completed)**
+
 ---
 
 ## Phase 4.5: Pool → Active Promotion
+
+**TaskUpdate("Pool → active promotion", in_progress)**
 
 This is the decision the backlog deliberately defers to here: **which pooled items enter committed scope.** Run it when `active/` is thin (few open items left), the current milestone just shipped, or the user asks "what should we plan next."
 
@@ -176,9 +216,13 @@ Set `horizon: next` in frontmatter if absent. Leave everything else in the pool.
 
 **Promotion is the only path into `active/`.** New captures always land in `pool/` via `ac-backlog`; nothing else writes to `active/`.
 
+**TaskUpdate("Pool → active promotion", completed)**
+
 ---
 
 ## Phase 5: Report
+
+**TaskUpdate("Report", in_progress)**
 
 ```markdown
 ## Pipeline Alignment Report
@@ -212,6 +256,9 @@ Set `horizon: next` in frontmatter if absent. Leave everything else in the pool.
 
 Omit sections with zero items.
 
+**TaskUpdate("Report", completed)**
+**TaskUpdate("Present user decisions", in_progress)**  <!-- INTERACTIVE only — skip in REVIEW -->
+
 ---
 
 ## Phase 6: User Decisions
@@ -237,6 +284,8 @@ AskUserQuestion(
 ```
 
 Apply approved changes. Do NOT modify files without explicit user confirmation.
+
+**TaskUpdate("Present user decisions", completed)**
 
 ---
 

@@ -28,9 +28,9 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 Infer from the invocation prompt — **do NOT ask**:
 
-- **Light** — user said "light", "quick", or "fast refine" → Sonnet agents, 1–4 rounds
+- **Light** — user said "light", "quick", or "fast refine" → Sonnet agents, 2–4 rounds
 - **Heavy** — user said "heavy", "thorough", "deep", "full", or "exhaustive" → 6 Opus agents, 3–6 rounds
-- **Medium** — anything else (default) → 3 Opus agents, 1–4 rounds
+- **Medium** — anything else (default) → 3 Opus agents, 2–4 rounds
 
 ### Configuration
 
@@ -38,9 +38,11 @@ Infer from the invocation prompt — **do NOT ask**:
 TIER=<user selection>
 
 # Tier-dependent settings:
-# Light:  AGENT_MODEL=sonnet, AGENT_COUNT=3, PERSONAS=simple, MIN_ROUNDS=1, MAX_ROUNDS=4
-# Medium: AGENT_MODEL=opus,   AGENT_COUNT=3, PERSONAS=simple, MIN_ROUNDS=1, MAX_ROUNDS=4
+# Light:  AGENT_MODEL=sonnet, AGENT_COUNT=3, PERSONAS=simple, MIN_ROUNDS=2, MAX_ROUNDS=4
+# Medium: AGENT_MODEL=opus,   AGENT_COUNT=3, PERSONAS=simple, MIN_ROUNDS=2, MAX_ROUNDS=4
 # Heavy:  AGENT_MODEL=opus,   AGENT_COUNT=6, PERSONAS=heavy,  MIN_ROUNDS=3, MAX_ROUNDS=6
+# MIN_ROUNDS=2 is an ABSOLUTE floor across every tier (Craig's call, 2026-07-07) — light/medium
+# are raised to it here; heavy's own floor of 3 already clears it, so heavy is unchanged.
 
 CURRENT_ROUND=1
 ARTIFACTS_DIR=/tmp/plan-refine-internal-$(date +%Y%m%d-%H%M%S)
@@ -131,15 +133,33 @@ mcp__mcp-agent-mail__send_message(
 )
 ```
 
-### Create Workflow Tasks
+### Create Workflow Tasks (run ledger)
+
+**One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
+section you'd report on gets its own line (not a 3-phase skeleton). Create the fixed tasks
+below at Phase 0; **ADD a "Round N" task at the start of each review round** (rounds are
+dynamic — 2 floor, up to each tier's `MAX_ROUNDS` — so the ledger grows to the real shape
+instead of pre-committing to a round count or showing phantom rounds). `TaskUpdate` each to
+`in_progress` when you start it and `completed` when done; put live detail in the description
+(per round: finding counts + convergence verdict), so a glance at the ledger shows exactly
+where the run is.
 
 ```
-TaskCreate(subject: "Phase 0: Initialize plan-refine", description: "Identify plan, select tier, checkpoint, create consensus registry", activeForm: "Initializing plan-refine...")
-TaskCreate(subject: "Phases 1-4: Refinement loop", description: "Parallel agents per round, synthesize, apply, convergence check. Repeat up to MAX_ROUNDS.", activeForm: "Refining plan...")
-TaskCreate(subject: "Phase 5: Finalize", description: "Present no-consensus findings, commit, report", activeForm: "Finalizing refinement...")
+# Fixed tasks — create upfront at Phase 0:
+TaskCreate("Initialize — identify plan, select tier, checkpoint, consensus registry, agent-mail reservation")
+TaskCreate("Conductor triage — classify remaining no-consensus + DESIGN_DECISION findings")
+TaskCreate("Present decisions — surface DESIGN_DECISION/SCOPE_ESCALATION items to the user")
+TaskCreate("Apply + update plan + commit — apply approved items, update frontmatter, commit + push")
+TaskCreate("Report — refinement summary + loop-ready prompt")
+
+# Per-round task — create ONE as each round begins (not upfront):
+TaskCreate("Round {N} — {TIER} lens reviewers → synthesize → apply")
+# On completion, TaskUpdate its description: "{C}/{H}/{M} findings, {n} auto-applied, convergence: {major|minor|cosmetic}"
 ```
 
-**TaskUpdate(task: "Phase 0", status: "completed")**
+With a 2-round run (the light/medium floor) that's 7 tasks; a 4-round light/medium run, 9; a
+6-round heavy run, 11. **TaskUpdate("Initialize", in_progress)** now, and mark it `completed`
+at the end of Phase 0.
 
 ---
 
@@ -416,11 +436,21 @@ These deferred findings serve two purposes:
 
 Log `convergence: {major|minor|cosmetic}` in the round entry. The plan has **steadied** when two consecutive rounds are minor-or-cosmetic with no open Critical/High — improvements are now marginal and further rounds burn tokens without changing the plan.
 
-**Severity gate (overrides early-stop):** if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes — fixes are unverified until the next round confirms no new Critical/High emerge.
+**Rule 1 (severity gate — overrides early-stop): if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes.** Fixes are unverified until the next round confirms no new Critical/High emerge.
+
+**Rule 2 (the round floor): the `MIN_ROUNDS=2` floor is ABSOLUTE.** The major/minor/cosmetic
+trend itself needs at least one later round in which the plan can prove it has actually
+steadied, not just gone quiet once. A minor-or-cosmetic round 1 is not evidence the plan is
+done; it is evidence one round isn't enough to tell. **One round is not sufficient** — even a
+minor-or-cosmetic round 1 does NOT finalize before round 2; the "steadied" early exit is only
+reachable once `CURRENT_ROUND >= MIN_ROUNDS`. Ceiling is each tier's `MAX_ROUNDS` (4 for
+light/medium, 6 for heavy).
 
 ```
+# The floor is checked FIRST and is absolute — nothing exits before MIN_ROUNDS=2.
+IF CURRENT_ROUND < MIN_ROUNDS -> apply fixes, continue (increment CURRENT_ROUND)   # even on a minor/cosmetic-only round
+IF two consecutive rounds are minor/cosmetic AND no Critical/High (only reachable at CURRENT_ROUND >= MIN_ROUNDS) -> finalize (converged — proceed to Phase 5)
 IF agents found any Critical or High issues -> apply fixes, continue (increment CURRENT_ROUND, loop to Phase 1)
-IF two consecutive rounds are minor/cosmetic AND no Critical/High -> finalize (converged — proceed to Phase 5)
 IF 3+ Medium issues across agents -> continue
 IF only few Medium or no issues -> finalize (proceed to Phase 5)
 IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes in Refinement Log)

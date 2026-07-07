@@ -17,6 +17,10 @@ description: 'Capture ideas into the backlog pool — cohesive grouping (one the
 | **Artifacts**    | None (stateless)                                                    |
 | **Verification** | File written, item confirmed                                        |
 
+**No run-ledger by design** — this is a quick-capture skill; the org's one-task-per-section
+ledger standard is deliberately waived here because ceremony defeats the skill's purpose
+(speed).
+
 ## Prerequisites
 
 - Project has `_backlog/` directory (create `_backlog/pool/` if missing)

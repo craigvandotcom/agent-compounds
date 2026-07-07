@@ -58,9 +58,13 @@ Pick the lightest tool that fits — don't reach for deterministic orchestration
 delegated agent will do.
 
 - **`TaskCreate` / `TaskUpdate` — the run ledger.** The declared progress unit for a workflow
-  run: phases (and iterations), not work items. Persists across sessions, prevents early
-  exit, and is the resume anchor after compaction. Every non-trivial workflow opens with one.
-  *Live reference instance:* `ac-loop`'s Phase 0 run ledger.
+  run: one task per major run SECTION (phases, sub-steps, and iterations as they occur), not
+  work items. This is a *runtime progress-visibility* axis — see the Non-negotiable standards
+  §1-2 split below for how it relates to (and is deliberately finer than) the design-time phase
+  count. Persists across sessions, prevents early exit, and is the resume anchor after
+  compaction. Every non-trivial workflow opens with one. *Live reference instances:* `ac-loop`'s
+  Phase 0 run ledger; `ac-hygiene`'s "Create Workflow Tasks" section (fixed sections + one
+  dynamic task per round).
 - **`Agent` tool — the 3-stance trio.** Model-driven delegation: **researcher** (gather &
   distill, read-only), **implementer** (produce the artifact), **validator** (adversarial
   check against a rubric, read-only). *Fat skills, thin agents* — load domain knowledge via a
@@ -99,11 +103,23 @@ multi-stakeholder, or high-stakes workflows.
 
 Every workflow this skill produces has:
 
-1. **A run ledger, declared first** (`TaskCreate`). 5-7 high-level phases, not micro-steps;
-   `pending → in_progress → completed`; dependencies via `addBlockedBy`. Tracks the *run*,
-   never the work items.
-2. **A phase skeleton, 5-7 phases.** Phase 0 initializes; a final phase finalizes (report +
-   verification/teardown). Each phase carries enter/exit criteria. Never 12+ micro-phases.
+1. **A run ledger, declared first** (`TaskCreate`) — **one task per major run SECTION, not a
+   restatement of the phase skeleton below.** This is a different axis from item 2: the ledger
+   exists for runtime clarity + accountability (so a glance shows exactly where the run is), and
+   is expected to run *finer* than the phase count — a single phase can and should emit several
+   ledger tasks (a per-round/per-iteration task, a sub-step worth reporting on individually).
+   **~8-12 tasks is the normal, encouraged shape for a non-trivial run** — a 3-4-task ledger for
+   a real multi-stage workflow is usually under-decomposed, not admirably lean. Mechanics:
+   `pending → in_progress → completed`; dependencies via `addBlockedBy`. Tracks the *run's*
+   progress, never the underlying work-item list itself. *Live reference instance:* `ac-hygiene`'s
+   "Create Workflow Tasks" section (fixed sections created upfront + one dynamic task per round).
+2. **A phase skeleton, 5-7 phases** (a separate, design-time axis — unaffected by the ledger
+   granularity in item 1). Phase 0 initializes; a final phase finalizes (report +
+   verification/teardown). Each phase carries enter/exit criteria. Never 12+ micro-PHASES — that
+   guidance is about the workflow's *structural design* (how the recipe is organized), not about
+   how many `TaskCreate` lines its ledger emits at runtime. A well-designed 5-7-phase workflow
+   still emits an 8-12-task run ledger whenever its phases have rounds or sub-steps worth
+   reporting on individually — the two counts are not meant to match.
 3. **Quality gates tagged blocking vs warning.** Blocking = STOP, fix, re-run until PASS.
    Warning = note and continue. Prefer a **classifier-gate** (run only the checks the diff/
    output warrants) over a fixed unconditional battery. Independent checks run in **parallel**

@@ -29,6 +29,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ```
 CURRENT_ROUND=1
+MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
 ARTIFACTS_DIR=/tmp/bead-refine-$(date +%Y%m%d-%H%M%S)
 ```
@@ -101,24 +102,37 @@ Everything downstream (reviewer prompts, `br list --json` re-reads for verificat
 convergence, the final `refined`-stamp loop) operates over this narrowed snapshot instead
 of the whole board.
 
-### Create Workflow Tasks
+### Create Workflow Tasks (run ledger)
+
+**One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
+section you'd report on gets its own line (not a 3-phase skeleton). Create the fixed tasks
+below at Phase 0; **ADD a "Round N" task at the start of each review round** (rounds are
+dynamic — 3 floor, up to 5 — so the ledger grows to the real shape instead of pre-committing
+to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` when you start
+it and `completed` when done; put live detail in the description (per round: finding +
+applied counts), so a glance at the ledger shows exactly where the run is.
 
 ```
-TaskCreate(subject: "Phase 0: Initialize bead-refine session", description: "Identify plan file, gather bead snapshot, create tasks", activeForm: "Initializing bead-refine...")
+# Fixed tasks — create upfront at Phase 0:
+TaskCreate("Initialize — snapshot beads + dep-cycle check")
+TaskCreate("Conductor triage — classify no-consensus + design-decision items")
+TaskCreate("Present decisions to user")
+TaskCreate("Stamp labels — remove unrefined, add refined")
+TaskCreate("Verify structure — dep cycles, lint, ready")
+TaskCreate("Report + handoff")
 
-TaskCreate(subject: "Phase 1-4: Refinement loop", description: "Parallel agent review -> synthesize -> apply fixes -> convergence check. Repeat up to MAX_ROUNDS.", activeForm: "Refining beads...")
-
-TaskCreate(subject: "Phase 5: Finalize and verify", description: "Final verification, commit, present summary", activeForm: "Finalizing refinement...")
+# Per-round task — create ONE as each round begins (not upfront):
+TaskCreate("Round {N} — 3 reviewers → synthesize → apply → converge")
+# On completion, TaskUpdate its description: "{C}/{H}/{M} findings, {n} applied, {n} deferred"
 ```
 
-
-**TaskUpdate(task: "Phase 0", status: "completed")**
+With a 3-round run that's 9 tasks; a 5-round run, 11. **TaskUpdate("Initialize", in_progress)**
+now, and mark it `completed` at the end of Phase 0. This ledger tracks bead-refine's top-level
+sections only — keep it ~6 fixed + rounds.
 
 ---
 
 ## REFINEMENT LOOP: Phases 1-4
-
-**TaskUpdate(task: "Phase 1-4: Refinement loop", status: "in_progress", description: "Round {CURRENT_ROUND}/{MAX_ROUNDS}")**
 
 ### Phase 1: Spawn 3 Reviewers (parallel)
 
@@ -311,13 +325,23 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 ### Phase 4: Convergence Check
 
-**Rule: if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes.** Fixes are unverified until the next round's agents confirm no new Critical/High issues emerge. Only finalize after a round where all findings are Medium or lower.
+**Rule 1: if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes.** Fixes are unverified until the next round's agents confirm no new Critical/High issues emerge.
+
+**Rule 2 (the round floor): the `MIN_ROUNDS=3` floor is ABSOLUTE.** Cross-round consensus —
+the rule that promotes recurring single-agent findings — needs at least two later rounds in
+which a deferral can recur. A clean round 1 is not evidence the bead set is clean; it is
+evidence one round isn't enough. **Two rounds is not sufficient** — even two consecutive
+zero-finding rounds do NOT finalize before round 3; the dry-panel early exit is only reachable
+once `CURRENT_ROUND >= MIN_ROUNDS`. Ceiling is `MAX_ROUNDS=5`.
 
 ```
+# The floor is checked FIRST and is absolute — nothing exits before round 3.
+IF CURRENT_ROUND < MIN_ROUNDS -> apply fixes, continue (increment CURRENT_ROUND)   # even on back-to-back zero-finding rounds
+IF two consecutive rounds found ZERO findings (only reachable at CURRENT_ROUND >= MIN_ROUNDS) -> finalize early (panel is dry — stop burning agents)
 IF agents found any Critical or High issues -> apply fixes, continue (increment CURRENT_ROUND)
-IF 3+ Medium issues across agents -> continue
-IF only few Medium or no issues -> finalize (proceed to Phase 5)
+IF only Medium or no new issues -> finalize (proceed to Phase 5)
 IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes in progress.md)
+IF this round found same issues as last round AND CURRENT_ROUND >= MIN_ROUNDS -> force finalize (agents are circling)
 ```
 
 **Between rounds:** Include in next prompt: "Previous round findings are in {ARTIFACTS_DIR}/round-{N-1}-\*.md. Focus on areas NOT covered in previous rounds, plus verify previous fixes landed correctly."
@@ -327,9 +351,6 @@ IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes in progr
 ---
 
 ## Phase 5: Finalize
-
-**TaskUpdate(task: "Phase 1-4: Refinement loop", status: "completed")**
-**TaskUpdate(task: "Phase 5: Finalize", status: "in_progress")**
 
 ### Conductor Final Review (Triage)
 
@@ -477,8 +498,6 @@ AskUserQuestion(
 )
 ```
 
-**TaskUpdate(task: "Phase 5: Finalize", status: "completed")**
-
 ---
 
 ## Jeffrey's Standard
@@ -491,6 +510,7 @@ AskUserQuestion(
 
 - **YOU synthesize and apply fixes** — agents find issues, you decide and fix
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
+- **Honor the round floor — it is ABSOLUTE** — never finalize before MIN_ROUNDS=3, not even on two consecutive zero-finding rounds (the dry-panel exit is only reachable at round ≥3); ceiling MAX_ROUNDS=5. Cross-round consensus needs the later rounds to exist
 - **Cross-round consensus:** single-agent findings that recur in later rounds are high-signal — auto-apply on match
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus

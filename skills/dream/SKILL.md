@@ -47,6 +47,26 @@ ship (every proposal cites concrete lessons/commits) · dedupe against ALL prior
 (including rejected — never re-propose verbatim) · this skill is itself a valid proposal
 target (the cycle may propose upgrades to `dream`/`reflect`/`context-engineering`).
 
+### Create Workflow Tasks (run ledger — CYCLE mode)
+
+**One task per phase — this ledger is scheduler-run, so it's the only proof-of-life until
+the Phase-6 heartbeat writes.** Create these upfront; `TaskUpdate` each to `in_progress`
+when its phase starts and `completed` when it ends. The Phase-4 judge subagent (validator
+stance) keeps its own scope — this ledger tracks CYCLE's top-level phases only. (CYCLE-DAILY,
+still DESIGNED not live, reuses Phases 2/4/5 unchanged when it activates — its own ledger,
+if any, is a future addition, not this one.)
+
+```
+TaskCreate("Gather lessons — structured stream since last run")
+TaskCreate("Synthesize patterns — repetition, clusters, cross-domain echoes, promotions")
+TaskCreate("Lint substrate — contradictions, staleness, duplicates, taxonomy, registry")
+TaskCreate("Judge candidates — validator-stance rubric, score >=7 to proposal")
+TaskCreate("Emit proposals — write the review queue, commit + push")
+TaskCreate("Heartbeat + report — last-run.json, run summary")
+```
+
+**TaskUpdate("Gather lessons", in_progress)**
+
 ### Phase 1 — Gather (the structured stream, since last run)
 
 ```bash
@@ -66,6 +86,9 @@ git -C ~/Repos/neometa/software/agent-compounds log --since="$LAST" --oneline --
 Read every new/changed lesson file (they are small). Also `br list --json 2>/dev/null`
 and recent `git log --oneline` for outcome signals to ground against. If the stream is
 empty, still run Phase 3 (lint) — hygiene work exists even in quiet weeks.
+
+**TaskUpdate("Gather lessons", completed)**
+**TaskUpdate("Synthesize patterns", in_progress)**
 
 ### Phase 2 — Synthesize (what no single session sees)
 
@@ -92,6 +115,9 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   procedure — for the same escalation. Inverse: an always-on line edited repeatedly → propose
   **demotion** to L3.
 
+**TaskUpdate("Synthesize patterns", completed)**
+**TaskUpdate("Lint substrate", in_progress)**
+
 ### Phase 3 — Lint (hygiene; see `references/lint-checks.md` for the full checklist)
 
 **Scope note (since 2026-06-26):** the **mechanical, lossless** checks (Tier-0 — e.g.
@@ -112,6 +138,9 @@ Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.
 lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
 low-risk).
 
+**TaskUpdate("Lint substrate", completed)**
+**TaskUpdate("Judge candidates", in_progress)**
+
 ### Phase 4 — Judge (the quality bar)
 
 Spawn an **independent judge subagent** — the **`validator`** stance agent (its
@@ -122,6 +151,9 @@ strictly, after re-reading it. Each candidate
 gets `score` (0–10) + `verdict` + one-line reason. **Only candidates scoring ≥7 become
 proposals.** Drop the rest into the run's `INDEX.md` under "Considered & cut" (one line
 each — auditability without queue noise).
+
+**TaskUpdate("Judge candidates", completed)**
+**TaskUpdate("Emit proposals", in_progress)**
 
 ### Phase 5 — Emit (the review queue)
 
@@ -179,12 +211,17 @@ Commit (root repo, these paths only) + push — the queue must be visible cross-
 (target-repo bead dbs: commit `.beads/` in each target repo touched, separately —
 never across repo boundaries.)
 
+**TaskUpdate("Emit proposals", completed)**
+**TaskUpdate("Heartbeat + report", in_progress)**
+
 ### Phase 6 — Heartbeat + report
 
 Write `infrastructure/dream-cycle/last-run.json`:
 `{"timestamp": "<ISO now>", "window_start": "<LAST>", "lessons_read": N, "candidates": N, "proposals": N, "machine": "<hostname>"}`
 (include in the Phase-5 commit). Then output a compact run report. If the run produced
 zero proposals, say so plainly — a quiet week is a valid outcome, not a failure.
+
+**TaskUpdate("Heartbeat + report", completed)**
 
 ---
 
@@ -249,6 +286,23 @@ Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
 **decision docket** (`/ac-human-session` surfaces the same beads org-wide; either
 entry point works, the contract is identical).
 
+### Create Workflow Tasks (run ledger — REVIEW mode)
+
+**One task per numbered step below — this is a separate ledger from CYCLE's** (REVIEW is
+its own invocation, walking the docket interactively rather than emitting to it). Create
+these upfront; `TaskUpdate` each to `in_progress` when its step starts and `completed` when
+it ends.
+
+```
+TaskCreate("List proposals — open dream-proposal beads, oldest first")
+TaskCreate("Present + collect decisions — AskUserQuestion, batches of <=4")
+TaskCreate("Apply approved — edit target_file in target_repo, commit")
+TaskCreate("Close out — record decision, close bead, flip frontmatter, push")
+TaskCreate("Report — applied/rejected/remaining + acceptance rate")
+```
+
+**TaskUpdate("List proposals", in_progress)**
+
 1. List open `dream-proposal` beads across the beads repos (root, agent-compounds,
    apps): per repo `br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] |
    index("dream-proposal")) | select(.status != "closed")]'` — oldest first.
@@ -257,15 +311,27 @@ entry point works, the contract is identical).
    already carrying `status: approved` / `status: rejected`** — those were pre-decided by
    Craig via the Slack triage buttons (Increment 3, `infrastructure/slack/post-proposals.py`).
    Nothing open and nothing pre-decided → say so.
+
+**TaskUpdate("List proposals", completed)**
+**TaskUpdate("Present + collect decisions", in_progress)**
+
 2. Per proposal: read the memo file (What/Why/evidence/judge verdict), present.
    **Pre-decided proposals (`status: approved`/`rejected` from the Slack buttons) skip the
    question** — the human already chose: apply the approved, record the rejected, no re-ask.
    For the rest, collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
    approve / reject / skip).
+
+**TaskUpdate("Present + collect decisions", completed)**
+**TaskUpdate("Apply approved", in_progress)**
+
 3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
    (adjust mechanically if the target drifted; if it drifted *semantically*, leave the
    bead open with an enrichment comment instead of guessing). Respect repo boundaries —
    commit in the target repo with message `dream: apply <slug>`, push.
+
+**TaskUpdate("Apply approved", completed)**
+**TaskUpdate("Close out", in_progress)**
+
 4. **Close out per bead-conventions:** record the decision
    (`br comments add <id> "DECISION (<human>): <choice> — <why>"`), close the bead
    (approved-and-applied or rejected alike — the comment trail is the record), set the
@@ -273,8 +339,14 @@ entry point works, the contract is identical).
    "approved" from "actually landed") or `rejected`, commit the queue (root) + each touched
    `.beads/` (own repo), push. (Note: the daily queue job applies the `auto` tier and any
    `status: approved` backlog automatically — REVIEW is the interactive path for `gated`.)
+
+**TaskUpdate("Close out", completed)**
+**TaskUpdate("Report", in_progress)**
+
 5. Report: applied / rejected / remaining — and note acceptance-rate (the cycle's own
    quality metric; persistently low → propose a judge-bar fix next cycle).
+
+**TaskUpdate("Report", completed)**
 
 ---
 

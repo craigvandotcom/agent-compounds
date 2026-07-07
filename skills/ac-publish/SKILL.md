@@ -37,6 +37,30 @@ build/sign/upload is owned by `ac-distribute` — you **call** it, never inline 
 
 ## Phase 0: Preflight
 
+### Create Workflow Tasks (run ledger)
+
+**One task per phase — the ledger tracks this gate's own progress toward a ship.** Create
+the fixed tasks below now; **add a "Fix-in-session — round N" task each time Phase 1 or 2
+surfaces an issue** (dynamic, per the re-entrant loop — a fix commit moves `main`, so the
+run returns to Phase 1a and re-pins `RELEASE_SHA`; the Confidence/QA gate task goes back to
+`in_progress` on that return, it does not get re-created). `ac-distribute`, invoked from
+Phase 4, keeps its own ledger — don't duplicate its build/sign/upload steps here.
+
+```
+# Fixed tasks — create upfront:
+TaskCreate("Preflight — confirm main clean + current, pin RELEASE_SHA")
+TaskCreate("Confidence/QA gate — SHA-pinned CI read + full device/browser QA")
+TaskCreate("Migration safety — expand/contract audit since last release")
+TaskCreate("Ship — verify bump, confirm web live, invoke ac-distribute for native")
+TaskCreate("Report — Slack the release summary")
+
+# Dynamic task — add ONE each time a gate fails (not upfront):
+TaskCreate("Fix-in-session — round {N}")
+# On completion, TaskUpdate its description with what was fixed + the new commit SHA.
+```
+
+**TaskUpdate("Preflight", in_progress)**
+
 ```bash
 git checkout main && git pull --rebase
 git status                       # must be clean + up to date with origin
@@ -45,7 +69,11 @@ RELEASE_SHA=$(git rev-parse main)
 
 If `main` is not clean/current, stop — publish releases exactly what is on `origin/main`.
 
+**TaskUpdate("Preflight", completed)**
+
 ## Phase 1: Confidence gate (SHA-pinned CI + full QA)
+
+**TaskUpdate("Confidence/QA gate", in_progress)**
 
 **1a — Read the full-suite CI result, SHA-pinned to `RELEASE_SHA`.** Only a **full** run counts —
 that is a `workflow_dispatch` run (loop-close or a prior publish); `push`/`pull_request` runs are
@@ -87,7 +115,11 @@ This run is also where every non-peripheral journey's `last_pass` stamp gets ref
 twins write stamps per their Journey stamps doctrine, so `ac-distribute`'s store gate
 (`skills/_tools/journey-stamp-check.sh`) sees fresh review-critical stamps at submission.
 
+**TaskUpdate("Confidence/QA gate", completed)**
+
 ## Phase 2: Migration safety (expand/contract)
+
+**TaskUpdate("Migration safety", in_progress)**
 
 Shared prod Supabase DB + native builds lag weeks — the one real release hazard
 (`shared-prod-migration-collisions`, `app-version-pinned-1.2.0-appstore-resubmission`). Inspect every
@@ -113,14 +145,20 @@ Read each new migration and classify it per `rule-migrations-expand-contract`:
 
 This gate blocks the ship; it is not a warning.
 
+**TaskUpdate("Migration safety", completed)**
+
 ## Phase 3: Fix-in-session
 
-If CI (1a), QA (1b), or migrations (2) surface an issue: **fix it now** — you may ask Craig. Get to
-100% before shipping. File a bead only if the fix is genuinely bigger than this session (then stop —
-it re-enters the loop). A fix commit moves `main`, so **return to Phase 1a** and re-pin
-`RELEASE_SHA`.
+If CI (1a), QA (1b), or migrations (2) surface an issue: **add a "Fix-in-session — round {N}"
+task now** (`in_progress`) and fix it — you may ask Craig. Get to 100% before shipping. File a
+bead only if the fix is genuinely bigger than this session (then stop — it re-enters the loop).
+A fix commit moves `main`, so **return to Phase 1a** and re-pin `RELEASE_SHA` — **mark
+"Fix-in-session — round {N}" `completed`** (note the new SHA in its description) and set
+**"Confidence/QA gate" back to `in_progress`** (it is re-entered, not re-created).
 
 ## Phase 4: Ship
+
+**TaskUpdate("Ship", in_progress)**
 
 1. **Verify the bump (never perform it).** `ac-merge` already bumped `CURRENT_PROJECT_VERSION` at
    merge — confirm the build number advanced since `$LAST_RELEASE`. If it somehow did not, route back
@@ -130,8 +168,14 @@ it re-enters the loop). A fix commit moves `main`, so **return to Phase 1a** and
 3. **Native.** Invoke `ac-distribute` for the actual build/sign/upload (Workflow A → TestFlight, or
    Workflow B → App Store submit). Pass that its preconditions are met (fresh QA PASS from Phase 1b,
    bump already verified). `ac-distribute` is check-only on the bump — no re-bump.
+
+**TaskUpdate("Ship", completed)**
+**TaskUpdate("Report", in_progress)**
+
 4. **Confirm + notify.** Web live + native uploaded → report the release (SHA, build number, what
    shipped) on Slack.
+
+**TaskUpdate("Report", completed)**
 
 ---
 

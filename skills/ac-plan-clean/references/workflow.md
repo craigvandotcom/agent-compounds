@@ -32,7 +32,8 @@ Scan the plan for domain keywords. Check `AGENTS.md > Available Skills` for rele
 
 ```
 CURRENT_ROUND=1
-MAX_ROUNDS=3
+MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
+MAX_ROUNDS=5
 AGENT_MODEL=sonnet
 ARTIFACTS_DIR=/tmp/plan-clean-$(date +%Y%m%d-%H%M%S)
 ```
@@ -113,15 +114,32 @@ mcp__mcp-agent-mail__send_message(
 
 If `$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to recover `CURRENT_ROUND` (set to N+1). If `consensus-registry.md` exists, read it to recover the deferred findings pool.
 
-### Create Workflow Tasks
+### Create Workflow Tasks (run ledger)
+
+**One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
+section you'd report on gets its own line (not a 3-phase skeleton). Create the fixed tasks
+below at Phase 0; **ADD a "Round N" task at the start of each review round** (rounds are
+dynamic — 3 floor, up to 5 — so the ledger grows to the real shape instead of pre-committing
+to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` when you start
+it and `completed` when done; put live detail in the description (per round: finding +
+applied counts), so a glance at the ledger shows exactly where the run is.
 
 ```
-TaskCreate(subject: "Phase 0: Initialize plan-clean", description: "Identify plan, checkpoint, create consensus registry", activeForm: "Initializing plan-clean...")
-TaskCreate(subject: "Phases 1-3: Review loop", description: "3 Sonnet reviewers per round, synthesize, convergence check. Up to MAX_ROUNDS.", activeForm: "Reviewing plan...")
-TaskCreate(subject: "Phase 4: Finalize", description: "Present no-consensus findings, commit, report", activeForm: "Finalizing plan-clean...")
+# Fixed tasks — create upfront at Phase 0:
+TaskCreate("Initialize — identify plan, checkpoint, consensus registry")
+TaskCreate("Conductor triage — classify no-consensus + design-decision items")
+TaskCreate("Present decisions to user")
+TaskCreate("Apply fixes + update plan frontmatter + commit")
+TaskCreate("Report")
+
+# Per-round task — create ONE as each round begins (not upfront):
+TaskCreate("Round {N} — reviewers → synthesize → apply")
+# On completion, TaskUpdate its description: "{n} findings, {n} applied, {n} deferred"
 ```
 
-**TaskUpdate(task: "Phase 0", status: "completed")**
+With a 3-round run that's 8 tasks; a 5-round run, 10. **TaskUpdate("Initialize", in_progress)**
+now, and mark it `completed` at the end of Phase 0. This ledger tracks plan-clean's top-level
+sections only — keep it ~5 fixed + rounds.
 
 ---
 
@@ -316,16 +334,23 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 ### Phase 3: Convergence Check
 
+**Rule 1: if this round's agents found ANY findings, you MUST run another round after applying fixes.** Fixes are unverified until the next round's agents confirm no new issues emerge.
+
+**Rule 2 (the round floor): the `MIN_ROUNDS=3` floor is ABSOLUTE.** Cross-round consensus —
+the rule that promotes recurring single-agent findings — needs at least two later rounds in
+which a deferral can recur. A clean round 1 is not evidence the plan is clean; it is evidence
+one round isn't enough. **Two rounds is not sufficient** — even two consecutive zero-finding
+rounds do NOT finalize before round 3; the dry-panel early exit is only reachable once
+`CURRENT_ROUND >= MIN_ROUNDS`. Ceiling is `MAX_ROUNDS=5`.
+
 ```
-IF any findings were auto-applied this round AND CURRENT_ROUND < MAX_ROUNDS
-   -> continue (fixes are unverified — need another round to confirm)
-   -> increment CURRENT_ROUND, loop to Phase 1
-
-IF no findings from any agent (clean round)
-   -> finalize (proceed to Phase 4)
-
-IF CURRENT_ROUND >= MAX_ROUNDS
-   -> force finalize (proceed to Phase 4)
+# The floor is checked FIRST and is absolute — nothing exits before round 3.
+IF CURRENT_ROUND < MIN_ROUNDS -> apply fixes, continue (increment CURRENT_ROUND)   # even on back-to-back zero-finding rounds
+IF two consecutive rounds found ZERO findings (only reachable at CURRENT_ROUND >= MIN_ROUNDS) -> finalize early (panel is dry — stop burning agents)
+IF any findings were auto-applied this round -> apply fixes, continue (increment CURRENT_ROUND)
+IF no new findings this round -> finalize (proceed to Phase 4)
+IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes in progress.md)
+IF this round found same issues as last round AND CURRENT_ROUND >= MIN_ROUNDS -> force finalize (agents are circling)
 ```
 
 **Between rounds:** Include in the next prompt: "Previous round applied these fixes: {list}. Verify they're correct and look for anything missed."
@@ -508,6 +533,7 @@ AskUserQuestion(
 - **This is a hygiene pass, not a rewrite** — targeted edits only, preserve the plan's intent
 - **Consensus is the gating mechanism** — single-agent findings must be confirmed by recurrence or user approval
 - **Cross-round consensus is novel** — deferred findings that recur in later rounds are high-signal
+- **Honor the round floor — it is ABSOLUTE** — never finalize before MIN_ROUNDS=3, not even on two consecutive zero-finding rounds (the dry-panel exit is only reachable at round ≥3); ceiling MAX_ROUNDS=5. Cross-round consensus needs the later rounds to exist
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of consensus
 - **Sonnets are cost-effective** — accuracy/structure/hygiene checks don't need Opus-level reasoning

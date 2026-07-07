@@ -34,6 +34,26 @@ Do not introduce a second build tool to an app that already has a working lane.
 The fast, repeatable closed-beta push. art-still has reduced this to **one command**
 (`pnpm ship:testflight`); this workflow is the generic shape that wraps it.
 
+### Run tasks (this workflow only)
+
+Long-running and failure-prone (signing probes, processing hangs, keychain footguns) —
+open a `TaskCreate` run ledger, one task per section, so a stalled/hung step is visible
+rather than silent:
+
+```
+TaskCreate("Preconditions — macOS + clean merge + fresh QA PASS + signing probe + prod-backend check")
+TaskCreate("Confirm build number already bumped by ac-merge (no re-bump here)")
+TaskCreate("Build the web bundle + cap sync")
+TaskCreate("Archive + sign (fastlane match/gym) + codesign-verify the .app inside the archive")
+TaskCreate("Upload to TestFlight (pilot)")
+TaskCreate("Processing wait — poll ASC until processingState == VALID")
+TaskCreate("Verify — dSYM uploaded, build VALID/visible, backend + version confirmed")
+TaskCreate("Report — TESTFLIGHT_PUSH block")
+```
+
+`TaskUpdate` each to `in_progress` on start, `completed` on finish — a hung Processing
+wait or a signing-probe failure shows up as a stuck task instead of a silent hang.
+
 ### Preconditions (all must hold — STOP if not)
 
 1. **On macOS.** `uname` → not `Darwin` ⇒ stop: producing the `.ipa` (xcodebuild
@@ -191,6 +211,16 @@ headless via a fastlane `submit` lane (`upload_to_app_store`, `skip_metadata: tr
 Flow (per app, wired in CORE/distribution.md):
 `cap:build → testflight-push → wait for build to process → submit-preflight (read-only) →
 submit → click Release in ASC after approval`.
+
+**Run tasks — kept minimal.** Mostly one-shot ASC API calls (unlike Workflow A's long,
+failure-prone build/sign/upload mile), so a full per-section ledger is overkill; a short
+3-task list is enough to track the human-gated hand-off:
+
+```
+TaskCreate("Preflight — read-only ASC health check (build VALID, version editable, review info present)")
+TaskCreate("Submit — clear any stuck prior submission, attach build, submit_for_review")
+TaskCreate("Monitor — poll review state through to WAITING_FOR_REVIEW / hand off for Release tap")
+```
 
 Stages:
 

@@ -19,6 +19,10 @@ ceremony costs future captures. Conventions authority:
 | **Artifacts**    | The bead(s); `.beads/` committed in the target repo                   |
 | **Verification** | `br show <id>` renders with all template sections                     |
 
+**No run-ledger by design** — this is a quick-capture skill; the org's one-task-per-section
+ledger standard is deliberately waived here because ceremony defeats the skill's purpose
+(speed).
+
 ## Phase 1 — Clarify (at most ONE round, often zero)
 
 Capture beats interrogation. Ask only if you cannot determine **what done looks

@@ -27,6 +27,11 @@ You surface what must cross a **human gate before it can flow autonomously** —
 | **Artifacts**    | Mutates only on explicit/confirmed action (decisions recorded, plans signed off, items promoted/planned) |
 | **Verification** | Each acted item reports its result; cleared gates unblock downstream |
 
+**Exempt from the org run-ledger standard** — this is an interactive, human-driven
+tap-through session by design: the rendered dashboard (Phase 3/4) IS the live progress
+view, so a `TaskCreate` ledger's main value (background/compaction resume) is weak here.
+No run ledger is added.
+
 ## Prerequisites
 
 - `br` installed — verify with `which br`

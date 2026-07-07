@@ -87,6 +87,30 @@ Whole-site mode discovers routes **from `routes.public.md`** (Phase 1 of the bui
 is absent, **halt and prompt** — do not fall back to a directory scan (path geometry mis-classifies
 `/` and the auth routes).
 
+### Run tasks (whole-site mode)
+
+**Not the Conformance/Elevation ledgers below** — those are the audit's *findings* output
+(defects + scored surfaces). This is a separate, runtime **progress list** (`TaskCreate` /
+`TaskUpdate`) so a glance shows where a long whole-site crawl actually is — call it "run tasks"
+here to avoid colliding with the "ledger" term already owned by Conformance/Elevation. One task
+per major section, created at the start of the run:
+
+```
+TaskCreate("Baseline — read design.site.md (or bootstrap DRAFT) + ui-audit.md")
+TaskCreate("Seed data — populate realistic state where pages have data")
+TaskCreate("Build coverage matrix — route (routes.public.md) × viewport × data-state")
+TaskCreate("Sense — sensors per cell (contrast, hardcoded colour, token symmetry)")
+TaskCreate("Audit vs design.site.md — rubric + the 4 site axes, per cell")
+TaskCreate("Elevate — two ledgers (Conformance + Elevation)")
+TaskCreate("SEO + a11y — seo-metadata + web-design-guidelines, inline")
+TaskCreate("Re-audit — re-run sensors + rubric + axes on changed cells")
+TaskCreate("Verify — running at every viewport/data-state; before/after artifacts; DoD checklist")
+```
+
+`TaskUpdate` each to `in_progress` on start and `completed` on finish; carry live detail (cell
+counts, finding counts) in the description. **Scoped (single-page) mode is exempt** — it's a
+short, single-context loop where a run-tasks list would be ceremony, not clarity.
+
 ---
 
 ## Core workflow

@@ -43,19 +43,26 @@ STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VE
 
 ### Declare the Run Ledger
 
-ac-merge spans 10-min CI polls where a session can drop. Declare a run ledger so a resumed
-run re-enters at the right phase instead of re-polling from scratch or re-asking PR#/version:
+ac-merge spans 10-min CI polls where a session can drop. Declare a run ledger — **one task
+per major section** — so a resumed run re-enters at the exact section instead of re-polling
+from scratch or re-asking PR#/version:
 
 ```
-TaskCreate (one per phase):
-  1. Pre-flight — QA, rebase, version bump                  in_progress
-  2. Create PR                                               pending
-  3. Wait for PR feedback + triage                           pending
-  4. Merge + tag + verify deploy shipped                     pending
-  5. Report + finalize                                       pending
+TaskCreate (one per section, in run order):
+  1.  Rebase on main + quality gate                    in_progress
+  2.  QA smoke gate (conditional)                      pending
+  3.  Version bump + native propagation                pending
+  4.  Feedback write-back                              pending
+  5.  Push + confirm CI/agent-review config            pending
+  6.  Create PR                                        pending
+  7.  Wait for PR feedback + triage + fix              pending
+  8.  Merge + tag                                      pending
+  9.  Verify deploy shipped                            pending
+  10. Report + finalize                                pending
 ```
 
-`TaskUpdate` at each phase boundary. As you capture `PR_NUMBER`, `NEW_VERSION`, and
+`TaskUpdate` each to `in_progress` when you start it and `completed` when done — the section
+headers below map to these tasks 1:1. As you capture `PR_NUMBER`, `NEW_VERSION`, and
 `WAIT_FOR_FEEDBACK`, append them to `$STATE` (e.g. `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`)
 so a dropped session reloads them on resume. The ledger tracks the RUN; beads stay the work atom.
 
@@ -90,6 +97,8 @@ the *push* uses `--no-verify` (to skip the heavy pre-push build). Never let CI c
 formatting miss.
 
 **If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
+
+Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
@@ -153,6 +162,8 @@ Open `qa-blocker` beads are unresolved user-facing breaks filed by QA runs —
 treat exactly like failing required checks: STOP and ask (fix first vs merge
 anyway with explicit override). The two valid resolutions: fix the bug, or —
 if the behavior is intended — update the journey doc and close the bead.
+
+Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
 ### Version Bump
 
@@ -233,6 +244,8 @@ git commit -m "chore(release): v${NEW_VERSION} (iOS build ${NEW_BUILD})"
 
 The tag is created on the merge commit in Phase 3 (after merge to main), not here — that way `v$NEW_VERSION` points at the actual shipped state.
 
+Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
+
 ### Feedback write-back (post-build-bump)
 
 **Run immediately after the bump commit, before the push.** This step requires `NEW_BUILD`
@@ -265,6 +278,8 @@ WHERE id          = '<linked_bead>'
 
 Full spec, error-handling policy, and unit test cases: `references/feedback-writeback-hook.md`.
 
+Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
+
 ### Push
 
 ```bash
@@ -287,11 +302,13 @@ AskUserQuestion(
 )
 ```
 
-Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FOR_FEEDBACK=$WAIT_FOR_FEEDBACK" >> "$STATE"`. Mark ledger task 1 `completed`.
+Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FOR_FEEDBACK=$WAIT_FOR_FEEDBACK" >> "$STATE"`. Mark ledger task 5 `completed`.
 
 ---
 
 ## Phase 1: Create PR
+
+`TaskUpdate` task 6 `in_progress`.
 
 ### Gather PR Context
 
@@ -344,9 +361,9 @@ EOF
 )"
 ```
 
-Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`. Mark ledger task 2 `completed`.
+Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`. Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 
-**If `WAIT_FOR_FEEDBACK` is false:** Skip to Phase 3 (Merge).
+**If `WAIT_FOR_FEEDBACK` is false:** Mark ledger task 7 `completed` (skipped — no feedback to wait for) and skip to Phase 3 (Merge).
 
 ---
 
@@ -499,6 +516,8 @@ done
 
 **If checks still fail after fixes:** Present failures to user and ask whether to merge anyway or abort.
 
+Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
+
 ---
 
 ## Phase 3: Merge
@@ -579,6 +598,8 @@ prod AT merge, so code that *depends* on a migration must not go live before its
   *held* migration and is applied later via `ac-publish`'s migration gate, after old native
   builds age out. If a branch bundles contract DDL into an expand migration, split it first.
 
+Mark ledger task 8 `completed`; `TaskUpdate` task 9 `in_progress`.
+
 ### Verify the Deploy Actually Shipped
 
 If the project deploys on push to main (Vercel: `vercel.json` present or a known Vercel
@@ -620,6 +641,8 @@ workflow) and must COMPLETE (else assume failed).
   TestFlight build produced; ship via the app's release lane" instead of implying a shippable
   build exists (the wording that cost BCA an evening, 2026-07-02).
 - No native-build-on-merge → skip silently.
+
+Mark ledger task 9 `completed`; `TaskUpdate` task 10 `in_progress`.
 
 ---
 

@@ -61,26 +61,30 @@ git diff --stat
 
 ### Declare the Run Ledger
 
-ac-land runs LAST and can compact mid-flight (a slow standalone-fallback `test:all` in Phase 1b —
-rare, only when no loop-close CI path exists — a hung browser tester) — and teardown that never
-runs leaves zombies. Declare a run ledger so a resumed
-session re-enters at the right phase instead of re-running quality gates or, worse, skipping
-teardown:
+ac-land runs LAST and can compact mid-flight — Phase 1 alone carries two named compaction
+risks (a slow standalone-fallback `test:all` in 1b, a hung browser-tester in 1c) — and
+teardown that never runs leaves zombies. Declare a run ledger with **one task per major
+section, including each of Phase 1's four sub-steps**, so a resumed session re-enters at the
+exact sub-step instead of re-running quality gates or, worse, skipping teardown:
 
 ```
-TaskCreate (one per phase):
-  1. Initialize                          in_progress
-  2. Land the plane (gates + UI + git)   pending
-  3. Learn (retrospective)               pending
-  4. Compound (system upgrades)          pending
-  5. Hand off                            pending
-  6. Teardown                            pending
+TaskCreate (one per section, in run order):
+  1. Initialize                            in_progress
+  2. File remaining work (1a)              pending
+  3. Quality gates (1b)                    pending
+  4. UI validation suite (1c)              pending
+  5. Git ops + fire async CI (1d)          pending
+  6. Learn (retrospective)                 pending
+  7. Compound (system upgrades)            pending
+  8. Hand off                              pending
+  9. Teardown                              pending
 ```
 
-`TaskUpdate` at each phase boundary; mark task 1 `completed` now. `progress.md` remains the
-artifact-of-record for *what was accomplished*; the ledger tracks *where the run is* — so a
-compacted conductor knows whether teardown (task 6) still owes work. The ledger tracks the
-RUN; beads stay the work atom.
+`TaskUpdate` each to `in_progress` when you start it and `completed` when done — the section
+headers below (`1a.` … `1d.`, then Phase 2 → Phase 4, then Teardown) map to these tasks 1:1;
+mark task 1 `completed` now. `progress.md` remains the artifact-of-record for *what was
+accomplished*; the ledger tracks *where the run is* — so a compacted conductor knows whether
+teardown (task 9) still owes work. The ledger tracks the RUN; beads stay the work atom.
 
 ---
 
@@ -96,6 +100,8 @@ RUN; beads stay the work atom.
   ```bash
   br create "Follow-up: <description>" --priority P1 --description "Discovered during bead-work session. Context: ..."
   ```
+
+Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
 ### 1b. Quality Gates
 
@@ -157,6 +163,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
 If nothing changed (tree was already formatted), skip the commit.
+
+Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 
 ### 1c. UI Validation Suite
 
@@ -231,6 +239,8 @@ Read all report files from `<ARTIFACTS_DIR>/ui-suite-*.md` (use the resolved pat
 - **Any FAIL:** Fix the issue, re-run only the failing journey's tester, then continue
 - **Skipped:** Note "UI validation skipped (no browser tool / no journeys defined)"
 
+Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
+
 ### 1d. Git Operations
 
 ```bash
@@ -268,6 +278,8 @@ Affected-only ran per wave; this one full run is the doctrine's single loop-clos
 (§5 Tier 2), covering everything the loop merged. Red → auto-file a P1 bead (first pick for the next
 `ac-loop` run) and it blocks `publish`. Skip only for a standalone landing with no CI path.
 
+Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
+
 ---
 
 ## Phase 2: Learn (Retrospective)
@@ -283,6 +295,8 @@ Spawn the retrospective analyst using the prompt in **`references/retrospective-
 ### Conductor Reviews Retrospective
 
 Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Apply the minimum bar: did this issue cause real waste THIS session? Drop anything that's "interesting but theoretical." Keep only items where you can point to a specific moment where time or resources were lost because the information wasn't available upfront.
+
+Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 
 ---
 
@@ -362,6 +376,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 git push
 ```
 
+Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
+
 ---
 
 ## Phase 4: Hand Off
@@ -424,6 +440,8 @@ rm -rf /tmp/hygiene-*
 rm -rf /tmp/work-review-*
 ```
 
+Mark ledger task 8 `completed`; `TaskUpdate` task 9 `in_progress`.
+
 ### Teardown (operational — part of landing)
 
 Landing means leaving NO live debris. Run this regardless of how the session reached land
@@ -459,6 +477,8 @@ git status          # Clean working tree
 git log --oneline -1  # Latest commit pushed
 br ready --json     # What's left
 ```
+
+Mark ledger task 9 `completed` — the run is landed.
 
 ---
 

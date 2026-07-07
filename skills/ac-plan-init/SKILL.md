@@ -55,16 +55,27 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ### Create Workflow Tasks
 
+**One task per major section** — a dropped/compacted session must be able to tell exactly
+which action it reached, not just which of the 5 phases:
+
 ```
-TaskCreate(subject: "Phase 0: Initialize and classify", description: "Verify branch, classify request type and complexity", activeForm: "Initializing plan session...")
+TaskCreate(subject: "Initialize — verify branch, classify request type and complexity", activeForm: "Initializing plan session...")
 
-TaskCreate(subject: "Phase 1: Parallel code exploration", description: "Spawn 3 parallel code exploration agents (Haiku, general-purpose): patterns, dependencies, constraints", activeForm: "Exploring codebase...")
+TaskCreate(subject: "Parallel code exploration — patterns, dependencies, constraints", description: "Spawn 3 parallel code exploration agents (Haiku, general-purpose)", activeForm: "Exploring codebase...")
 
-TaskCreate(subject: "Phase 2: Validation baseline", description: "Capture current state, verify tools, define success criterion and test specs", activeForm: "Establishing baseline...")
+TaskCreate(subject: "Validation baseline — identify method + capture current state", description: "Phase 2 steps 1-2: pick the validation method, capture the current-state baseline", activeForm: "Capturing baseline...")
 
-TaskCreate(subject: "Phase 3: Synthesize plan", description: "Combine exploration findings into actionable implementation plan", activeForm: "Creating plan...")
+TaskCreate(subject: "Taste the tools — verify validation capability", description: "Phase 2 step 3: confirm tests/browser/dev-server/API are actually reachable before planning against them", activeForm: "Tasting the tools...")
 
-TaskCreate(subject: "Phase 4: Get approval and commit", description: "Present plan for user approval, then commit artifacts to current branch", activeForm: "Awaiting approval...")
+TaskCreate(subject: "Validation baseline — success criterion + test specs", description: "Phase 2 steps 4-6: Silver Bullet success criterion, machine-readable test specs, baseline-vs-target doc", activeForm: "Defining success criterion...")
+
+TaskCreate(subject: "Synthesize plan — combine research into implementation plan", description: "Read research outputs, resolve conflicts, write the plan doc from the complexity-matched template", activeForm: "Creating plan...")
+
+TaskCreate(subject: "Present plan for approval", description: "Present summary + AskUserQuestion approve/adjust/reject gate", activeForm: "Awaiting approval...")
+
+TaskCreate(subject: "Commit plan artifacts + update status", description: "Safety check, commit to main, update plan frontmatter, archive source backlog item", activeForm: "Committing plan...")
+
+TaskCreate(subject: "Release signal + report + hand-off", description: "Release Agent Mail reservation, broadcast DONE, report completion, present next-step choice", activeForm: "Reporting completion...")
 ```
 
 ### Compaction Recovery
@@ -154,13 +165,13 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 - **Request:** {brief summary}
 ```
 
-**TaskUpdate(task: "Phase 0", status: "completed")**
+**TaskUpdate(task: "Initialize", status: "completed")**
 
 ---
 
 ## Phase 1: Parallel Code Exploration
 
-**TaskUpdate(task: "Phase 1", status: "in_progress")**
+**TaskUpdate(task: "Parallel code exploration", status: "in_progress")**
 
 ### Skill Routing
 
@@ -187,13 +198,13 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 - **Key finding:** {most important discovery}
 ```
 
-**TaskUpdate(task: "Phase 1", status: "completed")**
+**TaskUpdate(task: "Parallel code exploration", status: "completed")**
 
 ---
 
 ## Phase 2: Validation Baseline ("Taste the Tools")
 
-**TaskUpdate(task: "Phase 2", status: "in_progress")**
+**TaskUpdate(task: "Validation baseline — identify method + capture current state", status: "in_progress")**
 
 **Purpose:** Capture current state AND verify you can actually measure success BEFORE planning.
 
@@ -225,6 +236,9 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 **For bug fixes:** Follow reproduction steps, document broken behavior, confirm you can see the bug.
 
 **Save baseline to:** `_plans/research/YYYY-MM-DD-HHMM-baseline-[feature].md`
+
+Mark task "Validation baseline — identify method + capture current state" `completed`;
+`TaskUpdate(task: "Taste the tools — verify validation capability", status: "in_progress")`.
 
 ### Step 3: "Taste the Tools" (Verify Validation Capability)
 
@@ -259,6 +273,9 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 **IF all tools blocked:** STOP. Present blocker details and recovery procedure. Await user confirmation.
 
 **IF partial tools available:** Present working vs blocked tools. Propose alternative validation. Get user approval before proceeding with adjusted criteria.
+
+Mark task "Taste the tools — verify validation capability" `completed`;
+`TaskUpdate(task: "Validation baseline — success criterion + test specs", status: "in_progress")`.
 
 ### Step 4: Define Success Criterion (Silver Bullet)
 
@@ -338,13 +355,13 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 - **Tests designed:** 1 Silver Bullet + {X} supporting tests
 ```
 
-**TaskUpdate(task: "Phase 2", status: "completed")**
+**TaskUpdate(task: "Validation baseline — success criterion + test specs", status: "completed")**
 
 ---
 
 ## Phase 3: Synthesize Findings and Create Plan
 
-**TaskUpdate(task: "Phase 3", status: "in_progress")**
+**TaskUpdate(task: "Synthesize plan — combine research into implementation plan", status: "in_progress")**
 
 **THIS IS YOUR CORE WORK. Do not delegate synthesis.**
 
@@ -387,13 +404,13 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 - **Test specs:** 1 Silver Bullet + {X} supporting
 ```
 
-**TaskUpdate(task: "Phase 3", status: "completed")**
+**TaskUpdate(task: "Synthesize plan — combine research into implementation plan", status: "completed")**
 
 ---
 
 ## Phase 4: Present for Approval and Commit
 
-**TaskUpdate(task: "Phase 4", status: "in_progress")**
+**TaskUpdate(task: "Present plan for approval", status: "in_progress")**
 
 ### Ask Questions If Needed
 
@@ -459,6 +476,10 @@ AskUserQuestion(
 - **Adjust** -> Update plan based on feedback, re-present
 - **Reject** -> Discuss concerns, revise approach
 
+On **Approve**, mark task "Present plan for approval" `completed`;
+`TaskUpdate(task: "Commit plan artifacts + update status", status: "in_progress")`.
+(On Adjust/Reject, leave the task `in_progress` — you're still in the approval loop.)
+
 ### Safety Check (Before Commit)
 
 ```bash
@@ -509,6 +530,9 @@ Also archive the source backlog item (if a `source_backlog` was set):
 mkdir -p "$(dirname $SOURCE_BACKLOG)/_done"
 mv "$SOURCE_BACKLOG" "$(dirname $SOURCE_BACKLOG)/_done/$(basename $SOURCE_BACKLOG)"
 ```
+
+Mark task "Commit plan artifacts + update status" `completed`;
+`TaskUpdate(task: "Release signal + report + hand-off", status: "in_progress")`.
 
 ### Release Active Work Signal (Agent Mail)
 
@@ -587,7 +611,7 @@ AskUserQuestion(
 )
 ```
 
-**TaskUpdate(task: "Phase 4", status: "completed")**
+**TaskUpdate(task: "Release signal + report + hand-off", status: "completed")**
 
 ---
 

@@ -56,6 +56,28 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 Read `AGENTS.md` for project context.
 
+### Create Workflow Tasks (run ledger)
+
+**One task per major section — every reconciliation sub-phase gets its own line.** Create
+these upfront; `TaskUpdate` each to `in_progress` when its section starts and `completed`
+when it ends (both modes — NIGHTLY tracks the ledger internally even with no human to show
+it to). This run does not invoke sub-skills mid-flight; if a future revision does, that
+sub-skill keeps its own ledger — don't duplicate its steps here.
+
+```
+TaskCreate("Scope + scan — read AGENTS.md, scan beads/plans/backlog via board-scan")
+TaskCreate("2a — archive completed backlog items")
+TaskCreate("2b — archive beadified plans")
+TaskCreate("2c — archive completed plans (all beads closed)")
+TaskCreate("2d — update backlog status for planned items")
+TaskCreate("2e — fix missing plan frontmatter")
+TaskCreate("2f — lifecycle label gap lint")
+TaskCreate("Flag orphans + suggest consolidation")
+TaskCreate("Report — tidy summary, commit changes")
+```
+
+**TaskUpdate("Scope + scan", in_progress)**
+
 ---
 
 ## Phase 1: Scan Everything
@@ -68,9 +90,13 @@ Your lens (the reconciliation inputs to pull from the board):
 - **Plans** — `status` (and infer it if frontmatter is missing → Phase 2e); whether each plan is **referenced by a bead** (= beadified → Phase 2b) and whether those beads are all closed (→ Phase 2c); `source_backlog` (→ Phase 2d).
 - **Backlog** — `status` + `plans` fields; checked vs unchecked task counts; which folder (`active/` = committed · `pool/` = candidate; flag any legacy `v*/` for the `{active/, pool/}` migration `/ac-align` offers).
 
+**TaskUpdate("Scope + scan", completed)**
+
 ---
 
 ## Phase 2: Reconcile Lifecycle State
+
+**TaskUpdate("2a", in_progress)**
 
 ### 2a: Archive Completed Backlog Items
 
@@ -95,6 +121,9 @@ AskUserQuestion(
 For approved items:
 1. Update frontmatter: `status: complete`
 2. Move to `_backlog/_done/`
+
+**TaskUpdate("2a", completed)**
+**TaskUpdate("2b", in_progress)**
 
 ### 2b: Archive Beadified Plans
 
@@ -124,6 +153,9 @@ For approved items:
 1. Update frontmatter: `status: done`
 2. Move to `_plans/_done/`
 
+**TaskUpdate("2b", completed)**
+**TaskUpdate("2c", in_progress)**
+
 ### 2c: Archive Completed Plans (All Beads Closed)
 
 > **NIGHTLY:** same as 2b — auto-archive only under the Tier-2 toggle + positive-proof gate; else Tier-3 proposal.
@@ -136,6 +168,9 @@ For approved items:
 { label: "{filename}", description: "All {count} beads closed — work complete" }
 ```
 
+**TaskUpdate("2c", completed)**
+**TaskUpdate("2d", in_progress)**
+
 ### 2d: Update Backlog Status for Planned Items
 
 > **NIGHTLY (Tier 1):** auto-applies in both modes — non-destructive reconciliation, no confirmation needed.
@@ -145,6 +180,9 @@ For approved items:
 **Action:** Update frontmatter to `status: planned` and add `plans:` field if missing.
 
 Report: "Updated {filename}: status → planned (plan: {plan_name})"
+
+**TaskUpdate("2d", completed)**
+**TaskUpdate("2e", in_progress)**
 
 ### 2e: Fix Missing Plan Frontmatter
 
@@ -169,6 +207,9 @@ refinement_rounds: {count from Refinement Log, or 0}
 
 Report each inference for user awareness.
 
+**TaskUpdate("2e", completed)**
+**TaskUpdate("2f", in_progress)**
+
 ### 2f: Lifecycle Label Gap Lint
 
 > **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac-bead-refine` convergence, no other skill (`skills/_shared/bead-conventions.md`).
@@ -189,6 +230,9 @@ br list --json --limit 1000 | jq -r '
 **Action:** `br label add <id> "unrefined"` (fail-safe — unknown readiness is treated as not-ready). List every flagged bead in the report.
 
 Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
+
+**TaskUpdate("2f", completed)**
+**TaskUpdate("Flag orphans + suggest consolidation", in_progress)**
 
 ---
 
@@ -245,6 +289,9 @@ those are gated, not housekeeping.
 
 **NIGHTLY (Tier 3):** do NOT `AskUserQuestion` (no human present). Instead emit a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`) + one `human-gate,pipeline-proposal` bead per cluster, per `workflows/nightly.md`. Before emitting, **dedup**: skip any cluster already covered by an open `pipeline-proposal` bead (the populated-`bead:` slot is the idempotency marker). `ac-human-session` applies approved proposals by re-invoking this skill's INTERACTIVE flow.
 
+**TaskUpdate("Flag orphans + suggest consolidation", completed)**
+**TaskUpdate("Report", in_progress)**
+
 ---
 
 ## Phase 5: Report
@@ -293,6 +340,8 @@ EOF
 )"
 git push
 ```
+
+**TaskUpdate("Report", completed)**
 
 ---
 

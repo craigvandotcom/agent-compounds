@@ -10,6 +10,14 @@ description: Comprehensive audit framework for systematic, parallelizable verifi
 > `.claude/skills/CORE/SKILL.md`** (and the `AGENTS.md` summary it indexes).
 > Do not add app-specific facts to this file — they belong in CORE.
 
+> **Exempt from the org run-ledger standard.** This is a reference/checklist
+> **library** (taskify format + domain checklists), invoked ad hoc by a human or
+> cited by another skill's gate — it has no `ARTIFACTS_DIR`, no compaction-recovery
+> state, and no delegation-invocation pattern of its own, because it isn't a
+> standalone orchestrated run. When audit work runs *inside* another skill (e.g. a
+> pre-deployment sweep orchestrated by a workflow), that calling skill's own run
+> ledger carries the task — this file does not need a parallel one.
+
 # Audit Framework Skill
 
 **Purpose:** Orchestrate systematic, parallelizable audits across security, performance, UI/UX, and testing domains

@@ -126,21 +126,40 @@ If the plan file has no changes (already committed), git will report "nothing to
 ### Configuration
 
 ```bash
+MIN_ROUNDS=2          # ABSOLUTE floor (Craig's call, 2026-07-07) — never finalize before round 2,
+                      # even on an incremental round 1; each round runs ~4 external models (~$2),
+                      # so the floor costs ~$4 minimum — deliberate, to bound external-review spend.
 MAX_ROUNDS=5
 CURRENT_ROUND=1
 ```
 
-### Create Workflow Tasks
+### Create Workflow Tasks (run ledger)
 
-**CRITICAL: Create ALL tasks upfront so workflow is transparent.**
+**One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
+section you'd report on gets its own line (not a 3-phase skeleton mutated in place). Create
+the fixed tasks below at Phase 0; **ADD a "Round N" task at the start of each round** (rounds
+are dynamic — 2 floor, up to `MAX_ROUNDS=5` — so the ledger grows to the real shape instead of
+pre-committing to a round count or showing phantom rounds, and instead of overwriting one
+task's description round after round). `TaskUpdate` each to `in_progress` when you start it
+and `completed` when done; put live detail in the description (per round: model count +
+scope classification + synthesis result), so a glance at the ledger shows exactly where the
+run is.
 
 ```
-TaskCreate(subject: "Phase 0: Initialize - Setup refinement workspace", description: "Identify plan file, check AGENTS.md context, read model registry, create working directory", activeForm: "Initializing refinement...")
+# Fixed tasks — create upfront at Phase 0:
+TaskCreate("Initialize + select external models — plan file, AGENTS.md context, working dir, consensus registry, model set")
+TaskCreate("Conductor triage — classify remaining no-consensus findings (AUTO_IMPLEMENT / DESIGN_DECISION / SCOPE_ESCALATION)")
+TaskCreate("Present decisions — surface DESIGN_DECISION/SCOPE_ESCALATION items to the user")
+TaskCreate("Apply + update plan + commit — copy final plan, master changelog, commit + push")
+TaskCreate("Report — refinement summary + loop-ready prompt")
 
-TaskCreate(subject: "Phase 1-4: Refinement Loop - Iterative multi-model review", description: "Prepare prompt → parallel model review → synthesize improvements → convergence check. Repeat up to MAX_ROUNDS.", activeForm: "Refining plan...")
-
-TaskCreate(subject: "Phase 5: Finalize - Create changelog and present results", description: "Generate master changelog, copy final plan, commit artifacts, present summary", activeForm: "Finalizing refinement...")
+# Per-round task — create ONE as each round begins (not upfront):
+TaskCreate("Round {N} — {MODEL_COUNT} external models (parallel) → synthesize")
+# On completion, TaskUpdate its description: "{scope} scope, {n} auto-applied, {model} highlights"
 ```
+
+With a 2-round run (the floor) that's 7 tasks; a 5-round run, 10. **TaskUpdate("Initialize +
+select external models", in_progress)** now, and mark it `completed` at the end of Phase 0.
 
 ### Present Configuration Summary
 
@@ -164,17 +183,20 @@ TaskCreate(subject: "Phase 5: Finalize - Create changelog and present results", 
 Starting refinement loop...
 ```
 
-**TaskUpdate(subject: "Phase 0: Initialize", status: "completed")**
+**TaskUpdate(subject: "Initialize + select external models", status: "completed")**
 
 ---
 
 ## REFINEMENT LOOP: Phases 1→2→3→4
 
-**CRITICAL: This is an ITERATIVE loop. Phases 1-4 repeat up to MAX_ROUNDS times.**
+**CRITICAL: This is an ITERATIVE loop. Phases 1-4 repeat until `MIN_ROUNDS` is cleared and
+convergence is reached, up to `MAX_ROUNDS` times.**
 
 **Loop flow:**
 
 ```
+[Create "Round {CURRENT_ROUND} — {MODEL_COUNT} external models (parallel) → synthesize" task]
+    ↓
 Phase 1: Prepare Review Prompt
     ↓
 Phase 2: Multi-Model Review (parallel)
@@ -185,12 +207,12 @@ Phase 4: Convergence Check
     ↓
 [Decision: Continue OR Finalize?]
     ↓ Continue
-[Increment CURRENT_ROUND, loop back to Phase 1]
+[Complete the round task, increment CURRENT_ROUND, loop back — create the NEXT round's task]
     ↓ Finalize
 Phase 5: Finalize
 ```
 
-**TaskUpdate(subject: "Phase 1-4: Refinement Loop", status: "in_progress", description: "Round {CURRENT_ROUND}/{MAX_ROUNDS} - Preparing review...")**
+**At the start of each round:** `TaskCreate("Round {CURRENT_ROUND} — {MODEL_COUNT} external models (parallel) → synthesize")`, then `TaskUpdate(status: "in_progress", description: "Preparing review...")` on that round's task — never reuse a previous round's task.
 
 ---
 
@@ -242,7 +264,7 @@ echo "Review prompt created for round $CURRENT_ROUND"
 
 ## Phase 2: Multi-Model Review
 
-**TaskUpdate(subject: "Phase 1-4: Refinement Loop", description: "Round {CURRENT_ROUND}/{MAX_ROUNDS} - Sending to {MODEL_COUNT} models in parallel...")**
+**TaskUpdate on the round's task** (`"Round {CURRENT_ROUND} — ..."`, description: "Sending to {MODEL_COUNT} models in parallel...")
 
 ### Send to Models in Parallel
 
@@ -315,7 +337,7 @@ done
 
 ## Phase 3: Synthesize Improvements
 
-**TaskUpdate(subject: "Phase 1-4: Refinement Loop", description: "Round {CURRENT_ROUND}/{MAX_ROUNDS} - Synthesizing improvements...")**
+**TaskUpdate on the round's task** (`"Round {CURRENT_ROUND} — ..."`, description: "Synthesizing improvements...")
 
 ### Read All Model Outputs
 
@@ -514,7 +536,7 @@ CHANGELOG_END
 
 ## Phase 4: Convergence Check
 
-**TaskUpdate(subject: "Phase 1-4: Refinement Loop", description: "Round {CURRENT_ROUND}/{MAX_ROUNDS} - Checking convergence...")**
+**TaskUpdate on the round's task** (`"Round {CURRENT_ROUND} — ..."`, description: "Checking convergence...")
 
 ### Assess Scope of Changes
 
@@ -558,7 +580,7 @@ CHANGE_SCOPE="[Structural|Significant|Incremental]"
 
 ### Decision Logic
 
-**Auto-continue for structural/significant changes:**
+**Rule 1 (scope gate): structural/significant changes always continue.**
 
 Structural or significant changes mean the plan was materially altered. These fixes are unverified until the next round's models confirm no new issues emerged. Only finalize after a round where changes are incremental (all major issues resolved).
 
@@ -573,9 +595,28 @@ elif [ "$CHANGE_SCOPE" = "Significant" ]; then
 fi
 ```
 
-**Ask user for incremental changes:**
+**Rule 2 (the round floor): the `MIN_ROUNDS=2` floor is ABSOLUTE.** Each round runs ~4 external
+models in parallel (~$2/round), so the floor costs ~$4 minimum — deliberate, Craig set it that
+way to bound spend while still buying real cross-round signal. An incremental round 1 is not
+evidence of convergence; it is evidence one round can't tell. **Never even ask the user to
+finalize before `CURRENT_ROUND >= MIN_ROUNDS`** — on an incremental round short of the floor,
+continue automatically without prompting. The "ask to finalize" branch is only reachable once
+the floor is cleared.
 
-When changes become incremental, convergence may be approaching. Use **AskUserQuestion tool** (NOT bash `read`):
+```bash
+# The floor is checked FIRST and is absolute — nothing exits before MIN_ROUNDS=2.
+if [ "$CURRENT_ROUND" -lt "$MIN_ROUNDS" ]; then
+    echo "Round $CURRENT_ROUND < MIN_ROUNDS=$MIN_ROUNDS — continuing automatically, even on an Incremental round"
+    CONTINUE_REFINING=true
+elif [ "$CHANGE_SCOPE" = "Incremental" ]; then
+    # Floor cleared (CURRENT_ROUND >= MIN_ROUNDS) — ask user whether to finalize
+    :
+fi
+```
+
+**Ask user for incremental changes (only once `CURRENT_ROUND >= MIN_ROUNDS`):**
+
+When changes become incremental AND the floor is cleared, convergence may be approaching. Use **AskUserQuestion tool** (NOT bash `read`):
 
 ```
 AskUserQuestion(
@@ -616,7 +657,8 @@ if [ "$CONTINUE_REFINING" = true ] && [ "$CURRENT_ROUND" -lt "$MAX_ROUNDS" ]; th
     # - Phase 3: Synthesize new round of improvements
     # - Phase 4: Check convergence again
 
-    # TaskUpdate to reflect new round
+    # Complete THIS round's task, then TaskCreate the NEXT round's task at the top of the loop
+    # TaskUpdate("Round {CURRENT_ROUND-1} — ...", status: "completed", description: "{scope} scope, {n} auto-applied")
     # [Loop continues...]
 
 else
@@ -625,8 +667,8 @@ else
     echo "Refinement complete after $CURRENT_ROUND rounds"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    # Update task to completed
-    TaskUpdate(subject: "Phase 1-4: Refinement Loop", status: "completed")
+    # Complete this round's dynamic task
+    # TaskUpdate("Round {CURRENT_ROUND} — ...", status: "completed", description: "{scope} scope, {n} auto-applied")
 
     # Proceed to finalization
     echo "Proceeding to Phase 5: Finalize..."
@@ -643,35 +685,61 @@ fi
 
 ## Phase 5: Finalize
 
-**TaskUpdate(subject: "Phase 5: Finalize", status: "in_progress")**
+### Conductor Triage
 
-### Present Remaining No-Consensus Findings (once)
+**TaskUpdate("Conductor triage", status: "in_progress")**
 
-Read the consensus registry. Any deferred findings that never achieved cross-round consensus are presented to the user in a single batch:
+Read the consensus registry. Collect all remaining single-model findings that never achieved cross-round consensus.
 
-**If no remaining deferred findings:** Skip — just proceed to copy.
+**If nothing remains:** Skip — mark this task `completed` and proceed to Present Decisions (which will also skip).
 
-**If deferred findings remain:**
+**Classify each remaining no-consensus finding:**
+
+| Category | Criteria | Action |
+|---|---|---|
+| `AUTO_IMPLEMENT` | There is a clearly superior answer — better correctness, robustness, or completeness. The improvement is unambiguous. | Apply now via a sequential Haiku subagent (same pattern as Step 2). |
+| `DESIGN_DECISION` | No objectively superior answer AND the choice would **noticeably affect the end-user experience** or **profoundly change the development approach**. | Defer to user. |
+| `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change that constitutes a strategic commitment. | Defer to user with scope context. |
+
+**Default bias: `AUTO_IMPLEMENT`.** Most single-model suggestions that never recurred still have a correct answer — pick it.
+
+**Apply all `AUTO_IMPLEMENT` items now, via sequential Haiku subagents (same pattern as Step 2). Log each with rationale.**
+
+**TaskUpdate("Conductor triage", status: "completed", description: "{n} auto-implemented, {m} deferred to user")**
+
+### Present Decisions
+
+**TaskUpdate("Present decisions", status: "in_progress")**
+
+**If no `DESIGN_DECISION` or `SCOPE_ESCALATION` items remain:** Skip — mark this task `completed` and proceed to Apply + update plan + commit.
+
+**If items remain:**
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "All consensus findings applied across {CURRENT_ROUND} rounds. {N} single-model suggestions never confirmed. Apply any of these?",
-    header: "Remaining",
+    question: "Auto-implemented {N} clear improvements across {CURRENT_ROUND} rounds. {M} items need your decision:",
+    header: "Decisions",
     multiSelect: true,
     options: [
-      { label: "Change X: <title>", description: "Round {R}, Incremental — {model}: {section} — <one-line summary>" },
-      { label: "Change Y: <title>", description: "Round {R}, Incremental — {model}: {section} — <one-line summary>" }
+      { label: "Change X: <title>", description: "DESIGN_DECISION — Round {R}, {model}: {section} — <one-line summary>" },
+      { label: "Change Y: <title>", description: "SCOPE_ESCALATION — {model}: {section} — <one-line summary>. Scope: {what it entails}" }
     ]
   }]
 )
 ```
 
-**If more than 4 remaining items:** Split across multiple `AskUserQuestion` calls.
+**If more than 4 items:** Split across multiple `AskUserQuestion` calls.
 
 **Apply any user-approved findings via sequential Haiku subagents (same pattern as Step 2).**
 
-### Copy Final Plan
+**TaskUpdate("Present decisions", status: "completed")**
+
+### Apply + Update Plan + Commit
+
+**TaskUpdate("Apply + update plan + commit", status: "in_progress")**
+
+#### Copy Final Plan
 
 ```bash
 # Copy final refined plan to original location
@@ -680,7 +748,7 @@ cp "$FINAL_PLAN" "$PLAN_FILE"
 echo "✓ Final plan written to: $PLAN_FILE"
 ```
 
-### Create Master Changelog
+#### Create Master Changelog
 
 **Combine all round changelogs into comprehensive log:**
 
@@ -771,7 +839,7 @@ BREAKDOWN
 echo "✓ Master changelog created: $WORK_DIR/REFINEMENT-LOG.md"
 ```
 
-### Safety Check & Commit
+#### Safety Check & Commit
 
 ```bash
 git status --short
@@ -782,7 +850,7 @@ git status --short
 - **If ANY deletions (D):** STOP and ask user "You're about to delete X files. Is this intentional?"
 - Wait for confirmation before proceeding if deletions present
 
-### Commit Refinement Artifacts
+#### Commit Refinement Artifacts
 
 ```bash
 # Copy refinement log to project for version control
@@ -809,7 +877,13 @@ git push
 git status
 ```
 
-### Present Final Summary
+**TaskUpdate("Apply + update plan + commit", status: "completed")**
+
+### Report
+
+**TaskUpdate("Report", status: "in_progress")**
+
+#### Present Final Summary
 
 ```markdown
 ## Plan Refinement Complete (External)
@@ -885,13 +959,16 @@ git commit -m "docs(plan): mark loop-ready
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
-**TaskUpdate(subject: "Phase 5: Finalize", status: "completed")**
+**TaskUpdate("Report", status: "completed")**
 
 ---
 
 ## Flexibility & Overrides
 
 ### User Can Adjust Process
+
+**`MIN_ROUNDS=2` is NOT user-adjustable** — it's an absolute floor (Craig's call, 2026-07-07).
+Every override below adjusts `MAX_ROUNDS` only; the floor still applies underneath it.
 
 **"Quick refinement (3 rounds max)"**
 → Set `MAX_ROUNDS=3` before starting
