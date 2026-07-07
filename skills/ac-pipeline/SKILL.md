@@ -1,13 +1,14 @@
 ---
 name: ac-pipeline
-description: 'End-to-end engineering pipeline orchestrator — chains align → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Single named goal, human gates at plan-approval and pre-merge; for unattended multi-item queue clearance use ac-loop. Use when you want the whole flow run hands-off, or a named slice of it. Triggers: "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>".'
+description: 'DEPRECATED — superseded by `ac-loop` (runtime conductor) and `ac-pipeline-builder` (doctrine); kept for historical/archival reference only, its stage chain is stale. End-to-end engineering pipeline orchestrator — chains align → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Single named goal, human gates at plan-approval and pre-merge. For unattended multi-item queue clearance use `ac-loop` instead — it now owns the triggers "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>". Do not route live work here.'
 ---
 
 > **DEPRECATED — superseded by `ac-loop` (runtime conductor) and `ac-pipeline-builder` (doctrine).**
 > This file's stage chain below is stale: it describes `ac-land` as a pre-merge gate
 > alongside `ac-review`. That is no longer correct — `ac-review` is the sole pre-merge
 > gate; `ac-land` is the closing ritual that runs LAST, after `ac-merge`. Do not treat
-> the chain diagram or the "Two-path model" section below as current doctrine. Kept
+> the chain diagram, the "Two-path model" section, or the stage table below (rows 5a/5b/6
+> repeat the same stale land-before-merge ordering) as current doctrine. Kept
 > readable for historical/archival reference; nothing below has been deleted.
 
 # Pipeline Orchestrator

@@ -1,6 +1,6 @@
 ---
 name: device-testing
-description: Use for ad-hoc (not pipeline-gated) native iOS-simulator work — driving the real app with agent-device, and capturing screenshots or recording screen video as deliverables (App Review evidence, bug repros, demos, marketing clips). The native twin of browser-testing. Triggers on "record the screen", "screen recording", "screenshot the app", "capture the simulator", "drive the simulator", "record a flow", "grab a screenshot on device", "make a video of the app". NOT for structured full-app native QA with depth levels / QA_VALIDATION reporting / native-shell checklist / ac-merge gating (use ac-qa-device); NOT for web/browser capture (use browser-testing).
+description: Use for ad-hoc (not pipeline-gated) native iOS-simulator work — driving the real app with agent-device, and capturing screenshots or recording screen video as deliverables (App Review evidence, bug repros, demos, marketing clips). The native twin of browser-testing. Triggers on "record the screen", "screen recording", "screenshot the app" (native simulator capture), "capture the simulator", "drive the simulator", "record a flow", "grab a screenshot on device", "make a video of the app". NOT for structured full-app native QA with depth levels / QA_VALIDATION reporting / native-shell checklist / ac-merge gating (use ac-qa-device); NOT for web/browser capture (use browser-testing); NOT for refreshing landing-page/marketing screenshots (use screenshot-refresh).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
