@@ -55,7 +55,7 @@ If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or ch
 > absence of `unrefined` (`skills/_shared/bead-conventions.md`) — a well-written
 > description is not a refined spec.
 
-**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` stamps `refined` (or `ac-triage` stamps it directly on a justified refined-by-construction defect). Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads carrying `refined` and NOT carrying `human-gate` are eligible:
+**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` (or `ac-triage`, or `ac-bead-capture`) carry the `unrefined` label until `/ac-bead-refine` — the label's sole source, with no exceptions — stamps `refined` on convergence. Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads carrying `refined` and NOT carrying `human-gate` are eligible:
 
 ```bash
 # Ready beads that are refined AND not human-gated

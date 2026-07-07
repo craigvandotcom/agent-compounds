@@ -38,10 +38,11 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   (ops `human-gate` bead, deduped against open ones), never silent-skip, never advance
   that watermark.
 - Cluster, severity-filter, dedupe against open beads AND open pool candidates.
-- Route by shape: defects → beads (**respect the Phase-3a readiness gate** —
-  refined-by-construction defects — permalink + suspected commit + repro + verification
-  path — get `refined` + a justification comment; anything vaguer carries `unrefined`);
-  themes → `_backlog/pool/` candidates with `status: candidate`.
+- Route by shape: defects → beads, ALWAYS `unrefined` (**the Phase-3a readiness bar** —
+  permalink + suspected commit + repro + verification path — is evidencing guidance, not a
+  stamping decision; only `/ac-bead-refine` ever applies `refined`, and a
+  refined-by-construction bead just converges there fast); themes → `_backlog/pool/`
+  candidates with `status: candidate`.
 
 ### 2. Report + persist (even on a zero-findings run)
 

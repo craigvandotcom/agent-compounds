@@ -377,8 +377,11 @@ re-derives it from cold (or worse, can't). Two run-specific notes for the review
 
 Headless runs included — refinement is agent-satisfiable (genuine design forks already went
 through this run's decision gates or carry `human-gate`). 0–1 beads → skip (nothing to
-converge). On convergence the `unrefined` labels come off and `refined` goes on, leaving the
-epic implement-ready for the loop.
+converge). Hygiene never stamps `refined` itself — that label comes from **this
+`ac-bead-refine` invocation**, on its own convergence, exactly like any other bead; hygiene's
+role is to run it in-session while context is hot, not to earn the stamp on its behalf. On
+convergence the `unrefined` labels come off and `refined` goes on, leaving the epic
+implement-ready for the loop.
 
 ### Report
 

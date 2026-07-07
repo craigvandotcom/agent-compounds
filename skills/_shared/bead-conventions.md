@@ -40,7 +40,7 @@ Every **open, non-epic** bead carries exactly one of three lifecycle labels:
 | Label | Meaning | Who stamps it |
 | ----- | ------- | ------------- |
 | `unrefined` | Not implementation-ready, awaiting `/ac-bead-refine` | Default at creation (`ac-bead-capture`, `ac-beadify`) |
-| `refined` | Implementation-ready | **Exclusively** `/ac-bead-refine` on convergence, OR `ac-triage` on a refined-by-construction defect (source permalink + suspected wave/commit + repro + verification path, WITH a justifying comment) |
+| `refined` | Implementation-ready | **Exclusively** `/ac-bead-refine` on convergence — no other skill, and no conductor, ever applies this label, however strong the finding's evidence |
 | `human-gate` | Decision/approval bead — never implemented directly | Creator, per the decision-bead contract above |
 
 **Readiness for implementation = presence of `refined`.** (2026-07-07 doctrine
