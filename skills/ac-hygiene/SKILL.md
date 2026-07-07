@@ -361,10 +361,11 @@ git switch main && git pull
 
 ### Refine the Run's Beads (in-session, after the merge)
 
-If this run created an epic (2+ beads), run **`ac-bead-refine`** scoped to that epic NOW —
-before the report, not "later." The conductor still holds every finding, verdict, and triage
-rationale in context; that is exactly what refinement needs, and a deferred refine session
-re-derives it from cold (or worse, can't). Two run-specific notes for the reviewer prompts:
+If this run created **≥1 bead**, run **`ac-bead-refine`** NOW — scoped to the epic if one
+exists (2+ beads), to the single bead otherwise — before the report, not "later." The
+conductor still holds every finding, verdict, and triage rationale in context; that is
+exactly what refinement needs, and a deferred refine session re-derives it from cold (or
+worse, can't). Two run-specific notes for the reviewer prompts:
 
 - Bead descriptions were written mid-run — file/line references predate the merged fixes.
   Reviewers must re-verify every reference against merged `main` and correct drift.
@@ -376,7 +377,7 @@ re-derives it from cold (or worse, can't). Two run-specific notes for the review
   not only against code.
 
 Headless runs included — refinement is agent-satisfiable (genuine design forks already went
-through this run's decision gates or carry `human-gate`). 0–1 beads → skip (nothing to
+through this run's decision gates or carry `human-gate`). 0 beads → skip (nothing to
 converge). Hygiene never stamps `refined` itself — that label comes from **this
 `ac-bead-refine` invocation**, on its own convergence, exactly like any other bead; hygiene's
 role is to run it in-session while context is hot, not to earn the stamp on its behalf. On
@@ -453,7 +454,7 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
 - **Incremental in the loop, exhaustive at the boundary** — rounds gate on type-check + lint + affected tests; the FULL suite runs exactly once, at Phase 5 pre-merge (BLOCKING)
-- **Deferred beads get an epic per run** (2+ beads) — refined in-session post-merge (`ac-bead-refine` while the findings are still in context), shipped as orphans by the loop
+- **Deferred beads get an epic per run** (2+ beads); refined in-session post-merge whenever **≥1 bead** was created (epic-scoped or single-bead-scoped) — `ac-bead-refine` while the findings are still in context, shipped as orphans by the loop
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Don't invent issues** — if the codebase is clean, say so and finish early
 

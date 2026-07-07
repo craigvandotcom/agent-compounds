@@ -79,6 +79,28 @@ for id in $(br list --json | jq -r '.[].id'); do
 done > "$ARTIFACTS_DIR/beads-full-dump.txt"
 ```
 
+**Epic-scoped invocation** (caller says "scoped to that epic" — e.g. from `ac-hygiene` or
+`ac-triage`'s per-run epic): the snapshot narrows to the epic + its `parent-child` children.
+`br list --json` carries no dependency-edge field, so derive the child set via `dep list`:
+
+```bash
+EPIC_ID=<the epic bead id>
+CHILD_IDS=$(br dep list "$EPIC_ID" --direction up -t parent-child --json | jq -r '.[].issue_id')
+
+ID_FLAGS=(--id "$EPIC_ID")
+for c in $CHILD_IDS; do ID_FLAGS+=(--id "$c"); done
+br list --json "${ID_FLAGS[@]}" --all > "$ARTIFACTS_DIR/beads-snapshot.json"
+
+# Full bead details, epic-scoped
+{ echo "=== Bead $EPIC_ID ==="; br show "$EPIC_ID"; br comments "$EPIC_ID"; echo ""; \
+  for id in $CHILD_IDS; do echo "=== Bead $id ==="; br show "$id"; br comments "$id"; echo ""; done; \
+} > "$ARTIFACTS_DIR/beads-full-dump.txt"
+```
+
+Everything downstream (reviewer prompts, `br list --json` re-reads for verification,
+convergence, the final `refined`-stamp loop) operates over this narrowed snapshot instead
+of the whole board.
+
 ### Create Workflow Tasks
 
 ```
@@ -359,8 +381,9 @@ AskUserQuestion(
 **On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
 
 ```bash
-# Remove unrefined, add refined, on all open beads that were reviewed
-for id in $(br list --json | jq -r '.[] | select(.status == "open") | .id'); do
+# Remove unrefined, add refined — scoped to what was actually reviewed this run
+# (the snapshot from Phase 0: whole board normally, epic + children if epic-scoped).
+for id in $(jq -r '.issues[] | select(.status == "open") | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); do
     br label remove "$id" "unrefined" 2>/dev/null
     br label add "$id" "refined" 2>/dev/null
 done

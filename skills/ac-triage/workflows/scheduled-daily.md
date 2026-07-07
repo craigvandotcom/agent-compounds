@@ -44,20 +44,30 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   refined-by-construction bead just converges there fast); themes → `_backlog/pool/`
   candidates with `status: candidate`.
 
-### 2. Report + persist (even on a zero-findings run)
+### 2. Group + refine (per-run epic + in-session `ac-bead-refine`)
+
+- **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
+  epic (`br create -t epic "Triage <date> — findings"`, children linked via parent-child
+  deps). 0–1 beads → no epic.
+- **In-session refine, before the report:** if this run created ≥1 bead, run
+  `ac-bead-refine` NOW — scoped to the epic if one exists, to the single bead otherwise.
+  0 beads → skip. Triage never stamps `refined` itself — that comes from this
+  `ac-bead-refine` invocation's own convergence (SKILL.md Phase 3c).
+
+### 3. Report + persist (even on a zero-findings run)
 
 - Write the Phase-4 report to `.claude/state/triage-last-run.md` — an empty run still
   writes it (proof-of-life; a dead scheduler and a quiet prod must not look identical).
 - Post the same report via `slack-send` to the app's channel.
 
-### 3. Commit + push (pathspec-scoped ONLY)
+### 4. Commit + push (pathspec-scoped ONLY)
 
 - Stage only what triage owns: `.beads/*.jsonl`, `.claude/state/`, `_backlog/pool/`.
   Never sweep unrelated dirty files (concurrent sessions share this checkout).
 - Commit on `main` with `AGENT_NAME=<name>` inline; push with `--no-verify` (the
   pre-push build hook swallows background pushes) and **verify the origin SHA** after.
 
-### 4. Degrade loudly
+### 5. Degrade loudly
 
 Any failed step → `slack-send` a `TRIAGE DEGRADED: <reason>` line to the app's channel.
 Exit without partial watermark advances.

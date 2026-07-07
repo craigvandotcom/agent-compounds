@@ -71,6 +71,28 @@ br list --json --limit 1000 | jq -r '
 | while read -r id; do br label add "$id" "refined"; done
 ```
 
+## Batch-producing workflows (per-run epic + in-session refine)
+
+Any skill that files **multiple beads in one run** (`ac-hygiene`, `ac-triage`, future ones)
+follows the same batching contract — this is the shared authority both cite:
+
+1. **2+ beads → one per-run epic.** `br create -t epic "<Skill> <date> — <noun>"` (e.g.
+   "Hygiene 2026-07-07 — deferred findings", "Triage 2026-07-07 — findings"), children
+   linked via `--parent` (`parent-child` dep). 0–1 beads → no epic (don't inflate).
+2. **≥1 bead → in-session `ac-bead-refine` at run end.** Scoped to the epic if one exists
+   (2+ beads), to the single bead otherwise. The conductor still holds every cluster, source
+   permalink, and repro rationale in context right now — a deferred refine session has to
+   re-derive all of it from cold. 0 beads → nothing to refine.
+3. **Single-stamper invariant intact.** Children ship `unrefined` at creation, same as any
+   other bead. The run-end `ac-bead-refine` invocation is what earns `refined` — on its own
+   convergence, exclusively, exactly as for any other bead (see Lifecycle labels above). The
+   batch workflow never stamps `refined` itself; it only runs the skill that does, while
+   context is hot.
+
+`ac-bead-capture` is the human quick-capture skill (one bead, typed live in conversation) —
+batch workflows create beads directly via `br create` per these conventions; they do not
+invoke `ac-bead-capture`.
+
 ## Body template (the `br lint` contract)
 
 `br lint` checks each bead's DESCRIPTION for per-type template sections (fuzzy

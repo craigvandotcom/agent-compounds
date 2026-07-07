@@ -128,10 +128,12 @@ Silent-skip is reserved for sources that were never wired.
   same theme (for desires). Recurrence updates the existing bead/candidate (bump count /
   append evidence), it does NOT create a duplicate.
 
-### Phase 3a — route DEFECTS to beads (hand off to ac-bead-capture)
+### Phase 3a — route DEFECTS to beads
 
-For each confirmed, deduped **defect**, create a typed bead via the `ac-bead-capture`
-conventions (authority: `_shared/bead-conventions.md`):
+For each confirmed, deduped **defect**, create a typed bead directly via `br create`, per
+the conventions in `_shared/bead-conventions.md` (the authority for bead shape —
+`ac-bead-capture` is the human quick-capture skill and is not invoked by this batch
+workflow; raw `br create` per those conventions is the deliberate pattern here):
 
 ```
 br create -t bug --labels triage,<source>  \
@@ -154,7 +156,9 @@ br create -t bug --labels triage,<source>  \
   to evidence the bead at creation time. A refined-by-construction bead still queues for
   refinement, but with everything already in hand it converges in one fast pass instead of
   needing investigative rounds. `-t investigation` beads are ALWAYS `unrefined` — they are
-  questions, not specs.
+  questions, not specs. Findings still always ship `unrefined` at creation — the run-end
+  `ac-bead-refine` invocation below (Phase 3c) is what earns the stamp, in-session, while
+  the evidence above is still in the conductor's context.
 - Always include the **source permalink** (Sentry issue URL / ASC feedback id) and the
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.
@@ -201,6 +205,24 @@ One-line intent, synthesized from {N} reports.
   Don't bundle unrelated desires; do cluster many reports of the *same* desire into one.
 - A candidate is NOT yet committed work — `ac-align` promotes it `pool → active` only after the
   human approves it (`status: candidate → captured`).
+
+### Phase 3c — group + refine (before the report)
+
+**Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
+epic (`br create -t epic "Triage <date> — findings"`, children linked via parent-child
+deps) so the batch is refined together in-session and shipped by the loop as one cohesive
+unit. 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) aren't beads —
+they don't count toward this threshold and aren't epic children.
+
+**In-session refine, before the report — not "later":** if this run created ≥1 bead, run
+**`ac-bead-refine`** NOW — scoped to the epic if one exists, to the single bead otherwise.
+The conductor still holds every cluster, source permalink, and repro rationale in context
+right now; a deferred refine session has to re-derive all of it from cold. Headless runs
+included — refinement is agent-satisfiable (genuine forks already went `human-gate` in
+Phase 3a/3b). 0 beads → skip (nothing to converge). Triage never stamps `refined` itself —
+that label comes from **this `ac-bead-refine` invocation**, on its own convergence, exactly
+like any other bead; triage's role is to run it in-session while the evidence is hot, not
+to earn the stamp on its behalf.
 
 ### Phase 4 — report
 
@@ -253,9 +275,12 @@ per-app severity bar, the dedupe-fingerprint convention, and any source-specific
 - **Sentry first** — symbolicated stacks beat sparse beta-crash APIs.
 - **A source not configured is skipped; a source configured-but-FAILING is an escalation**
   — file/update the ops bead, never silently skip a wired source, never advance its watermark.
-- **Respect the ac-loop seam** — findings ALWAYS ship `unrefined`; only
-  `/ac-bead-refine` ever applies `refined`. Strong evidence just makes that pass converge
-  fast, it never skips it.
+- **Respect the ac-loop seam** — findings ALWAYS ship `unrefined` at creation; only
+  `/ac-bead-refine`'s run-end, in-session invocation (Phase 3c) ever applies `refined`.
+  Strong evidence just makes that pass converge fast, it never skips it.
+- **Finding-beads get an epic per run** (2+ beads) — refined in-session before the report
+  whenever this run created **≥1 bead** (epic-scoped or single-bead-scoped), shipped by the
+  loop as one cohesive unit.
 - **Inbound counterpart to `ac-distribute`** — it ships out, this listens back.
 
 ---
