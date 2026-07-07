@@ -53,8 +53,8 @@ SCOPE=<user selection or Full codebase>
 SCOPE_CONTEXT=<commit list or directory listing, if scoped>
 PANEL=full            # full = 6 lenses (weekly run) | light = 3 (quick pass, user asked for "light")
 CURRENT_ROUND=1
-MIN_ROUNDS=3          # floor — cross-round consensus needs recurrence opportunities
-MAX_ROUNDS=4
+MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
+MAX_ROUNDS=5
 ARTIFACTS_DIR=/tmp/hygiene-$(date +%Y%m%d-%H%M%S)
 ```
 
@@ -158,13 +158,34 @@ ground truth, never memory.
 
 ### Create Workflow Tasks (run ledger)
 
+**One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
+section you'd report on gets its own line (not a 3-phase skeleton). Create the fixed tasks
+below at Phase 0; **ADD a "Round N" task at the start of each review round** (rounds are
+dynamic — 3 floor, up to 5 — so the ledger grows to the real shape instead of pre-committing
+to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` when you start
+it and `completed` when done; put live detail in the description (per round: finding counts +
+commit SHA), so a glance at the ledger shows exactly where the run is.
+
 ```
-TaskCreate(subject: "Phase 0: Initialize hygiene review", description: "Select scope, gather context, create branch + consensus registry", activeForm: "Initializing hygiene review...")
-TaskCreate(subject: "Phases 1-4: Review loop", description: "Panel of Opus agents per round, synthesize, apply fixes, convergence check. MIN_ROUNDS floor, up to MAX_ROUNDS.", activeForm: "Running hygiene review...")
-TaskCreate(subject: "Phase 5: Finalize", description: "Conductor triage, quality gate, PR + merge, deferred-findings epic, report", activeForm: "Finalizing hygiene review...")
+# Fixed tasks — create upfront at Phase 0:
+TaskCreate("Initialize — scope, worktree + hygiene branch, consensus registry, baseline gate")
+TaskCreate("Coverage audit — surface inventory vs journey registry; file journey-gap beads")
+TaskCreate("Triage deferred findings + file bead epic (Exhaust Rule)")
+TaskCreate("Exhaustive quality gate — format → type-check → lint → full suite")
+TaskCreate("Ship the branch — delegate to ac-merge")
+TaskCreate("Refine the epic's beads in-session — ac-bead-refine")
+TaskCreate("Report — hygiene summary + Slack (headless)")
+TaskCreate("Cleanup / teardown — artifacts + worktree")
+
+# Per-round task — create ONE as each round begins (not upfront):
+TaskCreate("Round {N} — 6-lens panel → synthesize → auto-apply → gate → commit")
+# On completion, TaskUpdate its description: "{C}/{H}/{M} findings, {n} auto-fixed, commit {sha}"
 ```
 
-**TaskUpdate(task: "Phase 0", status: "completed")**
+With a 3-round run that's 11 tasks; a 5-round run, 13. **TaskUpdate("Initialize", in_progress)**
+now, and mark it `completed` at the end of Phase 0. Sub-skills invoked by the Ship and Refine
+tasks (`ac-merge`, `ac-bead-refine`) run their OWN ledgers — do not duplicate their steps here;
+this ledger tracks the hygiene run's top-level sections only.
 
 ---
 
@@ -272,15 +293,17 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 **Rule 1: if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes.** Fixes are unverified until the next round's agents confirm no new Critical/High issues emerge.
 
-**Rule 2 (the round floor): never finalize before `MIN_ROUNDS`.** Cross-round consensus —
+**Rule 2 (the round floor): the `MIN_ROUNDS=3` floor is ABSOLUTE.** Cross-round consensus —
 the rule that promotes recurring single-agent findings — needs at least two later rounds in
 which a deferral can recur. A clean round 1 is not evidence the codebase is clean; it is
-evidence one round isn't enough. The only early exit: **two consecutive rounds with zero
-findings** (panel is dry — stop burning agents).
+evidence one round isn't enough. **Two rounds is not sufficient** — even two consecutive
+zero-finding rounds do NOT finalize before round 3; the dry-panel early exit is only reachable
+once `CURRENT_ROUND >= MIN_ROUNDS`. Ceiling is `MAX_ROUNDS=5`.
 
 ```
-IF two consecutive rounds found ZERO findings -> finalize early (codebase clean)
-IF CURRENT_ROUND < MIN_ROUNDS -> apply fixes, continue (increment CURRENT_ROUND)
+# The floor is checked FIRST and is absolute — nothing exits before round 3.
+IF CURRENT_ROUND < MIN_ROUNDS -> apply fixes, continue (increment CURRENT_ROUND)   # even on back-to-back zero-finding rounds
+IF two consecutive rounds found ZERO findings (only reachable at CURRENT_ROUND >= MIN_ROUNDS) -> finalize early (panel is dry — stop burning agents)
 IF agents found any Critical or High issues -> apply fixes, continue (increment CURRENT_ROUND)
 IF only Medium or no new issues -> finalize (proceed to Phase 5)
 IF CURRENT_ROUND >= MAX_ROUNDS -> force finalize (note unverified fixes)
@@ -499,7 +522,7 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Codebase-wide, not feature-scoped** — agents explore freely (unless user constrains)
 - **Fresh eyes each round** — direct agents to unexplored files in subsequent rounds
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
-- **Honor the round floor** — never finalize before MIN_ROUNDS (except two consecutive zero-finding rounds); cross-round consensus needs the later rounds to exist
+- **Honor the round floor — it is ABSOLUTE** — never finalize before MIN_ROUNDS=3, not even on two consecutive zero-finding rounds (the dry-panel exit is only reachable at round ≥3); ceiling MAX_ROUNDS=5. Cross-round consensus needs the later rounds to exist
 - **Lens-diverse consensus is rarer and stronger** — don't lower the bar because six lenses overlap less than three same-lens hunters; the registry + Phase 5 triage absorb the singles
 - **Fixes ride the hygiene branch** — per-round commits; PR creation, CI/feedback triage, and the actual merge are delegated to `ac-merge` at the end; never straight to main, never merge red
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
