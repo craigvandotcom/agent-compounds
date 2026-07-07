@@ -29,6 +29,7 @@ Variant suffixes: **`-genius`** = multi-disciplinary first-principles depth; **`
 | `e2e-pipeline-validator` | Validate an end-to-end pipeline works |
 | `error-message-improver` | Make error messages clear and actionable |
 | `cli-error-tolerance` | Harden a CLI against bad input / errors |
+| `headless-webview-crumb-debugging` | Find a runtime hang in a Capacitor/WKWebView app with no inspector — env-gated crumb trail read via the a11y tree |
 
 ### Performance
 | Prompt | Use when |
