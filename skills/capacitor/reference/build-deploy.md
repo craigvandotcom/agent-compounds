@@ -2,6 +2,13 @@
 
 Reference for native build, device runs, and App Store submission. Read at CI/CD or release time.
 
+## Build-time env guard + CI dep gate
+
+Every app's native/export build script should assert its required `NEXT_PUBLIC_*` vars
+are non-empty (a silent-bake of an unset key ships a dead feature, not a build failure)
+and every quality-gate CI workflow should fail a PR that removes a dependency the source
+tree still imports. Copy-paste doctrine for both: `../../../templates/ci-build-guards.md`.
+
 ## Commands
 
 ```bash

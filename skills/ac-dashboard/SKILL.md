@@ -19,6 +19,8 @@ description: 'Read-only pipeline dashboard — render the FULL board (backlog ·
 
 - `br` installed — verify with `which br`
 - `_plans/` and `_backlog/` (optional — absent sections render as `—`)
+- `CORE/journeys/*.md` (optional — absent renders as `—`); staleness verdicts need
+  `skills/_tools/journey-stamp-check.sh`
 
 ---
 
@@ -44,6 +46,20 @@ gh run list --limit 3 --json status,conclusion,name,createdAt 2>/dev/null    # r
 ```
 
 Per wave branch, one cheap read: `git log origin/main..origin/<wave> --oneline | wc -l` (commits ahead) + last-commit age. Skip anything expensive — this is a glance, not an audit.
+
+**Journey registry read (journey debt — Invariant 9, `_shared/verification-gate.md` §Journey registry):**
+
+```bash
+for f in "$PROJECT_ROOT"/CORE/journeys/*.md "$PROJECT_ROOT"/.claude/skills/CORE/journeys/*.md; do
+  [ -f "$f" ] || continue        # frontmatter: journey, criticality, last_pass
+done
+skills/_tools/journey-stamp-check.sh   # staleness verdict (SHA-ancestry + surface-touch diff)
+```
+
+Per journey doc: no frontmatter or `criticality: peripheral` → out of scope (skip). Any
+other `criticality` (`review-critical`/`commerce`/`core`, i.e. `≥ core`) with no
+`last_pass` block → **missing**. With `last_pass` present → the stamp-check script's
+verdict decides **stale** vs current. Cheap read, org-wide sweep same as WIP above.
 
 ## Phase 2 — render
 
@@ -75,6 +91,10 @@ CI:    {last 3 runs: name → conclusion}
 
 ### 🚪 Gates (needs a human)
 {N} human-gate beads ({decisions} decisions · {proposals} proposals) · {N} plans awaiting sign-off · {N} triage candidates
+
+### 🧭 Journey Debt ({N} non-peripheral)
+{N} missing stamp · {N} stale
+  • {journey} [{criticality} · {app}] — {missing | stale: sha not ancestor of HEAD | surface touched since <sha>}
 
 ### ⚠ Observed flags (not fixed — routed below)
 - {board-scan anomalies: missing plan frontmatter, legacy v*/ folders, open-but-looks-done beads, stale wave branch with closed beads}

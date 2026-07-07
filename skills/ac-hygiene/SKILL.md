@@ -127,6 +127,35 @@ Save this as `CODEBASE_CONTEXT` for agent prompts.
 
 Scan codebase for domain keywords. Check `AGENTS.md > Available Skills` for relevant skills. Include skill paths in reviewer prompts where applicable.
 
+### Coverage Audit (standing doctrine — projects with `CORE/journeys/`)
+
+Mechanical, conductor-run, once per hygiene run (not per round, not an agent
+lens) — the enumeration hole is that an untagged surface is silently
+unprotected, which is the original failure one level up, so this can't be a
+sampled hunt:
+
+1. **RE-DERIVE the app's surface inventory from ground truth** — grep the live
+   tree for routes (`app/**/page.tsx` or platform equivalent), nav entries,
+   FABs, deep-link handlers, push-notification entry points. Never recall this
+   from memory or a prior run's notes — derive it fresh from the current tree
+   every time.
+2. **Diff against the journey registry** — parse `CORE/journeys/*.md`
+   frontmatter (`criticality`, `surfaces`; schema: `_shared/verification-gate.md`
+   §Journey registry). A doc with no frontmatter defaults to `peripheral`.
+3. **Untagged critical-looking surfaces become findings** — a derived surface
+   with no matching journey doc, or one whose match reads `peripheral`/untagged
+   while the surface name matches payment/auth/purchase/onboarding, files
+   directly (skip the round/consensus machinery — this check is deterministic,
+   not a judgment call): `br create -t bug --labels hygiene-finding,journey-gap,unrefined
+   -d "Coverage audit: <surface> has no journey-registry entry (or is
+   under-tagged) — untagged critical surfaces are unprotected by the
+   runtime-proof gates."`
+
+If `CORE/journeys/` doesn't exist for this app, skip — nothing to audit. This
+same derivation is the starting point for the initial all-apps journey-tagging
+sweep; the audit and the sweep share one inventory method so tags come from
+ground truth, never memory.
+
 ### Create Workflow Tasks (run ledger)
 
 ```

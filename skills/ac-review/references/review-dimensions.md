@@ -59,6 +59,10 @@ Spawn all four in parallel (one message, four Task calls).
 - Missing error handling at system boundaries
 - Naming inconsistencies
 
+Also hunt the three named anti-patterns in `_shared/anti-patterns.md` (evidence
+destruction, coordinated workaround, unproven seam) — shared with ac-hygiene's
+structural lens.
+
 ---
 
 ## correctness
@@ -78,4 +82,8 @@ Spawn all four in parallel (one message, four Task calls).
 - Edge cases not handled (empty arrays, zero values, unicode)
 - State management issues (stale closures, missing cleanup)
 - Missing test coverage for new functionality
+
+Also hunt the three named anti-patterns in `_shared/anti-patterns.md` (evidence
+destruction, coordinated workaround, unproven seam) — shared with ac-hygiene's
+bug-hunter lens.
 </content>

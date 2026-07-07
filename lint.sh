@@ -159,6 +159,8 @@ done
 echo "--- Check 4: README <-> disk ---"
 
 README="$AC_ROOT/README.md"
+check
+[ -f "$README" ] || fail "README: $README is missing — Check 4c/4d's link-existence sub-checks silently no-op without it"
 
 # 4a: every skills/ dir with a SKILL.md is mentioned in README.md
 for skill_dir in "$AC_ROOT/skills"/*/; do
@@ -261,7 +263,7 @@ APP_CONSUMER_DIRS=()
 if [ -f "$DEPLOY_TARGETS_LIST" ]; then
   while IFS= read -r line; do
     line="${line%%#*}"                      # strip trailing/whole-line comments
-    line="$(printf '%s' "$line" | xargs)"   # trim whitespace; empty if comment/blank
+    line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"   # trim whitespace; empty if comment/blank
     [ -n "$line" ] || continue
     APP_CONSUMER_DIRS+=("$HOME/Repos/neometa/software/$line/.claude")
   done < "$DEPLOY_TARGETS_LIST"

@@ -102,6 +102,66 @@ visual blast).
 `mac-needed` note ("native-touching wave verified without device QA — run
 `ac-qa-device` smoke from a Mac before the next TestFlight push").
 
+**Registry-driven smoke selection (replaces "primary journey"):** the smoke pass's
+journey list is not ad hoc — it's every journey in the registry (§Journey registry
+below) whose `surfaces` intersects the wave's diff-classes (Step 1) AND whose
+`criticality` ≥ `core`. Affected-only preserved: a journey whose surfaces the wave
+didn't touch doesn't re-drive.
+
+---
+
+## Journey registry
+
+**Canonical schema home** for journey frontmatter (`ac-pipeline-builder` Invariant 9
+points here). No new file kind — existing journey docs gain structured frontmatter.
+Journey docs live at each app's `CORE/journeys/*.md` (consumer apps:
+`.claude/skills/CORE/journeys/*.md`).
+
+```yaml
+---
+journey: paywall
+criticality: review-critical        # review-critical | commerce | core | peripheral
+surfaces: [native, webui]           # this gate's diff-classes (Step 1) that touch it
+proof:
+  required: sim-drive               # sim-drive | browser-drive | device-only
+  asserts:                          # the observable(s) that constitute PASS — behavior, not presence
+    - "plan cards render LIVE store data (not placeholders)"
+    - "purchase CTA ENABLED"
+  device_only_steps:                # honest residue the sim can't prove
+    - "StoreKit purchase completion (sandbox payment sheet)"
+last_pass:                          # written ONLY by QA twins, never by hand
+  build: "34"
+  sha: "87e8a251"
+  date: 2026-07-07
+  platform: ios-simulator
+---
+```
+
+Conventions: `criticality` is a ranked scale — `review-critical > commerce > core >
+peripheral` — the order every `≥` comparison in this file uses. `criticality` and
+`proof.required` are set by humans (plan/bead review); `last_pass` is machine-written
+only by the QA twin that drove the journey, in the same run that emits `QA_VALIDATION`
+(`qa-shared.md`) — never hand-edited otherwise. No frontmatter on a journey doc =
+`peripheral` by default (adoption is incremental).
+
+Staleness (store gate): `skills/_tools/journey-stamp-check.sh` re-uses Step 1's
+class patterns over `last_pass.sha..ship-sha`, with one deliberate asymmetry — a
+file matching no class counts as touching EVERY surface there (selection may err
+loose; a store-submission gate errs strict: over-block, never under-block).
+
+**Enumeration tripwire (mechanical, no judgment):**
+
+```bash
+git diff "$RANGE" --diff-filter=A --name-only | grep -qE 'app/.*page\.(tsx|jsx)$' && ADDED_ROUTE=1
+git diff "$RANGE" --name-only | grep -q 'CORE/journeys/.*\.md$' && TOUCHED_JOURNEY_DOC=1
+```
+
+`ADDED_ROUTE=1` and `TOUCHED_JOURNEY_DOC` unset → flag it in the Step 4 decision line
+("wave adds a route with no matching journey-doc update — tag it in the registry").
+Never blocks; pure file-pattern detection closing the hole where a new user-facing
+surface ships untagged and silently unprotected — the failure one level up from the
+registry itself.
+
 ---
 
 ## Step 3 — override hooks (force, regardless of diff)
@@ -125,7 +185,8 @@ skipped qa-device — no native-shell files in diff.
 ```
 
 State every skip and its reason. This is the *silent-failure → add-visibility* rule:
-the gate decides what to skip, but it always says so.
+the gate decides what to skip, but it always says so. Also append the §Journey
+registry enumeration-tripwire flag when it fires — same visible-not-silent treatment.
 
 ---
 

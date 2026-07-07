@@ -236,6 +236,22 @@ board* and *how often*.
    authorship — which is why include-by-default is correct only when paired with a real gate and
    a surfaced manifest. Binds `ac-merge`, `ac-hygiene`, `ac-review`, `ac-loop`.
 
+9. **Runtime proof over static presence.** Every app maintains a journey registry
+   (`CORE/journeys/*.md` frontmatter) naming its critical surfaces, each with a
+   criticality tier and required proof class. QA passes write journey-level PASS stamps
+   (build + SHA + date); gates consume stamps mechanically — the merge smoke selects
+   journeys by diff-class × criticality, and **no store submission proceeds with a
+   stale or missing stamp on a `review-critical` journey**. Static checks (dep
+   installed, chunk bundled, key baked, plugin registered) are necessary but never
+   sufficient; the only sufficient evidence for a critical surface is a fresh drive of
+   its journey in the environment users experience. *Rationale:* all five layers of the
+   BCA 2.1(b) chain passed every static check; verification debt that lives only in
+   prose is decoration (the system tracked "live walk pending" through four App Store
+   rejections and nothing read it). Schema + selection rules:
+   `_shared/verification-gate.md` §Journey registry. Binds `ac-qa-device`,
+   `ac-qa-browser`, `ac-merge`, `ac-distribute`, `ac-publish`, `ac-hygiene`,
+   `ac-dashboard`.
+
 ---
 
 ## Cross-cadence schedule (the single home for scheduling rules)
@@ -328,6 +344,7 @@ The doctrine is the target; these stage edits bring reality into line:
 - [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
 - [ ] **QA placement** — retire `ac-land` 1c; one exhaustive browser crawl at publish. (tracked: Wave B plan — land refocus — restructure, not sweep)
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
+- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `_shared/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `_shared/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
 
 ---
 

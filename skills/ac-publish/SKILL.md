@@ -83,6 +83,9 @@ Red → Phase 3 (fix-in-session). Never trust a stale prior-SHA green.
 **1b — Full QA (device + browser).** This is the one genuinely-new expensive thing at publish
 (`qa-gating-craig-owns-visual-agent-functional`): run `ac-qa-device` + `ac-qa-browser` at full depth against the
 release build. Agent runs functional QA; Craig owns visual sign-off. Any blocker → Phase 3.
+This run is also where every non-peripheral journey's `last_pass` stamp gets refreshed — the
+twins write stamps per their Journey stamps doctrine, so `ac-distribute`'s store gate
+(`skills/_tools/journey-stamp-check.sh`) sees fresh review-critical stamps at submission.
 
 ## Phase 2: Migration safety (expand/contract)
 

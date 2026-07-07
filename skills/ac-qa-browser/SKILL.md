@@ -165,6 +165,21 @@ Emit the **`QA_VALIDATION`** block from `_shared/qa-shared.md` with:
 Consumed by `ac-merge` (gates the PR on web-UI waves). **Never** satisfies the native
 ship gate in `ac-distribute` — that gate predicates on `platform: ios-simulator`.
 
+## Journey stamps (last_pass)
+
+After a journey **PASS**, update its `last_pass` frontmatter block in
+`CORE/journeys/<name>.md` — `build`, `sha`, `date`, `platform: browser-local`
+(or `browser-preview` / `browser-production`) — committed together with the QA
+artifacts in the same run that emits `QA_VALIDATION`. A **FAIL** never writes a
+stamp — the bead trail covers failures; a stamp is proof of success only.
+Schema + staleness rule: `_shared/verification-gate.md` §Journey registry.
+
+**Conflict rule:** `last_pass` is last-writer-wins. On a merge conflict, keep
+the NEWER stamp (compare `date`, then `build`) — never hand-merge a hybrid
+stamp. An infra-flaky drive (daemon crash, stuck load, a selector that only
+fails once) is the same **NO-STAMP**, never FAIL, never PASS — file a `qa-infra`
+bead instead (same rule as `ac-qa-device`).
+
 ## Teardown
 
 `agent-browser --session $S close` for every session you opened — the final step,
@@ -174,6 +189,7 @@ CPU failure mode: `browser-testing/SKILL.md` § Teardown.)
 ## Related files
 
 - `_shared/qa-shared.md` — depth levels, journey reuse, findings=beads, `QA_VALIDATION` schema (shared with the twin)
+- `_shared/verification-gate.md` — journey registry schema (`last_pass` stamp fields), staleness rule
 - `web-shell-checklist.md` — what ONLY the web shell surfaces
 - `browser-testing/SKILL.md` — the low-level `agent-browser` mechanics this skill wraps
 - `ac-qa-device/SKILL.md` — the native-shell twin (Layer 2)
