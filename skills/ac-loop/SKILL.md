@@ -38,15 +38,18 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 ```
 EACH ITERATION:
   1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships FIRST)
-      └─ ac-implement → VERIFY-GATE → ac-review → ac-merge → Slack notify
+      └─ ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
       │      (prep — only now, AFTER the maintenance wave has shipped)
       └─ ensure wave branch (loop owns this, not ac-implement) →
-         ac-implement → VERIFY-GATE → ac-review → ac-merge → Slack notify
+         ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
 
   VERIFY-GATE = consult _shared/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
+  BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-merge no longer checks beads
+                itself) — genuine (non-post-merge) open beads block the merge; advisory
+                Slack nudge, not a hard stop.
   3. Loop — check for more orphans or plans
   4. Nothing left → Phase ARIA (unlock human blocks, then stop)
 
@@ -239,10 +242,22 @@ If orphans exist:
 4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review on branch `<WAVE>`. This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
 5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-6. **Invoke `ac-merge`** — use this delegation prompt:
+6. **Verify beads closed (the loop's own pre-merge gate — `ac-merge` no longer checks this itself):**
+   ```bash
+   br list --json --limit 1000 | jq '[.issues[]
+     | select(.status != "closed")
+     | select((.labels // []) | index("post-merge") | not)]'
+   ```
+   `post-merge`-labelled beads are excluded — they're deliberately un-closeable until the
+   merge ships (carried forward as known tails, listed in the PR body), never blockers. If
+   any genuinely open (non-`post-merge`) beads remain for this wave, do NOT merge — surface
+   via the loop's Slack-nudge pattern instead: "wave `<WAVE>` has `<N>` beads still open — not
+   merging" (advisory nudge, no `AskUserQuestion` — this is not a genuine human fork). Only
+   proceed to Invoke `ac-merge` once this set is empty.
+7. **Invoke `ac-merge`** — use this delegation prompt:
    > "Run ac-merge on branch `<WAVE>`. CI config for this project: `<cached-answer>`. Version bump: accept recommended default without asking. For uncertain PR feedback items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after merge."
-7. **Slack notify** (see Milestone Notifications).
-8. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land); per-wave landing was the leftover the "land runs LAST" reconciliation retired.
+8. **Slack notify** (see Milestone Notifications).
+9. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land); per-wave landing was the leftover the "land runs LAST" reconciliation retired.
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -277,10 +292,20 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review on branch `<WAVE>` (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
 5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-6. **Invoke `ac-merge`** with delegation prompt:
+6. **Verify beads closed (the loop's own pre-merge gate — `ac-merge` no longer checks this itself):**
+   ```bash
+   br list --json --limit 1000 | jq '[.issues[]
+     | select(.status != "closed")
+     | select((.labels // []) | index("post-merge") | not)]'
+   ```
+   `post-merge`-labelled beads are excluded — carried forward as known tails in the PR body,
+   never blockers. If any genuinely open (non-`post-merge`) beads remain for this wave, do NOT
+   merge — advisory Slack nudge instead: "wave `<WAVE>` has `<N>` beads still open — not
+   merging" (no `AskUserQuestion`). Only proceed once this set is empty.
+7. **Invoke `ac-merge`** with delegation prompt:
    > "Run ac-merge on `<WAVE>` (ac-loop autonomous run). CI config: `<cached>`. Version bump: accept recommended default. Uncertain feedback: Exhaust Rule — decision beads. No next-step question after merge."
-7. **Slack notify** — wave shipped.
-8. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
+8. **Slack notify** — wave shipped.
+9. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 

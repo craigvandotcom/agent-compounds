@@ -25,9 +25,9 @@ Phase 1 constructs the PR body from gathered context (plan, beads, diff stats, q
 
 ## Known post-merge tails
 
-{beads labeled `post-merge` that are still open — the "Verify All Beads Closed" gate
-excludes them deliberately (they can't close until this code is live), so they're
-listed here instead of silently dropped. Populate with `br list --json --limit 1000
+{beads labeled `post-merge` that are still open — the pre-merge bead-closure gate
+(now the loop's, upstream of ac-merge) excludes them deliberately (they can't close
+until this code is live), so they're listed here instead of silently dropped. Populate with `br list --json --limit 1000
 | jq '[.issues[] | select(.status != "closed") | select((.labels // []) |
 index("post-merge")) | {id, title}]'` — format as a checklist: `- [ ] {id}: {title}`.
 Omit this section entirely if the query returns an empty list.}

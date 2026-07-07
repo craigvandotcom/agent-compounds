@@ -359,7 +359,7 @@ AskUserQuestion(
 
 **Apply any user-approved fixes** using Edit tool.
 
-### Quality Gate (exhaustive — the ONCE-per-run full gate)
+### Quality Gate (exhaustive — pre-handoff sanity check)
 
 ```bash
 # Order MIRRORS CI's Quality Gate exactly — format is the FIRST thing CI checks.
@@ -374,36 +374,41 @@ repairing a gate CI was already failing, not sweeping unrelated changes. If any 
 fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
 on the hygiene branch (again, **no `--no-verify` on the commit**).
 
-### Ship the Branch (PR → merge)
+**Note:** `ac-merge`'s own post-rebase Quality Gate runs this same full gate again at merge
+time (on the rebased state that actually merges) — so this Phase-5 run is now a pre-handoff
+sanity check, not the last word. Keep it: catching a red gate here, before handing off, is
+cheaper than catching it inside `ac-merge`'s PR flow.
+
+### Ship the Branch (delegate to ac-merge)
 
 No commits landed (findings only)? Delete the branch, return to main, skip to Report.
-Otherwise:
+Otherwise: **invoke `ac-merge` on the current hygiene branch.** ac-merge is now the single
+merge-to-main path for any branch — wave or chore/hygiene — and handles push → PR → CI poll
++ feedback triage → merge → patch version bump → tag → verify → land, all in one skill.
+Delegation prompt:
 
-**The branch is the merge unit — include by default, surface the extras** (pipeline-builder
-Invariant 8). A concurrent session or a scheduled job may have committed onto this hygiene branch
-(it was the checked-out branch). The squash-merge carries those changes to main by design —
-that's correct, **do not exclude a foreign commit just because this run didn't author it**. But
-your PR body is built from the round table + fix list, which won't mention them, so they'd ship
-*unsurfaced*. Before creating the PR, diff the full branch against main
-(`git diff --stat main...HEAD` and `git log --oneline main..HEAD`) and add an **"Also carried
-(not hygiene fixes)"** line to the body naming any non-hygiene commit/change (an `.env`/secret
-edit, a migration, another session's fix). CI runs on the whole branch, so the full diff is
-gated regardless of author. Exclude only on a real signal (`WIP`/`DO-NOT-MERGE`, CI failure,
-gitleaks hit) — and note the exclusion in the body; never a silent drop.
+> "Run ac-merge on the current hygiene branch. This is a chore/hygiene merge: version bump =
+> patch (default), accept without asking; uncertain PR feedback → decision beads (Exhaust
+> Rule); no 'what's next?' after merge."
 
-```bash
-git push -u origin hygiene/{date}
-gh pr create --title "chore(hygiene): {N} fixes — {date}" --body "<round table + fix list + deferred count + Also-carried line>"
-# Wait for CI with a HARD CAP (never unbounded): poll checks, e.g. for i in $(seq 1 20); do ... sleep 30; done
-gh pr merge --squash --delete-branch
-git switch main && git pull
-```
+**Hand ac-merge what it needs to build the PR body:** this run's fix list (round table +
+per-round summary + deferred count) and the **"Also carried (not hygiene fixes)"** line —
+a concurrent session or scheduled job may have committed onto this hygiene branch (it was
+the checked-out branch), and the branch is the merge unit (pipeline-builder Invariant 8): those
+foreign commits ship too, by design, but must be named, not silently dropped. Diff the full
+branch against main (`git diff --stat main...HEAD` and `git log --oneline main..HEAD`) and
+pass any non-hygiene commit/change (an `.env`/secret edit, a migration, another session's fix)
+to ac-merge as the Also-carried content — do not exclude it just because this run didn't
+author it. ac-merge builds the actual PR body; this run supplies the hygiene-specific content.
 
-- **No version bump** — bump ownership is `ac-merge`'s, for feature waves; hygiene merges are chores.
-- **No remote / no CI on this repo:** run the full local quality gate (above), then merge
-  locally (`git switch main && git merge --ff-only hygiene/{date}`) and delete the branch.
-- CI fails → fix on the branch and re-push; if unfixable this session, leave the PR open,
-  file a `qa-blocker`-style bead, and report it — never merge red, never delete unmerged work.
+- **Hygiene merges bump `patch` via `ac-merge`** (changed 2026-07-07 — previously hygiene
+  merges took no version bump; ac-merge is now the single bump owner for every branch kind,
+  and the default for every merge, feature or chore, is patch unless explicitly frozen/skipped).
+- **No remote / no CI on this repo:** this is ac-merge's concern now — it falls back to a
+  local quality-gate-then-merge path when there's no PR flow to run.
+- CI fails → ac-merge fixes on the branch and re-pushes as part of its own triage loop; if
+  unfixable this session, it leaves the PR open, files a `qa-blocker`-style bead, and reports
+  it — never merge red, never delete unmerged work.
 
 ### Refine the Run's Beads (in-session, after the merge)
 
@@ -496,7 +501,7 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
 - **Honor the round floor** — never finalize before MIN_ROUNDS (except two consecutive zero-finding rounds); cross-round consensus needs the later rounds to exist
 - **Lens-diverse consensus is rarer and stronger** — don't lower the bar because six lenses overlap less than three same-lens hunters; the registry + Phase 5 triage absorb the singles
-- **Fixes ride the hygiene branch** — per-round commits, PR + CI at the end; never straight to main, never merge red
+- **Fixes ride the hygiene branch** — per-round commits; PR creation, CI/feedback triage, and the actual merge are delegated to `ac-merge` at the end; never straight to main, never merge red
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
 - **Incremental in the loop, exhaustive at the boundary** — rounds gate on format(auto-fix) + type-check + lint + affected tests; the FULL suite runs exactly once, at Phase 5 pre-merge (BLOCKING). Format is FIRST + auto-fix in both gates (mirrors CI's `prettier --check .` first step); commit WITHOUT `--no-verify` so the pre-commit lint-staged hook auto-formats — never let CI catch a formatting miss.

@@ -1,12 +1,12 @@
 ---
 name: ac-merge
-description: 'Merge a wave branch to main — PR creation, CI/agent feedback triage, version + build bump, land. Triggers: ''merge the wave'', ''wave merge'', ''ship the branch'', ''merge to main''.'
+description: 'The single merge-to-main path for ANY branch — feature wave or chore/hygiene. PR creation, CI/agent feedback triage + fix-forward, always-patch version bump, tag, land. Triggers: ''merge the wave'', ''ship the branch'', ''merge to main'', ''merge this branch''.'
 ---
 
 
-**You are the conductor closing a feature wave.** Create the PR, wait for CI and agent feedback, triage and fix issues, merge when clean.
+**You are the conductor closing out a branch — feature wave or chore/hygiene.** Create the PR, wait for CI and agent feedback, triage and fix issues, merge when clean.
 
-Run after `/ac-review` has completed for the wave — review is the sole pre-merge gate. `/ac-land` runs AFTER this merge, as session closure. This is per-wave (not per-session like bead-land).
+For a feature wave, run after `/ac-review` has completed — review is the pre-merge gate for waves (chore/hygiene branches are self-reviewed and skip it). `/ac-land` runs AFTER this merge, as session closure. This is per-branch (not per-session like bead-land).
 
 ---
 
@@ -14,17 +14,16 @@ Run after `/ac-review` has completed for the wave — review is the sole pre-mer
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | Wave branch with all beads complete, pushed, post `/ac-review` (the sole pre-merge gate)  |
-| **Output**       | PR merged to main, wave branch deleted, feature shipped                                    |
+| **Input**        | The current branch (wave or chore/hygiene), pushed. For a wave, post `/ac-review` (the pre-merge gate); hygiene/chore branches are self-reviewed and skip that gate. |
+| **Output**       | PR merged to main, branch deleted, work shipped                                    |
 | **Artifacts**    | PR on GitHub, feedback triage in `$ARTIFACTS_DIR/`                                         |
 | **Verification** | All CI checks green, PR merged, on main branch                                            |
 
 ## Prerequisites
 
-- On a `wave/*` branch
-- All beads closed (`br list --json` — none open)
 - Branch pushed and up-to-date with remote
 - `gh` CLI authenticated
+- Works on any branch — feature wave (`wave/*`) or chore/hygiene (`hygiene/*`); no branch-name check is performed
 
 ---
 
@@ -32,9 +31,10 @@ Run after `/ac-review` has completed for the wave — review is the sole pre-mer
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-WAVE=$(git branch --show-current)
-# Stable per-wave artifacts dir → a session dropped during a 10-min CI poll finds the SAME dir
-# on resume (a fresh timestamped dir would orphan the prior state). ac-land sweeps /tmp/wave-merge-*.
+WAVE=$(git branch --show-current)   # variable name kept for both wave and chore/hygiene branches
+# Stable per-branch artifacts dir → a session dropped during a 10-min CI poll finds the SAME dir
+# on resume (a fresh timestamped dir would orphan the prior state). ac-land sweeps /tmp/wave-merge-*
+# (the artifacts-dir prefix is unchanged regardless of branch kind — ac-land's glob depends on it).
 ARTIFACTS_DIR="/tmp/wave-merge-${WAVE//\//-}"
 mkdir -p "$ARTIFACTS_DIR"
 STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VERSION, WAIT_FOR_FEEDBACK
@@ -48,7 +48,7 @@ run re-enters at the right phase instead of re-polling from scratch or re-asking
 
 ```
 TaskCreate (one per phase):
-  1. Pre-flight — branch, beads, QA, rebase, version bump   in_progress
+  1. Pre-flight — QA, rebase, version bump                  in_progress
   2. Create PR                                               pending
   3. Wait for PR feedback + triage                           pending
   4. Merge + tag + verify deploy shipped                     pending
@@ -58,83 +58,6 @@ TaskCreate (one per phase):
 `TaskUpdate` at each phase boundary. As you capture `PR_NUMBER`, `NEW_VERSION`, and
 `WAIT_FOR_FEEDBACK`, append them to `$STATE` (e.g. `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`)
 so a dropped session reloads them on resume. The ledger tracks the RUN; beads stay the work atom.
-
-### Verify Wave Branch
-
-```bash
-CURRENT_BRANCH=$(git branch --show-current)
-echo "Current branch: $CURRENT_BRANCH"
-```
-
-**If not on a `wave/*` branch:** STOP. "You must be on a wave branch. Current: {CURRENT_BRANCH}"
-
-### Verify Review Verdict (standalone-mode gate)
-
-`ac-loop` already enforces "review before merge" as part of its own chain (it reads
-`VERDICT:` straight from `ac-review`'s Phase 8 output and only chains to merge on
-`APPROVED`). This step closes the hole where `/ac-merge` is invoked **standalone** by a
-human, with no loop in front of it to guarantee review actually ran first — read the
-verdict mechanically off disk instead of trusting memory of "I think review passed."
-
-```bash
-LATEST_REVIEW=$(ls -t .claude/reviews/*.md 2>/dev/null | head -1)
-```
-
-- **Missing** (no file in `.claude/reviews/`) → STOP. "No review found in
-  `.claude/reviews/` — run `/ac-review` on this branch before merging."
-- **Stale** (the review file's mtime/commit predates the branch's last non-review
-  commit — i.e. code changed after the review ran):
-  ```bash
-  git log -1 --format=%ct -- . ':!.claude/reviews' > /tmp/last-code-commit-ts
-  ```
-  compare against `LATEST_REVIEW`'s modification time → if the last code commit is
-  newer, STOP. "Latest review (`$LATEST_REVIEW`) predates the newest code commit on
-  this branch — re-run `/ac-review`."
-- **Present and fresh but not `VERDICT: APPROVED`** (e.g. `VERDICT: NEEDS_DECISION`, or
-  no `VERDICT:` line at all):
-  ```bash
-  grep -m1 "^\*\*VERDICT:\*\*\|^VERDICT:" "$LATEST_REVIEW"
-  ```
-  → STOP. Surface the verdict line (or "no VERDICT line found") and the review file
-  path; do not proceed to the Quality Gate.
-- **`VERDICT: APPROVED`** and fresher than the last code commit → proceed.
-
-### Verify All Beads Closed
-
-```bash
-br list --json
-```
-
-Beads labeled `post-merge` are **excluded** from this gate — they're deliberately
-un-closeable until after the code they track has shipped and gone live (prod
-verification, follow-up monitoring, a check that only makes sense once the merge
-commit is running in production). Blocking the merge on them would be circular: the
-bead can't close until the merge happens, so it can never close. Instead of blocking,
-they're carried forward as known tails, listed explicitly in the PR body (see
-`references/pr-body-template.md` § Known post-merge tails) so they're never silently
-dropped — the gate below narrows to beads that genuinely should be closed pre-merge:
-
-```bash
-br list --json --limit 1000 | jq '[.issues[]
-  | select(.status != "closed")
-  | select((.labels // []) | index("post-merge") | not)]'
-```
-
-Check for any open/in-progress beads in that filtered set. **If open beads remain:**
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "{N} beads still open. Merge anyway?",
-    header: "Open beads",
-    multiSelect: false,
-    options: [
-      { label: "Stop — close beads first", description: "Run /ac-implement to finish remaining beads" },
-      { label: "Merge anyway", description: "Open beads will remain for a future wave" }
-    ]
-  }]
-)
-```
 
 ### Rebase on Main (first — post-rebase truth)
 
@@ -233,52 +156,63 @@ if the behavior is intended — update the journey doc and close the bead.
 
 ### Version Bump
 
-**The default bump is ALWAYS `patch`.** These app versions are a build / marketing
-number, not a published-library API contract — so a feature wave does NOT auto-escalate
-to minor. `minor` and `major` are **deliberate, explicitly-chosen** bumps that a human
-directs for a milestone or an announced breaking release; they are NEVER auto-derived from
-commit prefixes. The version-bump commit lands on the wave branch BEFORE the push, so the
-PR shows it as part of the merge unit.
+**Every merge bumps `patch` by default — waves AND hygiene/chores alike.** These app
+versions are a build / marketing number, not a published-library API contract — so
+neither a feature wave nor a chore pass auto-escalates to minor. `minor` and `major` are
+**deliberate, explicitly-chosen** bumps that a human directs for a milestone or an
+announced breaking release; they are NEVER auto-derived from commit prefixes. The
+version-bump commit lands on the branch BEFORE the push, so the PR shows it as part of
+the merge unit.
+
+**The default path is non-interactive: apply `patch` automatically, without asking.**
+This is the normal case — autonomous/delegated runs (`ac-loop`, `ac-hygiene`) and any
+other invocation that doesn't explicitly ask for interactive control all take the patch
+bump silently.
 
 ```bash
 BASE_BRANCH=main
 COMMIT_LOG=$(git log "$BASE_BRANCH"..HEAD --format="%s%n%b")
 
-# DEFAULT IS PATCH for every wave — features included.
-SUGGESTED_BUMP=patch
+# DEFAULT IS PATCH — every merge, features and chores alike.
+CHOSEN_BUMP=patch
 
-# Signal only: surface a breaking-change marker so a human can CHOOSE major.
-# Do NOT auto-escalate the default off patch.
+# Signal only: surface a breaking-change marker so a human can CHOOSE major later.
+# Never auto-escalate the default off patch.
 if printf '%s' "$COMMIT_LOG" | grep -qE "^[a-zA-Z]+(\([^)]+\))?!:|BREAKING[ -]CHANGE"; then
-    echo "NOTE: wave carries a breaking-change marker — pick 'major' explicitly only if truly warranted."
+    echo "NOTE: branch carries a breaking-change marker — pick 'major' explicitly only if truly warranted."
 fi
 
 CURRENT_VERSION=$(node -p "require('./package.json').version")
-echo "Current version: $CURRENT_VERSION → default bump: patch"
+echo "Current version: $CURRENT_VERSION → bump: patch"
 ```
 
-**Autonomous / loop mode (ac-loop): always take `patch`** — never auto-select minor/major
-without an explicit human instruction passed in the loop directive.
+**The only thing that stops the patch bump is an explicit skip/freeze directive.** If
+the caller passes a freeze/skip directive (e.g. `MERGE_SKIP_BUMP=1`, or a standing
+version-freeze such as an App Store submission in review — see the app-version-pin
+rule), do NOT bump; carry the current version forward unchanged. There is no other
+"skip" path — every non-frozen merge bumps patch.
 
-Confirm with the user (patch is the recommended default):
+**Interactive human-run merge only:** if a human is running this skill directly
+(not via `ac-loop` / `ac-hygiene` delegation) and wants to override the default,
+offer the choice explicitly — otherwise skip straight to applying `patch`:
 
 ```
 AskUserQuestion(
   questions: [{
-    question: "Bump v{CURRENT_VERSION} → patch (default)? Choose minor/major only for a deliberate milestone.",
+    question: "Bump v{CURRENT_VERSION} → patch (default)? Choose minor/major only for a deliberate milestone, or skip if frozen.",
     header: "Version bump",
     multiSelect: false,
     options: [
-      { label: "patch (Recommended)", description: "Default for EVERY wave — fixes and features alike. App version is a build number, not a library API contract." },
+      { label: "patch (Recommended)", description: "Default for EVERY merge — fixes, features, and chores alike. App version is a build number, not a library API contract." },
       { label: "minor", description: "Explicit opt-in only — a deliberate feature-milestone release you are choosing now." },
       { label: "major", description: "Explicit opt-in only — a deliberate, announced breaking/milestone release." },
-      { label: "skip — no bump this wave", description: "Don't touch package.json (rare; doc-only or experiment-only wave)." }
+      { label: "skip — freeze the version", description: "Only for a standing freeze (e.g. an App Store submission in review). Don't touch package.json." }
     ]
   }]
 )
 ```
 
-Apply the chosen bump (unless skipped):
+Apply the chosen bump (unless frozen/skipped):
 
 ```bash
 pnpm version "$CHOSEN_BUMP" --no-git-tag-version
@@ -365,7 +299,7 @@ Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FO
 # Bead summary
 br list --json > "$ARTIFACTS_DIR/beads.json"
 
-# Commit history on this wave
+# Commit history on this branch
 BASE_BRANCH=main
 git log "$BASE_BRANCH"..HEAD --oneline > "$ARTIFACTS_DIR/commits.txt"
 
@@ -382,20 +316,26 @@ Also read the plan file (`_plans/*.md`) if it exists for the original intent.
 
 Construct a structured PR body from the gathered context using the template in **`references/pr-body-template.md`** (Summary, Beads Completed, Changes, Test Coverage, Review).
 
+Beads labeled `post-merge` are deliberately un-closeable pre-merge (prod verification,
+follow-up monitoring — checks that only make sense once the merge commit is live). List
+them explicitly as **known post-merge tails** (`references/pr-body-template.md` § Known
+post-merge tails) rather than treating them as blockers — closure of genuinely open beads
+is checked upstream of this skill (by `ac-loop`, for a wave) before it invokes ac-merge.
+
 **The branch is the merge unit — include by default, gate on the full diff, surface the extras**
-(pipeline-builder Invariant 8). This wave branch may carry commits you didn't author — a
+(pipeline-builder Invariant 8). This branch may carry commits you didn't author — a
 concurrent session's fix, a scheduled triage/ops commit landed on the checked-out branch. Do
 **not** drop them because they're "not yours": the merge validates the *entire* branch diff as a
 unit (CI + review + gitleaks are the gate, not authorship). Before writing the body, diff the
 whole branch against main (`git diff --stat main...HEAD`) and **name any change beyond this
-wave's headline scope** — an `.env`/secret edit, a migration, a foreign commit — in a
+branch's headline scope** — an `.env`/secret edit, a migration, a foreign commit — in a
 **"Also carried"** line of the PR body, so a human sees what actually shipped. Exclude a change
 only on a real signal (`WIP`/`DO-NOT-MERGE` marker, CI failure, gitleaks hit, explicit scope
 conflict), and when you do, **say so in the PR body** — never a silent drop.
 
 ### Create PR
 
-The wave branch name (e.g. `wave/042`) is just an identifier — it doesn't describe content. Derive the PR title from the version bump + a 4-7 word summary of what actually changed, scanned from commit subjects + the bead list.
+The branch name (e.g. `wave/042` or `hygiene/20260707`) is just an identifier — it doesn't describe content. Derive the PR title from the version bump + a 4-7 word summary of what actually changed, scanned from commit subjects + the bead list.
 
 ```bash
 gh pr create --title "v{NEW_VERSION}: {short summary derived from commits}" --body "$(cat <<'EOF'
@@ -600,7 +540,7 @@ git checkout main
 git pull
 ```
 
-Tag the merge commit with the version that was bumped in Phase 0. Skip this step if the user chose "skip — no bump this wave".
+Tag the merge commit with the version that was bumped in Phase 0. Skip this step if the version was frozen/skipped (see Version Bump above).
 
 ```bash
 # NEW_VERSION captured in Phase 0; if not in scope, re-read from package.json on main
@@ -614,12 +554,12 @@ git push origin "v$NEW_VERSION"
 ```bash
 git log --oneline -5            # Confirm merge commit visible
 git tag --points-at HEAD        # Confirm v$NEW_VERSION on the merge commit
-git branch -d "$WAVE" 2>/dev/null || true   # Clean local wave branch
+git branch -d "$WAVE" 2>/dev/null || true   # Clean local branch (wave or hygiene/chore)
 ```
 
 ### Database migrations are a SEPARATE, human-approved push — not part of merge
 
-If the wave includes a `supabase/migrations/*.sql` file, merging to main does **NOT**
+If the branch includes a `supabase/migrations/*.sql` file, merging to main does **NOT**
 apply it to production. The prod `db push` is a deliberate, human-approved, collision-aware
 step (the `supabase` skill gates `db push` as ASK-USER-FIRST), run AFTER the local-validate
 gate passed pre-merge (ac-implement Phase 1c). For apps on a **shared** Supabase project,
@@ -632,12 +572,12 @@ until the push is done and verified.
 prod AT merge, so code that *depends* on a migration must not go live before its schema does:
 
 - **EXPAND (additive) migration that merged code depends on:** it must be applied **before or
-  at this merge**. If still unpushed, ask (headless loop → Slack buttons): *"Wave depends on
+  at this merge**. If still unpushed, ask (headless loop → Slack buttons): *"Branch depends on
   unpushed expand migration `<file>` — Push to prod now / Merge anyway (dependent code path is
-  flag-gated OFF) / Hold the wave."* Do not merge live-dependent code over an unpushed schema.
+  flag-gated OFF) / Hold the merge."* Do not merge live-dependent code over an unpushed schema.
 - **CONTRACT (drop/rename/narrow/NOT NULL-no-default):** never apply at merge. It merges as a
   *held* migration and is applied later via `ac-publish`'s migration gate, after old native
-  builds age out. If a wave bundles contract DDL into an expand migration, split it first.
+  builds age out. If a branch bundles contract DDL into an expand migration, split it first.
 
 ### Verify the Deploy Actually Shipped
 
@@ -688,10 +628,10 @@ workflow) and must COMPLETE (else assume failed).
 ### Report
 
 ```markdown
-## Wave Merged: {wave name}
+## Branch Merged: {branch name}
 
 **PR:** {URL}
-**Branch:** wave/{name} → main
+**Branch:** {branch} → main
 **Beads completed:** {count}
 **Commits:** {count}
 **Files changed:** {count}
@@ -703,7 +643,7 @@ workflow) and must COMPLETE (else assume failed).
 
 ### What Shipped
 
-{1-3 bullet summary of the feature}
+{1-3 bullet summary of what merged — feature or chore/hygiene fixes}
 ```
 
 ### Next Step
@@ -711,17 +651,19 @@ workflow) and must COMPLETE (else assume failed).
 ```
 AskUserQuestion(
   questions: [{
-    question: "Wave merged to main. What's next?",
+    question: "Branch merged to main. What's next?",
     header: "Next step",
     multiSelect: false,
     options: [
       { label: "Start new feature (Recommended)", description: "Run /ac-plan-init — begin planning the next wave" },
       { label: "Hygiene pass", description: "Run /ac-hygiene — codebase health check after the merge" },
-      { label: "Done", description: "Feature shipped — nothing more to do" }
+      { label: "Done", description: "Shipped — nothing more to do" }
     ]
   }]
 )
 ```
+
+(Skipped entirely when this delegation prompt says so — e.g. `ac-loop` and `ac-hygiene` both say "no 'what's next?' after merge".)
 
 ### Finalize
 
@@ -739,18 +681,19 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 ## Remember
 
-- **This is per-wave, not per-session** — run once when all beads are done, not after each bead-work session
-- **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN`) is opaque.
-- **The default bump is ALWAYS `patch`** — minor/major are explicit, deliberate human choices, never derived from commit prefixes. User confirms before the bump commit lands; tag is created on the merge commit after merge.
-- **`ac-review` is the sole pre-merge gate** — branch review must complete before running this. `ac-land` is NOT a pre-merge gate; it runs after this merge as session closure.
+- **This is the single merge-to-main path for any branch** — wave or chore/hygiene — run once per branch, not per session
+- **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN` or `hygiene/YYYYMMDD`) is opaque.
+- **Every merge bumps `patch` by default** — waves and hygiene/chores alike; taken automatically, non-interactively, unless a caller-passed freeze/skip directive says otherwise. minor/major remain explicit, deliberate human choices, never derived from commit prefixes; tag is created on the merge commit after merge.
+- **`ac-review` is the pre-merge gate for feature waves only** — chore/hygiene branches are self-reviewed and skip it. `ac-land` is NOT a pre-merge gate; it runs after this merge as session closure.
+- **Bead-closure is checked upstream, not here** — for a wave, `ac-loop` verifies genuine (non-`post-merge`) beads are closed before invoking this skill; ac-merge itself performs no bead-count gate.
 - **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
 - **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)
-- **Sim smoke gate is conditional** — only for native-touching waves on a Mac; never blocks from Linux, but the report must flag the skipped gate
+- **Sim smoke gate is conditional** — only for native-touching branches on a Mac; never blocks from Linux, but the report must flag the skipped gate
 - **Auto-fix obvious issues, ask about the rest** — same triage philosophy as the review commands
 - **Re-poll is short** — 5 minutes max after pushing fixes, don't loop forever
 - **Abort is always an option** — if checks keep failing, let the user decide
 
 ---
 
-_Wave merge: create PR, triage feedback, fix, ship. For session closure: `/ac-land`. For next feature: `/ac-plan-init`._
+_Universal merge: create PR, triage feedback, fix, ship — wave or chore/hygiene. For session closure: `/ac-land`. For next feature: `/ac-plan-init`._
