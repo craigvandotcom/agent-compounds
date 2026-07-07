@@ -61,8 +61,10 @@ nearest parent that has one, noting the intended home.
    `investigation` (open question an agent can resolve) · `decision` (fork only
    the human can resolve → label `human-gate` + pre-stage the memo: context,
    options, trade-offs, recommendation).
-3. **Labels:** `unrefined` unless genuinely implementation-ready (capture
-   usually isn't); provenance labels only where true.
+3. **Labels:** `unrefined` — capture never stamps `refined` (that's
+   `/ac-bead-refine`'s exclusive output, or `ac-triage`'s justified Phase 3a
+   gate); a decision fork gets `human-gate` instead. Provenance labels only
+   where true.
 4. **Create:** `br create "<imperative title>" -t <type> --labels "<labels>"
    --description "<context: what/why/where, user's words preserved>"` — set
    `--priority` only if the user signaled urgency; default is fine. Body carries
@@ -87,3 +89,5 @@ scheduling.` Nothing more; the user is mid-thought.
 | Skipping dedupe | `br search` first — enrich beats duplicate |
 | Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + private pointer |
 | Forgetting the `.beads/` commit | The jsonl is the sync surface — uncommitted = invisible cross-machine |
+| Stamping `refined` at capture | Never — only `/ac-bead-refine` (or `ac-triage`'s justified gate) may |
+

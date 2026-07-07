@@ -30,7 +30,46 @@ file the `bug` directly. `investigation` is only for genuine unknowns.
 | `qa-blocker` | Gates the next merge — ac-merge refuses while open |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
+| `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
 | `tooling` | Infra/toolchain work, not app code |
+
+## Lifecycle labels — readiness gate (the refined-stamp doctrine)
+
+Every **open, non-epic** bead carries exactly one of three lifecycle labels:
+
+| Label | Meaning | Who stamps it |
+| ----- | ------- | ------------- |
+| `unrefined` | Not implementation-ready, awaiting `/ac-bead-refine` | Default at creation (`ac-bead-capture`, `ac-beadify`) |
+| `refined` | Implementation-ready | **Exclusively** `/ac-bead-refine` on convergence, OR `ac-triage` on a refined-by-construction defect (source permalink + suspected wave/commit + repro + verification path, WITH a justifying comment) |
+| `human-gate` | Decision/approval bead — never implemented directly | Creator, per the decision-bead contract above |
+
+**Readiness for implementation = presence of `refined`.** (2026-07-07 doctrine
+change — this inverts the earlier convention, where *absence* of `unrefined`
+meant ready. That convention let any bead created outside the normal capture
+paths, or with a label accidentally stripped, silently qualify for
+`/ac-implement`.) `ac-implement` gates on `refined`, not on the lack of
+`unrefined`.
+
+**Absence of any lifecycle label = unknown → treat as `unrefined` (fail-safe).**
+A bead with none of the three carries a lifecycle-label gap; `ac-tidy`'s
+nightly lint auto-adds `unrefined` to these — it never auto-adds `refined`,
+which is only ever earned, never inferred.
+
+**One-time board migration (legacy boards, run once per repo):** boards built
+under the old convention have open beads that are implementation-ready but
+only signal it by *lacking* `unrefined`. Backfill the explicit `refined` stamp:
+
+```bash
+br list --json --limit 1000 | jq -r '
+  .issues[]
+  | select(.status == "open")
+  | select((.labels // []) as $l |
+      ($l | index("unrefined") | not) and
+      ($l | index("human-gate") | not) and
+      ($l | index("refined") | not))
+  | .id' \
+| while read -r id; do br label add "$id" "refined"; done
+```
 
 ## Body template (the `br lint` contract)
 

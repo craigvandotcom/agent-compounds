@@ -354,18 +354,19 @@ AskUserQuestion(
 
 **Apply any user-approved findings using `br` commands.**
 
-### Remove `unrefined` Label
+### Remove `unrefined`, Stamp `refined`
 
-**On successful convergence (Phase 5 reached), remove the `unrefined` label from all beads that were reviewed.**
+**On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
 
 ```bash
-# Remove unrefined label from all open beads
+# Remove unrefined, add refined, on all open beads that were reviewed
 for id in $(br list --json | jq -r '.[] | select(.status == "open") | .id'); do
     br label remove "$id" "unrefined" 2>/dev/null
+    br label add "$id" "refined" 2>/dev/null
 done
 ```
 
-This signals to `/ac-human-session` and `/ac-implement` that these beads have been through refinement and are agent-ready.
+This signals to `/ac-human-session` and `/ac-implement` that these beads have been through refinement and are agent-ready — `/ac-implement`'s intake gate checks for `refined` explicitly.
 
 ### Verify Final Structure
 
@@ -388,7 +389,7 @@ Verify:
 - [ ] Each bead is independently **green + shippable**; bead order is **commit-safe** (add-before-remove; migrations additive-first)
 - [ ] Comments explain reasoning/justification
 - [ ] Acceptance criteria are clear and verifiable
-- [ ] `unrefined` label removed from all reviewed beads
+- [ ] `unrefined` removed AND `refined` added to all reviewed beads
 
 ### Report
 

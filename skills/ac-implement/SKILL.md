@@ -47,14 +47,22 @@ br ready --json
 
 If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or check `br list --json` for blocked items."
 
-**Filter out unrefined and human-gated beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` removes it. Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads WITHOUT both labels are eligible:
+> **Hard intake gate — no exceptions.** Before working ANY bead — regardless of who
+> supplied its ID, including conductor delegation — verify it carries the `refined`
+> label. A bead without `refined` is NOT workable: add `unrefined` to it (if it lacks
+> a lifecycle label), skip it, and report it back for the refine queue. `human-gate`
+> beads are never implemented directly. Readiness = presence of `refined`, never the
+> absence of `unrefined` (`skills/_shared/bead-conventions.md`) — a well-written
+> description is not a refined spec.
+
+**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` carry the `unrefined` label until `/ac-bead-refine` stamps `refined` (or `ac-triage` stamps it directly on a justified refined-by-construction defect). Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads carrying `refined` and NOT carrying `human-gate` are eligible:
 
 ```bash
 # Ready beads that are refined AND not human-gated
-br ready --json | jq '[.[] | select((.labels | index("unrefined") | not) and (.labels | index("human-gate") | not))]'
+br ready --json | jq '[.[] | select((.labels | index("refined")) and (.labels | index("human-gate") | not))]'
 ```
 
-If ALL ready beads have the `unrefined` label, STOP: "All ready beads are unrefined. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-session` for the decision docket."
+If NO ready beads carry the `refined` label, STOP: "No refined beads ready. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-session` for the decision docket."
 
 ### Ensure Wave Branch (single-branch rule)
 
@@ -273,18 +281,19 @@ This returns the top pick AND a claim command.
 
 > ⚠️ **The claim command robot-next prints uses `bd`, but this repo's binary is `br`.** `bv --robot-next` emits `bd update <id> --status=in_progress`; running it verbatim fails with `command not found: bd`. Translate to **`br update <id> --status=in_progress`**. (Incident 2026-06-12 wave/004: ran the emitted `bd` command, hit the error, re-ran with `br` — one wasted round-trip.)
 
-**Guard: verify the selected bead is refined and not human-gated.** Check the bead's labels — if it has `unrefined` or `human-gate`, skip it and pick the next one:
+**Guard: verify the selected bead carries `refined` and is not human-gated.** Readiness is presence of `refined`, not absence of `unrefined`. Check the bead's labels — if it lacks `refined`, or has `human-gate`, skip it and pick the next one:
 
 ```bash
-# Check the selected bead's labels for either exclusion
-br show <id> --json | jq '.labels | (index("unrefined") // index("human-gate"))'
+# Check the selected bead's labels: must have refined, must not have human-gate
+br show <id> --json | jq '.labels | ((index("refined") | not) or index("human-gate"))'
 ```
 
-If the bead is unrefined:
+If the bead is not `refined`:
 1. Do NOT claim it
-2. Log: "Skipping <id> (unrefined — needs `/ac-bead-refine` first)"
-3. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("unrefined") | not)] | .[0]'`
-4. If no refined beads remain, STOP the session early
+2. If it carries no lifecycle label at all, add `unrefined`: `br label add <id> "unrefined"`
+3. Log: "Skipping <id> (missing `refined` — needs `/ac-bead-refine` first)"
+4. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("refined"))] | .[0]'`
+5. If no refined beads remain, STOP the session early
 
 **Guard: reserve bead files via Agent Mail.** Before claiming, reserve the bead's files using `AGENT_NAME` (registered via `macro_start_session` in Phase 0 — unique per session). If the call returns a conflict, this bead is taken:
 
@@ -303,7 +312,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 On `FILE_RESERVATION_CONFLICT`:
 1. Do NOT claim it
 2. Log: "Skipping <id> (file conflict with <agent> — already being worked)"
-3. Get the next candidate from `br ready --json` and repeat both guards (unrefined + conflict)
+3. Get the next candidate from `br ready --json` and repeat both guards (refined + conflict)
 4. If no conflict-free beads remain, STOP the session early
 
 On success: reservation is held. The pre-commit guard (installed in Phase 0) will enforce it at commit time as a second layer.
@@ -322,7 +331,7 @@ If the bead requires absent infrastructure:
 1. Do NOT claim it
 2. Add a comment via `br comments add <id> "Env-blocked: <reason>. Needs <required-env> or a /ac-bead-refine round to pick an alternative path."`
 3. Get the next candidate from `br ready --json`
-4. Burning a bead slot on a no-op attempt is equivalent to claiming an unrefined bead — skip it.
+4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it.
 
 Concrete prior incident (2026-05-15 wave/v1-bootstrap): conductor claimed `owr.3` (P0) before recognising its spec called for `supabase migration up --local` against a local stack that doesn't exist on the project. One of the session's 8 bead slots was consumed before the env mismatch surfaced. Separately, `bv --robot-next` repeatedly recommended `n6a.2` whose remaining ACs are Mac-only — conductor had to manually filter via `br ready --json` jq each Phase 1a loop, ~4–6 min wasted across the session.
 

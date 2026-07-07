@@ -15,7 +15,7 @@ description: 'Pipeline housekeeping — archive completed items, reconcile backl
 
 In **NIGHTLY** mode:
 
-- **Tier 1 — auto-apply** (non-destructive reconciliation): Phase 2d (`captured → planned`) + Phase 2e (fix/infer plan frontmatter) + adding missing `plans:` fields + stripping a stale `unrefined` label from any CLOSED bead (a closed bead is past refinement by definition — pure label reconciliation; `br label remove <id> unrefined`, verify via the issues.jsonl, not `br show`). Always runs.
+- **Tier 1 — auto-apply** (non-destructive reconciliation): Phase 2d (`captured → planned`) + Phase 2e (fix/infer plan frontmatter) + adding missing `plans:` fields + stripping a stale `unrefined` label from any CLOSED bead (a closed bead is past refinement by definition — pure label reconciliation; `br label remove <id> unrefined`, verify via the issues.jsonl, not `br show`) + Phase 2f (stamping fail-safe `unrefined` onto any OPEN bead with a lifecycle-label gap — never `refined`, that stamp is only earned). Always runs.
 - **Tier 2 — auto-apply provably-done archive** (Phases 2b/2c): ONLY when the Tier-2 toggle is ON *and* the positive-proof gate passes (see NIGHTLY Guardrails). Otherwise the item falls through to a Tier-3 proposal.
 - **Tier 3 — propose only** (Phases 3–4: orphans, consolidation, dedup, finding-bead prune): emit a proposal file + a `human-gate,pipeline-proposal` bead. **Never** `AskUserQuestion` — there is no human. `ac-human-session` applies approved proposals later by re-invoking this skill's INTERACTIVE flow.
 
@@ -64,7 +64,7 @@ Read `AGENTS.md` for project context.
 
 Your lens (the reconciliation inputs to pull from the board):
 
-- **Beads** — closed vs open; `unrefined`-labelled; epics with child completion ratios (total / closed / open); finding labels (`qa-finding` / `review-finding` / `hygiene-finding`) for the prune pass (Phase 4).
+- **Beads** — closed vs open; `unrefined`-labelled; lifecycle-label gaps (open beads with none of `unrefined`/`refined`/`human-gate` — Phase 2f); epics with child completion ratios (total / closed / open); finding labels (`qa-finding` / `review-finding` / `hygiene-finding`) for the prune pass (Phase 4).
 - **Plans** — `status` (and infer it if frontmatter is missing → Phase 2e); whether each plan is **referenced by a bead** (= beadified → Phase 2b) and whether those beads are all closed (→ Phase 2c); `source_backlog` (→ Phase 2d).
 - **Backlog** — `status` + `plans` fields; checked vs unchecked task counts; which folder (`active/` = committed · `pool/` = candidate; flag any legacy `v*/` for the `{active/, pool/}` migration `/ac-align` offers).
 
@@ -169,6 +169,27 @@ refinement_rounds: {count from Refinement Log, or 0}
 
 Report each inference for user awareness.
 
+### 2f: Lifecycle Label Gap Lint
+
+> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is only earned via `/ac-bead-refine` convergence or `ac-triage`'s justified Phase 3a gate (`skills/_shared/bead-conventions.md`).
+
+**Condition:** an open, non-epic bead carries none of `unrefined` / `refined` / `human-gate` — a lifecycle-label gap, i.e. unknown readiness state.
+
+```bash
+br list --json --limit 1000 | jq -r '
+  .issues[]
+  | select(.status == "open")
+  | select((.labels // []) as $l |
+      ($l | index("unrefined") | not) and
+      ($l | index("refined") | not) and
+      ($l | index("human-gate") | not))
+  | .id'
+```
+
+**Action:** `br label add <id> "unrefined"` (fail-safe — unknown readiness is treated as not-ready). List every flagged bead in the report.
+
+Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
+
 ---
 
 ## Phase 3: Flag Orphans
@@ -238,6 +259,9 @@ those are gated, not housekeeping.
 ### Status Updates
 - {count} backlog items: captured → planned
 - {count} plans: frontmatter added/corrected
+
+### Lifecycle Label Gaps
+- {count} open beads had none of `unrefined`/`refined`/`human-gate` — `unrefined` added (fail-safe)
 
 ### Orphans Flagged
 - {count} orphan plans (no source, no beads)

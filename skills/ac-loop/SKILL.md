@@ -101,9 +101,9 @@ Read the current state of the board. This is the map you navigate by.
 
 ```bash
 
-# All refined, ready, non-human-gated beads
+# All refined, ready, non-human-gated beads (readiness = presence of `refined`)
 br ready --json | jq '[.[] | select(
-  (.labels | index("unrefined") | not) and
+  (.labels | index("refined")) and
   (.labels | index("human-gate") | not)
 )]'
 
@@ -125,8 +125,10 @@ Also check for loop-ready plans and unrefined beads:
 grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 
 # Unrefined beads from loop-ready plans (need ac-bead-refine before implement)
+# Classification (needs-refine), NOT readiness: matches `unrefined` OR no lifecycle
+# label at all — i.e. anything that is neither `refined` nor `human-gate` yet.
 br ready --json | jq '[.[] | select(
-  (.labels | index("unrefined")) and
+  ((.labels | index("refined") | not) and (.labels | index("human-gate") | not)) and
   (.labels | map(test("^wave-[0-9]+$")) | any)
 )]'
 
@@ -134,7 +136,7 @@ br ready --json | jq '[.[] | select(
 #   (a) part of a beadified EPIC or a plan-traceable group → AUTO-REFINE (signed-off work)
 #   (b) truly RAW lone captures (no parent, no epic group, no source plan) → ARIA gate
 br ready --json | jq '[.[] | select(
-  (.labels | index("unrefined")) and
+  ((.labels | index("refined") | not) and (.labels | index("human-gate") | not)) and
   (.labels | map(test("^wave-[0-9]+$")) | any | not)
 )]'
 # Then classify each: does it have a parent-child dep (epic child), children (epic parent),
@@ -155,7 +157,7 @@ br ready --json | jq '[.[] | select(
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
-Summarise: N orphan beads, M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined **signed-off** beads needing refine (plan-beads + beadified epics + plan-traceable groups → auto-refine), O **truly-raw** unrefined captures (lone, no epic/plan → ARIA gate only).
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U **signed-off** beads needing refine — classified by absence of `refined` (whether labeled `unrefined` or lacking any lifecycle label), not by presence of `unrefined` — (plan-beads + beadified epics + plan-traceable groups → auto-refine), O **truly-raw** unrefined captures (lone, no epic/plan → ARIA gate only).
 
 **Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling new raw work in:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
@@ -191,12 +193,12 @@ If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready p
 
 **Orphans = refined, non-human-gate beads with no wave affinity.** These are typically bugs and quick fixes surfaced by `ac-triage` or `ac-bead-capture`. Ship them first — they often unblock other work or are time-sensitive production fixes.
 
-> **Seam contract with `ac-triage`:** triage omits `unrefined` only on refined-by-construction defects (source permalink + suspected wave/commit + repro + verification path — its Phase 3a readiness gate); vaguer findings arrive labeled `unrefined` and route through `ac-bead-refine` like any raw capture. If an orphan turns out to be a cold trail mid-implement, that's a triage-side readiness bug — kick it back to `unrefined` with a note rather than guessing at a fix.
+> **Seam contract with `ac-triage`:** triage stamps `refined` (with a one-line justification comment) only on refined-by-construction defects (source permalink + suspected wave/commit + repro + verification path — its Phase 3a readiness gate); vaguer findings arrive labeled `unrefined` and route through `ac-bead-refine` like any raw capture. If an orphan turns out to be a cold trail mid-implement, that's a triage-side readiness bug — strip `refined`, add `unrefined` with a note, rather than guessing at a fix.
 
 ```bash
 # Orphan beads: refined, no wave-NNN marker label, no human-gate
 br ready --json | jq '[.[] | select(
-  (.labels | index("unrefined") | not) and
+  (.labels | index("refined")) and
   (.labels | index("human-gate") | not) and
   (.labels | map(test("^wave-[0-9]+$")) | any | not)
 )]'
@@ -253,7 +255,7 @@ LOOP_READY_PLANS=$(grep -l "status: loop-ready" _plans/*.md 2>/dev/null)
 
 # Of those, find which have refined, non-human-gate ready beads
 br ready --json | jq '[.[] | select(
-  (.labels | index("unrefined") | not) and
+  (.labels | index("refined")) and
   (.labels | index("human-gate") | not) and
   (.labels | map(test("^wave-[0-9]+$")) | any)
 )] | group_by(.labels[] | select(test("^wave-[0-9]+$"))) | sort_by(.[0].priority) | .[0]'

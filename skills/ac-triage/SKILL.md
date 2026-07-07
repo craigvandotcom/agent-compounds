@@ -145,14 +145,16 @@ br create -t bug --labels triage,<source>  \
 
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
-- **Readiness gate (the ac-loop seam):** the loop treats any ready bead WITHOUT the
-  `unrefined` label as shippable and hands it straight to `ac-implement` — no
-  `ac-bead-refine` pass. So omit `unrefined` ONLY when the bead is refined-by-construction:
-  source permalink, first-seen release, suspected wave/commit, stack frames/repro, AND a
-  verification path (how the implementer proves the fix). Anything vaguer — no repro,
-  unclear cause, cross-cutting blast radius — gets `--labels triage,<source>,unrefined` so
-  the loop routes it through `ac-bead-refine` instead of burning an implement slot on a
-  cold trail. `-t investigation` beads are ALWAYS `unrefined` — they are questions, not specs.
+- **Readiness gate (the ac-loop seam):** the loop treats any ready bead carrying the
+  `refined` label as shippable and hands it straight to `ac-implement` — no
+  `ac-bead-refine` pass. So apply `refined` — plus a one-line justification comment
+  (`br comments add <id> "refined-by-construction: <why>"`) — ONLY when the bead is
+  refined-by-construction: source permalink, first-seen release, suspected wave/commit,
+  stack frames/repro, AND a verification path (how the implementer proves the fix).
+  Anything vaguer — no repro, unclear cause, cross-cutting blast radius — gets
+  `--labels triage,<source>,unrefined` so the loop routes it through `ac-bead-refine`
+  instead of burning an implement slot on a cold trail. `-t investigation` beads are
+  ALWAYS `unrefined` — they are questions, not specs.
 - Always include the **source permalink** (Sentry issue URL / ASC feedback id) and the
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.
@@ -251,8 +253,9 @@ per-app severity bar, the dedupe-fingerprint convention, and any source-specific
 - **Sentry first** — symbolicated stacks beat sparse beta-crash APIs.
 - **A source not configured is skipped; a source configured-but-FAILING is an escalation**
   — file/update the ops bead, never silently skip a wired source, never advance its watermark.
-- **Respect the ac-loop seam** — no `unrefined` label means the bead ships without any
-  refinement pass; only refined-by-construction defects may omit it.
+- **Respect the ac-loop seam** — the `refined` label means the bead ships without any
+  refinement pass; only refined-by-construction defects may carry it (with a
+  justification comment).
 - **Inbound counterpart to `ac-distribute`** — it ships out, this listens back.
 
 ---
