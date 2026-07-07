@@ -1,6 +1,6 @@
 ---
 name: ac-loop
-description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, pauses on genuine decisions via Slack buttons, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with checkpoints use ac-pipeline. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".'
+description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, pauses on genuine decisions via Slack buttons, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-review → ac-merge) gating between them via ac-human-session — ac-pipeline is deprecated. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".'
 ---
 
 # ac-loop — Autonomous Shipping Loop
