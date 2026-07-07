@@ -269,25 +269,30 @@ build_hooks_obj() {
 
 render_hooks_root() {
   [ -f "$HOOKS_MANIFEST" ] || { echo "  WARN: $HOOKS_MANIFEST missing — hooks skipped"; return 0; }
-  local obj settings="$REPOS_ROOT/.claude/settings.json"
+  local obj content settings="$REPOS_ROOT/.claude/settings.json"
 
   if [ "$EN_CLAUDE" = "true" ] && [ -f "$settings" ]; then
     echo "  -- claude hooks (.claude/settings.json#hooks)"
     obj="$(build_hooks_obj claude)"
-    write_file_if_changed "$settings" "$(jq --argjson h "$obj" '.hooks = $h' "$settings")"
+    # assignment form (not inline in the call) so a jq failure trips `set -e`
+    # instead of silently writing empty content over the real settings file.
+    content="$(jq --argjson h "$obj" '.hooks = $h' "$settings")"
+    write_file_if_changed "$settings" "$content"
   fi
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex hooks (.codex/hooks.json)"
     obj="$(build_hooks_obj codex)"
     local before=$CHANGES
-    write_file_if_changed "$REPOS_ROOT/.codex/hooks.json" "$(jq -n --argjson h "$obj" '{hooks: $h}')"
+    content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
+    write_file_if_changed "$REPOS_ROOT/.codex/hooks.json" "$content"
     [ "$CHANGES" -gt "$before" ] && [ "$DRY" = 0 ] && \
       echo "  NOTE: codex hooks.json changed — re-trust once via /hooks in the Codex TUI"
   fi
   if [ "$EN_DROID" = "true" ]; then
     echo "  -- droid hooks (tools/droid/hooks.json -> ~/.factory/hooks.json)"
     obj="$(build_hooks_obj droid)"
-    write_file_if_changed "$REPOS_ROOT/tools/droid/hooks.json" "$(jq -n --argjson h "$obj" '{hooks: $h}')"
+    content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
+    write_file_if_changed "$REPOS_ROOT/tools/droid/hooks.json" "$content"
     ensure_home_link "$DROID_HOME/hooks.json" "$REPOS_ROOT/tools/droid/hooks.json"
   fi
   if [ "$EN_PI" = "true" ]; then
@@ -296,26 +301,30 @@ render_hooks_root() {
 }
 
 render_mcp_root() {
-  local src="$REPOS_ROOT/.mcp.json"
+  local src="$REPOS_ROOT/.mcp.json" body content
   [ -f "$src" ] || { echo "  WARN: $src missing — MCP projection skipped"; return 0; }
 
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex MCP (.codex/config.toml [mcp_servers], generated)"
-    write_generated "$REPOS_ROOT/.codex/config.toml" "$(printf '%s\n%s' \
-"# $STAMP — do not hand-edit (source: .mcp.json). Loaded only when this project is trusted in ~/.codex/config.toml." \
-"$(jq -r '.mcpServers | to_entries[] |
+    # assignment form (not inline in the call) so a jq failure trips `set -e`
+    # instead of silently generating a truncated/empty config.toml.
+    body="$(jq -r '.mcpServers | to_entries[] |
   "[mcp_servers.\(.key)]"
   + (if .value.command then "\ncommand = \(.value.command | tojson)" else "" end)
   + (if .value.args then "\nargs = \(.value.args | tojson)" else "" end)
   + (if .value.url then "\nurl = \(.value.url | tojson)" else "" end)
   + (if .value.env then "\n[mcp_servers.\(.key).env]\n"
       + (.value.env | to_entries | map("\(.key) = \(.value | tojson)") | join("\n")) else "" end)
-  + "\n"' "$src")")"
+  + "\n"' "$src")"
+    content="$(printf '%s\n%s' \
+"# $STAMP — do not hand-edit (source: .mcp.json). Loaded only when this project is trusted in ~/.codex/config.toml." \
+"$body")"
+    write_generated "$REPOS_ROOT/.codex/config.toml" "$content"
   fi
   if [ "$EN_DROID" = "true" ]; then
     echo "  -- droid MCP (tools/droid/mcp.json -> ~/.factory/mcp.json)"
-    write_file_if_changed "$REPOS_ROOT/tools/droid/mcp.json" \
-      "$(jq '{mcpServers: (.mcpServers | with_entries(.value |= (if .command then ({type:"stdio"} + .) else . end)))}' "$src")"
+    content="$(jq '{mcpServers: (.mcpServers | with_entries(.value |= (if .command then ({type:"stdio"} + .) else . end)))}' "$src")"
+    write_file_if_changed "$REPOS_ROOT/tools/droid/mcp.json" "$content"
     ensure_home_link "$DROID_HOME/mcp.json" "$REPOS_ROOT/tools/droid/mcp.json"
   fi
   if [ "$EN_PI" = "true" ]; then
@@ -343,11 +352,17 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
   echo "== $base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
-    local dep_flags=""
+    local dep_flags="" deploy_status
     [ "$DRY" = 1 ] && dep_flags="-n"
     # deploy.sh output counts as change signal only in --check via its own diff-noise;
     # it is idempotent, so re-running is always safe.
+    # `|| true` guards against grep's own exit 1 when it filters out every line
+    # (no real diff noise) — that is not a failure. But PIPESTATUS[0] still holds
+    # deploy.sh's own exit code regardless of the trailing `|| true`, so check it
+    # explicitly instead of silently discarding a genuine deploy.sh crash.
     "$AC_ROOT/deploy.sh" "$base" --all $dep_flags | sed 's/^/  [deploy.sh] /' | grep -v '^  \[deploy.sh\] $' || true
+    deploy_status="${PIPESTATUS[0]}"
+    [ "$deploy_status" -eq 0 ] || { echo "  ERROR: deploy.sh failed (exit $deploy_status) for $base" >&2; exit "$deploy_status"; }
   fi
 
   if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ]; then
@@ -417,7 +432,7 @@ if [ "$DO_ALL" = 1 ]; then
   LIST="$REPOS_ROOT/infrastructure/ac-deploy-targets.list"
   [ -f "$LIST" ] || { echo "error: $LIST missing" >&2; exit 2; }
   while IFS= read -r line; do
-    line="${line%%#*}"; line="$(echo "$line" | xargs)"
+    line="${line%%#*}"; line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
     [ -n "$line" ] || continue
     if [ -d "$AC_ROOT/../$line" ]; then
       sync_target "$AC_ROOT/../$line" app

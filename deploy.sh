@@ -125,7 +125,7 @@ t = sys.argv[1]
 if not os.path.isabs(t):
     t = os.path.join(os.getcwd(), t)
 print(os.path.normpath(t))
-' "$current_target" 2>/dev/null || true)"
+' "$current_target")"
     if ! is_inside_ac "$resolved"; then
       echo "  SKIP (foreign symlink, not overwriting): ${dest#$TARGET/} -> $current_target"
       return
@@ -158,7 +158,7 @@ t = sys.argv[1]
 if not os.path.isabs(t):
     t = os.path.join(os.getcwd(), t)
 print(os.path.normpath(t))
-' "$current_target" 2>/dev/null || true)"
+' "$current_target")"
     is_inside_ac "$resolved" || continue   # foreign dangling link → leave it
     if [ "$DRY" = 1 ]; then
       echo "  prune (orphan) ${link#$TARGET/} -> $current_target"
