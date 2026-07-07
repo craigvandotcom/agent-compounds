@@ -52,6 +52,12 @@ relevant sections on a **full** or **exhaustive** pass; the consuming app's
 - [ ] Permission prompts: the system alert appears, BOTH grant and deny paths
       recover gracefully (`simctl privacy revoke` to re-test)
 - [ ] Plugin error paths: cancelled sheets, denied permissions
+- [ ] **Commerce surfaces (review-critical):** the paywall renders LIVE store data —
+      real packages/prices fetched at runtime, purchase CTA ENABLED. A placeholder
+      card or disabled button = FAIL, whatever static checks say (runtime behavior is
+      the only proof — a plugin can be installed, bundled, keyed, and registered and
+      still hang at the bridge). StoreKit offering/product fetch WORKS on the
+      simulator; only purchase COMPLETION (the payment sheet) is device-only.
 
 ## Auth & navigation
 

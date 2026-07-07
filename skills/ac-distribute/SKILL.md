@@ -47,6 +47,14 @@ The fast, repeatable closed-beta push. art-still has reduced this to **one comma
    session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
    proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
    artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
+   **Review-critical journeys are part of this gate (store submissions especially):** the
+   QA pass must DRIVE the flows a reviewer will drive — above all any COMMERCE surface:
+   the paywall must render LIVE store data with an ENABLED purchase CTA, not placeholders
+   or a disabled button. Static presence checks (dep installed, chunk bundled, key baked,
+   plugin registered) are never sufficient — runtime behavior is the only proof (BCA
+   2.1(b): five static layers passed while the purchase flow hung, through four
+   rejections). StoreKit offering/product fetch WORKS on the simulator; only purchase
+   COMPLETION is device-only — "sim can't test payments" never excuses skipping this.
    **QA-freshness equivalence:** a PASS artifact captured *pre-merge* still satisfies this
    gate post-merge **iff no commits landed on main between the QA run and the merge commit
    being shipped** (i.e. the merge was fast-forward-equivalent — the version/build-bump
