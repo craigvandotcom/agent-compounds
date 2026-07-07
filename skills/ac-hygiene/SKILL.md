@@ -214,9 +214,15 @@ After each batch of fixes — the **round gate** (incremental, per `ac-pipeline-
 Invariant 2: incremental in the loop, exhaustive once at the boundary):
 
 ```bash
-type-check + lint + AFFECTED tests only (project affected runner, e.g. `pnpm test`)   # BLOCKING
+format (auto-fix, e.g. `pnpm format`) + type-check + lint + AFFECTED tests only   # BLOCKING
 # Never run the full suite per round — it runs exactly once, at Phase 5, pre-merge.
 ```
+
+Run **format FIRST and as an auto-fix** (`pnpm format` = `prettier --write .`, not
+`format:check`). CI's Quality Gate runs `prettier --check .` as its *first* step over the
+*whole repo*, so a single unformatted file — including one you didn't touch that was already
+rotting on `main` — fails the entire gate ~10 min into CI. Auto-fixing locally makes that
+impossible. Sub-second cost; never let CI be the thing that catches formatting.
 
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
@@ -226,6 +232,12 @@ Then commit the round's fixes on the hygiene branch (small, revert-friendly comm
 git add <specific files>   # NEVER `git add -A` / `git add .` — it sweeps untracked orphans
 git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}"
 ```
+
+> **Commit WITHOUT `--no-verify`.** The pre-commit hook runs `lint-staged` (prettier `--write`
+> + eslint `--fix`) on your staged files and re-stages them — it is the cheap auto-format
+> safety net, exactly the check that stops formatting-class CI failures. `--no-verify` is for
+> the **push** only (it skips the heavy pre-push `pnpm build` that swallows backgrounded
+> pushes), NEVER for a commit. Bypassing the commit hook is how an unformatted file reaches CI.
 
 > **Stage the exact files you changed — never `git add -A`.** A run may sit next to untracked
 > orphans (a stale `.next.stale-*` build dir, scratch output); `git add -A` commits them. On
@@ -350,12 +362,17 @@ AskUserQuestion(
 ### Quality Gate (exhaustive — the ONCE-per-run full gate)
 
 ```bash
-Run the FULL project quality gate: type-check + lint + full test suite (see AGENTS.md > Project Commands)   # BLOCKING
+# Order MIRRORS CI's Quality Gate exactly — format is the FIRST thing CI checks.
+format (auto-fix, e.g. `pnpm format`) + type-check + lint + full test suite   # BLOCKING
 ```
 
-This is the single exhaustive run of the workflow (rounds ran affected-only). If any
-fail, fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT
-triage items) on the hygiene branch.
+This is the single exhaustive run of the workflow (rounds ran affected-only). Run
+`pnpm format` (`prettier --write .`) FIRST — it mirrors and pre-empts CI's `prettier --check .`
+first step (whole-repo). If it rewrites files you did NOT author (pre-existing rot already red
+on `main`), that is expected: commit the formatting as part of this run's ship — you are
+repairing a gate CI was already failing, not sweeping unrelated changes. If any check fails,
+fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
+on the hygiene branch (again, **no `--no-verify` on the commit**).
 
 ### Ship the Branch (PR → merge)
 
@@ -482,7 +499,7 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Fixes ride the hygiene branch** — per-round commits, PR + CI at the end; never straight to main, never merge red
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
-- **Incremental in the loop, exhaustive at the boundary** — rounds gate on type-check + lint + affected tests; the FULL suite runs exactly once, at Phase 5 pre-merge (BLOCKING)
+- **Incremental in the loop, exhaustive at the boundary** — rounds gate on format(auto-fix) + type-check + lint + affected tests; the FULL suite runs exactly once, at Phase 5 pre-merge (BLOCKING). Format is FIRST + auto-fix in both gates (mirrors CI's `prettier --check .` first step); commit WITHOUT `--no-verify` so the pre-commit lint-staged hook auto-formats — never let CI catch a formatting miss.
 - **Deferred beads get an epic per run** (2+ beads); refined in-session post-merge whenever **≥1 bead** was created (epic-scoped or single-bead-scoped) — `ac-bead-refine` while the findings are still in context, shipped as orphans by the loop
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Don't invent issues** — if the codebase is clean, say so and finish early

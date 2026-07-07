@@ -151,8 +151,20 @@ git rebase origin/main
 ### Quality Gate (post-rebase)
 
 ```bash
-# Run project quality gate (see AGENTS.md > Project Commands > Quality gate)
+# Run project quality gate (see AGENTS.md > Project Commands > Quality gate).
+# Order MIRRORS CI: format FIRST + auto-fix, then type-check, lint, tests.
+#   format (auto-fix, e.g. `pnpm format` = prettier --write .)   <- pre-empts CI's `prettier --check .`
+#   + type-check + lint + tests
 ```
+
+**Format is the first step and it AUTO-FIXES.** CI's Quality Gate runs `prettier --check .`
+over the whole repo as its *first* step; a single unformatted file — even one you didn't
+touch that was already red on `main` — fails the entire gate ~10 min into CI. Running
+`pnpm format` locally makes that impossible for sub-second cost; if it rewrites pre-existing
+files, commit the formatting (you're repairing a gate CI was already failing). Also **commit
+without `--no-verify`** — the pre-commit `lint-staged` hook auto-formats staged files; only
+the *push* uses `--no-verify` (to skip the heavy pre-push build). Never let CI catch a
+formatting miss.
 
 **If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
 
