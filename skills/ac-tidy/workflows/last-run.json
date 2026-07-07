@@ -1,21 +1,24 @@
 {
   "status": "done",
   "mode": "nightly",
-  "date": "2026-07-04",
+  "date": "2026-07-05",
   "machine": "darwin",
   "branch": "main",
-  "commit": "12c4e70d0b4653c57731446d4ee82772eafba222",
+  "commit": "b9556f69c330c95f86e200e2fef2a712dd206eb3",
   "tier2_toggle": "OFF",
   "counts": {
     "tier1_reconciled": 0,
     "tier2_archived": 0,
-    "tier3_proposals": 3
+    "tier3_proposals": 0
   },
-  "proposals": [
-    { "file": "_plans/_proposals/2026-07-04/01-archive-admin-user-role-plan.md", "bead": "bd-3bbct" },
-    { "file": "_plans/_proposals/2026-07-04/02-anomalous-ready-unrefined-bead.md", "bead": "bd-fihkd" },
-    { "file": "_plans/_proposals/2026-07-04/03-stale-marketing-skills-backlog.md", "bead": "bd-ovcfc" },
-    { "file": "_plans/_proposals/2026-07-04/INDEX.md" }
+  "proposals": [],
+  "deferred": [
+    {
+      "action": "strip stale 'unrefined' label from CLOSED bead bd-blmt2",
+      "tier": 1,
+      "reason": ".beads/issues.jsonl carries a foreign uncommitted comment on bd-ao062 (~4h stale); a br label op re-exports the whole jsonl, so committing a cosmetic strip would sweep another actor's work. Pick up on a clean-tree run."
+    }
   ],
-  "slack": { "channel": "sofi", "status": "healthy", "ts": "1783119233.594329" }
+  "notes": "No-op night: board healthy. 3 active plans loop-ready with provenance (not archivable — layer2 Wave B pending). 8 open finding beads, all fresh/distinct (no inflation to prune). All re-derivable Tier-3 clusters already covered by open proposal beads (bd-3bbct, bd-fihkd, bd-ovcfc + bd-fervp/bd-qx7f1/bd-jphs1/bd-m66h0 = 7 undrained). Zero BCA writes; no commit/push.",
+  "slack": { "channel": "sofi", "status": "healthy", "ts": "1783205412.796699" }
 }
