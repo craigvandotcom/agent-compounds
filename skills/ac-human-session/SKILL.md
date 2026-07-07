@@ -89,6 +89,13 @@ curl -s -o /dev/null -w "%{http_code}" https://www.eat.zone 2>/dev/null    # �
 
 Also flag open beads explicitly blocked on a human (notes "waiting on" / "needs manual" / "requires account" / "human decision") that aren't already `human-gate`.
 
+**Journey debt** (Invariant 9, `_shared/verification-gate.md` §Journey registry): per
+`CORE/journeys/*.md`, a non-peripheral journey (`criticality` ≥ `core`) with a missing
+`last_pass` block, or one `skills/_tools/journey-stamp-check.sh` verdicts stale
+(SHA not an ancestor of HEAD, or an intervening diff touched its `surfaces`), is
+verification debt — 🔴 if `review-critical` (blocks the next store submission per
+ac-distribute's precondition), 🟡 if `commerce`/`core` (schedule before it becomes one).
+
 ---
 
 ## Phase 3: Situational-Awareness Header
@@ -98,7 +105,7 @@ Salvaged from the old `ac-next` funnel view — give the human the whole board a
 ```
 ## Command Center — {project | org-wide}
 
-Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any}
+Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any} {⚠ N journey stamps missing/stale, if any}
 🤖 Loop:   {ready_beads} beads + {loop_ready_plans} plans flowing autonomously{, {in_progress} in-flight} — you don't touch these
 
 ⚡ {one-line sequence note IF reordering is warranted — e.g. "approve plan X before promoting pool, it unblocks 3 items"; omit if order is fine}
@@ -120,11 +127,13 @@ Order = distance from a stall: clear what's stopped, then feed backward. Omit an
    • CI {run} failed                                        → investigate
    • {N} dependabot/grouped PRs                             → review as ONE batch
    • PR #{n} {substantive title}                            → review/merge (one each)
+   • {journey} review-critical — stamp missing/stale         → run QA drive (ac-qa-device/ac-qa-browser)
    (org-wide: group by repo · batch trivial, itemize substantive)
 
 ### 🟡 Feed the builders — next batch needs your sign-off ({N})
    Plans waiting on you; approving makes them loop-ready and they leave your view.
    • {plan} [{Nr {tier} → trajectory}, touched {date}]      → approve / refine
+   • {journey} commerce/core — stamp missing/stale           → schedule a QA drive
 
 ### 🟢 Stock the hopper — what enters planning next ({N})
    • {active item} [{size}]                                 → plan

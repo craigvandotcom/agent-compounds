@@ -49,6 +49,16 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
    the **narrowest subtree covering all consumers** + leave pointers in the lower levels
    (the ALTITUDE rule in context-engineering). Detect by grepping the shared rule's keywords
    across the AGENTS/CORE files at each level.
+10. **Unevidenced impossibility claims** `[T2 weekly]` — a memory item asserting "X can't be
+    done on Y" (or equivalent) with no `evidence:` line grounding *how* that was established.
+    Propose: add the missing evidence line, or flag for human confirmation if it can't be
+    reconstructed. Second-order check on the same shape: an impossibility claim that
+    **justified a skipped verification** (a "can't verify this on device/sim" note sitting
+    upstream of a PASS or a shipped feature) — propose a **retest**, not just a citation fix;
+    BCA 2.1(b) shipped four rejections behind exactly this pattern (a stale "live walk still
+    pending" note nothing ever re-checked). Grep seed: `grep -rin "can't be\|cannot be\|not
+    possible\|no way to" <memory homes>`, then check each hit for `evidence:` and for
+    downstream skip/PASS language nearby.
 
 ## Mechanics
 

@@ -36,6 +36,8 @@ Then explore with completely fresh eyes. Start wherever interests you — recent
 
 Look super carefully for real bugs — the kind that cause wrong results, silent failures, or data corruption. Two moves that pay off: (1) invariant analysis — list what must ALWAYS be true, then try to construct the scenario that violates it; unenforced invariants are bugs waiting to happen. (2) boundary probing — empty, null, zero, negative, huge, concurrent, out-of-order. Some areas worth considering: logic errors, race conditions, null hazards, swallowed exceptions, type assertion abuse — but follow your instincts, not a checklist.
 
+Also read `_shared/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test) — real failure modes from a production incident, not speculative.
+
 Rank what you find by Severity × Likelihood.
 
 ## Output
@@ -105,6 +107,8 @@ You are a structural reviewer checking architecture health. You compete with 5 o
 Read the project structure, then explore source directories with fresh eyes. Assess the overall health of the architecture — dependency cleanliness, test coverage, module boundaries, abstraction levels.
 
 Think about structural integrity: are modules well-bounded? Are dependencies flowing in the right direction? Is there over-abstraction or under-abstraction? Are critical paths tested? But explore broadly — structural issues often hide in unexpected places. Trust your architectural intuition.
+
+Also read `_shared/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test).
 
 ## Output
 

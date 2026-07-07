@@ -90,7 +90,10 @@ sim, a sim NAME, or an agent-device session. Isolate with three layers:
    (`simctl create`) and target it **by UDID** (not name) so the build is immune
    to the CoreSimulator name-match race that fires when another app boots/renames
    sims concurrently. (Symptom of the race: `xcodebuild: error: Unable to find a
-   device matching…` while that exact name IS in the available list.)
+   device matching…` while that exact name IS in the available list.) The pinned
+   sim MUST be **iPhone-class** — never iPad: iPad Stage Manager introduces
+   coordinate offsets that misread as app bugs (taps landing wrong, spurious
+   `hittable:false`).
 2. **A named agent-device session per app** — pass `--session <app>` to EVERY
    `agent-device` call. One daemon per machine multiplexes named sessions;
    `--tenant`/`--state-dir` give full daemon isolation if needed.
@@ -284,6 +287,30 @@ Emit the **`QA_VALIDATION`** block from `_shared/qa-shared.md` with:
 Consumed by `ac-merge` (gates the PR) and `ac-distribute` (the native ship gate
 keys on `platform:`).
 
+## Journey stamps (last_pass)
+
+After a journey **PASS**, update its `last_pass` frontmatter block in
+`CORE/journeys/<name>.md` — `build`, `sha`, `date`, `platform: ios-simulator`
+(or `android-emulator`) — committed together with the QA artifacts in the same
+run that emits `QA_VALIDATION`. A **FAIL** never writes a stamp — the bead
+trail covers failures; a stamp is proof of success only. Schema + staleness
+rule: `_shared/verification-gate.md` §Journey registry.
+
+**Conflict rule:** `last_pass` is last-writer-wins. On a merge conflict, keep
+the NEWER stamp (compare `date`, then `build`) — never hand-merge a hybrid
+stamp (e.g. one journey's build with another's SHA).
+
+## Infra-flaky drives — NO-STAMP, not FAIL
+
+`hittable:false` false-negatives, coordinate misses, and sim-daemon weirdness
+that survive a retry (discipline rule 5) are **executor** failures, not app
+failures. Classify the drive as infra-flaky: write **no `last_pass` stamp**
+(neither PASS nor FAIL) and file a `qa-infra` bead instead. A flaky gate that
+occasionally red-Xs a working app trains gate-skipping — worse than no gate.
+Prerequisite the pin depends on: the dedicated sim MUST be **iPhone-class**,
+never iPad (see "Parallel QA on a shared Mac" above) — iPad Stage Manager
+introduces coordinate offsets that misread as app bugs.
+
 ## Teardown
 
 - Stop any recordings (`agent-device record stop`, `kill -INT` simctl video).
@@ -325,6 +352,7 @@ keys on `platform:`).
 ## Related files
 
 - `_shared/qa-shared.md` — depth levels, journey reuse, findings=beads, `QA_VALIDATION` schema (shared with the twin)
+- `_shared/verification-gate.md` — journey registry schema (`last_pass` stamp fields), staleness rule
 - `native-shell-checklist.md` — what ONLY the simulator/native shell can catch
 - `perf-and-limits.md` — CAN/MISLEADING/CANNOT taxonomy, hardware matrix,
   xctrace recipes, visual regression, automation speed tricks

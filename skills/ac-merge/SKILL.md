@@ -187,8 +187,10 @@ git diff main...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@
 ```
 
 - **All hold** → load **`ac-qa-device/SKILL.md`** and run a **smoke** pass
-  (build via the app's own build command, launch, auth, primary journey —
-  facts in the app's `CORE/journeys/native.md`). ~2–3 min on a warm sim.
+  (build via the app's own build command, launch, auth, then the journeys
+  `_shared/verification-gate.md` §Journey registry selects — surfaces ∩ this
+  wave's diff-classes AND criticality ≥ `core` — facts in each `CORE/journeys/*.md`).
+  ~2–3 min on a warm sim.
 - **Smoke FAILS** → STOP before creating the PR. Report the `QA_VALIDATION`
   block (`platform: ios-simulator`) and ask: abort (fix first) vs merge anyway
   (not recommended).

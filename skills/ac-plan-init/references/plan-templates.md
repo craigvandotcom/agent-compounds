@@ -25,6 +25,7 @@ source_backlog: _backlog/{version}/{filename}.md
 
 **Type:** BUILD | IMPROVE | FIX
 **Complexity:** MINIMAL
+**Journeys touched:** [name each from `CORE/journeys/`, or "none"; a new user-facing surface adds/updates a registry entry — schema: `_shared/verification-gate.md` §Journey registry]
 
 ## Assumptions
 
@@ -76,6 +77,7 @@ source_backlog: _backlog/{version}/{filename}.md
 
 **Type:** BUILD | IMPROVE | FIX
 **Complexity:** MORE
+**Journeys touched:** [name each from `CORE/journeys/`, or "none"; a new user-facing surface adds/updates a registry entry — schema: `_shared/verification-gate.md` §Journey registry]
 
 ## Assumptions
 

@@ -47,14 +47,23 @@ The fast, repeatable closed-beta push. art-still has reduced this to **one comma
    session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
    proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
    artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
-   **Review-critical journeys are part of this gate (store submissions especially):** the
-   QA pass must DRIVE the flows a reviewer will drive — above all any COMMERCE surface:
-   the paywall must render LIVE store data with an ENABLED purchase CTA, not placeholders
-   or a disabled button. Static presence checks (dep installed, chunk bundled, key baked,
-   plugin registered) are never sufficient — runtime behavior is the only proof (BCA
-   2.1(b): five static layers passed while the purchase flow hung, through four
-   rejections). StoreKit offering/product fetch WORKS on the simulator; only purchase
-   COMPLETION is device-only — "sim can't test payments" never excuses skipping this.
+   **Review-critical journeys are part of this gate — mechanically, not by memory.**
+   Run `skills/_tools/journey-stamp-check.sh --app <this-app> --sha <ship-sha> --lane
+   store` before any store submission: it reads each `review-critical` journey's
+   frontmatter stamp (`CORE/journeys/*.md`) and BLOCKS (exit 1) if any is MISSING or
+   STALE — `last_pass.sha` not an ancestor of the ship SHA, or an intervening diff
+   touched that journey's declared `surfaces`. TestFlight pushes run the same script
+   with `--lane testflight`, which never blocks but prints `WARN` lines — a stamp gap
+   is visible, not silent. Rationale (BCA 2.1(b)): five static-presence checks (dep
+   installed, chunk bundled, key baked, plugin registered) all passed while the
+   paywall's purchase CTA sat disabled behind placeholder data through four
+   rejections — runtime behavior, not static presence, is the only sufficient proof,
+   above all on COMMERCE surfaces (live store data + enabled CTA). StoreKit
+   offering/product fetch WORKS on the simulator; only purchase COMPLETION is
+   device-only — "sim can't test payments" never excuses a missing/stale stamp. A
+   stamp is refreshed by driving the journey again (`ac-qa-device`/`ac-qa-browser`
+   writing `last_pass`) — see `ac-publish`'s full-QA phase, which is where every
+   critical journey's stamp gets refreshed before a release ceremony.
    **QA-freshness equivalence:** a PASS artifact captured *pre-merge* still satisfies this
    gate post-merge **iff no commits landed on main between the QA run and the merge commit
    being shipped** (i.e. the merge was fast-forward-equivalent — the version/build-bump

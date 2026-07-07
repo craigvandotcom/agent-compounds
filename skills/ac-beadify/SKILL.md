@@ -208,6 +208,9 @@ Each bead description must be **self-contained** (typed headers per
   not an AC)
 - Test requirements included — **plus a declared test scope**: the file paths/globs this bead
   touches, so its per-bead (Tier-1) check runs only the affected tests (feeds `vitest-affected`)
+- User-facing beads carry forward the plan's **Journeys touched** into their `## Test Scope`
+  QA-modality declaration (`_shared/bead-conventions.md` §Test Scope) — propagate the plan's
+  named journeys, don't re-derive them from scratch
 - No need to reference original plan
 - "So detailed that we never need the plan again"
 - Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context
