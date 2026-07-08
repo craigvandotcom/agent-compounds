@@ -5,29 +5,27 @@ description: 'Use when polishing the PUBLIC marketing website (landing page + pu
 
 # Site Polish
 
-**Purpose:** Take the already-coded **public marketing website** and (1) verify it conforms to the
-site's design spec (`CORE/design.site.md`), then (2) raise it to premium quality — bounded to that
-spec so polish never drifts into redesign. Adds the marketing-specific axes ac-ui-polish lacks
-(conversion, copy hierarchy, desktop responsive, link integrity, screenshot freshness) and runs SEO
-+ a11y inline. Works on one page or a whole-site crawl.
+**Purpose:** Take the already-coded **public marketing website** and (1) verify it conforms to
+`CORE/design.site.md`, then (2) raise it to premium quality — **bounded to that spec so polish never
+drifts into redesign**. Adds the marketing axes ac-ui-polish lacks (conversion, copy hierarchy,
+desktop responsive, link integrity, screenshot freshness) and runs SEO + a11y inline. One page or a
+whole-site crawl.
 
-**Domain:** Frontend craft, conversion/marketing UX, design-spec conformance, anti-slop critique.
+> **The public twin of `ac-ui-polish`.** ac-ui-polish owns the **authenticated app** (anchored on
+> `CORE/design.md`); this skill owns the **public marketing** surface (anchored on
+> `CORE/design.site.md`). Same craft engine, different surface + spec + matrix. The marketing site is
+> browser-only (the native build ignores public pages) — run **through the browser**; no
+> device/native twin.
 
-> **The public twin of `ac-ui-polish`.** ac-ui-polish owns the **authenticated app** surface
-> (anchored on `CORE/design.md`); this skill owns the **public marketing** surface (anchored on
-> `CORE/design.site.md`). Same craft engine, different surface + spec + matrix. The marketing site
-> is browser-only (the native build ignores public pages), so this skill runs **through the browser**
-> — no device/native twin.
+> **Generic skill — method only, zero app facts** (symlinked from agent-compounds across apps; do not
+> add app-specific facts to this file). **App specifics:** the spec → `CORE/design.site.md`; routes →
+> `CORE/journeys/routes.public.md`; the **runnable operational facts (deployed URL, seed commands,
+> capture quirks) → `CORE/ui-audit.md`** (or `CORE/site-audit.md` if present), NOT `CORE/SKILL.md`
+> (which holds only the surface map).
 
-> **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and shared across
-> apps. It carries technique, not project specifics. **App specifics:** the spec → `CORE/design.site.md`;
-> routes → `CORE/journeys/routes.public.md`; the **runnable operational facts (deployed URL, seed
-> commands, capture quirks) → `CORE/ui-audit.md`** (or `CORE/site-audit.md` if present), NOT
-> `CORE/SKILL.md` (which holds only the surface map). Do not add app-specific facts to this file.
-
-> **Reuses ac-ui-polish's craft engine — never forks it.** The visual-craft, interaction, perceived-
-> performance, sensors, anti-slop rubric, and recipes are identical for a webpage. This skill is a
-> **thin spine** that points into ac-ui-polish's reference files and adds only the marketing layer.
+> **Reuses ac-ui-polish's craft engine — never fork it** (the visual-craft, interaction, perceived-
+> performance, sensors, anti-slop rubric, and recipes are identical for a webpage). This skill is a
+> **thin spine** pointing into ac-ui-polish's reference files, adding only the marketing layer.
 
 ---
 
@@ -45,8 +43,8 @@ off manifest membership, **not path geometry** (the landing `/` is `app/page.tsx
 
 ## The spec anchor — `CORE/design.site.md`
 
-The baseline is the app's `CORE/design.site.md` — the site twin of `design.md`, same **hand-authored**
-two-part format (there is **no** `designmd-gen`/linter; it is hand-authored):
+The baseline is the app's `CORE/design.site.md` — the site twin of `design.md`, same two-part format,
+**hand-authored** (there is **no** `designmd-gen`/linter for it):
 
 1. **Token YAML block** — colors, spacing, radius, type ramp the marketing surface uses.
 2. **Do's/Don'ts prose** — plus the **marketing-only sections** ac-ui-polish's `design.md` lacks:
@@ -89,11 +87,9 @@ is absent, **halt and prompt** — do not fall back to a directory scan (path ge
 
 ### Run tasks (whole-site mode)
 
-**Not the Conformance/Elevation ledgers below** — those are the audit's *findings* output
-(defects + scored surfaces). This is a separate, runtime **progress list** (`TaskCreate` /
-`TaskUpdate`) so a glance shows where a long whole-site crawl actually is — call it "run tasks"
-here to avoid colliding with the "ledger" term already owned by Conformance/Elevation. One task
-per major section, created at the start of the run:
+A runtime **progress list** (`TaskCreate`/`TaskUpdate`) — distinct from the Conformance/Elevation
+ledgers below, which are the audit's *findings* output — so a glance shows where a long whole-site
+crawl actually is. One task per major section, created at the start of the run:
 
 ```
 TaskCreate("Baseline — read design.site.md (or bootstrap DRAFT) + ui-audit.md")
@@ -108,8 +104,8 @@ TaskCreate("Verify — running at every viewport/data-state; before/after artifa
 ```
 
 `TaskUpdate` each to `in_progress` on start and `completed` on finish; carry live detail (cell
-counts, finding counts) in the description. **Scoped (single-page) mode is exempt** — it's a
-short, single-context loop where a run-tasks list would be ceremony, not clarity.
+counts, finding counts) in the description. **Scoped (single-page) mode is exempt** — a short
+single-context loop where run tasks would be ceremony.
 
 ---
 
@@ -153,9 +149,9 @@ errored page renders like an empty one) · **never change working code just to h
 
 The craft layer lives in **ac-ui-polish's reference files**, reused **by reference, never copied**.
 
-- **Literal path:** reference shared craft as **`../ac-ui-polish/reference/<file>.md`**. Per-skill
-  symlinks make this sibling-dir offset resolve in both the canonical agent-compounds tree and each
-  app's symlinked `.claude/skills/`.
+- **Literal path:** reference shared craft as **`../ac-ui-polish/reference/<file>.md`** — per-skill
+  symlinks make this sibling-dir offset resolve in both the canonical tree and each app's symlinked
+  `.claude/skills/`.
 - **Two-namespace rule:** bare `<file>` = this skill's own files (`workflows/...`);
   `../ac-ui-polish/<file>` = shared craft.
 - **Required ac-ui-polish reference files** (this skill breaks if any is renamed/removed):
