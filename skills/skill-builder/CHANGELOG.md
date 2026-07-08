@@ -1,5 +1,28 @@
 # Skill Builder Changelog
 
+## 2026-07-07 - Token Economy doctrine (v2.1)
+
+Based on 2026-07 research (Anthropic docs, Matt Pocock writing-great-skills,
+obra/superpowers wording tests) + registry audit. Craig's standing rule: pipeline
+skills deliberately spend tokens on determinism — predictability first, cost second.
+
+- **New Core Principle 5 (SKILL.md):** Token Economy — four token buckets
+  (enforcement/discovery/persuasion/sediment), enforcement hierarchy, the cut rule
+  ("removed only when its job passes to an equal-or-stronger mechanism").
+- **New reference:** `references/token-economics.md` — loading model, hard budgets
+  (1024-char description limit, ~15k-char listing cliff with silent skill dropping),
+  empirical anti-patterns, sources.
+- **refine-skill workflow:** mandatory Phase 3.0 Constraint Inventory (extract every
+  behavioral rule → rewrite under the cut rule → validator verifies survival).
+- **validate-skill.sh:** new `--registry` mode auditing total description chars vs the
+  listing budget (fail >15k, warn >12k; excludes `disable-model-invocation: true`);
+  block-scalar description extraction fixed in single-skill mode.
+- **best-practices.md:** registry override recorded (determinism subordinates
+  conciseness/progressive disclosure for enforcement content); drift-management
+  guidance (script it or mirror-mark it).
+- **Size constraints:** enforcement-heavy pipeline skills explicitly exempted from the
+  line-count target — judged by token buckets instead.
+
 ## 2026-01-23 - Major Update (v2.0)
 
 Based on research from:

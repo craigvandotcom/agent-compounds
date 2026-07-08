@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: Use when creating new Claude Code skills, editing existing skills, refactoring oversized SKILL.md files, or converting documentation/subagents to skills. Guides SKILL.md structure, the spine+references split, YAML frontmatter, progressive disclosure, and RED-GREEN testing. Triggers on "create a skill", "build a skill", "refactor this skill", "convert to a skill", "improve this skill's description".
+description: Use when creating new Claude Code skills, editing existing skills, refactoring oversized SKILL.md files, optimizing skill token cost or descriptions, or converting documentation/subagents to skills. Triggers on "create a skill", "build a skill", "refactor this skill", "convert to a skill", "improve this skill's description", "make skills token efficient", "trim this skill", "description budget".
 ---
 
 > **Shared skill (agent-compounds).** Symlinked into projects via `deploy.sh` — this is the single source of truth; edit here, not in a consumer copy. Method-only and portable (no project facts).
@@ -51,7 +51,14 @@ description: Use when creating new Claude Code skills, editing existing skills, 
 The YAML `description` determines skill discovery. Must include:
 - What the skill does (specific capabilities)
 - When to use it (trigger terms users would mention)
-- Max 1024 characters
+- Max 1024 characters, strongest trigger first (truncation happens at the tail)
+
+Descriptions are paid in EVERY session of every consuming app, and the total across all
+visible skills must fit the listing budget (~15k chars) or skills get **silently
+dropped**. Check with `validate-skill.sh --registry`; budget mechanics in
+`references/token-economics.md`. Skills only ever invoked by name (user command or
+pipeline orchestration) should set `disable-model-invocation: true` — zero standing
+cost.
 
 **CRITICAL: Descriptions must focus on WHEN (triggering conditions), NOT HOW (workflow summary).**
 
@@ -76,6 +83,35 @@ A non-trivial skill is a **lean spine that routes to references**, not a wall of
 **The discriminator:** *Does the orchestrator itself need this to decide what to do next, or does only a spawned sub-agent / one stage consume it?* Orchestrator → spine. Sub-agent/stage → `references/`.
 
 Full rulebook (spine vs references, pointer syntax, ToC rule, refactor procedure): **[references/structure-standard.md](references/structure-standard.md)**. Read it before writing a large skill or refactoring an oversized one.
+
+### 5. Token Economy — determinism first
+
+**Predictability is the virtue; token cost is a symptom.** Never ask "can this be
+shorter?" Ask: **what failure does this token prevent, and does an equally strong or
+stronger mechanism exist for fewer tokens?** Cut only when the answer is yes.
+
+Enforcement hierarchy (strongest → weakest): **script/hook > inline instruction at
+point of use > checkable completion criterion > repetition at decision points > prose
+rule at a distance > pointer to another file.** A token may move down this hierarchy
+only when its job passes to something at the same level or higher. Pointers are the
+*weakest* mechanism — so progressive disclosure is right for payload only some runs
+need, wrong for enforcement content every run needs. Pipeline skills legitimately run
+long: their length IS the enforcement.
+
+Classify before cutting:
+
+| Bucket | Action |
+|---|---|
+| **Enforcement** (run-ledger lines, explicit branches, exact option sets, point-of-use repetition, completion criteria, Remember blocks) | Keep. Replace only with something *stronger* (script/hook), never merely cheaper |
+| **Discovery** (frontmatter description) | Trigger-only, front-loaded, hard-pruned — cutting here *increases* reliability |
+| **Persuasion** (rationale, anecdotes) | Compress to rule + one-clause why; full stories → `references/incidents.md` or memory |
+| **Sediment** (same content twice in one file, dead paths, stale layers, redundant syntax) | Pure cut, no tradeoff |
+
+Sentence-level: the **no-op test** — does it change behavior vs. the default? If not,
+delete the sentence, don't trim its words. Full payload (loading model, hard budgets
+incl. the ~15k-char registry listing cliff, evidence, sources):
+**[references/token-economics.md](references/token-economics.md)** — read it when
+writing/refining descriptions, cutting from a skill, or auditing registry footprint.
 
 ---
 
@@ -155,6 +191,12 @@ description: Use when...  # Max 1024 chars, third-person, concrete triggers
 | references/*.md | varies | Keep focused on single topic |
 
 **Note:** Anthropic's actual average is ~2,200 words (1,500-2,000 optimal). Target 200-400 lines for balance between completeness and context efficiency.
+
+**Exception — enforcement-heavy pipeline skills:** a multi-phase orchestrator whose
+length is enforcement (run ledgers, explicit branches, point-of-use repetition) may
+legitimately exceed these targets. Judge it by the token-bucket test (§ Token Economy),
+not the line count: over-target is fine only if what remains is enforcement, not
+sediment.
 
 ---
 
@@ -298,9 +340,10 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 **validate-skill.sh** checks:
 - YAML frontmatter format
 - Name/description constraints
-- Size limits (warns >400 lines, fails >500)
+- Size limits (warns >400 and >500 lines — see enforcement-heavy exception above)
 - Trigger phrase presence
 - Workflow summary anti-patterns
+- `--registry <skills-dir>`: sums all descriptions against the ~15k-char listing budget
 
 ---
 
@@ -319,6 +362,7 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 | File | Contents |
 |------|----------|
 | `references/structure-standard.md` | **The spine+references rulebook** — read before writing/refactoring a large skill |
+| `references/token-economics.md` | **Loading model, hard budgets, determinism framework** — read before writing/refining descriptions or cutting content |
 | `references/skill-template.md` | Copy-paste starting template for a new SKILL.md |
 | `references/best-practices.md` | Anthropic + community patterns (description, naming, progressive disclosure) |
 | `references/testing-patterns.md` | RED-GREEN-REFACTOR testing methodology |
@@ -352,8 +396,10 @@ Is it generic/portable (method-only, no project facts)?
 Before deploying a skill:
 
 - [ ] Placement determined using decision tree above
-- [ ] Description under 1024 chars with concrete triggers
+- [ ] Description under 1024 chars with concrete triggers, strongest first
 - [ ] **Description focuses on WHEN (triggers) not HOW (workflow)**
+- [ ] Registry description budget still fits (`validate-skill.sh --registry`); manual-only skills use `disable-model-invocation: true`
+- [ ] Any content cut/moved passed the token-bucket test (no enforcement tokens weakened)
 - [ ] Name uses lowercase/numbers/hyphens only (max 64 chars)
 - [ ] SKILL.md between 200-400 lines (under 500 max)
 - [ ] **Tested: natural prompts trigger skill without explicit mentions**

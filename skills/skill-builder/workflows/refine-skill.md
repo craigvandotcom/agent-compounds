@@ -16,11 +16,12 @@ Workflow for improving an existing skill's effectiveness.
 
 | Check | Standard | Current |
 |-------|----------|---------|
-| Description length | ≤1024 chars | ? |
-| SKILL.md size | ≤250 lines | ? |
+| Description length | ≤1024 chars, strongest trigger first | ? |
+| SKILL.md size | 200-400 lines target (enforcement-heavy pipeline skills may exceed — judge by token buckets, not line count) | ? |
 | Name format | lowercase/hyphens | ? |
 | Triggers concrete? | Specific keywords | ? |
-| Progressive disclosure? | References not duplicates | ? |
+| Progressive disclosure? | References not duplicates — for payload, never for enforcement content | ? |
+| Registry budget | `validate-skill.sh --registry` under listing budget | ? |
 
 ### 1.3 Identify Issues
 
@@ -56,9 +57,28 @@ Triggers on [concrete terms users would say].
 
 ## Phase 3: Structure Optimization
 
+### 3.0 Constraint Inventory (MANDATORY before any cut or move)
+
+This is the mechanism that guarantees a refinement loses zero function. No text is
+removed or relocated until its inventory entry exists.
+
+1. **Extract every behavioral rule** from the current skill into a numbered checklist —
+   every instruction, gate, branch, completion criterion, exact option set, and
+   standing constraint. If a sentence changes agent behavior, it's a rule; list it.
+2. **Classify each rule's tokens** by bucket (SKILL.md § Token Economy /
+   `references/token-economics.md`): enforcement / discovery / persuasion / sediment.
+3. **Rewrite under the cut rule:** enforcement stays inline (or moves UP the hierarchy,
+   e.g. prose procedure → bundled script); persuasion compresses to rule + one-clause
+   why; only restatements and no-op sentences are truly deleted. Anything moved to a
+   reference gets a when-to-read condition on the pointer.
+4. **Verify survival:** an independent validator (validator-stance subagent) walks the
+   checklist against the rewrite and confirms every rule survives — in the spine, in a
+   script, or behind a condition-labeled pointer — and flags any rule that got weaker
+   on the enforcement hierarchy. A weakened rule is a FAIL: restore it or move it up.
+
 ### 3.1 Size Check
 
-If SKILL.md > 250 lines:
+If SKILL.md exceeds its target (and the excess is not enforcement content):
 1. Identify content that's not needed for every invocation
 2. Move to supporting files
 3. Add reference table in SKILL.md
@@ -129,6 +149,7 @@ Add to bottom of SKILL.md:
 ## Output Summary
 
 Document improvements made:
+- [ ] Constraint inventory written and every rule verified surviving (Phase 3.0)
 - [ ] Description optimized
 - [ ] Size reduced (if over limit)
 - [ ] Progressive disclosure applied

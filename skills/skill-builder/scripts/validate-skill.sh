@@ -1,13 +1,20 @@
 #!/bin/bash
 # Validate skill meets standards
 # Usage: ./validate-skill.sh /path/to/skill/
+#        ./validate-skill.sh --registry /path/to/skills/   (description-budget audit)
 #
-# Checks:
+# Checks (single skill):
 # - YAML frontmatter exists with name and description
 # - Name is lowercase-hyphen format, max 64 chars
 # - Description under 1024 chars
 # - SKILL.md under 500 lines (warning if over 400)
 # - Description contains trigger phrases (not just purpose)
+#
+# Checks (--registry):
+# - Sum of all model-invocable descriptions vs the skill-listing budget
+#   (~15,000 chars measured; beyond it, least-used skills are SILENTLY DROPPED
+#   from Claude's awareness — see skill-builder references/token-economics.md).
+#   Skills with disable-model-invocation: true are excluded (zero standing cost).
 
 set -e
 
@@ -17,6 +24,73 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Extract the description value (handles single-line and block-scalar YAML) from a
+# SKILL.md's first frontmatter block; prints it as one line.
+extract_description() {
+    awk '
+        NR==1 && /^---[[:space:]]*$/ {f=1; next}
+        f && /^---[[:space:]]*$/ {exit}
+        f && /^description:/ {
+            d=$0; sub(/^description:[[:space:]]*/, "", d)
+            if (d ~ /^[>|]/) { block=1; next }   # block scalar: value on following indented lines
+            print d; exit
+        }
+        block && /^[[:space:]]+/ { s=$0; sub(/^[[:space:]]+/, "", s); out = out (out?" ":"") s; next }
+        block { print out; exit }
+        END { if (block && out) print out }
+    ' "$1"
+}
+
+# --registry mode: audit the always-loaded description budget across a skills dir
+if [ "$1" = "--registry" ]; then
+    SKILLS_DIR="${2:-skills}"
+    if [ ! -d "$SKILLS_DIR" ]; then
+        echo -e "${RED}❌ Error: Directory not found: $SKILLS_DIR${NC}"
+        exit 1
+    fi
+    BUDGET_FAIL=15000   # measured listing cliff (chars)
+    BUDGET_WARN=12000
+    TOTAL=0; MANUAL=0; COUNT=0; OVER_1024=0
+    ROWS=""
+    for md in "$SKILLS_DIR"/*/SKILL.md; do
+        [ -f "$md" ] || continue
+        name=$(basename "$(dirname "$md")")
+        desc=$(extract_description "$md")
+        len=${#desc}
+        fm=$(awk 'NR==1 && /^---[[:space:]]*$/ {f=1; next} f && /^---[[:space:]]*$/ {exit} f {print}' "$md")
+        if echo "$fm" | grep -q "^disable-model-invocation:[[:space:]]*true"; then
+            MANUAL=$((MANUAL + len))
+        else
+            TOTAL=$((TOTAL + len))
+            COUNT=$((COUNT + 1))
+            ROWS="$ROWS$len $name\n"
+        fi
+        if [ "$len" -gt 1024 ]; then
+            echo -e "${RED}❌ $name: description $len chars (>1024 hard limit)${NC}"
+            OVER_1024=$((OVER_1024 + 1))
+        fi
+    done
+    echo -e "${BLUE}📊 Registry description budget — $SKILLS_DIR${NC}"
+    echo "  Model-invocable skills: $COUNT, total description chars: $TOTAL"
+    echo "  (excluded manual-only skills: $MANUAL chars carry zero standing cost)"
+    echo "  Top consumers:"
+    printf "$ROWS" | sort -rn | head -10 | awk '{printf "    %6d  %s\n", $1, $2}'
+    echo ""
+    if [ "$TOTAL" -gt "$BUDGET_FAIL" ]; then
+        echo -e "${RED}❌ FAIL: $TOTAL chars exceeds the ~$BUDGET_FAIL listing cliff — skills are likely being SILENTLY DROPPED in consuming sessions.${NC}"
+        echo "  Fix: trigger-only descriptions; disable-model-invocation: true on name-invoked skills."
+        exit 1
+    elif [ "$TOTAL" -gt "$BUDGET_WARN" ]; then
+        echo -e "${YELLOW}⚠️  WARNING: $TOTAL chars — within budget but close to the ~$BUDGET_FAIL cliff.${NC}"
+        [ "$OVER_1024" -gt 0 ] && exit 1
+        exit 0
+    else
+        echo -e "${GREEN}✅ OK: $TOTAL chars within listing budget (~$BUDGET_FAIL cliff)${NC}"
+        [ "$OVER_1024" -gt 0 ] && exit 1
+        exit 0
+    fi
+fi
 
 # Parse arguments
 SKILL_PATH="${1:-.}"
@@ -81,7 +155,7 @@ else
 
     # Check for description field
     if echo "$FRONTMATTER" | grep -q "^description:"; then
-        DESCRIPTION=$(echo "$FRONTMATTER" | grep -m1 "^description:" | sed 's/description: *//')
+        DESCRIPTION=$(extract_description "$SKILL_MD")
         DESC_LENGTH=${#DESCRIPTION}
         echo -e "${GREEN}✓ PASS: Description field present${NC}"
 

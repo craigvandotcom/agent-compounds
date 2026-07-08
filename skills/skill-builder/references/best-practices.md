@@ -12,6 +12,12 @@ Compiled from Anthropic documentation, metaskills/skill-builder, and obra/superp
 2. **Degrees of Freedom** - Constrain where needed, allow flexibility elsewhere
 3. **Progressive Disclosure** - Load only what's needed, when needed
 
+**Registry override:** conciseness and progressive disclosure are subordinate to
+determinism here. Enforcement content (run ledgers, explicit branches, point-of-use
+repetition) stays inline even when it makes a skill long — a pointer is the weakest
+enforcement mechanism. The full framework (token buckets, enforcement hierarchy, hard
+budgets): `token-economics.md`. Apply it before cutting anything.
+
 ### Description Field (Critical)
 
 The description determines whether Claude activates the skill.
@@ -180,8 +186,8 @@ With progressive disclosure:
 | Mistake | Why It's Bad | Fix |
 |---------|--------------|-----|
 | Vague description | Won't trigger correctly | Add concrete keywords |
-| Over 250 lines | Bloats context | Split to supporting files |
-| Duplicating content | Maintenance burden | Use references |
+| Long SKILL.md that's sediment, not enforcement | Bloats context without buying reliability | Token-bucket test (`token-economics.md`), then split payload to supporting files |
+| Duplicating content across files unmanaged | Copies drift → contradictory instructions | Script it (procedures) or mirror-mark it (prose): `<!-- mirror of x.md — edit there first -->` |
 | No "when NOT to use" | False activations | Add exclusions |
 | Testing after writing | Miss what skill should teach | Test first (RED) |
 | Mixing concerns | Hard to maintain | One skill = one capability |
