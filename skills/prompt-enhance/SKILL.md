@@ -9,17 +9,12 @@ description: Use when auditing, scoring, or improving subagent prompts in skill/
 
 ## I/O Contract
 
-|                  |                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------- |
-| **Input**        | Skill/command file(s) containing `Task(` subagent prompt blocks                          |
-| **Output**       | Enhanced prompts with scorecard report                                                   |
-| **Artifacts**    | Scorecard in `$ARTIFACTS_DIR/`, enhanced files committed                                 |
-| **Verification** | Re-score shows improvement, no broken formatting                                         |
-
-## Prerequisites
-
-- Skill or command files with `Task(` prompt blocks (typically `.claude/skills/*/SKILL.md` or `.claude/commands/*.md`)
-- No external tools required
+| | |
+|---|---|
+| **Input** | Skill/command file(s) containing `Task(` subagent prompt blocks (typically `.claude/skills/*/SKILL.md` or `.claude/commands/*.md`) |
+| **Output** | Enhanced prompts with scorecard report |
+| **Artifacts** | Scorecard in `$ARTIFACTS_DIR/`, enhanced files committed |
+| **Verification** | Re-score shows improvement, no broken formatting |
 
 ---
 
@@ -30,22 +25,10 @@ ARTIFACTS_DIR=/tmp/prompt-enhance-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$ARTIFACTS_DIR"
 ```
 
-Ask the user:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "What should I enhance?",
-    header: "Target",
-    multiSelect: false,
-    options: [
-      { label: "All skills/commands (Recommended)", description: "Scan all SKILL.md files in current skills/ directory (or .md files in commands/)" },
-      { label: "Specific file", description: "Enhance one skill or command file" },
-      { label: "Directory path", description: "Scan .md files in a custom directory" }
-    ]
-  }]
-)
-```
+Ask the user — `AskUserQuestion`, question: "What should I enhance?", header: "Target", single-select:
+- **All skills/commands (Recommended)** — Scan all SKILL.md files in current skills/ directory (or .md files in commands/)
+- **Specific file** — Enhance one skill or command file
+- **Directory path** — Scan .md files in a custom directory
 
 ---
 
@@ -255,23 +238,11 @@ Check for:
 
 ## Phase 5: Apply Enhancements
 
-Present enhancement plan to user:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Scorecard complete. {N} prompts scored, {M} enhancements identified. What should I apply?",
-    header: "Enhance",
-    multiSelect: false,
-    options: [
-      { label: "All FAIL + WEAK fixes (Recommended)", description: "Fix {X} missing must-have patterns and {Y} weak patterns" },
-      { label: "FAIL fixes only", description: "Fix {X} missing must-have patterns only — minimal changes" },
-      { label: "Full pass", description: "Fix all issues including anti-pattern trimming ({Z} total changes)" },
-      { label: "Skip — review only", description: "Keep scorecard, don't modify any files" }
-    ]
-  }]
-)
-```
+Present enhancement plan to user — `AskUserQuestion`, question: "Scorecard complete. {N} prompts scored, {M} enhancements identified. What should I apply?", header: "Enhance", single-select:
+- **All FAIL + WEAK fixes (Recommended)** — Fix {X} missing must-have patterns and {Y} weak patterns
+- **FAIL fixes only** — Fix {X} missing must-have patterns only — minimal changes
+- **Full pass** — Fix all issues including anti-pattern trimming ({Z} total changes)
+- **Skip — review only** — Keep scorecard, don't modify any files
 
 Apply approved fixes using the Edit tool. **Apply fixes to the SOURCE skill/command file directly.** Work through one prompt at a time, one fix at a time, to avoid merge conflicts.
 
@@ -326,33 +297,16 @@ git push
 
 ## Phase 7: Handoff
 
-```
-AskUserQuestion(
-  questions: [{
-    question: "Prompts enhanced. What's next?",
-    header: "Next step",
-    multiSelect: false,
-    options: [
-      { label: "Review enhanced prompts (Recommended)", description: "Read through the modified skill/command files to verify quality" },
-      { label: "Run a workflow", description: "Test the enhanced prompts by running a skill like /ac-hygiene or /ac-bead-refine" },
-      { label: "Done", description: "Enhancements complete" }
-    ]
-  }]
-)
-```
+`AskUserQuestion`, question: "Prompts enhanced. What's next?", header: "Next step", single-select:
+- **Review enhanced prompts (Recommended)** — Read through the modified skill/command files to verify quality
+- **Run a workflow** — Test the enhanced prompts by running a skill like /ac-hygiene or /ac-bead-refine
+- **Done** — Enhancements complete
 
 ---
 
-## Pattern Rubric: Research Sources
+## Rubric Provenance
 
-This rubric was derived from analysis of:
-
-1. **Agent-compounds skills/commands** (15 commands, ~40 subagent prompts) — structural consistency patterns
-2. **Jeffrey Emanuel's command library** (30+ commands) — competitive framing, persona-as-authority, silver bullet criterion, compaction recovery
-3. **Jeffrey Emanuel's public posts** (Feb 2026) — "fresh eyes" loop, "overprompting trap" thesis, intent-over-specification philosophy
-4. **Flywheel CORE skill** — delegation rules, progressive disclosure, model selection guidance
-
-**Key insight:** The strongest prompts combine clear intent with hard constraints. Over-specification (>8 method steps) degrades output quality because it shifts the agent from reasoning to following instructions mechanically.
+Derived from the agent-compounds skill/command corpus (~40 subagent prompts), Jeffrey Emanuel's command library and posts (competitive framing, persona-as-authority, the "overprompting trap"), and the Flywheel CORE skill. A1 exists because >8 prescriptive method steps shift the agent from reasoning to mechanical instruction-following — intent + hard constraints outperform step-by-step method.
 
 ---
 
@@ -364,7 +318,3 @@ This rubric was derived from analysis of:
 - **Preserve existing strengths** — don't rewrite prompts that already score well
 - **One fix at a time** — Edit tool, not bulk rewrite. Each fix is atomic and reversible.
 - **Anti-patterns are flags, not failures** — A1 (over-specification) is a suggestion, not a mandate
-
----
-
-_Prompt enhance: score, diagnose, rewrite. Evidence-backed prompt engineering for the flywheel._
