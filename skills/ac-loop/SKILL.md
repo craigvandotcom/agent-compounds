@@ -143,20 +143,12 @@ br ready --json | jq '[.[] | select(
   (.labels | map(test("^wave-[0-9]+$")) | any | not)
 )]'
 # Then classify each: does it have a parent-child dep (epic child), children (epic parent),
-# or ≥1 label-sibling under a shared non-wave epic label (e.g. "tailwind-v4")? → (a) auto-refine.
-# A lone unrefined bead with no parent, no children, no epic-label siblings → (b) raw capture, gate.
+# or ≥1 label-sibling under a shared non-wave epic label (e.g. "tailwind-v4")? → (a) auto-refine
+# ((a) is signed-off BY CONSTRUCTION — Craig deliberately beadified it → auto-refine-and-finish).
+# A lone unrefined bead with no parent, no children, no epic-label siblings, no traceable plan
+# (the `ac-bead-capture` quick-idea case) → (b) raw capture, gate.
 # Cross-check (a) against _plans/ AND _plans/_done/ — an archived source plan IS the sign-off.
 ```
-
-> **"Unrefined orphan" ≠ "raw capture" — classify by pipeline depth, not just the missing
-> `wave-NNN` marker label.** A bead that has been *beadified into an epic* (parent + children, or a shared
-> epic label) is signed-off **by construction** — Craig deliberately beadified it — and is
-> *further down the pipeline* than an un-beadified loop-ready plan. **Auto-refine-and-finish it.**
-> Its source plan is often already archived in `_plans/_done/` (that's the sign-off), so the
-> "no plan-level sign-off" gate must check `_done/` too, not just live plans. Only a **truly raw
-> lone capture** (single bead, no parent, no epic-label siblings, no traceable plan — the
-> `ac-bead-capture` quick-idea case) stays gated. Pushing the *furthest-advanced* work to merge
-> first means refinement state counts: a beadified epic outranks an un-beadified plan.
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
@@ -168,7 +160,7 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wav
 3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
 4. Plan wave refined beads → Phase 2
 
-> **Why orphans before prep:** `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, and a feature wave is a long haul. Ship the cheap, ready, often time-sensitive orphan fixes FIRST so a session that ends early (compaction, human override, iteration cap) has still delivered the ready work. Maintenance wave first; prep for the next feature wave second.
+> **Orphans ship before prep** — `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, so a session that ends early (compaction / human override / iteration cap) still delivers the ready work if the cheap fixes go first.
 
 ### Create the Run Ledger
 
@@ -221,17 +213,14 @@ If orphans exist:
    REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1)
    WAVE=${LOCAL_WAVE:-$REMOTE_WAVE}
    if [ -z "$WAVE" ]; then
-     # Highest-EVER wave number: live refs ∪ merge messages on main ∪ tags — not refs alone.
-     # `git fetch --prune` drops merged waves' refs, so a refs-only scan reuses a shipped
-     # number (hit 2026-06-26, produced a triple wave/001 collision).
-     HIGHEST=$( { git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/;
-                  git log origin/main --oneline | grep -oE 'wave/[0-9]{3}' | cut -d/ -f2;
-                  git tag -l 'wave/*' | cut -d/ -f2; } \
-               | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
-     WAVE="wave/$(printf "%03d" $(( ${HIGHEST:-000} + 1 )))"
-     # Guard: never reuse a number that ever existed in history.
-     git log origin/main --oneline | grep -q "$WAVE" && { echo "collision: $WAVE already in history"; exit 1; }
-     git checkout -b "$WAVE" main && git push -u origin "$WAVE"
+     # Allocate the next numbered wave. The shared script computes the highest-EVER
+     # wave number (live refs ∪ merge messages on main ∪ tags — not refs alone;
+     # a refs-only scan reuses shipped numbers: 2026-06-26 triple wave/001 collision),
+     # hard-fails on collision (exit 1, no auto-increment), else checkout -b from
+     # main + push -u, printing the new branch name.
+     git fetch origin --prune   # script precondition — union sources must be fresh
+     WAVE=$(bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/allocate-wave-branch.sh") \
+       || { echo "$WAVE"; exit 1; }   # on failure, captured output is the collision message
    else
      git checkout "$WAVE" && git pull --rebase
    fi
@@ -244,16 +233,15 @@ If orphans exist:
 5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
 6. **Verify beads closed (the loop's own pre-merge gate — `ac-merge` no longer checks this itself):**
    ```bash
-   br list --json --limit 1000 | jq '[.issues[]
-     | select(.status != "closed")
-     | select((.labels // []) | index("post-merge") | not)]'
+   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh"
+   # prints the genuinely-open bead set; exit 0 = empty (safe to merge), exit 1 = open beads remain
    ```
    `post-merge`-labelled beads are excluded — they're deliberately un-closeable until the
    merge ships (carried forward as known tails, listed in the PR body), never blockers. If
-   any genuinely open (non-`post-merge`) beads remain for this wave, do NOT merge — surface
-   via the loop's Slack-nudge pattern instead: "wave `<WAVE>` has `<N>` beads still open — not
-   merging" (advisory nudge, no `AskUserQuestion` — this is not a genuine human fork). Only
-   proceed to Invoke `ac-merge` once this set is empty.
+   any genuinely open (non-`post-merge`) beads remain for this wave (exit 1), do NOT merge —
+   surface via the loop's Slack-nudge pattern instead: "wave `<WAVE>` has `<N>` beads still
+   open — not merging" (advisory nudge, no `AskUserQuestion` — this is not a genuine human
+   fork). Only proceed to Invoke `ac-merge` once this set is empty (exit 0).
 7. **Invoke `ac-merge`** — use this delegation prompt:
    > "Run ac-merge on branch `<WAVE>`. CI config for this project: `<cached-answer>`. Version bump: accept recommended default without asking. For uncertain PR feedback items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after merge."
 8. **Slack notify** (see Milestone Notifications).
@@ -294,14 +282,13 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
 6. **Verify beads closed (the loop's own pre-merge gate — `ac-merge` no longer checks this itself):**
    ```bash
-   br list --json --limit 1000 | jq '[.issues[]
-     | select(.status != "closed")
-     | select((.labels // []) | index("post-merge") | not)]'
+   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh"
+   # prints the genuinely-open bead set; exit 0 = empty (safe to merge), exit 1 = open beads remain
    ```
    `post-merge`-labelled beads are excluded — carried forward as known tails in the PR body,
-   never blockers. If any genuinely open (non-`post-merge`) beads remain for this wave, do NOT
-   merge — advisory Slack nudge instead: "wave `<WAVE>` has `<N>` beads still open — not
-   merging" (no `AskUserQuestion`). Only proceed once this set is empty.
+   never blockers. If any genuinely open (non-`post-merge`) beads remain for this wave (exit 1),
+   do NOT merge — advisory Slack nudge instead: "wave `<WAVE>` has `<N>` beads still open — not
+   merging" (no `AskUserQuestion`). Only proceed once this set is empty (exit 0).
 7. **Invoke `ac-merge`** with delegation prompt:
    > "Run ac-merge on `<WAVE>` (ac-loop autonomous run). CI config: `<cached>`. Version bump: accept recommended default. Uncertain feedback: Exhaust Rule — decision beads. No next-step question after merge."
 8. **Slack notify** — wave shipped.
@@ -439,14 +426,10 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > You are post-merge on `main`. System-upgrade proposals: Slack card for Craig, do NOT block.
 > This is the loop's final step — exit after landing." (`_shared/run-id.md`)
 
-> **No token-budget stop.** A "running low on tokens" condition was removed deliberately:
-> the loop cannot reliably measure its own remaining budget, and with no explicit target
-> there is nothing to bound against — so it only ever became a vague excuse to quit early.
-> The loop is bounded by the **measurable** conditions instead: it stops when the pipeline
-> is empty (C1) or the iteration cap is hit (C3). Context-window pressure is handled by
-> compaction (the loop survives it — see Compaction Recovery), not by guessing at a token
-> count. If a run needs a hard ceiling, give it one explicitly (an iteration cap or a
-> stated goal) — don't infer it from an unreadable budget.
+> **No token-budget stop** (removed deliberately) — an unmeasurable budget only becomes a
+> vague excuse to quit early; the loop is bounded by the **measurable** conditions instead:
+> C1 (pipeline empty) or C3 (iteration cap). A run needing a hard ceiling gets one
+> explicitly (an iteration cap or a stated goal).
 
 ---
 
@@ -510,7 +493,3 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 - **C2 is the only hard stop** — critical regression never merges
 - **Always Slack-notify** — shipped waves, blocked stops, clear pipeline. Headless means Craig has no other visibility
 - **Never close `human-gate` beads** — record the decision, execute consequences, then close only after Craig's recorded answer
-
----
-
-_Loop runs: Phase 0 orient → Phase 1 orphans → Phase 2 plan wave → repeat → Phase ARIA when empty. Each merge is a milestone; each nudge is a bottleneck signal. The loop is what keeps the flywheel turning without Craig in the seat._
