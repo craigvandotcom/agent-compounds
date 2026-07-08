@@ -484,7 +484,7 @@ Run `ac-triage` as a **separate** scheduled job before `ac-loop` (e.g., 30 min e
 | Moving backlog → plan | Product/priority decision |
 | Unrefined plans | Scope and intent need human sign-off before beadify |
 | Closing `human-gate` decision beads | Domain/taste/risk — agent prepares, human decides |
-| ac-bead-refine runs | Agent proposes; Craig approves spec before implementation |
+| Pipeline entry | Plan `loop-ready` sign-off + beadify approval ratify the spec contract wholesale; per-bead refine executes it autonomously — deviations come back as `human-gate` decision beads |
 
 The loop never touches these. It nudges Craig when they're bottlenecks.
 
