@@ -416,12 +416,19 @@ if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
   fail "D8: skills/ac-distribute/SKILL.md missing defer-to-ac-merge language"
 fi
 
-# D9: BOTH ac-loop and ac-implement allocators contain the highest-ever union pattern.
+# D9: the highest-ever union allocator pattern lives in the SHARED SCRIPT (W2
+# extraction, 2026-07-08 — upward move on the enforcement hierarchy), and BOTH
+# ac-loop and ac-implement call it. The invariant is the union scan (refs ∪ main
+# log ∪ tags — refs-only reuses shipped numbers); its home moved, the check follows.
+check
+d9_script="$AC_ROOT/skills/_shared/scripts/allocate-wave-branch.sh"
+if ! grep -qE "git log origin/main --oneline \| grep -oE" "$d9_script" 2>/dev/null; then
+  fail "D9: _shared/scripts/allocate-wave-branch.sh missing the highest-ever union allocator pattern"
+fi
 for d9_skill in ac-loop ac-implement; do
   check
-  d9_target="$AC_ROOT/skills/$d9_skill/SKILL.md"
-  if ! grep -qE "git log origin/main --oneline \| grep -oE" "$d9_target" 2>/dev/null; then
-    fail "D9: skills/$d9_skill/SKILL.md missing the highest-ever union allocator pattern"
+  if ! grep -q "allocate-wave-branch.sh" "$AC_ROOT/skills/$d9_skill/SKILL.md" 2>/dev/null; then
+    fail "D9: skills/$d9_skill/SKILL.md does not call the shared wave allocator script"
   fi
 done
 
