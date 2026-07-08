@@ -3,7 +3,6 @@ name: ac-human-session
 description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''.'
 ---
 
-
 **You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. You are the third conductor: `ac-pipeline` drives agents, `ac-loop` runs unattended, **you drive the human**.
 
 ## The loop boundary (what you NEVER surface)
@@ -27,10 +26,9 @@ You surface what must cross a **human gate before it can flow autonomously** —
 | **Artifacts**    | Mutates only on explicit/confirmed action (decisions recorded, plans signed off, items promoted/planned) |
 | **Verification** | Each acted item reports its result; cleared gates unblock downstream |
 
-**Exempt from the org run-ledger standard** — this is an interactive, human-driven
-tap-through session by design: the rendered dashboard (Phase 3/4) IS the live progress
-view, so a `TaskCreate` ledger's main value (background/compaction resume) is weak here.
-No run ledger is added.
+**Exempt from the org run-ledger standard** — interactive, human-driven tap-through
+session: the rendered dashboard (Phase 3/4) IS the live progress view. No run ledger
+is added.
 
 ## Prerequisites
 
@@ -51,9 +49,9 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ## Phase 1: Render first — freshen is an action, not a gate
 
-Sit-down speed matters: **show the board before asking anything.** The human came to see what needs them, not to answer a setup question. Go straight to Scan (Phase 2) → render (Phase 3/4).
+**Show the board before asking anything** — the human came to see what needs them, not to answer a setup question. Go straight to Scan (Phase 2) → render (Phase 3/4).
 
-Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option inside the action loop** (Phase 5), never an upfront gate. The scheduled nightly tidy + weekly align runs now keep the board fresh and file `pipeline-proposal` beads for anything needing a human — so the primary signal is **proposals pending in the Docket**, not a staleness guess. Surface a one-line header hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist; fall back to the legacy heuristic (open beads that look done, a fat finding-bead pile, or `active/` empty while `pool/` is full) only if no nightly has run recently. Headless runs skip freshen entirely.
+Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option inside the action loop** (Phase 5), never an upfront gate. The scheduled nightly tidy + weekly align runs keep the board fresh and file `pipeline-proposal` beads for anything needing a human — the primary staleness signal is **proposals pending in the Docket**. Surface a one-line header hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist; fall back to the legacy heuristic (open beads that look done, a fat finding-bead pile, or `active/` empty while `pool/` is full) only if no nightly has run recently. Headless runs skip freshen entirely.
 
 ---
 
@@ -66,7 +64,7 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
 - **🔴 Decision Docket (PRIMARY)** = board beads with the `human-gate` label, open. The first-class channel for human-required work — pre-staged with a memo (context, options + trade-offs, recommendation); agents enrich but **never** close them, so they survive every autonomous sweep until the human decides. Covers decision beads (`-t decision`) **and dream proposals** (`dream-proposal` beads carry `human-gate` too — the memo is the proposal file) **and pipeline proposals** (`pipeline-proposal` beads from the scheduled nightly tidy / weekly align also carry `human-gate` — sub-filter on the `pipeline-proposal` label to render them distinctly). (`qa-blocker` is a *merge* gate, agent-resolvable — NOT human-gate, so it never appears here.)
   - **Applying a pipeline proposal:** invoke the owning skill (`ac-tidy` or `ac-align`) via the Skill tool in its INTERACTIVE flow (the same cross-skill delegation `ac-loop` uses for its stage skills). The skill's own gate re-confirms the moves against the *current* board — for `ac-align` this re-scores the slate against live strategy, so a stale item self-skips; this re-prompt is intended late-binding re-confirmation, not a bug (do NOT add a bypass). Then set the proposal file `status: applied` + `br close` the bead.
   - **Discarding one:** set the proposal file `status: rejected` + `br close` the bead; do NOT invoke the owning skill.
-  - **Verify before presenting (anti-rot):** human-gate beads outlive their work (agents never close them) and memos freeze step-lists that later waves can invalidate. Before surfacing an item, spend ~1 read confirming its live state against the system it gates on (external API, prod DB read, Vercel env, code grep for the mechanism the memo assumes). Present the *verified* remaining scope — often "already done → one tap to book it" — and fold corrections onto the bead as an enrichment comment. Memory: `human-gate-beads-rot-verify-before-presenting` (2026-07-03: 3 of 5 presented blockers were already done or obsolete).
+  - **Verify before presenting (anti-rot):** human-gate beads outlive their work (agents never close them) and memos freeze step-lists that later waves can invalidate. Before surfacing an item, spend ~1 read confirming its live state against the system it gates on (external API, prod DB read, Vercel env, code grep for the mechanism the memo assumes). Present the *verified* remaining scope — often "already done → one tap to book it" — and fold corrections onto the bead as an enrichment comment. Memory: `human-gate-beads-rot-verify-before-presenting`.
 - **🟡 Plans awaiting sign-off** = board plans with `status: draft | refined` and **NOT** `loop-ready`. Most-invested first. (Drop every `loop-ready` plan — the loop owns it.)
 - **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan-init`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
 - **Loop awareness (count only)** = board ready beads + `loop-ready` plans + in-progress waves → a single header line, never itemized (tells the human the factory is running).
@@ -105,7 +103,7 @@ ac-distribute's precondition), 🟡 if `commerce`/`core` (schedule before it bec
 
 ## Phase 3: Situational-Awareness Header
 
-Salvaged from the old `ac-next` funnel view — give the human the whole board at a glance before the actions:
+Give the human the whole board at a glance before the actions:
 
 ```
 ## Command Center — {project | org-wide}
@@ -151,7 +149,7 @@ Order = distance from a stall: clear what's stopped, then feed backward. Omit an
 
 ## Phase 5: Drive the action loop (interactive · exit-first · auto-advance)
 
-**Don't dump the dashboard and wait.** After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically. The dashboard is for seeing; this loop is for doing.
+After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically; never dump the dashboard and wait.
 
 **Pick-next prompt** (when several items remain — `AskUserQuestion`, max 4 options, so offer the top of the queue + escape hatches):
 
@@ -213,16 +211,9 @@ Close the session by pointing at what now flows autonomously:
 If anything was just unblocked or signed off, offer to kick the loop now:
 
 ```
-AskUserQuestion(
-  questions: [{
-    question: "Start the autonomous loop now?",
-    header: "Hand-off",
-    options: [
-      { label: "Start /ac-loop", description: "Ship the now-ready work autonomously" },
-      { label: "Leave it for the schedule", description: "The loop will pick it up on its next scheduled run" }
-    ]
-  }]
-)
+AskUserQuestion(question: "Start the autonomous loop now?", header: "Hand-off", options: [
+  { label: "Start /ac-loop", description: "Ship the now-ready work autonomously" },
+  { label: "Leave it for the schedule", description: "The loop will pick it up on its next scheduled run" } ])
 ```
 
 ---
