@@ -64,11 +64,9 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ### Isolate in a Worktree, then Create the Hygiene Branch
 
-**Run in a git worktree.** A full run holds HEAD on its branch for *hours*; in a shared repo a
-human or a scheduled agent (triage/loop) will commit to the same checkout and their commits
-land on the hygiene branch, entangling the PR. A worktree gives the run its own checkout so
-that can't happen. (Learned the hard way 2026-07-06: a run's branch absorbed 4 concurrent
-human commits.)
+**Run in a git worktree.** A full run holds HEAD for *hours* — in a shared checkout,
+concurrent human/scheduled commits land on the hygiene branch and entangle the PR
+(incident: `references/incidents.md`).
 
 ```bash
 # Scoped dirty-tree check — only SOURCE paths block; harness/memory/state files are always dirty
@@ -209,10 +207,8 @@ prompt (see Phase 4).
 Synthesis principles:
 
 - **Consensus is high-signal** — 2+ agents flagging the same area is almost certainly real.
-  With lens-diverse agents, expect consensus to be *rarer and stronger*: two different
-  disciplines converging on the same file is the best signal this workflow produces. More
-  findings will be single-agent — that is what the consensus registry and Phase 5 triage
-  are for; don't lower the bar to compensate.
+  Lens-diverse consensus is *rarer and stronger* — don't lower the bar to compensate;
+  single-agent findings are what the consensus registry and Phase 5 triage are for.
 - **Evidence over opinion** — findings need file paths and line numbers
 - **Don't pile on** — if explorer finds dead code, that's cleanup, not a bug
 - **Critical/High first** — skip Medium unless trivial to fix
@@ -227,7 +223,11 @@ Produce a numbered change list. For each: target file, what to change, auto-fixa
 2. **Same-round consensus:** 2+ agents independently flagged the same issue (regardless of severity) — multi-agent agreement is high-signal
 3. **Cross-round consensus:** A single-agent finding from THIS round matches a deferred finding in the consensus registry from a PREVIOUS round — recurrence across rounds is high-signal
 
+<!-- mirror: _shared/review-consensus.md §The auto-apply cascade — edit there first -->
+
 **Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing values, naming conventions, implementation style) — just pick the better option and auto-apply.
+
+<!-- mirror: _shared/review-consensus.md §Design-decision gate — edit there first -->
 
 **Apply these immediately. Log them as "Auto-applied" in the progress file with the consensus type.**
 
@@ -240,10 +240,9 @@ format (auto-fix, e.g. `pnpm format`) + type-check + lint + AFFECTED tests only 
 ```
 
 Run **format FIRST and as an auto-fix** (`pnpm format` = `prettier --write .`, not
-`format:check`). CI's Quality Gate runs `prettier --check .` as its *first* step over the
-*whole repo*, so a single unformatted file — including one you didn't touch that was already
-rotting on `main` — fails the entire gate ~10 min into CI. Auto-fixing locally makes that
-impossible. Sub-second cost; never let CI be the thing that catches formatting.
+`format:check`) — CI checks formatting first over the *whole repo*, so one unformatted file
+fails the entire gate ~10 min in; auto-fixing locally makes that impossible.
+<!-- mirror: _shared/verification-gate.md §Format-first gate — edit there first -->
 
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
@@ -260,10 +259,9 @@ git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}"
 > the **push** only (it skips the heavy pre-push `pnpm build` that swallows backgrounded
 > pushes), NEVER for a commit. Bypassing the commit hook is how an unformatted file reaches CI.
 
-> **Stage the exact files you changed — never `git add -A`.** A run may sit next to untracked
-> orphans (a stale `.next.stale-*` build dir, scratch output); `git add -A` commits them. On
-> 2026-07-06 that swept a 2.4 GB build dir into a commit and broke the Turbopack build. Track
-> your changed paths (from the implementer reports) and stage those explicitly.
+> **Stage the exact files you changed** — track your changed paths (from the implementer
+> reports) and stage them explicitly; a run may sit next to untracked orphans that
+> `git add -A` would commit (2026-07-06 incident: `references/incidents.md`).
 
 **Defer remaining findings (DO NOT ask user per-round):**
 
@@ -293,12 +291,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 **Rule 1: if this round's agents found ANY Critical or High issues, you MUST run another round after applying fixes.** Fixes are unverified until the next round's agents confirm no new Critical/High issues emerge.
 
-**Rule 2 (the round floor): the `MIN_ROUNDS=3` floor is ABSOLUTE.** Cross-round consensus —
-the rule that promotes recurring single-agent findings — needs at least two later rounds in
-which a deferral can recur. A clean round 1 is not evidence the codebase is clean; it is
-evidence one round isn't enough. **Two rounds is not sufficient** — even two consecutive
-zero-finding rounds do NOT finalize before round 3; the dry-panel early exit is only reachable
-once `CURRENT_ROUND >= MIN_ROUNDS`. Ceiling is `MAX_ROUNDS=5`.
+**Rule 2 (the round floor): the `MIN_ROUNDS=3` floor is ABSOLUTE** — cross-round consensus needs two later rounds for a deferral to recur in; see the config comment (Phase 0) and the first branch of the decision block below. Ceiling is `MAX_ROUNDS=5`.
 
 ```
 # The floor is checked FIRST and is absolute — nothing exits before round 3.
@@ -335,6 +328,8 @@ Read the consensus registry. Collect all remaining items:
 
 **Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it.
 
+<!-- mirror: _shared/review-consensus.md §Conductor triage — edit there first -->
+
 **Apply all `AUTO_IMPLEMENT` items** using Edit tool. Log each with rationale.
 
 ### Present Decisions to User (if any)
@@ -353,9 +348,8 @@ sweep on a question. Dedupe via `br search` first; nits stay in the report
 template): typed headers (`## Steps to Reproduce` for bugs, `## Acceptance
 Criteria`, `## Test Scope` with grep-verified anchors, `## Success Criteria` on
 the epic) plus a durable evidence pointer (the run's PR, not `$ARTIFACTS_DIR`
-paths — those are deleted at Cleanup). You hold the finding's evidence RIGHT NOW;
-writing the full body costs a minute here and a full refine round later. The
-in-session refine step then verifies instead of authoring.
+paths — those are deleted at Cleanup). Writing the full body now costs a minute vs a
+full refine round later — the in-session refine step then verifies instead of authoring.
 
 **Per-run epic:** if this run created 2+ beads, group them under one epic
 (`br create -t epic "Hygiene <date> — deferred findings"`, children linked) so the
@@ -389,13 +383,11 @@ AskUserQuestion(
 format (auto-fix, e.g. `pnpm format`) + type-check + lint + full test suite   # BLOCKING
 ```
 
-This is the single exhaustive run of the workflow (rounds ran affected-only). Run
-`pnpm format` (`prettier --write .`) FIRST — it mirrors and pre-empts CI's `prettier --check .`
-first step (whole-repo). If it rewrites files you did NOT author (pre-existing rot already red
-on `main`), that is expected: commit the formatting as part of this run's ship — you are
-repairing a gate CI was already failing, not sweeping unrelated changes. If any check fails,
-fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
-on the hygiene branch (again, **no `--no-verify` on the commit**).
+This is the single exhaustive run of the workflow (rounds ran affected-only). Format runs
+FIRST as auto-fix; if it rewrites files you did NOT author, commit the formatting as part of
+this run's ship (rule + why: `_shared/verification-gate.md` §Format-first gate). If any check
+fails, fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage
+items) on the hygiene branch (again, **no `--no-verify` on the commit**).
 
 **Note:** `ac-merge`'s own post-rebase Quality Gate runs this same full gate again at merge
 time (on the rebased state that actually merges) — so this Phase-5 run is now a pre-handoff
@@ -416,9 +408,8 @@ Delegation prompt:
 
 **Hand ac-merge what it needs to build the PR body:** this run's fix list (round table +
 per-round summary + deferred count) and the **"Also carried (not hygiene fixes)"** line —
-a concurrent session or scheduled job may have committed onto this hygiene branch (it was
-the checked-out branch), and the branch is the merge unit (pipeline-builder Invariant 8): those
-foreign commits ship too, by design, but must be named, not silently dropped. Diff the full
+the branch is the merge unit (pipeline-builder Invariant 8), so foreign commits from a
+concurrent session/job ship too, but must be named, not silently dropped. Diff the full
 branch against main (`git diff --stat main...HEAD` and `git log --oneline main..HEAD`) and
 pass any non-hygiene commit/change (an `.env`/secret edit, a migration, another session's fix)
 to ac-merge as the Also-carried content — do not exclude it just because this run didn't
@@ -436,10 +427,9 @@ author it. ac-merge builds the actual PR body; this run supplies the hygiene-spe
 ### Refine the Run's Beads (in-session, after the merge)
 
 If this run created **≥1 bead**, run **`ac-bead-refine`** NOW — scoped to the epic if one
-exists (2+ beads), to the single bead otherwise — before the report, not "later." The
-conductor still holds every finding, verdict, and triage rationale in context; that is
-exactly what refinement needs, and a deferred refine session re-derives it from cold (or
-worse, can't). Two run-specific notes for the reviewer prompts:
+exists (2+ beads), to the single bead otherwise — before the report, not "later": the
+conductor still holds every finding, verdict, and triage rationale in context; a deferred
+refine session re-derives it from cold, or can't. Run-specific notes for the reviewer prompts:
 
 - Bead descriptions were written mid-run — file/line references predate the merged fixes.
   Reviewers must re-verify every reference against merged `main` and correct drift.
@@ -522,13 +512,13 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Codebase-wide, not feature-scoped** — agents explore freely (unless user constrains)
 - **Fresh eyes each round** — direct agents to unexplored files in subsequent rounds
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
-- **Honor the round floor — it is ABSOLUTE** — never finalize before MIN_ROUNDS=3, not even on two consecutive zero-finding rounds (the dry-panel exit is only reachable at round ≥3); ceiling MAX_ROUNDS=5. Cross-round consensus needs the later rounds to exist
-- **Lens-diverse consensus is rarer and stronger** — don't lower the bar because six lenses overlap less than three same-lens hunters; the registry + Phase 5 triage absorb the singles
-- **Fixes ride the hygiene branch** — per-round commits; PR creation, CI/feedback triage, and the actual merge are delegated to `ac-merge` at the end; never straight to main, never merge red
-- **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
-- **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
-- **Incremental in the loop, exhaustive at the boundary** — rounds gate on format(auto-fix) + type-check + lint + affected tests; the FULL suite runs exactly once, at Phase 5 pre-merge (BLOCKING). Format is FIRST + auto-fix in both gates (mirrors CI's `prettier --check .` first step); commit WITHOUT `--no-verify` so the pre-commit lint-staged hook auto-formats — never let CI catch a formatting miss.
-- **Deferred beads get an epic per run** (2+ beads); refined in-session post-merge whenever **≥1 bead** was created (epic-scoped or single-bead-scoped) — `ac-bead-refine` while the findings are still in context, shipped as orphans by the loop
+- **Round floor = MIN_ROUNDS=3, ABSOLUTE** — never finalize before round 3 (see Phase 4); ceiling MAX_ROUNDS=5
+- **Lens-diverse consensus is rarer and stronger** — don't lower the bar; the registry + Phase 5 triage absorb the singles
+- **Fixes ride the hygiene branch** — never straight to main, never merge red; the merge itself is `ac-merge`'s
+- **Conductor triage before user** — auto-implement clear technical improvements; defer only genuine design decisions and scope escalations
+- **Design decision gate every round** — UX-affecting or approach-transforming choices defer regardless of severity or consensus
+- **Incremental in the loop, exhaustive at the boundary** — affected-only per round, full suite exactly once at Phase 5; format FIRST + auto-fix in both gates, commit WITHOUT `--no-verify` (§Format-first gate)
+- **Deferred beads get an epic per run** (2+ beads); refine in-session post-merge whenever ≥1 bead was created
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Don't invent issues** — if the codebase is clean, say so and finish early
 
