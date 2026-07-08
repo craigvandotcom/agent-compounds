@@ -1,6 +1,6 @@
 # Plan Document Templates
 
-Phase 3 selects a template by complexity and writes `_plans/YYYY-MM-DD-HHMM-[feature].md`.
+Phase 3 selects a template by complexity and writes `_plans/YYYY-MM-DD-HHMM-[feature].md`. Phase 2 working templates (tool-verification checklist, YAML test specs, baseline-vs-target) are at the end of this file.
 
 | Complexity  | Criteria                              | Template Sections                                                            |
 | ----------- | ------------------------------------- | ---------------------------------------------------------------------------- |
@@ -143,4 +143,85 @@ All sections from MORE, plus:
 - Phased rollout plan
 - Detailed test matrix
 - Dependencies/blockers
-</content>
+
+---
+
+# Phase 2 working templates
+
+Used during SKILL.md Phase 2 (validation baseline), before the plan doc is written. Fill these as instructed at Steps 3, 5, and 6.
+
+## Phase 2 Step 3 — Tool Verification Checklist
+
+```markdown
+## Tool Verification Checklist
+
+### Unit/Integration Tests
+
+- [ ] Run project test command (see AGENTS.md > Project Commands > Test)
+- [ ] Result: [X passing / Y failing]
+- [ ] Status: Can run tests | BLOCKED
+
+### Browser Access (if available)
+
+- [ ] Navigate to: /[relevant-page]
+- [ ] Result: [Can access | Cannot access]
+- [ ] Status: Can browse | BLOCKED | N/A
+
+### Dev Server
+
+- [ ] Check: dev server running (see AGENTS.md > Project Commands > Dev server)
+- [ ] Result: [Running | Not running]
+- [ ] Status: Accessible | BLOCKED
+
+### API Endpoints (if applicable)
+
+- [ ] Endpoint: /api/[endpoint]
+- [ ] Result: [Response code]
+- [ ] Status: Reachable | BLOCKED
+```
+
+## Phase 2 Step 5 — Test Specifications (YAML skeleton)
+
+```yaml
+## Test Specifications
+
+test_specs:
+  silver_bullet:
+    file: '[test-file-path]'
+    type: 'Journey' # Journey | Screenshot | API | Performance | Custom
+    description: '[What this test verifies]'
+    assertions:
+      - '[First assertion]'
+      - '[Second assertion]'
+      - '[Third assertion]'
+
+  supporting_tests:
+    - name: '[Test 1 Name]'
+      file: '[unit-test-file-path]'
+      type: 'Unit'
+      description: '[What it verifies]'
+      cases:
+        - '[happy path]'
+        - '[edge case]'
+        - '[error case]'
+
+    - name: '[Test 2 Name]'
+      file: '[integration-test-file-path]'
+      type: 'Integration'
+      description: '[What it verifies]'
+      cases:
+        - '[case 1]'
+        - '[case 2]'
+```
+
+## Phase 2 Step 6 — Baseline vs Target
+
+```markdown
+## Baseline vs Target
+
+| Aspect         | Current State      | Target State        |
+| -------------- | ------------------ | ------------------- |
+| [Feature area] | [What exists now]  | [What should exist] |
+| [Behavior]     | [Current behavior] | [Desired behavior]  |
+| [Test status]  | [Current coverage] | [Expected coverage] |
+```

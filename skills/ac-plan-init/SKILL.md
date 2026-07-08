@@ -4,7 +4,7 @@ description: 'Use to CREATE a first-draft implementation plan from a backlog ite
 ---
 
 
-**You are the orchestrator creating implementation plans.** Three explorers investigate in parallel. You synthesize findings into an actionable plan with test specs. **DO NOT implement code — only plan.**
+**DO NOT implement code — only plan.**
 
 > **Method:** this chain applies the scope-oscillation planning methodology — see the `planning` skill for the underlying lenses.
 
@@ -127,13 +127,23 @@ working_since: YYYY-MM-DD
 
 ### Signal Active Work (Agent Mail)
 
-Use the agent name registered at session start (from `macro_start_session`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/active/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
+Use the agent name registered at session start (from `macro_start_session` — NOTE: that tool takes `human_key`; the other agent-mail tools below take `project_key`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/active/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
+
+> **Two call-scoped facts (shakedown-verified 2026-07-08):** (1) also capture the
+> returned `registration_token` — `file_reservation_paths`, `release_file_reservations`,
+> and `send_message` REQUIRE it (as `registration_token`/`sender_token`) unless this MCP
+> session already authenticated as the agent; carry it through every Agent Mail call.
+> (2) `export` lives only in the bash call that ran it — every later bash call is a
+> fresh shell, so re-assert any variable this skill carries across phases
+> (`PROJECT_ROOT`, `BACKLOG_REL`, `SOURCE_BACKLOG`, `ARTIFACTS_DIR`) in the SAME bash
+> call that consumes it — recompute or restate the assignment at point of use.
 
 **Reserve the source item:**
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   agent_name: <session agent name>,
   paths: [BACKLOG_REL],   # or "_plans/new" if no source backlog
   ttl_seconds: 10800,
@@ -147,6 +157,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 ```
 mcp__mcp-agent-mail__send_message(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "WIP: ac-plan-init — {BACKLOG_REL}",
@@ -163,6 +174,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 - **Type:** {BUILD|IMPROVE|FIX}
 - **Complexity:** {MINIMAL|MORE|A LOT}
 - **Request:** {brief summary}
+- **Backlog item:** {BACKLOG_REL, or "_plans/new" if none} <!-- durable copy — Phase 4 re-derives BACKLOG_REL from here; shell vars are call-scoped -->
 ```
 
 **TaskUpdate(task: "Initialize", status: "completed")**
@@ -242,33 +254,7 @@ Mark task "Validation baseline — identify method + capture current state" `com
 
 ### Step 3: "Taste the Tools" (Verify Validation Capability)
 
-```markdown
-## Tool Verification Checklist
-
-### Unit/Integration Tests
-
-- [ ] Run project test command (see AGENTS.md > Project Commands > Test)
-- [ ] Result: [X passing / Y failing]
-- [ ] Status: Can run tests | BLOCKED
-
-### Browser Access (if available)
-
-- [ ] Navigate to: /[relevant-page]
-- [ ] Result: [Can access | Cannot access]
-- [ ] Status: Can browse | BLOCKED | N/A
-
-### Dev Server
-
-- [ ] Check: dev server running (see AGENTS.md > Project Commands > Dev server)
-- [ ] Result: [Running | Not running]
-- [ ] Status: Accessible | BLOCKED
-
-### API Endpoints (if applicable)
-
-- [ ] Endpoint: /api/[endpoint]
-- [ ] Result: [Response code]
-- [ ] Status: Reachable | BLOCKED
-```
+Fill in the **Tool Verification Checklist** from **`references/plan-templates.md`** § "Phase 2 Step 3 — Tool Verification Checklist" (Unit/Integration Tests, Browser Access, Dev Server, API Endpoints — each with check items + a Status line).
 
 **IF all tools blocked:** STOP. Present blocker details and recovery procedure. Await user confirmation.
 
@@ -298,51 +284,13 @@ Mark task "Taste the tools — verify validation capability" `completed`;
 
 **CRITICAL: Tests are designed here, built in implementation phase.** These specs are "hardcoded" in the plan — engineer cannot modify them during implementation.
 
-```yaml
-## Test Specifications
+Write the specs from the YAML skeleton in **`references/plan-templates.md`** § "Phase 2 Step 5 — Test Specifications (YAML skeleton)" (`silver_bullet` + `supporting_tests`).
 
-test_specs:
-  silver_bullet:
-    file: '[test-file-path]'
-    type: 'Journey' # Journey | Screenshot | API | Performance | Custom
-    description: '[What this test verifies]'
-    assertions:
-      - '[First assertion]'
-      - '[Second assertion]'
-      - '[Third assertion]'
-
-  supporting_tests:
-    - name: '[Test 1 Name]'
-      file: '[unit-test-file-path]'
-      type: 'Unit'
-      description: '[What it verifies]'
-      cases:
-        - '[happy path]'
-        - '[edge case]'
-        - '[error case]'
-
-    - name: '[Test 2 Name]'
-      file: '[integration-test-file-path]'
-      type: 'Integration'
-      description: '[What it verifies]'
-      cases:
-        - '[case 1]'
-        - '[case 2]'
-```
-
-**Why structured YAML:** Machine-parseable by implementation commands. Tests designed before code prevents "cheating". User reviews specs. Engineer implements to spec, can't modify requirements.
+**Why structured YAML:** machine-parseable by implementation commands, and specs fixed before code prevent "cheating".
 
 ### Step 6: Document Baseline vs Target
 
-```markdown
-## Baseline vs Target
-
-| Aspect         | Current State      | Target State        |
-| -------------- | ------------------ | ------------------- |
-| [Feature area] | [What exists now]  | [What should exist] |
-| [Behavior]     | [Current behavior] | [Desired behavior]  |
-| [Test status]  | [Current coverage] | [Expected coverage] |
-```
+Document it with the **Baseline vs Target** table skeleton in **`references/plan-templates.md`** § "Phase 2 Step 6 — Baseline vs Target" (Aspect | Current State | Target State rows).
 
 Append to `$ARTIFACTS_DIR/progress.md`:
 
@@ -527,6 +475,10 @@ Also archive the source backlog item (if a `source_backlog` was set):
 1. Update its frontmatter to `status: planned` and add a `plans:` field linking to this plan.
 2. Move it to `_done/`:
 ```bash
+# Re-derive at point of use — shell vars are call-scoped, nothing survives from Phase 0's bash calls
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+BACKLOG_REL=<restate the Phase-0 value — read it back from "$ARTIFACTS_DIR/progress.md" (Phase 0 "Backlog item" line) if unsure>
+SOURCE_BACKLOG="$PROJECT_ROOT/$BACKLOG_REL"
 mkdir -p "$(dirname $SOURCE_BACKLOG)/_done"
 mv "$SOURCE_BACKLOG" "$(dirname $SOURCE_BACKLOG)/_done/$(basename $SOURCE_BACKLOG)"
 ```
@@ -536,11 +488,14 @@ Mark task "Commit plan artifacts + update status" `completed`;
 
 ### Release Active Work Signal (Agent Mail)
 
+Re-derive `BACKLOG_REL` at point of use (shell vars are call-scoped — Phase 0's value did not survive): recompute it as in Phase 0, or read it back from `$ARTIFACTS_DIR/progress.md` (Phase 0 "Backlog item" line). Pass the captured `registration_token` on both calls below.
+
 **Release reservation:**
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   agent_name: <session agent name>,
   paths: [BACKLOG_REL]
 )
@@ -551,6 +506,7 @@ mcp__mcp-agent-mail__release_file_reservations(
 ```
 mcp__mcp-agent-mail__send_message(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "DONE: ac-plan-init — {BACKLOG_REL}",
@@ -574,15 +530,6 @@ mcp__mcp-agent-mail__send_message(
 | MINIMAL    | `/ac-beadify` directly, then `/ac-bead-refine` -> `/ac-implement` |
 | MORE       | `/ac-plan-refine-internal` -> `/ac-plan-clean` -> `/ac-beadify` |
 | A LOT      | `/ac-plan-refine-internal` or `/ac-plan-refine-external` -> `/ac-plan-clean` -> `/ac-beadify` |
-
-**Pipeline next steps (each is now its own skill):**
-
-- `/ac-plan-refine-internal` — multi-agent refinement (no external models)
-- `/ac-plan-refine-external` — multi-model/OpenRouter refinement for high-stakes plans
-- `/ac-plan-clean` — correctness/structure hygiene pass (final polish)
-- `/ac-plan-review-genius` / `/ac-plan-transcender-alien` — forensic / paradigm-breaking review
-- `/ac-beadify` — convert plan to beads with parallel validation (then `/ac-bead-refine`)
-- `/ac-implement` — sequential implementation (conductor + engineer sub-agents)
 
 **Key context:**
 
@@ -636,16 +583,10 @@ AskUserQuestion(
 
 - **YOU synthesize findings and create the plan** — explorers find patterns, you decide what matters
 - **Planning is thinking, not doing** — do NOT write implementation code
-- **Competitive framing sharpens exploration** — agents cite files, not guesses
 - **Tests are designed in plan, built in implementation** — specs are hardcoded
 - **Artifacts survive compaction** — always read from files, not memory
 - **Progress file is compaction recovery** — parse it to know where you left off
-- **Plans always commit to main** — docs never live on wave branches; switch to main in Phase 0 if needed
 - **WAIT for approval** — never proceed without the user's explicit approval
-
----
-
-_Plan init: classify, explore, baseline, synthesize, approve. For refinement: `/ac-plan-refine-internal`. For beadification: `/ac-beadify`._
 
 ---
 
@@ -660,5 +601,7 @@ Plan creation (above) gets you to a first draft. Deepening, verifying, and press
 | `/ac-plan-clean` | 3 Sonnet agents verify accuracy, structure, completeness (final polish) |
 | `/ac-plan-review-genius` | Multi-disciplinary first-principles forensic review of the plan |
 | `/ac-plan-transcender-alien` | Push the plan beyond human cognitive defaults — paradigm-breaking angles |
+| `/ac-beadify` | Plan ready — convert plan to beads with parallel validation (then `/ac-bead-refine`) |
+| `/ac-implement` | Beads refined — sequential implementation (conductor + engineer sub-agents) |
 
 Typical order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` → (`/ac-plan-refine-external` / `/ac-plan-review-genius` / `/ac-plan-transcender-alien` as warranted) → `/ac-beadify`.
