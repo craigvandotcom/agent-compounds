@@ -33,7 +33,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 git status --short
 ```
 
-If uncommitted changes exist, review them and commit in logical groups before proceeding. The goal is granular checkpoints — every commit is a revert point. Group related changes together (e.g., plan updates in one commit, script changes in another). If anything looks like a red flag (unexpected deletions, sensitive files), flag it to the user before committing. Almost always, the right action is to commit — not stash, not ignore.
+If uncommitted changes exist, review them and commit in logical groups before proceeding. The goal is granular checkpoints — every commit is a revert point. Group related changes together (e.g., plan updates in one commit, script changes in another). If anything looks like a red flag (unexpected deletions, sensitive files), flag it to the user before committing. Almost always, the right action is to commit — not stash, not ignore. Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked and proceed.
 
 **Do NOT start bead-work with a dirty working tree.** Engineers see all uncommitted files in their context and may inadvertently include unrelated changes in their diffs, forcing manual selective staging.
 
@@ -190,7 +190,7 @@ Register a unique identity for this implement session — used for file reservat
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+  human_key: CANONICAL_PROJECT_KEY,   // NOTE: this tool takes human_key (other agent-mail tools take project_key) — the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
                                         # mirror: _shared/agent-identity.md — edit there first
   program: "claude-code",
   model: "claude-opus-4-8"
@@ -198,6 +198,14 @@ mcp__mcp-agent-mail__macro_start_session(
 ```
 
 Capture the returned `name` field:
+> **Two call-scoped facts (shakedown-verified 2026-07-08):** (1) also capture the
+> returned `registration_token` — `file_reservation_paths`, `release_file_reservations`,
+> and `send_message` REQUIRE it (as `registration_token`/`sender_token`) unless this MCP
+> session already authenticated as the agent; carry it through every Agent Mail call.
+> (2) `export` lives only in the bash call that ran it — every later bash call is a
+> fresh shell, so re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
+> SAME call as each `git commit`/`git push`, or the guard will treat you as anonymous
+> and block against your own reservation.
 
 ```bash
 # Export so the pre-commit guard reads AGENT_NAME and WORKTREES_ENABLED at commit time
@@ -269,7 +277,7 @@ This returns the top pick AND a claim command.
 
 ```bash
 # Check the selected bead's labels: must have refined, must not have human-gate
-br show <id> --json | jq '.labels | ((index("refined") | not) or index("human-gate"))'
+br show <id> --json | jq '.[0].labels | ((index("refined") | not) or index("human-gate"))'
 ```
 
 If the bead is not `refined`:

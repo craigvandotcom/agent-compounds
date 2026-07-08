@@ -25,7 +25,10 @@ HIGHEST=$( { git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/
              git log origin/main --oneline | grep -oE 'wave/[0-9]{3}' | cut -d/ -f2;
              git tag -l 'wave/*' | cut -d/ -f2; } \
            | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
-NEXT=$(printf "%03d" $(( ${HIGHEST:-000} + 1 )))
+# 10# forces base-10: zero-padded "008"/"009" are invalid octal in $((...)) —
+# latent bug inherited from the original inline bash, caught + proven in the
+# W2 shakedown (HIGHEST=009 produced an empty NEXT and a misfired guard).
+NEXT=$(printf "%03d" $(( 10#${HIGHEST:-0} + 1 )))
 # Guard: never reuse a number that ever existed in history.
 git log origin/main --oneline | grep -q "wave/$NEXT" && { echo "collision: wave/$NEXT already in history"; exit 1; }
 git checkout -b "wave/$NEXT" main

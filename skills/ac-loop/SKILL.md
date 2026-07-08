@@ -82,13 +82,21 @@ Register a unique identity for this loop run — gives the conductor a readable 
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+  human_key: CANONICAL_PROJECT_KEY,   // NOTE: this tool takes human_key (other agent-mail tools take project_key) — the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
   program: "claude-code",
   model: "claude-opus-4-8"
 )
 ```
 
 Capture the returned `name` field:
+> **Two call-scoped facts (shakedown-verified 2026-07-08):** (1) also capture the
+> returned `registration_token` — `file_reservation_paths`, `release_file_reservations`,
+> and `send_message` REQUIRE it (as `registration_token`/`sender_token`) unless this MCP
+> session already authenticated as the agent; carry it through every Agent Mail call.
+> (2) `export` lives only in the bash call that ran it — every later bash call is a
+> fresh shell, so re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
+> SAME call as each `git commit`/`git push`, or the guard will treat you as anonymous
+> and block against your own reservation.
 
 ```bash
 export WORKTREES_ENABLED=1
