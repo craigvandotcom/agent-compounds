@@ -22,17 +22,19 @@ description: Use to SHIP a built app out the door — push a signed build to Tes
 back in — that's **`ac-triage`** (inbound, headless, source-agnostic). It does NOT prove
 the build — that's **`ac-qa-device`** (run it first; this gates on its report).
 
-**Foundation (Decision 2026-06-15):** thin wrapper over **whatever the app already uses
-for the build mile**. art-still uses **fastlane** (match git-stored signing + Admin ASC
-API key → fully headless, no Apple 2FA). Keep it. The ASC API owns the read/submit miles.
-Do not introduce a second build tool to an app that already has a working lane.
+**Foundation:** thin wrapper over **whatever the app already uses for the build mile**
+(the proven headless shape: fastlane **match** git-stored signing + Admin ASC API key —
+no Apple 2FA at any point). The ASC API owns the read/submit miles. Never introduce a
+second build tool to an app that already has a working lane — rewriting a working lane
+is churn for zero user value. Decision record: `references/_DECISION-distribution-stack.md`
+· incident log: `references/incidents.md`.
 
 ---
 
 ## Workflow A — testflight-push
 
-The fast, repeatable closed-beta push. art-still has reduced this to **one command**
-(`pnpm ship:testflight`); this workflow is the generic shape that wraps it.
+The fast, repeatable closed-beta push. Apps typically reduce this to **one command**
+(→ CORE/distribution.md); this workflow is the generic shape that command wraps.
 
 ### Run tasks (this workflow only)
 
@@ -74,16 +76,14 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
    STALE — `last_pass.sha` not an ancestor of the ship SHA, or an intervening diff
    touched that journey's declared `surfaces`. TestFlight pushes run the same script
    with `--lane testflight`, which never blocks but prints `WARN` lines — a stamp gap
-   is visible, not silent. Rationale (BCA 2.1(b)): five static-presence checks (dep
-   installed, chunk bundled, key baked, plugin registered) all passed while the
-   paywall's purchase CTA sat disabled behind placeholder data through four
-   rejections — runtime behavior, not static presence, is the only sufficient proof,
-   above all on COMMERCE surfaces (live store data + enabled CTA). StoreKit
-   offering/product fetch WORKS on the simulator; only purchase COMPLETION is
-   device-only — "sim can't test payments" never excuses a missing/stale stamp. A
-   stamp is refreshed by driving the journey again (`ac-qa-device`/`ac-qa-browser`
-   writing `last_pass`) — see `ac-publish`'s full-QA phase, which is where every
-   critical journey's stamp gets refreshed before a release ceremony.
+   is visible, not silent. Why: runtime behavior, not static presence, is the only
+   sufficient proof — above all on COMMERCE surfaces (live store data + enabled CTA;
+   the four-rejection incident: `references/incidents.md` §1). StoreKit offering/product fetch
+   WORKS on the simulator; only purchase COMPLETION is device-only — "sim can't test
+   payments" never excuses a missing/stale stamp. A stamp is refreshed by driving the
+   journey again (`ac-qa-device`/`ac-qa-browser` writing `last_pass`) — see
+   `ac-publish`'s full-QA phase, which is where every critical journey's stamp gets
+   refreshed before a release ceremony.
    **QA-freshness equivalence:** a PASS artifact captured *pre-merge* still satisfies this
    gate post-merge **iff no commits landed on main between the QA run and the merge commit
    being shipped** (i.e. the merge was fast-forward-equivalent — the version/build-bump
@@ -105,8 +105,8 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
 5. **Prod backend baked in.** If the app's `.env.local` is intentionally backendless (a
    fail-soft test pattern), the prod env MUST be injected into the web build BEFORE
    archiving, else you ship a backendless binary. Verify the prod ref appears in the build
-   output. (art-still: `.env.release.local` + a `grep <project-ref> out/` assertion in the
-   ship script.)
+   output (proven recipe: a `.env.release.local` + a `grep <project-ref> out/` assertion in
+   the ship script).
 
 ### Steps
 
@@ -121,8 +121,8 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
    upstream, not something to patch here. The **only** exception `ac-distribute` may own
    is a same-version **upload-retry** bump (a rejected/stuck build that must move without a
    new marketing version) — record that narrow convention, if used, in
-   `CORE/distribution.md`; it must defer to `ac-merge`'s owner ship for every normal push.
-   (art-still: monotonic `CURRENT_PROJECT_VERSION` ×4 in pbxproj, bumped by `ac-merge`.)
+   `CORE/distribution.md`; it must defer to `ac-merge`'s ownership for every normal push.
+   (pbxproj carries `CURRENT_PROJECT_VERSION` ×4; a bump moves all four in lockstep.)
 2. **Build the web bundle** for the native target (e.g. `BUILD_TARGET=capacitor pnpm
    build`) with prod env, then sync to native (`npx cap sync ios`).
 3. **Archive → sign → upload** via the app's lane (fastlane `release`: match → gym →
@@ -130,7 +130,8 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
    Sentry] → pilot/TestFlight, `distribute_external: false` for closed beta).
 4. **What-to-Test** (optional, recommended): derive the tester note from the wave's git log
    (`feat:`/`fix:` subjects since the last tag) rather than hand-writing it.
-5. **Commit the build-number bump** (don't push automatically unless the app's flow does).
+5. **If the upload-retry exception bumped the build number, commit it** — normal pushes
+   already carry `ac-merge`'s bump (don't push automatically unless the app's flow does).
 
 ### Report block
 
@@ -165,17 +166,17 @@ dsym:         uploaded ✓ | SKIPPED (Sentry not wired — see ac-triage)
   TestFlight — its green run proves the commit still archives, nothing more. Never claim
   "build shipped" from an archive success; the proof is the build appearing in ASC with
   `processingState == VALID`. CORE/distribution.md must state explicitly whether the
-  merge-triggered native build UPLOADS or is health-check-only (BCA burned an evening on
-  this ambiguity, 2026-07-02).
+  merge-triggered native build UPLOADS or is health-check-only — this ambiguity has burned
+  an evening (`references/incidents.md` §2).
 - **`setup_ci` on a PERSONAL-Mac runner hijacks the user's keychain** — it makes
   `fastlane_tmp_keychain` the user's DEFAULT keychain and drops login from the search list.
   Fine on ephemeral CI VMs; on a self-hosted personal Mac it breaks the owner's GUI session
   (system dialogs demanding the tmp keychain's password — which is the empty string). Any
   lane using `setup_ci` on such a runner MUST restore in `after_all` AND `error` hooks:
   `security list-keychains -s ~/Library/Keychains/login.keychain-db` + `default-keychain -s`
-  + `delete_keychain`. (BCA Fastfile is the reference implementation, 2026-07-03.)
+  + `delete_keychain`. (Reference implementation + incident: `references/incidents.md` §3.)
 
-Store-submit footguns (validated on BCA's first headless submit, 2026-06-17):
+Store-submit footguns (validated live — `references/incidents.md` §4):
 
 - **A stuck rejected `reviewSubmission` blocks a new one** — "Cannot submit for review – a
   review submission is already in progress." A prior rejection sits in `UNRESOLVED_ISSUES`
@@ -200,7 +201,7 @@ Store-submit footguns (validated on BCA's first headless submit, 2026-06-17):
 
 ---
 
-## Workflow B — store-release (VALIDATED — BCA first headless submit 2026-06-17)
+## Workflow B — store-release (validated live — `references/incidents.md` §4)
 
 Production App Store submission. ASC **API** work — runs anywhere the API key exists; NOT
 Mac-bound (the build it submits was already produced by testflight-push). **Human-gated at
@@ -225,7 +226,8 @@ TaskCreate("Monitor — poll review state through to WAITING_FOR_REVIEW / hand o
 Stages:
 
 1. **Submission-health / preflight (read-only)** — latest build `VALID`? App Store version
-   editable? review info present? Pure ASC-API reads, mutate nothing (BCA: `pnpm submit:preflight`).
+   editable? review info present? Pure ASC-API reads, mutate nothing (e.g. a
+   `submit:preflight` script).
 2. **Listing + screenshots** — managed in **ASC web** (standing config: description,
    keywords, supportUrl, screenshots, demo account). The submit lane leaves these alone
    (`skip_metadata`). Asset side: `app-store-screenshots` / `screenshot-refresh` skills.
@@ -242,15 +244,16 @@ covers read (status/preflight) + the surgical writes (cancel stuck submission, d
 locale) that `deliver` can't do cleanly. Pin the app id + script path in CORE/distribution.md.
 
 First real submission does one-time human setup (app record, privacy labels, primary-locale
-listing). art-still/unsit/move-free inherit this validated shape when they leave closed beta.
+listing); apps leaving closed beta inherit this validated shape.
 
 ---
 
 ## Per-app facts → CORE/distribution.md
 
-**Onboarding a new app:** copy `distribution.template.md` (this skill dir) → the app's
-`.claude/skills/CORE/distribution.md` and fill every `{{…}}` (incl. the `template_version`
-stamp). ~30 min if the app already has a build lane; longer if it needs one stood up first.
+**Onboarding a new app:** copy `references/distribution.template.md` (this skill dir) → the
+app's `.claude/skills/CORE/distribution.md` and fill every `{{…}}` (incl. the
+`template_version` stamp). ~30 min if the app already has a build lane; longer if it needs
+one stood up first.
 
 **Keeping it current:** the CORE file is a real, app-owned copy — `deploy.sh` never overwrites
 it, so it does NOT auto-update. `infra-sync` flags `template_version` drift; reconcile by
@@ -258,12 +261,12 @@ grafting new template sections in while PRESERVING filled values, then bump the 
 template's *Maintaining this file* note). Never edit this symlinked SKILL.md per-app — method
 changes land HERE and propagate to every app.
 
-Each consuming app carries a `CORE/distribution.md` (mirror of `journeys/native.md`):
-bundle id, ASC app id + team id, signing setup, TestFlight group, demo account, the exact
-ship command, screenshot specs, and **pointers** to secrets (key id, issuer id, where the
-`.p8` lives) — never the secrets themselves. Build-number ownership is NOT per-app
-configurable — it's `ac-merge` (`skills/ac-merge/references/version-bump.md`) for every
-app; only document a same-version upload-retry exception here if the app uses one.
+Each consuming app carries a `CORE/distribution.md` (same per-app pattern as
+`journeys/native.md`): bundle id, ASC app id + team id, signing setup, TestFlight group,
+demo account, the exact ship command, screenshot specs, and **pointers** to secrets (key id,
+issuer id, where the `.p8` lives) — never the secrets themselves. Build-number ownership is
+NOT per-app configurable — it's `ac-merge` (`skills/ac-merge/references/version-bump.md`)
+for every app; only document a same-version upload-retry exception here if the app uses one.
 
 ## Remember
 
