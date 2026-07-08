@@ -1,30 +1,10 @@
-# Per-prompt reminders (hot lane — keep this file short)
+# Per-prompt reminders (hot lane — every line here is paid on EVERY prompt)
 
-## Memory
-
-Relevant memory facts are auto-injected by the `memory-retrieval.py` hook (qmd keyword
-recall over the substrate). For deeper or semantic recall, query directly:
-`qmd search "X" --json` (keyword, pure-alnum terms) · `qmd query "X" --json` (semantic).
-Lobes cover knowledge/, system docs, `infrastructure/memory/auto/`, `neometa/memory/auto/`,
-and per-app memory. Taxonomy + write loop: `context-engineering` skill.
-
-## Delegation — three stances
-
-| Stance | Use for | Never for |
-|---|---|---|
-| **researcher** | read-only investigation: brain (qmd) → code → web; returns ≤2k-token cited summary | producing code/content |
-| **implementer** | scoped execution of an approved plan/spec; full write tools | planning, architecture |
-| **validator** | adversarial review/audit/judging against rubrics; read-only + tests | fixing what it finds |
-
-Domain knowledge arrives via **skills**, not agent identity. Built-ins (`Plan`,
-`Explore`) remain available. Principle: *if you only need the OUTPUT, delegate; if you
-need to SEE THE WORK, execute directly.*
-
-## Git
-
-Root repo only: after file changes under `~/Repos` (outside submodules), commit + push.
-Never commit across repo boundaries in one operation — apps are their own repos.
-
-## Lost?
-
-`.claude/skills/CORE/SKILL.md` is the index. Durable saves: `context-engineering` skill.
+- **Delegate, don't inline:** multi-file reads/investigations go to a subagent
+  (researcher / implementer / validator — stance table in AGENTS.md); the main context
+  keeps decisions and returned summaries, never file dumps. *If you only need the
+  OUTPUT, delegate; if you need to SEE THE WORK, execute directly.*
+- **Memory:** relevant facts auto-inject per prompt; deeper or semantic recall:
+  `qmd search "X" --json` · `qmd query "X" --json`.
+- **Git (root repo only):** after file changes under `~/Repos` outside app repos,
+  commit + push. Never commit across repo boundaries in one operation.
