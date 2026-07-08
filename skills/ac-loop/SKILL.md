@@ -1,15 +1,15 @@
 ---
 name: ac-loop
-description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, pauses on genuine decisions via Slack buttons, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-review → ac-merge) gating between them via ac-human-session — ac-pipeline is deprecated. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".'
+description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, surfaces genuine decisions as human-gate decision beads + advisory nudges, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-review → ac-merge) gating between them via ac-human-session — ac-pipeline is deprecated. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".'
 ---
 
 # ac-loop — Autonomous Shipping Loop
 
-**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same skills `ac-pipeline` uses, but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only when those are simple enough for Slack buttons.
+**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same skills `ac-pipeline` uses, but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only in interactive sessions.
 
-When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal. When invoked by the scheduler (headless), `AskUserQuestion` posts to Slack as interactive buttons — the session suspends and resumes when Craig clicks. Either way, the behaviour is identical; the transport differs.
+When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal for simple bounded forks. When invoked by the scheduler (headless), never `AskUserQuestion` — apply the Exhaust Rule: leave the `human-gate` decision bead in place, post an advisory Slack nudge, and keep working everything else. Decisions are answered via `ac-human-session` (the docket), not mid-run.
 
-> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items or unrefined *plans*. But unrefined **beads** that are already *in* the pipeline — beadified epics (parent+children) or beads traceable to a plan (`_plans/` or `_plans/_done/`) — you DO refine-and-finish; only a truly raw lone capture stays gated. Craig controls what *enters* the pipeline (via beadify/plan sign-off); you drive everything already in it to merge, furthest-advanced first. Human-gated beads (`human-gate` label) are surfaced, not auto-closed.
+> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not `human-gate` is loop-eligible** — if `unrefined`, you refine it (`ac-bead-refine`) first, then implement; if `refined`, you implement. The `unrefined` label routes a bead *through* refinement — **it is NOT a human gate** (memory `feedback-conductor-beads-need-unrefined-label`: the label forces the QA refine pass, it does not withhold sign-off). The **only** thing exempt from autonomous implementation is a **`human-gate`** bead (surfaced, never auto-closed). Craig controls what *enters* the pipeline **upstream** — at the backlog pool (`ac-backlog`) and via plan `loop-ready` sign-off; once an idea is a *bead* it is already committed work, so drive it to merge, furthest-advanced first. (Refinement *priority* still favours signed-off/furthest-advanced work — but nothing non-`human-gate` is gated *out*.)
 
 > **Orchestration contract — 3-level, non-negotiable.** You are a *conductor*, not a doer. Every
 > "Invoke `<skill>`" / "Run `<skill>`" step in this file means **spawn a fresh sub-session
@@ -110,61 +110,55 @@ Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fre
 
 Read the current state of the board. This is the map you navigate by.
 
-```bash
+> **Discovery uses `bv` for triage, `br` for data — NEVER bare `br ready`.**
+> `br ready` **defaults to `--limit 20`** and silently truncates: a board with >20 ready
+> beads shows only the first 20, and the default sort can bury all the shippable ones below
+> the cut (this stranded 23 refined maintenance beads and derailed a whole run, 2026-07-08).
+> **ALWAYS pass `--limit 0`.** `bv --robot-triage` is the dependency-aware "what to work on"
+> engine (no truncation; correctly treats parent-child *containment* edges as non-blocking);
+> `br` remains the **create/modify/close** engine + the labeled data source. Roles, not
+> substitutes: **bv = discovery/triage, br = mutations + data** (AGENTS.md bv/br split). Use
+> bv to see + sanity-check the true actionable set/counts, then `br ready --limit 0` for the
+> labeled rows the jq filters need. If bv is unavailable (headless), `br ready --limit 0` is
+> the correct fallback on its own.
 
-# All refined, ready, non-human-gated beads (readiness = presence of `refined`)
-br ready --json | jq '[.[] | select(
-  (.labels | index("refined")) and
-  (.labels | index("human-gate") | not)
+```bash
+# TRIAGE (dependency-aware, no truncation) — read the TRUE counts first; if these disagree
+# with your br filters below, trust these and debug the filter (a 20-row answer = you forgot --limit 0).
+bv --robot-triage 2>/dev/null | jq '.triage.quick_ref | {actionable: .actionable_count, blocked: .blocked_count, in_progress: .in_progress_count, open: .open_count}'
+
+# --- Full labeled ready set. ALWAYS --limit 0 (bare `br ready` caps at 20). ---
+
+# Refined, non-human-gate ready beads (the shippable pool: orphans + plan-wave beads)
+br ready --limit 0 --json | jq '[.[] | select(
+  (.labels | index("refined")) and (.labels | index("human-gate") | not)
 )]'
 
-# All human-gated ready beads (for Phase ARIA)
-br ready --json | jq '[.[] | select(.labels | index("human-gate"))]'
+# UNREFINED, non-human-gate ready beads → these ALL get ac-bead-refine, THEN implement.
+# `unrefined` = "route through refinement", NOT a human gate. Nothing here is gated out;
+# only the REFINE-PRIORITY differs (signed-off / furthest-advanced first — see Work priority).
+br ready --limit 0 --json | jq '[.[] | select(
+  (.labels | index("refined") | not) and (.labels | index("human-gate") | not)
+)]'
+
+# Human-gate ready beads (the ONLY exempt class — for Phase ARIA)
+br ready --limit 0 --json | jq '[.[] | select(.labels | index("human-gate"))]'
 
 # Current wave branch (if any)
 git branch --list 'wave/*' --format='%(refname:short)' | head -1
 git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1
 
-# Plans with refined beads
-ls _plans/ 2>/dev/null
-```
-
-Also check for loop-ready plans and unrefined beads:
-
-```bash
 # Plans marked loop-ready (Craig's explicit gate — only these enter the loop)
 grep -l "status: loop-ready" _plans/*.md 2>/dev/null
-
-# Unrefined beads from loop-ready plans (need ac-bead-refine before implement)
-# Classification (needs-refine), NOT readiness: matches `unrefined` OR no lifecycle
-# label at all — i.e. anything that is neither `refined` nor `human-gate` yet.
-br ready --json | jq '[.[] | select(
-  ((.labels | index("refined") | not) and (.labels | index("human-gate") | not)) and
-  (.labels | map(test("^wave-[0-9]+$")) | any)
-)]'
-
-# Unrefined beads with NO wave-NNN marker label — split by pipeline depth (see classification below):
-#   (a) part of a beadified EPIC or a plan-traceable group → AUTO-REFINE (signed-off work)
-#   (b) truly RAW lone captures (no parent, no epic group, no source plan) → ARIA gate
-br ready --json | jq '[.[] | select(
-  ((.labels | index("refined") | not) and (.labels | index("human-gate") | not)) and
-  (.labels | map(test("^wave-[0-9]+$")) | any | not)
-)]'
-# Then classify each: does it have a parent-child dep (epic child), children (epic parent),
-# or ≥1 label-sibling under a shared non-wave epic label (e.g. "tailwind-v4")? → (a) auto-refine
-# ((a) is signed-off BY CONSTRUCTION — Craig deliberately beadified it → auto-refine-and-finish).
-# A lone unrefined bead with no parent, no children, no epic-label siblings, no traceable plan
-# (the `ac-bead-capture` quick-idea case) → (b) raw capture, gate.
-# Cross-check (a) against _plans/ AND _plans/_done/ — an archived source plan IS the sign-off.
 ```
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
-Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U **signed-off** beads needing refine — classified by absence of `refined` (whether labeled `unrefined` or lacking any lifecycle label), not by presence of `unrefined` — (plan-beads + beadified epics + plan-traceable groups → auto-refine), O **truly-raw** unrefined captures (lone, no epic/plan → ARIA gate only).
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
-**Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling new raw work in:
+**Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave-NNN` marker label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question; return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
+2. Unrefined non-`human-gate` beads, **furthest-advanced first** — (a) from a loop-ready plan (`wave-NNN` marker), OR part of a beadified epic / plan-traceable group; then (b) lone captures (triage/hygiene/reflect/`ac-bead-capture` follow-ups). Run `ac-bead-refine` on them, then drive to merge (delegation: "ac-loop autonomous run, skip next-step question; return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — a captured bead is committed work; refine-and-finish it. (The backlog *pool* is the "not-yet-committed" holding area, upstream of beads — that is where human promotion happens, not here.) A beadified epic outranks #3.
 3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed; return bead IDs created/refined + anything blocked, ≤200 words")
 4. Plan wave refined beads → Phase 2
 
@@ -188,7 +182,7 @@ TaskCreate — one task per run phase; add a Plan-wave task per queued loop-read
 
 > **On resume (compaction / restart):** read the ledger first — it's your resume *anchor* (which phase you were in). Then reconcile against live board state, which remains ground truth: a wave the ledger calls `in_progress` may have merged in the moments before compaction. Trust the **board** for work state; trust the **ledger** for run position.
 
-If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready plans to beadify, and no human-gated beads** → go straight to Phase ARIA.
+If **no refined beads, no unrefined non-`human-gate` beads, no loop-ready plans to beadify, and only `human-gate` beads remain** → go straight to Phase ARIA.
 
 ---
 
@@ -204,8 +198,9 @@ If **no refined beads, no unrefined beads from loop-ready plans, no loop-ready p
 > beads in the same run as plan-beads and beadified epics — never a shortcut into Phase 1.
 
 ```bash
-# Orphan beads: refined, no wave-NNN marker label, no human-gate
-br ready --json | jq '[.[] | select(
+# Orphan beads: refined, no wave-NNN marker label, no human-gate.
+# --limit 0 is MANDATORY — bare `br ready` caps at 20 and will silently hide orphans.
+br ready --limit 0 --json | jq '[.[] | select(
   (.labels | index("refined")) and
   (.labels | index("human-gate") | not) and
   (.labels | map(test("^wave-[0-9]+$")) | any | not)
@@ -269,8 +264,8 @@ After orphans are clear (or if no orphans), advance the highest-priority plan wi
 # Loop-ready plans (Craig's explicit gate)
 LOOP_READY_PLANS=$(grep -l "status: loop-ready" _plans/*.md 2>/dev/null)
 
-# Of those, find which have refined, non-human-gate ready beads
-br ready --json | jq '[.[] | select(
+# Of those, find which have refined, non-human-gate ready beads (--limit 0 mandatory — bare `br ready` caps at 20)
+br ready --limit 0 --json | jq '[.[] | select(
   (.labels | index("refined")) and
   (.labels | index("human-gate") | not) and
   (.labels | map(test("^wave-[0-9]+$")) | any)
@@ -316,10 +311,10 @@ This phase persists. The loop does not exit after a nudge — it re-checks at in
 
 | Signal | Action |
 |--------|--------|
-| `human-gate` bead with ≤3 options, question answerable in ≤10 words | `AskUserQuestion` (Slack buttons) → session pauses → resumes on click |
+| `human-gate` bead with ≤3 options, question answerable in ≤10 words | Interactive session: `AskUserQuestion` in-terminal. Headless: advisory Slack nudge (card), bead stays open for `ac-human-session` — never pause |
 | `human-gate` bead with complex/open-ended answer | Advisory Slack nudge (card) — do NOT pause |
 | Plan exists but all beads are `unrefined` | Advisory nudge: "Plan X has N beads awaiting refinement — run `/ac-bead-refine`" |
-| **Truly raw** unrefined bead (lone — no parent, no epic-label siblings, no plan in `_plans/` or `_plans/_done/`) | Advisory nudge: "N captured idea(s) awaiting refinement — run `/ac-bead-refine` or attach to a plan." The loop will NOT auto-refine a raw capture (no sign-off); surface, don't touch. **NOTE:** a beadified epic or plan-traceable unrefined bead is NOT this — it's signed-off pipeline work → auto-refine-and-finish per Work priority #2, don't nudge. |
+| Unrefined non-`human-gate` bead of ANY origin (lone capture, beadified epic, or plan-traceable) | **NOT an ARIA case** — these are eligible work. The loop refines them (`ac-bead-refine`) and ships them in Phase 1/2 per Work priority #2; they should never reach ARIA idle. Only nudge if refinement itself is *blocked* (e.g. `ac-bead-refine` couldn't converge and surfaced a `human-gate` decision) — then it's the `human-gate` row above. A captured bead is committed work, not a raw idea awaiting promotion (that lives in the backlog *pool*). |
 | Refined plans exist but no beads yet | Advisory nudge: "Plan X is ready for `/ac-beadify`" |
 | Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
 | Nothing at all (no backlog, no plans, no beads) | Session-end notify: "Pipeline clear — nothing waiting" |
@@ -339,9 +334,9 @@ Post via `slack-send --channel sofi --card` (or the app's channel):
 Run the relevant skill or click a bead to unblock.
 ```
 
-### AskUserQuestion (simple forks only)
+### AskUserQuestion (simple forks, interactive sessions only)
 
-For `human-gate` beads with clear options:
+For `human-gate` beads with clear options, when a human is at the terminal (never headless):
 
 ```
 AskUserQuestion(
@@ -466,12 +461,11 @@ ac-loop is designed to run as a scheduled PAI job (headless). Configure in `infr
   "prompt": "Load the ac-loop skill and run the autonomous shipping loop for <app>. Working directory: <app-path>.",
   "schedule": "0 */4 * * *",
   "enabled_on": ["<hostname>"],
-  "pauseable": true,
   "channel": "<slack-channel-id>"
 }
 ```
 
-`pauseable: true` is required — without it, `AskUserQuestion` events are dropped and simple decisions fall through to advisory nudges. The channel ID is used by the scheduler to post the AskUserQuestion card and thread updates.
+Headless runs never `AskUserQuestion` — all decisions fall through to advisory nudges + open `human-gate` decision beads by design (Exhaust Rule). The channel ID is used by the scheduler to post nudges and thread updates.
 
 Run `ac-triage` as a **separate** scheduled job before `ac-loop` (e.g., 30 min earlier). Triage feeds beads into the board; the loop ships them. Keep them decoupled so triage failures don't block shipping.
 
@@ -492,11 +486,13 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 
 ## Remember
 
+- **Never trust bare `br ready`** — it caps at `--limit 20` and silently hides the rest. Discovery = `bv --robot-triage` (true counts, dependency-aware) + `br ready --limit 0` (labeled rows). A 20-row answer means you forgot `--limit 0`. bv = discovery, br = mutations — not substitutes
+- **Only `human-gate` beads are gated** — every other bead (refined → implement; unrefined → `ac-bead-refine` then implement) is loop-eligible. `unrefined` routes *through* refinement, it does not withhold sign-off. The "not-yet-committed" gate is the backlog *pool*, upstream of beads
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Single-branch rule** — join the open wave, never create a second. If >1 is somehow open, resume the highest-priority unfinished one and drain the rest before new work
 - **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-merge`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
 - **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
-- **ARIA gating** — `AskUserQuestion` only for simple, bounded forks. Everything else is advisory
+- **ARIA gating** — `AskUserQuestion` only for simple, bounded forks in interactive sessions; headless = advisory nudge + open decision bead. Everything else is advisory
 - **Persistent nudge** — re-nudge every session until Craig acts. Silence enables bottlenecks
 - **C2 is the only hard stop** — critical regression never merges
 - **Always Slack-notify** — shipped waves, blocked stops, clear pipeline. Headless means Craig has no other visibility
