@@ -20,7 +20,7 @@ The engine and the see→act→assert loop are the same as the pipeline QA skill
 this skill is the **ad-hoc entry point** and owns the **capture recipe** (the
 part that bites you if you wing it). For the full driving reference (snapshot
 discipline, keyboard traps, parallel-sim isolation, setup/install) see
-**`ac-qa-device/SKILL.md`** + **`ac-qa-device/setup.md`**. Don't duplicate those
+**`ac-qa-device/SKILL.md`** + **`ac-qa-device/references/setup.md`**. Don't duplicate those
 here.
 
 ## When to use

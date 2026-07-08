@@ -24,12 +24,12 @@ see → act → assert loop. Tooling: **agent-device** (Callstack; XCUITest engi
 sees the full webview tree, @ref targeting, wait/is/find primitives, real HID
 taps) + **`xcrun simctl`** (lifecycle, screenshots, video, push payloads, deep
 links, permissions, appearance). AXe is the engine-diverse fallback (point-probe
-only on webview apps — see `setup.md`).
+only on webview apps — see `references/setup.md`).
 
-> Tool decision settled 2026-06-11 by bake-off against a Capacitor app on
-> iOS 26.5: AXe/XcodeBuildMCP tree dumps are **webview-blind** (empty Groups);
+> Tool choice is settled: AXe/XcodeBuildMCP tree dumps are **webview-blind**;
 > agent-device's XCUITest snapshot sees everything. Re-evaluate the tool layer
-> when Xcode 27's first-party agent automation ships (~fall 2026).
+> when Xcode 27's first-party agent automation ships (~fall 2026). Bake-off
+> record: `references/incidents.md`.
 
 Android (emulator) support: planned — agent-device drives Android with the same
 commands, so the structure (layers, checklist, journey reuse) carries over.
@@ -39,7 +39,7 @@ commands, so the structure (layers, checklist, journey reuse) carries over.
 **Everything here requires macOS** (Xcode + simulators). Check before doing
 anything: `uname` → if not `Darwin`, **stop** — report that simulator QA needs
 a Mac session and hand off. Remote Linux→Mac driving (idb gRPC) exists but is
-friction-prone — see `setup.md` appendix; don't attempt it ad hoc.
+friction-prone — see `references/setup.md` appendix; don't attempt it ad hoc.
 
 ## Layered QA model — what to test where
 
@@ -47,13 +47,13 @@ friction-prone — see `setup.md` appendix; don't attempt it ad hoc.
 | ----- | ---- | -------- | ---- |
 | 1. Browser (DOM) | `browser-testing` skill (agent-browser) | Exhaustive: every page, button, state, edge case | Cheap, fast |
 | 2. **Simulator (this skill)** | agent-device + simctl | Every journey happy-path with REAL native taps + the native-shell checklist | Slower per action |
-| 3. DOM-in-shell | Appium webview context | DOM truth inside the real shell (origin/cookies/storage) | Flaky; escape hatch only (`setup.md`) |
+| 3. DOM-in-shell | Appium webview context | DOM truth inside the real shell (origin/cookies/storage) | Flaky; escape hatch only (`references/setup.md`) |
 
 For hybrid (Capacitor) apps the webview renders the **same bundle** as the
 browser — so exhaustive DOM-matrix coverage stays in Layer 1. Layer 2 proves
 what only the native shell can: real touch pipeline, keyboard, safe-area,
 splash/cold-start, plugin bridge, system sheets, deep links, lifecycle. The
-full list → `native-shell-checklist.md`.
+full list → `references/native-shell-checklist.md`.
 
 **Decision rule:** logic/layout/state bug → Layer 1. "Does the real app work
 when really touched" → Layer 2. DOM assertion inside the shell → Layer 3,
@@ -63,10 +63,10 @@ sparingly.
 
 Defined in **`_shared/qa-shared.md`** (smoke / full / exhaustive). Native specifics
 per level: **smoke** = build→install→launch→splash→first-paint→auth→primary journey
-(run before TestFlight pushes); **full** adds the `native-shell-checklist.md` +
+(run before TestFlight pushes); **full** adds the `references/native-shell-checklist.md` +
 appearance spot-checks; **exhaustive** adds the appearance matrix (dark/light ×
 2–3 Dynamic Type sizes), deep-link matrix, lifecycle (background/resume), and a
-perf sanity pass (`perf-and-limits.md`).
+perf sanity pass (`references/perf-and-limits.md`).
 
 ## Toolchain
 
@@ -99,9 +99,8 @@ sim, a sim NAME, or an agent-device session. Isolate with three layers:
    `--tenant`/`--state-dir` give full daemon isolation if needed.
 3. **Ownership rule (non-negotiable):** only ever rename/boot/shutdown a sim your
    app owns (`<APP>-QA-*`). Hijacking a shared sim mid-session breaks BOTH apps —
-   the build (name race) and agent-device (wrong-device match). Documented
-   incident: 2026-06-15, art-still + Body Compass both defaulting to "iPhone 17
-   Pro".
+   the build (name race) and agent-device (wrong-device match). Incident
+   record: `references/incidents.md`.
 
 ## Core loop
 
@@ -224,7 +223,7 @@ XCUITest projects the DOM's accessibility tree fully: web content appears as
 | Deterministic screenshots | `xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4` (clear when done) |
 | App logs | `xcrun simctl spawn booted log stream --predicate 'subsystem CONTAINS "<bundle-id>"'` (or `agent-device logs`) |
 | Reset app state | `xcrun simctl uninstall booted <bundle-id>` then reinstall |
-| Face ID match/no-match | see `perf-and-limits.md` (notifyutil pattern) |
+| Face ID match/no-match | see `references/perf-and-limits.md` (notifyutil pattern) |
 
 ## Reusing the app's journeys
 
@@ -250,7 +249,7 @@ template above before the first full QA pass.
 
 ## Performance & rendering — what you may claim
 
-Full taxonomy + hardware matrix + xctrace recipes → **`perf-and-limits.md`**.
+Full taxonomy + hardware matrix + xctrace recipes → **`references/perf-and-limits.md`**.
 The headlines:
 
 - **CAN verify:** layout/rendering correctness, dark mode, Dynamic Type,
@@ -280,7 +279,7 @@ Emit the **`QA_VALIDATION`** block from `_shared/qa-shared.md` with:
 
 - `platform: ios-simulator` (or `android-emulator`)
 - `target:` sim model + OS version
-- `shell_checklist:` items from `native-shell-checklist.md`
+- `shell_checklist:` items from `references/native-shell-checklist.md`
 - `appearance_matrix:` dark/light × Dynamic Type combos
 - `perf_observations:` qualitative only — hangs, freezes, leaks
 
@@ -308,16 +307,15 @@ failures. Classify the drive as infra-flaky: write **no `last_pass` stamp**
 (neither PASS nor FAIL) and file a `qa-infra` bead instead. A flaky gate that
 occasionally red-Xs a working app trains gate-skipping — worse than no gate.
 Prerequisite the pin depends on: the dedicated sim MUST be **iPhone-class**,
-never iPad (see "Parallel QA on a shared Mac" above) — iPad Stage Manager
-introduces coordinate offsets that misread as app bugs.
+never iPad (Stage Manager coordinate offsets — see "Parallel QA on a shared
+Mac" above).
 
 ## Teardown
 
 - Stop any recordings (`agent-device record stop`, `kill -INT` simctl video).
 - **Close your agent-device session** (`agent-device close --session <app>`) —
-  a lingering session stays bound to its device and can collide later (a stale
-  `default` session bound to a device another app then claimed broke a run on
-  2026-06-15).
+  a lingering session stays bound to its device and can collide later
+  (incident record: `references/incidents.md`).
 - `xcrun simctl status_bar <udid> clear` if you overrode it (target YOUR sim's
   UDID, not `booted` — multiple sims may be booted on a shared Mac).
 - Reset appearance/content-size if you changed them.
@@ -345,7 +343,7 @@ introduces coordinate offsets that misread as app bugs.
 - **Snapshot returns only keyboard/near-empty tree** → transient; retry.
 - **XCUITest runner breaks after Xcode update** → `npm update -g agent-device`,
   re-run `agent-device prepare ios-runner --platform ios`; AXe point-probes
-  are the engine-diverse stopgap (`setup.md`).
+  are the engine-diverse stopgap (`references/setup.md`).
 - **Permission dialog blocks flow unexpectedly** → pre-grant with
   `simctl privacy` in setup, or handle via `agent-device alert`.
 
@@ -353,11 +351,12 @@ introduces coordinate offsets that misread as app bugs.
 
 - `_shared/qa-shared.md` — depth levels, journey reuse, findings=beads, `QA_VALIDATION` schema (shared with the twin)
 - `_shared/verification-gate.md` — journey registry schema (`last_pass` stamp fields), staleness rule
-- `native-shell-checklist.md` — what ONLY the simulator/native shell can catch
-- `perf-and-limits.md` — CAN/MISLEADING/CANNOT taxonomy, hardware matrix,
+- `references/native-shell-checklist.md` — what ONLY the simulator/native shell can catch
+- `references/perf-and-limits.md` — CAN/MISLEADING/CANNOT taxonomy, hardware matrix,
   xctrace recipes, visual regression, automation speed tricks
-- `setup.md` — Mac setup, AXe fallback, Linux→Mac remote appendix,
+- `references/setup.md` — Mac setup, AXe fallback, Linux→Mac remote appendix,
   Appium webview escape hatch (Layer 3)
+- `references/incidents.md` — full incident narratives behind the compressed rules
 - `ac-qa-browser/SKILL.md` — the web-shell twin (Layer 1, exhaustive DOM coverage)
 - `browser-testing/SKILL.md` — the low-level `agent-browser` mechanics the twin wraps
 - Consuming app's `CORE/journeys/` + `CORE/journeys/native.md` — the what
