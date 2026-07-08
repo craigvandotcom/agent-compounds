@@ -3,7 +3,6 @@ name: ac-tidy
 description: 'Pipeline housekeeping — archive completed items, reconcile backlog/plans/beads, flag orphans, suggest consolidation. Triggers: ''tidy the pipeline'', ''clean up backlog'', ''reconcile plans and beads'', ''pipeline housekeeping''. For codebase code review/cleanup use ac-hygiene.'
 ---
 
-
 **You are the pipeline janitor.** Scan all three data stores, reconcile lifecycle state, archive completed work, flag orphans, suggest consolidation.
 
 ## Modes
@@ -102,21 +101,7 @@ Your lens (the reconciliation inputs to pull from the board):
 
 **Condition:** All tasks checked off (`- [x]`) OR frontmatter `status: complete`
 
-**Action:** Propose moving to `_backlog/_done/`:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "{count} backlog files appear complete. Archive them?",
-    header: "Archive Backlog",
-    multiSelect: true,
-    options: [
-      { label: "{filename}", description: "{checked}/{total} tasks done" },
-      ...
-    ]
-  }]
-)
-```
+**Action:** Propose moving to `_backlog/_done/` via `AskUserQuestion` — question: "{count} backlog files appear complete. Archive them?" · header: "Archive Backlog" · multiSelect: true · one option per file: label "{filename}", description "{checked}/{total} tasks done".
 
 For approved items:
 1. Update frontmatter: `status: complete`
@@ -131,23 +116,7 @@ For approved items:
 
 **Condition:** Plan frontmatter `status: beadified` OR plan is referenced by beads in `br` AND all those beads exist
 
-Plans that have been fully converted to beads are historical artifacts — beads are now the source of truth.
-
-**Action:** Propose moving to `_plans/_done/`:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "{count} plans have been beadified. Archive to _done/?",
-    header: "Archive Plans",
-    multiSelect: true,
-    options: [
-      { label: "{filename}", description: "Beadified — beads are the source of truth" },
-      ...
-    ]
-  }]
-)
-```
+**Action:** Propose moving to `_plans/_done/` via `AskUserQuestion` — question: "{count} plans have been beadified. Archive to _done/?" · header: "Archive Plans" · multiSelect: true · one option per plan: label "{filename}", description "Beadified — beads are the source of truth".
 
 For approved items:
 1. Update frontmatter: `status: done`
@@ -205,7 +174,7 @@ refinement_rounds: {count from Refinement Log, or 0}
 ---
 ```
 
-Report each inference for user awareness.
+Report each inference.
 
 **TaskUpdate("2e", completed)**
 **TaskUpdate("2f", in_progress)**
@@ -271,8 +240,8 @@ Scan active backlog files for merge opportunities:
 ### Stale Finding-Bead Pruning
 
 Finding beads (`qa-finding`, `review-finding`, `hygiene-finding` labels — see
-`skills/_shared/bead-conventions.md`) are the main inflation risk: the
-pipeline stages file them automatically. As janitor, ac-tidy is their pruner.
+`skills/_shared/bead-conventions.md`) inflate fastest — the pipeline stages
+file them automatically; ac-tidy is their pruner.
 
 ```bash
 br list --json --limit 1000 | jq -r '.issues[] | select(.labels // [] | (index("qa-finding") or index("review-finding") or index("hygiene-finding"))) | select(.status != "closed") | "\(.id) \(.status) \(.title)"'
