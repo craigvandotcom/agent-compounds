@@ -33,6 +33,15 @@
 app gets the entire registry (all skills + all agents) via `deploy.sh --all`. There is no
 selective per-app skill list anymore — availability is uniform.
 
+**Consumer requirement (2026-07-08):** every deploy target's `.claude/settings.json` must
+carry `"skillListingBudgetFraction": 0.02` — the full registry's model-invocable
+descriptions exceed Claude Code's default listing budget, and without the setting an app
+degrades to nondeterministic per-app description truncation. New apps inherit it by copying
+settings from an existing app (the standard bootstrap). The registry's own gate:
+`lint.sh` Check D / `validate-skill.sh --registry` (budget threshold coupled to this value
++ the invocation-graph rule — flags derived from the files, never memory; doctrine:
+`skills/skill-builder/references/token-economics.md`).
+
 **Auto-propagation:** `infra-sync.sh` runs `harness-sync.sh --all` daily (06:30): for root +
 each app in `infrastructure/ac-deploy-targets.list` it runs `deploy.sh --all` (the `.claude/`
 layer) and then projects that layer into every other harness home — `.agents/skills`

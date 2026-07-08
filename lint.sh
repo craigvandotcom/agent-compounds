@@ -512,6 +512,19 @@ for dir in "${CONSUMER_DIRS[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
+# Check D — Skill registry: description budget + invocation-graph rule
+# (validate-skill.sh --registry: total vs the deployed skillListingBudgetFraction
+#  budget, per-skill 1024-char cap, and the hard rule that no skill flagged
+#  disable-model-invocation is invoked from another skill's body. The graph is
+#  recomputed from the files on every run — never maintained by memory.)
+# ---------------------------------------------------------------------------
+echo "--- Check D: skill registry (budget + invocation graph) ---"
+check
+if ! bash "$AC_ROOT/skills/skill-builder/scripts/validate-skill.sh" --registry "$AC_ROOT/skills" > /tmp/ac-lint-registry.out 2>&1; then
+  fail "skill-registry validation (budget / >1024 desc / invocation-graph) — details: /tmp/ac-lint-registry.out"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
