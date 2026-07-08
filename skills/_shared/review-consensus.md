@@ -28,6 +28,19 @@ pick the better option and auto-apply.** Defer as `DESIGN_DECISION` only if the 
 Minor choices (spacing values, naming conventions, implementation style) → just pick the better
 one.
 
+## Conductor triage (final review of remaining items)
+
+After the cascade and any auto-fix pass, the conductor reviews each remaining item
+(NEEDS_DECISION + no-consensus findings) and classifies it:
+
+| Category | Criteria | Action |
+|---|---|---|
+| `AUTO_IMPLEMENT` | There is a clearly superior technical answer — better correctness, robustness, performance, or maintainability. The improvement is unambiguous. | Implement it now. |
+| `DESIGN_DECISION` | No objectively superior answer AND the choice would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing, naming, style) — just pick the better option and classify as `AUTO_IMPLEMENT`. | Defer to user. |
+| `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change (new abstractions, large refactors, architectural pivots) that constitutes a strategic commitment. | Defer to user with scope context. |
+
+**Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it. Only classify as `DESIGN_DECISION` when you genuinely cannot determine a superior option on engineering merit AND the impact is user-visible or development-transformative. Only classify as `SCOPE_ESCALATION` when the blast radius is transformative, not merely "more work."
+
 ## Deferred-finding lifecycle
 
 - **Single-reviewer Medium/Low, no cross-round match** → append to the consensus registry; do

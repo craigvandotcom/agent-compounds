@@ -58,23 +58,7 @@ Read `AGENTS.md > Project Commands` for the project's toolchain. Map to workflow
 | `CMD_FORMAT`    | AGENTS.md > Project Commands > Format |
 | `CMD_QUALITY`   | AGENTS.md > Project Commands > Quality gate |
 
-If AGENTS.md doesn't exist or is incomplete, fall back to auto-detection:
-
-```bash
-if [ -f "package.json" ]; then
-  if [ -f "pnpm-lock.yaml" ]; then PKG="pnpm"
-  elif [ -f "yarn.lock" ]; then PKG="yarn"
-  elif [ -f "bun.lockb" ]; then PKG="bun"
-  else PKG="npm"; fi
-  echo "Available scripts:"
-  grep -E '^\s+"[^"]+":' package.json | head -20
-fi
-
-if [ -f "Cargo.toml" ]; then echo "Rust: cargo test, cargo clippy, cargo build"; fi
-if [ -f "Makefile" ]; then echo "Makefile targets:"; grep -E '^[a-zA-Z_-]+:' Makefile | head -10; fi
-if [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then echo "Python project"; fi
-if [ -f "go.mod" ]; then echo "Go: go test ./..., go vet, go build"; fi
-```
+If AGENTS.md doesn't exist or is incomplete — i.e. the project is not the registry-standard Next.js/pnpm stack — read `references/stack-detection.md` and run its auto-detect probe.
 
 If a command doesn't exist for this project, set it to empty and skip in validation phases.
 
@@ -290,17 +274,16 @@ summary. Harness-agnostic: plain `python3`, stdlib only.
   a **performance** finding rated Critical/High whose evidence carries no quantified
   impact estimate (N × unit cost weighed against the operation's real budget) is
   DOWNGRADED to Medium and re-routed through the deferred/design-decision gate, with
-  the downgrade noted in the report. Perf severities are the least grounded — reviewers
-  pattern-match allocation/loop shapes without estimating magnitude (observed
-  2026-07-04: "Critical" on a ~sub-millisecond map copy whose own cited numbers
-  contradicted the rating, riding the cascade unchallenged). Correctness/security
-  severities are not subject to this check.
+  the downgrade noted in the report — perf severities are the least grounded (reviewers
+  pattern-match allocation/loop shapes without estimating magnitude; incident:
+  `references/incidents.md`). Correctness/security severities are not subject to this check.
 - **`deferred`** — single-reviewer Medium/Low, no consensus; the script has already carried them
   into `consensus-registry.json` for cross-round matching. **Apply the design-decision gate
   yourself** — the one judgment the script can't make: a choice with no objectively superior
   answer → pick the better option and move it into the change list; defer as `DESIGN_DECISION`
   (→ user in Phase 7) only if it **noticeably affects end-user experience** or **profoundly
   changes the development approach**. Minor choices (spacing, naming, style) → just pick the better one.
+  <!-- mirror: _shared/review-consensus.md §Design-decision gate — edit there first -->
 
 ### Produce Numbered Change List
 
@@ -353,11 +336,9 @@ Read the engineer's result file. Confirm:
 **TaskUpdate(task: "Phase 5", status: "in_progress")**
 
 Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
-risk using the shared classifier in `_shared/verification-gate.md` (Step 1). ac-review is a
-branch review, **not** the green-main boundary — the exhaustive run is the loop-close CI full
-`test:all` (parallel-execution doctrine §5) — so running a full FORMAT+LINT+TYPECHECK+TEST+BUILD
-battery on every wave (including docs-only ones) violates *proportional effort: incremental in
-the loop, exhaustive at the boundary*.
+risk using the shared classifier in `_shared/verification-gate.md` (Step 1) — ac-review is a
+branch review, **not** the green-main boundary (the exhaustive full-suite run is loop-close CI;
+rationale: `references/incidents.md`).
 
 ```bash
 {CMD_FORMAT}    # always (cheap)
@@ -466,6 +447,7 @@ Report auto-fix results and skip to Phase 8.
 | `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change (new abstractions, large refactors, architectural pivots) that constitutes a strategic commitment. | Defer to user with scope context. |
 
 **Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it. Only classify as `DESIGN_DECISION` when you genuinely cannot determine a superior option on engineering merit AND the impact is user-visible or development-transformative. Only classify as `SCOPE_ESCALATION` when the blast radius is transformative, not merely "more work."
+<!-- mirror: _shared/review-consensus.md §Conductor triage — edit there first -->
 
 ### Apply AUTO_IMPLEMENT Items
 
@@ -477,19 +459,12 @@ Log each with rationale: why this is a clear technical improvement, not a design
 
 **If no DESIGN_DECISION or SCOPE_ESCALATION items remain:** Skip to commit.
 
-**Exhaust rule (see `skills/_shared/bead-conventions.md`):** nothing actionable
-leaves this phase as prose. Before (or instead of) asking:
-
-- Confirmed defect, out of this wave's scope → `br create -t bug --labels review-finding`
-- Plausible-but-unverified concern an agent could chase → `br create -t investigation --labels review-finding`
-- Genuine taste/product/risk fork AND the user is not interactively present
-  (autonomous run) → `br create -t decision --labels human-gate` with a
-  pre-staged memo (context, options + trade-offs, recommendation), block any
-  dependent beads on it, and continue. AskUserQuestion is only for
-  synchronous forks with the user present.
-
-Apply the anti-inflation rules: dedupe via `br search` first; nits stay in
-the report.
+**Exhaust rule (see `skills/_shared/bead-conventions.md`): nothing actionable leaves
+this phase as prose.** Route by type before (or instead of) asking — confirmed defect,
+out of this wave's scope → `br create -t bug --labels review-finding`;
+plausible-but-unverified concern an agent could chase → `br create -t investigation
+--labels review-finding`; genuine taste/product/risk fork → `decision` (mechanics
+below). Dedupe via `br search` first; nits stay in the report.
 
 **Default (including all autonomous/headless runs): apply the Exhaust Rule.** Create a `decision` bead for each remaining item — do NOT ask:
 
@@ -649,15 +624,7 @@ rm -rf "$ARTIFACTS_DIR"
 
 ## When to Use This vs /ac-hygiene
 
-|            | `/ac-review`                            | `/ac-hygiene`                             |
-| ---------- | ----------------------------------------- | -------------------------------------- |
-| **Scope**  | Feature branch diff                       | Whole codebase                         |
-| **When**   | After `/ac-implement` or manual coding              | Between sessions, daily maintenance    |
-| **Agents** | 4 specialized Sonnet reviewers, 1-2 rounds | 3 Opus explorers, multi-round          |
-| **Fixes**  | Engineer sub-agent                        | Conductor applies directly             |
-| **Focus**  | Security, perf, arch, correctness         | Bugs, dead code, drift, health         |
-
-Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
+Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/daily maintenance, 3 Opus explorers multi-round (vs 4 Sonnet reviewers here), conductor fixes directly, hunts bugs/dead code/drift. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
 
 ---
 
