@@ -1,6 +1,5 @@
 ---
 name: ac-plan-refine-external
-disable-model-invocation: true
 description: 'Use to refine a HIGH-STAKES plan via 3–4 diverse EXTERNAL AI models through OpenRouter — catches architectural blind spots a single model misses. Triggers: ''refine external'', ''multi-model refine'', ''get other models to critique this plan'', ''external plan refinement''. Requires an existing plan and the openrouter CLI.'
 ---
 

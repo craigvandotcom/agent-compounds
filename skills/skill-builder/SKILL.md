@@ -54,11 +54,19 @@ The YAML `description` determines skill discovery. Must include:
 - Max 1024 characters, strongest trigger first (truncation happens at the tail)
 
 Descriptions are paid in EVERY session of every consuming app, and the total across all
-visible skills must fit the listing budget (~15k chars) or skills get **silently
-dropped**. Check with `validate-skill.sh --registry`; budget mechanics in
-`references/token-economics.md`. Skills only ever invoked by name (user command or
-pipeline orchestration) should set `disable-model-invocation: true` — zero standing
-cost.
+visible skills must fit the listing budget (default ~15k chars; this registry deploys
+`skillListingBudgetFraction: 0.02` ≈ 30k to its apps) — over budget, least-invoked
+skills lose their descriptions first and natural-language triggering degrades. Check
+with `validate-skill.sh --registry`; budget mechanics in
+`references/token-economics.md`.
+
+**The invocation-graph rule decides `disable-model-invocation` — never memory or budget
+pressure.** If ANY other skill invokes a skill (`/name` or "run `name`" in its body),
+it MUST stay model-invocable; only zero-inbound entry points (fired solely by a human
+or a `prompt_file` job) may flip. New skills default to model-invocable (the safe,
+cheap direction); flipping is an optimization ratified later. The graph is computed
+from the files by `validate-skill.sh --registry` every run — a flipped skill with
+inbound references is a hard FAIL.
 
 **CRITICAL: Descriptions must focus on WHEN (triggering conditions), NOT HOW (workflow summary).**
 
@@ -119,7 +127,7 @@ writing/refining descriptions, cutting from a skill, or auditing registry footpr
 
 Anthropic merged custom commands into skills: a `.claude/commands/x.md` and a `.claude/skills/x/SKILL.md` both create `/x`. So:
 
-- A **task skill** the user triggers like a slash command → set `disable-model-invocation: true` (manual-only, behaves exactly like the old command, plus `references/`).
+- A **task skill** the user triggers like a slash command → set `disable-model-invocation: true` (manual-only, behaves exactly like the old command, plus `references/`) — **but ONLY if no other skill invokes it**; the invocation-graph rule (§ Description is Critical) overrides this heuristic, and `validate-skill.sh --registry` enforces it.
 - A **reference skill** Claude should auto-apply when relevant → omit that field so the model can invoke it.
 
 Don't author new `.claude/commands/*.md` files — author skills.

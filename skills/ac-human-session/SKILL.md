@@ -1,6 +1,5 @@
 ---
 name: ac-human-session
-disable-model-invocation: true
 description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''.'
 ---
 

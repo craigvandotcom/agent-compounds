@@ -12,9 +12,15 @@
 #
 # Checks (--registry):
 # - Sum of all model-invocable descriptions vs the skill-listing budget
-#   (~15,000 chars measured; beyond it, least-used skills are SILENTLY DROPPED
-#   from Claude's awareness — see skill-builder references/token-economics.md).
+#   (default ~15,000 chars; raise via skillListingBudgetFraction in settings —
+#   over budget, least-invoked skills lose their descriptions first, degrading
+#   natural-language triggering — see skill-builder references/token-economics.md).
 #   Skills with disable-model-invocation: true are excluded (zero standing cost).
+# - INVOCATION-GRAPH RULE (hard fail): no skill flagged disable-model-invocation
+#   may be referenced as an invocation (/name, or run/invoke `name`) from another
+#   skill's files — a flipped skill is unreachable by the model, so such a
+#   reference is a broken chain. The graph is computed from the files every run;
+#   never classify a skill's flag from memory.
 
 set -e
 
@@ -49,8 +55,12 @@ if [ "$1" = "--registry" ]; then
         echo -e "${RED}❌ Error: Directory not found: $SKILLS_DIR${NC}"
         exit 1
     fi
-    BUDGET_FAIL=15000   # measured listing cliff (chars)
-    BUDGET_WARN=12000
+    # MUST track the deployed budget: skillListingBudgetFraction: 0.02 in every
+    # ac-deploy-target's .claude/settings.json (~2x the ~15k default). If an app
+    # lacks that setting, its real budget is ~15k — deploy the setting, don't
+    # shrink here. Raise both together, deliberately.
+    BUDGET_FAIL=30000
+    BUDGET_WARN=24000
     TOTAL=0; MANUAL=0; COUNT=0; OVER_1024=0
     ROWS=""
     for md in "$SKILLS_DIR"/*/SKILL.md; do
@@ -71,6 +81,30 @@ if [ "$1" = "--registry" ]; then
             OVER_1024=$((OVER_1024 + 1))
         fi
     done
+    # --- Invocation-graph check: flipped skills must have zero inbound invocation refs ---
+    GRAPH_VIOLATIONS=0
+    MANUAL_SKILLS=""
+    for md in "$SKILLS_DIR"/*/SKILL.md; do
+        [ -f "$md" ] || continue
+        fm=$(awk 'NR==1 && /^---[[:space:]]*$/ {f=1; next} f && /^---[[:space:]]*$/ {exit} f {print}' "$md")
+        if echo "$fm" | grep -q "^disable-model-invocation:[[:space:]]*true"; then
+            MANUAL_SKILLS="$MANUAL_SKILLS $(basename "$(dirname "$md")")"
+        fi
+    done
+    for name in $MANUAL_SKILLS; do
+        # invocation forms: /name (boundary-guarded), or run/invoke/use `name`
+        hits=$(grep -rnE "(/$name([^a-z0-9-]|\$))|([Rr]un(ning)? \`$name\`)|([Ii]nvoke \`$name\`)|([Uu]se \`$name\`)" \
+               "$SKILLS_DIR" --include="*.md" 2>/dev/null | grep -v "/$name/" || true)
+        if [ -n "$hits" ]; then
+            echo -e "${RED}❌ GRAPH: '$name' is flagged disable-model-invocation but is invoked from other skills:${NC}"
+            echo "$hits" | head -5 | sed 's/^/    /'
+            n_hits=$(echo "$hits" | wc -l | tr -d ' ')
+            [ "$n_hits" -gt 5 ] && echo "    ... and $((n_hits - 5)) more"
+            echo "    Fix: remove the flag (the graph says other skills reach it), or remove the references."
+            GRAPH_VIOLATIONS=$((GRAPH_VIOLATIONS + 1))
+        fi
+    done
+
     echo -e "${BLUE}📊 Registry description budget — $SKILLS_DIR${NC}"
     echo "  Model-invocable skills: $COUNT, total description chars: $TOTAL"
     echo "  (excluded manual-only skills: $MANUAL chars carry zero standing cost)"
@@ -78,16 +112,18 @@ if [ "$1" = "--registry" ]; then
     printf "$ROWS" | sort -rn | head -10 | awk '{printf "    %6d  %s\n", $1, $2}'
     echo ""
     if [ "$TOTAL" -gt "$BUDGET_FAIL" ]; then
-        echo -e "${RED}❌ FAIL: $TOTAL chars exceeds the ~$BUDGET_FAIL listing cliff — skills are likely being SILENTLY DROPPED in consuming sessions.${NC}"
-        echo "  Fix: trigger-only descriptions; disable-model-invocation: true on name-invoked skills."
+        echo -e "${RED}❌ FAIL: $TOTAL chars exceeds the ~$BUDGET_FAIL listing budget — least-invoked skills lose descriptions (degraded triggering) in consuming sessions.${NC}"
+        echo "  Fix: trigger-only descriptions; flip zero-inbound entry points; or raise skillListingBudgetFraction (and this threshold) deliberately."
         exit 1
     elif [ "$TOTAL" -gt "$BUDGET_WARN" ]; then
-        echo -e "${YELLOW}⚠️  WARNING: $TOTAL chars — within budget but close to the ~$BUDGET_FAIL cliff.${NC}"
+        echo -e "${YELLOW}⚠️  WARNING: $TOTAL chars — within budget but close to the ~$BUDGET_FAIL threshold.${NC}"
         [ "$OVER_1024" -gt 0 ] && exit 1
+        [ "$GRAPH_VIOLATIONS" -gt 0 ] && exit 1
         exit 0
     else
-        echo -e "${GREEN}✅ OK: $TOTAL chars within listing budget (~$BUDGET_FAIL cliff)${NC}"
+        echo -e "${GREEN}✅ OK: $TOTAL chars within listing budget (~$BUDGET_FAIL threshold)${NC}"
         [ "$OVER_1024" -gt 0 ] && exit 1
+        [ "$GRAPH_VIOLATIONS" -gt 0 ] && exit 1
         exit 0
     fi
 fi

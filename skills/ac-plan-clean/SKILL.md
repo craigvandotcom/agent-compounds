@@ -1,6 +1,5 @@
 ---
 name: ac-plan-clean
-disable-model-invocation: true
 description: 'Use to verify an EXISTING plan draft''s correctness, structure, and completeness — a 3-reviewer hygiene pass that applies targeted fixes, not a rewrite. Run as the final polish before beadifying. Triggers: ''clean the plan'', ''check the plan'', ''correctness pass on the plan'', ''plan clean''. Requires an existing plan file; to create a plan use ac-plan-init.'
 ---
 

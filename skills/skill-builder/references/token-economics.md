@@ -35,18 +35,32 @@ Consequences:
 |---|---|---|
 | `description` field | **1,024 chars max** (platform validation) | Rejected/truncated |
 | Per-skill listing entry | ~1,536 chars (description + when_to_use) | Silently truncated in the listing |
-| **Total skill-listing budget** | **~1% of context window; measured in practice at ~15,000 chars (~4k tokens)** | Least-used skills are **silently dropped from the listing — the model is told not to use unlisted skills, so an over-budget registry makes skills invisible.** The ultimate reliability failure: the skill never fires at all. |
+| **Total skill-listing budget** | **~1% of context window by default (~15,000 chars measured); configurable via `skillListingBudgetFraction` in settings.json** (this registry deploys 0.02 ≈ 30k to its apps) or `SLASH_COMMAND_TOOL_CHAR_BUDGET` env | Over budget: skill **names** stay listed, but **least-invoked skills lose their descriptions first** — natural-language auto-triggering degrades nondeterministically per app (each app truncates by its own usage history). `/doctor` reports shortened/dropped descriptions. (Older CLI versions dropped skills entirely — the harder failure.) |
 | Post-compaction re-attach | ~5k tokens per invoked skill, ~25k shared, most-recent-first | Older invoked skills silently dropped after compaction |
 
-**Registry rule:** the sum of all description lengths across every skill visible to a
-session must stay under the listing budget. Check with
-`validate-skill.sh --registry <skills-dir>`. Two levers when over budget:
+**Registry rule:** the sum of all model-invocable description lengths must stay under
+the configured listing budget. Check with `validate-skill.sh --registry <skills-dir>`
+(threshold coupled to the deployed `skillListingBudgetFraction`). Levers, in order:
 1. Trim descriptions to trigger-only form (§4).
-2. Set `disable-model-invocation: true` on skills only ever invoked by name (user
-   command or pipeline orchestration) — removes their description from context
-   entirely, zero standing cost, and frees budget so model-discoverable skills
-   reliably stay listed. Verify the invocation path still reaches the skill before
-   flipping this on an existing skill.
+2. **The invocation-graph rule** (learned 2026-07-08; convergent with mattpocock/skills
+   and EveryInc/compound-engineering, which arrived at it independently): a skill's
+   `disable-model-invocation` flag is decided by its position in the invocation graph,
+   NEVER by budget pressure or memory. **If any other skill invokes it (`/name` or
+   "run `name`" in a skill body), it MUST stay model-invocable** — a flipped skill is
+   absent from subagent listings and Skill-tool-blocked, so such a reference is a
+   broken chain. Only zero-inbound entry points (fired solely by a human slash command
+   or a scheduler `prompt_file` job, which reads the file directly) may flip. **New
+   skills default to model-invocable** — being listed is never incorrect, merely
+   ~100 tokens; flipping is an optimization ratified when the computed graph proves
+   zero inbound references. The graph is recomputed from the files on every
+   `--registry` run; violations are hard failures. The scanner is deliberately
+   conservative (advisory mentions count as references) — over-matching keeps a skill
+   listed, which errs safe.
+3. Raise `skillListingBudgetFraction` deliberately (update the validator threshold in
+   the same change — they must move together).
+4. Growth path beyond these: consolidate overlapping skills first; past ~70 skills,
+   per-app subset deployment (each app gets the skills it uses); semantic routers are
+   not worth it below ~100 skills (loses native auto-invocation).
 
 ## 3. The determinism framework — classify tokens by the failure they prevent
 

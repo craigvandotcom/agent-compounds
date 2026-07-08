@@ -1,6 +1,5 @@
 ---
 name: ac-pipeline
-disable-model-invocation: true
 description: 'DEPRECATED — superseded by `ac-loop` (runtime conductor) and `ac-pipeline-builder` (doctrine); kept for historical/archival reference only, its stage chain is stale. End-to-end engineering pipeline orchestrator — chains align → plan → beadify → implement → (land + review, either order) → merge with gates between stages. Single named goal, human gates at plan-approval and pre-merge. For unattended multi-item queue clearance use `ac-loop` instead — it now owns the triggers "run the pipeline", "take this from idea to merged", "ship this end to end", "/pipeline <goal>". Do not route live work here.'
 ---
 

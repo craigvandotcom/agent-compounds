@@ -1,6 +1,5 @@
 ---
 name: ac-hygiene
-disable-model-invocation: true
 description: 'Iterative codebase review — a 6-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes ride a hygiene branch → PR; deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''.'
 ---
 
