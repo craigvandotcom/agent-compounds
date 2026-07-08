@@ -164,8 +164,8 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wav
 
 **Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling new raw work in:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave-NNN` marker label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
-3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed")
+2. Unrefined beads that are **signed-off pipeline work** — from a loop-ready plan (`wave-NNN` marker label), OR part of a **beadified epic** (parent+children / shared epic label), OR traceable to a plan in `_plans/` *or* `_plans/_done/` → run `ac-bead-refine` then drive to merge (delegation: "ac-loop autonomous run, skip next-step question; return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — these are already in the pipeline; refine-and-finish them. A beadified epic outranks #3 (it's further along).
+3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed; return bead IDs created/refined + anything blocked, ≤200 words")
 4. Plan wave refined beads → Phase 2
 
 > **Orphans ship before prep** — `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, so a session that ends early (compaction / human override / iteration cap) still delivers the ready work if the cheap fixes go first.
@@ -234,7 +234,7 @@ If orphans exist:
    fi
    ```
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions:
-   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`). Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Report when complete — the loop advances to verify → review → merge."
+   > "Run ac-implement targeting all N orphan beads (IDs: `<list>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`). Skip the bead-count setup question — answer is pre-supplied. Wave branch is already `<WAVE>`. For baseline test failures: file a P1 bead and proceed (do not ask). Report when complete as a compact structured summary (≤400 words: beads shipped/closed with IDs, wave branch, gate outcomes, anything blocked) — the loop advances to verify → review → merge."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
 4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review on branch `<WAVE>`. This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
@@ -283,7 +283,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 1. **Pre-allocate wave branch (loop's job)** — same logic as Phase 1 step 1. If a wave is already open from the orphan pass, join it. Single-branch rule: never create a second wave while one is open.
 2. **Invoke `ac-implement`** with delegation prompt:
-   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Report when complete — the loop advances to verify → review → merge."
+   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (wave label: `<wave-label>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Wave branch is `<WAVE>`. Baseline test failures: file P1 bead and proceed. Report when complete as a compact structured summary (≤400 words: beads shipped/closed with IDs, wave branch, gate outcomes, anything blocked) — the loop advances to verify → review → merge."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the wave diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review on branch `<WAVE>` (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
