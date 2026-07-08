@@ -33,11 +33,11 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 git status --short
 ```
 
-If uncommitted changes exist, review them and commit in logical groups before proceeding. The goal is granular checkpoints — every commit is a revert point. Group related changes together (e.g., plan updates in one commit, script changes in another). If anything looks like a red flag (unexpected deletions, sensitive files), flag it to the user before committing. Almost always, the right action is to commit — not stash, not ignore.
+If uncommitted changes exist, review them and commit in logical groups before proceeding. The goal is granular checkpoints — every commit is a revert point. Group related changes together (e.g., plan updates in one commit, script changes in another). If anything looks like a red flag (unexpected deletions, sensitive files), flag it to the user before committing. Almost always, the right action is to commit — not stash, not ignore. Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked and proceed.
 
 **Do NOT start bead-work with a dirty working tree.** Engineers see all uncommitted files in their context and may inadvertently include unrelated changes in their diffs, forcing manual selective staging.
 
-**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** A `stash pop` can surface pre-existing stash entries from other branches and write merge-conflict markers into files unrelated to the current session, forcing manual cleanup. Concrete incident (2026-04-08 wave/structured-modifiers session): `git stash && pnpm test && git stash pop` found nothing to save, then popped an unrelated stash entry from another branch and corrupted an unrelated plan file. If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` or just commit the work first — stash is not a reversible tool in a multi-branch workflow.
+**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** A `stash pop` can surface pre-existing stash entries from other branches and write merge-conflict markers into files unrelated to the current session (incident: stash-corruption — `references/incidents.md`). If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` or just commit the work first — stash is not a reversible tool in a multi-branch workflow.
 
 ### Verify Refined Beads Exist
 
@@ -80,25 +80,18 @@ REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)
   git checkout "$WAVE" && git pull --rebase
   ```
 
-- **No wave exists anywhere:** create the next numbered wave. Compute the next 3-digit counter
-  from the highest-EVER wave number — live refs ∪ merge messages on main ∪ tags, not refs alone
-  (`git fetch --prune` drops merged waves' refs, so a refs-only scan reuses a shipped number —
-  hit 2026-06-26, produced a triple wave/001 collision):
+- **No wave exists anywhere:** create the next numbered wave:
   ```bash
-  HIGHEST=$( { git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/wave/;
-               git log origin/main --oneline | grep -oE 'wave/[0-9]{3}' | cut -d/ -f2;
-               git tag -l 'wave/*' | cut -d/ -f2; } \
-             | grep -oE '^[0-9]{3}$' | sort -n | tail -1)
-  NEXT=$(printf "%03d" $(( ${HIGHEST:-000} + 1 )))
-  # Guard: never reuse a number that ever existed in history.
-  git log origin/main --oneline | grep -q "wave/$NEXT" && { echo "collision: wave/$NEXT already in history"; exit 1; }
-  git checkout -b "wave/$NEXT" main
-  git push -u origin "wave/$NEXT"
+  bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/allocate-wave-branch.sh"
   ```
+  Computes the next 3-digit counter from the highest-EVER wave number — live refs ∪ merge
+  messages on main ∪ tags, not refs alone (`git fetch --prune` drops merged waves' refs, so a
+  refs-only scan reuses a shipped number — incident: wave-collision — `references/incidents.md`);
+  hard-fails with exit 1 if `wave/NNN` already appears in main's history (never auto-increments
+  past a collision); on success creates `wave/NNN` from main, pushes with upstream set, and
+  prints the new branch name.
 
 - **Multiple waves found (defensive guard):** STOP and surface to user. The single-branch rule was violated upstream — let the user decide which to keep before claiming any beads.
-
-Trunk-based: `/ac-merge` ships the wave to main and bumps the app version based on the commits.
 
 > **Migration note (2026-05-19→):** the previous thematic naming (`wave/<feature-name>`) is being phased out. Pre-existing thematic waves finish under their current names; only newly created waves use `wave/NNN`. Once the current open wave merges, all subsequent waves follow `wave/NNN` exclusively. Do NOT propose renaming an in-flight thematic wave — let it complete naturally.
 
@@ -107,6 +100,7 @@ Trunk-based: `/ac-merge` ships the wave to main and bumps the app version based 
 ```
 mcp__mcp-agent-mail__install_precommit_guard(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   code_repo_path: PROJECT_ROOT
 )
 ```
@@ -148,7 +142,7 @@ fi
   app has no full-test CI gate) → run the full suite once locally to establish the baseline:
   `pnpm test:all 2>&1 | tail -20`.
 
-**Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them. Concrete prior incident (2026-05-14 wave/curator): conductor recorded `13 failed across 3 files (3 known-pre-existing)` in progress.md and proceeded silently; user pushed back hard at land time ("why do we have failures? we should have none — why were they not addressed? and why do you persist in not addressing them?"). The 13 failures sorted into two clearly fixable buckets (env-override gap → production rate-limit, and schema-drift after migration rename) — neither was a mystery, both had deterministic fix paths. The "pre-existing = OK" framing collapsed under user scrutiny.
+**Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them — silent absorption removes the user's opportunity to catch real regressions dressed as "known" debt (incident: baseline-preexisting — `references/incidents.md`).
 
 Behavior:
 
@@ -159,16 +153,7 @@ Behavior:
   - 1-line root-cause hypothesis if obvious
   - Whether the file overlaps the session's target bead scope
 
-  Then surface to the user via `AskUserQuestion`:
-
-  ```
-  question: "Baseline test run shows N failures across M files: <one-line summary per file>. How to handle?"
-  options:
-    - "File P1 follow-up bead now and proceed" — captures debt, doesn't block session (recommended for >5 failures or substantive schema-drift)
-    - "Fix first as a pre-bead commit" — pause session, fix, re-baseline (recommended for ≤2 quick wins like env-override toggles)
-    - "Proceed without filing — I have an existing bead tracking these" — explicit acknowledgment; user MUST cite the bead ID
-    - "Stop and let me investigate" — abort session
-  ```
+  Then surface to the user via `AskUserQuestion` — Ask: "Baseline test run shows N failures across M files: <one-line summary per file>. How to handle?" — options: "File P1 follow-up bead now and proceed" (captures debt, doesn't block session (recommended for >5 failures or substantive schema-drift)) / "Fix first as a pre-bead commit" (pause session, fix, re-baseline (recommended for ≤2 quick wins like env-override toggles)) / "Proceed without filing — I have an existing bead tracking these" (explicit acknowledgment; user MUST cite the bead ID) / "Stop and let me investigate" (abort session).
 
   Record the user's decision (and any cited bead ID) in progress.md header. Do NOT proceed silently.
 
@@ -194,7 +179,7 @@ Ask one question via `AskUserQuestion`:
 TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
 # Deterministic dir keyed on the wave slug (+ RUN_ID for parallel same-wave sessions).
-# Contract: _shared/run-id.md. Stable across compaction; ac-land lands this same path.
+# Contract: _shared/run-id.md. ac-land lands this same path.
 WAVE_SLUG=$(git branch --show-current | tr '/' '-')
 ARTIFACTS_DIR="/tmp/bead-work-${WAVE_SLUG}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-wave-004
 ```
@@ -205,13 +190,22 @@ Register a unique identity for this implement session — used for file reservat
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+  human_key: CANONICAL_PROJECT_KEY,   // NOTE: this tool takes human_key (other agent-mail tools take project_key) — the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   program: "claude-code",
   model: "claude-opus-4-8"
 )
 ```
 
 Capture the returned `name` field:
+> **Two call-scoped facts (shakedown-verified 2026-07-08):** (1) also capture the
+> returned `registration_token` — `file_reservation_paths`, `release_file_reservations`,
+> and `send_message` REQUIRE it (as `registration_token`/`sender_token`) unless this MCP
+> session already authenticated as the agent; carry it through every Agent Mail call.
+> (2) `export` lives only in the bash call that ran it — every later bash call is a
+> fresh shell, so re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
+> SAME call as each `git commit`/`git push`, or the guard will treat you as anonymous
+> and block against your own reservation.
 
 ```bash
 # Export so the pre-commit guard reads AGENT_NAME and WORKTREES_ENABLED at commit time
@@ -269,9 +263,7 @@ If `$ARTIFACTS_DIR/` was deleted and recreated mid-session (e.g., by a partial b
 git branch --show-current
 ```
 
-If the branch is NOT the wave branch you started on, STOP. Do not silently `git checkout` back (that would clobber the other session's work). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — single-branch-per-wave is a deliberate convention here; spawning a worktree forks the wave state.
-
-Concrete prior incident (2026-05-09 wave/research-curator-prereqs / between bd-nxtl and bd-yvhn): conductor's spawned engineer detected the branch had flipped to `wave/loading-coherence` mid-session. Engineer correctly aborted; conductor wasted ~15 min recovering by inappropriately creating a worktree. Re-verifying branch in Phase 1a (this step) eliminates the failure mode entirely.
+If the branch is NOT the wave branch you started on, STOP. Do not silently `git checkout` back (that would clobber the other session's work). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — single-branch-per-wave is a deliberate convention here; spawning a worktree forks the wave state (incident: worktree-drift — `references/incidents.md`).
 
 ```bash
 bv --robot-next
@@ -279,13 +271,13 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
-> ⚠️ **The claim command robot-next prints uses `bd`, but this repo's binary is `br`.** `bv --robot-next` emits `bd update <id> --status=in_progress`; running it verbatim fails with `command not found: bd`. Translate to **`br update <id> --status=in_progress`**. (Incident 2026-06-12 wave/004: ran the emitted `bd` command, hit the error, re-ran with `br` — one wasted round-trip.)
+> ⚠️ **The claim command robot-next prints uses `bd`, but this repo's binary is `br`.** `bv --robot-next` emits `bd update <id> --status=in_progress`; running it verbatim fails with `command not found: bd`. Translate to **`br update <id> --status=in_progress`** (incident: bd-br-translation — `references/incidents.md`).
 
 **Guard: verify the selected bead carries `refined` and is not human-gated.** Readiness is presence of `refined`, not absence of `unrefined`. Check the bead's labels — if it lacks `refined`, or has `human-gate`, skip it and pick the next one:
 
 ```bash
 # Check the selected bead's labels: must have refined, must not have human-gate
-br show <id> --json | jq '.labels | ((index("refined") | not) or index("human-gate"))'
+br show <id> --json | jq '.[0].labels | ((index("refined") | not) or index("human-gate"))'
 ```
 
 If the bead is not `refined`:
@@ -300,14 +292,13 @@ If the bead is not `refined`:
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   agent_name: AGENT_NAME,
   paths: ["<files listed in bead spec>"],
   ttl_seconds: 7200,
   exclusive: true
 )
 ```
-
-> **Parallel sessions on the same wave:** Each `/ac-implement` session calls `macro_start_session` independently and receives a distinct adjective+noun as `AGENT_NAME` — no manual discriminators needed. The pre-commit guard enforces reservations at commit time regardless.
 
 On `FILE_RESERVATION_CONFLICT`:
 1. Do NOT claim it
@@ -331,9 +322,7 @@ If the bead requires absent infrastructure:
 1. Do NOT claim it
 2. Add a comment via `br comments add <id> "Env-blocked: <reason>. Needs <required-env> or a /ac-bead-refine round to pick an alternative path."`
 3. Get the next candidate from `br ready --json`
-4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it.
-
-Concrete prior incident (2026-05-15 wave/v1-bootstrap): conductor claimed `owr.3` (P0) before recognising its spec called for `supabase migration up --local` against a local stack that doesn't exist on the project. One of the session's 8 bead slots was consumed before the env mismatch surfaced. Separately, `bv --robot-next` repeatedly recommended `n6a.2` whose remaining ACs are Mac-only — conductor had to manually filter via `br ready --json` jq each Phase 1a loop, ~4–6 min wasted across the session.
+4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it. (incident: env-blocked-claims — `references/incidents.md`)
 
 **Once a refined, conflict-free, env-supported bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
@@ -352,7 +341,7 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 ### Phase 1b: Identify Skills + Spawn Engineer Sub-Agent
 
-**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Bead specs go stale between refine and implement — refine verifies against the codebase as of ITS run, and intervening beads invalidate claims. Concrete cost (2026-06-12 session, 10-bead env-mac run): fwb's spec ordered deletion of the entire dead scoring layer — impossible for 2 of its 3 sublayers (no live web twin existed; ~30 min engineer detour); 081.12's spec said "PluginHostSmokeTests currently has 2 UIDevice tests — extend it" — the file did not exist at all. Both were non-E9 beads; do this for every bead, not just ones the native-testing skill flags.
+**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Bead specs go stale between refine and implement — refine verifies against the codebase as of ITS run, and intervening beads invalidate claims (incident: stale-spec-claims — `references/incidents.md`). Do this for every bead, not just ones the native-testing skill flags.
 
 **Engineering skill first (conductor's job):** Before identifying domain skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps this is `capacitor` (`capacitor/SKILL.md`). Include it in the engineer prompt for any bead touching UI, navigation, data fetching, auth, storage, lifecycle, or build.
 
@@ -383,7 +372,7 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
    - E2e: `pnpm playwright test tests/e2e/<spec>.spec.ts --reporter=line`
    - Bundle exclusion: `pnpm build && pnpm verify:no-scripted` (fresh build, not cached `.next/`)
 
-   These two claim types had a 2/2 false-green rate on first engineer rounds (2026-06-10 session: s1p.1 bundle claim, s1p.2 e2e claims — both caught only by conductor re-runs, ~75 min combined re-spawn cost). Do NOT approve until you have personally observed green output.
+   These two claim types had a 2/2 false-green rate on first engineer rounds (incident: false-green-claims — `references/incidents.md`). Do NOT approve until you have personally observed green output.
 
 2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
 
@@ -425,7 +414,7 @@ UI validation is deferred to `/ac-land` where it runs once for the entire sessio
 
 ### Phase 1d: Commit + Close Bead
 
-**Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** A second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` (see commit `f64db219` in wave/app-first-feel history for the canonical incident). Pathspec commits are atomic and self-documenting — there's no window between staging and committing where state can drift.
+**Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** A second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` (incident: staged-sweep — `references/incidents.md`). Pathspec commits are atomic and self-documenting — there's no window between staging and committing where state can drift.
 
 ```bash
 git commit -m "feat(<scope>): <bead title>
@@ -444,11 +433,9 @@ For many files at once, globs work in the pathspec: `git commit -m "..." -- 'fea
 > git add path/to/new-file.ts
 > git commit -m "..." -- path/to/new-file.ts
 > ```
-> Concrete cost (wave/001, bd-al8p.8): the new `ci-hygiene.test.ts` failed its pathspec commit; the `br close` in the SAME bash block then ran anyway and closed the bead before any commit landed.
+> (incident: untracked-pathspec-close — `references/incidents.md`)
 >
 > **NEVER put `br close` in the same bash block as the `git commit`.** Bash continues past a failed commit, so a chained `br close` closes the bead in the tracker with no matching commit — a silent correctness hazard. Run the commit in one call, verify it landed (`git log --oneline -1` shows your commit, or check `$?`), then `br close` in a separate call.
-
-> Note: pathspec commits bypass `lint-staged` (which hooks the index). This repo's `lint-staged` config has been a no-op in practice — every commit this session reported "could not find any staged files matching configured tasks" — so practical impact is zero. The pre-push `pnpm build` hook still runs on the committed snapshot regardless.
 
 Push after every bead commit prevents stranded work if the session crashes before bead-land.
 
@@ -465,6 +452,7 @@ Release the file reservation using the **same paths reserved in Phase 1a** (the 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
   project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
+                                        # mirror: _shared/agent-identity.md — edit there first
   agent_name: AGENT_NAME,
   paths: ["<same paths passed to file_reservation_paths in Phase 1a>"]
 )
@@ -536,26 +524,9 @@ nothing else will run the full suite.
 
 ### Next Steps
 
-**Run `/ac-review` next (recommended).** `/ac-review` is the sole pre-merge gate — it must complete before `/ac-merge`. `/ac-land` is NOT a pre-merge gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has merged to main.
+**Run `/ac-review` next (recommended).** `/ac-review` is the sole pre-merge gate — it must complete before `/ac-merge`. `/ac-land` is NOT a pre-merge gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has merged to main — run it manually when not driven by `/ac-loop`. Do NOT run `/ac-merge` until review has completed. Do NOT run `/ac-land` before merge — it has nothing to close out yet.
 
-**Pipeline context:** `→ /ac-review → /ac-merge; run /ac-land manually after merge when not driven by /ac-loop.` Do NOT run `/ac-merge` until review has completed. Do NOT run `/ac-land` before merge — it has nothing to close out yet.
-
-**Present next step with `AskUserQuestion`:**
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?",
-    header: "Next step",
-    multiSelect: false,
-    options: [
-      { label: "Review branch (Recommended)", description: "Run /ac-review — the pre-merge gate. Then /ac-merge." },
-      { label: "Continue implementing", description: "Run /ac-implement again for more beads (review + merge later)" },
-      { label: "Done for now", description: "Stop here — remember to run /ac-review then /ac-merge before closing; /ac-land runs after merge" }
-    ]
-  }]
-)
-```
+**Present next step with `AskUserQuestion`** — Ask (header: "Next step", single-select): "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?" — options: "Review branch (Recommended)" (Run /ac-review — the pre-merge gate. Then /ac-merge.) / "Continue implementing" (Run /ac-implement again for more beads (review + merge later)) / "Done for now" (Stop here — remember to run /ac-review then /ac-merge before closing; /ac-land runs after merge).
 
 **TaskUpdate(task: "FINAL: Session summary + quality gate ({TARGET_BEADS} beads total)", status: "completed")**
 
@@ -568,12 +539,7 @@ Terminal 1: /ac-implement   → "target 5 beads"
 Terminal 2: /ac-implement   → "target 5 beads"
 ```
 
-This skill is parallel-by-design — no mode switch needed:
-
-- Both sessions join the **same wave branch** (single-branch rule — never create a second wave)
-- Agent Mail file reservations (Phase 1a) prevent file-level conflicts; the pre-commit guard (Phase 0) enforces them at commit time
-- Pathspec commits (`git commit -- <pathspec>`) keep each session's scope isolated
-- Wave-branch-named `ARTIFACTS_DIR` is per-wave, not per-session — parallel sessions share it, but progress.md is append-only and result files are per-bead, so no collision
+This skill is parallel-by-design — no mode switch needed: the mechanics above already handle it (single wave branch · Phase 1a reservations + Phase 0 pre-commit guard · pathspec commits · shared per-wave `ARTIFACTS_DIR` with append-only progress.md and per-bead result files).
 
 `bv --robot-next` is global-priority, not wave-aware; conductor must filter to the wave's labels OR pick from a different epic when the wave's chain is sequentially gated.
 
@@ -583,17 +549,6 @@ Pre-push `pnpm build` reads the working tree — another session's uncommitted W
 
 ## Remember
 
-- **Single-branch rule** — always exactly one active `wave/*` branch in this repo. If one exists, join it. Never create a second wave while one is open. New waves use `wave/NNN` (3-digit counter); thematic names are legacy only.
-- **YOU review, YOU commit** — engineers implement, you verify
-- **Be extremely strict** — bead must be fully complete before moving on
-- **Minor fixes: do them yourself. Major gaps: re-spawn engineer.**
-- **Temp files survive compaction** — re-derive `ARTIFACTS_DIR` from `git branch --show-current | tr '/' '-'` if lost
-- **Progress file is compaction recovery** — parse it on restart for TARGET_BEADS; count COMPLETE entries for BEADS_COMPLETED
-- **Per-bead: tests + type-check + lint. Full quality gate at session end.**
-- **UI validation runs once at session end** (in bead-land) — not per-bead
-- **No new code without new tests** — verify engineer wrote tests before approving
-- **"Bead X of N" task naming prevents drift** — the task list IS the stop condition
-
----
-
-_Bead work: sequential implementation with quality gates. For bead prep: `/ac-beadify` → `/ac-bead-refine`. After implementing: `/ac-land` (session closure) + `/ac-review` (branch review), both before `/ac-merge`._
+- **One active `wave/*` branch, ever** — join it if it exists, never create a second; new waves are `wave/NNN` (thematic names legacy only). Engineers implement; **YOU review, YOU commit** — be extremely strict, a bead must be fully complete before moving on. Minor fixes: do them yourself; major gaps: re-spawn the engineer.
+- **Compaction recovery** — progress.md is the state: parse its header for TARGET_BEADS, count COMPLETE entries for BEADS_COMPLETED; re-derive `ARTIFACTS_DIR` from `git branch --show-current | tr '/' '-'` if lost. "Bead X of N" task naming prevents drift — the task list IS the stop condition.
+- **Quality cadence** — per-bead: tests + type-check + lint, and no new code without new tests (verify the engineer wrote them before approving); full quality gate at session end; UI validation runs once at session end (in bead-land), not per-bead.
