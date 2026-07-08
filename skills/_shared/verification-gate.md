@@ -198,4 +198,21 @@ Verify stage proves the pre-land code at gate-selected depth; ac-merge re-proves
 post-rebase code at smoke (a rebase can change what merges). If a fresh gate-selected
 PASS exists for the current `HEAD` SHA, ac-merge's net may note-and-skip; otherwise it
 runs smoke. Both read this file so the classifier never forks.
-```
+
+---
+
+## Format-first gate
+
+**Canonical home for the format-first rule.** Consumers (`ac-merge`, `ac-hygiene`,
+`ac-implement`, `ac-land`) carry the rule + a one-clause why and mirror-mark this
+section — edit here first, then propagate.
+
+**Format is the first step of every local quality gate, and it AUTO-FIXES.** CI's
+Quality Gate runs `prettier --check .` over the whole repo as its *first* step; a
+single unformatted file — even one you didn't touch that was already red on `main` —
+fails the entire gate ~10 min into CI. Running `pnpm format` locally makes that
+impossible for sub-second cost; if it rewrites pre-existing files, commit the
+formatting (you're repairing a gate CI was already failing). Also **commit without
+`--no-verify`** — the pre-commit `lint-staged` hook auto-formats staged files; only
+the *push* uses `--no-verify` (to skip the heavy pre-push build). Never let CI catch
+a formatting miss.

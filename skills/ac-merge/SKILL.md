@@ -4,9 +4,9 @@ description: 'The single merge-to-main path for ANY branch — feature wave or c
 ---
 
 
-**You are the conductor closing out a branch — feature wave or chore/hygiene.** Create the PR, wait for CI and agent feedback, triage and fix issues, merge when clean.
+**You are the conductor closing out a branch — feature wave or chore/hygiene.** Create the PR, wait for CI and agent feedback, triage and fix, merge when clean.
 
-For a feature wave, run after `/ac-review` has completed — review is the pre-merge gate for waves (chore/hygiene branches are self-reviewed and skip it). `/ac-land` runs AFTER this merge, as session closure. This is per-branch (not per-session like bead-land).
+Feature waves run after `/ac-review` (the pre-merge gate for waves); chore/hygiene branches are self-reviewed and skip it. `/ac-land` runs AFTER this merge, as session closure. Per-branch, not per-session (contrast: bead-land).
 
 ---
 
@@ -84,17 +84,17 @@ git rebase origin/main
 # Run project quality gate (see AGENTS.md > Project Commands > Quality gate).
 # Order MIRRORS CI: format FIRST + auto-fix, then type-check, lint, tests.
 #   format (auto-fix, e.g. `pnpm format` = prettier --write .)   <- pre-empts CI's `prettier --check .`
+# mirror: _shared/verification-gate.md §Format-first
 #   + type-check + lint + tests
 ```
 
-**Format is the first step and it AUTO-FIXES.** CI's Quality Gate runs `prettier --check .`
-over the whole repo as its *first* step; a single unformatted file — even one you didn't
-touch that was already red on `main` — fails the entire gate ~10 min into CI. Running
-`pnpm format` locally makes that impossible for sub-second cost; if it rewrites pre-existing
-files, commit the formatting (you're repairing a gate CI was already failing). Also **commit
-without `--no-verify`** — the pre-commit `lint-staged` hook auto-formats staged files; only
-the *push* uses `--no-verify` (to skip the heavy pre-push build). Never let CI catch a
-formatting miss.
+**Format is the first step and it AUTO-FIXES** — CI runs `prettier --check .` repo-wide as
+its *first* step, so any unformatted file (even one already red on `main`) fails the whole
+gate; if `pnpm format` rewrites pre-existing files, commit the formatting (you're repairing
+a gate CI was already failing). **Commit without `--no-verify`** — the pre-commit
+`lint-staged` hook auto-formats staged files; only the *push* uses `--no-verify` (to skip
+the heavy pre-push build). Never let CI catch a formatting miss.
+<!-- mirror: _shared/verification-gate.md §Format-first — edit there first -->
 
 **If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
 
@@ -113,6 +113,8 @@ exists for the current `HEAD` SHA, note-and-skip; otherwise run the smoke pass b
 > greps in sync with it (or, when editing, lift the classification there and reference it).
 > Note: this net covers the **QA twins** only; `ac-ui-polish` is a Verify-stage pass, not
 > re-run at merge.
+
+<!-- mirror: _shared/verification-gate.md §Step 1 — classify the diff — edit there first -->
 
 Hybrid/native apps only. Runs the post-rebase state — the thing that actually merges.
 Three conditions, all must hold; otherwise skip silently:
@@ -205,23 +207,10 @@ rule), do NOT bump; carry the current version forward unchanged. There is no oth
 
 **Interactive human-run merge only:** if a human is running this skill directly
 (not via `ac-loop` / `ac-hygiene` delegation) and wants to override the default,
-offer the choice explicitly — otherwise skip straight to applying `patch`:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Bump v{CURRENT_VERSION} → patch (default)? Choose minor/major only for a deliberate milestone, or skip if frozen.",
-    header: "Version bump",
-    multiSelect: false,
-    options: [
-      { label: "patch (Recommended)", description: "Default for EVERY merge — fixes, features, and chores alike. App version is a build number, not a library API contract." },
-      { label: "minor", description: "Explicit opt-in only — a deliberate feature-milestone release you are choosing now." },
-      { label: "major", description: "Explicit opt-in only — a deliberate, announced breaking/milestone release." },
-      { label: "skip — freeze the version", description: "Only for a standing freeze (e.g. an App Store submission in review). Don't touch package.json." }
-    ]
-  }]
-)
-```
+offer the choice explicitly — otherwise skip straight to applying `patch`. The exact
+`AskUserQuestion` spec (verbatim option set — do not paraphrase it):
+`references/version-bump-interactive.md`. Read it in interactive mode only — when
+NOT running under a delegation prompt that pre-answers the bump.
 
 Apply the chosen bump (unless frozen/skipped):
 
@@ -287,6 +276,8 @@ git push --force-with-lease
 ```
 
 ### Ask About CI/Agent Reviews
+
+**Delegation reception:** when the delegation prompt supplies a cached CI config (e.g. `ac-loop` passes "CI config for this project: <cached-answer>"), skip the question below and use the supplied answer as `WAIT_FOR_FEEDBACK`.
 
 ```
 AskUserQuestion(
@@ -471,6 +462,7 @@ that won't be acted on in this merge leaves as a typed bead, not a skipped
 list item — `-t bug`/`-t investigation` with `--labels review-finding`, or
 `-t decision --labels human-gate` (pre-staged memo) for taste/product forks
 when running autonomously. Don't block the merge on non-blocking exhaust.
+<!-- mirror: _shared/bead-conventions.md — edit there first -->
 
 **If uncertain items remain:**
 
@@ -615,10 +607,9 @@ vercel ls <project> 2>/dev/null | head -5   # latest deployment: ● Ready or �
   cause). Do not close the session claiming "shipped."
 - No Vercel project → skip silently.
 
-> Why: a broken main build fails silently on Vercel — prod just keeps serving the last
-> good build, with no alert. simil8's prod was frozen for ~447 days this way
-> (react-virtuoso never added to package.json; every build since March 2025 failed;
-> nobody knew). Evidence: simil8/memory/auto/simil8-vercel-production-frontend.md.
+> Why: a broken main build fails silently on Vercel — no alert, prod just keeps serving
+> the last good build (simil8's prod was frozen ~447 days this way — full incident:
+> `references/incidents.md`).
 
 **Native (iOS) build — the same boundary, the same check.** If the app's merge to main ALSO
 triggers a native build (Xcode Cloud archive on push, or a self-hosted-runner release lane),
@@ -639,7 +630,7 @@ workflow) and must COMPLETE (else assume failed).
   never reaches TestFlight (BCA's Xcode Cloud archive is exactly this). CORE/distribution.md
   must say which it is; when it's health-check-only, report "archive health-check green — no
   TestFlight build produced; ship via the app's release lane" instead of implying a shippable
-  build exists (the wording that cost BCA an evening, 2026-07-02).
+  build exists — a wrong wording here caused the BCA 2026-07-02 incident (`references/incidents.md`).
 - No native-build-on-merge → skip silently.
 
 Mark ledger task 9 `completed`; `TaskUpdate` task 10 `in_progress`.
