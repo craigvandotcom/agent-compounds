@@ -395,7 +395,7 @@ done
 check
 D6_BAD=$(grep -hn "pre-merge gate" "$AC_ROOT/skills/ac-implement/SKILL.md" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null \
   | grep -i "land" \
-  | grep -vi "NOT a pre-merge gate\|sole pre-merge gate" || true)
+  | grep -vi "NOT a pre-merge gate\|sole pre-merge gate\|review is the pre-merge gate\|runs AFTER" || true)
 if [ -n "$D6_BAD" ]; then
   fail "D6: stale 'land is a pre-merge gate' claim found: $D6_BAD"
 fi
@@ -454,10 +454,12 @@ if ! grep -q "fast-forward-equivalent" "$AC_ROOT/skills/ac-distribute/SKILL.md" 
   fail "G4: skills/ac-distribute/SKILL.md missing the fast-forward-equivalent QA-freshness rule"
 fi
 
-# G5: VERDICT-read step present in ac-merge
+# G5: VERDICT-read step present in ac-loop (moved there by the universal-merge
+# refactor 432517e — the loop reads ac-review's VERDICT before invoking ac-merge;
+# ac-merge itself no longer performs the read)
 check
-if ! grep -q "VERDICT: APPROVED" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null; then
-  fail "G5: skills/ac-merge/SKILL.md missing the VERDICT: APPROVED read step"
+if ! grep -q "VERDICT" "$AC_ROOT/skills/ac-loop/SKILL.md" 2>/dev/null; then
+  fail "G5: skills/ac-loop/SKILL.md missing the VERDICT read step (review->merge gate)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -512,16 +514,16 @@ for dir in "${CONSUMER_DIRS[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Check D — Skill registry: description budget + invocation-graph rule
+# Check 13 — Skill registry: description budget + invocation-graph rule
 # (validate-skill.sh --registry: total vs the deployed skillListingBudgetFraction
 #  budget, per-skill 1024-char cap, and the hard rule that no skill flagged
 #  disable-model-invocation is invoked from another skill's body. The graph is
 #  recomputed from the files on every run — never maintained by memory.)
 # ---------------------------------------------------------------------------
-echo "--- Check D: skill registry (budget + invocation graph) ---"
+echo "--- Check 13: skill registry (budget + invocation graph) ---"
 check
 if ! bash "$AC_ROOT/skills/skill-builder/scripts/validate-skill.sh" --registry "$AC_ROOT/skills" > /tmp/ac-lint-registry.out 2>&1; then
-  fail "skill-registry validation (budget / >1024 desc / invocation-graph) — details: /tmp/ac-lint-registry.out"
+  fail "Check 13: skill-registry validation (budget / >1024 desc / invocation-graph) — details: /tmp/ac-lint-registry.out"
 fi
 
 # ---------------------------------------------------------------------------
