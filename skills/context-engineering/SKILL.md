@@ -125,7 +125,7 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
 |---|---|---|
 | **L0 — Identity** | root `AGENTS.md` (canonical; read natively by Codex/Droid/Pi) + thin shims for harnesses that need one (`CLAUDE.md`) | Always-on. **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
 | **L1 — CORE** | operating manual (conventions, tool inventory, project map) | Session-start hook. Keep progressive (thin index → sub-files), not monolithic. |
-| **L2 — Skills** | capabilities | Progressive disclosure: frontmatter always (~100 tok) → SKILL.md body on invoke → `references/` on demand. One level of reference depth. |
+| **L2 — Skills** | capabilities | Progressive disclosure: frontmatter always (~100 tok) → SKILL.md body on invoke → `references/` on demand. One level of reference depth. Authoring mechanics + the hard listing budget (descriptions overflow → skills silently drop): skill-builder `references/token-economics.md`. |
 | **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Relevance pre-retrieval:** the memory hook extracts prompt keywords and runs per-term `qmd search` (BM25, union-ranked, ≥2 terms must agree) over the memory homes + every app's `/memory/auto/`. Semantic (`vsearch`) is the upgrade path — rejected v1 at ~4s/lobe vs ~120ms. NEVER bulk-load the full index. |
 | **L4 — Knowledge** | PKM, references, corpus, transcripts | On-demand retrieval (`qmd query`/`search`, file reads). |
 

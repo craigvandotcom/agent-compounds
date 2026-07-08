@@ -389,6 +389,10 @@ Is it generic/portable (method-only, no project facts)?
 
 **Rule of thumb:** a shared skill teaches the *how* (technique, portable across apps); per-app CORE holds the *what* (this app's specific facts). If you're tempted to bake an app fact into a shared skill, that fact belongs in the app's CORE instead.
 
+This tree decides placement *within the skill layer*. Whether something is a skill at
+all (vs memory, hook, CORE, AGENTS.md) and at what directory altitude — that's the
+`context-engineering` skill's PLACEMENT ladder + ALTITUDE rule; run that first.
+
 ---
 
 ## Quick Checklist
