@@ -3,7 +3,6 @@ name: ac-beadify
 description: 'Use to CONVERT an approved/refined plan into a beads task structure (create only). Triggers: ''beadify'', ''turn plan into beads'', ''create beads from plan'', ''break plan into tasks''. Requires an existing plan; to refine the resulting beads afterward use ac-bead-refine.'
 ---
 
-
 # Flywheel Beadify Command
 
 Convert refined plan to beads task structure using beads_rust.
@@ -52,22 +51,19 @@ Read the plan file's YAML frontmatter `status` field. Only proceed automatically
 - `loop-ready`
 - `refined`
 
-**Any other value — including `draft`, `in_progress`, or a missing/absent `status` field — is a STOP condition.** A plan that crashed mid-refinement is otherwise indistinguishable from one that reached convergence deliberately; beadifying it bakes half-finished thinking into the beads as if it were settled.
+**Any other value — including `draft`, `in_progress`, or a missing/absent `status` field — is a STOP condition:** a plan that crashed mid-refinement is indistinguishable from one that converged deliberately, and beadifying it bakes half-finished thinking into the beads as if it were settled.
 
 STOP and ask via `AskUserQuestion`:
 
 ```
-AskUserQuestion(
-  questions: [{
-    question: "Plan status is '{status}' (expected approved/loop-ready/refined). This plan may be mid-refinement or unfinished — beadifying it now risks converting incomplete thinking into beads. Proceed anyway?",
-    header: "Status gate",
-    multiSelect: false,
-    options: [
-      { label: "Override — beadify anyway", description: "I've confirmed this plan is actually ready despite the status field" },
-      { label: "Abort", description: "Stop here — run /ac-plan-clean or /ac-plan-refine-internal first, or fix the frontmatter" }
-    ]
-  }]
-)
+question: "Plan status is '{status}' (expected approved/loop-ready/refined). This plan may be mid-refinement or unfinished — beadifying it now risks converting incomplete thinking into beads. Proceed anyway?"
+header: "Status gate"
+multiSelect: false
+options:
+  - label: "Override — beadify anyway"
+    description: "I've confirmed this plan is actually ready despite the status field"
+  - label: "Abort"
+    description: "Stop here — run /ac-plan-clean or /ac-plan-refine-internal first, or fix the frontmatter"
 ```
 
 Only continue past this gate on explicit user override.
@@ -154,6 +150,7 @@ Epic: Dashboard
 
 If validators found Critical/High issues, **revise the proposed structure** and present findings for user selection.
 
+<!-- mirror of _shared/review-consensus.md §The auto-apply cascade (conditions 1-2; beadify is single-round, no cross-round condition) — edit there first -->
 **Auto-apply a finding if EITHER condition is met:**
 
 1. **Severity-based:** The issue is Critical or High severity — these are defects, not preferences
@@ -167,17 +164,14 @@ If validators found Critical/High issues, **revise the proposed structure** and 
 **Ask only about remaining items (Medium/Low AND single-validator):**
 
 ```
-AskUserQuestion(
-  questions: [{
-    question: "Auto-applied {N} fixes (Critical/High + consensus). {M} single-validator findings remain:",
-    header: "Remaining",
-    multiSelect: true,
-    options: [
-      { label: "Fix X: <title>", description: "Medium — <validator>: <one-line summary>" },
-      { label: "Fix Y: <title>", description: "Medium — <validator>: <one-line summary>" }
-    ]
-  }]
-)
+question: "Auto-applied {N} fixes (Critical/High + consensus). {M} single-validator findings remain:"
+header: "Remaining"
+multiSelect: true
+options:
+  - label: "Fix X: <title>"
+    description: "Medium — <validator>: <one-line summary>"
+  - label: "Fix Y: <title>"
+    description: "Medium — <validator>: <one-line summary>"
 ```
 
 **If no remaining items after auto-apply:** Skip the question entirely — just report what was applied.
@@ -209,6 +203,7 @@ Use only the `br` tool to create and modify beads and add dependencies.
 
 ### Bead Content Requirements
 
+<!-- mirror of _shared/bead-conventions.md §Body template (incl. its Test Scope bullet) — edit there first -->
 Each bead description must be **self-contained** (typed headers per
 `_shared/bead-conventions.md` §Body template — `## Acceptance Criteria`,
 `## Test Scope`, `## Steps to Reproduce` on bugs — emitted at creation, so
@@ -230,6 +225,7 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 
 ### Label All Beads as Unrefined
 
+<!-- mirror of _shared/bead-conventions.md §Lifecycle labels — edit there first -->
 **Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-implement` (and the loop's prep step) that these beads have not yet been through `/ac-bead-refine`.
 
 ```bash
@@ -306,7 +302,7 @@ mv "$PLAN_FILE" "$PROJECT_ROOT/_plans/_done/$(basename $PLAN_FILE)"
 br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_FILE)"
 ```
 
-**Why archive?** If beads still need the plan, they're not self-contained enough. Archiving forces this discipline. The plan is preserved in `_done/` — it's not deleted, just removed from the active workspace.
+**Why archive?** If beads still need the plan, they're not self-contained enough — archiving forces this discipline (the plan is preserved in `_done/`, not deleted).
 
 **TaskUpdate(task: "Archive source plan", status: "completed")**
 **TaskUpdate(task: "Report + handoff to ac-bead-refine", status: "in_progress")**
@@ -327,24 +323,22 @@ br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_F
 
 **Refine beads** -> `/ac-bead-refine` (severity-based convergence with 3 parallel reviewers)
 
-> "Check your beads N times, implement once." Planning tokens are cheaper than implementation tokens. Bead refinement is not optional — it's where the `unrefined` label gets removed and beads become truly agent-ready.
+> Bead refinement is not optional — it's where the `unrefined` label gets removed and beads become truly agent-ready; planning tokens are cheaper than implementation tokens.
 ```
 
-**Proceed to `/ac-bead-refine`.** Only skip if the user explicitly opts out:
+**Proceed to `/ac-bead-refine`.** Only skip if the user explicitly opts out. In a delegated autonomous run whose prompt says to proceed without confirmation (e.g. ac-loop's "always proceed to ac-bead-refine, no confirmation needed"), skip the question below and proceed directly:
 
 ```
-AskUserQuestion(
-  questions: [{
-    question: "Proceeding to /ac-bead-refine (bead refinement is essential). Skip?",
-    header: "Refine",
-    multiSelect: false,
-    options: [
-      { label: "Refine beads", description: "Run /ac-bead-refine — recommended, ensures beads are self-contained and agent-ready" },
-      { label: "Skip refinement", description: "Go straight to /ac-implement — only if you've already refined manually" },
-      { label: "Review visually first", description: "Open bv TUI to inspect before refining" }
-    ]
-  }]
-)
+question: "Proceeding to /ac-bead-refine (bead refinement is essential). Skip?"
+header: "Refine"
+multiSelect: false
+options:
+  - label: "Refine beads"
+    description: "Run /ac-bead-refine — recommended, ensures beads are self-contained and agent-ready"
+  - label: "Skip refinement"
+    description: "Go straight to /ac-implement — only if you've already refined manually"
+  - label: "Review visually first"
+    description: "Open bv TUI to inspect before refining"
 ```
 
 **TaskUpdate(task: "Report + handoff to ac-bead-refine", status: "completed")**
@@ -357,10 +351,4 @@ AskUserQuestion(
 
 ---
 
-_Beadify: plan -> beads with parallel validation. For refinement: `/ac-bead-refine`. For implementation: `/ac-implement`._
-
----
-
-## Next: refine the beads
-
-Beadify creates the structure; refinement makes each bead self-contained and agent-ready. That is now a **separate skill** — run **`/ac-bead-refine`** (3 parallel reviewers, severity-based convergence, removes the `unrefined` label). Do not skip it.
+_Beadify: plan -> beads with parallel validation. Next: `/ac-bead-refine` (do not skip). For implementation: `/ac-implement`._
