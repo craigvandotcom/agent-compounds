@@ -230,6 +230,19 @@ Placement isn't once-and-for-all — context earns its layer continuously, in **
 - **Promotion is MOVE, not copy** — on promoting, reduce the L3 fact to a pointer (or remove
   it). Two live copies = drift; single-source survives the move.
 
+**Hot-lane trim procedure (AGENTS.md / CLAUDE.md / CORE / per-turn hooks).** Trimming an
+always-on file is a refinement under contract, not an edit: (1) **constraint inventory
+first** — list every behavioral rule (skill-builder `workflows/refine-skill.md` Phase 3.0),
+bucket-classified per skill-builder § Token Economy; (2) **demotion, not deletion** — every
+removed line must have a NAMED destination on the PLACEMENT ladder (an L2 skill, an L3
+memory fact, or a pointer at the right ALTITUDE) or it stays. The only outright deletions:
+no-op sentences, and restatements of content already loaded in the same session (e.g. a
+per-turn hook duplicating L0, or an app AGENTS.md restating its sub-domain parent —
+cascade-loaded, so already present); (3) **independent validator** walks the inventory
+against the rewrite — every rule survives at equal-or-higher enforcement; (4) enforcement
+stays verbatim, persuasion compresses to rule + one-clause why, sediment goes. In doubt →
+keep.
+
 ## Subagents: stances, not domains  *(PLACEMENT rung 3)*
 
 A subagent definition is hot-lane context for a delegated window. It carries exactly
