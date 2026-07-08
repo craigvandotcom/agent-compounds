@@ -1,6 +1,5 @@
 ---
 name: ac-bead-refine
-disable-model-invocation: true
 description: 'Use to REFINE existing beads to convergence — 3 parallel reviewers hunt for gaps, the conductor makes each bead self-contained and agent-ready, then removes the ''unrefined'' label and stamps ''refined''. Triggers: ''refine the beads'', ''bead refine'', ''make beads implementation-ready'', ''refine bead structure''. Input is open beads from ac-beadify OR any other source (hygiene, triage, review''s Exhaust Rule, conductor follow-ups); creating plan-decomposition beads is ac-beadify''s job.'
 ---
 

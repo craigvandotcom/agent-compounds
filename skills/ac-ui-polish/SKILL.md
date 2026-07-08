@@ -1,6 +1,5 @@
 ---
 name: ac-ui-polish
-disable-model-invocation: true
 description: 'Use when polishing already-coded UI to premium quality or checking it conforms to the app''s design spec (CORE/design.md) — one screen or a whole-app crawl. Triggers on "polish this UI", "make this feel premium", "ui polish", "level up the design", "this looks like AI slop", "elevate this", "check design conformance", "tighten the visuals", "make it production-quality". NOT for: the public marketing site (ac-site-polish), accessibility/compliance audits (web-design-guidelines), design ideation (ui-brainstorm), React perf internals (capacitor), visual/CSS defects (ui-debug), greenfield generation.'
 ---
 

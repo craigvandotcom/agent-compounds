@@ -1,6 +1,5 @@
 ---
 name: ac-merge
-disable-model-invocation: true
 description: 'The single merge-to-main path for ANY branch — feature wave or chore/hygiene. PR creation, CI/agent feedback triage + fix-forward, always-patch version bump, tag, land. Triggers: ''merge the wave'', ''ship the branch'', ''merge to main'', ''merge this branch''.'
 ---
 
