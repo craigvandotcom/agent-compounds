@@ -3,8 +3,7 @@ name: ac-align
 description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next''.'
 ---
 
-
-**You are the Pipeline Alignment Director.** Your job is to ensure the execution pipeline — backlog, plans, and beads — faithfully serves the current strategy. You enforce the hierarchy: strategy shapes pipeline, not the other way around.
+**You are the Pipeline Alignment Director.** Ensure the execution pipeline — backlog, plans, and beads — serves the current strategy. You enforce the hierarchy: strategy shapes pipeline, not the other way around.
 
 ## Modes
 
@@ -76,16 +75,10 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 Check for `_strategy/` directory. If it exists, proceed to Phase 1. If it does not exist:
 
 ```
-AskUserQuestion(
-  questions: [{
-    question: "No _strategy/ directory found. What's the current north star or core goal for this project?",
-    header: "Strategy",
-    options: [
-      { label: "Describe it now", description: "I'll state the goal in free text" },
-      { label: "Create _strategy/ first", description: "Stop here — I'll set up strategy docs before aligning" }
-    ]
-  }]
-)
+AskUserQuestion — header "Strategy":
+"No _strategy/ directory found. What's the current north star or core goal for this project?"
+- "Describe it now" — "I'll state the goal in free text"
+- "Create _strategy/ first" — "Stop here — I'll set up strategy docs before aligning"
 ```
 
 If user provides a free-text goal, treat it as the alignment target for this session. Note in the report that a `_strategy/` directory would make future alignment more rigorous.
@@ -101,7 +94,7 @@ If user provides a free-text goal, treat it as the alignment target for this ses
 Read all files in `_strategy/`. Synthesize:
 
 1. **Core value proposition** — the one thing this product does that matters most
-2. **Target user and their primary pain** — who is this for, what problem does it solve
+2. **Target user and their primary pain**
 3. **Business model** — how value is captured
 4. **Current phase / milestone** — what's the immediate target (e.g., v1.0 launch, beta, MVP)
 5. **Launch sequence** — what must be true before each milestone
@@ -116,9 +109,9 @@ Identify internal gaps or inconsistencies in the strategy itself (e.g., a premiu
 
 **TaskUpdate("Pipeline scan", in_progress)**
 
-**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog, in parallel) — that is the single, shared definition of how pipeline state is read; don't re-specify it here.
+**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog, in parallel) — the single, shared definition of how pipeline state is read.
 
-Your lens on the board: for every backlog item, plan, and bead, note **which folder it's in** (`active/` = committed · `pool/` = candidate · legacy `v*/` = pre-migration), the `horizon`/`priority` hints, `status` (esp. `candidate` vs `captured` — see Phase 4.5), and rough scope — the inputs to the alignment audit and to promotion.
+Your lens on the board: for every backlog item, plan, and bead, note **which folder it's in** (per the active/pool model above), the `horizon`/`priority` hints, `status` (esp. `candidate` vs `captured` — see Phase 4.5), and rough scope — the inputs to the alignment audit and to promotion.
 
 **TaskUpdate("Pipeline scan", completed)**
 
@@ -162,7 +155,7 @@ Look across the full pipeline and assess ordering:
 - Nice-to-have polish before core functionality is stable
 - Items with unresolved upstream dependencies
 
-**Crystallization order** — for items at the same pipeline level, which order minimizes future rework? What gets built first sets the pattern for what comes after. Note where current ordering creates downstream technical debt risk.
+**Crystallization order** — for items at the same pipeline level, which order minimizes future rework? Note where current ordering creates downstream technical debt risk.
 
 **TaskUpdate("Sequencing review", completed)**
 
@@ -184,6 +177,7 @@ This is the decision the backlog deliberately defers to here: **which pooled ite
    The legacy `version:` field, if present, is a **soft prior — not authoritative.** Strategy as it stands *now* wins over a guess made at capture.
 3. **Propose promotions** — the top N (default 3–5, or enough to refill `active/`):
 
+<!-- mirrored (emit spec + dedup) in workflows/weekly.md §2–4 — edit both -->
 > **REVIEW mode (headless):** do NOT run the `AskUserQuestion` below and do NOT `git mv`.
 > Instead write the scored slate as a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`;
 > frontmatter `status: pending` · `bead: <id>` · `source: ac-align` · `summary`; `## What` = the
@@ -193,17 +187,10 @@ This is the decision the backlog deliberately defers to here: **which pooled ite
 > **INTERACTIVE only.**
 
 ```
-AskUserQuestion(
-  questions: [{
-    question: "active/ is running low. Promote these pool items into committed scope?",
-    header: "Promote",
-    multiSelect: true,
-    options: [
-      { label: "{pool_file}", description: "{why it fits current strategy / what it unblocks}" },
-      ...
-    ]
-  }]
-)
+AskUserQuestion — header "Promote", multiSelect: true:
+"active/ is running low. Promote these pool items into committed scope?"
+- "{pool_file}" — "{why it fits current strategy / what it unblocks}"
+- ...
 ```
 
 4. **Promote approved items** *(INTERACTIVE only — REVIEW never reaches here):*
@@ -269,18 +256,11 @@ For each category with recommended changes, present via `AskUserQuestion`. Group
 
 Example:
 ```
-AskUserQuestion(
-  questions: [{
-    question: "3 items flagged as orphans (don't serve the current strategy). What should we do?",
-    header: "Orphans",
-    multiSelect: false,
-    options: [
-      { label: "Review and defer each", description: "Walk through them one by one" },
-      { label: "Move all to _backlog/_done", description: "Archive them now" },
-      { label: "Skip for now", description: "Leave the pipeline as is" }
-    ]
-  }]
-)
+AskUserQuestion — header "Orphans", multiSelect: false:
+"3 items flagged as orphans (don't serve the current strategy). What should we do?"
+- "Review and defer each" — "Walk through them one by one"
+- "Move all to _backlog/_done" — "Archive them now"
+- "Skip for now" — "Leave the pipeline as is"
 ```
 
 Apply approved changes. Do NOT modify files without explicit user confirmation.
