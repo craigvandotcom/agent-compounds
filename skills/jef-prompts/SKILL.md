@@ -1,6 +1,6 @@
 ---
 name: jef-prompts
-description: 'A curated library of high-leverage one-shot prompts (debugging, performance, refactoring, planning, ideation, review, UI, workflow) — the Jeffrey-Emanuel "jef" pack plus local additions. Invoke with a hint of what you want and load the best-matching prompt. Triggers: "/jef-prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "find a prompt".'
+description: 'A curated library of high-leverage one-shot prompts (debugging, performance, refactoring, planning, ideation, review, UI, workflow) — the Jeffrey-Emanuel jef pack plus local additions. Invoke with a hint of what you want. Triggers: "/jef-prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "performance audit prompt", "refactor prompt", "find a prompt".'
 ---
 
 # Prompts Library

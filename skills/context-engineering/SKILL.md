@@ -1,6 +1,6 @@
 ---
 name: context-engineering
-description: The canonical context + memory architecture for the AI-native org. Use when deciding WHERE or HOW to save something durable (a lesson, decision, rule, recipe, doc), when asked "where should this live", "how do we store/remember X", "what loads when", or when designing/auditing anything that touches memory, CLAUDE.md/AGENTS.md, CORE, skills structure, hooks, or retrieval. Cited by reflect, dream, and the memory hooks — this file is the single source for the save-routing taxonomy, the L0–L4 loading model, and the layer-placement procedure (which layer/hook a given instruction belongs in). NOT for executing a save at session end (that is reflect) or organizing general files (that is librarian).
+description: The canonical context + memory architecture for the AI-native org. Use when deciding WHERE or HOW to save something durable (a lesson, decision, rule, recipe, doc), when asked "where should this live", "how do we store/remember X", "what loads when", or when designing/auditing anything touching memory, CLAUDE.md/AGENTS.md, CORE, skills structure, hooks, or retrieval. NOT for executing a save at session end (that is reflect) or organizing general files (that is librarian).
 ---
 
 # context-engineering — the substrate's constitution

@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Pre-planning exploration and ideation using divergent-convergent methodology. Use when exploring ideas before committing to a plan; triggers on "brainstorm", "explore ideas", "what are the options", "think through approaches". NOT for UI/design ideation where multiple AI models should evaluate a screenshot (use ui-brainstorm).
+description: Pre-planning exploration and ideation using divergent-convergent methodology. Use when exploring ideas before committing to a plan, uncertain which approach to take, or weighing competing visions. Triggers on "brainstorm", "explore ideas", "what are the options", "think through approaches", "before I plan this", "/brainstorm". NOT for UI/design ideation where multiple AI models should evaluate a screenshot (use ui-brainstorm).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

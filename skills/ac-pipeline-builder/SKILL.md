@@ -1,5 +1,6 @@
 ---
 name: ac-pipeline-builder
+disable-model-invocation: true
 description: 'The engineering-pipeline doctrine — the canonical design of how work goes from idea to shipped (stage order, each stage''s contract, the cross-cutting invariants, and the standards for changing the pipeline). Read/maintain this when DESIGNING or EVOLVING the pipeline itself; the runtime conductor (ac-loop) and humans consult it for order + gates. Triggers: "pipeline architecture", "how should the pipeline work", "change/add a pipeline stage", "pipeline standards", "pipeline design", "ac-pipeline-builder". NOT for running the pipeline (that is ac-loop) or executing one stage (that is the stage''s own skill).'
 ---
 

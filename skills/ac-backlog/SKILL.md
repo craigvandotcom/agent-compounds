@@ -1,5 +1,6 @@
 ---
 name: ac-backlog
+disable-model-invocation: true
 description: 'Capture ideas into the backlog pool — cohesive grouping (one theme = one wave), shape-routing (small+clear goes straight to a bead), strategy-aware horizon, no version guessing at capture. Triggers: ''add to backlog'', ''capture idea'', ''backlog this'', ''note for later'', ''park this''.'
 ---
 

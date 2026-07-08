@@ -1,6 +1,6 @@
 ---
 name: seo-metadata
-description: Use when adding or auditing SEO and social-share metadata on web/marketing surfaces — page titles, meta descriptions, Open Graph / Twitter cards, canonical URLs, sitemaps, robots, structured data (JSON-LD), and hreflang. Next.js App Router Metadata API focused. Triggers on "SEO", "meta tags", "Open Graph", "OG image", "social preview", "sitemap", "robots.txt", "structured data", "JSON-LD", "schema.org", "canonical URL", "search ranking", "meta description", "discoverability". NOT for Core Web Vitals / render performance (use capacitor and web-design-guidelines) or native Capacitor app shells (SEO applies to web surfaces only).
+description: Use when adding or auditing SEO and social-share metadata on web/marketing surfaces — page titles, meta descriptions, Open Graph / Twitter cards, canonical URLs, sitemaps, robots, structured data (JSON-LD), and hreflang (Next.js App Router Metadata API). Triggers on "SEO", "meta tags", "Open Graph", "OG image", "social preview", "sitemap", "robots.txt", "structured data", "JSON-LD", "schema.org", "canonical URL", "search ranking", "meta description", "discoverability". NOT for Core Web Vitals / render performance (use capacitor and web-design-guidelines) or native Capacitor app shells.
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

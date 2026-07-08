@@ -1,5 +1,6 @@
 ---
 name: ac-qa-device
+disable-model-invocation: true
 description: Use when QA-ing the NATIVE app build on a device/simulator — full journey validation against the real native shell (keyboard, safe-area, splash, deep links, OAuth sheets, plugin calls, push payloads), appearance matrix, screenshots/video evidence, and perf sanity. The native twin of ac-qa-browser. Triggers on "test native app", "device QA", "simulator QA", "QA on device", "test on iOS", "validate native build", "native smoke test". macOS/iOS Simulator today (Android emulator planned) — see Platform Gate.
 ---
 

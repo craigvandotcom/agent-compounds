@@ -1,5 +1,6 @@
 ---
 name: ac-implement
+disable-model-invocation: true
 description: 'Sequential bead implementation — conductor reviews, engineer sub-agents implement, loops until the wave is done. Triggers: ''work the beads'', ''implement the wave'', ''bead work'', ''run the wave'', ''start implementation''.'
 ---
 

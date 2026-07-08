@@ -1,5 +1,6 @@
 ---
 name: ac-dashboard
+disable-model-invocation: true
 description: 'Read-only pipeline dashboard — render the FULL board (backlog · plans · beads · WIP waves/PRs/CI · human gates) in one glance, including the loop-side work ac-human-session deliberately hides. Observes only; never writes, closes, promotes, or prompts. Triggers: ''dashboard'', ''ac-dashboard'', ''show the board'', ''state of the pipeline'', ''pipeline status'', "what''s the factory doing", ''WIP status'', ''board overview'', ''full board''. To ACT on human gates use ac-human-session; to reconcile/archive use ac-tidy; to re-prioritize use ac-align.'
 ---
 

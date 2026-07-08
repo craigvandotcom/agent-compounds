@@ -1,5 +1,6 @@
 ---
 name: ac-idea-review-genius
+disable-model-invocation: true
 description: Use when stress-testing a raw IDEA, framework, or concept through rigorous first-principles forensic review. Triggers on "review this idea", "stress-test this", "devil's advocate", "find flaws in this concept", "critique this approach", "first-principles review". For a written implementation plan or a strategy with execution steps/timelines use ac-plan-review-genius.
 ---
 

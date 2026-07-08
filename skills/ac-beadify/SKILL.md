@@ -1,5 +1,6 @@
 ---
 name: ac-beadify
+disable-model-invocation: true
 description: 'Use to CONVERT an approved/refined plan into a beads task structure (create only). Triggers: ''beadify'', ''turn plan into beads'', ''create beads from plan'', ''break plan into tasks''. Requires an existing plan; to refine the resulting beads afterward use ac-bead-refine.'
 ---
 

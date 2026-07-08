@@ -1,5 +1,6 @@
 ---
 name: ac-publish
+disable-model-invocation: true
 description: 'The manual, human-triggered release gate — the definitive "ship to production" step, run AFTER the loop has merged waves to main. Reads the full-suite CI result SHA-pinned to main, runs full device/browser QA, checks migrations are expand/contract-safe, then ships web + native. Composes ac-merge (bump ownership) + ac-distribute (native ship); it never bumps and never re-runs affected tests. Triggers: "/ac-publish", "publish", "release to prod", "ship it to production", "cut the release".'
 ---
 

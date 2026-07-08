@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Use when writing tests for TypeScript/Next.js code. Handles unit tests (Vitest), component tests (RTL), integration tests, and E2E tests (Playwright). Triggers on test, spec, coverage, mock, assertion.
+description: Use when writing, fixing, or reviewing tests for TypeScript/Next.js code — unit tests, component tests, integration tests, or E2E tests. Triggers on test, spec, coverage, mock, assertion, Vitest, Playwright, React Testing Library (RTL), MSW, flaky test, failing test, write a test, add test coverage.
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

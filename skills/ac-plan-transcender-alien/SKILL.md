@@ -1,5 +1,6 @@
 ---
 name: ac-plan-transcender-alien
+disable-model-invocation: true
 description: 'Use to push an implementation PLAN beyond human cognitive defaults toward a higher paradigm — what a radically better approach would look like. Triggers: ''transcend this plan'', ''push the plan deeper'', ''alien perspective on the plan'', ''escape local optima on this plan'', ''what is the plan missing at a deeper level''. For a raw idea or concept use ac-idea-transcender-alien.'
 ---
 

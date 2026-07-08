@@ -1,6 +1,6 @@
 ---
 name: screenshot-refresh
-description: Use when refreshing, recapturing, or updating landing page (marketing website) screenshots — discovers what's needed, seeds test data, captures via Playwright script or browser agent, then verifies results. Triggers on "refresh screenshots", "update screenshots", "recapture landing page screenshots", "screenshot the app" (landing-page/marketing context), "landing page images are stale". NOT for ad-hoc native simulator screenshots/recordings (use device-testing); NOT for App Store listing assets (use app-store-screenshots).
+description: Use when refreshing, recapturing, or updating landing page (marketing website) screenshots. Triggers on "refresh screenshots", "update screenshots", "recapture landing page screenshots", "screenshot the app" (landing-page/marketing context), "landing page images are stale". NOT for ad-hoc native simulator screenshots/recordings (use device-testing); NOT for App Store listing assets (use app-store-screenshots).
 ---
 
 **You are the screenshot conductor.** Discover what screenshots the landing page needs, ensure the app has compelling data, then capture them.

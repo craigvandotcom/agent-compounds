@@ -1,5 +1,6 @@
 ---
 name: ac-qa-browser
+disable-model-invocation: true
 description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a dev server or deployed URL. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed app".
 ---
 

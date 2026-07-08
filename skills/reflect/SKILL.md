@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Writes typed, domain-routed, deduped lessons (facts/decisions/recipes) into git-tracked, qmd-indexed homes so the next session — on any machine, any agent — is faster. Called by ac-land; also runs standalone. NOT for mid-task notes (that is the memory-capture agent), full bead-work closure (that is ac-land), or cross-session synthesis/lint (that is dream).
+description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Called by ac-land; also runs standalone. NOT for mid-task notes (that is the memory-capture agent), full bead-work closure (that is ac-land), or cross-session synthesis/lint (that is dream).
 ---
 
 # reflect — close the write loop

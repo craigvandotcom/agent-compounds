@@ -1,6 +1,6 @@
 ---
 name: openrouter
-description: Access 400+ AI models from any agent. Discover, select, and query the right model for any task. Use when you need a specific or non-default model; triggers on "query a model", "which model for", "use OpenRouter", "list available models".
+description: Use when a task needs a specific or non-default AI model — Claude, GPT, Gemini, Grok, DeepSeek, or another of 400+ models via OpenRouter. Triggers on "query a model", "which model for", "use OpenRouter", "list available models", "ask GPT/Gemini/Grok directly", "run this on <model>", "switch model for this task", "non-default model".
 tools: [openrouter (infrastructure/tools)]
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduler heartbeat; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". Reads the git-synced lesson stream, synthesizes cross-session patterns, lints for contradictions/staleness/duplicates, judges candidates against a quality bar, and emits PR-style proposals to a review queue. CYCLE mode emits proposals only — never applies; REVIEW mode applies human-approved proposals to target repos. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduler heartbeat; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". CYCLE mode emits proposals only; REVIEW mode applies human-approved proposals. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — synthesize · lint · judge · propose

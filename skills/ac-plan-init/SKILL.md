@@ -1,5 +1,6 @@
 ---
 name: ac-plan-init
+disable-model-invocation: true
 description: 'Use to CREATE a first-draft implementation plan from a backlog item or feature request — parallel explorers investigate, you synthesize an actionable plan with test specs. The entry point of the planning chain. Triggers: ''make a plan'', ''plan this feature'', ''plan init'', ''start a plan for X''. To improve an existing draft use ac-plan-clean / ac-plan-refine-internal / ac-plan-refine-external; to pressure-test it use ac-plan-review-genius / ac-plan-transcender-alien.'
 ---
 
