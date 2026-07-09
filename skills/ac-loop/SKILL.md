@@ -37,11 +37,18 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 
 ```
 EACH ITERATION:
-  1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships FIRST)
+  0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
+      ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
+      ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
+      ├─ batch into branches: one bug per branch, OR one branch per group of bugs touching the SAME files
+      │      (never bundle unrelated bugs — one bad fix blocks the rest; never fold a bug into a feature wave)
+      └─ EACH bug branch: ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
+      ⟳ RE-CHECK the Bug-Lane filter after every merge; repeat until ZERO unblocked bugs remain, THEN step 1
+  1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships after the bug lane is dry)
       └─ ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
-      │      (prep — only now, AFTER the maintenance wave has shipped)
+      │      (prep — only now, AFTER the bug lane + maintenance wave have shipped)
       └─ ensure wave branch (loop owns this, not ac-implement) →
          ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
 
@@ -50,7 +57,7 @@ EACH ITERATION:
   BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-merge no longer checks beads
                 itself) — genuine (non-post-merge) open beads block the merge; advisory
                 Slack nudge, not a hard stop.
-  3. Loop — check for more orphans or plans
+  3. Loop — RE-CHECK the bug lane FIRST (a just-merged non-bug may have unblocked a bug), then orphans/plans
   4. Nothing left → Phase ARIA (unlock human blocks, then stop)
 
 STOP CONDITIONS checked before each iteration (see below).
@@ -144,6 +151,13 @@ br ready --limit 0 --json | jq '[.[] | select(
 # Human-gate ready beads (the ONLY exempt class — for Phase ARIA)
 br ready --limit 0 --json | jq '[.[] | select(.labels | index("human-gate"))]'
 
+# BUG LANE (Rule 0 — see Work priority). ALL unblocked bugs drain before ANY non-bug work.
+# issue_type == "bug", ready (= unblocked, deps satisfied), non-human-gate — EVERY priority.
+# `br ready` already excludes blocked bugs; blocked / human-gate bugs are surfaced, never shipped.
+br ready --limit 0 --json | jq '[.[] | select(
+  (.issue_type == "bug") and (.labels | index("human-gate") | not)
+)]'
+
 # Current wave branch (if any)
 git branch --list 'wave/*' --format='%(refname:short)' | head -1
 git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1
@@ -156,7 +170,12 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
-**Work priority order** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
+> **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) — **every priority, P0 through P4** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked bugs remain do you touch the non-bug order below.
+> - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
+> - **Blocked bugs can't ship — so they never freeze the loop.** A bug with an unmet dependency is not in `br ready`; a `human-gate` bug is exempt. Both are *surfaced* (advisory nudge / Phase ARIA), set aside, and picked up automatically on a later pass once their blocker merges through the non-bug flow. "Within reason" = a bug you can't act on does not hold up the world.
+> - **Execution: bug fixes ride their own branch.** One bug — or a small group of bugs touching the *same files* — per branch → own CI → merge independently. Never fold a bug into an unrelated feature wave; never bundle unrelated bugs (one bad fix would block the rest). A bug that is *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
+
+**Work priority order (NON-BUG work — runs only after the Bug Lane is dry)** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
 2. Unrefined non-`human-gate` beads, **furthest-advanced first** — (a) from a loop-ready plan (`wave-NNN` marker), OR part of a beadified epic / plan-traceable group; then (b) lone captures (triage/hygiene/reflect/`ac-bead-capture` follow-ups). Run `ac-bead-refine` on them, then drive to merge (delegation: "ac-loop autonomous run, skip next-step question; return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — a captured bead is committed work; refine-and-finish it. (The backlog *pool* is the "not-yet-committed" holding area, upstream of beads — that is where human promotion happens, not here.) A beadified epic outranks #3.
 3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed; return bead IDs created/refined + anything blocked, ≤200 words")
@@ -171,9 +190,10 @@ Once you've oriented and know what's queued, lay down a **run-level task list** 
 ```
 TaskCreate — one task per run phase; add a Plan-wave task per queued loop-ready wave (up to the iteration cap):
   1. Orient + read board                  → in_progress  (this pass)
-  2. Orphan / maintenance wave → merge     → pending      (omit if no orphans)
-  3. Plan wave: <plan-name> → merge        → pending      (one per queued wave, cap 3)
-  4. Phase ARIA + ac-land                  → pending
+  2. Bug lane: drain all unblocked bugs    → pending      (Rule 0; omit if no ready bugs; re-checked each loop)
+  3. Orphan / maintenance wave → merge     → pending      (omit if no orphans)
+  4. Plan wave: <plan-name> → merge        → pending      (one per queued wave, cap 3)
+  5. Phase ARIA + ac-land                  → pending
 ```
 
 `TaskUpdate` each task to `in_progress` when its phase starts and `completed` at its merge/exit; mark task 1 `completed` when this orient pass finishes. If the board is empty, the ledger is just task 1 + task 4.
