@@ -134,6 +134,16 @@ xcrun simctl io booted screenshot /tmp/qa-<step>.png
 agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
 ```
 
+> **Build-stall self-watchdog (step 0).** When the build+install is slow or
+> backgrounded, the QA agent polls it on **its own hard-capped loop** — never hand off
+> to an unbounded external monitor and wait. An open-ended build monitor + a broken
+> resume chain silently eats the whole run (2026-07-03: ~45 min lost, checks time-boxed
+> out, recovered only by conductor-side watchdog timers + a SendMessage poke — recipe:
+> `background-agent-resume-chains-break-silently`). Bound it: poll on a fixed cadence up
+> to N minutes (build-specific, e.g. 15), and if the build hasn't produced an installed
+> app by the cap, **report `build-stall` and stop** — do not silently keep waiting. A
+> stalled build is a reportable outcome, not a pause.
+
 > **Screenshots / screen recordings as deliverables** (App Review evidence, bug
 > repros, demos) → the **`device-testing`** skill owns the capture recipe,
 > including the simulator-VFR video gotcha (raw `simctl recordVideo` is
@@ -177,7 +187,11 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
 8. **Prefer @refs over semantic label clicks.** `click "Label"` resolves
    internally but failed silently in testing; `click @ref` from a fresh
    snapshot is deterministic. `hittable:false` in `--raw` output is advisory,
-   not authoritative — verify by outcome (wait/assert), not by flag.
+   not authoritative — verify by outcome (wait/assert), not by flag. But some
+   interactions are *reproducibly* un-automatable (backdrop fall-through, etc.) —
+   before planning, check the **known automation-limited interactions registry**
+   (`references/incidents.md`) and plan those to the boundary + route the real
+   step to device, rather than re-discovering the limit at ~60 min/attempt.
 9. **Catch toasts — success waits race past them.** Toasts are transient
    (~4s) and a `wait "<next screen>"` that passes can still have skipped an
    error toast the user would have seen. The toast container IS in the tree

@@ -26,3 +26,19 @@ sim per app, target by UDID, ownership rule (never touch another app's sim).
 A stale `default` agent-device session remained bound to a device that another app then
 claimed, breaking that app's run. Root cause of the teardown rule: always close your
 session (`agent-device close --session <app>`) and pass `--session <app>` on every call.
+
+## Known automation-limited interactions (registry — consult before test planning)
+
+Some real interactions are **not automatable under XCUITest** and re-attempting them
+only burns build+QA cycles for zero new information. Before planning a run, check this
+list; for a listed interaction, plan sim QA **to the boundary** and route the
+un-automatable step to **real-device** QA (or a standing exception where one exists).
+
+- **BCA — feedback drawer submit (Send button).** XCUITest reports `hittable:false` on
+  the drawer's Send button (backdrop fall-through over the button's rect); taps never
+  register and a DB check confirms zero rows written. Reproduced twice (2026-06-28, then
+  again 2026-07-03 — ~60 min build+QA for no new signal). **Plan:** sim QA validates the
+  feedback flow up to the drawer-open + field-fill boundary; the actual submit,
+  submit-during-background, and screenshot-bucket write go to real-device. Memory fact:
+  `bca-sim-feedback-submit-automation-limited`. (A standing-exception proposal for this
+  is tracked separately.)

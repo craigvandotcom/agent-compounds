@@ -583,9 +583,10 @@ until the push is done and verified.
 prod AT merge, so code that *depends* on a migration must not go live before its schema does:
 
 - **EXPAND (additive) migration that merged code depends on:** it must be applied **before or
-  at this merge**. If still unpushed, ask (headless loop → Slack buttons): *"Branch depends on
-  unpushed expand migration `<file>` — Push to prod now / Merge anyway (dependent code path is
-  flag-gated OFF) / Hold the merge."* Do not merge live-dependent code over an unpushed schema.
+  at this merge**. If still unpushed — interactive: ask *"Branch depends on unpushed expand
+  migration `<file>` — Push to prod now / Merge anyway (dependent code path is flag-gated OFF)
+  / Hold the merge."* Headless: hold the merge and file a `human-gate` decision bead carrying
+  those options (Exhaust Rule). Do not merge live-dependent code over an unpushed schema.
 - **CONTRACT (drop/rename/narrow/NOT NULL-no-default):** never apply at merge. It merges as a
   *held* migration and is applied later via `ac-publish`'s migration gate, after old native
   builds age out. If a branch bundles contract DDL into an expand migration, split it first.
@@ -632,6 +633,30 @@ workflow) and must COMPLETE (else assume failed).
   TestFlight build produced; ship via the app's release lane" instead of implying a shippable
   build exists — a wrong wording here caused the BCA 2026-07-02 incident (`references/incidents.md`).
 - No native-build-on-merge → skip silently.
+
+### Confirm the main-branch CI run — silence ≠ pass
+
+The merge triggers the repo's CI (e.g. `Quality Gate`) on `main`. On a **single
+self-hosted runner** that queue can sit hours behind a dependabot backlog — so "no failure
+seen" is NOT "passed": the loop can land its last commits with **zero CI confirmation** and
+only the fix-forward convention as cover (2026-07-03 incident: main Quality Gate queued 2+
+hrs behind dependabot; the session closed blind). Never treat poll-timeout silence as green.
+
+```bash
+# The run triggered by THE MERGE COMMIT (not "latest" — a stale prior run is the trap)
+MERGE_SHA=$(git rev-parse HEAD)
+RUN_JSON=$(gh run list --branch main --commit "$MERGE_SHA" \
+  --json databaseId,status,conclusion,url,createdAt --limit 5 2>/dev/null)
+echo "$RUN_JSON"                       # RECORD the run ID + URL in the report — always
+```
+
+- Terminal + green → report the run URL as the confirmation.
+- Terminal + failed → surface loudly; fix-forward or file a bead. Do not claim shipped.
+- **Still `queued`/`in_progress`** → compute elapsed from `createdAt` (per
+  `ci-in-progress-not-stuck-compute-elapsed` — status alone is not "stuck"). If a **main**
+  run is still pending **>1hr**, do NOT close silently: surface it in the report AND
+  `slack-send` the run URL so a human can watch it land. The merge is done; the *proof* is
+  outstanding — say so explicitly rather than implying green.
 
 Mark ledger task 9 `completed`; `TaskUpdate` task 10 `in_progress`.
 
