@@ -1,8 +1,7 @@
 ---
 name: ac-land
-description: 'The closing ritual — runs LAST, after merge. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: ''land the session'', ''bead land'', ''close out the bead work'', ''wrap up session'', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect).'
+description: "The closing ritual — runs LAST, after merge. To land = leave it clean AND wiser: TEARDOWN (kill spawned tasks, sweep orphaned waiters, release+deregister Agent Mail, clear temp, clean tree) plus LEARN (retrospective + reflect + system compounding). Triggers: 'land the session', 'bead land', 'close out the bead work', 'wrap up session', loop exit. NOT for standalone lesson capture without bead-work context (that is reflect)."
 ---
-
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
@@ -82,8 +81,8 @@ TaskCreate (one per section, in run order):
 
 `TaskUpdate` each to `in_progress` when you start it and `completed` when done — the section
 headers below (`1a.` … `1d.`, then Phase 2 → Phase 4, then Teardown) map to these tasks 1:1;
-mark task 1 `completed` now. `progress.md` remains the artifact-of-record for *what was
-accomplished*; the ledger tracks *where the run is* — so a compacted conductor knows whether
+mark task 1 `completed` now. `progress.md` remains the artifact-of-record for _what was
+accomplished_; the ledger tracks _where the run is_ — so a compacted conductor knows whether
 teardown (task 9) still owes work. The ledger tracks the RUN; beads stay the work atom.
 
 ---
@@ -113,12 +112,25 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 > (Mirrors `ac-merge`'s QA-gate skip-if-fresh; don't validate the same HEAD twice.)
 
 > **Tiered-testing model (parallel-execution doctrine §5).** Wave merges now run **affected-only**
-> CI, so at loop-close there is no fresh *full* `test:all` for HEAD. Do NOT run a blocking local
+> CI, so at loop-close there is no fresh _full_ `test:all` for HEAD. Do NOT run a blocking local
 > `test:all` here — it's the exact full run the doctrine keeps OFF the loop's critical path, and it
 > starves the shared self-hosted runner. Instead **Phase 1d fires the async loop-close full run on
 > CI** (`gh workflow run quality-gate.yml -f reason=loop-close`), non-blocking; a red result
 > auto-files a bead (§5) and blocks `publish`. Run a local `test:all` here ONLY for a standalone
 > landing with no CI path.
+
+> **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball.** At loop-close the
+> merge's own CI Quality Gate for HEAD is frequently STILL RUNNING (ac-merge fires it and lands
+> immediately after) — an `in_progress` run is the EXPECTED state, not an anomaly. **Never report a
+> run as "stuck"/"hung"/"wedged" from its status alone or with a duration you did not measure.** A run
+> is stuck ONLY if its _computed_ elapsed time far exceeds the suite's norm: derive it from
+> `gh run view <id> --json createdAt,jobs` (or the job's `startedAt`) vs `date -u` now, and flag only
+> when elapsed > ~2× typical (this suite is ~15-20 min → threshold ~40 min+). Under the threshold →
+> report "CI in-progress, on track (Nm elapsed)" and move on; do NOT alarm, do NOT block landing.
+> Asserting an unmeasured duration is a **fabricated finding** — cost: the RUN_ID 20260708-191557
+> land falsely flagged `e77abbae` "stuck in_progress 2+ hours" when its gate was 15 min old and
+> passed clean, sending the conductor on a false-alarm CI hunt. If you flag a run, paste the two
+> timestamps + the arithmetic; a flag without the math is not allowed.
 
 ```bash
 # Format / lint / type-check run fast — terminal-only output is fine.
@@ -171,6 +183,7 @@ Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 After code quality gates pass, run UI validation for any session that changed runtime code.
 
 **Skip ONLY if:**
+
 - Session was purely docs/config with zero runtime code changes (no .tsx/.ts in app/, features/, lib/, components/)
 
 **Run if ANY runtime code was changed** (API routes, UI components, hooks, utils).
@@ -357,12 +370,12 @@ AskUserQuestion(
 
 For each approved upgrade, apply the edit directly. Common targets:
 
-| Target                              | What Gets Updated                      |
-| ----------------------------------- | -------------------------------------- |
-| `AGENTS.md`                         | Workflow improvements, new conventions |
-| `CLAUDE.md`                         | Orchestrator context updates           |
-| `.claude/skills/*.md`             | Command improvements based on friction |
-| `MEMORY.md`                         | New patterns, gotchas, workflow notes  |
+| Target                | What Gets Updated                      |
+| --------------------- | -------------------------------------- |
+| `AGENTS.md`           | Workflow improvements, new conventions |
+| `CLAUDE.md`           | Orchestrator context updates           |
+| `.claude/skills/*.md` | Command improvements based on friction |
+| `MEMORY.md`           | New patterns, gotchas, workflow notes  |
 
 ### Commit Compound Changes
 
@@ -459,10 +472,10 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
      # self-hosted Actions runner, the dev server someone else owns, or unrelated jobs.
      ```
    - Then confirm none survive: re-run the `ps … grep` → expect empty.
-   - **Prevention** (the *Fail safe; leave no live debris* law — `ac-pipeline-builder`
+   - **Prevention** (the _Fail safe; leave no live debris_ law — `ac-pipeline-builder`
      through-threads): every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
      `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie —
-     and the rule binds when you *write* the loop, not just when teardown sweeps for it here.
+     and the rule binds when you _write_ the loop, not just when teardown sweeps for it here.
 2. **Agent Mail:** `release_file_reservations` (all paths for your agent), then
    `deregister_agent` (or `retire_agent`). Don't leave reservations to TTL-expire.
 3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session
