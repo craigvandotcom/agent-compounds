@@ -446,7 +446,9 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > "Run ac-land to close this loop session (autonomous run). `RUN_ID=<RUN_ID>`. Land the WHOLE
 > session, not one wave: the retrospective reads every `/tmp/bead-work-*-<RUN_ID>/progress.md`
 > (all waves this run shipped — `RUN_ID` scopes them safely), and teardown sweeps all of them.
-> You are post-merge on `main`. System-upgrade proposals: Slack card for Craig, do NOT block.
+> You are post-merge on `main`. This is a HEADLESS land: system-upgrade proposals become
+> deduped `human-gate` decision beads per `_shared/disposition.md` — never Slack cards,
+> never `AskUserQuestion`, do NOT block.
 > This is the loop's final step — exit after landing." (`_shared/run-id.md`)
 
 > **No token-budget stop** (removed deliberately) — an unmeasurable budget only becomes a

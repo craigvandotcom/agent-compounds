@@ -94,9 +94,15 @@ body = context · decision · rationale · consequences).
 catalog line in its `SKILL.md`. Even when reflecting inside an app repo, recipes go
 there — never start a parallel library.
 
-**skill-improvement** → **GATED.** Do not auto-apply. Present the exact proposed
-edit (target file + diff + the session evidence) and get explicit approval before writing
-— system behaviour changes need a human merge (consistent with ac-land's no-auto-apply rule).
+**skill-improvement** → **GATED.** Do not auto-apply — system behaviour changes need a
+human merge (rule 3 in `_shared/disposition.md`, consistent with ac-land's no-auto-apply).
+**Interactive:** present the exact proposed edit (target file + diff + the session evidence)
+and get explicit approval before writing. **Headless (no human present):** file it as a
+decision bead — `br create -t decision -p 3 -l human-gate,skill-improvement` with the memo
+(target · evidence · diff · recommendation), **dedupe-first** against open
+`skill-improvement` beads per `_shared/disposition.md` § Save-for-later. Never post it to
+Slack, never silently drop it — the bead is how the merge request survives an unattended
+session.
 
 ### 6. Golden-set check (optional, rare)
 If the session produced a clearly-above-bar exemplar (a sharp plan, clean diff, good

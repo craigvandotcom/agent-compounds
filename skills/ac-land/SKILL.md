@@ -317,7 +317,7 @@ Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 
 **Goal:** Turn learnings into system improvements. User decides what ships.
 
-**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land presents ALL upgrade proposals to the user. System compounding changes identity and workflow — every change needs explicit approval.
+**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. The difference is not caution vs confidence — it's downstream gates: a review finding rides a branch through tests/CI/review/merge (auto isn't final), while a skill/doctrine edit is live agent policy the next scheduled run simply obeys. Full three-way rule (AUTO / HUMAN / DISREGARD): **`_shared/disposition.md`**.
 
 ### Step 0: Capture durable lessons via `reflect`
 
@@ -330,6 +330,36 @@ from a different app/machine next week instead of being stranded in this transcr
 the retrospective findings from Phase 2 as the candidate lessons.
 
 Then continue with the system-file upgrade proposals below.
+
+### Disposition — classify, then route by mode
+
+Classify each surviving proposal per `_shared/disposition.md`:
+
+- **DISREGARD** — no concrete, named waste this session → drop silently (most proposals).
+- **AUTO** — pure knowledge (fact / rule / decision / recipe) → already captured by
+  `reflect` in Step 0; nothing further here.
+- **HUMAN** — system-file change (skills, AGENTS.md, CLAUDE.md, CORE, hooks, workflows) →
+  route by mode below.
+
+**Interactive session** → present + `AskUserQuestion` (next two subsections).
+
+**Headless (loop-driven land)** → NEVER `AskUserQuestion` and **NEVER post proposals to
+Slack** — a Slack card is not a decision's storage; Slack stays notification-only. File each
+HUMAN item as a decision bead per `_shared/disposition.md` § Save-for-later, **dedupe
+first** (same target file + gist as an open `skill-improvement` bead → comment on it
+instead), then skip ahead to Commit Compound Changes:
+
+```bash
+br create -t decision -p 3 "Proposal: <title> (<target file>)" -l human-gate,skill-improvement \
+  -d "## Decision memo
+**Target:** <file path>
+**Evidence (this session):** <what happened + concrete cost>
+**Proposed change:**
+<exact diff or content>
+**Recommendation:** <apply / apply-modified / drop>"
+```
+
+It surfaces on the `ac-human-session` docket; Craig decides there.
 
 ### Present Upgrades to User
 

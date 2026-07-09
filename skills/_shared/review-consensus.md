@@ -9,6 +9,12 @@ This operationalizes the *You can't self-validate — confidence requires indepe
 through-thread in `ac-pipeline-builder`: agreement across independent agents/rounds is the
 reliable signal, not any single reviewer's confidence.
 
+This is the **code-findings instantiation of `disposition.md`** (the shared AUTO / HUMAN /
+DISREGARD rule). Its default-AUTO bias is rule 2 there — safe because findings ride a branch
+through tests/CI/review/merge, not because reviewers are trusted. `ac-land`/`reflect`'s
+no-auto-apply for skill/doctrine edits is rule 3 (no downstream gate) — the two defaults are
+the same rule, not a contradiction.
+
 ## The auto-apply cascade
 
 Tag a finding `AUTO_FIX` if **any** condition holds:
