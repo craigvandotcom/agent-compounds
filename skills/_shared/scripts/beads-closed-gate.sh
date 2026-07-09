@@ -2,19 +2,68 @@
 # beads-closed-gate.sh — BEADS-CLOSED-GATE: the loop's own pre-merge gate
 # (ac-merge no longer checks beads itself).
 #
-# Prints the set of genuinely open beads: status != closed, EXCLUDING
-# `post-merge`-labelled beads — those are deliberately un-closeable until the
-# merge ships (carried forward as known tails, listed in the PR body), never
-# blockers.
+# WAVE-SCOPED (bd-h1tyu, fixed 2026-07-09): scopes to only the beads THIS
+# branch owns, never the whole board. A board-wide `br list` that exits 1 on
+# ANY open bead anywhere deadlocks every merge on a healthy multi-epic board
+# (always has open work elsewhere) — see memory
+# beads-closed-gate-board-wide-not-wave-scoped.
 #
-# Exit 0 — the set is empty: safe to proceed to ac-merge.
-# Exit 1 — genuinely open (non-post-merge) beads remain: do NOT merge.
-# Exit 2 — br/jq query itself failed (treat as blocked, investigate).
+# Scope is determined two ways (either satisfies the bead's "commit trailers
+# OR an explicit wave label" decision):
+#   1. Default (no args): derive the bead-ID set from `bd-xxxxx` references
+#      found in commit messages between this branch's merge-base with main
+#      and HEAD (matches ac-implement's `Bead: <id>` commit trailer). Works
+#      uniformly for wave/* branches (many beads) and bug/* lane branches
+#      (single bead) — no wave-label lookup needed.
+#   2. Optional `$1` = explicit wave label (e.g. "wave-042"): scope to beads
+#      carrying that label instead of parsing commits.
+#
+# Prints the set of genuinely open, IN-SCOPE beads: status != closed,
+# EXCLUDING `post-merge`-labelled beads — those are deliberately un-closeable
+# until the merge ships (carried forward as known tails, listed in the PR
+# body), never blockers.
+#
+# Exit 0 — the in-scope open set is empty: safe to proceed to ac-merge.
+# Exit 1 — genuinely open (non-post-merge) beads remain IN SCOPE: do NOT merge.
+# Exit 2 — br/jq/git query itself failed (treat as blocked, investigate).
 set -o pipefail
 
-OPEN=$(br list --json --limit 1000 | jq '[.issues[]
+WAVE_LABEL="${1:-}"
+
+ALL_OPEN=$(br list --json --limit 1000 | jq '[.issues[]
   | select(.status != "closed")
   | select((.labels // []) | index("post-merge") | not)]') || exit 2
+
+if [ -n "$WAVE_LABEL" ]; then
+  # Explicit label-scoped mode.
+  OPEN=$(echo "$ALL_OPEN" | jq --arg label "$WAVE_LABEL" \
+    '[.[] | select((.labels // []) | index($label))]') || exit 2
+else
+  # Default: derive the bead-ID set owned by this branch from its own
+  # commits (merge-base..HEAD), matching `bd-xxxxx` anywhere in the message
+  # (covers the `Bead: <id>` trailer and inline `(bd-xxxxx)` refs alike).
+  BASE_REF=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null)
+  if [ -z "$BASE_REF" ]; then
+    echo "beads-closed-gate: could not determine merge-base with main" >&2
+    exit 2
+  fi
+
+  LOG_OUTPUT=$(git log "${BASE_REF}..HEAD" --format=%B 2>/dev/null) || exit 2
+  # grep exits 1 on "no matches" (e.g. branch has no commits yet, or none
+  # reference a bead) — that's a valid empty-scope result, not a failure, so
+  # it's intentionally NOT `|| exit 2` here (pipefail would otherwise trip).
+  BEAD_IDS=$(printf '%s' "$LOG_OUTPUT" | grep -oE 'bd-[a-z0-9]+' | sort -u)
+
+  if [ -z "$BEAD_IDS" ]; then
+    # No beads referenced by this branch's commits yet — nothing in scope.
+    echo "[]"
+    exit 0
+  fi
+
+  IDS_JSON=$(printf '%s\n' "$BEAD_IDS" | jq -R . | jq -s .) || exit 2
+  OPEN=$(echo "$ALL_OPEN" | jq --argjson ids "$IDS_JSON" \
+    '[.[] | select(.id as $i | $ids | index($i))]') || exit 2
+fi
 
 echo "$OPEN"
 [ "$(printf '%s' "$OPEN" | jq 'length')" -eq 0 ]
