@@ -269,7 +269,7 @@ skills) point here rather than restating times in more than one place.
 | Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` |
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-loop` run | scheduled, feeds beads ahead of shipping | `ac-triage` |
-| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 6-lens panel; fixes via `hygiene/*` branch + PR; deferred → epic beads | `ac-hygiene` |
+| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes via `hygiene/*` branch + PR; deferred → epic beads | `ac-hygiene` |
 | Audit | **Not yet scheduled** — human-triggered today; checklists serve as reference depth behind the weekly hygiene panel | findings → beads, never fixes in place | `audit` |
 
 **Triage-before-loop ordering** is the one cadence rule with a *hard dependency* on another

@@ -1,13 +1,13 @@
 ---
 name: ac-hygiene
-description: 'Iterative codebase review — a 6-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes ride a hygiene branch → PR; deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''.'
+description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes ride a hygiene branch → PR; deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''.'
 ---
 
 
 **You are the conductor.** A panel of reviewers hunts independently, each through a different
 lens. You synthesize, fix, and iterate. Codebase-wide — not tied to any feature branch or diff.
 
-The weekly quality pass for a repo (`PANEL=full`, 6 lenses), or a quick between-session
+The weekly quality pass for a repo (`PANEL=full`, 7 lenses), or a quick between-session
 sweep (`PANEL=light`, 3 lenses). For feature-scoped review, use `/ac-review` instead.
 
 ---
@@ -51,7 +51,7 @@ skipped too (the Exhaust Rule routes what would have been asked into beads).
 ```
 SCOPE=<user selection or Full codebase>
 SCOPE_CONTEXT=<commit list or directory listing, if scoped>
-PANEL=full            # full = 6 lenses (weekly run) | light = 3 (quick pass, user asked for "light")
+PANEL=full            # full = 7 lenses (weekly run) | light = 3 (quick pass, user asked for "light")
 CURRENT_ROUND=1
 MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
@@ -176,7 +176,7 @@ TaskCreate("Report — hygiene summary + Slack (headless)")
 TaskCreate("Cleanup / teardown — artifacts + worktree")
 
 # Per-round task — create ONE as each round begins (not upfront):
-TaskCreate("Round {N} — 6-lens panel → synthesize → auto-apply → gate → commit")
+TaskCreate("Round {N} — 7-lens panel → synthesize → auto-apply → gate → commit")
 # On completion, TaskUpdate its description: "{C}/{H}/{M} findings, {n} auto-fixed, commit {sha}"
 ```
 
@@ -194,7 +194,7 @@ this ledger tracks the hygiene run's top-level sections only.
 **All panel agents in a single message for parallel execution.**
 
 Spawn the panel per `PANEL` (full = Bug Hunter, Explorer, Structural, Adversary, Failure
-Engineer, Promise Keeper; light = first three — all Opus) using the prompts in
+Engineer, Promise Keeper, Test Warden; light = first three — all Opus) using the prompts in
 **`references/reviewers.md`**, substituting `{SCOPE_CONTEXT}`, `{CURRENT_ROUND}`, and
 `{ARTIFACTS_DIR}`. Each writes to `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`.
 **Between rounds**, add the "Files already reviewed: {list}. Look elsewhere." line to each

@@ -1,4 +1,4 @@
-# Hygiene Reviewers — the 6-lens panel
+# Hygiene Reviewers — the 7-lens panel
 
 Spawn the panel in a **single message** (parallel). Each agent writes to
 `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`. Substitute `{SCOPE_CONTEXT}`,
@@ -6,7 +6,7 @@ Spawn the panel in a **single message** (parallel). Each agent writes to
 `Files already reviewed: {list from previous round findings}. Look elsewhere.`
 
 **Panels:**
-- `PANEL=full` (default, the weekly run): all 6 lenses below.
+- `PANEL=full` (default, the weekly run): all 7 lenses below.
 - `PANEL=light` (quick between-session pass): Bug Hunter + Explorer + Structural only.
 
 All lenses share the rules that make consensus work: open-ended hunting (seed lists are
@@ -23,7 +23,7 @@ converging on the same file is the strongest signal the conductor gets.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a bug hunter doing a "fresh eyes" review of this codebase. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+You are a bug hunter doing a "fresh eyes" review of this codebase. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — you choose where to look."}
@@ -63,7 +63,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a codebase explorer doing deep random investigation. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+You are a codebase explorer doing deep random investigation. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — explore freely."}
@@ -97,7 +97,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a structural reviewer checking architecture health. You compete with 5 other reviewers — only structural improvements backed by evidence count.
+You are a structural reviewer checking architecture health. You compete with 6 other reviewers — only structural improvements backed by evidence count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — assess overall health."}
@@ -133,7 +133,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a security-minded reviewer reading this codebase the way someone hostile would. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+You are a security-minded reviewer reading this codebase the way someone hostile would. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — follow the trust boundaries."}
@@ -169,7 +169,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a failure engineer asking "how does this die?" of a codebase that works today. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+You are a failure engineer asking "how does this die?" of a codebase that works today. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — hunt the failure modes."}
@@ -209,7 +209,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
-You are a contract reviewer verifying that this codebase does what it claims. You compete with 5 other reviewers — only evidence-backed findings with file paths count.
+You are a contract reviewer verifying that this codebase does what it claims. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
 
 ## Scope
 {SCOPE_CONTEXT or "Full codebase — audit the promises."}
@@ -239,6 +239,61 @@ For each finding:
 **Auto-fixable:** YES | NO
 
 Limit: top 7 findings. Skip Low severity. Under 600 words total.
+If nothing found, say so — don't invent issues.
+""")
+```
+
+## Agent 7: Test Warden (Opus)
+
+```
+Task(subagent_type: "general-purpose", model: "opus", prompt: """
+First: read AGENTS.md for project context, coding standards, and conventions.
+
+You are a test warden auditing whether the tests that exist are worth anything. You compete with 6 other reviewers — only evidence-backed findings with file paths count. Promise Keeper hunts MISSING tests; you audit the EXISTING ones. A bad test is worse than no test — it costs runtime and buys false confidence. Unlike the other lenses, you don't just read: you run experiments that prove a test is broken.
+
+## Scope
+
+{SCOPE_CONTEXT — if set, audit the tests in/near that scope. Otherwise, three slices in priority order:}
+
+1. Fresh — tests touching code changed since the last hygiene run (find it via git log — most recent hygiene/* merge or hygiene commit; fall back to the last 30 days). New machine-written tests get caught here while the diff is small.
+2. Rotation — this week's bucket of the full suite, so the back-catalog is provably covered every N weeks. Stateless and deterministic — no state file, derived from the date:
+   N=10; BUCKET=$(( $(date +%V) % N ))   # a test file is in this week's bucket when cksum(path) % N == BUCKET
+3. Instinct — leftover budget wherever suspicion leads: most-mocked files, slowest tests, tests that have never once failed.
+
+## Your Method
+
+Read first, experiment second. Read the slice and shortlist suspects (veins below), then spend a capped experiment budget — max ~10 probes — convicting the shortlist. Reading nominates; experiments convict.
+
+The toolbox (probes):
+- Rerun the suspect tests 2-3x on identical code. A test that flips is proven flaky.
+- Shuffle — run them in random order (vitest: --sequence.shuffle with a seed; or the runner's equivalent). Fails only when shuffled = proven order-dependent.
+- Sabotage — break the code a test claims to guard (empty the function body, flip a boundary, invert a condition — pick the ONE sabotage most likely to expose a hollow test), run just the covering tests, expect red. Still green = the tests assert nothing. That's proof, not opinion.
+
+Isolation discipline (absolute): the other reviewers are reading this tree RIGHT NOW. Never sabotage or modify the shared tree. All destructive probes run in a disposable worktree — `git worktree add <tmpdir> HEAD`, experiment there, `git worktree remove --force <tmpdir>` when done. To you, the shared tree is read-only.
+
+The reading veins, in rough payoff order:
+- Cannot fail — no assertions; assertions inside conditionals/catch blocks; un-awaited async assertions; trivial truths (defined-only, length-only); snapshot-only tests reflexively regenerated on every change.
+- Tautologies — expected values computed by the same logic as the code under test, or the test importing the SUT's own helper to build its expectation.
+- Testing the mock — assertions that only echo arguments the test itself passed; asserting a stub returns its stubbed value; mocking the module under test; mock setup longer than the test body. The signature failure mode of machine-written tests — expect to find it. Cross-check `_shared/anti-patterns.md`'s unproven seam: a mocked boundary with no un-mocked test anywhere.
+- Flakiness precursors — sleeps instead of polling, unseeded randomness, un-frozen clocks, real network in unit tests, shared mutable fixtures, order assertions on unordered collections, float equality. Prime sabotage/shuffle candidates.
+- Zombies — long-skipped tests with no linked issue (git-blame the skip), commented-out tests, tests exercising deleted features or mocking removed modules.
+- Classic smells only past threshold — assertion roulette at 3+ unmessaged assertions, eager tests calling 4+ distinct production functions, any test-body conditional logic. Below threshold, stay quiet: binary smell-flagging drowns the signal.
+
+`audit/tests-audit.md` has rubric seeds — inspiration, not a checklist. Discipline: never nominate a test for deletion on coverage evidence alone — a sabotage probe that stays green IS deletion-grade evidence; for bloated-but-load-bearing tests, prescribe simplification instead.
+
+## Output
+
+Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-test-warden.md
+
+For each finding:
+## Finding N: Title
+**Severity:** Critical | High | Medium
+**File:** path/to/test-file:line
+**Evidence:** What the test claims to guard, and the proof — probe result ("emptied calculateTotal, all 12 covering tests stayed green") or the specific reading
+**Fix:** Specific change needed (strengthen assertion / un-mock the seam / simplify / delete)
+**Auto-fixable:** YES | NO (deleting zombies and probe-convicted cannot-fail tests = YES; rewriting over-mocked or tautological tests = NO — a bad rewrite destroys the only regression protection that code has)
+
+Limit: top 7 findings. Skip Low severity. Under 600 words total. State which probes you ran and their verdicts even when clean.
 If nothing found, say so — don't invent issues.
 """)
 ```
