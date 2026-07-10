@@ -10,7 +10,7 @@
     {
       "id": "memory-recall",
       "event": "UserPromptSubmit",
-      "command": "python3 {PROJECT}/.claude/hooks/memory-retrieval-adaptive.py",
+      "command": "python3 {PROJECT}/.claude/hooks/memory-retrieval.py",
       "harnesses": ["claude"],
       "_doc": "Claude-only: emits Claude hook-JSON; script stays in .claude/hooks/. Other harnesses compensate via the manual-recall reminder below."
     },
