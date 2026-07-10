@@ -65,6 +65,12 @@ Operating summary (details + edge cases live in context-engineering):
   `skill-improvement` for the decomposition skills (`ac-beadify` / `ac-bead-refine`, or the
   `planning` / `ac-plan-*` skills), **not** a one-off fact. These are the highest-leverage
   upgrade targets — route the lesson INTO the skill, not into a memory note.
+- **Approve-then-diff signal:** if a human edited or corrected a gated deliverable (plan,
+  skill-improvement, proposal) before they approve it, diff the draft against what was
+  actually kept — that diff is a first-class lesson candidate, classified and routed
+  through the normal `{type, domain}` taxonomy and gates like any other. It's the
+  highest-signal, lowest-noise capture channel available: the correction already
+  happened, in view, with no inference required — don't let it evaporate at approval.
 
 ### 3. Classify each: `{type, domain}`
 Use the tables above. A lesson that fits no `{type, domain}` slot is a signal the taxonomy

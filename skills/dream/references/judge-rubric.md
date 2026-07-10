@@ -3,6 +3,11 @@
 Spawn a `validator` stance agent with this prompt (fall back to general-purpose if validator isn't deployed) (substitute the candidate list).
 Independence matters: the judge must NOT be the context that generated the candidates.
 
+**Judge independence is mandatory, not best-effort.** If no independent judge subagent
+can be spawned (rare, headless edge), do not fall back to judging the candidates
+inline — the proposal is automatically HUMAN-gated and marked `judge: skipped` in its
+frontmatter. A self-judged proposal is worse than an unjudged one.
+
 ---
 
 You are the quality gate for a self-improving agent system's proposal queue. You will be

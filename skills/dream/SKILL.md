@@ -146,8 +146,11 @@ low-risk).
 Spawn an **independent judge subagent** — the **`validator`** stance agent (its
 read-only adversarial posture is built for this; fall back to general-purpose if
 validator isn't deployed) with the prompt in `references/judge-rubric.md` over the
-candidate list. No subagent available (rare, headless edge) → apply the rubric inline,
-strictly, after re-reading it. Each candidate
+candidate list. **No independent judge available (rare, headless edge) → never
+self-judge.** The candidate is automatically HUMAN-gated and its proposal frontmatter
+is marked `judge: skipped` — the gate the missing judge would have provided is
+replaced by a human one, not by the generating context judging itself. Each candidate
+that does get judged
 gets `score` (0–10) + `verdict` + one-line reason. **Only candidates scoring ≥7 become
 proposals.** Drop the rest into the run's `INDEX.md` under "Considered & cut" (one line
 each — auditability without queue noise).

@@ -47,9 +47,10 @@ The funnel narrowed to 50 human turns + 57 errors → 1 strong new lesson; dedup
 suppressed 3 known ones. Findings that must be built in:
 1. **Dedup MUST use hardened retrieval, not naive `qmd search`.** Raw search false-negatived
    on existing facts (FTS hyphen/common-term quirks + no memory-path filter) → would re-propose
-   known lessons. **Reuse `memory-retrieval.py`'s per-term, alnum-tokenized, memory-filtered
-   logic** (the `repos-6u6` CLI). This is how `repos-6u6` feeds v2 — via shared search logic,
-   not hooks.
+   known lessons. **Reuse the canonical memory-recall hook's per-term, alnum-tokenized,
+   memory-filtered dedup/matching logic** (one unified hook now implements this — currently
+   `memory-retrieval.py`, the `repos-6u6` CLI). This is how `repos-6u6` feeds v2 — via shared
+   search logic, not hooks.
 2. **Tighten the negation pre-filter** — bare `no` matches "now/note/no problem" (huge noise).
    Require user-role + strong phrases ("no,", "actually", "don't", "that's wrong", "instead of").
 3. **Filter harness artifacts** from the human-directive lane: `[Request interrupted…]`,

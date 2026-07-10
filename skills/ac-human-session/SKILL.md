@@ -194,6 +194,12 @@ AskUserQuestion(
 - **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-plan-refine-internal {path}`.
 - **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac-plan-init`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
 
+**Approve-then-diff capture:** when a decision or plan approval follows the human editing
+or correcting the deliverable first (a reframed memo, a re-scoped plan) — diff what was
+drafted against what was kept *before* closing the item. Hand that diff to `reflect` as a
+lesson candidate (routed through its normal type/domain taxonomy and gates). It's the
+cheapest, highest-signal capture channel in the session — don't close the gate and lose it.
+
 **Auto-advance:** after each action, confirm the result + ripple, then immediately present the next item — never re-render the whole dashboard mid-flow. Stop when the human picks "Done" or every tier is empty.
 
 **Migration duty:** any human-pending item found in a legacy file scan (e.g. `_backlog-manual/`, plan `needs-approval`) that is NOT yet a bead → convert to a `human-gate` bead (`-t decision` for choices, `-t task` for manual actions) so the docket stays the system of record. File scans are a safety net, not the source of truth.
