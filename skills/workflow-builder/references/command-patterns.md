@@ -100,7 +100,7 @@ to answer a cheap "is this a flake?" — re-run the one failing unit).
 
 A long autonomous run must not stall on a decision. Two paths:
 - **Simple, bounded fork** (≤3 options, answerable in a few words) → an in-line prompt
-  (`AskUserQuestion`; headless, it can render as Slack buttons).
+  (`AskUserQuestion`) — interactive sessions only; headless runs defer instead.
 - **Anything else** → **defer it**: record the decision as a durable item the human clears
   later (a deferred-decision note; in the eng pipeline, a *decision bead* — the **Exhaust
   Rule** in `ac-pipeline-builder`), and keep moving.

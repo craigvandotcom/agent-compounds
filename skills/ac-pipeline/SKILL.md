@@ -56,7 +56,7 @@ identically.
 - `ac-tidy` — pipeline housekeeping (archive done items, reconcile backlog/plans/beads). Run between waves.
 - `ac-hygiene` — codebase cleanup pass. Run between waves.
 - `ac-human-session` — the human command center: surfaces what needs *your* decision (blockers, plans to approve, hopper) and conducts the sit-down. Absorbs the old `ac-next` funnel view.
-- `ac-loop` — **scheduled autonomous conductor**: ships orphan beads + plan waves without human checkpoints, pauses on simple decisions via Slack buttons, nudges human about remaining blocks. Use instead of `ac-pipeline` for unattended runs.
+- `ac-loop` — **scheduled autonomous conductor**: ships orphan beads + plan waves without human checkpoints, surfaces decisions as `human-gate` decision beads + advisory nudges, nudges human about remaining blocks. Use instead of `ac-pipeline` for unattended runs.
 
 ## Operating rules
 
