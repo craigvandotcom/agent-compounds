@@ -40,9 +40,15 @@ EACH ITERATION:
   0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
       ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
-      ├─ batch into branches: one bug per branch, OR one branch per group of bugs touching the SAME files
-      │      (never bundle unrelated bugs — one bad fix blocks the rest; never fold a bug into a feature wave)
-      └─ EACH bug branch: ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
+      ├─ batch the drain into ONE bug-batch branch (bugs/batch-<YYYYMMDD>-<n>): sequenced commits,
+      │      one bug per commit, each independently green on affected tests BEFORE the next starts —
+      │      the branch is never broken mid-sequence. A fix that goes bad is REVERTED out of the
+      │      batch (bead reopened), never a blocker. Cap ~8 bugs/batch; overflow forms the next
+      │      batch after this one merges.
+      │      SOLO exceptions (own branch, ship immediately): P0/urgent; migration- or native-touching;
+      │      conductor judges the fix risky enough to isolate. Never fold a bug into a feature wave.
+      └─ the BATCH runs the chain ONCE: ac-implement (per bug, sequential) → VERIFY-GATE → ac-review
+             → BEADS-CLOSED-GATE → ac-merge → Slack notify   (1 PR + 1 CI run for the whole batch)
       ⟳ RE-CHECK the Bug-Lane filter after every merge; repeat until ZERO unblocked bugs remain, THEN step 1
   1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships after the bug lane is dry)
       └─ ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
@@ -173,7 +179,7 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wav
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) — **every priority, P0 through P4** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
 > - **Blocked bugs can't ship — so they never freeze the loop.** A bug with an unmet dependency is not in `br ready`; a `human-gate` bug is exempt. Both are *surfaced* (advisory nudge / Phase ARIA), set aside, and picked up automatically on a later pass once their blocker merges through the non-bug flow. "Within reason" = a bug you can't act on does not hold up the world.
-> - **Execution: bug fixes ride their own branch.** One bug — or a small group of bugs touching the *same files* — per branch → own CI → merge independently. Never fold a bug into an unrelated feature wave; never bundle unrelated bugs (one bad fix would block the rest). A bug that is *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
+> - **Execution: the drain ships as ONE batched branch.** Pull the ready lane into a single bug-batch branch (`bugs/batch-<YYYYMMDD>-<n>`) — sequenced commits, one bug per commit, each independently green on affected tests before the next starts, so the branch is never broken mid-sequence (same safe-sequencing contract as wave beads). The batch then runs implement → review → merge **once**: one PR, one CI run — a 9-bug drain costs one merge ceremony, not nine (the 2026-07-10 all-nighter post-mortem: per-bug branches spent ~3h in CI for ~1h of fixes). A fix that turns out bad is **reverted out of the batch** and its bead reopened — it never blocks siblings (this replaces the old "never bundle unrelated bugs" rationale). **Solo-branch exceptions (ship immediately, own branch):** P0/urgent fixes that must not wait for the batch; migration- or native-touching fixes; anything the conductor judges needs isolation. Cap ~8 bugs per batch — overflow forms the next batch after this one merges. Never fold a bug into an unrelated feature wave; a bug *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
 
 **Work priority order (NON-BUG work — runs only after the Bug Lane is dry)** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
