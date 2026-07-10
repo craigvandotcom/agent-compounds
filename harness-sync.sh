@@ -51,6 +51,7 @@ done
 
 CHANGES=0
 note_change() { CHANGES=$((CHANGES + 1)); }
+FAILURES=0
 
 # --- manifest -----------------------------------------------------------------
 MANIFEST="$AC_ROOT/harnesses.json"
@@ -345,15 +346,52 @@ ensure_home_link() {
   note_change
 }
 
+# --- public-target guard ------------------------------------------------------------
+# A `public` flag on a target's ac-deploy-targets.list line means the repo is
+# published: the harness layer must be gitignored so stamped symlinks are never
+# committed (dangling links for external cloners + internal-structure leak).
+# check-ignore is pure pattern matching — probe paths need not exist; they stand
+# in for anything sync_target would create.
+TARGETS_LIST="$REPOS_ROOT/infrastructure/ac-deploy-targets.list"
+
+is_public_target() { # <basename>
+  [ -f "$TARGETS_LIST" ] || return 1
+  grep -Eq "^[[:space:]]*$1[[:space:]]+public([[:space:]]|#|$)" "$TARGETS_LIST"
+}
+
+guard_public() { # <target-base-dir> — 0 if every stamped harness path is gitignored
+  local base="$1" p
+  git -C "$base" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || { echo "  ERROR: public target is not a git repo — cannot verify ignore rules" >&2; return 1; }
+  for p in ".claude/skills/__ac_probe__" ".claude/agents/__ac_probe__.md" \
+           "$CODEX_SKILLS_DIR/__ac_probe__" "$CODEX_AGENTS_DIR/__ac_probe__.toml" \
+           "$DROID_SKILLS_DIR/__ac_probe__" "$DROID_AGENTS_DIR/__ac_probe__.md"; do
+    git -C "$base" check-ignore -q "$p" || {
+      echo "  ERROR: '$p' would be git-tracked — a public target must gitignore its harness layer" >&2
+      return 1
+    }
+  done
+}
+
 # --- target renderers -------------------------------------------------------------
 sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude layer)
-  local base="$1" mode="${2:-app}"
+  local base="$1" mode="${2:-app}" dep_extra=""
   base="$(cd "$base" && pwd)"
   echo "== $base"
 
+  if is_public_target "$(basename "$base")"; then
+    echo "  -- public target: verifying harness layer is gitignored"
+    if ! guard_public "$base"; then
+      echo "  SKIP target (public guard failed, nothing stamped): $base" >&2
+      FAILURES=$((FAILURES + 1))
+      return 0
+    fi
+    dep_extra="--require-ignored"
+  fi
+
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
-    local dep_flags="" deploy_status
-    [ "$DRY" = 1 ] && dep_flags="-n"
+    local dep_flags="$dep_extra" deploy_status
+    [ "$DRY" = 1 ] && dep_flags="$dep_flags -n"
     # deploy.sh output counts as change signal only in --check via its own diff-noise;
     # it is idempotent, so re-running is always safe.
     # `|| true` guards against grep's own exit 1 when it filters out every line
@@ -429,17 +467,17 @@ sync_root() {
 [ "$DO_ROOT" = 1 ] && sync_root
 
 if [ "$DO_ALL" = 1 ]; then
-  LIST="$REPOS_ROOT/infrastructure/ac-deploy-targets.list"
-  [ -f "$LIST" ] || { echo "error: $LIST missing" >&2; exit 2; }
+  [ -f "$TARGETS_LIST" ] || { echo "error: $TARGETS_LIST missing" >&2; exit 2; }
   while IFS= read -r line; do
     line="${line%%#*}"; line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
     [ -n "$line" ] || continue
-    if [ -d "$AC_ROOT/../$line" ]; then
-      sync_target "$AC_ROOT/../$line" app
+    name="${line%%[[:space:]]*}"   # first token = dir; rest = flags (e.g. `public`)
+    if [ -d "$AC_ROOT/../$name" ]; then
+      sync_target "$AC_ROOT/../$name" app
     else
-      echo "WARN: target missing on this machine: $line"
+      echo "WARN: target missing on this machine: $name"
     fi
-  done < "$LIST"
+  done < "$TARGETS_LIST"
 fi
 
 for t in ${TARGETS[@]+"${TARGETS[@]}"}; do
@@ -448,6 +486,10 @@ for t in ${TARGETS[@]+"${TARGETS[@]}"}; do
 done
 
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
+if [ "$FAILURES" -gt 0 ]; then
+  echo "ERROR: $FAILURES target(s) skipped by the public-target guard — fix their .gitignore and re-run" >&2
+  exit 1
+fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then
   echo "DRIFT: projections out of sync — run harness-sync.sh to converge" >&2
   exit 1

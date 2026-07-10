@@ -52,10 +52,14 @@ app AND every harness on the next sync with **no manual re-stamp** (idempotent:
 creates/refreshes symlinks only, never clobbers a real file — so local customizations like
 art-still's `design-system` survive; generated files are stamp-gated).
 
-**Exclusion (the one exception):** public OSS libraries that are cloned standalone are NOT
-stamped — e.g. `vitest-affected`. Symlinks into `../../../agent-compounds` would dangle for
-external cloners and leak internal tooling structure. The "no exclude" rule is scoped to
-internal neoMeta product apps, not published OSS. To add/remove a target, edit
+**Public repos (the `public` flag, 2026-07-10):** public OSS repos (e.g. `vitest-affected`)
+are synced like everyone else — the concern was never the sync, it was *committing* the
+symlinks (dangling for external cloners + internal-structure leak). Such targets carry a
+`public` flag in the list and must gitignore their harness layer (`.claude/`, `.agents/`,
+`.factory/`, `.codex/`); only AGENTS.md/CLAUDE.md and deliberately tracked project-authored
+skills stay published. harness-sync.sh verifies the ignore rules before stamping
+(`guard_public`, backed by `deploy.sh --require-ignored`) and skips the target loudly if
+they're missing — the invariant is enforced, not conventional. To add/remove a target, edit
 `infrastructure/ac-deploy-targets.list` (not deploy.sh).
 
 ## Architecture

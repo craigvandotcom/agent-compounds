@@ -21,6 +21,10 @@
 #   --all                   all skills + all agents
 #   --list                  print what's available and exit
 #   --no-prune              keep orphaned symlinks (default: prune them)
+#   --require-ignored       refuse to stamp unless the target's git repo ignores
+#                           the harness paths this script creates (guard for
+#                           PUBLIC repos — symlinks must never be committed/
+#                           published; see ac-deploy-targets.list `public` flag)
 #   -n, --dry-run           show what would happen, change nothing
 #
 # Prune (default ON): after linking, any symlink under the target's
@@ -41,6 +45,7 @@ AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 DRY=0
 PRUNE=1
+REQ_IGNORED=0
 SKILLS_REQ=""
 AGENTS_REQ=""
 TARGET=""
@@ -71,6 +76,7 @@ while [ $# -gt 0 ]; do
     --all)      SKILLS_REQ="all"; AGENTS_REQ="all"; shift ;;
     --list)     list_available; exit 0 ;;
     --no-prune) PRUNE=0; shift ;;
+    --require-ignored) REQ_IGNORED=1; shift ;;
     -n|--dry-run) DRY=1; shift ;;
     -*)         echo "unknown option: $1" >&2; exit 2 ;;
     *)          TARGET="$1"; shift ;;
@@ -82,6 +88,19 @@ if [ -z "$TARGET" ]; then
 fi
 [ -d "$TARGET" ] || { echo "error: target dir does not exist: $TARGET" >&2; exit 2; }
 TARGET="$(cd "$TARGET" && pwd)"   # absolutize
+
+# --require-ignored: public-repo guard. check-ignore is pure pattern matching, so
+# probe paths need not exist — they stand in for anything this script would create.
+if [ "$REQ_IGNORED" = 1 ]; then
+  git -C "$TARGET" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || { echo "error: --require-ignored: $TARGET is not a git repo — cannot verify ignore rules" >&2; exit 3; }
+  for p in .claude/skills/__ac_probe__ .claude/agents/__ac_probe__.md; do
+    git -C "$TARGET" check-ignore -q "$p" || {
+      echo "error: --require-ignored: '$p' would be git-tracked in $TARGET — a public target must gitignore its harness layer before stamping (nothing linked)" >&2
+      exit 3
+    }
+  done
+fi
 
 # relpath FROM_DIR TO_PATH  -> relative path usable as a symlink target
 relpath() { python3 -c 'import os,sys; print(os.path.relpath(sys.argv[2], sys.argv[1]))' "$1" "$2"; }
