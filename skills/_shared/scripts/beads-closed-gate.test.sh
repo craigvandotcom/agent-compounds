@@ -113,6 +113,69 @@ else
   fail "Case C: expected exit 1, got exit $RC. Output: $OUT"
 fi
 
+# --- Case D: dot-suffix child bead must NOT prefix-collide parent -------
+# Fixture board: bd-19o6g (parent epic, OPEN) + bd-19o6g.3 (child, CLOSED).
+# Branch commit carries trailer `Bead: bd-19o6g.3` only. Expect: gate exits
+# 0 — only the child was in scope and it's closed; the open parent must NOT
+# be pulled in despite being a string-prefix of the child's ID.
+git -C "$WORKDIR" checkout -q main
+git -C "$WORKDIR" checkout -q -b bug/bd-fixtureD-test
+echo "change-d" >>"$WORKDIR/file.txt"
+git -C "$WORKDIR" add file.txt
+git -C "$WORKDIR" commit -q -m "fix(test): dot-suffix fixture fix
+
+Bead: bd-19o6g.3"
+
+write_mock_br_two() {
+  # $1 = id of bead A, $2 = status of bead A, $3 = id of bead B, $4 = status of bead B.
+  local id_a="$1" status_a="$2" id_b="$3" status_b="$4"
+  cat >"$MOCK_BIN/br" <<EOF
+#!/usr/bin/env bash
+if [ "\$1" = "list" ]; then
+  cat <<JSON
+{"issues":[
+  {"id":"$id_a","status":"$status_a","labels":["infra"]},
+  {"id":"$id_b","status":"$status_b","labels":["infra"]}
+]}
+JSON
+fi
+EOF
+  chmod +x "$MOCK_BIN/br"
+}
+
+write_mock_br_two "bd-19o6g" "open" "bd-19o6g.3" "closed"
+OUT=$(run_gate 2>&1)
+RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case D: dot-suffix child closed -> gate exits 0 (parent not swept in)"
+else
+  fail "Case D: expected exit 0, got exit $RC. Output: $OUT"
+fi
+
+# --- Case E: prose mention of an unrelated bead must NOT block -----------
+# Fixture board: bd-fixture01 (the branch's own bead, OPEN) + bd-ciqgd
+# (unrelated, OPEN). Commit body prose-mentions bd-ciqgd but the trailer is
+# bd-fixture01 only. Expect: gate exits 1, driven only by bd-fixture01 being
+# open; bd-ciqgd (prose-only) must not appear in the output.
+git -C "$WORKDIR" checkout -q main
+git -C "$WORKDIR" checkout -q -b bug/bd-fixtureE-test
+echo "change-e" >>"$WORKDIR/file.txt"
+git -C "$WORKDIR" add file.txt
+git -C "$WORKDIR" commit -q -m "fix: fixture prose fix
+
+Filed bd-ciqgd follow-up for later.
+
+Bead: bd-fixture01"
+
+write_mock_br_two "bd-fixture01" "open" "bd-ciqgd" "open"
+OUT=$(run_gate 2>&1)
+RC=$?
+if [ "$RC" -eq 1 ] && ! printf '%s' "$OUT" | grep -q "bd-ciqgd"; then
+  pass "Case E: prose-mentioned bead excluded -> gate exits 1 on own bead only"
+else
+  fail "Case E: expected exit 1 without bd-ciqgd in output, got exit $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All beads-closed-gate.sh fixture tests passed."

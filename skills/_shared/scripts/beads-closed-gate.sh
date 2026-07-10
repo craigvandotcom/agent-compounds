@@ -10,11 +10,16 @@
 #
 # Scope is determined two ways (either satisfies the bead's "commit trailers
 # OR an explicit wave label" decision):
-#   1. Default (no args): derive the bead-ID set from `bd-xxxxx` references
-#      found in commit messages between this branch's merge-base with main
-#      and HEAD (matches ac-implement's `Bead: <id>` commit trailer). Works
-#      uniformly for wave/* branches (many beads) and bug/* lane branches
-#      (single bead) — no wave-label lookup needed.
+#   1. Default (no args): derive the bead-ID set from `Bead: <id>` commit
+#      trailer LINES ONLY, found between this branch's merge-base with main
+#      and HEAD (matches ac-implement's mandated commit template). Trailer-
+#      only, exact-match, dot-suffix-preserving — inline/prose `bd-xxxxx`
+#      mentions elsewhere in the commit body are deliberately EXCLUDED, since
+#      matching them would both prefix-collide dot-suffixed child IDs (e.g.
+#      `bd-19o6g.3` truncating to parent `bd-19o6g`) and pull in beads merely
+#      referenced in prose (e.g. "deferred to bd-xxxxx") as if in scope.
+#      Works uniformly for wave/* branches (many beads) and bug/* lane
+#      branches (single bead) — no wave-label lookup needed.
 #   2. Optional `$1` = explicit wave label (e.g. "wave-042"): scope to beads
 #      carrying that label instead of parsing commits.
 #
@@ -39,9 +44,11 @@ if [ -n "$WAVE_LABEL" ]; then
   OPEN=$(echo "$ALL_OPEN" | jq --arg label "$WAVE_LABEL" \
     '[.[] | select((.labels // []) | index($label))]') || exit 2
 else
-  # Default: derive the bead-ID set owned by this branch from its own
-  # commits (merge-base..HEAD), matching `bd-xxxxx` anywhere in the message
-  # (covers the `Bead: <id>` trailer and inline `(bd-xxxxx)` refs alike).
+  # Default: derive the bead-ID set owned by this branch from `Bead: <id>`
+  # commit trailer LINES ONLY (merge-base..HEAD) — exact-match, dot-suffix-
+  # preserving. Inline/prose `bd-xxxxx` mentions elsewhere in the commit body
+  # are deliberately excluded (prevents prefix-collision on dot-suffixed
+  # child IDs and false-positive scope from prose references).
   BASE_REF=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null)
   if [ -z "$BASE_REF" ]; then
     echo "beads-closed-gate: could not determine merge-base with main" >&2
@@ -50,9 +57,12 @@ else
 
   LOG_OUTPUT=$(git log "${BASE_REF}..HEAD" --format=%B 2>/dev/null) || exit 2
   # grep exits 1 on "no matches" (e.g. branch has no commits yet, or none
-  # reference a bead) — that's a valid empty-scope result, not a failure, so
-  # it's intentionally NOT `|| exit 2` here (pipefail would otherwise trip).
-  BEAD_IDS=$(printf '%s' "$LOG_OUTPUT" | grep -oE 'bd-[a-z0-9]+' | sort -u)
+  # carry a `Bead:` trailer) — that's a valid empty-scope result, not a
+  # failure, so it's intentionally NOT `|| exit 2` here (pipefail would
+  # otherwise trip). grep is line-oriented, so this naturally captures every
+  # `Bead:` line across the full commit range, including multiple distinct
+  # trailers inside one squashed/merged commit body.
+  BEAD_IDS=$(printf '%s' "$LOG_OUTPUT" | grep -E '^Bead: ' | sed -E 's/^Bead: //' | sort -u)
 
   if [ -z "$BEAD_IDS" ]; then
     # No beads referenced by this branch's commits yet — nothing in scope.
