@@ -367,6 +367,10 @@ Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER"
 
 ## Phase 2: Wait for PR Feedback
 
+> **Bounded wait only** (`_shared/delegation-contract.md`): the poll below is hard-capped
+> and timeout-terminal on purpose — never swap it for an open-ended "monitor" and assume it
+> wakes you. A stalled CI/agent run is a reportable outcome, not a pause.
+
 ### Poll for Checks and Comments
 
 Wait for CI checks and agent reviews to complete. Poll every 30 seconds, timeout after 10 minutes.

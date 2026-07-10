@@ -230,7 +230,10 @@ Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, 
 - Include a dimension's `SKILL_HINT` line only if Phase-1 skill routing found a relevant skill.
 - Competitive framing, the finding format, and limits (top 7, skip Low, <600 words) are baked into the template — don't restate them.
 
-**Wait for all 4 reviewers to complete.**
+**Wait for all 4 reviewers to complete.** Bound the wait per
+`_shared/delegation-contract.md`: a reviewer that returns nothing (died on a terminal API
+error, or its resume chain broke) is a **failure to re-spawn or report**, not a silent pass —
+verify each `round-1-{role}.json` actually exists before synthesizing; missing output ≠ "no findings."
 
 **TaskUpdate(task: "Phase 2", status: "completed")**
 
