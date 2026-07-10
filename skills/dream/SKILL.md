@@ -81,11 +81,19 @@ while IFS= read -r app; do
 done < ~/Repos/infrastructure/apps.list
 # Recipe stream
 git -C ~/Repos/neometa/software/agent-compounds log --since="$LAST" --oneline -- skills/jef-prompts/
+# Calibration rollup (observe-loop signal; tolerate absence — it lands as a parallel
+# work item, never fail this phase on it)
+python3 ~/Repos/infrastructure/telemetry/telemetry.py rollup 2>/dev/null || echo "(telemetry rollup unavailable this run — note it in INDEX.md, don't fail the phase)"
 ```
 
 Read every new/changed lesson file (they are small). Also `br list --json 2>/dev/null`
 and recent `git log --oneline` for outcome signals to ground against. If the stream is
 empty, still run Phase 3 (lint) — hygiene work exists even in quiet weeks.
+
+Capture the rollup's calibration markdown block (acceptance rate — trailing 4 weeks,
+**gated-proposals-only** scope, denominator stated) — Phase 5 folds it verbatim into
+this run's `INDEX.md`. If the command was absent or failed, carry forward a one-line
+"telemetry rollup unavailable" note instead; don't block the cycle on it.
 
 **TaskUpdate("Gather lessons", completed)**
 **TaskUpdate("Synthesize patterns", in_progress)**
@@ -162,7 +170,10 @@ each — auditability without queue noise).
 
 Create `infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`:
 
-- `INDEX.md` — run summary: window, stream size, proposals by category, considered-&-cut.
+- `INDEX.md` — run summary: window, stream size, proposals by category, considered-&-cut,
+  and the **calibration block** captured in Phase 1 (acceptance rate — trailing 4 weeks,
+  gated-proposals-only scope, denominator stated) or the one-line "rollup unavailable"
+  note if `telemetry.py` hasn't landed on this machine yet.
 - `NN-<slug>.md` per proposal:
 
 ```markdown
@@ -220,9 +231,17 @@ never across repo boundaries.)
 ### Phase 6 — Heartbeat + report
 
 Write `infrastructure/dream-cycle/last-run.json`:
-`{"timestamp": "<ISO now>", "window_start": "<LAST>", "lessons_read": N, "candidates": N, "proposals": N, "machine": "<hostname>"}`
-(include in the Phase-5 commit). Then output a compact run report. If the run produced
-zero proposals, say so plainly — a quiet week is a valid outcome, not a failure.
+`{"timestamp": "<ISO now>", "window_start": "<LAST>", "status": "ok"|"empty"|"error", "lessons_read": N, "candidates": N, "proposals": N, "machine": "<hostname>"}`
+(include in the Phase-5 commit). **`status` is the honest outcome, not a proxy for
+proposal count:** `ok` = every phase completed and the cycle emitted ≥1 proposal;
+`empty` = every phase completed with **zero** proposals — a quiet week is a first-class
+valid outcome, never dressed up as `ok`; `error` = a phase could not complete
+(precondition failure, judge unreachable, write/push failure, uncaught exception) — still
+write `last-run.json` with whatever counts were reached and `status: error`, and still
+emit a run report describing what broke (this is the field the nightly dead-man's-switch
+check reads for stale/failed runs — this skill only writes it honestly, it doesn't
+implement that check). Then output a compact run report. If the run produced zero
+proposals, say so plainly — a quiet week is a valid outcome, not a failure.
 
 **TaskUpdate("Heartbeat + report", completed)**
 

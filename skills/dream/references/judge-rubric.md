@@ -44,3 +44,18 @@ throughput is the bottleneck (optimize the generation→verification loop for *s
 verification*, not volume of generation). Target acceptance-rate at review: ~60–80%. If
 the human rejects more than that, the bar is too low — the cycle should propose raising
 it; if ~100% accepted across multiple cycles, it may be too high.
+
+**The judge-bar auto-trigger (forward-armed, not backfill-armed).** Each cycle's Phase 1
+rollup reports a trailing acceptance rate, **gated proposals only** (Tier-0/Tier-1
+auto-applies are 100%-by-construction and excluded). That number is **forward-only
+armed**: only dispositions recorded *after* the telemetry rollup landed count toward the
+trigger. Backfilled/historical numbers are printed in the calibration block for context
+only and can **never** fire it — the pre-telemetry corpus has zero persisted rejections,
+so a backfilled rate would read as ~100% by construction, an artifact of missing data,
+not a calibration signal. When the trailing **forward-data** rate sits outside 60–80% for
+**2 consecutive cycles**, the cycle emits a **GATED** judge-bar adjustment proposal
+(category: `skill-improvement`, target: this file's scoring dimensions/threshold) — the
+dial above, finally fed by data instead of an unmeasured target. One cycle outside the
+band is noise; two in a row is the trigger. If the rollup is unavailable (script not yet
+shipped, or fewer than 2 cycles of forward data exist), the trigger stays un-armed — say
+so in the candidate list, don't guess a rate.
