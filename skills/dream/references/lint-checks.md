@@ -59,6 +59,23 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     pending" note nothing ever re-checked). Grep seed: `grep -rin "can't be\|cannot be\|not
     possible\|no way to" <memory homes>`, then check each hit for `evidence:` and for
     downstream skip/PASS language nearby.
+11. **Decay / promotion by reference** `[T2 weekly, script-driven, data-gated]` — a fact
+    that has earned **neither an injection nor a read** across the trailing window is an
+    archive candidate; a fact referenced often enough is a promotion candidate. This check
+    is **not a manual sweep** — it is the deterministic script
+    `infrastructure/dream-cycle/decay_lint.py`, which reads the observe-loop reference
+    signals (recall injections + qmd reads) and emits **gated** archive proposals
+    (`category: re-home`, always human-gated). It **self-arms**: it does nothing until ≥28
+    days of recall data exist AND the `memory_reads` table is live, so it cannot act on a
+    zero it hasn't earned. Predicate + thresholds (the script docstring is the authority —
+    keep them in sync): archive requires *all* of — zero injected-count in the trailing
+    **28d** window · a **coverage guard** (every non-retired machine contributed ≥**5**
+    active days; shards idle >**90d** are retired, not blockers) · zero read-count in the
+    window · git mtime >**60d**. Promotion: ≥**3** total references (injected+read) in the
+    window. Every archive proposal moves the fact to `<home>/memory/archive/` (reversible,
+    audit-trailed — never deletion) and carries the verbatim blindness caveat that direct
+    `Read`-tool access and MEMORY.md-index browsing are uncounted. Emit-only: the script
+    never moves or deletes anything.
 
 ## Mechanics
 
@@ -70,7 +87,15 @@ diff <(grep -oE '\(([a-z0-9-]+\.md)\)' <home>/MEMORY.md | tr -d '()' | sort) \
      <(ls <home> | grep -v -E 'MEMORY|README' | sort)
 # dead wikilinks
 grep -ohrE '\[\[[a-z0-9-]+\]\]' <homes>... | sort -u   # then check each slug exists
+# decay / promotion by reference (check 11 — self-arming, gated, emit-only)
+python3 ~/Repos/infrastructure/dream-cycle/decay_lint.py   # or --dry-run to preview
 ```
+
+Run `decay_lint.py` in the lint phase; **tolerate absence / not-armed** — a not-armed run
+prints a single `not armed: collecting since <date>; arms <date>` line and exits 0, which
+goes into the cycle `INDEX.md` as-is (it is a status, not a failure). When armed it writes
+its own gated archive proposals into today's `proposals/<date>/` dir and prints a summary +
+promotion list; fold that summary into `INDEX.md` too.
 
 Semantic checks (contradiction, staleness, duplication) need reading + `qmd search` —
 budget most lint time there; the mechanical ones are seconds.

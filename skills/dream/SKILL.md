@@ -220,10 +220,43 @@ cd <target_repo_path> && br create "dream: <slug>" -t decision \
 Public-db caution (already handled by `file-beads.py`): agent-compounds beads publish —
 neutral titles, pointer-only descriptions (the conventions file has the rule).
 
+**CYCLE-DAILY go/no-go decision bead (data-gated, file ONCE).** The transcript-mining v2
+build (`Mode: CYCLE-DAILY`) is deliberately *not* built on a hunch — it waits for gap-trend
+data. Once `infrastructure/dream-cycle/gap-history.jsonl` **spans ≥28 days** (first→last
+date) **and no open-or-closed bead for this decision exists yet**, file a single
+**human-gate decision bead** in the **root** repo carrying the empirical number, so Craig can
+decide *ship-v2a* vs *keep-the-reflect-gap-backstop* on evidence rather than intuition. It
+carries: the **median substantive-unreflected sessions/week** (from the gap-history rollup),
+**2–3 example sessions** (session ids + one-line what-they-did, from a `reflect_gap.py --all`
+sample), and a checklist line for the **one-time transcript-durability verification** (cass
+archive + weekly gdrive coverage — the transcript-durability finding; if inadequate, bump the
+gdrive backup to nightly). File it, don't decide it — this is a gate, not an auto-build.
+Idempotency marker = the bead's stable title below (search before filing so a re-run never
+double-files):
+
+```bash
+# gate: gap-history spans >=28d AND the decision bead does not already exist
+SPAN=$(python3 - <<'PY'
+import json,datetime,pathlib
+p=pathlib.Path.home()/ "Repos/infrastructure/dream-cycle/gap-history.jsonl"
+ds=sorted(json.loads(l)["date"] for l in p.read_text().splitlines() if l.strip()) if p.exists() else []
+d=lambda s:datetime.date.fromisoformat(s)
+print((d(ds[-1])-d(ds[0])).days if len(ds)>=2 else 0)
+PY
+)
+EXISTS=$(br list --json --limit 1000 | jq -r '.issues[]?.title' | grep -c "CYCLE-DAILY go/no-go" || true)
+if [ "$SPAN" -ge 28 ] && [ "$EXISTS" -eq 0 ]; then
+  cd ~/Repos && br create "dream: CYCLE-DAILY go/no-go (transcript-mining v2)" -t decision \
+    --labels "human-gate,dream-proposal" \
+    --description "Median substantive-unreflected sessions/wk: <N> (gap-history since <date>). Examples: <2-3 session ids + one-liners>. Decide: ship v2-a transcript mining vs keep the reflect-gap backstop. Checklist: verify transcript durability (cass archive + weekly gdrive; bump to nightly if inadequate)."
+fi
+```
+
 Commit (root repo, these paths only) + push — the queue must be visible cross-machine:
 `git add infrastructure/dream-cycle && git commit -m "dream: <date> cycle — N proposals" && git push`
-(target-repo bead dbs: commit `.beads/` in each target repo touched, separately —
-never across repo boundaries.)
+(also `git add .beads` in this root commit if the CYCLE-DAILY decision bead was filed above —
+it lives in root's db; target-repo bead dbs for other proposals: commit `.beads/` in each
+target repo touched, separately — never across repo boundaries.)
 
 **TaskUpdate("Emit proposals", completed)**
 **TaskUpdate("Heartbeat + report", in_progress)**
