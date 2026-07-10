@@ -402,6 +402,11 @@ fighting the machine. Hold these:
 **Validators — each fires ONCE, at its correct boundary**
 - Per-bead AND per-wave correctness → `pnpm test` (the affected runner). NEVER `test:all` per bead
   or per wave.
+- The branch-final gate (inside `ac-merge`, post-rebase) is the AGGREGATED affected run pinned to
+  the merge base: `VITEST_AFFECTED_REF=origin/main pnpm test`. Per-bead runs tested each change
+  against the branch's own history; only the aggregated run sees the whole batch/wave diff against
+  CURRENT main (semantic conflicts with main drift, conflict-resolution commits, review fixups).
+  It is still affected-only — cheap — and shrinks what the loop-close `test:all` can be first to find.
 - Full `test:all` runs **exactly once per loop-close** — the async CI run `ac-land` fires
   (`gh workflow run quality-gate.yml -f reason=loop-close`), off the loop's critical path (doctrine
   §5 Tier 2). Waves merge on affected only; the loop-close run is the integration/masking backstop

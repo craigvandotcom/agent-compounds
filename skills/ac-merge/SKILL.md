@@ -86,6 +86,13 @@ git rebase origin/main
 #   format (auto-fix, e.g. `pnpm format` = prettier --write .)   <- pre-empts CI's `prettier --check .`
 # mirror: _shared/verification-gate.md §Format-first
 #   + type-check + lint + tests
+# Tests = the AGGREGATED affected run, pinned to the merge base:
+#   VITEST_AFFECTED_REF=origin/main pnpm test
+# Post-rebase this selects everything the WHOLE branch changed vs the exact state
+# that merges — per-commit affected runs during implementation never saw current
+# main (semantic-conflict class) nor the final tree (review fixups, conflict
+# resolutions). Pin the ref: the config default 'main' is the LOCAL branch, which
+# can be stale even right after `git fetch origin main` — origin/main is truth.
 ```
 
 **Format is the first step and it AUTO-FIXES** — CI runs `prettier --check .` repo-wide as
