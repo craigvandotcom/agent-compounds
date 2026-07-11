@@ -125,6 +125,15 @@ working_since: YYYY-MM-DD
 
 (Skip if no `source_backlog` was identified.)
 
+**If the plan ADOPTS existing open beads** (rather than creating new ones at beadify), claim
+them NOW: `br update <id> --status in_progress` on each, plus a comment on their epic
+recording the plan claim. An active ac-loop treats every un-gated open bead as committed
+work and will ship a divergent fix mid-planning — `br ready` excludes `in_progress`, making
+the claim the only race-proof gate (shipped evidence: 2026-07-10, a concurrent loop closed 3
+adopted beads with divergent implementations while the plan was being drafted). Un-gating a
+decision bead makes it instantly loop-eligible: claim it in the same action. Beadify later
+flips claimed beads back to open-with-wave-marker as it adopts each.
+
 ### Signal Active Work (Agent Mail)
 
 Use the agent name registered at session start (from `macro_start_session` — NOTE: that tool takes `human_key`; the other agent-mail tools below take `project_key`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/active/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
