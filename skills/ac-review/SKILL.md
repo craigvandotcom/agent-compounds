@@ -1,10 +1,10 @@
 ---
 name: ac-review
-description: 'Feature-branch code review — parallel reviewers (correctness/security/perf/architecture), severity-based auto-fix + escalation. Triggers: ''review the branch'', ''work review'', ''code review this feature'', ''pre-merge review''.'
+description: 'Feature-branch code review — parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), severity-based auto-fix + escalation. Triggers: ''review the branch'', ''work review'', ''code review this feature'', ''pre-merge review''.'
 ---
 
 
-**You are the conductor.** Four reviewers hunt independently. You synthesize, auto-fix, and escalate. Feature-branch scoped — run after implementation, before merge.
+**You are the conductor.** A panel of up to six reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts). You synthesize, auto-fix, and escalate. Feature-branch scoped — run after implementation, before merge.
 
 For codebase-wide health checks, use `/ac-hygiene` instead.
 
@@ -69,7 +69,7 @@ TaskCreate(subject: "Phase 0: Initialize", description: "Discover commands, crea
 
 TaskCreate(subject: "Phase 1: Gather context", description: "Branch safety, diff scope, plan context, baseline check", activeForm: "Gathering context...")
 
-TaskCreate(subject: "Phase 2: Parallel review", description: "Spawn 4 reviewers (security, performance, architecture, correctness)", activeForm: "Running parallel reviews...")
+TaskCreate(subject: "Phase 2: Parallel review", description: "Assemble panel (core 4 + conditional test-quality/contracts), write manifest, spawn reviewers", activeForm: "Running parallel reviews...")
 
 TaskCreate(subject: "Phase 3: Synthesize findings", description: "Dedup, consensus detection, severity-based auto-apply rules", activeForm: "Synthesizing findings...")
 
@@ -220,20 +220,50 @@ options:
 
 Read project config files and `AGENTS.md` to build context for reviewers. Extract: framework, key dependencies, test framework, patterns used, language settings, architecture overview.
 
-### Spawn All 4 Reviewers Simultaneously
+### Assemble the Panel
 
-**CRITICAL: All 4 agents run IN PARALLEL using a single message with 4 Task calls.**
+The panel is the six dimensions in **`references/review-dimensions.md`**. The **core four**
+(security, performance, architecture, correctness) ALWAYS spawn. The two diff-conditional
+lenses use **negative gating** — spawn by default, skip only when provably irrelevant:
 
-Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** (security, performance, architecture, correctness). Substitute `{DIFF}` (the Phase-2 diff), `{ARTIFACTS_DIR}`, and `{ROUND}` (`1` here) into each.
+- **test-quality** — skip ONLY if the diff contains zero test files AND zero runtime
+  source (a docs/CI-only diff).
+- **contracts** — skip ONLY if the diff touches no exported surface (no type/interface
+  files, route handlers, exported function signatures, or docs).
+
+Two cheap checks against the Phase-1 changed-file list. When in doubt, **spawn** — a
+wasted reviewer costs one agent; a wrongly skipped lens is a silent coverage gap.
+
+**Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
+against it (a spawned dimension with no output = partial failure, never a silent pass):
+
+```bash
+cat > "$ARTIFACTS_DIR/panel-round-1.json" <<'EOF'
+{"round": 1,
+ "spawned": ["security", "performance", "architecture", "correctness", "test-quality", "contracts"],
+ "skipped": {}}
+EOF
+```
+
+List only the roles you actually spawn; record each skipped lens in `skipped` with its
+one-line reason (e.g. `"contracts": "no exported surface in diff"`).
+
+### Spawn the Panel Simultaneously
+
+**CRITICAL: All spawned agents run IN PARALLEL using a single message with one Task call per dimension.**
+
+Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** — including `{METHOD}`, the dimension's hunting doctrine. Substitute `{DIFF}` (the Phase-2 diff), `{ARTIFACTS_DIR}`, `{ROUND}` (`1` here), and `{N_OTHERS}` (spawned count minus one) into each.
 
 - Each agent writes **JSON** to `$ARTIFACTS_DIR/round-1-{role}.json` (`round-1-security.json`, …) — machine-read by the Phase-3 consensus script, so the schema in the template is load-bearing.
 - Include a dimension's `SKILL_HINT` line only if Phase-1 skill routing found a relevant skill.
-- Competitive framing, the finding format, and limits (top 7, skip Low, <600 words) are baked into the template — don't restate them.
+- Competitive framing, the finding format, and limits (top 7, skip Low) are baked into the template — don't restate them.
+- The `test-quality` reviewer runs probes (rerun/shuffle/sabotage) in its own disposable worktree — its prompt carries the isolation discipline; it never mutates the shared branch.
 
-**Wait for all 4 reviewers to complete.** Bound the wait per
+**Wait for all spawned reviewers to complete.** Bound the wait per
 `_shared/delegation-contract.md`: a reviewer that returns nothing (died on a terminal API
 error, or its resume chain broke) is a **failure to re-spawn or report**, not a silent pass —
-verify each `round-1-{role}.json` actually exists before synthesizing; missing output ≠ "no findings."
+verify a `round-1-{role}.json` exists for every manifest-listed role before synthesizing;
+missing output ≠ "no findings."
 
 **TaskUpdate(task: "Phase 2", status: "completed")**
 
@@ -383,7 +413,7 @@ AskUserQuestion(
 )
 ```
 
-**If verification round:** Re-run Phase 2-5 with the updated diff, spawning reviewers with `{ROUND}` = `2` so they write `round-2-{role}.json`. Include in reviewer prompts: "Previous round found and fixed: {list}. Check if fixes are correct and look for NEW issues only." Max 2 total rounds. In Phase 3, run `consensus.py --round 2` — it reads `consensus-registry.json` and auto-applies any finding that matches a prior-round deferred entry (cross-round consensus), with no manual registry-checking.
+**If verification round:** Re-run Phase 2-5 with the updated diff, re-applying the panel skip rules and writing a fresh `panel-round-2.json` manifest, spawning reviewers with `{ROUND}` = `2` so they write `round-2-{role}.json`. Include in reviewer prompts: "Previous round found and fixed: {list}. Check if fixes are correct and look for NEW issues only." Max 2 total rounds. In Phase 3, run `consensus.py --round 2` — it reads `consensus-registry.json` and auto-applies any finding that matches a prior-round deferred entry (cross-round consensus), with no manual registry-checking.
 
 ---
 
@@ -528,7 +558,7 @@ git push
 **TaskUpdate(task: "Phase 8", status: "in_progress")**
 
 > **VERDICT gate.** Emit `VERDICT: APPROVED` only if **every** holds: the last consensus run had
-> `reviewers_missing` empty (all four dimensions reviewed, after at most one retry), all `auto_fix`
+> `reviewers_missing` empty (every manifest-listed dimension reviewed, after at most one retry), all `auto_fix`
 > items were applied and the validation gate passed, and no open `qa-blocker`/blocking decision
 > bead remains. Otherwise emit `VERDICT: NEEDS_DECISION` — `ac-loop` stops instead of merging.
 
@@ -544,9 +574,11 @@ git push
 
 ### Convergence
 
-Round  Security  Performance  Architecture  Correctness  Total  Applied  Deferred
-  1      {n}       {n}          {n}           {n}         {n}     {n}       {n}
-  2      {n}       {n}          {n}           {n}         {n}     {n}       {n}
+Round  Sec  Perf  Arch  Correct  Tests  Contracts  Total  Applied  Deferred
+  1     {n}  {n}   {n}    {n}     {n}      {n}      {n}     {n}       {n}
+  2     {n}  {n}   {n}    {n}     {n}      {n}      {n}     {n}       {n}
+
+(mark a skipped dimension `—`, per the round's panel manifest)
 
 R1  {▓▓░░░████}  {total}
 R2  {░████}      {total}  {-N%}
@@ -609,7 +641,7 @@ rm -rf "$ARTIFACTS_DIR"
 ## Flexibility & Overrides
 
 **"Quick review"**
--> Spawn single comprehensive reviewer (Opus) instead of 4 specialized ones
+-> Spawn single comprehensive reviewer (Opus) instead of the specialized panel
 
 **"Just report, don't fix"**
 -> Skip Phase 4 (auto-fix), present all findings as report only
@@ -627,13 +659,14 @@ rm -rf "$ARTIFACTS_DIR"
 
 ## When to Use This vs /ac-hygiene
 
-Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/daily maintenance, 3 Opus explorers multi-round (vs 4 Sonnet reviewers here), conductor fixes directly, hunts bugs/dead code/drift. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
+Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/weekly maintenance, a 7-lens Opus panel over 3+ rounds (vs the single-round 6-dimension Sonnet diff panel here), conductor fixes directly, hunts bugs/dead code/drift. The two test lenses are complementary, not duplicate: this skill's `test-quality` reviewer audits the tests a wave just wrote, at the gate, while the diff is small; hygiene's Test Warden rotates through the whole back-catalog. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
 
 ---
 
 ## Remember
 
 - **YOU synthesize, engineers fix** — reviewers analyze, you decide what's real, engineer applies
+- **Panel = core four always + test-quality/contracts unless provably irrelevant** — gating is negative (fail-open to spawning); write `panel-round-{N}.json` BEFORE spawning so `consensus.py` blocks on any spawned dimension that goes missing
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus** — defer the rest to registry
 - **Cross-round consensus:** single-reviewer findings that recur in verification rounds are high-signal — auto-apply on match
 - **One human touchpoint:** remaining no-consensus + NEEDS_DECISION items presented once in Phase 7, not per-round

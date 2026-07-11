@@ -10,6 +10,17 @@ MECHANICAL auto-apply cascade from `_shared/review-consensus.md`, carries deferr
 findings forward in a consensus registry, and surfaces any missing reviewer
 (partial-failure) instead of silently dropping it.
 
+Which reviewers to expect comes from (highest precedence first):
+  1. --expect security,performance,...      explicit CLI override
+  2. <dir>/panel-round-<N>.json             the panel manifest Phase 2 writes at
+                                            spawn time ({"round": N, "spawned":
+                                            [...], "skipped": {...}}) — the
+                                            normal path for the 6-dimension panel
+  3. the core four (security, performance, architecture, correctness) — fallback
+     so pre-manifest artifact dirs still validate correctly.
+A dimension listed as spawned but with no parseable output file is reported in
+`reviewers_missing` — a partial failure, never a silent pass.
+
 What this does NOT do: the design-decision gate (a choice with no objectively
 superior answer) is irreducibly the conductor's judgment — it is applied to the
 `deferred` pool this script emits, not mechanized here.
@@ -27,7 +38,7 @@ import os
 import re
 import sys
 
-EXPECTED = ["security", "performance", "architecture", "correctness"]
+DEFAULT_EXPECTED = ["security", "performance", "architecture", "correctness"]
 AUTO_SEVERITIES = {"critical", "high"}
 _SEV_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
@@ -44,9 +55,30 @@ def norm_key(f):
     return "{}:{}|{}".format(file, line, cat)
 
 
-def load_round(artifacts_dir, rnd):
+def load_panel(artifacts_dir, rnd, override):
+    """Resolve the expected reviewer set: CLI override > panel manifest > core four."""
+    if override:
+        roles = [r.strip() for r in override.split(",") if r.strip()]
+        if roles:
+            return roles, "cli"
+    path = os.path.join(artifacts_dir, "panel-round-{}.json".format(rnd))
+    if os.path.exists(path):
+        try:
+            with open(path) as fh:
+                data = json.load(fh)
+            spawned = data.get("spawned") or []
+            if spawned:
+                return spawned, "manifest"
+            print("WARN: panel manifest {} has empty 'spawned'; using default panel".format(path),
+                  file=sys.stderr)
+        except (json.JSONDecodeError, OSError) as e:
+            print("WARN: could not parse panel manifest {}: {}".format(path, e), file=sys.stderr)
+    return DEFAULT_EXPECTED, "default"
+
+
+def load_round(artifacts_dir, rnd, expected):
     present, missing, findings = [], [], []
-    for role in EXPECTED:
+    for role in expected:
         path = os.path.join(artifacts_dir, "round-{}-{}.json".format(rnd, role))
         if not os.path.exists(path):
             missing.append(role)
@@ -76,9 +108,9 @@ def load_registry(path):
         return []
 
 
-def build(artifacts_dir, rnd):
+def build(artifacts_dir, rnd, expected, panel_source):
     reg_path = os.path.join(artifacts_dir, "consensus-registry.json")
-    present, missing, findings = load_round(artifacts_dir, rnd)
+    present, missing, findings = load_round(artifacts_dir, rnd, expected)
     registry = load_registry(reg_path)
     prior_keys = {e["key"]: e for e in registry if e.get("round", 0) < rnd}
 
@@ -148,6 +180,8 @@ def build(artifacts_dir, rnd):
 
     return {
         "round": rnd,
+        "reviewers_expected": expected,
+        "panel_source": panel_source,
         "reviewers_present": present,
         "reviewers_missing": missing,
         "total_findings": len(findings),
@@ -159,6 +193,7 @@ def build(artifacts_dir, rnd):
 
 def print_summary(r):
     print("## Consensus — round {}".format(r["round"]))
+    print("Panel ({}): {}".format(r["panel_source"], ", ".join(r["reviewers_expected"])))
     if r["reviewers_missing"]:
         print("⚠ MISSING reviewers (partial failure — DO NOT treat as clean): {}".format(
             ", ".join(r["reviewers_missing"])))
@@ -180,13 +215,16 @@ def main():
     ap = argparse.ArgumentParser(description="Deterministic ac-review consensus.")
     ap.add_argument("--artifacts-dir", required=True)
     ap.add_argument("--round", type=int, default=1)
+    ap.add_argument("--expect", default=None,
+                    help="Comma-separated reviewer roles to expect (overrides the panel manifest)")
     args = ap.parse_args()
 
     if not os.path.isdir(args.artifacts_dir):
         print("ERROR: artifacts dir not found: {}".format(args.artifacts_dir), file=sys.stderr)
         return 2
 
-    result = build(args.artifacts_dir, args.round)
+    expected, panel_source = load_panel(args.artifacts_dir, args.round, args.expect)
+    result = build(args.artifacts_dir, args.round, expected, panel_source)
     out = os.path.join(args.artifacts_dir, "consensus-round-{}.json".format(args.round))
     try:
         with open(out, "w") as fh:
