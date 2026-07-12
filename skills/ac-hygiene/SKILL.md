@@ -161,6 +161,28 @@ same derivation is the starting point for the initial all-apps journey-tagging
 sweep; the audit and the sweep share one inventory method so tags come from
 ground truth, never memory.
 
+### Knip Dead-Code / Unused-Dep Lens (weekly cadence only — `PANEL=full`)
+
+Mechanical, conductor-run, once per hygiene run (not per round, not an agent lens) — same
+shape as the Coverage Audit above. This lens runs alongside, not instead of, the standing
+`command` cron entry ("Code Hygiene - Weekly knip sweep", Sat 05:30, root
+`infrastructure/jobs/weekly.json`: `cd neometa/software/body-compass-app && pnpm knip || true`)
+— the cron job is a standalone tripwire; this lens is the conductor's own pass, wired into the
+weekly panel run so findings feed the same triage/bead path as the other lenses.
+
+1. **Run `pnpm knip`** from the app root. The committed `knip.json` (bd-pwt44.12) is this lens's
+   provenance for what gets filtered — framework false-positives are excluded there; don't
+   re-litigate its exclusions per run.
+2. **Surface real findings** (dead exports, unused files, unused/unlisted deps) as hygiene
+   findings — real dead code becomes cleanup findings/beads exactly like the other lenses'
+   output: route through Phase 5 triage (`AUTO_IMPLEMENT` for unambiguous dead-code removal,
+   `br create -t bug --labels hygiene-finding,unrefined` for anything needing a human look —
+   e.g. an export that *looks* dead but may be a public API surface).
+3. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light` (the
+   quick between-session sweep).
+
+If the app has no `knip.json` / no `knip` devDependency, skip — nothing to run.
+
 ### Create Workflow Tasks (run ledger)
 
 **One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
@@ -525,6 +547,17 @@ the weekly hygiene run is the review of everything on `main` since the last `v*`
 not optional in that window. This is the trunk-direct analogue of the pre-merge review a PR used
 to force; when batches ship regularly, `ac-batch-close`'s own `ac-review` gate covers `main` and
 this weekly pass is the ordinary quality sweep on top.
+
+**Baseline pointer only — `ac-prove` `probe` mode (Consumer Roster row (e)).** The weekly
+review-main run consumes the latest `ac-prove` receipt in **`probe` mode ONLY** — a read-only
+freshness check against `publish-checkpoint-gate.mjs` (`ac-prove` Step 1). This is **never** a
+dispatch: hygiene never calls `ensure` or `ensure --fix-forward`, never triggers a fresh CI run,
+and never fixes CI forward — proving `main` is a ship-path concern, not a review-pass concern.
+It is also **never proof-of-green**: `probe` mode checks freshness only (condition 1 of
+`ac-prove`'s three-condition trust rule — Canonical Receipt Contract) — the referenced run's
+actual conclusion is unchecked and may be RED. Treat the receipt strictly as a baseline pointer
+("here's roughly how fresh `main`'s last full proof is"), never as evidence that the codebase
+this run is reviewing is CI-green.
 
 ---
 
