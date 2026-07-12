@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# beads-closed-gate.sh — BEADS-CLOSED-GATE: the loop's own pre-merge gate
+# beads-closed-gate.sh — BEADS-CLOSED-GATE: the loop's own pre-close gate
 # (ac-batch-close no longer checks beads itself).
 #
 # TRUNK-DIRECT REWRITE (bd-u2lo1.7): under trunk-direct there is no wave
@@ -8,31 +8,53 @@
 # `in_progress` + assignee (its Agent Mail AGENT_NAME) at selection time,
 # BEFORE any implementation (see ac-loop Phase 1/2, ac-implement Phase 1a).
 # The gate's scope is therefore simply: `br list` filtered to
-# `assignee == <conductor> && status != closed`. No commit-trailer parsing,
-# no merge-base range computation, no wave-label lookup, no L4-gate-handoff
-# plumbing remains — the assignee IS the scope.
+# `assignee ∈ <identities> && status != closed`. No commit-trailer parsing,
+# no merge-base range computation, no wave-label lookup — the assignee IS the
+# scope.
 #
-# Assignee comes from $1 if given, else from `$AGENT_NAME` (the conductor's
-# Agent Mail identity, exported earlier in the invoking skill's session) —
-# this keeps the existing zero-arg invocation surface working as long as
-# AGENT_NAME is exported in the SAME shell call (exports don't persist
-# across bash tool calls — re-assert it in the call that runs this script).
+# UNION OF IDENTITIES (bd-w504y): a single batch may be claimed under MORE
+# THAN ONE Agent Mail identity. ac-loop claims the batch under its own name
+# (e.g. BlueLake), but a delegated ac-implement session self-registers a
+# DIFFERENT name (e.g. SunnyBear; ac-loop's name is NOT inherited) and its
+# incremental/replacement-bead claims land under THAT identity. Querying only
+# the loop identity silently MISSES the delegate's open beads → a fail-OPEN of
+# the exact safety gate. So this gate now accepts ONE OR MORE assignees (every
+# positional arg = the union) and checks the UNION of their claimed sets.
+#   The invoking skill MUST pass every identity that claimed into this batch:
+#   the loop identity PLUS each delegated ac-implement identity it was told
+#   about (ac-implement reports its registered name back in its summary, and
+#   ALSO threads the conductor's claim identity onto its incremental claims —
+#   belt-and-suspenders, see ac-implement Phase 1a). If no positional assignee
+#   is given, $AGENT_NAME is the sole fallback identity.
 #
-# Prints the set of genuinely open, IN-SCOPE beads: status != closed,
-# EXCLUDING `post-merge`-labelled beads — those are deliberately un-closeable
-# until the merge ships (carried forward as known tails, listed in the PR
-# body), never blockers.
+# FAIL-CLOSED (bd-w504y): the gate must never quietly say "safe to close" when
+# it cannot actually see the batch.
+#   * No assignee determinable (no positional arg, no $AGENT_NAME) → exit 2.
+#   * The UNION claimed-set is EMPTY — every given identity returns zero beads,
+#     even with `--all` — → the gate is being asked about a batch that nothing
+#     is claimed under, which almost always means the assignee set is
+#     wrong/incomplete (a delegated identity was dropped) = fail-open risk. So
+#     warn loudly and exit 2, UNLESS `--allow-empty` is passed (the caller has
+#     asserted the board is legitimately empty).
 #
-# Exit 0 — the in-scope open set is empty: safe to proceed to ac-batch-close.
-# Exit 1 — genuinely open (non-post-merge) beads remain IN SCOPE: do NOT merge.
-# Exit 2 — br/jq query itself failed, or no assignee could be determined.
+# Assignees come from the positional args if any; else from `$AGENT_NAME` (the
+# conductor's Agent Mail identity, exported earlier in the invoking skill's
+# session). Exports don't persist across bash tool calls — re-assert AGENT_NAME
+# in the SAME call that runs this script, or pass the identities explicitly.
+#
+# Prints the set of genuinely open, IN-SCOPE beads (union across identities):
+# status != closed, EXCLUDING `post-merge`-labelled beads — those are
+# deliberately un-closeable until the merge ships (carried forward as known
+# tails, listed in the PR body), never blockers.
+#
+# Exit 0 — the union in-scope open set is empty: safe to proceed to ac-batch-close.
+# Exit 1 — genuinely open (non-post-merge) beads remain in the union: do NOT close.
+# Exit 2 — br/jq query failed, no assignee determinable, OR empty claimed-set
+#          without --allow-empty (fail-closed).
+#
+# Usage: beads-closed-gate.sh [--allow-empty] <assignee1> [assignee2 ...]
+#        beads-closed-gate.sh                 # falls back to $AGENT_NAME
 set -o pipefail
-
-ASSIGNEE="${1:-${AGENT_NAME:-}}"
-if [ -z "$ASSIGNEE" ]; then
-  echo "beads-closed-gate: no assignee provided — pass it as \$1 or export AGENT_NAME before calling this script" >&2
-  exit 2
-fi
 
 # --- Out-of-scope bead-status-bleed check (non-blocking; bd-vtrlm) ---
 # Detects whether this run's own .beads/issues.jsonl diff touches any
@@ -42,9 +64,10 @@ fi
 # diff) -- flag it, don't block (often self-healing; see memory
 # br-sync-exports-full-db-cross-branch-bleed). $1 = space/newline-separated
 # in-scope id list (may be empty -- an empty declared scope means nothing
-# claimed, so ANY pre-existing changed id is flagged). UNCHANGED in
-# behavior from the wave-branch era -- only what feeds `in_scope` changed
-# (assignee-derived claim set instead of a commit-trailer/wave-label set).
+# claimed, so ANY pre-existing changed id is flagged). NOTE: .beads/issues.jsonl
+# is JSON LINES (one bead object per line) — `jq -r '.id'` streams it directly;
+# feeding it a single `[...]` JSON array breaks the stream (jq: "Cannot index
+# array with \"id\"") and silently voids this check.
 warn_bead_bleed() {
   local in_scope="$1"
   local old_ids changed_ids preexisting_changed out_of_scope
@@ -59,18 +82,55 @@ warn_bead_bleed() {
   fi
 }
 
+# --- Parse flags + collect the union of assignee identities ---
+ALLOW_EMPTY=0
+ASSIGNEES=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --allow-empty) ALLOW_EMPTY=1; shift ;;
+    --) shift ;;
+    *) ASSIGNEES+=("$1"); shift ;;
+  esac
+done
+
+# Fall back to $AGENT_NAME only when no positional identity was given.
+if [ "${#ASSIGNEES[@]}" -eq 0 ] && [ -n "${AGENT_NAME:-}" ]; then
+  ASSIGNEES=("$AGENT_NAME")
+fi
+if [ "${#ASSIGNEES[@]}" -eq 0 ]; then
+  echo "beads-closed-gate: no assignee provided — pass one or more identities as positional args (loop identity + each delegated ac-implement identity), or export AGENT_NAME before calling this script" >&2
+  exit 2
+fi
+
 BASE_REF=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null)
 if [ -z "$BASE_REF" ]; then
   echo "beads-closed-gate: could not determine merge-base with main" >&2
   exit 2
 fi
 
-# `br list --json` paginates (default --limit 50); --limit 0 = unlimited, so
-# a single call always returns this conductor's FULL claimed set regardless
-# of batch size. `-a`/`--all` includes closed beads too — needed so the
-# bleed check's in-scope id list covers beads this conductor claimed AND has
-# already closed (a closed-but-claimed id must not read as "out of scope").
-FULL_CLAIMED=$(br list --json --limit 0 --all --assignee "$ASSIGNEE" | jq '.issues') || exit 2
+# `br list --json` paginates (default --limit 50); --limit 0 = unlimited, so a
+# single call always returns an identity's FULL claimed set regardless of batch
+# size. `-a`/`--all` includes closed beads too — needed so the bleed check's
+# in-scope id list covers beads an identity claimed AND has already closed (a
+# closed-but-claimed id must not read as "out of scope"). Query each identity,
+# then UNION the results (dedupe by id).
+FULL_CLAIMED="[]"
+for a in "${ASSIGNEES[@]}"; do
+  part=$(br list --json --limit 0 --all --assignee "$a" | jq '.issues') || exit 2
+  FULL_CLAIMED=$(jq -s 'add | unique_by(.id)' \
+    <(printf '%s' "$FULL_CLAIMED") <(printf '%s' "$part")) || exit 2
+done
+
+# FAIL-CLOSED: an empty union claimed-set means the gate can't see any batch
+# under the identities it was handed — refuse to green-light unless overridden.
+CLAIMED_COUNT=$(printf '%s' "$FULL_CLAIMED" | jq 'length') || exit 2
+if [ "$CLAIMED_COUNT" -eq 0 ] && [ "$ALLOW_EMPTY" -ne 1 ]; then
+  echo "beads-closed-gate: FAIL-CLOSED — the union claimed-set is EMPTY for assignee(s): ${ASSIGNEES[*]}" >&2
+  echo "  A batch was expected to be claimed under one of these identities, but br returned zero beads." >&2
+  echo "  This usually means the wrong/incomplete assignee set was passed (a delegated ac-implement identity is missing)." >&2
+  echo "  Refusing to report 'safe to close'. Pass EVERY claiming identity, or --allow-empty if the board is genuinely empty." >&2
+  exit 2
+fi
 
 OPEN=$(echo "$FULL_CLAIMED" | jq \
   '[.[] | select(.status != "closed") | select((.labels // []) | index("post-merge") | not)]') || exit 2

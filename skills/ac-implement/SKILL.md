@@ -292,7 +292,16 @@ the first bead this session works, determine the candidate set it will draw from
 ONE call — not incrementally as beads are picked:
 
 ```bash
-br update <id1> <id2> ... --status in_progress --assignee "$AGENT_NAME"
+# CLAIM_ASSIGNEE is the identity ALL bead claims land under this session — the
+# batch claim AND every later incremental/replacement claim (Phase 1a below).
+# When ac-loop delegated to you it hands its OWN Agent Mail identity as
+# CLAIM_ASSIGNEE (in the delegation prompt); use it verbatim so the loop's
+# BEADS-CLOSED-GATE — which queries the LOOP identity — can see your claims.
+# Standalone (no delegation), it defaults to your own session AGENT_NAME.
+# NOTE: this is the bead ASSIGNEE only; Agent Mail FILE reservations still use
+# your own session AGENT_NAME (they coordinate the shared checkout per-session).
+CLAIM_ASSIGNEE="${CLAIM_ASSIGNEE:-$AGENT_NAME}"
+br update <id1> <id2> ... --status in_progress --assignee "$CLAIM_ASSIGNEE"
 ```
 
 This is the CLAIM-AT-SELECTION mechanism (precedent: body-compass-app memory
@@ -302,6 +311,14 @@ for every other conductor — no new gating logic needed. If this session was it
 `ac-loop`, the loop already did this claim before delegating — skip re-claiming beads whose
 IDs were handed to you as "already claimed" in the delegation prompt.
 
+> **Single-identity contract (bd-w504y).** The loop's pre-close BEADS-CLOSED-GATE scopes by
+> bead ASSIGNEE. If a delegated session claimed replacement beads under its OWN self-registered
+> name instead of the loop's, `br list --assignee <loop-identity>` would MISS them and the gate
+> would fail OPEN (green-light a merge with a genuinely open in-scope bead). Threading
+> `CLAIM_ASSIGNEE` onto EVERY claim keeps the whole batch visible under one identity. The gate
+> ALSO unions any delegated identities it was told about (defense in depth), but do not rely on
+> that — claim under `CLAIM_ASSIGNEE` and report your registered name back in your summary.
+
 Mint the batch's CLAIM ID **once**, at the moment of claiming: `<first-claimed-bead-id>-<YYYYMMDD>`
 (e.g. `bd-u2lo1.1-20260712`). Write it to `$ARTIFACTS_DIR/.claim-id` (first line = the claim
 id — a FILE, not an env var, since downstream skills read it from a fresh process) and mirror
@@ -309,7 +326,8 @@ it as the first line of `$ARTIFACTS_DIR/progress.md`'s header. Downstream skills
 re-keying, bd-u2lo1.9) read the claim id verbatim from `.claim-id`.
 
 On later loop iterations within the same session, only claim a bead individually (same
-`--status in_progress --assignee` call) if it falls OUTSIDE the batch already claimed above
+`--status in_progress --assignee "$CLAIM_ASSIGNEE"` call — the SAME identity as the batch, never
+your own session name when delegated) if it falls OUTSIDE the batch already claimed above
 (e.g. a candidate went blocked mid-session and was replaced by the next-ready bead) — the
 rest of the batch is already claimed and stays that way until closed.
 

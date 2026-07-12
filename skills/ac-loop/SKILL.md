@@ -272,21 +272,29 @@ If orphans exist:
    read the claim id verbatim from `.claim-id`.
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions:
    > "Run ac-implement targeting all N orphan beads (IDs: `<list>`, already claimed —
-   in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). TARGET_BEADS=N.
-   `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`). Skip the bead-count
-   setup question — answer is pre-supplied. For baseline test failures: file a P1 bead and
-   proceed (do not ask). Report when complete as a compact structured summary (≤400 words:
-   beads shipped/closed with IDs, gate outcomes, anything blocked) — the loop advances to
-   verify → review → merge."
+   in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>`
+   (MY loop identity) — make EVERY bead claim, including any incremental/replacement claim,
+   under `--assignee <AGENT_NAME>`, NOT your own session name, so the BEADS-CLOSED-GATE sees
+   them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`).
+   Skip the bead-count setup question — answer is pre-supplied. For baseline test failures:
+   file a P1 bead and proceed (do not ask). Report when complete as a compact structured
+   summary (≤400 words: beads shipped/closed with IDs, gate outcomes, anything blocked, AND
+   every Agent Mail identity you claimed beads under) — the loop advances to verify → review →
+   close."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
 4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch argument). This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
 5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-6. **Verify beads closed (the loop's own pre-merge gate — `ac-batch-close` no longer checks this itself):**
+6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself):**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" "$AGENT_NAME"
-   # prints the genuinely-open bead set; exit 0 = empty (safe to merge), exit 1 = open beads remain
+   # Pass the UNION of every identity that claimed into this batch: MY loop identity PLUS each
+   # delegated ac-implement identity from its summary (bd-w504y — querying only the loop identity
+   # would MISS a delegate's incremental claim and fail OPEN). Threading CLAIM_ASSIGNEE above
+   # already funnels those claims to $AGENT_NAME, so <delegated-identities…> is belt-and-suspenders.
+   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" "$AGENT_NAME" <delegated-identities…>
+   # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
+   # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```
    `post-merge`-labelled beads are excluded — they're deliberately un-closeable until the
    merge ships (carried forward as known tails, listed in the PR body), never blockers. If
@@ -327,16 +335,20 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join.
 2. **Invoke `ac-implement`** with delegation prompt:
-   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (IDs: `<list>`, already claimed — in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Baseline test failures: file P1 bead and proceed. Report when complete as a compact structured summary (≤400 words: beads shipped/closed with IDs, gate outcomes, anything blocked) — the loop advances to verify → review → merge."
+   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (IDs: `<list>`, already claimed — in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>` (MY loop identity) — make EVERY bead claim, including incremental/replacement claims, under `--assignee <AGENT_NAME>`, not your own session name, so the BEADS-CLOSED-GATE sees them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Baseline test failures: file P1 bead and proceed. Report when complete as a compact structured summary (≤400 words: beads shipped/closed with IDs, gate outcomes, anything blocked, AND every Agent Mail identity you claimed beads under) — the loop advances to verify → review → close."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch argument) (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
 5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-6. **Verify beads closed (the loop's own pre-merge gate — `ac-batch-close` no longer checks this itself):**
+6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself):**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" "$AGENT_NAME"
-   # prints the genuinely-open bead set; exit 0 = empty (safe to merge), exit 1 = open beads remain
+   # Pass the UNION: MY loop identity + each delegated ac-implement identity from its summary
+   # (bd-w504y — a delegate's incremental claim under its own name would otherwise be MISSED,
+   # failing the gate OPEN). CLAIM_ASSIGNEE threading already funnels claims to $AGENT_NAME.
+   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" "$AGENT_NAME" <delegated-identities…>
+   # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
+   # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```
    `post-merge`-labelled beads are excluded — carried forward as known tails in the PR body,
    never blockers. If any genuinely open (non-`post-merge`) beads remain for this batch (exit 1),
