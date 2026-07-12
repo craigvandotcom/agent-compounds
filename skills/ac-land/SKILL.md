@@ -14,30 +14,31 @@ Run this LAST, after merge — invoked at loop-exit (post-merge, on `main`, wave
 ### Gather Session Context
 
 Resolve `ARTIFACTS_DIR` **deterministically**, per `_shared/run-id.md`. ac-land runs at
-loop-exit (post-merge, on `main`, wave branch gone), so it CANNOT derive the wave slug itself —
-the orchestrator hands it the key. Never glob as the primary path.
+loop-exit (post-merge/batch-close, on `main`) — it never claimed a batch itself, so it CANNOT
+mint or independently recompute a claim id; the orchestrator hands it the key. Never glob as
+the primary path. There is no branch-based fallback in this chain: trunk-direct means `main` is
+always there, so a "standalone session still sitting on the wave branch" case can no longer
+occur — that dead fallback is removed outright, not left dormant.
 
 ```bash
-# 0. Loop-exit: RUN_ID set → ALL this run's wave dirs (scoped glob is SAFE — RUN_ID excludes
-#    foreign/stale dirs). The retrospective spans every wave; teardown sweeps them all.
-# 1. Handed ARTIFACTS_DIR (single bead-work session) → use verbatim.
-# 2. Standalone on a wave branch → derive.
-# 3. Last resort → newest dir, with a logged warning (it was guessed).
+# 0. Loop-exit: RUN_ID set → ALL this run's dirs (scoped glob is SAFE — RUN_ID excludes
+#    foreign/stale dirs). The retrospective spans every batch this run shipped; teardown sweeps
+#    them all.
+# 1. Handed ARTIFACTS_DIR (single bead-work session, no RUN_ID) → use verbatim.
+# 2. Last resort → newest dir, with a logged warning (it was guessed).
 if [ -n "$RUN_ID" ]; then
   ARTIFACTS_DIRS=$(ls -1dt /tmp/bead-work-*-"$RUN_ID"/ 2>/dev/null | sed 's:/$::')
-  ARTIFACTS_DIR=$(printf '%s\n' "$ARTIFACTS_DIRS" | head -1)   # primary (newest wave) for single-dir steps
+  ARTIFACTS_DIR=$(printf '%s\n' "$ARTIFACTS_DIRS" | head -1)   # primary (newest batch) for single-dir steps
   [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work     # run shipped nothing landable
 elif [ -n "$ARTIFACTS_DIR" ]; then
   :                                                   # handed by orchestrator — use verbatim
-elif git rev-parse --abbrev-ref HEAD 2>/dev/null | grep -q '^wave/'; then
-  ARTIFACTS_DIR="/tmp/bead-work-$(git branch --show-current | tr '/' '-')"
 else
   ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
   [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
-  echo "WARN: ARTIFACTS_DIR not handed and not on a wave branch — GUESSED $ARTIFACTS_DIR" >&2
+  echo "WARN: ARTIFACTS_DIR not handed and no RUN_ID scope — GUESSED $ARTIFACTS_DIR" >&2
 fi
 echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
-[ -n "$ARTIFACTS_DIRS" ] && echo "ARTIFACTS_DIRS (all waves this run, retrospective spans all): $ARTIFACTS_DIRS"
+[ -n "$ARTIFACTS_DIRS" ] && echo "ARTIFACTS_DIRS (all batches this run, retrospective spans all): $ARTIFACTS_DIRS"
 ```
 
 **You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
@@ -473,7 +474,7 @@ Remove session artifacts (they've been consumed by retrospective). Run each sepa
 rm -rf /tmp/bead-work
 rm -rf /tmp/bead-work-*
 rm -rf /tmp/plan-init-*
-rm -rf /tmp/wave-merge-*
+rm -rf /tmp/batch-close-*
 rm -rf /tmp/plan-refine-internal-*
 rm -rf /tmp/plan-refine-*
 rm -rf /tmp/plan-clean-*

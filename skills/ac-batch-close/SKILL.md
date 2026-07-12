@@ -106,6 +106,12 @@ Deterministic `$ARTIFACTS_DIR` per `_shared/run-id.md` (prefix `batch-close`) â€
 has no wave branch to key on, so the key is the anchor SHA instead of a branch slug:
 
 ```bash
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
+# mint-if-absent rule). Not folded into ARTIFACTS_DIR below: this dir is keyed on the
+# anchor SHA (stable across a resumed/dropped session), and RUN_ID is re-minted per
+# invocation â€” appending it would break resume detection (`[ -f "$STATE" ]` below relies
+# on recomputing the SAME path on retry).
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 ARTIFACTS_DIR="/tmp/batch-close-${ANCHOR:0:8}"
 mkdir -p "$ARTIFACTS_DIR"
 STATE="$ARTIFACTS_DIR/state.env"

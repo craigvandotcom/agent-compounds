@@ -191,10 +191,26 @@ Ask one question via `AskUserQuestion`:
 ```bash
 TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
-# Deterministic dir keyed on the wave slug (+ RUN_ID for parallel same-wave sessions).
-# Contract: _shared/run-id.md. ac-land lands this same path.
-WAVE_SLUG=$(git branch --show-current | tr '/' '-')
-ARTIFACTS_DIR="/tmp/bead-work-${WAVE_SLUG}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-wave-004
+# Deterministic dir keyed on the CLAIM/BATCH ID, never the branch — trunk-direct puts every
+# conductor on `main`, so `git branch --show-current` no longer discriminates concurrent
+# sessions (bd-u2lo1.9 re-keying). Contract: _shared/run-id.md. ac-land lands this same path.
+#
+# If ac-loop already claimed this batch and delegated (claim id handed in the prompt, e.g.
+# "claim id `bd-u2lo1.1-20260712`"), use it verbatim below — do not re-derive.
+#
+# If this is a standalone first run (no claim id handed down yet), Phase 1a's
+# claim-at-selection is the moment the batch is actually *claimed* (mint format:
+# <first-claimed-bead-id>-<YYYYMMDD>), but it writes `.claim-id` INTO $ARTIFACTS_DIR — which
+# needs to already exist. Resolve that ordering (contract: _shared/run-id.md "Mint order") by
+# computing the identical string here, ahead of the `br update` mutation: the first bead ID in
+# the refined, non-human-gate ready-bead candidate list already gathered above ("Verify
+# Refined Beads Exist") + today's date. Phase 1a recomputes the same string when it actually
+# claims, from the same unmutated candidate-list ordering and the same date — no mismatch.
+CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"   # handed-down or self-derived
+WAVE_SLUG="$CLAIM_ID"   # alias for other in-file references to this key (task labels, progress.md header) — same value, not a re-derivation
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md).
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
+ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-bd-u2lo1.1-20260712
 ```
 
 ### Register Session Identity
@@ -260,7 +276,7 @@ TaskUpdate(task: "Bead {N} of {TARGET_BEADS}", subject: "Bead {N} of {TARGET_BEA
 
 ### Compaction Recovery
 
-If `$ARTIFACTS_DIR/progress.md` exists, parse its header to recover `TARGET_BEADS`. Count entries marked `COMPLETE` to recover `BEADS_COMPLETED`. Skip completed beads. The wave-branch-based `ARTIFACTS_DIR` is stable across compaction — re-derive it with `git branch --show-current | tr '/' '-'` if the variable is lost.
+If `$ARTIFACTS_DIR/progress.md` exists, parse its header to recover `TARGET_BEADS`. Count entries marked `COMPLETE` to recover `BEADS_COMPLETED`. Skip completed beads. The claim-id-keyed `ARTIFACTS_DIR` is stable across compaction — recover it from the `Session config` TaskCreate description (which stores the literal resolved path) or from the `.claim-id` file inside a located dir if the variable is lost; never re-derive from `git branch --show-current` (trunk-direct collapses every branch to the constant `main` — no longer a valid key).
 
 If `$ARTIFACTS_DIR/` was deleted and recreated mid-session (e.g., by a partial bead-land run), result files for completed beads are lost. Note this in progress.md as "(result file lost — bead completed, committed as <hash>)".
 
@@ -590,5 +606,5 @@ Pre-push `pnpm build` reads the working tree — another session's uncommitted W
 ## Remember
 
 - **Trunk-direct: work on `main`, never create a branch** — commits are pathspec-limited to your reserved files, and every commit is immediately pushed (commit = push). Engineers implement; **YOU review, YOU commit** — be extremely strict, a bead must be fully complete before moving on. Minor fixes: do them yourself; major gaps: re-spawn the engineer.
-- **Compaction recovery** — progress.md is the state: parse its header for TARGET_BEADS, count COMPLETE entries for BEADS_COMPLETED; re-derive `ARTIFACTS_DIR` from `git branch --show-current | tr '/' '-'` if lost. "Bead X of N" task naming prevents drift — the task list IS the stop condition.
+- **Compaction recovery** — progress.md is the state: parse its header for TARGET_BEADS, count COMPLETE entries for BEADS_COMPLETED; recover `ARTIFACTS_DIR` from the `Session config` task description or `.claim-id` if lost (never re-derive from `git branch --show-current` — trunk-direct collapses every branch to `main`). "Bead X of N" task naming prevents drift — the task list IS the stop condition.
 - **Quality cadence** — per-bead: tests + type-check + lint, and no new code without new tests (verify the engineer wrote them before approving); full quality gate at session end; UI validation runs once at session end (in bead-land), not per-bead.
