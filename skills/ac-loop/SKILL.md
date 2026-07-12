@@ -1,6 +1,6 @@
 ---
 name: ac-loop
-description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, surfaces genuine decisions as human-gate decision beads + advisory nudges, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-review → ac-merge) gating between them via ac-human-session — ac-pipeline is deprecated. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".'
+description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, surfaces genuine decisions as human-gate decision beads + advisory nudges, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-review → ac-batch-close) gating between them via ac-human-session — ac-pipeline is deprecated. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode".'
 ---
 
 # ac-loop — Autonomous Shipping Loop
@@ -28,7 +28,7 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > browser/simulator in your own context. The passes are themselves conductors over tester
 > subagents (`_shared/qa-shared.md` § Conductor / worker evidence protocol).
 > You **never** read a phase skill's `SKILL.md`
-> (`ac-implement`, `ac-review`, `ac-merge`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
+> (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
 > `ac-ui-polish`, `ac-qa-browser`, `ac-qa-device`) into your
 > OWN context — that collapses to 2-level and bloats the conductor with every phase's skill +
 > working detail until it compacts mid-run. Orchestrator holds *decisions*; sub-sessions hold
@@ -54,28 +54,29 @@ EACH ITERATION:
   0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
       ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
-      ├─ batch the drain into ONE bug-batch branch (bugs/batch-<YYYYMMDD>-<n>): sequenced commits,
-      │      one bug per commit, each independently green on affected tests BEFORE the next starts —
-      │      the branch is never broken mid-sequence. A fix that goes bad is REVERTED out of the
-      │      batch (bead reopened), never a blocker. Cap ~8 bugs/batch; overflow forms the next
-      │      batch after this one merges.
-      │      SOLO exceptions (own branch, ship immediately): P0/urgent; migration- or native-touching;
+      ├─ CLAIM the ready-bug set as ONE batch (claim-at-selection): mark all in_progress + assignee
+      │      ($AGENT_NAME) in one br update, mint the claim id, write .claim-id — then ac-implement
+      │      commits each fix DIRECTLY to main, one bug per commit, each independently green on affected
+      │      tests BEFORE the next starts — main is never broken mid-sequence. A fix that goes bad is
+      │      REVERTED (its own commit) and the bead reopened, never a blocker. Cap ~8 bugs/batch;
+      │      overflow forms the next batch after this one closes.
+      │      SOLO close (ship immediately as a batch-of-one): P0/urgent; migration- or native-touching;
       │      conductor judges the fix risky enough to isolate. Never fold a bug into a feature wave.
-      └─ the BATCH runs the chain ONCE: ac-implement (per bug, sequential) → VERIFY-GATE → ac-review
-             → BEADS-CLOSED-GATE → ac-merge → Slack notify   (1 PR + 1 CI run for the whole batch)
-      ⟳ RE-CHECK the Bug-Lane filter after every merge; repeat until ZERO unblocked bugs remain, THEN step 1
+      └─ the BATCH runs the chain ONCE: ac-implement (per bug, sequential, direct-to-main) → VERIFY-GATE
+             → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify   (one batch-close for the whole drain)
+      ⟳ RE-CHECK the Bug-Lane filter after every close; repeat until ZERO unblocked bugs remain, THEN step 1
   1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships after the bug lane is dry)
-      └─ ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
+      └─ ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
       │      (prep — only now, AFTER the bug lane + maintenance wave have shipped)
-      └─ ensure wave branch (loop owns this, not ac-implement) →
-         ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-merge → Slack notify
+      └─ claim-at-selection (loop owns this, not ac-implement — direct to main, no branch) →
+         ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
 
   VERIFY-GATE = consult _shared/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
-  BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-merge no longer checks beads
-                itself) — genuine (non-post-merge) open beads block the merge; advisory
+  BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-batch-close no longer checks beads
+                itself) — genuine (non-post-merge) open beads block the close; advisory
                 Slack nudge, not a hard stop.
   3. Loop — RE-CHECK the bug lane FIRST (a just-merged non-bug may have unblocked a bug), then orphans/plans
   4. Nothing left → Phase ARIA (unlock human blocks, then stop)
@@ -126,7 +127,7 @@ Capture the returned `name` field:
 > and block against your own reservation.
 
 ```bash
-export WORKTREES_ENABLED=1
+export GIT_IDENTITY_ENABLED=1   # Agent Mail git identity/attribution — NOT worktree isolation (WORKTREES_ENABLED made subagents worktree; see rule-agent-mail-identity-setup)
 export AGENT_NAME=<returned-name>   # e.g. "BlueLake" — unique per loop run
 export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dirs; passed to every spawned stage (_shared/run-id.md)
 ```
@@ -193,7 +194,9 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wav
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) — **every priority, P0 through P4** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
 > - **Blocked bugs can't ship — so they never freeze the loop.** A bug with an unmet dependency is not in `br ready`; a `human-gate` bug is exempt. Both are *surfaced* (advisory nudge / Phase ARIA), set aside, and picked up automatically on a later pass once their blocker merges through the non-bug flow. "Within reason" = a bug you can't act on does not hold up the world.
-> - **Execution: the drain ships as ONE batched branch.** Pull the ready lane into a single bug-batch branch (`bugs/batch-<YYYYMMDD>-<n>`) — sequenced commits, one bug per commit, each independently green on affected tests before the next starts, so the branch is never broken mid-sequence (same safe-sequencing contract as wave beads). The batch then runs implement → review → merge **once**: one PR, one CI run — a 9-bug drain costs one merge ceremony, not nine (the 2026-07-10 all-nighter post-mortem: per-bug branches spent ~3h in CI for ~1h of fixes). A fix that turns out bad is **reverted out of the batch** and its bead reopened — it never blocks siblings (this replaces the old "never bundle unrelated bugs" rationale). **Solo-branch exceptions (ship immediately, own branch):** P0/urgent fixes that must not wait for the batch; migration- or native-touching fixes; anything the conductor judges needs isolation. Cap ~8 bugs per batch — overflow forms the next batch after this one merges. Never fold a bug into an unrelated feature wave; a bug *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
+> - **Execution: the drain ships as ONE trunk-direct batch (claim-at-selection, direct-to-main, `ac-batch-close`).** This is the SAME model Phase 1/2 use — no branch is ever minted. Claim the full ready-bug set in one `br update` (`in_progress` + assignee `$AGENT_NAME`), mint the claim id, write `.claim-id`; `br ready` then naturally excludes them for every other conductor. `ac-implement` commits each fix **directly to main**, one bug per commit, each independently green on affected tests before the next starts, so main is never broken mid-sequence (same safe-sequencing contract as wave beads). The batch then runs implement → VERIFY-GATE → review → BEADS-CLOSED-GATE → `ac-batch-close` **once**: one batch-close, one CI dispatch — a 9-bug drain costs one close ceremony, not nine (the 2026-07-10 all-nighter post-mortem: per-bug branches spent ~3h in CI for ~1h of fixes). A fix that turns out bad is **reverted (its own commit)** and its bead reopened — it never blocks siblings (this replaces the old "never bundle unrelated bugs" rationale). **Solo-close exceptions (ship immediately as a batch-of-one):** P0/urgent fixes that must not wait for the batch; migration- or native-touching fixes; anything the conductor judges needs isolation — each still commits to main and runs its own `ac-batch-close`, never a branch. Cap ~8 bugs per batch — overflow forms the next batch after this one closes. Never fold a bug into an unrelated feature wave; a bug *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
+>
+> *(Historical — superseded 2026-07-12, trunk-direct migration bd-u2lo1: the bug lane formerly minted a `bugs/batch-<YYYYMMDD>-<n>` branch and ran one PR / one CI run. That branch model is retired — `ac-implement` HARD STOPs on any non-main branch and `bugs/batch-*` cannot be pre-allowlisted, so the drain now ships claim-at-selection direct to main. Reversible if Craig overrules at the post-migration reassessment — see bd-smrcb.)*
 
 **Work priority order (NON-BUG work — runs only after the Bug Lane is dry)** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
@@ -423,10 +426,10 @@ fighting the machine. Hold these:
 **Validators — each fires ONCE, at its correct boundary**
 - Per-bead AND per-wave correctness → `pnpm test` (the affected runner). NEVER `test:all` per bead
   or per wave.
-- The branch-final gate (inside `ac-merge`, post-rebase) is the AGGREGATED affected run pinned to
-  the merge base: `VITEST_AFFECTED_REF=origin/main pnpm test`. Per-bead runs tested each change
-  against the branch's own history; only the aggregated run sees the whole batch/wave diff against
-  CURRENT main (semantic conflicts with main drift, conflict-resolution commits, review fixups).
+- The batch-final gate (inside `ac-batch-close`, pre-close) is the AGGREGATED affected run pinned to
+  the anchor: `VITEST_AFFECTED_REF=origin/main pnpm test`. Per-bead runs tested each change
+  against main's history at that moment; only the aggregated run sees the whole batch/wave diff against
+  CURRENT main (semantic conflicts with concurrent main drift, review fixups).
   It is still affected-only — cheap — and shrinks what the loop-close `test:all` can be first to find.
 - Full `test:all` runs **exactly once per loop-close** — the async CI run `ac-land` fires
   (`gh workflow run quality-gate.yml -f reason=loop-close`), off the loop's critical path (doctrine
@@ -544,7 +547,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 - **Only `human-gate` beads are gated** — every other bead (refined → implement; unrefined → `ac-bead-refine` then implement) is loop-eligible. `unrefined` routes *through* refinement, it does not withhold sign-off. The "not-yet-committed" gate is the backlog *pool*, upstream of beads
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Claim-at-selection** — mark the FULL batch `in_progress` + assignee, mint the claim id, and write `.claim-id` up front, before any implementation — never incrementally per bead
-- **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-merge`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
+- **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
 - **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
 - **ARIA gating** — `AskUserQuestion` only for simple, bounded forks in interactive sessions; headless = advisory nudge + open decision bead. Everything else is advisory
 - **Persistent nudge** — re-nudge every session until Craig acts. Silence enables bottlenecks

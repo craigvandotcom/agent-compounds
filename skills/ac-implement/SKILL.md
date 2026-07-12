@@ -237,8 +237,8 @@ Capture the returned `name` field:
 > and block against your own reservation.
 
 ```bash
-# Export so the pre-commit guard reads AGENT_NAME and WORKTREES_ENABLED at commit time
-export WORKTREES_ENABLED=1
+# Export so the pre-commit guard reads AGENT_NAME + GIT_IDENTITY_ENABLED at commit time
+export GIT_IDENTITY_ENABLED=1   # Agent Mail git identity/attribution — NOT worktree isolation (WORKTREES_ENABLED made subagents worktree; see rule-agent-mail-identity-setup)
 export AGENT_NAME=<returned-name>   # e.g. "SunnyBear" — unique per session
 ```
 
