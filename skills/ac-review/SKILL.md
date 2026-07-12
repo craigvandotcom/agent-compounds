@@ -15,13 +15,13 @@ For codebase-wide health checks, use `/ac-hygiene` instead.
 |                  |                                                                                                            |
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Input**        | Feature branch with implementation commits (from `/ac-implement` or manual coding)                  |
-| **Output**       | Review report in `.claude/reviews/`, auto-fixed issues committed, NEEDS_DECISION items presented           |
+| **Output**       | Review report in `.claude/reviews/` (default) or `.claude/reviews/batch/` (when `ac-batch-close` passes `report_dest` — advances the review-mark), auto-fixed issues committed, NEEDS_DECISION items presented |
 | **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.json`, consensus in `consensus-round-1.json` + `consensus-registry.json`, progress in `progress.md` |
 | **Verification** | All project checks pass (test, lint, type-check), fixes committed, decisions resolved or documented        |
 
 ## Prerequisites
 
-- On a feature branch (not main/master)
+- On `main` (primary, trunk-direct mode) — or on a branch listed in `.claude/legacy-branches.txt` (legacy mode)
 - Implementation committed and pushed
 - Project test/lint/type-check commands runnable
 
@@ -105,25 +105,64 @@ detection — the script reads it automatically.
 
 **TaskUpdate(task: "Phase 1", status: "in_progress")**
 
-### Branch Safety Check (CRITICAL)
+### Scope Detection (dual-mode, CRITICAL)
 
 ```bash
 CURRENT_BRANCH=$(git branch --show-current)
 echo "Current branch: $CURRENT_BRANCH"
 ```
 
-**If on main or master:** STOP. "You must be on a feature branch for review. Create one first: `git checkout -b fix/<name>`"
-
-### Detect Review Scope
+**On `main` (PRIMARY mode — trunk-direct):** scope is everything since the last
+review-mark (the last commit that touched `.claude/reviews/batch/`):
 
 ```bash
-# Determine base branch
-BASE_BRANCH=$(git merge-base --fork-point main HEAD 2>/dev/null && echo "main" || echo "master")
+REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
 
-# Diff against base
-git diff "$BASE_BRANCH"...HEAD --stat
-git diff "$BASE_BRANCH"...HEAD --name-only
+if [ -n "$REVIEW_MARK" ]; then
+  DIFF_RANGE="$REVIEW_MARK..HEAD"
+else
+  # Bootstrap fallback: no batch review-mark exists yet
+  LAST_TAG=$(git describe --tags --match 'v*' --abbrev=0)
+  DIFF_RANGE="$LAST_TAG..HEAD"
+fi
+
+git diff $DIFF_RANGE --stat
+git diff $DIFF_RANGE --name-only
 ```
+
+**Weekly hygiene-run duty:** if more than 7 days pass with no batch shipping (no new
+`.claude/reviews/batch/` commit), ac-review's standing duty is to review all of `main`
+since the last `v*` tag (`git describe --tags --match 'v*' --abbrev=0`) — the same
+bootstrap mechanism above, run proactively rather than waiting on `ac-batch-close`.
+
+**On a branch (legacy mode):** read `.claude/legacy-branches.txt` (ignore blank lines
+and `#`-comment lines):
+
+```bash
+LEGACY_FILE="$(git rev-parse --show-toplevel)/.claude/legacy-branches.txt"
+IS_LEGACY=$(grep -vE '^[[:space:]]*(#|$)' "$LEGACY_FILE" 2>/dev/null | grep -Fx "$CURRENT_BRANCH" || true)
+```
+
+- **Listed** -> legacy scope, unchanged from pre-migration behavior:
+
+  ```bash
+  BASE_BRANCH=$(git merge-base --fork-point main HEAD 2>/dev/null && echo "main" || echo "master")
+  DIFF_RANGE="$BASE_BRANCH...HEAD"
+  git diff $DIFF_RANGE --stat
+  git diff $DIFF_RANGE --name-only
+  ```
+
+- **Not listed -> HARD STOP.** Do not proceed, do not downgrade to a warning:
+
+  ```
+  ERROR: ac-review runs on main by default (trunk-direct migration). Branch
+  "$CURRENT_BRANCH" is not in .claude/legacy-branches.txt. Either run the review on
+  main (the primary mode) or add this branch to the allowlist if it genuinely needs
+  legacy branch-relative review.
+  ```
+
+  Fire a Slack alert (`slack-send`) reporting the blocked branch, then STOP — never
+  silently proceed or warn-only.
 
 ### Uncommitted Implementation Check
 
@@ -175,7 +214,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 ### Phase 1: Context
 
 - **Branch:** {CURRENT_BRANCH}
-- **Base:** {BASE_BRANCH}
+- **Scope:** {DIFF_RANGE}
 - **Changed files:** {count} files, {lines} lines
 - **Plan:** {path or "none"}
 - **Project commands:** {CMD_TEST}, {CMD_LINT}, {CMD_TYPECHECK}
@@ -193,13 +232,13 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 ### Get Diff
 
 ```bash
-git diff "$BASE_BRANCH"...HEAD
+git diff $DIFF_RANGE
 ```
 
 ### Diff Size Check
 
 ```bash
-git diff "$BASE_BRANCH"...HEAD --stat | tail -1
+git diff $DIFF_RANGE --stat | tail -1
 ```
 
 **If diff is very large (>2000 lines):** Ask user with `AskUserQuestion`:
@@ -421,9 +460,23 @@ AskUserQuestion(
 
 **TaskUpdate(task: "Phase 6", status: "in_progress")**
 
+### Report Destination
+
+Default: `.claude/reviews/` root — used for standalone or mid-batch invocations; this
+does **not** advance the review-mark. When `ac-batch-close` invokes ac-review and
+explicitly passes `.claude/reviews/batch/`, the report lands there instead, which
+**does** advance the review-mark (the next `main`-mode Phase 1 scope detection reads
+from this commit).
+
+```bash
+REPORT_DEST="${report_dest:-.claude/reviews/}"
+```
+
+Callers pass the destination via the delegation prompt, e.g. `report_dest=.claude/reviews/batch/`.
+
 ### Generate Review Report
 
-Create `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings).
+Create `${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings).
 
 ### Safety Check
 
@@ -436,7 +489,7 @@ git status --short
 ### Commit
 
 ```bash
-git add .claude/reviews/YYYY-MM-DD-HHMM-[feature].md
+git add "${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md"
 git add <files modified by auto-fixes>
 git commit -m "$(cat <<'EOF'
 review: [feature] - {N} issues fixed, {M} need decision
@@ -569,7 +622,7 @@ git push
 
 **VERDICT:** APPROVED
 **Status:** APPROVED
-**Report:** `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`
+**Report:** `${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md`
 **Rounds:** {count}
 
 ### Convergence
@@ -608,7 +661,7 @@ Found: {total} across {count} rounds
 
 ### Next Step
 
-**If called from `ac-loop` (autonomous run):** Skip — exit after the summary. The loop reads `VERDICT:` from the output and chains to `ac-merge` (APPROVED) or stops (NEEDS_DECISION with open blockers).
+**If called from `ac-loop` (autonomous run):** Skip — exit after the summary. The loop reads `VERDICT:` from the output. On `main` (trunk-direct), `APPROVED` gates `ac-batch-close` proceeding — VERDICT semantics are unchanged, only the downstream consumer is: the loop no longer chains through `ac-merge`'s PR-merge step. On a legacy branch, `APPROVED` still chains to `ac-merge`. Either way, `NEEDS_DECISION` stops instead of proceeding.
 
 **If called interactively (human present):**
 
