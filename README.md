@@ -74,7 +74,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 
-> `ac-distribute/` also carries `_DECISION-distribution-stack.md` — the (still-open) distribution-stack decision doc that preceded the skill.
+> `ac-distribute/` also carries `references/_DECISION-distribution-stack.md` — the distribution-stack decision doc (ratified 2026-06-15) that preceded the skill.
 
 > **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
 
