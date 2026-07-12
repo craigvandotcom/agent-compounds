@@ -1,47 +1,52 @@
 {
-  "_doc": "Canonical hook WIRING manifest (Phase 2 of the harness-sync plan). Hook LOGIC lives beside this file (scripts/md payloads — the canon; per-harness copies are dead). harness-sync.sh renders this into each harness's dialect: the `hooks` key of <repos>/.claude/settings.json (Claude), <repos>/.codex/hooks.json (Codex), tools/droid/hooks.json → ~/.factory/hooks.json (Droid). Pi has no declarative hooks (TS extensions only) — skipped with a warning. Placeholders: {HOOKS} = this dir via $HOME/Repos path · {HOME} = $HOME literal · {PROJECT} = $CLAUDE_PROJECT_DIR (claude only). Event names are shared verbatim by Claude/Codex/Droid — no mapping table needed since Gemini's decommission. Per-harness `command` objects express capability-gated content variants (e.g. delegation-reminder: Claude assumes the memory-injection hook + Task-tool stances; harnesses without those get the manual-recall variant). NOTE: regenerating Codex's hooks.json invalidates its trusted_hash — re-trust once via /hooks in the Codex TUI.",
+  "_doc": "Canonical hook WIRING manifest. Hook LOGIC lives beside this file (scripts/md payloads — the canon; per-harness copies are dead). harness-sync.sh renders this into each harness's dialect via build_hooks_obj(<harness>, <scope>): org scope -> <repos>/.claude/settings.json#hooks (Claude), <repos>/.codex/hooks.json (Codex), tools/droid/hooks.json -> ~/.factory/hooks.json (Droid); app scope -> <app>/.claude/settings.json#hooks stamped block (Claude only — no other harness has functioning app-scope hooks); machine scope -> ~/.grok/hooks/00-ac.json (Grok only: it discards passive-event stdout, so only PreToolUse guards + fire-and-forget loggers function there; its context stack is the generated ~/.grok/AGENTS.md rules projection instead). Pi has no declarative hooks (TS extensions only) — skipped with a warning. Placeholders: {HOOKS} = this dir via $HOME/Repos path · {HOME} = $HOME literal. Event names are shared verbatim by Claude/Codex/Droid/Grok. Per-harness `command` objects express capability-gated content variants when needed. `timeout` (seconds) passes through to the rendered hook — REQUIRED on blocking hooks rendered for grok (fail-open, 5s default there). NOTE: regenerating Codex's hooks.json invalidates its trusted_hash — re-trust once via /hooks in the Codex TUI.",
   "wiring": [
     {
       "id": "session-start-context",
       "event": "SessionStart",
       "command": "cat {HOOKS}/session-start.md",
-      "harnesses": ["claude", "codex", "droid"]
+      "harnesses": ["claude", "codex", "droid"],
+      "scope": ["org"]
     },
     {
       "id": "memory-recall",
       "event": "UserPromptSubmit",
-      "command": "python3 {PROJECT}/.claude/hooks/memory-retrieval.py",
-      "harnesses": ["claude"],
-      "_doc": "Claude-only: emits Claude hook-JSON; script stays in .claude/hooks/. Other harnesses compensate via the manual-recall reminder below."
+      "command": "python3 {HOME}/Repos/.claude/hooks/memory-retrieval.py",
+      "harnesses": ["claude", "codex", "droid"],
+      "scope": ["org", "app"],
+      "_doc": "Emits a plain-stdout <memory-recall> block — injected as context by claude, codex, and droid (all three inject UserPromptSubmit stdout; verified 2026-07-12). Grok discards passive stdout — its recall path is the rules-digest floor + qmd MCP pull."
     },
     {
       "id": "pre-prompt-reminder",
       "event": "UserPromptSubmit",
-      "command": {
-        "claude": "cat {HOOKS}/delegation-reminder.md",
-        "codex": "cat {HOOKS}/delegation-reminder.manual-recall.md",
-        "droid": "cat {HOOKS}/delegation-reminder.manual-recall.md"
-      },
-      "harnesses": ["claude", "codex", "droid"]
+      "command": "cat {HOOKS}/delegation-reminder.md",
+      "harnesses": ["claude", "codex", "droid"],
+      "scope": ["org"],
+      "_doc": "Full push variant everywhere since codex/droid gained stdout injection (2026-07-12; previously delegation-reminder.manual-recall.md — that payload now sources the Grok rules projection)."
     },
     {
       "id": "trauma-guard",
       "event": "PreToolUse",
       "matcher": "Bash",
       "command": "{HOOKS}/trauma_guard.py",
-      "harnesses": ["claude", "codex", "droid"]
+      "harnesses": ["claude", "codex", "droid", "grok"],
+      "scope": ["org", "machine"],
+      "timeout": 30,
+      "_doc": "Grok aliases Bash -> run_terminal_command in matchers; the script emits Grok's deny dialect when GROK_HOOK_EVENT is set. Explicit timeout because Grok defaults to 5s and fails open."
     },
     {
       "id": "activity-logger",
       "event": "PostToolUse",
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
-      "harnesses": ["claude", "codex", "droid"]
+      "harnesses": ["claude", "codex", "droid", "grok"],
+      "scope": ["org", "machine"]
     },
     {
       "id": "activity-logger-subagent",
       "event": "SubagentStop",
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
-      "harnesses": ["claude", "codex", "droid"]
+      "harnesses": ["claude", "codex", "droid", "grok"],
+      "scope": ["org", "machine"]
     }
   ]
 }

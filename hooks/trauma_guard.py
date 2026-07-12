@@ -95,14 +95,16 @@ def main():
 
     # Extract command
     # Claude Code format: {"tool_name": "Bash", "tool_input": {"command": "..."}}
-    tool_name = input_data.get("tool_name")
-    tool_input = input_data.get("tool_input") or {}
+    # Grok Build format:  {"toolName": "run_terminal_command", "toolInput": {"command": "..."}}
+    tool_name = input_data.get("tool_name") or input_data.get("toolName")
+    tool_input = input_data.get("tool_input") or input_data.get("toolInput") or {}
     if not isinstance(tool_input, dict):
         sys.exit(0)
     command = tool_input.get("command")
 
-    # Only check Bash / run_shell_command commands
-    if tool_name not in ["Bash", "run_shell_command"] or not isinstance(command, str) or not command:
+    # Only check shell-command tools (Claude/Codex/Droid names + Grok aliases)
+    shell_tools = ["Bash", "run_shell_command", "run_terminal_command", "run_terminal_cmd"]
+    if tool_name not in shell_tools or not isinstance(command, str) or not command:
         sys.exit(0)
 
     traumas = load_traumas()
@@ -123,20 +125,29 @@ def main():
             if use_emoji
             else "[HOT STOVE] VISCERAL SAFETY INTERVENTION"
         )
-        
-        # Deny the command
+        reason = (
+            f"{banner}\n\n"
+            f"BLOCKED: This pattern matches a registered TRAUMA.\n"
+            f"Pattern: {pattern}\n"
+            f"Reason: {msg}\n"
+            f"Reference: {ref}\n\n"
+            f"If you MUST run this, heal it first with: cm trauma heal {trauma_id}"
+        )
+
+        if os.environ.get("GROK_HOOK_EVENT"):
+            # Grok Build dialect: {"decision": "deny"} + exit 2. Grok is fail-open —
+            # only this explicit decision blocks the call.
+            output = {"decision": "deny", "reason": reason}
+            sys.stdout.write(json.dumps(output))
+            sys.stdout.flush()
+            sys.exit(2)
+
+        # Claude Code (and compatible) dialect
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "deny",
-                "permissionDecisionReason": (
-                    f"{banner}\n\n"
-                    f"BLOCKED: This pattern matches a registered TRAUMA.\n"
-                    f"Pattern: {pattern}\n"
-                    f"Reason: {msg}\n"
-                    f"Reference: {ref}\n\n"
-                    f"If you MUST run this, heal it first with: cm trauma heal {trauma_id}"
-                )
+                "permissionDecisionReason": reason,
             }
         }
         # Explicitly print to stdout and exit

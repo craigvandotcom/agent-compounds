@@ -72,6 +72,8 @@ EN_CLAUDE="$(cfg '.harnesses.claude.enabled')"
 EN_CODEX="$(cfg '.harnesses.codex.enabled')"
 EN_DROID="$(cfg '.harnesses.droid.enabled')"
 EN_PI="$(cfg '.harnesses.pi.enabled')"
+EN_GROK="$(cfg '.harnesses.grok.enabled // false')"
+GROK_HOME="$(expand_tilde "$(cfg '.harnesses.grok.home // "~/.grok"')")"
 CODEX_SKILLS_DIR="$(cfg '.harnesses.codex.skills_mirror_dir')"
 CODEX_AGENTS_DIR="$(cfg '.harnesses.codex.agents_gen_dir')"
 DROID_SKILLS_DIR="$(cfg '.harnesses.droid.skills_mirror_dir')"
@@ -254,17 +256,20 @@ HOOKS_MANIFEST="$AC_ROOT/hooks/hooks.json"
 # literal-$HOME path so rendered configs stay portable across machines
 HOOKS_PATH_LIT='$HOME/Repos/neometa/software/agent-compounds/hooks'
 
-# build_hooks_obj <harness> — manifest -> harness's hooks object (shared JSON dialect)
+# build_hooks_obj <harness> <scope> — manifest -> harness's hooks object for one
+# placement scope (machine|org|app; entries default to org). The scope field on each
+# wiring entry is the single source of hook placement (plan: hooks-scopes-grok Phase 3).
 build_hooks_obj() {
-  jq --arg h "$1" --arg hooks "$HOOKS_PATH_LIT" '
+  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" '
     def subst: (if type == "object" then .[$h] else . end)
       | gsub("\\{HOOKS\\}"; $hooks)
-      | gsub("\\{HOME\\}"; "$HOME")
-      | gsub("\\{PROJECT\\}"; "$CLAUDE_PROJECT_DIR");
-    reduce (.wiring[] | select(.harnesses | index($h))) as $e ({};
+      | gsub("\\{HOME\\}"; "$HOME");
+    reduce (.wiring[]
+            | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))) as $e ({};
       .[$e.event] += [
         (if $e.matcher then {matcher: $e.matcher} else {} end)
-        + {hooks: [{type: "command", command: ($e.command | subst)}]}
+        + {hooks: [({type: "command", command: ($e.command | subst)}
+                    + (if $e.timeout then {timeout: $e.timeout} else {} end))]}
       ])' "$HOOKS_MANIFEST"
 }
 
@@ -274,7 +279,7 @@ render_hooks_root() {
 
   if [ "$EN_CLAUDE" = "true" ] && [ -f "$settings" ]; then
     echo "  -- claude hooks (.claude/settings.json#hooks)"
-    obj="$(build_hooks_obj claude)"
+    obj="$(build_hooks_obj claude org)"
     # assignment form (not inline in the call) so a jq failure trips `set -e`
     # instead of silently writing empty content over the real settings file.
     content="$(jq --argjson h "$obj" '.hooks = $h' "$settings")"
@@ -282,7 +287,7 @@ render_hooks_root() {
   fi
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex hooks (.codex/hooks.json)"
-    obj="$(build_hooks_obj codex)"
+    obj="$(build_hooks_obj codex org)"
     local before=$CHANGES
     content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
     write_file_if_changed "$REPOS_ROOT/.codex/hooks.json" "$content"
@@ -291,7 +296,7 @@ render_hooks_root() {
   fi
   if [ "$EN_DROID" = "true" ]; then
     echo "  -- droid hooks (tools/droid/hooks.json -> ~/.factory/hooks.json)"
-    obj="$(build_hooks_obj droid)"
+    obj="$(build_hooks_obj droid org)"
     content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
     write_file_if_changed "$REPOS_ROOT/tools/droid/hooks.json" "$content"
     ensure_home_link "$DROID_HOME/hooks.json" "$REPOS_ROOT/tools/droid/hooks.json"
@@ -299,6 +304,74 @@ render_hooks_root() {
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi hooks skipped by design (TS-extension surface only)"
   fi
+  render_hooks_grok
+  render_context_grok
+}
+
+# render_hooks_app <target-base-dir> — app-scope stamped hooks block (plan:
+# _plans/2026-07-12-harness-sync-hooks-scopes-grok.md Phase 1). The whole `hooks`
+# key of <app>/.claude/settings.json is a managed projection regenerated from the
+# canon; every other key (env, skillListingBudgetFraction, …) is preserved
+# untouched. A malformed target file fails THIS target loudly and the run
+# continues (guard_public posture) — never write over a file we cannot parse.
+render_hooks_app() {
+  local base="$1" settings obj content
+  settings="$base/.claude/settings.json"
+  [ -f "$HOOKS_MANIFEST" ] || { echo "  WARN: $HOOKS_MANIFEST missing — app hooks skipped"; return 0; }
+  echo "  -- claude app hooks (.claude/settings.json#hooks, stamped block)"
+  obj="$(build_hooks_obj claude app)"
+  if [ -f "$settings" ]; then
+    if ! content="$(jq --argjson h "$obj" '.hooks = $h' "$settings" 2>/dev/null)"; then
+      echo "  ERROR: $settings is not valid JSON — app hooks block NOT rendered" >&2
+      FAILURES=$((FAILURES + 1))
+      return 0
+    fi
+  else
+    content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
+  fi
+  write_file_if_changed "$settings" "$content"
+}
+
+# render_hooks_grok — machine-scope native hooks file (plan Phase 2). Grok discards
+# passive-event stdout (verified 2026-07-12, v0.2.93), so only the PreToolUse guard
+# and fire-and-forget loggers are rendered; context travels via render_context_grok.
+# Pairs with the REQUIRED machine setup `[compat.claude] hooks = false` in
+# <grok home>/config.toml — without it these hooks double-fire via compat scanning.
+render_hooks_grok() {
+  [ "$EN_GROK" = "true" ] || return 0
+  [ -f "$HOOKS_MANIFEST" ] || return 0
+  [ -d "$GROK_HOME" ] || { echo "  WARN: grok home $GROK_HOME missing — skipping (grok not installed?)"; return 0; }
+  echo "  -- grok hooks ($GROK_HOME/hooks/00-ac.json, machine scope)"
+  local obj content
+  obj="$(build_hooks_obj grok machine)"
+  content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
+  write_file_if_changed "$GROK_HOME/hooks/00-ac.json" "$content"
+}
+
+# render_context_grok — Grok's context stack as a generated machine-global rules
+# file (Grok loads ~/.grok/AGENTS.md in every session). Projection of the same
+# canonical payloads the other harnesses receive via hook stdout injection.
+render_context_grok() {
+  [ "$EN_GROK" = "true" ] || return 0
+  [ -d "$GROK_HOME" ] || return 0
+  echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
+  local ss dr content
+  ss="$(cat "$AC_ROOT/hooks/session-start.md")"
+  dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
+  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/delegation-reminder.manual-recall.md) -->
+
+# Machine-global rules (Repos fleet)
+
+Other harnesses receive this context via per-prompt hook injection; Grok discards
+hook stdout, so this file carries the same canon statically. It applies when
+working anywhere under ~/Repos.
+
+$ss
+
+---
+
+$dr"
+  write_generated "$GROK_HOME/AGENTS.md" "$content"
 }
 
 render_mcp_root() {
@@ -401,6 +474,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     "$AC_ROOT/deploy.sh" "$base" --all $dep_flags | sed 's/^/  [deploy.sh] /' | grep -v '^  \[deploy.sh\] $' || true
     deploy_status="${PIPESTATUS[0]}"
     [ "$deploy_status" -eq 0 ] || { echo "  ERROR: deploy.sh failed (exit $deploy_status) for $base" >&2; exit "$deploy_status"; }
+    render_hooks_app "$base"
   fi
 
   if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ]; then

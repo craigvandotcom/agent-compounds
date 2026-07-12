@@ -26,6 +26,11 @@
       "home_env": "PI_CODING_AGENT_DIR",
       "home_default": "~/.pi/agent",
       "_doc": "Pi reads .agents/skills up the cwd tree (covered by the codex mirror) + <home>/skills globally. No declarative agents/hooks/MCP surfaces — those are skipped with a warning, never silently."
+    },
+    "grok": {
+      "enabled": true,
+      "home": "~/.grok",
+      "_doc": "Grok Build (xAI). Machine scope only: hooks -> <home>/hooks/00-ac.json (trauma-guard + activity-logger — the only hooks that function; Grok discards passive-event stdout, verified 2026-07-12 on v0.2.93) and context -> <home>/AGENTS.md (generated global rules — loaded in every Grok session). Skills arrive via the .agents/skills compat mirror; no org/app hook layers (context hooks can't function there, and machine scope avoids per-repo folder-trust ceremony). REQUIRED one-time machine setup in <home>/config.toml: [compat.claude] hooks = false (prevents double-fire via Claude-compat hook scanning; skills/rules/mcps compat stays on) + [mcp_servers.qmd] (memory pull layer)."
     }
   }
 }
