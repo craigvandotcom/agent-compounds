@@ -15,7 +15,7 @@ Multiple sessions can safely share a wave — file reservations via Agent Mail p
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Unblocked beads (from `/ac-bead-refine`)                                       |
-| **Output**       | Implemented code, committed per bead, pushed to wave branch                                |
+| **Output**       | Implemented code, committed per bead, pushed directly to `main` (trunk-direct)             |
 | **Artifacts**    | Per-bead results in `/tmp/bead-work-<wave-slug>/bead-{id}-result.md`, progress in `/tmp/bead-work-<wave-slug>/progress.md` |
 | **Verification** | Per-bead quality gate (test, lint, type-check), beads closed in `br`                       |
 
@@ -27,17 +27,21 @@ Multiple sessions can safely share a wave — file reservations via Agent Mail p
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
 
-### Clean Working Tree (FIRST)
+### Inventory the Working Tree — H7d: Never Commit Foreign WIP (FIRST)
 
 ```bash
 git status --short
 ```
 
-If uncommitted changes exist, review them and commit in logical groups before proceeding. The goal is granular checkpoints — every commit is a revert point. Group related changes together (e.g., plan updates in one commit, script changes in another). If anything looks like a red flag (unexpected deletions, sensitive files), flag it to the user before committing. Almost always, the right action is to commit — not stash, not ignore. Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked and proceed.
+Under trunk-direct, every session works directly on `main` with no branch isolation — a non-empty `git status --short` is EXPECTED and, by itself, is NOT a blocker. It may contain another concurrent session's in-flight, not-yet-committed work.
 
-**Do NOT start bead-work with a dirty working tree.** Engineers see all uncommitted files in their context and may inadvertently include unrelated changes in their diffs, forcing manual selective staging.
+**Inventory it; do not touch it.** Uncommitted changes in files you have not reserved via Agent Mail (Phase 1a) belong to someone else's session. Leave them exactly as found — do not stage them, do not commit them "on their behalf," do not group them into "logical" commits, do not delete or revert them. If anything in the inventory looks like a genuine red flag (unexpected deletions, sensitive files, something clearly orphaned rather than in-flight), flag it to the user before proceeding — otherwise, proceed past it.
 
-**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** A `stash pop` can surface pre-existing stash entries from other branches and write merge-conflict markers into files unrelated to the current session (incident: stash-corruption — `references/incidents.md`). If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` or just commit the work first — stash is not a reversible tool in a multi-branch workflow.
+**The rule that keeps committed state clean under concurrent editing: only files YOU reserved may enter YOUR commits.** Every commit in this workflow — Phase 0 onward — is pathspec-mandatory: `git commit -- <file1> <file2> ...`. **Never `git add -A`, never `git add .`, never `git commit -a`.** A wildcard add sweeps in whatever foreign WIP happens to be sitting in the shared working tree at that moment and ships it under your bead's commit message — misattributing someone else's unreviewed work to your commit record and to your bead.
+
+Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked regardless of who "owns" it.
+
+**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** A `stash pop` can surface pre-existing stash entries from other sessions and write merge-conflict markers into files unrelated to the current session (incident: stash-corruption — `references/incidents.md`). If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` — stash is not a reversible tool in a shared, concurrently-edited working tree.
 
 ### Verify Refined Beads Exist
 
@@ -64,36 +68,16 @@ br ready --json | jq '[.[] | select((.labels | index("refined")) and (.labels | 
 
 If NO ready beads carry the `refined` label, STOP: "No refined beads ready. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-session` for the decision docket."
 
-### Ensure Wave Branch (single-branch rule)
+### Work Directly on Main (trunk-direct — no wave branch)
 
-**There is always exactly ONE active wave branch in this repo.** Whatever bead-work runs joins it — a wave is a release/merge unit, not a feature unit. Never create a second wave while one is open. Multiple Claude sessions also share that single wave branch.
+**There is no wave branch.** Under trunk-direct, ac-implement sessions commit straight to `main` — nothing is created, allocated, or joined. Concurrency across sessions is coordinated entirely by Agent Mail file reservations (H3, unchanged) plus claim-at-selection in Phase 1a; it is no longer coordinated by branch isolation. Whole-project truth lives only at committed-state CI layers on `main`, not on a per-wave branch.
 
 ```bash
-git fetch origin --prune
-LOCAL_WAVE=$(git branch --list 'wave/*' --format='%(refname:short)' | head -1)
-REMOTE_WAVE=$(git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1)
+git checkout main 2>/dev/null || true
+git pull --rebase
 ```
 
-- **A wave exists (local or remote):** join it. Do NOT create a second wave.
-  ```bash
-  WAVE=${LOCAL_WAVE:-$REMOTE_WAVE}
-  git checkout "$WAVE" && git pull --rebase
-  ```
-
-- **No wave exists anywhere:** create the next numbered wave:
-  ```bash
-  bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/allocate-wave-branch.sh"
-  ```
-  Computes the next 3-digit counter from the highest-EVER wave number — live refs ∪ merge
-  messages on main ∪ tags, not refs alone (`git fetch --prune` drops merged waves' refs, so a
-  refs-only scan reuses a shipped number — incident: wave-collision — `references/incidents.md`);
-  hard-fails with exit 1 if `wave/NNN` already appears in main's history (never auto-increments
-  past a collision); on success creates `wave/NNN` from main, pushes with upstream set, and
-  prints the new branch name.
-
-- **Multiple waves found (defensive guard):** STOP and surface to user. The single-branch rule was violated upstream — let the user decide which to keep before claiming any beads.
-
-> **Migration note (2026-05-19→):** the previous thematic naming (`wave/<feature-name>`) is being phased out. Pre-existing thematic waves finish under their current names; only newly created waves use `wave/NNN`. Once the current open wave merges, all subsequent waves follow `wave/NNN` exclusively. Do NOT propose renaming an in-flight thematic wave — let it complete naturally.
+Confirm you're on `main` (`git branch --show-current`) before doing anything else. If you find yourself on some other branch, `git checkout main` — there is nothing to "join," and no second branch to defensively guard against.
 
 ### Install Pre-Commit Guard
 
@@ -167,6 +151,35 @@ Specifically REJECT these failure modes from being treated as "acceptable baseli
 
 The baseline read is cheap — always do it. Only the fallback full run (when no loop-close run is available) is expensive; skip that fallback only if it takes > 10 minutes AND the session targets fewer than 2 beads.
 
+### Scoped Per-Commit Readiness Gate (H7 v3) + Push Cadence
+
+This is the gate that runs at **every** commit for the rest of the session (Phase 1d), not just once here — establishing it in Phase 0 so it's binding for the whole loop. Under trunk-direct there is no wave branch acting as a buffer, so this gate — plus post-push CI — is the only thing keeping `main` clean.
+
+**The gate is scoped to YOUR OWN diff, never the whole project:**
+
+1. **Format** — `lint-staged` (or the project's equivalent) on YOUR OWN staged files only.
+2. **`ubs <changed-files>`** — pass the exact list of files YOU changed. **Never `ubs .`** — a whole-project scan is a jef-flywheel anti-pattern: it re-surfaces every pre-existing issue in the repo on every commit and buries your own signal in noise that isn't yours to fix.
+3. **`pnpm test` (vitest-affected) scoped to YOUR OWN diff** — not the full suite (that's session-end and loop-close territory, per the Baseline Check note above).
+4. **Whole-project `tsc`** — this one check is necessarily whole-project (TypeScript has no per-file mode), so triage its output by attribution rather than treating every red line as yours to fix:
+   > A `tsc` error in a file you didn't touch that does NOT import your changed files is foreign-WIP noise → log it and proceed (push-CI re-checks committed state in ~4 min). An error in your own file, or in a file that imports your changes, is yours → fix it before committing.
+
+**Cadence: commit every 15–20 minutes.** Do not batch a whole bead — or worse, a whole session — into one commit; granular commits are both the revert points and the unit of concurrency-safety under H7d.
+
+**Commit = push. Always. Mandatory, not optional.** There is no wave branch holding your work safe in the interim — origin is the only durability record. The sequence for every commit:
+
+```bash
+git pull --rebase
+# pre-push trip-wire runs here (installed hook) — see the --no-verify note below
+git commit -- <file1> <file2> ...
+git push --no-verify origin main
+git rev-parse HEAD                     # local
+git ls-remote origin main              # origin — confirm the SHAs match
+```
+
+`--no-verify` is deliberate: the installed pre-push hook runs a full-tree build, and under trunk-direct another session's uncommitted WIP can be sitting in that same working tree and false-positive the hook (see Multi-Session Parallelism, below) — real verification for state you don't own comes from the per-commit gate above plus post-push CI, not from a hook scanning the whole tree. **Never sit on local-only commits** — a crashed or abandoned session with unpushed commits is lost work, not "recoverable from the branch," because there is no branch.
+
+> **Race handling (unchanged):** if `git push` collides with another session's push, `git pull --rebase` and re-push — never force-push over another session's committed work.
+
 ### Ask User
 
 Ask one question via `AskUserQuestion`:
@@ -228,7 +241,7 @@ mkdir -p "$ARTIFACTS_DIR"
 TaskCreate(subject: "Session config: {TARGET_BEADS} beads | {WAVE_SLUG}", description: "TARGET_BEADS={TARGET_BEADS}. ARTIFACTS_DIR={ARTIFACTS_DIR}. Stop after {TARGET_BEADS} beads.", activeForm: "Configuring session...")
 TaskUpdate(task: "Session config", status: "completed")
 
-TaskCreate(subject: "Phase 0: Initialize bead-work session", description: "Verify beads, ensure wave branch, create tasks", activeForm: "Initializing session...")
+TaskCreate(subject: "Phase 0: Initialize bead-work session", description: "Verify beads, confirm on main (trunk-direct), create tasks", activeForm: "Initializing session...")
 
 # "X of N" naming — makes the boundary crystal clear even after compaction
 for i in 1..TARGET_BEADS:
@@ -539,7 +552,7 @@ Terminal 1: /ac-implement   → "target 5 beads"
 Terminal 2: /ac-implement   → "target 5 beads"
 ```
 
-This skill is parallel-by-design — no mode switch needed: the mechanics above already handle it (single wave branch · Phase 1a reservations + Phase 0 pre-commit guard · pathspec commits · shared per-wave `ARTIFACTS_DIR` with append-only progress.md and per-bead result files).
+This skill is parallel-by-design — no mode switch needed: the mechanics above already handle it (trunk-direct on `main` · Phase 1a reservations + Phase 0 pre-commit guard · pathspec commits · shared `ARTIFACTS_DIR` with append-only progress.md and per-bead result files).
 
 `bv --robot-next` is global-priority, not wave-aware; conductor must filter to the wave's labels OR pick from a different epic when the wave's chain is sequentially gated.
 
@@ -549,6 +562,6 @@ Pre-push `pnpm build` reads the working tree — another session's uncommitted W
 
 ## Remember
 
-- **One active `wave/*` branch, ever** — join it if it exists, never create a second; new waves are `wave/NNN` (thematic names legacy only). Engineers implement; **YOU review, YOU commit** — be extremely strict, a bead must be fully complete before moving on. Minor fixes: do them yourself; major gaps: re-spawn the engineer.
+- **Trunk-direct: work on `main`, never create a branch** — commits are pathspec-limited to your reserved files, and every commit is immediately pushed (commit = push). Engineers implement; **YOU review, YOU commit** — be extremely strict, a bead must be fully complete before moving on. Minor fixes: do them yourself; major gaps: re-spawn the engineer.
 - **Compaction recovery** — progress.md is the state: parse its header for TARGET_BEADS, count COMPLETE entries for BEADS_COMPLETED; re-derive `ARTIFACTS_DIR` from `git branch --show-current | tr '/' '-'` if lost. "Bead X of N" task naming prevents drift — the task list IS the stop condition.
 - **Quality cadence** — per-bead: tests + type-check + lint, and no new code without new tests (verify the engineer wrote them before approving); full quality gate at session end; UI validation runs once at session end (in bead-land), not per-bead.

@@ -425,7 +425,10 @@ d9_script="$AC_ROOT/skills/_shared/scripts/allocate-wave-branch.sh"
 if ! grep -qE "git log origin/main --oneline \| grep -oE" "$d9_script" 2>/dev/null; then
   fail "D9: _shared/scripts/allocate-wave-branch.sh missing the highest-ever union allocator pattern"
 fi
-for d9_skill in ac-loop ac-implement; do
+# Trunk-direct migration (epic bd-u2lo1): ac-implement no longer allocates wave
+# branches (bd-u2lo1.6); ac-loop follows (bd-u2lo1.7); the allocator script itself
+# is deleted by bd-u2lo1.3 — this whole D9 block retires with it.
+for d9_skill in ac-loop; do
   check
   if ! grep -q "allocate-wave-branch.sh" "$AC_ROOT/skills/$d9_skill/SKILL.md" 2>/dev/null; then
     fail "D9: skills/$d9_skill/SKILL.md does not call the shared wave allocator script"
