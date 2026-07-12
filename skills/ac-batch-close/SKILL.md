@@ -142,6 +142,9 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
+This is the **post-push re-proof** (J5 — the trunk-direct successor of ac-merge's
+"post-rebase re-proof": same gate logic, re-prove after the diff changes; only the
+trigger-event name changed, since there is no rebase without a branch to rebase onto).
 Identical structure and conditions to `ac-merge`'s QA Smoke Gate (hybrid/native apps only,
 native-touching diff, Mac-only for the device twin), retargeted to the batch range:
 

@@ -31,11 +31,20 @@ verification; review is the *static* one. Both are pre-merge.
 
 ## Step 1 — classify the diff
 
-Run against the wave's range (`main...HEAD` on the wave branch). Fail-safe: a class
-flips on when **any** file matches; ambiguity counts as a match, never a skip.
+Run against the batch's range: everything since the review-mark (the last commit that
+touched `.claude/reviews/batch/` — same anchor as `ac-review`'s trunk-direct scope
+detection; bootstrap fallback when no batch commit exists yet: the last `v*` tag).
+Fail-safe: a class flips on when **any** file matches; ambiguity counts as a match,
+never a skip.
 
 ```bash
-RANGE="main...HEAD"                       # wave vs base
+# Review-mark anchor (identical computation to ac-review Phase 1 — keep in sync)
+REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
+if [ -n "$REVIEW_MARK" ]; then
+  RANGE="$REVIEW_MARK..HEAD"              # batch vs review-mark
+else
+  RANGE="$(git describe --tags --match 'v*' --abbrev=0)..HEAD"   # bootstrap: last v* tag
+fi
 FILES=$(git diff "$RANGE" --name-only)
 NFILES=$(printf '%s\n' "$FILES" | grep -c . || true)
 
@@ -204,14 +213,15 @@ registry enumeration-tripwire flag when it fires — same visible-not-silent tre
 
 ---
 
-## Relationship to ac-merge's smoke net
+## Relationship to the batch-close smoke net
 
-`ac-merge` runs a **smoke**-only QA pass on the **post-rebase** state — the exact thing
-that merges — using this same classifier. That is complementary, not redundant: the
-Verify stage proves the pre-land code at gate-selected depth; ac-merge re-proves the
-post-rebase code at smoke (a rebase can change what merges). If a fresh gate-selected
-PASS exists for the current `HEAD` SHA, ac-merge's net may note-and-skip; otherwise it
-runs smoke. Both read this file so the classifier never forks.
+The closing ceremony (`ac-batch-close`; `ac-merge` on the surviving PR path) runs a
+**smoke**-only QA pass on the **post-push** state — the exact thing that ships — using
+this same classifier. That is complementary, not redundant: the Verify stage proves the
+pre-close code at gate-selected depth; the closing ceremony re-proves the post-push code
+at smoke (the diff can change between verify and close). If a fresh gate-selected PASS
+exists for the current `HEAD` SHA, the net may note-and-skip; otherwise it runs smoke.
+Both read this file so the classifier never forks.
 
 ---
 

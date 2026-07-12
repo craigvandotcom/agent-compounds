@@ -114,11 +114,13 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
-This is the **post-rebase smoke net**: it re-proves the exact state that merges, using
+This is the smoke net: it re-proves the exact state that merges, using
 the **same classifier as `_shared/verification-gate.md`** (the diff-class greps below are
 that gate's `native` / `webui` classes). The Verify stage in `ac-pipeline`/`ac-loop`
 already ran the gate-selected passes at full depth pre-land; this net re-checks at
-**smoke** depth because a rebase can change what merges. If a fresh gate-selected PASS
+**smoke** depth because the diff can change between verify and merge (on this PR path via
+the rebase above; on the trunk-direct path the same net runs as `ac-batch-close`'s
+**post-push re-proof** — J5). If a fresh gate-selected PASS
 exists for the current `HEAD` SHA, note-and-skip; otherwise run the smoke pass below.
 
 > Selection/depth logic is single-sourced in `_shared/verification-gate.md` — keep these
