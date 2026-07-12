@@ -270,13 +270,40 @@ If `$ARTIFACTS_DIR/` was deleted and recreated mid-session (e.g., by a partial b
 
 ### Phase 1a: Select Bead
 
+**First iteration only — claim the target batch (CLAIM-AT-SELECTION).** Before selecting
+the first bead this session works, determine the candidate set it will draw from (the same
+`refined`, non-`human-gate` ready-bead filter used above) and claim ALL of them up front, in
+ONE call — not incrementally as beads are picked:
+
+```bash
+br update <id1> <id2> ... --status in_progress --assignee "$AGENT_NAME"
+```
+
+This is the CLAIM-AT-SELECTION mechanism (precedent: body-compass-app memory
+`claim-adopted-beads-before-planning` — claim before you plan/implement, generalized here to
+every batch): a claimed bead's status is `in_progress`, so `br ready` naturally excludes it
+for every other conductor — no new gating logic needed. If this session was itself invoked by
+`ac-loop`, the loop already did this claim before delegating — skip re-claiming beads whose
+IDs were handed to you as "already claimed" in the delegation prompt.
+
+Mint the batch's CLAIM ID **once**, at the moment of claiming: `<first-claimed-bead-id>-<YYYYMMDD>`
+(e.g. `bd-u2lo1.1-20260712`). Write it to `$ARTIFACTS_DIR/.claim-id` (first line = the claim
+id — a FILE, not an env var, since downstream skills read it from a fresh process) and mirror
+it as the first line of `$ARTIFACTS_DIR/progress.md`'s header. Downstream skills (RUN_ID
+re-keying, bd-u2lo1.9) read the claim id verbatim from `.claim-id`.
+
+On later loop iterations within the same session, only claim a bead individually (same
+`--status in_progress --assignee` call) if it falls OUTSIDE the batch already claimed above
+(e.g. a candidate went blocked mid-session and was replaced by the next-ready bead) — the
+rest of the batch is already claimed and stays that way until closed.
+
 **Re-verify branch context BEFORE claiming.** Branch state is dynamic in this workflow — multiple Claude sessions sharing one git checkout can switch the branch between operations via serial hand-off. Phase 0's branch check is a snapshot; treat it as stale on every loop iteration.
 
 ```bash
 git branch --show-current
 ```
 
-If the branch is NOT the wave branch you started on, STOP. Do not silently `git checkout` back (that would clobber the other session's work). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — single-branch-per-wave is a deliberate convention here; spawning a worktree forks the wave state (incident: worktree-drift — `references/incidents.md`).
+If the branch is not `main`, STOP. Do not silently `git checkout` back (that could clobber another session's uncommitted work sitting in the shared tree). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — trunk-direct means a single shared checkout is the deliberate convention here; spawning a worktree forks state invisibly (incident: worktree-drift — `references/incidents.md`).
 
 ```bash
 bv --robot-next
