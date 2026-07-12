@@ -184,13 +184,27 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
 ---
 
-## Phase 1: ac-review Gate
+## Phase 1: Review Gate
 
-There is no PR to attach a review to, so `ac-review` runs directly on `main` and its `VERDICT`
-gates this ceremony proceeding — the same severity bar `ac-merge` enforced at PR-merge, moved
-here since there's no PR-merge choke point left on trunk-direct.
+This ceremony **NEVER closes an unreviewed batch** — the gate is unconditional. What widens on
+trunk-direct is only the *source* of the review verdict: Phase 1 accepts **either** a standard
+`ac-review` run **or** an equivalent-review artifact the invoking conductor pre-supplies. In both
+cases the accepted artifact must carry an explicit `VERDICT:` line and land in
+`.claude/reviews/batch/`.
 
-Delegate `ac-review` (do not inline its work — `ac-review/SKILL.md` is a full skill, not a
+**(a) Pre-supplied equivalent-review artifact.** If the delegation prompt hands you a completed
+review of this same diff — e.g. `ac-hygiene`'s 7-lens panel run report (same severity bar,
+already adversarial) — do **not** re-run `ac-review` on the same diff (double-review). Take that
+report as the review artifact: confirm it contains an explicit `VERDICT:` line, then carry it
+into `.claude/reviews/batch/` via **Phase 5's Final-Act commit** (the same commit that lands the
+batch-close summary), so the trunk-direct review-mark is backed by a committed artifact exactly as
+the `ac-review` path is. Read its `VERDICT:` and gate on it below. No supplied artifact, or one
+lacking an explicit `VERDICT:` line → fall through to (b); never proceed unreviewed.
+
+**(b) No artifact supplied → run `ac-review` yourself.** There is no PR to attach a review to, so
+`ac-review` runs directly on `main` and its `VERDICT` gates this ceremony — the same severity bar
+`ac-merge` enforced at PR-merge, moved here since there's no PR-merge choke point left on
+trunk-direct. Delegate (do not inline its work — `ac-review/SKILL.md` is a full skill, not a
 sub-step of this one):
 
 > "Run ac-review on main (trunk-direct mode). report_dest=.claude/reviews/batch/"
@@ -199,7 +213,7 @@ sub-step of this one):
 provisionally advances the review-mark; Phase 5's Final Act below supersedes it (see that
 section's note on why).
 
-**Read the returned summary for `VERDICT:`.**
+**Read the supplied-or-produced artifact for `VERDICT:`.**
 
 - **`VERDICT: APPROVED`** → proceed to Phase 2.
 - **`VERDICT: NEEDS_DECISION`** → STOP. Do not version-bump, tag, or dispatch CI. Report the

@@ -425,8 +425,10 @@ fix-forward → tag → deploy verification. Delegation prompt:
 
 > "Run ac-batch-close for this hygiene run's commits on `main`. Version bump = patch (existing
 > hygiene-bumps-patch policy — accept without asking); the 7-lens panel already served as this
-> batch's review, so **skip the `ac-review` gate** (pass the panel run report as the review
-> artifact); uncertain CI feedback → decision beads (Exhaust Rule); no 'what's next?' after."
+> batch's review — **pass the panel run report as the pre-supplied review artifact for Phase 1
+> path (a)** (it carries an explicit `VERDICT:` line; commit it into `.claude/reviews/batch/` via
+> your Final Act), so do NOT re-run `ac-review` on this same diff; uncertain CI feedback →
+> decision beads (Exhaust Rule); no 'what's next?' after."
 
 **Hand `ac-batch-close` the "Also carried (not hygiene fixes)" disclosure.** With no PR diff to
 eyeball, foreign work that rode along is easy to miss — diff `main` since this run's first
@@ -471,10 +473,14 @@ implement-ready for the loop.
 Produce the summary using the template in **`references/report-template.md`** (convergence table, resolution breakdown, areas reviewed, health assessment).
 
 **Commit the run report to `.claude/reviews/` root** (the standalone/mid-batch review
-destination — same rule as any non-batch-close `ac-review` invocation). It **must NOT** land in
-`.claude/reviews/batch/`: that directory is the review-mark `ac-review` and `ac-batch-close`
-track, and a hygiene run is not a batch close — writing there would spuriously advance the
-review-mark and make the next standing-review-of-`main` skip real commits.
+destination — same rule as any non-batch-close `ac-review` invocation). *Hygiene itself* **must
+NOT** write to `.claude/reviews/batch/`: that directory is the review-mark `ac-review` and
+`ac-batch-close` track, and a hygiene run on its own is not a batch close — writing there would
+spuriously advance the review-mark and make the next standing-review-of-`main` skip real commits.
+(When this run *did* land fixes and closes them through `ac-batch-close`, the panel report is
+handed to that ceremony as its Phase 1 review artifact — path (a) — and `ac-batch-close`, not
+hygiene, lands it in `.claude/reviews/batch/` via its Final Act; advancing the mark is then
+correct, because a batch genuinely shipped and was reviewed.)
 
 **Headless run:** post the summary via `slack-send` — this is a MANDATORY step, not optional
 polish (confirm exit 0) — then skip the question below and proceed to Cleanup.
