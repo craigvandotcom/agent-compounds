@@ -38,7 +38,7 @@ AGENT_MODEL=sonnet
 # Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/plan-clean-$(date +%Y%m%d-%H%M%S)
+ARTIFACTS_DIR=/tmp/plan-clean-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (_shared/run-id.md)
 ```
 
 ```bash
