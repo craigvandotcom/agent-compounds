@@ -1,13 +1,24 @@
 # Review Report Template
 
-Phase 6 writes this to `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`.
+One report per shipped batch, ONE template — there is no parallel `.claude/batch-closes/`
+home. Destination is set by the invocation (C4 mode switch, already built in the `ac-review`
+rewrite — this template does not decide it):
+
+- **Batch-close invocation** (`ac-batch-close` passes `report_dest=.claude/reviews/batch/`) →
+  writes to `.claude/reviews/batch/YYYY-MM-DD-HHMM-[batch-anchor].md` and advances the
+  review-mark. Under trunk-direct this report IS the batch's shipped record — there is no PR
+  diff to eyeball, so the PR-body sections below carry the weight the PR description used to.
+- **Standalone / mid-batch invocation** → writes to `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`
+  (root, does not advance the review-mark). The PR-body sections are optional here: fill
+  **Changes**, **Test Coverage**, **Review**; **Beads Completed** / **Known post-merge tails** /
+  **Also carried** may read "N/A (standalone review)".
 
 ```markdown
-# Code Review: [Feature/Branch Name]
+# Review Report: [Batch Anchor / Feature Name]
 
 **Date:** YYYY-MM-DD
-**Branch:** {CURRENT_BRANCH}
-**Base:** {BASE_BRANCH}
+**Mode:** {batch-close | standalone}
+**Range:** {BASE_SHA..HEAD_SHA on main — the commits this report covers}
 **Plan:** {plan path or "none"}
 **Reviewers:** Security, Performance, Architecture, Correctness
 **Rounds:** {count}
@@ -15,6 +26,26 @@ Phase 6 writes this to `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`.
 ---
 
 ## Summary
+
+{1-3 sentence description of what this batch shipped, derived from plan + beads. For a
+standalone review, describe the diff under review.}
+
+## Beads Completed
+
+{list of beads with IDs and titles from `br list` — the beads this batch closed. Standalone
+review with no batch: "N/A (standalone review)".}
+
+## Changes
+
+{diff stats summary — files changed, insertions, deletions. Derive from
+`git diff --stat {BASE_SHA}..HEAD` (batch range on main — there is no branch to diff).}
+
+## Test Coverage
+
+{quality-gate results — tests passing, lint clean, type-check clean; Tier 1 CI dispatch
+conclusion + SHA if `ac-batch-close` ran it.}
+
+## Review
 
 | Category     | Critical | High | Medium | Auto-Fixed |
 | ------------ | -------- | ---- | ------ | ---------- |
@@ -24,32 +55,51 @@ Phase 6 writes this to `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`.
 | Correctness  | X        | Y    | Z      | D          |
 | **Total**    | X        | Y    | Z      | E          |
 
----
+**VERDICT:** {APPROVED | NEEDS_DECISION}
 
-## Auto-Fixed Issues
+### Auto-Fixed Issues
 
 {list of issues auto-applied with finding IDs}
 
----
+### Needs Decision
 
-## Needs Decision
+{list of NEEDS_DECISION items — each with the decision bead ID it was filed as}
 
-{list of NEEDS_DECISION items}
+### All Findings
 
----
-
-## All Findings
-
-### Security
+#### Security
 {findings}
 
-### Performance
+#### Performance
 {findings}
 
-### Architecture
+#### Architecture
 {findings}
 
-### Correctness
+#### Correctness
 {findings}
+
+## Known post-merge tails
+
+{beads labeled `post-merge` that are still open — the pre-close bead-closure gate (the loop's,
+upstream of `ac-batch-close`) excludes them deliberately (they can't close until this code is
+live), so they're listed here instead of silently dropped. Populate with
+`br list --json --limit 1000 | jq '[.issues[] | select(.status != "closed") | select((.labels // []) | index("post-merge")) | {id, title}]'` —
+format as a checklist: `- [ ] {id}: {title}`. Omit this section entirely if the query returns
+an empty list.}
+
+## Also carried (not this batch's beads)
+
+> **Read this section with extra care under trunk-direct — there is no PR diff to catch an
+> omission after the fact.** The commit range is the ship unit, so it may carry changes this
+> batch didn't author (a concurrent session's fix, a scheduled triage/ops commit, a foreign
+> WIP hunk adopted verbatim). Completeness is the whole point of this section: every such
+> change is named here, never silently dropped.
+
+{Derive from `git log --oneline {BASE_SHA}..HEAD` + `git diff --stat {BASE_SHA}..HEAD` — list
+any change beyond this batch's headline scope: `- {commit-or-file}: {what it is} ({why it's
+here / bead})`. Note any deliberate EXCLUSION here too, with its reason
+(`WIP`/CI-fail/gitleaks/scope). Omit this section entirely only if the range carries nothing
+beyond this batch's own beads — and only after you have actually diffed to confirm that.}
 ```
 </content>
