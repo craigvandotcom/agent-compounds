@@ -269,7 +269,7 @@ skills) point here rather than restating times in more than one place.
 | Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` |
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-loop` run | scheduled, feeds beads ahead of shipping | `ac-triage` |
-| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes via `hygiene/*` branch + PR; deferred → epic beads | `ac-hygiene` |
+| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes commit direct to `main` (trunk-direct), close via `ac-batch-close`; deferred → epic beads. Doubles as the standing review of `main` when no batch shipped in >7 days | `ac-hygiene` |
 | Audit | **Not yet scheduled** — human-triggered today; checklists serve as reference depth behind the weekly hygiene panel | findings → beads, never fixes in place | `audit` |
 
 **Triage-before-loop ordering** is the one cadence rule with a *hard dependency* on another
@@ -287,14 +287,22 @@ failure never blocks shipping — this table is the cross-cutting reference poin
 | Work type | Branch | Who manages it |
 |---|---|---|
 | Code — implement → verify → review → merge | `wave/NNN` | ac-loop only |
-| Hygiene auto-fixes | `hygiene/YYYYMMDD` → PR → squash-merge (no version bump) | ac-hygiene only |
+| Hygiene auto-fixes | `main` — always (trunk-direct) | ac-hygiene only |
 | Plans, docs, backlog, bead captures | `main` — always | No branch, ever |
 
 Wave branches protect main from in-progress code and make the green-main invariant hold. That protection is code-specific — plans are markdown, they can't break a test. Branching for docs creates two parallel histories that need reconciling and is the source of the "simultaneous plan session created another branch" problem.
 
+**Hygiene is trunk-direct (migrated 2026-07-12, bd-u2lo1.14):** it no longer uses a
+worktree/`hygiene/*` branch/PR ceremony. Its 7-lens panel IS the pre-push review, auto-fixes
+commit directly to `main` as pathspec commits under the full H7 discipline (`ac-implement`
+Phase 0) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
+never `ac-merge`. The run report commits to `.claude/reviews/` root and does not advance the
+`.claude/reviews/batch/` review-mark.
+
 **Enforcement:**
 - `ac-loop` is the sole branch manager — only it creates, checks out, and merges `wave/NNN`
 - `ac-plan-init` and `ac-plan-refine-*` switch to main in Phase 0 before any git operation
+- `ac-hygiene` creates no branch — it commits fixes directly to `main` (trunk-direct)
 - No other skill creates or checks out branches
 
 ---

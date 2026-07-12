@@ -1,6 +1,6 @@
 ---
 name: ac-hygiene
-description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes ride a hygiene branch → PR; deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''.'
+description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes commit directly to `main` (trunk-direct); deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''.'
 ---
 
 
@@ -62,27 +62,31 @@ ARTIFACTS_DIR=/tmp/hygiene-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$ARTIFACTS_DIR"
 ```
 
-### Isolate in a Worktree, then Create the Hygiene Branch
+### Work Directly on Main (trunk-direct — no worktree, no hygiene branch)
 
-**Run in a git worktree.** A full run holds HEAD for *hours* — in a shared checkout,
-concurrent human/scheduled commits land on the hygiene branch and entangle the PR
-(incident: `references/incidents.md`).
-
-```bash
-# Scoped dirty-tree check — only SOURCE paths block; harness/memory/state files are always dirty
-git status --porcelain -- '*.ts' '*.tsx' '*.js' '*.sql' '*.css' package.json   # must be clean, else STOP (blocking)
-```
-
-All auto-applied fixes ride a run branch, never main directly (branch policy:
-`ac-pipeline-builder` § Branch policy). Create it in an isolated worktree:
+Hygiene **conforms to trunk-direct**: there is no hygiene branch and no worktree. Auto-applied
+fixes commit straight to `main` as pathspec commits under the **full H7 discipline** the
+`ac-implement` Phase 0 spells out — the implementing-conductor concurrency rules apply to
+hygiene whenever it is actively *fixing code* (hygiene is exempt from H7 **only** while purely
+reading/filing beads, never while editing). The 7-lens panel below IS this run's pre-push
+review — stronger than most batches get — so there is **no separate `ac-review` step** (branch
+policy: `ac-pipeline-builder` § Branch policy).
 
 ```bash
-git worktree add -b hygiene/$(date +%Y%m%d) ../hygiene-run origin/main   # isolated checkout off fresh main
-cd ../hygiene-run
+git checkout main 2>/dev/null || true
+git pull --rebase
+git branch --show-current   # confirm `main` before doing anything else
 ```
 
-If the harness supplies worktree isolation directly, use that instead. If the branch already
-exists (re-run same day): append `-2`, `-3`, ….
+**Dirty-tree rule (trunk-direct — H7d):** a non-empty `git status --short` is EXPECTED and is
+**NOT a blocker** — every session shares one checkout on `main`, so another session's in-flight,
+not-yet-committed work may be sitting there. **Inventory it; do not touch it.** Only files YOU
+changed enter YOUR commits (pathspec-mandatory, Phase 3): never `git add -A`, never
+`git add .`, never `git commit -a`, and **never `git stash`** (a stray `stash pop` writes
+conflict markers into unrelated files — `ac-implement` Phase 0 H7d). Use `git diff HEAD` if you
+need to isolate uncommitted-vs-committed state. If the inventory shows a genuine red flag
+(unexpected deletions, sensitive files, something orphaned rather than in-flight), surface it to
+the user before proceeding — otherwise proceed past it.
 
 ### Initialize Consensus Registry
 
@@ -166,14 +170,14 @@ commit SHA), so a glance at the ledger shows exactly where the run is.
 
 ```
 # Fixed tasks — create upfront at Phase 0:
-TaskCreate("Initialize — scope, worktree + hygiene branch, consensus registry, baseline gate")
+TaskCreate("Initialize — scope, confirm on main (trunk-direct), consensus registry, baseline gate")
 TaskCreate("Coverage audit — surface inventory vs journey registry; file journey-gap beads")
 TaskCreate("Triage deferred findings + file bead epic (Exhaust Rule)")
 TaskCreate("Exhaustive quality gate — format → type-check → lint → full suite")
-TaskCreate("Ship the branch — delegate to ac-merge")
+TaskCreate("Close ceremony — delegate to ac-batch-close")
 TaskCreate("Refine the epic's beads in-session — ac-bead-refine")
 TaskCreate("Report — hygiene summary + Slack (headless)")
-TaskCreate("Cleanup / teardown — artifacts + worktree")
+TaskCreate("Cleanup / teardown — artifacts")
 
 # Per-round task — create ONE as each round begins (not upfront):
 TaskCreate("Round {N} — 7-lens panel → synthesize → auto-apply → gate → commit")
@@ -182,7 +186,7 @@ TaskCreate("Round {N} — 7-lens panel → synthesize → auto-apply → gate �
 
 With a 3-round run that's 11 tasks; a 5-round run, 13. **TaskUpdate("Initialize", in_progress)**
 now, and mark it `completed` at the end of Phase 0. Sub-skills invoked by the Ship and Refine
-tasks (`ac-merge`, `ac-bead-refine`) run their OWN ledgers — do not duplicate their steps here;
+tasks (`ac-batch-close`, `ac-bead-refine`) run their OWN ledgers — do not duplicate their steps here;
 this ledger tracks the hygiene run's top-level sections only.
 
 ---
@@ -246,22 +250,32 @@ fails the entire gate ~10 min in; auto-fixing locally makes that impossible.
 
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
-Then commit the round's fixes on the hygiene branch (small, revert-friendly commits):
+Then commit the round's fixes **directly to `main`** (trunk-direct — no hygiene branch;
+small, revert-friendly, pathspec-limited commits) and **push immediately** (commit = push;
+there is no branch holding the work safe in the interim):
 
 ```bash
-git add <specific files>   # NEVER `git add -A` / `git add .` — it sweeps untracked orphans
-git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}"
+git pull --rebase
+git commit -m "chore(hygiene): round {CURRENT_ROUND} — {short summary}" -- <specific files>
+git push --no-verify origin main
+git rev-parse HEAD && git ls-remote origin main   # confirm the SHAs match after every push
 ```
 
-> **Commit WITHOUT `--no-verify`.** The pre-commit hook runs `lint-staged` (prettier `--write`
-> + eslint `--fix`) on your staged files and re-stages them — it is the cheap auto-format
-> safety net, exactly the check that stops formatting-class CI failures. `--no-verify` is for
-> the **push** only (it skips the heavy pre-push `pnpm build` that swallows backgrounded
-> pushes), NEVER for a commit. Bypassing the commit hook is how an unformatted file reaches CI.
+> **Pathspec commits, never `git add -A`.** Use the `git commit -- <files>` form limited to the
+> exact paths YOU changed (tracked from the implementer reports). Under trunk-direct another
+> session's uncommitted WIP shares this checkout — a wildcard add sweeps that foreign work into
+> your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d; 2026-07-06 incident:
+> `references/incidents.md`). New (untracked) files need `git add <file>` first, then the
+> pathspec commit of exactly that path.
 
-> **Stage the exact files you changed** — track your changed paths (from the implementer
-> reports) and stage them explicitly; a run may sit next to untracked orphans that
-> `git add -A` would commit (2026-07-06 incident: `references/incidents.md`).
+> **Commit WITHOUT `--no-verify`; push WITH it.** The pre-commit hook runs `lint-staged`
+> (prettier `--write` + eslint `--fix`) on your staged files and re-stages them — the cheap
+> auto-format net that stops formatting-class CI failures; never bypass it on a commit.
+> `--no-verify` is for the **push** only — under trunk-direct the heavy pre-push `pnpm build`
+> reads the whole working tree and another session's uncommitted WIP can false-positive it
+> (swallowing the push), so real verification for state you don't own comes from the round gate
+> above plus post-push CI. **Race handling:** if `git push` collides, `git pull --rebase` and
+> re-push — never force-push over another session's committed work.
 
 **Defer remaining findings (DO NOT ask user per-round):**
 
@@ -383,48 +397,49 @@ AskUserQuestion(
 format (auto-fix, e.g. `pnpm format`) + type-check + lint + full test suite   # BLOCKING
 ```
 
-This is the single exhaustive run of the workflow (rounds ran affected-only). Format runs
+This is the single exhaustive local run of the workflow (rounds ran affected-only). Format runs
 FIRST as auto-fix; if it rewrites files you did NOT author, commit the formatting as part of
-this run's ship (rule + why: `_shared/verification-gate.md` §Format-first gate). If any check
-fails, fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage
-items) on the hygiene branch (again, **no `--no-verify` on the commit**).
+this run (rule + why: `_shared/verification-gate.md` §Format-first gate). If any check fails,
+fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
+directly to `main` (pathspec, push immediately; **no `--no-verify` on the commit**, `--no-verify`
+on the push only — same rule as Phase 3).
 
-**Note:** `ac-merge`'s own post-rebase Quality Gate runs this same full gate again at merge
-time (on the rebased state that actually merges) — so this Phase-5 run is now a pre-handoff
-sanity check, not the last word. Keep it: catching a red gate here, before handing off, is
-cheaper than catching it inside `ac-merge`'s PR flow.
+**Note:** the close ceremony below (`ac-batch-close`) dispatches Tier 1 CI on the final SHA —
+so this Phase-5 local run is a pre-handoff sanity check, not the last word. Keep it: catching a
+red gate here, before handing off, is cheaper than catching it inside the CI dispatch.
 
-### Ship the Branch (delegate to ac-merge)
+### Close Ceremony (delegate to ac-batch-close)
 
-No commits landed (findings only)? Delete the branch, return to main, skip to Report.
-Otherwise: **invoke `ac-merge` on the current hygiene branch.** ac-merge is now the single
-merge-to-main path for any branch — wave or chore/hygiene — and handles push → PR → CI poll
-+ feedback triage → merge → patch version bump → tag → verify → land, all in one skill.
-Delegation prompt:
+There is **no branch to ship** — every fix is already committed and pushed to `main` (Phase 3).
+The close ceremony is therefore batch-close style, not a merge:
 
-> "Run ac-merge on the current hygiene branch. This is a chore/hygiene merge: version bump =
-> patch (default), accept without asking; uncertain PR feedback → decision beads (Exhaust
-> Rule); no 'what's next?' after merge."
+**No commits landed (findings only)?** Skip to Report — nothing to close, no version bump.
 
-**Hand ac-merge what it needs to build the PR body:** this run's fix list (round table +
-per-round summary + deferred count) and the **"Also carried (not hygiene fixes)"** line —
-the branch is the merge unit (pipeline-builder Invariant 8), so foreign commits from a
-concurrent session/job ship too, but must be named, not silently dropped. Diff the full
-branch against main (`git diff --stat main...HEAD` and `git log --oneline main..HEAD`) and
-pass any non-hygiene commit/change (an `.env`/secret edit, a migration, another session's fix)
-to ac-merge as the Also-carried content — do not exclude it just because this run didn't
-author it. ac-merge builds the actual PR body; this run supplies the hygiene-specific content.
+**Otherwise: invoke `ac-batch-close`.** Do not build a third bespoke close mechanism and do not
+route through `ac-merge` (that path is for the branches that survive the migration — dependabot,
+human PRs). `ac-batch-close` owns the trunk-direct close: version bump → Tier 1 CI dispatch +
+fix-forward → tag → deploy verification. Delegation prompt:
 
-- **Hygiene merges bump `patch` via `ac-merge`** (changed 2026-07-07 — previously hygiene
-  merges took no version bump; ac-merge is now the single bump owner for every branch kind,
-  and the default for every merge, feature or chore, is patch unless explicitly frozen/skipped).
-- **No remote / no CI on this repo:** this is ac-merge's concern now — it falls back to a
-  local quality-gate-then-merge path when there's no PR flow to run.
-- CI fails → ac-merge fixes on the branch and re-pushes as part of its own triage loop; if
-  unfixable this session, it leaves the PR open, files a `qa-blocker`-style bead, and reports
-  it — never merge red, never delete unmerged work.
+> "Run ac-batch-close for this hygiene run's commits on `main`. Version bump = patch (existing
+> hygiene-bumps-patch policy — accept without asking); the 7-lens panel already served as this
+> batch's review, so **skip the `ac-review` gate** (pass the panel run report as the review
+> artifact); uncertain CI feedback → decision beads (Exhaust Rule); no 'what's next?' after."
 
-### Refine the Run's Beads (in-session, after the merge)
+**Hand `ac-batch-close` the "Also carried (not hygiene fixes)" disclosure.** With no PR diff to
+eyeball, foreign work that rode along is easy to miss — diff `main` since this run's first
+hygiene commit (`git log --oneline <first-hygiene-sha>..HEAD`) and name any non-hygiene commit
+(an `.env`/secret edit, a migration, another session's fix) as Also-carried content for the
+batch-close report — do not silently drop it just because this run didn't author it.
+
+- **Hygiene bumps `patch`** via `ac-batch-close` (unchanged policy — `ac-batch-close` is the
+  trunk-direct bump owner, default patch unless explicitly frozen/skipped).
+- **No CI on this repo:** `ac-batch-close`'s concern — it falls back to a local
+  quality-gate-then-tag path when there's no `quality-gate.yml` dispatch to run.
+- CI fails → `ac-batch-close` fixes forward on `main` and re-dispatches as part of its own
+  triage loop; if unfixable this session it files a `qa-blocker`-style bead and reports it —
+  never tag red.
+
+### Refine the Run's Beads (in-session, after the close ceremony)
 
 If this run created **≥1 bead**, run **`ac-bead-refine`** NOW — scoped to the epic if one
 exists (2+ beads), to the single bead otherwise — before the report, not "later": the
@@ -433,8 +448,8 @@ refine session re-derives it from cold, or can't. Run-specific notes for the rev
 
 - Bead descriptions were written mid-run — file/line references predate the merged fixes.
   Reviewers must re-verify every reference against merged `main` and correct drift.
-- The refine reviewers work in the MAIN checkout (post-merge), not the hygiene worktree
-  (already removed by now).
+- The refine reviewers work in the shared `main` checkout (there is no hygiene worktree under
+  trunk-direct); fixes are already committed and pushed to `main`.
 - Give reviewers the evidence, not just the beads: `$ARTIFACTS_DIR` still exists (Cleanup
   runs later) — point the refine reviewers at the round findings files and consensus
   registry so they verify beads against the ORIGINAL evidence and severity rationale,
@@ -451,6 +466,12 @@ implement-ready for the loop.
 ### Report
 
 Produce the summary using the template in **`references/report-template.md`** (convergence table, resolution breakdown, areas reviewed, health assessment).
+
+**Commit the run report to `.claude/reviews/` root** (the standalone/mid-batch review
+destination — same rule as any non-batch-close `ac-review` invocation). It **must NOT** land in
+`.claude/reviews/batch/`: that directory is the review-mark `ac-review` and `ac-batch-close`
+track, and a hygiene run is not a batch close — writing there would spuriously advance the
+review-mark and make the next standing-review-of-`main` skip real commits.
 
 **Headless run:** post the summary via `slack-send` — this is a MANDATORY step, not optional
 polish (confirm exit 0) — then skip the question below and proceed to Cleanup.
@@ -488,6 +509,14 @@ Use `/ac-hygiene` as the weekly quality pass per repo (`PANEL=full`) or a quick
 between-session sweep (`PANEL=light`). For feature-specific review before merge, use
 `/ac-review` on the feature branch diff.
 
+**Standing weekly review of `main` (trunk-direct duty, C2).** Because fixes now land directly
+on `main` with no PR diff to gate them, the weekly `PANEL=full` run doubles as the standing
+review of `main`: **if no batch has shipped (no `.claude/reviews/batch/` commit) in >7 days,
+the weekly hygiene run is the review of everything on `main` since the last `v*` tag** — it is
+not optional in that window. This is the trunk-direct analogue of the pre-merge review a PR used
+to force; when batches ship regularly, `ac-batch-close`'s own `ac-review` gate covers `main` and
+this weekly pass is the ordinary quality sweep on top.
+
 ---
 
 ## Flexibility / Overrides
@@ -499,11 +528,11 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 
 ## Troubleshooting
 
-- **Branch creation blocked** (git write perms) → surface to user; never fall back to committing on main
-- **Dirty tree at Phase 0** → STOP (blocking); a hygiene run must start from a clean state it can safely revert within
+- **Push blocked / collides** → `git pull --rebase` and re-push (never force-push over another session's committed work); if the pre-push build false-positives on foreign WIP, push with `--no-verify` (the round gate + post-push CI are the real verification)
+- **Dirty tree at Phase 0** → EXPECTED under trunk-direct, NOT a blocker — inventory the foreign WIP, don't touch it, and pathspec-commit only your own files (Phase 3); only a genuine red flag (unexpected deletions, sensitive files) surfaces to the user
 - **Agent dies / returns nothing** → note the lens as absent for the round and continue with the rest of the panel; re-spawn once if 2+ die
 - **Quality gate fails on a fix** → revert that fix, mark non-auto-fixable, add to registry; never ship a red gate
-- **Compaction mid-run** → `$ARTIFACTS_DIR/progress.md` + consensus registry are the recovery state (see Phase 0); the hygiene branch holds all applied fixes
+- **Compaction mid-run** → `$ARTIFACTS_DIR/progress.md` + consensus registry are the recovery state (see Phase 0); commits already pushed to `main` hold all applied fixes (there is no branch — never sit on local-only commits)
 
 ---
 
@@ -514,11 +543,11 @@ between-session sweep (`PANEL=light`). For feature-specific review before merge,
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
 - **Round floor = MIN_ROUNDS=3, ABSOLUTE** — never finalize before round 3 (see Phase 4); ceiling MAX_ROUNDS=5
 - **Lens-diverse consensus is rarer and stronger** — don't lower the bar; the registry + Phase 5 triage absorb the singles
-- **Fixes ride the hygiene branch** — never straight to main, never merge red; the merge itself is `ac-merge`'s
+- **Fixes commit directly to `main`** (trunk-direct — no hygiene branch, no worktree) under full H7 discipline while editing; commit=push, pathspec-limited to your own files; the close ceremony is `ac-batch-close`'s, never `ac-merge`'s
 - **Conductor triage before user** — auto-implement clear technical improvements; defer only genuine design decisions and scope escalations
 - **Design decision gate every round** — UX-affecting or approach-transforming choices defer regardless of severity or consensus
 - **Incremental in the loop, exhaustive at the boundary** — affected-only per round, full suite exactly once at Phase 5; format FIRST + auto-fix in both gates, commit WITHOUT `--no-verify` (§Format-first gate)
-- **Deferred beads get an epic per run** (2+ beads); refine in-session post-merge whenever ≥1 bead was created
+- **Deferred beads get an epic per run** (2+ beads); refine in-session after the close ceremony whenever ≥1 bead was created
 - **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Don't invent issues** — if the codebase is clean, say so and finish early
 
