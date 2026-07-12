@@ -112,17 +112,21 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 > or local changes since the gate). Format / lint / type-check are cheap — always run.
 > (Mirrors `ac-merge`'s QA-gate skip-if-fresh; don't validate the same HEAD twice.)
 
-> **Tiered-testing model (parallel-execution doctrine §5).** Wave merges now run **affected-only**
-> CI, so at loop-close there is no fresh _full_ `test:all` for HEAD. Do NOT run a blocking local
-> `test:all` here — it's the exact full run the doctrine keeps OFF the loop's critical path, and it
-> starves the shared self-hosted runner. Instead **Phase 1d fires the async loop-close full run on
-> CI** (`gh workflow run quality-gate.yml -f reason=loop-close`), non-blocking; a red result
-> auto-files a bead (§5) and blocks `publish`. Run a local `test:all` here ONLY for a standalone
-> landing with no CI path.
+> **Tiered-testing model (parallel-execution doctrine §5, bd-pwt44).** Wave merges now run
+> **affected-only** CI, so at land time there is no fresh _full_ `test:all` for HEAD. Do NOT run a
+> blocking local `test:all` here — it's the exact full run the doctrine keeps OFF the loop's
+> critical path, and it starves the shared self-hosted runner. **Phase 1d no longer fires a
+> full-suite CI run** — the between-publish full-suite proof is obtained at PUBLISH START instead:
+> `ac-publish` calls `ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to
+> the commit being published, before release. A nightly idle-time full run (`ac-prove`/
+> `workflows/scheduled.md`) is planned but DEFERRED/unwired — until it ships, the publish-start run
+> is the only full-suite checkpoint. Run a local `test:all` here ONLY for a standalone landing with
+> no CI path.
 
-> **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball.** At loop-close the
-> merge's own CI Quality Gate for HEAD is frequently STILL RUNNING (ac-merge fires it and lands
-> immediately after) — an `in_progress` run is the EXPECTED state, not an anomaly. **Never report a
+> **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball.** At land time, the
+> just-merged commit's own CI Quality Gate for HEAD is frequently STILL RUNNING (the merge step
+> fires it and landing follows immediately after) — an `in_progress` run is the EXPECTED state, not
+> an anomaly. **Never report a
 > run as "stuck"/"hung"/"wedged" from its status alone or with a duration you did not measure.** A run
 > is stuck ONLY if its _computed_ elapsed time far exceeds the suite's norm: derive it from
 > `gh run view <id> --json createdAt,jobs` (or the job's `startedAt`) vs `date -u` now, and flag only
@@ -142,10 +146,10 @@ pnpm build:check
 ```
 
 > **STANDALONE ONLY — else SKIP.** Only run the block below if this is a standalone landing with
-> no loop-close CI path (no `quality-gate.yml` workflow in this repo, or a manual land with no
-> Phase 1d to follow). In the normal loop/tiered close, SKIP entirely: Phase 1d fires the async
-> loop-close CI run, and a blocking local full run here is the exact run §5 moves off the critical
-> path.
+> no full-suite CI path (no `quality-gate.yml` workflow in this repo, or a manual land with no
+> Phase 1d to follow). In the normal loop/tiered close, SKIP entirely: Phase 1d no longer fires any
+> full-suite CI run (that proof now happens at publish start via `ac-prove`), and a blocking local
+> full run here is the exact run §5 moves off the critical path.
 >
 > ```bash
 > # tee to a log so failure detail survives tail-truncation.
@@ -274,23 +278,14 @@ git status   # Must show "up to date with origin"
 
 **If push fails:** Resolve and retry. Do not proceed until pushed.
 
-**Fire the loop-close integration run (tiered testing, doctrine §5).** With `main` pushed and up to
-date, kick off the full `test:all` on CI for this exact HEAD — **non-blocking**; continue to Phase 2
-without waiting. **Guard first** — only body-compass-app has this workflow today; if
-`quality-gate.yml` doesn't exist in this repo, fall back to a local full run as the loop-close gate:
-
-```bash
-if gh workflow list --json name --jq '.[].name' 2>/dev/null | grep -qi quality-gate; then
-  gh workflow run quality-gate.yml -f reason=loop-close   # async full-suite integration gate that publish reads (§6)
-else
-  echo "No quality-gate.yml workflow — running local full suite as the loop-close gate instead."
-  pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
-fi
-```
-
-Affected-only ran per wave; this one full run is the doctrine's single loop-close `test:all`
-(§5 Tier 2), covering everything the loop merged. Red → auto-file a P1 bead (first pick for the next
-`ac-loop` run) and it blocks `publish`. Skip only for a standalone landing with no CI path.
+**No full-suite CI fire here (retired, bd-pwt44).** ac-land used to kick off an async full
+`test:all` on CI at close; that role has moved to PUBLISH START instead — `ac-publish` calls
+`ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to the commit being
+published, before release. ac-land's job here is done once `main` is pushed and up to date: no
+CI dispatch, nothing to wait on. (A nightly idle-time full run via `ac-prove`/
+`workflows/scheduled.md` is planned but DEFERRED/unwired — until it ships, the publish-start run
+is the only full-suite checkpoint. Historical full-run receipts already on the evidence-log
+ancestry chain remain valid regardless — this doesn't touch them.)
 
 Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 

@@ -442,11 +442,13 @@ fighting the machine. Hold these:
   the anchor: `VITEST_AFFECTED_REF=origin/main pnpm test`. Per-bead runs tested each change
   against main's history at that moment; only the aggregated run sees the whole batch/wave diff against
   CURRENT main (semantic conflicts with concurrent main drift, review fixups).
-  It is still affected-only — cheap — and shrinks what the loop-close `test:all` can be first to find.
-- Full `test:all` runs **exactly once per loop-close** — the async CI run `ac-land` fires
-  (`gh workflow run quality-gate.yml -f reason=loop-close`), off the loop's critical path (doctrine
-  §5 Tier 2). Waves merge on affected only; the loop-close run is the integration/masking backstop
-  and `ac-publish` reads it SHA-pinned. Not per bead, not per wave, not to "prove" a flake.
+  It is still affected-only — cheap — and shrinks what the publish-start full run can be first to find.
+- Full `test:all` no longer fires at close (bd-pwt44 retired the async close-time dispatch) —
+  waves/batches merge on affected only, and the between-publish full-suite proof now happens at
+  PUBLISH START instead: `ac-publish` calls `ac-prove ensure --fix-forward`, which runs the
+  exhaustive gate SHA-pinned to the commit being published. That publish-start run is the
+  integration/masking backstop; a nightly idle-time full run (`ac-prove`/`workflows/scheduled.md`)
+  is planned but DEFERRED/unwired. Not per bead, not per wave, not to "prove" a flake.
 - "Is this a flake?" is a CHEAP question → re-run the ONE failing file in isolation. Never
   answer it with a full-suite re-run — that's the heaviest tool on the cheapest question.
 - The wave-level `ac-review` is scoped to **cross-bead integration** (per-bead conductor
