@@ -97,6 +97,14 @@ exhaustive  — release / version bump, or any file matching auth|session|paymen
 release or when design tokens / `design.md` / `globals.css` / brand changed (app-wide
 visual blast).
 
+**ui-polish execution mode (depth-gated fan-out):** at `smoke` depth (or a Scoped run
+of ≤ ~3 routes) run the single-context inline path (`audit-and-elevate.md`). When this
+gate selects ui-polish at **`full` or `exhaustive`** depth, run the per-route fan-out
+(`ac-ui-polish/workflows/whole-app-workflow.md`) — over the wave's touched routes at
+`full`, all routes at `exhaustive`/Whole-app. Gate selection at these depths is
+**standing authorization** for that workflow's multi-agent opt-in (decision 2026-07-12);
+manual ad-hoc invocations still require explicit opt-in.
+
 **Native pass platform gate (reuse ac-merge semantics):** `ac-qa-device` requires
 `uname = Darwin`. If `native` but not on a Mac → do **not** block; emit the
 `mac-needed` note ("native-touching wave verified without device QA — run
@@ -122,6 +130,7 @@ Journey docs live at each app's `CORE/journeys/*.md` (consumer apps:
 journey: paywall
 criticality: review-critical        # review-critical | commerce | core | peripheral
 surfaces: [native, webui]           # this gate's diff-classes (Step 1) that touch it
+mutates: true                       # writes app state (create/edit/delete, settings, transactions)?
 proof:
   required: sim-drive               # sim-drive | browser-drive | device-only
   asserts:                          # the observable(s) that constitute PASS — behavior, not presence
@@ -143,6 +152,11 @@ peripheral` — the order every `≥` comparison in this file uses. `criticality
 only by the QA twin that drove the journey, in the same run that emits `QA_VALIDATION`
 (`qa-shared.md`) — never hand-edited otherwise. No frontmatter on a journey doc =
 `peripheral` by default (adoption is incremental).
+
+`mutates:` feeds the QA twins' lane split (`qa-shared.md` conductor/worker protocol):
+`mutates: false` journeys are eligible for the browser twin's parallel lane; **absent ⇒
+`true`** (serialize — fail-safe, since app test accounts are typically shared and a
+misclassified parallel run races on data). Set by humans alongside `criticality`.
 
 Staleness (store gate): `skills/_tools/journey-stamp-check.sh` re-uses Step 1's
 class patterns over `last_pass.sha..ship-sha`, with one deliberate asymmetry — a

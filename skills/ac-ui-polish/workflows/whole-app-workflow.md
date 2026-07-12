@@ -29,10 +29,14 @@ prose.)
 
 When you split, make the `slug` unique per sub-cell so browser sessions don't collide.
 
-> **Opt-in only.** Author/run a `Workflow` for this *only* when the user has asked
-> for multi-agent orchestration (the keyword, an on session, or "use a workflow").
-> Otherwise run the single-context procedure in `audit-and-elevate.md`. Whole-app
-> fan-out spawns many agents — it must be the user's choice.
+> **Opt-in only — two authorization channels.** Author/run a `Workflow` for this when
+> (a) the user has asked for multi-agent orchestration (the keyword, an on session, or
+> "use a workflow"), **or** (b) `_shared/verification-gate.md` selected ui-polish at
+> `full`/`exhaustive` depth in a conductor-driven verify pass — that gate selection is
+> standing authorization (decision 2026-07-12; at `full`, scope the route list to the
+> wave's touched routes). Otherwise run the single-context procedure in
+> `audit-and-elevate.md`. Whole-app fan-out spawns many agents — outside a gate-selected
+> verify pass it must be the user's choice.
 
 ## Why a workflow fits
 

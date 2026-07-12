@@ -5,9 +5,9 @@ description: Use when QA-ing the NATIVE app build on a device/simulator — full
 
 > **The native twin.** `ac-qa-device` proves the native shell; `ac-qa-browser`
 > proves the web shell. Shared conventions — **depth levels, journey reuse,
-> findings=beads, and the `QA_VALIDATION` report** — live in
-> **`_shared/qa-shared.md`**; both twins reference it so they stay in lockstep.
-> This file owns the native/simulator specifics only.
+> findings=beads, the `QA_VALIDATION` report, and the conductor/worker evidence
+> protocol** — live in **`_shared/qa-shared.md`**; both twins reference it so they
+> stay in lockstep. This file owns the native/simulator specifics only.
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and
@@ -68,6 +68,40 @@ appearance spot-checks; **exhaustive** adds the appearance matrix (dark/light ×
 2–3 Dynamic Type sizes), deep-link matrix, lifecycle (background/resume), and a
 perf sanity pass (`references/perf-and-limits.md`).
 
+## Conductor flow (you never drive the simulator yourself)
+
+**You are the conductor.** Journeys are executed by **`device-tester`** subagents —
+**strictly one worker at a time, sequential lane only** (simulator concurrency is
+flaky and collision-prone — `references/incidents.md`; the win here is context
+isolation, not wall-clock). You hold the manifest, verdicts, and report; the worker
+holds the accessibility trees, simctl output, and screenshots. Full protocol
+(manifest/verdict schemas, completeness rule): `_shared/qa-shared.md` § Conductor /
+worker evidence protocol.
+
+1. **Orient + build (yours, once):** Platform Gate check; derive `ARTIFACTS_DIR`
+   per `_shared/run-id.md` (prefix `qa-device`); build + install via the app's own
+   build command (from CORE — never xcodebuild alone) and boot the app's dedicated
+   uniquely-named sim (§Parallel QA below). Workers never build, boot, or shut down
+   simulators.
+2. **Manifest:** journey list per depth (`surfaces` includes `native`, or
+   `proof.required: sim-drive|device-only`), ALL in the `sequential` lane; write
+   `$ARTIFACTS_DIR/journeys-manifest.json` BEFORE any spawn (visible `skipped`
+   reasons — e.g. sim-impossible flows from CORE).
+3. **Dispatch sequentially:** one worker per journey via
+   **`references/device-tester-prompt.md`** (dispatched to the `device-tester`
+   agent; no model re-pin). Bounded wait per `_shared/delegation-contract.md`;
+   a silent worker past the cap = `stall`, re-spawn once, then record.
+4. **Collect + aggregate:** manifest ⊖ verdicts check; file beads from verdict
+   findings (you, not workers — deduped); write `last_pass` stamps for PASSes;
+   emit `QA_VALIDATION` (`platform: ios-simulator`); run
+   `_shared/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" --skip-teardown-check`
+   (the teardown check is browser-specific; sweep agent-device sessions yourself).
+5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain; shut
+   down only sims your app owns, per the ownership rule below.
+
+Everything from **Core loop** down is **worker-side doctrine** — the
+device-tester agent reads it; you don't execute it.
+
 ## Toolchain
 
 ```bash
@@ -102,12 +136,14 @@ sim, a sim NAME, or an agent-device session. Isolate with three layers:
    the build (name race) and agent-device (wrong-device match). Incident
    record: `references/incidents.md`.
 
-## Core loop
+## Core loop (worker-side — device-tester agents execute this)
 
 ```bash
-# 0. Build + install — ALWAYS via the app's own build command (from CORE).
+# 0. Build + install — done by the CONDUCTOR before you were spawned; verify the
+#    app is installed and the sim booted, then skip to 1. (Standalone human runs
+#    without a conductor: build via the app's own build command from CORE.
 #    Never xcodebuild alone: hybrid apps must sync web assets first or you
-#    QA a stale bundle (the #1 false-result source).
+#    QA a stale bundle — the #1 false-result source.)
 
 # 1. Simulator up (keep it warm between runs — cold boot is 20–60s)
 xcrun simctl boot "<sim-name>" 2>/dev/null || true

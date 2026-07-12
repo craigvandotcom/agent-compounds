@@ -44,6 +44,9 @@ RUN_ID and needs neither job (one session, one wave).
 | ac-review | `work-review` |
 | ac-merge | `wave-merge` |
 | ac-plan-init | `plan-init` (no wave yet → use the plan slug as the key) |
+| ac-qa-browser | `qa-browser` |
+| ac-qa-device | `qa-device` |
+| ac-ui-polish | `ui-polish` |
 
 ## Dual-mode
 

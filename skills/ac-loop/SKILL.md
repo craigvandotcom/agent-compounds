@@ -20,8 +20,16 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > workers keep the per-call pins already written in each skill's reference prompts (deliberate
 > sonnet/opus mix). Never set `CLAUDE_CODE_SUBAGENT_MODEL` to manage this: it sits ABOVE per-call
 > pins in model precedence and silently flattens all of them (shakedown-verified 2026-07-12; see
-> `rule-agent-mail-identity-setup`). You **never** read a phase skill's `SKILL.md`
-> (`ac-implement`, `ac-review`, `ac-merge`, `ac-beadify`, `ac-bead-refine`, `ac-land`) into your
+> `rule-agent-mail-identity-setup`).
+> **The VERIFY-GATE passes are phases too:** each gate-selected pass (`ac-ui-polish`,
+> `ac-qa-browser`, `ac-qa-device`) runs as its own spawned opus-pinned sub-session with a
+> delegation prompt — you consult `_shared/verification-gate.md` for selection + depth (that
+> consult is yours), then spawn the pass; you never load a verify skill or drive a
+> browser/simulator in your own context. The passes are themselves conductors over tester
+> subagents (`_shared/qa-shared.md` § Conductor / worker evidence protocol).
+> You **never** read a phase skill's `SKILL.md`
+> (`ac-implement`, `ac-review`, `ac-merge`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
+> `ac-ui-polish`, `ac-qa-browser`, `ac-qa-device`) into your
 > OWN context — that collapses to 2-level and bloats the conductor with every phase's skill +
 > working detail until it compacts mid-run. Orchestrator holds *decisions*; sub-sessions hold
 > *skills + file contents* (`context-engineering`). If you catch yourself about to Read a phase

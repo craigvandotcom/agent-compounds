@@ -10,7 +10,7 @@ The split:
 | ----- | ----- |
 | Native shell (safe-area, splash, plugins, OAuth sheets, keyboard, deep links, lifecycle) | **`ac-qa-device`** (`native-shell-checklist.md`) |
 | Web shell (CORS, SPA routing, storage, service worker, console, responsive) | **`ac-qa-browser`** (`web-shell-checklist.md`) |
-| Depth levels · journey reuse · findings=beads · report schema | **this file** |
+| Depth levels · journey reuse · findings=beads · report schema · conductor/worker evidence protocol | **this file** |
 
 For hybrid (Capacitor) apps the device webview renders the **same bundle** as the
 browser, so visual/DOM-matrix coverage stays cheap in the browser (`ac-qa-browser`);
@@ -42,6 +42,76 @@ happy path step-by-step, locating each step's control in the latest snapshot
 **Journey docs drift.** When a label/flow in the doc doesn't match the live tree,
 trust the tree, complete the journey via the real UI, and fix the doc as part of
 the pass (that's a finding's resolution, not a blocker).
+
+## Conductor / worker evidence protocol (both twins + ui-polish fan-out)
+
+QA passes run as a **conductor + tester-subagent split**, never inline: the conductor
+(the pass's spawned session) holds the manifest, verdicts, and gate decision; tester
+subagents (`browser-tester` / `device-tester` agents) hold the per-journey execution
+noise (snapshots, console output, screenshots). The conductor never drives the
+browser/simulator itself and never holds raw page state — it spot-reads flagged
+evidence files only. Rationale: exhaustive sweeps in one context suffer late-journey
+attention decay and compaction risk, at conductor-model prices.
+
+**Artifacts dir** — derive per `_shared/run-id.md` (prefixes `qa-browser` / `qa-device` /
+`ui-polish`), never glob.
+
+**Manifest before spawn.** The conductor writes `$ARTIFACTS_DIR/journeys-manifest.json`
+BEFORE dispatching any worker — a dispatched journey with no verdict is a mechanical
+partial failure, never a silent pass:
+
+```json
+{
+  "run_id": "<RUN_ID or empty>", "app": "<app>", "depth": "smoke|full|exhaustive",
+  "session_prefix": "qa-<app>-<RUN_ID>",
+  "dispatched": [{"journey": "<name>", "lane": "parallel|sequential", "worker": "w1"}],
+  "skipped": {"<journey>": "<reason — visible skips only, per verification-gate.md>"}
+}
+```
+
+**Verdict files.** Each worker writes `$ARTIFACTS_DIR/verdict-<journey>.json` as its
+mandatory Output contract:
+
+```json
+{
+  "journey": "<name>", "lane": "parallel|sequential", "session": "<session name>",
+  "started_at": "<ISO8601>", "ended_at": "<ISO8601>",
+  "status": "PASS|FAIL",
+  "assertions": [{"assert": "<from journey proof.asserts>", "result": "PASS|FAIL", "evidence": "<path>"}],
+  "covered": ["<what was actually driven — undriven steps are NOT tested>"],
+  "console_errors": "<summary or none>",
+  "findings": [{"title": "", "severity": "qa-finding|qa-blocker", "repro": ""}]
+}
+```
+
+Evidence = **paths on disk** (screenshots under `$ARTIFACTS_DIR/evidence/`), never
+inlined into the report.
+
+**Completeness rule** (`_shared/delegation-contract.md` applies): bound each worker's
+wait; manifest ⊖ verdict files = re-spawn each missing worker ONCE, then record it in
+the QA_VALIDATION block as `status: FAIL` with `notes: stall — <journeys>`. Missing
+output ≠ "no findings".
+
+**Lanes + journey classification.** A journey's frontmatter field `mutates: true|false`
+declares whether it writes app state (create/edit/delete, settings, transactions).
+**Absent ⇒ `mutates: true`** (fail-safe: serialize — misclassification costs wall-clock,
+never data races; app test accounts are typically shared). Parallel-eligible =
+`mutates: false` and no `device_only_steps`. Browser twin: parallel lane cap **3**
+concurrent workers (dev-server load), sequential lane for everything else. Device twin:
+**sequential only** (simulator concurrency is flaky and collision-prone — see
+`ac-qa-device/references/incidents.md`).
+
+**Session naming + teardown.** Worker sessions are `qa-<app>-<RUN_ID>-w<N>` (or the
+wave slug when no RUN_ID). Each worker tears down ONLY its own named session, on
+success AND failure paths. The conductor sweeps leftovers matching its
+`session_prefix` at pass end. Never `close --all`, never bare `pkill` (kills sibling
+sessions — documented incidents).
+
+**Aggregation.** The conductor merges verdicts into the single QA_VALIDATION block
+below (`journeys_tested` from verdict statuses, `findings_filed` from filed beads,
+`evidence` from verdict paths). Downstream consumers (ac-merge, ac-distribute) are
+unchanged. Mechanical validation: `_shared/scripts/validate-qa-run.sh $ARTIFACTS_DIR`
+asserts manifest⊖verdict completeness, parallel-lane overlap, and teardown.
 
 ## Findings = beads (file immediately, like failing tests)
 
