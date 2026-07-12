@@ -63,20 +63,36 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
    this step is a Mac ritual.)
 2. **Clean wave merge.** The commit being shipped is merged/landed (via `ac-merge`), not a
    dirty tree. Build from the integration branch's HEAD.
-3. **Fresh native-QA PASS.** A `ac-qa-device` `QA_VALIDATION` report artifact exists whose
+3. **`ac-prove` gate — fresh proven SHA (`ci` depth, before any dispatch).** Before Step 2
+   (build) below, call `ac-prove` in `ensure --fix-forward` mode at `ci` depth on the
+   commit established by item 2 (the clean wave-merge HEAD) — a TestFlight push does not
+   require `+qa` here (native-QA freshness for THIS lane is item 4's PASS-artifact check +
+   the WARN-only `--lane testflight` journey-stamp below; `+qa` is reserved for the App
+   Store lane, Workflow B Stage 0). Full contract: `ac-prove/SKILL.md`. Two things matter:
+   - **Consume the RETURNED proven SHA, never the original ref** (`ac-prove`'s
+     Returned-SHA Contract) — if `ac-prove` had to fix forward, the tip moved; Steps 2-3
+     must build/archive/upload that new SHA, not the commit `ac-distribute` started with.
+   - **Only proceed on a green receipt** — freshness + `ac-prove`'s own dispatched
+     `runId` (attribution) + `conclusion=success` (its three-condition trust rule). A FAIL
+     from `ac-prove` (PROFOUND failure or iteration cap hit) stops `ac-distribute` here —
+     never archive/sign/upload off an unproven tree, even mid-wave.
+4. **Fresh native-QA PASS.** A `ac-qa-device` `QA_VALIDATION` report artifact exists whose
    **`platform:` is `ios-simulator` (or `android-emulator`)**, `status: PASS`, and
    `journeys_tested` block is **fresh relative to the commit being shipped** — not the
    session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
    proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
    artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
    **Review-critical journeys are part of this gate — mechanically, not by memory.**
-   Run `skills/_tools/journey-stamp-check.sh --app <this-app> --sha <ship-sha> --lane
-   store` before any store submission: it reads each `review-critical` journey's
-   frontmatter stamp (`CORE/journeys/*.md`) and BLOCKS (exit 1) if any is MISSING or
-   STALE — `last_pass.sha` not an ancestor of the ship SHA, or an intervening diff
-   touched that journey's declared `surfaces`. TestFlight pushes run the same script
-   with `--lane testflight`, which never blocks but prints `WARN` lines — a stamp gap
-   is visible, not silent. Why: runtime behavior, not static presence, is the only
+   TestFlight pushes run `skills/_tools/journey-stamp-check.sh --app <this-app> --sha
+   <ship-sha> --lane testflight`, which never blocks but prints `WARN` lines — a stamp
+   gap is visible, not silent, ahead of the store lane's harder gate.
+   **For App Store submissions this check is no longer run standalone here** — it's
+   absorbed into Workflow B's mandatory `ac-prove ensure --fix-forward +qa` gate (Stage 0
+   below): `+qa` drives `ac-qa-device`, including the review-critical sim-PASS rule
+   (memory: `rule-review-critical-journeys-sim-pass-before-submission`), against the
+   commit being submitted. `ac-distribute` does not additionally dispatch the BLOCKING
+   `--lane store` journey-stamp-check itself in parallel — one gate, not two. Why:
+   runtime behavior, not static presence, is the only
    sufficient proof — above all on COMMERCE surfaces (live store data + enabled CTA;
    the four-rejection incident: `references/incidents.md` §1). StoreKit offering/product fetch
    WORKS on the simulator; only purchase COMPLETION is device-only — "sim can't test
@@ -90,7 +106,7 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
    commit only, no other diffs). Any intervening commit invalidates freshness and requires
    a re-run. This is a stated equivalence, not yet mechanized — verify by commit range, not
    by assumption.
-4. **Signing reachable — PROBE, don't assume.** Before any signed build, run the 5-second
+5. **Signing reachable — PROBE, don't assume.** Before any signed build, run the 5-second
    codesign probe: `cp /bin/ls /tmp/csp && codesign --force --sign "<distribution identity>"
    /tmp/csp`. On `errSecInternalComponent`, classify by CONTEXT before touching key ACLs —
    the same error means different things in different places: (a) **agent/automation shells
@@ -102,7 +118,7 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
    reset these): `security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k <pw>`
    then re-probe. Never start a 20-minute archive to discover what the probe tells you in 5s.
    match details per app → CORE/distribution.md.
-5. **Prod backend baked in.** If the app's `.env.local` is intentionally backendless (a
+6. **Prod backend baked in.** If the app's `.env.local` is intentionally backendless (a
    fail-soft test pattern), the prod env MUST be injected into the web build BEFORE
    archiving, else you ship a backendless binary. Verify the prod ref appears in the build
    output (proven recipe: a `.env.release.local` + a `grep <project-ref> out/` assertion in
@@ -218,13 +234,30 @@ failure-prone build/sign/upload mile), so a full per-section ledger is overkill;
 3-task list is enough to track the human-gated hand-off:
 
 ```
+TaskCreate("ac-prove gate — ensure --fix-forward +qa on the commit whose build is being submitted")
 TaskCreate("Preflight — read-only ASC health check (build VALID, version editable, review info present)")
 TaskCreate("Submit — clear any stuck prior submission, attach build, submit_for_review")
 TaskCreate("Monitor — poll review state through to WAITING_FOR_REVIEW / hand off for Release tap")
 ```
 
-Stages:
+Stages (Stage 0 gates everything after it):
 
+0. **`ac-prove` gate — mandatory `+qa` (before Stage 1, before any dispatch).** Call
+   `ac-prove` in `ensure --fix-forward +qa` mode on the commit whose build was uploaded via
+   Workflow A (testflight-push). `+qa` drives `ac-qa-device` — including the review-critical
+   sim-PASS rule (memory: `rule-review-critical-journeys-sim-pass-before-submission`) — this
+   IS the App Store lane's sim-PASS gate now; item 4's `--lane store` journey-stamp-check is
+   **not** run as a separate parallel call (see Workflow A item 4 — absorbed here, not
+   duplicated). As with Workflow A: **consume the returned proven SHA**, and only proceed on
+   a green receipt (freshness + own-`runId` + `conclusion=success`); a FAIL stops
+   `ac-distribute` here, before Stage 1.
+   **Identity check (App-Store-specific):** unlike Workflow A, Workflow B does not build —
+   it submits a build ASC already has. If `ac-prove` had to fix forward, the returned SHA is
+   a NEW tip whose build was never uploaded via testflight-push — submitting the OLD
+   processed build under a differently-proven commit is a mismatch, not a valid ship. In
+   that case, stop, re-run Workflow A (testflight-push, which re-runs its own `ci`-depth
+   `ac-prove` gate) for the new tip, then resume Workflow B. Only advance to Stage 1 when the
+   returned SHA matches the commit whose build is already `VALID` in ASC.
 1. **Submission-health / preflight (read-only)** — latest build `VALID`? App Store version
    editable? review info present? Pure ASC-API reads, mutate nothing (e.g. a
    `submit:preflight` script).
@@ -274,6 +307,9 @@ for every app; only document a same-version upload-retry exception here if the a
   Three skills, three concerns — don't merge them.
 - **Wrap what the app already uses** for the build — don't impose a tool.
 - **The sim-QA gate is mechanical** — a fresh PASS artifact, not a memory.
+- **A direct ship dispatch never bypasses proof.** Both workflows call `ac-prove` first —
+  `ensure --fix-forward` at `ci` depth for TestFlight, mandatory `+qa` for App Store — and
+  build/submit off `ac-prove`'s RETURNED SHA, never the stale input ref.
 - **Build number is the footgun** — increment every upload; owned by `ac-merge`
   (`skills/ac-merge/references/version-bump.md`), never re-bumped here.
 - **Only the build mile is Mac-bound** — submit/monitor/triage all run headless.
