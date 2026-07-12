@@ -416,24 +416,11 @@ if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
   fail "D8: skills/ac-distribute/SKILL.md missing defer-to-ac-merge language"
 fi
 
-# D9: the highest-ever union allocator pattern lives in the SHARED SCRIPT (W2
-# extraction, 2026-07-08 — upward move on the enforcement hierarchy), and BOTH
-# ac-loop and ac-implement call it. The invariant is the union scan (refs ∪ main
-# log ∪ tags — refs-only reuses shipped numbers); its home moved, the check follows.
-check
-d9_script="$AC_ROOT/skills/_shared/scripts/allocate-wave-branch.sh"
-if ! grep -qE "git log origin/main --oneline \| grep -oE" "$d9_script" 2>/dev/null; then
-  fail "D9: _shared/scripts/allocate-wave-branch.sh missing the highest-ever union allocator pattern"
-fi
-# Trunk-direct migration (epic bd-u2lo1): ac-implement no longer allocates wave
-# branches (bd-u2lo1.6); ac-loop follows (bd-u2lo1.7); the allocator script itself
-# is deleted by bd-u2lo1.3 — this whole D9 block retires with it.
-for d9_skill in ac-loop; do
-  check
-  if ! grep -q "allocate-wave-branch.sh" "$AC_ROOT/skills/$d9_skill/SKILL.md" 2>/dev/null; then
-    fail "D9: skills/$d9_skill/SKILL.md does not call the shared wave allocator script"
-  fi
-done
+# D9 retired (trunk-direct migration, epic bd-u2lo1, bd-u2lo1.3): the allocator
+# script (`_shared/scripts/allocate-wave-branch.sh`) it checked is deleted —
+# ac-implement no longer allocates wave branches (bd-u2lo1.6) and ac-loop no
+# longer calls the allocator either (bd-u2lo1.7). D9b (below) is the surviving
+# check for stale `wave/` branch-naming assumptions.
 
 # D9b: zero startswith("wave/") in ac-loop/SKILL.md
 check

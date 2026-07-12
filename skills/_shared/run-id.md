@@ -42,7 +42,7 @@ RUN_ID and needs neither job (one session, one wave).
 |---|---|
 | ac-implement **+** ac-land (shared bead-work session) | `bead-work` |
 | ac-review | `work-review` |
-| ac-merge | `wave-merge` |
+| ac-batch-close (trunk-direct batch closing ceremony) | `batch-close` |
 | ac-plan-init | `plan-init` (no wave yet → use the plan slug as the key) |
 | ac-qa-browser | `qa-browser` |
 | ac-qa-device | `qa-device` |

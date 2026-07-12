@@ -8,6 +8,11 @@ description: 'The single merge-to-main path for ANY branch — feature wave or c
 
 Feature waves run after `/ac-review` (the pre-merge gate for waves); chore/hygiene branches are self-reviewed and skip it. `/ac-land` runs AFTER this merge, as session closure. Per-branch, not per-session (contrast: bead-land).
 
+**Trunk-direct migration:** agents committing directly to `main` no longer open PRs — that
+closing ceremony is **`ac-batch-close`** (`skills/ac-batch-close/SKILL.md`). This skill
+(`ac-merge`) is unchanged and remains the PR-merge path for legacy branches (dependabot,
+human feature branches — see `.claude/legacy-branches.txt`).
+
 ---
 
 ## I/O Contract
