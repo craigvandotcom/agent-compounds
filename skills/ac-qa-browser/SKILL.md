@@ -61,6 +61,9 @@ viewport set), and a console-clean assertion on every route.
 - Selection + depth arrive from `_shared/verification-gate.md` (a conductor upstream
   already consulted it; standalone human runs: consult it yourself, or honor the
   human's explicit depth request).
+- Mint RUN_ID if the orchestrator didn't hand one down (contract: `_shared/run-id.md`
+  mint-if-absent rule — the same `qa-<app>-<RUN_ID>` session names below already
+  assume RUN_ID exists): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`.
 - Derive `ARTIFACTS_DIR` per `_shared/run-id.md` (prefix `qa-browser`);
   `mkdir -p "$ARTIFACTS_DIR/evidence"`.
 - **You own the dev server** (workers never start/stop it): if targeting local, start

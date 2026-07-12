@@ -55,6 +55,9 @@ PANEL=full            # full = 7 lenses (weekly run) | light = 3 (quick pass, us
 CURRENT_ROUND=1
 MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
+# mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 ARTIFACTS_DIR=/tmp/hygiene-$(date +%Y%m%d-%H%M%S)
 ```
 

@@ -45,6 +45,9 @@ TIER=<user selection>
 # are raised to it here; heavy's own floor of 3 already clears it, so heavy is unchanged.
 
 CURRENT_ROUND=1
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
+# mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 ARTIFACTS_DIR=/tmp/plan-refine-internal-$(date +%Y%m%d-%H%M%S)
 ```
 

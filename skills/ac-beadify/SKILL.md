@@ -32,6 +32,9 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ### Configuration
 
 ```
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
+# mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 ARTIFACTS_DIR=/tmp/beadify-$(date +%Y%m%d-%H%M%S)
 ```
 

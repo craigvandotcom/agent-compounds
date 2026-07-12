@@ -78,7 +78,9 @@ holds the accessibility trees, simctl output, and screenshots. Full protocol
 (manifest/verdict schemas, completeness rule): `_shared/qa-shared.md` § Conductor /
 worker evidence protocol.
 
-1. **Orient + build (yours, once):** Platform Gate check; derive `ARTIFACTS_DIR`
+1. **Orient + build (yours, once):** Platform Gate check; mint RUN_ID if the
+   orchestrator didn't hand one down (contract: `_shared/run-id.md` mint-if-absent
+   rule): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`; derive `ARTIFACTS_DIR`
    per `_shared/run-id.md` (prefix `qa-device`); build + install via the app's own
    build command (from CORE — never xcodebuild alone) and boot the app's dedicated
    uniquely-named sim (§Parallel QA below). Workers never build, boot, or shut down
