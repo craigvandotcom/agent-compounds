@@ -136,10 +136,14 @@ git diff $DIFF_RANGE --stat
 git diff $DIFF_RANGE --name-only
 ```
 
-**Weekly hygiene-run duty:** if more than 7 days pass with no batch shipping (no new
-`.claude/reviews/batch/` commit), ac-review's standing duty is to review all of `main`
-since the last `v*` tag (`git describe --tags --match 'v*' --abbrev=0`) — the same
-bootstrap mechanism above, run proactively rather than waiting on `ac-batch-close`.
+**Standing weekly review of `main` — NOT ac-review's duty; it belongs to the weekly hygiene
+run (plan C2).** If more than 7 days pass with no batch shipping (no new
+`.claude/reviews/batch/` commit), the review of all of `main` since the last `v*` tag is driven
+proactively by the weekly `ac-hygiene` `PANEL=full` run (its 7-lens panel IS that review) —
+see `ac-hygiene/SKILL.md` § "When to Use This". ac-review owns only the *mechanism* for that
+range (the bootstrap `DIFF_RANGE` above, `git describe --tags --match 'v*' --abbrev=0`), which
+`ac-hygiene`'s close path and any standalone invocation reuse; it does not schedule or
+self-trigger the standing review. Exactly one owner.
 
 **On a branch (legacy mode):** read `.claude/legacy-branches.txt` (ignore blank lines
 and `#`-comment lines):
