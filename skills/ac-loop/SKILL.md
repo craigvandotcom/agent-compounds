@@ -13,8 +13,14 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 
 > **Orchestration contract — 3-level, non-negotiable.** You are a *conductor*, not a doer. Every
 > "Invoke `<skill>`" / "Run `<skill>`" step in this file means **spawn a fresh sub-session
-> (Task/subagent) whose prompt is the delegation text** — let it load that skill and run its own
-> workers, and you keep only the returned summary. You **never** read a phase skill's `SKILL.md`
+> (Task/subagent) whose prompt is the delegation text, pinned `model: "opus"` on the spawn call** —
+> let it load that skill and run its own workers, and you keep only the returned summary.
+> Phase sub-sessions are conductors themselves (they judge, gate, and spawn workers) — they run
+> opus-class, explicitly pinned, never inherited (a headless launch may not be opus-class). Their
+> workers keep the per-call pins already written in each skill's reference prompts (deliberate
+> sonnet/opus mix). Never set `CLAUDE_CODE_SUBAGENT_MODEL` to manage this: it sits ABOVE per-call
+> pins in model precedence and silently flattens all of them (shakedown-verified 2026-07-12; see
+> `rule-agent-mail-identity-setup`). You **never** read a phase skill's `SKILL.md`
 > (`ac-implement`, `ac-review`, `ac-merge`, `ac-beadify`, `ac-bead-refine`, `ac-land`) into your
 > OWN context — that collapses to 2-level and bloats the conductor with every phase's skill +
 > working detail until it compacts mid-run. Orchestrator holds *decisions*; sub-sessions hold
