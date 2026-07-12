@@ -95,8 +95,14 @@ Phase 1 "Scope Detection"), computed identically here so both skills agree on th
 ```bash
 ANCHOR=$(git log -1 --format=%H -- .claude/reviews/batch/)
 if [ -z "$ANCHOR" ]; then
-  # Bootstrap fallback: no batch review-mark exists yet
-  ANCHOR=$(git describe --tags --match 'v*' --abbrev=0)
+  # Bootstrap fallback: no batch review-mark exists yet. The `batch_anchor`
+  # workflow input is a COMMIT SHA (quality-gate.yml peels it via `^{commit}`
+  # and diffs `<anchor>...HEAD`), so resolve the newest v* tag to the SHA it
+  # POINTS TO — never pass the bare tag NAME. Passing a tag name works only
+  # while checkout fetches tags (fetch-depth:0); if that ever narrows, an
+  # unresolvable tag name silently degrades to the full-scope root-commit
+  # fallback. A resolved SHA keeps the contract honest.
+  ANCHOR=$(git rev-list -n1 "$(git describe --tags --match 'v*' --abbrev=0)")
 fi
 BATCH_RANGE="$ANCHOR..HEAD"
 echo "ANCHOR=$ANCHOR" >> "$STATE"
