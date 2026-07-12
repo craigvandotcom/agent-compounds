@@ -448,31 +448,19 @@ Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 ## Phase 5: Final Act — Commit the Batch Report
 
 Write `.claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md` — the batch-close summary,
-distinct from `ac-review`'s own findings report already committed in Phase 1:
+distinct from `ac-review`'s own findings report already committed in Phase 1.
+
+**Single source of truth for the shared sections:** `ac-review/references/report-template.md`.
+The **Summary**, **Beads Completed**, **Changes**, **Test Coverage**, **Known post-merge tails**,
+and **Also carried** sections are that template's — do NOT re-specify their contents here (a
+second hand-rolled copy is exactly the drift bug ac-vgt filed). Fill them per the template's
+field descriptions; `$BATCH_RANGE` is the range those sections' `git diff`/`git log` commands
+key on. Batch-close's **only** addition beyond the template is the **Deploy** section, inserted
+after **Test Coverage**:
 
 ```markdown
-## Summary
-{1-3 sentences: what this batch shipped}
-
-## Beads Completed
-{claim-set beads with IDs and titles from br list}
-
-## Changes
-{diff stats over $BATCH_RANGE}
-
-## Test Coverage
-{quality gate results + Tier 1 CI dispatch run link}
-
 ## Deploy
 {Vercel served-version check + intermediate-commit scan result; native archive-watch-head result}
-
-## Known post-merge tails
-{beads labeled post-merge, still open — same convention as ac-merge's PR body}
-
-## Also carried (beyond the claim set)
-{any commit in $BATCH_RANGE not tied to a tracked bead — a concurrent agent's fix, a
-scheduled ops commit. Trunk-direct means multiple sessions can commit to main inside one
-batch window; name them here so nothing ships unseen (pipeline-builder Invariant 8).}
 ```
 
 ```bash

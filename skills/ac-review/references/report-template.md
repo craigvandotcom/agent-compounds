@@ -1,8 +1,12 @@
 # Review Report Template
 
 One report per shipped batch, ONE template — there is no parallel `.claude/batch-closes/`
-home. Destination is set by the invocation (C4 mode switch, already built in the `ac-review`
-rewrite — this template does not decide it):
+home. This file is the **single source of truth** for the shared report sections (Summary,
+Beads Completed, Changes, Test Coverage, Known post-merge tails, Also carried); `ac-batch-close`
+Phase 5 references these sections rather than re-specifying them, and appends only its own
+**Deploy** section — edit the shared sections HERE, not there. Destination is set by the
+invocation (C4 mode switch, already built in the `ac-review` rewrite — this template does not
+decide it):
 
 - **Batch-close invocation** (`ac-batch-close` passes `report_dest=.claude/reviews/batch/`) →
   writes to `.claude/reviews/batch/YYYY-MM-DD-HHMM-[batch-anchor].md` and advances the
