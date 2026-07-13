@@ -170,7 +170,27 @@ Emit at creation (ac-beadify holds the cross-bead data flow; batch workflows
 per their conventions); quick-capture (`ac-bead-capture`) is exempt — refine
 authors the contract there, as it does for whatever capture omits.
 
-## Decision beads (`-t decision` + `human-gate` + assignee)
+## Binding vs advisory (the present-tree rule)
+
+Beads are written at plan time and executed later, against a tree that has
+moved — every recorded expensive spec failure (bd-fsx: AC depended on
+components never wired into the runtime; l73.11: headline ACs owned by the
+bead's own dependents) is the same event: a load-bearing claim pointing at
+imagined state. The rule that removes the class:
+
+**Binding sections** — `## Acceptance Criteria`, `## Delivers`, `## Consumes`,
+`## Test Scope` (+ `## Steps to Reproduce` on bugs) — **may only reference two
+things: what exists in the tree NOW (grep-verified), or what an upstream
+blocker's `## Delivers` explicitly promises.** A binding claim resting on
+anything else — the bead's own dependents, unwired components, unpromised
+future state — is a refine-blocking defect.
+
+**Everything else is advisory.** Suggested implementation, imagined wiring,
+file-by-file how-to goes under `## Approach (advisory)` (or in comments).
+Engineers re-derive the how against the real tree and may discard it;
+**advisory staleness is not a defect** and reviewers don't flag it. Detail
+that helps a cold-start belongs there — self-containment means a complete
+contract plus useful pointers, not prophecy dressed as fact.
 
 The contract that keeps autonomous sweeps safe:
 
