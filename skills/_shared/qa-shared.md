@@ -6,11 +6,11 @@ in lockstep. Reference it from a twin as `_shared/qa-shared.md`.
 
 The split:
 
-| Plane | Owner |
-| ----- | ----- |
-| Native shell (safe-area, splash, plugins, OAuth sheets, keyboard, deep links, lifecycle) | **`ac-qa-device`** (`native-shell-checklist.md`) |
-| Web shell (CORS, SPA routing, storage, service worker, console, responsive) | **`ac-qa-browser`** (`web-shell-checklist.md`) |
-| Depth levels · journey reuse · findings=beads · report schema · conductor/worker evidence protocol | **this file** |
+| Plane                                                                                              | Owner                                            |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Native shell (safe-area, splash, plugins, OAuth sheets, keyboard, deep links, lifecycle)           | **`ac-qa-device`** (`native-shell-checklist.md`) |
+| Web shell (CORS, SPA routing, storage, service worker, console, responsive)                        | **`ac-qa-browser`** (`web-shell-checklist.md`)   |
+| Depth levels · journey reuse · findings=beads · report schema · conductor/worker evidence protocol | **this file**                                    |
 
 For hybrid (Capacitor) apps the device webview renders the **same bundle** as the
 browser, so visual/DOM-matrix coverage stays cheap in the browser (`ac-qa-browser`);
@@ -19,8 +19,8 @@ twice — route by plane.
 
 > **Whether to run a twin at all (and how deep)** is decided upstream by
 > **`_shared/verification-gate.md`** — it classifies the wave diff and selects passes +
-> depth so a one-line fix doesn't trigger a simulator boot. This file owns the *how*;
-> that gate owns the *whether*. Conductors (`ac-pipeline` Verify stage, `ac-loop`,
+> depth so a one-line fix doesn't trigger a simulator boot. This file owns the _how_;
+> that gate owns the _whether_. Conductors (`ac-pipeline` Verify stage, `ac-loop`,
 > `ac-merge`'s smoke net) consult the gate, not this file, to decide selection.
 
 ## Depth levels
@@ -43,6 +43,28 @@ happy path step-by-step, locating each step's control in the latest snapshot
 trust the tree, complete the journey via the real UI, and fix the doc as part of
 the pass (that's a finding's resolution, not a blocker).
 
+## Prod-write ban + secrets (the minimal package, Craig's decision)
+
+**Admin/shared-data writes are never QA'd against prod.** Any action that
+mutates cross-user shared data — canonical_ingredients zone gates, the
+research/retrigger pipeline, curator merge/amend, a zoning-model override, or
+any other cross-user shared record — is proven against the **local stack**
+(integration tests, or a browser drive against `pnpm dev` if a live UI walk is
+genuinely needed) and never against prod. Prod stays the **default** target for
+user-scoped journeys — the test account's own food/signal/wellness/settings
+data — plus read-only smoke. Each journey doc's `prod_unsafe:` frontmatter key
+names the concrete buttons/actions this applies to for that journey (an empty
+list is a deliberate "nothing unsafe here" statement, not an omission) —
+consult it before picking a target environment for a given journey.
+
+**Secrets stay redacted.** Env values (API keys, credentials, tokens) are
+always redacted in agent output, regardless of which environment is under test.
+
+**Deferred by explicit decision, not rejected.** Heavier options considered for
+this problem — a three-class data model, a seed/reset pipeline, CSP lockdown —
+are DEFERRED-UNTIL-PAIN. Don't re-propose them from scratch; only re-open if
+the minimal rule above stops being enough.
+
 ## Conductor / worker evidence protocol (both twins + ui-polish fan-out)
 
 QA passes run as a **conductor + tester-subagent split**, never inline: the conductor
@@ -62,10 +84,16 @@ partial failure, never a silent pass:
 
 ```json
 {
-  "run_id": "<RUN_ID or empty>", "app": "<app>", "depth": "smoke|full|exhaustive",
+  "run_id": "<RUN_ID or empty>",
+  "app": "<app>",
+  "depth": "smoke|full|exhaustive",
   "session_prefix": "qa-<app>-<RUN_ID>",
-  "dispatched": [{"journey": "<name>", "lane": "parallel|sequential", "worker": "w1"}],
-  "skipped": {"<journey>": "<reason — visible skips only, per verification-gate.md>"}
+  "dispatched": [
+    { "journey": "<name>", "lane": "parallel|sequential", "worker": "w1" }
+  ],
+  "skipped": {
+    "<journey>": "<reason — visible skips only, per verification-gate.md>"
+  }
 }
 ```
 
@@ -74,13 +102,24 @@ mandatory Output contract:
 
 ```json
 {
-  "journey": "<name>", "lane": "parallel|sequential", "session": "<session name>",
-  "started_at": "<ISO8601>", "ended_at": "<ISO8601>",
+  "journey": "<name>",
+  "lane": "parallel|sequential",
+  "session": "<session name>",
+  "started_at": "<ISO8601>",
+  "ended_at": "<ISO8601>",
   "status": "PASS|FAIL",
-  "assertions": [{"assert": "<from journey proof.asserts>", "result": "PASS|FAIL", "evidence": "<path>"}],
+  "assertions": [
+    {
+      "assert": "<from journey proof.asserts>",
+      "result": "PASS|FAIL",
+      "evidence": "<path>"
+    }
+  ],
   "covered": ["<what was actually driven — undriven steps are NOT tested>"],
   "console_errors": "<summary or none>",
-  "findings": [{"title": "", "severity": "qa-finding|qa-blocker", "repro": ""}]
+  "findings": [
+    { "title": "", "severity": "qa-finding|qa-blocker", "repro": "" }
+  ]
 }
 ```
 
@@ -163,7 +202,7 @@ ship — it keys on `platform:` so a browser PASS can't satisfy a native ship ga
 ```markdown
 QA_VALIDATION:
 platform: ios-simulator | android-emulator | browser-local | browser-preview | browser-production
-target: [sim/emulator model + OS  |  browser + viewport]
+target: [sim/emulator model + OS | browser + viewport]
 app_build: [how built/served — command + branch/commit]
 depth: smoke | full | exhaustive
 journeys_tested: [list, with PASS/FAIL each]
