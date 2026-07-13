@@ -114,9 +114,10 @@ of the run:
 
 > **"Max parallel sub-sessions for this run? Reply with a number — defaulting to 2 in 2 minutes."**
 
-Then wait for the reply in short chunks — e.g. 8 × 15-second shell sleeps, checking
-after each chunk whether a reply arrived (replies land between chunks, so an early
-answer costs at most ~one chunk, not the full window). After ~120 s of silence,
+Then wait for the reply in short chunks — e.g. 8 × 15-second shell sleeps. **A reply
+= any user message that has arrived when a wait chunk returns** (in a turn-based
+harness, messages typed mid-chunk are delivered as the chunk's call completes — so an
+early answer costs at most ~one chunk, not the full window). After ~120 s of silence,
 proceed with the **default of 2**. Never use `AskUserQuestion` for this fork — it has
 no timeout, and a walked-away human would stall the run at second zero.
 
@@ -124,9 +125,11 @@ no timeout, and a walked-away human would stall the run at second zero.
   Parallelism). **1 is a legal answer** — the serial escape hatch when the machine is
   loaded (live CI job on this Mac, sibling-app loop). An unparseable reply → default 2.
 - **Headless runs never prompt** (Exhaust Rule) — width is 2. Likewise if the
-  environment refuses the timed wait: treat as headless, width 2, move on.
+  environment refuses the timed wait: treat as headless, width 2, move on — but flag
+  it (see next bullet) so a silently-skipped prompt is visible, never mistaken for a
+  human choice.
 - Carry the outcome into the run ledger when it's created — annotate the orient task
-  `width=N chosen` / `width=2 defaulted`.
+  `width=N chosen` / `width=2 defaulted` / `width=2 defaulted (no-wait env)`.
 
 ### Register Loop Identity
 
@@ -298,7 +301,11 @@ If orphans exist:
    downstream skills read it from a fresh process) and mirror it as the first line of
    `$ARTIFACTS_DIR/progress.md`'s header. Downstream skills (RUN_ID re-keying, bd-u2lo1.9)
    read the claim id verbatim from `.claim-id`.
-2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions:
+2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions.
+   *At width >1:* split into up to WIDTH tree-disjoint child delegations per Efficiency
+   § Parallelism (each child: own bead subset, own `TARGET_BEADS`, own claim id +
+   artifacts dir); verify → review → close still run ONCE for the whole batch after all
+   children return:
    > "Run ac-implement targeting all N orphan beads (IDs: `<list>`, already claimed —
    in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>`
    (MY loop identity) — make EVERY bead claim, including any incremental/replacement claim,
@@ -362,7 +369,9 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 ### Execute the wave
 
 1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join.
-2. **Invoke `ac-implement`** with delegation prompt:
+2. **Invoke `ac-implement`** with delegation prompt. *At width >1:* same split rule as
+   Phase 1 step 2 (up to WIDTH tree-disjoint children, each with own subset /
+   `TARGET_BEADS` / claim id + artifacts dir; one verify → review → close for the batch):
    > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (IDs: `<list>`, already claimed — in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>` (MY loop identity) — make EVERY bead claim, including incremental/replacement claims, under `--assignee <AGENT_NAME>`, not your own session name, so the BEADS-CLOSED-GATE sees them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Baseline test failures: file P1 bead and proceed. Report when complete as a compact structured summary (≤400 words: beads shipped/closed with IDs, gate outcomes, anything blocked, AND every Agent Mail identity you claimed beads under) — the loop advances to verify → review → close."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-review`** with delegation prompt:
@@ -498,13 +507,27 @@ fighting the machine. Hold these:
   loops/conductors (single-conductor fan-out plan, body-compass-app
   `_plans/2026-07-12-2354-single-conductor-fanout-dial.md`).
 - **What may parallelize:** implementers on **tree-disjoint** independent beads
-  (dep-graph antichains — `bv --robot-plan` computes the parallel tracks), plus any
-  read-only session (e.g. a refine pass) freely alongside. **Tree-disjointness check
-  before dispatch:** compare the beads' expected file sets (their Agent Mail
-  reservation paths); any overlap → serialize those beads behind each other. When a
-  dependency chain exists (A blocks B), stay sequential.
+  (dep-graph antichains — `bv --robot-plan` computes the parallel tracks), plus
+  genuinely read-only sessions (board triage/discovery reads) freely alongside.
+  **Tree-disjointness check before dispatch:** compare the beads' expected file sets
+  from their bead specs (the lists each child will reserve in ac-implement Phase 1a —
+  reservations themselves don't exist until the child starts); any overlap →
+  serialize those beads behind each other. When a dependency chain exists (A blocks
+  B), stay sequential.
+- **How width is enacted (Phase 1/2 step 2):** at width >1, partition the claimed
+  batch into up to WIDTH tree-disjoint sub-batches along the `bv --robot-plan`
+  tracks. Each child gets its OWN delegation: its bead subset, its own
+  `TARGET_BEADS`, and its own claim id (`<first-bead-of-subset>-<YYYYMMDD>`) → own
+  `.claim-id` + artifacts dir + `progress.md` — children NEVER share a progress file
+  (shared counting breaks TARGET_BEADS recovery after compaction). The batch still
+  runs verify → review → close **once**, after ALL children return; the
+  BEADS-CLOSED-GATE already takes the union of every child identity.
 - **What NEVER parallelizes:** batch-close ceremonies (serial by construction); two
-  writers on the same file; prove/publish (outside the loop, unchanged).
+  writers on the same file; the **bug-lane drain** (its contract is each fix
+  independently green BEFORE the next starts — sequencing IS the safety property);
+  cross-batch overlap (reviewing batch A while batch B implements) — OFF at this
+  ramp stage, one batch in flight at a time, width applies WITHIN the batch;
+  prove/publish (outside the loop, unchanged).
 - **Mandatory at width >1** (best-practice at width 1): ledger touch at every
   dispatch/return; ≤200–400-word child summaries; a watchdog/poke on every child
   (background resume chains break silently); strict repo + pathspec instructions per
