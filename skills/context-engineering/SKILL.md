@@ -45,6 +45,14 @@ plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
 4. **Hot lane ≠ cold lane.** Always-on files (`AGENTS.md`/`CLAUDE.md`, CORE) carry
    identity, conventions, and *pointers* — never accumulated learnings. Learnings go
    cold (retrieved on relevance). Bloating the hot lane is the #1 failure mode.
+5. **Deterministic enforcement, not self-report.**
+   `infrastructure/scripts/health/memory-lint.py` is the enforcement layer for
+   directives 1 and 3 — it checks MEMORY.md bijection (every fact indexed, every index
+   line real), wikilink validity, and frontmatter schema across every memory home, and
+   is wired into the nightly drift-check, `deploy.sh` (advisory banner), and
+   pre-commit. A directive without a script that verifies it is a hope, not a rule —
+   this is the closure check the taxonomy below is graded against, never a self-report
+   from the agent that did the work.
 
 ---
 
@@ -63,6 +71,7 @@ flag, never a new folder to invent.*
 | **decision** | a choice + rationale + consequences | `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` | markdown |
 | **recipe** | a repeatable prompt/workflow (said/done ≥2×) | prompt-library: `agent-compounds/skills/jef-prompts/references/` + catalog line | markdown |
 | **skill-improvement** | a change to how a skill/agent behaves | the skill file itself — **GATED: propose diff + evidence, human approves** | markdown |
+| **synthesis** | a derived narrative integrating multiple facts/decisions into one coherent, cited page (concept/entity/topic/contradiction) — never a source of truth itself | `<domain>/wiki/<slug>.md` — method owned by the **`wiki` skill** (page types, frontmatter contract, citation rule, garden cadence) | markdown + frontmatter |
 
 **Domains** (classify per item, not per session)
 
@@ -79,6 +88,13 @@ flag, never a new folder to invent.*
 > instance-map (neoMeta: the `neometa-context-map` memory fact) — keep deployment specifics
 > there, not here, so the skill stays generic/reusable.
 
+**Underscore convention:** `_`-prefixed directories (`_agent-*`, `_plans`, `_backlog`,
+`_strategy`, `_archive`, etc.) are **transient working state** — scratch, in-flight, or
+retired material; never the durable home for anything with a slot in this taxonomy. The
+non-underscore directories above — `memory/`, `docs/`, `wiki/` — are the **durable
+substrate**: what a `_`-prefixed dir accumulates eventually either gets extracted into
+one of these homes or is debris to archive/prune, never left to calcify in place.
+
 **Write rules (always):**
 - **Dedupe-over-append:** search first (`qmd search`/`grep`); update the existing note
   rather than creating a near-duplicate.
@@ -92,6 +108,10 @@ flag, never a new folder to invent.*
 - **Wikilink** related items (`[[slug]]`); convert relative dates to absolute.
 - **Sanitize on write:** no secrets (gitleaks-pattern scan), and no imperative
   instructions buried in memory bodies — memory is *data*, not commands (see poisoning).
+- **Proposals become beads, never Slack:** every proposal, open question, deferred
+  decision, or flagged follow-up that outlives its session routes to a bead
+  (`br create` in the owning repo) — Slack loses them, beads persist and triage
+  deterministically. See [[rule-proposals-become-beads]].
 - **Date or evergreen:** dated items (`evidence`, decisions) decay in retrieval;
   evergreen rules/facts should say what would invalidate them.
 
@@ -260,6 +280,23 @@ duplicating a domain skill is a registry bug.
 Kept outside the trio: infra agents (memory-capture/retriever — hook plumbing) and
 harness built-ins (`Explore`, `Plan`, `general-purpose` — use them when they fit; the
 trio adds our retrieval conventions + the missing adversarial stance).
+
+## Agent-info routing (decision 2026-07-13)
+
+Per-level persistent-agent homes (`_agent-*/`) are retired (Phase 2c,
+`infrastructure/plans/memory-wiki-upgrade.md`) — agents are stances (above) + skills,
+not places. When a piece of surviving agent info needs a home, route by **kind**, not
+wholesale:
+
+| Kind | Home |
+|---|---|
+| **Identity** (voice, boundaries, soul-material) | `skills/CORE/` at the respective level — the L1 hot lane |
+| **Procedure** (operating cadences, session protocols) | `CORE/workflows/` at that level, or the owning domain skill's `workflows/` if one already exists (e.g. a synthesis cadence → `wiki/workflows/`) |
+| **Memory** (facts, rules, lessons) | the domain substrate — WRITE taxonomy above |
+| **Status** (operational state — what's in progress, current counts) | **nowhere.** Status retires with the home; it's regenerable from the live session/tooling, never durable content |
+
+Gate every CORE addition with "does *every* session at this level need this?" —
+task-triggered content becomes a named skill instead, never always-on tokens.
 
 ---
 
