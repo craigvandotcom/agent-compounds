@@ -324,6 +324,39 @@ Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 
 **NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. The difference is not caution vs confidence — it's downstream gates: a review finding rides a branch through tests/CI/review/merge (auto isn't final), while a skill/doctrine edit is live agent policy the next scheduled run simply obeys. Full three-way rule (AUTO / HUMAN / DISREGARD): **`_shared/disposition.md`**.
 
+### Loop-retro friction disposition (D3) — runs FIRST, before Step 0
+
+**ac-land Phase 3 is the SOLE tier router.** When Phase 0 read a non-empty loop-retro carrier,
+classify **each** friction item into one of three tiers BEFORE the Step 0 `reflect` delegation
+below, and execute T1/T2 here directly — `reflect` never re-decides a tier (it only writes the
+T3 subset this router hands it). This is a **citing specialization** of `_shared/disposition.md`'s
+core three-way rule (DISREGARD / AUTO / HUMAN — that page § "The three-way rule", §1/§2/§3): it
+MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
+
+| Tier | disposition.md route | What ac-land does here | Extra gate |
+|---|---|---|---|
+| **T1 bug/defect** | AUTO (rides a bead→CI gate; auto isn't final — §2) | `br create -t bug` immediately, no filter | none — **never rate-limited** (matches the Rule-0 bug lane); the T2 cap does NOT apply to bugs |
+| **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
+| **T3 everything else** | AUTO additive-knowledge (§2), else DISREGARD (§1) | tag for the Step 0 reflect call → keyed observation (bd-jv33f.5), or drop if zero evidence | reversible memory observation only |
+
+**T2 objective bar** — an improvement clears iff EITHER:
+- **recurrence evidenced** — a matching observation/lesson already exists in the substrate
+  (`qmd search` hit), OR a matching open `skill-improvement` bead exists (the Save-for-later
+  dedupe check, disposition.md § Save-for-later); OR
+- **material per-run cost** — a named this-run cost: a confirmed defect, or a friction item
+  marked `cost: material` (optional Craig-set minutes floor).
+
+**Per-land cap = 1.** If more than one candidate clears the bar, file the **highest-cost** one as
+the single T2 improvement bead and **demote the rest to T3 observations** — their recurrence
+still accrues for `dream`'s full-corpus ranking (nothing lost, just deferred). T1 bugs are exempt
+from the cap.
+
+**Ordering (preserves bd-jv33f.3's "sole reflect call" invariant):** (1) classify every carrier
+item into T1/T2/T3 here; (2) create T1 bug beads + the ≤1 T2 decision bead here, now — no
+`reflect` involvement; (3) hand only the pre-classified **T3 subset** to the single Step 0
+`reflect` invocation below — do NOT add a second `reflect` call. Absent/empty carrier → no
+tiering, Step 0 behaves exactly as a standalone land.
+
 ### Step 0: Capture durable lessons via `reflect`
 
 Before proposing system-file upgrades, invoke the **`reflect`** skill to capture this
@@ -332,13 +365,14 @@ git-tracked memory substrate. `reflect` handles `{type, domain}` routing + dedup
 it writes low-risk lessons directly and **gates** any skill-improvement for approval (same
 discipline as below). This closes the write loop — a lesson learned here becomes retrievable
 from a different app/machine next week instead of being stranded in this transcript. Pass it
-the retrospective findings from Phase 2 as the candidate lessons — **AND, when Phase 0 read a
-non-empty loop-retro carrier, the carrier's per-stage friction items as pre-classified TYPED
-candidate lessons**, each carrying its `stage`/`cost`/`lesson`/`class` (the `class` is a
-re-adjudicated HINT, not authoritative). Pass them structurally, never re-derived from prose —
-this is what preserves the D4/D5 structural key. This is the **sole** `reflect` invocation; do
-not add a second one. (Absent/empty carrier → reflect gets only the Phase 2 findings, exactly
-as before.)
+the retrospective findings from Phase 2 as the candidate lessons — **AND the pre-classified
+T3-subset friction items from the Loop-retro friction disposition above** (the T1/T2 items were
+already turned into beads there; do NOT re-capture them here), each carrying its
+`stage`/`cost`/`lesson`/`class` (the `class` is a re-adjudicated HINT, not authoritative). Pass
+the T3 items structurally, never re-derived from prose — this is what preserves the D4/D5
+structural key, which reflect writes as keyed observations (bd-jv33f.5). This is the **sole**
+`reflect` invocation; do not add a second one. (Absent/empty carrier → no tiering ran, reflect
+gets only the Phase 2 findings, exactly as before.)
 
 Then continue with the system-file upgrade proposals below.
 

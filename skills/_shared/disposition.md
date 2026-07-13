@@ -6,6 +6,8 @@ answer stops being re-invented per skill. Domain instantiations stay local
 (`review-consensus.md` for code findings, `ac-land` Phase 3 + `reflect` for lessons and
 system upgrades, `ac-triage` for external signal) — they cite this and must not contradict it.
 
+> **Loop-retro instantiation:** `ac-land` Phase 3 § "Loop-retro friction disposition (D3)" maps the loop's per-run friction items onto this fork (T1 bug → AUTO · T2 improvement → HUMAN, with an objective bar + one-per-land cap · T3 → AUTO memory-observation or DISREGARD) — a specialization that adds gates, never redefines the rule.
+
 ## The three-way rule
 
 **1. Evidence bar first → DISREGARD.** No concrete, named cost this session (a specific
