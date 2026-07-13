@@ -617,6 +617,31 @@ C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clea
 
 **Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
 
+### Friction aggregation — the loop-retro carrier (D2)
+
+As each phase child returns, the conductor collects its `friction:` block (the D1 schema —
+Phase 1 step 2 "Child friction schema") and rolls the items up **per stage** into one carrier
+file, `/tmp/loop-retro-<RUN_ID>.md` (RUN_ID convention — `_shared/run-id.md`; ephemeral, NOT
+`progress.md`). Append as children return, or aggregate once after each batch's children
+return — either is fine, provided the file is written **before** the Exit-Land spawn below so
+`ac-land` can reference it deterministically.
+
+Structure: one `## <stage>` section per stage that ran **and produced ≥1 friction item**, that
+stage's children's `friction:` items listed under it. **Zero-friction rule:** a stage that ran
+but returned only `friction: []` is **OMITTED** — no empty `## <stage>` header. A fully-clean
+run therefore yields an empty-or-absent carrier, and `ac-land` (the consume leg) degrades
+gracefully to today's behavior when the carrier is empty/absent — nothing downstream ever
+parses an empty stage section.
+
+> **Why a dedicated carrier file, not `progress.md` and not conductor-side `reflect`** (recorded
+> so this isn't relitigated): children NEVER share a `progress.md` (shared counting breaks
+> `TARGET_BEADS` recovery after compaction — the "children NEVER share a progress file" invariant
+> in Efficiency § above); a separate carrier keeps that invariant intact and gives `ac-land` ONE
+> path to read. Moving `reflect` to the conductor top-level (the rejected alternative) violates the
+> 3-level orchestration contract — the conductor never reads a phase skill's `SKILL.md`, and
+> `reflect` lives inside `ac-land`, a phase skill. The carrier is the typed hand-off across that
+> boundary.
+
 ### Exit-Land — the loop's single closing invocation
 
 ac-land runs **once here**, not per-wave. The loop shipped one or more waves, each writing
@@ -626,6 +651,9 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > "Run ac-land to close this loop session (autonomous run). `RUN_ID=<RUN_ID>`. Land the WHOLE
 > session, not one wave: the retrospective reads every `/tmp/bead-work-*-<RUN_ID>/progress.md`
 > (all waves this run shipped — `RUN_ID` scopes them safely), and teardown sweeps all of them.
+> ALSO read the friction carrier `/tmp/loop-retro-<RUN_ID>.md` if it exists (the per-stage
+> aggregated friction packet — an absent or empty carrier means a clean run; proceed as today)
+> and pass its items to `reflect` as typed candidate lessons for disposition.
 > You are post-merge on `main`. This is a HEADLESS land: system-upgrade proposals become
 > deduped `human-gate` decision beads per `_shared/disposition.md` — never Slack cards,
 > never `AskUserQuestion`, do NOT block.
