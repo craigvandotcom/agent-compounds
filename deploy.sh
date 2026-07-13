@@ -237,7 +237,7 @@ if [ "$PRUNE" = 1 ]; then
   prune_orphans "$TARGET/.claude/agents"
 fi
 
-# --- memory hygiene (Phase 1, _plans/memory-wiki-upgrade.md) ---
+# --- memory hygiene (Phase 1, infrastructure/plans/memory-wiki-upgrade.md) ---
 # Surfaced LOUDLY but never blocks the deploy: unrelated memory-substrate drift
 # (a hand-organized MEMORY.md a few facts behind) is not a reason to hold up
 # shipping code. The nightly drift-check run is the actual enforcement point
