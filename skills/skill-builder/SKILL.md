@@ -403,6 +403,33 @@ all (vs memory, hook, CORE, AGENTS.md) and at what directory altitude — that's
 
 ---
 
+## Procedure lives in `workflows/`
+
+**`workflows/` inside a skill is the canonical home for that skill's owned
+procedure** — multi-step processes a session or a scheduled job runs (a weekly review,
+a seed/garden/distill cadence, an interactive create/refine flow). Level-scoped
+**operating cadences** (a domain's daily heartbeat, weekly review) route to
+`CORE/workflows/` at that level if no domain skill owns the topic yet, or to the owning
+skill's `workflows/` if one does (e.g. `neometa/wiki/`'s garden cadence lives in the
+`wiki` skill's `workflows/`, not a standalone home) — never a parallel `_agent-*/workflows/`
+directory (decided 2026-07-13, `infrastructure/plans/memory-wiki-upgrade.md` Phase 2c:
+the per-level persistent-agent homes that pattern came from are retired). See
+`context-engineering` PLACEMENT rung 1/2 for the full routing logic; this section only
+fixes *where inside the skill layer* procedure goes once PLACEMENT has already said
+"skill."
+
+**Agent construction is stances + skills, never a persistent home.** An agent is a
+**stance** (researcher/implementer/validator — tool boundary + model tier, defined in
+`agents/*.md`) that loads **skills** for domain knowledge at runtime; see
+`context-engineering` § Subagents. There is no third category of "build a persistent
+`_agent-name/` identity home" — that pattern is deprecated (the `agent-builder` skill
+is scheduled for a stances+skills rewrite, bead `org-um4`). If you're tempted to give a
+new agent its own directory of `memory/`/`workflows/`/`soul.md`, route each piece
+through the taxonomy instead: identity → the level's `CORE`, procedure → a skill's
+`workflows/`, memory → the domain substrate.
+
+---
+
 ## Quick Checklist
 
 Before deploying a skill:
