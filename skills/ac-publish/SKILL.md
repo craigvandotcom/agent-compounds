@@ -15,7 +15,7 @@ you're about to ship** (via `ac-prove`), run the genuinely-new expensive checks 
 QA **and** a heavy 6-dimension review over everything since the last publish — the "freight" that
 moved here when `ac-batch-close` went on its diet, `bd-pwt44` epic), confirm migrations are
 release-safe, fix anything that surfaces **in-session**, **tag** the proved commit, then ship web
-(via **Vercel promote, never a rebuild** — Option C) + native, and **finalize** the feedback rows
+(via **Vercel promote, never a rebuild** — Staged Deployments) + native, and **finalize** the feedback rows
 `ac-batch-close` left pending.
 
 **You compose, you don't duplicate.** The confidence proof is owned by `ac-prove`
@@ -25,23 +25,23 @@ freshness/dispatch/trust logic yourself. The heavy review panel is owned by `ac-
 light pass), you don't re-derive its dimension rubric. The native build/sign/upload is owned by
 `ac-distribute` — you **call** it, never inline it.
 
-> **⚠ Web ship model — promote-not-rebuild (Option C), superseding "deploy at merge".**
-> Historically `ac-merge` triggered a Vercel PROD deploy on every wave merge, autonomously (Vercel's
-> Production Branch dashboard setting pinned to `main`) — so web content was already live by the
-> time `ac-publish` ran, and this file used to say so. **Under Option C that model is superseded:**
-> production now moves ONLY when `ac-publish` explicitly **promotes** `R`'s already-proven Vercel
-> PREVIEW deployment (Phase 5, Step 3) — no rebuild between proof and going live, and no more
-> silent auto-promotion of every intermediate merge (including unreviewed fix-forward commits).
-> **This requires a one-time Vercel dashboard change — repointing Production Branch away from
-> `main` — which is `bd-pwt44.7`, a separate human-gate bead NOT implemented by this file.** Until
-> that runbook step lands, Vercel's dashboard config may still auto-deploy every push to `main`
-> straight to production, i.e. the OLD "deploys at merge" behavior described above may still be
-> live in practice alongside this file's promote ceremony. Phase 5's promote step is written to
-> **fail gracefully with an explicit message** if the Production Branch pin hasn't been moved yet
-> — never a silent or misleading success (see Phase 5, Step 3). Migration safety is unaffected
-> either way: `ac-merge`'s apply-timing gate (`rule-migrations-expand-contract`) still ensures an
-> EXPAND migration is pushed before/at the merge of code that depends on it, so schema never lags
-> code regardless of which web-ship model is currently live.
+> **⚠ Web ship model — promote-not-rebuild via Vercel Staged Deployments, superseding "deploy at
+> merge".** Historically `ac-merge` triggered a Vercel PROD deploy on every wave merge,
+> autonomously — so web content was already live by the time `ac-publish` ran, and this file used
+> to say so. **Under the current model that's superseded:** Vercel's **Production Branch stays
+> `main`**, but domain auto-assignment for the production branch is turned OFF (`bd-pwt44.7`,
+> Craig's Vercel Dashboard setting, live 2026-07-13). Effect: **every push to `main` still builds a
+> PRODUCTION-target deployment** — production env vars baked in, exactly as a real prod build would
+> be — but it sits as a **Staged** deployment with no domain attached; nothing is user-visible until
+> `ac-publish` explicitly **promotes** that proven SHA's staged deployment (Phase 5, Step 3;
+> dashboard "Promote to Production" or `vercel promote`). No rebuild between proof and going live,
+> and no more silent auto-promotion of every intermediate merge (including unreviewed fix-forward
+> commits). **Never promote a preview deployment** — a preview build bakes *preview* env vars into
+> `NEXT_PUBLIC_*` at build time, so promoting one ships the wrong artifact; only the staged
+> production-target build is ever a valid promote target (see Phase 5, Step 3). Migration safety is
+> unaffected either way: `ac-merge`'s apply-timing gate (`rule-migrations-expand-contract`) still
+> ensures an EXPAND migration is pushed before/at the merge of code that depends on it, so schema
+> never lags code regardless of which web-ship model is currently live.
 
 ---
 
@@ -50,7 +50,7 @@ light pass), you don't re-derive its dimension rubric. The native build/sign/upl
 | | |
 |---|---|
 | **Input** | `main` at rest, whatever commits have landed since the last release |
-| **Output** | Production web deploy (Vercel, via **promote** of `R`'s proven preview — never a rebuild) + native build shipped (`ac-distribute` → TestFlight / App Store); one minted version bump per publish; a `vX` git tag at the exact proved commit `R`; `fixed_pending_release` feedback rows finalized to `fixed` with the minted build |
+| **Output** | Production web deploy (Vercel, via **promote** of `R`'s proven staged deployment — never a rebuild) + native build shipped (`ac-distribute` → TestFlight / App Store); one minted version bump per publish; a `vX` git tag at the exact proved commit `R`; `fixed_pending_release` feedback rows finalized to `fixed` with the minted build |
 | **Not in scope** | Merging (that's `ac-merge`/`ac-batch-close`), the confidence-proof mechanics (that's `ac-prove`), the review-dimension rubric (that's `ac-review`), autonomous triggering |
 
 ---
@@ -207,10 +207,11 @@ show a sim-PASS on the exact build before submission), so `ac-distribute`'s stor
 (`skills/_tools/journey-stamp-check.sh`) sees fresh review-critical stamps at submission. Any QA
 blocker → Phase 4.
 
-Optionally, `+qa` can additionally target `R`'s Vercel **PREVIEW** deployment directly
-(`qa-browser` against the literal artifact about to ship, pre-promotion) — this flows through
-`ac-prove`'s existing `--ref` contract already in play above; no new machinery is needed to
-support it.
+Optionally, `+qa` can additionally target `R`'s Vercel **staged** deployment directly (`qa-browser`
+against the literal production-target artifact about to be promoted, pre-promotion) — this flows
+through `ac-prove`'s existing `--ref` contract already in play above; no new machinery is needed to
+support it. Never target a preview deployment for this purpose — its baked-in preview env vars
+make it a different artifact than the one that will actually ship.
 
 **Fix-forward re-pin.** If `ac-prove` fixes forward, it returns a **new tip `R′ ≠ R`** (its
 Returned-SHA Contract — never assume your input `--ref` still holds). Re-pin `R ← R′` and
@@ -329,40 +330,36 @@ last heavy-review pass means that pass no longer covers the code you're about to
    the version again here** — the single mint already happened in Phase 0 (or rode along on `R′`
    if Phase 1 re-pinned); this step only tags what was already minted, proved, and reviewed.
 
-3. **Promote-not-rebuild — the web ship (Option C).** Production moves ONLY by promoting `R`'s
-   already-proven Vercel **PREVIEW** deployment — no rebuild between proof and going live. The
-   artifact `ac-prove` (and any `+qa` browser pass) validated IS the artifact that ships; a fresh
-   `vercel deploy --prod` would build a *different* artifact than the one just proven.
+3. **Promote-not-rebuild — the web ship (Vercel Staged Deployments).** Vercel's Production Branch
+   stays `main`; domain auto-assignment for the production branch is OFF (`bd-pwt44.7`, Craig's
+   Vercel Dashboard setting, live 2026-07-13). Effect: the push to `main` in Phase 0/1 already
+   built a PRODUCTION-target deployment (production env vars) for `R` — it is sitting as
+   **Staged**, with no domain attached. Production moves ONLY by promoting that staged deployment
+   — no rebuild between proof and going live. The artifact `ac-prove` (and any `+qa` browser pass)
+   validated IS the artifact that ships; a fresh `vercel deploy --prod` would build a *different*
+   artifact than the one just proven.
 
    ```bash
-   # Locate R's existing PREVIEW deployment (built when R was pushed in Phase 0/1), keyed on
-   # R's git SHA:
-   PREVIEW_URL=$(vercel ls <project> --meta githubCommitSha="$R" | ...)
-   vercel inspect "$PREVIEW_URL"                  # confirm it actually built R
-   vercel promote "$PREVIEW_URL"                  # prod-alias move — NOT a rebuild
+   # Locate R's existing STAGED deployment (production-target build, sitting with no domain),
+   # keyed on R's git SHA:
+   STAGED_URL=$(vercel ls <project> --meta githubCommitSha="$R" | ...)
+   vercel inspect "$STAGED_URL"                   # confirm it actually built R AND is a
+                                                    # production-target build (production env
+                                                    # vars) — never a preview
+   vercel promote "$STAGED_URL"                    # dashboard equivalent: "Promote to Production"
    ```
 
    Assert there is **no** `vercel deploy --prod` call anywhere in this step — promotion is an
-   alias move over an already-built, already-proven deployment, never a new build.
+   alias move over an already-built, already-proven staged deployment, never a new build.
 
-   **HUMAN-GATE DEPENDENCY (`bd-pwt44.7`, a separate bead — do NOT implement it here).** This
-   promote step only behaves correctly once Vercel's **Production Branch** dashboard setting has
-   been repointed away from `main` (a one-time runbook step, not code-gated — see `bd-pwt44.7`'s
-   runbook). Until that pin lands, Vercel may still auto-promote every push to `main` straight to
-   production (the legacy "deploys at merge" model — see the callout near the top of this file),
-   which both defeats the promote-not-rebuild guarantee (unreviewed intermediate commits, e.g.
-   fix-forward rounds, would already be live) and can make an explicit `vercel promote` call here
-   redundant or misleading. **Fail gracefully — never silently or misleadingly "successfully."**
-   Before promoting, check whether the pin has moved (Vercel dashboard/API check, or treat a
-   promote-time signal — e.g. the target production alias already serving a commit *other than*
-   `R` before you've promoted anything — as evidence auto-deploy is still active). If the pin is
-   still on `main`, or the check is inconclusive, **abort this step** with an explicit message:
-
-   ```
-   Production Branch not pinned — see bd-pwt44.7 runbook
-   ```
-
-   Surface this to Craig and stop at Phase 5 — do not report a completed ship.
+   **NEVER promote a preview deployment.** A preview deployment bakes **preview** env vars into
+   `NEXT_PUBLIC_*` at build time — promoting one ships the wrong artifact into production (stale
+   or wrong API keys/flags baked in, not swappable post-build). Only the staged production-target
+   build produced by the `main` push is ever a valid promote target; verify this via
+   `vercel inspect` before promoting, never by URL naming alone. If `vercel inspect` shows the
+   candidate is a preview build, or no staged deployment for `R` can be found, **abort this step**
+   with an explicit message and surface it to Craig — never report a completed ship on an
+   unverified or wrong-artifact promote.
 
 4. **Post-promotion verify — deployment IDENTITY, never a version-grep.** Confirm production is
    actually serving `R`, not merely that a version string matches (a stale version string can
@@ -412,11 +409,15 @@ last heavy-review pass means that pass no longer covers the code you're about to
 - **Tag at the explicit `R`, never `HEAD`** — `ac-prove`'s evidence-commit push moves `HEAD` past
   `R` on every dispatch; tagging `HEAD` would tag an unproven, unreviewed commit.
 - **Promote, don't rebuild** — production moves only via `vercel promote` on `R`'s already-proven
-  PREVIEW deployment; a fresh `vercel deploy --prod` builds a different artifact than the one
-  proved and reviewed. Verify by deployment identity, never a version-grep.
-- **The promote step depends on a one-time human-gated dashboard change (`bd-pwt44.7`)** — fail
-  gracefully and explicitly if the Production Branch pin hasn't moved yet; never a silent or
-  misleading "success."
+  STAGED deployment (production-target build, no domain attached); a fresh `vercel deploy --prod`
+  builds a different artifact than the one proved and reviewed. Verify by deployment identity,
+  never a version-grep.
+- **Never promote a preview** — preview deployments bake preview env vars into `NEXT_PUBLIC_*` at
+  build time; only the staged production-target build is a valid promote target. Verify via
+  `vercel inspect`, never by URL naming.
+- **Production Branch stays `main`; domain auto-assignment for production is OFF** (`bd-pwt44.7`,
+  Craig's Vercel Dashboard setting, live 2026-07-13) — this is what makes every `main` push a
+  production-target staged deployment instead of a live prod deploy.
 - **Never inline the native ship** — call `ac-distribute`; don't duplicate build/sign/upload.
 - **Expand/contract is a hard gate** — a backward-incompatible migration in range stops the ship.
 - **Finalize the feedback rows at mint (Phase 0)** — sweep `fixed_pending_release` rows to
