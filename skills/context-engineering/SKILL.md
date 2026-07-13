@@ -68,7 +68,8 @@ flag, never a new folder to invent.*
 
 | Domain | Subject is… | Memory root | Decisions |
 |---|---|---|---|
-| **neometa** | the business, apps, brand, content, books | `neometa/memory/` | `neometa/alignment/decisions/` |
+| **neometa** | the business, apps, brand, books | `neometa/memory/` | `neometa/alignment/decisions/` |
+| **content** | content-craft lessons: what works on which platform, editorial patterns — distinct from neoMeta org/strategy facts | `neometa/content/memory/` | `neometa/alignment/decisions/` |
 | **app-local** | one app's internals | `<app>/memory/auto/` (each own-repo app) | app docs |
 | **personal** | life, PKM, journaling | `knowledge/` | — |
 | **global** | tooling, agents, infra, PAI | `infrastructure/memory/` | `infrastructure/memory/` |
