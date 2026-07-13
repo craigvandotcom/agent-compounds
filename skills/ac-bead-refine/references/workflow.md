@@ -193,6 +193,8 @@ Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}) and put you
 
 **Verify the data-producer/consumer CHAIN, not just named artifacts.** Confirming a type/function exists and passes tests is NOT enough — when a bead's spec claims it will read, assemble, or transform data from a runtime component (a scorer, bus, accumulator, coordinator, queue, store), grep the LIVE codebase to confirm that component is actually wired into the runtime flow (producer → bus/transport → consumer), not just present as a class or passing tests in isolation. A type that exists and passes unit tests but is not plumbed into the live code path is a FALSE dependency: a spec built on it describes future state as if it were present state. Flag Critical if a bead's key acceptance criteria depend on a data source that exists only in a standalone module or test harness but is not connected to the runtime pipeline the bead runs in. Concrete cost: a 3-reviewer round certified bead bd-fsx "cold-startable" while its metrics-assembly AC depended on ScoringCore scorers that exist and pass their parity-harness (dump-formulas) tests but were never wired to the live MotionBus — the spec assumed the checkpointer accumulated metrics it never receives. The false-convergence surfaced only at implement-time pre-flight and forced a mid-implement scope split (skeleton + a new aggregation bead). Trace the chain end-to-end during refine, not after.
 
+**Verify the bead I/O contract (`_shared/bead-conventions.md` §Bead I/O contract).** Every implementable bead carries `## Delivers` + `## Consumes`. Check three things: (1) present — a missing `## Consumes` is a finding (absence ≠ `- none`; refine authors the contract for quick-capture beads, so propose the content, don't just flag); (2) concrete — each artifact is a greppable path/table/route/symbol, not "the auth work"; (3) edge-matched — every Consumes line's blocker ID has an actual dep edge (`br dep list <id>`), and that blocker's own `## Delivers` includes the named artifact. A contract failure here is what ac-implement's pre-dispatch premise check would bounce later — catch it now.
+
 ## Output
 
 Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-implementability.md
@@ -235,6 +237,7 @@ Optimize the bead dependency graph, ordering, and granularity. Your only verbs: 
    - Beads that touch >5 files or span multiple concerns -> split candidate
    - Beads that are trivial (<30 min) with no dependents -> merge candidate
    - Beads that mix backend + frontend -> split candidate
+   - **Split-coverage check (interface-preserving):** any split proposal must partition the original bead's `## Delivers` across the children — name which child delivers each artifact. A deliverable that lands in no child is silently dropped scope: flag Critical. Same for epic restructures: children's combined `## Delivers` must cover the epic's.
 4. Check priority assignments:
    - P0 beads should be on the critical path
    - P2 beads should genuinely be deferrable
@@ -305,6 +308,9 @@ br update <id> --priority P0
 br label add <id> "new-label"
 
 # Split a bead that's too large
+# Split rule: partition the original's ## Delivers across the children — nothing
+# dropped (bead-conventions §Bead I/O contract); re-point downstream beads'
+# Consumes lines at the new child IDs that now own those artifacts.
 br create "Split: first half" --parent <epic-id> --priority P0 --description "..."
 br create "Split: second half" --parent <epic-id> --priority P0 --description "..."
 br dep add <second-half-id> <first-half-id>
@@ -403,6 +409,8 @@ AskUserQuestion(
 ### Remove `unrefined`, Stamp `refined`
 
 **On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
+
+**Contract gate:** no implementable bead gets the stamp while its `## Delivers` / `## Consumes` is missing or vague (`_shared/bead-conventions.md` §Bead I/O contract) — author or fix the contract first (refine authors it for quick-capture beads). The stamp asserts the I/O contract along with everything else; ac-implement's pre-dispatch premise check reads Consumes lines at face value.
 
 ```bash
 # Remove unrefined, add refined — scoped to what was actually reviewed this run

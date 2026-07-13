@@ -209,7 +209,8 @@ Use only the `br` tool to create and modify beads and add dependencies.
 <!-- mirror of _shared/bead-conventions.md §Body template (incl. its Test Scope bullet) — edit there first -->
 Each bead description must be **self-contained** (typed headers per
 `_shared/bead-conventions.md` §Body template — `## Acceptance Criteria`,
-`## Test Scope`, `## Steps to Reproduce` on bugs — emitted at creation, so
+`## Test Scope`, `## Steps to Reproduce` on bugs, `## Delivers` +
+`## Consumes` on every implementable bead — emitted at creation, so
 `br lint` passes and refine verifies instead of authoring):
 
 - Clear acceptance criteria — each one with a **nameable check** (the command,
@@ -220,6 +221,13 @@ Each bead description must be **self-contained** (typed headers per
 - User-facing beads carry forward the plan's **Journeys touched** into their `## Test Scope`
   QA-modality declaration (`_shared/bead-conventions.md` §Test Scope) — propagate the plan's
   named journeys, don't re-derive them from scratch
+- **Bead I/O contract** (`_shared/bead-conventions.md` §Bead I/O contract): `## Delivers`
+  lists the concrete artifacts (file/endpoint/migration/schema/doc/decision/config) this
+  bead produces; `## Consumes` names the payload taken from each blocker
+  (`<blocker-id> → <artifact>`, or the literal `- none`). Beadify holds the plan's
+  cross-bead data flow — emit the contract here, while it's in context; every Consumes
+  line must match a dep edge you create in this phase. Epics carry `## Delivers` only,
+  derived from the plan's Outcome Definition
 - No need to reference original plan
 - "So detailed that we never need the plan again"
 - Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context
