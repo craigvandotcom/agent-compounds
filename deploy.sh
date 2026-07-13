@@ -237,4 +237,28 @@ if [ "$PRUNE" = 1 ]; then
   prune_orphans "$TARGET/.claude/agents"
 fi
 
+# --- memory hygiene (Phase 1, _plans/memory-wiki-upgrade.md) ---
+# Surfaced LOUDLY but never blocks the deploy: unrelated memory-substrate drift
+# (a hand-organized MEMORY.md a few facts behind) is not a reason to hold up
+# shipping code. The nightly drift-check run is the actual enforcement point
+# (it FAILs on exactly this). This is a visibility step only.
+REPO_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
+MEMORY_LINT="$REPO_ROOT/infrastructure/scripts/health/memory-lint.py"
+if [ -f "$MEMORY_LINT" ]; then
+  echo
+  ML_LOG="$(mktemp)"
+  if ! /usr/bin/python3 "$MEMORY_LINT" --check > "$ML_LOG" 2>&1; then
+    echo "############################################################"
+    echo "# WARNING: memory hygiene drift detected (non-blocking)     #"
+    echo "# nightly drift-check enforces this — see the report there  #"
+    echo "############################################################"
+    tail -5 "$ML_LOG"
+    echo "############################################################"
+  else
+    echo "Memory hygiene: clean"
+    tail -1 "$ML_LOG"
+  fi
+  rm -f "$ML_LOG"
+fi
+
 echo "Done."
