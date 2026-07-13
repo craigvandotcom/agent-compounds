@@ -45,6 +45,15 @@ echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 
 Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac-implement` first."
 
+**Also read the loop-retro friction carrier** — `/tmp/loop-retro-<RUN_ID>.md` (resolve `<RUN_ID>`
+from the `RUN_ID` passed in; the ac-loop conductor writes it before Exit-Land, one `## <stage>`
+section per stage that hit friction — see ac-loop § "Friction aggregation"). Hold the parsed
+per-stage friction items **with their `stage`/`cost`/`lesson`/`class` typing intact** — they feed
+`reflect` directly in Phase 3 Step 0 (do NOT route them through the Phase 2 prose analyst, which
+would reword them and destroy the structural key D4/D5 depend on). **Graceful degrade:** if the
+carrier is absent or empty (a standalone / clean-run land), skip it entirely and proceed exactly
+as today — reflect then receives only the Phase 2 findings.
+
 Also gather:
 
 ```bash
@@ -323,7 +332,13 @@ git-tracked memory substrate. `reflect` handles `{type, domain}` routing + dedup
 it writes low-risk lessons directly and **gates** any skill-improvement for approval (same
 discipline as below). This closes the write loop — a lesson learned here becomes retrievable
 from a different app/machine next week instead of being stranded in this transcript. Pass it
-the retrospective findings from Phase 2 as the candidate lessons.
+the retrospective findings from Phase 2 as the candidate lessons — **AND, when Phase 0 read a
+non-empty loop-retro carrier, the carrier's per-stage friction items as pre-classified TYPED
+candidate lessons**, each carrying its `stage`/`cost`/`lesson`/`class` (the `class` is a
+re-adjudicated HINT, not authoritative). Pass them structurally, never re-derived from prose —
+this is what preserves the D4/D5 structural key. This is the **sole** `reflect` invocation; do
+not add a second one. (Absent/empty carrier → reflect gets only the Phase 2 findings, exactly
+as before.)
 
 Then continue with the system-file upgrade proposals below.
 
