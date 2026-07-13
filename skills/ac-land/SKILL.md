@@ -512,45 +512,80 @@ AskUserQuestion(
 
 ### Cleanup Temp Files
 
-Remove session artifacts (they've been consumed by retrospective). Run each separately to avoid shell chaining that triggers safety hooks.
+Remove session artifacts (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
 
-**Concurrency-safe, two-tier teardown.** Under the homogeneous-width doctrine two ac-loop runs can overlap in time, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. A naive "just suffix every glob with `$RUN_ID`" fix is *unimplementable*, because only 7 of the 11 producer prefixes actually embed the handed loop RUN_ID in their dir name (`bead-work`, `plan-init`, `plan-refine-internal`, `plan-clean`, `bead-refine`, `beadify`, `hygiene`); the other 4 (`work-review` → bare timestamp, `batch-close` → commit-SHA anchor, `plan-refine` external → bare timestamp, and the fixed-name `/tmp/bead-work`) never do, so a RUN_ID glob would silently no-op on them. So the two tiers are:
+**Concurrency-safe, two-tier teardown.** Under the homogeneous-width doctrine two ac-loop runs can overlap in time, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. A naive "just suffix every glob with `$RUN_ID`" fix is *unimplementable*, because only 7 of the producer prefixes actually embed the handed loop RUN_ID in their dir name (`bead-work`, `plan-init`, `plan-refine-internal`, `plan-clean`, `bead-refine`, `beadify`, `hygiene`); the others (`work-review` → bare timestamp, `batch-close` → commit-SHA anchor, `plan-refine` external → bare timestamp, and the fixed-name `/tmp/bead-work`) never do, so a RUN_ID glob would silently no-op on them. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
 
-- **Tier 1 — universal age-gate (LOAD-BEARING).** For every prefix, delete only dirs older than `STALE_MIN` minutes via `find`, constrained to `-maxdepth 1 -type d -name '<prefix>-*'` so it can never touch bare `/tmp` or unrelated content. A live concurrent run keeps rewriting its `progress.md`, so its dirs stay fresh and never qualify. `STALE_MIN=1440` (24h): a full loop is minutes-to-a-few-hours, and the pathological tail this file cites is a ~16.5h zombie-waiter — so 24h reaps genuine orphans without ever racing a real run. This tier alone makes teardown concurrency-safe.
-- **Tier 2 — RUN_ID exact-match (optimization, 7 prefixes only).** When `$RUN_ID` is set, immediately delete THIS run's own dirs for the 7 RUN_ID-embedding prefixes by exact match, so this run cleans up after itself without waiting out the age gate. The 4 non-RUN_ID prefixes (`work-review`, `batch-close`, external `plan-refine`, bare `bead-work`) get NO tier-2 line — a RUN_ID glob would just no-op — they rely on the age gate alone.
+- **Tier 1 — universal content-aware age-gate (LOAD-BEARING).** A dir is stale ONLY if nothing inside it — nor the dir itself — was modified within `STALE_MIN` minutes: `find "$d" -mmin -$STALE_MIN -print -quit` returning non-empty means something is fresh ⇒ LIVE ⇒ keep; empty output ⇒ demonstrably abandoned ⇒ delete. Do NOT gate on the parent dir's own mtime: in-place rewrites of files like `progress.md` do NOT bump the containing dir's mtime, so a dir-mtime gate would reap a live long-running run. Each loop is keyed to its exact `/tmp/<prefix>-*/` glob (or the literal `/tmp/bead-work`) — nothing can reach unrelated `/tmp` content.
+- **Tier 2 — RUN_ID exact-match (optimization; the 7 embedding prefixes ONLY).** Immediately delete THIS run's own dirs so it cleans up after itself without waiting out the age gate. The `[ -n "$RUN_ID" ]` guard on every line is MANDATORY: with `RUN_ID` unset or empty, the unguarded glob degenerates right back to the original unscoped bug. `work-review-*`, `batch-close-*`, external `plan-refine-*`, and bare `/tmp/bead-work` get NO tier-2 line — a RUN_ID glob never matches them, and a silent no-op masquerading as cleanup is worse than no line — they rely on the age gate alone.
 
-Note: the external `plan-refine-*` age-gate glob also matches `plan-refine-internal-*`; the internal prefix additionally gets its own tier-2 exact-match line, applied independently of the external age-gate, so there is no double-handling bug.
+`STALE_MIN=1440` (24h) rationale: the bound is the maximum plausible gap between WRITES inside a live run — NOT total run duration. A live run that writes any file at least once per 24h stays safe even if it runs for days; the pathological tail this file cites (a ~16.5h zombie waiter) still fits under 24h.
 
-**Residual risk (accepted, bounded by STALE_MIN).** The age-gate can still reap a legitimately long-running FOREIGN run's dirs if that run exceeds `STALE_MIN` (24h) AND its dirs lack this run's RUN_ID. The doctrine accepts this bounded residual — no plausible healthy loop runs 24h — rather than leaving orphans forever. (Follow-up, not required here: thread the loop RUN_ID into `ac-review` / `ac-plan-refine-external` / `ac-batch-close` dir naming so all 11 prefixes gain a RUN_ID tier and the age-gate becomes belt-and-suspenders.)
+Every deletion — tier 1 and tier 2 — is logged (path echoed before the `rm`), so a wrongful sweep is diagnosable post-hoc. The external `plan-refine-*` glob also matches `plan-refine-internal-*` dirs — harmless idempotent double-handling; both prefixes stay listed for clarity.
 
-**Explicitly out of scope** (considered, deliberately left): Phase 0's read-only fallback `ls` (a guess for the retrospective, not a delete) and the `ps … grep` waiter-kill below (already identity/command-scoped with a confirm-before-kill step). Neither deletes artifact dirs, so neither is RUN_ID-blind in a way that matters here.
+**Residual risk (accepted, bounded by STALE_MIN):** a live FOREIGN run that writes NOTHING for >24h can still be reaped by the age gate. Accepted — no healthy run goes 24h between artifact writes. (Follow-up, not required here: thread the loop RUN_ID into `ac-review` / `ac-plan-refine-external` / `ac-batch-close` dir naming so every prefix gains a tier-2 line and the age gate becomes belt-and-suspenders.)
+
+**Explicitly out of scope** (considered, deliberately left): Phase 0's read-only fallback `ls` (a guess for the retrospective, not a delete) and the `ps … grep` waiter-kill below (already identity-scoped with a confirm-before-kill step). Neither deletes artifact dirs; if hardening is wanted there, file a separate bead.
 
 ```bash
-STALE_MIN=1440   # 24h — safely larger than the longest plausible run; see rationale above
+STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a bound on total run duration)
 
-# Tier 1 — universal age-gate (each on its own line; never targets bare /tmp)
-find /tmp -maxdepth 1 -type d -name 'bead-work' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'bead-work-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'plan-init-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'batch-close-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'plan-refine-internal-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'plan-refine-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'plan-clean-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'bead-refine-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'beadify-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'hygiene-*' -mmin +$STALE_MIN -exec rm -rf {} +
-find /tmp -maxdepth 1 -type d -name 'work-review-*' -mmin +$STALE_MIN -exec rm -rf {} +
+# Tier 1 — universal content-aware age-gate. Non-empty find ⇒ something fresh inside ⇒ LIVE ⇒ keep.
+# Bare /tmp/bead-work (literal name — no glob), treated identically to the globs:
+for d in /tmp/bead-work/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/bead-work-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/plan-init-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/batch-close-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/plan-refine-internal-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/plan-refine-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/plan-clean-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/bead-refine-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/beadify-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/hygiene-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
+for d in /tmp/work-review-*/; do
+  [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+done
 
-# Tier 2 — RUN_ID exact-match (this run's own dirs; 7 RUN_ID-embedding prefixes only)
-if [ -n "$RUN_ID" ]; then
-  rm -rf /tmp/bead-work-*"$RUN_ID"*
-  rm -rf /tmp/plan-init-*"$RUN_ID"*
-  rm -rf /tmp/plan-refine-internal-*"$RUN_ID"*
-  rm -rf /tmp/plan-clean-*"$RUN_ID"*
-  rm -rf /tmp/bead-refine-*"$RUN_ID"*
-  rm -rf /tmp/beadify-*"$RUN_ID"*
-  rm -rf /tmp/hygiene-*"$RUN_ID"*
-fi
+# Tier 2 — immediate self-cleanup by exact RUN_ID match. Guard MANDATORY on every line
+# (unset RUN_ID would degenerate the glob to the original unscoped bug). 7 embedding prefixes only.
+if [ -n "$RUN_ID" ]; then for d in /tmp/bead-work-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/plan-init-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/plan-refine-internal-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/plan-clean-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/bead-refine-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/beadify-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/hygiene-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
 ```
 
 Mark ledger task 8 `completed`; `TaskUpdate` task 9 `in_progress`.
