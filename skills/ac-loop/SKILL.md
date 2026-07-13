@@ -7,7 +7,7 @@ description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fi
 
 **You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same skills `ac-pipeline` uses, but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only in interactive sessions.
 
-When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal for simple bounded forks. When invoked by the scheduler (headless), never `AskUserQuestion` — apply the Exhaust Rule: leave the `human-gate` decision bead in place, post an advisory Slack nudge, and keep working everything else. Decisions are answered via `ac-human-session` (the docket), not mid-run.
+When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal for simple bounded forks. When invoked by the scheduler (headless), never `AskUserQuestion` — apply the Exhaust Rule: leave the `human-gate` decision bead in place, post an advisory Slack nudge, and keep working everything else. Decisions are answered via `ac-human-session` (the docket), not mid-run. **One exception:** the Phase 0 **width prompt** never uses `AskUserQuestion` (it has no timeout) — it is a timed plain-text ask, first output of the run (see Phase 0 § Width Prompt).
 
 > **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not `human-gate` is loop-eligible** — if `unrefined`, you refine it (`ac-bead-refine`) first, then implement; if `refined`, you implement. The `unrefined` label routes a bead *through* refinement — **it is NOT a human gate** (memory `feedback-conductor-beads-need-unrefined-label`: the label forces the QA refine pass, it does not withhold sign-off). The **only** thing exempt from autonomous implementation is a **`human-gate`** bead (surfaced, never auto-closed). Craig controls what *enters* the pipeline **upstream** — at the backlog pool (`ac-backlog`) and via plan `loop-ready` sign-off; once an idea is a *bead* it is already committed work, so drive it to merge, furthest-advanced first. (Refinement *priority* still favours signed-off/furthest-advanced work — but nothing non-`human-gate` is gated *out*.)
 
@@ -50,6 +50,11 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 ## Execution Order
 
 ```
+RUN START (once, before anything else):
+  WIDTH PROMPT — interactive: the run's FIRST output, before registration/orient
+  (2-min chunked wait → default 2); headless: no prompt, width = 2.
+  Sets PARALLEL_WIDTH for the run. See Phase 0 § Width Prompt + Efficiency § Parallelism.
+
 EACH ITERATION:
   0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
@@ -99,6 +104,29 @@ ON EXIT — ALWAYS, every stop path (C1/C2/C3/C4, Phase ARIA, or an error):
 ---
 
 ## Phase 0: Orient
+
+### Width Prompt (FIRST — before registration, before any board read)
+
+**Interactive runs only.** The run's **very first output** — before
+`macro_start_session`, before any `br`/`bv` call — is the width question, so the
+human can answer in the opening seconds and leave the loop unattended for the rest
+of the run:
+
+> **"Max parallel sub-sessions for this run? Reply with a number — defaulting to 2 in 2 minutes."**
+
+Then wait for the reply in short chunks — e.g. 8 × 15-second shell sleeps, checking
+after each chunk whether a reply arrived (replies land between chunks, so an early
+answer costs at most ~one chunk, not the full window). After ~120 s of silence,
+proceed with the **default of 2**. Never use `AskUserQuestion` for this fork — it has
+no timeout, and a walked-away human would stall the run at second zero.
+
+- The answer sets **`PARALLEL_WIDTH`** for this run (doctrine: Efficiency §
+  Parallelism). **1 is a legal answer** — the serial escape hatch when the machine is
+  loaded (live CI job on this Mac, sibling-app loop). An unparseable reply → default 2.
+- **Headless runs never prompt** (Exhaust Rule) — width is 2. Likewise if the
+  environment refuses the timed wait: treat as headless, width 2, move on.
+- Carry the outcome into the run ledger when it's created — annotate the orient task
+  `width=N chosen` / `width=2 defaulted`.
 
 ### Register Loop Identity
 
@@ -463,11 +491,29 @@ fighting the machine. Hold these:
   CI job is live on the runner — you starve your own runner and triple every duration
   (a ~21-min suite became ~50 min at load-68). See `bca-ci-and-ios-build-ops`.
 
-**Parallelism (judgment, not a blanket rule)**
-- When ≥2 ready beads have NO dependency between them, spawn their engineers concurrently.
-  When a chain exists (A blocks B), stay sequential. Pull heavy sub-steps (e2e / prod-build)
-  OUT of the implementer into their own gated step so they're visible and pace-able — don't
-  let one bead's engineer run 100+ min hidden inside a sub-agent.
+**Parallelism — the `PARALLEL_WIDTH` dial (fan-out under ONE conductor)**
+- The conductor may hold up to **`PARALLEL_WIDTH`** phase sub-sessions in flight —
+  set per run by the Phase 0 width prompt (default 2; headless 2; 1 = fully serial).
+  More width means more sub-sessions under THIS one orchestrator, never additional
+  loops/conductors (single-conductor fan-out plan, body-compass-app
+  `_plans/2026-07-12-2354-single-conductor-fanout-dial.md`).
+- **What may parallelize:** implementers on **tree-disjoint** independent beads
+  (dep-graph antichains — `bv --robot-plan` computes the parallel tracks), plus any
+  read-only session (e.g. a refine pass) freely alongside. **Tree-disjointness check
+  before dispatch:** compare the beads' expected file sets (their Agent Mail
+  reservation paths); any overlap → serialize those beads behind each other. When a
+  dependency chain exists (A blocks B), stay sequential.
+- **What NEVER parallelizes:** batch-close ceremonies (serial by construction); two
+  writers on the same file; prove/publish (outside the loop, unchanged).
+- **Mandatory at width >1** (best-practice at width 1): ledger touch at every
+  dispatch/return; ≤200–400-word child summaries; a watchdog/poke on every child
+  (background resume chains break silently); strict repo + pathspec instructions per
+  child. Pull heavy sub-steps (e2e / prod-build) OUT of the implementer into their own
+  gated step so they're visible and pace-able — don't let one bead's engineer run
+  100+ min hidden inside a sub-agent.
+- **Ramp evidence:** the exit retrospective (ac-land) notes any tree collisions, child
+  stalls, or conductor compactions this run — Craig moves width run-by-run at the
+  prompt; the skill default only rises after green windows at the current default.
 
 ---
 
@@ -557,6 +603,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 
 ## Remember
 
+- **Width prompt first** — interactive runs open with the `PARALLEL_WIDTH` question as the very first output (2-min chunked wait → default 2) so the human can answer and walk away; headless = width 2, no prompt. Fan-out stays under the ONE conductor; ceremonies and same-file writers stay serial
 - **Never trust bare `br ready`** — it caps at `--limit 20` and silently hides the rest. Discovery = `bv --robot-triage` (true counts, dependency-aware) + `br ready --limit 0` (labeled rows). A 20-row answer means you forgot `--limit 0`. bv = discovery, br = mutations — not substitutes
 - **Only `human-gate` beads are gated** — every other bead (refined → implement; unrefined → `ac-bead-refine` then implement) is loop-eligible. `unrefined` routes *through* refinement, it does not withhold sign-off. The "not-yet-committed" gate is the backlog *pool*, upstream of beads
 - **Orphans first** — fixes and production bugs ship before new feature waves
