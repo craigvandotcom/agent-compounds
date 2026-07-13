@@ -398,7 +398,7 @@ If the bead requires absent infrastructure:
 3. Get the next candidate from `br ready --json`
 4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it. (incident: env-blocked-claims — `references/incidents.md`)
 
-**Guard: premise-check `## Consumes` (I/O contract, `_shared/bead-conventions.md` §Bead I/O contract).** For each Consumes line (`<blocker-id> → <artifact>`; a literal `- none` passes trivially), verify the premise holds on the CURRENT tree before spending an engineer session on it: the named artifact exists (file path `ls`-checks, symbol/route/table greps, migration file present) and the blocker bead is closed (`br show <blocker-id> --json`). Also check the blocker's close comment — it records delivered artifact paths (Phase 1d), which is the fastest verification. If any consumed artifact is missing:
+**Guard: premise-check `## Consumes` (I/O contract, `_shared/bead-conventions.md` §Bead I/O contract).** For each Consumes line (`<blocker-id> → <artifact>`; a literal `- none` passes trivially), verify the premise holds on the CURRENT tree before spending an engineer session on it: the named artifact exists (file path `ls`-checks, symbol/route/table greps, migration file present) and the blocker bead is closed (`br show <blocker-id> --json`). That same call returns `.close_reason`, where Phase 1d records delivered artifact paths — the fastest verification. If any consumed artifact is missing:
 
 1. Do NOT claim it; do NOT dispatch an engineer
 2. `br comments add <id> "Premise failure: consumes <artifact> from <blocker-id> — not found on main (checked: <what you checked>). World moved since refinement."`
