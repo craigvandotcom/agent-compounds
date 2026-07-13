@@ -133,7 +133,7 @@ if [ "$CLAIMED_COUNT" -eq 0 ] && [ "$ALLOW_EMPTY" -ne 1 ]; then
 fi
 
 OPEN=$(echo "$FULL_CLAIMED" | jq \
-  '[.[] | select(.status != "closed") | select((.labels // []) | index("post-merge") | not)]') || exit 2
+  '[.[] | select(.status != "closed") | select((.labels // []) | index("post-merge") | not) | select(.issue_type != "epic")]') || exit 2
 
 IN_SCOPE_IDS=$(echo "$FULL_CLAIMED" | jq -r '.[].id' | sort -u)
 warn_bead_bleed "$IN_SCOPE_IDS"

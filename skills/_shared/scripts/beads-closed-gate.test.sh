@@ -137,6 +137,29 @@ else
   fail "Case D: expected exit 0, got $RC. Output: $OUT"
 fi
 
+# --- Case J: conductor-claimed in_progress EPIC excluded; children closed -> exit 0 (bd-vyiej) ---
+# The conductor claims the epic parent as a work signal (status in_progress). The gate must
+# NOT read that epic as unfinished batch work — with all non-epic children closed it exits 0.
+clear_fixtures
+write_fixture "ConductorA" '[{"id":"bd-epic","status":"in_progress","issue_type":"epic","labels":["infra"]},{"id":"bd-child","status":"closed","issue_type":"task","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorA" run_gate 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case J: in_progress epic parent excluded, children closed -> exit 0 (bd-vyiej)"
+else
+  fail "Case J: expected exit 0 (epic excluded), got $RC. Output: $OUT"
+fi
+
+# J2 — fail-closed guard: an OPEN non-epic bead alongside the in_progress epic STILL blocks.
+# Proves the epic exclusion did not over-broaden into swallowing genuine open work.
+clear_fixtures
+write_fixture "ConductorA" '[{"id":"bd-epic","status":"in_progress","issue_type":"epic","labels":["infra"]},{"id":"bd-child","status":"open","issue_type":"task","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorA" run_gate 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "bd-child"; then
+  pass "Case J2: epic exclusion does not mask an open non-epic child -> exit 1"
+else
+  fail "Case J2: expected exit 1 listing bd-child, got $RC. Output: $OUT"
+fi
+
 # --- Case E: no identity determinable (no arg, no AGENT_NAME) -> exit 2 ------
 clear_fixtures
 write_fixture "ConductorA" '[{"id":"bd-a","status":"open","labels":["infra"]}]'
