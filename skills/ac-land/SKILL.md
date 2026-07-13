@@ -73,7 +73,7 @@ TaskCreate (one per section, in run order):
   2. File remaining work (1a)              pending
   3. Quality gates (1b)                    pending
   4. UI validation suite (1c)              pending
-  5. Git ops + fire async CI (1d)          pending
+  5. Git ops — commit + push (1d)          pending
   6. Learn (retrospective)                 pending
   7. Compound (system upgrades)            pending
   8. Hand off                              pending

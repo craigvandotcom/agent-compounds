@@ -98,6 +98,17 @@ acquire_build_slot(key="batch-close:main", ttl=<covers the expected CI-poll wall
     abort, so a stalled conductor doesn't leave a stale advisory lease for the next run
 ```
 
+> **Prerequisite + graceful degrade (bd-kskxg field-test).** `acquire_build_slot` (like
+> `macro_start_session`) needs a `registration_token` for a pre-existing identity — a
+> loop-spawned MCP session that did not itself register that identity does NOT hold one, and the
+> call will fail for it. If you cannot acquire the slot (no `registration_token`, or the
+> primitive errors), **degrade gracefully — do not block the ceremony**: the slot is advisory,
+> not a lock (memory `agent-mail-build-slot-advisory`), so proceed advisory and instead assert
+> `git rev-parse origin/main` equals your local `HEAD` immediately before and after each
+> CI-affecting step (dispatch, any fix-forward push, the Act 3 report commit). A mismatch is the
+> real signal a concurrent conductor moved `main` under you — which is the only thing the slot
+> was ever hinting at.
+
 No mutual exclusion is enforced by the primitive itself — this is a presence signal for a
 conflicting concurrent run to notice, not a queue or a lock.
 
@@ -201,6 +212,12 @@ Same order `ac-merge` mirrors from `_shared/verification-gate.md` §Format-first
 VITEST_AFFECTED_REF=$ANCHOR pnpm test
 ```
 
+> **Runner self-contention (bd-kskxg field-test).** On a single self-hosted Mac runner, this
+> local affected pre-flight and the Tier 1 CI dispatch fired below run on the SAME machine —
+> executing the local suite while CI is already dispatched makes both contend for one runner and
+> stretches wall-clock. Sequence them: finish (or skip) this local pre-flight BEFORE firing the
+> dispatch; never overlap them.
+
 **If any fail:** fix before proceeding — same rule as `ac-merge`: never dispatch Tier 1 CI with
 failing local checks.
 
@@ -264,11 +281,20 @@ running after this turn ends.
 
 ```bash
 HEAD_SHA=$(git rev-parse HEAD)
+# Resolve the dispatched run's id ONCE (list + match by headSha to get its databaseId), then
+# poll THAT id deterministically with `gh run view <id>` — re-listing + jq-selecting by headSha
+# every iteration is fragile (bd-kskxg field-test). The run may take a cycle to register, so
+# keep resolving until the id is known, then switch to the deterministic view.
+RUN_DB_ID=""
 for i in $(seq 1 20); do
     sleep 30
-    RUN_JSON=$(gh run list --workflow=quality-gate.yml --branch main \
-      --json databaseId,status,conclusion,headSha,url --limit 10 2>/dev/null)
-    MATCH=$(echo "$RUN_JSON" | jq -r --arg sha "$HEAD_SHA" '[.[] | select(.headSha == $sha)][0]')
+    if [ -z "$RUN_DB_ID" ]; then
+        RUN_DB_ID=$(gh run list --workflow=quality-gate.yml --branch main \
+          --json databaseId,headSha --limit 10 2>/dev/null \
+          | jq -r --arg sha "$HEAD_SHA" '[.[] | select(.headSha == $sha)][0].databaseId // empty')
+        [ -z "$RUN_DB_ID" ] && { echo "Run not registered yet... ($i/20)"; continue; }
+    fi
+    MATCH=$(gh run view "$RUN_DB_ID" --json databaseId,status,conclusion,url 2>/dev/null)
     STATUS=$(echo "$MATCH" | jq -r '.status // empty')
     if [ "$STATUS" = "completed" ]; then
         echo "Dispatch run completed."
@@ -393,7 +419,11 @@ verification moved to `ac-publish`).
 
 ```bash
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
-git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits"
+# Pathspec-on-commit (bd-kskxg field-test): the trailing `-- <report path>` scopes the commit to
+# ONLY this file, so pre-staged foreign WIP in the shared checkout cannot be swept into the
+# batch-report commit (happened live; a soft-reset recovered it). The `git add` above is still
+# needed because the report is a brand-new untracked file.
+git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits" -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 git push origin main || { git pull --rebase origin main && git push origin main; }
 ```
 
