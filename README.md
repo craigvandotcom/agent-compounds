@@ -40,6 +40,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **ac-batch-close** | Trunk-direct batch closing ceremony — Tier 1 CI dispatch, review gate, version bump + tag, deploy checks, review-mark advance |
 | **ac-land** | Session closure — retrospective learning + system compounding |
 | **ac-publish** | Manual, human-triggered release gate — post-loop "ship to production": SHA-pinned full-CI read + full QA + migration safety, composes `ac-merge` + `ac-distribute` |
+| **ac-prove** | The shared tip-valid full-suite proof primitive — freshness probe / dispatch-if-stale / ensure --fix-forward; every ship path calls it instead of re-implementing its own CI-trust logic |
 | **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
 | **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |

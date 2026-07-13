@@ -1,6 +1,5 @@
 ---
 name: ac-publish
-disable-model-invocation: true
 description: 'The manual, human-triggered release gate — the definitive "ship to production" step. Pins main, mints the single release version bump (Phase 0), then calls ac-prove (ensure --fix-forward) for a fresh ref-pinned full-suite + full device/browser QA proof, runs a heavy 6-dimension review over everything since the last publish, checks migrations are expand/contract-safe, tags the proved commit, then ships web (Vercel promote, never a rebuild) + native. Composes ac-prove (the confidence gate) + ac-review (the heavy panel) + ac-distribute (native ship). Triggers: "/ac-publish", "publish", "release to prod", "ship it to production", "cut the release".'
 ---
 
