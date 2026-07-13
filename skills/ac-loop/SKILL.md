@@ -41,7 +41,7 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 
 | | |
 |---|---|
-| **Input** | Refined plans in `_plans/`, beads in `br` (any state from unrefined onward), current wave branch (if any) |
+| **Input** | Refined plans in `_plans/`, beads in `br` (any state from unrefined onward); trunk-direct on `main` (legacy branches, if any, per `.claude/legacy-branches.txt`) |
 | **Output** | Merged PRs, closed beads, Slack notifications per milestone |
 | **Not in scope** | Backlog capture, plan init (`ac-plan-init`), unrefined plans, human decisions |
 
@@ -210,9 +210,10 @@ br ready --limit 0 --json | jq '[.[] | select(
   (.issue_type == "bug") and (.labels | index("human-gate") | not)
 )]'
 
-# Current wave branch (if any)
-git branch --list 'wave/*' --format='%(refname:short)' | head -1
-git branch -r --list 'origin/wave/*' --format='%(refname:lstrip=3)' | head -1
+# Legacy branches still in flight (trunk-direct works on `main`; wave-branches are retired —
+# mirror ac-merge/ac-review's .claude/legacy-branches.txt awareness)
+LEGACY_FILE="$(git rev-parse --show-toplevel)/.claude/legacy-branches.txt"
+[ -f "$LEGACY_FILE" ] && grep -v '^[[:space:]]*$' "$LEGACY_FILE" 2>/dev/null
 
 # Plans marked loop-ready (Craig's explicit gate — only these enter the loop)
 grep -l "status: loop-ready" _plans/*.md 2>/dev/null
@@ -220,7 +221,7 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
-Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, wave open/closed, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) — **every priority, P0 through P4** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
