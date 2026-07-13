@@ -107,6 +107,7 @@ Portable agent definitions, symlinked into `.claude/agents/`.
 | **[code-explorer](./agents/code-explorer.md)** | Read-only codebase exploration + mapping, pattern discovery before building |
 | **[browser-tester](./agents/browser-tester.md)** | UI smoke testing via agent-browser — runs user journey story files and reports PASS/FAIL |
 | **[browser-agent](./agents/browser-agent.md)** | General-purpose headless browser automation — screenshots, scraping, forms, navigation |
+| **[device-tester](./agents/device-tester.md)** | Native UI validation agent — runs journeys in the iOS Simulator via agent-device + simctl, reports PASS/FAIL, never edits code |
 
 > **Note:** `implementer` and `validator` were formerly named `engineer` and `reviewer` — those aliases are retired.
 
