@@ -327,9 +327,28 @@ If orphans exist:
    them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `_shared/run-id.md`).
    Skip the bead-count setup question — answer is pre-supplied. For baseline test failures:
    file a P1 bead and proceed (do not ask). Report when complete as a compact structured
-   summary (≤400 words: beads shipped/closed with IDs, gate outcomes, anything blocked, AND
-   every Agent Mail identity you claimed beads under) — the loop advances to verify → review →
-   close."
+   summary (≤400 words, cap unchanged: beads shipped/closed with IDs, gate outcomes, anything
+   blocked, every Agent Mail identity you claimed beads under, AND a structured `friction:`
+   block — one item per stage that hit friction, keys `stage` / `cost` / `lesson` / `class`
+   (`friction: []` if the stage was clean); see the Child friction schema below) — the loop
+   advances to verify → review → close."
+
+   > **Child friction schema (D1)** — the `friction:` block the summary contract above asks
+   > for. Structured (not prose) so the conductor can aggregate it mechanically and `dream`
+   > can key on `stage`/`cost` later. One list item per stage that hit friction; a clean
+   > stage returns `friction: []`. Lives INSIDE the existing ≤400-word summary cap — it is a
+   > slot in that summary, not a new unbounded field.
+   > ```
+   > friction:
+   >   - stage: implement          # pipeline stage that hit it
+   >     cost: material|minor       # + optional "~Nmin" when quantifiable
+   >     lesson: "vi.mock hoist trap swallowed the first two runs"
+   >     class: defect|improvement|observation   # child's pre-classification HINT
+   > ```
+   > `class` is a HINT only — `ac-land`/`reflect` re-adjudicate it against the objective bar;
+   > never treat it as authoritative. Both `ac-implement` delegation prompts (Phase 1, Phase 2)
+   > and the `## Remember` child-summary bullet name this same block — keep the four keys
+   > identical across all three (bd-jv33f.2 aggregates on them).
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
 4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch argument). This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
@@ -394,7 +413,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 2. **Invoke `ac-implement`** with delegation prompt. *At width >1:* same split rule as
    Phase 1 step 2 (up to WIDTH tree-disjoint children, each with own subset /
    `TARGET_BEADS` / claim id + artifacts dir; one verify → review → close for the batch):
-   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (IDs: `<list>`, already claimed — in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>` (MY loop identity) — make EVERY bead claim, including incremental/replacement claims, under `--assignee <AGENT_NAME>`, not your own session name, so the BEADS-CLOSED-GATE sees them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Baseline test failures: file P1 bead and proceed. Report when complete as a compact structured summary (≤400 words: beads shipped/closed with IDs, gate outcomes, anything blocked, AND every Agent Mail identity you claimed beads under) — the loop advances to verify → review → close."
+   > "Run ac-implement targeting all refined ready beads for plan `<plan-name>` (IDs: `<list>`, already claimed — in_progress + assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>` (MY loop identity) — make EVERY bead claim, including incremental/replacement claims, under `--assignee <AGENT_NAME>`, not your own session name, so the BEADS-CLOSED-GATE sees them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (`_shared/run-id.md`). Skip bead-count setup question. Baseline test failures: file P1 bead and proceed. Report when complete as a compact structured summary (≤400 words, cap unchanged: beads shipped/closed with IDs, gate outcomes, anything blocked, every Agent Mail identity you claimed beads under, AND a structured `friction:` block — one item per stage that hit friction, keys `stage` / `cost` / `lesson` / `class` (`friction: []` if the stage was clean); see the Child friction schema in Phase 1 step 2) — the loop advances to verify → review → close."
 3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch argument) (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
@@ -675,6 +694,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Claim-at-selection** — mark the FULL batch `in_progress` + assignee, mint the claim id, and write `.claim-id` up front, before any implementation — never incrementally per bead
 - **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
+- **Every child summary carries a `friction:` block** — the structured D1 slot inside the ≤400-word summary (keys `stage` / `cost` / `lesson` / `class`; `friction: []` for a clean stage; `class` is a re-adjudicated HINT). Canonical schema: Phase 1 step 2 "Child friction schema (D1)". This is the evidence packet the conductor aggregates per stage into the loop-retro carrier and `ac-land`/`reflect` dispose of — never let a child return prose-only lessons the aggregator can't key on
 - **Keep the run ledger current** — `TaskUpdate` at every phase/wave boundary; it's the anti-early-exit anchor and the compaction resume point. Beads stay the work atom; the ledger tracks only the run
 - **ARIA gating** — `AskUserQuestion` only for simple, bounded forks in interactive sessions; headless = advisory nudge + open decision bead. Everything else is advisory
 - **Persistent nudge** — re-nudge every session until Craig acts. Silence enables bottlenecks
