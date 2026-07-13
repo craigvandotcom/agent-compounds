@@ -195,6 +195,8 @@ Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}) and put you
 
 **Verify the bead I/O contract (`_shared/bead-conventions.md` §Bead I/O contract).** Every implementable bead carries `## Delivers` + `## Consumes`. Check three things: (1) present — a missing `## Consumes` is a finding (absence ≠ `- none`; refine authors the contract for quick-capture beads, so propose the content, don't just flag); (2) concrete — each artifact is a greppable path/table/route/symbol, not "the auth work"; (3) edge-matched — every Consumes line's blocker ID has an actual dep edge (`br dep list <id>`), and that blocker's own `## Delivers` includes the named artifact. A contract failure here is what ac-implement's pre-dispatch premise check would bounce later — catch it now.
 
+**Enforce the present-tree rule (`_shared/bead-conventions.md` §Binding vs advisory).** Trace every claim in the BINDING sections (ACs, Delivers/Consumes, Test Scope, repro steps) to one of exactly two anchors: something that exists in the tree NOW (grep it), or something an upstream blocker's `## Delivers` explicitly promises. A binding claim resting on anything else — the bead's own dependents, components present-but-unwired, unpromised future state — is Critical (this is the bd-fsx / l73.11 class at its root). Where you find speculative how-to sitting in a binding section, the fix is usually demotion: move it under `## Approach (advisory)`, don't delete it. Do NOT flag advisory sections for staleness — they are allowed to rot; only the binding surface is load-bearing.
+
 ## Output
 
 Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-implementability.md

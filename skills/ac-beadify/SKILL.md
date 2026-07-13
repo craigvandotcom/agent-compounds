@@ -231,6 +231,11 @@ Each bead description must be **self-contained** (typed headers per
 - No need to reference original plan
 - "So detailed that we never need the plan again"
 - Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context
+- **Binding vs advisory** (`_shared/bead-conventions.md` §Binding vs advisory): binding
+  sections (ACs, Delivers/Consumes, Test Scope, repro) reference only the present tree
+  (grep before citing) or an upstream blocker's `## Delivers` — never the bead's own
+  dependents or unpromised future state. Implementation how-to goes under
+  `## Approach (advisory)` — write it freely there, it's allowed to go stale
 
 Use `--description` for the core spec and `br comments add` for supplementary context (background, reasoning, edge cases).
 
