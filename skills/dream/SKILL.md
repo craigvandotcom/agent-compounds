@@ -105,6 +105,17 @@ this run's `INDEX.md`. If the command was absent or failed, carry forward a one-
 Look across the gathered lessons + the existing substrate (`qmd search`/`qmd query`) for:
 - **Repetition → promotion:** the same gotcha/pattern in ≥2 lessons or ≥2 apps →
   candidate *rule* (markdown fact `type: rule`) or *recipe* (jef-prompts entry).
+- **Loop-retro observation mining (recurrence×cost → bounded promotion):** scan the keyed
+  loop-retro corpus — `memory/auto/` rows carrying `metadata.kind: loop-retro-observation`
+  (written by `reflect`'s Tier-3 primitive, bd-jv33f.5) — and compute
+  `score = recurrence × cost_weight` per row (`cost_weight`: `material` = 3, `minor` = 1; the
+  constant is tunable, not load-bearing). Rank by score and promote ONLY the **top 3** that ALSO
+  clear a **`recurrence ≥ 2` floor** — a single-session one-off never promotes; it waits for a
+  second occurrence. Hold the rest (their `recurrence` keeps accruing for a later run). Promoted
+  rows become candidates that flow through the SAME Phase 4 judge → Phase 5 emit path as every
+  other candidate (`file-beads.py` files them as `human-gate,dream-proposal` beads, unchanged) —
+  this is a ranking sub-step, NOT a second mining mechanism. Both CYCLE and CYCLE-DAILY run
+  Phase 2, so both get it.
 - **Cluster → skill-improvement:** several lessons orbiting one skill's friction →
   candidate edit to that skill.
 - **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
