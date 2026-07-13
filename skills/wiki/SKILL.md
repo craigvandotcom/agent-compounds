@@ -154,6 +154,7 @@ draft's claims carry lower trust than a canonical one until reviewed. Never self
 | `workflows/seed-page.md` | Drafting a brand-new synthesis page from cited sources |
 | `workflows/garden.md` | Periodic dedupe/merge/prune + contradiction-page creation + staleness sweep |
 | `workflows/distill-weekly.md` | Weekly review's distillation cadence — STRATEGY.md decisions log + NOW.md refresh |
+| `workflows/hallucination-audit.md` | Monthly cadence — sample 5 random wiki claims, trace to cited sources, untraceable → proposal beads |
 
 ## Reference Documentation
 

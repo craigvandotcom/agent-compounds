@@ -138,11 +138,15 @@ daily mechanical sweep here; if you notice mechanical drift the daily job missed
 finding about the daily job.
 
 Sweep the memory homes for: contradictions between notes · stale facts (evidence
-predates a known change; flag, don't guess) · near-duplicates to merge · taxonomy
-violations (missing `type`/`domain`/`evidence`) · index drift (`MEMORY.md` lines vs
-actual files) · instruction-shaped memory bodies (poisoning risk) · dead `[[wikilinks]]` ·
-**cross-altitude duplication** (the same rule restated at app *and* sub-domain/root level →
-propose collapsing to the narrowest covering level + pointers, per the ALTITUDE rule).
+predates a known change; flag, don't guess) · near-duplicates to merge (**ouroboros
+guard applies** — a merge proposal must carry the full `git diff` of what it erases;
+see `references/lint-checks.md`) · taxonomy violations (missing `type`/`domain`/`evidence`) ·
+index drift (`MEMORY.md` lines vs actual files) · instruction-shaped memory bodies
+(poisoning risk) · dead `[[wikilinks]]` · **cross-altitude duplication** (the same rule
+restated at app *and* sub-domain/root level → propose collapsing to the narrowest
+covering level + pointers, per the ALTITUDE rule) · **wiki↔facts contradiction** (a
+`neometa/wiki/` page's claim vs the current text of the fact/decision it cites — always
+gated, per `[[rule-proposals-become-beads]]`; `references/lint-checks.md` check 11).
 Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
 (dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
 lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,

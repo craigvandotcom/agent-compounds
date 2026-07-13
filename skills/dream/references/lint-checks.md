@@ -1,7 +1,10 @@
 # Substrate lint — the hygiene checklist (dream Phase 3)
 
 Sweep targets: `infrastructure/memory/auto/`, `neometa/memory/auto/`, each app's
-`memory/auto/`, `neometa/alignment/decisions/`, `infrastructure/eval/golden/`.
+`memory/auto/`, `neometa/alignment/decisions/`, `infrastructure/eval/golden/`,
+`neometa/wiki/` (check 11 below is wiki-specific; the others treat wiki pages as
+read-only citation targets, not sweep subjects — the wiki skill's own `garden.md`
+owns wiki-internal hygiene).
 Every finding → candidate proposal (`category: lint-fix`), judged like everything else.
 Karpathy's lint framing: this is the step most teams skip, and the one that prevents
 compounding errors. Staleness is silent.
@@ -30,7 +33,8 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
    subject (search the substrate + recent commits for supersession signals). Propose: update,
    or add `superseded-by: [[new-note]]`. Do NOT silently delete; decay, don't erase.
 3. **Near-duplicates** `[T2 weekly]` — two notes ≥70% overlapping in subject. Propose: merge
-   into the older slug (stable wikilinks), redirect line in the newer. (Lossy — always gated.)
+   into the older slug (stable wikilinks), redirect line in the newer. (Lossy — always gated;
+   **the ouroboros guard below applies to every merge/dedupe proposal this check emits.**)
 4. **Taxonomy violations** `[T2 weekly]` — missing `type`/`domain`/`evidence` frontmatter; a
    "rule" phrased as a vague aspiration; an item homed against the context-engineering routing
    table. Propose: the corrected frontmatter/home. (Filling values needs judgment.)
@@ -61,7 +65,21 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     pending" note nothing ever re-checked). Grep seed: `grep -rin "can't be\|cannot be\|not
     possible\|no way to" <memory homes>`, then check each hit for `evidence:` and for
     downstream skip/PASS language nearby.
-11. **Decay / promotion by reference** `[T2 weekly, script-driven, data-gated]` — a fact
+11. **Wiki↔facts contradiction** `[T2 weekly]` — for every `neometa/wiki/*.md` page (draft
+    or canonical), walk its `[[wikilink]]` citations into `memory/auto/` and
+    `alignment/decisions/` and diff the page's claim against the cited note's *current*
+    text. A claim that no longer matches its source — the fact was updated/superseded since
+    the page cited it, or the page overstated/misstated it at write time — is a finding.
+    This is THE CITATION RULE's outside-in enforcement (the wiki skill's own write-time
+    discipline is self-attested; this check is the independent, read-time verification
+    that citations still hold). Distinct from check 1 (note-vs-note contradiction): this
+    check's comparison is specifically wiki-CLAIM vs cited-fact-CONTENT. Propose: a fix to
+    the wiki page's claim (most common — facts are append-only ground truth, pages are the
+    derived layer) or, rarely, a flag that the *fact itself* looks wrong if the wiki page's
+    citation trail reveals a fact that was never actually true. **Always gated, never an
+    auto-edit to either side** — per `[[rule-proposals-become-beads]]`, every finding
+    becomes a proposal, which becomes a decision bead in its target repo.
+12. **Decay / promotion by reference** `[T2 weekly, script-driven, data-gated]` — a fact
     that has earned **neither an injection nor a read** across the trailing window is an
     archive candidate; a fact referenced often enough is a promotion candidate. This check
     is **not a manual sweep** — it is the deterministic script
@@ -79,6 +97,34 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     `Read`-tool access and MEMORY.md-index browsing are uncounted. Emit-only: the script
     never moves or deletes anything.
 
+## Ouroboros guard (merge/dedupe proposals)
+
+Named for the anti-pattern it defends against — "ouroboros compression": repeated
+dedupe/summarize cycles silently eroding nuance (`../wiki/references/research-basis.md`'s
+anti-patterns table; the wiki skill's countermeasure on its own layer is the
+regenerability mindset + Craig's canonical-page review gate — this is dream's mirror
+of that discipline, applied to the *facts* layer instead of the *synthesis* layer).
+
+**Canonical facts (`memory/auto/`, `alignment/decisions/`) are append-only.** Only
+synthesis/wiki pages (`neometa/wiki/`) are ever rewritten in place — that's what makes
+them regenerable cache rather than ground truth (see the wiki skill's authority chain).
+A dream proposal that merges or dedupes two memory notes is therefore never a silent
+in-place rewrite of the older slug: it is a *reviewable replacement*, and review needs
+to see exactly what disappears.
+
+**The rule:** any proposal in `category: lint-fix` (near-duplicate merge, check 3) or
+`category: re-home` (consolidation) that would erase, overwrite, or fold content out of
+an existing memory note MUST include, in its `## What` section, the **full literal
+`git diff`** of every note the merge would erase or truncate — not a prose description
+of the diff, the actual diff output (`git diff -- <old-note-path>` against what the
+merge proposes to leave behind). Review sees precisely what's lost, not a summary of
+what's kept. A merge proposal without this diff is incomplete — the judge (Phase 4)
+should score it 0 on **Risk-bounded** (see `judge-rubric.md`) until the diff is added.
+
+This is orthogonal to, and does not relax, check 2's staleness contract (`superseded-
+by:` pointers, never silent deletion) — a merge is a *bigger* erasure than a staleness
+update, so it earns the stricter evidence bar.
+
 ## Mechanics
 
 ```bash
@@ -89,7 +135,7 @@ diff <(grep -oE '\(([a-z0-9-]+\.md)\)' <home>/MEMORY.md | tr -d '()' | sort) \
      <(ls <home> | grep -v -E 'MEMORY|README' | sort)
 # dead wikilinks
 grep -ohrE '\[\[[a-z0-9-]+\]\]' <homes>... | sort -u   # then check each slug exists
-# decay / promotion by reference (check 11 — self-arming, gated, emit-only)
+# decay / promotion by reference (check 12 — self-arming, gated, emit-only)
 python3 ~/Repos/infrastructure/dream-cycle/decay_lint.py   # or --dry-run to preview
 ```
 
