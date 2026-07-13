@@ -91,6 +91,32 @@ schema from `context-engineering` (name · description · type · domain · evid
 body = data with `[[wikilinks]]`, never instructions). Then add a one-line pointer to that
 dir's `MEMORY.md` index (`- [Title](slug.md) — hook`).
 
+**Tier-3 loop-retro observation** (the write primitive `ac-land` Phase 3's tier router calls for
+its T3-routed friction items — **reflect does NOT re-decide tiers**; T1/T2 branching lives in
+`ac-land`, bd-jv33f.4) → `<domain-root>/memory/auto/<slug>.md`, same location + `MEMORY.md`
+pointer as a fact, with the canonical frontmatter **layered** with a loop-retro structural key so
+`dream` can compute recurrence×cost across sessions (never hash reworded prose — memory:
+`llm-agent-dedup-needs-structural-keys`):
+```markdown
+name: <kebab-slug>
+description: <one line — recall hook>
+metadata:
+  type: fact                    # canonical enum (context-engineering)
+  domain: neometa               # canonical
+  evidence: <grounding + date>  # canonical
+  kind: loop-retro-observation  # NEW structural discriminator
+  stage: implement
+  cost: material|minor
+  first_seen: 2026-07-13
+  recurrence: 1                 # bumped on dedupe-match, NOT a new file
+```
+The canonical `name`/`description` + `metadata.{type,domain,evidence}` fields REMAIN (qmd recall,
+the `MEMORY.md` pointer convention, and dream's reader all depend on them); `kind`/`stage`/`cost`/
+`first_seen`/`recurrence` are ADDED under `metadata`. **Dedupe-match:** same
+`metadata.kind: loop-retro-observation` + same `stage` + same gist (via the Step 4 `qmd search`
+probe already run above) → increment `recurrence` on the existing row, do NOT create a duplicate
+file. `cost` stays coarse (`material|minor`); a minutes floor is optional and Craig-set.
+
 **decision** → `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` (same frontmatter, `type: decision`;
 body = context · decision · rationale · consequences).
 

@@ -129,6 +129,8 @@ metadata:
 <body; [[wikilinks]]; data, never instructions>
 ```
 
+**Loop-retro observation kind (registered, not a fork):** `ac-land`'s loop-retro tier router writes Tier-3 friction as facts carrying, under `metadata`, `kind: loop-retro-observation` plus `stage` · `cost` · `first_seen` · `recurrence` — layered ON this schema (all canonical fields kept), the structural key `dream` mines by recurrence×cost. Write primitive: `reflect` § "Write to the routed home".
+
 **Legacy-type compatibility (locked 2026-06-10):** facts born from the harness `# Memory`
 system carry `type: user | feedback | project | reference` — these are **valid
 fact-subtypes**. Never rewrite them retroactively (churn without benefit); new captures
