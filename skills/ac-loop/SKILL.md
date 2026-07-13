@@ -55,7 +55,9 @@ RUN START (once, before anything else):
   (2-min chunked wait → default 2); headless: no prompt, width = 2.
   Sets PARALLEL_WIDTH for the run. See Phase 0 § Width Prompt + Efficiency § Parallelism.
 
-EACH ITERATION:
+EACH ITERATION:  (phase ORDER is preserved; within each numbered step, up to
+                 PARALLEL_WIDTH HOMOGENEOUS children may run — same-kind only,
+                 never a refine child beside an implement child — see Efficiency § Parallelism)
   0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
       ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
@@ -221,6 +223,17 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
+> **Plan-frontmatter `depends-on:` convention (plan-level admission gate).** A loop-ready
+> plan MAY declare a machine-readable `depends-on:` frontmatter field naming a blocking
+> **epic id** OR **plan path** — e.g. `depends-on: bd-abc12` or
+> `depends-on: _plans/2026-07-01-foo.md`. It means "do not admit this plan to the beadify
+> phase until the named epic/plan is closed/merged." The conductor honours it in
+> Phase 2 § Pick the next plan (the admission gate below). Unrelated plans (no declared
+> `depends-on`) may parallelize within the beadify phase. Bead-level `depends-on` edges +
+> `bv --robot-plan` tracks continue to govern within-*implement* partitioning. Prior art:
+> memory `plan-internal-gates-outrank-blanket-loop-directives` — this structuralizes what
+> plan prose already did.
+
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) — **every priority, P0 through P4** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked bugs remain do you touch the non-bug order below.
@@ -367,6 +380,14 @@ br ready --limit 0 --json | jq '[.[] | select(
 
 Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its parent plan file has `status: loop-ready`. If no loop-ready plan waves exist, skip to Phase ARIA.
 
+> **Plan-admission gate (`depends-on:`).** Before admitting a plan to the **beadify** phase,
+> read its `depends-on:` frontmatter (convention: Phase 0 § loop-ready gate). If it names an
+> epic id or plan path that is NOT closed/merged (`br show <id>` status ≠ closed, or the named
+> plan not yet merged), the plan is NOT admitted this pass — it stays queued; move to the next
+> loop-ready plan. Unrelated plans (no declared `depends-on`) parallelize freely within the
+> beadify phase. This is the plan-level counterpart to bead-level `depends-on` edges (which
+> govern within-implement partitioning via `bv --robot-plan`).
+
 ### Execute the wave
 
 1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join.
@@ -500,6 +521,10 @@ fighting the machine. Hold these:
 - **The CI runner IS this Mac** (self-hosted). Do NOT run local `test:all`/builds while a
   CI job is live on the runner — you starve your own runner and triple every duration
   (a ~21-min suite became ~50 min at load-68). See `bca-ci-and-ios-build-ops`.
+- **Bulk `br` write-loops run FOREGROUND** (batch claim/label/dep sweeps of >~10–20
+  sequential `br` writes) — a backgrounded bulk-`br` loop can stall silently; kill and
+  retry foreground before assuming `br` is broken (`_shared/bead-conventions.md` § Bulk
+  `br` write-loops).
 
 **Parallelism — the `PARALLEL_WIDTH` dial (fan-out under ONE conductor)**
 - The conductor may hold up to **`PARALLEL_WIDTH`** phase sub-sessions in flight —
@@ -507,27 +532,44 @@ fighting the machine. Hold these:
   More width means more sub-sessions under THIS one orchestrator, never additional
   loops/conductors (single-conductor fan-out plan, body-compass-app
   `_plans/2026-07-12-2354-single-conductor-fanout-dial.md`).
-- **What may parallelize:** implementers on **tree-disjoint** independent beads
-  (dep-graph antichains — `bv --robot-plan` computes the parallel tracks), plus
-  genuinely read-only sessions (board triage/discovery reads) freely alongside.
-  **Tree-disjointness check before dispatch:** compare the beads' expected file sets
-  from their bead specs (the lists each child will reserve in ac-implement Phase 1a —
-  reservations themselves don't exist until the child starts); any overlap →
-  serialize those beads behind each other. When a dependency chain exists (A blocks
-  B), stay sequential.
-- **How width is enacted (Phase 1/2 step 2):** at width >1, partition the claimed
-  batch into up to WIDTH tree-disjoint sub-batches along the `bv --robot-plan`
-  tracks. Each child gets its OWN delegation: its bead subset, its own
+- **Machine headroom:** up to 3 opus sub-sessions + a live CI job all share this ONE
+  Mac (the runner is self-hosted); the per-run width prompt is the throttle — keep the
+  ramp-evidence discipline (below) unchanged and don't ramp the default past green windows.
+- **What may parallelize — HOMOGENEOUS within-phase fan-out.** Widening a phase runs up
+  to `PARALLEL_WIDTH` children **of the SAME kind of work** — you never mix an implement
+  child with a refine or beadify child. The three parallelizable phase kinds:
+  **(a) implement** — implementers on **tree-disjoint** independent beads (dep-graph
+  antichains — `bv --robot-plan` computes the parallel tracks); **(b) refine** —
+  `ac-bead-refine` children on **disjoint unrefined-bead subsets** (no two children
+  refine the same bead); **(c) beadify** — `ac-beadify` children on **independent plans**
+  (no shared `depends-on`). **The invariant:** all children in flight at one moment are
+  the same kind — uniform supervision, clean failure attribution. Genuinely read-only
+  sessions (board triage/discovery reads) still run freely alongside any phase.
+  **Tree-disjointness check before dispatch (implement):** compare the beads' expected
+  file sets from their bead specs (the lists each child will reserve in ac-implement
+  Phase 1a — reservations themselves don't exist until the child starts); any overlap →
+  serialize those beads behind each other. When a dependency chain exists (A blocks B),
+  stay sequential.
+- **How width is enacted (per-phase fan-out):** at width >1, partition the phase's work
+  into up to WIDTH children along that phase's **disjointness unit** — implement →
+  `bv --robot-plan` tracks (file-set disjoint); refine → disjoint unrefined-bead subsets
+  (no two children refine the same bead); beadify → independent plans (no shared
+  `depends-on`). Each child gets its OWN delegation: its work subset, its own
   `TARGET_BEADS`, and its own claim id (`<first-bead-of-subset>-<YYYYMMDD>`) → own
   `.claim-id` + artifacts dir + `progress.md` — children NEVER share a progress file
-  (shared counting breaks TARGET_BEADS recovery after compaction). The batch still
-  runs verify → review → close **once**, after ALL children return; the
-  BEADS-CLOSED-GATE already takes the union of every child identity.
-- **What NEVER parallelizes:** batch-close ceremonies (serial by construction); two
-  writers on the same file; the **bug-lane drain** (its contract is each fix
-  independently green BEFORE the next starts — sequencing IS the safety property);
-  cross-batch overlap (reviewing batch A while batch B implements) — OFF at this
-  ramp stage, one batch in flight at a time, width applies WITHIN the batch;
+  (shared counting breaks TARGET_BEADS recovery after compaction). The ceremony
+  (verify → review → close) still runs **once** per batch, after ALL children return;
+  the BEADS-CLOSED-GATE already takes the union of every child identity.
+- **What NEVER parallelizes:** **heterogeneous phase mixing / cross-phase pipelining is
+  OFF** — prep (refine/beadify) never runs concurrently with implement, and phases never
+  pipeline (no beadifying plan B while wave A implements). *Accepted trade-off (chosen
+  knowingly):* run wall-clock = sum of phases, and batch-of-one phases idle the width —
+  revisit heterogeneous lanes only later, on evidence that prep is the bottleneck. Also
+  serial: batch-close ceremonies (serial by construction); two writers on the same file;
+  the **bug-lane drain** (Rule 0 stays literal — nothing else even preps while bugs drain;
+  its contract is each fix independently green BEFORE the next starts, so sequencing IS the
+  safety property); cross-batch overlap (reviewing batch A while batch B implements) — OFF
+  at this ramp stage, one batch in flight at a time, width applies WITHIN the batch;
   prove/publish (outside the loop, unchanged).
 - **Mandatory at width >1** (best-practice at width 1): ledger touch at every
   dispatch/return; ≤200–400-word child summaries; a watchdog/poke on every child

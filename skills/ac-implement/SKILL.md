@@ -532,6 +532,15 @@ br close <id> --reason "Implemented and tested. Delivered: <artifact paths, comm
 
 (Legacy beads with no `## Delivers` header: close with the plain reason as before.)
 
+**On close, check for memory facts that cite this bead.** A freeze/pin or other
+lifecycle-scoped fact often names the exact bead whose closure retires it (e.g. an
+`app-version-pinned-*` fact tied to an App Store-submission bead). When you close such a
+bead, grep the memory substrate for facts referencing its id and retire/update any that
+are now stale — otherwise the fact stays silently wrong until some later session trusts it:
+`grep -rl "<bead-id>" memory/auto/` (a manual reminder is enough; even a one-line check
+here would have caught a 7-day-stale version pin within a day). This is the retirement
+trigger the freeze-check in `ac-merge` (§ Version Bump) relies on upstream.
+
 Release the file reservation using the **same paths reserved in Phase 1a** (the bead spec file list, not just the files committed — releasing over-reserved paths is harmless; leaving them locked starves parallel sessions):
 
 ```

@@ -271,6 +271,19 @@ Read project config files and `AGENTS.md` to build context for reviewers. Extrac
 
 ### Assemble the Panel
 
+**Docs-only diff → docs-lens set (not the code four).** First check whether the diff
+touches **only non-code paths** — every changed file under `_plans/`, `docs/`,
+`references/`, or a bare `*.md`, with **zero** hits under `app|lib|scripts|supabase|features`.
+If so, the code-shaped four (correctness/security/performance/architecture) do not apply;
+spawn the **docs-lens set** from **`references/review-dimensions-docs.md`** instead —
+**findings-integrity** (every claim cited), **consistency** (severity/priority/register
+alignment, cross-doc contradictions), **discipline** (scope adherence — no fixes snuck into
+a study/docs mission). Those lenses review the docs against **the org's own
+documentation-standards skills** (`context-engineering`, `skill-builder`, the wiki/memory
+doctrine) as their rubric source — declared standards, not improvised taste. Everything else
+below (panel manifest, parallel spawn, consensus) works identically with the docs lenses
+substituted for the code four. If the diff has ANY code, use the standard panel:
+
 The panel is the six dimensions in **`references/review-dimensions.md`**. The **core four**
 (security, performance, architecture, correctness) ALWAYS spawn. The two diff-conditional
 lenses use **negative gating** — spawn by default, skip only when provably irrelevant:
@@ -708,6 +721,14 @@ rm -rf "$ARTIFACTS_DIR"
 
 **"Just report, don't fix"**
 -> Skip Phase 4 (auto-fix), present all findings as report only
+
+**"Docs-only wave"** (diff touches only non-code paths — `_plans/`, `docs/`,
+`references/`, `*.md`; no `app|lib|scripts|supabase|features` hits)
+-> Spawn the **docs-lens set** (findings-integrity / consistency / discipline) from
+`references/review-dimensions-docs.md` instead of the code four — reviewed against the
+org's documentation-standards skills (`context-engineering`, `skill-builder`, wiki/memory
+doctrine). Auto-detected in Assemble the Panel; named here so it's discoverable, not
+reinvented per docs wave.
 
 **"Review these files only: [list]"**
 -> Scope diff to specified files instead of full branch diff

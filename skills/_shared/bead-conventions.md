@@ -236,6 +236,22 @@ strategy, money, personal, or credential content**. A decision whose memo is
 sensitive keeps the memo in a private home (`_plans/`, root repo) and the
 bead carries only a pointer + neutral title.
 
+## Bulk `br` write-loops — run FOREGROUND, not backgrounded
+
+A bulk sequential `br` write-loop (dep fan-outs, batch label stamps, batch status
+flips — roughly **more than ~10–20 sequential `br` write calls**) should run as a
+**plain foreground Bash call**, not `run_in_background: true`. In one session a ~129-call
+`br dep add` fan-out launched in the background stalled indefinitely — zero progress, no
+errors; killed and re-run identically in the foreground it completed immediately with no
+special handling (suspected beads_rust SQLite write-lock contention on the background-shell
+path, not yet root-caused).
+
+**If a backgrounded bulk-`br` loop shows no output/progress, kill it and retry in the
+foreground BEFORE assuming `br` or the dataset is broken.** This is a documented caution,
+not a hard rule — it rests on one data point; hold off on any stronger enforcement until
+the SQLite-lock hypothesis has a repro. (Single `br` calls and small loops are unaffected —
+this is specifically about large sequential write sweeps.)
+
 ## Anti-inflation rules (beads are scheduled work, not a notebook)
 
 1. **File only what survived verification** — a reviewer hunch that didn't

@@ -219,6 +219,21 @@ version-freeze such as an App Store submission in review — see the app-version
 rule), do NOT bump; carry the current version forward unchanged. There is no other
 "skip" path — every non-frozen merge bumps patch.
 
+**Verify the freeze fact before honoring it — never trust its prose alone.** A
+freeze/pin memory fact (e.g. `app-version-pinned-*`) goes stale silently: it can outlive
+the situation that created it and wrongly suppress a bump for days. Before you skip the
+bump on the strength of such a fact, check BOTH ground truths, in this order:
+1. **The cited gating bead's LIVE status** — the fact MUST name the bead whose closure
+   retires it; run `br show <id>` and confirm it is still open. A closed gating bead means
+   the freeze is over — the fact is stale; do NOT honor it (and flag it for retirement —
+   see the bead-close checklist in `ac-implement`).
+2. **`package.json` ground truth** — read the current version. If it already moved past
+   the pinned version, the pin is contradicted by reality; do NOT honor the fact.
+Only when the gating bead is still open AND `package.json` still sits at the pinned
+version do you carry the version forward. (Incident: a 1.2.0 App Store pin outlived its
+bead's close by 7 days and would have wrongly skipped a bump — caught only by this
+double-check. Memory: `app-version-pinned-*`.)
+
 **Interactive human-run merge only:** if a human is running this skill directly
 (not via `ac-loop` / `ac-hygiene` delegation) and wants to override the default,
 offer the choice explicitly — otherwise skip straight to applying `patch`. The exact
