@@ -124,6 +124,51 @@ Plus, for every implementable bead (finding-sourced ones especially):
   plus a durable pointer (PR URL, commit sha) — never a run-temp artifact path.
 - **Falsifiable ACs** — a criterion that both branches of a choice satisfy
   gates nothing; pick the branch or split the criterion.
+- **`## Delivers` + `## Consumes`** — the bead I/O contract (next section).
+
+## Bead I/O contract (`## Delivers` / `## Consumes`)
+
+Dep edges carry ordering ("B before A") but not payload ("A needs X from B") —
+the handoff otherwise lives in agents' heads and gets re-derived per session.
+These two headers write it down, making three things mechanical: pre-dispatch
+premise checks (ac-implement), close-time output verification (ac-implement),
+and split-coverage checks (ac-bead-refine). Skill-enforced, like Test Scope —
+not a `br lint` template section. (Source: ATG, arXiv 2607.01942 — plan
+`_plans/2026-07-12-bead-io-contract.md`.)
+
+```markdown
+## Delivers
+- file: features/settings/api.ts — PUT /api/settings handler
+- migration: 20260712_user_settings.sql — bca.user_settings table
+
+## Consumes
+- ac-abc12 → bca.user_settings table
+```
+
+`<kind>` ∈ `file | endpoint | migration | schema | doc | decision | config`.
+Consumes lines are `<blocker-bead-id> → <artifact it delivers>`, or the single
+literal `- none`.
+
+Rules:
+
+1. **Every implementable bead** (`task`/`feature`/`bug`) carries both headers.
+   `epic` carries `## Delivers` only — the promise its children must cover.
+   `decision`/`investigation`: `## Delivers` is one line — the recorded
+   decision / the answer (their closure semantics, made explicit).
+2. **Every Consumes line must correspond to an existing dep edge.** The dep
+   graph stays the single authority for ordering; Consumes names the payload
+   on an edge, never substitutes for `br dep add`. A Consumes line with no
+   matching edge fails refine; an edge with no Consumes line is fine — some
+   deps are pure sequencing.
+3. **Artifacts are concrete and greppable** — a path, table, route, symbol.
+   "The auth work" is not an artifact. Same discipline as Test Scope anchors:
+   grep first, never name what you haven't seen.
+4. **`- none` is explicit, never omitted.** A missing `## Consumes` means "not
+   yet contracted" — refine treats the bead as unready.
+
+Emit at creation (ac-beadify holds the cross-bead data flow; batch workflows
+per their conventions); quick-capture (`ac-bead-capture`) is exempt — refine
+authors the contract there, as it does for whatever capture omits.
 
 ## Decision beads (`-t decision` + `human-gate` + assignee)
 
