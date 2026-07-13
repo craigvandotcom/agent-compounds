@@ -350,15 +350,21 @@ render_hooks_grok() {
 
 # render_context_grok — Grok's context stack as a generated machine-global rules
 # file (Grok loads ~/.grok/AGENTS.md in every session). Projection of the same
-# canonical payloads the other harnesses receive via hook stdout injection.
+# canonical payloads the other harnesses receive via hook stdout injection, plus
+# the memory-digest static floor (minimal pointer index; detail is pulled via the
+# qmd MCP server). Digest failure degrades to a warning line, never breaks sync.
 render_context_grok() {
   [ "$EN_GROK" = "true" ] || return 0
   [ -d "$GROK_HOME" ] || return 0
   echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
-  local ss dr content
+  local ss dr digest content
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
   dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
-  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/delegation-reminder.manual-recall.md) -->
+  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
+    echo "  WARN: memory digest generation failed — rendering rules without it"
+    digest="*(digest generation failed on last sync — search qmd directly)*"
+  fi
+  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
 
 # Machine-global rules (Repos fleet)
 
@@ -370,7 +376,17 @@ $ss
 
 ---
 
-$dr"
+$dr
+
+---
+
+## Memory digest (pointer index — refreshed daily by infra-sync)
+
+One line per high-value memory in the substrate. This is the FLOOR, not the
+substrate: pull full detail with the qmd MCP tools (or \`qmd search\`/\`qmd query\`)
+before acting on anything listed here.
+
+$digest"
   write_generated "$GROK_HOME/AGENTS.md" "$content"
 }
 
