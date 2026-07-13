@@ -11,7 +11,9 @@ compounding errors. Staleness is silent.
 Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
 
 - **Tier-0 (mechanical, lossless, code-re-derivable) → runs DAILY**, emitted by the
-  Context Mining job (`_agent-pi/workflows/context.md` step 7) and auto-applied by the 02:00
+  Context Mining job (`.claude/skills/context-engineering/workflows/context-mining-daily.md`
+  step 7 — relocated from the archived `_agent-pi/` home in memory-wiki-upgrade Phase 2c)
+  and auto-applied by the 02:00
   queue via `classify.py --apply-tier0`. Drops drift latency from 7 days to 1.
 - **Tier-2 (semantic or lossy — needs reading + judgment) → stays WEEKLY** here in Phase 3,
   always emitted as a `gated` proposal. Merges and contradiction-resolution **delete

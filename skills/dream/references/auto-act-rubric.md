@@ -80,7 +80,8 @@ writes unreviewed content. The asymmetry is intentional.
 
 ## How the tiers are consumed (the daily queue job)
 
-`_agent-pi/workflows/dream-daily.md` (02:00) is the apply engine:
+`.claude/skills/dream/workflows/dream-daily.md` (02:00; relocated from the archived
+`_agent-pi/` home in memory-wiki-upgrade Phase 2c) is the apply engine:
 
 1. **Classify** every pending proposal (`classify.py --dir <today>`). The reason field names
    the shape: `Tier-1 · …` or `Tier-0 · …`.

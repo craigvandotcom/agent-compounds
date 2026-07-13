@@ -25,7 +25,9 @@ DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a
 | **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
 
 **Auto-act tier (the gate-skip).** Not every proposal needs Craig's tap. The daily queue job
-(`_agent-pi/workflows/dream-daily.md`) classifies each proposal **deterministically**
+(`.claude/skills/dream/workflows/dream-daily.md` — relocated from the archived
+`_agent-pi/workflows/dream-daily.md` in memory-wiki-upgrade Phase 2c) classifies each
+proposal **deterministically**
 (`infrastructure/dream-cycle/classify.py`) into `auto` or `gated` (everything judgment-laden).
 `auto` has two shapes: **Tier-1** (a pure new-memory-note ADD to root, judge ≥9 — append-only)
 and **Tier-0** (a `lint-fix` the script can *re-derive and apply itself* — e.g. `index-prune`;
