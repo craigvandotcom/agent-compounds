@@ -398,7 +398,16 @@ If the bead requires absent infrastructure:
 3. Get the next candidate from `br ready --json`
 4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it. (incident: env-blocked-claims — `references/incidents.md`)
 
-**Once a refined, conflict-free, env-supported bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
+**Guard: premise-check `## Consumes` (I/O contract, `_shared/bead-conventions.md` §Bead I/O contract).** For each Consumes line (`<blocker-id> → <artifact>`; a literal `- none` passes trivially), verify the premise holds on the CURRENT tree before spending an engineer session on it: the named artifact exists (file path `ls`-checks, symbol/route/table greps, migration file present) and the blocker bead is closed (`br show <blocker-id> --json`). Also check the blocker's close comment — it records delivered artifact paths (Phase 1d), which is the fastest verification. If any consumed artifact is missing:
+
+1. Do NOT claim it; do NOT dispatch an engineer
+2. `br comments add <id> "Premise failure: consumes <artifact> from <blocker-id> — not found on main (checked: <what you checked>). World moved since refinement."`
+3. De-stamp: `br label remove <id> refined && br label add <id> unrefined` — stale premises are refine's to reconcile; only `/ac-bead-refine` re-earns the stamp (stripping `refined` on hard evidence is allowed; adding it never is)
+4. Release any reservation taken for it, get the next candidate from `br ready --json`, repeat all guards
+
+A bead with no `## Consumes` header at all predates the contract (legacy) — log it and proceed; do not bounce legacy beads for missing paperwork.
+
+**Once a refined, conflict-free, env-supported, premise-verified bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
 Then read bead details:
 
@@ -515,11 +524,13 @@ Push after every bead commit prevents stranded work if the session crashes befor
 
 **Verify commit landed before closing.** (`git log --oneline -1` shows your commit hash, confirming it succeeded.) Only then:
 
-Close the bead:
+**Delivers gate (I/O contract, `_shared/bead-conventions.md` §Bead I/O contract):** before closing, verify each `## Delivers` item exists in the committed result — same grep/ls-level check as the Phase 1a premise guard, against what you just committed. A promised artifact that doesn't exist means the bead is NOT done: back to Phase 1c review, don't close around it. Then record the delivered artifacts in the close reason — downstream beads' premise checks read this:
 
 ```bash
-br close <id> --reason "Implemented and tested"
+br close <id> --reason "Implemented and tested. Delivered: <artifact paths, comma-separated>"
 ```
+
+(Legacy beads with no `## Delivers` header: close with the plain reason as before.)
 
 Release the file reservation using the **same paths reserved in Phase 1a** (the bead spec file list, not just the files committed — releasing over-reserved paths is harmless; leaving them locked starves parallel sessions):
 
