@@ -295,11 +295,11 @@ render_hooks_root() {
       echo "  NOTE: codex hooks.json changed — re-trust once via /hooks in the Codex TUI"
   fi
   if [ "$EN_DROID" = "true" ]; then
-    echo "  -- droid hooks (tools/droid/hooks.json -> ~/.factory/hooks.json)"
+    echo "  -- droid hooks (infrastructure/harness-config/droid/hooks.json -> ~/.factory/hooks.json)"
     obj="$(build_hooks_obj droid org)"
     content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
-    write_file_if_changed "$REPOS_ROOT/tools/droid/hooks.json" "$content"
-    ensure_home_link "$DROID_HOME/hooks.json" "$REPOS_ROOT/tools/droid/hooks.json"
+    write_file_if_changed "$REPOS_ROOT/infrastructure/harness-config/droid/hooks.json" "$content"
+    ensure_home_link "$DROID_HOME/hooks.json" "$REPOS_ROOT/infrastructure/harness-config/droid/hooks.json"
   fi
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi hooks skipped by design (TS-extension surface only)"
@@ -412,10 +412,10 @@ render_mcp_root() {
     write_generated "$REPOS_ROOT/.codex/config.toml" "$content"
   fi
   if [ "$EN_DROID" = "true" ]; then
-    echo "  -- droid MCP (tools/droid/mcp.json -> ~/.factory/mcp.json)"
+    echo "  -- droid MCP (infrastructure/harness-config/droid/mcp.json -> ~/.factory/mcp.json)"
     content="$(jq '{mcpServers: (.mcpServers | with_entries(.value |= (if .command then ({type:"stdio"} + .) else . end)))}' "$src")"
-    write_file_if_changed "$REPOS_ROOT/tools/droid/mcp.json" "$content"
-    ensure_home_link "$DROID_HOME/mcp.json" "$REPOS_ROOT/tools/droid/mcp.json"
+    write_file_if_changed "$REPOS_ROOT/infrastructure/harness-config/droid/mcp.json" "$content"
+    ensure_home_link "$DROID_HOME/mcp.json" "$REPOS_ROOT/infrastructure/harness-config/droid/mcp.json"
   fi
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi MCP skipped by design (no MCP support in harness)"
