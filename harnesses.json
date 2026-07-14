@@ -17,8 +17,8 @@
       "skills_mirror_dir": ".factory/skills",
       "agents_gen_dir": ".factory/droids",
       "home": "~/.factory",
-      "tracked_farm_skills": "tools/droid/skills",
-      "tracked_farm_droids": "tools/droid/droids",
+      "tracked_farm_skills": "infrastructure/harness-config/droid/skills",
+      "tracked_farm_droids": "infrastructure/harness-config/droid/droids",
       "_doc": "No FACTORY_HOME env override exists — ~/.factory is wired via symlinks into the tracked tools/droid/ dir (setup.sh pattern). App-level .factory/ dirs are projected directly."
     },
     "pi": {
