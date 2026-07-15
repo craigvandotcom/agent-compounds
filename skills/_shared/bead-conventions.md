@@ -252,6 +252,21 @@ not a hard rule — it rests on one data point; hold off on any stronger enforce
 the SQLite-lock hypothesis has a repro. (Single `br` calls and small loops are unaffected —
 this is specifically about large sequential write sweeps.)
 
+### br CLI gotchas (shared tool — learned once, applies everywhere)
+
+- **JSON shapes differ by command.** `br list --json` returns a **paginated object**
+  (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But
+  `br ready --json` and `br show <id> --json` return **bare arrays** — index `.[0]`, don't
+  reach for `.issues`. Parsers must handle both shapes.
+- **Bulk writes must run in the foreground.** See "Bulk `br` write-loops" above — a loop of
+  `br dep add` (or any bulk br write) stalls under `run_in_background`.
+- **Never chain `br close` to a commit in one call.** `git commit && br close <id>` records the
+  **wrong SHA** when the commit fails (untracked file, bad pathspec) — the close fires against
+  whatever HEAD is. Commit, verify the SHA, *then* close as a separate step.
+- **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides closed
+  children and epics don't auto-close on last child close — check closed children before
+  triaging an epic as abandoned/empty.
+
 ## Anti-inflation rules (beads are scheduled work, not a notebook)
 
 1. **File only what survived verification** — a reviewer hunch that didn't

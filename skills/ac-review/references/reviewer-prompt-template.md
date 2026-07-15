@@ -67,3 +67,40 @@ Notes:
 - `{METHOD}` comes from the dimension's METHOD block in `review-dimensions.md` — it is the how-to-hunt doctrine, not more checklist items. Always include it.
 - `{ROLE}` is the lowercase dimension name used both in the prose and the output filename (`round-{ROUND}-security.json`, `round-{ROUND}-test-quality.json`, etc.).
 - After spawning, record the panel in `$ARTIFACTS_DIR/panel-round-{ROUND}.json` (SKILL.md Phase 2) so `consensus.py` validates against what was actually spawned.
+
+## Measurement / analytics honesty (conditional add-on)
+
+`ac-review` hardcodes 4 core reviewers (`consensus.py` and Phase 2 expect exactly 4) — this is
+**not a 5th reviewer**. When the diff **instruments analytics events** or **produces
+metrics/rates/reports a human will trust for decisions**, splice this checklist into the
+**correctness** or **architecture** reviewer's `{CHECKLIST}` for that round (per-bead TDD proves
+an event fires and each function's contract holds — it cannot prove the event fires *only* when
+it should, *without leaking*, or that the measurement as a whole answers the intended question):
+
+**Measurement honesty (metrics/analysis code):**
+1. **Denominator honesty** — what's excluded/exempted, and is every exclusion loud?
+2. **Feedback loops** — does simulated/derived state feed back where real state would (drift,
+   staleness), or does a shortcut quietly reuse ground-truth data?
+3. **Join keys** — every cross-dataset join (paths/names/IDs) normalized on BOTH sides + a
+   loud guard when a join yields zero matches against nonzero inputs.
+4. **Guard swallowing** — do failure guards still emit their diagnosis artifact, or does an
+   early throw destroy the evidence?
+5. **Bias direction** — name which way each approximation biases the metric; conservative
+   (overstating problems) OK, optimistic is a bug.
+
+**Analytics `track()` call-sites (the 5 recurring failure modes):**
+1. **CREATE vs EDIT** — a save/submit event fires on edits too unless explicitly gated.
+2. **Shared component → wrong route** — a handler in a multi-page component emits everywhere;
+   pass a context prop, fire only in the intended context.
+3. **Payload leaks PII/health** — an `*_id` is often a content slug; send categorical *type*
+   only. (Key-based `scrubPII` at the boundary is a backstop, not the guarantee — it misses
+   innocent-looking content keys and nested objects.)
+4. **Timing spans too many awaits** — stop the timer at the exact operation boundary.
+5. **Fires on no-op / failure** — guard empty results; fire activation events at the
+   API-success point, not inside a later try a downstream throw can drop.
+
+Evidence: two independent waves shipped fully green (28 green unit tests + tsc clean; 3-reviewer
+`ac-bead-refine` + every engineer's own tests) yet an honesty-briefed reviewer found a High
+feedback-loop bug in one and `ac-review` found 6 High bugs across 5 of these classes in the
+other (incl. a PII leak that falsified the app's own privacy claim). PostHog is the shared
+stack across every app — this checklist recurs, it is not app-specific.

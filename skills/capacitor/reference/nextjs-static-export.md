@@ -69,3 +69,26 @@ Server Actions are incompatible with static export. Use API routes on the web bu
 ```bash
 BUILD_TARGET=capacitor pnpm build && npx cap sync
 ```
+
+---
+
+## Environment variables — NEXT_PUBLIC discipline
+
+- **`NEXT_PUBLIC_*` is for publishable-safe values ONLY — never a sensitivity toggle.**
+  Anything secret, or any permission-gate allowlist, must be **server-only and enforced
+  server-side**. Do NOT invent a `NEXT_PUBLIC_*` allowlist for gating; **reuse the existing
+  `ADMIN_EMAILS → /api/me → isAdmin` server pattern** — native DOES reach `/api/me` even under
+  static export. `output: 'export'` pre-renders PAGES; it does NOT remove runtime fetches to
+  deployed API routes (those run on Vercel, not in the shipped native binary).
+- **`NEXT_PUBLIC_*` inlines at BUILD time.** Enabling a dark feature/flag needs a **Vercel
+  redeploy AND a new native build** (set in both Vercel and `.env.local`); a runtime env change
+  does nothing to an already-built bundle — an already-archived TestFlight/App-Store binary
+  won't pick up a later flag. (PostHog: 3 vars, ships with autocapture off — browsing/login
+  produces zero events; only explicit `track()` calls register.)
+- **`NEXT_PUBLIC_*` keys trip gitleaks' generic-api-key rule** (false positive on publishable
+  client keys, e.g. a PostHog `phc_…` project key). Allowlist via a `.gitleaksignore`
+  `file:rule:line` fingerprint, not by loosening the rule — re-confirm the fingerprint after
+  big edits (line-number-based, shifts as the file grows).
+
+Mnemonic: **"if it gates access or unlocks privilege, it never gets `NEXT_PUBLIC_`."** Every
+Next.js-static-export + Capacitor app in the portfolio shares this constraint.
