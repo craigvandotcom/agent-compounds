@@ -18,9 +18,8 @@ homes, PLACEMENT/ALTITUDE all come from there; this skill is the `synthesis` typ
 method).
 **Evidence base:** `references/research-basis.md` — distills the field research + our
 internal audit; read before seeding pages or designing a garden pass.
-**Status:** MVP (schema layer only — Phase 3 item 0 of
-`infrastructure/plans/memory-wiki-upgrade.md`; the pages themselves are item 1, not yet
-seeded)
+**Status:** live — schema + 7 seeded pages in `neometa/wiki/` (drafts pending Craig's
+review); provenance: `infrastructure/plans/memory-wiki-upgrade.md` Phase 3
 
 ---
 
