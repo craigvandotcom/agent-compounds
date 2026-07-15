@@ -35,7 +35,7 @@ review); provenance: `infrastructure/plans/memory-wiki-upgrade.md` Phase 3
 **When NOT to Use:**
 - Saving a single fact, rule, decision, or recipe → `context-engineering` routes it
 - End-of-session capture → `reflect`
-- Reading/browsing pages (no skill needed — `qmd query` or open the file)
+- Reading/browsing pages (no skill needed — **index-first**: open `<domain>/wiki/index.md` and follow links; `qmd query` when no page covers it; the hook auto-injects matching pages)
 
 ---
 
@@ -72,7 +72,10 @@ status: draft | canonical
 `trigger:` is not decorative — it's Devin's structural idea (see
 `references/research-basis.md`): author *when this should surface* explicitly, don't
 make the agent infer relevance post hoc. Write it the way you'd write a skill's
-`description:` trigger clause.
+`description:` trigger clause. **How it's consumed:** the `wiki` collection is one of
+the memory-retrieval hook's lobes, so the trigger text is part of the page's hybrid
+search/embedding surface — a well-written trigger literally improves when the page
+auto-injects. memory-lint enforces its presence.
 
 ## THE CITATION RULE
 
