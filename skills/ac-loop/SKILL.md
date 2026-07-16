@@ -303,6 +303,11 @@ If orphans exist:
    Mail identity from Phase 0) in ONE call, up front — never incrementally as ac-implement
    works through them:
    ```bash
+   # HARD RULE (ac-ycr.6; doctrine _shared/agent-identity.md): FoggyCreek is the Tier-2
+   # chore identity and may NEVER claim beads. If AGENT_NAME fell back to it (a fresh shell
+   # that didn't re-assert the Phase-0 minted name), FAIL LOUDLY here rather than claim a
+   # batch under the shared chore identity (which silently misattributes and breaks the gate).
+   [ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: AGENT_NAME=FoggyCreek — cannot claim beads under the Tier-2 chore identity; re-assert the Phase-0 minted loop name" >&2; exit 2; }
    br update <id1> <id2> ... --status in_progress --assignee "$AGENT_NAME"
    ```
    This is the precedent from body-compass-app memory
@@ -409,7 +414,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 ### Execute the wave
 
-1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join.
+1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join. **Same FoggyCreek guard as Phase 1 step 1** — assert `AGENT_NAME != FoggyCreek` before the `br update` (`[ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: cannot claim beads as the Tier-2 chore identity" >&2; exit 2; }`); a plan batch claimed under the shared chore identity is the same misattribution bug the gate rejects (doctrine `_shared/agent-identity.md`).
 2. **Invoke `ac-implement`** with delegation prompt. *At width >1:* same split rule as
    Phase 1 step 2 (up to WIDTH tree-disjoint children, each with own subset /
    `TARGET_BEADS` / claim id + artifacts dir; one verify → review → close for the batch):

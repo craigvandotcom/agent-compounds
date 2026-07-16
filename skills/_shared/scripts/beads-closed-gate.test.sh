@@ -170,6 +170,27 @@ else
   fail "Case E: expected exit 2, got $RC. Output: $OUT"
 fi
 
+# --- Case K: FoggyCreek REJECTED as an assignee (ac-ycr.6 tier boundary) -----
+# FoggyCreek is the Tier-2 chore identity — it may commit chore files but may
+# NEVER claim beads. The gate must reject it LOUDLY (exit 2) before any br query,
+# whether passed positionally or falling back via AGENT_NAME.
+clear_fixtures
+write_fixture "FoggyCreek" '[{"id":"bd-x","status":"open","labels":["infra"]}]'
+# K1 — explicit positional FoggyCreek -> exit 2 with the REJECTED message.
+OUT=$(GATE_AGENT="" run_gate "FoggyCreek" 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -qi "REJECTED" && echo "$OUT" | grep -q "FoggyCreek"; then
+  pass "Case K1: FoggyCreek positional assignee rejected -> exit 2 (REJECTED message)"
+else
+  fail "Case K1: expected exit 2 with REJECTED/FoggyCreek message, got $RC. Output: $OUT"
+fi
+# K2 — FoggyCreek arriving via the AGENT_NAME fallback is caught too.
+OUT=$(GATE_AGENT="FoggyCreek" run_gate 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -qi "REJECTED"; then
+  pass "Case K2: FoggyCreek via AGENT_NAME fallback rejected -> exit 2"
+else
+  fail "Case K2: expected exit 2 with REJECTED message, got $RC. Output: $OUT"
+fi
+
 # --- Case F: CROSS-IDENTITY FAIL-OPEN reproduction (bd-w504y) ----------------
 # BlueLake = loop conductor (its own batch bead already closed).
 # SunnyBear = delegated ac-implement session; its replacement bead is OPEN.

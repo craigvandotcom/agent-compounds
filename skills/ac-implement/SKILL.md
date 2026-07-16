@@ -301,6 +301,12 @@ ONE call — not incrementally as beads are picked:
 # NOTE: this is the bead ASSIGNEE only; Agent Mail FILE reservations still use
 # your own session AGENT_NAME (they coordinate the shared checkout per-session).
 CLAIM_ASSIGNEE="${CLAIM_ASSIGNEE:-$AGENT_NAME}"
+# HARD RULE (ac-ycr.6; doctrine _shared/agent-identity.md): FoggyCreek is the Tier-2 chore
+# identity and may NEVER be a bead assignee. If CLAIM_ASSIGNEE resolved to it (a dropped
+# delegation value, or $AGENT_NAME fell back to the settings.json default in a fresh shell),
+# FAIL LOUDLY — never claim the batch under the shared chore identity (silent misattribution
+# the BEADS-CLOSED-GATE then rejects anyway).
+[ "$CLAIM_ASSIGNEE" = "FoggyCreek" ] && { echo "FATAL: CLAIM_ASSIGNEE=FoggyCreek — cannot claim beads under the Tier-2 chore identity; pass the loop's minted identity (or re-assert this session's AGENT_NAME)" >&2; exit 2; }
 br update <id1> <id2> ... --status in_progress --assignee "$CLAIM_ASSIGNEE"
 ```
 
