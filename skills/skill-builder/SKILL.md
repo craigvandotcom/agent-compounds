@@ -392,7 +392,9 @@ Is it generic/portable (method-only, no project facts)?
          │         App facts (schema, routes, domain rules, brand voice) belong here,
          │         typically under the app's CORE skill — not in a shared skill.
          │
-         └─ ONE-OFF → don't make a skill; put it in CLAUDE.md / AGENTS.md.
+         └─ NOT A SKILL → stop; `context-engineering` PLACEMENT owns the "is it a
+                   skill at all (vs memory/hook/CORE/L0)" call — this tree assumes it
+                   already said "skill" (see the note below).
 ```
 
 **Rule of thumb:** a shared skill teaches the *how* (technique, portable across apps); per-app CORE holds the *what* (this app's specific facts). If you're tempted to bake an app fact into a shared skill, that fact belongs in the app's CORE instead.
