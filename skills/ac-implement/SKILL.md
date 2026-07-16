@@ -544,6 +544,22 @@ test, an `investigation` its findings + spawned fix beads (the `discovered-from`
 `task`/`feature` its delivered-artifact refs (the `Delivered:` list above already satisfies
 task/feature). Convention-enforced, not lint-checked.
 
+**Worker-identity stamp (per bead, at close).** The bead's assignee is the CONDUCTOR (loop)
+identity — the actual implementer is a per-child session + model, otherwise unrecoverable. So
+immediately after `br close`, stamp WHO/WHAT implemented it as a structured comment (uses
+`beads-standards` § Worker-identity stamp — a stable greppable prefix, sibling to the VERDICT grammar):
+
+```bash
+br comments add <id> "WORKER: model=<model-id> session=<AGENT_NAME> skill@version=<agent-compounds SHA at skill-load> duration=<wall-clock claim→close>"
+```
+
+- `skill@version` = the agent-compounds git SHA resolved at skill-load (skills load via symlink
+  from this repo) — the skills-eval before/after axis for measuring doctrine changes.
+- `duration` = wall-clock from bead-claim to bead-close in the child session.
+- **Per-bead TOKEN cost is deliberately OUT** — a child can't see its own token usage, so a
+  per-bead number would be fabricated precision. Token cost lands at BATCH/child granularity in
+  `ac-batch-close`'s report (the conductor receives per-child usage in task notifications).
+
 **On close, check for memory facts that cite this bead.** A freeze/pin or other
 lifecycle-scoped fact often names the exact bead whose closure retires it (e.g. an
 `app-version-pinned-*` fact tied to an App Store-submission bead). When you close such a

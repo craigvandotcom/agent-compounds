@@ -204,6 +204,23 @@ retiring** a frozen one requires the migration note. Migration log:
 
 - *(none yet — first freeze ratified 2026-07-16, bead ac-aa7)*
 
+## Worker-identity stamp (structured comment)
+
+A bead's `assignee` is the conductor (loop) identity — the agent that actually implemented it
+is a per-child session + model, otherwise unrecoverable. At close, the implementing skill
+(`ac-implement`) stamps a structured comment recording it, written in the same
+stable-greppable-prefix style as the VERDICT grammar (`grep 'WORKER:' .beads/issues.jsonl`):
+
+```
+WORKER: model=<model-id> session=<session-name> skill@version=<agent-compounds SHA> duration=<wall-clock>
+```
+
+Fields are **joinable for future model-level comparison**: `model` groups runs by model,
+`skill@version` (the agent-compounds git SHA at skill-load) is the **skills-eval before/after
+axis** — it lets a doctrine change be measured against outcomes. Per-bead **token cost is
+excluded** (a child can't observe its own usage — a per-bead split would be fabricated
+precision); token cost is reported at batch/child granularity by `ac-batch-close`.
+
 ## Label hygiene rules
 
 - **kebab-case, lowercase only.** `human-gate`, not `Human-Gate` or `human_gate`.

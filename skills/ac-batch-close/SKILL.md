@@ -463,6 +463,14 @@ key on. Batch-close's own addition beyond the template is a short **Feedback wri
 (the pending-write count logged above) — there is no Deploy section anymore (deploy
 verification moved to `ac-publish`).
 
+**Worker cost line (per-child / per-batch).** Add a one-line **Worker cost** entry to the
+report: per-child implementer usage (model + token cost, which the conductor received in each
+engineer's task-completion notification) and the batch total. This is where per-bead TOKEN cost
+lives — deliberately at batch/child granularity, never per bead (a child can't see its own token
+usage, so a per-bead split would be fabricated precision; see `ac-implement`'s worker-identity
+stamp, which carries model/session/skill@version/duration per bead but explicitly NOT tokens).
+Format: `Worker cost: <child-session> (<model>) <tokens>; … — batch total <tokens>`.
+
 ```bash
 export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this commit is the operative review-mark; attribute it to the minted identity, not FoggyCreek
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
