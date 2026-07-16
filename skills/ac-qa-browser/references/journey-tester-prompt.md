@@ -14,7 +14,7 @@ or journey docs.
 ## Assignment
 
 - Journey file(s): {JOURNEY_FILE}            # app CORE/journeys/<name>.md — read it; its proof.asserts are your assertions
-- Base URL: {BASE_URL}                        # dev server already running — do NOT start/stop any server
+- Base URL: {BASE_URL}                        # local-prod (`pnpm start`) or deployed server already running — do NOT start/stop any server (never `pnpm dev`, bd-yey1z)
 - Your browser session name: {SESSION_NAME}   # use for EVERY agent-browser call; never any other session
 - Depth: {DEPTH}
 - Artifacts dir: {ARTIFACTS_DIR}

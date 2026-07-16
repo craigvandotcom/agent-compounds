@@ -1,6 +1,6 @@
 ---
 name: ac-qa-browser
-description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a dev server or deployed URL. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed app".
+description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a local production build (pnpm build && pnpm start) or a deployed URL — never the pnpm dev server. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed app".
 ---
 
 > **The web twin.** `ac-qa-browser` proves the web shell; `ac-qa-device` proves
@@ -29,21 +29,30 @@ schema, verdict schema, lanes, completeness rule, session naming) is
 
 ## Platform note (read first)
 
-Runs **anywhere** (any OS — no Mac needed). Requires either the app's dev server
-running (`pnpm dev`, see the app's AGENTS.md) or a deployed URL (preview/production).
+Runs **anywhere** (any OS — no Mac needed). Requires either a **local production
+build** served (`pnpm build && pnpm start`) or a deployed URL (preview/production).
 For hybrid (Capacitor) apps the browser renders the **same bundle** the native
 webview does — so this twin owns the cheap, exhaustive DOM/visual coverage; route
 native-shell concerns (safe-area, splash, plugins, OAuth sheets) to `ac-qa-device`.
 
+> **QA server target — local-PROD only, NEVER `pnpm dev` (doctrine, bd-yey1z).**
+> Browser QA MUST target a local **production** build (`pnpm build && pnpm start`)
+> or a deployed URL — never the Next.js dev server. Under sustained QA load the dev
+> server's Fast-Refresh watcher enters a rebuild storm (~10 min in it began serving
+> 0-byte 200s with CPU/RSS climbing until killed); a prod build (`next start`) was
+> proven stable for 5 concurrent + sequential workers (bd-yey1z, 2026-07-12). The
+> dev server is not a QA target and QA must never gate on its Fast-Refresh behavior.
+> `pnpm dev` is for interactive development only.
+
 ## Layered QA model — what to test here
 
-| Layer | Tool | Coverage | Cost |
-| ----- | ---- | -------- | ---- |
-| 1. **Browser (this skill)** | browser-tester workers driving agent-browser | Exhaustive: every route, button, state, edge case + the web-shell checklist | Cheap, fast |
-| 2. Native shell | `ac-qa-device` (agent-device + simctl) | Real native taps + native-shell checklist | Slower per action |
+| Layer                       | Tool                                         | Coverage                                                                    | Cost              |
+| --------------------------- | -------------------------------------------- | --------------------------------------------------------------------------- | ----------------- |
+| 1. **Browser (this skill)** | browser-tester workers driving agent-browser | Exhaustive: every route, button, state, edge case + the web-shell checklist | Cheap, fast       |
+| 2. Native shell             | `ac-qa-device` (agent-device + simctl)       | Real native taps + native-shell checklist                                   | Slower per action |
 
 **Decision rule:** logic / layout / state / routing / console / responsive → here.
-"Does the real app work when really *native*-touched" → `ac-qa-device`.
+"Does the real app work when really _native_-touched" → `ac-qa-device`.
 
 ## Depth levels
 
@@ -66,10 +75,13 @@ viewport set), and a console-clean assertion on every route.
   assume RUN_ID exists): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`.
 - Derive `ARTIFACTS_DIR` per `_shared/run-id.md` (prefix `qa-browser`);
   `mkdir -p "$ARTIFACTS_DIR/evidence"`.
-- **You own the dev server** (workers never start/stop it): if targeting local, start
-  it backgrounded (`pnpm dev >"$ARTIFACTS_DIR/dev.log" 2>&1`, or the app's AGENTS.md
-  command), set `DEV_STARTED=1`, wait until it answers; record `BASE_URL`. Deployed
-  URL → skip, `DEV_STARTED` empty.
+- **You own the local server** (workers never start/stop it): if targeting local,
+  serve a **production build — never `pnpm dev`** (bd-yey1z doctrine, above): build
+  once, then start it backgrounded —
+  `pnpm build && pnpm start >"$ARTIFACTS_DIR/server.log" 2>&1`. Set `SERVER_STARTED=1`,
+  wait until it answers; record `BASE_URL` (default `http://localhost:3000`). Deployed
+  URL → skip the build/serve, `SERVER_STARTED` empty. Tear down the same `pnpm start`
+  process (not any `pnpm dev`) at Phase-final.
 
 ### Phase 1 — Select journeys, assign lanes, write the manifest
 
@@ -142,7 +154,7 @@ Workers close their own sessions; you sweep the stragglers:
 agent-browser session list | grep -F "qa-<app>-<RUN_ID>" || true   # should be empty
 # close any leftover BY NAME (never `close --all`):
 agent-browser --session <leftover> close
-[ -n "$DEV_STARTED" ] && pkill -f "next dev" 2>/dev/null   # only the server YOU started; skip if a human runs their own
+[ -n "$SERVER_STARTED" ] && pkill -f "next start" 2>/dev/null   # only the local-prod server YOU started; skip if a human runs their own
 ```
 
 ## Worker discipline (mirrored into the tester prompt — edit both together)
@@ -171,7 +183,7 @@ conductor files the beads** (deduped). Tag bead descriptions with `browser QA`.
 When the `QA_VALIDATION` pass completes, the conductor records the ceremony's outcome as
 a structured **VERDICT comment** on each bead it validated — `VERDICT: passed:` (journey
 PASS), `VERDICT: failed:` (a QA finding), or `VERDICT: blocked:` (infra-flaky / NO-STAMP)
-— per the grammar in **`beads-standards` § Verification verdicts**. QA is a *verifier*
+— per the grammar in **`beads-standards` § Verification verdicts**. QA is a _verifier_
 ceremony: the conductor writes the verdict from the verdict files (workers/implementers
 never do — Goodhart guard). Each filed `qa-finding` bead also carries
 `discovered-from: <bead-id|unknown>` linking the escape to the work that introduced it
