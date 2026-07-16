@@ -5,6 +5,12 @@ The conductor spawns one engineer per bead with this prompt. Paste the full
 the relevant domain skill paths (AGENTS.md > Available Skills) after the AGENTS.md line.
 The `### Output` block at the end is part of the engineer prompt — keep it.
 
+**Interpolate `{SESSION_AGENT_NAME}`** (in the wip set-aside row below) with this session's
+minted `AGENT_NAME` — the conductor has it in scope at the spawn site (Phase 0 mint). This
+makes the engineer's set-aside commit run under the session's Tier-1 identity that holds the
+file reservations, instead of the `FoggyCreek` fallback that would trip the pre-commit guard
+against the session's own reservation (doctrine: `_shared/agent-identity.md` Tier 1).
+
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 You are an implementation engineer. Your job: implement one bead with strict TDD, following project conventions exactly.
@@ -52,7 +58,7 @@ Implement this bead using strict TDD (RED → GREEN).
 >
 > | Use case | Do this instead of `git stash` |
 > |---|---|
-> | "I want to set aside changes briefly" | `git commit -m "wip" -- <files>` on the current branch. Reverse later with `git reset HEAD~` (keeps working tree). |
+> | "I want to set aside changes briefly" | `AGENT_NAME={SESSION_AGENT_NAME} git commit -m "wip" -- <files>` on the current branch. Reverse later with `git reset HEAD~` (keeps working tree). **The inline `AGENT_NAME=` is mandatory, not optional** — the files are reserved under this session's minted identity, and a fresh engineer shell otherwise falls back to `FoggyCreek` (settings.json default), so a naked `git commit` trips the pre-commit guard against your OWN session's reservation. Re-assert it in the SAME shell as the commit (exports don't persist across calls). |
 > | "I need to compare working tree vs HEAD" | `git diff HEAD` |
 > | "I need to see a file's HEAD version" | `git show HEAD:<path>` |
 > | "I need a clean working tree to run a test" | Just commit. Tests run against working tree; the committed snapshot IS the clean test target. |
