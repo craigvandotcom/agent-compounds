@@ -510,6 +510,29 @@ AskUserQuestion(
 )
 ```
 
+### Preserve the raw friction carrier (before teardown discards /tmp)
+
+Step 0's `reflect` already wrote this run's **distilled** lessons to the git-tracked memory
+substrate — but the **raw** stage-keyed carrier `/tmp/loop-retro-<RUN_ID>.md` (read in Phase 0)
+does NOT survive: it dies with /tmp in the teardown sweep below, taking the qualitative
+skills-eval feed with it. Copy it — `stage`/`cost`/`lesson`/`class` typing intact — into a
+git-tracked artifacts path FIRST, mirroring the `.claude/reviews/batch/` convention
+`ac-batch-close` already uses:
+
+```bash
+if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
+  DEST=".claude/reviews/loop-retro"
+  mkdir -p "$DEST"
+  cp "/tmp/loop-retro-${RUN_ID}.md" "$DEST/loop-retro-${RUN_ID}.md"
+  git add "$DEST/loop-retro-${RUN_ID}.md"
+  git commit -m "ac-land: preserve raw friction carrier — RUN ${RUN_ID}" -- "$DEST/loop-retro-${RUN_ID}.md"
+  git push origin main || { git pull --rebase origin main && git push origin main; }
+fi
+```
+
+The raw packets join the committed review-artifact trail instead of evaporating — the
+qualitative before/after feed for skills-eval.
+
 ### Cleanup Temp Files
 
 Remove session artifacts (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
@@ -589,29 +612,6 @@ if [ -n "$RUN_ID" ]; then for d in /tmp/hygiene-*-"$RUN_ID"/; do [ -d "$d" ] && 
 ```
 
 Mark ledger task 8 `completed`; `TaskUpdate` task 9 `in_progress`.
-
-### Preserve the raw friction carrier (before teardown discards /tmp)
-
-Step 0's `reflect` already wrote this run's **distilled** lessons to the git-tracked memory
-substrate — but the **raw** stage-keyed carrier `/tmp/loop-retro-<RUN_ID>.md` (read in Phase 0)
-does NOT survive: it dies with /tmp in the teardown sweep below, taking the qualitative
-skills-eval feed with it. Copy it — `stage`/`cost`/`lesson`/`class` typing intact — into a
-git-tracked artifacts path FIRST, mirroring the `.claude/reviews/batch/` convention
-`ac-batch-close` already uses:
-
-```bash
-if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
-  DEST=".claude/reviews/loop-retro"
-  mkdir -p "$DEST"
-  cp "/tmp/loop-retro-${RUN_ID}.md" "$DEST/loop-retro-${RUN_ID}.md"
-  git add "$DEST/loop-retro-${RUN_ID}.md"
-  git commit -m "ac-land: preserve raw friction carrier — RUN ${RUN_ID}" -- "$DEST/loop-retro-${RUN_ID}.md"
-  git push origin main || { git pull --rebase origin main && git push origin main; }
-fi
-```
-
-The raw packets join the committed review-artifact trail instead of evaporating — the
-qualitative before/after feed for skills-eval.
 
 ### Teardown (operational — part of landing)
 
