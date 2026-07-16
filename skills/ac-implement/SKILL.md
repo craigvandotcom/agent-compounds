@@ -538,6 +538,12 @@ br close <id> --reason "Implemented and tested. Delivered: <artifact paths, comm
 
 (Legacy beads with no `## Delivers` header: close with the plain reason as before.)
 
+**Per-type close evidence** (`_shared/bead-conventions.md` § Per-type close artifacts): after
+the outcome verb, cite the evidence the bead's TYPE closes with — a `bug` names its regression
+test, an `investigation` its findings + spawned fix beads (the `discovered-from` trail), a
+`task`/`feature` its delivered-artifact refs (the `Delivered:` list above already satisfies
+task/feature). Convention-enforced, not lint-checked.
+
 **On close, check for memory facts that cite this bead.** A freeze/pin or other
 lifecycle-scoped fact often names the exact bead whose closure retires it (e.g. an
 `app-version-pinned-*` fact tied to an App Store-submission bead). When you close such a

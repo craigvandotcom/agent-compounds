@@ -129,6 +129,16 @@ detail — `shipped: ...`, `fixed: ...`, `wontfix: ...`, `duplicate: ...`,
 codify-as-rule candidates (cockpit phase 4) — an unstructured reason can't be
 clustered.
 
+**Typed close evidence (extends the outcome verb one level down).** After the verb, the
+detail names the evidence appropriate to the bead's TYPE, so closed beads segment cleanly
+for metrics: `bug` → the regression test guarding the fix; `investigation` → its findings
++ the fix beads it spawned (the `discovered-from` trail); `task`/`feature` → the delivered
+artifact refs (file / route / migration / doc). Thin rules, no new template machinery —
+per-type detail in `_shared/bead-conventions.md` § Per-type close artifacts. Enforcement is
+convention-level: `br lint` checks DESCRIPTION template sections only, never `close_reason`
+content, so the closing skills + the refine/close review carry it — presence-checked, not
+truth-checked, until `br` grows close-content linting.
+
 **Priority is `0`-`4`, integers only** (`P0`-`P4` accepted as input, stored as int).
 0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself.
 

@@ -339,7 +339,8 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 - **Auto-fix:** obvious CI failures (lint/type/format), clear single-fix issues.
 - **Conductor decides:** high-severity items with clear fixes, easy improvements.
 - **Present to user:** architectural/debatable items (Exhaust Rule applies if headless —
-  `br create -t bug --labels review-finding` rather than blocking silently).
+  `br create -t bug --labels ci-finding` rather than blocking silently — CI is the catch stage;
+  its eventual close cites the regression test per bead-conventions § Per-type close artifacts).
 
 Apply fixes, then commit under the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
 the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard

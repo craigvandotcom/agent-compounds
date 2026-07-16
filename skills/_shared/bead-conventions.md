@@ -215,6 +215,25 @@ Batching: `ac-human-session` presents all open `human-gate` beads as the
 at the dashboard: a decision arriving without a memo is flagged `⚠ no memo` and
 framed on demand (it cannot be a one-tap choice without staged options).
 
+## Per-type close artifacts
+
+`close_reason` leads with an outcome verb (`shipped:`/`fixed:`/… — beads-standards
+§ Status & priority canon); ONE level down, each type names the evidence its closure
+rests on, so closed beads cluster cleanly for future metrics:
+
+- **`bug`** → cite the **regression test** that now guards the fix (path + describe block).
+- **`investigation`** → cite the **findings + the fix beads it spawned** (the
+  `discovered-from` trail below).
+- **`task` / `feature`** → cite the **delivered artifact(s)** — the `## Delivers` refs
+  (file / route / migration / doc).
+
+Thin rules — no new template machinery, no per-type description headers, no lint schema
+change. Enforcement is **convention-level**: `br lint` checks DESCRIPTION template
+sections only (§ Body template — the `br lint` contract), NOT `close_reason` content, so
+these rules live in the closing skills (`ac-implement`, `ac-batch-close`, `ac-review`) +
+the refine/close review, not in a new `br lint` rule. Presence-checked, not truth-checked
+— kept deliberately light until/unless `br` gains close-content linting.
+
 ## Lineage
 
 Fix beads spawned by an investigation/decision carry a typed dep:

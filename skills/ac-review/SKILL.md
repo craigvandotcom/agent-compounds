@@ -413,7 +413,9 @@ merge-blocking finding (`VERDICT: blocked:` for a `NEEDS_DECISION` partial-failu
 Review is a *verifier* ceremony — the panel/conductor writes the verdict, never the
 implementer whose diff is under review (Goodhart guard). Every finding bead filed here
 carries the `review-finding` catch-stage label **and** `discovered-from: <bead-id|unknown>`
-linking it to the work that introduced the defect.
+linking it to the work that introduced the defect. When such a finding is later closed, its
+`close_reason` cites the per-type evidence (`bug` → regression test, etc.) per
+`_shared/bead-conventions.md` § Per-type close artifacts.
 
 ### Produce Numbered Change List
 
