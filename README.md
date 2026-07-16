@@ -74,6 +74,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
 | **seo-metadata** | Add or audit SEO and social-share metadata (OG, Twitter cards, JSON-LD, sitemaps) |
 | **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
+| **outbound-comms** | The operator voice — draft Slack messages, notifications, session summaries, blocker/status reports, and emails addressed to Craig (distinct from brand/audience-facing output voice) |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 
@@ -81,12 +82,13 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 
 > **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
 
-**Substrate** — the AI-native-org memory trio (deploy together)
+**Substrate** — the AI-native-org memory skills (deploy together)
 | Skill | What it does |
 |-------|-------------|
 | **context-engineering** | Canonical save-routing taxonomy and L0–L4 loading model — where durable knowledge goes and what loads when |
 | **reflect** | Capture session learnings into the memory substrate — facts, decisions, recipes, domain-routed and git-tracked |
 | **dream** | The org's self-improvement engine — synthesize cross-session patterns, lint the substrate, emit PR-style proposals |
+| **wiki** | Write and garden wiki synthesis pages — concept/entity/topic/contradiction pages that integrate atomic facts and decisions into one cited narrative (a derived view, not fact capture) |
 
 ## Commands → Skills (migration complete)
 
