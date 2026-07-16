@@ -110,6 +110,12 @@ Preserve all other existing frontmatter fields.
 
 Use the agent name registered at session start (from `macro_start_session`). Compute `PLAN_REL` = path of `PLAN_FILE` relative to `PROJECT_ROOT` (e.g. `_plans/foo.md`).
 
+> **Carry the registration_token (shakedown-verified 2026-07-08).** Capture the
+> `registration_token` returned by `macro_start_session` and pass it through every Agent Mail
+> call below — `file_reservation_paths` / `release_file_reservations` take it as
+> `registration_token`, `send_message` as `sender_token` — unless this MCP session already
+> authenticated as the agent. Canonical note: `_shared/agent-identity.md` § Call-scoped facts.
+
 **Reserve the plan file:**
 
 ```
@@ -549,6 +555,9 @@ find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null 
 ```
 
 ### Release Active Work Signal (Agent Mail)
+
+> **Same token-carry as the reserve step:** pass the captured `registration_token`
+> (`release_file_reservations`) / `sender_token` (`send_message`) unless already authenticated.
 
 **Release reservation:**
 
