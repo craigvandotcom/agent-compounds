@@ -1,24 +1,16 @@
 {
   "status": "done",
-  "mode": "nightly",
-  "date": "2026-07-05",
-  "machine": "darwin",
-  "branch": "main",
-  "commit": "b9556f69c330c95f86e200e2fef2a712dd206eb3",
+  "mode": "NIGHTLY",
+  "machine": "FoggyCreek",
+  "date": "2026-07-16",
   "tier2_toggle": "OFF",
   "counts": {
-    "tier1_reconciled": 0,
-    "tier2_archived": 0,
-    "tier3_proposals": 0
+    "reconciled": 40,
+    "closed_unrefined_stripped": 33,
+    "open_lifecycle_gap_stamped": 7,
+    "proposals_emitted": 2,
+    "archived": 0
   },
-  "proposals": [],
-  "deferred": [
-    {
-      "action": "strip stale 'unrefined' label from CLOSED bead bd-blmt2",
-      "tier": 1,
-      "reason": ".beads/issues.jsonl carries a foreign uncommitted comment on bd-ao062 (~4h stale); a br label op re-exports the whole jsonl, so committing a cosmetic strip would sweep another actor's work. Pick up on a clean-tree run."
-    }
-  ],
-  "notes": "No-op night: board healthy. 3 active plans loop-ready with provenance (not archivable — layer2 Wave B pending). 8 open finding beads, all fresh/distinct (no inflation to prune). All re-derivable Tier-3 clusters already covered by open proposal beads (bd-3bbct, bd-fihkd, bd-ovcfc + bd-fervp/bd-qx7f1/bd-jphs1/bd-m66h0 = 7 undrained). Zero BCA writes; no commit/push.",
-  "slack": { "channel": "sofi", "status": "healthy", "ts": "1783205412.796699" }
+  "proposals": ["bd-ajlnd", "bd-qb8ap"],
+  "pushed_sha": "dab91604ead91f45e26e9219398802ed19f64bc0"
 }

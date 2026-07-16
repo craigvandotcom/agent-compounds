@@ -17,3 +17,6 @@ _ideas/
 
 # Machine-local harness manifest overlay (template: harnesses.local.json.example)
 harnesses.local.json
+
+# bv (beads viewer) local config and caches
+.bv/
