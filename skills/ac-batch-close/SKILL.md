@@ -112,7 +112,7 @@ This ceremony can be invoked more than once concurrently under 3-5 concurrent co
 refuses (memory `agent-mail-build-slot-advisory`). Correctness is entirely on the caller:
 
 ```
-acquire_build_slot(key="batch-close:main", registration_token=<the token from macro_start_session above>, ttl=<covers the expected CI-poll wall-clock>)
+acquire_build_slot(project_key=CANONICAL_PROJECT_KEY, agent_name=AGENT_NAME, slot="batch-close:main", registration_token=<the token from macro_start_session above>, ttl_seconds=<covers the expected CI-poll wall-clock>)
   → read the returned `conflicts` list
   → if another agent's active lease is present, this is advisory, not a lock: proceed only if
     your batch anchor genuinely does not overlap theirs (different ANCHOR..HEAD ranges are
@@ -560,7 +560,7 @@ slack-send --channel sofi --card \
 ### Release the build slot
 
 ```
-release_build_slot(key="batch-close:main")   # release even on an aborted run
+release_build_slot(project_key=CANONICAL_PROJECT_KEY, agent_name=AGENT_NAME, slot="batch-close:main")   # release even on an aborted run
 ```
 
 ### Self-deregister the Tier-1 identity (Layer 1)
