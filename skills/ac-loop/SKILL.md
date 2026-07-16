@@ -659,6 +659,23 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > never `AskUserQuestion`, do NOT block.
 > This is the loop's final step — exit after landing." (`_shared/run-id.md`)
 
+### Deregister the conductor identity (Layer 1 — the loop's true last act)
+
+`ac-land` releases and deregisters the child identities on the roster it was handed (Layer 2),
+but it **cannot** deregister the conductor's own name — the conductor is still alive, invoking
+it. So **after `ac-land` returns**, the conductor's actual final act is to deregister its OWN
+minted `AGENT_NAME` (the one registered in Phase 0). By name — `registration_token` optional
+(doctrine: `_shared/agent-identity.md` Deregistration, Layer 1):
+
+```
+mcp__mcp-agent-mail__deregister_agent(
+  project_key: CANONICAL_PROJECT_KEY,
+  agent_name: AGENT_NAME   # the loop conductor's own Phase-0 name, re-asserted inline
+)
+```
+
+Only then does the loop process exit.
+
 > **No token-budget stop** (removed deliberately) — an unmeasurable budget only becomes a
 > vague excuse to quit early; the loop is bounded by the **measurable** conditions instead:
 > C1 (pipeline empty) or C3 (iteration cap). A run needing a hard ceiling gets one

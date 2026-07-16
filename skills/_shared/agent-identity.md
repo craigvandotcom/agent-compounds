@@ -82,7 +82,7 @@ These are different axes; do not conflate them:
 
 | Layer | Who | When | Wiring |
 |---|---|---|---|
-| 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/batch-close ceremony end; the loop conductor last, AFTER `ac-land` returns) | `ac-ycr.4` |
+| 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/batch-close ceremony end; the loop conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/batch-close self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
 | 2. **Roster sweep** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity from summaries); land `retire_agent`s stragglers + `force_release_file_reservation` on stale holds | `ac-ycr.5` |
 | 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land; reservation TTL (7200 s) is the absolute floor | `ac-ycr.5` |
 

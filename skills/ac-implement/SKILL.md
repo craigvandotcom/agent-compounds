@@ -622,6 +622,24 @@ nothing else will run the full suite.
 
 **Present next step with `AskUserQuestion`** — Ask (header: "Next step", single-select): "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?" — options: "Review branch (Recommended)" (Run /ac-review — the pre-merge gate. Then /ac-merge.) / "Continue implementing" (Run /ac-implement again for more beads (review + merge later)) / "Done for now" (Stop here — remember to run /ac-review then /ac-merge before closing; /ac-land runs after merge).
 
+### Deregister Session Identity (Layer 1 — true last act)
+
+This session minted a Tier-1 identity in Phase 0 and released each bead's file reservations
+in its Phase 1d as that bead closed. As the session's **final act — after the last bead's
+reservation release** — deregister its own minted `AGENT_NAME` so the registry doesn't
+accumulate one zombie identity per wave (doctrine: `_shared/agent-identity.md` Deregistration,
+Layer 1; by name — `registration_token` optional):
+
+```
+mcp__mcp-agent-mail__deregister_agent(
+  project_key: CANONICAL_PROJECT_KEY,
+  agent_name: AGENT_NAME
+)
+```
+
+(Layers 2 and 3 — `ac-land`'s roster sweep and the next run's Phase-0 stale sweep — are the
+backstop for sessions that die before reaching here; they do not replace this self-deregister.)
+
 **TaskUpdate(task: "FINAL: Session summary + quality gate ({TARGET_BEADS} beads total)", status: "completed")**
 
 ---
