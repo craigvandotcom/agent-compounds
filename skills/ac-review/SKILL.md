@@ -61,7 +61,7 @@ self-deregister):
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key — the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>") — NEVER an absolute path (abs paths fork a per-machine mailbox / split-brain)
+  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   program: "claude-code",
   model: "claude-opus-4-8"
 )
@@ -455,7 +455,7 @@ released after the Phase 6 commit:
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical Agent Mail key (pattern: "neometa/<app-dir>") — NEVER an absolute path
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   agent_name: AGENT_NAME,               // the Tier-1 name minted in Phase 0
   paths: ["<every file in the AUTO_FIX numbered change list>"],
   ttl_seconds: 7200,

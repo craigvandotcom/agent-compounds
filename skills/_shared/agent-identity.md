@@ -111,6 +111,41 @@ Verified against live tool schemas (2026-07-14): `deregister_agent` and `retire_
 - **Commit-time (live backstop):** the Agent Mail pre-commit guard blocks a commit touching
   another identity's reserved path. Keyed on `AGENT_NAME` in the commit shell.
 
+## Project key format (canonical — the one home for the key-format rule)
+
+**Rule: always pass the app's canonical two-segment key `neometa/<app-dir>` (e.g.
+`neometa/body-compass-app`, `neometa/agent-compounds`) — from the app's `session-start.md`.
+NEVER an absolute path, and never an ad-hoc project slug.** One canonical key = one shared
+mailbox; a divergent key forks a *separate* project (a separate mailbox) and the coordinating
+sessions can no longer see each other — split-brain.
+
+**Which arg takes it:** `macro_start_session` takes it as **`human_key`**; every other
+Agent Mail tool (`file_reservation_paths`, `release_file_reservations`, `install_precommit_guard`,
+`send_message`, …) takes it as **`project_key`**. Same value, different parameter name — the
+one call-signature fact worth keeping inline at each call site.
+
+**Live accept-matrix (probed 2026-07-16, macro_start_session against the dev server).** The
+server does **not** reject any of these — it slugifies `human_key` (lowercase; every non-alnum
+run → `-`) and maps each *distinct* key to a *distinct* project/mailbox. The coordination rule
+therefore holds because a divergent key silently forks a divergent mailbox, **not** because the
+validator enforces a format:
+
+| `human_key` passed | Server result | Resolved project slug | Effect |
+|---|---|---|---|
+| `neometa/agent-compounds` (canonical two-segment) | accepted | `neometa-agent-compounds` (the shared project) | joins the ONE canonical mailbox ✅ |
+| `sandbox/w2-shakedown` (two-segment, non-neometa) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
+| `/Users/…/agent-compounds` (absolute path) | accepted | `users-craigvanheerden-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
+
+**Reconciliation verdict (closes the 2026-07-08 split-brain).** The 2026-07-08 shakedown saw
+`macro_start_session` *reject* a non-neometa key with `human_key must be an absolute path-like
+project key` — an error that flatly contradicted this doctrine. That error **no longer
+reproduces**: the current server accepts every form above. So the doctrine wins and is
+accurate as stated — an absolute path *does* fork a distinct mailbox (row 3, confirmed live) —
+and the contradicting server message is gone. This is a **doctrine-correct / server-message-
+retired** outcome, not a live server bug; no upstream server bead is warranted (the probe found
+nothing to fix server-side). The `project` field the commit-guard filters on (below) is this
+same resolved-project identity — which is exactly why a divergent key defeats the guard.
+
 ## Conformance status
 
 **Doctrine ratified 2026-07-14 (epic `ac-ycr`); wiring in flight.** Live today: Tier-1

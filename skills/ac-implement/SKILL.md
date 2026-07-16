@@ -83,8 +83,7 @@ Confirm you're on `main` (`git branch --show-current`) before doing anything els
 
 ```
 mcp__mcp-agent-mail__install_precommit_guard(
-  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
-                                        # doctrine: _shared/agent-identity.md (Tier 1 lifecycle — two-tier contract)
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   code_repo_path: PROJECT_ROOT
 )
 ```
@@ -219,8 +218,7 @@ Register a unique identity for this implement session — used for file reservat
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // NOTE: this tool takes human_key (other agent-mail tools take project_key) — the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
-                                        # doctrine: _shared/agent-identity.md (Tier 1 lifecycle — two-tier contract)
+  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   program: "claude-code",
   model: "claude-opus-4-8"
 )
@@ -371,8 +369,7 @@ If the bead is not `refined`:
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
-                                        # doctrine: _shared/agent-identity.md (Tier 1 lifecycle — two-tier contract)
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
   paths: ["<files listed in bead spec>"],
   ttl_seconds: 7200,
@@ -573,8 +570,7 @@ Release the file reservation using the **same paths reserved in Phase 1a** (the 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>", e.g. "neometa/body-compass-app") — NEVER an absolute path: abs paths fork a per-machine mailbox (split-brain)
-                                        # doctrine: _shared/agent-identity.md (Tier 1 lifecycle — two-tier contract)
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
   paths: ["<same paths passed to file_reservation_paths in Phase 1a>"]
 )
