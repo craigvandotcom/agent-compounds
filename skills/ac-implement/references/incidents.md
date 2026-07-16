@@ -20,9 +20,9 @@ Concrete prior incident (2026-05-14 wave/curator): conductor recorded `13 failed
 
 Concrete prior incident (2026-05-09 wave/research-curator-prereqs / between bd-nxtl and bd-yvhn): conductor's spawned engineer detected the branch had flipped to `wave/loading-coherence` mid-session. Engineer correctly aborted; conductor wasted ~15 min recovering by inappropriately creating a worktree. Re-verifying branch in Phase 1a eliminates the failure mode entirely.
 
-## bd-br-translation
+## bd-br-translation (RESOLVED — bv v0.18.0, 2026-07-16)
 
-Incident 2026-06-12 wave/004: ran the emitted `bd` command, hit the `command not found: bd` error, re-ran with `br` — one wasted round-trip.
+Incident 2026-06-12 wave/004: ran the emitted `bd` command, hit the `command not found: bd` error, re-ran with `br` — one wasted round-trip. **RESOLVED as of `bv v0.18.0`:** `bv --robot-next` now emits `claim_command: "br update <id> --status=in_progress"` natively (verified live 2026-07-16), so no translation is needed on `bv` ≥ 0.18. Kept as a dated historical note — the workaround applied only to `bv` ≤ 0.16; cross-machine version parity is assumed, not re-verified per run.
 
 ## env-blocked-claims
 

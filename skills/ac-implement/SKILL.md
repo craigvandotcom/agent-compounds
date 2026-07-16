@@ -349,7 +349,7 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
-> ⚠️ **The claim command robot-next prints uses `bd`, but this repo's binary is `br`.** `bv --robot-next` emits `bd update <id> --status=in_progress`; running it verbatim fails with `command not found: bd`. Translate to **`br update <id> --status=in_progress`** (incident: bd-br-translation — `references/incidents.md`).
+> **`bv` ≥ 0.18 emits `br` natively.** `bv --robot-next`'s `claim_command` is already `br update <id> --status=in_progress`, so run it verbatim. The old `bd`→`br` translation was only needed on `bv` ≤ 0.16 and is retired (2026-07-16 — this repo runs `bv v0.18.0`, verified live). **Version assumption:** cross-machine `bv` parity is assumed, not re-checked per run; if some machine is pinned ≤ 0.16 and emits `bd update`, translate it to `br update`. History: `references/incidents.md` § bd-br-translation.
 
 **Guard: verify the selected bead carries `refined` and is not human-gated.** Readiness is presence of `refined`, not absence of `unrefined`. Check the bead's labels — if it lacks `refined`, or has `human-gate`, skip it and pick the next one:
 
