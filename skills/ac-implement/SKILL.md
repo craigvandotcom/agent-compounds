@@ -464,6 +464,12 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
 
 2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports).
 
+   > **Red-test classification requires EVIDENCE — never accept "pre-existing" or "concurrent-session" at face value** (memory `verify-red-tests-against-history-before-preexisting-claim`). When an engineer's result file (or your own triage) classifies a failing test as pre-existing debt or another session's WIP rather than a regression THIS bead caused, that classification is only valid with one of two concrete proofs, recorded in the bead's progress/result notes:
+   > - **History proof:** the same test was already red BEFORE this bead's diff — cite the Phase 0 Baseline Check result (the loop-close/`quality-gate.yml` run, or the local baseline) showing that test failing, or re-run it pinned to the pre-wave SHA with `VITEST_AFFECTED_REF=<pre-wave-SHA> pnpm test`. Do NOT use `git stash` or spawn a `git worktree` to get this (both banned under trunk-direct — Phase 0), OR
+   > - **Symbol proof:** the failing assertions reference only symbols/files that this wave's diff does not touch (`git diff --stat` shows the test's subject-under-test is untouched by any commit in this session).
+   >
+   > Absent either proof, treat the red test as YOURS and fix it before closing. Two independent engineers misclassified `resolution-trigger{,-state}.test.ts` regressions this way (bd-c5vg7 evidence: wave/035 cost a conductor rerun + extra spawn, commit e25f6284). "Known pre-existing" without a proof is the same evasion phrase the Baseline Check rejects.
+
 3. **Lint + type-check** — catch errors early:
 
    ```bash
