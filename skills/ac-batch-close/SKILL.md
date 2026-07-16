@@ -77,6 +77,33 @@ Everything else below is the same mechanism, retargeted anchor and audience.
 
 ---
 
+## Session Identity (Tier 1 — mint FIRST, before the build slot)
+
+ac-batch-close is a **Tier-1 session**: on a red Tier-1 CI dispatch it **fix-forwards** —
+edits code, commits, pushes to `main` (Act 1 triage). Mint a unique identity at ceremony
+start (doctrine: `_shared/agent-identity.md` — Tier 1 lifecycle). Minting is also the
+**prerequisite for the build slot**: `acquire_build_slot` needs a real `registration_token`
+for a pre-existing identity, and the mint is what yields one — a loop-spawned session that
+skips this step holds no token (this closes bd-kskxg's token-less graceful-degrade path):
+
+```
+mcp__mcp-agent-mail__macro_start_session(
+  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key — canonical Agent Mail key (pattern: "neometa/<app-dir>") — NEVER an absolute path (split-brain)
+  program: "claude-code",
+  model: "claude-opus-4-8"
+)
+```
+
+Capture the returned `name` and `registration_token` (the build slot below and every fix-forward
+commit consume them):
+
+```bash
+export GIT_IDENTITY_ENABLED=1
+export AGENT_NAME=<returned-name>   # re-assert inline at each git commit (exports don't survive across bash calls)
+```
+
+---
+
 ## Build Slot (advisory coordination across concurrent conductors)
 
 This ceremony can be invoked more than once concurrently under 3-5 concurrent conductors
@@ -85,7 +112,7 @@ This ceremony can be invoked more than once concurrently under 3-5 concurrent co
 refuses (memory `agent-mail-build-slot-advisory`). Correctness is entirely on the caller:
 
 ```
-acquire_build_slot(key="batch-close:main", ttl=<covers the expected CI-poll wall-clock>)
+acquire_build_slot(key="batch-close:main", registration_token=<the token from macro_start_session above>, ttl=<covers the expected CI-poll wall-clock>)
   → read the returned `conflicts` list
   → if another agent's active lease is present, this is advisory, not a lock: proceed only if
     your batch anchor genuinely does not overlap theirs (different ANCHOR..HEAD ranges are
@@ -98,16 +125,14 @@ acquire_build_slot(key="batch-close:main", ttl=<covers the expected CI-poll wall
     abort, so a stalled conductor doesn't leave a stale advisory lease for the next run
 ```
 
-> **Prerequisite + graceful degrade (bd-kskxg field-test).** `acquire_build_slot` (like
-> `macro_start_session`) needs a `registration_token` for a pre-existing identity — a
-> loop-spawned MCP session that did not itself register that identity does NOT hold one, and the
-> call will fail for it. If you cannot acquire the slot (no `registration_token`, or the
-> primitive errors), **degrade gracefully — do not block the ceremony**: the slot is advisory,
-> not a lock (memory `agent-mail-build-slot-advisory`), so proceed advisory and instead assert
-> `git rev-parse origin/main` equals your local `HEAD` immediately before and after each
-> CI-affecting step (dispatch, any fix-forward push, the Act 3 report commit). A mismatch is the
-> real signal a concurrent conductor moved `main` under you — which is the only thing the slot
-> was ever hinting at.
+> **Token custody + concurrency assertion (bd-kskxg field-test, resolved).** The Session
+> Identity mint above gives this ceremony a real `registration_token`, so `acquire_build_slot`
+> succeeds — there is no longer a token-less path to degrade around. What remains, unconditionally,
+> is the concurrency assertion the slot only ever *hinted* at: assert `git rev-parse origin/main`
+> equals your local `HEAD` immediately before and after each CI-affecting step (dispatch, any
+> fix-forward push, the Act 3 report commit). A mismatch is the real signal a concurrent conductor
+> moved `main` under you — the slot is advisory (memory `agent-mail-build-slot-advisory`), so this
+> assertion, not the lease, is what actually protects the range.
 
 No mutual exclusion is enforced by the primitive itself — this is a presence signal for a
 conflicting concurrent run to notice, not a queue or a lock.
@@ -316,10 +341,19 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 - **Present to user:** architectural/debatable items (Exhaust Rule applies if headless —
   `br create -t bug --labels review-finding` rather than blocking silently).
 
-Apply fixes, commit, push directly to `main`, re-dispatch, re-poll (5-minute cap, same as
-`ac-merge`'s re-poll) — **still foreground**, never backgrounded. **If checks still fail after
-fixes:** present failures and ask abort vs proceed-anyway (interactive), or file a `qa-blocker`
-bead + STOP (autonomous/headless).
+Apply fixes, then commit under the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
+the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard
+reads it, and a fix-forward as `FoggyCreek` would be a Tier-2-boundary violation):
+
+```bash
+export AGENT_NAME=<minted-name>   # re-assert inline — the Phase-0 mint's name
+git commit -m "batch-close: fix-forward CI failure — <summary>" -- <fixed files>
+git push origin main || { git pull --rebase origin main && git push origin main; }
+```
+
+Re-dispatch, re-poll (5-minute cap, same as `ac-merge`'s re-poll) — **still foreground**, never
+backgrounded. **If checks still fail after fixes:** present failures and ask abort vs
+proceed-anyway (interactive), or file a `qa-blocker` bead + STOP (autonomous/headless).
 
 Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 
@@ -418,6 +452,7 @@ key on. Batch-close's own addition beyond the template is a short **Feedback wri
 verification moved to `ac-publish`).
 
 ```bash
+export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this commit is the operative review-mark; attribute it to the minted identity, not FoggyCreek
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 # Pathspec-on-commit (bd-kskxg field-test): the trailing `-- <report path>` scopes the commit to
 # ONLY this file, so pre-staged foreign WIP in the shared checkout cannot be swept into the
@@ -498,6 +533,20 @@ slack-send --channel sofi --card \
 
 ```
 release_build_slot(key="batch-close:main")   # release even on an aborted run
+```
+
+### Self-deregister the Tier-1 identity (Layer 1)
+
+As the ceremony's true last act — after the build slot is released — deregister the name
+minted in the Session Identity step so the registry doesn't accumulate a zombie identity per
+batch-close (doctrine: `_shared/agent-identity.md` Deregistration, Layer 1; by name —
+`registration_token` optional). Do this even on an aborted run:
+
+```
+mcp__mcp-agent-mail__deregister_agent(
+  project_key: CANONICAL_PROJECT_KEY,
+  agent_name: AGENT_NAME
+)
 ```
 
 ### Next Step
