@@ -163,6 +163,33 @@ Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.
 lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
 low-risk).
 
+#### Hot-lane (L0–L2) lint — stack-wide, GATED (Phase-1.6 gap closed)
+
+Beyond the substrate (L3) sweep above, Phase 3 also lints the **hot lane** — L0 entry
+files, L1 CORE, L2 skills/agents, and hook-injected files — the every-turn context whose
+rot is silent (nothing breaks; every session just reads a lie). Two passes, both feeding
+the SAME gated proposal queue:
+
+1. **Mechanical (stack-wide):** run `infrastructure/tools/bin/hot-lane-lint` (the L0–L2
+   analog of the daily registry self-lint, generalized across ALL deploy targets, not just
+   agent-compounds). It checks pointer-path resolution, projection symlink health, the
+   **regeneration test** (`harness-sync.sh --all --check`, per conformance-checklist
+   §Projections — invoked here), and budget/roster/hook/app-list drift. HARD failures
+   (broken pointer/symlink) exit non-zero; SOFT warnings (L0 >150, CORE >200, roster/hook/
+   drift) are emitted as findings. Fold its `--json` output into the run `INDEX.md`. (Use
+   `--no-regen` if the weekly slot is tight; the regen test also runs in the projection
+   health job.)
+2. **Semantic:** sweep `references/stack-lint.md` (altitude · no-learnings-in-hot-lane ·
+   skill selectability · task-overlap · stale-claims · PLACEMENT-ladder) — the judgment
+   checks the grep half can't reduce. Seed the reads with the mechanical WARNs' line
+   numbers.
+
+**Every L0–L2 finding is emitted as a GATED proposal — NEVER auto-applied**, however
+mechanical it looks (unlike the daily Tier-0 substrate sweep, which auto-applies lossless
+fixes). A hot-lane line propagates to every session, so the blast radius earns a human read
+(context-engineering PLACEMENT: "L0–L2 changes are gated, rare"). These findings flow into
+the same Phase 4 judge / Phase 5 emit path as the substrate candidates below.
+
 **TaskUpdate("Lint substrate", completed)**
 **TaskUpdate("Judge candidates", in_progress)**
 
