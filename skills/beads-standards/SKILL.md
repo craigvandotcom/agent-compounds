@@ -198,6 +198,7 @@ checklist). The frozen set:
 - `human-gate` — the sole human marker
 - the VERDICT grammar tokens — `passed`/`failed`/`blocked`/`waived` + `discovered-from`
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
+- the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-bead-refine` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or
 retiring** a frozen one requires the migration note. Migration log:

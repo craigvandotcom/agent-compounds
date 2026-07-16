@@ -412,14 +412,18 @@ AskUserQuestion(
 
 **On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
 
+**Also stamp the refine-PATH that produced the convergence** — `refine-full` for the normal 3-reviewer × ≥3-round run this workflow codifies, or `refine-light` when the conductor ran a **disclosed** reduced-process deviation (e.g. the match-process-weight-to-task-size case — this skill has no formal light branch today, so `refine-light` records that carve-out and makes its frequency/safety measurable). The pair is eval-load-bearing and frozen under `beads-standards` § LABEL-FREEZE.
+
 **Contract gate:** no implementable bead gets the stamp while its `## Delivers` / `## Consumes` is missing or vague (`_shared/bead-conventions.md` §Bead I/O contract) — author or fix the contract first (refine authors it for quick-capture beads). The stamp asserts the I/O contract along with everything else; ac-implement's pre-dispatch premise check reads Consumes lines at face value.
 
 ```bash
-# Remove unrefined, add refined — scoped to what was actually reviewed this run
-# (the snapshot from Phase 0: whole board normally, epic + children if epic-scoped).
+# Remove unrefined, add refined + the refine-path label — scoped to what was actually
+# reviewed this run (the snapshot from Phase 0: whole board normally, epic + children if epic-scoped).
+REFINE_PATH="refine-full"   # normal 3-reviewer × ≥3-round run; set to "refine-light" for a DISCLOSED reduced-process deviation
 for id in $(jq -r '.issues[] | select(.status == "open") | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); do
     br label remove "$id" "unrefined" 2>/dev/null
     br label add "$id" "refined" 2>/dev/null
+    br label add "$id" "$REFINE_PATH" 2>/dev/null
 done
 ```
 
