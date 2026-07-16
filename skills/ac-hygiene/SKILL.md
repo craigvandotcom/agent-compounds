@@ -383,6 +383,13 @@ taste/product forks in an autonomous run (user not present) → `-t decision
 sweep on a question. Dedupe via `br search` first; nits stay in the report
 (hygiene is the highest inflation risk — a bead is something you'd schedule).
 
+> **`human-gate` is MANDATORY on every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled
+> bead at filing, not optional** (memory `decision-beads-need-human-gate-label-at-filing`;
+> `beads-standards` § human-gate). `issue_type=decision` alone gates nothing — the LABEL is
+> what every label-keyed gate reads. Do not hand-roll a `br create -t decision` that omits it;
+> a dropped `human-gate` leaves the bead silently workable/auto-closable around the human.
+> `ac-bead-refine`'s Phase 5 title/label parity check (bd-7fqgi seam 2) backstops any that slip.
+
 **Bead bodies follow the template at creation** (bead-conventions § Body
 template): typed headers (`## Steps to Reproduce` for bugs, `## Acceptance
 Criteria`, `## Test Scope` with grep-verified anchors, `## Success Criteria` on

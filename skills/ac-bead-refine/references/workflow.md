@@ -408,6 +408,22 @@ AskUserQuestion(
 
 **Apply any user-approved findings using `br` commands.**
 
+### Title/Label Parity Gate (decision beads MUST carry `human-gate`) — run BEFORE stamping
+
+**Critical parity assertion, checked over the whole reviewed snapshot before any `refined` stamp.** Any bead titled `DECISION:` / `DESIGN_DECISION:` (case-insensitive prefix) OR typed `decision` that lacks the `human-gate` label is a Critical finding — the label is what every label-keyed gate reads (`issue_type=decision` alone gates nothing; memory `decision-beads-need-human-gate-label-at-filing`, `beads-standards` § human-gate). Fix it (add the label) BEFORE that bead can be stamped `refined` — a decision bead must never reach `refined` without its gate label. This is the backstop for producers (ac-review / ac-hygiene Exhaust Rule) that hand-roll a `br create` and drop the label; it has recurred 14+ times, caught only by reactive manual relabeling in refine passes — this gate makes the fix automatic.
+
+```bash
+# Add human-gate to any decision-typed OR DECISION:/DESIGN_DECISION:-titled reviewed bead missing it
+for id in $(jq -r '.issues[] | select(.status == "open") | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); do
+    row=$(br show "$id" --json | jq -c '.[0]')   # br show returns a bare ARRAY — index .[0]
+    needs_gate=$(echo "$row" | jq -r 'if ((.issue_type == "decision") or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):"))) and ((.labels | index("human-gate")) | not) then "yes" else "no" end')
+    if [ "$needs_gate" = "yes" ]; then
+        echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
+        br label add "$id" "human-gate" 2>/dev/null
+    fi
+done
+```
+
 ### Remove `unrefined`, Stamp `refined`
 
 **On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
@@ -450,6 +466,7 @@ Verify:
 - [ ] Each bead is independently **green + shippable**; bead order is **commit-safe** (add-before-remove; migrations additive-first)
 - [ ] Comments explain reasoning/justification
 - [ ] Acceptance criteria are clear and verifiable
+- [ ] Title/label parity enforced — every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled reviewed bead carries `human-gate` BEFORE stamping
 - [ ] `unrefined` removed AND `refined` added to all reviewed beads
 
 ### Report

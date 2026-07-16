@@ -684,6 +684,16 @@ br create -t decision --labels "human-gate,review-finding" \
 br dep add <downstream-bead-id> <decision-bead-id>
 ```
 
+> **The `human-gate` label is MANDATORY at filing, not optional** (memory
+> `decision-beads-need-human-gate-label-at-filing`; `beads-standards` § human-gate).
+> `issue_type=decision` alone gates NOTHING — every label-keyed gate (bug-lane drain,
+> beads-closed-gate, cleaning passes) keys on the LABEL. A `DECISION:`/`DESIGN_DECISION:`-titled
+> or `decision`-typed bead created WITHOUT `human-gate` sits silently workable and can be
+> auto-closed around the human. Do not hand-roll a `br create` that drops it. This has recurred
+> 14+ times across sessions despite the template being correct — `ac-bead-refine`'s Phase 5
+> title/label parity check (bd-7fqgi seam 2) is the backstop that catches any that still slip
+> through, but the fix belongs here at the producer.
+
 Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-session` when Craig reviews the docket.
 
 **Only use AskUserQuestion when explicitly in an interactive session** (human is present at the terminal, NOT a scheduled or headless run):
