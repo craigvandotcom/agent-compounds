@@ -51,6 +51,30 @@ ARTIFACTS_DIR=/tmp/work-review-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$ARTIFACTS_DIR"
 ```
 
+### Register Session Identity (Tier 1)
+
+ac-review is a **Tier-1 session**: its Phase-4 auto-fix engineer edits product code and
+Phase 6 commits + pushes. Mint a unique identity at review start so those fixes reserve and
+commit under a real name instead of falling back to `FoggyCreek` (doctrine:
+`_shared/agent-identity.md` — Tier 1 lifecycle: mint → reserve at work grain → release →
+self-deregister):
+
+```
+mcp__mcp-agent-mail__macro_start_session(
+  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key — the app's canonical Agent Mail key from its session-start.md (pattern: "neometa/<app-dir>") — NEVER an absolute path (abs paths fork a per-machine mailbox / split-brain)
+  program: "claude-code",
+  model: "claude-opus-4-8"
+)
+```
+
+Capture the returned `name` and `registration_token` (the reservation/release/message calls
+below REQUIRE the token). Then export so the commit shells attribute correctly:
+
+```bash
+export GIT_IDENTITY_ENABLED=1   # Agent Mail git identity/attribution — NOT worktree isolation
+export AGENT_NAME=<returned-name>   # unique per session; re-assert inline at each git commit (exports don't survive across bash calls)
+```
+
 ### Discover Project Commands
 
 Read `AGENTS.md > Project Commands` for the project's toolchain. Map to workflow variables:
@@ -411,6 +435,21 @@ Skip to Phase 5.
 
 ### If AUTO_FIX Items Exist
 
+**Reserve the AUTO_FIX file list first (Tier 1).** The numbered change list from Phase 3
+names every file the fix engineer will touch — reserve them at the work grain BEFORE
+spawning the engineer, so a concurrent invocation sees them as held mid-fixup. Held until
+released after the Phase 6 commit:
+
+```
+mcp__mcp-agent-mail__file_reservation_paths(
+  project_key: CANONICAL_PROJECT_KEY,   // canonical Agent Mail key (pattern: "neometa/<app-dir>") — NEVER an absolute path
+  agent_name: AGENT_NAME,               // the Tier-1 name minted in Phase 0
+  paths: ["<every file in the AUTO_FIX numbered change list>"],
+  ttl_seconds: 7200,
+  exclusive: true
+)
+```
+
 Spawn engineer with the AUTO_FIX list, using the prompt in **`references/engineer-fix-prompt.md`** with the Phase-4 `INTENT` ("Apply these fixes exactly as specified. Do NOT modify NEEDS_DECISION items.") and the `## Output` block kept (the result file is read back below).
 
 ### Verify Fixes
@@ -512,6 +551,7 @@ git status --short
 ### Commit
 
 ```bash
+export AGENT_NAME=<minted-name>   # re-assert inline — exports don't survive across bash calls; the pre-commit guard reads this
 git add "${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md"
 git add <files modified by auto-fixes>
 git commit -m "$(cat <<'EOF'
@@ -525,6 +565,21 @@ EOF
 )"
 git push
 ```
+
+**Release the AUTO_FIX reservation** — the auto-fix files are committed; release the same
+paths reserved before Phase 4 so parallel sessions aren't starved (the Phase-0 identity is
+deregistered later, in Phase 8):
+
+```
+mcp__mcp-agent-mail__release_file_reservations(
+  project_key: CANONICAL_PROJECT_KEY,
+  agent_name: AGENT_NAME,
+  paths: ["<same paths passed to file_reservation_paths before Phase 4>"]
+)
+```
+
+> **If the commit failed:** do NOT release reservations — the files still need work. Fix the
+> commit, then release after a verified commit.
 
 **TaskUpdate(task: "Phase 6", status: "completed")**
 
@@ -612,6 +667,7 @@ Spawn engineer for approved items using **`references/engineer-fix-prompt.md`** 
 ### Commit All Fixes
 
 ```bash
+export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 identity) — exports don't survive across bash calls
 git add <specific files>
 git commit -m "$(cat <<'EOF'
 review: implement fixes + decisions for [feature]
@@ -708,6 +764,18 @@ AskUserQuestion(
 
 ```bash
 rm -rf "$ARTIFACTS_DIR"
+```
+
+**Self-deregister the Tier-1 identity (Layer 1).** As ac-review's true last act — after the
+final commit and reservation release — deregister the name minted in Phase 0 so the registry
+doesn't accumulate a zombie identity per review (doctrine: `_shared/agent-identity.md`
+Deregistration, Layer 1; by name — `registration_token` optional):
+
+```
+mcp__mcp-agent-mail__deregister_agent(
+  project_key: CANONICAL_PROJECT_KEY,
+  agent_name: AGENT_NAME
+)
 ```
 
 **TaskUpdate(task: "Phase 8", status: "completed")**
