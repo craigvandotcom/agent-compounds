@@ -342,6 +342,14 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
   `br create -t bug --labels ci-finding` rather than blocking silently — CI is the catch stage;
   its eventual close cites the regression test per bead-conventions § Per-type close artifacts).
 
+> **Correlated failures → escalate to the LCA, don't fix-forward N times.** If **2+** batch
+> beads fail for one shared root cause (same wrong contract/assumption/parent-decomposition
+> error, not just the same file), do not queue per-bead fix-forwards: trace them to their
+> lowest common ancestor and route that parent node back to `/ac-bead-refine`, keeping
+> closed+verified beads frozen. Full detection + frozen-region rule: `ac-review` § Correlated-
+> Failure Escalation (LCA Repair). Per-bead fix-forward remains correct for uncorrelated,
+> single-bead CI failures.
+
 Apply fixes, then commit under the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
 the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard
 reads it, and a fix-forward as `FoggyCreek` would be a Tier-2-boundary violation):

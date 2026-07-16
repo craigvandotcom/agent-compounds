@@ -442,6 +442,37 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 **TaskUpdate(task: "Phase 4", status: "in_progress")**
 
+### Correlated-Failure Escalation (LCA Repair — check BEFORE per-bead patching)
+
+Before dispatching per-bead fixes, ask whether the findings are **correlated** — a
+higher-leverage repair than patching each bead in isolation (ATG, arXiv 2607.01942).
+
+**Detection rule.** Findings are *correlated* when **2 or more beads** in this batch fail
+review/validation and share a **single root cause** — the same wrong assumption, contract, or
+shared-parent decomposition error, not merely the same file. Signals: identical/near-identical
+finding text across beads; failures all trace to one shared spec, type, or interface the parent
+epic/plan defined; fixing one bead's symptom would obviously re-appear in its siblings.
+
+**Escalation path (repair the parent once, not the children N times).** On a correlated
+cluster:
+1. Trace the failing beads to their **lowest common ancestor (LCA)** in the decomposition — the
+   shared epic or plan node they were split from (walk `## Consumes` / dependency edges and the
+   `discovered-from` / epic parent up to the first node they all descend from).
+2. Escalate the fix to that parent: emit **`VERDICT: NEEDS_DECISION`** with a note routing the
+   LCA node back to `/ac-bead-refine` (re-decompose the parent) rather than queuing N per-bead
+   AUTO_FIX items. Repair the decomposition **once**, then regenerate the affected subgraph.
+3. Do **not** hand-patch the correlated symptoms here — per-bead patches around a shared-parent
+   defect leave the decomposition wrong and the bug re-emerges on the next bead off that parent.
+
+**Frozen-region rule.** A parent-level repair **never reopens closed + verified beads**. Beads
+already `closed` with delivered artifacts are frozen; the regeneration touches only the
+still-open subgraph under the repaired LCA. Use the frozen beads' **`## Delivers` / downstream
+`## Consumes`** lines to identify exactly what must be **re-checked** (not re-implemented): any
+open bead consuming a frozen bead's artifact is re-verified against it after regeneration; the
+frozen bead itself stays closed.
+
+Uncorrelated findings (single-bead root cause) fall through to the normal per-item flow below.
+
 ### If No AUTO_FIX Items
 
 Skip to Phase 5.
