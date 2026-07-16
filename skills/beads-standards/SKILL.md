@@ -42,10 +42,15 @@ decision rule are computed directly off this one label (`is_pending` + `human-ga
 predicates, `/fleet.json` — `infrastructure/services/cockpit/SKILL.md`). A missed
 synonym is a bead the cockpit cannot see.
 
-## Human-gate template (the structured decision card)
+## Human-gate template (two card kinds — one gate label)
 
-A human bead is a **decision card**, not a flag. Title prefix `DECISION:` or `HUMAN:`.
-Description carries exactly these fields:
+A human bead is a **card**, not a flag — everything Craig needs to act is on it.
+`human-gate` stays the **SOLE** gate label: no `-gate` variant is ever introduced. The
+two kinds below differ only by **title prefix** and body template, so the cockpit's
+`is_pending` + `human-gate` predicates are untouched — the split is at the template
+level, not the label level.
+
+**`DECISION:` — a decision card** (a fork only Craig can resolve). Description fields:
 
 ```
 decision: <one-sentence question — what is Craig actually choosing?>
@@ -55,6 +60,25 @@ options:
   (2-4 lettered options; each does the analysis work Craig shouldn't have to)
 context: <why this fork exists now — the minimum needed to decide in 15 seconds>
 ```
+
+(`HUMAN:` remains an accepted alias prefix for a decision-shaped gate that isn't a
+fork — an approval, credential handoff, or go/no-go — same fields, same wiring rule.)
+
+**`ACTION:` — an action card** (a do-in-the-world task only Craig can perform — a console
+toggle, a store submission, a credential handoff). Not a fork, so **no options block**;
+instead:
+
+```
+what:            <the action, one line>
+where:           <the exact surface — console / app / URL / menu path>
+checklist:       <ordered steps to complete it>
+estimated-time:  <rough wall-clock — "2 min", "15 min">
+best-done-when:  <the ridealong hint — e.g. "on the next ASC version submission">
+```
+
+Motivating case: BCA `bd-l6khg.13` (ASC intro-offer config) — no options, pure action,
+must ride a version submission. Copy-paste blocks + worked examples for both kinds:
+[reference/human-gate-template.md](reference/human-gate-template.md).
 
 **MANDATORY dependency wiring — not optional, not "if convenient":** every bead this
 decision gates gets a `blocks` edge back to the decision, at creation time:

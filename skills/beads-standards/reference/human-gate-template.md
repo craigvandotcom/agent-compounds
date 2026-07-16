@@ -75,6 +75,65 @@ EOF
 br dep add bd-abc12 bd-mf9k1   # reminder-system bead now blocked on the decision
 ```
 
+## ACTION cards (do-in-the-world tasks)
+
+Some human beads aren't forks — they're a task only Craig can perform (a console
+toggle, a store submission, a credential handoff). Same `human-gate` label (still the
+sole gate label — no new `-gate` variant), different **title prefix** (`ACTION:`) and a
+checklist body instead of options. No options block: an action card is a *do-this*, not
+a *choose-between*.
+
+```bash
+br create -t task --labels human-gate \
+  --title "ACTION: <the action, one line>" \
+  -d "$(cat <<'EOF'
+what:            <the action, one line>
+where:           <the exact surface — console / app / URL / menu path>
+checklist:
+  - <ordered step 1>
+  - <ordered step 2>
+estimated-time:  <rough wall-clock — "2 min", "15 min">
+best-done-when:  <ridealong hint — e.g. "on the next ASC version submission">
+EOF
+)"
+```
+
+`-t task` (not `-t decision`) — an action has no fork to record; its closure is "done",
+not "decided". The `best-done-when` field is the ridealong hint that lets a sit-down
+session batch the action against the moment it naturally belongs to.
+
+### Worked example (modelled on BCA bd-l6khg.13)
+
+```bash
+br create -t task --labels human-gate \
+  --title "ACTION: configure the ASC intro-offer for Body Compass" \
+  -d "$(cat <<'EOF'
+what: Set up the introductory offer (7-day free trial) on the Body Compass
+subscription in App Store Connect so it ships with the next version.
+
+where: App Store Connect → Body Compass → Subscriptions → <group> → the monthly
+product → Introductory Offers.
+
+checklist:
+  - Create a new introductory offer on the monthly subscription
+  - Type: Free trial, duration 1 week, all territories
+  - Attach it to the version currently in "Prepare for Submission"
+  - Confirm the offer shows as "Ready to Submit" alongside the build
+
+estimated-time: 10 min
+best-done-when: on the next ASC version submission (the offer must ride a version —
+it cannot ship standalone).
+EOF
+)"
+# -> prints e.g. bd-l6khg.13
+
+br dep add bd-l6khg.13 <version-submission-bead-id>   # wire it to the ride it depends on
+```
+
+The action rides the version-submission bead: `best-done-when` records the timing
+constraint in prose, and the `blocks` edge makes it mechanical — the docket surfaces the
+action beside the submission it must accompany.
+
 ## Closing a human-gate bead
 
 Agents may comment/enrich (add evidence, refine the options, flag urgency) but never
