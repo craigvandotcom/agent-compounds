@@ -32,7 +32,7 @@ the *run skeleton*; the skill is the *behavior*.
   ```bash
   BCA="$HOME/Repos/neometa/software/body-compass-app"   # canonical live checkout (has the board + .beads DB)
   git -C "$BCA" fetch origin main
-  TIDY_WT="${TMPDIR:-/tmp}/ac-tidy-run-$(date +%Y%m%d-%H%M%S)-$$"
+  TIDY_WT="${TMPDIR:-/tmp}/ac_tidy_run-$(date +%Y%m%d-%H%M%S)-$$"
   # Detached at fresh origin/main so `main` staying checked out in the live tree is irrelevant —
   # a worktree cannot share the live checkout's branch, and detach sidesteps that entirely.
   git -C "$BCA" worktree add --detach "$TIDY_WT" origin/main || {

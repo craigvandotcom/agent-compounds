@@ -46,7 +46,7 @@ the pass (that's a finding's resolution, not a blocker).
 ## Prod-write ban + secrets (the minimal package, Craig's decision)
 
 **Admin/shared-data writes are never QA'd against prod.** Any action that
-mutates cross-user shared data — canonical_ingredients zone gates, the
+mutates cross-user shared data — canonical shared-data zone gates, the
 research/retrigger pipeline, curator merge/amend, a zoning-model override, or
 any other cross-user shared record — is proven against the **local stack**
 (integration tests, or a browser drive against `pnpm dev` if a live UI walk is
