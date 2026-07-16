@@ -108,6 +108,68 @@ clustered.
 **Priority is `0`-`4`, integers only** (`P0`-`P4` accepted as input, stored as int).
 0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself.
 
+## Verification verdicts (structured comments)
+
+Close-status alone is a weak eval label — a bead can close green while its symptom
+survives; only the verdict chain shows it (a BCA bead once closed green while the
+symptom it targeted lived on). So each verification ceremony (QA, review, CI,
+prod-triage) records its outcome as a **structured comment** on the bead — not prose:
+greppable, survives `br` version changes, and clusterable by the same tooling that reads
+`close_reason`. It is a structured-COMMENT convention — **not** a sidecar file, **not**
+new `br` schema fields (labels are too coarse for a per-ceremony verdict).
+
+**Grammar** (mirrors `close_reason`'s outcome-verb shape, so one clustering pass reads both):
+
+```
+VERDICT: <outcome-verb>: <detail>
+discovered-from: <bead-id|unknown>
+```
+
+- `<outcome-verb>` leads, colon, then detail — exactly like `shipped:`/`fixed:`. Closed
+  verb set: `passed` · `failed` · `blocked` (couldn't verify — env/infra) · `waived`
+  (verification deliberately skipped, reason in the detail).
+- `discovered-from: <bead-id>` — origin linkage, on **finding beads only** (a bead a
+  ceremony filed because it caught an escape). It names the bead whose work the escape
+  traces back to. **`unknown` is a legal value** — the escape-depth metric counts only
+  linked findings, so an honest `unknown` is the correct entry when the origin can't be
+  pinned; a fabricated link is worse than none.
+- Stable greppable prefix: `grep 'VERDICT:' .beads/issues.jsonl`.
+
+**VERIFIERS write verdicts + linkage; IMPLEMENTERS never do (Goodhart guard).** The agent
+that produced the work does not grade it — the verdict is written by the QA / review / CI /
+prod ceremony that checks it. An implementer stamping its own `VERDICT: passed` is grading
+its own homework; that is a convention violation, not a verdict. This separation is what
+makes the verdict trustworthy as an eval label.
+
+**Catch-stage vocabulary — a CLOSED set.** A finding bead carries exactly one catch-stage
+label naming the lens that caught the escape:
+
+`qa-finding` · `review-finding` · `hygiene-finding` · `ci-finding` · `prod-finding`
+
+Escape-depth metrics count on this set, so it is closed — no new `*-finding` token is minted
+without a migration note (see LABEL-FREEZE). Sentry-sourced findings **normalize into
+`prod-finding`** (an alias, not a sixth token). As of ratification: `ci-finding` and
+`prod-finding` are new; `qa-finding`/`hygiene-finding` are defined but were unused;
+`review-finding` is in active use.
+
+## LABEL-FREEZE (eval-load-bearing labels are versioned)
+
+A subset of labels is **load-bearing for skills-eval metrics** — silently renaming or
+repurposing one breaks every downstream measurement that keys on it. These labels are
+**frozen**: stable and versioned, renamed ONLY with a migration note (a dated line in the
+migration log below **and** a one-time `br label rename` sweep recorded in the backfill
+checklist). The frozen set:
+
+- `refined` — the readiness gate
+- `human-gate` — the sole human marker
+- the VERDICT grammar tokens — `passed`/`failed`/`blocked`/`waived` + `discovered-from`
+- the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
+
+Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or
+retiring** a frozen one requires the migration note. Migration log:
+
+- *(none yet — first freeze ratified 2026-07-16, bead ac-aa7)*
+
 ## Label hygiene rules
 
 - **kebab-case, lowercase only.** `human-gate`, not `Human-Gate` or `human_gate`.

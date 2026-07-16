@@ -325,6 +325,17 @@ labels (`qa-finding` / `qa-blocker`) are in **`_shared/qa-shared.md`**. A native
 finding is any divergence from the journey docs' expected behavior, plus a11y
 gaps and native-shell bugs. Tag bead descriptions with `device QA`.
 
+### Verdict comment (VERDICT grammar)
+
+When the `QA_VALIDATION` pass completes, the conductor records the ceremony's outcome as
+a structured **VERDICT comment** on each bead it validated — `VERDICT: passed:` (journey
+PASS), `VERDICT: failed:` (a QA finding), or `VERDICT: blocked:` (infra-flaky / NO-STAMP)
+— per the grammar in **`beads-standards` § Verification verdicts**. QA is a *verifier*
+ceremony: the conductor writes the verdict from the verdict files (workers/implementers
+never do — Goodhart guard). Each filed `qa-finding` bead also carries
+`discovered-from: <bead-id|unknown>` linking the escape to the work that introduced it
+(`unknown` when it can't be pinned).
+
 ## Reporting
 
 Emit the **`QA_VALIDATION`** block from `_shared/qa-shared.md` with:

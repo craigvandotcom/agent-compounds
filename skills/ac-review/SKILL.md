@@ -404,6 +404,17 @@ summary. Harness-agnostic: plain `python3`, stdlib only.
   changes the development approach**. Minor choices (spacing, naming, style) → just pick the better one.
   <!-- mirror: _shared/review-consensus.md §Design-decision gate — edit there first -->
 
+### Verdict comment (VERDICT grammar)
+
+The consensus `VERDICT:` line is this review ceremony's verdict — record it on the
+reviewed bead(s) as a structured comment per **`beads-standards` § Verification verdicts**:
+`VERDICT: passed:` for a clean `APPROVED`, `VERDICT: failed:` when the panel surfaced a
+merge-blocking finding (`VERDICT: blocked:` for a `NEEDS_DECISION` partial-failure gate).
+Review is a *verifier* ceremony — the panel/conductor writes the verdict, never the
+implementer whose diff is under review (Goodhart guard). Every finding bead filed here
+carries the `review-finding` catch-stage label **and** `discovered-from: <bead-id|unknown>`
+linking it to the work that introduced the defect.
+
 ### Produce Numbered Change List
 
 From the script's `auto_fix` plus any `deferred` items you resolved: target file, what to

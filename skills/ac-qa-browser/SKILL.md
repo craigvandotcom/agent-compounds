@@ -166,6 +166,17 @@ Conventions, types, and labels (`qa-finding` / `qa-blocker`) are in
 **`_shared/qa-shared.md`**. Workers report findings in their verdict files; **the
 conductor files the beads** (deduped). Tag bead descriptions with `browser QA`.
 
+### Verdict comment (VERDICT grammar)
+
+When the `QA_VALIDATION` pass completes, the conductor records the ceremony's outcome as
+a structured **VERDICT comment** on each bead it validated — `VERDICT: passed:` (journey
+PASS), `VERDICT: failed:` (a QA finding), or `VERDICT: blocked:` (infra-flaky / NO-STAMP)
+— per the grammar in **`beads-standards` § Verification verdicts**. QA is a *verifier*
+ceremony: the conductor writes the verdict from the verdict files (workers/implementers
+never do — Goodhart guard). Each filed `qa-finding` bead also carries
+`discovered-from: <bead-id|unknown>` linking the escape to the work that introduced it
+(`unknown` when it can't be pinned).
+
 ## Journey stamps (last_pass)
 
 After a journey **PASS**, update its `last_pass` frontmatter block in

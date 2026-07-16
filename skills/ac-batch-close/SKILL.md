@@ -357,6 +357,17 @@ proceed-anyway (interactive), or file a `qa-blocker` bead + STOP (autonomous/hea
 
 Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 
+### Verdict comment (VERDICT grammar)
+
+The Tier 1 CI dispatch result is a verification verdict — record it on the batch's anchor /
+scope beads as a structured comment per **`beads-standards` § Verification verdicts**:
+`VERDICT: passed:` on a green dispatch, `VERDICT: failed:` when the run red-Xed (put the
+fix-forward SHA in the detail), `VERDICT: blocked:` for a stalled/timeout-terminal run. CI
+is a *verifier* ceremony — the verdict is written here, never by the implementer whose
+commit is under test (Goodhart guard). A finding filed from a CI failure carries the
+`ci-finding` catch-stage label (the CI token in beads-standards' closed set) plus
+`discovered-from: <bead-id|unknown>`.
+
 ---
 
 ## Act 2 — One Light Review Pass
