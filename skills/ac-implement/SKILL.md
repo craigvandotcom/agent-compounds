@@ -150,6 +150,8 @@ Specifically REJECT these failure modes from being treated as "acceptable baseli
 
 The baseline read is cheap — always do it. Only the fallback full run (when no loop-close run is available) is expensive; skip that fallback only if it takes > 10 minutes AND the session targets fewer than 2 beads.
 
+> **Wait for long local runs IN-SHELL — never detach from your own command** (`_shared/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall (this exact ac-implement phase stalled twice, RUN_ID=20260710-170558-52993). Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
+
 ### Scoped Per-Commit Readiness Gate (H7 v3) + Push Cadence
 
 This is the gate that runs at **every** commit for the rest of the session (Phase 1d), not just once here — establishing it in Phase 0 so it's binding for the whole loop. Under trunk-direct there is no wave branch acting as a buffer, so this gate — plus post-push CI — is the only thing keeping `main` clean.

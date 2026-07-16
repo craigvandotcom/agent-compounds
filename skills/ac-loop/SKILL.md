@@ -549,6 +549,12 @@ fighting the machine. Hold these:
   sequential `br` writes) — a backgrounded bulk-`br` loop can stall silently; kill and
   retry foreground before assuming `br` is broken (`_shared/bead-conventions.md` § Bulk
   `br` write-loops).
+- **Wait for your OWN long-running local command in-shell — never detach** (`_shared/delegation-contract.md`
+  § clause 5, self-detachment). Backgrounding a local `pnpm test`/build/CI-poll via
+  `run_in_background` + `Monitor` and ending your turn "waiting for completion" is the
+  self-detachment stall — the same silent-resume-break as an abandoned child, pointed at
+  yourself. Foreground it with a generous Bash timeout (or a foreground `pgrep`/poll
+  until-loop); the turn does not end until the command returns.
 
 **Parallelism — the `PARALLEL_WIDTH` dial (fan-out under ONE conductor)**
 - The conductor may hold up to **`PARALLEL_WIDTH`** phase sub-sessions in flight —
