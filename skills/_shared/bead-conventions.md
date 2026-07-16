@@ -275,8 +275,10 @@ this is specifically about large sequential write sweeps.)
 
 - **JSON shapes differ by command.** `br list --json` returns a **paginated object**
   (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But
-  `br ready --json` and `br show <id> --json` return **bare arrays** — index `.[0]`, don't
-  reach for `.issues`. Parsers must handle both shapes.
+  `br ready --json` and `br show <id> --json` return **bare arrays** — index `.[0]` (e.g.
+  `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
+  array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
+  Parsers must handle both shapes.
 - **Bulk writes must run in the foreground.** See "Bulk `br` write-loops" above — a loop of
   `br dep add` (or any bulk br write) stalls under `run_in_background`.
 - **Never chain `br close` to a commit in one call.** `git commit && br close <id>` records the
