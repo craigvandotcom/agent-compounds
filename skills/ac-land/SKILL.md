@@ -107,7 +107,10 @@ teardown (task 9) still owes work. The ledger tracks the RUN; beads stay the wor
 - For each: either close it (if done) or add a comment documenting where you left off
 - Create new beads for any loose ends discovered during the session:
   ```bash
-  br create "Follow-up: <description>" --priority P1 --description "Discovered during bead-work session. Context: ..."
+  # Dedup first: br list --json | grep -i "<keyword>"  — skip if an open match already exists.
+  # -t = kind of work (task/bug/investigation; -t bug only for a shipped product defect).
+  # unrefined routes the raw bead through ac-bead-refine instead of treating it as already-refined.
+  br create "Follow-up: <description>" -t <type> --priority P1 --labels followup,unrefined --description "Discovered during bead-work session. Context: ..."
   ```
 
 Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.

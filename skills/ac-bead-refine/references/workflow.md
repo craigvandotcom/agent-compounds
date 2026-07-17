@@ -313,8 +313,11 @@ br label add <id> "new-label"
 # Split rule: partition the original's ## Delivers across the children — nothing
 # dropped (bead-conventions §Bead I/O contract); re-point downstream beads'
 # Consumes lines at the new child IDs that now own those artifacts.
-br create "Split: first half" --parent <epic-id> --priority P0 --description "..."
-br create "Split: second half" --parent <epic-id> --priority P0 --description "..."
+# Dedup first: br list --json | grep -i "<keyword>". Set -t (task/bug/investigation).
+# Split children inherit the epic's domain <origin-label>; author must set it.
+# unrefined routes each child back through refinement rather than treating it as refined.
+br create "Split: first half" -t <type> --parent <epic-id> --priority P0 --labels <origin-label>,unrefined --description "..."
+br create "Split: second half" -t <type> --parent <epic-id> --priority P0 --labels <origin-label>,unrefined --description "..."
 br dep add <second-half-id> <first-half-id>
 br close <original-id>
 ```
