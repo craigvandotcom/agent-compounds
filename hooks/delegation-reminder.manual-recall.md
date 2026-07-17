@@ -1,6 +1,7 @@
 # Memory context — load alongside the user prompt
 
-Before drafting a response, load memory context:
+This harness receives no per-prompt hook injection — pull recall MANUALLY before
+drafting a response:
 
 ```bash
 qmd search "<task keywords>" --limit 5
@@ -8,94 +9,62 @@ qmd search "<task keywords>" --limit 5
 
 - Run a search (task = 2-6 word summary of the user prompt above)
 - Review results: facts, rules, decisions, recipes relevant to this task
-- Check if worldview principles apply to this task
-- Integrate into working context before acting
 - If the task touches prior work, widen the search and check hits carefully
-
-**qmd is the memory substrate — the recall hook also injects relevant facts on
-matching prompts, but an explicit search catches what the hook misses.**
+- Integrate into working context before acting
 
 **The full recall stack (know these cold):** `qmd query "X" --json` (knowledge +
 memory + wiki lobes) · `cass search "X" --json` (past agent-session transcripts —
 "did we discuss X?") · `cm context "<task>" --json` (procedural playbook rules).
 Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
 
-**Order of operations:** If the user prompt is a scheduled heartbeat, run the heartbeat's first Takeoff step (`date`, or read soul.md) first, then this `qmd search` call, then continue the heartbeat sequence. This memory load is supplementary context — it does NOT replace executing the user prompt.
+**Order of operations:** If the user prompt is a scheduled heartbeat, run the
+heartbeat's first Takeoff step (`date`, or its named first step) first, then this
+recall pull, then continue the heartbeat sequence. Memory load is supplementary
+context — it does NOT replace executing the user prompt.
 
 ---
 
-## Knowledge Base Search (qmd)
+## Knowledge base (qmd)
 
-**When to use qmd tools:**
-- User asks about past writing, notes, or research
-- Query needs semantic understanding ("concepts related to X")
-- Search across PKM vault (knowledge/) or system docs (.claude/)
-- Finding specific files or content across 1,400+ documents
+Collections span the PKM vault (`knowledge/`), system docs, memory substrates, wiki
+synthesis pages, and per-app lobes — `qmd status` lists them all with doc counts.
 
-**Available tools:** qmd CLI via Bash — `qmd search "X" --json`, `qmd query "X" --json`, `qmd get "path"`, `qmd status`
-
-**Collections:**
-- `knowledge` - PKM vault (1,114 docs: projects, journals, research)
-- `system` - PAI docs (318 docs: skills, agents, architecture)
-
-**Use qmd when:** User query contains research/discovery intent
-**Skip qmd when:** Only need session context (cm handles this)
+**Use qmd when:** the query needs past writing/notes/research, semantic understanding
+("concepts related to X"), or any search across the vault.
+**Use cass when:** the question is about a past SESSION ("did we discuss/decide X?").
+**Use cm when:** starting a task that likely has procedural rules from prior runs.
 
 ---
 
 ## Core Protocol
 
-**Read:** `.claude/skills/CORE/SKILL.md` (complete identity, capabilities, subagent rules)
+**Read:** `~/Repos/.claude/skills/CORE/SKILL.md` (identity, capabilities, quick-nav)
+**Doctrine:** `~/Repos/AGENTS.md` (delegation stances, memory routing, tool inventory)
 
-**Execution default:** Direct execution using tools/MCPs. Delegate strategically for context isolation, parallel work, specialized depth.
-
-**Git (root only):** After ANY file changes in `the repo root`, commit + push. Skip submodules.
-
----
-
-## Mandatory Delegation
-
-**`.claude/` directory changes → architect subagent (NO EXCEPTIONS)**
-Includes: skills, agents, hooks, memory, settings. Architect understands progressive disclosure. File reads OK, edits require architect.
+**Git (root repo only):** after file changes under `~/Repos` outside app repos,
+commit + push. Never commit across repo boundaries in one operation.
 
 ---
 
-## Subagent Quick Reference
+## Delegation — the three stances
 
-| Subagent | Mandatory For | Don't Use When |
-|----------|---------------|----------------|
-| architect | ANY `.claude/` modifications | Reading docs only |
-| _(content)_ | Content tasks → use `/project content` to switch context (no root subagent) | Quick notes, bullet lists |
-| strategist | Full planning with frameworks | Quick goal lookup, simple task |
-| researcher | Multi-source deep investigations | Single WebSearch, reading one file |
-| administrator | Complex multi-step life ops | Single message/email/task |
-| advisor | Complex life decisions | Simple preference questions |
-| librarian | Bulk PKM operations | Filing single document |
+Delegate non-trivial work to a subagent by stance (all defined in `.claude/agents/`):
 
-**Details:** `.claude/skills/CORE/subagent-usage.md`
+| Stance | Use for | Never for |
+|--------|---------|-----------|
+| **researcher** | read-only investigation (brain → code → web), returns cited summary | making changes |
+| **implementer** | scoped execution of an approved plan/spec | planning, verification |
+| **validator** | adversarial review/audit against rubrics & tests | fixing what it finds |
 
----
-
-## Workflow Reminder
-
-**Complex tasks (5+ steps):** Generate workflow first, decide delegation per step.
-
-**Context principle:** "If I only need OUTPUT, delegate. If I need to SEE THE WORK, execute directly."
+**Context principle:** "If I only need OUTPUT, delegate. If I need to SEE THE WORK,
+execute directly." The orchestrator holds decisions; subagents hold file contents.
 
 ---
 
-## Navigation Lost?
+## Navigation lost?
 
-If unsure what to do or where to find information:
-
-1. **Check decision tree:** `.claude/skills/CORE/SKILL.md` (Decision Tree: When Uncertain section)
-2. **Use quick nav table:** `.claude/skills/CORE/SKILL.md` (Quick Navigation section)
-3. **Search knowledge base:** qmd CLI via Bash (`qmd search "X" --json`)
-4. **Check memory context:** `qmd search "<task keywords>" --limit 5`
-5. **Ask Craig:** When architecture isn't clear
-
-**Common confusion points:**
-- "What skill handles X?" → `pai/reference/skills-inventory.md`
-- "Where do I schedule jobs?" → `admin/workflows/calendar-management.md`
-- "Which subagent for this task?" → CORE decision tree
-- "How do I build a workflow?" → `pai/workflows/build-workflow.md`
+1. **Quick-nav table:** `~/Repos/.claude/skills/CORE/SKILL.md`
+2. **Skill inventory:** `~/Repos/.claude/skills/pai/reference/skills-inventory.md`
+3. **Search the knowledge base:** `qmd search "X" --json`
+4. **Search past sessions:** `cass search "X" --json`
+5. **Ask Craig** when architecture isn't clear
