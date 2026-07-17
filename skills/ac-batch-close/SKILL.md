@@ -578,6 +578,15 @@ slack-send --channel sofi --card \
   --body "Batch closed — ${ANCHOR:0:8}..$(git rev-parse --short HEAD), ${N} beads, ${COMMIT_COUNT} commits. CI: ${RUN_URL}. Review: APPROVED."
 ```
 
+> **If the batch produced visual evidence, UPLOAD the images — don't just cite `/tmp`
+> paths in the card body** (Craig's directive — `_shared/qa-shared.md` § Conductor /
+> worker evidence protocol). A `/tmp` path is unreachable from his phone and transient.
+> Send only the LIVE decision surface, with context (bead id + SHA + what needs his eyes):
+> ```bash
+> slack-send -c C0AQ7964ZU6 "<context — bead, SHA, what needs judgment>" --file a.png b.png
+> ```
+> Message BEFORE `--file` (argparse is greedy — it becomes the `initial_comment`).
+
 ### Release the build slot
 
 ```

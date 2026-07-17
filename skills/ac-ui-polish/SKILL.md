@@ -211,6 +211,7 @@ diff**. Fill the **Definition of Done** checklist in
 | Programmatic correctness checks (contrast / hardcoded colour / token symmetry) | `reference/sensors.md` (run before the visual rubric) |
 | Functional QA (does it work / native shell / console) | `ac-qa-browser`, `ac-qa-device` |
 | See it running / screenshot / confirm the change | `run`, `verify` |
+| Surface visual evidence (screenshots) to Craig for sign-off | `_shared/qa-shared.md` § Conductor / worker evidence protocol — UPLOAD the image via `slack-send --file` to #sofi, never a `/tmp` path in a card |
 
 This skill *orchestrates* — it calls these in, it doesn't duplicate their content.
 

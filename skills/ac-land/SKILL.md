@@ -269,6 +269,12 @@ Read all report files from `<ARTIFACTS_DIR>/ui-suite-*.md` (use the resolved pat
 - **Any FAIL:** Fix the issue, re-run only the failing journey's tester, then continue
 - **Skipped:** Note "UI validation skipped (no browser tool / no journeys defined)"
 
+> **Visual evidence that needs Craig's eyes → UPLOAD it to Slack, never a `/tmp` path.**
+> When a UI-validation screenshot surfaces something for Craig's visual sign-off, upload
+> the actual image via `slack-send --file` per **`_shared/qa-shared.md` § Conductor /
+> worker evidence protocol** (message before `--file`, #sofi, include bead id + SHA +
+> what needs his judgment) — a `/tmp` path in a card is unreachable from his phone.
+
 Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
 
 ### 1d. Git Operations

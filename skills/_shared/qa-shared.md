@@ -126,6 +126,24 @@ mandatory Output contract:
 Evidence = **paths on disk** (screenshots under `$ARTIFACTS_DIR/evidence/`), never
 inlined into the report.
 
+**Visual evidence goes to Slack as UPLOADED IMAGES, never a `/tmp` path in a card**
+(Craig's standing directive, 2026-07-17 — memory `visual-evidence-send-to-slack-not-paths`).
+Craig owns visual sign-off but acts from his phone: a `/tmp` path in a Slack card is
+unreachable and transient, so whenever a pass produces a screenshot that needs his eyes,
+UPLOAD the actual image:
+
+```bash
+slack-send -c C0AQ7964ZU6 "<context>" --file a.png b.png   # #sofi
+```
+
+- **Message BEFORE `--file`** — argparse is greedy, so the message becomes the
+  upload's `initial_comment`; a message placed after `--file` is swallowed as a filename.
+- **Required context** (in that message): bead id, commit SHA, what changed, and what
+  specifically needs Craig's judgment (e.g. "stop position / band height is yours").
+- **Only the LIVE decision surface** — send the current shots, skip superseded ones.
+- **Send when evidence is produced, or at the batch ceremony** — don't batch across
+  ceremonies. A conductor may upload directly, or relay a worker's evidence path.
+
 **Completeness rule** (`_shared/delegation-contract.md` applies): bound each worker's
 wait; manifest ⊖ verdict files = re-spawn each missing worker ONCE, then record it in
 the QA_VALIDATION block as `status: FAIL` with `notes: stall — <journeys>`. Missing
