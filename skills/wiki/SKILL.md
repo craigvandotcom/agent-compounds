@@ -85,6 +85,11 @@ it comes from.** Pages are DERIVED views, never a source of truth — the atomic
 `references/`/`knowledge/` remain canonical. A sentence with no citation trail is not
 synthesis, it's a claim with nowhere to verify it — cut it or find its source first.
 
+`[[wikilinks]]` resolve **cross-home by design**: a link may target another wiki page OR
+a memory-fact slug in any substrate home (memory-lint's `check_wikilinks` enforces both).
+Linking a fact by slug is the normal citation form — do not create stub wiki pages just
+to satisfy a link.
+
 This is the single most validated mechanism in the field evidence (GitHub Copilot's
 production A/B test: citation-verified memory beat uncited memory on every measured
 metric, p<0.00001 — see `references/research-basis.md`). It is also the guard against
