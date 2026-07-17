@@ -128,10 +128,22 @@ Classify the failure:
 - **PROFOUND** (architectural, ambiguous, needs a design decision, or the cap is hit): **abort**
   — file a plan or beads describing what's blocking, report **FAIL**, and return **no valid
   (green) receipt** to the caller. Never fabricate a pass.
+- **ENVIRONMENT** (runner-side blocker: leaked Supabase local stack, port conflict, disk
+  pressure, stale process — no code to fix and no design fork). Seen live on the first
+  `ac-publish` run (v1.5.13): round 1 failed the local-stack guard on a leaked stack. Rules:
+  - **CI-started leak → auto-clear, then re-dispatch.** Only if the blocker is **provably**
+    CI-started (e.g. no interactive dev session owns the stack/port) may you clear it (stop the
+    stack, free the port) and re-dispatch. When in doubt, treat as dev-owned.
+  - **Active dev session → NEVER auto-kill.** If a stack/process might belong to a live dev
+    session, **halt `NEEDS_DECISION`** with the specific blocker and the exact remedy command —
+    let the operator clear it. Killing a dev's stack is destructive.
+  - **ENVIRONMENT retries do NOT count against the MECHANICAL round cap** — clearing a leaked
+    stack is not a code-fix round, so an auto-clear + re-dispatch is free against the cap below.
 
 **Bounded iteration cap.** This loop re-dispatches a full CI run per round — cap the number of
 rounds (a small fixed number, e.g. 3) and treat hitting the cap as PROFOUND. No unbounded
-re-dispatch loop under any circumstance.
+re-dispatch loop under any circumstance. **The cap counts MECHANICAL code-fix rounds only;
+ENVIRONMENT auto-clears are excluded** (they change no code and prove no new tip).
 
 Each successful round proves a **new tip** — the SHA changes every time a fix lands. This is
 why the Returned-SHA Contract below exists: the caller's original `--ref` is stale the moment a
