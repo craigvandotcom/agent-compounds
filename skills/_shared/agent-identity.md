@@ -83,12 +83,18 @@ These are different axes; do not conflate them:
 | Layer | Who | When | Wiring |
 |---|---|---|---|
 | 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/batch-close ceremony end; the loop conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/batch-close self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
-| 2. **Roster sweep** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity from summaries); land `retire_agent`s stragglers + `force_release_file_reservation` on stale holds | `ac-ycr.5` |
-| 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land; reservation TTL (7200 s) is the absolute floor | `ac-ycr.5` |
+| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity from summaries); land runs `force_release_file_reservation` on the roster's stale holds. Identities are **not** retired here — see below | `ac-ycr.5` |
+| 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land — stale-**reservation** sweep only; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
 
-Verified against live tool schemas (2026-07-14): `deregister_agent` and `retire_agent` take
-`registration_token` as **optional** — layer 2's by-name sweep works without token custody;
-`force_release_file_reservation` validates abandonment heuristics before releasing.
+Runtime-verified (2026-07-16, decision `ac-ycr.8`): `retire_agent`/`deregister_agent` mark
+`registration_token` optional in the *schema* but **reject name-only calls at runtime** unless
+the MCP session already authenticated as that agent — tokens live with the minting session
+(call-scoped fact #1 below), so cross-session identity retirement is impossible by design.
+Identity cleanup is therefore **layer 1 (self-deregister) only**; a crashed session's identity
+persists (harmless roster noise — retired/active listing only, no write authority) until the
+upstream admin-sweep primitive requested of mcp-agent-mail lands. Reservations — the
+safety-critical half — DO sweep cross-session: `force_release_file_reservation` releases
+another agent's hold by name after validating abandonment heuristics.
 
 ## Call-scoped facts (shakedown-verified 2026-07-08)
 
