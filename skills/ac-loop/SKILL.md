@@ -727,6 +727,12 @@ Headless runs never `AskUserQuestion` — all decisions fall through to advisory
 
 Run `ac-triage` as a **separate** scheduled job before `ac-loop` (e.g., 30 min earlier). Triage feeds beads into the board; the loop ships them. Keep them decoupled so triage failures don't block shipping.
 
+**Keep-awake for overnight/headless runs (defence in depth — bd-8pfcw).** A scheduled loop that outruns the display-sleep timer stalls silently when the Mac sleeps. Three layers, in priority order:
+
+1. **Wrap the run in `caffeinate -ims`** (keep-awake) — the primary mechanism. This is what actually keeps a long headless loop alive across the night.
+2. **launchd watchdog + SessionEnd resume file** (bd-8pfcw) — restarts / resumes a run that dropped.
+3. **In-session `ScheduleWakeup`** — arm it ONLY as the third, last-resort layer. It is **in-memory and dies with the process**, so sleep kills the wake chain (memory: `schedulewakeup-in-memory-only-sleep-kills-chains`); never rely on it as the primary keep-awake.
+
 ---
 
 ## What Craig Controls (Never Automated)
