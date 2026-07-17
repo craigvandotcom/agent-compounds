@@ -665,6 +665,14 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > ALSO read the friction carrier `/tmp/loop-retro-<RUN_ID>.md` if it exists (the per-stage
 > aggregated friction packet — an absent or empty carrier means a clean run; proceed as today)
 > and pass its items to `reflect` as typed candidate lessons for disposition.
+> ALSO sweep the Agent Mail roster (Layer 2, `_shared/agent-identity.md` wiring `ac-ycr.5`):
+> `AGENT_MAIL_ROSTER=<loop-conductor-name>,<child-1>,<child-2>,…` — the loop's OWN Phase-0 name
+> plus every child identity this run registered (gather the child names from the per-child
+> summaries you collected this run; if any summary omitted its registered name, `list_window_identities`
+> for this project fills the gap). Teardown consumes this roster: for each name still registered,
+> `retire_agent` it (token optional) + `force_release_file_reservation` on its stale holds, then
+> verify the roster is clean. (Your own conductor name stays on the roster but is deregistered by
+> YOU below, after land returns — land cannot reach a still-live conductor.)
 > You are post-merge on `main`. This is a HEADLESS land: system-upgrade proposals become
 > deduped `human-gate` decision beads per `_shared/disposition.md` — never Slack cards,
 > never `AskUserQuestion`, do NOT block.
@@ -672,7 +680,8 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 
 ### Deregister the conductor identity (Layer 1 — the loop's true last act)
 
-`ac-land` releases and deregisters the child identities on the roster it was handed (Layer 2),
+`ac-land` sweeps the child identities on the `AGENT_MAIL_ROSTER` handed to it in the Exit-Land
+prompt above (Layer 2 — `retire_agent` + `force_release_file_reservation`, then verifies clean),
 but it **cannot** deregister the conductor's own name — the conductor is still alive, invoking
 it. So **after `ac-land` returns**, the conductor's actual final act is to deregister its OWN
 minted `AGENT_NAME` (the one registered in Phase 0). By name — `registration_token` optional
