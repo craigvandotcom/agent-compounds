@@ -113,6 +113,30 @@ inherited machine-wide, not repeated here.
 Readiness for pickup = **presence** of `refined`, never inferred from the absence of
 `unrefined`. This is what gates loop/agent pickup everywhere this labelling is adopted.
 
+## Sequencing & parentage (derived, not authored)
+
+**Bead-level `blocks` edges are the only authored sequencing truth.** Epic order is
+DERIVED from the cross-epic bead edges beneath it — epics are sequenced so as to honour
+the bead edges that cross between them, never the reverse — epic order follows the bead
+edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge** (a `blocks` edge with an epic endpoint is an I2 violation —
+the epic-edge detector in `_shared/board-scan.md` reports it).
+
+The only legitimate cross-epic edge is a genuinely bead-shaped **consume** — bead B needs
+an artifact bead A delivers. The falsifiability test before adding any cross-epic edge:
+*does B actually need A's `## Delivers` artifact?* If not — if the ordering is strategic
+("do the auth epic before the billing epic") with no bead-level cause — it is **not** an
+edge. Strategic ordering lives in priority (`0`-`4`) plus `ac-align`, never in the
+dependency graph. A fabricated edge serializes work that could run in parallel and risks
+wedging a whole chain.
+
+**Routing is a convention, not a hard gate (§9 = Option B).** A new bead routes to an
+epic parent by convention: `ac-bead-refine` adopts an obvious parent when it processes the
+bead, and `ac-tidy` flags what stays unparented (the parentage-gap orphan class,
+`_shared/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
+disposition grammar, no backfill sweep — those were considered and cut. The **one** place
+parentage is ENFORCED rather than conventional is the `human-gate` class (Arm 0): its
+parentage is wired at creation, because human-gate beads bypass both refine and tidy.
+
 ## Status & priority canon
 
 | Status | Semantics |
