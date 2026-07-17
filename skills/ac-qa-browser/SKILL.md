@@ -110,6 +110,25 @@ authenticated (e.g. on `/app`) before starting — the vault has reported succes
 without applying the session (0-for-4 across the 2026-07-12 shakedown; also
 `--password-stdin` needs a TTY). Login replay stays parallel across workers.
 
+> **Concurrent same-account hazard — assign per-worker accounts, or serialize
+> auth-sensitive waves** (bd-iro5f, 2026-07-14). When N parallel workers all authenticate
+> as the SAME account against a shared Supabase, refresh-token rotation across the
+> concurrent same-account sessions — compounded by dev-server HMR/Fast-Refresh churn
+> resetting auth singletons — produces spurious `SIGNED_OUT` / 401-on-authenticated-request
+> / session-expired events in the workers (observed in all 4 workers on run
+> 20260714-170945; each recovered instantly on re-login, proving credentials valid). These
+> findings are CONFOUNDED, not real defects. Mitigation, best-first:
+> - **PRIMARY — per-worker accounts:** give each parallel worker its OWN test account so
+>   no two concurrent sessions share a refresh-token family. Source the pool from the app's
+>   `CORE/journeys/environments.md` (an `accounts:`/worker-account list) and assign one per
+>   worker in the manifest (`account` field per parallel entry), passed via `{AUTH_PROFILE}`.
+>   **Provisioning the extra accounts is a human/Craig step** — until the pool exists, fall back:
+> - **INTERIM — serialize auth-sensitive waves:** set a `serialize_auth: true` manifest flag
+>   that forces the parallel lane to run sequentially (one active session at a time) whenever a
+>   per-worker account pool is NOT provisioned, OR run against a quiescent dev server / local
+>   Supabase with a seeded account (no HMR churn). Serialize is the cheap stopgap; per-worker
+>   accounts is the robust answer.
+
 ### Phase 3 — Dispatch workers
 
 Build each worker's prompt from **`references/journey-tester-prompt.md`** (fill
@@ -138,6 +157,12 @@ drop the remaining parallel lane to sequential and note it in the report.
 
 - File beads from verdict `findings` (conventions: qa-shared.md — you file them, not
   the workers; dedupe across verdicts first).
+  - **Clean-env re-confirmation rule (bd-iro5f):** a `SIGNED_OUT` / 401-on-authenticated-request
+    / session-expired finding produced during a CONCURRENT same-account run is NOT blocker-class
+    on its own — it is likely confounded by refresh-token rotation + HMR churn (see Phase 2). Before
+    filing any such finding as `qa-blocker`, re-confirm it in a clean environment (per-worker
+    account, or a serialized single-session run, or a quiescent/local-Supabase run). File at
+    reduced severity with a "needs clean-env re-confirmation" note if you cannot re-run it clean.
 - Write journey `last_pass` stamps for PASSes (rules: §Journey stamps below).
 - Emit the **`QA_VALIDATION`** block (qa-shared.md): `journeys_tested` from verdict
   statuses, `evidence` from verdict paths, `platform: browser-local` (or
@@ -156,6 +181,22 @@ agent-browser session list | grep -F "qa-<app>-<RUN_ID>" || true   # should be e
 agent-browser --session <leftover> close
 [ -n "$SERVER_STARTED" ] && pkill -f "next start" 2>/dev/null   # only the local-prod server YOU started; skip if a human runs their own
 ```
+
+**Delete worker-created data rows (mandatory — the conductor owns this, not the workers)**
+(bd-wlpbk). Mutating journeys create real rows (food entries, etc.) in the test account, and
+workers deliberately DO NOT self-clean them (`references/journey-tester-prompt.md` § Teardown:
+"leave cleanup to the conductor's sweep") — so a leftover row survives every run unless YOU
+delete it here. It is a "leave the account as found" violation and pollutes the next run's
+baseline (incident: `QA Smoke Test 20260716-w2` entry left in test@neometa.app). Concretely:
+
+1. Confirm no QA run is still in flight (this run's workers are all closed, per the session
+   sweep above).
+2. Query the test account for rows created during THIS run's window — e.g. entries whose
+   title/name matches the run's QA marker, or `created_at` within `[run_start, now]` (for BCA:
+   psql via `CURATE_POSTGRES_URL`, `foods` table — memory `bca-tables-public-schema-curate-psql-access`;
+   or the app's admin/UI).
+3. Delete them by id, then re-query to confirm zero remain. Record the deleted-row count in
+   the QA report.
 
 ## Worker discipline (mirrored into the tester prompt — edit both together)
 

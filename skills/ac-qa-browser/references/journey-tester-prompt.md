@@ -63,6 +63,10 @@ in `_shared/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
 PASS|FAIL, assertions[] (from proof.asserts, each with evidence path), covered[],
 console_errors, findings[] (title/severity/repro — severity qa-blocker only for
 user-facing breaks or trapped states). Do NOT file beads — the conductor does.
+A mid-run SIGNED_OUT / 401-on-authenticated-request that RECOVERS on re-login during a
+concurrent same-account run is likely environmental (refresh-token rotation + HMR churn,
+bd-iro5f) — record it in the verdict `findings` with the recovery note, but do NOT mark it
+`qa-blocker`; the conductor re-confirms in a clean env before any blocker-class treatment.
 
 ## Teardown (non-negotiable, success AND failure paths)
 

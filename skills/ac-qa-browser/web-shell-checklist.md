@@ -25,6 +25,11 @@ is what's *web-specific*. Check the relevant subset at `full`, all of it at `exh
       correct unauthenticated state, no stuck spinner waiting on missing state.
 - [ ] **Multi-tab** — no cross-tab corruption of shared state.
 
+> Concurrent-run caveat (bd-iro5f): a mid-run `SIGNED_OUT`/401 during a CONCURRENT
+> same-account QA run is likely confounded by refresh-token rotation + HMR churn, not a
+> session-persistence defect — re-confirm in a clean env (per-worker account / serialized /
+> quiescent-local) before treating it as blocker-class. See SKILL.md Phase 2 + Phase 5.
+
 ## Service worker / PWA
 
 - [ ] **Registration** succeeds (check `errors`/`console` for SW failures).
