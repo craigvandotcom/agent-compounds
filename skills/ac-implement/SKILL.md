@@ -180,6 +180,10 @@ git ls-remote origin main              # origin — confirm the SHAs match
 `--no-verify` is deliberate: the installed pre-push hook runs a full-tree build, and under trunk-direct another session's uncommitted WIP can be sitting in that same working tree and false-positive the hook (see Multi-Session Parallelism, below) — real verification for state you don't own comes from the per-commit gate above plus post-push CI, not from a hook scanning the whole tree. **Never sit on local-only commits** — a crashed or abandoned session with unpushed commits is lost work, not "recoverable from the branch," because there is no branch.
 
 > **Race handling (unchanged):** if `git push` collides with another session's push, `git pull --rebase` and re-push — never force-push over another session's committed work.
+>
+> **Foreign-unstaged rebase block (recurring — bd-x7gec).** The mandated pre-push `git pull --rebase` refuses to run while the shared checkout carries unstaged tracked foreign files (e.g. `.beads/issues.jsonl`, `skills/ac-tidy/workflows/last-run.json`) — and the no-stash rule (Phase 0) bans `git stash` as the escape hatch. This recurred in EVERY implement child of run 20260714-170945 (5+ times). Do NOT stash. Use one of two workarounds:
+> - **Fetch + fast-forward (preferred):** `git fetch origin main`, then confirm you are 0-behind (`git rev-list --count HEAD..origin/main` returns `0`); if 0-behind there is nothing to rebase — `git push --no-verify origin main` fast-forwards cleanly. If behind >0, you genuinely need to integrate — fall to the next option.
+> - **Discard the foreign ledger churn first:** `git checkout .beads/issues.jsonl` (and any other foreign generated file blocking the rebase — it is machine-local runtime state, safe to reset), then `git pull --rebase` and re-push. Only discard files you did NOT author this session; never `git checkout` a path you edited.
 
 ### Ask User
 
@@ -435,7 +439,13 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 **Skill routing (conductor's job):** Read the bead spec and identify relevant domain skills from `AGENTS.md` > "Available Skills". Include the relevant skill paths in the engineer prompt below.
 
-Give the engineer the bead's full spec (self-contained — no plan reference needed):
+**Doc/config-bead branch — no RED test, conductor-direct allowed (bd-x7gec).** The engineer-delegation default below is TDD/code-shaped: write a failing test first, then implement to green. That path is N/A for beads whose `## Delivers` are exclusively `doc:` / `config:` artifacts (skill text, doctrine, workflow JSON, prose — no code or tests), which is the shape of every SKILL-DOC/PROCESS bead. For those:
+
+- The conductor MAY edit the artifact directly (these edits are small, precise, and anchor-verified — often faster than a round-trip), OR spawn a non-TDD doc-implementer with the same scope contract but no "write a RED test first" gate.
+- The acceptance gate is NOT a passing test — it is the bead's own grep/diff on the edited artifact (the AC block), plus prettier-clean on touched files and a re-verify that the edit anchor still matched (skill line numbers drift between refine and implement).
+- Everything else in this workflow still applies: pathspec-scoped commit of only your files, commit=push, per-bead close with `Delivered:` artifact refs. If a bead's Delivers mix code AND doc, treat it as code-shaped (TDD path below).
+
+For code/test-shaped beads, give the engineer the bead's full spec (self-contained — no plan reference needed):
 
 Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — paste the bead's full `br show <id>` + `br comments <id>` into its `### Bead Spec` section, and add the relevant domain skill paths (from `AGENTS.md > Available Skills`) after the AGENTS.md line. The prompt carries the TDD flow, the no-stash rule, the scope contract, cross-bead shared-invariant rules, the four-location test-sweep guidance, and the mandatory result-file `### Output` contract.
 
