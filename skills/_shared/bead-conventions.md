@@ -17,10 +17,17 @@ it:
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
 | `decision` | A fork only the human can resolve (taste, product, money, risk) | Human decision RECORDED, consequences executed |
-| `epic` | Grouping container | Children closed |
+| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-tidy` |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it,
 file the `bug` directly. `investigation` is only for genuine unknowns.
+
+**Epics stay open across batches.** An epic's close criterion is that its `## Delivers`
+promise is covered — and the close itself is PROPOSED by `ac-tidy`, not "children closed"
+mechanically and not `ac-batch-close`'s job. Parent-child edges do NOT block `br ready`
+(only `blocks` edges sequence), so an epic staying open across many batches starves no
+work and costs nothing; do not force-close an epic just because its currently-open
+children are done.
 
 ## Labels = gating & provenance (orthogonal to type)
 
@@ -93,6 +100,50 @@ follows the same batching contract — this is the shared authority both cite:
 batch workflows create beads directly via `br create` per these conventions; they do not
 invoke `ac-bead-capture`.
 
+## Bead routing (creation → parent) — convention, not a gate
+
+A new bead routes to an epic parent by **convention**, adopted when the routing is
+obvious — never a hard creation-time gate (§9 = Option B; the one ENFORCED exception is
+the `human-gate` class, whose parentage is wired at creation per Arm 0 — see
+`skills/beads-standards/reference/human-gate-template.md`). Four creation sources, four
+routing behaviours:
+
+| Creation source | Parent routing |
+| --------------- | -------------- |
+| `ac-beadify` (plan → beads) | The plan's epic, with cross-epic `blocks` edges wired per the plan's data flow |
+| Ad-hoc capture / raw `br create` | Deferred — `ac-bead-refine` adopts an obvious parent when it processes the bead. A `human-gate`/DECISION shape instead resolves parentage AT capture (Arm 0), never deferred |
+| In-loop exhaust (`ac-review` / QA / conductor findings) | The epic whose beads were in the batch that produced the finding; per-finding by file/scope when the batch spanned epics; fallback to a per-run review epic |
+| Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |
+
+`ac-tidy` flags what stays unparented (the parentage-gap orphan class,
+`_shared/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
+disposition grammar, no backfill sweep — considered and cut.
+
+## Pick-order (which ready bead the loop picks next)
+
+When several beads are ready, selection order is:
+
+1. **Priority** — bugs drain first (bug-lane Rule 0), then `0` → `4`.
+2. **Graph structure** — `bv` ranking / critical-path position among the same-priority set.
+3. **FIFO** — creation time, oldest first, as the final tie-break.
+
+**Arrival order is NEVER an edge.** "B was filed after A" is not a dependency — encoding it
+as one fabricates a `blocks` edge that serializes work which could run in parallel and
+risks wedging a chain. Ordering with no bead-level cause is priority + pick-order, never
+the dependency graph.
+
+## Claim semantics — `post-merge` exhaust (one definition)
+
+Exhaust beads filed inside a batch's verify → review → close window would, if immediately
+`br ready`, be claimable before the batch that spawned them has even merged. So they are
+stamped **`post-merge` at creation** — the literal label `beads-closed-gate.sh` excludes
+from its open-bead union, letting a batch close cleanly despite its own fresh exhaust.
+
+**Every claim path strips `post-merge` at claim** — wave claim-at-selection, bug-lane batch
+claim, and `ac-implement`'s incremental/replacement claims all remove the label the moment
+they take the bead. One definition, stated once here, so no claim path forgets it and no
+permanently gate-excluded zombie bead can form.
+
 ## Body template (the `br lint` contract)
 
 `br lint` checks each bead's DESCRIPTION for per-type template sections (fuzzy
@@ -107,7 +158,7 @@ creation's job):
 | `task` / `feature` | `## Acceptance Criteria` |
 | `investigation` | the open question + `## Acceptance Criteria` (exit criteria: what answers it) |
 | `decision` | the pre-staged memo (context · options · recommendation — see below) |
-| `epic` | `## Success Criteria` |
+| `epic` | `## Delivers` |
 
 Plus, for every implementable bead (finding-sourced ones especially):
 
