@@ -306,6 +306,22 @@ render_hooks_root() {
   fi
   render_hooks_grok
   render_context_grok
+  render_context_claude_global
+}
+
+# render_context_claude_global — machine-global floor at ~/.claude/CLAUDE.md (bead
+# org-29d, option a — decided 2026-07-17). Claude loads this file into EVERY session
+# on the machine, including sessions launched outside ~/Repos (which otherwise get no
+# context at all). Deliberately a few lines: recall stack + pointers — ~/Repos/AGENTS.md
+# stays the doctrine; growing this file grows every session's context.
+render_context_claude_global() {
+  echo "  -- claude machine-global shim (~/.claude/CLAUDE.md, generated)"
+  local body content
+  body="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
+  content="<!-- $STAMP — do not hand-edit (source: hooks/machine-global-shim.md) -->
+
+$body"
+  write_generated "$HOME/.claude/CLAUDE.md" "$content"
 }
 
 # render_hooks_app <target-base-dir> — app-scope stamped hooks block (plan:
