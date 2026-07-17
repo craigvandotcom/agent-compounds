@@ -164,11 +164,13 @@ that actually finalizes those rows.
 # STATE-BASED query — NOT a time-window / "since last publish" cutoff. A time-window cutoff
 # could orphan rows accumulated across several batch-closes that ran before this publish.
 # WHERE status = 'fixed_pending_release'
+pnpm finalize:feedback "$R_VERSION"   # BCA: scripts/pipeline/finalize-feedback-sweep.mjs
 ```
 
-Call `runFeedbackFinalizeSweep(newBuild, deps)` — the finalize path of
-`lib/pipeline/merge-feedback-writeback.ts` in the consuming app (BCA: bd-pwt44.6) — with
-`newBuild` set to the version just minted above (the version baked into `R`). It lists every
+`pnpm finalize:feedback <mintedVersion>` (BCA: `scripts/pipeline/finalize-feedback-sweep.mjs`) is the
+prod runner for `runFeedbackFinalizeSweep(newBuild, deps)` — the finalize path of
+`lib/pipeline/merge-feedback-writeback.ts` in the consuming app (BCA: bd-pwt44.6). Call it with the
+version just minted above (the version baked into `R`) as the sole argument. It lists every
 still-pending row via `deps.listPendingReleaseRows()` (the state-based query above) and writes
 `status='fixed'` + `fixed_in_build=<R's version>` for each. This is the exact write that flips
 the client's `isNowFixed` check (`features/feedback/lib/loopback.ts:190`,
@@ -176,6 +178,7 @@ the client's `isNowFixed` check (`features/feedback/lib/loopback.ts:190`,
 timed at ship, with a real build number attached, instead of at batch-close when no build number
 existed yet. Same never-abort-on-write-failure policy as the pending-write hook: a
 0-rows-affected update is logged as a warning and the publish is never aborted by this sweep.
+Replaces the manual SELECT workaround used during the v1.5.13 publish.
 
 **TaskUpdate("Preflight", completed)**
 
