@@ -8,6 +8,7 @@ the card, nothing requires opening a chat log or a plan doc to reconstruct.
 
 ```bash
 br create -t decision --labels human-gate \
+  --parent <spawning-epic-id> \
   --title "DECISION: <the fork, in one line>" \
   -d "$(cat <<'EOF'
 decision: <one-sentence question>
@@ -27,6 +28,18 @@ EOF
 (`decision` = a fork only the human can resolve — taste, product, money, risk).
 `HUMAN:` is the alternative prefix for a gate that isn't shaped as a decision fork
 (an approval, a credential handoff, a "go/no-go") — same fields, same wiring rule.
+
+## Parentage at creation (Arm 0)
+
+A human-gate bead sets its **parent = the epic whose work spawned the fork**, at creation
+time — the `--parent <spawning-epic-id>` above. This is Arm 0, the ONE place parentage is
+ENFORCED rather than conventional: human-gate/DECISION beads bypass both `ac-bead-refine`'s
+adopt-a-parent step and `ac-tidy`'s parentage flag (agents may enrich but never process a
+human-gate bead), so parentage that is conventional everywhere else must be wired here, at
+the one moment an agent creates the bead. This sits ALONGSIDE the mandatory `blocks`-edge
+wiring below — both, not either. A fork with no spawning epic (a genuinely standalone
+decision) simply records its origin in the card's `context:` field — no disposition
+grammar, no synthetic parent.
 
 ## Mandatory dependency wiring
 
@@ -53,6 +66,7 @@ in a batch sweep. An un-wired human-gate bead is invisible to:
 
 ```bash
 br create -t decision --labels human-gate \
+  --parent <move-free-reminders-epic-id> \
   --title "DECISION: push notification provider for Move Free" \
   -d "$(cat <<'EOF'
 decision: Which push-notification provider do we standardize on for Move Free's

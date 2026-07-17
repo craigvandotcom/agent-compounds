@@ -64,7 +64,12 @@ nearest parent that has one, noting the intended home.
    (CONFIRMED defect — repro/cause in hand, else `investigation`) ·
    `investigation` (open question an agent can resolve) · `decision` (fork only
    the human can resolve → label `human-gate` + pre-stage the memo: context,
-   options, trade-offs, recommendation).
+   options, trade-offs, recommendation). For a `human-gate`/DECISION shape,
+   **resolve parentage AT capture** — set `--parent <spawning-epic-id>` (Arm 0:
+   human-gate beads bypass `ac-bead-refine`'s adopt-a-parent step and `ac-tidy`'s
+   parentage flag, so their parent must be wired here at capture, not deferred; the
+   template alone would leave zero-ceremony capture as a bypass). A standalone fork
+   with no spawning epic records its origin in the memo `context:` instead.
 3. **Labels:** `unrefined` — capture never stamps `refined`, exclusively
    `/ac-bead-refine`'s output on convergence, no exceptions; a decision fork
    gets `human-gate` instead. Provenance labels only where true.
@@ -72,7 +77,12 @@ nearest parent that has one, noting the intended home.
    --description "<context: what/why/where, user's words preserved>"` — set
    `--priority` only if the user signaled urgency; default is fine. Body carries
    the typed headers from conventions §Body template (`## Steps to Reproduce`
-   for bugs, `## Acceptance Criteria`, …) — emit them at creation.
+   for bugs, `## Acceptance Criteria`, …) — emit them at creation. For a
+   `human-gate`/DECISION shape, add `--parent <spawning-epic-id>` (step 2). An
+   optional `origin:` hint may be added to the description for any ad-hoc capture —
+   a lightweight provenance breadcrumb (`origin: <slack thread / conversation /
+   bead-id>`), never required. A plain non-human-gate capture stays zero-ceremony:
+   no epic selection, no origin required.
 5. **Public-db rule:** agent-compounds beads publish — neutral title,
    pointer-only for anything sensitive (conventions §Public-repo rule).
 6. **Commit** `.beads/` in the target repo (own repo, own commit).
