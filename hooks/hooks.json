@@ -14,7 +14,7 @@
       "command": "python3 {HOME}/Repos/.claude/hooks/memory-retrieval.py",
       "harnesses": ["claude", "codex", "droid"],
       "scope": ["org", "app"],
-      "_doc": "Emits a plain-stdout <memory-recall> block — injected as context by claude, codex, and droid (all three inject UserPromptSubmit stdout; verified 2026-07-12). Grok discards passive stdout — its recall path is the rules-digest floor + qmd MCP pull."
+      "_doc": "Emits a plain-stdout <memory-recall> block — injected as context by claude, codex, and droid (all three inject UserPromptSubmit stdout; verified 2026-07-12). Grok discards passive stdout — its recall path is the rules-digest floor + qmd MCP pull. HOT-LANE: the script queries MEMORY_LOBES (memory, neometa-memory, content-memory, wiki) + per-app lobes on EVERY prompt — adding/removing a lobe changes per-prompt latency and the recall surface fleet-wide; the wiki lobe means wiki synthesis pages are auto-injected context (bead org-yp4)."
     },
     {
       "id": "pre-prompt-reminder",

@@ -15,6 +15,11 @@ qmd search "<task keywords>" --limit 5
 **qmd is the memory substrate — the recall hook also injects relevant facts on
 matching prompts, but an explicit search catches what the hook misses.**
 
+**The full recall stack (know these cold):** `qmd query "X" --json` (knowledge +
+memory + wiki lobes) · `cass search "X" --json` (past agent-session transcripts —
+"did we discuss X?") · `cm context "<task>" --json` (procedural playbook rules).
+Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
+
 **Order of operations:** If the user prompt is a scheduled heartbeat, run the heartbeat's first Takeoff step (`date`, or read soul.md) first, then this `qmd search` call, then continue the heartbeat sequence. This memory load is supplementary context — it does NOT replace executing the user prompt.
 
 ---

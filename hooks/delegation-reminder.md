@@ -4,7 +4,9 @@
   (researcher / implementer / validator — stance table in AGENTS.md); the main context
   keeps decisions and returned summaries, never file dumps. *If you only need the
   OUTPUT, delegate; if you need to SEE THE WORK, execute directly.*
-- **Memory:** relevant facts auto-inject per prompt; deeper or semantic recall:
-  `qmd search "X" --json` · `qmd query "X" --json`.
+- **Memory & recall:** facts auto-inject per prompt (qmd over memory + wiki lobes).
+  Deeper: `qmd query "X" --json` (knowledge) · `cass search "X" --json` (past agent
+  sessions — "did we discuss X?") · `cm context "<task>" --json` (procedural playbook).
+  Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
 - **Git (root repo only):** after file changes under `~/Repos` outside app repos,
   commit + push. Never commit across repo boundaries in one operation.
