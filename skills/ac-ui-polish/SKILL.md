@@ -71,7 +71,12 @@ exhaustive and no "pass" is inferred. Then:
   the Do's/Don'ts, required interaction states. File each deviation as a bead
   (`qa-finding`, + `qa-blocker` if it breaks the spec materially). **Be specific:**
   "change X to Y because design.md says Z" — never vague "feels off." This phase
-  does not edit code; it produces the deviation list.
+  does not edit code; it produces the deviation list. **If `docs/design-refs/` has a
+  reference image for the surface under polish, anchor on it explicitly:** do a
+  Read-tool visual comparison — Read the rendered screenshot AND the reference image
+  and compare them directly (shape, radius, spacing, not just token names) — no
+  external vision tooling required. Conformance-to-bead text alone is insufficient;
+  this is how the navbar-capsule-vs-rounded-xl drift (wave-050) would have been caught.
 - **Phase B — Elevation.** On confirmed-conformant pages, run the elevation loop —
   **bounded to `design.md`'s tokens** (no new fonts/colors/components). Apply the
   highest-impact, lowest-risk fixes first.

@@ -45,6 +45,12 @@ only.
 Non-epic calls (a single bead, or "refine everything open") behave exactly as today: the
 bead set is whatever `br list --json` returns for that scope.
 
+**UI beads derived from a visual reference** must carry the reference-image path
+(`docs/design-refs/<surface>-<source>-reference.<ext>`, per `ac-plan-init`'s capture rule)
+in their `## Acceptance Criteria` — the Completeness Reviewer (see `references/workflow.md`)
+checks for this and for AC drift against the source research doc's geometry, not just
+internal bead coherence.
+
 ## Procedure
 
 This is a multi-agent conductor workflow. **Load and follow [`references/workflow.md`](references/workflow.md)** — it holds the full phased procedure (reviewer prompts, round structure, fix application, convergence, label removal).

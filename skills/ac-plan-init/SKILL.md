@@ -255,6 +255,8 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 5. Document current state
 ```
 
+**Human-shared visual references are a different artifact from the baseline screenshot above, and persisting them is not optional.** If Craig (or any human) shares a visual reference — screenshot, mockup, design comp — as the target to build toward, save it IMMEDIATELY to `docs/design-refs/<surface>-<source>-reference.<ext>` (NOT under `.claude/` — that's one harness's mount) and cite that exact path in the research doc / plan frontmatter; do not just describe it into prose. An image referenced-but-not-committed is a refine-blocking gap. Contrast with the baseline above: `research/YYYY-MM-DD-HHMM-baseline-screenshot-[feature].png` is agent-captured *current* state; `docs/design-refs/` is human-shared *target* state.
+
 **For API changes:** Hit current endpoint, record response shape, note errors/limitations.
 
 **For bug fixes:** Follow reproduction steps, document broken behavior, confirm you can see the bug.

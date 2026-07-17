@@ -216,6 +216,11 @@ Each bead description must be **self-contained** (typed headers per
 - Clear acceptance criteria — each one with a **nameable check** (the command,
   test, or observation that verifies it; an AC no one can name a check for is
   not an AC)
+- **UI beads derived from a visual reference** (a human-shared screenshot/mockup/comp
+  saved per `ac-plan-init`'s capture rule) MUST carry the reference-image path
+  (`docs/design-refs/<surface>-<source>-reference.<ext>`) in `## Acceptance Criteria` —
+  not just a prose description of it. Losing the path here is how geometry (shape,
+  radius, spacing) silently drops between research doc and bead.
 - Test requirements included — **plus a declared test scope**: the file paths/globs this bead
   touches, so its per-bead (Tier-1) check runs only the affected tests (feeds `vitest-affected`)
 - User-facing beads carry forward the plan's **Journeys touched** into their `## Test Scope`
