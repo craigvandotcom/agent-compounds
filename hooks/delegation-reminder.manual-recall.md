@@ -17,10 +17,10 @@ memory + wiki lobes) · `cass search "X" --json` (past agent-session transcripts
 "did we discuss X?") · `cm context "<task>" --json` (procedural playbook rules).
 Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
 
-**Order of operations:** If the user prompt is a scheduled heartbeat, run the
-heartbeat's first Takeoff step (`date`, or its named first step) first, then this
-recall pull, then continue the heartbeat sequence. Memory load is supplementary
-context — it does NOT replace executing the user prompt.
+**Order of operations:** If the user prompt is a scheduled job (a pai-scheduler
+prompt_file or other automated instruction), run its first step, then this recall
+pull, then continue the job's sequence. Memory load is supplementary context — it
+does NOT replace executing the user prompt.
 
 ---
 
