@@ -669,10 +669,14 @@ Log each with rationale: why this is a clear technical improvement, not a design
 
 **Exhaust rule (see `skills/_shared/bead-conventions.md`): nothing actionable leaves
 this phase as prose.** Route by type before (or instead of) asking — confirmed defect,
-out of this wave's scope → `br create -t bug --labels review-finding`;
+out of this wave's scope → `br create -t bug --labels review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
---labels review-finding`; genuine taste/product/risk fork → `decision` (mechanics
-below). Dedupe via `br search` first; nits stay in the report.
+--labels review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
+below). Dedupe via `br search` first; nits stay in the report. **Always include
+`unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
+instead of being treated as already-refined. **`-t bug` = shipped product defect only;
+test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never
+`-t bug`** — mistyping inflates the preemptive bug lane.
 
 **Default (including all autonomous/headless runs): apply the Exhaust Rule.** Create a `decision` bead for each remaining item — do NOT ask:
 
