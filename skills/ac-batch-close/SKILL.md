@@ -304,6 +304,20 @@ to a background process that outlives the session.** The `$STATE` persistence ab
 session that drops and resumes; it does not license spawning a detached poller that keeps
 running after this turn ends.
 
+> **Cap must be WIDE — the wall-clock is batch-CONTENT-dependent.** A batch whose diff touches
+> `scripts/` or CI config correctly defeats `vitest-affected` selection (fail-closed, by design)
+> and runs the **FULL suite (~19min observed, run 29243312437)**, not the ~4-min affected leg.
+> The poll below is therefore capped at ~25min (`seq 1 50` at 30s), NOT the old 10min — a 10-min
+> cap times out mid-run on any full-suite-fallback batch.
+>
+> **Invoke this poll with Bash `timeout: 600000`** (the tool's 120000ms default silently kills a
+> multi-minute poll mid-loop — cost 2 extra Bash turns, RUN_ID 20260713-222115). 600000ms is the
+> Bash-tool MAX (10min), which is shorter than the 25-min logical cap, so a full-suite-fallback
+> run will span **2–3 foreground Bash invocations**: each returns with `$STATUS` still not
+> `completed`, and you re-invoke (the loop re-resolves `RUN_DB_ID` from `HEAD_SHA` each call, so
+> it resumes cleanly) until `completed` or the ~25-min logical cap is exhausted. Re-invoking in
+> the same turn is NOT backgrounding — it stays foreground.
+
 ```bash
 HEAD_SHA=$(git rev-parse HEAD)
 # Resolve the dispatched run's id ONCE (list + match by headSha to get its databaseId), then
@@ -311,13 +325,16 @@ HEAD_SHA=$(git rev-parse HEAD)
 # every iteration is fragile (bd-kskxg field-test). The run may take a cycle to register, so
 # keep resolving until the id is known, then switch to the deterministic view.
 RUN_DB_ID=""
-for i in $(seq 1 20); do
+# ~25-min logical cap (50 × 30s) — wide enough for a full-suite-fallback batch (~19min).
+# Invoke with Bash timeout: 600000; a full-suite run spans 2-3 foreground re-invocations
+# (this loop re-resolves RUN_DB_ID from HEAD_SHA each call, so re-invoking resumes cleanly).
+for i in $(seq 1 50); do
     sleep 30
     if [ -z "$RUN_DB_ID" ]; then
         RUN_DB_ID=$(gh run list --workflow=quality-gate.yml --branch main \
           --json databaseId,headSha --limit 10 2>/dev/null \
           | jq -r --arg sha "$HEAD_SHA" '[.[] | select(.headSha == $sha)][0].databaseId // empty')
-        [ -z "$RUN_DB_ID" ] && { echo "Run not registered yet... ($i/20)"; continue; }
+        [ -z "$RUN_DB_ID" ] && { echo "Run not registered yet... ($i/50)"; continue; }
     fi
     MATCH=$(gh run view "$RUN_DB_ID" --json databaseId,status,conclusion,url 2>/dev/null)
     STATUS=$(echo "$MATCH" | jq -r '.status // empty')
@@ -325,7 +342,7 @@ for i in $(seq 1 20); do
         echo "Dispatch run completed."
         break
     fi
-    echo "Waiting... ($i/20)"
+    echo "Waiting... ($i/50)"
 done
 echo "$MATCH" >> "$ARTIFACTS_DIR/dispatch-run.json"
 ```
