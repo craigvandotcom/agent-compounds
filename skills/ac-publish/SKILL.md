@@ -382,7 +382,11 @@ last heavy-review pass means that pass no longer covers the code you're about to
 **TaskUpdate("Report", in_progress)**
 
 6. **Confirm + notify.** Web live (verified by identity, Step 4) + native uploaded → report the
-   release (SHA, build number, tag, what shipped) on Slack.
+   release (SHA, build number, tag, what shipped) on Slack. **Known-action findings from this
+   run (defects, decision forks, refinements you KNOW need action) are filed as beads
+   (`unrefined`) and cited by ID here, never left as prose-only** — a prose-only findings
+   channel orphans once its consumer closes (`rule-known-action-capture-beads-not-prose`;
+   bd-pwt44 lesson).
 
 **TaskUpdate("Report", completed)**
 

@@ -469,7 +469,11 @@ second hand-rolled copy is exactly the drift bug ac-vgt filed). Fill them per th
 field descriptions; `$BATCH_RANGE` is the range those sections' `git diff`/`git log` commands
 key on. Batch-close's own addition beyond the template is a short **Feedback write-back** line
 (the pending-write count logged above) — there is no Deploy section anymore (deploy
-verification moved to `ac-publish`).
+verification moved to `ac-publish`). **Known-action findings surfaced during the batch
+(defects, decision forks, refinements you KNOW need action beyond this ceremony) are filed
+as beads (`unrefined`) and cited by ID in this report, never left as prose-only** — a
+prose-only findings channel orphans once its consumer closes
+(`rule-known-action-capture-beads-not-prose`; bd-pwt44 lesson).
 
 **Worker cost line (per-child / per-batch).** Add a one-line **Worker cost** entry to the
 report: per-child implementer usage (model + token cost, which the conductor received in each
