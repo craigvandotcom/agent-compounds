@@ -47,6 +47,27 @@ Surface these labels (consumers filter on them): `human-gate`, `dream-proposal`,
 For **epics** (dependent_count > 3 or "epic" in title): count total / ready / blocked / closed
 children.
 
+### Structural lint (parentage + edges)
+
+Beyond the status categories above, Scan A also computes two structural lint classes —
+defined ONCE here so `ac-tidy`, `ac-loop` Phase 0 orient, and standalone lint can't fork
+on what "orphan" or "illegal edge" mean:
+
+- **Parentage-gap orphan** — an open, non-epic bead with no epic parent (no `parent-child`
+  edge to an epic). `human-gate` beads are EXCLUDED from this class (Arm 0 owns their
+  parentage — wired at creation). This is the I1 sense of "orphan" (a bead with no home
+  epic), distinct from `ac-tidy`'s older sense ("orphan = a bead referencing a plan file
+  that no longer exists") — both are reported, they are different classes.
+- **Authored epic-edge** — any `blocks` edge with an **epic endpoint** (either end an epic)
+  is an I2 violation: epic order is derived from cross-epic bead edges, never authored
+  directly (`skills/beads-standards/SKILL.md` § Sequencing & parentage). Report it ALWAYS;
+  converting it into the right bead-level edge needs human judgment, so route the
+  conversion to Tier 3 rather than auto-fixing.
+
+**Edge queries read `.beads/issues.jsonl` directly.** `br list --json` (0.2.16) returns
+the beads but NO dependency edges — parse the jsonl for the `blocks` / `parent-child`
+relationships these two classes need.
+
 ## Scan B — plans
 
 ```bash
