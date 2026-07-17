@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduler heartbeat; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". CYCLE mode emits proposals only; REVIEW mode applies human-approved proposals. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduled run; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". CYCLE mode emits proposals only; REVIEW mode applies human-approved proposals. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — synthesize · lint · judge · propose
@@ -10,7 +10,7 @@ has *captured*, find what no single session could see, and propose system improv
 gated behind human judgment.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there). Plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` Phase 2.
-**Queue:** `infrastructure/dream-cycle/proposals/` · **Heartbeat:** `infrastructure/dream-cycle/last-run.json`
+**Queue:** `infrastructure/dream-cycle/proposals/` · **Run marker:** `infrastructure/dream-cycle/last-run.json`
 **Status:** v1 LIVE (weekly, structured stream only) · v2 daily raw-transcript mining
 DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a lands)
 
@@ -20,7 +20,7 @@ DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a
 
 | Mode | Trigger | What happens |
 |---|---|---|
-| **CYCLE** | scheduler heartbeat, "run the dream cycle" | Phases 1–6 below: gather → synthesize → lint → judge → emit → heartbeat |
+| **CYCLE** | weekly scheduled run, "run the dream cycle" | Phases 1–6 below: gather → synthesize → lint → judge → emit → run marker |
 | **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Precondition check (verify, don't clean) → raw-transcript mining funnel → reuses Phases 2/4/5; consumes the `infra-maintain` health report. See the mode section below |
 | **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
 
@@ -52,7 +52,7 @@ target (the cycle may propose upgrades to `dream`/`reflect`/`context-engineering
 ### Create Workflow Tasks (run ledger — CYCLE mode)
 
 **One task per phase — this ledger is scheduler-run, so it's the only proof-of-life until
-the Phase-6 heartbeat writes.** Create these upfront; `TaskUpdate` each to `in_progress`
+the Phase-6 run-marker writes.** Create these upfront; `TaskUpdate` each to `in_progress`
 when its phase starts and `completed` when it ends. The Phase-4 judge subagent (validator
 stance) keeps its own scope — this ledger tracks CYCLE's top-level phases only. (CYCLE-DAILY,
 still DESIGNED not live, reuses Phases 2/4/5 unchanged when it activates — its own ledger,
@@ -64,7 +64,7 @@ TaskCreate("Synthesize patterns — repetition, clusters, cross-domain echoes, p
 TaskCreate("Lint substrate — contradictions, staleness, duplicates, taxonomy, registry")
 TaskCreate("Judge candidates — validator-stance rubric, score >=7 to proposal")
 TaskCreate("Emit proposals — write the review queue, commit + push")
-TaskCreate("Heartbeat + report — last-run.json, run summary")
+TaskCreate("Run marker + report — last-run.json, run summary")
 ```
 
 **TaskUpdate("Gather lessons", in_progress)**
@@ -303,9 +303,9 @@ it lives in root's db; target-repo bead dbs for other proposals: commit `.beads/
 target repo touched, separately — never across repo boundaries.)
 
 **TaskUpdate("Emit proposals", completed)**
-**TaskUpdate("Heartbeat + report", in_progress)**
+**TaskUpdate("Run marker + report", in_progress)**
 
-### Phase 6 — Heartbeat + report
+### Phase 6 — Run marker + report
 
 Write `infrastructure/dream-cycle/last-run.json`:
 `{"timestamp": "<ISO now>", "window_start": "<LAST>", "status": "ok"|"empty"|"error", "lessons_read": N, "candidates": N, "proposals": N, "machine": "<hostname>"}`
@@ -320,7 +320,7 @@ check reads for stale/failed runs — this skill only writes it honestly, it doe
 implement that check). Then output a compact run report. If the run produced zero
 proposals, say so plainly — a quiet week is a valid outcome, not a failure.
 
-**TaskUpdate("Heartbeat + report", completed)**
+**TaskUpdate("Run marker + report", completed)**
 
 ---
 
@@ -458,6 +458,6 @@ TaskCreate("Report — applied/rejected/remaining + acceptance rate")
 | Re-proposing a rejected idea verbatim | Dedupe against ALL prior proposals first |
 | Editing another repo from the root commit | Apply + commit inside the target repo |
 | Treating an empty week as failure | Lint still runs; "0 proposals" is a valid report |
-| Skipping the heartbeat | Always write last-run.json — silent death is the enemy |
+| Skipping the run marker | Always write last-run.json — silent death is the enemy |
 | Emitting a proposal file without its decision bead | The bead IS the action handle — a file alone is invisible to the docket |
 | Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + pointer; memo stays private |
