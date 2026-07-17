@@ -255,6 +255,45 @@ br label add <id> "unrefined"
 
 This label is removed by `/ac-bead-refine` when convergence is reached.
 
+### Stamp the `plan-<slug>` join label on every epic
+
+Every epic ac-beadify creates also gets a `plan-<slug>` label, where `<slug>` derives from
+the plan filename (kebab-case, **no slashes** — `br` rejects them). This is the **join
+key** the loop's plan-completion gate reads to know which epics belong to one plan — this
+bead is the producer that DEFINES the label format; the gate that consumes it lives in
+`ac-loop`.
+
+```bash
+# slug from the plan filename, e.g. 2026-07-12-bead-io-contract.md -> 2026-07-12-bead-io-contract
+PLAN_SLUG=$(basename "$PLAN_FILE" .md)
+br label add <epic-id> "plan-${PLAN_SLUG}"
+```
+
+### Fork-check — wire open human-gate beads that gate the new beads
+
+At beadify of ANY plan, before the new beads go ready, reconcile them against the open
+decision docket. This is the forward-looking half of two-sided fork wiring — the other
+half, wiring at decision-creation, is `beads-standards`' existing mandatory-wiring rule.
+
+1. List open `human-gate` beads (a small, docket-sized set):
+   ```bash
+   br list --json --limit 1000 | jq -r '.issues[] | select(.status=="open") | select((.labels // []) | index("human-gate")) | .id + "  " + .title'
+   ```
+2. Judge which of them gate any of the NEW beads just created, and wire the `blocks` edge
+   for each such pair:
+   ```bash
+   br dep add <new-bead-id> <human-gate-id>
+   ```
+3. Re-run cycle detection — `br` does NO cycle prevention at `dep add`, so edges added
+   after the initial structure go unchecked unless you re-run it:
+   ```bash
+   br dep cycles   # must return clean
+   ```
+
+Manual beadify outside the loop stays a human-judgment override: this step surfaces the
+forks and wires the obvious edges, but adds **no gate CHECK** here — the plan-completion
+gate itself lives in `ac-loop`.
+
 ### Create Commands Reference
 
 ```bash
