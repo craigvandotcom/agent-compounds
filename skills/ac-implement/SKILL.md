@@ -534,6 +534,15 @@ UI validation is deferred to `/ac-land` where it runs once for the entire sessio
 
 ### Phase 1d: Commit + Close Bead
 
+**Shared-checkout git recipe (bd-chd5p.10 / Item 6c):** the full one-stop sequence —
+fetch, 0-behind check, pathspec commit, `--pathspec-from-file` for route-group paths
+`(…)`/`[…]`, no-stash escalation ladder — lives in
+**[`references/shared-checkout-git.md`](references/shared-checkout-git.md)**. That
+snippet consolidates (and supersedes as the single source) the pathspec notes that
+used to live only here plus the foreign-WIP ladder in
+`body-compass-app/memory/auto/pull-rebase-blocked-by-foreign-wip-decision-ladder.md`.
+**Never `git stash`.** Pathspec-limited commits remain binding (H7d).
+
 **Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** A second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` (incident: staged-sweep — `references/incidents.md`). Pathspec commits are atomic and self-documenting — there's no window between staging and committing where state can drift.
 
 ```bash
@@ -554,6 +563,11 @@ For many files at once, globs work in the pathspec: `git commit -m "..." -- 'fea
 > git commit -m "..." -- path/to/new-file.ts
 > ```
 > (incident: untracked-pathspec-close — `references/incidents.md`)
+>
+> **Route-group paths need `--pathspec-from-file`.** Paths containing `(…)` or `[…]`
+> (e.g. `app/(auth)/login/page.tsx`) must not be passed bare on the shell CLI — use
+> `git commit --pathspec-from-file=/tmp/pathspec.txt` (see
+> `references/shared-checkout-git.md`).
 >
 > **NEVER put `br close` in the same bash block as the `git commit`.** Bash continues past a failed commit, so a chained `br close` closes the bead in the tracker with no matching commit — a silent correctness hazard. Run the commit in one call, verify it landed (`git log --oneline -1` shows your commit, or check `$?`), then `br close` in a separate call.
 
