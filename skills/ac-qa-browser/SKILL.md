@@ -1,6 +1,6 @@
 ---
 name: ac-qa-browser
-description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a local production build (pnpm build && pnpm start) or a deployed URL — never the pnpm dev server. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed app".
+description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a local production build (via scripts/qa/serve-prod.sh) or a deployed URL — never the pnpm dev server. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed app".
 ---
 
 > **The web twin.** `ac-qa-browser` proves the web shell; `ac-qa-device` proves
@@ -30,19 +30,24 @@ schema, verdict schema, lanes, completeness rule, session naming) is
 ## Platform note (read first)
 
 Runs **anywhere** (any OS — no Mac needed). Requires either a **local production
-build** served (`pnpm build && pnpm start`) or a deployed URL (preview/production).
+build** served via **`scripts/qa/serve-prod.sh`** (per-HEAD + input-hash cache; see
+bd-chd5p.4) or a deployed URL (preview/production).
 For hybrid (Capacitor) apps the browser renders the **same bundle** the native
 webview does — so this twin owns the cheap, exhaustive DOM/visual coverage; route
 native-shell concerns (safe-area, splash, plugins, OAuth sheets) to `ac-qa-device`.
 
 > **QA server target — local-PROD only, NEVER `pnpm dev` (doctrine, bd-yey1z).**
-> Browser QA MUST target a local **production** build (`pnpm build && pnpm start`)
+> Browser QA MUST target a local **production** build via `scripts/qa/serve-prod.sh`
 > or a deployed URL — never the Next.js dev server. Under sustained QA load the dev
 > server's Fast-Refresh watcher enters a rebuild storm (~10 min in it began serving
 > 0-byte 200s with CPU/RSS climbing until killed); a prod build (`next start`) was
 > proven stable for 5 concurrent + sequential workers (bd-yey1z, 2026-07-12). The
 > dev server is not a QA target and QA must never gate on its Fast-Refresh behavior.
 > `pnpm dev` is for interactive development only.
+>
+> **Do not re-implement the cache in this skill** — delegate to `serve-prod.sh`.
+> The script refuses ANY dirty tree (incl. untracked); commit/clean before QA.
+> Cache key = HEAD_SHA + fingerprint of `.env*` + `pnpm-lock.yaml` (not SHA-only).
 
 ## Layered QA model — what to test here
 
@@ -76,12 +81,23 @@ viewport set), and a console-clean assertion on every route.
 - Derive `ARTIFACTS_DIR` per `_shared/run-id.md` (prefix `qa-browser`);
   `mkdir -p "$ARTIFACTS_DIR/evidence"`.
 - **You own the local server** (workers never start/stop it): if targeting local,
-  serve a **production build — never `pnpm dev`** (bd-yey1z doctrine, above): build
-  once, then start it backgrounded —
-  `pnpm build && pnpm start >"$ARTIFACTS_DIR/server.log" 2>&1`. Set `SERVER_STARTED=1`,
-  wait until it answers; record `BASE_URL` (default `http://localhost:3000`). Deployed
-  URL → skip the build/serve, `SERVER_STARTED` empty. Tear down the same `pnpm start`
-  process (not any `pnpm dev`) at Phase-final.
+  serve a **production build — never `pnpm dev`** (bd-yey1z doctrine, above) via the
+  app's cached serve script (do **not** raw `pnpm build && pnpm start` — that burns
+  ~1–1.5h/run and skips the SHA+input-hash key):
+  ```bash
+  # Requires a CLEAN tree (git status --porcelain empty, incl. untracked).
+  # Dirty → script exits non-zero; commit or clean first.
+  scripts/qa/serve-prod.sh >"$ARTIFACTS_DIR/server.log" 2>&1 &
+  SERVER_PID=$!
+  SERVER_STARTED=1
+  # Wait until it answers; record BASE_URL (default http://localhost:3000).
+  # Capture fingerprints from the script's stdout (also in server.log):
+  #   SERVED_SHA=…  INPUT_HASH=…  CACHE_KEY=…  ENV_FINGERPRINT=…  CACHE_HIT=0|1
+  # Fold SERVED_SHA + INPUT_HASH/ENV_FINGERPRINT into QA evidence so ceremonies
+  # can verify build↔commit↔env identity.
+  ```
+  Deployed URL → skip the build/serve, `SERVER_STARTED` empty. Tear down the same
+  `next start` / serve-prod process (not any `pnpm dev`) at Phase-final.
 
 ### Phase 1 — Select journeys, assign lanes, write the manifest
 
