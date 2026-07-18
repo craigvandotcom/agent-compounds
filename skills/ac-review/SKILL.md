@@ -678,6 +678,23 @@ instead of being treated as already-refined. **`-t bug` = shipped product defect
 test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never
 `-t bug`** — mistyping inflates the preemptive bug lane.
 
+> **Route the finding bead to an epic parent + stamp `post-merge` at creation** (§3 routing
+> map, `_shared/bead-conventions.md` § Bead routing + § Claim semantics). Every
+> `review-finding` bead created here is in-loop exhaust filed inside the batch's
+> verify→review→close window, so on creation:
+> 1. **Epic parent (§3 routing):** parent = **the epic whose beads were in the batch under
+>    review**. If the batch **spanned epics**, route per-finding by **file/scope** (the epic
+>    owning the file the finding lands in). If no batch epic applies, **fall back to a
+>    per-run review epic** (`br create -t epic "ac-review <date> — findings"`, created once
+>    per run, reused for the rest). Wire it: `br dep add <finding-id> <epic-id>` (parent-child).
+> 2. **`post-merge` at creation:** `br label add <finding-id> post-merge` — the finding was
+>    filed before its parent batch merged, so the literal label keeps `beads-closed-gate.sh`
+>    from counting it as a genuinely-open in-scope bead and blocking the batch's own close.
+>    Stripped at the next claim (the strip-at-claim half of the lifecycle).
+>
+> This is additive: the `review-finding`, `unrefined`, and `discovered-from: <bead-id|unknown>`
+> labels/linkage (above) are UNCHANGED — parent + `post-merge` are wired on top of them.
+
 **Default (including all autonomous/headless runs): apply the Exhaust Rule.** Create a `decision` bead for each remaining item — do NOT ask:
 
 ```bash
