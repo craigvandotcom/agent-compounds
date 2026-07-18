@@ -65,7 +65,7 @@ br list                    # List all beads
 br ready                   # Show unblocked beads
 br show <id>               # View bead details
 br close <id>              # Mark bead complete
-br comment <id> "message"  # Add progress note
+br comments add <id> "message"  # Add progress note
 ```
 
 ### Beads Viewer (Prioritization)

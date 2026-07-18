@@ -65,7 +65,7 @@ br update bd-1234 --status in_progress
 ### Add a Comment
 
 ```bash
-br comment bd-1234 "Found the root cause - null check missing"
+br comments add bd-1234 "Found the root cause - null check missing"
 ```
 
 ### Close an Issue
@@ -129,7 +129,7 @@ bv --robot-insights
 | `br show <id>`                 | View issue details          |
 | `br update <id> --status ...`  | Update status               |
 | `br close <id> --reason "..."` | Close with reason           |
-| `br comment <id> "..."`        | Add a comment               |
+| `br comments add <id> "..."`   | Add a comment               |
 | `bv --robot-triage`            | Get AI task recommendations |
 
 ---

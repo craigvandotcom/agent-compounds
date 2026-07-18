@@ -407,7 +407,9 @@ summary. Harness-agnostic: plain `python3`, stdlib only.
 ### Verdict comment (VERDICT grammar)
 
 The consensus `VERDICT:` line is this review ceremony's verdict — record it on the
-reviewed bead(s) as a structured comment per **`beads-standards` § Verification verdicts**:
+reviewed bead(s) as a structured comment per **`beads-standards` § Verification verdicts**
+(exact CLI: `br comments add <id> "VERDICT: passed: <detail>"` — plural `comments`
+subcommand only; do not invent a singular verb):
 `VERDICT: passed:` for a clean `APPROVED`, `VERDICT: failed:` when the panel surfaced a
 merge-blocking finding (`VERDICT: blocked:` for a `NEEDS_DECISION` partial-failure gate).
 Review is a *verifier* ceremony — the panel/conductor writes the verdict, never the

@@ -386,7 +386,9 @@ Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 ### Verdict comment (VERDICT grammar)
 
 The Tier 1 CI dispatch result is a verification verdict — record it on the batch's anchor /
-scope beads as a structured comment per **`beads-standards` § Verification verdicts**:
+scope beads as a structured comment per **`beads-standards` § Verification verdicts**
+(exact CLI: `br comments add <id> "VERDICT: passed: <detail>"` — plural `comments`
+subcommand only; do not invent a singular verb):
 `VERDICT: passed:` on a green dispatch, `VERDICT: failed:` when the run red-Xed (put the
 fix-forward SHA in the detail), `VERDICT: blocked:` for a stalled/timeout-terminal run. CI
 is a *verifier* ceremony — the verdict is written here, never by the implementer whose

@@ -25,7 +25,7 @@ br show bd-1234 --comments                       # Show with comments
 
 # Update
 br update bd-1234 --status in_progress           # Change status
-br comment bd-1234 "Progress note"               # Add comment
+br comments add bd-1234 "Progress note"          # Add comment
 br close bd-1234 --reason "Fixed in commit abc"  # Mark complete with reason
 br reopen bd-1234                                # Reopen bead
 br label add bd-1234 "frontend"                  # Add label/tag
