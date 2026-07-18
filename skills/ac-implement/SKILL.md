@@ -312,6 +312,11 @@ CLAIM_ASSIGNEE="${CLAIM_ASSIGNEE:-$AGENT_NAME}"
 # the BEADS-CLOSED-GATE then rejects anyway).
 [ "$CLAIM_ASSIGNEE" = "FoggyCreek" ] && { echo "FATAL: CLAIM_ASSIGNEE=FoggyCreek — cannot claim beads under the Tier-2 chore identity; pass the loop's minted identity (or re-assert this session's AGENT_NAME)" >&2; exit 2; }
 br update <id1> <id2> ... --status in_progress --assignee "$CLAIM_ASSIGNEE"
+# Strip `post-merge` from every bead being claimed (single bead-conventions claim-semantics
+# rule — _shared/bead-conventions.md § post-merge claim semantics). An exhaust bead adopted
+# into THIS batch must be closeable again; leaving `post-merge` on it strands a gate-invisible
+# zombie (open forever, never counted by beads-closed-gate.sh). Harmless no-op if unlabeled.
+for id in <id1> <id2> ...; do br label remove "$id" post-merge 2>/dev/null || true; done
 ```
 
 This is the CLAIM-AT-SELECTION mechanism (precedent: body-compass-app memory
@@ -339,7 +344,10 @@ On later loop iterations within the same session, only claim a bead individually
 `--status in_progress --assignee "$CLAIM_ASSIGNEE"` call — the SAME identity as the batch, never
 your own session name when delegated) if it falls OUTSIDE the batch already claimed above
 (e.g. a candidate went blocked mid-session and was replaced by the next-ready bead) — the
-rest of the batch is already claimed and stays that way until closed.
+rest of the batch is already claimed and stays that way until closed. **This incremental /
+replacement claim strips `post-merge` too** (`br label remove <id> post-merge`) — the
+strip-at-claim rule holds on EVERY claim path, not just the up-front batch claim, so no
+adopted exhaust bead ever re-enters work still carrying its gate-excluding label.
 
 **Re-verify branch context BEFORE claiming.** Branch state is dynamic in this workflow — multiple Claude sessions sharing one git checkout can switch the branch between operations via serial hand-off. Phase 0's branch check is a snapshot; treat it as stale on every loop iteration.
 
