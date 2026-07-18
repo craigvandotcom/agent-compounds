@@ -215,6 +215,24 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
 - Beads whose description references a plan file that doesn't exist (not in active or `_done/`)
 - Report: "Orphan bead {id}: references plan {name} which doesn't exist"
 
+### Parentage-Gap Orphans (the I1 orphan class — `_shared/board-scan.md`)
+- **An open, non-epic bead with no epic parent** (no `parent-child` edge to any epic). This is the I1 sense of "orphan" (no home epic) — **distinct** from the plan-reference orphan above. Read it from the board-scan spec's parentage-gap detector; do not re-derive.
+- **`human-gate` beads are EXCLUDED** — their parentage is wired at creation (Arm 0 owns them); never flag a `human-gate` bead as a parentage-gap orphan.
+- **FLAG-ONLY (Tier 3), never backfill.** Report the gap. When the §3 routing map (`_shared/bead-conventions.md` § Bead routing) makes a parent obvious, the report MAY carry a **Tier-3 adoption proposal** (`br dep add <id> <epic-id>`) — but there is **NO backfill mandate and nothing is auto-applied**. Missing/ambiguous routing → leave it flagged, unparented.
+- Report: "Parentage-gap orphan {id}: open non-epic bead with no epic parent{ — obvious parent {epic-id} (proposal)| — no obvious parent}"
+
+### Authored Epic-Edge Violations (I2 — `_shared/board-scan.md`)
+- **Any `blocks` edge with an epic endpoint** (either end an epic) is an I2 violation: containment is `parent-child`, sequencing is bead-level `blocks` (`skills/beads-standards/SKILL.md` § Sequencing & parentage). Read it from the board-scan spec's authored epic-edge detector.
+- **Report ALWAYS.** Conversion to bead↔bead edges (or dropping an arrival-order-only edge) needs judgment → **Tier 3 proposal**, never auto-applied.
+- Report: "Epic-edge violation: `blocks` edge {a}→{b} has an epic endpoint — propose bead-level rewire (Tier 3)"
+
+### Epic-Close Proposals (the epic-close home — NOT `beads-closed-gate.sh`)
+- Tidy already collects epic child-completion ratios (total / closed / open — § Scope + scan, from `board-scan.md`). Add the close action: **when every child of an epic is closed AND the epic's `## Delivers` is covered by the delivered artifacts of those children → propose closing the epic.** This is the single home for epic-close proposals; `beads-closed-gate.sh` stays focused on the claimed set and never closes epics.
+- **NIGHTLY (Tier 3):** emit a proposal (do not auto-close). **INTERACTIVE (Tier 2):** confirm via `AskUserQuestion` before closing.
+- Report: "Epic {id}: all {n} children closed + Delivers covered — propose close"
+
+> **All Phase-3 proposals exclude `in_progress`/claimed beads and re-validate at apply time (proposal→apply TOCTOU guard).** A bead claimed since the scan may have moved; before any proposal is applied (via `ac-human-session`'s re-invocation of the INTERACTIVE flow), re-check `br show <id>` and skip anything now `in_progress`, claimed, or already reconciled. Never propose an adoption/rewire/close over a bead another session holds.
+
 ### Stale Backlog
 - Backlog items with `status: planned` but linked plan has been archived/deleted
 - Report: "Stale backlog: {filename} says 'planned' but plan is gone"
