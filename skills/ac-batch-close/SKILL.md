@@ -524,6 +524,26 @@ of leaking it into the next batch's diff. No special git trick needed; ordering 
 this point, that means Act 1 (or Act 2) isn't actually done — re-run from there and redo this
 commit last, again. Nothing pushes after the batch report.
 
+### Ceremony pool ack + post-ack drain (bd-chd5p.2 / Item 1)
+
+When the loop handed a **pool-backed** batch (pool-only, mixed, or pure risk-solo that
+snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 3 **acks** after the report commit:
+
+1. Under `flock` on `/tmp/loop-pool-<RUN_ID>.json`, remove **only this batch's
+   `in_flight` IDs** (never whole-file wipe).
+2. Non-pool ceremonies (planned-wave / pure risk-solo with no snapshot) **no-op** the
+   pool — leave `pending`/`in_flight`/`risk_queue` intact.
+3. On ceremony **failure** before this ack: re-merge `in_flight` → `pending` (do not
+   drop IDs); recompute `first_close_ts = min(closed_at)`.
+4. After successful ack, if `in_flight` is empty → run the **drain sequence**
+   (ac-loop SKILL.md § Ceremony batching pool): risk_queue head first (mixed or pure
+   risk-solo), else fire opportunity on `pending` (soft-8 / ~3h window / line-floor
+   N≈800, hard-10 ceiling), else stop.
+
+Ceremony batch range for CI/report scope uses `_shared/risk-classification.md`
+**binding #1** (pool-only union of `in_flight` `pre_sha..close_sha`; mixed ∪ risk bead
+range; planned-wave/pure risk-solo = that batch's range).
+
 Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 
 ---
