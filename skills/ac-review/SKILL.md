@@ -320,6 +320,44 @@ lenses use **negative gating** — spawn by default, skip only when provably irr
 Two cheap checks against the Phase-1 changed-file list. When in doubt, **spawn** — a
 wasted reviewer costs one agent; a wrongly skipped lens is a silent coverage gap.
 
+### Panel scaling (ZERO-RUNTIME + no RISK-TOUCH — bd-chd5p.8 / Item 6a)
+
+Body count may shrink **only** when classification proves the batch is safe. Keys on
+**files touched** via `_shared/risk-classification.md` (ZERO-RUNTIME allowlist + no
+RISK-TOUCH after test-path exclusion) — **never** on a self-declared
+"doc/test/methodology" batch label. The run's Criticals were all on batches that
+self-labeled low-risk; a label-keyed shrink would have let them through.
+
+**Classifier (binding — Item 0):**
+
+```bash
+# DIFF_RANGE from Phase 1 scope detection
+git diff --name-only $DIFF_RANGE
+# Then apply risk-classification.md: RISK-TOUCH globs + test-path exclusion +
+# ZERO-RUNTIME positive allowlist. Shrink-eligible ONLY if EVERY path is
+# ZERO-RUNTIME AND no path is RISK after exclusion.
+```
+
+**Panel-scaling table — retained dimensions per tier:**
+
+| Tier | Condition | Bodies | Dimensions retained |
+| ---- | --------- | ------ | ------------------- |
+| **Full (default)** | any RISK-TOUCH hit **OR** any non-ZERO-RUNTIME / runtime-source change | up to 6 | **core four** (security, performance, architecture, correctness) **ALWAYS** + test-quality + contracts (negative-gating skip rules above still apply) |
+| **Shrink** | ZERO-RUNTIME **AND** no RISK-TOUCH (proved by `git diff --name-only`) | 2–3 | **core four still covered** (may share bodies; fewer bodies never silently drop a dimension) |
+| **test-quality dedicated** | ANY test file present in the diff (`**/__tests__/**` or `**/*.{test,spec}.*`) | +1 body | **test-quality is its own dedicated body** — never merged into another body. The reduced-motion Critical was caught by a test-quality body tracing a self-defeating e2e; that probe does not survive a merged body. |
+
+**Rules (non-negotiable):**
+
+1. **Core four ALWAYS** — fewer bodies never silently drop security / performance /
+   architecture / correctness (this section's baseline rule at ~core-four ALWAYS).
+2. **Any RISK-TOUCH hit, OR any runtime-source change → full 6-dimension panel, no
+   shrink, ever.**
+3. **test-quality is its own dedicated body whenever ANY test file is present** —
+   even on a shrink-eligible ZERO-RUNTIME batch.
+4. **GUARD-RAIL:** batch is shrink-eligible only if `git diff --name-only` proves
+   ZERO-RUNTIME + no RISK-TOUCH per `_shared/risk-classification.md`. When in doubt,
+   full panel.
+
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
 against it (a spawned dimension with no output = partial failure, never a silent pass):
 
