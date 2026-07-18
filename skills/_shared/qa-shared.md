@@ -97,6 +97,13 @@ partial failure, never a silent pass:
 }
 ```
 
+> **Schema contract (bd-g4ktj):** the validator
+> (`_shared/scripts/validate-qa-run.sh`) reads **flat `dispatched[]`** —
+> `.dispatched[].journey` / `.dispatched[].lane` / …. Do **not** write a top-level
+> `workers[]` array as the completeness key (that produces false missing-verdict /
+> null iterate). **One `dispatched[]` row per journey** (= one `verdict-<journey>.json`
+> basename) even when a single worker runs 2–3 journeys back-to-back.
+
 **Verdict files.** Each worker writes `$ARTIFACTS_DIR/verdict-<journey>.json` as its
 mandatory Output contract:
 

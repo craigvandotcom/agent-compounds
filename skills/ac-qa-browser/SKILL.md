@@ -113,8 +113,11 @@ viewport set), and a console-clean assertion on every route.
   construction, so **parallel-lane eligible** (useful: many apps' journey sets skew
   heavily mutating, leaving the parallel lane thin) — and one **checklist worker**
   (`web-shell-checklist.md` + appearance matrix) — drives forms, so sequential.
-- Write `$ARTIFACTS_DIR/journeys-manifest.json` (schema: qa-shared.md) **BEFORE any
-  spawn** — including `skipped` with reasons (e.g. `surfaces: native` only).
+- Write `$ARTIFACTS_DIR/journeys-manifest.json` (schema: `_shared/qa-shared.md`)
+  **BEFORE any spawn** — including `skipped` with reasons (e.g. `surfaces: native` only).
+  **Validator key is `dispatched[]`** (not `workers[]`) — one entry per journey /
+  verdict basename even when one worker runs multiple journeys. Required fields per
+  row: at least `journey`, `lane` (see `validate-qa-run.sh` + qa-shared example).
 
 ### Phase 2 — Seed auth
 
@@ -195,7 +198,22 @@ Workers close their own sessions; you sweep the stragglers:
 agent-browser session list | grep -F "qa-<app>-<RUN_ID>" || true   # should be empty
 # close any leftover BY NAME (never `close --all`):
 agent-browser --session <leftover> close
-[ -n "$SERVER_STARTED" ] && pkill -f "next start" 2>/dev/null   # only the local-prod server YOU started; skip if a human runs their own
+# Kill-by-PORT teardown (bd-g4ktj) — pkill -f "next start" does NOT match pnpm start's
+# real process (`next-server`); port stayed bound 2×. Prefer port from BASE_URL
+# (default 3000) or SERVED port printed by serve-prod.sh.
+if [ -n "$SERVER_STARTED" ]; then
+  PORT="${PORT:-3000}"
+  # Prefer port embedded in BASE_URL when present
+  if [ -n "${BASE_URL:-}" ]; then
+    PORT=$(printf '%s' "$BASE_URL" | sed -E 's#.*:([0-9]+).*#\1#' | grep -E '^[0-9]+$' || echo "$PORT")
+  fi
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null | xargs kill 2>/dev/null || true
+  else
+    # fallback only — primary is port kill
+    kill "${SERVER_PID:-}" 2>/dev/null || true
+  fi
+fi
 ```
 
 **Delete worker-created data rows (mandatory — the conductor owns this, not the workers)**
