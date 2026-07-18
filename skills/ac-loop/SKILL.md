@@ -171,6 +171,16 @@ Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fre
 
 Read the current state of the board. This is the map you navigate by.
 
+> **Canonical scan spec: `_shared/board-scan.md`.** This Phase-0 orient IS a consumer of the
+> shared board-scan spec — read it alongside the calls below and use ITS definitions, so the
+> loop and the janitor (`ac-tidy`) cannot fork on what "orphan" or "illegal edge" mean. In
+> particular, adopt board-scan's **parentage-gap orphan** detector (open non-epic bead with
+> no epic parent — the I1 orphan sense) and its **authored epic-edge** detector (any `blocks`
+> edge with an epic endpoint — report ALWAYS) rather than re-deriving either here. The raw
+> `bv`/`br` calls below are the concrete implementation of that spec's ready-set + bug-lane
+> lenses (they carry the `--limit 0` and bug-lane specifics the loop needs); board-scan is
+> the source of truth for the structural-lint detectors.
+
 > **Discovery uses `bv` for triage, `br` for data — NEVER bare `br ready`.**
 > `br ready` **defaults to `--limit 20`** and silently truncates: a board with >20 ready
 > beads shows only the first 20, and the default sort can bury all the shippable ones below
