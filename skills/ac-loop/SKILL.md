@@ -224,15 +224,23 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 > **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
 > **Plan-frontmatter `depends-on:` convention (plan-level admission gate).** A loop-ready
-> plan MAY declare a machine-readable `depends-on:` frontmatter field naming a blocking
-> **epic id** OR **plan path** — e.g. `depends-on: bd-abc12` or
-> `depends-on: _plans/2026-07-01-foo.md`. It means "do not admit this plan to the beadify
-> phase until the named epic/plan is closed/merged." The conductor honours it in
-> Phase 2 § Pick the next plan (the admission gate below). Unrelated plans (no declared
-> `depends-on`) may parallelize within the beadify phase. Bead-level `depends-on` edges +
-> `bv --robot-plan` tracks continue to govern within-*implement* partitioning. Prior art:
-> memory `plan-internal-gates-outrank-blanket-loop-directives` — this structuralizes what
-> plan prose already did.
+> plan MAY declare a machine-readable `depends-on:` frontmatter field naming one or more
+> upstream **PLAN(s) by path or name** — e.g. `depends-on: _plans/2026-07-01-foo.md`. It
+> means "do not admit this plan to the beadify phase until the named upstream plan(s) are
+> **Complete(A)** (defined in the Phase 2 admission gate below)." **`depends-on:` names
+> plans only.** The **epic-id form is DEPRECATED** (epics stay open across batches, so an
+> epic-status check would wedge a dependent plan permanently) — the gate **ERRORS** on an
+> epic-id value: it does **not** silently ignore it. Operationally, ERROR = **skip
+> admission of that one dependent plan this pass + surface an advisory Slack nudge**
+> (loud, visible), and then move on. It is **NEVER a hard loop stop** — ac-loop's Stop
+> Conditions make **C2 (critical regression) the only hard stop** (§ Stop Conditions), so
+> a malformed `depends-on` de-admits its own plan and nudges the human without halting the
+> queue. The conductor honours all of this in Phase 2 § Pick the next plan (the admission
+> gate below). Unrelated plans (no declared `depends-on`) may parallelize within the
+> beadify phase. Bead-level `depends-on` edges + `bv --robot-plan` tracks continue to
+> govern within-*implement* partitioning. Prior art: memory
+> `plan-internal-gates-outrank-blanket-loop-directives` — this structuralizes what plan
+> prose already did.
 
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
@@ -404,13 +412,40 @@ br ready --limit 0 --json | jq '[.[] | select(
 
 Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its parent plan file has `status: loop-ready`. If no loop-ready plan waves exist, skip to Phase ARIA.
 
-> **Plan-admission gate (`depends-on:`).** Before admitting a plan to the **beadify** phase,
-> read its `depends-on:` frontmatter (convention: Phase 0 § loop-ready gate). If it names an
-> epic id or plan path that is NOT closed/merged (`br show <id>` status ≠ closed, or the named
-> plan not yet merged), the plan is NOT admitted this pass — it stays queued; move to the next
-> loop-ready plan. Unrelated plans (no declared `depends-on`) parallelize freely within the
-> beadify phase. This is the plan-level counterpart to bead-level `depends-on` edges (which
-> govern within-implement partitioning via `bv --robot-plan`).
+> **Plan-admission gate (`depends-on:` → Complete(A)).** Before admitting a plan B to the
+> **beadify** phase, read its `depends-on:` frontmatter (convention: Phase 0 § loop-ready
+> gate). For each named upstream plan A, admit B only when **Complete(A)** holds; otherwise
+> B is NOT admitted this pass — it stays queued; move to the next loop-ready plan. Unrelated
+> plans (no declared `depends-on`) parallelize freely within the beadify phase. This is the
+> plan-level counterpart to bead-level `depends-on` edges (which govern within-implement
+> partitioning via `bv --robot-plan`).
+>
+> **Complete(A)** is evaluated over the `plan-<slug(A)>` join label (stamped on every epic
+> by `ac-beadify`), NOT over any single epic's status and NOT over plan archival:
+>
+> - **Non-vacuous guard:** at least one epic labeled `plan-<slug(A)>` must exist **with ≥1
+>   child**. An unbeadified (or child-less) plan is **never** Complete — a vacuous "no open
+>   children" must not read as done.
+> - **All children closed-or-excluded:** every child of every `plan-<slug(A)>` epic is
+>   either `closed`, OR labeled `post-merge` (exhaust bead — deferred to a later batch by
+>   design), OR labeled `human-gate` (a fork that gates via § Phase ARIA, not via
+>   completion). Any child that is merely **deferred** (open, no `post-merge`/`human-gate`)
+>   **holds Complete(A) open**.
+> - **Multi-wave / multi-epic:** if A produced several `plan-<slug(A)>` epics, ALL of their
+>   children must satisfy the above — Complete(A) is over the whole join, not the first epic.
+>
+> **Archival to `_plans/_done/` is reporting, NEVER a gate input** (tidy archives at beadify
+> time in one path and via a human-gated proposal in another — premature one way, laggy the
+> other; either would misjudge the gate). Do **not** substitute a `br show <epic-id>` status
+> check for Complete(A) — an epic staying open across batches is expected and must not wedge
+> a dependent plan.
+>
+> **Admission is planned-scope and is NOT retracted mid-flight** (§ 4.1): a claimed exhaust
+> bead (its `post-merge` label stripped at claim) can re-open Complete(A) for a **not-yet-
+> admitted** B — that B simply waits another pass; an **already-admitted** B proceeds
+> regardless. If a `depends-on` value is an **epic id** (deprecated form), the gate ERRORS:
+> **skip** B's admission this pass and post an **advisory nudge** — never a hard loop stop
+> (C2-only per § Stop Conditions).
 
 ### Execute the wave
 
