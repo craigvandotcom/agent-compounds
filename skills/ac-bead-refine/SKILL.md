@@ -52,8 +52,9 @@ end is a finding. (2) **finding beads carry `discovered-from:`** (an honest `unk
 PLUS a convention that **NEVER blocks `refined`**: refine **adopts** an unparented bead into
 an epic when §3 routing makes the parent obvious — idempotent (adopt only a parentless bead,
 re-check `br show` immediately before `br dep add`, verify single-parenthood after), never
-mutex-guarded. (Distinct from the OPEN human-gate proposal bd-9bvr2 on a refine light-path /
-hard-block waiver — that is a separate concern, not part of these three additions.)
+mutex-guarded. (Light-path refine criteria are **decided ACCEPT** — bd-9bvr2 closed
+`decided:ACCEPT` 2026-07-18 — and **implemented** below as the formal `refine-light`
+branch; do not re-open a human-gate on those criteria.)
 
 **UI beads derived from a visual reference** must carry the reference-image path
 (`docs/design-refs/<surface>-<source>-reference.<ext>`, per `ac-plan-init`'s capture rule)
@@ -61,6 +62,53 @@ in their `## Acceptance Criteria` — the Completeness Reviewer (see `references
 checks for this and for AC drift against the source research doc's geometry, not just
 internal bead coherence.
 
+## Light-path refine branch (`refine-light`) — formal criteria (bd-chd5p.6 / Item 4)
+
+**Decision D1 (2026-07-18):** ACCEPT plan criteria as written. **bd-9bvr2 closed
+`decided:ACCEPT`** — this section **implements** those criteria; do not re-open a
+human-gate.
+
+Evidence: ≥5 clean light-paths + 1 costly failure (bd-hfdst). bd-hfdst **passed** a
+"mechanism traced at a named line" test with detailed but **WRONG** file:lines —
+excluding clauses are the **async/persist hard gate (#1)** plus **independent
+concurrence (#4)**, not self-attested mechanism-traced alone.
+
+### HARD GATE first (criterion #1) — fail → full `MIN_ROUNDS` / `refine-full`
+
+Light path is **forbidden** if the fix touches **any** of:
+
+- a **RISK-TOUCH** path under `_shared/risk-classification.md` **binding #5**
+  (file-set of the bead under refine — same files the refine stamp will cite),
+  especially persistence/write/RPC surfaces; **OR**
+- any **async / multi-writer / SSE / poll / create** surface.
+
+*This* hard gate would have excluded bd-hfdst. Classify the bead's file set against
+risk-classification before considering criteria 2–4.
+
+### Criteria #2–#4 (ALL four required; any fail → full MIN_ROUNDS)
+
+| # | Criterion |
+| - | --------- |
+| **1** | **HARD GATE** above (RISK-TOUCH persistence / async-multi-writer) |
+| **2** | **Single-file scope** required |
+| **3** | Evidence from the **same run**, **< 24h old measured against `RUN_ID` start** (QA repro or review finding); paste **artifact path + ISO timestamp** into the stamp |
+| **4** | Mechanism traced to concrete `file:line`, **AND** that trace **confirmed by a single spawned adversarial subagent DISTINCT from the trace's author** (never conductor self-concurring). Output is one-line **PASS** naming the `file:line` independently confirmed |
+
+### Stamp content (`refine-light`)
+
+When all four hold, stamp `refine-light` (not only `refined`) and record in a bead
+comment:
+
+- `file:line` of the mechanism
+- evidence artifact path + ISO timestamp (< 24h vs RUN_ID start)
+- independent concurrence one-liner (PASS + file:line)
+
+Grep can confirm all three fields are **present**; it cannot confirm trace correctness —
+independent concurrence is the guard.
+
+Failing any criterion → run full `MIN_ROUNDS` and stamp `refine-full`. Procedure detail:
+`references/workflow.md` § Light-path / refine-light.
+
 ## Procedure
 
-This is a multi-agent conductor workflow. **Load and follow [`references/workflow.md`](references/workflow.md)** — it holds the full phased procedure (reviewer prompts, round structure, fix application, convergence, label removal).
+This is a multi-agent conductor workflow. **Load and follow [`references/workflow.md`](references/workflow.md)** — it holds the full phased procedure (reviewer prompts, round structure, fix application, convergence, label removal), including the formal light-path branch.

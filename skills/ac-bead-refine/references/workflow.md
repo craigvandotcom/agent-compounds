@@ -447,14 +447,38 @@ done
 
 **On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
 
-**Also stamp the refine-PATH that produced the convergence** — `refine-full` for the normal 3-reviewer × ≥3-round run this workflow codifies, or `refine-light` when the conductor ran a **disclosed** reduced-process deviation (e.g. the match-process-weight-to-task-size case — this skill has no formal light branch today, so `refine-light` records that carve-out and makes its frequency/safety measurable). The pair is eval-load-bearing and frozen under `beads-standards` § LABEL-FREEZE.
+**Also stamp the refine-PATH that produced the convergence** — `refine-full` for the
+normal 3-reviewer × ≥3-round run this workflow codifies, or `refine-light` when the
+formal light-path branch below applies (ALL four criteria; see SKILL.md § Light-path
+and this section). The pair is eval-load-bearing and frozen under
+`beads-standards` § LABEL-FREEZE.
+
+### Light-path / `refine-light` (formal branch — bd-chd5p.6)
+
+This skill **has a formal light branch**. `refine-light` is **not** an ad-hoc
+carve-out: it may be stamped only when **ALL four** criteria in
+`ac-bead-refine/SKILL.md` § Light-path hold (HARD GATE #1 first: RISK-TOUCH
+persistence / async-multi-writer via `_shared/risk-classification.md` binding #5;
+single-file; <24h same-run evidence vs `RUN_ID` start; independent adversarial
+concurrence on `file:line`). Failing any one → full `MIN_ROUNDS` and `refine-full`.
+
+Before stamping `refine-light`, paste into a bead comment (exact CLI:
+`br comments add <id> "…"`):
+
+1. mechanism `file:line`
+2. evidence artifact path + ISO timestamp
+3. independent concurrence one-liner (`PASS <file:line>`)
+
+bd-9bvr2 closed `decided:ACCEPT` — do not re-open a human-gate on these criteria.
 
 **Contract gate:** no implementable bead gets the stamp while its `## Delivers` / `## Consumes` is missing or vague (`_shared/bead-conventions.md` §Bead I/O contract) — author or fix the contract first (refine authors it for quick-capture beads). The stamp asserts the I/O contract along with everything else; ac-implement's pre-dispatch premise check reads Consumes lines at face value.
 
 ```bash
 # Remove unrefined, add refined + the refine-path label — scoped to what was actually
 # reviewed this run (the snapshot from Phase 0: whole board normally, epic + children if epic-scoped).
-REFINE_PATH="refine-full"   # normal 3-reviewer × ≥3-round run; set to "refine-light" for a DISCLOSED reduced-process deviation
+# refine-full = normal 3-reviewer × ≥3-round; refine-light = formal light branch (ALL 4 criteria).
+REFINE_PATH="refine-full"
+# Set REFINE_PATH=refine-light only after HARD GATE + criteria 2–4 all hold (SKILL.md § Light-path).
 for id in $(jq -r '.issues[] | select(.status == "open") | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); do
     br label remove "$id" "unrefined" 2>/dev/null
     br label add "$id" "refined" 2>/dev/null
