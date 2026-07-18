@@ -67,20 +67,36 @@ Locate the original plan file if one exists (check `_plans/*.md`, ask user if un
 
 ### Gather Bead Snapshot
 
+**Canonical snapshot shape (bd-lsnc0):** `$ARTIFACTS_DIR/beads-snapshot.json` is always
+`{ "issues": [ …issue objects… ] }` — the same shape `br list --json` emits. All
+downstream loops (parity gate, stamp) read **only** this file; they never re-invoke
+`br show --json | jq` per id (multi-line descriptions break `jq -c '.[0]'`).
+
+**zsh-safe array iteration:** never `for id in $UNQUOTED` (word-splits under zsh).
+Build a real array via `while IFS= read -r` (portable bash 3.2 + zsh).
+
 ```bash
-# Current bead state
+# Current bead state — ONE shape: { "issues": [...] }
 br list --json --limit 1000 > "$ARTIFACTS_DIR/beads-snapshot.json"
 
 # Dependency health
 br dep cycles
 
-# Full bead details for agent context
-for id in $(br list --json --limit 1000 | jq -r '.issues[].id'); do
+# Full bead details for agent context (zsh+bash portable array)
+IDS=()
+while IFS= read -r line; do
+  [ -n "$line" ] && IDS+=("$line")
+done < <(jq -r '.issues[].id' "$ARTIFACTS_DIR/beads-snapshot.json")
+
+: > "$ARTIFACTS_DIR/beads-full-dump.txt"
+for id in "${IDS[@]}"; do
+  {
     echo "=== Bead $id ==="
     br show "$id"
     br comments "$id"
     echo ""
-done > "$ARTIFACTS_DIR/beads-full-dump.txt"
+  } >> "$ARTIFACTS_DIR/beads-full-dump.txt"
+done
 ```
 
 **Epic-scoped invocation** (caller says "scoped to that epic" — e.g. from `ac-hygiene` or
@@ -89,21 +105,26 @@ done > "$ARTIFACTS_DIR/beads-full-dump.txt"
 
 ```bash
 EPIC_ID=<the epic bead id>
-CHILD_IDS=$(br dep list "$EPIC_ID" --direction up -t parent-child --json | jq -r '.[].issue_id')
+CHILD_IDS=()
+while IFS= read -r line; do
+  [ -n "$line" ] && CHILD_IDS+=("$line")
+done < <(br dep list "$EPIC_ID" --direction up -t parent-child --json | jq -r '.[].issue_id')
 
 ID_FLAGS=(--id "$EPIC_ID")
-for c in $CHILD_IDS; do ID_FLAGS+=(--id "$c"); done
+for c in "${CHILD_IDS[@]}"; do ID_FLAGS+=(--id "$c"); done
 br list --json "${ID_FLAGS[@]}" --all > "$ARTIFACTS_DIR/beads-snapshot.json"
 
-# Full bead details, epic-scoped
-{ echo "=== Bead $EPIC_ID ==="; br show "$EPIC_ID"; br comments "$EPIC_ID"; echo ""; \
-  for id in $CHILD_IDS; do echo "=== Bead $id ==="; br show "$id"; br comments "$id"; echo ""; done; \
+# Full bead details, epic-scoped (array iteration — zsh-safe)
+{
+  echo "=== Bead $EPIC_ID ==="; br show "$EPIC_ID"; br comments "$EPIC_ID"; echo ""
+  for id in "${CHILD_IDS[@]}"; do
+    echo "=== Bead $id ==="; br show "$id"; br comments "$id"; echo ""
+  done
 } > "$ARTIFACTS_DIR/beads-full-dump.txt"
 ```
 
-Everything downstream (reviewer prompts, `br list --json` re-reads for verification,
-convergence, the final `refined`-stamp loop) operates over this narrowed snapshot instead
-of the whole board.
+Everything downstream (reviewer prompts, convergence, the final `refined`-stamp loop)
+operates over this narrowed snapshot instead of the whole board.
 
 ### Create Workflow Tasks (run ledger)
 
@@ -432,9 +453,12 @@ AskUserQuestion(
 **Critical parity assertion, checked over the whole reviewed snapshot before any `refined` stamp.** Any bead titled `DECISION:` / `DESIGN_DECISION:` (case-insensitive prefix) OR typed `decision` that lacks the `human-gate` label is a Critical finding — the label is what every label-keyed gate reads (`issue_type=decision` alone gates nothing; memory `decision-beads-need-human-gate-label-at-filing`, `beads-standards` § human-gate). Fix it (add the label) BEFORE that bead can be stamped `refined` — a decision bead must never reach `refined` without its gate label. This is the backstop for producers (ac-review / ac-hygiene Exhaust Rule) that hand-roll a `br create` and drop the label; it has recurred 14+ times, caught only by reactive manual relabeling in refine passes — this gate makes the fix automatic.
 
 ```bash
-# Add human-gate to any decision-typed OR DECISION:/DESIGN_DECISION:-titled reviewed bead missing it
-for id in $(jq -r '.issues[] | select(.status == "open") | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); do
-    row=$(br show "$id" --json | jq -c '.[0]')   # br show returns a bare ARRAY — index .[0]
+# Add human-gate to any decision-typed OR DECISION:/DESIGN_DECISION:-titled reviewed bead
+# missing it. Read rows from the Phase-0 beads-snapshot.json ONLY — never
+# `br show "$id" --json | jq` per id (multi-line descriptions break jq; bd-lsnc0).
+jq -c '.issues[] | select(.status == "open")' "$ARTIFACTS_DIR/beads-snapshot.json" \
+  | while IFS= read -r row; do
+    id=$(echo "$row" | jq -r '.id')
     needs_gate=$(echo "$row" | jq -r 'if ((.issue_type == "decision") or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):"))) and ((.labels | index("human-gate")) | not) then "yes" else "no" end')
     if [ "$needs_gate" = "yes" ]; then
         echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
