@@ -45,6 +45,16 @@ only.
 Non-epic calls (a single bead, or "refine everything open") behave exactly as today: the
 bead set is whatever `br list --json` returns for that scope.
 
+**Arm 1 rubric (prevention at the front door — see `references/workflow.md` § Method).** Two
+checks the stamp gate now enforces: (1) **dependency edges are bead-level only — NO epic
+endpoints** (I2, `beads-standards` § Sequencing & parentage); an edge with an epic on either
+end is a finding. (2) **finding beads carry `discovered-from:`** (an honest `unknown` passes).
+PLUS a convention that **NEVER blocks `refined`**: refine **adopts** an unparented bead into
+an epic when §3 routing makes the parent obvious — idempotent (adopt only a parentless bead,
+re-check `br show` immediately before `br dep add`, verify single-parenthood after), never
+mutex-guarded. (Distinct from the OPEN human-gate proposal bd-9bvr2 on a refine light-path /
+hard-block waiver — that is a separate concern, not part of these three additions.)
+
 **UI beads derived from a visual reference** must carry the reference-image path
 (`docs/design-refs/<surface>-<source>-reference.<ext>`, per `ac-plan-init`'s capture rule)
 in their `## Acceptance Criteria` — the Completeness Reviewer (see `references/workflow.md`)

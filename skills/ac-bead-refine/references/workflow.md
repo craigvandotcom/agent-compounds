@@ -193,7 +193,9 @@ Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}) and put you
 
 **Verify the data-producer/consumer CHAIN, not just named artifacts.** Confirming a type/function exists and passes tests is NOT enough — when a bead's spec claims it will read, assemble, or transform data from a runtime component (a scorer, bus, accumulator, coordinator, queue, store), grep the LIVE codebase to confirm that component is actually wired into the runtime flow (producer → bus/transport → consumer), not just present as a class or passing tests in isolation. A type that exists and passes unit tests but is not plumbed into the live code path is a FALSE dependency: a spec built on it describes future state as if it were present state. Flag Critical if a bead's key acceptance criteria depend on a data source that exists only in a standalone module or test harness but is not connected to the runtime pipeline the bead runs in. Concrete cost: a 3-reviewer round certified bead bd-fsx "cold-startable" while its metrics-assembly AC depended on ScoringCore scorers that exist and pass their parity-harness (dump-formulas) tests but were never wired to the live MotionBus — the spec assumed the checkpointer accumulated metrics it never receives. The false-convergence surfaced only at implement-time pre-flight and forced a mid-implement scope split (skeleton + a new aggregation bead). Trace the chain end-to-end during refine, not after.
 
-**Verify the bead I/O contract (`_shared/bead-conventions.md` §Bead I/O contract).** Every implementable bead carries `## Delivers` + `## Consumes`. Check three things: (1) present — a missing `## Consumes` is a finding (absence ≠ `- none`; refine authors the contract for quick-capture beads, so propose the content, don't just flag); (2) concrete — each artifact is a greppable path/table/route/symbol, not "the auth work"; (3) edge-matched — every Consumes line's blocker ID has an actual dep edge (`br dep list <id>`), and that blocker's own `## Delivers` includes the named artifact. A contract failure here is what ac-implement's pre-dispatch premise check would bounce later — catch it now.
+**Verify the bead I/O contract (`_shared/bead-conventions.md` §Bead I/O contract).** Every implementable bead carries `## Delivers` + `## Consumes`. Check three things: (1) present — a missing `## Consumes` is a finding (absence ≠ `- none`; refine authors the contract for quick-capture beads, so propose the content, don't just flag); (2) concrete — each artifact is a greppable path/table/route/symbol, not "the auth work"; (3) edge-matched — every Consumes line's blocker ID has an actual dep edge (`br dep list <id>`), and that blocker's own `## Delivers` includes the named artifact; **and bead-level only — NO epic endpoints on any `blocks` edge** (`skills/beads-standards/SKILL.md` § Sequencing & parentage, I2). A dependency edge exists exactly where a bead's `Consumes` implies one, and both ends are non-epic beads: an edge with an epic on either end is an I2 violation (a finding — propose converting it to the bead↔bead edge, or dropping it if arrival-order-only). Containment is `parent-child`; sequencing is bead-level `blocks`. A contract failure here is what ac-implement's pre-dispatch premise check would bounce later — catch it now.
+
+**Require `discovered-from:` on finding beads (`_shared/bead-conventions.md` § provenance).** A finding bead — anything carrying `review-finding` (from `ac-review`'s Exhaust Rule), or a `bug`/`investigation`/`task` filed by `ac-triage`/QA/a conductor as a follow-up — must carry a `discovered-from: <originating-bead-id>` field naming what surfaced it. This is a refine check the stamp gate enforces (it did NOT exist in the rubric before). An **honest `discovered-from: unknown`** passes — the point is a deliberate, recorded answer, not a fabricated lineage; withhold `refined` only when the field is absent entirely on a finding-shaped bead, and propose `unknown` if the origin genuinely can't be reconstructed.
 
 **Enforce the present-tree rule (`_shared/bead-conventions.md` §Binding vs advisory).** Trace every claim in the BINDING sections (ACs, Delivers/Consumes, Test Scope, repro steps) to one of exactly two anchors: something that exists in the tree NOW (grep it), or something an upstream blocker's `## Delivers` explicitly promises. A binding claim resting on anything else — the bead's own dependents, components present-but-unwired, unpromised future state — is Critical (this is the bd-fsx / l73.11 class at its root). Where you find speculative how-to sitting in a binding section, the fix is usually demotion: move it under `## Approach (advisory)`, don't delete it. Do NOT flag advisory sections for staleness — they are allowed to rot; only the binding surface is load-bearing.
 
@@ -304,6 +306,20 @@ br comments add <id> "Acceptance criteria update: ..."
 # Fix dependency structure
 br dep add <child-id> <depends-on-id>
 br dep remove <child-id> <depends-on-id>
+
+# Adopt-when-obvious (CONVENTION — NEVER a refined-blocker; §9 = Option B). When the §3
+# routing map (_shared/bead-conventions.md § Bead routing) makes a bead's epic parent
+# obvious, refine MAY adopt it into that epic — but adoption is IDEMPOTENT, not
+# mutex-guarded (an in_progress lock would hijack the claim namespace). Guard it:
+#   1. Adopt ONLY a bead with NO existing parent (skip if it already has a parent-child edge).
+#   2. Re-check `br show <id>` IMMEDIATELY before `br dep add` (TOCTOU — a parent may have
+#      landed since the scan).
+#   3. Verify single-parenthood AFTER (exactly one parent-child edge; never a second).
+# Missing/ambiguous routing is fine — leave the bead unparented (ac-tidy flags the
+# parentage gap later). Adoption NEVER gates the `refined` stamp.
+if [ -z "$(br dep list <id> --direction down -t parent-child --json | jq -r '.[].issue_id')" ]; then
+  br dep add <id> <obvious-epic-id>   # only after the re-check above confirms still-unparented
+fi
 
 # Adjust priority or labels
 br update <id> --priority P0
