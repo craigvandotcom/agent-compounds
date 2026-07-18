@@ -453,7 +453,15 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 - The acceptance gate is NOT a passing test — it is the bead's own grep/diff on the edited artifact (the AC block), plus prettier-clean on touched files and a re-verify that the edit anchor still matched (skill line numbers drift between refine and implement).
 - Everything else in this workflow still applies: pathspec-scoped commit of only your files, commit=push, per-bead close with `Delivered:` artifact refs. If a bead's Delivers mix code AND doc, treat it as code-shaped (TDD path below).
 
-For code/test-shaped beads, give the engineer the bead's full spec (self-contained — no plan reference needed):
+**Conductor-direct extension for mechanical CODE beads (bd-chd5p.9 / Item 6b).** In addition to the doc/config path above, the conductor MAY implement a **code** bead directly (no engineer spawn) **only when ALL of the following hold**:
+
+1. **Grep-checkable file+line edits** — the refined spec names exact file+line (or unique anchor) edits with acceptance criteria that are themselves grep/diff-checkable (not open-ended behavior).
+2. **Mechanical over code with existing test coverage** — the edit is a mechanical transform over already-covered code (rename, wire an existing helper, one-line guard that existing tests already exercise). **No new behavioral surface** without existing coverage: if the bead introduces new behavior that current tests do not cover, conductor-direct is **forbidden** — spawn an implement child on the TDD path as today.
+3. **Affected-test gate green post-edit** — after the edit, the conductor runs the project's affected tests (`pnpm test` / vitest-affected, or the bead's named test targets) and they pass green. This is the hard guard: **grep-checkable ≠ behaviorally safe**. The zero-defect record rode on the affected-test-green gate; never close a conductor-direct code bead on grep alone.
+
+If any of the three fails (or is uncertain), fall through to the engineer-spawn path below. The doc/config conductor-direct doctrine above is unchanged and does not require the affected-test gate (its AC is the bead's own grep/diff).
+
+For code/test-shaped beads that do **not** qualify for conductor-direct, give the engineer the bead's full spec (self-contained — no plan reference needed):
 
 Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — paste the bead's full `br show <id>` + `br comments <id>` into its `### Bead Spec` section, and add the relevant domain skill paths (from `AGENTS.md > Available Skills`) after the AGENTS.md line. The prompt carries the TDD flow, the no-stash rule, the scope contract, cross-bead shared-invariant rules, the four-location test-sweep guidance, and the mandatory result-file `### Output` contract.
 
