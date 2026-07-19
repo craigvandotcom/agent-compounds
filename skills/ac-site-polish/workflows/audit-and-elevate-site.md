@@ -71,7 +71,10 @@ every "conformant" verdict** — an errored page renders like an empty one.
    now)? Is there exactly one primary CTA per viewport, visually dominant, repeated at natural decision
    points? Is social proof present and placed near the ask? Is the page scannable (headings carry the
    argument; no wall-of-text)? Does copy lead with benefit, not feature? (Defer voice/register to
-   `brand-system`.)
+   `brand-system`.) **Score this axis against `reference/conversion-craft.md`** — the
+   landing-structure presence rubric, copy elevation vocabulary (headline formulas,
+   specificity-over-vagueness, CTA-verb consistency, outcome bullets), and the pricing
+   "reduce uncertainty" checklist.
 2. **Desktop-responsive craft** — Breakpoint integrity (no broken layouts between the app's
    breakpoints); max line-measure on long text; fluid/clamped type; nothing assumes mobile-only.
    **Hover is a primary affordance here** (unlike the mobile app) — interactive elements have
@@ -96,7 +99,9 @@ every "conformant" verdict** — an errored page renders like an empty one.
 - **Elevation ledger** — score every surface; change a surface **only** with a cited gap. **"No change
   = already at the bar" is a passing outcome** — never churn working code for a diff. Pull canonical
   values (radius, shadow, press-scale, easing, stagger) from `../ac-ui-polish/reference/recipes.md`;
-  the app's `design.site.md` token always overrides.
+  the app's `design.site.md` token always overrides. For marketing motion (hero/section reveals,
+  marquee proof strips), pull bands + easing from the **Marketing-surface motion register** in
+  `../ac-ui-polish/reference/interaction-and-feel.md` (marketing-only; app defaults never apply here).
 - **Binding rule:** while the spec is a draft, bound elevation to the anti-slop rubric +
   `brand-system` tokens (not the draft). After ratification, bind to `design.site.md`.
 

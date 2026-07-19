@@ -168,6 +168,7 @@ The craft layer lives in **ac-ui-polish's reference files**, reused **by referen
 | Need | Defer to |
 |------|----------|
 | Visual craft, perceived performance, interaction feel, anti-slop rubric, recipes, sensors | `../ac-ui-polish/reference/*.md` (reuse) |
+| Conversion structure, copy hierarchy, pricing clarity (the marketing layer) | `reference/conversion-craft.md` (this skill's own) |
 | SEO / metadata / OG + Twitter cards / sitemap / robots / JSON-LD | `seo-metadata` — **run inline** as a composed stage |
 | Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `web-design-guidelines` — **run inline** |
 | Refreshing embedded app screenshots (seed → capture → verify) | `screenshot-refresh` |
@@ -184,6 +185,7 @@ The craft layer lives in **ac-ui-polish's reference files**, reused **by referen
 | File | When to read |
 |------|--------------|
 | `workflows/audit-and-elevate-site.md` | **Always** — the operating procedure + the 4 site axes + Definition of Done |
+| `reference/conversion-craft.md` | At AUDIT (site axis 1) + ELEVATE — landing-structure presence rubric, copy elevation vocabulary, pricing "reduce uncertainty" checklist |
 | `../ac-ui-polish/reference/sensors.md` | **At SENSE, before eyes** — contrast / hardcoded-colour / token symmetry |
 | `../ac-ui-polish/reference/critique-polish.md` | At AUDIT — the anti-slop checklist + scoring rubric |
 | `../ac-ui-polish/reference/recipes.md` | At ELEVATE — canonical paste-able values (radius, shadow, press-scale, easing) |

@@ -46,8 +46,11 @@ A screen that only handles the happy path with perfect data is unfinished.
 
 - **Meaning or cut.** Every animation either signals a state change or directs
   attention. Decoration-only motion gets removed.
-- **Duration:** UI micro-transitions 150–250ms; larger transitions 250–400ms.
-  Too slow feels sluggish; instant feels broken. Use the app's duration tokens.
+- **Duration (App surfaces — default):** UI micro-transitions 150–250ms; larger transitions
+  250–400ms. Too slow feels sluggish; instant feels broken. Use the app's duration tokens. An
+  in-app "hero" (onboarding/splash) is still an app surface — keep the 250–400ms ceiling and a
+  ~100ms group stagger; the longer marketing bands in the register below are for public
+  marketing pages ONLY, never inside `/app`.
 - **Easing:** ease-out for entrances (fast→settle), ease-in for exits, standard/
   ease-in-out for moves. Avoid linear for UI (feels robotic). Springs for playful,
   physical interactions (keep `bounce: 0` unless the surface is genuinely playful).
@@ -99,3 +102,55 @@ A screen that only handles the happy path with perfect data is unfinished.
 - **Navigation transitions** orient the user (push/pop direction, shared-element
   where it adds clarity). Instant hard-cuts between screens feel cheap on mobile.
 - **Preserve scroll position** on back-navigation; don't reset to top unexpectedly.
+
+---
+
+## Marketing-surface motion register (site/marketing pages ONLY — never inside /app)
+
+Marketing pages (the public Vercel web build; `ac-site-polish`'s surface) get a wider, more
+cinematic motion vocabulary than the app: desktop hover is a primary affordance, and reveals
+can run longer because there is no native-perf budget or 60fps-under-gesture constraint. This
+register applies to those surfaces alone — inside `/app` the App-surface defaults above hold.
+
+> **Precedence:** on any conflict, the surface's own `CORE/design.site.md` (or an existing
+> project recipe) wins over this register — these are defaults for a marketing page that has
+> not specified its own, not overrides.
+
+> Distilled from [MengTo/Skills](https://github.com/MengTo/Skills) (MIT) — `animation-systems`,
+> `marquee-loop`, and the scroll-reveal skills — rewritten in our vocabulary.
+
+**Duration bands** (every band carries its scope tag):
+- micro / hover-press (marketing): 120–200ms
+- UI state change — toggle/select (marketing): 180–260ms
+- section entrance (marketing): 400–800ms
+- hero sequence (marketing only): 800–1600ms, with internal beats
+
+**Stagger:** 40–90ms per element (text lines / cards); smaller on mobile.
+
+**Easing:** ease-out for entrances (fast→settle), ease-in for exits (faster); reuse a small
+set (the library's `power3.out` / `expo.out` family). No elastic/bounce unless the brand is
+genuinely playful. Linear only for continuous loops (marquee, scrub).
+
+**Primitives:** *fade + rise* (opacity 0→1, Y 12–24px→0) is the default entrance;
+*scale + fade* (0.98→1) for popovers/toasts/selected states. Transform + opacity only.
+
+**Scroll-reveal taxonomy** — ONE reveal concept, two implementations (pick by stack):
+- *mask-based* (GSAP variant): words rise through an `overflow:hidden` mask
+  (`yPercent 110→0`), trigger `top 82%`, `once: true`, stagger by word — premium editorial feel.
+- *opacity-based* (no-lib variant): IntersectionObserver (`threshold 0.2`,
+  `rootMargin -10%`) toggles a class; `opacity + translateY + blur` transition, reveal once.
+Both keep no-JS content visible and expose the full text to screen readers via `aria-label`.
+
+**Marquee (logo/testimonial strips):** duplicate the sequence, translate 0→-50% linear, fade
+the edges with a mask, pause-on-hover only when reading matters; never marquee content the user
+must read carefully.
+
+**Perf rules (non-negotiable):** animate `transform` / `opacity` (and short-lived
+`clip-path`) only — never layout props; drive scroll effects off IntersectionObserver, not raw
+scroll listeners; clamp device-pixel-ratio (1–2) in any heavy canvas; `filter: blur()` on text
+/ small elements only.
+
+**Still governed by the app-wide rules above:** motion is **interruptible by default** (CSS
+transitions retarget mid-flight; reserve keyframes for one-shot enters) and **respects
+`prefers-reduced-motion`** — keep content visible, replace motion with an instant/opacity state,
+disable scroll-scrub and pinning.
