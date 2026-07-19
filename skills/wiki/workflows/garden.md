@@ -23,7 +23,10 @@ the dream cycle.
 3. **Citation audit.** Sample pages for THE CITATION RULE compliance — every claim
    still traces to a real `[[wikilink]]` target. A link that no longer resolves (the
    source fact was pruned/renamed) is a dead-link finding, same severity as
-   `memory-lint.py`'s wikilink check.
+   `memory-lint.py`'s wikilink check. Cross-check each page's `sources:` frontmatter and
+   `[[wikilinks]]` against `infrastructure/graph/edges.jsonl` (the extractor, 2a) —
+   citation repair is nearly free once the edge list exists: a `sources:` entry with no
+   matching edge is a stale-path finding the same class the digest flagged manually.
 4. **Staleness sweep.** Grep `updated:` dates. A page whose cited sources have since
    been superseded or contradicted, or that hasn't been touched while its topic clearly
    moved (a shipped decision, a retired product) — flag for review, don't silently
@@ -38,8 +41,14 @@ the dream cycle.
    affected section from its cited sources over patching around the drift
    (regenerability mindset, SKILL.md).
 
+**Timeline discipline (all passes above):** any pass that changes Compiled Truth
+prose appends a dated Timeline entry (below the `--- <!-- timeline -->` divider)
+recording what changed and why — never a silent in-place rewrite of ratified prose.
+The Timeline itself is never edited or reordered by a garden pass, only appended to.
+
 ## Output
 
 A short report: pages touched, merges proposed (not applied to canonical pages), dead
-links found, staleness flags, contradiction pages created/updated. Anything touching a
-`canonical` page's substance → Craig review, same gate as seeding.
+links found, staleness flags, contradiction pages created/updated, timeline entries
+appended. Anything touching a `canonical` page's substance → Craig review, same gate as
+seeding.

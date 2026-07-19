@@ -77,6 +77,25 @@ the memory-retrieval hook's lobes, so the trigger text is part of the page's hyb
 search/embedding surface — a well-written trigger literally improves when the page
 auto-injects. memory-lint enforces its presence.
 
+## Page structure: Compiled Truth + Timeline
+
+Every page body has two layers below the frontmatter, split by a
+`--- <!-- timeline -->` divider line:
+
+- **Compiled Truth** (above the divider) — the current synthesis, freely rewritable,
+  same regenerability mindset as the rest of this doctrine. This is what an injected
+  page shows.
+- **Timeline** (below the divider) — append-only, dated, one-paragraph entries, newest
+  first. **Never edited or deleted** — a correction is a new dated entry, not a rewrite
+  of an old one.
+
+Garden/distill passes update Compiled Truth prose FROM the timeline (what actually
+happened), never the reverse. Any material edit to a ratified page's Compiled Truth
+requires appending a timeline entry recording what changed and why, same session.
+memory-lint does not enforce this structure (schema/index/wikilink checks only,
+`infrastructure/scripts/health/memory-lint.py`) — this checklist is the enforcement
+layer; see Common Mistakes below.
+
 ## THE CITATION RULE
 
 **Every claim in a wiki page carries a `[[wikilink]]` to the fact, decision, or source
@@ -181,3 +200,5 @@ draft's claims carry lower trust than a canonical one until reviewed. Never self
 | Flipping `status: canonical` yourself | Craig reviews first |
 | Mirroring a beads/status dashboard into a page | Point at it, never copy it |
 | Treating a stale page as precious | Regenerate from cited sources; pages are cache |
+| Editing or deleting a Timeline entry | Timeline is append-only — correct by appending a new dated entry |
+| Rewriting Compiled Truth without a Timeline entry | Every material edit needs a same-session timeline entry recording what/why |

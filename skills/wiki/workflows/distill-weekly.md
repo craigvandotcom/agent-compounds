@@ -30,14 +30,18 @@ Alignment Check section (step 6) rather than forcing it into a fact file, and no
 5. **Wiki-page touch-check.** Does this week's decisions-log addition change or
    contradict a claim on any existing `neometa/wiki/` page? If yes → that page needs an
    update (route through `garden.md`'s dedupe/citation passes, or `seed-page.md` if the
-   decision opens a genuinely new concept with no page yet). If no wiki page exists yet
-   to house it, don't force one — STRATEGY.md's decisions log is itself a valid, already
-   durable home; only promote to a wiki page when the material has outgrown a log entry
-   (recurring + stable + broadly applicable — same bar as any L3→L2 promotion,
-   context-engineering PROMOTION & DEMOTION).
+   decision opens a genuinely new concept with no page yet). Update means appending a
+   dated Timeline entry (below the page's `--- <!-- timeline -->` divider) recording what
+   changed and why, then revising Compiled Truth from it — never a silent in-place
+   rewrite of the ratified prose. If no wiki page exists yet to house it, don't force
+   one — STRATEGY.md's decisions log is itself a valid, already durable home; only
+   promote to a wiki page when the material has outgrown a log entry (recurring +
+   stable + broadly applicable — same bar as any L3→L2 promotion, context-engineering
+   PROMOTION & DEMOTION).
 
 ## Output
 
 STRATEGY.md decisions log has this week's entries; NOW.md is current; any wiki pages
-touched are flagged `status: draft` again if their canonical claims changed (re-review
-needed) or left `canonical` if only a citation/related-link was added.
+touched have a new Timeline entry (never a silent rewrite) and are flagged `status:
+draft` again if their canonical claims changed (re-review needed) or left `canonical`
+if only a citation/related-link was added.
