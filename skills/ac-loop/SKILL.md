@@ -15,6 +15,10 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > "Invoke `<skill>`" / "Run `<skill>`" step in this file means **spawn a fresh sub-session
 > (Task/subagent) whose prompt is the delegation text, pinned `model: "opus"` on the spawn call** —
 > let it load that skill and run its own workers, and you keep only the returned summary.
+> **Every child delegation prompt OPENS with the Child-spawn preamble from
+> `_shared/delegation-contract.md` § Child-spawn preamble, included VERBATIM** — a pointer is not
+> sufficient (children act before they read; verbatim inlining took the 20260719 run's
+> self-detachment + token-rediscovery recurrences to zero).
 > Phase sub-sessions are conductors themselves (they judge, gate, and spawn workers) — they run
 > opus-class, explicitly pinned, never inherited (a headless launch may not be opus-class). Their
 > workers keep the per-call pins already written in each skill's reference prompts (deliberate
@@ -1070,6 +1074,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 - **Only `human-gate` beads are gated** — every other bead (refined → implement; unrefined → `ac-bead-refine` then implement) is loop-eligible. `unrefined` routes *through* refinement, it does not withhold sign-off. The "not-yet-committed" gate is the backlog *pool*, upstream of beads
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Claim-at-selection** — mark the FULL batch `in_progress` + assignee, mint the claim id, and write `.claim-id` up front, before any implementation — never incrementally per bead
+- **Open every delegation with the verbatim Child-spawn preamble** (`_shared/delegation-contract.md` § Child-spawn preamble) — the child-side environment contract; a pointer alone is a rediscovered failure
 - **Delegate to fresh sub-sessions, never inline** — every phase (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-land`, `ac-beadify`, `ac-bead-refine`) runs in a spawned session with its delegation prompt; you never Read its `SKILL.md` into your own context (Orchestration contract). Holding only decisions + returned summaries is what keeps the conductor alive across a long run
 - **Every child summary carries a `friction:` block** — the structured D1 slot inside the ≤400-word summary (keys `stage` / `cost` / `lesson` / `class`; `friction: []` for a clean stage; `class` is a re-adjudicated HINT). Canonical schema: Phase 1 step 2 "Child friction schema (D1)". This is the evidence packet the conductor aggregates per stage into the loop-retro carrier and `ac-land`/`reflect` dispose of — never let a child return prose-only lessons the aggregator can't key on
 - **Findings channels are bead-first (known-action capture)** — field-test / ceremony / error-handling findings that you KNOW need action beyond this session are filed as a bead (`unrefined`) and cited by ID in the report, never left as prose-only; a prose-only findings channel needs a NAMED consumer or it orphans the moment that consumer closes (bd-pwt44 lesson). Litmus: "we know action must be taken" = bead; "worth mentioning" = prose (`rule-known-action-capture-beads-not-prose`)
