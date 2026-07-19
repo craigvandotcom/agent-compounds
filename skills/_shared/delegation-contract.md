@@ -45,3 +45,39 @@ feedback/CI), plus `ac-loop`/`ac-qa-*` build monitors — AND any skill/session 
 backgrounds its OWN long-running command (test suite, build, CI poll) instead of
 waiting for it in-shell (the self-detachment case in clause 5). Load this before
 writing a spawn-and-continue OR a background-your-own-command step.
+
+---
+
+## Child-spawn preamble (the child-side environment contract)
+
+Clauses 1–5 above govern the CONDUCTOR. This section governs the CHILD — and the
+rule is: **the conductor includes the preamble block below VERBATIM in every child
+delegation prompt.** A pointer ("see delegation-contract.md") is NOT sufficient: a
+fresh child acts before it reads, and every environment rule it must re-derive is
+a rediscovered failure. Evidence (ac-loop RUN 20260719-102946-27401): with
+pointer-only guidance, 3 distinct children self-detached and 3 independently
+rediscovered the Agent Mail token rule; after the conductor began inlining these
+clauses verbatim, recurrence dropped to zero for the rest of the run.
+
+**The preamble (copy verbatim into the delegation prompt; ~110 words):**
+
+> ENVIRONMENT CONTRACT (non-negotiable):
+> - WAIT for your own long-running commands in-shell (foreground, generous Bash
+>   timeout, or a foreground until-loop). Never arm a Monitor on your own command
+>   and end your turn — if a completion event already fired, read it and CONTINUE.
+> - Agent Mail: capture `registration_token` at registration and pass it
+>   explicitly on EVERY mutating call — session-auth carry is transport-conditional.
+> - After every push: verify origin SHA == local HEAD before proceeding.
+> - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass; leave
+>   /tmp scratch to OS TTL rather than fighting delete guards.
+> - Shared checkout: commit your bead's files (pathspec-scoped) the INSTANT its
+>   ACs verify — minimal working-tree dwell; run `br` from the bead-board repo root.
+> - Autonomous run: never AskUserQuestion — Exhaust Rule.
+> - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
+
+Keep the preamble SHORT. It is loaded into every child prompt, so every added line
+is paid on every delegation — high-recurrence behavioral clauses only. Tooling
+trivia (CLI flag quirks, JSON shapes) stays in the memory substrate, not here:
+those cost ~1 wasted call per hit, while a bloated preamble costs every child.
+Amend this block only for a failure class observed across MULTIPLE children or
+runs (recurrence ≥2 in the loop-retro carrier / memory bumps).
