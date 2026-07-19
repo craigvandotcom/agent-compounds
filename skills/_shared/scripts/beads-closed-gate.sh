@@ -134,9 +134,20 @@ check_progress_completeness() {
   fi
 
   # Multi-bead wave (N>1) — HARD-FAIL on incompleteness.
-  local problems=""
+  local problems="" missing="" id
+  # Identity-based check (PRIMARY): every in-scope bead id must carry its OWN
+  # '### Bead <id>' result entry. This is computed FIRST and feeds the pass/fail
+  # decision — the raw count checks below are belt-and-suspenders (they also cover
+  # the in_scope-empty case). Identity-first defeats the duplicate/extra-entry
+  # evasion where raw `### Bead`/`Status:` counts reach N while a DISTINCT in-scope
+  # bead is entirely absent (a retried/copy-pasted per-bead section) — the exact
+  # false-PASS ac-514 exists to prevent (review-finding, ac-514 hardening).
+  for id in $in_scope; do
+    grep -qE "^### Bead[[:space:]]+${id}([[:space:]:]|$)" "$pf" 2>/dev/null || missing="${missing:+$missing }$id"
+  done
+  [ -n "$missing" ] && problems="in-scope bead(s) with no '### Bead <id>' result entry: $missing"
   if [ "$entry_count" -lt "$n" ] || [ "$status_count" -lt "$n" ]; then
-    problems="only $entry_count per-bead '### Bead' entries ($status_count with a Status line) for N=$n beads"
+    problems="${problems:+$problems; }only $entry_count per-bead '### Bead' entries ($status_count with a Status line) for N=$n beads"
   fi
   if [ -z "$tally" ]; then
     problems="${problems:+$problems; }missing 'COMPLETED: n/N' tally"
@@ -148,11 +159,6 @@ check_progress_completeness() {
   fi
 
   if [ -n "$problems" ]; then
-    # Name the in-scope bead ids that have no '### Bead <id>' entry in progress.md.
-    local missing="" id
-    for id in $in_scope; do
-      grep -qE "^### Bead[[:space:]]+${id}([[:space:]:]|$)" "$pf" 2>/dev/null || missing="${missing:+$missing }$id"
-    done
     echo "beads-closed-gate: PROGRESS-INCOMPLETE (multi-bead wave, N=$n) — $problems." >&2
     [ -n "$missing" ] && echo "  Missing per-bead result entry for: $missing" >&2
     echo "  A multi-bead wave must record a per-bead result + the COMPLETED tally so the retrospective reads every progress.md (decision ac-x9a)." >&2
@@ -168,7 +174,15 @@ ASSIGNEES=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --allow-empty) ALLOW_EMPTY=1; shift ;;
-    --progress) PROGRESS_FILE="$2"; shift 2 ;;
+    --progress)
+      # Guard the value: a trailing `--progress` with no path would `shift 2` past
+      # the end, which bash rejects without shifting — spinning the while-loop
+      # forever. A malformed gate invocation must fail LOUD (exit 2), never hang.
+      if [ $# -lt 2 ]; then
+        echo "beads-closed-gate: ERROR — --progress requires a path argument." >&2
+        exit 2
+      fi
+      PROGRESS_FILE="$2"; shift 2 ;;
     --) shift ;;
     *) ASSIGNEES+=("$1"); shift ;;
   esac

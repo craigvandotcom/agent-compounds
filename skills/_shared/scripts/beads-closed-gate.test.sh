@@ -307,6 +307,92 @@ else
   fail "Case L3: expected exit 0 with single-bead WARNING, got $RC. Output: $OUT"
 fi
 
+# --- Case L4: multi-bead, DUPLICATE entry masks an absent in-scope bead -------
+# Raw counts reach N (bd-l1 appears twice, tally reads 2/2) but bd-l2 has no
+# entry at all. Identity-based check must still HARD-FAIL and name bd-l2 —
+# guards the count-evasion false-PASS (ac-514 hardening, review-finding).
+clear_fixtures
+write_fixture "ConductorL" '[{"id":"bd-l1","status":"closed","labels":["infra"]},{"id":"bd-l2","status":"closed","labels":["infra"]}]'
+PROG_DUP="$WORKDIR/progress-dup.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' \
+  'WAVE=test-wave' \
+  '' \
+  '### Bead bd-l1: first bead' \
+  '- Status: COMPLETE' \
+  '' \
+  '### Bead bd-l1: first bead (retried, duplicate section)' \
+  '- Status: COMPLETE' \
+  '' \
+  'COMPLETED: 2 / 2' \
+  >"$PROG_DUP"
+OUT=$(GATE_AGENT="ConductorL" run_gate --progress "$PROG_DUP" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" && echo "$OUT" | grep -q "bd-l2"; then
+  pass "Case L4: duplicate entry masking absent bd-l2 -> hard-fail, names bd-l2 (no count-evasion)"
+else
+  fail "Case L4: expected non-zero exit naming bd-l2, got $RC. Output: $OUT"
+fi
+
+# --- Case L5: multi-bead, all entries present but COMPLETED tally SHORT --------
+# Every bead has a '### Bead'+Status entry, but the footer reads 1/2. Must
+# HARD-FAIL on the short tally (done_n < n).
+clear_fixtures
+write_fixture "ConductorL" '[{"id":"bd-l1","status":"closed","labels":["infra"]},{"id":"bd-l2","status":"closed","labels":["infra"]}]'
+PROG_SHORT="$WORKDIR/progress-short-tally.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' \
+  'WAVE=test-wave' \
+  '' \
+  '### Bead bd-l1: first bead' \
+  '- Status: COMPLETE' \
+  '' \
+  '### Bead bd-l2: second bead' \
+  '- Status: COMPLETE' \
+  '' \
+  'COMPLETED: 1 / 2' \
+  >"$PROG_SHORT"
+OUT=$(GATE_AGENT="ConductorL" run_gate --progress "$PROG_SHORT" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "tally short"; then
+  pass "Case L5: complete entries but short COMPLETED tally -> hard-fail (done_n<n)"
+else
+  fail "Case L5: expected non-zero exit citing short tally, got $RC. Output: $OUT"
+fi
+
+# --- Case L6: multi-bead, both entries present but a Status line MISSING -------
+# Headers for both beads present, tally 2/2, but bd-l2 has no '- Status:' line.
+# status_count (1) < n (2) must HARD-FAIL — guards the "headers-only" regression.
+clear_fixtures
+write_fixture "ConductorL" '[{"id":"bd-l1","status":"closed","labels":["infra"]},{"id":"bd-l2","status":"closed","labels":["infra"]}]'
+PROG_NOSTATUS="$WORKDIR/progress-nostatus.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' \
+  'WAVE=test-wave' \
+  '' \
+  '### Bead bd-l1: first bead' \
+  '- Status: COMPLETE' \
+  '' \
+  '### Bead bd-l2: second bead' \
+  '- Commit: def456' \
+  '' \
+  'COMPLETED: 2 / 2' \
+  >"$PROG_NOSTATUS"
+OUT=$(GATE_AGENT="ConductorL" run_gate --progress "$PROG_NOSTATUS" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "Status line"; then
+  pass "Case L6: entry present but missing Status line -> hard-fail (status_count<n)"
+else
+  fail "Case L6: expected non-zero exit citing Status-line shortfall, got $RC. Output: $OUT"
+fi
+
+# --- Case L7: --progress with no path argument -> loud exit 2, no hang ---------
+clear_fixtures
+write_fixture "ConductorL" '[{"id":"bd-l1","status":"closed","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorL" run_gate --progress 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -qi "requires a path argument"; then
+  pass "Case L7: trailing --progress with no value -> exit 2 (fails loud, no infinite loop)"
+else
+  fail "Case L7: expected exit 2 citing missing path, got $RC. Output: $OUT"
+fi
+
 # ============================================================================
 # Case I: bleed check needs a real BASE..HEAD diff — put HEAD ahead of main.
 # ============================================================================
