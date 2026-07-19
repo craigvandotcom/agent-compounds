@@ -500,7 +500,7 @@ Remove session artifacts (they've been consumed by retrospective). Run each bloc
 
 `STALE_MIN=1440` (24h) rationale: the bound is the maximum plausible gap between WRITES inside a live run — NOT total run duration. A live run that writes any file at least once per 24h stays safe even if it runs for days; the pathological tail this file cites (a ~16.5h zombie waiter) still fits under 24h.
 
-Every deletion — tier 1 and tier 2 — is logged (path echoed before the `rm`), so a wrongful sweep is diagnosable post-hoc. The external `plan-refine-*` glob also matches `plan-refine-internal-*` dirs — harmless idempotent double-handling; both prefixes stay listed for clarity.
+Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is deleted inside the loops — deletion happens in the compose step below, so a wrongful sweep is diagnosable post-hoc. The external `plan-refine-*` glob also matches `plan-refine-internal-*` dirs — harmless idempotent double-handling; both prefixes stay listed for clarity.
 
 **Residual risk (accepted, bounded by STALE_MIN):** a live FOREIGN run that writes NOTHING for >24h can still be reaped by the age gate. Accepted — no healthy run goes 24h between artifact writes. (Follow-up, not required here: thread the loop RUN_ID into `ac-review` / `ac-plan-refine-external` / `ac-batch-close` dir naming so every prefix gains a tier-2 line and the age gate becomes belt-and-suspenders.)
 
@@ -513,59 +513,78 @@ STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a
 # Bare /tmp/bead-work (literal name — no glob), treated identically to the globs:
 for d in /tmp/bead-work/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/bead-work-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/plan-init-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/batch-close-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/plan-refine-internal-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/plan-refine-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/plan-clean-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/bead-refine-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/beadify-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/hygiene-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 for d in /tmp/work-review-*/; do
   [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "teardown: removing stale $d" && rm -rf "$d"
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
 done
 
 # Tier 2 — immediate self-cleanup by exact RUN_ID match. Guard MANDATORY on every line
 # (unset RUN_ID would degenerate the glob to the original unscoped bug). 7 embedding prefixes only.
-if [ -n "$RUN_ID" ]; then for d in /tmp/bead-work-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/plan-init-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/plan-refine-internal-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/plan-clean-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/bead-refine-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/beadify-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/hygiene-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/bead-work-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/plan-init-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/plan-refine-internal-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/plan-clean-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/bead-refine-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/beadify-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+if [ -n "$RUN_ID" ]; then for d in /tmp/hygiene-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
 ```
+
+**Step 2 — compose the delete from the PRINTED LITERALS (the dcg contract).** The loops
+above are SELECTORS ONLY — they print candidates and delete nothing. `rm -rf "$d"` inside
+a loop is a dynamic-path delete and dcg blocks it (this exact pattern made teardown
+silently inert for whole runs — RUN 20260719-102946-27401 left ~30 scratch dirs). Read
+the `STALE:`/`OWN:` lines and issue ONE command with the printed paths pasted verbatim as
+literals:
+
+```bash
+# example — paste the actual printed paths; never $VAR, never $( ), never a bare loop var
+rm -rf /tmp/bead-work-buglane-20260719-102946-27401 /tmp/bead-refine-20260719-102946-27401-refA
+```
+
+dcg (verified v0.6.7, 2026-07-19) ALLOWS `rm -rf` on literal `/tmp/...` paths and on
+distinctive `/tmp/<prefix>-*` globs; it BLOCKS variable/substituted paths everywhere and
+`rm -rf` on home/repo paths always. For repo-tree debris (a stale `.next.stale-*`, an
+orphaned scratch file): `git rm` if tracked; else gitignore-and-flag or `dcg allow-once`
+— don't fight the guard (memory: `feedback_dcg_blocks_os_unlink`). Zero `STALE:`/`OWN:`
+lines printed = nothing to delete; step 2 is skipped.
 
 Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
 
