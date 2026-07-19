@@ -40,14 +40,15 @@ note is a starting point, never a mandate to ship the look by default.
   bold editorial hero. The source's `#E61919` red palette is **off-brand — do not
   import it**; take the scale, leave the colour.
 
-- **Corner-diagonals (demoted — vocabulary only).** — `clip-path: polygon(…)`
-  chamfered corners (8 / 14 / 24px cuts). Sci-fi / engineered feel, **off-brand for
-  wellness surfaces** — named here for vocabulary completeness only; no full
-  distillation, do not adopt as a default treatment.
-
 ---
 
 ## Vocabulary-only rows (named for divergence, not distilled)
+
+**Corner-diagonals (demoted — vocabulary only).** `clip-path: polygon(…)` chamfered
+corners (8 / 14 / 24px cuts). Sci-fi / engineered feel, **off-brand for wellness
+surfaces** — named here for vocabulary completeness only; no full distillation, do not
+adopt as a default treatment. (Not an admitted look — a distinct clip-path technique,
+so it sits here rather than among the SKIP-A prose mood-boards.)
 
 **Mood presets (SKIP-A).** Nineteen upstream "art-direction" presets are prose
 mood-boards with no reusable tokens — their only value is *naming a look*. Use them as
