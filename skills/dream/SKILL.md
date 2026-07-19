@@ -40,6 +40,17 @@ exact predicate: `references/auto-act-rubric.md`; architecture:
 `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`. CYCLE itself still **never
 applies** — it only emits; the auto-apply lives in the daily job (Stage-1 autonomy = deterministic hygiene only).
 
+> **Apply-path routing split (dream is PRIMARY for proposals — NOT for already-approved
+> same-session work).** dream owns **proposal-originated** edits: unreviewed/accumulated
+> edit proposals it emits (CYCLE) and later applies (REVIEW). It is NOT a router for work a
+> user already approved in-session — that legitimately stays on `ac-land`'s inline
+> Apply-Approved-Upgrades path, relabeled the `skill-hotfix:` **hotfix hatch**, which
+> applies approved same-session edits across all four target classes (skill files,
+> `AGENTS.md`, `CLAUDE.md`, `MEMORY.md`). Neither path claims sole ownership of the apply
+> surface: this hatch owns approved same-session hotfixes; dream owns proposals. dream's
+> dedupe (Phase 5 Emit) therefore treats `skill-hotfix:` applies as legitimate hand-applied
+> work, never as proposal-orphans to re-propose. (Mirrored in `skills/ac-land/SKILL.md`.)
+
 ---
 
 ## Mode: CYCLE

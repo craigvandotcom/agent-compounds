@@ -452,6 +452,18 @@ AskUserQuestion(
 
 ### Apply Approved Upgrades
 
+> **Apply-path routing split (this inline path is the `skill-hotfix:` hotfix hatch).**
+> This inline path exists for **same-session, user-APPROVED** upgrades — it applies them
+> immediately and traceably (via the `skill-hotfix:` commit-prefix hatch, defined under
+> Commit Compound Changes below) across **every** target class in the table below (skill
+> files AND `AGENTS.md` / `CLAUDE.md` / `MEMORY.md`). **`dream` is PRIMARY** — but only
+> for *proposal-originated* edits (unreviewed/accumulated edit proposals it emits and
+> later applies in REVIEW mode). "dream is primary" does NOT make it a router for
+> already-approved same-session work: that work legitimately stays here, on the hatch,
+> because dream CYCLE never applies and dream REVIEW runs rarely. Neither path owns the
+> whole apply surface — this hatch owns approved same-session hotfixes for all four target
+> classes; dream owns proposals. (Mirrored in `skills/dream/SKILL.md`.)
+
 For each approved upgrade, apply the edit directly. Common targets:
 
 | Target                | What Gets Updated                      |
