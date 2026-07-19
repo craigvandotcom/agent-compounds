@@ -141,10 +141,13 @@ flips claimed beads back to open-with-wave-marker as it adopts each.
 
 Use the agent name registered at session start (from `macro_start_session` — NOTE: that tool takes `human_key`; the other agent-mail tools below take `project_key`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/active/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
 
-> **Two call-scoped facts (shakedown-verified 2026-07-08):** (1) also capture the
-> returned `registration_token` — `file_reservation_paths`, `release_file_reservations`,
-> and `send_message` REQUIRE it (as `registration_token`/`sender_token`) unless this MCP
-> session already authenticated as the agent; carry it through every Agent Mail call.
+> **Two call-scoped facts (shakedown-verified 2026-07-08; token rule widened `ac-g93`):** (1) also
+> capture the returned `registration_token` and thread it EXPLICITLY on EVERY privileged / mutating
+> Agent Mail call — file reservations (`file_reservation_paths`, `release_file_reservations`,
+> `renew_file_reservations`, `force_release_file_reservation`), build slots, `send_message` /
+> `reply_message` (as `sender_token`), and `deregister_agent` / `retire_agent`. Do NOT rely on
+> same-session auth carry — it is transport-conditional and is never inherited by a separate phase
+> child (blanket rule + verdict: `_shared/agent-identity.md` § Call-scoped facts).
 > (2) `export` lives only in the bash call that ran it — every later bash call is a
 > fresh shell, so re-assert any variable this skill carries across phases
 > (`PROJECT_ROOT`, `BACKLOG_REL`, `SOURCE_BACKLOG`, `ARTIFACTS_DIR`) in the SAME bash

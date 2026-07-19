@@ -96,11 +96,24 @@ upstream admin-sweep primitive requested of mcp-agent-mail lands. Reservations �
 safety-critical half — DO sweep cross-session: `force_release_file_reservation` releases
 another agent's hold by name after validating abandonment heuristics.
 
-## Call-scoped facts (shakedown-verified 2026-07-08)
+## Call-scoped facts (shakedown-verified 2026-07-08; token rule widened `ac-g93` 2026-07-19)
 
-1. Capture `macro_start_session`'s returned `registration_token` — `file_reservation_paths`,
-   `release_file_reservations`, and `send_message` REQUIRE it unless the MCP session already
-   authenticated as the agent. Tokens live with the minting session and do not transfer.
+1. **Capture `macro_start_session`'s returned `registration_token` and thread it EXPLICITLY on
+   EVERY privileged / mutating Agent Mail call.** The token-requiring set is NOT the old three
+   tools — it is the blanket rule: `file_reservation_paths`, `release_file_reservations`,
+   `renew_file_reservations`, `force_release_file_reservation`, `acquire_build_slot` /
+   `release_build_slot` / `renew_build_slot`, `send_message` / `reply_message` (as `sender_token`),
+   `deregister_agent`, `retire_agent`, `hard_delete_agent`. **Do NOT rely on same-session auth
+   carry.** Validation (`ac-g93`, 2026-07-19 — read `~/mcp_agent_mail` `app.py`): same-session
+   token-free auth is a REAL, intended mechanism (`register_agent` / `macro_start_session` bind the
+   MCP session via `_bind_session_agent`; `_authenticate_agent` then honors the binding), but it is
+   **conditional** — the binding is keyed on a stable `ctx.session_id`, and (a) a separate phase
+   child is a separate MCP session that never inherits the conductor's binding, and (b) a transport
+   that doesn't surface a stable session id falls to a per-call orphan UUID that makes the binding
+   invisible. So the carry is *intended-but-conditional*, NOT a guarantee to depend on (verdict: not
+   a clean server bug — no upstream bead; our docs were over-claiming). Threading the token is the
+   only reliable path; tokens live with the minting session and do not transfer. The narrow
+   "these three tools only, unless already authenticated" model is **retired**.
 2. `export` lives only in the bash call that ran it — every later bash call is a fresh shell
    (where `AGENT_NAME` falls back to FoggyCreek via `settings.json`). Re-assert
    `AGENT_NAME=<minted-name>` in the SAME call as each `git commit`/`git push`, or the

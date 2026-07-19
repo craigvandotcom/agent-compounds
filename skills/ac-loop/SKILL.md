@@ -150,10 +150,13 @@ mcp__mcp-agent-mail__macro_start_session(
 ```
 
 Capture the returned `name` field:
-> **Two call-scoped facts (shakedown-verified 2026-07-08):** (1) also capture the
-> returned `registration_token` — `file_reservation_paths`, `release_file_reservations`,
-> and `send_message` REQUIRE it (as `registration_token`/`sender_token`) unless this MCP
-> session already authenticated as the agent; carry it through every Agent Mail call.
+> **Two call-scoped facts (shakedown-verified 2026-07-08; token rule widened `ac-g93`):** (1) also
+> capture the returned `registration_token` and thread it EXPLICITLY on EVERY privileged / mutating
+> Agent Mail call — file reservations (`file_reservation_paths`, `release_file_reservations`,
+> `renew_file_reservations`, `force_release_file_reservation`), build slots, `send_message` /
+> `reply_message` (as `sender_token`), and `deregister_agent` / `retire_agent`. Do NOT rely on
+> same-session auth carry — it is transport-conditional and is never inherited by a separate phase
+> child (blanket rule + verdict: `_shared/agent-identity.md` § Call-scoped facts).
 > (2) `export` lives only in the bash call that ran it — every later bash call is a
 > fresh shell, so re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
 > SAME call as each `git commit`/`git push`, or the guard will treat you as anonymous
@@ -951,8 +954,12 @@ in the Exit-Land prompt above (Layer 2 — `force_release_file_reservation` only
 identities are NOT retired — name-only cross-session retire is rejected at runtime, decision
 `ac-ycr.8`), but it **cannot** deregister the conductor's own name — the conductor is still alive, invoking
 it. So **after `ac-land` returns**, the conductor's actual final act is to deregister its OWN
-minted `AGENT_NAME` (the one registered in Phase 0). By name — `registration_token` optional
-(doctrine: `_shared/agent-identity.md` Deregistration, Layer 1):
+minted `AGENT_NAME` (the one registered in Phase 0). This is the Layer-1 SELF path in the SAME MCP
+session that registered in Phase 0, so its binding authorizes a token-free `deregister_agent` — the
+self-carve-out to the blanket token rule (`ac-g93`). Still pass the captured `registration_token` if
+you hold it (harmless, and the only reliable path if the binding lapsed); the carve-out is the SELF
+path ONLY — every CROSS-session call threads the token (doctrine: `_shared/agent-identity.md`
+Deregistration, Layer 1 + § Call-scoped facts):
 
 ```
 mcp__mcp-agent-mail__deregister_agent(
