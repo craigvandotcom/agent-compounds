@@ -442,6 +442,68 @@ else
 fi
 
 # ============================================================================
+# Cases L10-L11: explicit --beads batch scope (ac-0i1). The completeness in-scope
+# set was identity-LIFETIME; --beads scopes it to exactly the current batch so a
+# later ceremony no longer re-demands per-bead entries for PRIOR batches' beads
+# under the same identity (nor mislabels a 1-bead batch as multi-bead). The
+# OPEN-bead check stays identity-wide — every assignee bead here is CLOSED so the
+# exit code is the completeness check's alone.
+# ============================================================================
+
+# --- Case L10: batch-scoped PASS despite prior-batch beads under same identity ---
+# ConductorY's identity has THREE lifetime beads (2 prior-batch + 1 current), all
+# closed. The progress file covers ONLY the current batch bead (bd-cur), as a
+# single-bead child (TARGET_BEADS=1). Without --beads the identity-lifetime set is
+# 3 (>1) so coverage re-demands bd-prior1/bd-prior2 -> hard-fail (documents the
+# bug). With --beads bd-cur the scope is exactly {bd-cur}, count 1 -> coverage
+# skipped -> exit 0.
+clear_fixtures
+write_fixture "ConductorY" '[{"id":"bd-prior1","status":"closed","labels":["infra"]},{"id":"bd-prior2","status":"closed","labels":["infra"]},{"id":"bd-cur","status":"closed","labels":["infra"]}]'
+PROG_CUR="$WORKDIR/progress-cur.md"
+printf '%s\n' \
+  'TARGET_BEADS=1' 'WAVE=current-batch' '' \
+  '### Bead bd-cur: current batch bead' '- Status: COMPLETE' '- Commit: ccc333' '' \
+  'COMPLETED: 1 / 1' \
+  >"$PROG_CUR"
+# L10a — WITHOUT --beads: identity-lifetime scope (3 beads) re-demands prior batch -> hard-fail.
+OUT=$(GATE_AGENT="ConductorY" run_gate --progress "$PROG_CUR" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" && echo "$OUT" | grep -q "bd-prior1"; then
+  pass "Case L10a: no --beads re-demands prior-batch beads under same identity -> hard-fail (documents bug)"
+else
+  fail "Case L10a: expected non-zero exit naming bd-prior1, got $RC. Output: $OUT"
+fi
+# L10b — WITH --beads bd-cur: scope is exactly the current batch -> exit 0.
+OUT=$(GATE_AGENT="ConductorY" run_gate --beads bd-cur --progress "$PROG_CUR" 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case L10b: --beads scopes completeness to current batch, prior-batch beads ignored -> exit 0"
+else
+  fail "Case L10b: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case L11: batch-scoped FAIL names ONLY the in-batch missing id --------------
+# ConductorZ has a prior-batch bead (bd-prev) plus a 2-bead current batch
+# (bd-cur1, bd-cur2), all closed. Progress covers only bd-cur1 (single-bead child).
+# --beads bd-cur1,bd-cur2 (comma-separated) makes the scope size 2 (>1) so coverage
+# runs: bd-cur2 is missing -> hard-fail naming ONLY bd-cur2 — never bd-prev (prior
+# batch, out of scope) and never bd-cur1 (covered).
+clear_fixtures
+write_fixture "ConductorZ" '[{"id":"bd-prev","status":"closed","labels":["infra"]},{"id":"bd-cur1","status":"closed","labels":["infra"]},{"id":"bd-cur2","status":"closed","labels":["infra"]}]'
+PROG_Z="$WORKDIR/progress-z.md"
+printf '%s\n' \
+  'TARGET_BEADS=1' 'WAVE=z-child-1' '' \
+  '### Bead bd-cur1: first current bead' '- Status: COMPLETE' '- Commit: zzz111' '' \
+  'COMPLETED: 1 / 1' \
+  >"$PROG_Z"
+OUT=$(GATE_AGENT="ConductorZ" run_gate --beads bd-cur1,bd-cur2 --progress "$PROG_Z" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" \
+   && echo "$OUT" | grep -q "bd-cur2" \
+   && ! echo "$OUT" | grep -q "bd-prev" && ! echo "$OUT" | grep -q "bd-cur1"; then
+  pass "Case L11: --beads fail names ONLY the in-batch missing bd-cur2 (not prior-batch, not covered)"
+else
+  fail "Case L11: expected exit 1 naming only bd-cur2, got $RC. Output: $OUT"
+fi
+
+# ============================================================================
 # Case I: bleed check needs a real BASE..HEAD diff — put HEAD ahead of main.
 # ============================================================================
 git -C "$WORKDIR" checkout -q -b feature-bleed

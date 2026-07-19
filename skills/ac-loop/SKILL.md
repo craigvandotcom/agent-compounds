@@ -424,7 +424,13 @@ If orphans exist:
    # `### Bead <id>` entries across every provided file and validates coverage against the whole
    # in-scope set (a single child file alone would false-fail for missing its siblings' beads). Do NOT
    # glob. Omitting --progress skips the check (pre-ac-514 behavior).
+   # ac-0i1: ALSO pass --beads with THIS batch's bead ids (comma-separated) so the completeness check
+   # scopes to exactly this batch — the identity-lifetime default would re-demand per-bead entries (and
+   # --progress files) for EARLIER batches' beads under the same loop identity, and mislabel a 1-bead
+   # batch as multi-bead. The OPEN-bead check stays identity-wide (a genuinely-open bead from any batch
+   # still blocks). Omit --beads only for a standalone single-batch run where identity == batch.
    bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
+     --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
      "$AGENT_NAME" <delegated-identities…>
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
@@ -527,7 +533,13 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    # entries across every provided file and validates coverage against the whole in-scope set (a single
    # child file alone would false-fail for missing its siblings' beads). Do NOT glob. Omitting
    # --progress skips the check (pre-ac-514 behavior).
+   # ac-0i1: ALSO pass --beads with THIS batch's bead ids (comma-separated) so the completeness check
+   # scopes to exactly this batch — the identity-lifetime default would re-demand per-bead entries (and
+   # --progress files) for EARLIER batches' beads under the same loop identity, and mislabel a 1-bead
+   # batch as multi-bead. The OPEN-bead check stays identity-wide (a genuinely-open bead from any batch
+   # still blocks). Omit --beads only for a standalone single-batch run where identity == batch.
    bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
+     --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
      "$AGENT_NAME" <delegated-identities…>
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,

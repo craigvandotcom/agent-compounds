@@ -79,7 +79,23 @@
 # passes every child's progress.md as repeated --progress flags in ONE call.
 # Single-file callers are unaffected (back-compat).
 #
-# Usage: beads-closed-gate.sh [--allow-empty] [--progress <path> ...] <assignee1> [assignee2 ...]
+# EXPLICIT BATCH SCOPE (ac-0i1): the completeness in-scope set above was
+# identity-LIFETIME — the UNION of every bead ever assigned to the passed
+# identities, with no batch boundary. In a multi-batch run that makes every later
+# ceremony re-demand per-bead entries (and --progress files) for EARLIER batches'
+# beads (already gate-validated + report-committed), and mislabels a TARGET_BEADS=1
+# wave as "multi-bead" because the N>1 conditional keyed on the identity-lifetime
+# set size rather than the current batch. Decision ac-x9a only ever scoped the check
+# to "the wave's progress.md". Fix: a conductor that KNOWS its batch may pass it
+# explicitly as `--beads <id,id,...>` (comma-separated, repeatable). When given, the
+# COMPLETENESS check — and its N>1 coverage conditional — scopes to EXACTLY those
+# ids, checked against the UNION of provided --progress files; prior-batch beads
+# under the same identity are neither demanded nor counted. The OPEN-bead check
+# (below) is UNAFFECTED — it stays identity-wide, so a genuinely-open bead from ANY
+# batch still blocks the close regardless of --beads. Without --beads, completeness
+# falls back to the identity-lifetime set — byte-identical pre-ac-0i1 behavior.
+#
+# Usage: beads-closed-gate.sh [--allow-empty] [--progress <path> ...] [--beads <id,id,...>] <assignee1> [assignee2 ...]
 #        beads-closed-gate.sh                 # falls back to $AGENT_NAME
 set -o pipefail
 
@@ -208,6 +224,7 @@ check_progress_completeness() {
 ALLOW_EMPTY=0
 ENV_PROGRESS="${PROGRESS_FILE:-}"   # single-file back-compat via env
 PROGRESS_FILES=()                   # REPEATED --progress flags accumulate here (ac-0wi)
+BEADS_SCOPE=""                      # explicit --beads batch scope (ac-0i1); empty = identity-lifetime
 ASSIGNEES=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -221,6 +238,15 @@ while [ $# -gt 0 ]; do
         exit 2
       fi
       PROGRESS_FILES+=("$2"); shift 2 ;;
+    --beads)
+      # Explicit batch scope (ac-0i1): comma-separated bead ids, repeatable.
+      # Same trailing-value guard as --progress (fail LOUD, never hang). Commas
+      # become spaces so the completeness function can word-split the list.
+      if [ $# -lt 2 ]; then
+        echo "beads-closed-gate: ERROR — --beads requires a comma-separated id argument." >&2
+        exit 2
+      fi
+      BEADS_SCOPE="${BEADS_SCOPE:+$BEADS_SCOPE }$(printf '%s' "$2" | tr ',' ' ')"; shift 2 ;;
     --) shift ;;
     *) ASSIGNEES+=("$1"); shift ;;
   esac
@@ -301,11 +327,24 @@ OPEN=$(echo "$FULL_CLAIMED" | jq \
 IN_SCOPE_IDS=$(echo "$FULL_CLAIMED" | jq -r '.[].id' | sort -u)
 warn_bead_bleed "$IN_SCOPE_IDS"
 
+# Completeness scope (ac-0i1): an explicit --beads batch scope wins over the
+# identity-lifetime IN_SCOPE_IDS. When --beads is given, the completeness check
+# (and its N>1 coverage conditional) scopes to EXACTLY those ids — prior-batch
+# beads under the same identity are neither demanded nor counted. Without --beads,
+# it falls back to IN_SCOPE_IDS (byte-identical pre-ac-0i1 behavior). The
+# identity-wide warn_bead_bleed (above) and OPEN-bead check (below) are UNAFFECTED
+# — a genuinely-open bead from any batch still blocks regardless of --beads.
+if [ -n "$BEADS_SCOPE" ]; then
+  COMPLETENESS_IDS=$(printf '%s\n' $BEADS_SCOPE | sort -u)
+else
+  COMPLETENESS_IDS="$IN_SCOPE_IDS"
+fi
+
 # Completeness gate (ac-514) — severity conditional on wave size; runs against the
 # resolved progress file, names any missing in-scope bead ids. Skipped (rc 0) when
 # no progress file was provided.
 PROGRESS_RC=0
-check_progress_completeness "$IN_SCOPE_IDS" "${PROGRESS_FILES[@]}" || PROGRESS_RC=1
+check_progress_completeness "$COMPLETENESS_IDS" "${PROGRESS_FILES[@]}" || PROGRESS_RC=1
 
 echo "$OPEN"
 OPEN_RC=0
