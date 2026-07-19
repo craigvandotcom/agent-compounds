@@ -428,6 +428,14 @@ if grep -q 'startswith("wave/")' "$AC_ROOT/skills/ac-loop/SKILL.md" 2>/dev/null;
   fail "D9b: skills/ac-loop/SKILL.md still contains stale 'startswith(\"wave/\")' pattern"
 fi
 
+# D10 (WS6, bd-brv39.6): ac-human-session Phase 4 Three Tiers render documents
+# tier-first, then oldest-within-tier ordering (age dimension). Discriminating
+# phrase — bare "oldest|age|created_at" substring-false-matches tri-AGE/st-AGE-d.
+check
+if ! grep -qE "oldest-first|oldest-within|oldest-bead-first" "$AC_ROOT/skills/ac-human-session/SKILL.md" 2>/dev/null; then
+  fail "D10: skills/ac-human-session/SKILL.md missing the tier-first/oldest-within-tier age-ordering note (Phase 4 render)"
+fi
+
 # ---------------------------------------------------------------------------
 # Check 11 — pipeline conformance (G-series doctrine landings)
 # ---------------------------------------------------------------------------
@@ -457,6 +465,14 @@ fi
 check
 if ! grep -q "VERDICT" "$AC_ROOT/skills/ac-loop/SKILL.md" 2>/dev/null; then
   fail "G5: skills/ac-loop/SKILL.md missing the VERDICT read step (review->merge gate)"
+fi
+
+# G6 (Wave-B bd-brv39.2): ac-land's inline Apply-Approved-Upgrades path EMITS a
+# skill-hotfix:-prefixed commit for the approved-upgrade case (conditional; routine
+# compound stays chore:), so dream's Phase 5 dedupe can grep it across target classes.
+check
+if ! grep -q "skill-hotfix:" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; then
+  fail "G6: skills/ac-land/SKILL.md missing the skill-hotfix: emit instruction for the approved-upgrade apply case"
 fi
 
 # ---------------------------------------------------------------------------
