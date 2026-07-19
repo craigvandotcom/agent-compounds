@@ -76,7 +76,10 @@ LAST=$(python3 -c "import json;print(json.load(open('infrastructure/dream-cycle/
 # Root-repo lesson stream
 git -C ~/Repos log --since="$LAST" --name-only --pretty=format: -- \
   infrastructure/memory/ neometa/memory/ neometa/alignment/decisions/ \
-  infrastructure/eval/golden/ | sort -u | grep -v '^$'
+  infrastructure/eval/golden/ infrastructure/retrieval-evals/ | sort -u | grep -v '^$'
+# infrastructure/retrieval-evals/ (brain-gap-plan Phase 1 item 5): persistent
+# recall@5 failures/drift in failures/*.jsonl and health/reports/retrieval-evals-*.json
+# are proposal input, same as any other lesson stream.
 # Per-app lesson stream (own repos; canonical list = infrastructure/apps.list)
 while IFS= read -r app; do
   git -C ~/Repos/neometa/software/$app log --since="$LAST" --name-only --pretty=format: -- memory/ 2>/dev/null | sort -u | grep -v '^$' | sed "s|^|$app/|"
