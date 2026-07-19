@@ -68,8 +68,11 @@ clauses verbatim, recurrence dropped to zero for the rest of the run.
 > - Agent Mail: capture `registration_token` at registration and pass it
 >   explicitly on EVERY mutating call — session-auth carry is transport-conditional.
 > - After every push: verify origin SHA == local HEAD before proceeding.
-> - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass; leave
->   /tmp scratch to OS TTL rather than fighting delete guards.
+> - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass.
+>   Destructive commands (rm / find -delete) take FULLY-LITERAL paths: resolve
+>   first (`ls -d`), then paste literals — never `$VAR`, `$( )`, or a loop var.
+>   /tmp literals + distinctive /tmp globs are allowed; home/repo `rm -rf` never
+>   is — `git rm` if tracked, else gitignore-and-flag or ask the human.
 > - Shared checkout: commit your bead's files (pathspec-scoped) the INSTANT its
 >   ACs verify — minimal working-tree dwell; run `br` from the bead-board repo root.
 > - Autonomous run: never AskUserQuestion — Exhaust Rule.
