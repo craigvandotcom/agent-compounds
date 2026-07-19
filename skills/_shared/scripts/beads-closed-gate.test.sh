@@ -244,6 +244,70 @@ else
 fi
 
 # ============================================================================
+# Cases L1-L3: progress.md completeness gate (ac-514). All run while HEAD==main.
+# The assignee's beads are CLOSED so the open-bead gate passes and the exit code
+# is determined by the completeness check alone.
+# ============================================================================
+
+# --- Case L1: multi-bead wave, COMPLETE progress.md -> pass (exit 0) ----------
+clear_fixtures
+write_fixture "ConductorL" '[{"id":"bd-l1","status":"closed","labels":["infra"]},{"id":"bd-l2","status":"closed","labels":["infra"]}]'
+PROG_COMPLETE="$WORKDIR/progress-complete.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' \
+  'WAVE=test-wave' \
+  '' \
+  '### Bead bd-l1: first bead' \
+  '- Status: COMPLETE' \
+  '- Commit: abc123' \
+  '' \
+  '### Bead bd-l2: second bead' \
+  '- Status: COMPLETE' \
+  '- Commit: def456' \
+  '' \
+  'COMPLETED: 2 / 2' \
+  >"$PROG_COMPLETE"
+OUT=$(GATE_AGENT="ConductorL" run_gate --progress "$PROG_COMPLETE" 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case L1: multi-bead complete progress.md -> exit 0"
+else
+  fail "Case L1: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case L2: multi-bead wave, THIN progress.md -> HARD-FAIL (exit non-zero) --
+clear_fixtures
+write_fixture "ConductorL" '[{"id":"bd-l1","status":"closed","labels":["infra"]},{"id":"bd-l2","status":"closed","labels":["infra"]}]'
+PROG_THIN="$WORKDIR/progress-thin.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' \
+  'WAVE=test-wave' \
+  '' \
+  '### Bead bd-l1: first bead' \
+  '- Status: COMPLETE' \
+  >"$PROG_THIN"
+OUT=$(GATE_AGENT="ConductorL" run_gate --progress "$PROG_THIN" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" && echo "$OUT" | grep -q "bd-l2"; then
+  pass "Case L2: multi-bead thin progress.md -> exit non-zero, names missing bd-l2"
+else
+  fail "Case L2: expected non-zero exit naming bd-l2, got $RC. Output: $OUT"
+fi
+
+# --- Case L3: single-bead wave, THIN progress.md -> WARN, exit 0 --------------
+clear_fixtures
+write_fixture "ConductorS" '[{"id":"bd-s1","status":"closed","labels":["infra"]}]'
+PROG_SINGLE="$WORKDIR/progress-single.md"
+printf '%s\n' \
+  'TARGET_BEADS=1' \
+  'WAVE=single-wave' \
+  >"$PROG_SINGLE"
+OUT=$(GATE_AGENT="ConductorS" run_gate --progress "$PROG_SINGLE" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -qi "WARNING (single-bead wave"; then
+  pass "Case L3: single-bead thin progress.md -> WARN + exit 0 (never blocks)"
+else
+  fail "Case L3: expected exit 0 with single-bead WARNING, got $RC. Output: $OUT"
+fi
+
+# ============================================================================
 # Case I: bleed check needs a real BASE..HEAD diff — put HEAD ahead of main.
 # ============================================================================
 git -C "$WORKDIR" checkout -q -b feature-bleed

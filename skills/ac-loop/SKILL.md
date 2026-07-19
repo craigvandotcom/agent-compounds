@@ -416,7 +416,14 @@ If orphans exist:
    # delegated ac-implement identity from its summary (bd-w504y — querying only the loop identity
    # would MISS a delegate's incremental claim and fail OPEN). Threading CLAIM_ASSIGNEE above
    # already funnels those claims to $AGENT_NAME, so <delegated-identities…> is belt-and-suspenders.
-   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" "$AGENT_NAME" <delegated-identities…>
+   # ac-514: pass THIS batch's progress.md so the completeness check runs — a multi-bead (N>1) wave
+   # whose progress.md lacks a per-bead result entry or the `COMPLETED: n/N` tally HARD-FAILS the
+   # close (names the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this
+   # batch's scratch dir; for a parallel wave whose children each wrote their own progress.md, point
+   # --progress at the child dir being closed (the check reads TARGET_BEADS from whichever file it is
+   # given — do NOT glob). Omitting --progress skips the check (pre-ac-514 behavior).
+   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
+     --progress "$ARTIFACTS_DIR/progress.md" "$AGENT_NAME" <delegated-identities…>
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
    # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```
@@ -509,7 +516,14 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    # Pass the UNION: MY loop identity + each delegated ac-implement identity from its summary
    # (bd-w504y — a delegate's incremental claim under its own name would otherwise be MISSED,
    # failing the gate OPEN). CLAIM_ASSIGNEE threading already funnels claims to $AGENT_NAME.
-   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" "$AGENT_NAME" <delegated-identities…>
+   # ac-514: pass this wave's progress.md so the completeness check runs — a multi-bead (N>1) wave
+   # whose progress.md lacks a per-bead result entry or the `COMPLETED: n/N` tally HARD-FAILS (names
+   # the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this wave's scratch dir;
+   # for a parallel wave whose children each wrote their own progress.md, point --progress at the
+   # child dir being closed (the check reads TARGET_BEADS from whichever file it is given — do NOT
+   # glob). Omitting --progress skips the check (pre-ac-514 behavior).
+   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
+     --progress "$ARTIFACTS_DIR/progress.md" "$AGENT_NAME" <delegated-identities…>
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
    # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```
