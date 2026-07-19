@@ -475,15 +475,33 @@ For each approved upgrade, apply the edit directly. Common targets:
 
 ### Commit Compound Changes
 
+**Commit-prefix is CONDITIONAL — `skill-hotfix:` for the approved-upgrade case, `chore:`
+for routine-only.** This land-session compound commit carries BOTH routine
+retrospective/memory-substrate saves (the common case, fires every land) AND any doctrine
+edits the Apply-Approved-Upgrades hatch applied this session. **When ≥1 approved
+doctrine/skill/memory upgrade was actually applied this session** (any of the four target
+classes in the Apply-Approved-Upgrades table — skill files, `AGENTS.md`, `CLAUDE.md`,
+`MEMORY.md`; the name is historical, the class scope is all four), **EMIT the commit with a
+`skill-hotfix:` prefix** so the out-of-band apply is greppable by dream's Phase 5 dedupe
+(`git log --grep='^skill-hotfix' -- <target_file>`). **A land with no approved upgrade
+(routine compound/reflect-only saves) keeps `chore:`** — do NOT blanket-relabel every
+land-session commit, or you pollute the exact dedupe signal dream keys on.
+
 ```bash
 git add <specific files>
-git commit -m "chore: compound learnings from bead-work session
-
-Applied N system upgrades from retrospective.
+# Approved-upgrade case (≥1 hatch apply this session — any target class):
+git commit -m "skill-hotfix: compound learnings + applied N system upgrades from retrospective
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
+# Routine / no-upgrade case (compound + reflect saves only, no hatch apply):
+#   git commit -m "chore: compound learnings from bead-work session ..."
 git push
 ```
+
+Advisory (not mandated): you MAY commit the Apply-Approved-Upgrades edits SEPARATELY from
+routine compounding so the `skill-hotfix:` commit touches exactly the edited `target_file` —
+a cleaner per-file signal for dream's `git log --grep='^skill-hotfix' -- <target_file>`.
+Either one-commit-conditional or split-commit satisfies the convention.
 
 Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
 
