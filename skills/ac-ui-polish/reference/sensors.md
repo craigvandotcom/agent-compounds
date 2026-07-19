@@ -260,6 +260,25 @@ themes), after `document.fonts.ready`:
 - Fix path when it fails: prefer **`next/font/local`** (self-host) over a CDN `@import`/`<link>` —
   build-safe and offline-correct (`recipes.md` §11).
 
+## Sensor 10 — Stacked shadow utilities — catches muddy doubled elevation
+
+`recipes.md` §14: **one shadow utility per element per state.** Two arbitrary
+`shadow-[…]` strings on one element — or a named tier plus a default `shadow-*`
+scale token — double-render and muddy the edge. The stacked case is greppable.
+
+```bash
+# Two+ shadow utilities on one element (arbitrary strings and/or scale tokens)
+rg -n --glob '*.tsx' -e 'shadow-\[[^]]*\][^>]*shadow-' <component-dirs>
+
+# A named arbitrary shadow AND a default shadow-scale token on the same element
+rg -n --glob '*.tsx' -e 'shadow-\[[^]]*\][^>]*shadow-(sm|md|lg|xl|2xl)\b' <component-dirs>
+```
+
+**Pass = zero hits.** Each is a finding (≥ Medium): keep the single tier that matches
+the surface (`recipes.md` §14) and drop the rest. A `hover:`/`active:` state that
+*genuinely* changes elevation swaps to a different **single** tier — that is not
+stacking, and won't match (the two utilities carry distinct state prefixes).
+
 ---
 
 ## Running the sensors
@@ -271,15 +290,15 @@ themes), after `document.fonts.ready`:
 1b. **Once per route (live, theme-independent).** Sensor 9 (webfont renders) — run it
    on the first rendered route; the font is global, so a single `renders:false` is an
    app-wide finding. Cheap insurance against shipping on the fallback font.
-2. **Once at repo level.** Sensors 2, 3, 5, 6, 7, and 8 are static greps — run them
-   over the codebase before touching the browser; they point you straight at the
-   offending lines. (5–8 enforce the canonical values in `recipes.md`.)
+2. **Once at repo level.** Sensors 2, 3, 5, 6, 7, 8, and 10 are static greps — run
+   them over the codebase before touching the browser; they point you straight at the
+   offending lines. (5–8 and 10 enforce the canonical values in `recipes.md`.)
 3. **Feed the visual pass.** Sensor output is the *first* set of findings on the
    matrix; the visual rubric adds taste findings on top. A cell is not "audited"
    until both have run and its artifact is captured.
 
 **Sensors are necessary, not sufficient.** They catch correctness (contrast,
 hardcoded values, token gaps) and canonical-value violations (transition/will-change
-specificity, image outlines, press-scale, nested radii). They do **not** judge
+specificity, image outlines, press-scale, nested radii, shadow stacking). They do **not** judge
 hierarchy, rhythm, depth, or slop — that is `critique-polish.md` + the craft
 references. Run both.

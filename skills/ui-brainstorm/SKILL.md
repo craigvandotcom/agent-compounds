@@ -219,6 +219,7 @@ openrouter --file prompt.txt --image screenshot.png --model google/gemini-3.1-pr
 | `reference/design-rubric.md`      | Detailed rubric criteria        |
 | `reference/borda-count-method.md` | Ranking methodology             |
 | `reference/model-prompts.md`      | Exact prompts for each phase    |
+| `reference/art-direction-menu.md` | Divergent art-direction looks (vocabulary + admissibility rulings) to seed Phase 1 generation |
 
 ---
 

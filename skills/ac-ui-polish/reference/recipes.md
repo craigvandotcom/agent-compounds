@@ -256,6 +256,149 @@ inflate the visual.
 **Collision rule:** two interactive elements must never have overlapping hit areas —
 if the expansion would collide, shrink it to the largest size that doesn't.
 
+> **§§13–15 are distilled from [MengTo/Skills](https://github.com/MengTo/Skills)
+> (MIT)** — `glass-dark-ui`, `beautiful-shadows`, `progressive-blur` — rewritten in
+> our vocabulary and brand-filtered (neutral shadows, no purple/blue gradient tint).
+> This file is consumed by **light-mode** apps, so theme-sensitive recipes ship a
+> light form inline (token-override rule still applies — the app's `design.md` wins).
+
+## 13. Glass surface (frosted panel)
+
+A frosted, semi-transparent panel over a busy or image background — the premium
+alternative to a flat card on a hero. **Only worth it when there is real content
+*behind* the panel to blur:** `backdrop-filter` blurs what sits behind it, so over a
+flat fill it costs GPU and shows nothing. Always ship the non-blur fallback (a
+stronger solid fill) so it degrades cleanly.
+
+> **Surface caveat.** A glass hover/focus glow is a **web/marketing** affordance —
+> there is no `:hover` inside a native `/app` shell, so use press/active feedback
+> (§4) there instead. Keep glow radius restrained: readability first.
+
+**Dark surface** — the fill is a **deep navy/charcoal alpha, never a pure-black
+overlay over blur** (`rgba(0,0,0,…)` over a blur reads muddy — tint it):
+
+```css
+.glass-dark {
+  background-color: rgba(15, 23, 42, 0.45);            /* slate-900 @ 45% — NOT black */
+  background-image: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-radius: 24px;
+  box-shadow: 0 20px 48px rgba(2,6,23,.45), inset 0 1px 0 rgba(255,255,255,.12);
+}
+/* Non-blur fallback: stronger opaque fill so text stays readable */
+@supports not (backdrop-filter: blur(1px)) { .glass-dark { background-color: rgba(15,23,42,.62); } }
+```
+
+- **Body text ≥ `#cbd5e1`** on dark glass (the translucent fill eats contrast);
+  muted text no lighter than `#94a3b8`.
+
+**Light surface** — the frosted look on a light page is a **white** alpha fill, not a
+dark one:
+
+```css
+.glass-light {
+  background-color: rgba(255, 255, 255, 0.55);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.2));
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.10), inset 0 1px 0 rgba(255,255,255,.6);
+}
+```
+
+**Gradient hairline border** (optional — reads as edge refraction). The `::before`
+mask-composite trick works over any background; keep the stops **neutral and
+low-opacity** — no purple/blue tint (that's the AI-gradient tell, `critique-polish.md`
+§D/§I):
+
+```css
+.glass-dark, .glass-light { position: relative; }
+.glass-dark::before, .glass-light::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+  background: linear-gradient(160deg,
+    rgba(148,163,184,.28) 0%, rgba(148,163,184,.10) 50%, rgba(148,163,184,.28) 100%);
+}
+```
+
+## 14. Elevation shadows — one strength per state, named
+
+When a surface lifts off the page (card, popover, hero media, modal), a single
+**layered neutral** shadow reads premium where a default `shadow-lg` reads blunt.
+Three tiers, exact Tailwind arbitrary values — copy verbatim:
+
+**`sm`** — compact cards, form controls, pills, quieter surfaces:
+
+```txt
+shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]
+```
+
+**`md`** — cards, panels, popovers, the default elevated surface:
+
+```txt
+shadow-[0px_0px_0px_1px_rgba(0,0,0,0.06),0px_1px_1px_-0.5px_rgba(0,0,0,0.06),0px_3px_3px_-1.5px_rgba(0,0,0,0.06),_0px_6px_6px_-3px_rgba(0,0,0,0.06),0px_12px_12px_-6px_rgba(0,0,0,0.06),0px_24px_24px_-12px_rgba(0,0,0,0.06)]
+```
+
+**`lg`** — hero media, feature callouts, modal-like containers, the strongest lift:
+
+```txt
+shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]
+```
+
+**One shadow strength per component state.** Pick the tier that matches the surface
+and stop; raise a tier only when an interaction *genuinely* changes elevation
+(rest → hover on a lifting card). Otherwise the shadow is a constant, not an animation.
+
+- **Never stack multiple shadow utilities on one element** — two arbitrary
+  `shadow-[…]` strings (or a named tier plus a default `shadow-lg`) double-render and
+  muddy the edge. One utility, one state (grep-enforced: `sensors.md` Sensor 10).
+- **Keep them neutral** — no coloured/tinted glow; these are `rgba(0,0,0,…)` /
+  `rgba(25,28,33,…)` by design. For depth *without* a hard line (buttons/inputs) use
+  the shadow-as-border recipe (§2), not these.
+- **Dark surfaces:** black-alpha shadows are invisible on dark — don't stack a light
+  tier there; collapse to the §2 white-ring elevation (or lift via the glass border).
+- Map onto the app's elevation token scale where one exists (token-override rule).
+
+## 15. Progressive (gradient) blur — web/site only, perf-gated
+
+A stack of `backdrop-filter` + `mask` layers that fades a viewport edge from sharp to
+blurred, so content scrolls "under" a soft top/bottom fade. Premium on a marketing
+hero or a scroll-edge — but **GPU-heavy**.
+
+> **Admissibility (binding).** **Web / marketing surfaces only — NEVER inside
+> `/app`**: the stacked `backdrop-filter` layers blow the native-shell perf budget.
+> **Cap the layers at ≤ 6** blur steps (the ramp below is the ceiling, not a target)
+> and drop steps on low-end devices. `backdrop-filter` needs real content behind it —
+> it will not blur a flat background.
+
+```html
+<div class="gradient-blur" aria-hidden="true">
+  <div></div><div></div><div></div><div></div><div></div><div></div>
+</div>
+```
+
+```css
+.gradient-blur { position: fixed; inset: 0 0 auto 0; height: 12%; z-index: 5; pointer-events: none; }
+.gradient-blur > div, .gradient-blur::before, .gradient-blur::after { position: absolute; inset: 0; }
+/* doubling blur ramp 0.5→64px, each layer masked to a moving band up the edge */
+.gradient-blur::before             { z-index:1; backdrop-filter: blur(0.5px); mask: linear-gradient(to top, transparent 0%,    #000 12.5%, #000 25%,   transparent 37.5%); }
+.gradient-blur > div:nth-of-type(1){ z-index:2; backdrop-filter: blur(1px);   mask: linear-gradient(to top, transparent 12.5%, #000 25%,   #000 37.5%, transparent 50%); }
+.gradient-blur > div:nth-of-type(2){ z-index:3; backdrop-filter: blur(2px);   mask: linear-gradient(to top, transparent 25%,   #000 37.5%, #000 50%,   transparent 62.5%); }
+.gradient-blur > div:nth-of-type(3){ z-index:4; backdrop-filter: blur(4px);   mask: linear-gradient(to top, transparent 37.5%, #000 50%,   #000 62.5%, transparent 75%); }
+.gradient-blur > div:nth-of-type(4){ z-index:5; backdrop-filter: blur(8px);   mask: linear-gradient(to top, transparent 50%,   #000 62.5%, #000 75%,   transparent 87.5%); }
+.gradient-blur > div:nth-of-type(5){ z-index:6; backdrop-filter: blur(16px);  mask: linear-gradient(to top, transparent 62.5%, #000 75%,   #000 87.5%, transparent 100%); }
+.gradient-blur > div:nth-of-type(6){ z-index:7; backdrop-filter: blur(32px);  mask: linear-gradient(to top, transparent 75%,   #000 87.5%, #000 100%); }
+.gradient-blur::after              { z-index:8; backdrop-filter: blur(64px);  mask: linear-gradient(to top, transparent 87.5%, #000 100%); }
+```
+
+- **Direction:** flip every `to top` → `to bottom` for a bottom-edge fade.
+- **Height / strength:** the `.gradient-blur` height % and the blur ramp are the two
+  knobs; fewer steps = cheaper and coarser.
+- Keep `pointer-events: none` so it never blocks clicks; place it above content but
+  below modals.
+
 ---
 
 ## How this file is used
@@ -264,6 +407,7 @@ if the expansion would collide, shrink it to the largest size that doesn't.
   inventing one — *after* confirming the app has no token for it (token-override rule).
 - **AUDIT phase:** several of these are machine-checkable. The greppable ones
   (`transition: all`, `will-change: all`, tinted/missing image outline, sub-`0.95`
-  press-scale) are wired as **Sensors 5–8** in `sensors.md` — they run before eyes.
+  press-scale, stacked shadow utilities) are wired as **Sensors 5–8 and 10** in
+  `sensors.md` — they run before eyes.
 - These are **defaults, not dogma.** A cited reason to deviate (a design.md token, a
   brand motion spec) overrides any constant here. "Conform to the app" always wins.

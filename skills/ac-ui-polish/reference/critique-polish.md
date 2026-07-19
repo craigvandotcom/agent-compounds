@@ -102,6 +102,32 @@ Score each item. Cite `file:line` and a concrete fix.
 - [ ] No three-feature-card row with generic icons and vague headers
 - [ ] Spacing/sizing isn't suspiciously uniform-everywhere (real design has rhythm & contrast)
 
+> **AI-slop delta.** The tells below are distilled from [MengTo/Skills](https://github.com/MengTo/Skills)
+> (MIT) — `redesign-existing-projects` — as the NOVEL items not already covered by
+> A–H above, rewritten in our vocabulary. They **extend, never override** the
+> existing rubric (anti AI-default-gradient rule, §D, still governs colour).
+
+**Typography tells**
+- [ ] No all-caps subheaders *everywhere* — sentence case, small-caps, or lowercase-italic instead
+- [ ] No orphaned last-line words — `text-wrap: balance` (headings) / `pretty` (body) (`recipes.md` §11)
+
+**Colour & surface tells**
+- [ ] Background isn't pure `#000000` — off-black (`#0a0a0a` / `#121212`) or tinted dark
+- [ ] Grays are one family (all warm OR all cool), never a warm/cool mix
+- [ ] Flat, textureless fills carry subtle noise/grain — not sterile pure-flat vectors
+- [ ] No lone dark section breaking an otherwise light page (or vice-versa) — shift tone *within* the same palette, don't jump to `#111` mid-page
+
+**Layout tells**
+- [ ] Content is width-constrained (~1200–1440px max), not stretched edge-to-edge on wide screens
+- [ ] Vertical section padding is optically balanced (bottom slightly ≥ top), not mathematically identical
+- [ ] Card-group CTAs are bottom-aligned to a common baseline, not floating at content-dependent heights
+- [ ] Side-by-side columns (pricing/features) share baselines — titles/lists/prices start at the same Y
+
+**Content & icon tells**
+- [ ] Numbers read organic (`47.2%`, `$99.00`, `18 of 43`), not fake-round (`99.99%`, `$100.00`)
+- [ ] Icons aren't the default Lucide/Feather set — Phosphor/Heroicons/custom for differentiation
+- [ ] Icon metaphors avoid cliché (rocket = launch, shield = security) — pick the less obvious mark
+
 ---
 
 ## Self-audit prompt template
