@@ -419,11 +419,14 @@ If orphans exist:
    # ac-514: pass THIS batch's progress.md so the completeness check runs — a multi-bead (N>1) wave
    # whose progress.md lacks a per-bead result entry or the `COMPLETED: n/N` tally HARD-FAILS the
    # close (names the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this
-   # batch's scratch dir; for a parallel wave whose children each wrote their own progress.md, point
-   # --progress at the child dir being closed (the check reads TARGET_BEADS from whichever file it is
-   # given — do NOT glob). Omitting --progress skips the check (pre-ac-514 behavior).
+   # batch's scratch dir. ac-0wi: for a PARALLEL wave whose children each wrote their OWN progress.md,
+   # pass ALL child files in ONE call as REPEATED --progress flags — the completeness check unions the
+   # `### Bead <id>` entries across every provided file and validates coverage against the whole
+   # in-scope set (a single child file alone would false-fail for missing its siblings' beads). Do NOT
+   # glob. Omitting --progress skips the check (pre-ac-514 behavior).
    bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
-     --progress "$ARTIFACTS_DIR/progress.md" "$AGENT_NAME" <delegated-identities…>
+     --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
+     "$AGENT_NAME" <delegated-identities…>
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
    # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```
@@ -518,12 +521,15 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    # failing the gate OPEN). CLAIM_ASSIGNEE threading already funnels claims to $AGENT_NAME.
    # ac-514: pass this wave's progress.md so the completeness check runs — a multi-bead (N>1) wave
    # whose progress.md lacks a per-bead result entry or the `COMPLETED: n/N` tally HARD-FAILS (names
-   # the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this wave's scratch dir;
-   # for a parallel wave whose children each wrote their own progress.md, point --progress at the
-   # child dir being closed (the check reads TARGET_BEADS from whichever file it is given — do NOT
-   # glob). Omitting --progress skips the check (pre-ac-514 behavior).
+   # the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this wave's scratch dir.
+   # ac-0wi: for a PARALLEL wave whose children each wrote their OWN progress.md, pass ALL child files
+   # in ONE call as REPEATED --progress flags — the completeness check unions the `### Bead <id>`
+   # entries across every provided file and validates coverage against the whole in-scope set (a single
+   # child file alone would false-fail for missing its siblings' beads). Do NOT glob. Omitting
+   # --progress skips the check (pre-ac-514 behavior).
    bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
-     --progress "$ARTIFACTS_DIR/progress.md" "$AGENT_NAME" <delegated-identities…>
+     --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
+     "$AGENT_NAME" <delegated-identities…>
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
    # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```

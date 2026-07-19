@@ -394,6 +394,54 @@ else
 fi
 
 # ============================================================================
+# Cases L8-L9: PARALLEL wave — REPEATED --progress + UNION coverage (ac-0wi).
+# A parallel wave's children each write their OWN single-bead progress.md; the
+# batch spans all of them. The completeness check must union the '### Bead <id>'
+# entries across ALL provided files and validate coverage against the whole
+# in-scope set — never false-fail a child file for missing its siblings' beads.
+# ============================================================================
+
+# --- Case L8: union of two child files COVERS the batch -> exit 0 -------------
+# ConductorU claims a 2-bead batch (both CLOSED). Each child wrote its own
+# single-bead progress.md. Neither file alone covers the batch, but the union
+# does. Pre-fix (last --progress wins) this false-failed exit 1.
+clear_fixtures
+write_fixture "ConductorU" '[{"id":"bd-u1","status":"closed","labels":["infra"]},{"id":"bd-u2","status":"closed","labels":["infra"]}]'
+PROG_U1="$WORKDIR/progress-u1.md"
+PROG_U2="$WORKDIR/progress-u2.md"
+printf '%s\n' \
+  'TARGET_BEADS=1' 'WAVE=child-1' '' \
+  '### Bead bd-u1: first child bead' '- Status: COMPLETE' '- Commit: aaa111' '' \
+  'COMPLETED: 1 / 1' \
+  >"$PROG_U1"
+printf '%s\n' \
+  'TARGET_BEADS=1' 'WAVE=child-2' '' \
+  '### Bead bd-u2: second child bead' '- Status: COMPLETE' '- Commit: bbb222' '' \
+  'COMPLETED: 1 / 1' \
+  >"$PROG_U2"
+OUT=$(GATE_AGENT="ConductorU" run_gate --progress "$PROG_U1" --progress "$PROG_U2" 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case L8: parallel wave, repeated --progress, union covers batch -> exit 0"
+else
+  fail "Case L8: expected exit 0 (union covers), got $RC. Output: $OUT"
+fi
+
+# --- Case L9: union STILL missing one in-scope id -> exit 1, names ONLY it -----
+# ConductorU claims a 3-bead batch (all CLOSED); the two child files cover bd-u1
+# and bd-u2, but bd-u3 appears in NO progress file. Must HARD-FAIL naming only
+# the truly-missing bd-u3, not the two the union already covers.
+clear_fixtures
+write_fixture "ConductorU" '[{"id":"bd-u1","status":"closed","labels":["infra"]},{"id":"bd-u2","status":"closed","labels":["infra"]},{"id":"bd-u3","status":"closed","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorU" run_gate --progress "$PROG_U1" --progress "$PROG_U2" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" \
+   && echo "$OUT" | grep -q "bd-u3" \
+   && ! echo "$OUT" | grep -q "bd-u1" && ! echo "$OUT" | grep -q "bd-u2"; then
+  pass "Case L9: parallel wave, union missing bd-u3 -> exit 1 naming only bd-u3"
+else
+  fail "Case L9: expected exit 1 naming only bd-u3, got $RC. Output: $OUT"
+fi
+
+# ============================================================================
 # Case I: bleed check needs a real BASE..HEAD diff — put HEAD ahead of main.
 # ============================================================================
 git -C "$WORKDIR" checkout -q -b feature-bleed

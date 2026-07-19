@@ -61,14 +61,25 @@
 #     (message names the missing in-scope bead ids).
 #   * wave with N==1 bead (incl. investigation-only one-line-verdict waves):
 #     WARN-and-record, never block.
-# The progress file is located from `--progress <path>`, else `$PROGRESS_FILE`,
-# else `$ARTIFACTS_DIR/progress.md`. If none resolves, the completeness check is
-# SKIPPED (a caller that did not opt in keeps the pre-ac-514 behavior) — the
-# open-bead gate below is unaffected. Evidence: RUN 20260716-111224-31570 shipped
-# 3/7 waves with only a 3-line claim header, forcing the retrospective to
-# reconstruct a 6-bead wave from git log.
+# The progress file(s) are located from REPEATED `--progress <path>` flags, else
+# `$PROGRESS_FILE`, else `$ARTIFACTS_DIR/progress.md`. If none resolves, the
+# completeness check is SKIPPED (a caller that did not opt in keeps the pre-ac-514
+# behavior) — the open-bead gate below is unaffected. Evidence: RUN
+# 20260716-111224-31570 shipped 3/7 waves with only a 3-line claim header, forcing
+# the retrospective to reconstruct a 6-bead wave from git log.
 #
-# Usage: beads-closed-gate.sh [--allow-empty] [--progress <path>] <assignee1> [assignee2 ...]
+# MULTI-FILE UNION (ac-0wi): a PARALLEL wave's children each write their OWN
+# progress.md (children never share a progress file — a design invariant). Scoping
+# the in-scope set to ALL beads under the passed identities but validating per-bead
+# entries against ONE file therefore ALWAYS false-fails: each child file is missing
+# its siblings' beads. Fix: accept REPEATED --progress flags; PER-FILE structural
+# checks (TARGET_BEADS / Status-line count / COMPLETED tally) stay unchanged, but
+# the identity-first COVERAGE check now requires each in-scope bead id to appear in
+# the UNION of '### Bead <id>' entries across ALL provided files. A parallel wave
+# passes every child's progress.md as repeated --progress flags in ONE call.
+# Single-file callers are unaffected (back-compat).
+#
+# Usage: beads-closed-gate.sh [--allow-empty] [--progress <path> ...] <assignee1> [assignee2 ...]
 #        beads-closed-gate.sh                 # falls back to $AGENT_NAME
 set -o pipefail
 
@@ -98,70 +109,96 @@ warn_bead_bleed() {
   fi
 }
 
-# --- progress.md completeness check (ac-514) ---
-# check_progress_completeness <progress-file> <in-scope-ids>
-# Returns non-zero ONLY for a multi-bead (N>1) wave whose progress.md is missing
-# per-bead result entries or a complete COMPLETED tally. N==1 waves only warn.
-# A missing/unresolvable progress file is a skip (return 0), never a block.
+# --- progress.md completeness check (ac-514; multi-file union — ac-0wi) ---
+# check_progress_completeness <in-scope-ids> <progress-file>...
+# PER-FILE (unchanged single-file semantics): each provided file declares its own
+# TARGET_BEADS=N. A file with N>1 must carry N '### Bead' entries, N '- Status:'
+# lines, and a 'COMPLETED: n/N' tally with n>=N — else HARD-FAIL. A file with
+# N<=1 (single-bead child, incl. one-line investigation verdicts) only WARNs on
+# thinness, never blocks.
+# UNION COVERAGE (identity-first, ac-0wi): when the in-scope BATCH is multi-bead
+# (>1 id), every in-scope bead id must carry a '### Bead <id>' entry in SOME
+# provided file (the UNION across all files) — else HARD-FAIL naming ONLY the
+# truly-missing ids. A single-bead batch (<=1 id) never blocks on coverage.
+# Back-compat: exactly one file reproduces the pre-multi-file behavior. A parallel
+# wave passes every child's progress.md as repeated --progress flags in ONE call.
+# A missing/unresolvable progress file is skipped in the union (warns); if NO file
+# yields a TARGET_BEADS header the whole check is a skip (return 0), never a block.
 check_progress_completeness() {
-  local pf="$1" in_scope="$2"
-  [ -z "$pf" ] && return 0   # not opted in — skip
-  if [ ! -f "$pf" ]; then
-    echo "beads-closed-gate: WARNING — progress file not found at '$pf'; completeness check skipped." >&2
-    return 0
-  fi
+  local in_scope="$1"; shift
+  local files=("$@")
+  [ "${#files[@]}" -eq 0 ] && return 0   # not opted in — skip
 
-  local n
-  n=$(grep -oE 'TARGET_BEADS=[0-9]+' "$pf" | head -1 | grep -oE '[0-9]+')
-  if [ -z "$n" ]; then
-    echo "beads-closed-gate: WARNING — no 'TARGET_BEADS=' header in '$pf'; cannot assess completeness." >&2
-    return 0
-  fi
-
-  # Per-bead result entries: '### Bead <id>: ...' each expected to carry a Status line.
-  local header_ids entry_count status_count tally done_n
-  header_ids=$(grep -oE '^### Bead [^:]+' "$pf" 2>/dev/null | sed -E 's/^### Bead[[:space:]]+//' | sed -E 's/[[:space:]]+$//' | grep -c . )
-  entry_count="$header_ids"
-  status_count=$(grep -cE '^-[[:space:]]*Status:' "$pf" 2>/dev/null)
-  tally=$(grep -oE 'COMPLETED:[[:space:]]*[0-9]+[[:space:]]*/[[:space:]]*[0-9]+' "$pf" 2>/dev/null | tail -1)
-
-  if [ "$n" -le 1 ]; then
-    # Single-bead wave (incl. one-line investigation verdicts) — WARN only, never block.
-    if [ "$entry_count" -lt 1 ] || [ -z "$tally" ]; then
-      echo "beads-closed-gate: WARNING (single-bead wave, N=$n) — progress.md '$pf' is thin (entries=$entry_count, tally='${tally:-none}'); recording, not blocking." >&2
+  local union_ids="" valid_files=0 structural_problem=""
+  local pf n entry_count status_count tally done_n ids
+  for pf in "${files[@]}"; do
+    [ -z "$pf" ] && continue
+    if [ ! -f "$pf" ]; then
+      echo "beads-closed-gate: WARNING — progress file not found at '$pf'; skipping it in the completeness union." >&2
+      continue
     fi
-    return 0
-  fi
+    n=$(grep -oE 'TARGET_BEADS=[0-9]+' "$pf" | head -1 | grep -oE '[0-9]+')
+    if [ -z "$n" ]; then
+      echo "beads-closed-gate: WARNING — no 'TARGET_BEADS=' header in '$pf'; skipping it in the completeness union." >&2
+      continue
+    fi
+    valid_files=$((valid_files + 1))
 
-  # Multi-bead wave (N>1) — HARD-FAIL on incompleteness.
-  local problems="" missing="" id
-  # Identity-based check (PRIMARY): every in-scope bead id must carry its OWN
-  # '### Bead <id>' result entry. This is computed FIRST and feeds the pass/fail
-  # decision — the raw count checks below are belt-and-suspenders (they also cover
-  # the in_scope-empty case). Identity-first defeats the duplicate/extra-entry
-  # evasion where raw `### Bead`/`Status:` counts reach N while a DISTINCT in-scope
-  # bead is entirely absent (a retried/copy-pasted per-bead section) — the exact
-  # false-PASS ac-514 exists to prevent (review-finding, ac-514 hardening).
-  for id in $in_scope; do
-    grep -qE "^### Bead[[:space:]]+${id}([[:space:]:]|$)" "$pf" 2>/dev/null || missing="${missing:+$missing }$id"
+    # Collect this file's '### Bead <id>' header ids into the running union. Bead
+    # ids run up to the first whitespace or ':' (the title separator).
+    ids=$(grep -oE '^### Bead[[:space:]]+[^[:space:]:]+' "$pf" 2>/dev/null | sed -E 's/^### Bead[[:space:]]+//')
+    union_ids="${union_ids}"$'\n'"${ids}"
+
+    entry_count=$(grep -oE '^### Bead [^:]+' "$pf" 2>/dev/null | sed -E 's/^### Bead[[:space:]]+//' | sed -E 's/[[:space:]]+$//' | grep -c . )
+    status_count=$(grep -cE '^-[[:space:]]*Status:' "$pf" 2>/dev/null)
+    tally=$(grep -oE 'COMPLETED:[[:space:]]*[0-9]+[[:space:]]*/[[:space:]]*[0-9]+' "$pf" 2>/dev/null | tail -1)
+
+    if [ "$n" -le 1 ]; then
+      # Single-bead FILE (incl. one-line investigation verdicts) — WARN only.
+      if [ "$entry_count" -lt 1 ] || [ -z "$tally" ]; then
+        echo "beads-closed-gate: WARNING (single-bead wave, N=$n) — progress.md '$pf' is thin (entries=$entry_count, tally='${tally:-none}'); recording, not blocking." >&2
+      fi
+      continue
+    fi
+
+    # Multi-bead FILE (N>1) — per-file structural self-consistency (HARD-FAIL).
+    if [ "$entry_count" -lt "$n" ] || [ "$status_count" -lt "$n" ]; then
+      structural_problem="${structural_problem:+$structural_problem; }file '$pf': only $entry_count per-bead '### Bead' entries ($status_count with a Status line) for N=$n beads"
+    fi
+    if [ -z "$tally" ]; then
+      structural_problem="${structural_problem:+$structural_problem; }file '$pf': missing 'COMPLETED: n/N' tally"
+    else
+      done_n=$(printf '%s' "$tally" | grep -oE '[0-9]+' | head -1)
+      if [ "${done_n:-0}" -lt "$n" ]; then
+        structural_problem="${structural_problem:+$structural_problem; }file '$pf': COMPLETED tally short ('$tally', expected n=$n)"
+      fi
+    fi
   done
-  [ -n "$missing" ] && problems="in-scope bead(s) with no '### Bead <id>' result entry: $missing"
-  if [ "$entry_count" -lt "$n" ] || [ "$status_count" -lt "$n" ]; then
-    problems="${problems:+$problems; }only $entry_count per-bead '### Bead' entries ($status_count with a Status line) for N=$n beads"
+
+  # No file yielded a TARGET_BEADS header — nothing to assess (matches the
+  # pre-multi-file "unresolvable progress file is a skip" behavior).
+  [ "$valid_files" -eq 0 ] && return 0
+
+  # Union coverage (identity-first): only a MULTI-bead in-scope batch blocks.
+  # Identity-first (a2ce4bd) defeats the duplicate/extra-entry count-evasion where
+  # raw `### Bead`/`Status:` counts reach N while a DISTINCT in-scope bead is
+  # entirely absent — now checked across the whole union rather than a single file.
+  local in_scope_count missing="" id
+  in_scope_count=$(printf '%s\n' $in_scope | grep -c . )
+  if [ "$in_scope_count" -gt 1 ]; then
+    for id in $in_scope; do
+      printf '%s\n' "$union_ids" | grep -qxF "$id" || missing="${missing:+$missing }$id"
+    done
   fi
-  if [ -z "$tally" ]; then
-    problems="${problems:+$problems; }missing 'COMPLETED: n/N' tally"
-  else
-    done_n=$(printf '%s' "$tally" | grep -oE '[0-9]+' | head -1)
-    if [ "${done_n:-0}" -lt "$n" ]; then
-      problems="${problems:+$problems; }COMPLETED tally short ('$tally', expected n=$n)"
-    fi
-  fi
+
+  local problems=""
+  [ -n "$missing" ] && problems="in-scope bead(s) with no '### Bead <id>' result entry in any provided progress file: $missing"
+  [ -n "$structural_problem" ] && problems="${problems:+$problems; }$structural_problem"
 
   if [ -n "$problems" ]; then
-    echo "beads-closed-gate: PROGRESS-INCOMPLETE (multi-bead wave, N=$n) — $problems." >&2
+    echo "beads-closed-gate: PROGRESS-INCOMPLETE — $problems." >&2
     [ -n "$missing" ] && echo "  Missing per-bead result entry for: $missing" >&2
-    echo "  A multi-bead wave must record a per-bead result + the COMPLETED tally so the retrospective reads every progress.md (decision ac-x9a)." >&2
+    echo "  A multi-bead wave must record a per-bead result + the COMPLETED tally so the retrospective reads every progress.md (decision ac-x9a); a parallel wave passes ALL child files via repeated --progress." >&2
     return 1
   fi
   return 0
@@ -169,7 +206,8 @@ check_progress_completeness() {
 
 # --- Parse flags + collect the union of assignee identities ---
 ALLOW_EMPTY=0
-PROGRESS_FILE="${PROGRESS_FILE:-}"
+ENV_PROGRESS="${PROGRESS_FILE:-}"   # single-file back-compat via env
+PROGRESS_FILES=()                   # REPEATED --progress flags accumulate here (ac-0wi)
 ASSIGNEES=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -182,15 +220,22 @@ while [ $# -gt 0 ]; do
         echo "beads-closed-gate: ERROR — --progress requires a path argument." >&2
         exit 2
       fi
-      PROGRESS_FILE="$2"; shift 2 ;;
+      PROGRESS_FILES+=("$2"); shift 2 ;;
     --) shift ;;
     *) ASSIGNEES+=("$1"); shift ;;
   esac
 done
 
-# Resolve the progress file: explicit flag/env wins, else $ARTIFACTS_DIR/progress.md.
-if [ -z "$PROGRESS_FILE" ] && [ -n "${ARTIFACTS_DIR:-}" ]; then
-  PROGRESS_FILE="$ARTIFACTS_DIR/progress.md"
+# Resolve the progress file SET (ac-0wi): explicit --progress flags (one or more)
+# win; else the $PROGRESS_FILE env (single); else $ARTIFACTS_DIR/progress.md. A
+# parallel wave passes every child's progress.md as repeated --progress flags in
+# ONE call — the union of their '### Bead <id>' entries must cover the batch.
+if [ "${#PROGRESS_FILES[@]}" -eq 0 ]; then
+  if [ -n "$ENV_PROGRESS" ]; then
+    PROGRESS_FILES+=("$ENV_PROGRESS")
+  elif [ -n "${ARTIFACTS_DIR:-}" ]; then
+    PROGRESS_FILES+=("$ARTIFACTS_DIR/progress.md")
+  fi
 fi
 
 # Fall back to $AGENT_NAME only when no positional identity was given.
@@ -260,7 +305,7 @@ warn_bead_bleed "$IN_SCOPE_IDS"
 # resolved progress file, names any missing in-scope bead ids. Skipped (rc 0) when
 # no progress file was provided.
 PROGRESS_RC=0
-check_progress_completeness "$PROGRESS_FILE" "$IN_SCOPE_IDS" || PROGRESS_RC=1
+check_progress_completeness "$IN_SCOPE_IDS" "${PROGRESS_FILES[@]}" || PROGRESS_RC=1
 
 echo "$OPEN"
 OPEN_RC=0
