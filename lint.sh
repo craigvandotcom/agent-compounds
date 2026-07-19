@@ -475,6 +475,30 @@ if ! grep -q "skill-hotfix:" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; the
   fail "G6: skills/ac-land/SKILL.md missing the skill-hotfix: emit instruction for the approved-upgrade apply case"
 fi
 
+# G7 (Wave-B bd-brv39.5): ac-land 1c UI suite RETIRED; ac-implement deferral re-pointed to
+# BOTH owners; ac-pipeline-builder ledger reconciled (doctrine-honesty — 1b test:all stays live).
+# G7a: the 1c UI Validation Suite block is gone from ac-land.
+check
+if grep -qF "1c. UI Validation Suite" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; then
+  fail "G7a: skills/ac-land/SKILL.md still contains the retired '1c. UI Validation Suite' block"
+fi
+# G7b: ac-implement's UI-validation deferral names BOTH new owners (batch-close smoke + qa-browser crawl).
+check
+if ! { grep -qF "ac-batch-close" "$AC_ROOT/skills/ac-implement/SKILL.md" 2>/dev/null \
+    && grep -qF "ac-qa-browser" "$AC_ROOT/skills/ac-implement/SKILL.md" 2>/dev/null; }; then
+  fail "G7b: skills/ac-implement/SKILL.md UI-validation deferral must name both owners (ac-batch-close + ac-qa-browser)"
+fi
+# G7c: ac-pipeline-builder QA-placement checkbox marked DONE.
+check
+if ! grep -qF "[x] **QA placement**" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null; then
+  fail "G7c: skills/ac-pipeline-builder/SKILL.md QA-placement checkbox not marked DONE ([x])"
+fi
+# G7d (doctrine-honesty): the 1b test:all land-refocus sub-item stays LIVE — NOT marked done/retired.
+check
+if ! grep -qF "STILL-LIVE" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null; then
+  fail "G7d: skills/ac-pipeline-builder/SKILL.md 1b test:all must remain a live/pending land-refocus item (not marked done/retired)"
+fi
+
 # ---------------------------------------------------------------------------
 # Check 12 — deployed-app conformance (C-series)
 # ---------------------------------------------------------------------------

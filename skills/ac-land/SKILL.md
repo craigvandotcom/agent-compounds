@@ -70,10 +70,10 @@ git diff --stat
 
 ### Declare the Run Ledger
 
-ac-land runs LAST and can compact mid-flight — Phase 1 alone carries two named compaction
-risks (a slow standalone-fallback `test:all` in 1b, a hung browser-tester in 1c) — and
+ac-land runs LAST and can compact mid-flight — Phase 1 alone carries one named compaction
+risk (a slow standalone-fallback `test:all` in 1b) — and
 teardown that never runs leaves zombies. Declare a run ledger with **one task per major
-section, including each of Phase 1's four sub-steps**, so a resumed session re-enters at the
+section, including each of Phase 1's three sub-steps**, so a resumed session re-enters at the
 exact sub-step instead of re-running quality gates or, worse, skipping teardown:
 
 ```
@@ -81,19 +81,18 @@ TaskCreate (one per section, in run order):
   1. Initialize                            in_progress
   2. File remaining work (1a)              pending
   3. Quality gates (1b)                    pending
-  4. UI validation suite (1c)              pending
-  5. Git ops — commit + push (1d)          pending
-  6. Learn (retrospective)                 pending
-  7. Compound (system upgrades)            pending
-  8. Hand off                              pending
-  9. Teardown                              pending
+  4. Git ops — commit + push (1c)          pending
+  5. Learn (retrospective)                 pending
+  6. Compound (system upgrades)            pending
+  7. Hand off                              pending
+  8. Teardown                              pending
 ```
 
 `TaskUpdate` each to `in_progress` when you start it and `completed` when done — the section
-headers below (`1a.` … `1d.`, then Phase 2 → Phase 4, then Teardown) map to these tasks 1:1;
+headers below (`1a.` … `1c.`, then Phase 2 → Phase 4, then Teardown) map to these tasks 1:1;
 mark task 1 `completed` now. `progress.md` remains the artifact-of-record for _what was
 accomplished_; the ledger tracks _where the run is_ — so a compacted conductor knows whether
-teardown (task 9) still owes work. The ledger tracks the RUN; beads stay the work atom.
+teardown (task 8) still owes work. The ledger tracks the RUN; beads stay the work atom.
 
 ---
 
@@ -127,7 +126,7 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 > **Tiered-testing model (parallel-execution doctrine §5, bd-pwt44).** Wave merges now run
 > **affected-only** CI, so at land time there is no fresh _full_ `test:all` for HEAD. Do NOT run a
 > blocking local `test:all` here — it's the exact full run the doctrine keeps OFF the loop's
-> critical path, and it starves the shared self-hosted runner. **Phase 1d no longer fires a
+> critical path, and it starves the shared self-hosted runner. **Phase 1c no longer fires a
 > full-suite CI run** — the between-publish full-suite proof is obtained at PUBLISH START instead:
 > `ac-publish` calls `ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to
 > the commit being published, before release. A nightly idle-time full run (`ac-prove`/
@@ -159,7 +158,7 @@ pnpm build:check
 
 > **STANDALONE ONLY — else SKIP.** Only run the block below if this is a standalone landing with
 > no full-suite CI path (no `quality-gate.yml` workflow in this repo, or a manual land with no
-> Phase 1d to follow). In the normal loop/tiered close, SKIP entirely: Phase 1d no longer fires any
+> Phase 1c to follow). In the normal loop/tiered close, SKIP entirely: Phase 1c no longer fires any
 > full-suite CI run (that proof now happens at publish start via `ac-prove`), and a blocking local
 > full run here is the exact run §5 moves off the critical path.
 >
@@ -195,89 +194,7 @@ If nothing changed (tree was already formatted), skip the commit.
 
 Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 
-### 1c. UI Validation Suite
-
-After code quality gates pass, run UI validation for any session that changed runtime code.
-
-**Skip ONLY if:**
-
-- Session was purely docs/config with zero runtime code changes (no .tsx/.ts in app/, features/, lib/, components/)
-
-**Run if ANY runtime code was changed** (API routes, UI components, hooks, utils).
-
-#### Step 1: Verify Browser Testing Availability (MANDATORY)
-
-You MUST check both paths before concluding browser testing is unavailable:
-
-```bash
-# Check 1: CLI tool
-which agent-browser 2>/dev/null && echo "AVAILABLE" || echo "NOT FOUND"
-```
-
-```
-# Check 2: Agent type (always available in Claude Code)
-# The `browser-tester` agent type is built-in — check available agent types in your system prompt
-```
-
-```bash
-# Check 3: Journey definitions
-ls .claude/skills/CORE/journeys/ 2>/dev/null
-```
-
-**All three must fail** before skipping. If `agent-browser` CLI exists OR `browser-tester` agent type is available, proceed with UI validation. Do NOT assume unavailability without running these checks.
-
-#### Step 1b: Pre-Warm Dev Server (before spawning browser agents)
-
-Cold Next.js / Turbopack pages trigger a full compile on first hit. If a browser-tester agent is the first to touch a journey's starting URL, the compile can stall the browser connection long enough that the `agent-browser` daemon hangs (5 minute+ retries, then daemon-busy errors). Pre-warm with curl first:
-
-```bash
-# Hit each journey's starting URL once — forces the compile to complete before agents connect
-curl -s -o /dev/null -w "%{url}: %{http_code} (%{time_total}s)\n" --max-time 60 http://localhost:3000/
-curl -s -o /dev/null -w "%{url}: %{http_code} (%{time_total}s)\n" --max-time 60 http://localhost:3000/login
-# Add curls for any other URLs the journeys will visit (food entry, dashboard, etc.)
-```
-
-A 200/307/308 in <2s means the page is warm. If a curl hangs >30s, that's a real problem to debug before spawning agents. Auth-gated pages (e.g. `/app`) returning 307 to `/login` is fine — testers handle their own auth.
-
-**Why this matters:** During the bd-3utx wave, skipping this cost ~10-15 minutes — first browser-tester agent hung waiting for cold compile, daemon went unresponsive, second agent had to be killed and restarted with manual pre-warm. Cheap to do, expensive to skip.
-
-#### Step 2: Route to Relevant Journeys
-
-Classify the session diff with the **shared classifier in `_shared/verification-gate.md`**
-(Step 1) — the same `CLASS_WEBUI` / `CLASS_WEBRT` greps `ac-merge` and the Verify gate use.
-Don't re-derive the classification in prose here; single-sourcing it keeps ac-land from
-over-testing non-UI `.ts` changes (e.g. a `lib/` util) that the gate would skip:
-
-- `CLASS_WEBUI` or `CLASS_WEBRT` set → route to the matched journeys below.
-- Neither set (backend/logic-only or docs) → skip UI validation, note why.
-
-Cross-reference the set classes with the project's journey definitions to pick which testers to run.
-
-#### Step 3: Spawn Testers
-
-**One tester per matched journey, all in parallel.** If 2+ journeys match, send all Task calls in a single message for concurrent execution.
-
-Use the prompt in **`references/ui-tester-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>` from Phase 0).
-
-> Substitute `<ARTIFACTS_DIR>` with the resolved path from Phase 0 (e.g., `/tmp/bead-work-2939805` for parallel mode, `/tmp/bead-work` for solo).
-
-#### Step 4: Review Results
-
-Read all report files from `<ARTIFACTS_DIR>/ui-suite-*.md` (use the resolved path from Phase 0).
-
-- **All PASS:** Continue to git operations
-- **Any FAIL:** Fix the issue, re-run only the failing journey's tester, then continue
-- **Skipped:** Note "UI validation skipped (no browser tool / no journeys defined)"
-
-> **Visual evidence that needs Craig's eyes → UPLOAD it to Slack, never a `/tmp` path.**
-> When a UI-validation screenshot surfaces something for Craig's visual sign-off, upload
-> the actual image via `slack-send --file` per **`_shared/qa-shared.md` § Conductor /
-> worker evidence protocol** (message before `--file`, #sofi, include bead id + SHA +
-> what needs his judgment) — a `/tmp` path in a card is unreachable from his phone.
-
-Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
-
-### 1d. Git Operations
+### 1c. Git Operations
 
 ```bash
 git add <specific files>
@@ -305,7 +222,7 @@ CI dispatch, nothing to wait on. (A nightly idle-time full run via `ac-prove`/
 is the only full-suite checkpoint. Historical full-run receipts already on the evidence-log
 ancestry chain remain valid regardless — this doesn't touch them.)
 
-Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
+Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
 
 ---
 
@@ -323,7 +240,7 @@ Spawn the retrospective analyst using the prompt in **`references/retrospective-
 
 Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Apply the minimum bar: did this issue cause real waste THIS session? Drop anything that's "interesting but theoretical." Keep only items where you can point to a specific moment where time or resources were lost because the information wasn't available upfront.
 
-Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
+Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 
 ---
 
@@ -503,7 +420,7 @@ routine compounding so the `skill-hotfix:` commit touches exactly the edited `ta
 a cleaner per-file signal for dream's `git log --grep='^skill-hotfix' -- <target_file>`.
 Either one-commit-conditional or split-commit satisfies the convention.
 
-Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
+Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 
 ---
 
@@ -650,7 +567,7 @@ if [ -n "$RUN_ID" ]; then for d in /tmp/beadify-*-"$RUN_ID"/; do [ -d "$d" ] && 
 if [ -n "$RUN_ID" ]; then for d in /tmp/hygiene-*-"$RUN_ID"/; do [ -d "$d" ] && echo "teardown: removing own $d" && rm -rf "$d"; done; fi
 ```
 
-Mark ledger task 8 `completed`; `TaskUpdate` task 9 `in_progress`.
+Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
 
 ### Teardown (operational — part of landing)
 
@@ -698,7 +615,7 @@ git log --oneline -1  # Latest commit pushed
 br ready --json     # What's left
 ```
 
-Mark ledger task 9 `completed` — the run is landed.
+Mark ledger task 8 `completed` — the run is landed.
 
 ---
 

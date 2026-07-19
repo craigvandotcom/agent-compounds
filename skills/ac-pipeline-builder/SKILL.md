@@ -337,7 +337,8 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 - **Stay thin / map not territory.** This doc names stages and gates; it never restates a
   stage's internal logic. Selection logic lives in `_shared/verification-gate.md`; QA method
   in `_shared/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
-  `_shared/session-teardown.md` is *planned* — see the conformance checklist, not yet built).
+  `_shared/session-teardown.md` was *planned* but is now a RETIRED premise — Wave-B
+  bd-brv39.5 cut WS5a; teardown stays inline in `ac-land` Phase 4, no shared file).
 - **Naming.** `ac-*` = the pipeline family; `-builder` = the doctrine/method meta-skill
   (cf. `skill-builder`, `agent-builder`).
 
@@ -349,9 +350,13 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - [x] **Verify gate** — `_shared/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
 - [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner (this sweep, 2026-07-03).
-- [ ] **Land refocus** — strip 1b `test:all` + 1c UI suite; add scoped `_shared/session-teardown.md`; reassign push to merge. (tracked: Wave B plan — land refocus — restructure, not sweep)
+- [ ] **Land refocus** — bundled item SPLIT into its four sub-items (Wave-B bd-brv39.5); parent stays open while the 1b sub-item is live:
+  - [x] strip **1c UI suite** — DONE (retired from `ac-land`, Wave-B bd-brv39.5).
+  - [ ] strip **1b `test:all`** — SEPARATE, STILL-LIVE land-refocus item; the standalone-fallback `test:all` in `ac-land` 1b still exists. NOT a retired premise — pending.
+  - [ ] add scoped `_shared/session-teardown.md` — RETIRED premise (WS5a cut; never built; teardown stays inline in `ac-land`).
+  - [ ] reassign push to merge — RETIRED premise (void under trunk-direct; commit=push, no push-reassignment to `ac-merge`).
 - [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
-- [ ] **QA placement** — retire `ac-land` 1c; one exhaustive browser crawl at publish. (tracked: Wave B plan — land refocus — restructure, not sweep)
+- [x] **QA placement** — retire `ac-land` 1c (DONE, Wave-B bd-brv39.5): 1c UI suite removed from `ac-land`; per-batch smoke via `ac-batch-close`→`ac-qa-browser` (registry-driven, criticality ≥ core) + one exhaustive `ac-qa-browser` crawl at publish; `ac-implement`'s deferral re-pointed to both owners.
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
 - [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `_shared/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `_shared/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
 
@@ -361,5 +366,5 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - Runtime conductor: `ac-loop/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
-- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · `_shared/session-teardown.md` (cleanup — *planned*, not yet built)
+- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · session teardown stays inline in `ac-land` Phase 4 (`_shared/session-teardown.md` — RETIRED premise, Wave-B bd-brv39.5: WS5a cut, never built)
 - Context/memory doctrine (sibling): `context-engineering`
