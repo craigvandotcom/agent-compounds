@@ -57,7 +57,8 @@ applies** — it only emits; the auto-apply lives in the daily job (Stage-1 auto
 
 **Hard rules:** review-only (emit proposals, never edit targets) · evidence or it doesn't
 ship (every proposal cites concrete lessons/commits) · dedupe against ALL prior proposals
-(including rejected — never re-propose verbatim) · this skill is itself a valid proposal
+(including rejected — never re-propose verbatim; dedupe ALSO covers out-of-band `skill-hotfix:`
+hatch applies — executable check in Phase 5 Emit) · this skill is itself a valid proposal
 target (the cycle may propose upgrades to `dream`/`reflect`/`context-engineering`).
 
 ### Create Workflow Tasks (run ledger — CYCLE mode)
@@ -251,6 +252,31 @@ judge: {score: N, reason: "<one line>"}
 ## Why (compounding case)
 <which future sessions get faster, citing the evidence>
 ```
+
+**Hotfix-hatch dedupe (per-proposal, at emit — keys on this proposal's `target_repo:` +
+`target_file:`).** As each candidate proposal is emitted here — before/while writing its
+`NN-<slug>.md` — check whether the edit it would make was ALREADY hand-applied out-of-band
+via `ac-land`'s `skill-hotfix:` hotfix hatch (a same-session approved-upgrade apply leaves no
+proposal record, so without this check dream would re-propose it). Because `target_repo:` and
+`target_file:` are only assigned right here in the frontmatter block above (they do not exist
+before Phase 5), this executable step MUST live here in Phase 5 — NOT at the CYCLE Hard-rules
+line and NOT in REVIEW mode (REVIEW only applies already-emitted proposals; the re-proposal
+this prevents happens at CYCLE generation/emit time). Run the check **inside a checkout of the
+proposal's own `target_repo`** (proposals span repos — `root | agent-compounds | <app>` — so
+scanning agent-compounds alone would miss app-repo hotfixes):
+
+```bash
+cd <target_repo_path>   # root=~/Repos · agent-compounds=~/Repos/neometa/software/agent-compounds · <app>=~/Repos/neometa/software/<app>
+git log --grep='^skill-hotfix' --format='%H %s' -- <target_file>
+```
+
+A hit means this proposal's edit was already applied via the hotfix hatch → **do NOT emit the
+proposal** (or emit it flagged `already-applied` in `INDEX.md`'s considered-&-cut). No schema
+change — `target_repo:`/`target_file:` already exist. **Legacy proposals predating those two
+fields** fall back to a repo-wide scan with no path filter (`git log --grep='^skill-hotfix'`
+inside the best-guess target repo). This complements — does not replace — the Hard-rules
+"dedupe against ALL prior proposals" line (which only covers prior *proposals*, not out-of-band
+hatch applies).
 
 Always write `summary:` — it seeds the decision bead's framing and the digest nudge. State
 the *effect* ("Adds a memory rule so future X stops re-debugging Y"), not the file path. A
