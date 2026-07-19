@@ -67,7 +67,7 @@ printf '%s\n' "$FILES" | grep -qE 'app/api/|route\.(ts|js)$|middleware|hooks/|li
 printf '%s\n' "$FILES" | grep -qE 'lib/|utils/|server|supabase/|migrations?/|\.sql$' && CLASS_LOGIC=1
 
 # Any runtime code at all (i.e. NOT pure docs/test/CI) → review runs
-printf '%s\n' "$FILES" | grep -qvE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/' && CLASS_RUNTIME=1
+printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/' | grep -q . && CLASS_RUNTIME=1
 ```
 
 **Change classes:**
