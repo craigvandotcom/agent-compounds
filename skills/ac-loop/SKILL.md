@@ -167,6 +167,26 @@ export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dir
 
 Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fresh sessions and self-register independently — the loop's `AGENT_NAME` is not inherited (Tier-1 minting, the two-tier contract: `_shared/agent-identity.md` — parallel children must be distinct identities for reservations to protect between them).
 
+### Sweep Stale Reservations (Layer 3 — pre-run backstop)
+
+Before reading the board, sweep any file reservations stranded by a **prior run that died before
+its `ac-land` teardown** (doctrine `_shared/agent-identity.md` Deregistration, Layer 3). List this
+project's active reservations and, for any hold older than the reservation TTL floor (7200 s) that
+`force_release_file_reservation`'s abandonment heuristics confirm is stale, release it:
+
+```
+mcp__mcp-agent-mail__force_release_file_reservation(
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — never absolute (_shared/agent-identity.md § Project key format)
+  path: "<stale reservation path>"      // the tool validates abandonment heuristics before releasing
+)
+```
+
+This is a stale-**RESERVATION** sweep ONLY — mirror the Exit-Land teardown's force_release loop, and
+like it do NOT `retire_agent`/`deregister_agent`: there is **no identity TTL**, and name-only
+cross-session identity retire is rejected at runtime (decision `ac-ycr.8`). A dead run's identity
+persists as harmless roster noise until the upstream admin-sweep primitive (`ac-rjh`) lands; only its
+reservations — the safety-critical half — are swept here.
+
 ### Read Current Board State
 
 Read the current state of the board. This is the map you navigate by.
@@ -913,9 +933,12 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > plus every child identity this run registered (gather the child names from the per-child
 > summaries you collected this run; if any summary omitted its registered name, `list_window_identities`
 > for this project fills the gap). Teardown consumes this roster: for each name still registered,
-> `retire_agent` it (token optional) + `force_release_file_reservation` on its stale holds, then
-> verify the roster is clean. (Your own conductor name stays on the roster but is deregistered by
-> YOU below, after land returns — land cannot reach a still-live conductor.)
+> `force_release_file_reservation` on its stale holds, then verify the roster is clean. Layer 2 is
+> **reservations-only** — do NOT `retire_agent`/`deregister_agent` the roster names: name-only
+> cross-session identity retire is rejected at runtime (decision `ac-ycr.8`; tokens live with the
+> minting session), so a dead child's identity persists as harmless roster noise. (Your own
+> conductor name stays on the roster but is deregistered by YOU below, after land returns — land
+> cannot reach a still-live conductor.)
 > You are post-merge on `main`. This is a HEADLESS land: system-upgrade proposals become
 > deduped `human-gate` decision beads per `_shared/disposition.md` — never Slack cards,
 > never `AskUserQuestion`, do NOT block.
@@ -923,9 +946,10 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 
 ### Deregister the conductor identity (Layer 1 — the loop's true last act)
 
-`ac-land` sweeps the child identities on the `AGENT_MAIL_ROSTER` handed to it in the Exit-Land
-prompt above (Layer 2 — `retire_agent` + `force_release_file_reservation`, then verifies clean),
-but it **cannot** deregister the conductor's own name — the conductor is still alive, invoking
+`ac-land` sweeps the child identities' stale reservations on the `AGENT_MAIL_ROSTER` handed to it
+in the Exit-Land prompt above (Layer 2 — `force_release_file_reservation` only, then verifies clean;
+identities are NOT retired — name-only cross-session retire is rejected at runtime, decision
+`ac-ycr.8`), but it **cannot** deregister the conductor's own name — the conductor is still alive, invoking
 it. So **after `ac-land` returns**, the conductor's actual final act is to deregister its OWN
 minted `AGENT_NAME` (the one registered in Phase 0). By name — `registration_token` optional
 (doctrine: `_shared/agent-identity.md` Deregistration, Layer 1):

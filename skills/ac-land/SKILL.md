@@ -595,13 +595,15 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
    reservations to TTL-expire.
    Then perform the **Layer-2 roster sweep** (doctrine `_shared/agent-identity.md` wiring
    `ac-ycr.5`): the Exit-Land prompt handed you `AGENT_MAIL_ROSTER` = the loop conductor's name
-   plus every child identity this run registered. For each name on that roster still registered
-   (skip the live conductor — it deregisters itself after you return), `retire_agent <name>`
-   (`registration_token` optional — the by-name sweep works without token custody) and
+   plus every child identity this run registered. Layer 2 is **reservations-only** — for each name
+   on that roster (skip the live conductor — it deregisters itself after you return), run ONLY
    `force_release_file_reservation` on any stale holds it left (the tool validates abandonment
-   heuristics before releasing). Then VERIFY the roster is clean — re-list the project's
-   identities and confirm no swept child remains active. This is the backstop for children that
-   died before their own Layer-1 self-deregister; do not skip it on an empty-looking roster.
+   heuristics before releasing). Do NOT `retire_agent`/`deregister_agent` the roster names:
+   name-only cross-session identity retire is rejected at runtime (decision `ac-ycr.8`; tokens live
+   with the minting session), so a dead child's identity persists as harmless roster noise until the
+   upstream admin-sweep primitive lands. Then VERIFY the reservations are clear — re-list the
+   project's holds and confirm no swept child reservation remains. This is the backstop for children
+   that died before their own Layer-1 self-deregister; do not skip it on an empty-looking roster.
 3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session
    trips over is a teardown failure. If concurrent-session files are present and not yours
    (unmerged `UU`, stray staged files), surface them in the summary — don't silently leave
