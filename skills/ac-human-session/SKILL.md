@@ -121,13 +121,15 @@ The first line is the whole sit-down in one glance (lead with it). Rough the `~{
 
 ## Phase 4: The Three Tiers (silver platter, exit-first)
 
-Order = distance from a stall: clear what's stopped, then feed backward. Omit any empty tier.
+Order = distance from a stall (tier-first); **within a tier, oldest-bead-first** — the longest-stalled item surfaces above fresher ones so an aging blocker can't hide behind newer arrivals. Clear what's stopped, then feed backward. Omit any empty tier.
+
+Age is **derived, never separately queried**: every board pull this skill already makes carries `created_at` per bead — the org-wide sweep above (`br list --json --limit 1000`) AND the default single-project board pull (via `_shared/board-scan.md`). Compute `now − created_at` from whichever pull feeds the docket and render it as a compact age token (e.g. `12d`) on each bead line — add no new `br` invocation.
 
 ```
 ### 🔴 Blocking — the line has stopped ({N})
    For each: {what} · {one-line memo/why} · → {action}
-   • {bead id} {decision title} — {memo summary}           → decide        (tap-ready)
-   • {bead id} {decision title} ⚠ no memo                  → frame, then decide
+   • {bead id} {age} {decision title} — {memo summary}      → decide        (tap-ready)
+   • {bead id} {age} {decision title} ⚠ no memo             → frame, then decide
    • CI {run} failed                                        → investigate
    • {N} dependabot/grouped PRs                             → review as ONE batch
    • PR #{n} {substantive title}                            → review/merge (one each)
