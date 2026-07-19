@@ -291,6 +291,44 @@ Read each new migration and classify it per `rule-migrations-expand-contract`:
 - **Backward-incompatible change bundled into one migration:** → **stop**, split into an expand-now /
   contract-later pair.
 
+### Zero-pending-on-prod backstop (state-based — in addition to the classifier above)
+
+The `git diff "$LAST_RELEASE"..` classifier above reasons only about migrations added in **this**
+release window and only catches what it classifies. It cannot see a migration merged **before** the
+last tag that was never pushed, or a `db push` that silently failed. So, **in addition** to it, run a
+positive state assertion straight against prod — what **is** applied, not what should be — as a
+last-line **backstop** (normally a no-op once `db-deploy.yml` applies expands at merge-time; this
+catches the miss):
+
+```bash
+# Reuse the proven remote-list mechanism from scripts/ci/db-deploy-push.sh (do NOT invent a new one):
+# link to prod (BCA is the canonical migration host — rule-cross-app-migrations-bca-host), then list.
+supabase link --project-ref "${PROJECT_REF}" --password "${SUPABASE_DB_PASSWORD}"
+LIST="$(supabase migration list --password "${SUPABASE_DB_PASSWORD}" 2>&1)"
+echo "${LIST}"
+# Fail CLOSED on unexpected shape (same guard as db-deploy-push.sh): the parse needs the pipe table.
+printf '%s\n' "${LIST}" | grep -q '|' || { echo "migration list not pipe-delimited — cannot verify pending; BLOCK"; exit 1; }
+# Columns: Local | Remote | Time. A row with a Local version but an EMPTY Remote = pending (local
+# migration not yet applied to prod) — the inverse of the drift row db-deploy-push.sh aborts on.
+echo "${LIST}" | awk -F'|' 'NR>2 { l=$1; r=$2; gsub(/[[:space:]]/,"",l); gsub(/[[:space:]]/,"",r);
+    if (l!="" && r=="") found=1 } END { exit (found?1:0) }' \
+  && echo "Zero pending on prod — backstop clear." \
+  || echo "PENDING migrations on prod — apply then re-check (below)."
+```
+
+- **Require ZERO pending.** If the list shows any local migration with an empty Remote column, the
+  ship is **blocked** until it is applied — same block-not-warn semantics as the expand/contract
+  classifier above.
+- **If any are pending:** apply them now — `supabase db push` (collision-aware, exactly the expand
+  path above: `migration fetch` → review → `db push` → verify). Publish is human-triggered, so
+  `rule-shared-supabase-schemas` is satisfied and Craig confirms the push. Then **re-run
+  `supabase migration list` and confirm zero pending** before proceeding.
+- **Post-apply ops (non-blocking follow-through, NOT part of the gate):** if a just-applied
+  migration's body or its originating bead documents a required post-apply step (e.g.
+  `VACUUM ANALYZE`), run it now and note it in the ship report. This is conditional on such
+  documentation existing — absence of any documented step means there is nothing to run, and it
+  never blocks the ship.
+
 This gate blocks the ship; it is not a warning.
 
 **TaskUpdate("Migration safety", completed)**
