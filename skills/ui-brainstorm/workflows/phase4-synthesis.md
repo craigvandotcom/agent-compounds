@@ -293,7 +293,7 @@ Meta-model should produce:
 - GPT: [Tendencies observed]
 - Gemini: [Tendencies observed]
 
-**Save to playbook:** `cm context "ui brainstorm" --json`
+**Save learnings:** via the reflect skill (session-end capture to the memory substrate). **Retrieve past learnings:** `qmd query "ui brainstorm" --json`
 ```
 
 ---

@@ -473,7 +473,7 @@ echo "--- Check 12: deployed-app conformance (C-series) ---"
 # (lint.sh's own dead-pattern lists, BCA's _plans/research write-ups, etc.) that
 # legitimately mentions these strings as history/examples rather than live guidance.
 C1_PATTERN='/ac/bead-work|/ac/wave-merge|/ac/backlog-add|/ac/bead-land|/ac/work-review'
-C2_PATTERN='cm context|cass search'
+C2_PATTERN='cass search'
 C3_PATTERN='bead-work|wave-merge'
 
 for dir in "${CONSUMER_DIRS[@]}"; do

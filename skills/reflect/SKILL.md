@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Called by ac-land; also runs standalone. NOT for mid-task notes (that is the memory-capture agent), full bead-work closure (that is ac-land), or cross-session synthesis/lint (that is dream).
+description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Called by ac-land; also runs standalone. NOT for full bead-work closure (that is ac-land) or cross-session synthesis/lint (that is dream).
 ---
 
 # reflect — close the write loop
@@ -21,7 +21,10 @@ routed so they compound. The capture half of the AI-native-org write loop.
 "save lessons", "remember this", "compound this session".
 
 **When NOT to use:**
-- Mid-task fact capture → the continuous **memory-capture agent** already does this (root-repo harness only); in app sessions just capture at session end.
+- Mid-task fact capture → no live agent does this continuously (the former
+  memory-capture agent is archived, `.claude/agents/_archive/memories-capture.md`);
+  capture happens at this skill's own session-end trigger, or asynchronously via the
+  nightly context-mining job and knowledge-triage — not mid-task.
 - Full bead-work closure (land + quality gates + retrospective) → **ac-land** (which
   calls this skill for its capture step).
 - Pure conversation with no reusable learning → nothing to capture; say so and stop.

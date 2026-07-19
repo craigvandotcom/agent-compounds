@@ -14,8 +14,7 @@ qmd search "<task keywords>" --limit 5
 
 **The full recall stack (know these cold):** `qmd query "X" --json` (knowledge +
 memory + wiki lobes) · `cass search "X" --json` (past agent-session transcripts —
-"did we discuss X?") · `cm context "<task>" --json` (procedural playbook rules).
-Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
+"did we discuss X?"). Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
 
 **Order of operations:** If the user prompt is a scheduled job (a pai-scheduler
 prompt_file or other automated instruction), run its first step, then this recall
@@ -32,7 +31,6 @@ synthesis pages, and per-app lobes — `qmd status` lists them all with doc coun
 **Use qmd when:** the query needs past writing/notes/research, semantic understanding
 ("concepts related to X"), or any search across the vault.
 **Use cass when:** the question is about a past SESSION ("did we discuss/decide X?").
-**Use cm when:** starting a task that likely has procedural rules from prior runs.
 
 ---
 

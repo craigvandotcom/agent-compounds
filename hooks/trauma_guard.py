@@ -2,6 +2,15 @@
 """
 Dynamic Trauma Guard for Project Hot Stove.
 Reads from ~/.cass-memory/traumas.jsonl and .cass/traumas.jsonl to enforce safety.
+
+STATUS (verified 2026-07-19, brain-gap-plan Phase 0 item 1, org-bah): this hook is
+live-wired as a PreToolUse Bash hook in every harness (claude/codex/droid/grok — see
+hooks.json + settings.json), but ~/.cass-memory/traumas.jsonl does not exist on this
+machine and no project .cass/traumas.jsonl has ever been populated either (both repos
+that have a .cass/ dir contain only playbook.yaml, no traumas.jsonl). load_traumas()
+fails open on a missing file, so this guard currently matches nothing and silently
+no-ops on every Bash call. Left wired (not deleted) pending a decision on whether to
+seed a traumas store or retire the hook — see org-bah investigation notes.
 """
 import json
 import sys

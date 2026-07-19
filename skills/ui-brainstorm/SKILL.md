@@ -313,7 +313,7 @@ Persist via the reflect/context-engineering route (memory substrate), or the use
 - Model performance (which model's ideas win most)
 - Rubric refinements (adjust weights based on outcomes)
 
-**Command:** `cm context "ui brainstorm" --json` retrieves past design critique learnings (verified: `cm context` with `--json` flag works as of 2026-06-11)
+**Command:** `qmd query "ui brainstorm design critique" --json` retrieves past design critique learnings from the memory substrate (cm retired 2026-07-13, org-bah; capture now goes via the reflect skill, see below)
 
 ---
 

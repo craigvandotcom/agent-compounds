@@ -296,7 +296,7 @@ No ideas met user needs. Extract learnings for future.
 - [Suggested weight changes]
 ```
 
-**Save to playbook:** `cm context "ui brainstorm failures" --json`
+**Save learnings:** via the reflect skill (session-end capture to the memory substrate). **Retrieve past failures:** `qmd query "ui brainstorm failures" --json`
 
 ---
 
@@ -335,12 +335,11 @@ Suggested weights: [Updated based on outcomes]
 
 ### Storage Location
 
-**Playbook update:**
+**Memory substrate update:**
 
-```bash
-# After brainstorm session, reflect learnings
-cm reflect
-```
+Invoke the **reflect** skill at session end to capture learnings to the memory
+substrate (`infrastructure/memory/auto/` or the app-local equivalent) — typed
+fact/rule file + `MEMORY.md` index line, dedupe-over-append via `qmd search` first.
 
 **Manual tracking (optional):**
 `knowledge/2-areas/software/design-critiques/_learnings.md`:

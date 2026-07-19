@@ -6,7 +6,7 @@
   OUTPUT, delegate; if you need to SEE THE WORK, execute directly.*
 - **Memory & recall:** facts auto-inject per prompt (qmd over memory + wiki lobes).
   Deeper: `qmd query "X" --json` (knowledge) · `cass search "X" --json` (past agent
-  sessions — "did we discuss X?") · `cm context "<task>" --json` (procedural playbook).
-  Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
+  sessions — "did we discuss X?"). Full tool registry:
+  `~/Repos/.claude/skills/CORE/tools.md`.
 - **Git (root repo only):** after file changes under `~/Repos` outside app repos,
   commit + push. Never commit across repo boundaries in one operation.
