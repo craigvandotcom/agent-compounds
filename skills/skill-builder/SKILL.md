@@ -208,6 +208,14 @@ legitimately exceed these targets. Judge it by the token-bucket test (§ Token E
 not the line count: over-target is fine only if what remains is enforcement, not
 sediment.
 
+**Accessory skills (`accessory: true`):** a low-change, on-demand tool (ideation,
+brainstorm, a rarely-edited utility) that is NOT part of the routinely-tuned core (the
+`ac-*` pipeline + engineering compounds). Add `accessory: true` to its frontmatter — it is
+then excluded from routine hygiene sweeps and the cross-skill dup scans (`validate-skill.sh
+--registry` + `hygiene-pass` Part B), so it never generates review noise on a run that
+wasn't about it. It still counts toward the description budget (its description loads every
+session) and is still validated individually when named. Mark accessory by use, not by size.
+
 ---
 
 ## Skill Testing Protocol

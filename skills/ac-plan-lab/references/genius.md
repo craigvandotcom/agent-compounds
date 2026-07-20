@@ -1,15 +1,4 @@
----
-name: ac-plan-review-genius
-description: 'Use to forensically pressure-test an implementation PLAN, strategy, or roadmap for flaws, risks, and weak assumptions via multi-disciplinary first-principles review. Triggers: ''genius review the plan'', ''pressure-test this plan'', ''find flaws in the plan'', ''forensic plan review''. For a raw idea or concept (not a written plan) use ac-idea-review-genius.'
----
-
-# Plan Review Genius
-
-_Multi-disciplinary first-principles forensic review of any implementation plan, strategy, or roadmap_
-
----
-
-First: if an AGENTS.md file exists, read it for project context, architecture, and conventions.
+# Genius mode — forensic first-principles review of an implementation plan
 
 You are a polymath with mastery across engineering, science, philosophy, economics, and history - known for finding the one critical flaw everyone else missed. You've been asked to conduct the highest-stakes review of your career on the plan presented. Understand it completely before you critique anything. Be ruthlessly honest. A diplomatic review is a useless review.
 
@@ -114,45 +103,7 @@ If user needs to cherry-pick specific numbers, they can select "Other" and speci
 
 After receiving user selection, output the complete upgraded plan with selected changes integrated. Include a section documenting what was changed and why.
 
-### Step 5: Write Back to the Plan File
-
-This review is a gate in the planning chain, not a standalone chat exercise — the upgraded plan must land back in the plan file, or the next stage never sees it.
-
-1. **Edit the plan file in place** (Edit tool, not a rewrite) with the integrated changes from Step 4 — auto-applied critical fixes plus any user-selected items. Append a brief `## Genius Review Findings` section (or update it if present) summarizing what was changed and why, so a future reader doesn't need this session's transcript.
-2. **Update the plan's YAML frontmatter** — add or update:
-   ```yaml
-   ---
-   genius_reviewed: YYYY-MM-DD
-   ---
-   ```
-   Preserve all other existing frontmatter fields (`status`, `source_backlog`, `refinement_rounds`, etc.) as-is.
-3. **Safety check and commit:**
-   ```bash
-   git status --short
-   ```
-   If any deletions (`D`) appear that you didn't intend, STOP and confirm with the user before proceeding.
-   ```bash
-   git add "$PLAN_FILE"
-   git commit -m "docs(plan): genius review — {N} fixes integrated
-
-   Plan: {PLAN_FILE}
-   Auto-applied: {critical fix count}
-   User-selected: {selected count}
-
-   Co-Authored-By: Claude <noreply@anthropic.com>"
-   git push
-   ```
-
----
-
-## When to Use
-
-- Before committing to a major implementation effort
-- When evaluating project plans, feature roadmaps, or strategic initiatives
-- When something "feels right" but hasn't been stress-tested
-- As a devil's advocate for your own plans
-- When timeline or resource constraints feel aggressive
-- **Ordering:** runs AFTER `/ac-plan-refine-internal` / `/ac-plan-clean` (plan is already settled and hygienic) and BEFORE `/ac-beadify` (beads are cut from the pressure-tested version) — it is a review gate in the planning chain, not a detour.
+**Then write the result back to the plan file** — see SKILL.md § Write back to the plan file (shared by both modes).
 
 ## Tips
 
@@ -161,8 +112,4 @@ This review is a gate in the planning chain, not a standalone chat exercise — 
 - Step 11 is what separates critique from contribution - ALWAYS reconstruct the upgraded plan
 - Apply all lenses (engineer, scientist, economist, adversary) throughout
 - Works on technical plans, business strategies, content roadmaps, and life plans
-- Pairs well with plan-transcender-alien: run this first (perfect within paradigm), then alien (transcend paradigm)
-
----
-
-_Adapted from idea-review-genius for plan-specific forensics_
+- Pairs well with Alien mode: run Genius first (perfect within paradigm), then Alien (transcend paradigm)

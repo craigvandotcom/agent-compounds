@@ -164,6 +164,15 @@ inline (with the reason — usually A2-trap-1 or A3).
 
 Use when the ask is "clean up our skills" against a whole `skills/` dir, not one named skill.
 
+**Scope: skip accessory skills by default.** A skill with `accessory: true` in its frontmatter is a
+low-change, on-demand tool (ideation/brainstorm helpers, rarely-edited utilities) — NOT part of the
+routinely-tuned core (the `ac-*` pipeline + engineering compounds). `validate-skill.sh --registry`
+already excludes them from the dup scans; likewise **exclude them from the size ranking and the diet
+work-list** unless the user names one explicitly. They still count toward the description budget
+(their descriptions load every session), so a budget failure still surfaces them — but they never
+generate routine diet churn. Mark a skill accessory when it's used occasionally for extra thinking,
+not fine-tuned as part of the core set.
+
 ### B1. Scan and rank
 
 ```bash

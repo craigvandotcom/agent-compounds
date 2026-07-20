@@ -1,6 +1,6 @@
 ---
 name: ac-plan-init
-description: 'Use to CREATE a first-draft implementation plan from a backlog item or feature request — parallel explorers investigate, you synthesize an actionable plan with test specs. The entry point of the planning chain. Triggers: ''make a plan'', ''plan this feature'', ''plan init'', ''start a plan for X''. To improve an existing draft use ac-plan-clean / ac-plan-refine-internal / ac-plan-refine-external; to pressure-test it use ac-plan-review-genius / ac-plan-transcender-alien.'
+description: 'Use to CREATE a first-draft implementation plan from a backlog item or feature request — parallel explorers investigate, you synthesize an actionable plan with test specs. The entry point of the planning chain. Triggers: ''make a plan'', ''plan this feature'', ''plan init'', ''start a plan for X''. To improve an existing draft use ac-plan-clean / ac-plan-refine-internal / ac-plan-refine-external; to pressure-test or transcend it use ac-plan-lab (genius + alien modes).'
 ---
 
 
@@ -616,9 +616,8 @@ Plan creation (above) gets you to a first draft. Deepening, verifying, and press
 | `/ac-plan-refine-internal` | Multi-agent refinement (light/medium/heavy), no external AI |
 | `/ac-plan-refine-external` | Multi-model iterative refinement via 3–4 external AI models (OpenRouter) |
 | `/ac-plan-clean` | 3 Sonnet agents verify accuracy, structure, completeness (final polish) |
-| `/ac-plan-review-genius` | Multi-disciplinary first-principles forensic review of the plan |
-| `/ac-plan-transcender-alien` | Push the plan beyond human cognitive defaults — paradigm-breaking angles |
+| `/ac-plan-lab` | Deep analysis of the plan — genius mode (first-principles forensic review) + alien mode (push beyond cognitive defaults, paradigm-breaking angles) |
 | `/ac-beadify` | Plan ready — convert plan to beads with parallel validation (then `/ac-bead-refine`) |
 | `/ac-implement` | Beads refined — sequential implementation (conductor + engineer sub-agents) |
 
-Typical order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` → (`/ac-plan-refine-external` / `/ac-plan-review-genius` / `/ac-plan-transcender-alien` as warranted) → `/ac-beadify`.
+Typical order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` → (`/ac-plan-refine-external` / `/ac-plan-lab` as warranted) → `/ac-beadify`.

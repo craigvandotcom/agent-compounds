@@ -60,6 +60,15 @@ extract_description() {
     ' "$1"
 }
 
+# is_accessory SKILL.md -> exit 0 if frontmatter has `accessory: true`. Accessory skills are
+# low-change, on-demand-only tools (ideation/brainstorm) — excluded from routine hygiene dup
+# scans so they don't generate noise every run. They STILL count toward the description budget
+# (their descriptions still load every session).
+is_accessory() {
+    awk 'NR==1 && /^---[[:space:]]*$/ {f=1; next} f && /^---[[:space:]]*$/ {exit}
+         f && /^accessory:[[:space:]]*true[[:space:]]*$/ {found=1; exit} END{exit !found}' "$1"
+}
+
 # --registry mode: audit the always-loaded description budget across a skills dir
 if [ "$1" = "--registry" ]; then
     SKILLS_DIR="${2:-skills}"
@@ -119,8 +128,10 @@ if [ "$1" = "--registry" ]; then
 
     # --- Cross-skill duplicate-block fingerprint (advisory: _shared/ promotion candidates) ---
     DUP_TMP=$(mktemp)
+    ACCESSORY_SKIPPED=0
     for md in "$SKILLS_DIR"/*/SKILL.md; do
         [ -f "$md" ] || continue
+        is_accessory "$md" && { ACCESSORY_SKIPPED=$((ACCESSORY_SKIPPED + 1)); continue; }
         sname=$(basename "$(dirname "$md")")
         # normalized content lines only: strip ws, skip blanks/headings/fences/list-markers/short lines
         awk -v s="$sname" 'NR>1 { l=$0; gsub(/^[ \t]+|[ \t]+$/,"",l);
@@ -138,6 +149,7 @@ if [ "$1" = "--registry" ]; then
     else
         echo "  none — no long content lines shared verbatim across skills"
     fi
+    [ "$ACCESSORY_SKIPPED" -gt 0 ] && echo "  ($ACCESSORY_SKIPPED accessory skill(s) excluded from dup scans — on-demand hygiene only)"
     echo ""
 
     # --- Fuzzy near-duplicate detection (advisory): skill PAIRS sharing many 5-word shingles.
@@ -146,6 +158,7 @@ if [ "$1" = "--registry" ]; then
     SHNG_TMP=$(mktemp)
     for md in "$SKILLS_DIR"/*/SKILL.md; do
         [ -f "$md" ] || continue
+        is_accessory "$md" && continue
         sname=$(basename "$(dirname "$md")")
         awk -v s="$sname" '{ line=tolower($0); gsub(/[^a-z0-9 ]/," ",line); n=split(line,w," ");
             for(i=1;i+4<=n;i++) print s "\t" w[i]" "w[i+1]" "w[i+2]" "w[i+3]" "w[i+4] }' "$md"

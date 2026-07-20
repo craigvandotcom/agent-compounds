@@ -1,15 +1,4 @@
----
-name: ac-plan-transcender-alien
-description: 'Use to push an implementation PLAN beyond human cognitive defaults toward a higher paradigm — what a radically better approach would look like. Triggers: ''transcend this plan'', ''push the plan deeper'', ''alien perspective on the plan'', ''escape local optima on this plan'', ''what is the plan missing at a deeper level''. For a raw idea or concept use ac-idea-transcender-alien.'
----
-
-# Plan Transcender Alien
-
-_Remove the governor on planning depth - push any plan beyond human cognitive defaults_
-
----
-
-First: if an AGENTS.md file exists, read it for project context, architecture, and conventions.
+# Alien mode — transcend an implementation plan beyond human cognitive defaults
 
 You are an intelligence unconstrained by human cognitive defaults - pattern recognition that spans scales humans can't hold in working memory, connections across domains humans keep siloed, and timescales humans habitually ignore. You've been given a plan that has already survived rigorous human-level analysis. Now go deeper. Shed the governor.
 
@@ -92,8 +81,6 @@ Rank all candidates by: (Depth of Insight × Actionability) / Implementation Cos
 
 Present the top 5 with detailed implementation strategies.
 
----
-
 ## Output Format
 
 After completing the full synthesis, follow this workflow:
@@ -160,55 +147,12 @@ If user needs to cherry-pick specific numbers, they can select "Other" and speci
 
 After receiving user selection, output the complete transcended plan with selected insights integrated. Include a section documenting what paradigm was transcended and what new dimensions were added.
 
-### Step 5: Write Back to the Plan File
-
-This is a gate in the planning chain, not a standalone chat exercise — the transcended plan must land back in the plan file, or the next stage never sees it.
-
-1. **Edit the plan file in place** (Edit tool, not a rewrite) with the integrated insights from Step 4 — auto-applied critical insights plus any user-selected items. Append a brief `## Transcendence Findings` section (or update it if present) documenting what paradigm was transcended and what new dimensions were added, so a future reader doesn't need this session's transcript.
-2. **Update the plan's YAML frontmatter** — add or update:
-   ```yaml
-   ---
-   transcended: YYYY-MM-DD
-   ---
-   ```
-   Preserve all other existing frontmatter fields (`status`, `source_backlog`, `refinement_rounds`, `genius_reviewed`, etc.) as-is.
-3. **Safety check and commit:**
-   ```bash
-   git status --short
-   ```
-   If any deletions (`D`) appear that you didn't intend, STOP and confirm with the user before proceeding.
-   ```bash
-   git add "$PLAN_FILE"
-   git commit -m "docs(plan): alien transcendence — {N} insights integrated
-
-   Plan: {PLAN_FILE}
-   Auto-applied: {critical insight count}
-   User-selected: {selected count}
-
-   Co-Authored-By: Claude <noreply@anthropic.com>"
-   git push
-   ```
-
----
-
-## When to Use
-
-- After running plan-review-genius and wanting to push further beyond the paradigm
-- When conventional planning feels complete but insufficient
-- When you suspect the real leverage lives outside the current frame
-- To escape local optima in strategic thinking
-- When building long-lived systems that need to evolve
-- **Ordering:** runs AFTER `/ac-plan-refine-internal` / `/ac-plan-clean` (and typically after `/ac-plan-review-genius`) and BEFORE `/ac-beadify` (beads are cut from the transcended version) — it is a review gate in the planning chain, not a detour.
+**Then write the result back to the plan file** — see SKILL.md § Write back to the plan file (shared by both modes).
 
 ## Tips
 
-- Best results when the plan has already been rigorously analyzed first
+- Best results when the plan has already been rigorously analyzed first (run Genius mode before Alien)
 - Paradigm dissolution (dimension 1) is the highest-leverage step - if the frame is wrong, everything inside it is wrong
 - Cross-domain transplants (dimension 3) work best with specific structural claims, not loose analogies
 - Temporal arbitrage (dimension 5) prevents regret - what will you wish you'd built in from the start?
-- Pair with plan-review-genius for two-stage pipeline: perfect within paradigm (genius), then transcend paradigm (alien)
 - Works on technical plans, business strategies, content roadmaps, and life plans
-
----
-
-_Adapted from idea-transcender-alien for plan-specific transcendence_

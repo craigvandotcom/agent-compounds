@@ -941,7 +941,7 @@ AskUserQuestion(
     options: [
       { label: "Loop-ready — run plan-clean first (Recommended)", description: "Run /ac-plan-clean correctness check, then mark loop-ready so ac-loop picks it up" },
       { label: "Loop-ready — skip clean", description: "Mark loop-ready now — ac-loop will beadify and ship it autonomously" },
-      { label: "Enhance further", description: "Run /ac-plan-transcender-alien — paradigm-breaking alternative perspectives before deciding" },
+      { label: "Enhance further", description: "Run /ac-plan-lab (alien mode) — paradigm-breaking alternative perspectives before deciding" },
       { label: "Done for now", description: "Plan saved — mark loop-ready later when you're ready" }
     ]
   }]
@@ -1056,7 +1056,7 @@ FOCUS
 
 **Works well BEFORE:**
 
-- `/ac-plan-transcender-alien` - Paradigm-breaking alternative perspectives
+- `/ac-plan-lab` (alien mode) - Paradigm-breaking alternative perspectives
 - Implementation - Start building from validated plan
 
 **Works well AFTER:**
@@ -1069,7 +1069,7 @@ FOCUS
 1. **Brainstorm** → Explore approaches (ideation)
 2. **Draft** → Manual initial plan based on brainstorm recommendation
 3. **Refine** → `/ac-plan-refine-external` (this command) - Multi-model refinement
-4. **Enhance** → `/ac-plan-transcender-alien` - Alien perspective
+4. **Enhance** → `/ac-plan-lab` (alien mode) - Alien perspective
 5. **Implement** → Execute refined plan
 
 **Complementary commands:**

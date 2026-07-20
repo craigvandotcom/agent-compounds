@@ -42,7 +42,7 @@ For each target file:
 2. Extract every `Task(` block — the full prompt text between triple-quote delimiters
 3. For each prompt, capture: **skill/command name**, **agent role** (from persona), **model**, and **full prompt text**
 
-**Skip:** Files with no `Task(` blocks (e.g., `README.md`, single-agent skills like `ac-idea-review-genius`)
+**Skip:** Files with no `Task(` blocks (e.g., `README.md`, single-agent skills like `ac-idea-lab`)
 
 ---
 
