@@ -1,7 +1,8 @@
 #!/bin/bash
 # Validate skill meets standards
-# Usage: ./validate-skill.sh /path/to/skill/
-#        ./validate-skill.sh --registry /path/to/skills/   (description-budget audit)
+# Usage: ./validate-skill.sh /path/to/skill/            (single-skill checks)
+#        ./validate-skill.sh --registry /path/to/skills/ (budget + dup-fingerprint audit)
+#        ./validate-skill.sh --diff /path/to/skill/ <git-ref>  (enforcement-regression backstop)
 #
 # Checks (single skill):
 # - YAML frontmatter exists with name and description
@@ -9,6 +10,9 @@
 # - Description under 1024 chars
 # - SKILL.md under 500 lines (warning if over 400)
 # - Description contains trigger phrases (not just purpose)
+# - POINTER INTEGRITY: every references/|workflows/|tools/|_shared/ file named in the
+#   skill's .md files exists (hard fail if missing); reference files never pointed to
+#   are flagged as orphans (warn). _shared/ resolves against the parent skills dir.
 #
 # Checks (--registry):
 # - Sum of all model-invocable descriptions vs the skill-listing budget
@@ -21,6 +25,14 @@
 #   skill's files — a flipped skill is unreachable by the model, so such a
 #   reference is a broken chain. The graph is computed from the files every run;
 #   never classify a skill's flag from memory.
+# - CROSS-SKILL DUPLICATE FINGERPRINT (advisory): long content lines appearing verbatim
+#   in ≥2 skills — candidates to promote into skills/_shared/ (see structure-standard.md).
+#
+# Checks (--diff <ref>): enforcement-regression backstop for a diet/refactor. Flags
+# enforcement-shaped lines (TaskUpdate, Remember, MANDATORY, exact gates, MUST/NEVER/ALWAYS)
+# present at <git-ref> but absent from the CURRENT skill (any .md) — i.e. removed and NOT
+# relocated. A move is fine; a disappearance is a FAIL. Heuristic — verify hits against the
+# hygiene-pass CORE/EXTRACT/CUT ledger.
 
 set -e
 
@@ -105,6 +117,55 @@ if [ "$1" = "--registry" ]; then
         fi
     done
 
+    # --- Cross-skill duplicate-block fingerprint (advisory: _shared/ promotion candidates) ---
+    DUP_TMP=$(mktemp)
+    for md in "$SKILLS_DIR"/*/SKILL.md; do
+        [ -f "$md" ] || continue
+        sname=$(basename "$(dirname "$md")")
+        # normalized content lines only: strip ws, skip blanks/headings/fences/list-markers/short lines
+        awk -v s="$sname" 'NR>1 { l=$0; gsub(/^[ \t]+|[ \t]+$/,"",l);
+            if (length(l) >= 40 && l !~ /^[#|>*_+-]/ && l !~ /^```/ && l !~ /^[0-9]+\./) print s "\t" l }' "$md"
+    done > "$DUP_TMP"
+    DUP_OUT=$(sort -t"$(printf '\t')" -k2 "$DUP_TMP" | awk -F"$(printf '\t')" '
+        function emit(){ n=0; for(k in sk) n++; if (prev!="" && n>=2) printf "%d  %s\n", n, substr(prev,1,78) }
+        { if ($2==prev) { sk[$1]=1 } else { emit(); delete sk; sk[$1]=1; prev=$2 } }
+        END{ emit() }' | sort -rn | head -12)
+    rm -f "$DUP_TMP"
+    echo -e "${BLUE}🧬 Cross-skill duplicated lines (≥2 skills) — _shared/ promotion candidates${NC}"
+    if [ -n "$DUP_OUT" ]; then
+        echo "$DUP_OUT" | awk '{ printf "    %s\n", $0 }'
+        echo "  (verbatim lines shared across skills → consider skills/_shared/; see structure-standard.md)"
+    else
+        echo "  none — no long content lines shared verbatim across skills"
+    fi
+    echo ""
+
+    # --- Fuzzy near-duplicate detection (advisory): skill PAIRS sharing many 5-word shingles.
+    #     Catches reworded/synonym-swapped blocks the exact-line matcher misses (e.g. batch→wave).
+    #     Emits candidate pairs; a human/model makes the semantic call. Threshold tunable. ---
+    SHNG_TMP=$(mktemp)
+    for md in "$SKILLS_DIR"/*/SKILL.md; do
+        [ -f "$md" ] || continue
+        sname=$(basename "$(dirname "$md")")
+        awk -v s="$sname" '{ line=tolower($0); gsub(/[^a-z0-9 ]/," ",line); n=split(line,w," ");
+            for(i=1;i+4<=n;i++) print s "\t" w[i]" "w[i+1]" "w[i+2]" "w[i+3]" "w[i+4] }' "$md"
+    done | sort -u > "$SHNG_TMP"   # unique (skill, 5-gram) pairs
+    NEARDUP=$(sort -t"$(printf '\t')" -k2 "$SHNG_TMP" | awk -F"$(printf '\t')" '
+        function flush(){ delete A; m=0; for(k in S) A[m++]=k;
+            for(i=0;i<m;i++) for(j=i+1;j<m;j++){ p=(A[i]<A[j])?A[i]" ~ "A[j]:A[j]" ~ "A[i]; C[p]++ }
+            delete S }
+        { if($2!=psh){ flush(); psh=$2 } S[$1]=1 }
+        END{ flush(); for(p in C) if(C[p]>=8) printf "%d\t%s\n", C[p], p }' | sort -rn | head -10)
+    rm -f "$SHNG_TMP"
+    echo -e "${BLUE}🧪 Near-duplicate skill pairs (shared 5-word shingles ≥8) — reworded-block candidates${NC}"
+    if [ -n "$NEARDUP" ]; then
+        echo "$NEARDUP" | awk -F"$(printf '\t')" '{ printf "    %4d shingles  %s\n", $1, $2 }'
+        echo "  (high overlap = likely reworded/duplicated block; verify semantically, route real dups to _shared/)"
+    else
+        echo "  none above threshold"
+    fi
+    echo ""
+
     echo -e "${BLUE}📊 Registry description budget — $SKILLS_DIR${NC}"
     echo "  Model-invocable skills: $COUNT, total description chars: $TOTAL"
     echo "  (excluded manual-only skills: $MANUAL chars carry zero standing cost)"
@@ -125,6 +186,40 @@ if [ "$1" = "--registry" ]; then
         [ "$OVER_1024" -gt 0 ] && exit 1
         [ "$GRAPH_VIOLATIONS" -gt 0 ] && exit 1
         exit 0
+    fi
+fi
+
+# --diff mode: enforcement-regression backstop vs a git ref (diet/refactor guard)
+if [ "$1" = "--diff" ]; then
+    SKILL_PATH="${2:?usage: --diff <skill-dir> <git-ref>}"
+    REF="${3:?usage: --diff <skill-dir> <git-ref>}"
+    SKILL_MD="$SKILL_PATH/SKILL.md"
+    [ -f "$SKILL_MD" ] || { echo -e "${RED}❌ SKILL.md not found in $SKILL_PATH${NC}"; exit 1; }
+    RELMD=$(git -C "$SKILL_PATH" ls-files --full-name -- SKILL.md 2>/dev/null | head -1)
+    if [ -z "$RELMD" ]; then
+        echo -e "${YELLOW}⚠️  $SKILL_MD is not git-tracked (or no repo) — cannot diff${NC}"; exit 0
+    fi
+    OLD=$(git -C "$SKILL_PATH" show "$REF:$RELMD" 2>/dev/null || true)
+    if [ -z "$OLD" ]; then
+        echo -e "${YELLOW}⚠️  cannot read $REF:$RELMD — bad ref?${NC}"; exit 0
+    fi
+    echo -e "${BLUE}🛡️  Enforcement-regression check: $SKILL_PATH vs $REF${NC}"
+    # enforcement-shaped patterns; a removed match that no longer appears anywhere = regression
+    ENF_PAT='TaskUpdate|TaskCreate|Remember|MANDATORY|--limit 0|AskUserQuestion|\bMUST\b|\bNEVER\b|\bALWAYS\b|VERDICT|GUARD-RAIL|HARD STOP|Rule 0'
+    REGRESS=0
+    while IFS= read -r line; do
+        norm=$(printf '%s' "$line" | sed 's/^[ \t]*//; s/[ \t]*$//')
+        [ ${#norm} -lt 12 ] && continue
+        if ! grep -rqF -- "$norm" "$SKILL_PATH" --include="*.md" 2>/dev/null; then
+            echo -e "${RED}❌ removed, not relocated:${NC} ${norm:0:88}"
+            REGRESS=$((REGRESS + 1))
+        fi
+    done < <(printf '%s\n' "$OLD" | grep -iE "$ENF_PAT" || true)
+    echo ""
+    if [ "$REGRESS" -eq 0 ]; then
+        echo -e "${GREEN}✅ no enforcement-line regressions vs $REF (moves OK, nothing lost)${NC}"; exit 0
+    else
+        echo -e "${RED}❌ $REGRESS enforcement line(s) removed without relocation — check the diet ledger${NC}"; exit 1
     fi
 fi
 
@@ -294,6 +389,51 @@ fi
 if grep -q "^## Quick Reference" "$SKILL_MD"; then
     echo -e "${GREEN}✓ Found: 'Quick Reference' section${NC}"
     SECTIONS_FOUND=$((SECTIONS_FOUND + 1))
+fi
+
+# Check pointer integrity: every referenced support file exists; flag orphaned references
+echo ""
+echo -e "${BLUE}🔗 Checking pointer integrity...${NC}"
+SKILLS_PARENT=$(dirname "$SKILL_PATH")
+POINTER_MISSING=0
+# Two-tier, and always EXCLUDING fenced code blocks (which hold illustrative example paths).
+# Scope = SKILL.md spine only. A deliberate markdown-link pointer [text](path) is an unambiguous
+# claim the file exists → HARD FAIL if missing. A backtick/bare mention (`references/x.md`) is
+# often illustrative ("→ references/incidents.md or memory") or cross-skill shorthand
+# ("ac-prove/workflows/scheduled.md") → WARN only, for a human to judge.
+resolve_ref() { case "$1" in _shared/*) echo "$SKILLS_PARENT/$1" ;; *) echo "$SKILL_PATH/$1" ;; esac; }
+SKILL_BODY=$(awk '/^```/{f=!f; next} !f' "$SKILL_MD")
+LINK_REFS=$(printf '%s\n' "$SKILL_BODY" \
+    | grep -oE '\]\((references|workflows|tools|_shared)/[A-Za-z0-9._/-]+\.(md|json|txt|py|sh)\)' \
+    | sed -E 's/^\]\(//; s/\)$//' | sort -u || true)
+ALL_REFS=$(printf '%s\n' "$SKILL_BODY" \
+    | grep -oE '(references|workflows|tools|_shared)/[A-Za-z0-9._/-]+\.(md|json|txt|py|sh)' \
+    | sort -u || true)
+for ref in $LINK_REFS; do
+    if [ ! -f "$(resolve_ref "$ref")" ]; then
+        echo -e "${RED}❌ FAIL: broken link pointer: $ref${NC}"
+        POINTER_MISSING=$((POINTER_MISSING + 1)); ERRORS=$((ERRORS + 1))
+    fi
+done
+for ref in $ALL_REFS; do
+    printf '%s\n' "$LINK_REFS" | grep -qxF "$ref" && continue   # already reported as a link error
+    if [ ! -f "$(resolve_ref "$ref")" ]; then
+        echo -e "${YELLOW}⚠️  mentioned support file not found (illustrative or cross-skill? verify): $ref${NC}"
+        WARNINGS=$((WARNINGS + 1))
+    fi
+done
+[ "$POINTER_MISSING" -eq 0 ] && echo -e "${GREEN}✓ PASS: all markdown-link pointers resolve${NC}"
+# Orphan check: reference files never pointed to from any .md (warn — a stale/dead reference)
+if [ -d "$SKILL_PATH/references" ]; then
+    for f in "$SKILL_PATH"/references/*.md; do
+        [ -f "$f" ] || continue
+        base=$(basename "$f")
+        [ "$base" = "MAINTENANCE.md" ] && continue   # sidecar ledger: intentionally not pointed-to
+        if ! grep -rqF "references/$base" "$SKILL_PATH" --include="*.md" 2>/dev/null; then
+            echo -e "${YELLOW}⚠️  Orphaned reference (never pointed to): references/$base${NC}"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    done
 fi
 
 # Final summary

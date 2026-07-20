@@ -129,15 +129,26 @@ body = context · decision · rationale · consequences).
 catalog line in its `SKILL.md`. Even when reflecting inside an app repo, recipes go
 there — never start a parallel library.
 
-**skill-improvement** → **GATED.** Do not auto-apply — system behaviour changes need a
-human merge (rule 3 in `_shared/disposition.md`, consistent with ac-land's no-auto-apply).
-**Interactive:** present the exact proposed edit (target file + diff + the session evidence)
-and get explicit approval before writing. **Headless (no human present):** file it as a
-decision bead — `br create -t decision -p 3 -l human-gate,skill-improvement` with the memo
-(target · evidence · diff · recommendation), **dedupe-first** against open
-`skill-improvement` beads per `_shared/disposition.md` § Save-for-later. Never post it to
-Slack, never silently drop it — the bead is how the merge request survives an unattended
-session.
+**skill-improvement** → **risk-triage FIRST: does the lesson change what the skill DOES, or
+just how it's SHAPED?** (full boundary: `skill-builder/references/maintenance-ledger.md`).
+
+- **Shape / structure** (dedup, sediment, buried triggers, an extraction candidate, a near-dup,
+  content that should move to `references/`) → **append one line to the skill's Inbox** in
+  `<skill-dir>/MAINTENANCE.md` (create lazily per the ledger format), tagged
+  `[<date> · src:reflect]`. Low ceremony, **no human gate** — a hygiene-pass applies it later under
+  deterministic guards (`validate-skill.sh --diff` + survival gate). Do NOT file a bead for shape.
+- **Behavior / enforcement** (a new gate, a changed branch, a contract fix — anything that alters
+  what the skill does) → **GATED, unchanged.** Do not auto-apply — system-behaviour changes need a
+  human merge (rule 3 in `_shared/disposition.md`, consistent with ac-land's no-auto-apply).
+  **Interactive:** present the exact proposed edit (target file + diff + session evidence) and get
+  explicit approval before writing. **Headless:** file a decision bead —
+  `br create -t decision -p 3 -l human-gate,skill-improvement,skill:<name>` with the memo
+  (target · evidence · diff · recommendation), **dedupe-first** against open `skill-improvement`
+  beads per `_shared/disposition.md` § Save-for-later. Never post to Slack, never silently drop —
+  the bead is how the merge request survives an unattended session.
+
+When unsure which tier, treat it as **behavior** (escalate to the gated bead) — the shape lane is
+for changes a script can prove touched no enforcement.
 
 ### 6. Golden-set check (optional, rare)
 If the session produced a clearly-above-bar exemplar (a sharp plan, clean diff, good

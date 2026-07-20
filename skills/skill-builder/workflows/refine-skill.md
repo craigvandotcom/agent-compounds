@@ -76,6 +76,12 @@ removed or relocated until its inventory entry exists.
    script, or behind a condition-labeled pointer — and flags any rule that got weaker
    on the enforcement hierarchy. A weakened rule is a FAIL: restore it or move it up.
 
+**For a structural DIET (oversized SKILL.md, section-level extraction — not just rule
+polish), use `workflows/hygiene-pass.md` instead** — it adds the section-by-section
+CORE/EXTRACT/CUT cartography, the `_shared/` centralization decision, the orchestrator-trap
+gate for child-spawn prompts, and a registry-wide batch mode. Phase 3.0 here is the
+rule-granularity survival gate; hygiene-pass is the section-granularity diet that calls it.
+
 ### 3.1 Size Check
 
 If SKILL.md exceeds its target (and the excess is not enforcement content):
@@ -95,6 +101,9 @@ If SKILL.md exceeds its target (and the excess is not enforcement content):
 - Detailed procedures (workflows/)
 - Full tool documentation (tools/)
 - Background knowledge (references/)
+- **Blocks used verbatim by ≥2 skills → `_shared/`, not this skill's `references/`** (structure-standard § _shared/). If a rewrite target duplicates a block another skill also carries, promote to `_shared/` and repoint both — don't fork a second copy.
+
+> Progressive disclosure is for **optional payload only**. Never move enforcement content that loads every run behind a pointer (token-economics §3) — and never point a freshly-spawned child at a file (the orchestrator trap): its prompt must be pasted inline. See hygiene-pass A3.
 
 ### 3.3 Quick Reference Addition
 
@@ -128,12 +137,17 @@ Run test scenarios:
 
 ## Phase 5: Documentation Updates
 
-### 5.1 Update Cross-References
+### 5.1 Update Cross-References + Pointer Integrity
 
 If skill structure changed:
 - Update any skills that reference this one
 - Update agent definitions if applicable
 - Update CLAUDE.md if mentioned
+- **Grep the registry for the moved block's old section title / file path** — sibling skills that
+  pointed at it by name are now dangling; fix them in the same commit (coordinated multi-site edit).
+- **Re-run `validate-skill.sh <skill-dir>`** — the pointer-integrity check must pass (no reference
+  named in the spine is missing; no reference file is orphaned). A half-updated pointer graph is a
+  regression, not a refinement.
 
 ### 5.2 Version Note (optional)
 
