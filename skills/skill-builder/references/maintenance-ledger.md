@@ -57,9 +57,12 @@ spine_lines: <n> / target <≤500 orch | ≤400 knowledge>
 
 - **Inbox** is the next pass's agenda (shape only). Its behavior-tier counterpart lives in beads —
   the Health line links to it, this file never copies it.
-- **Holding pen** is quarantine, not a graveyard: every item carries a `review-by` date and a
-  `default` resolution. A pass that finds an expired item MUST resolve it (apply the default) or, if
-  it turns out to be a genuine behavior fork, escalate it to a `skill:<name>` decision bead.
+- **Holding pen** is **tier 3 of the promotion ladder** (`references/promotion-ladder.md`) — the
+  timed quarantine that unique content passes through before deletion, so knowledge is never silently
+  lost. Every item carries a `review-by` date + a `default` resolution (`promote`|`delete`). A pass
+  that finds an expired item MUST resolve it: reclaimed/re-added → it churns back up per the ladder's
+  proof rules; unclaimed past `review-by` with no churn → **git-delete with a Cut-log entry** (the
+  conservation record). Genuine behavior forks escalate to a `skill:<name>` decision bead instead.
 - **Cut-log** is the prose "why" that git history can't express; `git log -S` supplies the "how many
   times." Together they are the churn detector.
 

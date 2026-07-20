@@ -94,6 +94,8 @@ A non-trivial skill is a **lean spine that routes to references**, not a wall of
 
 Full rulebook (spine vs references vs `_shared/`, the orchestrator trap, pointer syntax, ToC rule): **[references/structure-standard.md](references/structure-standard.md)**. To *diet* an existing oversized skill (or batch-sweep the registry), run **`workflows/hygiene-pass.md`** — the callable "clean up our skills" procedure.
 
+**Moving content between tiers** (SKILL.md core ↔ `references/` ↔ holding zone) follows the promotion ladder: **up needs proof, down needs disuse, and unique content is never deleted without first aging in the holding zone** (`MAINTENANCE.md` § Holding pen) — so knowledge is never silently lost. Full rules + how ablation/metrics decide movement: **[references/promotion-ladder.md](references/promotion-ladder.md)**.
+
 ### 5. Token Economy — determinism first
 
 **Predictability is the virtue; token cost is a symptom.** Never ask "can this be
@@ -383,6 +385,7 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 | `references/structure-standard.md` | **The spine+references+`_shared` rulebook** — skill archetypes, the move-out decision tree, the orchestrator trap; read before writing/refactoring a large skill |
 | `references/token-economics.md` | **Loading model, hard budgets, determinism framework** — read before writing/refining descriptions or cutting content |
 | `references/maintenance-ledger.md` | **The per-skill `MAINTENANCE.md` format + lifecycle** — the shape-vs-behavior risk tiers; read when a hygiene-pass or reflect deposits/triages skill signal |
+| `references/promotion-ladder.md` | **The 3-tier insertion/deletion ladder** (SKILL.md core ↔ references ↔ holding zone) — up needs proof, down needs disuse, unique-deletes age in the holding zone first; how metrics/ablation decide movement; read before promoting content to core or deleting unique content |
 | `references/skill-template.md` | Copy-paste starting template for a new SKILL.md |
 | `references/best-practices.md` | Anthropic + community patterns (description, naming, progressive disclosure) |
 | `references/testing-patterns.md` | RED-GREEN-REFACTOR testing methodology |
