@@ -30,7 +30,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **ac-align** | Reconcile the pipeline with current strategy |
 | **ac-plan-init** | Create a first-draft implementation plan |
 | **ac-plan-clean** / **ac-plan-refine-internal** / **ac-plan-refine-external** | Verify / deepen a plan (correctness pass · multi-agent · multi-model) |
-| **ac-plan-review-genius** / **ac-plan-transcender-alien** | Forensic / paradigm-breaking review of a plan |
+| **ac-plan-lab** | Deep analysis of a plan — genius (forensic review) + alien (paradigm-breaking) modes |
 | **ac-bead-capture** | Capture a raw idea/bug/decision on the go as one properly typed, routed bead |
 | **ac-beadify** | Convert a refined plan into a beads task structure (create) |
 | **ac-bead-refine** | Refine beads to convergence — self-contained, agent-ready |
@@ -58,7 +58,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **brainstorming** | Divergent–convergent pre-planning ideation |
 | **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
-| **ac-idea-review-genius** / **ac-idea-transcender-alien** | Forensic / paradigm-breaking review of a raw idea |
+| **ac-idea-lab** | Deep analysis of a raw idea — genius (forensic review) + alien (paradigm-breaking) modes |
 | **audit** | The audit loop's checklist framework — severity-scored security/performance/tests/qa/ui sweeps of APP code, findings → beads (for auditing this registry itself → `ac-registry-audit`) |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
 | **workflow-builder** | Build a new orchestrated multi-step `/command` workflow — 6-phase build process, run-ledger + phase-skeleton + quality-gate standards |

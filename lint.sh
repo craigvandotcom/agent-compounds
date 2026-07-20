@@ -378,9 +378,9 @@ if ! { grep -q '`approved`' "$BEADIFY_MD" 2>/dev/null \
   fail "D4: skills/ac-beadify/SKILL.md missing the approved/loop-ready/refined status gate or its STOP semantic"
 fi
 
-# D5: BOTH ac-plan-review-genius and ac-plan-transcender-alien carry a write-back
+# D5: ac-plan-lab (merged genius+alien plan skill, 2026-07-20) carries the write-back
 # section (Write Back header, or the genius_reviewed/transcended frontmatter flags).
-for d5_skill in ac-plan-review-genius ac-plan-transcender-alien; do
+for d5_skill in ac-plan-lab; do
   check
   d5_target="$AC_ROOT/skills/$d5_skill/SKILL.md"
   if ! grep -qE "Write Back|genius_reviewed|transcended" "$d5_target" 2>/dev/null; then
