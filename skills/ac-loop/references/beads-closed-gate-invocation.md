@@ -2,8 +2,9 @@
 
 The loop's own pre-close gate (`ac-batch-close` no longer checks bead closure itself). The
 script is `_shared/scripts/beads-closed-gate.sh`; both Phase 1 (orphan batch) and Phase 2 (plan
-wave) invoke it identically at their step 6. This file holds the **why** behind each flag so the
-two spine sites keep only the command + exit-code decisions. Substitute this batch's ids/paths.
+wave) invoke it identically at their step 6. This file holds only the **why** behind each flag —
+the command, exit-code branches, and `post-merge`/nudge decision stay inline at both spine sites
+(enforcement). Substitute this batch's ids/paths.
 
 ## Identity set — pass the UNION (bd-w504y)
 Pass MY loop identity **plus** each delegated `ac-implement` identity from its summary. A
@@ -31,13 +32,5 @@ to exactly this batch. The identity-lifetime default would re-demand per-bead en
 batch as multi-bead. The OPEN-bead check stays identity-wide (a genuinely-open bead from any batch
 still blocks). Omit `--beads` only for a standalone single-batch run where identity == batch.
 
-## Exit codes
-`exit 0` = empty open-set, safe to close. `exit 1` = open beads remain. `exit 2` = FAIL-CLOSED
-(empty claimed-set / no identity — surface, do NOT proceed to close).
-
-## `post-merge` exclusion + open-bead handling
-`post-merge`-labelled beads are excluded — carried forward as known tails in the PR body, never
-blockers. If any genuinely open (non-`post-merge`) bead remains for this batch (`exit 1`), do NOT
-merge — surface via an advisory Slack nudge ("batch `<batch-id>` has `<N>` beads still open — not
-merging"), **no `AskUserQuestion`** (not a genuine human fork). Proceed to `ac-batch-close` only
-once the set is empty (`exit 0`).
+(Exit-code branches and the `post-merge`/nudge decision are enforcement — they stay inline at both
+step-6 spine sites, not here, so there is one canonical copy of each acting instruction.)
