@@ -413,26 +413,12 @@ If orphans exist:
 4. **Invoke `ac-review`** — use this delegation prompt:
    > "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch argument). This is an autonomous loop run. For DESIGN_DECISION or SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary with VERDICT: line."
 5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself):**
+6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
+   Pass the UNION of identities (loop + each delegated `ac-implement` identity), this batch's ids, and
+   its progress file(s). **Flag rationale (union / `--progress` / repeated-`--progress` parallel /
+   `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   # Pass the UNION of every identity that claimed into this batch: MY loop identity PLUS each
-   # delegated ac-implement identity from its summary (bd-w504y — querying only the loop identity
-   # would MISS a delegate's incremental claim and fail OPEN). Threading CLAIM_ASSIGNEE above
-   # already funnels those claims to $AGENT_NAME, so <delegated-identities…> is belt-and-suspenders.
-   # ac-514: pass THIS batch's progress.md so the completeness check runs — a multi-bead (N>1) wave
-   # whose progress.md lacks a per-bead result entry or the `COMPLETED: n/N` tally HARD-FAILS the
-   # close (names the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this
-   # batch's scratch dir. ac-0wi: for a PARALLEL wave whose children each wrote their OWN progress.md,
-   # pass ALL child files in ONE call as REPEATED --progress flags — the completeness check unions the
-   # `### Bead <id>` entries across every provided file and validates coverage against the whole
-   # in-scope set (a single child file alone would false-fail for missing its siblings' beads). Do NOT
-   # glob. Omitting --progress skips the check (pre-ac-514 behavior).
-   # ac-0i1: ALSO pass --beads with THIS batch's bead ids (comma-separated) so the completeness check
-   # scopes to exactly this batch — the identity-lifetime default would re-demand per-bead entries (and
-   # --progress files) for EARLIER batches' beads under the same loop identity, and mislabel a 1-bead
-   # batch as multi-bead. The OPEN-bead check stays identity-wide (a genuinely-open bead from any batch
-   # still blocks). Omit --beads only for a standalone single-batch run where identity == batch.
    bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
      --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
@@ -523,25 +509,11 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 4. **Invoke `ac-review`** with delegation prompt:
    > "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch argument) (ac-loop autonomous run). DESIGN_DECISION/SCOPE_ESCALATION: Exhaust Rule — create decision beads, do not AskUserQuestion. Exit after Phase 8 summary with VERDICT: line."
 5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself):**
+6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
+   Same gate as Phase 1 step 6 — pass the UNION of identities, this batch's ids, and its progress
+   file(s). **Flag rationale: `references/beads-closed-gate-invocation.md`.**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   # Pass the UNION: MY loop identity + each delegated ac-implement identity from its summary
-   # (bd-w504y — a delegate's incremental claim under its own name would otherwise be MISSED,
-   # failing the gate OPEN). CLAIM_ASSIGNEE threading already funnels claims to $AGENT_NAME.
-   # ac-514: pass this wave's progress.md so the completeness check runs — a multi-bead (N>1) wave
-   # whose progress.md lacks a per-bead result entry or the `COMPLETED: n/N` tally HARD-FAILS (names
-   # the missing bead ids); a single-bead wave only WARNs. $ARTIFACTS_DIR is this wave's scratch dir.
-   # ac-0wi: for a PARALLEL wave whose children each wrote their OWN progress.md, pass ALL child files
-   # in ONE call as REPEATED --progress flags — the completeness check unions the `### Bead <id>`
-   # entries across every provided file and validates coverage against the whole in-scope set (a single
-   # child file alone would false-fail for missing its siblings' beads). Do NOT glob. Omitting
-   # --progress skips the check (pre-ac-514 behavior).
-   # ac-0i1: ALSO pass --beads with THIS batch's bead ids (comma-separated) so the completeness check
-   # scopes to exactly this batch — the identity-lifetime default would re-demand per-bead entries (and
-   # --progress files) for EARLIER batches' beads under the same loop identity, and mislabel a 1-bead
-   # batch as multi-bead. The OPEN-bead check stays identity-wide (a genuinely-open bead from any batch
-   # still blocks). Omit --beads only for a standalone single-batch run where identity == batch.
    bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
      --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
