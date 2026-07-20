@@ -183,6 +183,28 @@ weekly panel run so findings feed the same triage/bead path as the other lenses.
 
 If the app has no `knip.json` / no `knip` devDependency, skip — nothing to run.
 
+### Stamp-Audit Lens (weekly cadence only — `PANEL=full`)
+
+Mechanical, conductor-run, once per hygiene run (not per round, not an agent lens) — same
+shape as the two lenses above. This is the integrity check on the proof gate itself
+(`skill-builder/references/promotion-ladder.md` §The ladder — tier-1 promotion needs "N green
+runs that EXERCISE it... / probe-verified fact / Craig sign-off"): a stamp is only as good as
+the run history behind it, and nothing currently re-checks a stamp already resident in the tree
+against reality.
+
+1. **Grep every skill's SKILL.md/references for evidence stamps** — the
+   `<!-- evidence: <N green runs | probe-fact | Craig sign-off> -->` form (`ac-review`'s
+   doctrine-delta dimension checks this shape at diff-time; this lens re-audits stamps already
+   landed, not just new ones).
+2. **Spot-check each claim against actual run history** — CI run logs, `.claude/reviews/batch/`
+   commits, or dream recurrence records that plausibly exercised the stamped mechanism. A stamp
+   claiming a green-run count the record can't substantiate, or a probe-fact stamp whose probe
+   script no longer exists, is a finding regardless of the stamp's age.
+3. **File it same as any stale-content finding** — route via the Deletion Mandate (Phase 2): pull
+   the false claim (demote/delete per promotion-ladder.md) or downgrade the content it guards back
+   to `references/`/holding-pen if the proof no longer holds.
+4. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light`.
+
 ### Create Workflow Tasks (run ledger)
 
 **One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every
@@ -241,6 +263,14 @@ Synthesis principles:
 - **Evidence over opinion** — findings need file paths and line numbers
 - **Don't pile on** — if explorer finds dead code, that's cleanup, not a bug
 - **Critical/High first** — skip Medium unless trivial to fix
+- **Deletion mandate** — a finding of stale/superseded/duplicated content is not flag-and-leave;
+  REMOVAL/demotion ranks as a first-class disposition, equal to additions/fixes, and follows the
+  same auto-apply rules (severity/consensus, Phase 3) as any other change. Route the removal per
+  `skill-builder/references/promotion-ladder.md` §What routes through the holding zone: a
+  **duplicate** (verbatim twin survives elsewhere) deletes outright; a still-needed **extract**
+  moves straight to `references/` with a pointer; **unique** content with no surviving twin is the
+  only case that must route through the skill's `MAINTENANCE.md` holding-pen (review-by date +
+  default resolution) before it can be git-deleted.
 
 Produce a numbered change list. For each: target file, what to change, auto-fixable or not.
 
@@ -589,6 +619,9 @@ this run is reviewing is CI-green.
 
 - **Codebase-wide, not feature-scoped** — agents explore freely (unless user constrains)
 - **Fresh eyes each round** — direct agents to unexplored files in subsequent rounds
+- **Removal ranks equal to additions** — stale/superseded/duplicate findings get the Deletion
+  Mandate's routing (dup deletes outright, extract → `references/`, unique → holding-pen), not a flag-and-leave
+- **Stamp-audit lens (weekly)** — spot-check `<!-- evidence: ... -->` stamps against real run history; an unsubstantiated claim is a finding
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
 - **Round floor = MIN_ROUNDS=3, ABSOLUTE** — never finalize before round 3 (see Phase 4); ceiling MAX_ROUNDS=5
 - **Lens-diverse consensus is rarer and stronger** — don't lower the bar; the registry + Phase 5 triage absorb the singles

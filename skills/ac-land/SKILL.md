@@ -265,6 +265,15 @@ MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
 | **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
 | **T3 everything else** | AUTO additive-knowledge (§2), else DISREGARD (§1) | tag for the Step 0 reflect call → keyed observation (bd-jv33f.5), or drop if zero evidence | reversible memory observation only |
 
+**Deletion mandate — supersession ranks equally with addition.** When a T1/T2/T3 item
+SUPERSEDES or contradicts existing skill content (not just adds to it), the disposition
+MUST also consider removing/demoting the stale content, not only filing the new lesson —
+`skill-builder/references/promotion-ladder.md` ranks the two moves equally, never
+addition-plus-optional-cleanup. Removal of unique content routes through the skill's
+`MAINTENANCE.md` holding-pen (that doc's holding-zone rule), not an outright delete; a
+verbatim duplicate may still hard-delete immediately. This is what keeps ac-land a
+net-neutral-or-shrinking force rather than an accretion ratchet.
+
 **T3 sub-route — skill-scoped friction vs general lesson (W4.3).** Before handing a T3 item
 to `reflect` in Step 0, tag it as either *skill-scoped friction* (about a specific skill's
 operation — its `stage` names a skill, or the narrative clearly targets one) or a *general
@@ -404,7 +413,7 @@ For each approved upgrade, apply the edit directly. Common targets:
 | --------------------- | -------------------------------------- |
 | `AGENTS.md`           | Workflow improvements, new conventions |
 | `CLAUDE.md`           | Orchestrator context updates           |
-| `.claude/skills/*.md` | Command improvements based on friction |
+| `.claude/skills/*.md` | Default lands in the skill's `references/`, its `FRICTIONS.md`, or `memory/auto/` — **never the SKILL.md spine by default.** Core insertion needs the promotion-ladder proof gate (N green runs / probe-verified fact / Craig sign-off for conductor-core — `skill-builder/references/promotion-ladder.md`), not a default landing here. |
 | `MEMORY.md`           | New patterns, gotchas, workflow notes  |
 
 ### Commit Compound Changes

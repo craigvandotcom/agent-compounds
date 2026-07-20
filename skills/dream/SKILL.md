@@ -131,8 +131,29 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   other candidate (`file-beads.py` files them as `human-gate,dream-proposal` beads, unchanged) —
   this is a ranking sub-step, NOT a second mining mechanism. Both CYCLE and CYCLE-DAILY run
   Phase 2, so both get it.
-- **Cluster → skill-improvement:** several lessons orbiting one skill's friction →
-  candidate edit to that skill.
+- **Cluster → skill-improvement (the friction-log promotion engine, W4.5):** several
+  lessons orbiting one skill's friction → candidate edit to that skill. Alongside ad-hoc
+  lesson clusters, this now also runs a **deterministic weighting pass over the friction
+  sensor logs**: scan every per-skill `skills/*/FRICTIONS.md` (schema:
+  `skill-builder/references/friction-capture.md` — read it for the fields, not restated
+  here) and, for each `id` (counted **once per id**, per the schema — a cross-cutting id
+  is logged once in its primary skill; `see <id> in <primary>` pointer entries elsewhere
+  don't re-count it), compute:
+
+  `weight(id) = impact_num × frequency_num × recurrence`
+
+  ordinal mapping (tunable, not load-bearing): `impact` S=1 / M=2 / L=3 ·
+  `frequency` rare=1 / occasional=2 / frequent=3 / every-run=4. **THRESHOLD:
+  `weight >= 12`** (tunable — e.g. M-impact (2) × frequent (3) × recurrence-2 = 12 clears
+  it; a single S-impact/rare/recurrence-1 entry at weight 1 does not). Before comparing to
+  the bar, group ids by the `related` field into clusters so one cluster yields one
+  candidate, not N near-duplicates. An over-bar id or cluster becomes a `skill-improvement`
+  candidate carrying the cluster's pre-drafted `proposed_fix`(es) as the starting point —
+  same Phase 4 judge → Phase 5 emit path as every other candidate (this is a second sensor
+  feeding the same funnel, not a new mechanism, exactly like the loop-retro rows above). On
+  REVIEW apply, the landed edit's commit also flips each contributing entry's
+  `status: open` → `status: promoted` in its FRICTIONS.md — the flip is the receipt that
+  the friction was acted on, not merely logged (see REVIEW Step 3).
 - **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
   broken-intermediate commits, bad bead-sequencing, or work-breakdowns that needed
   re-partitioning → target `ac-beadify` / `ac-bead-refine` (bead-level) or the `planning` /
@@ -465,8 +486,11 @@ TaskCreate("Report — applied/rejected/remaining + acceptance rate")
 
 3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
    (adjust mechanically if the target drifted; if it drifted *semantically*, leave the
-   bead open with an enrichment comment instead of guessing). Respect repo boundaries —
-   commit in the target repo with message `dream: apply <slug>`, push.
+   bead open with an enrichment comment instead of guessing). A friction-log-sourced
+   `skill-improvement` (Phase 2's weighting engine, W4.5) additionally flips each
+   contributing `FRICTIONS.md` entry's `status` to `promoted` **in the same commit** — the
+   proposal's What section names the entries. Respect repo boundaries — commit in the
+   target repo with message `dream: apply <slug>`, push.
 
 **TaskUpdate("Apply approved", completed)**
 **TaskUpdate("Close out", in_progress)**
