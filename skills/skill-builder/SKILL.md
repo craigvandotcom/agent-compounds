@@ -94,7 +94,7 @@ A non-trivial skill is a **lean spine that routes to references**, not a wall of
 
 Full rulebook (spine vs references vs `_shared/`, the orchestrator trap, pointer syntax, ToC rule): **[references/structure-standard.md](references/structure-standard.md)**. To *diet* an existing oversized skill (or batch-sweep the registry), run **`workflows/hygiene-pass.md`** — the callable "clean up our skills" procedure.
 
-**Moving content between tiers** (SKILL.md core ↔ `references/` ↔ holding zone) follows the promotion ladder: **up needs proof, down needs disuse, and unique content is never deleted without first aging in the holding zone** (`MAINTENANCE.md` § Holding pen) — so knowledge is never silently lost. Full rules + how ablation/metrics decide movement: **[references/promotion-ladder.md](references/promotion-ladder.md)**.
+**Moving content between tiers** (SKILL.md core ↔ `references/` ↔ holding zone) follows the promotion ladder: **up needs proof, down needs disuse, and unique content is never deleted without first aging in the holding zone** (`MAINTENANCE.md` § Holding pen) — so knowledge is never silently lost. Full rules + how ablation/metrics decide movement: **[references/promotion-ladder.md](references/promotion-ladder.md)** — it specializes `context-engineering` § PROMOTION & DEMOTION (SKILL.md:243–267) for the skill layer, is applied section-by-section by `workflows/hygiene-pass.md`, shares tier-3 holding-pen mechanics with `references/maintenance-ledger.md`, and adds the proof-gated promotion half on top of `references/structure-standard.md`'s move-out (demotion) tree.
 
 ### 5. Token Economy — determinism first
 

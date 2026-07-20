@@ -43,6 +43,12 @@ quarantined before deletion) both sit here. It is a *buffer*, never a permanent 
                                                             git delete  (cut-log entry + SHA)
 ```
 
+**The references→core rung, spelled out** (the diagram's tier-1 proof gate, stated in prose so it
+reads as a rule and not just a picture): promoting content into **SKILL.md core** requires N green
+runs that exercise it, or a probe-verified fact — and for **conductor-core** specifically, Craig's
+sign-off on top of that evidence. Promotion into `references/` needs the evidence alone; no sign-off
+is required below tier 1.
+
 **The load-bearing asymmetry:** *going up requires evidence; going down requires only that the
 content stopped being used.* That is what makes the ladder safe — promotion is hard (you must prove
 worth), demotion is easy (disuse is enough), and **nothing unique is deleted without first spending
