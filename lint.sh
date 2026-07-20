@@ -564,6 +564,63 @@ if ! bash "$AC_ROOT/skills/skill-builder/scripts/validate-skill.sh" --registry "
 fi
 
 # ---------------------------------------------------------------------------
+# Check 14 — no-net-growth (diff-aware, HARD) on skills/**/SKILL.md
+# (skill-diet WS2, bead ac-q6e.2: the enforcement chokepoint that makes shrinkage
+#  the default for SKILL.md content — see skills/skill-builder/references/
+#  promotion-ladder.md + token-economics.md. Net line delta across all SKILL.md
+#  files vs a base ref: <=0 (neutral/shrinking) always PASSes; net growth PASSes
+#  only with an added-line `<!-- net-growth-ok: <reason> -->` stamp, else HARD
+#  FAILs. Supersedes the old WARN-only absolute-size check removed from
+#  validate-skill.sh — that check judged a file in isolation and never blocked;
+#  this one judges the CHANGE and blocks it.)
+# ---------------------------------------------------------------------------
+echo "--- Check 14: no-net-growth (SKILL.md) ---"
+check
+
+NNG_BASE_REF="${NNG_BASE_REF:-origin/main}"
+NNG_MERGE_BASE=""
+if git -C "$AC_ROOT" rev-parse --verify --quiet "$NNG_BASE_REF" >/dev/null 2>&1; then
+  NNG_MERGE_BASE=$(git -C "$AC_ROOT" merge-base "$NNG_BASE_REF" HEAD 2>/dev/null || true)
+fi
+
+if [ -z "$NNG_MERGE_BASE" ]; then
+  # Degrade gracefully: a shallow CI checkout (actions/checkout@v4 default
+  # fetch-depth: 1) or a standalone clone may not have this ref locally. A
+  # false-green here is safer than a broken CI leg — Check 13's absolute
+  # budget total still bounds unbounded growth regardless of diff
+  # availability; this check adds diff-awareness on top when it can resolve
+  # a base, never blocks the whole lint leg when it can't.
+  echo "NOTICE: Check 14 skipped — base ref '$NNG_BASE_REF' unresolvable (shallow checkout, standalone clone, or no fetch of it) — no-net-growth not enforced this run."
+else
+  NNG_DIFF=$(git -C "$AC_ROOT" diff "$NNG_MERGE_BASE" -- 'skills/*/SKILL.md' 2>/dev/null || true)
+  if [ -z "$NNG_DIFF" ]; then
+    echo "no SKILL.md changes vs $NNG_BASE_REF ($NNG_MERGE_BASE) — PASS (nothing to check)"
+  else
+    NNG_ADDED=0
+    NNG_DELETED=0
+    while IFS=$'\t' read -r nng_add nng_del _nng_path; do
+      [ -n "$nng_add" ] || continue
+      [ "$nng_add" = "-" ] && continue   # binary numstat marker; SKILL.md is never binary
+      NNG_ADDED=$(( NNG_ADDED + nng_add ))
+      NNG_DELETED=$(( NNG_DELETED + nng_del ))
+    done < <(git -C "$AC_ROOT" diff --numstat "$NNG_MERGE_BASE" -- 'skills/*/SKILL.md' 2>/dev/null || true)
+    NNG_NET=$(( NNG_ADDED - NNG_DELETED ))
+
+    if [ "$NNG_NET" -le 0 ]; then
+      echo "no-net-growth: net $NNG_NET line(s) across skills/**/SKILL.md vs $NNG_BASE_REF — PASS (neutral or shrinking)"
+    else
+      NNG_STAMP=$(printf '%s\n' "$NNG_DIFF" | grep -E '^\+[^+].*net-growth-ok:' || true)
+      if [ -n "$NNG_STAMP" ]; then
+        echo "no-net-growth: net +$NNG_NET line(s) but an added net-growth-ok stamp justifies it — PASS"
+        printf '%s\n' "$NNG_STAMP" | sed 's/^/  /'
+      else
+        fail "no-net-growth: net +${NNG_NET} lines in SKILL.md without a net-growth-ok stamp or offsetting demotion; move content to references/, or stamp the addition (vs $NNG_BASE_REF @ $NNG_MERGE_BASE)."
+      fi
+    fi
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

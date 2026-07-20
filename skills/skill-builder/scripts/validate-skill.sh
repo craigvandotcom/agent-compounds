@@ -366,22 +366,12 @@ else
     fi
 fi
 
-# Check SKILL.md size
-LINE_COUNT=$(wc -l < "$SKILL_MD")
-# Size is a TARGET, not a hard law: ≤500 is optimal (Anthropic), but a genuine
-# multi-phase orchestrator may justifiably exceed it (see references/structure-standard.md).
-# So >500 warns (strongly) rather than fails — move sub-agent prompts/templates to references/.
-if [ $LINE_COUNT -le 400 ]; then
-    echo -e "${GREEN}✓ PASS: SKILL.md size OK ($LINE_COUNT/500 lines)${NC}"
-elif [ $LINE_COUNT -le 500 ]; then
-    echo -e "${YELLOW}⚠️  WARNING: SKILL.md getting large ($LINE_COUNT lines). Aim for ≤400; push detail to references/.${NC}"
-    WARNINGS=$((WARNINGS + 1))
-else
-    echo -e "${YELLOW}⚠️  WARNING: SKILL.md over the 500-line target ($LINE_COUNT lines).${NC}"
-    echo "  OK only if it's a genuine orchestrator whose flow needs the length."
-    echo "  Otherwise move sub-agent prompts/templates/schemas to references/ (see structure-standard.md)."
-    WARNINGS=$((WARNINGS + 1))
-fi
+# NOTE: the old absolute-size WARN-only check (SKILL.md line count vs a static
+# 400/500 threshold) lived here. Removed 2026-07-20 (skill-diet WS2, bead
+# ac-q6e.2) — it was INERT (WARN-only, never blocked anything) and judged a
+# file in isolation rather than the change. Superseded by lint.sh Check 14
+# (no-net-growth): a diff-aware HARD gate that fails on net SKILL.md line
+# growth vs origin/main unless stamped `<!-- net-growth-ok: <reason> -->`.
 
 # Check for common required sections
 echo ""
@@ -447,6 +437,7 @@ if [ -d "$SKILL_PATH/references" ]; then
         [ -f "$f" ] || continue
         base=$(basename "$f")
         [ "$base" = "MAINTENANCE.md" ] && continue   # sidecar ledger: intentionally not pointed-to
+        [ "$base" = "FRICTIONS.md" ] && continue     # per-skill sensor log: intentionally not pointed-to (references/friction-capture.md)
         if ! grep -rqF "references/$base" "$SKILL_PATH" --include="*.md" 2>/dev/null; then
             echo -e "${YELLOW}⚠️  Orphaned reference (never pointed to): references/$base${NC}"
             WARNINGS=$((WARNINGS + 1))
