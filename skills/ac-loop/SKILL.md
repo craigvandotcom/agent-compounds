@@ -818,6 +818,13 @@ parses an empty stage section.
 > `reflect` lives inside `ac-land`, a phase skill. The carrier is the typed hand-off across that
 > boundary.
 
+**Routing note (W4.3):** this carrier's `friction:` items are inherently skill-scoped (each
+keyed to the stage/skill that hit them) — `ac-land`'s Phase 3 tier router now routes the
+skill-scoped T3 subset to that skill's `FRICTIONS.md` instead of `memory/auto/` (see
+`ac-land/SKILL.md` § "Loop-retro friction disposition" and
+`skill-builder/references/friction-capture.md` § Routing). Nothing changes here — the
+carrier still just aggregates and hands off; the destination logic lives entirely downstream.
+
 ### Exit-Land — the loop's single closing invocation
 
 ac-land runs **once here**, not per-wave. The loop shipped one or more waves, each writing

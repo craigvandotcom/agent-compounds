@@ -120,6 +120,15 @@ the `MEMORY.md` pointer convention, and dream's reader all depend on them); `kin
 probe already run above) → increment `recurrence` on the existing row, do NOT create a duplicate
 file. `cost` stays coarse (`material|minor`); a minutes floor is optional and Craig-set.
 
+**Skill-scoped friction (W4.3)** — if `ac-land`'s Step 0 hand-off tagged the T3 item as
+*skill-scoped friction* rather than a general lesson, write it to
+`skills/<skill>/FRICTIONS.md` instead of the `memory/auto/` path above. Schema, per-skill
+template, and the dedup judgment (reuse-id-and-bump-recurrence vs mint-new) are
+`skill-builder/references/friction-capture.md`'s — read that file's existing entries and
+judge before writing; don't restate its rules here. Create the target file lazily from its
+template if absent. General (non-skill-scoped) lessons keep the `memory/auto/` path,
+unchanged.
+
 **decision** → `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` (same frontmatter, `type: decision`;
 body = context · decision · rationale · consequences).
 

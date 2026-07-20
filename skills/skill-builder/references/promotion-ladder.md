@@ -110,7 +110,10 @@ tests), does it show up in *logs* (file-touch, recurrence). We decide movement t
   it didn't. Caveat: a single-scenario PASS is a false-negative risk — use ≥2 repeat-cycle scenarios.
 - **Recurrence count** — `dream` Phase 2 already counts how often a lesson recurs across sessions;
   ≥N recurrences justifies `references/`. This is the **cheapest legitimate substitute** for a usage
-  signal and is already built — prefer it before spending on ablation.
+  signal and is already built — prefer it before spending on ablation. The recurrence signal itself
+  is sourced from per-skill `FRICTIONS.md` sensor logs (`references/friction-capture.md`), whose
+  `Σ(impact × frequency × recurrence)` weighting (dream Phase 2 / W4.5) surfaces over-bar clusters as
+  skill-improvement beads — friction-capture is the sensor, this ladder is the decision.
 - **Probe-verified environment fact** — a claim a script confirms true (a tool's real behavior).
 
 **For demotion (has this fallen out of use?) — DISUSE proxies are enough (no proof needed to fall):**

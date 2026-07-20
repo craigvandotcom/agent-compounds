@@ -35,6 +35,16 @@
       "_doc": "Grok aliases Bash -> run_terminal_command in matchers; the script emits Grok's deny dialect when GROK_HOOK_EVENT is set. Explicit timeout because Grok defaults to 5s and fails open."
     },
     {
+      "id": "skill-edit-guard",
+      "event": "PreToolUse",
+      "matcher": "Edit|Write",
+      "command": "{HOOKS}/skill-edit-guard.py",
+      "harnesses": ["claude", "codex", "droid", "grok"],
+      "scope": ["org", "machine"],
+      "timeout": 10,
+      "_doc": "Advisory reminder of the skill-diet promotion ladder + no-net-growth gate on Edit/Write to a skills/**/SKILL.md spine file (plan 2026-07-19-2338-skill-doctrine-diet-promotion-governance.md, D4/W2a). PreToolUse cannot inject context here (exit code + stderr only, verified against am-edit-guard.py) — signals via exit 2 + stderr, once per session (session-scoped flag file keyed on CLAUDE_CODE_SESSION_ID, falling back to a daily key), never blocks the edit. `machine` scope (mirroring trauma-guard) is required for this to actually reach Grok — its build_hooks_obj call only reads scope=machine (render_hooks_grok), so scope:[org] alone would silently drop grok despite being listed in harnesses. Explicit timeout because Grok defaults to 5s and fails open."
+    },
+    {
       "id": "activity-logger",
       "event": "PostToolUse",
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",

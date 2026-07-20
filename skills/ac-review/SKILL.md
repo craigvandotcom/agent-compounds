@@ -1,10 +1,10 @@
 ---
 name: ac-review
-description: 'Feature-branch code review — parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), severity-based auto-fix + escalation. Triggers: ''review the branch'', ''work review'', ''code review this feature'', ''pre-merge review''.'
+description: 'Feature-branch code review — parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Triggers: ''review the branch'', ''work review'', ''code review this feature'', ''pre-merge review''.'
 ---
 
 
-**You are the conductor.** A panel of up to six reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts). You synthesize, auto-fix, and escalate. Feature-branch scoped — run after implementation, before merge.
+**You are the conductor.** A panel of up to seven reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts), plus a 7th lens (doctrine-delta) that activates only when the diff touches `skills/`. You synthesize, auto-fix, and escalate. Feature-branch scoped — run after implementation, before merge.
 
 For codebase-wide health checks, use `/ac-hygiene` instead.
 
@@ -320,6 +320,59 @@ lenses use **negative gating** — spawn by default, skip only when provably irr
 Two cheap checks against the Phase-1 changed-file list. When in doubt, **spawn** — a
 wasted reviewer costs one agent; a wrongly skipped lens is a silent coverage gap.
 
+### Doctrine-Delta — the 7th, skills/-gated dimension
+
+**Positive-gated — the inverse of test-quality/contracts above: SKIP unless the diff
+touches any `skills/**` file.** Check the same Phase-1 changed-file list — zero paths
+matching `skills/` -> skip this dimension entirely (a normal app review, or even a
+docs-only review of non-skill docs, is unaffected). Any path matching `skills/` -> spawn
+it as a 7th body **in addition to** whichever panel this phase already assembled (the
+code four + conditional two, or the docs-lens set on a docs-only diff) — it stacks on
+either, it never replaces a lens.
+
+- **ROLE:** `doctrine-delta`
+- **SKILL_HINT:** `Read skills/skill-builder/references/promotion-ladder.md,
+  skills/skill-builder/references/friction-capture.md, and
+  skills/skill-builder/workflows/hygiene-pass.md for the doctrine this dimension enforces.`
+- **EVIDENCE:** The added block, its evidence stamp (or absence), and — for reintroduced
+  content — the `git log -S "<snippet>"` churn hit proving it was cut before.
+- **SKIP:** Unless the diff touches `skills/**` — spawn only then (gate above).
+
+**METHOD:**
+
+Three checks, each a promotion-ladder rule made adversarial:
+
+1. **Proof-or-demotion citation.** Every content block ADDED to a SKILL.md's tier-1 core
+   (not `references/`, not `workflows/`) must carry an evidence stamp
+   (`<!-- evidence: <N green runs | probe-fact | Craig sign-off> -->` — the
+   promotion-ladder's proof gate) OR the same diff carries a matching demotion — an
+   equal-or-greater shrink elsewhere in that SKILL.md, or a `references/` file gaining
+   the demoted content. No stamp and no demotion = a finding. A stamp citing a
+   run/probe/sign-off that can't be verified as real is a separate finding — the gate
+   verifies form, not truth; this dimension is the judgment backstop.
+2. **No reintroduced historical blocks.** The diff doesn't re-add struck-through,
+   deprecated, superseded, or holding-zone-quarantined content the registry has been
+   purging. Check `git log -S "<snippet>"` (the churn guard from `hygiene-pass.md` A2)
+   for any block that was cut before — a match is a finding regardless of rewording.
+3. **No-net-growth / ceiling respect.** Net SKILL.md line growth across the diff needs
+   the same evidence-or-demotion justification as check 1 (mirrors `lint.sh`'s
+   no-net-growth gate) — this dimension judges whether the cited stamp is genuine and
+   the content actually earns tier-1 core rather than `references/`. For a
+   conductor-core skill, growth with no Craig sign-off notice (pre-mint) or that
+   exceeds its minted ceiling (post-mint, per `promotion-ladder.md`) is a finding even
+   with a stamp present.
+
+**CHECKLIST:**
+
+- Added SKILL.md core content with no evidence stamp and no offsetting demotion
+- Evidence stamp present but citing a run/probe/sign-off that can't be verified as real
+- Re-added content matching a prior `git log -S` cut (deprecated/historical/superseded block)
+- Net SKILL.md line growth with no evidence-or-demotion justification
+- Conductor-core skill growth exceeding its minted ceiling, or missing sign-off pre-mint
+
+**SLUGS:** `missing-promotion-evidence`, `false-evidence-stamp`,
+`reintroduced-historical-block`, `unjustified-net-growth`, `conductor-ceiling-breach`
+
 ### Panel scaling (ZERO-RUNTIME + no RISK-TOUCH — bd-chd5p.8 / Item 6a)
 
 Body count may shrink **only** when classification proves the batch is safe. Keys on
@@ -346,6 +399,10 @@ git diff --name-only $DIFF_RANGE
 | **Shrink** | ZERO-RUNTIME **AND** no RISK-TOUCH (proved by `git diff --name-only`) | 2–3 | **core four still covered** (may share bodies; fewer bodies never silently drop a dimension) |
 | **test-quality dedicated** | ANY test file present in the diff (`**/__tests__/**` or `**/*.{test,spec}.*`) | +1 body | **test-quality is its own dedicated body** — never merged into another body. The reduced-motion Critical was caught by a test-quality body tracing a self-defeating e2e; that probe does not survive a merged body. |
 
+**Doctrine-delta stacks independently of this table** — its `skills/`-touch gate above
+decides spawn/skip regardless of risk tier; it is not one of the panel-scaling
+shrink/full tiers and is never dropped by a shrink.
+
 **Rules (non-negotiable):**
 
 1. **Core four ALWAYS** — fewer bodies never silently drop security / performance /
@@ -370,13 +427,16 @@ EOF
 ```
 
 List only the roles you actually spawn; record each skipped lens in `skipped` with its
-one-line reason (e.g. `"contracts": "no exported surface in diff"`).
+one-line reason (e.g. `"contracts": "no exported surface in diff"`). Add `"doctrine-delta"`
+to `spawned` only when the diff touches `skills/**` (per its gate above); otherwise record
+it in `skipped`, e.g. `"doctrine-delta": "no skills/ paths in diff"` — this keeps
+`consensus.py`'s manifest-driven expectation accurate either way.
 
 ### Spawn the Panel Simultaneously
 
 **CRITICAL: All spawned agents run IN PARALLEL using a single message with one Task call per dimension.**
 
-Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** — including `{METHOD}`, the dimension's hunting doctrine. Substitute `{DIFF}` (the Phase-2 diff), `{ARTIFACTS_DIR}`, `{ROUND}` (`1` here), and `{N_OTHERS}` (spawned count minus one) into each.
+Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, filling the placeholders from that dimension's row in **`references/review-dimensions.md`** — including `{METHOD}`, the dimension's hunting doctrine. For `doctrine-delta` (when spawned), fill the same placeholders from this file's **§ Doctrine-Delta — the 7th, skills/-gated dimension** above instead — it isn't in `review-dimensions.md` since it never applies to a non-skill diff. Substitute `{DIFF}` (the Phase-2 diff), `{ARTIFACTS_DIR}`, `{ROUND}` (`1` here), and `{N_OTHERS}` (spawned count minus one) into each.
 
 - Each agent writes **JSON** to `$ARTIFACTS_DIR/round-1-{role}.json` (`round-1-security.json`, …) — machine-read by the Phase-3 consensus script, so the schema in the template is load-bearing.
 - Include a dimension's `SKILL_HINT` line only if Phase-1 skill routing found a relevant skill.
@@ -821,11 +881,12 @@ git push
 
 ### Convergence
 
-Round  Sec  Perf  Arch  Correct  Tests  Contracts  Total  Applied  Deferred
-  1     {n}  {n}   {n}    {n}     {n}      {n}      {n}     {n}       {n}
-  2     {n}  {n}   {n}    {n}     {n}      {n}      {n}     {n}       {n}
+Round  Sec  Perf  Arch  Correct  Tests  Contracts  Doct  Total  Applied  Deferred
+  1     {n}  {n}   {n}    {n}     {n}      {n}      {n}   {n}     {n}       {n}
+  2     {n}  {n}   {n}    {n}     {n}      {n}      {n}   {n}     {n}       {n}
 
-(mark a skipped dimension `—`, per the round's panel manifest)
+(mark a skipped dimension `—`, per the round's panel manifest — `Doct` is `—` on any
+diff that doesn't touch skills/)
 
 R1  {▓▓░░░████}  {total}
 R2  {░████}      {total}  {-N%}
@@ -926,7 +987,7 @@ reinvented per docs wave.
 
 ## When to Use This vs /ac-hygiene
 
-Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/weekly maintenance, a 7-lens Opus panel over 3+ rounds (vs the single-round 6-dimension Sonnet diff panel here), conductor fixes directly, hunts bugs/dead code/drift. The two test lenses are complementary, not duplicate: this skill's `test-quality` reviewer audits the tests a wave just wrote, at the gate, while the diff is small; hygiene's Test Warden rotates through the whole back-catalog. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
+Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/weekly maintenance, a 7-lens Opus panel over 3+ rounds (vs the single-round 6-or-7-dimension Sonnet diff panel here — the 7th only on a skills/-touching diff), conductor fixes directly, hunts bugs/dead code/drift. The two test lenses are complementary, not duplicate: this skill's `test-quality` reviewer audits the tests a wave just wrote, at the gate, while the diff is small; hygiene's Test Warden rotates through the whole back-catalog. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
 
 ---
 
@@ -934,6 +995,7 @@ Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`)
 
 - **YOU synthesize, engineers fix** — reviewers analyze, you decide what's real, engineer applies
 - **Panel = core four always + test-quality/contracts unless provably irrelevant** — gating is negative (fail-open to spawning); write `panel-round-{N}.json` BEFORE spawning so `consensus.py` blocks on any spawned dimension that goes missing
+- **7th lens = doctrine-delta, gated positive** — the only dimension that defaults to SKIPPED: spawns only when the diff touches `skills/**`, checking proof-or-demotion citations, reintroduced historical blocks, and no-net-growth/ceiling respect
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus** — defer the rest to registry
 - **Cross-round consensus:** single-reviewer findings that recur in verification rounds are high-signal — auto-apply on match
 - **One human touchpoint:** remaining no-consensus + NEEDS_DECISION items presented once in Phase 7, not per-round

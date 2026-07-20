@@ -265,6 +265,23 @@ MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
 | **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
 | **T3 everything else** | AUTO additive-knowledge (§2), else DISREGARD (§1) | tag for the Step 0 reflect call → keyed observation (bd-jv33f.5), or drop if zero evidence | reversible memory observation only |
 
+**T3 sub-route — skill-scoped friction vs general lesson (W4.3).** Before handing a T3 item
+to `reflect` in Step 0, tag it as either *skill-scoped friction* (about a specific skill's
+operation — its `stage` names a skill, or the narrative clearly targets one) or a *general
+lesson*. Skill-scoped friction's destination is `skills/<skill>/FRICTIONS.md`, not
+`memory/auto/` — `reflect` executes the write (see its Step 5 disposition branch); this is
+only the classification tag ac-land hands across. Apply
+`skill-builder/references/friction-capture.md` § Routing's ambiguity defaults **verbatim**:
+
+- Uncertain, loop-mechanics-flavored → default sink is `ac-loop`'s `FRICTIONS.md`.
+- Uncertain, general → `memory/auto/` (unchanged from today).
+- Genuinely cross-cutting → primary skill's `FRICTIONS.md`, `see <id> in <primary>` pointer
+  entry in each secondary skill's file (never a full copy).
+
+Schema, per-skill template, and the dedup rule (reuse-id-and-bump-recurrence vs mint-new) are
+`friction-capture.md`'s — don't restate them here; create the target `FRICTIONS.md` lazily
+from that reference's template if absent.
+
 **T2 objective bar** — an improvement clears iff EITHER:
 - **recurrence evidenced** — a matching observation/lesson already exists in the substrate
   (`qmd search` hit), OR a matching open `skill-improvement` bead exists (the Save-for-later
