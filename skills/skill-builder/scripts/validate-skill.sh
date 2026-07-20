@@ -204,13 +204,18 @@ if [ "$1" = "--diff" ]; then
         echo -e "${YELLOW}⚠️  cannot read $REF:$RELMD — bad ref?${NC}"; exit 0
     fi
     echo -e "${BLUE}🛡️  Enforcement-regression check: $SKILL_PATH vs $REF${NC}"
+    # A removed enforcement line is only a regression if it appears NOWHERE it could have
+    # legitimately moved: the skill's own dir OR the sibling _shared/ (extraction target).
+    DIFF_PARENT=$(dirname "$SKILL_PATH")
+    DIFF_SEARCH="$SKILL_PATH"
+    [ -d "$DIFF_PARENT/_shared" ] && DIFF_SEARCH="$SKILL_PATH $DIFF_PARENT/_shared"
     # enforcement-shaped patterns; a removed match that no longer appears anywhere = regression
     ENF_PAT='TaskUpdate|TaskCreate|Remember|MANDATORY|--limit 0|AskUserQuestion|\bMUST\b|\bNEVER\b|\bALWAYS\b|VERDICT|GUARD-RAIL|HARD STOP|Rule 0'
     REGRESS=0
     while IFS= read -r line; do
         norm=$(printf '%s' "$line" | sed 's/^[ \t]*//; s/[ \t]*$//')
         [ ${#norm} -lt 12 ] && continue
-        if ! grep -rqF -- "$norm" "$SKILL_PATH" --include="*.md" 2>/dev/null; then
+        if ! grep -rqF -- "$norm" $DIFF_SEARCH --include="*.md" 2>/dev/null; then
             echo -e "${RED}❌ removed, not relocated:${NC} ${norm:0:88}"
             REGRESS=$((REGRESS + 1))
         fi

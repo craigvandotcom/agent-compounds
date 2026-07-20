@@ -536,8 +536,8 @@ snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 3 **acks** after the report
 3. On ceremony **failure** before this ack: re-merge `in_flight` → `pending` (do not
    drop IDs); recompute `first_close_ts = min(closed_at)`.
 4. After successful ack, if `in_flight` is empty → run the **drain sequence**
-   (ac-loop SKILL.md § Ceremony batching pool): risk_queue head first (mixed or pure
-   risk-solo), else fire opportunity on `pending` (soft-8 / ~3h window / line-floor
+   (`_shared/ceremony-batching-pool.md` § Drain sequence): risk_queue head first (mixed or
+   pure risk-solo), else fire opportunity on `pending` (soft-8 / ~3h window / line-floor
    N≈800, hard-10 ceiling), else stop.
 
 Ceremony batch range for CI/report scope uses `_shared/risk-classification.md`
