@@ -205,6 +205,32 @@ against reality.
    to `references/`/holding-pen if the proof no longer holds.
 4. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light`.
 
+### Friction Cluster-Walk Lens (weekly cadence only — `PANEL=full`)
+
+Mechanical, conductor-run, once per hygiene run (not per round, not an agent lens) — same
+shape as the three lenses above. The organic-surfacing half of W4.6
+(`skill-builder/references/friction-capture.md`): this repo's own weekly quality pass is a
+second, hygiene-cadence backstop over the friction sensor logs, alongside — never instead
+of — `dream` Phase 2's weekly weighting pass (`dream/SKILL.md` § Phase 2, W4.5).
+
+1. **Walk the `related` graph across every `skills/*/FRICTIONS.md`** — the graph is a free
+   byproduct of capture-time dedup judgment (`friction-capture.md` § Deduplication), not
+   something this lens builds; it only reads it, grouping ids into clusters the same way
+   W4.5 does.
+2. **Reuse W4.5's weight/threshold verbatim — do not redefine them here:**
+   `weight(id) = impact_num × frequency_num × recurrence`, threshold `weight >= 12`
+   (`dream/SKILL.md` § Phase 2 is the single definition; cite it, don't fork it).
+3. **An over-bar cluster files directly** as `br create -t bug --labels
+   hygiene-finding,skill-improvement,unrefined -d "Friction cluster-walk: <id(s)> —
+   <cluster's proposed_fix(es)>. weight=<N>, skills=<list>."` — deduped via `br search`
+   first, same as any other hygiene finding (Exhaust Rule). This is the direct,
+   no-judge-round path; it does not replace dream's judged/gated proposal path, it
+   catches the same signal on a different cadence so a cluster surfaces without anyone
+   manually reading FRICTIONS.md.
+4. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light`.
+
+If no skill in this repo has a `FRICTIONS.md` yet, skip — nothing to walk.
+
 ### Create Workflow Tasks (run ledger)
 
 **One task per major section — the ledger exists for CLARITY + ACCOUNTABILITY**, so every

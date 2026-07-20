@@ -147,7 +147,12 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   `weight >= 12`** (tunable — e.g. M-impact (2) × frequent (3) × recurrence-2 = 12 clears
   it; a single S-impact/rare/recurrence-1 entry at weight 1 does not). Before comparing to
   the bar, group ids by the `related` field into clusters so one cluster yields one
-  candidate, not N near-duplicates. An over-bar id or cluster becomes a `skill-improvement`
+  candidate, not N near-duplicates. **The `related` graph is a free byproduct, already
+  built (W4.6):** every capture judges same-vs-new against existing entries
+  (`friction-capture.md` § Deduplication), and whichever ids it compared against land in
+  `related` regardless of verdict — this weighting pass and ac-hygiene's cluster-walk lens
+  (`skills/ac-hygiene/SKILL.md` § Friction Cluster-Walk Lens) both just *walk* that graph,
+  neither builds it. An over-bar id or cluster becomes a `skill-improvement`
   candidate carrying the cluster's pre-drafted `proposed_fix`(es) as the starting point —
   same Phase 4 judge → Phase 5 emit path as every other candidate (this is a second sensor
   feeding the same funnel, not a new mechanism, exactly like the loop-retro rows above). On
@@ -194,6 +199,18 @@ restated at app *and* sub-domain/root level → propose collapsing to the narrow
 covering level + pointers, per the ALTITUDE rule) · **wiki↔facts contradiction** (a
 `neometa/wiki/` page's claim vs the current text of the fact/decision it cites — always
 gated, per `[[rule-proposals-become-beads]]`; `references/lint-checks.md` check 11).
+**Deletion mandate (W1.3b):** removal/supersession ranks EQUALLY with additions in this
+lint — don't only hunt for missing facts/rules. Flag **accretion**: content that should
+have been demoted or deleted when it was superseded but is still sitting in a skill
+(`skills/*/SKILL.md`/`references/`) — a stale block whose replacement already landed
+elsewhere, a `references/` file nothing points to any more, a holding-zone entry past its
+`review-by` with no churn signal. Route each finding per the ladder's own rules, don't
+re-derive them here: `skill-builder/references/promotion-ladder.md` §What routes through
+the holding zone (duplicate → delete outright, extract → `references/` + pointer, unique →
+holding-pen first) and §Holding-zone mechanics (the `review-by`/cut-log discipline). This
+mirrors ac-hygiene's own Deletion Mandate (`ac-hygiene/SKILL.md` § Phase 2 Synthesize) —
+same ladder, applied here to the memory/skill substrate instead of live code.
+
 Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
 (dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
 lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
