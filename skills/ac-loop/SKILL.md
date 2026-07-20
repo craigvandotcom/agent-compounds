@@ -98,9 +98,9 @@ ON EXIT — ALWAYS, every stop path (C1/C2/C3/C4, Phase ARIA, or an error):
   run ac-land. Land is the loop's single closing ritual — it TEARS DOWN (kills
   spawned tasks, sweeps orphaned waiters, releases+deregisters Agent Mail, clears
   temp, asserts a clean tree) AND LEARNS (reflect + system upgrades). ac-land runs
-  LAST, after the final wave's merge — not per-wave (it was wrongly in the per-wave
-  path before). The loop is NOT done until it has landed: a run that ships waves but
-  never lands leaves zombies + strands every lesson in the transcript.
+  LAST, after the final wave's merge — never per-wave. The loop is NOT done until
+  it has landed: a run that ships waves but never lands leaves zombies + strands
+  every lesson in the transcript.
 ```
 
 > The run's progress through these phases is tracked in the Phase 0 **run ledger**
@@ -211,7 +211,7 @@ Read the current state of the board. This is the map you navigate by.
 > **Discovery uses `bv` for triage, `br` for data — NEVER bare `br ready`.**
 > `br ready` **defaults to `--limit 20`** and silently truncates: a board with >20 ready
 > beads shows only the first 20, and the default sort can bury all the shippable ones below
-> the cut (this stranded 23 refined maintenance beads and derailed a whole run, 2026-07-08).
+> the cut (this has silently stranded ready work and derailed a run before).
 > **ALWAYS pass `--limit 0`.** `bv --robot-triage` is the dependency-aware "what to work on"
 > engine (no truncation; correctly treats parent-child *containment* edges as non-blocking);
 > `br` remains the **create/modify/close** engine + the labeled data source. Roles, not
@@ -264,20 +264,14 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 > plan MAY declare a machine-readable `depends-on:` frontmatter field naming one or more
 > upstream **PLAN(s) by path or name** — e.g. `depends-on: _plans/2026-07-01-foo.md`. It
 > means "do not admit this plan to the beadify phase until the named upstream plan(s) are
-> **Complete(A)** (defined in the Phase 2 admission gate below)." **`depends-on:` names
-> plans only.** The **epic-id form is DEPRECATED** (epics stay open across batches, so an
-> epic-status check would wedge a dependent plan permanently) — the gate **ERRORS** on an
-> epic-id value: it does **not** silently ignore it. Operationally, ERROR = **skip
-> admission of that one dependent plan this pass + surface an advisory Slack nudge**
-> (loud, visible), and then move on. It is **NEVER a hard loop stop** — ac-loop's Stop
-> Conditions make **C2 (critical regression) the only hard stop** (§ Stop Conditions), so
-> a malformed `depends-on` de-admits its own plan and nudges the human without halting the
-> queue. The conductor honours all of this in Phase 2 § Pick the next plan (the admission
-> gate below). Unrelated plans (no declared `depends-on`) may parallelize within the
-> beadify phase. Bead-level `depends-on` edges + `bv --robot-plan` tracks continue to
-> govern within-*implement* partitioning. Prior art: memory
-> `plan-internal-gates-outrank-blanket-loop-directives` — this structuralizes what plan
-> prose already did.
+> **Complete(A)**." **`depends-on:` names plans only** — the epic-id form is deprecated
+> and the gate ERRORS on it rather than silently ignoring it. Full ERROR-handling +
+> Complete(A) mechanics live at Phase 2 § Plan-admission gate below — that's the
+> conductor's actual enforcement point for this gate, not here. Unrelated plans (no
+> declared `depends-on`) may parallelize within the beadify phase. Bead-level
+> `depends-on` edges + `bv --robot-plan` tracks continue to govern within-*implement*
+> partitioning. Prior art: memory `plan-internal-gates-outrank-blanket-loop-directives`
+> — this structuralizes what plan prose already did.
 
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
@@ -292,14 +286,12 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any
 >   - **Class trumps priority** — any bug whose trace touches persistence, auth, money, or produces wrong values is preemptive **regardless of P-label**.
 >   - **GUARD-RAIL:** a mislabeled P3 waits at most one cycle (~2–3h); source-trace (not description) catches data-integrity mislabels.
 > - **Blocked bugs can't ship — so they never freeze the loop.** A bug with an unmet dependency is not in `br ready`; a `human-gate` bug is exempt. Both are *surfaced* (advisory nudge / Phase ARIA), set aside, and picked up automatically on a later pass once their blocker merges through the non-bug flow. "Within reason" = a bug you can't act on does not hold up the world.
-> - **Execution: the drain ships as ONE trunk-direct batch (claim-at-selection, direct-to-main, `ac-batch-close`).** This is the SAME model Phase 1/2 use — no branch is ever minted. Claim the full ready-bug set in one `br update` (`in_progress` + assignee `$AGENT_NAME`), **strip `post-merge` from any claimed bead** (strip-at-claim half of the `post-merge` lifecycle — Phase 1 § BEADS-CLOSED-GATE), mint the claim id, write `.claim-id`; `br ready` then naturally excludes them for every other conductor. `ac-implement` commits each fix **directly to main**, one bug per commit, each independently green on affected tests before the next starts, so main is never broken mid-sequence (same safe-sequencing contract as wave beads). The batch then runs implement → VERIFY-GATE → review → BEADS-CLOSED-GATE → `ac-batch-close` **once**: one batch-close, one CI dispatch — a 9-bug drain costs one close ceremony, not nine (the 2026-07-10 all-nighter post-mortem: per-bug branches spent ~3h in CI for ~1h of fixes). A fix that turns out bad is **reverted (its own commit)** and its bead reopened — it never blocks siblings (this replaces the old "never bundle unrelated bugs" rationale). **Solo-close exceptions (ship immediately as a batch-of-one):** P0/urgent fixes that must not wait for the batch; migration- or native-touching fixes; anything the conductor judges needs isolation — each still commits to main and runs its own `ac-batch-close`, never a branch. Cap ~8 bugs per batch — overflow forms the next batch after this one closes. Never fold a bug into an unrelated feature wave; a bug *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
->
-> *(Historical — superseded 2026-07-12, trunk-direct migration bd-u2lo1: the bug lane formerly minted a `bugs/batch-<YYYYMMDD>-<n>` branch and ran one PR / one CI run. That branch model is retired — `ac-implement` HARD STOPs on any non-main branch and `bugs/batch-*` cannot be pre-allowlisted, so the drain now ships claim-at-selection direct to main. Reversible if Craig overrules at the post-migration reassessment — see bd-smrcb.)*
+> - **Execution: the drain ships as ONE trunk-direct batch (claim-at-selection, direct-to-main, `ac-batch-close`).** This is the SAME model Phase 1/2 use — no branch is ever minted. Claim the full ready-bug set in one `br update` (`in_progress` + assignee `$AGENT_NAME`), **strip `post-merge` from any claimed bead** (strip-at-claim half of the `post-merge` lifecycle — Phase 1 § BEADS-CLOSED-GATE), mint the claim id, write `.claim-id`; `br ready` then naturally excludes them for every other conductor. `ac-implement` commits each fix **directly to main**, one bug per commit, each independently green on affected tests before the next starts, so main is never broken mid-sequence (same safe-sequencing contract as wave beads). The batch then runs implement → VERIFY-GATE → review → BEADS-CLOSED-GATE → `ac-batch-close` **once**: one batch-close, one CI dispatch — a 9-bug drain costs one close ceremony, not nine. A fix that turns out bad is **reverted (its own commit)** and its bead reopened — it never blocks siblings. **Solo-close exceptions (ship immediately as a batch-of-one):** P0/urgent fixes that must not wait for the batch; migration- or native-touching fixes; anything the conductor judges needs isolation — each still commits to main and runs its own `ac-batch-close`, never a branch. Cap ~8 bugs per batch — overflow forms the next batch after this one closes. Never fold a bug into an unrelated feature wave; a bug *structurally* part of an in-flight wave is `blocked-by` that wave's beads (so not `br ready`) and rides the wave naturally — no special handling.
 
 **Work priority order (NON-BUG work — runs only after the Bug Lane is dry)** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined non-`human-gate` beads, **furthest-advanced first** — (a) from a loop-ready plan (`wave-NNN` marker), OR part of a beadified epic / plan-traceable group; then (b) lone captures (triage/hygiene/reflect/`ac-bead-capture` follow-ups). Run `ac-bead-refine` on them, then drive to merge (delegation: "ac-loop autonomous run, skip next-step question; return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — a captured bead is committed work; refine-and-finish it. (The backlog *pool* is the "not-yet-committed" holding area, upstream of beads — that is where human promotion happens, not here.) A beadified epic outranks #3.
-3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed; return bead IDs created/refined + anything blocked, ≤200 words")
+2. Unrefined non-`human-gate` beads, **furthest-advanced first** — (a) from a loop-ready plan (`wave-NNN` marker), OR part of a beadified epic / plan-traceable group; then (b) lone captures (triage/hygiene/reflect/`ac-bead-capture` follow-ups). Run `ac-bead-refine` on them, then drive to merge (delegation: "ac-loop autonomous run, skip next-step question. If a ceremony or implement commit may be concurrently in flight, HOLD all beads-DB mutations (br update/close/label/comments) until told the ledger is flushed — the conductor owns the final commit (memory `beads-ledger-shared-file-conductor-should-own-final-commit`). Return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — a captured bead is committed work; refine-and-finish it. (The backlog *pool* is the "not-yet-committed" holding area, upstream of beads — that is where human promotion happens, not here.) A beadified epic outranks #3.
+3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed. If a ceremony or implement commit may be concurrently in flight, HOLD all beads-DB mutations (br update/close/label/comments) until told the ledger is flushed — the conductor owns the final commit (memory `beads-ledger-shared-file-conductor-should-own-final-commit`). Return bead IDs created/refined + anything blocked, ≤200 words")
 4. Plan wave refined beads → Phase 2
 
 > **Orphans ship before prep** — `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, so a session that ends early (compaction / human override / iteration cap) still delivers the ready work if the cheap fixes go first.
@@ -437,7 +429,7 @@ If orphans exist:
 7. **Invoke `ac-batch-close`** — use this delegation prompt:
    > "Run ac-batch-close for batch `<batch-id>`. CI config for this project: `<cached-answer>`. Version bump: accept recommended default without asking. For uncertain PR feedback items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after merge."
 8. **Slack notify** (see Milestone Notifications).
-9. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land); per-wave landing was the leftover the "land runs LAST" reconciliation retired.
+9. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land).
 
 If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
 
@@ -638,6 +630,21 @@ round inverting an earlier fix) is structurally preserved.
 | **(b)** | Non-bug **REFINE** children may run during a **bug-lane** implement. |
 | **(c)** | Non-bug **REFINE** children may run during a **feature-wave** implement. |
 
+<!-- net-growth-ok: wire phase-pipelining-permissions live (Craig-ratified at W3.2 pilot gate) — converts unwired spec-ware to actionable hookpoints + threads the beads-DB deferral guard-rail into the refine-delegation prompts -->
+
+**Engage phase-pipelining at these hookpoints** (the conductor's *when* — mirrors
+Ceremony batching pool's hookpoint table; this is what makes permissions (a)-(c)
+actionable rather than standing spec):
+
+| Owner | When | Action |
+| ----- | ---- | ------ |
+| **conductor** (a) | post-close, ceremony's CI-poll wait (batch N) | if ≥1 unclaimed unrefined non-`human-gate` bead exists AND no refine child is already in flight → spawn ONE `ac-bead-refine` child on the highest-priority such bead (Work priority #2/#3 delegation prompt), under the concurrency rules in Efficiency § Parallelism |
+| **conductor** (b) | during bug-lane implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset |
+| **conductor** (c) | during feature-wave implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset |
+
+WIDTH cap, homogeneity, and "refine ships nothing" invariants are unchanged — see
+Efficiency § Parallelism for the mechanics, not restated here.
+
 ### GUARD-RAIL — git ledger commit (mixed-state sanctioned)
 
 The ledger rule stays: the **ceremony** commits whatever `.beads/issues.jsonl` state
@@ -710,8 +717,8 @@ fighting the machine. Hold these:
 - Match the wakeup to the wait. A known ~5-min job → poll ~270s (stay in the prompt-cache
   window); reserve 1200–1800s for genuinely idle ticks. Don't sleep 20 min on a 5-min job.
 - **The CI runner IS this Mac** (self-hosted). Do NOT run local `test:all`/builds while a
-  CI job is live on the runner — you starve your own runner and triple every duration
-  (a ~21-min suite became ~50 min at load-68). See `bca-ci-and-ios-build-ops`.
+  CI job is live on the runner — you starve your own runner and can multiply every
+  duration under load. Measured numbers: memory `bca-ci-and-ios-build-ops`.
 - **Bulk `br` write-loops run FOREGROUND** (batch claim/label/dep sweeps of >~10–20
   sequential `br` writes) — a backgrounded bulk-`br` loop can stall silently; kill and
   retry foreground before assuming `br` is broken (`_shared/bead-conventions.md` § Bulk
