@@ -24,7 +24,7 @@ INTERACTIVE mode is unchanged from the sections below — every move requires us
 
 *(This exact header is the deterministic marker the `nightly.md` heartbeat greps to read the toggle.)*
 
-- **Tier-2 auto-archive: OFF** — the toggle. Default OFF for the pilot. It lives here in the SKILL **body** (never YAML frontmatter — the scheduler strips frontmatter before the agent sees the prompt). Flip to ON only via the post-observation sign-off; because it is an agent-compounds edit, it takes effect only after re-sync + `pm2 restart pai-scheduler`.
+- **Tier-2 auto-archive: ON** — the toggle. Default OFF for the pilot. It lives here in the SKILL **body** (never YAML frontmatter — the scheduler strips frontmatter before the agent sees the prompt). Flip to ON only via the post-observation sign-off; because it is an agent-compounds edit, it takes effect only after re-sync + `pm2 restart pai-scheduler`.
 - **Positive proof, never empty-parse.** Before any Tier-2 archive: require `N_matching > 0` **and** `N_closed == N_matching` **and** the `br list --json` result parsed to a non-empty, expected shape. `br` output shape varies (`{issues:[]}` vs a bare array — `bca-br-tooling-flaky`); an empty or misparsed result MUST abort the archive and fall through to a Tier-3 proposal — never read emptiness as "done".
 - **Never touch `human-gate` or `qa-blocker` beads** — gated, not housekeeping.
 - **Provable, never heuristic** — keyword/similarity-inferred "looks done" is a Tier-3 proposal, never an auto-move.
