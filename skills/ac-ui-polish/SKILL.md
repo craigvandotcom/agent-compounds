@@ -7,7 +7,7 @@ description: 'Use when polishing already-coded UI to premium quality or checking
 
 **Purpose:** Take already-coded UI and (1) verify it conforms to the app's design spec (`CORE/design.md`), then (2) raise it to premium quality — bounded to that spec so polish never drifts into redesign. Works on one screen or a whole-app crawl.
 **Domain:** Frontend craft, design-spec conformance, UX/UI polish, anti-slop critique
-**Status:** Complete (the elevation engine formerly named `ui-elevate`, extended with whole-app spec-anchored conformance)
+**Status:** Complete (the elevation engine, extended with whole-app spec-anchored conformance)
 
 > **The third member of the "verify the built app" triad** — alongside
 > `ac-qa-device` (native functional QA) and `ac-qa-browser` (web functional QA).
