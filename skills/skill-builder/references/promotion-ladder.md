@@ -54,6 +54,12 @@ content stopped being used.* That is what makes the ladder safe — promotion is
 worth), demotion is easy (disuse is enough), and **nothing unique is deleted without first spending
 a timed window in the holding zone where it can be caught.** Easy to demote, impossible to vaporize.
 
+**The standing posture this implies for every edit:** hold-or-shrink is the default for any
+SKILL.md change; net growth is the exception, and the exception must carry proof — a per-file
+`net-growth-ok` stamp on the growing file's own diff, satisfying the same evidence burden as a
+promotion. Enforced mechanically by lint Check 14 (per-file, not corpus-summed — one file's shrink
+never buys another file's growth).
+
 ## What routes through the holding zone — and what skips it
 
 The holding zone would drown in noise if *every* removal passed through it. Two removals skip it,
