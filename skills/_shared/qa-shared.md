@@ -20,7 +20,7 @@ twice — route by plane.
 > **Whether to run a twin at all (and how deep)** is decided upstream by
 > **`_shared/verification-gate.md`** — it classifies the wave diff and selects passes +
 > depth so a one-line fix doesn't trigger a simulator boot. This file owns the _how_;
-> that gate owns the _whether_. Conductors (`ac-pipeline` Verify stage, `ac-loop`,
+> that gate owns the _whether_. Conductors (`ac-loop`,
 > `ac-merge`'s smoke net) consult the gate, not this file, to decide selection.
 
 ## Depth levels

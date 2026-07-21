@@ -346,13 +346,6 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Check 10: pipeline conformance (D-series) ---"
 
-# D1: ac-pipeline/SKILL.md carries the deprecation banner (presence only — the
-# old chain text is deliberately kept readable, so we do NOT assert its absence).
-check
-if ! grep -q "DEPRECATED — superseded by" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
-  fail "D1: skills/ac-pipeline/SKILL.md missing deprecation banner ('DEPRECATED — superseded by')"
-fi
-
 # D2: ac-pipeline-builder conformance checklist has both ticked items with their
 # "(this sweep, 2026-07-03)" annotation — content match, not line numbers.
 check
@@ -632,13 +625,14 @@ fi
 # live-run-accepted 2026-07-21. This is a MEASURED ceiling (from a shipped skill),
 # not an aspirational one — it locks in the pilot's proven size as the cap.
 #
-# Standard-tier ceiling: DEFERRED. The plan sets the standard-tier ceiling "from
-# the first standard-tier skill dieted post-pilot" — no standard-tier skill has
-# been dieted yet, so there is no measured basis. We deliberately do NOT invent a
-# number here: fabricating one would just lock in the current bloat as the ceiling.
-# Emit a NOTICE (never a FAIL) until the first standard-tier diet supplies a real
-# measured floor to derive from.
+# Standard-tier ceiling: PROVISIONAL ratchet (not measured-from-pilot like the
+# conductor ceiling above). Derived as: largest standard-tier skill today
+# (ac-hygiene, 664 lines) x 1.15 headroom ~= 764 -> 770 (clean round-up). This
+# locks in "no worse than today's largest standard skill" as a floor-first
+# ratchet; lower it as standard skills get dieted post-pilot (do not raise it
+# to accommodate a bloated skill — diet the skill instead).
 CONDUCTOR_CEILING=1110
+STANDARD_CEILING=770
 
 CONDUCTOR_SKILLS=(
   "ac-loop"
@@ -665,7 +659,32 @@ for cskill in "${CONDUCTOR_SKILLS[@]}"; do
     printf '  PASS  %-16s %5s / %s lines\n' "$cskill" "$cskill_lines" "$CONDUCTOR_CEILING"
   fi
 done
-echo "NOTICE: standard-tier ceiling DEFERRED — no standard-tier skill dieted post-pilot yet, so no measured basis exists; not enforced (deriving one now would just lock in current bloat)."
+echo "standard-tier ceiling: ${STANDARD_CEILING} lines (ac-hygiene 664 +15%, provisional ratchet — lower as standard skills get dieted)"
+check
+for sskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
+  [ -f "$sskill_path" ] || continue
+  sskill_name=$(basename "$(dirname "$sskill_path")")
+
+  is_conductor=false
+  for cskill in "${CONDUCTOR_SKILLS[@]}"; do
+    if [ "$sskill_name" = "$cskill" ]; then
+      is_conductor=true
+      break
+    fi
+  done
+  [ "$is_conductor" = true ] && continue
+
+  if grep -q '^accessory: true' "$sskill_path" 2>/dev/null; then
+    continue
+  fi
+
+  sskill_lines=$(wc -l < "$sskill_path" | tr -d ' ')
+  if [ "$sskill_lines" -gt "$STANDARD_CEILING" ]; then
+    fail "Check 15: standard skill '$sskill_name' SKILL.md is ${sskill_lines} lines > ${STANDARD_CEILING} ceiling (diet it or move content to references/)"
+  else
+    printf '  PASS  %-16s %5s / %s lines\n' "$sskill_name" "$sskill_lines" "$STANDARD_CEILING"
+  fi
+done
 
 # ---------------------------------------------------------------------------
 # Summary

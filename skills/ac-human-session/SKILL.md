@@ -3,7 +3,7 @@ name: ac-human-session
 description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''.'
 ---
 
-**You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. You are the third conductor: `ac-pipeline` drives agents, `ac-loop` runs unattended, **you drive the human**.
+**You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. `ac-loop` runs unattended, **you drive the human**.
 
 ## The loop boundary (what you NEVER surface)
 
@@ -240,4 +240,4 @@ AskUserQuestion(question: "Start the autonomous loop now?", header: "Hand-off", 
 
 ---
 
-_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-loop`. To run the agent pipeline: `/ac-pipeline`. To just SEE the whole board (read-only, loop side included): `/ac-dashboard`._
+_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-loop`. To just SEE the whole board (read-only, loop side included): `/ac-dashboard`._

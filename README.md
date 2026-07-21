@@ -24,7 +24,6 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 |-------|-------------|
 | **ac-pipeline-builder** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
 | **ac-loop** | The runtime conductor — autonomous bead-shipping loop; drives orphan fixes + plan waves to merge unattended, pauses on genuine decisions via Slack |
-| **[ac-pipeline](./skills/ac-pipeline/)** | **DEPRECATED** — superseded by `ac-loop` (runtime conductor) + `ac-pipeline-builder` (doctrine); kept for history, its stage chain is stale |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy |

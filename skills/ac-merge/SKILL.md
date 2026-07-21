@@ -116,7 +116,7 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 This is the smoke net: it re-proves the exact state that merges, using
 the **same classifier as `_shared/verification-gate.md`** (the diff-class greps below are
-that gate's `native` / `webui` classes). The Verify stage in `ac-pipeline`/`ac-loop`
+that gate's `native` / `webui` classes). The Verify stage in `ac-loop`
 already ran the gate-selected passes at full depth pre-land; this net re-checks at
 **smoke** depth because the diff can change between verify and merge (on this PR path via
 the rebase above; on the trunk-direct path the same net runs as `ac-batch-close`'s

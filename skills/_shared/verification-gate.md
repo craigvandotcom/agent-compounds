@@ -3,7 +3,7 @@
 **The selection brain for the "verify the built app" triad.** Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
 boot. This file decides, from the wave's diff, **which passes run and at what
-depth**. It is the single source; conductors (`ac-pipeline` Verify stage, `ac-loop`
+depth**. It is the single source; conductors (`ac-loop`
 Phase 1/2, `ac-merge`'s smoke net) consult it rather than re-deciding.
 
 Reference it as `_shared/verification-gate.md`. Method only — zero app facts.

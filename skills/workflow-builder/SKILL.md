@@ -1,6 +1,6 @@
 ---
 name: workflow-builder
-description: Use when building a new orchestrated command workflow — a reusable, multi-step `/command` or scheduled job coordinating agents, gates, and outputs toward a repeatable outcome, for content OR code (newsletters, distribution runs, recurring reports, scaffolders, migration drivers, review pipelines). Triggers on "build a workflow", "create a /command", "turn this SOP into a command", "design a pipeline command", "workflow builder". NOT for authoring a SKILL.md (skill-builder), the engineering-pipeline DESIGN doctrine (ac-pipeline-builder), running the pipeline (ac-pipeline / ac-loop), or deciding where knowledge lives (context-engineering).
+description: Use when building a new orchestrated command workflow — a reusable, multi-step `/command` or scheduled job coordinating agents, gates, and outputs toward a repeatable outcome, for content OR code (newsletters, distribution runs, recurring reports, scaffolders, migration drivers, review pipelines). Triggers on "build a workflow", "create a /command", "turn this SOP into a command", "design a pipeline command", "workflow builder". NOT for authoring a SKILL.md (skill-builder), the engineering-pipeline DESIGN doctrine (ac-pipeline-builder), running the pipeline (ac-loop), or deciding where knowledge lives (context-engineering).
 ---
 
 > **Shared skill (agent-compounds).** Symlinked into projects via `deploy.sh` — this is the
