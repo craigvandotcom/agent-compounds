@@ -621,6 +621,53 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 15 — post-pilot line ceilings (skill-diet WS2b, bead ac-q6e.5)
+# ---------------------------------------------------------------------------
+# Conductor-tier ceiling: each of the 6 ratified pipeline-conductor skills'
+# SKILL.md must be <= CONDUCTOR_CEILING lines. HARD FAIL if any exceeds.
+#
+# Derivation: the W3.2 pilot dieted+wired ac-loop to a live-run-accepted GREEN
+# operating core of 963 lines. The conductor-tier ceiling = that measured size
+# + ~15% headroom = 963 x 1.15 ~= 1107 -> 1110 (clean round-up). Post-W3.2-pilot,
+# live-run-accepted 2026-07-21. This is a MEASURED ceiling (from a shipped skill),
+# not an aspirational one — it locks in the pilot's proven size as the cap.
+#
+# Standard-tier ceiling: DEFERRED. The plan sets the standard-tier ceiling "from
+# the first standard-tier skill dieted post-pilot" — no standard-tier skill has
+# been dieted yet, so there is no measured basis. We deliberately do NOT invent a
+# number here: fabricating one would just lock in the current bloat as the ceiling.
+# Emit a NOTICE (never a FAIL) until the first standard-tier diet supplies a real
+# measured floor to derive from.
+CONDUCTOR_CEILING=1110
+
+CONDUCTOR_SKILLS=(
+  "ac-loop"
+  "ac-implement"
+  "ac-review"
+  "ac-batch-close"
+  "ac-merge"
+  "ac-land"
+)
+
+echo "--- Check 15: post-pilot line ceilings ---"
+echo "conductor-tier ceiling: ${CONDUCTOR_CEILING} lines (ac-loop 963 +15%, post-W3.2-pilot, live-run-accepted 2026-07-21)"
+check
+for cskill in "${CONDUCTOR_SKILLS[@]}"; do
+  cskill_path="$AC_ROOT/skills/$cskill/SKILL.md"
+  if [ ! -f "$cskill_path" ]; then
+    fail "Check 15: conductor skill '$cskill' has no SKILL.md at ${cskill_path#$AC_ROOT/}"
+    continue
+  fi
+  cskill_lines=$(wc -l < "$cskill_path" | tr -d ' ')
+  if [ "$cskill_lines" -gt "$CONDUCTOR_CEILING" ]; then
+    fail "Check 15: conductor '$cskill' SKILL.md is ${cskill_lines} lines > ${CONDUCTOR_CEILING} ceiling (diet it or move content to references/)"
+  else
+    printf '  PASS  %-16s %5s / %s lines\n' "$cskill" "$cskill_lines" "$CONDUCTOR_CEILING"
+  fi
+done
+echo "NOTICE: standard-tier ceiling DEFERRED — no standard-tier skill dieted post-pilot yet, so no measured basis exists; not enforced (deriving one now would just lock in current bloat)."
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
