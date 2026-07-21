@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """PreToolUse(Edit|Write) guard — skill-diet doctrine reminder on SKILL.md spine edits.
 
-Reframed per plan D4 (2026-07-19-2338-skill-doctrine-diet-promotion-governance.md):
-PreToolUse hooks in this stack CANNOT inject context (verified against am-edit-guard.py +
-claude-code/hooks.md) — they communicate via exit code only (0 allow / 2 block, tool proceeds
-either way) plus stderr, shown to the acting agent as the block/advisory reason. There is no
-stdout-context-injection channel here (that's UserPromptSubmit's job).
+Why exit-2 + stderr, not context-injection (plan D4, 2026-07-19-2338-skill-doctrine-diet-promotion-governance.md):
+this hook deploys org-wide across 4 harnesses (claude/codex/droid/grok), and context-injection
+is NOT portable — Grok has no hook context-injection channel at all (it discards hook stdout AND
+ignores Claude's hookSpecificOutput.additionalContext; proven twice, memory
+`grok-hooks-no-context-injection-channel`), and additionalContext isn't wired for codex/droid
+either. exit code + stderr is the only mechanism honored on every harness, so the reminder is
+delivered as an advisory exit-2 block. (Whether Claude's PreToolUse *alone* could inject context
+is contested and moot here — a portable hook can't rely on it; Grok gets the doctrine separately
+via harness-sync's render_context_grok.)
 
 Behavior: an Edit|Write whose target matches a skill spine (`skills/**/SKILL.md`) gets an
 ADVISORY reminder of the skill-diet doctrine (promotion ladder, conservation gate,
-no-net-growth discipline) printed to stderr, signaled via exit 2. This is advisory only — the
-edit is NOT blocked; harnesses show the stderr text and the agent's own retry naturally
-proceeds (exit 2 does not undo the edit, it only surfaces a message on this call).
+no-net-growth discipline) printed to stderr, signaled via exit 2. Exit 2 BLOCKS this first
+attempt — that is how the reminder reaches the model (an exit-0 hook's stderr is not shown to
+it). The once-per-session flag (below) then lets the agent's RE-ISSUE of the edit through
+(exit 0), so the edit lands on retry. Net effect = a one-time speed-bump, not a hard wall — but
+it does depend on the agent choosing to retry, so it is not a silent pass-through. Enforcement
+proper is the commit-time lint.sh no-net-growth gate; this hook is only the doorbell.
 
 CRITICAL — must not infinite-loop: firing on every SKILL.md edit in a session would make the
 agent retry into the same exit-2 forever. Fire ONCE PER SESSION via a session-scoped flag
@@ -49,7 +56,7 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     no-net-growth gate. Run `node scripts/skill-diet-conservation.mjs` if you are
     moving or removing content, to confirm nothing unique is lost.
 
-(This reminder fires once per session -- this edit is NOT blocked.)
+(Fires once per session. This first attempt is blocked to surface the reminder; re-issue the edit to proceed.)
 """
 
 
