@@ -2,7 +2,7 @@
 skill: ac-loop
 created: 2026-07-21
 last_pass: 2026-07-22
-entries: 4
+entries: 7
 ---
 
 # ac-loop — friction log
@@ -63,3 +63,65 @@ entries: 4
 - status: open
 - proposed_fix: (a) make the explicit per-child FILE-TERRITORY FENCE standard delegation-prompt text — it is the mechanism that made width 3 safe; (b) add a width-safety caveat: parallelism is safe on source FILES but NOT on shared BUILD state (`.next`) or shared SCRATCH state (RUN_ID-derived artifact dirs) — never schedule two prod-build consumers (qa-browser / site-polish / anything triggering the pre-push build) concurrently until a real build slot or a per-consumer `distDir` exists.
 - narrative: PARALLEL_WIDTH=3 (Craig-chosen) held cleanly — three tree-disjoint implementers committed to `main` concurrently across two batches with ZERO lost work and zero pathspec collisions. The explicit per-child file-territory fence in the delegation prompt is what made that safe, and it is currently improvised per-run rather than standard text. Both genuine collisions this run were on shared NON-SOURCE state, not source: (1) refine siblings share a RUN_ID so their `beads-snapshot.json` collided, a near-miss that nearly stamped another child's beads (filed bd-baudw); (2) two prod-build consumers clobbered each other's `.next`, costing ~35min and a false-positive product investigation (filed bd-y5mza). Ramp conclusion: width 3 is sustainable for refine and implement; it is NOT yet safe for concurrent prod-build consumers.
+
+## phase-skills-mandate-panels-a-subagent-cannot-spawn
+- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser]
+- impact: L
+- frequency: every-run
+- recurrence: 30
+- related: [standing-sanctions-not-threaded-into-delegation-prompt]
+- first_seen: 2026-07-22
+- last_seen: 2026-07-22
+- stage: ac-loop
+- status: open
+- proposed_fix: declare an explicit DEGRADED SINGLE-CONDUCTOR MODE in each panel-mandating phase skill (`ac-bead-refine`, `ac-review`, `ac-qa-browser`) — when the skill is invoked from inside a subagent (no spawn capability), the mandated N-way parallel panel collapses to N sequential inline LENSES run by the one agent, and that degradation is declared in the artifact rather than silently substituted. Tracked by bd-nreuv.
+- narrative: recurred across ~30 children in one day (2026-07-22, BCA — three ac-loop batches plus
+  an infra-four batch). `ac-bead-refine`, `ac-review` and `ac-qa-browser` all MANDATE a parallel
+  reviewer/lens panel as their core mechanism, but every one of them is routinely invoked from
+  INSIDE a subagent, which cannot spawn further subagents. The mandate is therefore unsatisfiable
+  by construction in the most common invocation path. Every child silently degraded to running the
+  lenses inline and sequentially — which is a reasonable fallback, but it is undeclared: the
+  artifact still reads as though a real panel ran, so the conductor cannot tell a genuine 3-reviewer
+  consensus from one agent wearing three hats. The cost is not the degradation itself but the loss
+  of signal about which reviews had real independence. bd-nreuv tracks the decision.
+
+## dcg-blocks-the-skills-own-canonical-artifact-redirects
+- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement]
+- impact: M
+- frequency: every-run
+- recurrence: 15
+- related: [phase-skills-mandate-panels-a-subagent-cannot-spawn]
+- first_seen: 2026-07-22
+- last_seen: 2026-07-22
+- stage: ac-loop
+- status: open
+- proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
+- narrative: ~15 recurrences in one day (2026-07-22). The ac-* phase skills ship copy-paste setup
+  snippets that write artifacts via `> "$ARTIFACTS_DIR/<file>"`. dcg blocks variable/substituted
+  paths as a matter of policy, so the skills' OWN canonical snippets are guard-blocked on first
+  use — every child hit the block, then improvised a workaround. This is the worst shape of
+  friction: the doctrine says "a guard block means CHANGE APPROACH, never bypass", and the thing
+  being blocked is the doctrine's own example code, so a compliant child is left with no sanctioned
+  path and must invent one. Identical in kind to ac-land's own teardown fix (selectors print
+  literals, deletion pastes them) — the same resolve-then-paste discipline needs applying to the
+  artifact-write snippets across the phase skills. bd-5ndzm tracks it.
+
+## dcg-false-positives-on-angle-bracket-inside-quoted-prose
+- skills: [ac-loop, ac-land, ac-bead-capture, beads-standards]
+- impact: S
+- frequency: occasional
+- recurrence: 1
+- related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
+- first_seen: 2026-07-22
+- last_seen: 2026-07-22
+- stage: ac-land
+- status: open
+- proposed_fix: when a bead description contains markdown that could tokenise as shell metacharacters (a `>` blockquote is the common one), do not inline it in `br create -d "..."` — write the memo to a literal `/tmp/<dir>/memo.md` with the Write tool and pass `-d "$(cat /tmp/<dir>/memo.md)"`. Worth stating once in beads-standards' decision-bead template, since decision memos are exactly the beads long enough to contain blockquotes.
+- narrative: filing the ac-land T2 decision bead was BLOCKED by dcg's
+  `core.filesystem:redirect-truncate-dynamic-path` rule. Nothing in the command redirected
+  anything — the `>` was a markdown blockquote inside the double-quoted `-d` description, and the
+  guard's tokeniser read it as a redirect to a dynamic path. Correct guard behaviour is ambiguous
+  here (it cannot prove the quoting is safe), so the fix is on the caller side, not a bypass. Cost
+  was one blocked cycle plus a rewrite; trivial individually, but decision beads are precisely the
+  ones with long prose memos, so it will recur every time a memo uses a blockquote. Resolved by
+  writing the memo to a literal /tmp path and passing it via command substitution.
