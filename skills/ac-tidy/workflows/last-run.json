@@ -1,16 +1,15 @@
 {
   "status": "done",
   "mode": "NIGHTLY",
-  "machine": "FoggyCreek",
-  "date": "2026-07-16",
-  "tier2_toggle": "OFF",
+  "machine": "Craigs-MacBook-Air",
+  "date": "2026-07-22T00:46:00+0200",
+  "pushed_sha": "143bd69f",
   "counts": {
-    "reconciled": 40,
-    "closed_unrefined_stripped": 33,
-    "open_lifecycle_gap_stamped": 7,
-    "proposals_emitted": 2,
-    "archived": 0
+    "reconciled": 0,
+    "proposals_emitted": 3,
+    "proposals_deduped": 2,
+    "archived": 0,
+    "tier2_toggle": "ON"
   },
-  "proposals": ["bd-ajlnd", "bd-qb8ap"],
-  "pushed_sha": "dab91604ead91f45e26e9219398802ed19f64bc0"
+  "notes": "Ran in isolated worktree off fresh origin/main a6c3a218. Tier-1 clean: no captured->planned (all 4 active plans declare source_backlog:none), no missing frontmatter (all 4 have it), no lifecycle-gap 2f (zero open non-epic beads without a readiness label), no stale `unrefined` on any closed bead. Tier-2 toggle ON but 0 auto-archives fired: no plan has bead-reference matches on the BCA board (N_matching=0 for all 4), so the positive-proof gate could not pass — correctly withheld rather than reading emptiness as done. Tier-3: 3 proposals emitted. bd-b917c archive 2 completed/finalized plans (skill-doctrine-diet status:complete on agent-compounds board; single-conductor-fanout-dial status:finalized, epics bd-pwt44/bd-u2lo1 closed). bd-d6sbd close epic bd-19o6g (29/29 children closed). bd-8ms5t prune ~55-deep finding-bead backlog (recommend ac-triage/human sweep; never auto-close headless). Deduped 2 clusters vs open proposals bd-5kfi1 (I2 epic-edge rewire) + bd-zugqh (parentage-gap orphan adoptions). IMPORTANT self-correction: initially proposed closing bd-brv39 too (dotted-id view showed 6/6) but its 7th child bd-oumd8 is OPEN, linked via parent-child edge stored as child.depends_on_id (not dotted-id) — pulled bd-brv39 from the proposal (commit 143bd69f). Lesson: epic child-set MUST union dotted-id AND parent-child edges (via depends_on_id), never dotted-id alone. Push hit a concurrent-pusher race (origin advanced a6c3a218->20e0549b mid-run); rebased clean (additive JSONL append + new dated dir, no conflict), re-pushed, verified. 3 commits landed: c2a4dac3 (rebased into 34af8111) proposals, 143bd69f correction."
 }

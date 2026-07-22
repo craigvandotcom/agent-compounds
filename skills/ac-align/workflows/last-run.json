@@ -1,26 +1,23 @@
 {
   "status": "done",
   "mode": "REVIEW",
-  "date": "2026-07-04",
+  "date": "2026-07-18",
   "machine": "darwin",
   "branch": "main",
   "counts": {
-    "pool_items_scanned": 33,
-    "active_open_estimate": 7,
-    "loop_ready_plans": 4,
-    "proposed_promotions": 3,
-    "findings": 5,
+    "pool_items_scanned": 42,
+    "active_open_estimate": 10,
+    "proposed_promotions": 1,
+    "findings": 2,
     "files_moved": 0
   },
   "proposal": {
-    "file": "_plans/_proposals/2026-07-04/04-pool-active-promotion.md",
-    "bead": "bd-fervp",
-    "commit": "296c971927a14efd6876924a60fa916007578a0d"
+    "file": "_plans/_proposals/2026-07-18/01-promote-post-launch-activation.md",
+    "bead": "bd-7jz3p",
+    "commit": "d0473730c6c37270d33addc0c02df1c8af44c20f"
   },
   "slate": [
-    "pool/010-post-launch-activation.md",
-    "pool/050-wellness-tracker-pattern-viz.md",
-    "pool/037-food-entry-form-refactor.md"
+    "pool/010-post-launch-activation.md"
   ],
-  "slack": { "channel": "sofi", "status": "healthy", "ts": "1783137970.534499" }
+  "slack": { "channel": "sofi", "status": "healthy", "ts": "1784347819.162329" }
 }
