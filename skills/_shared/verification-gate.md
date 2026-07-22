@@ -72,7 +72,12 @@ printf '%s\n' "$FILES" | grep -qE 'app/api/|route\.(ts|js)$|middleware|hooks/|li
 printf '%s\n' "$FILES" | grep -qE 'lib/|utils/|server|supabase/|migrations?/|\.sql$' && CLASS_LOGIC=1
 
 # Any runtime code at all (i.e. NOT pure docs/test/CI) → review runs
-printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/' | grep -q . && CLASS_RUNTIME=1
+# `^\.beads/` (issue-tracker ledger) and `^scripts/ci/` (CI tooling, sibling of
+# ^\.github/) have no runtime surface — added 2026-07-22. The bead ledger is
+# written by every `br close`, so without this exclusion CLASS_RUNTIME=1 fired on
+# literally every commit. Keep this list in sync with PAT_DOC_TEST_CI in
+# skills/_tools/journey-stamp-check.sh, which mirrors these patterns.
+printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/' | grep -q . && CLASS_RUNTIME=1
 ```
 
 **Change classes:**
@@ -176,6 +181,18 @@ Staleness (store gate): `skills/_tools/journey-stamp-check.sh` re-uses Step 1's
 class patterns over `last_pass.sha..ship-sha`, with one deliberate asymmetry — a
 file matching no class counts as touching EVERY surface there (selection may err
 loose; a store-submission gate errs strict: over-block, never under-block).
+
+**The over-block only works if genuinely surface-less files are excluded first**
+(2026-07-22). Measured failure: `.beads/issues.jsonl` is written by every `br close`
+— it appeared in 50 of the last 50 commits — and, being unclassifiable, over-blocked
+to *every* surface. So every bead operation marked every review-critical journey
+STALE, and the store lane was permanently BLOCKED for a reason unrelated to code
+risk. A QA drive could never hold: pass, stamp, close one bead, blocked again.
+Excluding `^\.beads/` and `^scripts/ci/` restores the intended behaviour. Dependency
+manifests (`package.json`, `pnpm-lock.yaml`) are deliberately NOT swept into that
+exclusion — they are classified explicitly so the capacitor content check decides
+their native-relevance, which the catch-all had been pre-empting (making that check
+dead code).
 
 **Enumeration tripwire (mechanical, no judgment):**
 

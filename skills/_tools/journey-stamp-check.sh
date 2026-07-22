@@ -46,15 +46,46 @@ set -euo pipefail
 #           | OR globals\.css | design\.md | tailwind\.config | @neometa/brand | tokens
 #   webrt   | app/api/ | route\.(ts|js)$ | middleware | hooks/ | lib/.*(fetch|client|store|query)
 #   logic   | lib/ | utils/ | server | supabase/ | migrations?/ | \.sql$
-#   runtime | NOT ( \.(md|mdx)$ | \.test\. | \.spec\. | __tests__/ | ^\.github/ | ^docs/ )
+#   runtime | NOT ( \.(md|mdx)$ | \.test\. | \.spec\. | __tests__/ | ^\.github/
+#           |       | ^docs/ | ^\.beads/ | ^scripts/ci/ )
+# ============================================================================
+#
+# 2026-07-22 — two classifier corrections. The over-block rule below is correct
+# in principle (a staleness gate must err strict), but it was firing on files
+# with no runtime surface at all, which made the store lane UNSATISFIABLE:
+#
+#   1. `.beads/issues.jsonl` is a pure issue-tracker ledger. Measured: it was
+#      touched in 50 of the last 50 commits — i.e. EVERY commit. Because an
+#      unclassifiable file over-blocks to every surface, every `br close` marked
+#      every review-critical journey STALE. A QA drive could therefore never
+#      hold: pass the drive, stamp it, close one bead, blocked again. The gate
+#      was permanently red for a reason unrelated to any code risk.
+#   2. `scripts/ci/*` is CI tooling with no app-runtime surface — the exact
+#      sibling of `^\.github/`, which was already excluded. `app/robots.ts` and
+#      `app/sitemap.ts` fell through too: PAT_WEBUI_EXT requires .tsx/.jsx/.css,
+#      so plain .ts under app/ matched nothing and over-blocked to native.
+#
+# DELIBERATELY NOT relaxed: package.json, pnpm-lock.yaml and next.config.mjs
+# still over-block. Dependency and build-config changes genuinely can alter the
+# native shell (the Capacitor plugin set lives in package.json), so erring
+# strict there is correct, not noise.
 # ============================================================================
 PAT_NATIVE='^ios/|^android/|capacitor\.config|cap-build|@capacitor'
 PAT_WEBUI_EXT='\.(tsx|jsx|css)$'
 PAT_WEBUI_DIR='app/|components/|features/'
 PAT_WEBUI_TOKENS='globals\.css|design\.md|tailwind\.config|@neometa/brand|tokens'
-PAT_WEBRT='app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)'
+# `^app/.*\.ts$` — app-router TypeScript that is not a route/api file (robots.ts,
+# sitemap.ts, opengraph-image.ts). Web-runtime concerns; never native.
+PAT_WEBRT='app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)|^app/.*\.ts$'
 PAT_LOGIC='lib/|utils/|server|supabase/|migrations?/|\.sql$'
-PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/'
+# Dependency manifests — classified explicitly (see classify_range) so the
+# capacitor content check decides their native-relevance instead of the
+# catch-all over-block pre-empting it.
+PAT_DEPS='^package\.json$|^pnpm-lock\.yaml$'
+# `^\.beads/` = issue-tracker ledger, `^scripts/ci/` = CI tooling. Neither has a
+# runtime surface. See the 2026-07-22 note above before adding to this list —
+# anything excluded here can never mark a journey stale again.
+PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/'
 
 # ---------------------------------------------------------------------------
 # Args
@@ -165,6 +196,16 @@ classify_range() {
     if [[ "$f" =~ $PAT_WEBUI_TOKENS ]]; then classes+=(webui); hit=1; fi
     if [[ "$f" =~ $PAT_WEBRT ]]; then classes+=(webrt); hit=1; fi
     if [[ "$f" =~ $PAT_LOGIC ]]; then classes+=(logic); hit=1; fi
+    if [[ "$f" =~ $PAT_DEPS ]]; then
+      # Dependency manifests: they affect every WEB surface, but whether they
+      # affect NATIVE is decided by the content check below (does the diff touch
+      # a capacitor package?). Classifying them here — rather than letting them
+      # fall through to the over-block — is what keeps that content check alive.
+      # Before 2026-07-22 they hit the `hit -eq 0` branch, which unconditionally
+      # added `native`, making the content check dead code that could never
+      # change an outcome.
+      classes+=(webui webrt logic); hit=1
+    fi
     if [[ $hit -eq 0 ]]; then
       # Not doc/test/CI, but matches none of the specific surfaces either —
       # unclassifiable: over-block, count it as touching every surface.
@@ -172,11 +213,17 @@ classify_range() {
     fi
   done <<< "$files"
 
-  if printf '%s\n' "$files" | grep -qx 'package.json'; then
-    if git -C "$repo" diff "$range" -- package.json 2>/dev/null | grep -qE 'capacitor'; then
-      classes+=(native)
+  # Native-relevance of a dependency change is content-decided, not path-decided.
+  # Covers pnpm-lock.yaml too: a transitive Capacitor bump can land in the lock
+  # file without package.json changing at all.
+  local dep_file
+  for dep_file in package.json pnpm-lock.yaml; do
+    if printf '%s\n' "$files" | grep -qx "$dep_file"; then
+      if git -C "$repo" diff "$range" -- "$dep_file" 2>/dev/null | grep -qE 'capacitor'; then
+        classes+=(native)
+      fi
     fi
-  fi
+  done
 
   [[ ${#classes[@]} -eq 0 ]] && return 0
   printf '%s\n' "${classes[@]}" | sort -u
