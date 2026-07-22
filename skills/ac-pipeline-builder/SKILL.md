@@ -299,6 +299,20 @@ Phase 0) while it is actively editing, and the close ceremony is `ac-batch-close
 never `ac-merge`. The run report commits to `.claude/reviews/` root and does not advance the
 `.claude/reviews/batch/` review-mark.
 
+<!-- net-growth-ok: bd-kudrb — this skill is the DESIGN doctrine for new pipeline skills; the
+single-writer rule belongs here so the next skill that emits a review artifact does not pick
+`batch/` and silently re-break every batch range. -->
+
+**Single-writer invariant on the review-mark (bd-kudrb).** `.claude/reviews/batch/` is written
+by exactly ONE commit per ceremony — `ac-batch-close`'s Act 3. `ac-review` stages its findings
+report in the sibling `.claude/reviews/pending/`; `ac-publish` uses `.claude/reviews/publish/`;
+`ac-hygiene` uses `.claude/reviews/` root. Any new skill that emits a review-shaped artifact
+picks a sibling directory too. The reason is mechanical: four readers derive a batch range from
+`git log -1 --format=%H -- .claude/reviews/batch/` (`ac-batch-close` Act 1, `ac-review` Phase 1,
+`ac-loop`'s delegated scope detection, `_shared/verification-gate.md`), and a second writer
+touching that path mid-ceremony makes the probe return a commit *inside* the range it bounds —
+which under-scopes the batch **silently**, with no error to notice.
+
 **Enforcement:**
 - `ac-loop` is the sole branch manager — only it creates, checks out, and merges `wave/NNN`
 - `ac-plan-init` and `ac-plan-refine-*` switch to main in Phase 0 before any git operation

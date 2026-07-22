@@ -38,7 +38,12 @@ Fail-safe: a class flips on when **any** file matches; ambiguity counts as a mat
 never a skip.
 
 ```bash
-# Review-mark anchor (identical computation to ac-review Phase 1 — keep in sync)
+# Review-mark anchor (identical computation to ac-review Phase 1 — keep in sync).
+# Single-writer invariant (bd-kudrb): ONLY ac-batch-close's Act 3 commits to
+# .claude/reviews/batch/. ac-review stages its findings report in the sibling
+# .claude/reviews/pending/, which this probe deliberately cannot see — otherwise the
+# probe returns a commit inside the range it is meant to bound and the gate silently
+# under-scopes (no error, just fewer files classified).
 REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
 if [ -n "$REVIEW_MARK" ]; then
   RANGE="$REVIEW_MARK..HEAD"              # batch vs review-mark

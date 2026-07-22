@@ -8,10 +8,14 @@ Phase 5 references these sections rather than re-specifying them, and appends on
 invocation (C4 mode switch, already built in the `ac-review` rewrite — this template does not
 decide it):
 
-- **Batch-close invocation** (`ac-batch-close` passes `report_dest=.claude/reviews/batch/`) →
-  writes to `.claude/reviews/batch/YYYY-MM-DD-HHMM-[batch-anchor].md` and advances the
-  review-mark. Under trunk-direct this report IS the batch's shipped record — there is no PR
-  diff to eyeball, so the PR-body sections below carry the weight the PR description used to.
+- **Batch-close invocation** (`ac-batch-close` passes `report_dest=.claude/reviews/pending/`) →
+  writes to `.claude/reviews/pending/YYYY-MM-DD-HHMM-[batch-anchor].md`. This does **not**
+  advance the review-mark: `ac-batch-close`'s Act 3 `git mv`s this file into
+  `.claude/reviews/batch/` in the same commit that lands the batch-close summary, and that
+  single commit is the mark (bd-kudrb — a report committed straight into `batch/` mid-batch
+  was returned by the anchor probe as a commit inside its own range). Under trunk-direct this
+  report IS the batch's shipped record — there is no PR diff to eyeball, so the PR-body
+  sections below carry the weight the PR description used to.
 - **Standalone / mid-batch invocation** → writes to `.claude/reviews/YYYY-MM-DD-HHMM-[feature].md`
   (root, does not advance the review-mark). The PR-body sections are optional here: fill
   **Changes**, **Test Coverage**, **Review**; **Beads Completed** / **Known post-merge tails** /

@@ -173,6 +173,16 @@ git pull --rebase origin main   # never --force; re-verify HEAD after
 The **batch anchor** — same mechanism `ac-review` uses to find its scope (`ac-review/SKILL.md`
 Phase 1 "Scope Detection"), computed identically here so both skills agree on the range:
 
+> <!-- net-growth-ok: bd-kudrb — the single-writer invariant and its self-check tripwire must
+> live AT the probe. This bug's whole shape is silent under-scoping (no error, just a wrong
+> range); a reader who reaches this snippet without the invariant in view re-introduces it. -->
+> **The probe is only correct because `.claude/reviews/batch/` has exactly ONE writer per
+> ceremony — Act 3 below (bd-kudrb).** `ac-review` stages its report in the sibling
+> `.claude/reviews/pending/`; Act 3 `git mv`s it into `batch/` in the same commit as the summary.
+> Before that split `ac-review` committed straight into `batch/` mid-batch, so this probe
+> returned *that* report — a commit INSIDE the range it bounds. It failed SILENTLY: one live
+> case would have shrunk a 7-commit batch to 2 and still reported success.
+
 ```bash
 ANCHOR=$(git log -1 --format=%H -- .claude/reviews/batch/)
 if [ -z "$ANCHOR" ]; then
@@ -184,7 +194,30 @@ if [ -z "$ANCHOR" ]; then
   # unresolvable tag name silently degrades to the full-scope root-commit
   # fallback. A resolved SHA keeps the contract honest.
   ANCHOR=$(git rev-list -n1 "$(git describe --tags --match 'v*' --abbrev=0)")
+  ANCHOR_FROM_BOOTSTRAP=1
 fi
+
+# Self-check tripwire (bd-kudrb) — belt-and-braces on top of the single-writer rule above.
+# A well-formed mark is a `batch-close:` commit. Anything else touching `.claude/reviews/batch/`
+# means some other skill wrote there mid-batch and this anchor is INSIDE its own range; that
+# under-scopes the batch silently, so fail LOUD here instead.
+if [ -z "$ANCHOR_FROM_BOOTSTRAP" ]; then
+  ANCHOR_SUBJECT=$(git log -1 --format=%s "$ANCHOR")
+  case "$ANCHOR_SUBJECT" in
+    batch-close:*) ;;
+    *)
+      echo "FATAL: batch anchor $ANCHOR is not a batch-close mark." >&2
+      echo "  subject: $ANCHOR_SUBJECT" >&2
+      echo "  Something other than ac-batch-close Act 3 wrote to .claude/reviews/batch/." >&2
+      echo "  Using it would silently UNDER-SCOPE this batch (bd-kudrb)." >&2
+      echo "  Fix the offending writer (reports belong in .claude/reviews/pending/), then" >&2
+      echo "  step the anchor back to the previous batch-close mark:" >&2
+      echo "    git log --format='%H %s' -- .claude/reviews/batch/ | grep -m1 ' batch-close:'" >&2
+      exit 2
+      ;;
+  esac
+fi
+
 BATCH_RANGE="$ANCHOR..HEAD"
 echo "ANCHOR=$ANCHOR" >> "$STATE"
 ```
@@ -409,16 +442,19 @@ Batch-close's gate is a single lightweight `VERDICT` pass, same as before this b
 What widens on trunk-direct is only the *source* of the review verdict: Act 2 accepts **either**
 a standard `ac-review` run **or** an equivalent-review artifact the invoking conductor
 pre-supplies. In both cases the accepted artifact must carry an explicit `VERDICT:` line and
-land in `.claude/reviews/batch/`.
+must reach `.claude/reviews/batch/` **only via Act 3's single commit** — never by a writer of
+its own (bd-kudrb). Until then it lives in `.claude/reviews/pending/`.
 
 **(a) Pre-supplied equivalent-review artifact.** If the delegation prompt hands you a completed
 review of this same diff — e.g. `ac-hygiene`'s 7-lens panel run report (same severity bar,
 already adversarial) — do **not** re-run `ac-review` on the same diff (double-review). Take that
-report as the review artifact: confirm it contains an explicit `VERDICT:` line, then carry it
-into `.claude/reviews/batch/` via **Act 3's commit** (the same commit that lands the batch-close
-summary), so the trunk-direct review-mark is backed by a committed artifact exactly as the
-`ac-review` path is. Read its `VERDICT:` and gate on it below. No supplied artifact, or one
-lacking an explicit `VERDICT:` line → fall through to (b); never proceed unreviewed.
+report as the review artifact: confirm it contains an explicit `VERDICT:` line, place it in
+`.claude/reviews/pending/` (uncommitted, or committed there — either way it is invisible to the
+anchor probe), then carry it into `.claude/reviews/batch/` via **Act 3's commit** (the same
+commit that lands the batch-close summary), so the trunk-direct review-mark is backed by a
+committed artifact exactly as the `ac-review` path is. Read its `VERDICT:` and gate on it below.
+No supplied artifact, or one lacking an explicit `VERDICT:` line → fall through to (b); never
+proceed unreviewed.
 
 **(b) No artifact supplied → run `ac-review` yourself.** There is no PR to attach a review to, so
 `ac-review` runs directly on `main` and its `VERDICT` gates this ceremony — the same severity bar
@@ -427,11 +463,13 @@ trunk-direct. Delegate (do not inline its work — `ac-review/SKILL.md` is a ful
 sub-step of this one):
 
 > "Run ac-review on main (trunk-direct mode, single light pass — not the full 6-dim panel unless
-> ac-review's own default routing says otherwise). report_dest=.claude/reviews/batch/"
+> ac-review's own default routing says otherwise). report_dest=.claude/reviews/pending/"
 
-`ac-review`'s own Phase 6 commits its findings report to that destination and pushes — this
-provisionally advances the review-mark; Act 3's commit below supersedes it (see that section's
-note on why).
+`ac-review`'s own Phase 6 commits its findings report to that destination and pushes. Because
+`pending/` is a sibling of `batch/`, that commit does **not** touch the review-mark path and the
+Act 1 anchor probe never sees it — Act 3 below is the only commit that advances the mark
+(bd-kudrb). **Do not pass `report_dest=.claude/reviews/batch/`**: that is the exact wiring that
+made the anchor probe return a commit inside its own range.
 
 **Read the supplied-or-produced artifact for `VERDICT:`.**
 
@@ -479,7 +517,10 @@ Feedback pending-write: <N> rows marked fixed_pending_release
 ### Commit the batch report
 
 Write `.claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md` — the batch-close summary,
-distinct from `ac-review`'s own findings report already committed in Act 2.
+distinct from `ac-review`'s own findings report staged in `.claude/reviews/pending/` in Act 2.
+**Both files land in this one commit** (bd-kudrb): the summary is created here, and the Act 2
+findings report is `git mv`'d out of `pending/` into `batch/` so the ceremony leaves exactly one
+mark and `pending/` is empty again for the next batch.
 
 **Single source of truth for the shared sections:** `ac-review/references/report-template.md`.
 The **Summary**, **Beads Completed**, **Changes**, **Test Coverage**, **Known post-merge tails**,
@@ -504,21 +545,36 @@ Format: `Worker cost: <child-session> (<model>) <tokens>; … — batch total <t
 
 ```bash
 export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this commit is the operative review-mark; attribute it to the minted identity, not FoggyCreek
+
+# Carry Act 2's findings report from the staging sibling into the mark directory (bd-kudrb).
+# `git mv` when it was committed to pending/; a plain `mv` + `git add` when it is still
+# untracked. Both files must be in the SAME commit — that is what keeps `batch/` single-writer.
+CARRIED=""
+PENDING_REPORT=$(ls -1 .claude/reviews/pending/*.md 2>/dev/null | head -1)
+if [ -n "$PENDING_REPORT" ]; then
+  CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
+  git mv "$PENDING_REPORT" "$CARRIED" 2>/dev/null \
+    || { mv "$PENDING_REPORT" "$CARRIED" && git add "$CARRIED"; }
+fi
+
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 # Pathspec-on-commit (bd-kskxg field-test): the trailing `-- <report path>` scopes the commit to
-# ONLY this file, so pre-staged foreign WIP in the shared checkout cannot be swept into the
+# ONLY these files, so pre-staged foreign WIP in the shared checkout cannot be swept into the
 # batch-report commit (happened live; a soft-reset recovered it). The `git add` above is still
-# needed because the report is a brand-new untracked file.
-git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits" -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
+# needed because the report is a brand-new untracked file. $CARRIED is included in the pathspec
+# so the moved findings report rides in this same commit (both its delete-from-pending and
+# add-to-batch halves are staged by the `git mv` above).
+git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits" \
+  -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md" ${CARRIED:+"$CARRIED" ".claude/reviews/pending/"}
 git push origin main || { git pull --rebase origin main && git push origin main; }
 ```
 
-**Why this commit (not `ac-review`'s Act 2 commit) is the operative review-mark:**
-`git log -1 -- .claude/reviews/batch/` (both `ac-review`'s and `ac-loop`'s scope-detection use
-this) picks the **latest** commit touching that path. Since this commit lands after the Tier 1
-CI dispatch and the light review, it naturally supersedes `ac-review`'s earlier commit as the
-mark — folding the administrative tail of the ceremony into THIS batch's reviewed range instead
-of leaking it into the next batch's diff. No special git trick needed; ordering does the work.
+**Why this commit is the operative review-mark — and the ONLY writer of that path (bd-kudrb):**
+the probe takes the **latest** commit touching `batch/`. Correctness used to rest on ordering
+("this commit lands later, so it supersedes `ac-review`'s"), which holds for the *next* batch but
+not this one — Act 1's probe runs **after** Act 2's review, so it returned `ac-review`'s report,
+inside the range being closed. Ordering cannot fix a probe that runs mid-ceremony; routing the
+report through `pending/` removes the ambiguity at the source.
 
 **This must be the LAST commit of the ceremony.** If a fix-forward round is still needed after
 this point, that means Act 1 (or Act 2) isn't actually done — re-run from there and redo this
@@ -668,6 +724,10 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
   not per commit; `ac-merge` is unchanged and still owns the PR path for legacy branches.
 - **Batch = review-mark range, not a branch** — the anchor is the last commit touching
   `.claude/reviews/batch/` (bootstrap: last `v*` tag). Same computation `ac-review` uses.
+- **`.claude/reviews/batch/` has exactly ONE writer: Act 3 of this skill** (bd-kudrb). Review
+  artifacts stage in `.claude/reviews/pending/` and Act 3 carries them in. A second writer makes
+  the Act 1 anchor probe return a commit inside its own range — silent under-scoping, not an
+  error. Act 1's self-check (anchor subject must start `batch-close:`) is the tripwire.
 - **Thin, on purpose.** No version bump, no tag, no deploy verification, no 6-dim review panel
   live in this skill anymore — all four moved to `ac-publish`. This ceremony's ONLY outputs are
   a light `VERDICT`, a green Tier 1 CI dispatch, and a committed batch-report/review-mark.

@@ -15,7 +15,7 @@ For codebase-wide health checks, use `/ac-hygiene` instead.
 |                  |                                                                                                            |
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Input**        | Feature branch with implementation commits (from `/ac-implement` or manual coding)                  |
-| **Output**       | Review report in `.claude/reviews/` (default) or `.claude/reviews/batch/` (when `ac-batch-close` passes `report_dest` — advances the review-mark), auto-fixed issues committed, NEEDS_DECISION items presented |
+| **Output**       | Review report in `.claude/reviews/` (default) or `.claude/reviews/pending/` (when `ac-batch-close` passes `report_dest` — staged for that ceremony to carry into the mark; **never** advances the review-mark itself), auto-fixed issues committed, NEEDS_DECISION items presented |
 | **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.json`, consensus in `consensus-round-1.json` + `consensus-registry.json`, progress in `progress.md` |
 | **Verification** | All project checks pass (test, lint, type-check), fixes committed, decisions resolved or documented        |
 
@@ -144,6 +144,14 @@ echo "Current branch: $CURRENT_BRANCH"
 
 **On `main` (PRIMARY mode — trunk-direct):** scope is everything since the last
 review-mark (the last commit that touched `.claude/reviews/batch/`):
+
+> **`.claude/reviews/batch/` is written by EXACTLY ONE commit per ceremony — `ac-batch-close`'s
+> Act 3 (bd-kudrb).** Your own findings report goes to the sibling `.claude/reviews/pending/`
+> (see Phase 6 § Report Destination), which this probe deliberately does not see. Do not
+> "helpfully" write anything into `batch/` from here: the moment a second writer touches that
+> path mid-batch, this probe returns a commit INSIDE the range it is supposed to bound and the
+> batch silently under-scopes (one live case shrank a 7-commit batch to 2 and still reported
+> success — silent under-scoping, never an error).
 
 ```bash
 REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
@@ -668,17 +676,36 @@ AskUserQuestion(
 
 ### Report Destination
 
-Default: `.claude/reviews/` root — used for standalone or mid-batch invocations; this
-does **not** advance the review-mark. When `ac-batch-close` invokes ac-review and
-explicitly passes `.claude/reviews/batch/`, the report lands there instead, which
-**does** advance the review-mark (the next `main`-mode Phase 1 scope detection reads
-from this commit).
+Three destinations, and **none of them is `.claude/reviews/batch/`** (bd-kudrb):
+
+| Invocation | Destination | Advances the review-mark? |
+|---|---|---|
+| Standalone / mid-batch (default) | `.claude/reviews/` root | No |
+| `ac-batch-close` (passes `report_dest`) | `.claude/reviews/pending/` | No — `ac-batch-close`'s Act 3 carries it into `batch/` and THAT commit is the mark |
+| `ac-publish` (passes `report_dest`) | `.claude/reviews/publish/` | No |
 
 ```bash
 REPORT_DEST="${report_dest:-.claude/reviews/}"
+# `pending/` (and `publish/`) may not exist yet in a repo that has only ever used the
+# batch/ + root destinations — create it rather than failing the write (bd-kudrb).
+mkdir -p "$REPORT_DEST"
 ```
 
-Callers pass the destination via the delegation prompt, e.g. `report_dest=.claude/reviews/batch/`.
+Callers pass the destination via the delegation prompt, e.g. `report_dest=.claude/reviews/pending/`.
+
+> <!-- net-growth-ok: bd-kudrb — this skill is the WRITER whose misrouted report caused the
+> silent under-scoping; the prohibition has to sit at the write site, and the destination table
+> replaces prose that only described two of the three real destinations. -->
+> **Never write to `.claude/reviews/batch/` from this skill — not even when a caller asks you
+> to (bd-kudrb).** That directory is the trunk-direct review-mark, and the anchor probe
+> (`git log -1 --format=%H -- .claude/reviews/batch/`, used by `ac-batch-close` Act 1,
+> `ac-loop` scope detection, `_shared/verification-gate.md`, and this skill's own Phase 1)
+> takes the LATEST commit touching it. ac-review runs BEFORE `ac-batch-close` computes its
+> anchor, so a report committed there mid-batch is returned as the anchor — a commit inside
+> the range it is meant to bound. This bit four ceremonies in one day; each time only a
+> hand-supplied step-back to the prior batch-close mark prevented a silently under-scoped
+> batch. If a delegation prompt still says `report_dest=.claude/reviews/batch/` (a stale
+> caller), write to `.claude/reviews/pending/` instead and say so in your summary.
 
 ### Generate Review Report
 
