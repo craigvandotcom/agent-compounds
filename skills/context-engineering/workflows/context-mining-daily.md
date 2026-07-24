@@ -74,11 +74,20 @@ for home in infrastructure/memory/auto neometa/memory/auto \
             neometa/software/*/memory/auto; do
   [ -f "$home/MEMORY.md" ] || continue
   # index slugs whose target file is absent = dangling lines
+  # `command` prefixes are REQUIRED: on Craig's Mac `tr` is an alias for
+  # `tmux new-session -A -s repos` and `grep` is a Claude Code function — bare `tr`
+  # emits nothing in a non-TTY shell, which silently zeroes the left operand and makes
+  # this check report "0 drift" unconditionally. Also drop `slug.md`: it is the
+  # format-doc example on line 3 of most MEMORY.md files, not an index line.
   comm -23 \
-    <(grep -oE '\(([a-z0-9-]+\.md)\)' "$home/MEMORY.md" | tr -d '()' | sort -u) \
-    <(ls "$home" | grep -vE 'MEMORY|README' | sort -u)
+    <(command grep -oE '\(([a-z0-9-]+\.md)\)' "$home/MEMORY.md" | command tr -d '()' \
+        | command grep -vx 'slug.md' | sort -u) \
+    <(ls "$home" | command grep -vE 'MEMORY|README' | sort -u)
 done
 ```
+Sanity-check before trusting a "0 drift" result: the left operand should be non-empty
+(`… | wc -l` ≈ the number of index lines). An empty left operand means the pipeline broke,
+not that the index is clean.
 For each home with dangling lines, **emit an `index-prune` proposal** into today's dream
 queue (`infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`) so the 02:00 job auto-applies it.
 Frontmatter the classifier requires (`infrastructure/dream-cycle/classify.py` is the authority
