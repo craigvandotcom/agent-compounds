@@ -74,6 +74,8 @@ EN_DROID="$(cfg '.harnesses.droid.enabled')"
 EN_PI="$(cfg '.harnesses.pi.enabled')"
 EN_GROK="$(cfg '.harnesses.grok.enabled // false')"
 GROK_HOME="$(expand_tilde "$(cfg '.harnesses.grok.home // "~/.grok"')")"
+EN_OPENCODE="$(cfg '.harnesses.opencode.enabled // false')"
+OPENCODE_HOME="$(expand_tilde "$(cfg '.harnesses.opencode.home // "~/.config/opencode"')")"
 CODEX_SKILLS_DIR="$(cfg '.harnesses.codex.skills_mirror_dir')"
 CODEX_AGENTS_DIR="$(cfg '.harnesses.codex.agents_gen_dir')"
 DROID_SKILLS_DIR="$(cfg '.harnesses.droid.skills_mirror_dir')"
@@ -304,8 +306,12 @@ render_hooks_root() {
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi hooks skipped by design (TS-extension surface only)"
   fi
+  if [ "$EN_OPENCODE" = "true" ]; then
+    echo "  NOTE: opencode hooks skipped by design v1 (JS/TS plugin surface, not the shell-command dialect)"
+  fi
   render_hooks_grok
   render_context_grok
+  render_context_opencode
   render_context_claude_global
 }
 
@@ -404,6 +410,52 @@ before acting on anything listed here.
 
 $digest"
   write_generated "$GROK_HOME/AGENTS.md" "$content"
+}
+
+# render_context_opencode — opencode's machine-global rules floor as a generated
+# ~/.config/opencode/AGENTS.md (opencode loads a home-dir AGENTS.md in every session,
+# plus project AGENTS.md up the cwd tree natively). Like grok, opencode's hook surface
+# is a JS/TS plugin dialect, not the shell-command context-injection the other harnesses
+# run — so the same canon that reaches them via hook stdout is carried here statically.
+# Skills load natively from .claude/skills (no projection). Same degrade-not-fail posture
+# as render_context_grok: a memory-digest hiccup warns, never breaks the run.
+render_context_opencode() {
+  [ "$EN_OPENCODE" = "true" ] || return 0
+  [ -d "$OPENCODE_HOME" ] || { echo "  WARN: opencode home $OPENCODE_HOME missing — skipping (opencode not installed?)"; return 0; }
+  echo "  -- opencode global rules ($OPENCODE_HOME/AGENTS.md, generated)"
+  local ss dr digest content
+  ss="$(cat "$AC_ROOT/hooks/session-start.md")"
+  dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
+  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
+    echo "  WARN: memory digest generation failed — rendering rules without it"
+    digest="*(digest generation failed on last sync — search qmd directly)*"
+  fi
+  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
+
+# Machine-global rules (Repos fleet)
+
+Other harnesses receive this context via per-prompt hook injection; opencode runs a
+JS/TS plugin surface instead of the shell-command hooks, so this file carries the same
+canon statically. It applies when working anywhere under ~/Repos. Project-level AGENTS.md
+(the doctrine L0) loads natively from the cwd tree alongside this floor, and skills load
+natively from .claude/skills.
+
+$ss
+
+---
+
+$dr
+
+---
+
+## Memory digest (pointer index — refreshed daily by infra-sync)
+
+One line per high-value memory in the substrate. This is the FLOOR, not the
+substrate: pull full detail with the qmd MCP tools (or \`qmd search\`/\`qmd query\`)
+before acting on anything listed here.
+
+$digest"
+  write_generated "$OPENCODE_HOME/AGENTS.md" "$content"
 }
 
 render_mcp_root() {

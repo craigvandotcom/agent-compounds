@@ -31,6 +31,11 @@
       "enabled": true,
       "home": "~/.grok",
       "_doc": "Grok Build (xAI). Machine scope only: hooks -> <home>/hooks/00-ac.json (trauma-guard + activity-logger — the only hooks that function; Grok discards passive-event stdout, verified 2026-07-12 on v0.2.93) and context -> <home>/AGENTS.md (generated global rules — loaded in every Grok session). Skills arrive via the .agents/skills compat mirror; no org/app hook layers (context hooks can't function there, and machine scope avoids per-repo folder-trust ceremony). REQUIRED one-time machine setup in <home>/config.toml: [compat.claude] hooks = false (prevents double-fire via Claude-compat hook scanning; skills/rules/mcps compat stays on) + [mcp_servers.qmd] (memory pull layer)."
+    },
+    "opencode": {
+      "enabled": true,
+      "home": "~/.config/opencode",
+      "_doc": "opencode (Anomaly, ex-SST) — the vendor-independent cold-standby / harness-failover tier (distinct from claude-or = model-failover, pi = local utility). Runs OpenRouter open models (deepseek-v4-pro/-flash, parity with claude-or); OPENROUTER_API_KEY auto-detected from the ~/.zshrc env, no login. Machine scope only: context -> <home>/AGENTS.md (generated machine-global rules floor — loaded every session; project AGENTS.md up the cwd tree loads natively alongside it). Skills read NATIVELY from .claude/skills/*/SKILL.md (zero translation, verified 2026-07-24 v1.18.0 — the pingtest probe) — no projection. Hooks are JS/TS plugin modules (tool.execute.before/after, session.*), NOT the shell-command JSON dialect the other harnesses share — skipped by design v1 (like pi) until a plugin-wrapper generator exists. REQUIRED one-time machine setup: <home>/opencode.jsonc (model defaults + qmd MCP, hand-authored — mirrors grok's config.toml). GOTCHA: hangs at the ~/Repos monorepo root (huge submodule tree chokes its file walk) — run inside a project subdir, which is the real coding-fallback use case anyway."
     }
   }
 }
