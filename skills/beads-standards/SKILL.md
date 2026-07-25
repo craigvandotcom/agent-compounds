@@ -280,3 +280,93 @@ projects). Cross-project visibility is a dashboard/docket concern (cockpit, or
 carry no strategy, money, personal, or credential content — a sensitive decision's
 memo goes in a private home (`_plans/`, root repo) and the bead itself carries only a
 neutral title + pointer.
+
+---
+
+## Operating the tools — `bv` triages, `br` mutates
+
+> Migrated here from root `AGENTS.md` (2026-07-25, context-tokenomics): this is
+> look-up material, needed only once you are already doing beads work — it does not
+> belong in a file every agent loads on every spawn. Status/priority canon is above;
+> this section is purely operational.
+
+`br` ([beads_rust](https://github.com/Dicklesworthstone/beads_rust)) is the issue
+tracker; `bv` ([beads_viewer](https://github.com/Dicklesworthstone/beads_viewer)) is a
+graph-aware triage engine over `.beads/beads.jsonl`. Use `bv`'s robot flags for
+deterministic, dependency-aware output (PageRank, betweenness, critical path, cycles)
+rather than parsing JSONL or guessing at graph traversal.
+
+**Scope boundary:** `bv` decides *what to work on* (triage, priority, planning).
+`br` creates, modifies and closes. **Use ONLY `--robot-*` flags — a bare `bv` launches
+an interactive TUI that blocks the session.**
+
+### Start with triage
+
+`bv --robot-triage` is the single entry point; it returns `quick_ref` (counts + top 3
+picks), `recommendations` (ranked, with scores/reasons/unblock info), `quick_wins`,
+`blockers_to_clear`, `project_health`, and copy-pasteable `commands`.
+
+```bash
+bv --robot-triage                  # the mega-command: start here
+bv --robot-next                    # just the top pick + claim command
+bv --robot-triage --format toon    # TOON: token-optimized output, lower context cost
+```
+
+Before claiming, verify current state with `br show <id> --json` or `br ready --json`.
+`recommendations` can include graph-important work that is blocked or already assigned —
+**only `quick_ref.top_picks` and a non-empty `claim_command` mean claimable.**
+
+### Other `bv` commands
+
+| Command | Returns |
+|---|---|
+| `--robot-plan` | Parallel execution tracks with unblocks lists |
+| `--robot-priority` | Priority misalignment detection with confidence |
+| `--robot-insights` | PageRank, betweenness, HITS, eigenvector, critical path, cycles, k-core |
+| `--robot-alerts` | Stale issues, blocking cascades, priority mismatches |
+| `--robot-suggest` | Hygiene: duplicates, missing deps, label suggestions, cycle breaks |
+| `--robot-diff --diff-since <ref>` | Changes since ref: new/closed/modified |
+| `--robot-graph [--graph-format=json\|dot\|mermaid]` | Dependency graph export |
+
+Scoping: `--label <x>` (subgraph), `--as-of HEAD~30` (point-in-time),
+`--recipe actionable` (ready, unblocked), `--recipe high-impact` (top PageRank).
+
+### `br` cheatsheet
+
+```bash
+br ready                  # ready to work (no blockers)
+br list --status=open     # all open
+br show <id>              # full detail with dependencies
+br create --title="..." --type=task --priority=2
+br update <id> --status=in_progress
+br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above
+br close <id1> <id2>      # close several
+br dep add <issue> <depends-on>          # wire a blocking dependency
+br sync --flush-only      # export DB -> JSONL
+```
+
+**Types:** `task` · `bug` · `feature` · `epic` · `chore` · `docs` · `question`.
+**Priority:** integers `0`-`4` — see § *Status & priority canon* above, not repeated here.
+**Dependencies** gate `br ready`: an issue with an open blocker never appears in it.
+
+### Working cadence
+
+1. **Triage** — `bv --robot-triage` for the highest-impact actionable work
+2. **Claim** — `br update <id> --status=in_progress`
+3. **Work** — implement
+4. **Complete** — `br close <id> -r "..."`
+5. **Sync** — `br sync --flush-only` at session end, always
+
+### Session protocol
+
+```bash
+git status                # what changed
+git add <files>           # stage EXPLICIT paths, never -A (see ac-implement H7d)
+br sync --flush-only      # export beads changes to JSONL
+git commit -m "..."
+git push
+```
+
+⚠️ `br sync --flush-only` refuses after a fast-forward pull ("Export would lose N
+issue(s)" = DB behind JSONL). Run a bare `br sync` (import→export) — **never `--force`**,
+which deletes the pulled beads.
