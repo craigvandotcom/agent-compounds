@@ -69,8 +69,48 @@ set -euo pipefail
 # still over-block. Dependency and build-config changes genuinely can alter the
 # native shell (the Capacitor plugin set lives in package.json), so erring
 # strict there is correct, not noise.
+#
+# 2026-07-26 — narrow precision fix. `cap-build` was a bare path match inside
+# PAT_NATIVE, so ANY edit to scripts/cap-build.sh staled every review-critical
+# native journey — including an edit that only adds a fail-fast validation block,
+# which cannot change the produced artifact.
+#
+# Fix: cap-build scripts are now CONTENT-decided, exactly like the dependency
+# manifests — native is added only when the diff touches an env export, a
+# build/sync invocation, a build-shaping variable, or an .env write
+# (PAT_ARTIFACT_AFFECTING). NOT exempted wholesale the way scripts/ci/* is,
+# because cap-build.sh genuinely does shape the artifact when it changes how env
+# is injected; that case must still stale.
+#
+# READ THIS BEFORE ASSUMING A STALE VERDICT IS NOISE. This fix was originally
+# scoped from an analysis that called the 2026-07-26 store-lane block a false
+# positive. That analysis was WRONG, and the mistake is instructive: it filtered
+# the native delta to ios/ + package.json + capacitor.config + scripts/cap-* and
+# so missed `.env.capacitor`, which IS tracked and HAD changed — gaining
+# NEXT_PUBLIC_SIGNUP_ENABLED (absent before, so native shipped a reachable
+# /signup form while web disabled it) and NEXT_PUBLIC_GOOGLE_IOS_CLIENT_ID
+# (absent before, so signInWithGoogleNative() threw and native Google sign-in was
+# hard-broken). The auth journey was correctly STALE: those are exactly the two
+# paths its last_pass recorded as UNPROVEN. The gate was doing its job.
+# Enumerate the FULL changed-file set before concluding a stale verdict is noise.
+#
+# HONEST LIMITATION: this is a textual heuristic over the diff, not a semantic
+# one. A sufficiently creative artifact-affecting edit that matches none of those
+# patterns would slip through. It errs looser than before by design — if that
+# proves wrong, tighten PAT_ARTIFACT_AFFECTING rather than restoring the bare
+# path match.
 # ============================================================================
-PAT_NATIVE='^ios/|^android/|capacitor\.config|cap-build|@capacitor'
+PAT_NATIVE='^ios/|^android/|capacitor\.config|@capacitor'
+# Native build scripts — classified explicitly (see classify_range) so the
+# artifact-affecting content check decides their native-relevance instead of a
+# bare path match. `cap-build` used to live in PAT_NATIVE above; see the
+# 2026-07-26 note for why that was wrong.
+PAT_BUILD_TOOLING='^scripts/cap-build'
+# Lines in a build script that can actually change the produced artifact:
+# a real env export, a build/sync invocation, a build-shaping variable, or a
+# write into an .env file. Guard/validation edits (echo, grep, exit, arrays of
+# variable NAMES) match none of these and therefore do not stale native.
+PAT_ARTIFACT_AFFECTING='^[+-][[:space:]]*export[[:space:]]+[A-Za-z_]+=|^[+-][[:space:]]*(next build|pnpm[[:space:]]+.*build|xcodebuild)|^[+-].*(npx[[:space:]]+cap|cap[[:space:]]+(sync|copy|run|add))|^[+-].*(BUILD_TARGET|NODE_ENV=|BUILD_ID)|^[+-].*>[[:space:]]*\.env'
 PAT_WEBUI_EXT='\.(tsx|jsx|css)$'
 PAT_WEBUI_DIR='app/|components/|features/'
 PAT_WEBUI_TOKENS='globals\.css|design\.md|tailwind\.config|@neometa/brand|tokens'
@@ -206,6 +246,13 @@ classify_range() {
       # change an outcome.
       classes+=(webui webrt logic); hit=1
     fi
+    if [[ "$f" =~ $PAT_BUILD_TOOLING ]]; then
+      # Native build scripts: they shape the native artifact, but ONLY when the
+      # diff touches something that actually changes it. Marked hit=1 here so the
+      # catch-all below does not pre-empt the content check further down — the
+      # same shape the dependency manifests use.
+      hit=1
+    fi
     if [[ $hit -eq 0 ]]; then
       # Not doc/test/CI, but matches none of the specific surfaces either —
       # unclassifiable: over-block, count it as touching every surface.
@@ -224,6 +271,19 @@ classify_range() {
       fi
     fi
   done
+
+  # Native-relevance of a build-script change is content-decided too. A guard or
+  # validation block added to cap-build.sh cannot change the artifact it produces,
+  # so it must not stale a runtime journey; an env export, a build/sync
+  # invocation, or a build-shaping variable can, so it must.
+  local build_file
+  while IFS= read -r build_file; do
+    [[ -z "$build_file" ]] && continue
+    if git -C "$repo" diff "$range" -- "$build_file" 2>/dev/null \
+         | grep -qE "$PAT_ARTIFACT_AFFECTING"; then
+      classes+=(native)
+    fi
+  done < <(printf '%s\n' "$files" | grep -E "$PAT_BUILD_TOOLING" || true)
 
   [[ ${#classes[@]} -eq 0 ]] && return 0
   printf '%s\n' "${classes[@]}" | sort -u
