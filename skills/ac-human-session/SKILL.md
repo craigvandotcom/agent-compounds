@@ -88,8 +88,19 @@ done
 ```bash
 gh pr list --state open --json number,title,createdAt,labels 2>/dev/null   # 🔴 PRs needing review/merge
 gh run list --limit 3 --json status,conclusion,name,createdAt 2>/dev/null  # 🔴 failed CI
-curl -s -o /dev/null -w "%{http_code}" https://www.eat.zone 2>/dev/null    # 🔴 prod health
+curl -s -o /dev/null -w "%{http_code}" "$PROD_URL" 2>/dev/null             # 🔴 prod health
 ```
+
+**`$PROD_URL` is per-project — resolve it, never hardcode one here.** This skill is
+shared across every app in the registry, so a literal domain is wrong for all but one of
+them. Read the project's live domain from its `AGENTS.md` / CORE, or from the deployed
+alias, before probing. (BCA = `https://bodycompass.app`.)
+
+A **retired** domain must not be probed at all. Until 2026-07-26 this line curled
+`www.eat.zone` — BCA's pre-rebrand domain, decommissioned long before — so every run
+reported prod as `404` while prod was in fact healthy. A 🔴 that is always red trains the
+human to ignore the 🔴 tier, which is worse than not probing. If a probe is red, confirm
+the URL is still the real prod surface before reporting it (bd-vp7fw).
 
 Also flag open beads explicitly blocked on a human (notes "waiting on" / "needs manual" / "requires account" / "human decision") that aren't already `human-gate`.
 
