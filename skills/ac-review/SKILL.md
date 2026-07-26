@@ -63,7 +63,7 @@ self-deregister):
 mcp__mcp-agent-mail__macro_start_session(
   human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   program: "claude-code",
-  model: "claude-opus-4-8"
+  model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
 )
 ```
 
@@ -1014,7 +1014,7 @@ reinvented per docs wave.
 
 ## When to Use This vs /ac-hygiene
 
-Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/weekly maintenance, a 7-lens Opus panel over 3+ rounds (vs the single-round 6-or-7-dimension Sonnet diff panel here — the 7th only on a skills/-touching diff), conductor fixes directly, hunts bugs/dead code/drift. The two test lenses are complementary, not duplicate: this skill's `test-quality` reviewer audits the tests a wave just wrote, at the gate, while the diff is small; hygiene's Test Warden rotates through the whole back-catalog. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
+Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`); hygiene's distinguishers: whole-codebase scope, between-session/weekly maintenance, a 7-lens Opus panel over 3+ rounds (vs the single-round 6-or-7-dimension diff panel here — opus on security/correctness, sonnet on architecture/performance — the 7th only on a skills/-touching diff), conductor fixes directly, hunts bugs/dead code/drift. The two test lenses are complementary, not duplicate: this skill's `test-quality` reviewer audits the tests a wave just wrote, at the gate, while the diff is small; hygiene's Test Warden rotates through the whole back-catalog. Use both: `ac-review` for pre-merge validation, `hygiene` for general health.
 
 ---
 
