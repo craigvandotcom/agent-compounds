@@ -370,3 +370,17 @@ git push
 ⚠️ `br sync --flush-only` refuses after a fast-forward pull ("Export would lose N
 issue(s)" = DB behind JSONL). Run a bare `br sync` (import→export) — **never `--force`**,
 which deletes the pulled beads.
+
+**ONE COMMITTER PER SCOPE.** `issues.jsonl` is a DERIVED artifact — the `.db` is the source of
+truth and the JSONL is regenerable from it. So it must have exactly **one committer per scope**,
+and scopes must nest: **within a run**, the conductor owns the final ledger commit (children hold
+their mutations); **across scheduled jobs**, exactly one designated job commits it — or none, and
+it is regenerated on demand. Never sweep it into a feature commit (the explicit-paths rule above
+already covers that).
+
+Two independent writers do not merely risk a lost update — they routinely produce the SAME derived
+content, and a duplicate is what makes a commit **empty** on rebase. An automated `pull --rebase`
+then stops to ask `--skip` or `--continue` with no operator present, stranding the checkout
+detached mid-rebase; every session committing afterwards lands orphaned (BCA 2026-07-27: 8 hours,
+~26 sessions, no data lost but main wedged). Because the DB is authoritative, the recovery is
+always cheap — discard the JSONL and re-export — but the wedge is not.
