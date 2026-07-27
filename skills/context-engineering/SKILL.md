@@ -146,7 +146,7 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
 
 | Layer | Content | Loading discipline |
 |---|---|---|
-| **L0 — Identity** | root `AGENTS.md` (canonical; read natively by Codex/Droid/Pi) + thin shims for harnesses that need one (`CLAUDE.md`) | Always-on. **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
+| **L0 — Identity** | root `AGENTS.md` (canonical; read natively by Codex/Droid/Pi — **Claude Code does NOT read `AGENTS.md` at all**, so the `@AGENTS.md` import in its `CLAUDE.md` shim is load-bearing, not cosmetic: delete the shim and the whole stack goes silently dark) + thin shims (`CLAUDE.md`) | Always-on — and paid **per agent spawn, not per session** (see § What a subagent inherits). **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
 | **L1 — CORE** | operating manual (conventions, tool inventory, project map) | Session-start hook. Keep progressive (thin index → sub-files), not monolithic. |
 | **L2 — Skills** | capabilities | Progressive disclosure: frontmatter always (~100 tok) → SKILL.md body on invoke → `references/` on demand. One level of reference depth. Authoring mechanics + the hard listing budget (descriptions overflow → skills silently drop): skill-builder `references/token-economics.md`. |
 | **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Relevance pre-retrieval:** the per-prompt memory recall hook runs HYBRID retrieval over the memory homes + every app's `/memory/auto/` — per-term keyword search (BM25, union-ranked, ≥2 terms must agree) always, plus semantic (`vsearch`) adaptively by machine tier: fast machines run it every prompt, slow machines only on conceptual triggers, to keep latency bounded. NEVER bulk-load the full index. |
@@ -162,6 +162,30 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
 - **Per-agent dirs are projections.** `.claude/`, `.codex/`/`.agents/`, `.factory/`
   receive symlinks/shims from canonical sources (`harness-sync.sh`, manifest-driven);
   no agent keeps a private write store.
+
+### What a subagent inherits *(measured 2026-07-26, CC 2.1.220 — the multiplier)*
+
+A subagent's fresh context is **exactly**: its own system prompt · the task message ·
+**the full `CLAUDE.md` chain from cwd upward** · git status · preloaded skills (only with a
+`skills:` frontmatter key). It does **NOT** get conversation history, main-session
+auto-memory, CORE, or the skill listing — the listing arrives only if the agent holds the
+`Skill` tool.
+
+**The rule that follows: L0 is paid per spawn, not per session.** An `ac-loop` wave runs a
+documented 3-level hierarchy (conductor → phase sub-session → workers), so a ~4.5k chain
+costs ~16× per wave. When applying the cleanup rubric, price an always-on line at
+`cost × (1 + agents per wave)`, never once.
+
+Measured floors (`agent cost ≈ model floor + tool schemas + prompt body + chain`):
+`haiku` ~14.7k · `opus` ~16.6k · `sonnet` ~20.0k — **model choice alone is ~5.3k/spawn**,
+a context cost independent of per-token price. `tools: "*"` adds ~15.8k over an explicit
+list (it pulls in `Skill`, hence the listing: +14.6k in an app). **MCP costs ~0** for
+tool-restricted agents. Full model + method: `infrastructure/plans/context-tokenomics.md`.
+
+⚠️ **Measure subagents ONLY by spawning through the Task tool** and reading
+`subagent_tokens`. `claude -p --agent <name>` runs that agent as the **main thread** — a
+different code path with different context. Conflating them once produced a wrong headline
+in this very plan.
 
 ## PLACEMENT: which layer does an instruction go in
 
