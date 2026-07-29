@@ -55,36 +55,36 @@ NFILES=$(printf '%s\n' "$FILES" | grep -c . || true)
 
 CLASS_NATIVE=0 CLASS_WEBUI=0 CLASS_WEBRT=0 CLASS_LOGIC=0 CLASS_RUNTIME=0
 
-# Native shell — plugins, native projects, capacitor config/deps.
-# Markdown under a native dir has no native surface (bd-55f7a): a lone
-# `ios/App/fastlane/README.md` in a pure-prettier wave selected a full qa-device
-# simulator pass. Same "exclude surface-less files FIRST" fix as `^\.beads/` below, and
-# it matches journey-stamp-check.sh, which already drops doc/test/CI before classifying.
-# Strips ONLY `.md`/`.mdx` under ios|android — native detection is not otherwise loosened,
-# and the package.json content check on the next line is deliberately NOT swept into it.
-printf '%s\n' "$FILES" | grep -vE '^(ios|android)/.*\.(md|mdx)$' \
-  | grep -qE '^ios/|^android/|capacitor\.config|cap-build|@capacitor' && CLASS_NATIVE=1
+# Doc/test/CI files have NO runtime surface: exclude them ONCE here, then classify every
+# surface-bearing class off $CODE_FILES (bd-55f7a: a lone `ios/App/fastlane/README.md` selected
+# a full qa-device simulator pass; bd-mdbhr: `supabase/README.md` alone set CLASS_LOGIC=1,
+# `hooks/README.md` CLASS_WEBRT=1). Same list as PAT_DOC_TEST_CI in journey-stamp-check.sh —
+# keep in sync (`^\.beads/`/`^scripts/ci/` rationale: §Journey registry). EXACTLY ONE probe
+# opts out and reads unfiltered $FILES — CLASS_WEBUI's design-token line, where markdown IS the
+# surface. A second $FILES reader re-opens this hole; a blanket hoist breaks that opt-out.
+PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/'
+CODE_FILES=$(printf '%s\n' "$FILES" | grep -vE "$PAT_DOC_TEST_CI" || true)
+
+# Native shell — plugins, native projects, capacitor config/deps. The package.json content
+# check is deliberately OUTSIDE the exclusion (deps classify by content, not path).
+printf '%s\n' "$CODE_FILES" | grep -qE '^ios/|^android/|capacitor\.config|cap-build|@capacitor' && CLASS_NATIVE=1
 git diff "$RANGE" -- package.json | grep -qE '@capacitor|capacitor' && CLASS_NATIVE=1
 
 # Web UI — visual / DOM surfaces (drives ui-polish + browser QA)
-printf '%s\n' "$FILES" | grep -qE '\.(tsx|jsx|css)$' \
-  && printf '%s\n' "$FILES" | grep -qE 'app/|components/|features/' && CLASS_WEBUI=1
-# Design-token / spec changes are app-wide visual surface
+printf '%s\n' "$CODE_FILES" | grep -qE '\.(tsx|jsx|css)$' \
+  && printf '%s\n' "$CODE_FILES" | grep -qE 'app/|components/|features/' && CLASS_WEBUI=1
+# Design-token / spec changes are app-wide visual surface — THE deliberate opt-out:
+# `design.md` is markdown by design, so this probe alone reads $FILES, not $CODE_FILES.
 printf '%s\n' "$FILES" | grep -qE 'globals\.css|design\.md|tailwind\.config|@neometa/brand|tokens' && CLASS_WEBUI=1
 
 # Web runtime — non-visual but affects browser behavior (routing/data/api/hooks/middleware)
-printf '%s\n' "$FILES" | grep -qE 'app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)' && CLASS_WEBRT=1
+printf '%s\n' "$CODE_FILES" | grep -qE 'app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)' && CLASS_WEBRT=1
 
 # Backend / logic — server, utils, db (drives review; not QA on its own)
-printf '%s\n' "$FILES" | grep -qE 'lib/|utils/|server|supabase/|migrations?/|\.sql$' && CLASS_LOGIC=1
+printf '%s\n' "$CODE_FILES" | grep -qE 'lib/|utils/|server|supabase/|migrations?/|\.sql$' && CLASS_LOGIC=1
 
 # Any runtime code at all (i.e. NOT pure docs/test/CI) → review runs
-# `^\.beads/` (issue-tracker ledger) and `^scripts/ci/` (CI tooling, sibling of
-# ^\.github/) have no runtime surface — added 2026-07-22. The bead ledger is
-# written by every `br close`, so without this exclusion CLASS_RUNTIME=1 fired on
-# literally every commit. Keep this list in sync with PAT_DOC_TEST_CI in
-# skills/_tools/journey-stamp-check.sh, which mirrors these patterns.
-printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/' | grep -q . && CLASS_RUNTIME=1
+printf '%s\n' "$CODE_FILES" | grep -q . && CLASS_RUNTIME=1
 ```
 
 **Change classes:**
@@ -95,7 +95,7 @@ printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.g
 | `webui` | visual / DOM surface | `.tsx/.jsx/.css` under `app/components/features`, design tokens, `globals.css` |
 | `webrt` | web runtime behavior | API routes, middleware, data/fetch/store/query code |
 | `logic` | backend / lib / db | `lib/`, `utils/`, `server`, `supabase/`, migrations, `.sql` |
-| `runtime` | any non-doc/test/CI code | everything except `.md`, tests, `.github/`, `docs/` |
+| `runtime` | any non-doc/test/CI code | everything except `.md`, tests, `.github/`, `docs/` — proof harness for all 5 classes: `_shared/scripts/verification-gate-class.test.sh` (run it after ANY Step 1 edit) |
 
 ---
 
