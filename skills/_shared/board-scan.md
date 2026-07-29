@@ -141,7 +141,7 @@ while IFS= read -r r; do git rev-list "$r" 2>/dev/null >> "$D/covered"; done < "
 sort -u "$D/covered" -o "$D/covered"
 git rev-list "$BASE..HEAD" | sort -u > "$D/inrange"
 comm -23 "$D/inrange" "$D/covered" > "$D/uncovered"
-UNCOVERED=$(wc -l < "$D/uncovered" | tr -d ' ')
+UNCOVERED=$(( $(wc -l < "$D/uncovered") ))   # NOT `| tr -d ' '` — `tr` is a tmux alias in the fleet's interactive profile
 CODEISH=0   # the actionable subset — ONE git call, not one per commit
 [ -s "$D/uncovered" ] && CODEISH=$(git log --no-walk --format='%s' --stdin < "$D/uncovered" \
   | grep -cE '^(feat|fix|perf|refactor|test)([(!]|:)' || true)

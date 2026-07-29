@@ -173,7 +173,7 @@ export AGENT_NAME=<returned-name>   # e.g. "BlueLake" — unique per loop run
 export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dirs; passed to every spawned stage (_shared/run-id.md)
 ```
 
-Sub-skills invoked by the loop (ac-implement, ac-land, etc.) start their own fresh sessions and self-register independently — the loop's `AGENT_NAME` is not inherited (Tier-1 minting, the two-tier contract: `_shared/agent-identity.md` — parallel children must be distinct identities for reservations to protect between them).
+Sub-skills invoked by the loop (ac-implement, ac-land, etc.) self-register ONLY if they hold Agent Mail tools; a **stance-spawned** child does not and cannot reserve — hand it an `AGENT_NAME` and reserve on its behalf (the two-tier contract: `_shared/agent-identity.md` — parallel writers need distinct identities **or** provably disjoint scope).
 
 ### Sweep Stale Reservations (Layer 3 — pre-run backstop)
 
