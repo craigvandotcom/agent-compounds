@@ -34,7 +34,9 @@ agent-browser mechanics: read `browser-testing/SKILL.md`. Loop per journey step:
    navigation, modal, or async change; never reuse a stale @ref
 3. ACT: `click`/`fill` by @ref from the LATEST snapshot. Checkpoint fills: after
    `fill`, snapshot-verify the value landed before submitting
-4. ASSERT: the journey's `proof.asserts` — each is PASS/FAIL with evidence
+4. ASSERT: the journey's `proof.asserts` — each is PASS/FAIL with evidence, or
+   `NOT_PROVABLE_IN_BROWSER` when the surface cannot render here at all (native-gated
+   code path, StoreKit, device sensor). Never downgrade one of those to PASS
 5. `errors` after EVERY route load and mutation — console errors ARE findings
    (hydration mismatches, key warnings, failed fetches, CORS). `console` warnings too
    at exhaustive depth
@@ -60,7 +62,9 @@ agent-browser mechanics: read `browser-testing/SKILL.md`. Loop per journey step:
 Write {ARTIFACTS_DIR}/verdict-<journey>.json (one per journey) EXACTLY per the schema
 in `_shared/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
 ("{LANE}"), session ("{SESSION_NAME}"), started_at/ended_at (ISO8601, date -u), status
-PASS|FAIL, assertions[] (from proof.asserts, each with evidence path), covered[],
+PASS|FAIL|**INCONCLUSIVE** — INCONCLUSIVE whenever any `proof.asserts` result is
+`NOT_PROVABLE_IN_BROWSER`; a journey the harness could not observe is NOT a pass
+(bd-muutz) — assertions[] (from proof.asserts, each with evidence path), covered[],
 console_errors, findings[] (title/severity/repro — severity qa-blocker only for
 user-facing breaks or trapped states). Do NOT file beads — the conductor does.
 A mid-run SIGNED_OUT / 401-on-authenticated-request that RECOVERS on re-login during a
@@ -74,7 +78,7 @@ bd-iro5f) — record it in the verdict `findings` with the recovery note, but do
 `close --all`, never pkill, never touch the dev server. If the daemon wedges, say so
 in your final report and leave cleanup to the conductor's sweep.
 
-Final message: one line per journey — `<journey>: PASS|FAIL, <n> findings, verdict
-written`. No prose beyond that; the verdict file is the report.
+Final message: one line per journey — `<journey>: PASS|FAIL|INCONCLUSIVE, <n> findings,
+verdict written`. No prose beyond that; the verdict file is the report.
 """)
 ```

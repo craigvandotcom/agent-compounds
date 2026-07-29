@@ -32,14 +32,16 @@ the app's `CORE/journeys/native.md`.
 Assert the journey's `proof.asserts`, each PASS/FAIL with screenshot evidence to
 {ARTIFACTS_DIR}/evidence/{SESSION_NAME}-<step>.png (simctl screenshot). Steps listed
 in `proof.device_only_steps` that need a real device (not sim): exclude from
-`covered`, note why.
+`covered`, note why — declared residue, journey can still PASS. An **undeclared**
+assert the sim structurally cannot observe is `NOT_PROVABLE_IN_SIMULATOR`, which makes
+the journey INCONCLUSIVE (`_shared/qa-shared.md` §Verdict files) — never PASS.
 
 ## Output (mandatory — the conductor machine-reads this)
 
 Write {ARTIFACTS_DIR}/verdict-<journey>.json EXACTLY per the schema in
 `_shared/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
 ("sequential"), session ("{SESSION_NAME}"), started_at/ended_at (ISO8601, date -u),
-status PASS|FAIL, assertions[], covered[], console_errors (webview console if
+status PASS|FAIL|INCONCLUSIVE, assertions[], covered[], console_errors (webview console if
 inspected, else "n/a"), findings[] (severity qa-blocker only for user-facing breaks
 or trapped states). Do NOT file beads and do NOT write last_pass stamps — the
 conductor does both. An infra-flaky drive (daemon crash, stuck load) is NEITHER
@@ -51,7 +53,7 @@ so the conductor can NO-STAMP it and file the qa-infra bead.
 Close YOUR agent-device session ({SESSION_NAME}) as your final act. Never touch
 other sessions, never shut down or rename the simulator, never pkill.
 
-Final message: one line — `<journey>: PASS|FAIL, <n> findings, verdict written`.
+Final message: one line — `<journey>: PASS|FAIL|INCONCLUSIVE, <n> findings, verdict written`.
 The verdict file is the report.
 """)
 ```

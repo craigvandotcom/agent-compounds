@@ -99,6 +99,26 @@ printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.g
 
 ---
 
+## Step 1b — reachability (can the selected harness SEE the change?)
+
+Class-based selection alone can mandate a pass whose harness structurally **cannot observe**
+the changed surface — and that pass then reports PASS. Observed (RUN 20260729-170058-3584):
+paywall trial copy classified `webui`+`logic`, Step 3's payment override forced qa-browser at
+`full`, but the copy sits behind an `isNativePlatform()` gate and cannot render in a browser at
+all; 2 of 3 assertions returned `NOT_PROVABLE_IN_BROWSER` and the verdict still read PASS.
+
+Before selecting, intersect the changed surface with what each harness can observe, using
+§Journey registry fields already present: a journey whose `proof.required` is `sim-drive` or
+`device-only`, or whose `surfaces` are native-only, is **out of reach of a browser pass** — as
+is a native-gated code path inside an otherwise web-reachable journey. Out of reach ⇒ never
+silently select-and-pass. Skip with a stated reason, or run it for the in-reach parts only; in
+both cases (a) name the out-of-reach surface in Step 4's decision line — same
+visible-not-silent rule as a skip — and (b) file a tracking bead for the residue. An
+out-of-reach surface is UNVERIFIED and can never be discharged by a PASS
+(`qa-shared.md` §Verdict files: that is `INCONCLUSIVE`, a third state).
+
+---
+
 ## Step 2 — select passes + depth
 
 | Wave touches… | ac-review | ac-ui-polish | ac-qa-browser | ac-qa-device |

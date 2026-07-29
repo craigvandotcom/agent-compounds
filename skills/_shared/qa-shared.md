@@ -114,11 +114,11 @@ mandatory Output contract:
   "session": "<session name>",
   "started_at": "<ISO8601>",
   "ended_at": "<ISO8601>",
-  "status": "PASS|FAIL",
+  "status": "PASS|FAIL|INCONCLUSIVE",
   "assertions": [
     {
       "assert": "<from journey proof.asserts>",
-      "result": "PASS|FAIL",
+      "result": "PASS|FAIL|NOT_PROVABLE_IN_<HARNESS>",
       "evidence": "<path>"
     }
   ],
@@ -132,6 +132,25 @@ mandatory Output contract:
 
 Evidence = **paths on disk** (screenshots under `$ARTIFACTS_DIR/evidence/`), never
 inlined into the report.
+
+**INCONCLUSIVE is a real third state, not a soft PASS (bd-muutz).** `NOT_PROVABLE_IN_<HARNESS>`
+(e.g. `NOT_PROVABLE_IN_BROWSER`) is the honest assertion result when the harness structurally
+cannot observe the surface — see `verification-gate.md` §Step 1b. **A journey with any such
+result among its `proof.asserts` MUST NOT be `PASS`: it is `INCONCLUSIVE` — no `last_pass`
+write, and the residue gets a tracking bead.** For downstream gates INCONCLUSIVE counts as
+not-yet-verified, never as a pass (fail-safe: `ac-merge`/`ac-distribute` read PASS/FAIL only,
+so an INCONCLUSIVE journey can never make the pass-level `status:` PASS on its own strength).
+Observed: a browser worker correctly returned NOT_PROVABLE_IN_BROWSER on 2 of 3 paywall
+assertions while the journey verdict still read PASS — recording a native-only payment change
+as browser-verified.
+
+> Scope, so this does not swallow the two residues that already work: a step declared in
+> `proof.device_only_steps` is **known, human-reviewed** residue — keep the existing handling
+> (exclude from `covered`, say why in `notes`); it does not make the journey INCONCLUSIVE. An
+> infra-flaky drive stays `status: FAIL` + empty findings + an infra-flake note (deliberately
+> stricter). `NOT_PROVABLE_IN_<HARNESS>` is for the third case: a `proof.asserts` entry the
+> harness turns out to be structurally unable to observe, **undeclared** — the one that used to
+> read PASS.
 
 **Visual evidence goes to Slack as UPLOADED IMAGES, never a `/tmp` path in a card**
 (Craig's standing directive, 2026-07-17 — memory `visual-evidence-send-to-slack-not-paths`).
@@ -234,7 +253,7 @@ platform: ios-simulator | android-emulator | browser-local | browser-preview | b
 target: [sim/emulator model + OS | browser + viewport]
 app_build: [how built/served — command + branch/commit]
 depth: smoke | full | exhaustive
-journeys_tested: [list, with PASS/FAIL each]
+journeys_tested: [list, with PASS/FAIL/INCONCLUSIVE each]
 shell_checklist: [items checked, PASS/FAIL — native-shell-checklist.md | web-shell-checklist.md]
 appearance_matrix: [combos checked]
 findings_filed: [bead ids created this run, qa-blocker flagged]
