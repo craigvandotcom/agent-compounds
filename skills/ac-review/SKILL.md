@@ -146,12 +146,12 @@ echo "Current branch: $CURRENT_BRANCH"
 review-mark (the last commit that touched `.claude/reviews/batch/`):
 
 > **`.claude/reviews/batch/` is written by EXACTLY ONE commit per ceremony — `ac-batch-close`'s
-> Act 3 (bd-kudrb).** Your own findings report goes to the sibling `.claude/reviews/pending/`
-> (see Phase 6 § Report Destination), which this probe deliberately does not see. Do not
-> "helpfully" write anything into `batch/` from here: the moment a second writer touches that
-> path mid-batch, this probe returns a commit INSIDE the range it is supposed to bound and the
-> batch silently under-scopes (one live case shrank a 7-commit batch to 2 and still reported
-> success — silent under-scoping, never an error).
+> Act 3 (bd-kudrb).** Your findings report goes to the sibling `.claude/reviews/pending/` (Phase 6
+> § Report Destination), which this probe deliberately does not see. Never "helpfully" write into
+> `batch/` from here: a second writer mid-batch makes this probe return a commit INSIDE the range
+> it bounds and the batch silently under-scopes (one live case shrank a 7-commit batch to 2 and
+> still reported success). **So this probe measures ACCEPTANCE, never coverage — what has actually
+> been reviewed is Scan D's union of recorded `Range:` claims, `_shared/board-scan.md` (bd-zl1y5).**
 
 ```bash
 REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
@@ -676,7 +676,7 @@ AskUserQuestion(
 
 ### Report Destination
 
-Three destinations, and **none of them is `.claude/reviews/batch/`** (bd-kudrb):
+Three destinations, and **none of them is `.claude/reviews/batch/`** (bd-kudrb). None advancing the mark does **not** mean none counts: all three are read by `_shared/board-scan.md` Scan D, so a root-dir report is full-weight review *coverage* — provided it carries a machine-parseable `**Range:**` line (bd-zl1y5).
 
 | Invocation | Destination | Advances the review-mark? |
 |---|---|---|
@@ -709,7 +709,7 @@ Callers pass the destination via the delegation prompt, e.g. `report_dest=.claud
 
 ### Generate Review Report
 
-Create `${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings).
+Create `${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings). **The `**Range:**` line is MANDATORY and machine-parsed — full 40-char SHAs, `<base>..<head>`, no prose: an artifact without it is invisible to Scan D's coverage probe, i.e. the commits you just reviewed still read as unreviewed (bd-zl1y5).**
 
 ### Safety Check
 

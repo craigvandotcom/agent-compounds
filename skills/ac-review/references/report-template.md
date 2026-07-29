@@ -21,12 +21,30 @@ decide it):
   **Changes**, **Test Coverage**, **Review**; **Beads Completed** / **Known post-merge tails** /
   **Also carried** may read "N/A (standalone review)".
 
+### The `Range:` field is the coverage record — it is MANDATORY in every mode (bd-zl1y5)
+
+Not advancing the review-mark is **not** the same as not counting. The mark
+(`.claude/reviews/batch/`) records *acceptance* — that a batch was closed. What has actually been
+**reviewed** is computed directory-agnostically by `_shared/board-scan.md` **Scan D**, as the union
+of the `Range:` claims in every artifact under `.claude/reviews/**` (root, `pending/`, `publish/`,
+`batch/` alike). So this one line is the entire machine-readable coverage record of a review.
+
+- **Format is parsed, not read:** `**Range:** <base-sha>..<head-sha>` — **full 40-char SHAs**, one
+  pair, nothing else on the line. Scan D anchors on `Range:` and extracts `[0-9a-f]{7,40}\.\.`;
+  prose in this field (`"the families series"`, `"main since Tuesday"`) is silently uncountable.
+- **A bead-scoped or partial review still records a range.** If the diff you reviewed is not a
+  contiguous `A..B`, emit one `**Range:**` line per contiguous span — every line is unioned.
+- **Omitting it is a silent-false-green**, the same defect family as bd-kudrb: the review really
+  happened and the commits still read as unreviewed. Reviews that skipped it are precisely why the
+  measured blackout could only be stated as an upper bound ("~88 code-ish, some may be reviewed
+  and simply not machine-attributable"). An unfilled field makes the gate unable to tell.
+
 ```markdown
 # Review Report: [Batch Anchor / Feature Name]
 
 **Date:** YYYY-MM-DD
 **Mode:** {batch-close | standalone}
-**Range:** {BASE_SHA..HEAD_SHA on main — the commits this report covers}
+**Range:** {BASE_SHA}..{HEAD_SHA}
 **Plan:** {plan path or "none"}
 **Reviewers:** Security, Performance, Architecture, Correctness
 **Rounds:** {count}

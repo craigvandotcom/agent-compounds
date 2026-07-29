@@ -722,8 +722,10 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 - **This is the single batch-closing ceremony for trunk-direct `main`** — run once per batch,
   not per commit; `ac-merge` is unchanged and still owns the PR path for legacy branches.
-- **Batch = review-mark range, not a branch** — the anchor is the last commit touching
-  `.claude/reviews/batch/` (bootstrap: last `v*` tag). Same computation `ac-review` uses.
+- **Batch = review-mark range, not a branch** — anchor = last commit touching `.claude/reviews/batch/`
+  (bootstrap: last `v*` tag), same probe `ac-review` uses. **Act 3 is its ONLY advance, so it marks
+  ACCEPTANCE, never review coverage — any run that skips Act 3 (a C2 hard stop, a crash) freezes it,
+  once for 7 days / 237 commits. Coverage is `_shared/board-scan.md` Scan D (bd-zl1y5).**
 - **`.claude/reviews/batch/` has exactly ONE writer: Act 3 of this skill** (bd-kudrb). Review
   artifacts stage in `.claude/reviews/pending/` and Act 3 carries them in. A second writer makes
   the Act 1 anchor probe return a commit inside its own range — silent under-scoping, not an
@@ -731,8 +733,9 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 - **Thin, on purpose.** No version bump, no tag, no deploy verification, no 6-dim review panel
   live in this skill anymore — all four moved to `ac-publish`. This ceremony's ONLY outputs are
   a light `VERDICT`, a green Tier 1 CI dispatch, and a committed batch-report/review-mark.
-- **Light review gates everything downstream** — a single reviewer's `VERDICT: APPROVED`, not
-  the full panel; `NEEDS_DECISION` stops the ceremony cold.
+- **Light review gates everything downstream** — a single reviewer's `VERDICT: APPROVED`, not the
+  full panel. `NEEDS_DECISION`, or a Tier-1 CI that keeps failing, stops the ceremony cold: surface
+  it and let the user decide — never claim "closed" over an unresolved gate.
 - **Tier 1 CI dispatch is the batch's ONE CI confirmation** — fire once, poll in the
   foreground, fix-forward, never per-commit, never a backgrounded poller that outlives the
   session.
@@ -744,9 +747,6 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 - **Act 3's commit must be the LAST commit of the ceremony** — nothing pushes after it. A
   fix-forward round found after this point means re-running from Act 1 and redoing Act 3 last,
   again.
-- **Abort is always an option** — if Tier 1 CI keeps failing or review returns
-  `NEEDS_DECISION`, surface it and let the user decide; never claim "closed" over an unresolved
-  gate.
 
 ---
 

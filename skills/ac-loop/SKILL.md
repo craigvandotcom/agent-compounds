@@ -199,15 +199,15 @@ reservations — the safety-critical half — are swept here.
 
 Read the current state of the board. This is the map you navigate by.
 
-> **Canonical scan spec: `_shared/board-scan.md`.** This Phase-0 orient IS a consumer of the
-> shared board-scan spec — read it alongside the calls below and use ITS definitions, so the
-> loop and the janitor (`ac-tidy`) cannot fork on what "orphan" or "illegal edge" mean. In
-> particular, adopt board-scan's **parentage-gap orphan** detector (open non-epic bead with
-> no epic parent — the I1 orphan sense) and its **authored epic-edge** detector (any `blocks`
-> edge with an epic endpoint — report ALWAYS) rather than re-deriving either here. The raw
-> `bv`/`br` calls below are the concrete implementation of that spec's ready-set + bug-lane
-> lenses (they carry the `--limit 0` and bug-lane specifics the loop needs); board-scan is
-> the source of truth for the structural-lint detectors.
+> **Canonical scan spec: `_shared/board-scan.md`** — this Phase-0 orient is a consumer of it, so
+> read it alongside the calls below and use ITS definitions; the loop and the janitor (`ac-tidy`)
+> must not fork on what "orphan" or "illegal edge" mean. Adopt all three detectors rather than
+> re-deriving them: **parentage-gap orphan** (open non-epic bead, no epic parent — the I1 sense),
+> **authored epic-edge** (any `blocks` edge with an epic endpoint — report ALWAYS), and **Scan D
+> review-coverage staleness — run it, PRINT its verdict in the Summarise line below, and on
+> `ALARM` file/refresh a P1 review-blackout bead BEFORE selecting work** (bd-zl1y5: the mark
+> froze 7 days / 237 commits because every stop path that skips `ac-batch-close` freezes it
+> silently). The `bv`/`br` calls below are that spec's ready-set + bug-lane lenses, concretely.
 
 > **Discovery uses `bv` for triage, `br` for data — NEVER bare `br ready`.**
 > `br ready` **defaults to `--limit 20`** and silently truncates: a board with >20 ready
@@ -274,7 +274,7 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 > partitioning. Prior art: memory `plan-internal-gates-outrank-blanket-loop-directives`
 > — this structuralizes what plan prose already did.
 
-Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when it is `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked **preemptive** bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
@@ -820,7 +820,7 @@ Check before each iteration begins.
 | # | Condition | Action |
 |---|-----------|--------|
 | **C1** | No eligible work and no human-gate unblocks remaining | End session cleanly. Notify Slack: "Pipeline clear." |
-| **C2** | `ac-review` returns a Critical blocking finding (regression) | Hard stop. Do NOT merge. Notify Slack with the finding. File a P0 bead. Wait for human. |
+| **C2** | `ac-review` returns a Critical blocking finding (regression) | Hard stop. Do NOT merge. Notify Slack with the finding. File a P0 bead. Wait for human. **This path skips `ac-batch-close`, so the acceptance mark does NOT advance — by design. Before halting, commit the review artifact with its `**Range:**` line (that is what records the coverage the stop earned) and state the Scan D gap in the stop notice, else this correctly-honoured stop widens a blackout nobody can see (bd-zl1y5).** |
 | **C3** | Iteration cap reached (default: 3 plan waves per session) | Stop after current merge. Notify Slack: "Iteration cap reached." |
 | **C4** | Human override (Slack message "stop" / "pause the loop") | Honour immediately after current bead. Notify confirmation. |
 

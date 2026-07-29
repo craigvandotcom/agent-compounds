@@ -2,7 +2,7 @@
 
 **The single way to read pipeline state — beads + plans + backlog — into a structured
 "board."** `ac-align`, `ac-tidy`, `ac-human-session`, `ac-dashboard`, and `ac-loop` (Phase 0
-orient) all read THIS, then apply their own lens. **Share the read; never the judgment.** The three scans are defined ONCE here so they
+orient) all read THIS, then apply their own lens. **Share the read; never the judgment.** The four scans are defined ONCE here so they
 can't drift across the skills that consume them.
 
 This file owns the *read* (what to scan, how to categorize). Each consumer owns the *lens*
@@ -16,7 +16,7 @@ This file owns the *read* (what to scan, how to categorize). Each consumer owns 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
 
-Run scans A, B, C **in parallel** (they're independent).
+Run scans A, B, C, D **in parallel** (they're independent).
 
 ## Scan A — beads
 
@@ -101,6 +101,63 @@ Per file, read frontmatter + count tasks:
 - **unchecked task count** (`- [ ]`) vs checked (`- [x]`)
 - Skip `status: complete` and items with zero unchecked tasks.
 
+## Scan D — review coverage (the staleness probe)
+
+**One directory, two DIFFERENT facts — conflating them is how a 7-day / 237-commit review
+blackout stayed invisible (bd-zl1y5):**
+
+- **Acceptance mark** — the last commit touching `.claude/reviews/batch/`, written by exactly
+  one writer, `ac-batch-close` Act 3 (bd-kudrb). It records *"a batch was closed"*, **not**
+  *"review has looked this far"*. Every legitimate non-close exit leaves it frozen while commits
+  keep landing: an `ac-loop` **C2 hard stop** (correctly refuses to merge, so batch-close never
+  runs), a C1/C3/C4 mid-batch exit, a crashed run, or any standalone `ac-review`. The mark going
+  stale is therefore an **expected consequence of honouring a stop condition** — which is exactly
+  why it must be *reported*, not trusted.
+- **Coverage** — the union of the `**Range:** <sha>..<sha>` claims recorded by review artifacts
+  in **whatever directory they landed in** (`.claude/reviews/` root, `pending/`, `publish/`,
+  `batch/`). Directory-agnostic on purpose: root is `ac-review`'s *documented default* dest and
+  writing into `batch/` from it is forbidden, so "the artifact wasn't in `batch/`" is never the
+  defect. Coverage is the only honest answer to "what has actually been reviewed".
+
+```bash
+D="${ARTIFACTS_DIR:-$(mktemp -d)}"
+
+# Acceptance mark + its gap (bootstrap: last v* tag, else the root commit).
+MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
+MARK_AGE_DAYS=-1
+[ -n "$MARK" ] && MARK_AGE_DAYS=$(( ( $(date +%s) - $(git log -1 --format=%ct "$MARK") ) / 86400 ))
+BASE=${MARK:-$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null)}
+[ -n "$BASE" ] || BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
+ACCEPT_GAP=$(git rev-list --count "$BASE..HEAD")
+
+# Coverage. `git grep -h` (no xargs — empty input must not hang); anchored on `Range:` so only
+# an EXPLICIT claim counts, and an unparseable/rewritten sha is dropped by `rev-list 2>/dev/null`.
+# Both choices UNDER-credit coverage: this probe fails loud, never silently green.
+git grep -hE 'Range:.*[0-9a-f]{7,}\.\.[0-9a-f]{7,}' -- .claude/reviews 2>/dev/null \
+  | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' | sort -u > "$D/ranges"
+: > "$D/covered"
+while IFS= read -r r; do git rev-list "$r" 2>/dev/null >> "$D/covered"; done < "$D/ranges"
+sort -u "$D/covered" -o "$D/covered"
+git rev-list "$BASE..HEAD" | sort -u > "$D/inrange"
+comm -23 "$D/inrange" "$D/covered" > "$D/uncovered"
+UNCOVERED=$(wc -l < "$D/uncovered" | tr -d ' ')
+CODEISH=0   # the actionable subset — ONE git call, not one per commit
+[ -s "$D/uncovered" ] && CODEISH=$(git log --no-walk --format='%s' --stdin < "$D/uncovered" \
+  | grep -cE '^(feat|fix|perf|refactor|test)([(!]|:)' || true)
+```
+
+Verified under `bash` **and** `zsh`, and on all three degenerate inputs: no `.claude/reviews/`
+at all (doc repos — `mark=none`, bootstraps to the root commit), artifacts with no `Range:` line,
+and a range naming a sha this repo doesn't have.
+
+**Staleness classification** (shared so consumers can't fork on what "stale" means):
+
+| `staleness` | Condition |
+|---|---|
+| `ok` | `ACCEPT_GAP` ≤ 50 and `MARK_AGE_DAYS` ≤ 7 |
+| `warn` | `ACCEPT_GAP` > 50 |
+| `ALARM` | `ACCEPT_GAP` > 100, **or** `MARK_AGE_DAYS` > 7 (the same 7-day line `ac-review` § Standing weekly review already draws) |
+
 ---
 
 ## The board snapshot (shape returned to the consumer)
@@ -109,7 +166,13 @@ Per file, read frontmatter + count tasks:
 beads:    { ready[], unrefined[], blocked[], in_progress[], epics[], byLabel{} }
 plans:    { draft[], refined[], approved[], beadified[], loop_ready[] }
 backlog:  { active[], pool[], candidates[] }   # candidates = status:candidate
+review:   { mark, mark_age_days, accept_gap, uncovered, codeish_uncovered, staleness }
 ```
+
+> **A non-`ok` `staleness` is NEVER silent.** Every consumer must surface it in its own opening
+> output — that is the entire reason this scan exists. A review blackout that can only be found
+> by a later accident is the failure mode being fixed here, and a probe whose result is computed
+> and then not printed reproduces it exactly.
 
 ## Lenses (who reads this board, for what)
 
@@ -119,7 +182,7 @@ backlog:  { active[], pool[], candidates[] }   # candidates = status:candidate
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), CI (`gh run list`), prod health, org-wide `human-gate` sweep |
 | **`ac-dashboard`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), CI (`gh run list`) |
-| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan D's staleness verdict, and on `ALARM` file/refresh a P1 review-blackout bead before selecting work** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.
