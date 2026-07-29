@@ -60,8 +60,9 @@ RUN START (once, before anything else):
   Sets PARALLEL_WIDTH for the run. See Phase 0 § Width Prompt + Efficiency § Parallelism.
 
 EACH ITERATION:  (phase ORDER is preserved; within each numbered step, up to
-                 PARALLEL_WIDTH HOMOGENEOUS children may run — same-kind only,
-                 never a refine child beside an implement child — see Efficiency § Parallelism)
+                 PARALLEL_WIDTH HOMOGENEOUS children may run — same-kind only, one of the
+                 3 fannable kinds (implement|refine|beadify — CLOSED list, verify is NOT
+                 one), AND resource-disjoint — see Efficiency § Parallelism)
   0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
       ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
@@ -750,7 +751,10 @@ fighting the machine. Hold these:
   ramp-evidence discipline (below) unchanged and don't ramp the default past green windows.
 - **What may parallelize — HOMOGENEOUS within-phase fan-out.** Widening a phase runs up
   to `PARALLEL_WIDTH` children **of the SAME kind of work** — you never mix an implement
-  child with a refine or beadify child. The three parallelizable phase kinds:
+  child with a refine or beadify child. The three parallelizable phase kinds — **a CLOSED
+  list; a kind not named here does not become fannable by being homogeneous** (bd-3sh8k:
+  a conductor fanned out two *verify* children on the reasoning that both were "verify
+  kind", but verify is not on this list):
   **(a) implement** — implementers on **tree-disjoint** independent beads (dep-graph
   antichains — `bv --robot-plan` computes the parallel tracks); **(b) refine** —
   `ac-bead-refine` children on **disjoint unrefined-bead subsets** (no two children
@@ -759,11 +763,18 @@ fighting the machine. Hold these:
   (no shared `depends-on`). **The invariant:** all children in flight at one moment are
   the same kind — uniform supervision, clean failure attribution. Genuinely read-only
   sessions (board triage/discovery reads) still run freely alongside any phase.
-  **Tree-disjointness check before dispatch (implement):** compare the beads' expected
+  **Disjointness check before dispatch — BOTH tests must pass (bd-3sh8k):**
+  *(i) Tree-disjointness (implement):* compare the beads' expected
   file sets from their bead specs (the lists each child will reserve in ac-implement
   Phase 1a — reservations themselves don't exist until the child starts); any overlap →
   serialize those beads behind each other. When a dependency chain exists (A blocks B),
   stay sequential.
+  *(ii) Resource-disjointness (EVERY kind):* kind-homogeneity is necessary but **not
+  sufficient** — same-kind children can still contend for a non-shareable resource.
+  Before dispatching >1 child of any kind, confirm they do not share the checkout's
+  build output (`.next`, `.next-builds/`), a serve port or a running dev/prod server,
+  the local Supabase stack, or the beads ledger (already conductor-owned). Any overlap →
+  serialize, or give each child its own build dir / worktree.
 - **How width is enacted (per-phase fan-out):** at width >1, partition the phase's work
   into up to WIDTH children along that phase's **disjointness unit** — implement →
   `bv --robot-plan` tracks (file-set disjoint); refine → disjoint unrefined-bead subsets
@@ -777,7 +788,13 @@ fighting the machine. Hold these:
   the BEADS-CLOSED-GATE already takes the union of every child identity.
 - **What NEVER parallelizes (shipping work):** two **implement** phases under one
   conductor; beadify-while-implement; implement/implement mixing under Width-N fan-out
-  (SCOPE: Efficiency § Parallelism + Phase pipelining permissions). **What MAY
+  (SCOPE: Efficiency § Parallelism + Phase pipelining permissions); **two verify/QA
+  passes on ONE checkout** — they share `.next` and the serve port, so they are not
+  resource-disjoint however same-kind they look (bd-3sh8k: ui-polish fell back to
+  `pnpm dev`, which overwrote `.next` under a live `ac-qa-browser` serve → 8 of 19
+  journeys never ran while the gate's mandated "full depth" silently read as achieved,
+  plus a phantom ChunkLoadError filed as a P2 App Store 3.1.2 compliance bead and
+  retracted). Serialize them, or give each its own build dir / worktree. **What MAY
   pipeline (bd-chd5p.3):** non-bug **refine** during ceremony CI poll (a), during
   bug-lane implement (b), or during feature-wave implement (c) — refine ships nothing;
   children defer beads-DB mutations until the ceremony ledger commit lands. Still
