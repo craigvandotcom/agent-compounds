@@ -22,9 +22,27 @@ description: 'Use to REFINE existing beads to convergence — 3 parallel reviewe
 
 |            |                                                              |
 | ---------- | ------------------------------------------------------------ |
-| **Input**  | Open beads in `br` (from `/ac-beadify` or any other source)        |
-| **Output** | Refined beads ready for `/ac-implement` (`unrefined` removed, `refined` added) |
+| **Input**  | Open beads in `br` (from `/ac-beadify` or any other source). **Scope, in precedence order:** `TARGET_BEAD_IDS` (explicit id list) › `EPIC_ID` (epic + `parent-child` children) › whole board |
+| **Output** | Refined beads ready for `/ac-implement` (`unrefined` removed, `refined` added) — **only** the beads in this run's target list |
 | **Next**   | `/ac-implement`                                              |
+
+## Fan-out safety (bd-baudw) — read before running concurrently
+
+`ac-loop` runs several refine children at once on disjoint bead subsets and hands every one
+of them the **same `RUN_ID`** and the same claim id. Two consequences bind this skill:
+
+1. **`$ARTIFACTS_DIR` is keyed per CHILD, not per run** —
+   `/tmp/bead-refine-<AGENT_NAME>-<pid>[-<RUN_ID>]`, with the discriminator computed by the
+   child and never accepted from the caller. Keying on `RUN_ID` (or the claim id) collapsed
+   siblings onto one directory, where they overwrote each other's `beads-snapshot.json`.
+2. **The stamp is authoritative on `$ARTIFACTS_DIR/target-bead-ids.txt`**, written once at
+   Phase 0 — never on `beads-snapshot.json`. This is what stops a child stamping `refined`
+   onto beads it never reviewed.
+
+Never work around a collision by hand-suffixing `RUN_ID` per child; the safety belongs in
+the key, not the prompt. Formula, the three scope modes and the stamp loop:
+`references/workflow.md` § Phase 0 / § Phase 5. Proof:
+`bash skills/_shared/scripts/bead-refine-concurrent-dir.test.sh`.
 
 ## Epic-Scoped Invocation
 

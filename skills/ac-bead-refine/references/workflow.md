@@ -7,9 +7,9 @@
 
 |                  |                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------ |
-| **Input**        | Open beads in `br` (from `/ac-beadify` or any other source)                                         |
-| **Output**       | Refined beads ready for `/ac-implement`                                                 |
-| **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, progress in `$ARTIFACTS_DIR/progress.md` |
+| **Input**        | Open beads in `br` (from `/ac-beadify` or any other source). Scope, in precedence order: `TARGET_BEAD_IDS` (explicit list — what a fanned-out `ac-loop` child gets) › `EPIC_ID` › whole board |
+| **Output**       | Refined beads ready for `/ac-implement` — **only ever the beads in `$ARTIFACTS_DIR/target-bead-ids.txt`** |
+| **Artifacts**    | `$ARTIFACTS_DIR` is keyed **per child** (`/tmp/bead-refine-<agent>-<pid>[-<run-id>]`), never per run — siblings share a RUN_ID by design. Target list in `$ARTIFACTS_DIR/target-bead-ids.txt`, round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, progress in `$ARTIFACTS_DIR/progress.md` |
 | **Verification** | `br list --json`, `br dep cycles`, `br lint`, `br ready --json`                                  |
 
 ## Prerequisites
@@ -31,20 +31,77 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 CURRENT_ROUND=1
 MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
-# mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
-RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/bead-refine-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (_shared/run-id.md)
 ```
 
+#### `$ARTIFACTS_DIR` is keyed per-CHILD, never per-run (bd-baudw)
+
+This skill is **fanned out**: `ac-loop` at `PARALLEL_WIDTH>1` spawns several
+`ac-bead-refine` children on disjoint bead subsets, and by design hands every one of them
+the **same `RUN_ID`** (RUN_ID identifies the loop *run*, not the child — `ac-loop/SKILL.md`
+Phase 0 mints exactly one). It also hands them the same claim/batch id when there is one.
+So **neither `RUN_ID` nor the claim id can separate siblings** — keying the dir on either
+collapses N children onto one directory, where they clobber each other's
+`beads-snapshot.json` and each other's round findings, silently, last-writer-wins. That
+was a live, reproduced bug (two disjoint snapshots written in the same clock second),
+and it made a child stamp `refined` onto beads it never reviewed.
+
+The key is therefore a **child discriminator computed by the child itself**:
+
 ```bash
+# 1. RUN_ID — the orchestrator's run scope; mint-if-absent per _shared/run-id.md.
+#    Shared across siblings ON PURPOSE. It scopes, it does not discriminate.
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
+
+# 2. CHILD_ID — this child's OWN key. ALWAYS computed right here; NEVER read from the
+#    environment and NEVER accepted from the delegation prompt, so a caller-supplied
+#    RUN_ID (or an inherited CHILD_ID) cannot override it. Two independent
+#    discriminators, deliberately — defence in depth on the same mechanism:
+#      AGENT_NAME → this child's Agent Mail identity; distinct per child by the two-tier
+#                   contract (_shared/agent-identity.md) and stable across compaction
+#      $$         → this shell's PID; distinct even when AGENT_NAME is unset or duplicated
+unset CHILD_ID 2>/dev/null || true
+CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | tr -cd 'A-Za-z0-9')-$$"
+
+# 3. /tmp/<prefix>-<key>[-<run-id>] — the _shared/run-id.md invariant, key = CHILD_ID.
+#    RUN_ID stays LAST so a run-scoped glob (/tmp/bead-refine-*-$RUN_ID) still gathers
+#    every child of this run for ac-land.
+ARTIFACTS_DIR="/tmp/bead-refine-${CHILD_ID}${RUN_ID:+-$RUN_ID}"
 mkdir -p "$ARTIFACTS_DIR"
+printf '%s\n' "$CHILD_ID" | tee "$ARTIFACTS_DIR/.child-id" >/dev/null
+echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"   # ← copy this RESOLVED LITERAL; see below
 ```
+
+**Resolve once, then reuse the literal — never re-derive.** Every later bash call is a
+fresh shell with a **different `$$`**, so re-running the formula would compute a *new*
+directory and orphan this run's scratch. Immediately after the block above: paste the
+resolved literal path into the Phase-0 `TaskCreate("Initialize …")` description and into
+the `progress.md` header, and set `ARTIFACTS_DIR=<that literal>` at the top of every
+subsequent bash call. This is the same discipline `_shared/run-id.md` already mandates for
+the claim id ("recover it from the `.claim-id` file, or from a TaskCreate description that
+baked in the literal resolved path").
+
+**Never work around a collision by hand-suffixing `RUN_ID`** (`…-refineA` / `…-refineB` in
+the delegation prompt). That workaround was needed before this key existed; it is now both
+unnecessary and harmful — it breaks the `-$RUN_ID` glob ac-land uses to gather the run.
+The safety lives in `CHILD_ID`, not in the prompt, so the prompt passes `RUN_ID` bare.
+
+Proof: `bash skills/_shared/scripts/bead-refine-concurrent-dir.test.sh`.
+
+#### dcg-safe writes (fully-literal redirect targets only)
+
+The destructive-command-guard hook rule `core.filesystem:redirect-truncate-dynamic-path`
+**blocks any `>` redirect whose target path is built from a variable** — and
+`$ARTIFACTS_DIR` is necessarily a variable now that it carries a per-child discriminator,
+so a literal `/tmp/...` redirect target is impossible to write down in advance. Every
+truncating write below therefore goes through **`tee <path> >/dev/null`**: the path is an
+*argument* (not a redirect target) and the only redirect is the fully-literal `/dev/null`.
+Verified with `dcg test`: the `>` form is BLOCKED, the `tee` form is ALLOWED, and `>>`
+(append) is ALLOWED. **Do not "simplify" these back to `>` — they will not run.**
 
 ### Initialize Consensus Registry
 
 ```bash
-cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
+tee "$ARTIFACTS_DIR/consensus-registry.md" >/dev/null <<'EOF'
 # Consensus Registry
 
 Tracks single-agent findings across rounds. If a finding recurs in a later round, it achieves cross-round consensus and is auto-applied.
@@ -57,7 +114,9 @@ EOF
 
 ### Compaction Recovery
 
-If `$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to recover `CURRENT_ROUND` (set to N+1). Previous rounds' changes are already applied to beads. Read any existing findings files in `$ARTIFACTS_DIR` for context on the most recent round. If `$ARTIFACTS_DIR/consensus-registry.md` exists, read it to recover the deferred findings pool for cross-round consensus detection.
+Recover `ARTIFACTS_DIR` **first**, from the literal recorded in the Phase-0 task
+description / `progress.md` header (never by re-deriving — `$$` has changed). Then: if
+`$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to recover `CURRENT_ROUND` (set to N+1). Previous rounds' changes are already applied to beads. Read any existing findings files in `$ARTIFACTS_DIR` for context on the most recent round. If `$ARTIFACTS_DIR/consensus-registry.md` exists, read it to recover the deferred findings pool for cross-round consensus detection. `$ARTIFACTS_DIR/target-bead-ids.txt` (below) survives too — it, not the snapshot, remains the authority on what this child may stamp.
 
 ### Identify Plan File + Skills
 
@@ -67,41 +126,52 @@ Locate the original plan file if one exists (check `_plans/*.md`, ask user if un
 
 ### Gather Bead Snapshot
 
-**Canonical snapshot shape (bd-lsnc0):** `$ARTIFACTS_DIR/beads-snapshot.json` is always
+**Two files, and the first one is the authority.**
+
+| file | role |
+| --- | --- |
+| `$ARTIFACTS_DIR/target-bead-ids.txt` | **AUTHORITATIVE.** Newline-delimited ids this child owns and may stamp. Written exactly once, here. Phase 5 stamps **this list and nothing else.** |
+| `$ARTIFACTS_DIR/beads-snapshot.json` | Bead *content* for the reviewers, derived FROM that list. Convenience, never authority over scope. |
+
+**Canonical snapshot shape (bd-lsnc0):** `beads-snapshot.json` is always
 `{ "issues": [ …issue objects… ] }` — the same shape `br list --json` emits. All
-downstream loops (parity gate, stamp) read **only** this file; they never re-invoke
-`br show --json | jq` per id (multi-line descriptions break `jq -c '.[0]'`).
+downstream loops (parity gate, stamp) read **only** this file for bead content; they never
+re-invoke `br show --json | jq` per id (multi-line descriptions break `jq -c '.[0]'`).
 
 **zsh-safe array iteration:** never `for id in $UNQUOTED` (word-splits under zsh).
 Build a real array via `while IFS= read -r` (portable bash 3.2 + zsh).
 
+Pick **exactly one** of the three scope modes below, in this precedence order.
+
+#### Mode A — targeted (`TARGET_BEAD_IDS` set) — highest precedence
+
+`ac-loop` fans refine children out over **disjoint subsets of unrelated beads** (orphan/bug
+captures with no epic and no `parent-child` edge — `ac-loop/SKILL.md` § phase-pipelining
+hookpoints (b)/(c)). Neither of the other two modes can express that subset, which is
+exactly why a fanned-out child used to fall back to the whole board and then stamp beads
+belonging to a sibling. When the delegation prompt supplies `TARGET_BEAD_IDS`
+(newline- **or** comma-delimited), it is the scope — full stop:
+
 ```bash
-# Current bead state — ONE shape: { "issues": [...] }
-br list --json --limit 1000 > "$ARTIFACTS_DIR/beads-snapshot.json"
-
-# Dependency health
-br dep cycles
-
-# Full bead details for agent context (zsh+bash portable array)
-IDS=()
+TARGET_IDS=()
 while IFS= read -r line; do
-  [ -n "$line" ] && IDS+=("$line")
-done < <(jq -r '.issues[].id' "$ARTIFACTS_DIR/beads-snapshot.json")
+  [ -n "$line" ] && TARGET_IDS+=("$line")
+done < <(printf '%s\n' "$TARGET_BEAD_IDS" | tr ',' '\n' | tr -d ' ' | grep -v '^$')
 
-: > "$ARTIFACTS_DIR/beads-full-dump.txt"
-for id in "${IDS[@]}"; do
-  {
-    echo "=== Bead $id ==="
-    br show "$id"
-    br comments "$id"
-    echo ""
-  } >> "$ARTIFACTS_DIR/beads-full-dump.txt"
-done
+[ "${#TARGET_IDS[@]}" -gt 0 ] || { echo "FATAL: TARGET_BEAD_IDS set but empty" >&2; exit 2; }
+
+printf '%s\n' "${TARGET_IDS[@]}" | tee "$ARTIFACTS_DIR/target-bead-ids.txt" >/dev/null
+
+ID_FLAGS=()
+for t in "${TARGET_IDS[@]}"; do ID_FLAGS+=(--id "$t"); done
+br list --json "${ID_FLAGS[@]}" --all | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
 ```
 
-**Epic-scoped invocation** (caller says "scoped to that epic" — e.g. from `ac-hygiene` or
-`ac-triage`'s per-run epic): the snapshot narrows to the epic + its `parent-child` children.
-`br list --json` carries no dependency-edge field, so derive the child set via `dep list`:
+#### Mode B — epic-scoped (`EPIC_ID` set)
+
+Caller says "scoped to that epic" (e.g. from `ac-hygiene` or `ac-triage`'s per-run epic):
+scope is the epic + its `parent-child` children. `br list --json` carries no
+dependency-edge field, so derive the child set via `dep list`:
 
 ```bash
 EPIC_ID=<the epic bead id>
@@ -110,21 +180,53 @@ while IFS= read -r line; do
   [ -n "$line" ] && CHILD_IDS+=("$line")
 done < <(br dep list "$EPIC_ID" --direction up -t parent-child --json | jq -r '.[].issue_id')
 
-ID_FLAGS=(--id "$EPIC_ID")
-for c in "${CHILD_IDS[@]}"; do ID_FLAGS+=(--id "$c"); done
-br list --json "${ID_FLAGS[@]}" --all > "$ARTIFACTS_DIR/beads-snapshot.json"
+TARGET_IDS=("$EPIC_ID" "${CHILD_IDS[@]}")
+printf '%s\n' "${TARGET_IDS[@]}" | tee "$ARTIFACTS_DIR/target-bead-ids.txt" >/dev/null
 
-# Full bead details, epic-scoped (array iteration — zsh-safe)
-{
-  echo "=== Bead $EPIC_ID ==="; br show "$EPIC_ID"; br comments "$EPIC_ID"; echo ""
-  for id in "${CHILD_IDS[@]}"; do
-    echo "=== Bead $id ==="; br show "$id"; br comments "$id"; echo ""
-  done
-} > "$ARTIFACTS_DIR/beads-full-dump.txt"
+ID_FLAGS=()
+for t in "${TARGET_IDS[@]}"; do ID_FLAGS+=(--id "$t"); done
+br list --json "${ID_FLAGS[@]}" --all | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
+```
+
+#### Mode C — whole board (no `TARGET_BEAD_IDS`, no `EPIC_ID`)
+
+The standalone/human default. **Only ever correct when this is the sole refine session in
+flight** — if a conductor fanned you out and you land here, stop and ask for
+`TARGET_BEAD_IDS` rather than claiming the whole board out from under your siblings.
+
+```bash
+br list --json --limit 1000 | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
+jq -r '.issues[].id' "$ARTIFACTS_DIR/beads-snapshot.json" \
+  | tee "$ARTIFACTS_DIR/target-bead-ids.txt" >/dev/null
+```
+
+#### Common to all three modes
+
+```bash
+# Dependency health
+br dep cycles
+
+# Full bead details for agent context — driven off the AUTHORITATIVE target list
+IDS=()
+while IFS= read -r line; do
+  [ -n "$line" ] && IDS+=("$line")
+done < "$ARTIFACTS_DIR/target-bead-ids.txt"
+
+printf '' | tee "$ARTIFACTS_DIR/beads-full-dump.txt" >/dev/null
+for id in "${IDS[@]}"; do
+  {
+    echo "=== Bead $id ==="
+    br show "$id"
+    br comments "$id"
+    echo ""
+  } >> "$ARTIFACTS_DIR/beads-full-dump.txt"
+done
+
+echo "SCOPE: ${#IDS[@]} bead(s) — $(tr '\n' ' ' < "$ARTIFACTS_DIR/target-bead-ids.txt")"
 ```
 
 Everything downstream (reviewer prompts, convergence, the final `refined`-stamp loop)
-operates over this narrowed snapshot instead of the whole board.
+operates over this scope and no wider.
 
 ### Create Workflow Tasks (run ledger)
 
@@ -151,7 +253,10 @@ TaskCreate("Round {N} — 3 reviewers → synthesize → apply → converge")
 ```
 
 With a 3-round run that's 9 tasks; a 5-round run, 11. **TaskUpdate("Initialize", in_progress)**
-now, and mark it `completed` at the end of Phase 0. This ledger tracks bead-refine's top-level
+now, and mark it `completed` at the end of Phase 0. **Bake the resolved literal
+`ARTIFACTS_DIR` and the target-bead list into the "Initialize" task's description** — that
+is the compaction-proof record of which dir and which beads are this child's (`$$` is gone
+by the next bash call). This ledger tracks bead-refine's top-level
 sections only — keep it ~6 fixed + rounds.
 
 ---
@@ -456,9 +561,12 @@ AskUserQuestion(
 # Add human-gate to any decision-typed OR DECISION:/DESIGN_DECISION:-titled reviewed bead
 # missing it. Read rows from the Phase-0 beads-snapshot.json ONLY — never
 # `br show "$id" --json | jq` per id (multi-line descriptions break jq; bd-lsnc0).
+# Scope is still the target list (bd-baudw): this mutates beads, so it obeys the same
+# "never touch an id outside target-bead-ids.txt" rule as the stamp loop below.
 jq -c '.issues[] | select(.status == "open")' "$ARTIFACTS_DIR/beads-snapshot.json" \
   | while IFS= read -r row; do
     id=$(echo "$row" | jq -r '.id')
+    grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue   # not mine — never touch it
     needs_gate=$(echo "$row" | jq -r 'if ((.issue_type == "decision") or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):"))) and ((.labels | index("human-gate")) | not) then "yes" else "no" end')
     if [ "$needs_gate" = "yes" ]; then
         echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
@@ -497,17 +605,43 @@ bd-9bvr2 closed `decided:ACCEPT` — do not re-open a human-gate on these criter
 
 **Contract gate:** no implementable bead gets the stamp while its `## Delivers` / `## Consumes` is missing or vague (`_shared/bead-conventions.md` §Bead I/O contract) — author or fix the contract first (refine authors it for quick-capture beads). The stamp asserts the I/O contract along with everything else; ac-implement's pre-dispatch premise check reads Consumes lines at face value.
 
+**The stamp loop is authoritative on `target-bead-ids.txt`, NOT on the snapshot (bd-baudw).**
+The snapshot is a shared-shaped file that a sibling child could once have overwritten; the
+target list is this child's own scope, written once at Phase 0 and never re-derived. Stamping
+off the snapshot is what let a child mark beads it never reviewed as agent-ready. The rule:
+**an id absent from `target-bead-ids.txt` gets zero `br label` calls, ever** — no matter what
+the snapshot says.
+
 ```bash
-# Remove unrefined, add refined + the refine-path label — scoped to what was actually
-# reviewed this run (the snapshot from Phase 0: whole board normally, epic + children if epic-scoped).
+# Remove unrefined, add refined + the refine-path label — scoped to the beads THIS child
+# was handed at Phase 0 (Mode A/B/C target list), never to whatever the snapshot contains.
 # refine-full = normal 3-reviewer × ≥3-round; refine-light = formal light branch (ALL 4 criteria).
 REFINE_PATH="refine-full"
 # Set REFINE_PATH=refine-light only after HARD GATE + criteria 2–4 all hold (SKILL.md § Light-path).
-for id in $(jq -r '.issues[] | select(.status == "open") | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); do
+
+[ -s "$ARTIFACTS_DIR/target-bead-ids.txt" ] || { echo "FATAL: no target list — Phase 0 did not run in THIS dir; do not stamp" >&2; exit 2; }
+
+# Integrity gate: the snapshot must cover every target. A miss means the snapshot is stale
+# or foreign (a sibling clobbered it) — rebuild it from the target list rather than trusting it.
+MISSING=$(comm -23 \
+  <(sort -u "$ARTIFACTS_DIR/target-bead-ids.txt") \
+  <(jq -r '.issues[].id' "$ARTIFACTS_DIR/beads-snapshot.json" | sort -u))
+if [ -n "$MISSING" ]; then
+    echo "WARN: snapshot does not cover targets ($(echo "$MISSING" | tr '\n' ' ')) — rebuilding from the target list"
+    REBUILD_FLAGS=()
+    while IFS= read -r t; do [ -n "$t" ] && REBUILD_FLAGS+=(--id "$t"); done < "$ARTIFACTS_DIR/target-bead-ids.txt"
+    br list --json "${REBUILD_FLAGS[@]}" --all | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
+fi
+
+while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    # status comes from the (now target-consistent) snapshot; scope comes from the list
+    status=$(jq -r --arg id "$id" 'first(.issues[] | select(.id == $id) | .status) // "unknown"' "$ARTIFACTS_DIR/beads-snapshot.json")
+    [ "$status" = "open" ] || { echo "SKIP $id (status=$status)"; continue; }
     br label remove "$id" "unrefined" 2>/dev/null
     br label add "$id" "refined" 2>/dev/null
     br label add "$id" "$REFINE_PATH" 2>/dev/null
-done
+done < "$ARTIFACTS_DIR/target-bead-ids.txt"
 ```
 
 This signals to `/ac-human-session` and `/ac-implement` that these beads have been through refinement and are agent-ready — `/ac-implement`'s intake gate checks for `refined` explicitly.
@@ -617,7 +751,8 @@ AskUserQuestion(
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of severity or consensus
 - **Competitive framing sharpens output** — agents know they compete for relevance
 - **Structure Optimizer counterbalances** — prevents completeness reviewer from piling on complexity
-- **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
+- **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory (recover the dir from the recorded LITERAL path, never by re-deriving — `$$` changes every bash call)
+- **`$ARTIFACTS_DIR` is per-CHILD, `target-bead-ids.txt` is per-CHILD (bd-baudw)** — a conductor hands every sibling the same `RUN_ID` and claim id on purpose, so only the child's own discriminator (`AGENT_NAME`+`$$`) keeps two fan-out children apart. **Never** stamp off `beads-snapshot.json`; stamp off the target list. Never hand-suffix `RUN_ID` to dodge a collision
 - **Progress file is compaction recovery** — parse it to know where you left off
 - **3 agents per round > 1 pass repeated** — more perspectives, faster convergence
 - **Evidence over opinion** — bead IDs and content citations, not vague concerns

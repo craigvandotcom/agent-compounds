@@ -92,6 +92,14 @@ standalone run the same run-scoping safety net if it's later resumed or cross-re
 | ac-qa-browser | `qa-browser` | |
 | ac-qa-device | `qa-device` | |
 | ac-ui-polish | `ui-polish` | |
+| ac-bead-refine | `bead-refine` | keyed on a **per-CHILD** id — `<AGENT_NAME>-$$`, computed by the child, never accepted from the caller (bd-baudw). This stage is fanned out: `ac-loop` runs up to `PARALLEL_WIDTH` refine children on disjoint bead subsets and hands them all the SAME `RUN_ID` **and** the same claim id, so neither key discriminates siblings — they collapsed onto one dir and clobbered each other's `beads-snapshot.json`, making a child stamp `refined` onto beads it never reviewed. `RUN_ID` still trails (`/tmp/bead-refine-<child-id>-<run-id>`) so the run-scoped glob keeps working. Proof: `_shared/scripts/bead-refine-concurrent-dir.test.sh` |
+
+> **Fan-out corollary (general).** The claim-id key is **batch-scoped** and `RUN_ID` is
+> **run-scoped** — neither is child-scoped. Any stage a conductor fans out over subsets of
+> one batch must add a discriminator the child computes for itself (Agent Mail identity
+> and/or `$$`). Suffixing `RUN_ID` per child in the delegation prompt is **not** the fix:
+> it is un-enforceable (the next conductor forgets), and it breaks the `-$RUN_ID` glob
+> ac-land relies on.
 
 `ac-merge` — the legacy branch path only (`.claude/legacy-branches.txt` projects: dependabot,
 human feature branches) — still keys its `wave-merge` prefix on an actual wave/feature branch
@@ -105,8 +113,12 @@ still-live code path with a real branch to key on, not a stale reference.
 - **In ac-loop, single session per batch (the common case):** identical — the claim id suffices,
   no cross-session disambiguation needed. `RUN_ID` is still minted at ac-loop's own Phase 0 and
   threaded through, purely for the loop-exit scoping job (below).
-- **In ac-loop, parallel sessions on one batch:** ac-loop supplies a distinct `RUN_ID` per
-  session.
+- **In ac-loop, parallel children on one batch (width >1):** ac-loop does **NOT** supply a
+  distinct `RUN_ID` per child — `ac-loop/SKILL.md` Phase 0 mints exactly ONE `RUN_ID` per run
+  and threads it verbatim into every child, by design (it identifies the run, not the child).
+  Disambiguation is therefore the **child's** job, via the fan-out corollary above; a stage
+  that assumes RUN_ID separates its siblings is assuming something ac-loop never promised
+  (this stale assumption is what hid bd-baudw).
 
 ## The ac-land exception (a consumer that can't self-derive)
 

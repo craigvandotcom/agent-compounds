@@ -290,8 +290,8 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any
 
 **Work priority order (NON-BUG work — runs only after the Bug Lane is dry)** — ship ready maintenance first, then drive the *furthest-advanced* refinement work before pulling less-advanced work in. Nothing here except `human-gate` is gated *out*; ordering just decides what to do first:
 1. Orphan refined beads → Phase 1 (the maintenance wave — ready-to-ship fixes go first: cheapest, safest, often time-sensitive)
-2. Unrefined non-`human-gate` beads, **furthest-advanced first** — (a) from a loop-ready plan (`wave-NNN` marker), OR part of a beadified epic / plan-traceable group; then (b) lone captures (triage/hygiene/reflect/`ac-bead-capture` follow-ups). Run `ac-bead-refine` on them, then drive to merge (delegation: "ac-loop autonomous run, skip next-step question. If a ceremony or implement commit may be concurrently in flight, HOLD all beads-DB mutations (br update/close/label/comments) until told the ledger is flushed — the conductor owns the final commit (memory `beads-ledger-shared-file-conductor-should-own-final-commit`). Return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — a captured bead is committed work; refine-and-finish it. (The backlog *pool* is the "not-yet-committed" holding area, upstream of beads — that is where human promotion happens, not here.) A beadified epic outranks #3.
-3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed. If a ceremony or implement commit may be concurrently in flight, HOLD all beads-DB mutations (br update/close/label/comments) until told the ledger is flushed — the conductor owns the final commit (memory `beads-ledger-shared-file-conductor-should-own-final-commit`). Return bead IDs created/refined + anything blocked, ≤200 words")
+2. Unrefined non-`human-gate` beads, **furthest-advanced first** — (a) from a loop-ready plan (`wave-NNN` marker), OR part of a beadified epic / plan-traceable group; then (b) lone captures (triage/hygiene/reflect/`ac-bead-capture` follow-ups). Run `ac-bead-refine` on them, then drive to merge (delegation: "ac-loop autonomous run, skip next-step question. `TARGET_BEAD_IDS=<comma-separated ids>` — refine EXACTLY these and stamp nothing else (Mode A, `ac-bead-refine/references/workflow.md` §Gather Bead Snapshot). `RUN_ID=<RUN_ID>` — passed BARE, never per-child-suffixed; your own `CHILD_ID` keys your artifacts dir (bd-baudw). If a ceremony or implement commit may be concurrently in flight, HOLD all beads-DB mutations (br update/close/label/comments) until told the ledger is flushed — the conductor owns the final commit (memory `beads-ledger-shared-file-conductor-should-own-final-commit`). Return bead IDs refined + anything blocked, ≤200 words"). **Do NOT stop to ask** — a captured bead is committed work; refine-and-finish it. (The backlog *pool* is the "not-yet-committed" holding area, upstream of beads — that is where human promotion happens, not here.) A beadified epic outranks #3.
+3. Loop-ready plans with no beads → run `ac-beadify` then `ac-bead-refine` (prep) (delegation: "ac-loop autonomous run, always proceed to ac-bead-refine, no confirmation needed. Pass the just-created bead ids to the refine step as `TARGET_BEAD_IDS=<comma-separated ids>` (or `EPIC_ID=<id>` if they hang off one epic) so it refines exactly them; `RUN_ID=<RUN_ID>` bare, never per-child-suffixed (bd-baudw). If a ceremony or implement commit may be concurrently in flight, HOLD all beads-DB mutations (br update/close/label/comments) until told the ledger is flushed — the conductor owns the final commit (memory `beads-ledger-shared-file-conductor-should-own-final-commit`). Return bead IDs created/refined + anything blocked, ≤200 words")
 4. Plan wave refined beads → Phase 2
 
 > **Orphans ship before prep** — `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, so a session that ends early (compaction / human override / iteration cap) still delivers the ready work if the cheap fixes go first.
@@ -639,8 +639,17 @@ actionable rather than standing spec):
 | Owner | When | Action |
 | ----- | ---- | ------ |
 | **conductor** (a) | post-close, ceremony's CI-poll wait (batch N) | if ≥1 unclaimed unrefined non-`human-gate` bead exists AND no refine child is already in flight → spawn ONE `ac-bead-refine` child on the highest-priority such bead (Work priority #2/#3 delegation prompt), under the concurrency rules in Efficiency § Parallelism |
-| **conductor** (b) | during bug-lane implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset |
-| **conductor** (c) | during feature-wave implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset |
+| **conductor** (b) | during bug-lane implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset, **naming the subset with `TARGET_BEAD_IDS=<ids>`** |
+| **conductor** (c) | during feature-wave implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset, **naming the subset with `TARGET_BEAD_IDS=<ids>`** |
+
+> **How disjointness is ENFORCED, not just intended (bd-baudw).** These subsets have no
+> epic and no `parent-child` edge — they are ad-hoc partitions of the orphan/bug pool — so
+> a refine child cannot re-derive its own scope. Every fanned-out refine delegation MUST
+> carry `TARGET_BEAD_IDS=<comma-separated ids>` (`ac-bead-refine` Mode A); that list is the
+> child's stamping authority, so a child physically cannot stamp a sibling's beads.
+> Pass `RUN_ID=<RUN_ID>` **bare** — do **not** hand-suffix it per child (`…-refineA`).
+> The children key their own scratch dirs off their own `CHILD_ID`, and a suffixed RUN_ID
+> would break the `-$RUN_ID` glob `ac-land` uses to gather the run.
 
 WIDTH cap, homogeneity, and "refine ships nothing" invariants are unchanged — see
 Efficiency § Parallelism for the mechanics, not restated here.
@@ -745,7 +754,8 @@ fighting the machine. Hold these:
   **(a) implement** — implementers on **tree-disjoint** independent beads (dep-graph
   antichains — `bv --robot-plan` computes the parallel tracks); **(b) refine** —
   `ac-bead-refine` children on **disjoint unrefined-bead subsets** (no two children
-  refine the same bead); **(c) beadify** — `ac-beadify` children on **independent plans**
+  refine the same bead — enforce it by passing each child `TARGET_BEAD_IDS=<ids>`, which
+  is also its stamping authority; bd-baudw); **(c) beadify** — `ac-beadify` children on **independent plans**
   (no shared `depends-on`). **The invariant:** all children in flight at one moment are
   the same kind — uniform supervision, clean failure attribution. Genuinely read-only
   sessions (board triage/discovery reads) still run freely alongside any phase.
@@ -757,7 +767,8 @@ fighting the machine. Hold these:
 - **How width is enacted (per-phase fan-out):** at width >1, partition the phase's work
   into up to WIDTH children along that phase's **disjointness unit** — implement →
   `bv --robot-plan` tracks (file-set disjoint); refine → disjoint unrefined-bead subsets
-  (no two children refine the same bead); beadify → independent plans (no shared
+  (no two children refine the same bead; hand each child its subset as
+  `TARGET_BEAD_IDS=<ids>`); beadify → independent plans (no shared
   `depends-on`). Each child gets its OWN delegation: its work subset, its own
   `TARGET_BEADS`, and its own claim id (`<first-bead-of-subset>-<YYYYMMDD>`) → own
   `.claim-id` + artifacts dir + `progress.md` — children NEVER share a progress file
