@@ -48,6 +48,7 @@ of the `Range:` claims in every artifact under `.claude/reviews/**` (root, `pend
 **Plan:** {plan path or "none"}
 **Reviewers:** Security, Performance, Architecture, Correctness
 **Rounds:** {count}
+**Degraded:** {no | solo (trigger=…; lenses=…) — REQUIRED in both states, `_shared/degraded-mode.md` § 3}
 
 ---
 

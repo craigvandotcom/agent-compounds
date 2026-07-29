@@ -110,7 +110,7 @@ risk-classification before considering criteria 2–4.
 | **1** | **HARD GATE** above (RISK-TOUCH persistence / async-multi-writer) |
 | **2** | **Single-file scope** required |
 | **3** | Evidence from the **same run**, **< 24h old measured against `RUN_ID` start** (QA repro or review finding); paste **artifact path + ISO timestamp** into the stamp |
-| **4** | Mechanism traced to concrete `file:line`, **AND** that trace **confirmed by a single spawned adversarial subagent DISTINCT from the trace's author** (never conductor self-concurring). Output is one-line **PASS** naming the `file:line` independently confirmed |
+| **4** | Mechanism traced to concrete `file:line`, **AND** that trace **confirmed by a single spawned adversarial subagent DISTINCT from the trace's author** (never conductor self-concurring). Output is one-line **PASS** naming the `file:line` independently confirmed. **No `Task` tool (or spawns dead after 2 retries/rung)? #4 is structurally unreachable — do NOT self-concur and do NOT fall back to the *stronger* `refine-full` claim: `_shared/degraded-mode.md` § 4 replaces #4 with an EXECUTED witness (`refine-light-solo`) and mandates the `degraded-solo` label on either path (bd-nreuv)** |
 
 ### Stamp content (`refine-light`)
 
@@ -124,8 +124,8 @@ comment:
 Grep can confirm all three fields are **present**; it cannot confirm trace correctness —
 independent concurrence is the guard.
 
-Failing any criterion → run full `MIN_ROUNDS` and stamp `refine-full`. Procedure detail:
-`references/workflow.md` § Light-path / refine-light.
+Failing any criterion → run full `MIN_ROUNDS` and stamp `refine-full` (+ `degraded-solo` if the
+probe tripped). Procedure detail: `references/workflow.md` § Light-path / refine-light.
 
 ## Procedure
 

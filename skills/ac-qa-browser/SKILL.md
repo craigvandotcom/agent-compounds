@@ -26,6 +26,8 @@ hold the manifest, the verdicts, the gate decision, and the report; workers hold
 DOM snapshots, console noise, and screenshots. The full evidence protocol (manifest
 schema, verdict schema, lanes, completeness rule, session naming) is
 **`_shared/qa-shared.md` § Conductor / worker evidence protocol** — read it now.
+**No `Task` tool, or spawns still failing after 2 retries/rung → you have NO workers:
+read `_shared/degraded-mode.md` before writing the manifest (bd-nreuv).**
 
 ## Platform note (read first)
 
@@ -41,9 +43,7 @@ native-shell concerns (safe-area, splash, plugins, OAuth sheets) to `ac-qa-devic
 > or a deployed URL — never the Next.js dev server. Under sustained QA load the dev
 > server's Fast-Refresh watcher enters a rebuild storm (~10 min in it began serving
 > 0-byte 200s with CPU/RSS climbing until killed); a prod build (`next start`) was
-> proven stable for 5 concurrent + sequential workers (bd-yey1z, 2026-07-12). The
-> dev server is not a QA target and QA must never gate on its Fast-Refresh behavior.
-> `pnpm dev` is for interactive development only.
+> proven stable for 5 concurrent + sequential workers (bd-yey1z, 2026-07-12).
 >
 > **Do not re-implement the cache in this skill** — delegate to `serve-prod.sh`.
 > The script refuses ANY dirty tree (incl. untracked); commit/clean before QA.

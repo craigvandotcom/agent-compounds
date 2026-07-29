@@ -455,7 +455,7 @@ Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, 
 `_shared/delegation-contract.md`: a reviewer that returns nothing (died on a terminal API
 error, or its resume chain broke) is a **failure to re-spawn or report**, not a silent pass —
 verify a `round-1-{role}.json` exists for every manifest-listed role before synthesizing;
-missing output ≠ "no findings."
+missing output ≠ "no findings." **When the RE-spawn keeps failing too (529/rate-limit/timeout), or you never had `Task` at all, stop retrying and read `_shared/degraded-mode.md` — it owns the bounded full-panel→smaller-panel→solo ladder and the `Degraded:` report field that keeps a solo verdict distinguishable from a panel one (bd-nreuv).**
 
 **TaskUpdate(task: "Phase 2", status: "completed")**
 
