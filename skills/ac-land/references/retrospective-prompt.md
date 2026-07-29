@@ -13,6 +13,12 @@ Read these files:
 2. Any <ARTIFACTS_DIR>/bead-*-result.md files — engineer implementation reports
 3. AGENTS.md — current project context, conventions, and coding standards
 
+**If a lane's `progress.md` is a stub or header-only** (no beads/commits listed) — common: 10 of 13
+lanes in RUN 20260719-102946-27401 — do NOT conclude the lane did no work. Fall back to the batch
+review artifacts (`.claude/reviews/batch/*.md`, plus anything staged in `.claude/reviews/pending/`)
+and `br show <id>` close reasons to reconstruct that lane's work BEFORE analyzing it. This is a
+safety net for the retrospective's own blind spot, not a licence to leave the stubs unfixed.
+
 ## Workflow & Skill Files
 
 Read the command files that ran during this session so you can identify workflow friction:
