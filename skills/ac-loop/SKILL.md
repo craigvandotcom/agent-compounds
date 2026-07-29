@@ -199,15 +199,15 @@ reservations — the safety-critical half — are swept here.
 
 Read the current state of the board. This is the map you navigate by.
 
-> **Canonical scan spec: `_shared/board-scan.md`** — this Phase-0 orient is a consumer of it, so
-> read it alongside the calls below and use ITS definitions; the loop and the janitor (`ac-tidy`)
-> must not fork on what "orphan" or "illegal edge" mean. Adopt all three detectors rather than
-> re-deriving them: **parentage-gap orphan** (open non-epic bead, no epic parent — the I1 sense),
-> **authored epic-edge** (any `blocks` edge with an epic endpoint — report ALWAYS), and **Scan D
-> review-coverage staleness — run it, PRINT its verdict in the Summarise line below, and on
-> `ALARM` file/refresh a P1 review-blackout bead BEFORE selecting work** (bd-zl1y5: the mark
-> froze 7 days / 237 commits because every stop path that skips `ac-batch-close` freezes it
-> silently). The `bv`/`br` calls below are that spec's ready-set + bug-lane lenses, concretely.
+> **Canonical scan spec: `_shared/board-scan.md`** — this Phase-0 orient is a consumer of it, so read it
+> alongside the calls below and use ITS definitions; the loop and the janitor (`ac-tidy`) must not fork on
+> what "orphan" or "illegal edge" mean. Adopt all FOUR detectors: **parentage-gap orphan** (open non-epic
+> bead, no epic parent — the I1 sense), **authored epic-edge** (any `blocks` edge with an epic endpoint —
+> report ALWAYS), **Scan D review-coverage staleness** (PRINT its verdict below; on `ALARM` file/refresh a
+> P1 review-blackout bead BEFORE selecting work — bd-zl1y5: the mark froze 7 days / 237 commits silently,
+> on every stop path that skips `ac-batch-close`), and **Scan E scheduled-CI gate health** (PRINT the
+> `ci-gates` line EVERY run, `ok` included — bd-o9vmx: `e2e.yml` sat red 7 of 8 runs across five days and
+> nothing read it; **`unknown` is NOT green**). The `bv`/`br` calls below are that spec's ready-set lens.
 
 > **Discovery uses `bv` for triage, `br` for data — NEVER bare `br ready`.**
 > `br ready` **defaults to `--limit 20`** and silently truncates: a board with >20 ready
@@ -274,7 +274,7 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 > partitioning. Prior art: memory `plan-internal-gates-outrank-blanket-loop-directives`
 > — this structuralizes what plan prose already did.
 
-Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when it is `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when they are `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>` AND Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; and a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked **preemptive** bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
