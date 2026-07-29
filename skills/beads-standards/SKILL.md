@@ -136,6 +136,7 @@ bead, and `ac-tidy` flags what stays unparented (the parentage-gap orphan class,
 disposition grammar, no backfill sweep — those were considered and cut. The **one** place
 parentage is ENFORCED rather than conventional is the `human-gate` class (Arm 0): its
 parentage is wired at creation, because human-gate beads bypass both refine and tidy.
+**`br create --parent` is CONTAINMENT only, never provenance** — it mints a dot-child that blocks the parent's close; provenance uses `-t discovered-from`, and `br close --force` is the documented escape if you inherit a blocked parent (`_shared/bead-conventions.md` § `--parent` is CONTAINMENT only, bd-nbn3h).
 
 ## Status & priority canon
 

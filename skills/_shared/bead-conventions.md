@@ -119,6 +119,28 @@ routing behaviours:
 `_shared/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
 disposition grammar, no backfill sweep — considered and cut.
 
+### `--parent` is CONTAINMENT only — never provenance (bd-nbn3h)
+
+`br create --parent <id>` mints a **dot-notation** child (`bd-xxxxx.N`) and an open
+dot-child **blocks its parent's close** (verified against `br create --help` v0.2.16 and
+the live board). So using it to record "this bead came out of that one" silently converts
+the origin bead into one that cannot close until the derived work is done — which is the
+opposite of what a provenance link should cost. **Reserve `--parent` for genuine epic
+containment: "this bead is part of that epic's `## Delivers`."**
+
+- **Provenance instead:** the `discovered-from` dep type
+  (`br dep add <fix-id> <origin-id> -t discovered-from`, § Lineage below) or the
+  `discovered-from:` body field (`beads-standards` § Agent bead template). Neither gates a
+  close — § Lineage even has you close the origin once the trail is wired.
+- **Recovery — you are NOT stuck.** If a parent is already blocked by a dot-child, closing
+  or re-minting the child is **not** the only way out: `br close -f/--force` is the
+  documented escape ("Close even if blocked by open dependencies", verbatim from
+  `br close --help`). Live precedent, not theory: `bd-5gl3` is closed with `.10` still
+  open and `bd-tk2b` is closed with `.9` deferred. Use it deliberately and say why in the
+  close reason — a forced close over work that genuinely still matters just hides the work.
+- The `--parent` semantics themselves are **upstream** (`br` ships as a prebuilt binary; no
+  source on this machine), so this convention is the whole of the local fix.
+
 ## Pick-order (which ready bead the loop picks next)
 
 When several beads are ready, selection order is:
