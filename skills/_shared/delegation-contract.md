@@ -19,8 +19,10 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
    cap, surface `stall`/`no-return` explicitly and keep the parent moving —
    never let one quiet delegate freeze the whole run.
 4. **Verify the actual result** (return value / artifact / journal), don't infer
-   success from "it didn't error." A delegate that died after a terminal API
-   error returns nothing; treat missing output as failure, not completion.
+   success from "it didn't error" — nor from the delegate SAYING so: **a declared
+   done-state is a CLAIM, not evidence.** `completed` fires mid-flight, and children
+   have died on a 529 while reporting success; verify the DECLARED artifact — stamp
+   present, VERDICT written, commits in `git log`. Missing output = failure, not done.
    **A PARTIAL artifact is not the result either.** A still-live delegate's
    in-progress files are intermediate state: `pending`/unfilled fields mean NOT
    YET, not NEVER. **Poke first and wait for the answer; act on intermediate state
