@@ -69,14 +69,14 @@ pointer-only guidance, 3 distinct children self-detached and 3 independently
 rediscovered the Agent Mail token rule; after the conductor began inlining these
 clauses verbatim, recurrence dropped to zero for the rest of the run.
 
-**The preamble (copy verbatim into the delegation prompt; ~110 words):**
+**The preamble (copy verbatim; substitute the child's `AGENT_NAME` — you mint it; ~200 words):**
 
 > ENVIRONMENT CONTRACT (non-negotiable):
 > - WAIT for your own long-running commands in-shell (foreground, generous Bash
 >   timeout, or a foreground until-loop). Never arm a Monitor on your own command
 >   and end your turn — if a completion event already fired, read it and CONTINUE.
-> - Agent Mail: capture `registration_token` at registration and pass it
->   explicitly on EVERY mutating call — session-auth carry is transport-conditional.
+> - Agent Mail: you have NO `mcp__mcp-agent-mail__*` tools — don't try to register; export
+>   the `AGENT_NAME` your conductor gave you in each commit's own shell. IT owns reservations.
 > - After every push: verify origin SHA == local HEAD before proceeding.
 > - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass.
 >   Destructive commands (rm / find -delete) take FULLY-LITERAL paths: resolve
