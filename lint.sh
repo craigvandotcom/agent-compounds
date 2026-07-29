@@ -571,9 +571,73 @@ fi
 #  or shrinks on its own, or proves its own exception. Supersedes the old
 #  WARN-only absolute-size check removed from validate-skill.sh — that check
 #  judged a file in isolation-at-a-point-in-time and never blocked; this one
-#  judges the CHANGE per file and blocks it.)
+#  judges the CHANGE per file and blocks it.
+#
+#  TWO LEGS (bd-oxmsf, 2026-07-29). Leg 1 = this registry. Leg 2 = every deploy
+#  target's own REAL (non-symlink) `.claude/skills/*/SKILL.md`, judged in that
+#  target's own repo against that repo's own default branch. Rationale: a skill
+#  that reaches an app as a symlink into here is covered by leg 1, but a
+#  target-LOCAL skill directory was covered by NOTHING — no app has a net-growth
+#  check of its own (no .husky/, package.json or workflow carries one). The blind
+#  spot sat exactly where local customisation happens, and it reported green:
+#  body-compass-app's local curate-foods/SKILL.md reached 611 lines across three
+#  unstamped growth events before a manual demotion caught it. Same judge
+#  (nng_scan) for both legs by construction — a second copy of the loop would
+#  drift from the first, which is how leg 2 came to be missing in the first place.
+#  Proof harness: scripts/lint-net-growth.test.sh — run it after editing either leg.)
 # ---------------------------------------------------------------------------
-echo "--- Check 14: no-net-growth (SKILL.md) ---"
+echo "--- Check 14: no-net-growth (SKILL.md — registry + deploy-target-local) ---"
+
+# The per-file judge, used by BOTH legs. Appends "<label>/<path> (+net)" to
+# NNG_VIOLATIONS for every net-positive file whose own diff lacks the stamp.
+# Args: <repo root> <label> <merge base> <pathspec>
+# `--no-optional-locks` throughout: leg 2 reads OTHER live app checkouts, and a
+# lint run must never touch another repo's index (a sibling agent may be mid-edit).
+NNG_VIOLATIONS=()
+nng_scan() {
+  local nng_repo="$1" nng_label="$2" nng_base="$3" nng_spec="$4"
+  local nng_add nng_del nng_path nng_net nng_file_diff nng_stamp nng_seen=0
+  while IFS=$'\t' read -r nng_add nng_del nng_path; do
+    [ -n "$nng_add" ] || continue
+    [ "$nng_add" = "-" ] && continue   # binary numstat marker; SKILL.md is never binary
+    nng_seen=1
+    nng_net=$(( nng_add - nng_del ))
+    if [ "$nng_net" -le 0 ]; then
+      echo "no-net-growth: $nng_label/$nng_path net $nng_net line(s) vs $nng_base — PASS (neutral or shrinking)"
+      continue
+    fi
+    nng_file_diff=$(git --no-optional-locks -C "$nng_repo" diff "$nng_base" -- "$nng_path" 2>/dev/null || true)
+    nng_stamp=$(printf '%s\n' "$nng_file_diff" | grep -E '^\+[^+].*net-growth-ok:' || true)
+    if [ -n "$nng_stamp" ]; then
+      echo "no-net-growth: $nng_label/$nng_path net +$nng_net line(s) but carries its OWN net-growth-ok stamp — PASS"
+      printf '%s\n' "$nng_stamp" | sed 's/^/  /'
+    else
+      NNG_VIOLATIONS+=("$nng_label/$nng_path (+$nng_net)")
+    fi
+  done < <(git --no-optional-locks -C "$nng_repo" diff --numstat "$nng_base" -- "$nng_spec" 2>/dev/null || true)
+  # Name the pathspec, not just the repo: one repo can hold several consumer dirs
+  # ($HOME/Repos holds four), and a bare repo label would print an identical line for
+  # each — indistinguishable, so a silently mis-scoped leg would look like coverage.
+  [ "$nng_seen" -eq 1 ] || echo "no-net-growth: $nng_label — no changes under '$nng_spec' vs $nng_base — PASS (nothing to check)"
+}
+
+# Resolve a repo's own default-branch ref: origin/HEAD first (art-still-app and
+# unsit-app default to master, and $HOME/Repos carries BOTH origin/main and a
+# stale origin/master), then the explicit candidates. Empty = unresolvable.
+nng_base_of() {
+  local nng_r="$1" nng_ref nng_c
+  nng_ref=$(git --no-optional-locks -C "$nng_r" symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null || true)
+  if [ -z "$nng_ref" ]; then
+    for nng_c in "$NNG_BASE_REF" origin/main origin/master; do
+      if git --no-optional-locks -C "$nng_r" rev-parse --verify --quiet "$nng_c" >/dev/null 2>&1; then
+        nng_ref="$nng_c"; break
+      fi
+    done
+  fi
+  [ -n "$nng_ref" ] || return 0
+  git --no-optional-locks -C "$nng_r" merge-base "$nng_ref" HEAD 2>/dev/null || true
+}
+
 check
 
 NNG_BASE_REF="${NNG_BASE_REF:-origin/main}"
@@ -589,35 +653,48 @@ if [ -z "$NNG_MERGE_BASE" ]; then
   # budget total still bounds unbounded growth regardless of diff
   # availability; this check adds diff-awareness on top when it can resolve
   # a base, never blocks the whole lint leg when it can't.
-  echo "NOTICE: Check 14 skipped — base ref '$NNG_BASE_REF' unresolvable (shallow checkout, standalone clone, or no fetch of it) — no-net-growth not enforced this run."
+  echo "NOTICE: Check 14 leg 1 skipped — base ref '$NNG_BASE_REF' unresolvable (shallow checkout, standalone clone, or no fetch of it) — no-net-growth not enforced for the registry this run."
 else
-  NNG_DIFF=$(git -C "$AC_ROOT" diff "$NNG_MERGE_BASE" -- 'skills/*/SKILL.md' 2>/dev/null || true)
-  if [ -z "$NNG_DIFF" ]; then
-    echo "no SKILL.md changes vs $NNG_BASE_REF ($NNG_MERGE_BASE) — PASS (nothing to check)"
-  else
-    NNG_VIOLATIONS=()
-    while IFS=$'\t' read -r nng_add nng_del nng_path; do
-      [ -n "$nng_add" ] || continue
-      [ "$nng_add" = "-" ] && continue   # binary numstat marker; SKILL.md is never binary
-      nng_net=$(( nng_add - nng_del ))
-      if [ "$nng_net" -le 0 ]; then
-        echo "no-net-growth: $nng_path net $nng_net line(s) vs $NNG_BASE_REF — PASS (neutral or shrinking)"
-      else
-        nng_file_diff=$(git -C "$AC_ROOT" diff "$NNG_MERGE_BASE" -- "$nng_path" 2>/dev/null || true)
-        nng_stamp=$(printf '%s\n' "$nng_file_diff" | grep -E '^\+[^+].*net-growth-ok:' || true)
-        if [ -n "$nng_stamp" ]; then
-          echo "no-net-growth: $nng_path net +$nng_net line(s) but carries its OWN net-growth-ok stamp — PASS"
-          printf '%s\n' "$nng_stamp" | sed 's/^/  /'
-        else
-          NNG_VIOLATIONS+=("$nng_path (+$nng_net)")
-        fi
-      fi
-    done < <(git -C "$AC_ROOT" diff --numstat "$NNG_MERGE_BASE" -- 'skills/*/SKILL.md' 2>/dev/null || true)
+  nng_scan "$AC_ROOT" "agent-compounds" "$NNG_MERGE_BASE" 'skills/*/SKILL.md'
+fi
 
-    if [ "${#NNG_VIOLATIONS[@]}" -gt 0 ]; then
-      fail "no-net-growth: net-positive SKILL.md file(s) without their OWN net-growth-ok stamp (vs $NNG_BASE_REF @ $NNG_MERGE_BASE): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — move content to references/, or stamp the growing file's own diff (a shrink elsewhere does NOT offset it)."
-    fi
+# Leg 2 — deploy-target-LOCAL skills. CONSUMER_DIRS (built in Check 7) is the same
+# org-dirs ∪ ac-deploy-targets.list union, so a newly added target is covered with no
+# re-stamp here. A git pathspec can never traverse a symlinked dir, so this leg sees
+# ONLY real local SKILL.md files — exactly the blind spot, and no double-counting of
+# the symlinked majority leg 1 already judges.
+for dir in "${CONSUMER_DIRS[@]}"; do
+  [ -d "$dir/skills" ] || continue
+  nng_local=$(/usr/bin/find "$dir/skills" -maxdepth 2 -name SKILL.md -type f 2>/dev/null || true)
+  [ -n "$nng_local" ] || continue           # all skills symlinked here → leg 1 covers them
+  nng_repo=$(git --no-optional-locks -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)
+  [ -n "$nng_repo" ] || continue            # not a git checkout → nothing to diff
+  [ "$nng_repo" = "$AC_ROOT" ] && continue  # the registry itself — leg 1 already did it
+  check
+  nng_label="${nng_repo##*/}"
+  nng_rel="${dir#$nng_repo/}"
+  nng_base=$(nng_base_of "$nng_repo")
+  if [ -z "$nng_base" ]; then
+    echo "NOTICE: Check 14 leg 2 skipped for $nng_label — no resolvable default-branch ref — its local SKILL.md files are NOT net-growth checked this run."
+    continue
   fi
+  nng_scan "$nng_repo" "$nng_label" "$nng_base" "$nng_rel/skills/*/SKILL.md"
+  # A real-but-UNTRACKED local skill is invisible to a diff (public targets gitignore
+  # their whole harness layer — AGENTS.md § Public repos). Name it rather than let the
+  # leg read green over a file it structurally cannot see.
+  while IFS= read -r nng_f; do
+    [ -n "$nng_f" ] || continue
+    nng_rf="${nng_f#$nng_repo/}"
+    git --no-optional-locks -C "$nng_repo" ls-files --error-unmatch -- "$nng_rf" >/dev/null 2>&1 && continue
+    echo "NOTICE: no-net-growth: $nng_label/$nng_rf is UNTRACKED/gitignored ($(( $(wc -l < "$nng_f") )) lines) — real local skill, not diff-checkable there."
+  done <<< "$nng_local"
+done
+
+# One verdict over BOTH legs. The message names the EXACT token, because the
+# near-miss is real: bd-curate-…xu5tz's own AC asked for an `evidence:` comment, and
+# implementing it literally would have produced a "stamp" this grep does not see.
+if [ "${#NNG_VIOLATIONS[@]}" -gt 0 ]; then
+  fail "no-net-growth: net-positive SKILL.md file(s) without their OWN net-growth-ok stamp: $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — move content to references/, or add an ADDED line to the growing file's own diff carrying the EXACT token <!-- net-growth-ok: <reason> --> (the literal string 'net-growth-ok:' is what is grepped: an 'evidence:'/'why:' comment does NOT count, and a shrink in another file does NOT offset it)."
 fi
 
 # ---------------------------------------------------------------------------
