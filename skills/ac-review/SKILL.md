@@ -813,7 +813,7 @@ test-gaps / missing coverage / infra findings use `-t task` or `-t investigation
 >    review**. If the batch **spanned epics**, route per-finding by **file/scope** (the epic
 >    owning the file the finding lands in). If no batch epic applies, **fall back to a
 >    per-run review epic** (`br create -t epic "ac-review <date> — findings"`, created once
->    per run, reused for the rest). Wire it: `br dep add <finding-id> <epic-id>` (parent-child).
+>    per run, reused for the rest). Wire it: `br dep add -t parent-child <finding-id> <epic-id>` — the `-t` is **MANDATORY** (`br dep add` defaults to `-t blocks`, and a `blocks` edge with an epic endpoint is an I2 violation that makes the finding read as BLOCKED in `br ready`).
 > 2. **`post-merge` at creation:** `br label add <finding-id> post-merge` — the finding was
 >    filed before its parent batch merged, so the literal label keeps `beads-closed-gate.sh`
 >    from counting it as a genuinely-open in-scope bead and blocking the batch's own close.

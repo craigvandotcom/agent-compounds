@@ -218,7 +218,7 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
 ### Parentage-Gap Orphans (the I1 orphan class — `_shared/board-scan.md`)
 - **An open, non-epic bead with no epic parent** (no `parent-child` edge to any epic). This is the I1 sense of "orphan" (no home epic) — **distinct** from the plan-reference orphan above. Read it from the board-scan spec's parentage-gap detector; do not re-derive.
 - **`human-gate` beads are EXCLUDED** — their parentage is wired at creation (Arm 0 owns them); never flag a `human-gate` bead as a parentage-gap orphan.
-- **FLAG-ONLY (Tier 3), never backfill.** Report the gap. When the §3 routing map (`_shared/bead-conventions.md` § Bead routing) makes a parent obvious, the report MAY carry a **Tier-3 adoption proposal** (`br dep add <id> <epic-id>`) — but there is **NO backfill mandate and nothing is auto-applied**. Missing/ambiguous routing → leave it flagged, unparented.
+- **FLAG-ONLY (Tier 3), never backfill.** Report the gap. When the §3 routing map (`_shared/bead-conventions.md` § Bead routing) makes a parent obvious, the report MAY carry a **Tier-3 adoption proposal** (`br dep add -t parent-child <id> <epic-id>` — the `-t` is mandatory; the default `-t blocks` would author the very I2 violation below) — but there is **NO backfill mandate and nothing is auto-applied**. Missing/ambiguous routing → leave it flagged, unparented.
 - Report: "Parentage-gap orphan {id}: open non-epic bead with no epic parent{ — obvious parent {epic-id} (proposal)| — no obvious parent}"
 
 ### Authored Epic-Edge Violations (I2 — `_shared/board-scan.md`)

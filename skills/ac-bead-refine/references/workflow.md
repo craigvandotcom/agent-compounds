@@ -451,7 +451,9 @@ br dep remove <child-id> <depends-on-id>
 # Missing/ambiguous routing is fine — leave the bead unparented (ac-tidy flags the
 # parentage gap later). Adoption NEVER gates the `refined` stamp.
 if [ -z "$(br dep list <id> --direction down -t parent-child --json | jq -r '.[].issue_id')" ]; then
-  br dep add <id> <obvious-epic-id>   # only after the re-check above confirms still-unparented
+  # -t parent-child is MANDATORY — br dep add defaults to -t blocks, and a blocks edge with an
+  # epic endpoint is an I2 violation (the finding then reads as BLOCKED in br ready).
+  br dep add -t parent-child <id> <obvious-epic-id>   # only after the re-check confirms still-unparented
 fi
 
 # Adjust priority or labels
