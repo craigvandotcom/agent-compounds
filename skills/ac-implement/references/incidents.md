@@ -43,3 +43,38 @@ See commit `f64db219` in wave/app-first-feel history for the canonical incident:
 ## untracked-pathspec-close
 
 Concrete cost (wave/001, bd-al8p.8): the new `ci-hygiene.test.ts` failed its pathspec commit; the `br close` in the SAME bash block then ran anyway and closed the bead before any commit landed.
+
+## affected-graph-intersects-explicit-selection
+
+**The tool reports green having run a subset of what you named.** `vitest-affected` intersects an
+EXPLICITLY-NAMED file list with the git-diff set instead of honouring it, so `pnpm test fileA fileB
+fileC` runs only the named files that also appear in the diff — and exits 0. Measured occurrences:
+3× in RUN 20260714-170945-6308; 7-of-12 named files in RUN 20260728-234407-54469 (~4 min);
+2-of-5 named suites in two independent implement children in RUN 20260729-170058-3584, one of which
+reported GREEN on a per-bead gate that had run 40% of its evidence. `VITEST_AFFECTED_DISABLED=1` is
+the working escape and children keep re-discovering it independently. Same family as `org-8f0`
+(`ubs` exits 0 having checked nothing): **tools that report success without checking what you asked
+them to check are the most expensive defects we have, because they are trusted.** An explicit file
+list is exactly what an engineer reaches for when proving one specific bead, so the failure mode
+lands squarely on the per-bead gate.
+
+**Why the sibling-mock grep is the other half.** The per-file affected run under-selects sibling
+*mock* files, so a fix that changes which client/method a route calls — or widens a shared interface
+such as an optional `supabase?` on `AuthenticatedRequest` — breaks hand-rolled `requireAuth`/supabase
+mocks only AFTER the commit. Costs: `bd-8b61b` put main briefly RED (`1c8ff1b8..074660cd`) plus 3
+extra fix commits, because the per-file affected run missed 3 sibling mock files; `bd-7vta3` cost ~5
+extra rounds for the same root cause. The knowledge already existed in memory
+(`grep-consumers-before-widening-shared-interface`, `scan-siblings-and-cross-layer-gates`,
+`hand-rolled-supabase-mocks`, `dynamic-import-breaks-affected-test-graph`) — it was simply not
+ENFORCED at the implement-child gate.
+
+**Why clause (3), the scope-contract half, is not redundant with clause (1).** Clause (1) tells the
+engineer what to FIND; on a scope-contract-disciplined child, finding without permission is a dead
+end. RUN 20260728-234407-54469: a scope contract naming only the files a fix TOUCHES stranded the
+files that MOCK them, and the engineer was correctly refusing to edit them — ~1 extra conductor cycle.
+
+**Not fixed at source.** `bd-fdy3n` (checked 2026-07-29, closed "premise dead") was about a CI
+shallow-clone breaking `batch_anchor` scoping — a different defect. The explicit-selection
+intersection is still live, so clause (2) stands as doctrine rather than a stopgap. Promotion note
+from the approval: the real fix is upstream — either honour an explicit selection verbatim, or FAIL
+LOUDLY when the plugin would drop named files.
