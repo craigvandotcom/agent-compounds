@@ -11,6 +11,8 @@
 #      [started_at, ended_at] windows AND distinct session names (real concurrency)
 #   4. no leftover agent-browser sessions matching the manifest's session_prefix
 #   5. (optional) total findings across verdicts >= --baseline-findings N (parity)
+#   6. every verdict finding carries a bead id or an explicit not-bead-worthy reason
+#      (no `pending`/`none` left as prose-only capture — bd-xx9yv)
 
 set -euo pipefail
 
@@ -91,6 +93,23 @@ if [ -n "$BASELINE_FINDINGS" ]; then
   else
     bad "parity: $TOTAL findings < baseline $BASELINE_FINDINGS"
   fi
+fi
+
+# 6. Every finding is captured as a bead, not left as prose (bd-xx9yv).
+# `pending` = worker wrote it, conductor never filed. `none` = the old ambiguous sentinel
+# that conflated not-yet-filed with never-filing and caused 4 duplicate + 1 false bead.
+# Legal terminal values: a real `bd-*` id, or `not-bead-worthy: <reason>`.
+UNCAPTURED=$(jq -s -r '
+  [ .[] | .journey as $j | (.findings // [])[]
+    | select((.bead // "pending") | (. == "pending" or . == "none" or . == ""))
+    | "\($j): \(.title)" ] | .[]' "$ARTIFACTS_DIR"/verdict-*.json)
+if [ -n "$UNCAPTURED" ]; then
+  bad "findings still uncaptured as beads ($(printf '%s\n' "$UNCAPTURED" | grep -c .)):"
+  while IFS= read -r line; do
+    [ -n "$line" ] && say "    $line"
+  done <<< "$UNCAPTURED"
+else
+  ok "every finding carries a bead id or an explicit not-bead-worthy reason"
 fi
 
 exit $FAIL

@@ -43,8 +43,8 @@ Write {ARTIFACTS_DIR}/verdict-<journey>.json EXACTLY per the schema in
 ("sequential"), session ("{SESSION_NAME}"), started_at/ended_at (ISO8601, date -u),
 status PASS|FAIL|INCONCLUSIVE, assertions[], covered[], console_errors (webview console if
 inspected, else "n/a"), findings[] (severity qa-blocker only for user-facing breaks
-or trapped states). Do NOT file beads and do NOT write last_pass stamps — the
-conductor does both. An infra-flaky drive (daemon crash, stuck load) is NEITHER
+or trapped states, each with `"bead": "pending"` — never `"none"`). Do NOT file beads
+and do NOT write last_pass stamps — the conductor does both. An infra-flaky drive (daemon crash, stuck load) is NEITHER
 PASS nor FAIL — status FAIL with findings empty and notes explaining infra-flake,
 so the conductor can NO-STAMP it and file the qa-infra bead.
 

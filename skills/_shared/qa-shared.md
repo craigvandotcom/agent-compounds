@@ -125,7 +125,12 @@ mandatory Output contract:
   "covered": ["<what was actually driven — undriven steps are NOT tested>"],
   "console_errors": "<summary or none>",
   "findings": [
-    { "title": "", "severity": "qa-finding|qa-blocker", "repro": "" }
+    {
+      "title": "",
+      "severity": "qa-finding|qa-blocker",
+      "repro": "",
+      "bead": "bd-xxxxx | pending | not-bead-worthy: <reason>"
+    }
   ]
 }
 ```
@@ -151,6 +156,17 @@ as browser-verified.
 > stricter). `NOT_PROVABLE_IN_<HARNESS>` is for the third case: a `proof.asserts` entry the
 > harness turns out to be structurally unable to observe, **undeclared** — the one that used to
 > read PASS.
+
+**Every finding carries a `bead` field — no ambiguous sentinel (bd-xx9yv).** Legal values: a
+real id, `pending` (worker wrote it, conductor has not filed yet), or `not-bead-worthy:
+<reason>` (a deliberate decision). **Never `none`** — it conflates the two, and a conductor
+triaging a stalled child read 5 `none` findings as orphaned and filed all 5; the child then
+woke and filed its own richer 5 → 4 duplicates + 1 false P2 compliance bead to retract.
+Workers still never touch the ledger (single-writer); the conductor files and stamps the id
+back, so `pending` is a resumable state, not a silent loss. **File as each verdict LANDS, not
+in one batch at pass end** — per `rule-known-action-capture-beads-not-prose`, a finding whose
+bead depends on a single late aggregation step orphans when that step dies. Guard:
+`validate-qa-run.sh` fails a run that still has `pending`/`none` findings.
 
 **Visual evidence goes to Slack as UPLOADED IMAGES, never a `/tmp` path in a card**
 (Craig's standing directive, 2026-07-17 — memory `visual-evidence-send-to-slack-not-paths`).

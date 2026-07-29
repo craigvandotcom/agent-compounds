@@ -66,7 +66,9 @@ PASS|FAIL|**INCONCLUSIVE** — INCONCLUSIVE whenever any `proof.asserts` result 
 `NOT_PROVABLE_IN_BROWSER`; a journey the harness could not observe is NOT a pass
 (bd-muutz) — assertions[] (from proof.asserts, each with evidence path), covered[],
 console_errors, findings[] (title/severity/repro — severity qa-blocker only for
-user-facing breaks or trapped states). Do NOT file beads — the conductor does.
+user-facing breaks or trapped states, each with `"bead": "pending"` — never `"none"`,
+which reads as "decided not to file" and gets a finding double-filed). Do NOT file beads
+yourself — the conductor files each verdict's findings as it lands and stamps the id back.
 A mid-run SIGNED_OUT / 401-on-authenticated-request that RECOVERS on re-login during a
 concurrent same-account run is likely environmental (refresh-token rotation + HMR churn,
 bd-iro5f) — record it in the verdict `findings` with the recovery note, but do NOT mark it

@@ -172,10 +172,19 @@ record as stall (qa-shared.md completeness rule). **Missing output ≠ "no findi
 If a parallel worker's verdict shows connection-refused/server-overload symptoms,
 drop the remaining parallel lane to sequential and note it in the report.
 
+**File each verdict's beads AS IT LANDS, here — not in Phase 5 (bd-xx9yv).** Filing used to
+be a Phase-5 batch, so every finding sat as prose in a `bead: pending` artifact until one
+late step ran; when a conductor stalled between the two, 5 findings looked orphaned, got
+double-filed by the triaging parent, and cost 4 retractions + 1 false compliance bead. Read
+each verdict as it appears, file its action-worthy findings, and **stamp the id back into the
+verdict's `findings[].bead`** (dedupe against what you have already filed, not a batch
+pre-pass). No verdict leaves this phase with a `pending` finding.
+
 ### Phase 5 — Aggregate + report
 
-- File beads from verdict `findings` (conventions: qa-shared.md — you file them, not
-  the workers; dedupe across verdicts first).
+- Confirm every verdict `findings[]` entry carries a real bead id or an explicit
+  `not-bead-worthy: <reason>` (filed in Phase 4; conventions: qa-shared.md — you file them,
+  not the workers). A leftover `pending` here means Phase 4 was skipped — file it now.
   - **Clean-env re-confirmation rule (bd-iro5f):** a `SIGNED_OUT` / 401-on-authenticated-request
     / session-expired finding produced during a CONCURRENT same-account run is NOT blocker-class
     on its own — it is likely confounded by refresh-token rotation + HMR churn (see Phase 2). Before
@@ -250,8 +259,10 @@ by the checklist worker at full/exhaustive depth.
 ## Findings = beads
 
 Conventions, types, and labels (`qa-finding` / `qa-blocker`) are in
-**`_shared/qa-shared.md`**. Workers report findings in their verdict files; **the
-conductor files the beads** (deduped). Tag bead descriptions with `browser QA`.
+**`_shared/qa-shared.md`**. Workers report findings in their verdict files with
+`"bead": "pending"`; **the conductor files the beads** (deduped) **in Phase 4, as each
+verdict lands** — not at pass end — and stamps the id back into the verdict. Tag bead
+descriptions with `browser QA`.
 
 ### Verdict comment (VERDICT grammar)
 
