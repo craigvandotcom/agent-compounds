@@ -24,6 +24,7 @@
 #   4  NEGATIVE CONTROL: the old RUN_ID-only formula  -> DOES collide (test is sensitive)[AC4]
 #   5  stamp loop keyed on target-bead-ids.txt        -> zero `br label` on foreign ids  [AC3]
 #   5b NEGATIVE CONTROL: old snapshot-keyed loop      -> DOES touch foreign ids          [AC3]
+#   5c the SAME loop body under real zsh              -> no read-only-special abort  [bd-x8ios]
 #   6  drift guard: the formulas here match workflow.md verbatim                         [AC1]
 #   7  ac-loop's rendered refine delegation passes RUN_ID BARE + TARGET_BEAD_IDS         [AC5]
 #   8  Phase 0 writes are dcg-safe (no `>` into a variable path)                         [AC6]
@@ -181,8 +182,11 @@ STUB
 chmod +x "$PROBE_DIR/bin/br"
 
 # The Phase 5 stamp loop, retyped verbatim from workflow.md § Remove `unrefined`, Stamp `refined`.
+# STAMP_SHELL is parameterised so Case 5c can re-run the identical body under real zsh — the
+# fleet's default shell, where a variable named `status` is READ-ONLY and aborts the loop
+# (bd-x8ios). Running this only under bash is exactly why that bug survived.
 run_stamp_loop() {
-  ARTIFACTS_DIR="$PROBE_DIR" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" bash -c '
+  ARTIFACTS_DIR="$PROBE_DIR" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" "${STAMP_SHELL:-bash}" -c '
     set -uo pipefail
     REFINE_PATH="refine-full"
     [ -s "$ARTIFACTS_DIR/target-bead-ids.txt" ] || { echo "FATAL: no target list" >&2; exit 2; }
@@ -197,8 +201,8 @@ run_stamp_loop() {
     fi
     while IFS= read -r id; do
         [ -n "$id" ] || continue
-        status=$(jq -r --arg id "$id" "first(.issues[] | select(.id == \$id) | .status) // \"unknown\"" "$ARTIFACTS_DIR/beads-snapshot.json")
-        [ "$status" = "open" ] || { echo "  (loop) SKIP $id (status=$status)"; continue; }
+        bstatus=$(jq -r --arg id "$id" "first(.issues[] | select(.id == \$id) | .status) // \"unknown\"" "$ARTIFACTS_DIR/beads-snapshot.json")
+        [ "$bstatus" = "open" ] || { echo "  (loop) SKIP $id (status=$bstatus)"; continue; }
         br label remove "$id" "unrefined" 2>/dev/null
         br label add "$id" "refined" 2>/dev/null
         br label add "$id" "$REFINE_PATH" 2>/dev/null
@@ -221,6 +225,24 @@ else
     fail "Case 5: expected 3 refined-stamps on the child's own beads, got $STAMPED"
   else
     pass "Case 5: zero calls against foreign ids; all 3 target beads stamped despite a hostile snapshot"
+  fi
+
+  # 5c — the SAME loop body under real zsh (bd-x8ios). Must stamp all 3; any assignment to a
+  # zsh read-only special (`status`, `path`, `argv`, `pipestatus`, …) fails here and only here.
+  if command -v zsh >/dev/null 2>&1; then
+    ZSH_LOG="$PROBE_DIR/zsh-calls.log"; printf '' | tee "$ZSH_LOG" >/dev/null
+    if STAMP_SHELL=zsh run_stamp_loop "$ZSH_LOG" >/dev/null 2>"$PROBE_DIR/zsh-stamp.err"; then
+      ZSH_STAMPED=$(grep -c 'label add bd-mine.* refined' "$ZSH_LOG" || true)
+      if [ "$ZSH_STAMPED" -eq 3 ]; then
+        pass "Case 5c: the stamp loop runs clean under zsh — no read-only-special assignment"
+      else
+        fail "Case 5c: under zsh only $ZSH_STAMPED/3 beads stamped ($(tr '\n' ' ' < "$PROBE_DIR/zsh-stamp.err"))"
+      fi
+    else
+      fail "Case 5c: the stamp loop ABORTED under zsh ($(tr '\n' ' ' < "$PROBE_DIR/zsh-stamp.err"))"
+    fi
+  else
+    skip "Case 5c: zsh not on PATH — cannot prove the loop is read-only-special safe"
   fi
 
   # 5b — negative control: the pre-fix loop (snapshot-keyed) must leak, proving the probe bites.
@@ -258,6 +280,8 @@ else
   grep -qF "$DIR_LINE" "$WORKFLOW" || { fail "Case 6: ARTIFACTS_DIR line not found verbatim in workflow.md"; ok=0; }
   grep -qF 'target-bead-ids.txt' "$WORKFLOW" || { fail "Case 6: workflow.md has no target-bead-ids.txt authority file"; ok=0; }
   grep -qF 'TARGET_BEAD_IDS' "$WORKFLOW" || { fail "Case 6: workflow.md has no TARGET_BEAD_IDS scope branch"; ok=0; }
+  # bd-x8ios: the documented loop must not reintroduce a zsh read-only special as its own variable.
+  grep -qE '^ *(status|path|argv|pipestatus|options|signals)=' "$WORKFLOW" && { fail "Case 6: workflow.md assigns a zsh read-only special (bd-x8ios) — rename it"; ok=0; }
   [ "$ok" -eq 1 ] && pass "Case 6: workflow.md still documents exactly the formulas + scope channel this test exercises"
 fi
 

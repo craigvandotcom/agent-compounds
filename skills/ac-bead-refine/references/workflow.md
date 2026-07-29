@@ -141,6 +141,13 @@ re-invoke `br show --json | jq` per id (multi-line descriptions break `jq -c '.[
 **zsh-safe array iteration:** never `for id in $UNQUOTED` (word-splits under zsh).
 Build a real array via `while IFS= read -r` (portable bash 3.2 + zsh).
 
+**zsh-safe variable names (bd-x8ios):** never assign to `status`, `path`, `argv`,
+`pipestatus`, `options`, `signals`, `functions`, `commands`, or `aliases` — these are
+read-only or magic-typed specials in zsh, the fleet's default shell, so the assignment
+fails or silently rewrites the environment. Prefix instead (`bstatus`, `bpath`). Invisible
+under bash, which is why it survived; guard: `bead-refine-concurrent-dir.test.sh` Case 5c
+re-runs the stamp loop under real zsh.
+
 Pick **exactly one** of the three scope modes below, in this precedence order.
 
 #### Mode A — targeted (`TARGET_BEAD_IDS` set) — highest precedence
@@ -635,9 +642,11 @@ fi
 
 while IFS= read -r id; do
     [ -n "$id" ] || continue
-    # status comes from the (now target-consistent) snapshot; scope comes from the list
-    status=$(jq -r --arg id "$id" 'first(.issues[] | select(.id == $id) | .status) // "unknown"' "$ARTIFACTS_DIR/beads-snapshot.json")
-    [ "$status" = "open" ] || { echo "SKIP $id (status=$status)"; continue; }
+    # bstatus comes from the (now target-consistent) snapshot; scope comes from the list.
+    # NEVER name this `status` — it is a READ-ONLY special in zsh (alias for $?), so the
+    # assignment aborts the loop on the fleet's default shell (bd-x8ios).
+    bstatus=$(jq -r --arg id "$id" 'first(.issues[] | select(.id == $id) | .status) // "unknown"' "$ARTIFACTS_DIR/beads-snapshot.json")
+    [ "$bstatus" = "open" ] || { echo "SKIP $id (status=$bstatus)"; continue; }
     br label remove "$id" "unrefined" 2>/dev/null
     br label add "$id" "refined" 2>/dev/null
     br label add "$id" "$REFINE_PATH" 2>/dev/null

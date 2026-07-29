@@ -136,10 +136,12 @@ for trial in $(seq 1 "$TRIALS"); do
   trial_ok=1
   for id in "${TRIAL_IDS[@]}"; do
     row=$(br show "$id" --json --no-auto-flush --no-auto-import 2>/dev/null | jq -c '.[0]')
-    status=$(printf '%s' "$row" | jq -r '.status // empty')
+    # `bstatus`, not `status` — the latter is a zsh read-only special (bd-x8ios). Harmless under
+    # this file's bash shebang, but the name must not be modelled anywhere in the registry.
+    bstatus=$(printf '%s' "$row" | jq -r '.status // empty')
     assignee=$(printf '%s' "$row" | jq -r '.assignee // empty')
-    if [ "$status" != "in_progress" ] || [ -z "$assignee" ]; then
-      fail "Trial $trial: $id — ZERO-CLAIM deadlock (status=${status:-<empty>} assignee=${assignee:-<none>})"
+    if [ "$bstatus" != "in_progress" ] || [ -z "$assignee" ]; then
+      fail "Trial $trial: $id — ZERO-CLAIM deadlock (status=${bstatus:-<empty>} assignee=${assignee:-<none>})"
       trial_ok=0
       continue
     fi
