@@ -494,9 +494,9 @@ the client's "fixed in build N" notification (`features/feedback/lib/loopback.ts
 **Do not write `status='fixed'` here.** Batch-close has no build number to attach to it, and
 writing the literal string `'fixed'` would notify the user weeks early with a null build.
 
-```bash
-br list --json | jq '[.issues[] | select((.labels // []) | (index("triage") and index("feedback"))) | select(.status == "closed")]'
-```
+**Selector: run the canonical Step 1 from that spec — do NOT hand-roll it here.** It needs both
+`--status closed` (bare `br list` excludes closed beads, so an inline `.status == "closed"` filter
+selects nothing) AND scoping to the bead IDs named in `$BATCH_RANGE`'s commits (bd-2tlwf).
 
 For each matching bead, resolve `linked_bead` (parsed from the bead description's
 `Source: public.feedback_reports / id=<uuid>` line) and call `runFeedbackPendingWriteHook`

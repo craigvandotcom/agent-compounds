@@ -103,15 +103,44 @@ ac-publish Phase 0 (mint R) → ... → [HOOK, bd-pwt44.6, not yet built] finali
 
 ### Step 1 — Find triage,feedback beads that were closed (this batch / this wave)
 
+**CANONICAL SELECTOR — this block is the spec; `ac-batch-close` points here rather than
+restating it.** Three things it must get right, all three of which the pre-`bd-2tlwf` version
+got wrong (verified 2026-07-29 against a 1934-closed-bead board, under both `zsh` and `bash`):
+
+1. **`--status closed` is mandatory.** Bare `br list --json` returns only NOT-closed beads, so a
+   `select(.status == "closed")` filter applied to it matches **zero rows, always** — the hook
+   became a silent no-op that logged "no triage,feedback beads in this batch" on every batch.
+2. **Scope to the batch.** An unscoped selector re-stamps every all-time closed `triage,feedback`
+   bead, polluting the write-back signal for any consumer that reads the stamp as recent.
+   Scope by the **explicit ID set the ceremony is closing** — the batch's own commits name their
+   bead IDs, so `$BATCH_RANGE` *is* the authoritative list. Exact, and immune both to clock skew
+   and to the batch-anchor defect (bd-kudrb). (`closed_at`-window filtering is the fallback, not
+   the primary: it depends on both.)
+3. **No line-continuation backslashes inside the jq program.** A `\` inside the single-quoted jq
+   source is a literal character, not a shell continuation: `jq: error: syntax error, unexpected
+   INVALID_CHARACTER`. Break the pipeline outside the quotes, or keep the program on one line.
+
 ```bash
-CANDIDATE_BEADS=$(br list --json \
-  | jq '[.issues[] \
-    | select((.labels // []) | (index("triage") and index("feedback"))) \
-    | select(.status == "closed")]')
+# The ceremony's authoritative closed set, derived from the batch it is closing.
+BATCH_BEAD_IDS=$(git log $BATCH_RANGE --format='%s%n%b' \
+  | grep -oE 'bd-[a-z0-9]+(\.[0-9]+)*' | sort -u)
+IDS_JSON=$(printf '%s\n' "$BATCH_BEAD_IDS" | jq -R . | jq -sc 'map(select(. != ""))')
+
+CANDIDATE_BEADS=$(br list --status closed --json | jq --argjson ids "$IDS_JSON" '
+  [ .issues[]
+    | select((.labels // []) | (index("triage") and index("feedback")))
+    | select(.id as $i | $ids | index($i)) ]')
 ```
 
 If `CANDIDATE_BEADS` is empty (`[]`), log "no triage,feedback beads in this batch — skip" and
 exit the hook cleanly.
+
+**Regression probe — log it, every run.** The selected count must never exceed the count of
+`triage,feedback` beads the ceremony actually closed; if it does, the scoping regressed:
+
+```bash
+echo "writeback scope: $(echo "$CANDIDATE_BEADS" | jq length) selected / $(echo "$IDS_JSON" | jq length) batch beads"
+```
 
 ### Step 2 — For each bead, resolve the linked source row
 
