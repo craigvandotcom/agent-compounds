@@ -83,8 +83,8 @@ These are different axes; do not conflate them:
 | Layer | Who | When | Wiring |
 |---|---|---|---|
 | 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/batch-close ceremony end; the loop conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/batch-close self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
-| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity from summaries); land runs `force_release_file_reservation` on the roster's stale holds. Identities are **not** retired here — see below | `ac-ycr.5` |
-| 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land — stale-**reservation** sweep only; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
+| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity from summaries); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
+| 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land — stale-**reservation** sweep only, same project-key-agnostic query as layer 2; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
 
 Runtime-verified (2026-07-16, decision `ac-ycr.8`): `retire_agent`/`deregister_agent` mark
 `registration_token` optional in the *schema* but **reject name-only calls at runtime** unless
@@ -95,6 +95,43 @@ persists (harmless roster noise — retired/active listing only, no write author
 upstream admin-sweep primitive requested of mcp-agent-mail lands. Reservations — the
 safety-critical half — DO sweep cross-session: `force_release_file_reservation` releases
 another agent's hold by name after validating abandonment heuristics.
+
+### The sweep is NOT project-key-agnostic — query the store, don't loop per name (bd-ko38k)
+
+**One checkout mints SEVERAL project keys.** A 12-identity run on one `body-compass-app`
+checkout registered across three: `neometa/body-compass-app` (7), the **absolute path** (4),
+and bare `body-compass-app` (1) — re-verified live below. So a per-name
+`force_release_file_reservation` loop keyed on the "obvious" key resolves 4 of 12; the other 8
+return `Agent '<name>' not found in project '<key>'`, and a loop that tolerates that error
+reports a **clean roster having never looked at two thirds of it** — a false clean, the worst
+shape for a teardown check. Ask the global question instead; then addressability cannot hide
+anything:
+
+```bash
+AM_DB="file:$HOME/mcp_agent_mail/storage.sqlite3?mode=ro"   # read-only; never write this store
+
+# 1. THE SAFETY QUESTION — every project at once, no project_key, no per-name loop.
+sqlite3 "$AM_DB" "SELECT p.human_key, a.name, r.path_pattern, r.expires_ts
+  FROM file_reservations r JOIN agents a ON a.id=r.agent_id JOIN projects p ON p.id=r.project_id
+ WHERE r.released_ts IS NULL AND r.expires_ts > datetime('now');"   # empty output = clean
+
+# 2. Roster resolution — a name resolving NOWHERE is a LOUD failure, never a skipped iteration.
+#    `while read`, NOT `for n in $ROSTER`: unquoted expansion doesn't word-split in zsh, so that
+#    loop would run ONCE with the whole roster as one name and "pass".
+while IFS= read -r n; do
+  [ -n "$n" ] || continue
+  keys=$(sqlite3 "$AM_DB" "SELECT p.human_key FROM agents a JOIN projects p ON p.id=a.project_id
+                            WHERE a.name='$n';" | paste -sd'|' -)
+  [ -n "$keys" ] && echo "ok $n -> $keys" \
+    || echo "SWEEP FAILURE: '$n' resolves in ZERO projects — the sweep did NOT look at it" >&2
+done < "$ROSTER_FILE"   # one name per line
+```
+
+Verified under `bash` and `zsh` (2026-07-29): reproduced the three-key fragmentation above, and
+a bogus name produced the loud failure rather than a silent skip. **Root cause is upstream** —
+`mcp_agent_mail` derives `project_key` from a path at several call sites, so differing child
+launch contexts fork keys for one repo. That is a third-party repo (`Dicklesworthstone/
+mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole of the local fix.
 
 ## Call-scoped facts (shakedown-verified 2026-07-08; token rule widened `ac-g93` 2026-07-19)
 
