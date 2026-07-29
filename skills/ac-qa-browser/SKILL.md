@@ -86,7 +86,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   ~1–1.5h/run and skips the SHA+input-hash key):
   ```bash
   # Requires a CLEAN tree (git status --porcelain empty, incl. untracked).
-  # Dirty → script exits non-zero; commit or clean first.
+  # Dirty → script exits non-zero; commit or clean first. dcg blocks a variable-built redirect target: if the log redirect below is rejected, do NOT bypass — pipe into tee instead (_shared/shell-guardrails.md).
   scripts/qa/serve-prod.sh >"$ARTIFACTS_DIR/server.log" 2>&1 &
   SERVER_PID=$!
   SERVER_STARTED=1

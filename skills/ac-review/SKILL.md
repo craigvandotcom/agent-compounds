@@ -424,7 +424,7 @@ shrink/full tiers and is never dropped by a shrink.
    full panel.
 
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
-against it (a spawned dimension with no output = partial failure, never a silent pass):
+against it (a spawned dimension with no output = partial failure, never a silent pass). If `dcg` rejects this write, do NOT bypass it — the guard blocks a redirect whose target path is variable-built; sanctioned shapes (`tee`, the Write tool) are in `_shared/shell-guardrails.md`:
 
 ```bash
 cat > "$ARTIFACTS_DIR/panel-round-1.json" <<'EOF'

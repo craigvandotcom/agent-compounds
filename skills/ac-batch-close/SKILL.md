@@ -241,7 +241,7 @@ STATE="$ARTIFACTS_DIR/state.env"
 ### Gather Batch Context (retarget of "Gather PR Context" — no PR body, just scope)
 
 ```bash
-br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing
+br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing. If dcg blocks a write here (variable-built redirect target), do NOT bypass — see _shared/shell-guardrails.md
 git log $BATCH_RANGE --oneline > "$ARTIFACTS_DIR/commits.txt"
 git diff $BATCH_RANGE --stat > "$ARTIFACTS_DIR/diff-stats.txt"
 ```

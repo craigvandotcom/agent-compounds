@@ -219,6 +219,10 @@ while IFS= read -r line; do
   [ -n "$line" ] && IDS+=("$line")
 done < "$ARTIFACTS_DIR/target-bead-ids.txt"
 
+# NOTE: append via `tee -a`, NOT a brace-group append-redirect. `dcg` blocks a redirect whose
+# target path is variable-built, and this line was the single highest-recurrence instance of that
+# block in the registry (3 of 4 refine children in one run, ~2 min + 2 retries each). Do NOT
+# "fix" a block by decorating the command — sanctioned shapes: `_shared/shell-guardrails.md`.
 printf '' | tee "$ARTIFACTS_DIR/beads-full-dump.txt" >/dev/null
 for id in "${IDS[@]}"; do
   {
@@ -226,7 +230,7 @@ for id in "${IDS[@]}"; do
     br show "$id"
     br comments "$id"
     echo ""
-  } >> "$ARTIFACTS_DIR/beads-full-dump.txt"
+  } | tee -a "$ARTIFACTS_DIR/beads-full-dump.txt" >/dev/null
 done
 
 echo "SCOPE: ${#IDS[@]} bead(s) — $(tr '\n' ' ' < "$ARTIFACTS_DIR/target-bead-ids.txt")"

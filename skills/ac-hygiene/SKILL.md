@@ -91,7 +91,7 @@ need to isolate uncommitted-vs-committed state. If the inventory shows a genuine
 (unexpected deletions, sensitive files, something orphaned rather than in-flight), surface it to
 the user before proceeding — otherwise proceed past it.
 
-### Initialize Consensus Registry
+### Initialize Consensus Registry <!-- if dcg rejects this write, do NOT bypass: the guard blocks a redirect whose target path is variable-built — sanctioned shapes (tee, the Write tool) in _shared/shell-guardrails.md -->
 
 ```bash
 cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'

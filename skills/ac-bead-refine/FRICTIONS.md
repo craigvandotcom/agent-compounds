@@ -2,7 +2,7 @@
 skill: ac-bead-refine
 created: 2026-07-22
 last_pass: 2026-07-29
-entries: 8
+entries: 9
 ---
 
 # ac-bead-refine — friction log
@@ -115,3 +115,16 @@ entries: 8
 - status: open
 - proposed_fix: express nuance as an advisory recorded against the existing RISK-TOUCH/render-only binary, rather than inventing a new taxonomy to carry it — inventing taxonomy to express nuance is how doctrine rots.
 - narrative: the conductor invented a "third risk class" to express a nuance that didn't cleanly fit either RISK-TOUCH or render-only, instead of accepting the binary and recording the nuance as an advisory alongside it. Cost one reviewer-round to catch and walk back.
+
+## dcg-guard-blocks-the-skills-own-setup-snippet
+- skills: [ac-bead-refine, ac-merge, ac-batch-close, ac-review, ac-qa-browser, ac-hygiene, ac-plan-clean, ac-plan-refine-internal, ac-plan-refine-external]
+- impact: M
+- frequency: every-run
+- recurrence: 26
+- related: []
+- first_seen: 2026-07-21
+- last_seen: 2026-07-29
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: one _shared doc (shell-guardrails.md) naming the blocked constructs and the sanctioned substitutes, referenced once from each affected skill, plus rewriting this skill's own dump-collection step to append via tee -a instead of a brace-group append-redirect. NOT six inline snippet patches (six spines = six net-growth events) and NOT inline examples (see narrative).
+- narrative: the command guard rejects a stdout redirect whose target path is built from a shell variable, which is the shape of nearly every artifacts-dir write in the ac-* pipeline. Because the blocked lines are the skills' OWN provided setup lines, each child wastes about a call rediscovering the same workaround: ~15+ in RUN 20260721-133107-10979, 8+ in RUN 20260722-085844-39967, 5 in one interactive session 2026-07-26, and 3-of-4 refine children (~2 min + 2 retries each) in RUN 20260728-234407-54469 — cumulative 26+ across four consecutive runs. It bites wider than its name: the redirect operator is matched anywhere on the command line, so long quoted payloads (bead comment bodies, commit messages, inline SQL) are blocked with no redirect present; in-place editors (perl -i, sed -i) are blocked though they contain no redirect at all; and a trailing error-stream redirect on a compound command trips the same rule, so decorating the command is not a fix. Decisive constraint on the FIX SHAPE: the rules match on command TEXT, so documentation that quotes a blocked construct is itself blocked — two bead comments were rejected for merely describing one. That is why the guidance must live in a single carefully-worded _shared doc that names constructs instead of showing them, rather than as inline examples in nine files.

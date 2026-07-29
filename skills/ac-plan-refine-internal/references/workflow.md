@@ -59,6 +59,9 @@ mkdir -p "$ARTIFACTS_DIR"
 
 Create the cross-round tracking file for single-agent findings:
 
+> **If `dcg` rejects this write, do NOT bypass it** — the guard blocks a redirect whose target path
+> is variable-built. Sanctioned shapes (`tee`, the Write tool): `_shared/shell-guardrails.md`.
+
 ```bash
 cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
 # Consensus Registry

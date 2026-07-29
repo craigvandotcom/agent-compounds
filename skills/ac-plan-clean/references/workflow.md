@@ -57,6 +57,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>" || true
 
 Create the cross-round tracking file:
 
+> **If `dcg` rejects this write, do NOT bypass it** — the guard blocks a redirect whose target path
+> is variable-built. Sanctioned shapes (`tee`, the Write tool): `_shared/shell-guardrails.md`.
+
 ```bash
 cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
 # Consensus Registry
