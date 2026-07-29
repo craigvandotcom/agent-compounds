@@ -66,7 +66,7 @@ registry-selected journeys (gate's affected-list; always includes auth + primary
 zero console errors; **full** adds every journey in `CORE/journeys/` + the
 `web-shell-checklist.md` + responsive spot-checks; **exhaustive** adds the full-app
 crawl (every route in `CORE/journeys/routes.md`), the appearance matrix (dark/light ×
-viewport set), and a console-clean assertion on every route.
+viewport set), and a console-clean assertion on every route. **Flag-gated journeys need a flag-ON build at every level** — `qa-shared.md` § Flag-gated paths need a flag-ON build; an env-gated path that is off in every environment is unverified by construction, so sign it off only with a flag-ON pass or an explicit UNVERIFIED record.
 
 ## Conductor flow
 

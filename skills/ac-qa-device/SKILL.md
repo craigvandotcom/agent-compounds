@@ -66,7 +66,7 @@ per level: **smoke** = build→install→launch→splash→first-paint→auth→
 (run before TestFlight pushes); **full** adds the `references/native-shell-checklist.md` +
 appearance spot-checks; **exhaustive** adds the appearance matrix (dark/light ×
 2–3 Dynamic Type sizes), deep-link matrix, lifecycle (background/resume), and a
-perf sanity pass (`references/perf-and-limits.md`).
+perf sanity pass (`references/perf-and-limits.md`). **Flag-gated journeys need a flag-ON build at every level** — `qa-shared.md` § Flag-gated paths need a flag-ON build; note `NEXT_PUBLIC_*` vars are inlined at build time, so a flag ABSENT from `.env.capacitor` reads as ENABLED and native can ship a path web has disabled.
 
 ## Conductor flow (you never drive the simulator yourself)
 

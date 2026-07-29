@@ -43,6 +43,22 @@ happy path step-by-step, locating each step's control in the latest snapshot
 trust the tree, complete the journey via the real UI, and fix the doc as part of
 the pass (that's a finding's resolution, not a blocker).
 
+## Flag-gated paths need a flag-ON build
+
+**A code path behind a `NEXT_PUBLIC_*` or env gate that is OFF in every environment is
+UNVERIFIED BY CONSTRUCTION** — no test and no QA pass in this matrix has ever executed it.
+Before signing off a journey that is flag-gated: either **(a)** run at least one pass against
+a build with the flag ON, or **(b)** record the path explicitly as **UNVERIFIED** in the QA
+report and treat its first enablement as a first-run, not a re-run. **"Flag is off everywhere"
+is zero evidence, not low risk** — it is a reason to ADD that build, not to skip the path.
+**Audit flag-dark ERROR branches first**: they are the least-observed code in the system.
+
+Both directions bite. `NEXT_PUBLIC_SIGNUP_ENABLED` OFF in every environment meant every gate
+rendered `SignupDisabled` while signup was 100% broken in prod for months (bd-zszse/bd-lxyzl).
+The same flag ABSENT from `.env.capacitor` did the inverse: `NEXT_PUBLIC_*` is inlined at build
+time, so absent reads as ENABLED and native shipped a live signup form web had disabled
+(bd-native-signup-flag-divergence-stewq — caught because device QA looked, not by any gate).
+
 ## Prod-write ban + secrets (the minimal package, Craig's decision)
 
 **Admin/shared-data writes are never QA'd against prod.** Any action that
