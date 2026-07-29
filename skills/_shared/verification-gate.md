@@ -55,8 +55,15 @@ NFILES=$(printf '%s\n' "$FILES" | grep -c . || true)
 
 CLASS_NATIVE=0 CLASS_WEBUI=0 CLASS_WEBRT=0 CLASS_LOGIC=0 CLASS_RUNTIME=0
 
-# Native shell — plugins, native projects, capacitor config/deps
-printf '%s\n' "$FILES" | grep -qE '^ios/|^android/|capacitor\.config|cap-build|@capacitor' && CLASS_NATIVE=1
+# Native shell — plugins, native projects, capacitor config/deps.
+# Markdown under a native dir has no native surface (bd-55f7a): a lone
+# `ios/App/fastlane/README.md` in a pure-prettier wave selected a full qa-device
+# simulator pass. Same "exclude surface-less files FIRST" fix as `^\.beads/` below, and
+# it matches journey-stamp-check.sh, which already drops doc/test/CI before classifying.
+# Strips ONLY `.md`/`.mdx` under ios|android — native detection is not otherwise loosened,
+# and the package.json content check on the next line is deliberately NOT swept into it.
+printf '%s\n' "$FILES" | grep -vE '^(ios|android)/.*\.(md|mdx)$' \
+  | grep -qE '^ios/|^android/|capacitor\.config|cap-build|@capacitor' && CLASS_NATIVE=1
 git diff "$RANGE" -- package.json | grep -qE '@capacitor|capacitor' && CLASS_NATIVE=1
 
 # Web UI — visual / DOM surfaces (drives ui-polish + browser QA)
@@ -84,7 +91,7 @@ printf '%s\n' "$FILES" | grep -vE '\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.g
 
 | Class | Means | Files like |
 |-------|-------|-----------|
-| `native` | native shell touched | `ios/`, `android/`, `capacitor.config`, plugin code, capacitor dep bump |
+| `native` | native shell touched | `ios/`, `android/`, `capacitor.config`, plugin code, capacitor dep bump — **not** `.md` under `ios/`/`android/` |
 | `webui` | visual / DOM surface | `.tsx/.jsx/.css` under `app/components/features`, design tokens, `globals.css` |
 | `webrt` | web runtime behavior | API routes, middleware, data/fetch/store/query code |
 | `logic` | backend / lib / db | `lib/`, `utils/`, `server`, `supabase/`, migrations, `.sql` |
