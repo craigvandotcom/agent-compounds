@@ -464,7 +464,6 @@ Output for the user and next session:
 **Commits:** K commits pushed
 
 **Quality Gates:** All passing | Issues filed (list)
-**UI Validation:** All PASS | Failures fixed (list) | Skipped (docs/config only)
 
 **Learnings Applied:** X upgrades (list targets)
 
