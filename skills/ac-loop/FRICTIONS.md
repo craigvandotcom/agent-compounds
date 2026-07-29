@@ -1,8 +1,8 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-07-22
-entries: 7
+last_pass: 2026-07-29
+entries: 10
 ---
 
 # ac-loop — friction log
@@ -55,14 +55,15 @@ entries: 7
 - skills: [ac-loop]
 - impact: L
 - frequency: every-run
-- recurrence: 1
-- related: [standing-sanctions-not-threaded-into-delegation-prompt]
+- recurrence: 2
+- related: [standing-sanctions-not-threaded-into-delegation-prompt, open-tooling-bug-not-checked-against-run-config-at-phase0]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-22
+- last_seen: 2026-07-29
 - stage: ac-loop
 - status: open
-- proposed_fix: (a) make the explicit per-child FILE-TERRITORY FENCE standard delegation-prompt text — it is the mechanism that made width 3 safe; (b) add a width-safety caveat: parallelism is safe on source FILES but NOT on shared BUILD state (`.next`) or shared SCRATCH state (RUN_ID-derived artifact dirs) — never schedule two prod-build consumers (qa-browser / site-polish / anything triggering the pre-push build) concurrently until a real build slot or a per-consumer `distDir` exists.
+- proposed_fix: (a) make the explicit per-child FILE-TERRITORY FENCE standard delegation-prompt text — it is the mechanism that made width 3 safe; (b) add a width-safety caveat: parallelism is safe on source FILES but NOT on shared BUILD state (`.next`) or shared SCRATCH state (RUN_ID-derived artifact dirs) — never schedule two prod-build consumers (qa-browser / site-polish / anything triggering the pre-push build) concurrently until a real build slot or a per-consumer `distDir` exists; (c) ramp evidence now covers width=2 as well as width=3 — width 2 is workable on a shared checkout, width 3 would likely need real build isolation.
 - narrative: PARALLEL_WIDTH=3 (Craig-chosen) held cleanly — three tree-disjoint implementers committed to `main` concurrently across two batches with ZERO lost work and zero pathspec collisions. The explicit per-child file-territory fence in the delegation prompt is what made that safe, and it is currently improvised per-run rather than standard text. Both genuine collisions this run were on shared NON-SOURCE state, not source: (1) refine siblings share a RUN_ID so their `beads-snapshot.json` collided, a near-miss that nearly stamped another child's beads (filed bd-baudw); (2) two prod-build consumers clobbered each other's `.next`, costing ~35min and a false-positive product investigation (filed bd-y5mza). Ramp conclusion: width 3 is sustainable for refine and implement; it is NOT yet safe for concurrent prod-build consumers.
+  RUN 20260728-234407-54469 (width=2, shared trunk-direct checkout) added three more distinct, all non-fatal, cross-child collisions to the ramp evidence: (a) a sibling's uncommitted `lib/**` type error broke the OTHER child's `next build` moments after that child's own `tsc` had passed cleanly; (b) a transient whole-project `tsc` failure caused by in-flight sibling WIP; (c) foreign format churn appearing in the working tree from a sibling's pass. All three were correctly attributed by the children to sibling interference rather than self-blamed as regressions in their own change. This strengthens the width=2-is-workable / width=3-needs-isolation conclusion above.
 
 ## phase-skills-mandate-panels-a-subagent-cannot-spawn
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser]
@@ -125,3 +126,42 @@ entries: 7
   was one blocked cycle plus a rewrite; trivial individually, but decision beads are precisely the
   ones with long prose memos, so it will recur every time a memo uses a blockquote. Resolved by
   writing the memo to a literal /tmp path and passing it via command substitution.
+
+## hand-typed-sha-not-git-rev-parsed
+- skills: [ac-loop]
+- impact: M
+- frequency: rare
+- recurrence: 1
+- related: []
+- first_seen: 2026-07-29
+- last_seen: 2026-07-29
+- stage: ac-loop
+- status: open
+- proposed_fix: ALWAYS `git rev-parse` a SHA argument before using it — never abbreviate it, never type it from memory.
+- narrative: the conductor hand-typed a `batch_anchor` full SHA instead of resolving it with `git rev-parse`, producing a fabricated SHA that did not correspond to any real commit. The CI workflow peels it via `^{commit}`, which failed, and the run was cancelled. Cost one cancelled CI run.
+
+## bug-lane-generation-outpaces-drain-rate
+- skills: [ac-loop]
+- impact: M
+- frequency: frequent
+- recurrence: 1
+- related: []
+- first_seen: 2026-07-29
+- last_seen: 2026-07-29
+- stage: ac-loop
+- status: open
+- proposed_fix: Rule 0's "drain the bug lane COMPLETELY before steps 1-2" can never be satisfied at the current review depth — either cap the drain at a budget instead of exhaustion, or re-scope Rule 0 explicitly. This needs a human decision, not a skill patch.
+- narrative: the ready-bug count went from 31 to 34 across a run that shipped 10 beads — the review and QA panels file findings faster than the bug lane drains them at current review depth. This is a structural economics observation, not a single incident: at this depth of review scrutiny, bug-lane exhaustion is not a reachable state, so Rule 0 as currently written sets an unmeetable bar every run.
+
+## open-tooling-bug-not-checked-against-run-config-at-phase0
+- skills: [ac-loop]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [width-safe-on-files-not-on-shared-build-and-scratch-state]
+- first_seen: 2026-07-29
+- last_seen: 2026-07-29
+- stage: ac-loop
+- status: open
+- proposed_fix: make "read the board for OPEN tooling bugs whose trigger condition this run's own configuration satisfies" a standard Phase-0 step.
+- narrative: bd-baudw (siblings sharing `ARTIFACTS_DIR` on one `RUN_ID`, cross-stamping beads) was an OPEN bug at this run's start, and width=2 is exactly its trigger condition. Giving each child a distinct RUN_ID suffix pre-empted it this time — but only because the conductor happened to remember the bug, not because Phase-0 has a step that checks for it. Despite that top-level pre-emption, a child later reproduced the identical collision live in a nested run, showing the fix doesn't cascade down automatically — it has to be re-applied consciously at every level where the trigger condition recurs. Cost this run was 0, purely because the check happened informally; the process gap remains.
