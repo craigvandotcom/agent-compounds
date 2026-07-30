@@ -954,7 +954,7 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Merge (Recommended)", description: "Run /ac-merge — create PR, triage CI/agent feedback, ship to main" },
+      { label: "Close the wave (Recommended)", description: "Trunk-direct (default): run /ac-batch-close — CI verify, feedback triage, bead close. Legacy PR branch only: run /ac-merge" },
       { label: "Another review pass", description: "Run /ac-review again — fresh eyes on the updated code" },
       { label: "Manual review", description: "Done with automated review — you'll review manually" },
       { label: "Done for now", description: "Review saved — pick up later" }

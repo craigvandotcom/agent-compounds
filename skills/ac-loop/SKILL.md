@@ -209,11 +209,11 @@ Read the current state of the board. This is the map you navigate by.
 > `ci-gates` line EVERY run, `ok` included — bd-o9vmx: `e2e.yml` sat red 7 of 8 runs across five days and
 > nothing read it; **`unknown` is NOT green**). The `bv`/`br` calls below are that spec's ready-set lens.
 
-> **Discovery uses `bv` for triage, `br` for data — NEVER bare `br ready`.**
-> `br ready` **defaults to `--limit 20`** and silently truncates: a board with >20 ready
-> beads shows only the first 20, and the default sort can bury all the shippable ones below
-> the cut (this has silently stranded ready work and derailed a run before).
-> **ALWAYS pass `--limit 0`.** `bv --robot-triage` is the dependency-aware "what to work on"
+> **Discovery uses `bv` for triage, `br` for data.**
+> (`br ready` historically defaulted to `--limit 20` and once silently stranded ready work;
+> the tool now defaults to `--limit 0` — the full ready set, probe-verified 2026-07-30,
+> bead ac-wz2. An explicit `--limit 0` remains harmless belt-and-braces.)
+> `bv --robot-triage` is the dependency-aware "what to work on"
 > engine (no truncation; correctly treats parent-child *containment* edges as non-blocking);
 > `br` remains the **create/modify/close** engine + the labeled data source. Roles, not
 > substitutes: **bv = discovery/triage, br = mutations + data** (AGENTS.md bv/br split). Use
@@ -975,7 +975,7 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 ## Remember
 
 - **Width prompt first** — interactive runs open with the `PARALLEL_WIDTH` question as the very first output (2-min chunked wait → default 2) so the human can answer and walk away; headless = width 2, no prompt. Fan-out stays under the ONE conductor; ceremonies and same-file writers stay serial
-- **Never trust bare `br ready`** — it caps at `--limit 20` and silently hides the rest. Discovery = `bv --robot-triage` (true counts, dependency-aware) + `br ready --limit 0` (labeled rows). A 20-row answer means you forgot `--limit 0`. bv = discovery, br = mutations — not substitutes
+- **Discovery = `bv --robot-triage`** (true counts, dependency-aware) + `br ready` (labeled rows; defaults to the full ready set — probe-verified, bead ac-wz2). bv = discovery, br = mutations — not substitutes
 - **Only `human-gate` beads are gated** — every other bead (refined → implement; unrefined → `ac-bead-refine` then implement) is loop-eligible. `unrefined` routes *through* refinement, it does not withhold sign-off. The "not-yet-committed" gate is the backlog *pool*, upstream of beads
 - **Orphans first** — fixes and production bugs ship before new feature waves
 - **Claim-at-selection** — mark the FULL batch `in_progress` + assignee, mint the claim id, and write `.claim-id` up front, before any implementation — never incrementally per bead

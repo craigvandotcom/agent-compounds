@@ -101,12 +101,13 @@ If type-check fails:
 - **Error in a file owned by another agent's reservation:** Note the error in progress.md header, proceed with awareness that `--no-verify` may be needed on push. File a P0 bead if one doesn't exist for the fix.
 - **Error unrelated to any bead scope:** Proceed — note it but don't block the session
 
-### Baseline Check (read the loop-close run; don't re-run full per wave)
+### Baseline Check (read the last full-suite run; don't re-run full per wave)
 
 Confirm you're starting from a green `main` before building on it. With the `vitest-affected`
 fixture-cascade upgrade, affected-mode is trustworthy, so the full-suite masking-catch is
-**relocated to the loop-close CI run** (`ac-land` fires it; `ac-publish` reads it SHA-pinned —
-parallel-execution doctrine §5 Tier 2). Read that result instead of re-running the suite per wave.
+**relocated to PUBLISH START** (`ac-publish` runs `ac-prove ensure --fix-forward`, SHA-pinned to
+the commit being published — bd-pwt44; `ac-land` fires nothing at loop close).
+Read the most recent full-suite result instead of re-running the suite per wave.
 **Guard first** — only body-compass-app has this workflow today; if `quality-gate.yml` doesn't
 exist in this repo, skip straight to the local fallback:
 
@@ -121,7 +122,7 @@ fi
 
 - **Green (recent)** → baseline clean; proceed.
 - **Red** → `main` carries a failure; handle it BEFORE building (flow below).
-- **No recent loop-close run, or no CI workflow** (standalone use, `main` advanced since, or the
+- **No recent full-suite run, or no CI workflow** (standalone use, `main` advanced since, or the
   app has no full-test CI gate) → run the full suite once locally to establish the baseline:
   `pnpm test:all 2>&1 | tail -20`.
 
@@ -226,7 +227,7 @@ Register a unique identity for this implement session — used for file reservat
 mcp__mcp-agent-mail__macro_start_session(
   human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   program: "claude-code",
-  model: "claude-opus-4-8"
+  model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
 )
 ```
 
@@ -472,9 +473,7 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
 
 **YOU are the quality gate.** Read the engineer's result file and verify:
 
-**Worktree mode only:** Before copying files from a worktree, verify no uncommitted changes: `git -C <worktree> status --porcelain`. If uncommitted changes exist, commit them in the worktree first. `cp` reads the filesystem (committed state), not the working tree — uncommitted edits will be silently lost.
-
-1. **Run bead-relevant tests IN THE MAIN REPO** (not full suite — just what this bead touches). Do NOT trust worktree test results — module resolution and mock behavior may differ between the worktree and main repo. Run tests AFTER copying files but BEFORE committing:
+1. **Run bead-relevant tests** (not full suite — just what this bead touches). Run tests AFTER the engineer's edits land in the tree but BEFORE committing:
 
    ```bash
    pnpm test    # vitest-affected (~30s) — per-bead canonical
@@ -678,24 +677,23 @@ Output summary:
 
 ### Wave Quality Gate (affected)
 
-Run the wave's **affected** tests — the full suite is relocated to the loop-close CI run
-(`ac-land` fires it; parallel-execution doctrine §5 Tier 2), so it no longer runs per wave:
+Run the wave's **affected** tests — the full suite is relocated to PUBLISH START
+(`ac-publish` → `ac-prove ensure --fix-forward`, bd-pwt44), so it no longer runs per wave:
 
 ```bash
 pnpm test 2>&1 | tail -20     # vitest-affected across the whole wave's diff vs main
 ```
 
-If any fail, fix the issues before proceeding. **Standalone, non-loop use:** if you will NOT run
-`ac-land` / a loop-close full run before shipping this wave, run `pnpm test:all` here instead —
-nothing else will run the full suite.
+If any fail, fix the issues before proceeding. **Standalone, non-loop use:** if this wave will
+NOT reach a publish (nothing downstream runs the full suite), run `pnpm test:all` here instead.
 
 > **Parallel sessions:** Failing tests may originate from another session's uncommitted changes in the working tree. Run `git diff --stat HEAD` to identify which files are uncommitted — check their Agent Mail reservations to determine which session owns them. Failures in files not touched by this session's commits are owned by the other session — note them but do not block landing.
 
 ### Next Steps
 
-**Run `/ac-review` next (recommended).** `/ac-review` is the sole pre-merge gate — it must complete before `/ac-merge`. `/ac-land` is NOT a pre-merge gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has merged to main — run it manually when not driven by `/ac-loop`. Do NOT run `/ac-merge` until review has completed. Do NOT run `/ac-land` before merge — it has nothing to close out yet.
+**Run `/ac-review` next (recommended).** `/ac-review` is the sole pre-close gate — it must complete before the closing ceremony (`/ac-batch-close` under trunk-direct, the default; `/ac-merge` only on the legacy PR-branch path — see `ac-merge` § When to use). `/ac-land` is NOT a pre-close gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has closed to main — run it manually when not driven by `/ac-loop`. Do NOT run the closing ceremony until review has completed. Do NOT run `/ac-land` before it — it has nothing to close out yet.
 
-**Present next step with `AskUserQuestion`** — Ask (header: "Next step", single-select): "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?" — options: "Review branch (Recommended)" (Run /ac-review — the pre-merge gate. Then /ac-merge.) / "Continue implementing" (Run /ac-implement again for more beads (review + merge later)) / "Done for now" (Stop here — remember to run /ac-review then /ac-merge before closing; /ac-land runs after merge).
+**Present next step with `AskUserQuestion`** — Ask (header: "Next step", single-select): "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?" — options: "Review work (Recommended)" (Run /ac-review — the pre-close gate. Then /ac-batch-close, or /ac-merge on a PR branch.) / "Continue implementing" (Run /ac-implement again for more beads (review + close later)) / "Done for now" (Stop here — remember to run /ac-review then the closing ceremony; /ac-land runs after it).
 
 ### Deregister Session Identity (Layer 1 — true last act)
 

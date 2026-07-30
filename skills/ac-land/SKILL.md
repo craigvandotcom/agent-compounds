@@ -116,23 +116,20 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
 ### 1b. Quality Gates
 
-> **Skip-if-fresh (loop / post-merge context).** If a GREEN `test:all` / CI Quality Gate
-> already exists for the current HEAD — e.g. `ac-merge` just shipped it — **note-and-skip**
-> the `test:all` + `build:check` re-run here; they are redundant and cost ~45-50 min on the
-> shared self-hosted runner. Re-run them ONLY when no fresh pass exists (standalone landing,
-> or local changes since the gate). Format / lint / type-check are cheap — always run.
-> (Mirrors `ac-merge`'s QA-gate skip-if-fresh; don't validate the same HEAD twice.)
-
-> **Tiered-testing model (parallel-execution doctrine §5, bd-pwt44).** Wave merges now run
-> **affected-only** CI, so at land time there is no fresh _full_ `test:all` for HEAD. Do NOT run a
-> blocking local `test:all` here — it's the exact full run the doctrine keeps OFF the loop's
-> critical path, and it starves the shared self-hosted runner. **Phase 1c no longer fires a
-> full-suite CI run** — the between-publish full-suite proof is obtained at PUBLISH START instead:
-> `ac-publish` calls `ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to
-> the commit being published, before release. A nightly idle-time full run (`ac-prove`/
-> `workflows/scheduled.md`) is planned but DEFERRED/unwired — until it ships, the publish-start run
-> is the only full-suite checkpoint. Run a local `test:all` here ONLY for a standalone landing with
-> no CI path.
+> **Quality gates at land (tiered-testing model — parallel-execution doctrine §5, bd-pwt44).**
+> Format / lint / type-check are cheap — always run. Do NOT run a blocking local `test:all` or
+> fire a full-suite CI run here — that's the exact full run the doctrine keeps OFF the loop's
+> critical path (it starves the shared self-hosted runner), and wave merges run **affected-only**
+> CI, so no fresh full `test:all` for HEAD exists at land time BY DESIGN. The between-publish
+> full-suite proof is obtained at PUBLISH START instead: `ac-publish` calls
+> `ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to the commit being
+> published, before release. A nightly idle-time full run (`ac-prove`/`workflows/scheduled.md`) is
+> planned but DEFERRED/unwired — until it ships, the publish-start run is the only full-suite
+> checkpoint. Two exceptions: (1) a GREEN full `test:all` / Quality-Gate pass for the current
+> HEAD already exists (legacy `ac-merge` PR path, or a publish just ran) — **note-and-skip**,
+> don't validate the same HEAD twice (`test:all` + `build:check` re-runs cost ~45-50 min on the
+> shared runner); (2) standalone landing with **no CI path at all** — run a local `test:all` once
+> here. (Reconciles the former skip-if-fresh + tiered-testing blocks; bead ac-bkg.)
 
 > **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball.** At land time, the
 > just-merged commit's own CI Quality Gate for HEAD is frequently STILL RUNNING (the merge step
@@ -177,20 +174,27 @@ If any fail:
 **Repo-wide format sweep (separate commit).** Bead-work enforces per-bead formatter scope so individual bead diffs stay clean. Bead-land is where the whole-repo formatter runs once, in its own commit, so each bead's PR-level diff remains scope-focused while the tree still ends up consistently formatted. Run it here:
 
 ```bash
+git status --porcelain | awk '{print $2}' | sort > /tmp/pre-sweep-dirty-${RUN_ID}.txt   # foreign WIP inventory — NEVER commit these
 pnpm format   # or equivalent repo-wide prettier --write .
 git diff --stat
 ```
 
-If the sweep modified any file, commit it on its own:
+<!-- net-growth-ok: contradiction-wave fixes ac-hx8 (git add -A → pre-sweep-dirty exclusion + pathspec commit), ac-go2 (Tier-1/FoggyCreek teardown split), ac-56z (headless carve-out) — safety/enforcement text replacing defective one-liners; evidence in the beads, audit 2026-07-30 -->
+If the sweep modified any file, commit ONLY the files the sweep itself newly touched —
+**never `git add -A` / `git add .`** (H7d, `ac-implement/references/shared-checkout-git.md`:
+a wildcard add ships concurrent sessions' WIP under this sweep's message; bead ac-hx8).
+Files that were already dirty before the sweep belong to other sessions — the sweep may have
+reformatted them, but they are theirs to commit:
 
 ```bash
-git add -A
-git commit -m "chore: format sweep (prettier)
+git diff --name-only | sort | comm -23 - /tmp/pre-sweep-dirty-${RUN_ID}.txt > /tmp/fmt-pathspec-${RUN_ID}.txt
+[ -s /tmp/fmt-pathspec-${RUN_ID}.txt ] && git commit --pathspec-from-file=/tmp/fmt-pathspec-${RUN_ID}.txt -m "chore: format sweep (prettier)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
-If nothing changed (tree was already formatted), skip the commit.
+If nothing changed (tree was already formatted), or every reformatted file was pre-sweep
+dirty (foreign WIP), skip the commit.
 
 Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
 
@@ -472,7 +476,10 @@ Output for the user and next session:
 - (any filed beads or blockers)
 ```
 
-**Present next session choice with `AskUserQuestion`:**
+**Present next session choice with `AskUserQuestion`** — interactive sessions only. When driven
+headless by `ac-loop`'s Exit-Land prompt ("never `AskUserQuestion`"), skip this ask entirely and
+just emit the summary — the loop, not a human, decides what runs next (same carve-out as
+`ac-merge` / `ac-batch-close`; bead ac-56z):
 
 Note: `ac-land` runs **LAST** — after `ac-review` AND `ac-merge`. Review and merge are the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to review or merge for it. The only next steps are starting the next wave or stopping.
 
@@ -634,9 +641,13 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
      through-threads): every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
      `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie —
      and the rule binds when you _write_ the loop, not just when teardown sweeps for it here.
-2. **Agent Mail:** first release + deregister YOUR OWN identity — `release_file_reservations`
-   (all paths for your agent), then `deregister_agent` (or `retire_agent`). Don't leave
-   reservations to TTL-expire.
+2. **Agent Mail:** if THIS land session minted a Tier-1 identity, first release its
+   reservations (`release_file_reservations`, all paths), then Layer-1 self-deregister with its
+   `registration_token` (`deregister_agent` — never `retire_agent`: name-only cross-session
+   retire is rejected at runtime, decision `ac-ycr.8`). Don't leave reservations to TTL-expire.
+   A land session running as `FoggyCreek` (the Tier-2 chore identity — the normal case for the
+   format-sweep / report / learnings commits) holds no reservations and must NEVER be
+   deregistered or retired (`_shared/agent-identity.md` § Tier 2; bead ac-go2).
    Then perform the **Layer-2 roster sweep** (doctrine `_shared/agent-identity.md` wiring
    `ac-ycr.5`): the Exit-Land prompt handed you `AGENT_MAIL_ROSTER` = the loop conductor's name
    plus every child identity this run registered. Layer 2 is **reservations-only** — for each name

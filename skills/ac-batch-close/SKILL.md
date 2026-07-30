@@ -90,7 +90,7 @@ skips this step holds no token (this closes bd-kskxg's token-less graceful-degra
 mcp__mcp-agent-mail__macro_start_session(
   human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
   program: "claude-code",
-  model: "claude-opus-4-8"
+  model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
 )
 ```
 

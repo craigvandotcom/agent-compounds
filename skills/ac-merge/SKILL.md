@@ -395,13 +395,17 @@ Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER"
 
 ### Poll for Checks and Comments
 
-Wait for CI checks and agent reviews to complete. Poll every 30 seconds, timeout after 10 minutes.
+<!-- net-growth-ok: ac-j6v — 10-min cap timed out mid-run on full-suite-fallback batches (run 29243312437); cap + rationale aligned with ac-batch-close's evidence-stamped block -->
+Wait for CI checks and agent reviews to complete. Poll every 30 seconds, timeout after ~25
+minutes — a diff touching `scripts/` or CI config correctly defeats `vitest-affected` selection
+and runs the FULL suite (~19 min observed, run 29243312437); a 10-min cap times out mid-run on
+any full-suite-fallback batch (same evidence as `ac-batch-close`'s cap; bead ac-j6v).
 
 ```bash
 PR_NUMBER={from Phase 1}
 
-# Poll loop (up to 10 minutes)
-for i in $(seq 1 20); do
+# Poll loop (up to ~25 minutes)
+for i in $(seq 1 50); do
     sleep 30
 
     # Check CI status
