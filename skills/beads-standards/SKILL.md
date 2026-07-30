@@ -129,14 +129,12 @@ edge. Strategic ordering lives in priority (`0`-`4`) plus `ac-align`, never in t
 dependency graph. A fabricated edge serializes work that could run in parallel and risks
 wedging a whole chain.
 
-**Routing is a convention, not a hard gate (§9 = Option B).** A new bead routes to an
-epic parent by convention: `ac-bead-refine` adopts an obvious parent when it processes the
-bead, and `ac-tidy` flags what stays unparented (the parentage-gap orphan class,
-`_shared/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
-disposition grammar, no backfill sweep — those were considered and cut. The **one** place
-parentage is ENFORCED rather than conventional is the `human-gate` class (Arm 0): its
-parentage is wired at creation, because human-gate beads bypass both refine and tidy.
-**`br create --parent` is CONTAINMENT only, never provenance** — it mints a dot-child that blocks the parent's close; provenance uses `-t discovered-from`, and `br close --force` is the documented escape if you inherit a blocked parent (`_shared/bead-conventions.md` § `--parent` is CONTAINMENT only, bd-nbn3h).
+**Routing is a convention, not a hard gate; `--parent` is CONTAINMENT only, never
+provenance.** The routing table (per creation source), the Arm-0 human-gate exception
+(the ONE enforced parentage), and the full `--parent`/dot-child semantics + recovery
+(`br close --force`, bd-nbn3h) are pipeline canon — `_shared/bead-conventions.md`
+§ Bead routing + § `--parent` is CONTAINMENT only. Floor rule worth knowing everywhere:
+provenance uses `-t discovered-from`, never `--parent`.
 
 ## Status & priority canon
 
@@ -154,15 +152,10 @@ detail — `shipped: ...`, `fixed: ...`, `wontfix: ...`, `duplicate: ...`,
 codify-as-rule candidates (cockpit phase 4) — an unstructured reason can't be
 clustered.
 
-**Typed close evidence (extends the outcome verb one level down).** After the verb, the
-detail names the evidence appropriate to the bead's TYPE, so closed beads segment cleanly
-for metrics: `bug` → the regression test guarding the fix; `investigation` → its findings
-+ the fix beads it spawned (the `discovered-from` trail); `task`/`feature` → the delivered
-artifact refs (file / route / migration / doc). Thin rules, no new template machinery —
-per-type detail in `_shared/bead-conventions.md` § Per-type close artifacts. Enforcement is
-convention-level: `br lint` checks DESCRIPTION template sections only, never `close_reason`
-content, so the closing skills + the refine/close review carry it — presence-checked, not
-truth-checked, until `br` grows close-content linting.
+**Typed close evidence:** after the verb, the detail names evidence appropriate to the
+bead's TYPE (bug → regression test; investigation → findings + spawned fix beads;
+task/feature → delivered artifacts). Per-type detail + enforcement model: pipeline canon,
+`_shared/bead-conventions.md` § Per-type close artifacts — not restated here.
 
 **Priority is `0`-`4`, integers only** (`P0`-`P4` accepted as input, stored as int).
 0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself.
@@ -348,6 +341,32 @@ br sync --flush-only      # export DB -> JSONL
 **Types:** `task` · `bug` · `feature` · `epic` · `chore` · `docs` · `question`.
 **Priority:** integers `0`-`4` — see § *Status & priority canon* above, not repeated here.
 **Dependencies** gate `br ready`: an issue with an open blocker never appears in it.
+
+### `br` gotchas (learned once, applies everywhere)
+
+<!-- net-growth-ok: ac-gcj.1 audience split — this subsection RELOCATED from _shared/bead-conventions.md (matching deletion there, same commit); machine-wide tool learnings belong in the machine-wide floor -->
+
+- **JSON shapes differ by command.** `br list --json` returns a **paginated object**
+  (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But
+  `br ready --json` and `br show <id> --json` return **bare arrays** — index `.[0]` (e.g.
+  `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
+  array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
+  Parsers must handle both shapes.
+- **Bulk `br` write-loops run FOREGROUND, never backgrounded.** A bulk sequential write
+  sweep (dep fan-outs, batch label stamps — more than ~10–20 sequential `br` write calls)
+  runs as a plain foreground Bash call, not `run_in_background: true`: a ~129-call
+  `br dep add` fan-out once stalled indefinitely in the background (zero progress, no
+  errors) and completed immediately re-run foreground — suspected beads_rust SQLite
+  write-lock contention, not yet root-caused. If a backgrounded bulk loop shows no
+  progress, kill it and retry foreground BEFORE assuming `br` or the data is broken.
+  One data point — documented caution, not a hard rule; single calls and small loops
+  are unaffected.
+- **Never chain `br close` to a commit in one call.** `git commit && br close <id>` records
+  the **wrong SHA** when the commit fails (untracked file, bad pathspec) — the close fires
+  against whatever HEAD is. Commit, verify the SHA, *then* close as a separate step.
+- **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
+  closed children and epics don't auto-close on last child close — check closed children
+  before triaging an epic as abandoned/empty.
 
 ### Working cadence
 

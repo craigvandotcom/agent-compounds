@@ -1,4 +1,11 @@
-# Bead Conventions — types, labels, lifecycle
+# Bead Conventions — the pipeline-internal contract layer
+
+**Scope (ratified 2026-07-30, ac-gcj.1):** this file carries ONLY what the `ac-*`
+pipeline stages enforce — I/O contract, routing, claim semantics, lifecycle wiring,
+per-type close artifacts, anti-inflation. The **machine-wide floor** (taxonomy,
+templates, status/priority + close-reason grammar, label hygiene, where beads live,
+`bv`/`br` operations) is `skills/beads-standards/SKILL.md` — read both inside an
+`ac-*` skill; never restate the floor here.
 
 Shared by the pipeline skills (ac-qa-device, ac-qa-browser, ac-review, ac-hygiene,
 ac-merge, ac-implement, ac-human-session, ac-tidy). One principle drives all of
@@ -40,27 +47,19 @@ children are done.
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
 | `tooling` | Infra/toolchain work, not app code |
 
-## Lifecycle labels — readiness gate (the refined-stamp doctrine)
+<!-- diet: "Lifecycle labels — readiness gate (the refined-stamp doctrine)" -> ../beads-standards/SKILL.md § Agent bead template (doctrine); pipeline wiring retained below (ac-gcj.1) -->
+## Lifecycle labels — pipeline wiring (doctrine lives in beads-standards)
 
-Every **open, non-epic** bead carries exactly one of three lifecycle labels:
+The refined/unrefined/human-gate doctrine — presence-of-`refined` readiness, fail-safe
+unknown, 2026-07-07 inversion rationale — is machine-wide floor:
+`beads-standards` § Agent bead template. This section carries only the pipeline wiring:
 
-| Label | Meaning | Who stamps it |
-| ----- | ------- | ------------- |
-| `unrefined` | Not implementation-ready, awaiting `/ac-bead-refine` | Default at creation (`ac-bead-capture`, `ac-beadify`) |
-| `refined` | Implementation-ready | **Exclusively** `/ac-bead-refine` on convergence — no other skill, and no conductor, ever applies this label, however strong the finding's evidence |
-| `human-gate` | Decision/approval bead — never implemented directly | Creator, per the decision-bead contract above |
-
-**Readiness for implementation = presence of `refined`.** (2026-07-07 doctrine
-change — this inverts the earlier convention, where *absence* of `unrefined`
-meant ready. That convention let any bead created outside the normal capture
-paths, or with a label accidentally stripped, silently qualify for
-`/ac-implement`.) `ac-implement` gates on `refined`, not on the lack of
-`unrefined`.
-
-**Absence of any lifecycle label = unknown → treat as `unrefined` (fail-safe).**
-A bead with none of the three carries a lifecycle-label gap; `ac-tidy`'s
-nightly lint auto-adds `unrefined` to these — it never auto-adds `refined`,
-which is only ever earned, never inferred.
+- **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-bead-refine`
+  on convergence — no other skill, and no conductor, however strong the evidence.
+  `unrefined` is the default at creation (`ac-bead-capture`, `ac-beadify`).
+- **Gap repair:** `ac-tidy`'s nightly lint auto-adds `unrefined` to beads missing all
+  three lifecycle labels — it never auto-adds `refined`, which is earned, never inferred.
+- `ac-implement` gates on presence of `refined`, not on the lack of `unrefined`.
 
 **One-time board migration (legacy boards, run once per repo):** boards built
 under the old convention have open beads that are implementation-ready but
@@ -315,51 +314,16 @@ Fix beads spawned by an investigation/decision carry a typed dep:
 
 ## Where beads live
 
-Every repo where work happens has its own `.beads/` (tracked `issues.jsonl` +
-`config.yaml`; `.db` is a local cache, gitignored). Distinct issue prefixes
-per db where set (`ac` = agent-compounds, `org` = root repo, `bd` = apps).
-Beads live **with the work** — deps only gate within one db, so a bead
-belongs in the repo whose code/files it changes. Cross-repo visibility is
-ac-human-session's job (docket sweep), not a central database's.
+Machine-wide floor — `beads-standards` § Where beads live (per-repo `.beads/`, prefixes
+`ac`/`org`/`bd`, beads-live-with-the-work, the public-repo content rule). Not restated here.
 
-**Public-repo rule:** some beads dbs are world-readable (agent-compounds is
-a public repo — its `issues.jsonl` publishes). Beads there carry **no
-strategy, money, personal, or credential content**. A decision whose memo is
-sensitive keeps the memo in a private home (`_plans/`, root repo) and the
-bead carries only a pointer + neutral title.
+<!-- diet: "Bulk `br` write-loops — run FOREGROUND, not backgrounded" -> ../beads-standards/SKILL.md § br gotchas (ac-gcj.1) -->
+<!-- diet: "br CLI gotchas (shared tool — learned once, applies everywhere)" -> ../beads-standards/SKILL.md § br gotchas (ac-gcj.1) -->
+## Operating `br`/`bv` (bulk-write foreground rule, CLI gotchas)
 
-## Bulk `br` write-loops — run FOREGROUND, not backgrounded
-
-A bulk sequential `br` write-loop (dep fan-outs, batch label stamps, batch status
-flips — roughly **more than ~10–20 sequential `br` write calls**) should run as a
-**plain foreground Bash call**, not `run_in_background: true`. In one session a ~129-call
-`br dep add` fan-out launched in the background stalled indefinitely — zero progress, no
-errors; killed and re-run identically in the foreground it completed immediately with no
-special handling (suspected beads_rust SQLite write-lock contention on the background-shell
-path, not yet root-caused).
-
-**If a backgrounded bulk-`br` loop shows no output/progress, kill it and retry in the
-foreground BEFORE assuming `br` or the dataset is broken.** This is a documented caution,
-not a hard rule — it rests on one data point; hold off on any stronger enforcement until
-the SQLite-lock hypothesis has a repro. (Single `br` calls and small loops are unaffected —
-this is specifically about large sequential write sweeps.)
-
-### br CLI gotchas (shared tool — learned once, applies everywhere)
-
-- **JSON shapes differ by command.** `br list --json` returns a **paginated object**
-  (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But
-  `br ready --json` and `br show <id> --json` return **bare arrays** — index `.[0]` (e.g.
-  `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
-  array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
-  Parsers must handle both shapes.
-- **Bulk writes must run in the foreground.** See "Bulk `br` write-loops" above — a loop of
-  `br dep add` (or any bulk br write) stalls under `run_in_background`.
-- **Never chain `br close` to a commit in one call.** `git commit && br close <id>` records the
-  **wrong SHA** when the commit fails (untracked file, bad pathspec) — the close fires against
-  whatever HEAD is. Commit, verify the SHA, *then* close as a separate step.
-- **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides closed
-  children and epics don't auto-close on last child close — check closed children before
-  triaging an epic as abandoned/empty.
+Machine-wide tool learnings — `beads-standards` § Operating the tools (bulk `br`
+write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a commit;
+0-open-children epics are usually done). Not restated here.
 
 ## Anti-inflation rules (beads are scheduled work, not a notebook)
 
