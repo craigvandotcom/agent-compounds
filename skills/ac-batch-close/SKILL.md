@@ -86,21 +86,9 @@ start (doctrine: `_shared/agent-identity.md` — Tier 1 lifecycle). Minting is a
 for a pre-existing identity, and the mint is what yields one — a loop-spawned session that
 skips this step holds no token (this closes bd-kskxg's token-less graceful-degrade path):
 
-```
-mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-  program: "claude-code",
-  model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
-)
-```
-
-Capture the returned `name` and `registration_token` (the build slot below and every fix-forward
-commit consume them):
-
-```bash
-export GIT_IDENTITY_ENABLED=1
-export AGENT_NAME=<returned-name>   # re-assert inline at each git commit (exports don't survive across bash calls)
-```
+**Run the mint + token/export discipline per `_shared/agent-mail.md` (§ Mint,
+§ Export)** — capture `name` + `registration_token`; the build slot below and every
+fix-forward commit consume them.
 
 ---
 

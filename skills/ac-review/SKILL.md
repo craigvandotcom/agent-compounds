@@ -54,26 +54,12 @@ mkdir -p "$ARTIFACTS_DIR"
 ### Register Session Identity (Tier 1)
 
 ac-review is a **Tier-1 session**: its Phase-4 auto-fix engineer edits product code and
-Phase 6 commits + pushes. Mint a unique identity at review start so those fixes reserve and
-commit under a real name instead of falling back to `FoggyCreek` (doctrine:
+Phase 6 commits + pushes. Mint a unique identity at review start so those fixes reserve
+and commit under a real name instead of falling back to `FoggyCreek` (doctrine:
 `_shared/agent-identity.md` — Tier 1 lifecycle: mint → reserve at work grain → release →
-self-deregister):
-
-```
-mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-  program: "claude-code",
-  model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
-)
-```
-
-Capture the returned `name` and `registration_token` (the reservation/release/message calls
-below REQUIRE the token). Then export so the commit shells attribute correctly:
-
-```bash
-export GIT_IDENTITY_ENABLED=1   # Agent Mail git identity/attribution — NOT worktree isolation
-export AGENT_NAME=<returned-name>   # unique per session; re-assert inline at each git commit (exports don't survive across bash calls)
-```
+self-deregister). **Run the mint + token/export discipline per `_shared/agent-mail.md`
+(§ Mint, § Export)** — capture `name` + `registration_token`; the reservation/release/
+message calls below REQUIRE the token.
 
 ### Discover Project Commands
 

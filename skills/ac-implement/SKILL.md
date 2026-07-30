@@ -221,36 +221,12 @@ ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead
 
 ### Register Session Identity
 
-Register a unique identity for this implement session — used for file reservations and pre-commit guard attribution:
-
-```
-mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-  program: "claude-code",
-  model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
-)
-```
-
-Capture the returned `name` field:
-> **Two call-scoped facts (shakedown-verified 2026-07-08; token rule widened `ac-g93`):** (1) also
-> capture the returned `registration_token` and thread it EXPLICITLY on EVERY privileged / mutating
-> Agent Mail call — file reservations (`file_reservation_paths`, `release_file_reservations`,
-> `renew_file_reservations`, `force_release_file_reservation`), build slots, `send_message` /
-> `reply_message` (as `sender_token`), and `deregister_agent` / `retire_agent`. Do NOT rely on
-> same-session auth carry — it is transport-conditional and is never inherited by a separate phase
-> child (blanket rule + verdict: `_shared/agent-identity.md` § Call-scoped facts).
-> (2) `export` lives only in the bash call that ran it — every later bash call is a
-> fresh shell, so re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
-> SAME call as each `git commit`/`git push`, or the guard will treat you as anonymous
-> and block against your own reservation.
-
-```bash
-# Export so the pre-commit guard reads AGENT_NAME + GIT_IDENTITY_ENABLED at commit time
-export GIT_IDENTITY_ENABLED=1   # Agent Mail git identity/attribution — NOT worktree isolation (WORKTREES_ENABLED made subagents worktree; see rule-agent-mail-identity-setup)
-export AGENT_NAME=<returned-name>   # e.g. "SunnyBear" — unique per session
-```
-
-Each parallel ac-implement session runs its own `macro_start_session` and gets a distinct adjective+noun — no manual discriminators needed.
+Register a unique identity for this implement session — used for file reservations and
+pre-commit guard attribution. **Run the mint + token/export discipline per
+`_shared/agent-mail.md` (§ Mint, § Export)** — capture `name` + `registration_token`;
+explicit token threading and the per-shell `AGENT_NAME` re-assert (which the pre-commit
+guard depends on at every `git commit`) live there. Parallel ac-implement sessions each
+mint their own distinct name — no manual discriminators.
 
 ```bash
 mkdir -p "$ARTIFACTS_DIR"
