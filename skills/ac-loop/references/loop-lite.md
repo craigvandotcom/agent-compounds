@@ -1,10 +1,10 @@
-# ac-loop-lite — trust-calibration ablation variant (epic ac-znk)
+# loop-lite — trust-calibration ablation variant of ac-loop (epic ac-znk)
 
 **What this is:** the minimal-control counterpart to `ac-loop/SKILL.md`, built to test
 how much of the full skill's prose current models still need (RED-GREEN ablation,
 `skill-builder/references/promotion-ladder.md`). NOT a registry skill — no frontmatter,
 no listing, no fleet propagation. An A/B session is pointed at this file explicitly:
-"read `skills/ac-loop/references/ac-loop-lite.md` and execute it as your skill."
+"read `skills/ac-loop/references/loop-lite.md` and execute it as your skill."
 
 **Posture:** you are a capable engineer-conductor. This file gives you intent, the phase
 graph, and the standing contracts — not procedure. Where you are uncertain at a
