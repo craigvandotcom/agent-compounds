@@ -365,7 +365,11 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 > Failure Escalation (LCA Repair). Per-bead fix-forward remains correct for uncorrelated,
 > single-bead CI failures.
 
-Apply fixes, then commit under the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
+<!-- net-growth-ok: ac-3rb — fix-forward edited product code with NO file reservation (Tier-1 obligation); this seals the protocol gap via the shared canon -->
+**Reserve the files you are about to fix BEFORE editing** (`_shared/agent-mail.md`
+§ Reserve, bead ac-3rb — fix-forward is Tier-1 product-code editing in the shared
+checkout; release with the rest at teardown § Release). Apply fixes, then commit under
+the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
 the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard
 reads it, and a fix-forward as `FoggyCreek` would be a Tier-2-boundary violation):
 
