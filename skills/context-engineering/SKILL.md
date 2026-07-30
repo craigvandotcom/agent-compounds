@@ -273,7 +273,15 @@ Placement isn't once-and-for-all — context earns its layer continuously, in **
   broadly applicable** has outgrown retrieval → escalate to a skill (L2) or a context file
   (L0/L1) **at the right altitude**. The bar is high — promotion buys always-on cost, so demand
   proof (recalled/applied repeatedly; ≥N occurrences; not situational). **The dream cycle runs
-  the promotion check (review-only)** — it never fires automatically.
+  the promotion check (review-only)** — it never fires automatically (a human session with Craig
+  present is the other legitimate trigger).
+  <!-- net-growth-ok: the L3->L2 escalation trigger + destination ranking; by its own logic cannot sit in references/ (rung 3 = fires only if read). Folded UP from a duplicate fleet memory fact per MOVE-not-copy, 2026-07-30. -->
+- **`recurrence` is the escalation counter; N=2 is the threshold.** A rule RE-BROKEN after being
+  written has proven L3 retrieval is the wrong medium — stop rewording, move it. 2+ with no move
+  means the missing destination, not the repeated mistake, is the defect. **Rank destinations,
+  always taking the highest reachable:** failing lint/test/hook (unskippable) > a step in the
+  SKILL.md the actor is executing when it errs (read AT the decision) > an L3 fact (fires only if
+  recall surfaces it). Judgment rules that resist mechanical checking belong at rung 2, not 3.
 - **Promotion is MOVE, not copy** — on promoting, reduce the L3 fact to a pointer (or remove
   it). Two live copies = drift; single-source survives the move.
 

@@ -25,6 +25,23 @@ The holding zone is one concept serving both directions: content on its way **up
 addition that hasn't earned a higher tier) and content on its way **out** (removed from active use,
 quarantined before deletion) both sit here. It is a *buffer*, never a permanent store.
 
+**What is NOT a rung** (added 2026-07-30 — Craig and a conductor independently mis-drew this ladder
+as `SKILL.md → references → FRICTIONS → memory → delete`, and the conductor then proposed rebuilding
+doctrine that already existed. If you are about to invent a demotion path, read this first):
+
+| Not a rung | What it actually is |
+|---|---|
+| `FRICTIONS.md` | a **sensor log** (`references/friction-capture.md`) — *input* to promotion decisions, never a destination for demoted content. Sibling of `MAINTENANCE.md`, different question: "is this skill causing recurring pain?" vs "is this skill shaped right?" |
+| the memory substrate (qmd / `memory/auto/`) | **L3 on the PLACEMENT axis, not a tier on this ladder.** A different system, with its own routing |
+| `MAINTENANCE.md` | not a fourth tier — its holding-pen **is** tier 3 |
+
+**This ladder governs movement WITHIN one skill.** Moving content *between* the skill layer and the
+memory substrate is the L2↔L3 exchange, and it is owned by the parent: `context-engineering`
+§ PROMOTION & DEMOTION (which this file specializes — see the header). Go there for the criteria
+(demote when volatile; promote when recurring + stable + broadly applicable; `recurrence` as the
+escalation counter; MOVE not copy). **Do not restate those criteria here** — a second copy at a
+lower altitude is the exact drift the parent forbids.
+
 ## The ladder
 
 ```
