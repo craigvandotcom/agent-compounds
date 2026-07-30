@@ -264,6 +264,13 @@ its cwd — a heartbeat that references an absent skill fails *unattended, at 3a
 mechanics of wiring jobs live in the scheduler skill; this invariant — *required capabilities
 must be reachable at the consumer's altitude* — lives here, and the scheduler skill cites it.
 
+<!-- net-growth-ok: ac-znk.4 — the workflow/domain litmus cross-cite (doctrine ratified 2026-07-30); full statement single-homed in skill-builder structure-standard.md -->
+**Workflow vs domain (the skill-layer cut):** a rule true in ANY workflow is domain
+canon (the domain's skill / `_shared/` file), never a workflow skill's text; workflow
+files keep one-line *bindings* (when/who) + `§` pointers to the canon (what/how).
+Litmus + destinations: `skill-builder/references/structure-standard.md` § The
+workflow/domain litmus.
+
 ## PROMOTION & DEMOTION: context moves over time
 
 Placement isn't once-and-for-all — context earns its layer continuously, in **both** directions:

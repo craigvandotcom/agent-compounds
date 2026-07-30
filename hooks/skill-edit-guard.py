@@ -59,6 +59,8 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     or beads-standards (commit discipline, agent-mail procedure, beads canon, run-ledger,
     verification/smoke gate)? Point at it with a `§` anchor instead. The rare deliberate
     copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.
+    Litmus (ac-znk.4): a rule true in ANY workflow is domain canon, not workflow text —
+    workflow files keep one-line when/who bindings + pointers.
 
 (Fires once per session. This first attempt is blocked to surface the reminder; re-issue the edit to proceed.)
 """
