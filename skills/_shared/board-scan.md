@@ -78,7 +78,7 @@ ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
 Skip `README.md`, `_done/`, `research/`, `templates/`, `checkpoints/`. Per plan, read
 frontmatter:
 
-- **status** — `draft | refined | approved | beadified | loop-ready`
+- **status** — `draft | refined | approved | beadified | loop-ready`; ANY other value is present-but-out-of-vocabulary and routes to `unclassified[]` with the raw value preserved — **never dropped**, and renderers MUST report it (bd-5ljt6: `open` + `awaiting-ratification` hid 2 of 4 live plans for 4 nights)
 - **loop-ready** — the autonomous hand-off flag (the loop owns these; humans don't sign them off again)
 - **refinement_rounds** — frontmatter field, else count `### Round N` headings in the `## Refinement Log` (headings only)
 - **source_backlog**, **mtime** (recency)
@@ -100,7 +100,7 @@ Per file, read frontmatter + count tasks:
 - **status** — `captured` · `candidate` (triage-promoted, awaiting human approval) · `planned` · `complete`
 - **type / horizon / channel / source** (from the `ac-backlog` frontmatter schema)
 - **unchecked task count** (`- [ ]`) vs checked (`- [x]`)
-- Skip `status: complete` and items with zero unchecked tasks.
+- Skip `status: complete` **only**. Zero checkboxes means prose-captured, NOT done — route it to `unclassified[]` (raw reason preserved) and renderers MUST report it; the old task-count skip silently hid 16 live files, 3 of them in committed `active/` scope (bd-m64d5).
 
 ## Scan D — review coverage (the staleness probe)
 
@@ -254,8 +254,8 @@ therefore the consumer of last resort — **the loop noticing for itself** — n
 
 ```
 beads:    { ready[], unrefined[], blocked[], in_progress[], epics[], byLabel{} }
-plans:    { draft[], refined[], approved[], beadified[], loop_ready[] }
-backlog:  { active[], pool[], candidates[] }   # candidates = status:candidate
+plans:    { draft[], refined[], approved[], beadified[], loop_ready[], unclassified[] }
+backlog:  { active[], pool[], candidates[], unclassified[] }   # candidates = status:candidate
 review:   { mark, mark_age_days, accept_gap, uncovered, codeish_uncovered, staleness }
 ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health }
 ```
@@ -265,7 +265,10 @@ ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health 
 > line is the only thing standing between an autonomous run and proceeding on the belief that CI is
 > green). That is the entire reason these two scans exist. A review blackout or a five-day red
 > nightly that can only be found by a later accident is the failure mode being fixed here, and a
-> probe whose result is computed and then not printed reproduces it exactly.
+> probe whose result is computed and then not printed reproduces it exactly. **The same rule governs
+> every `unclassified[]` bucket above** — a read layer must NEVER silently drop an item it cannot
+> classify; it routes it to `unclassified[]` and reports it, because an item dropped for being
+> unrecognisable is indistinguishable from an item that does not exist (bd-m64d5 + bd-5ljt6).
 
 ## Lenses (who reads this board, for what)
 
