@@ -799,7 +799,7 @@ this phase as prose.** Route by type before (or instead of) asking — confirmed
 out of this wave's scope → `br create -t bug --labels review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
 --labels review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
-below). Dedupe via `br search` first; nits stay in the report. **Always include
+below). Dedupe via `br search` first; nits stay in the report. **SEVERITY FLOOR — a Low-severity finding NEVER gets its own bead:** roll ALL of a run's Low findings into ONE rollup bead (one per run, `-t task --labels review-finding,unrefined`, each item a titled paragraph naming its file:line + the report it came from), and split an item out only if it later grows. N separate P3 beads cost more board noise than they buy in tracking precision, and the finding lane inflates monotonically because nothing prunes it (bd-8ms5t: 55 open findings on 07-22, 102 by 07-30). Proven 2026-07-29: 9 Low findings from one review, one bead. **Always include
 `unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
 instead of being treated as already-refined. **`-t bug` = shipped product defect only;
 test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never
