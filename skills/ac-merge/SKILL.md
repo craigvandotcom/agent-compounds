@@ -585,7 +585,11 @@ If the project deploys on push to main (Vercel: `vercel.json` present or a known
 project — simil8, cv-site, neometa-app, move-free-app, art-still-app marketing):
 
 ```bash
-sleep 90   # give the build a head start
+# Poll — a bare foreground `sleep 90` is BLOCKED by the harness; the sleep must sit in a loop.
+for i in $(seq 1 12); do
+    sleep 10
+    vercel ls <project> 2>/dev/null | head -5 | command grep -qE '● (Ready|Error)' && break
+done
 vercel ls <project> 2>/dev/null | head -5   # latest deployment: ● Ready or ● Error?
 ```
 
