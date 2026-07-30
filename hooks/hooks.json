@@ -57,6 +57,15 @@
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
       "harnesses": ["claude", "codex", "droid", "grok"],
       "scope": ["org", "machine"]
+    },
+    {
+      "id": "activity-logger-memory-reads",
+      "event": "PostToolUse",
+      "matcher": "mcp__qmd__get|mcp__qmd__multi_get|Bash",
+      "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
+      "harnesses": ["claude"],
+      "scope": ["app"],
+      "_doc": "App-scope companion to `activity-logger`, added 2026-07-30 (bd-klyfr). A SEPARATE entry, not an `app` added to that one, because `matcher` is a per-ENTRY field: putting a matcher on activity-logger would also narrow the org render and lose its full tool_calls coverage, which `activity-report` consumes. Why app coverage is needed: the `memory_reads` table is the ONLY table with automated consumers — telemetry.py View 3b and, critically, dream-cycle/decay_lint.py, which proposes which memory facts are dead. org scope reaches only <repos>-rooted sessions and machine only Grok, so every read done in an APP session was invisible to memory decay — measured 72 rows over 34 paths against 458 fleet-wide memory files. Why the matcher: activity-logger is matcher-less, so app-scoping it as-is would spawn python3 on EVERY tool call in every app session (plan 2026-07-12 decision 2 rejected exactly that latency). Rows are only ever written for mcp__qmd__get / mcp__qmd__multi_get / a Bash command containing `qmd get|multi_get`, so this matcher is the complete set of signal-producing tools. Deliberately does NOT backfill tool_calls/subagent_completions from app sessions — those feed only the manual activity-report CLI and are not worth a per-call spawn. claude-only because app scope is Claude-only (no other harness has functioning app-scope hooks)."
     }
   ]
 }
