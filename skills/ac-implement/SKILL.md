@@ -683,6 +683,6 @@ Pre-push `pnpm build` reads the working tree — another session's uncommitted W
 
 ## Remember
 
-- **Trunk-direct: work on `main`, never create a branch** — commits are pathspec-limited to your reserved files, and every commit is immediately pushed (commit = push). Engineers implement; **YOU review, YOU commit** — be extremely strict, a bead must be fully complete before moving on. Minor fixes: do them yourself; major gaps: re-spawn the engineer.
-- **Compaction recovery** — progress.md is the state: parse its header for TARGET_BEADS, count COMPLETE entries for BEADS_COMPLETED; recover `ARTIFACTS_DIR` from the `Session config` task description or `.claim-id` if lost (never re-derive from `git branch --show-current` — trunk-direct collapses every branch to `main`). "Bead X of N" task naming prevents drift — the task list IS the stop condition.
-- **Quality cadence** — per-bead: tests + type-check + lint, and no new code without new tests (verify the engineer wrote them before approving); full quality gate at session end; UI-journey validation is owned by `ac-batch-close`'s QA Smoke Gate (per-batch) + `ac-qa-browser`'s exhaustive crawl at publish, not per-bead (ac-land's 1c UI suite retired, Wave-B).
+<!-- diet: restated content deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut clauses have live body twins (grep-verified); the Remember-only rule survives below -->
+
+- **No new code without new tests** — verify the engineer actually wrote them before approving a bead (per-bead: tests + type-check + lint; full quality gate at session end)

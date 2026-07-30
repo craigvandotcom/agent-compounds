@@ -111,70 +111,12 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
-This is the smoke net: it re-proves the exact state that merges, using
-the **same classifier as `_shared/verification-gate.md`** (the diff-class greps below are
-that gate's `native` / `webui` classes). The Verify stage in `ac-loop`
-already ran the gate-selected passes at full depth pre-land; this net re-checks at
-**smoke** depth because the diff can change between verify and merge (on this PR path via
-the rebase above; on the trunk-direct path the same net runs as `ac-batch-close`'s
-**post-push re-proof** — J5). If a fresh gate-selected PASS
-exists for the current `HEAD` SHA, note-and-skip; otherwise run the smoke pass below.
-
-> Selection/depth logic is single-sourced in `_shared/verification-gate.md` — keep these
-> greps in sync with it (or, when editing, lift the classification there and reference it).
-> Note: this net covers the **QA twins** only; `ac-ui-polish` is a Verify-stage pass, not
-> re-run at merge.
-
-<!-- mirror: _shared/verification-gate.md §Step 1 — classify the diff — edit there first -->
-
-Hybrid/native apps only. Runs the post-rebase state — the thing that actually merges.
-Three conditions, all must hold; otherwise skip silently:
-
-```bash
-# 1. Project has a native app at all
-[ -d ios ] || SKIP_SIM_SMOKE=1
-
-# 2. The wave touched native-adjacent surface
-git diff main...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capacitor' \
-  || git diff main...HEAD -- package.json | grep -qE '@capacitor|capacitor' \
-  || SKIP_SIM_SMOKE=1
-
-# 3. We're on a Mac (simulators need Xcode)
-[ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed
-```
-
-- **All hold** → load **`ac-qa-device/SKILL.md`** and run a **smoke** pass
-  (build via the app's own build command, launch, auth, then the journeys
-  `_shared/verification-gate.md` §Journey registry selects — surfaces ∩ this
-  wave's diff-classes AND criticality ≥ `core` — facts in each `CORE/journeys/*.md`).
-  ~2–3 min on a warm sim.
-- **Smoke FAILS** → STOP before creating the PR. Report the `QA_VALIDATION`
-  block (`platform: ios-simulator`) and ask: abort (fix first) vs merge anyway
-  (not recommended).
-- **`SKIP_SIM_SMOKE=mac-needed`** (native-touching wave, but not on a Mac) →
-  do NOT block the merge; surface a loud note in the Phase 4 report:
-  "native-touching wave merged without device QA — run `ac-qa-device` smoke
-  from a Mac session before the next TestFlight push."
-
-**Web-shell smoke (the browser twin, any OS):** if the wave touched web UI
-(`git diff main...HEAD --name-only | grep -qE '\.(tsx|jsx|css)$|app/|components/'`)
-load **`ac-qa-browser/SKILL.md`** and run a **smoke** pass against the dev server.
-A FAIL reports the `QA_VALIDATION` block (`platform: browser-local`) and STOPs the
-same way. This branch needs no Mac, so it has no `mac-needed` escape.
-
-The user can also trigger a smoke/full pass on either twin manually at any time,
-independent of this gate ("run a device QA smoke", "run a browser QA smoke").
-
-**QA-blocker check (beads projects, runs regardless of platform):**
-
-```bash
-br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
-```
-
-Open `qa-blocker` beads are unresolved user-facing breaks filed by QA runs —
-treat exactly like failing required checks: STOP and ask (fix first vs merge
-anyway with explicit override). The two valid resolutions: fix the bug, or —
-if the behavior is intended — update the journey doc and close the bead.
+**Run the ceremony smoke net per `_shared/verification-gate.md` § Ceremony smoke net**
+with `<RANGE>` = `main...HEAD` — the post-rebase state, the thing that actually merges
+(device-twin conditions, browser twin, FAIL escalation, `mac-needed` note, and the
+qa-blocker STOP all live there; a smoke FAIL here means STOP before creating the PR).
+The Verify stage already ran the gate-selected passes at full depth pre-land; this net
+re-checks at smoke because the rebase above can change the diff.
 
 Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
@@ -754,18 +696,11 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 ## Remember
 
-- **This is the single merge-to-main path for any branch** — wave or chore/hygiene — run once per branch, not per session
-- **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics. The PR title is derived from version + content summary; the branch name (`wave/NNN` or `hygiene/YYYYMMDD`) is opaque.
-- **Every merge bumps `patch` by default** — waves and hygiene/chores alike; taken automatically, non-interactively, unless a caller-passed freeze/skip directive says otherwise. minor/major remain explicit, deliberate human choices, never derived from commit prefixes; tag is created on the merge commit after merge.
-- **`ac-review` is the pre-merge gate for feature waves only** — chore/hygiene branches are self-reviewed and skip it. `ac-land` is NOT a pre-merge gate; it runs after this merge as session closure.
-- **Bead-closure is checked upstream, not here** — for a wave, `ac-loop` verifies genuine (non-`post-merge`) beads are closed before invoking this skill; ac-merge itself performs no bead-count gate.
-- **Merge commit preserves per-bead history** — don't squash, the flywheel's atomic commits are valuable
-- **The wait-triage-fix loop is the core value** — PR creation is trivial, feedback handling is not
+<!-- diet: restated bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut bullets have live body twins (grep-verified); Remember-only rules survive below -->
+
+- **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics; the PR title derives from version + content summary, the branch name (`wave/NNN` / `hygiene/YYYYMMDD`) is opaque
+- **Merge commit preserves per-bead history** — don't squash; the flywheel's atomic commits are valuable
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)
-- **Sim smoke gate is conditional** — only for native-touching branches on a Mac; never blocks from Linux, but the report must flag the skipped gate
-- **Auto-fix obvious issues, ask about the rest** — same triage philosophy as the review commands
-- **Re-poll is short** — 5 minutes max after pushing fixes, don't loop forever
-- **Abort is always an option** — if checks keep failing, let the user decide
 
 ---
 

@@ -538,62 +538,26 @@ Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is deleted insi
 ```bash
 STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a bound on total run duration)
 
-# Tier 1 — universal content-aware age-gate. Non-empty find ⇒ something fresh inside ⇒ LIVE ⇒ keep.
-# Bare /tmp/bead-work (literal name — no glob), treated identically to the globs:
-for d in /tmp/bead-work/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/bead-work-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/plan-init-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/batch-close-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/plan-refine-internal-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/plan-refine-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/plan-clean-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/bead-refine-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/beadify-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/hygiene-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
-for d in /tmp/work-review-*/; do
-  [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"
-done
+# Tier 1 — universal content-aware age-gate, ONE selector over all 12 targets (11 glob
+# prefixes + literal /tmp/bead-work; globs expand at the CALL SITE, so the function only
+# ever sees concrete dirs — identical per-dir semantics to writing 12 loops longhand).
+# Prefix inventory: _shared/run-id.md § Prefixes — keep the argument list in sync.
+stale() { for d in "$@"; do [ -d "$d" ] || continue
+  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"; done; }
+stale /tmp/bead-work/ /tmp/bead-work-*/ /tmp/plan-init-*/ /tmp/batch-close-*/ \
+      /tmp/plan-refine-internal-*/ /tmp/plan-refine-*/ /tmp/plan-clean-*/ \
+      /tmp/bead-refine-*/ /tmp/beadify-*/ /tmp/hygiene-*/ /tmp/work-review-*/
 
-# Tier 2 — immediate self-cleanup by exact RUN_ID match. Guard MANDATORY on every line
-# (unset RUN_ID would degenerate the glob to the original unscoped bug). 7 embedding prefixes only.
-if [ -n "$RUN_ID" ]; then for d in /tmp/bead-work-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/plan-init-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/plan-refine-internal-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/plan-clean-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/bead-refine-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/beadify-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
-if [ -n "$RUN_ID" ]; then for d in /tmp/hygiene-*-"$RUN_ID"/; do [ -d "$d" ] && echo "OWN: $d"; done; fi
+# Tier 2 — immediate self-cleanup by exact RUN_ID match, 7 embedding prefixes only.
+# The [ -n "$RUN_ID" ] guard is MANDATORY (unset RUN_ID degenerates the globs to the
+# original unscoped bug — one guard, wrapping every glob).
+if [ -n "$RUN_ID" ]; then
+  for d in /tmp/bead-work-*-"$RUN_ID"/ /tmp/plan-init-*-"$RUN_ID"/ \
+           /tmp/plan-refine-internal-*-"$RUN_ID"/ /tmp/plan-clean-*-"$RUN_ID"/ \
+           /tmp/bead-refine-*-"$RUN_ID"/ /tmp/beadify-*-"$RUN_ID"/ /tmp/hygiene-*-"$RUN_ID"/; do
+    [ -d "$d" ] && echo "OWN: $d"
+  done
+fi
 ```
 
 **Step 2 — compose the delete from the PRINTED LITERALS (the dcg contract).** The loops
@@ -675,13 +639,10 @@ Mark ledger task 8 `completed` — the run is landed.
 
 ## Remember
 
-- **Land is NON-NEGOTIABLE and runs LAST** — after merge; it is `ac-loop`'s guaranteed exit
-- **To land = clean AND wise** — teardown (no live processes, no leaked Agent Mail reservations, clean tree, temp cleared) is as much "landing" as the retrospective. A session that leaves zombies running did not land, no matter how much it shipped
+<!-- diet: restated bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut bullets have live body twins (grep-verified); Remember-only rules survive below -->
+
 - **Learn from evidence, not speculation** — every finding needs a concrete example from this session
-- **Compound aggressively but ALWAYS user-gated** — no auto-apply, every upgrade needs explicit approval (unlike review commands)
-- **Context bloat is the enemy** — refine existing content, don't just append
-- **Temp files are the source of truth** — read from `$ARTIFACTS_DIR`, not memory
-- **This is what makes the flywheel accelerate** — each session improves the next
+- **Compound aggressively but ALWAYS user-gated** — no auto-apply; every upgrade needs explicit approval (unlike review commands)
 
 ---
 

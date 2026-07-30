@@ -997,18 +997,9 @@ Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`)
 
 ## Remember
 
-- **YOU synthesize, engineers fix** — reviewers analyze, you decide what's real, engineer applies
-- **Panel = core four always + test-quality/contracts unless provably irrelevant** — gating is negative (fail-open to spawning); write `panel-round-{N}.json` BEFORE spawning so `consensus.py` blocks on any spawned dimension that goes missing
-- **7th lens = doctrine-delta, gated positive** — the only dimension that defaults to SKIPPED: spawns only when the diff touches `skills/**`, checking proof-or-demotion citations, reintroduced historical blocks, and no-net-growth/ceiling respect
-- **Auto-apply Critical/High + same-round consensus + cross-round consensus** — defer the rest to registry
-- **Cross-round consensus:** single-reviewer findings that recur in verification rounds are high-signal — auto-apply on match
-- **One human touchpoint:** remaining no-consensus + NEEDS_DECISION items presented once in Phase 7, not per-round
-- **Findings files + consensus registry survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
-- **Progress file is compaction recovery** — parse it on restart for phase state
-- **Project commands come from AGENTS.md** — detect from config files only as fallback
-- **Skill routing is dynamic** — check AGENTS.md > Available Skills, don't hardcode paths
-- **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions and profound scope changes to the user
-- **Convergence is optional** — only offer verification round for Critical/High auto-fixes
+<!-- diet: restated bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut bullets have live body twins (grep-verified); the Remember-only rule survives below -->
+
+- **One human touchpoint** — remaining no-consensus + NEEDS_DECISION items are presented ONCE in Phase 7, never per-round
 
 ---
 

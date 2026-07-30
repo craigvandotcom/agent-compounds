@@ -262,15 +262,56 @@ registry enumeration-tripwire flag when it fires — same visible-not-silent tre
 
 ---
 
-## Relationship to the batch-close smoke net
+## Ceremony smoke net (ac-merge / ac-batch-close) — the one definition
 
 The closing ceremony (`ac-batch-close`; `ac-merge` on the surviving PR path) runs a
-**smoke**-only QA pass on the **post-push** state — the exact thing that ships — using
-this same classifier. That is complementary, not redundant: the Verify stage proves the
-pre-close code at gate-selected depth; the closing ceremony re-proves the post-push code
-at smoke (the diff can change between verify and close). If a fresh gate-selected PASS
-exists for the current `HEAD` SHA, the net may note-and-skip; otherwise it runs smoke.
-Both read this file so the classifier never forks.
+**smoke**-only QA pass on the state that actually ships, using this same classifier.
+Complementary, not redundant: the Verify stage proves pre-close code at gate-selected
+depth; the ceremony re-proves post-change code at smoke (the diff can change between
+verify and close). If a fresh gate-selected PASS exists for the current `HEAD` SHA,
+note-and-skip; otherwise run the net below with the ceremony's own `<RANGE>`
+(`main...HEAD` on the PR path; `$ANCHOR...HEAD` on the batch path). Both ceremonies
+read THIS section — the conditions never fork (ac-gcj.5).
+
+**Device twin (hybrid/native apps only) — three conditions, all must hold, else skip
+silently:**
+
+```bash
+[ -d ios ] || SKIP_SIM_SMOKE=1                                  # 1. native app exists
+git diff <RANGE> --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capacitor' \
+  || git diff <RANGE> -- package.json | grep -qE '@capacitor|capacitor' \
+  || SKIP_SIM_SMOKE=1                                           # 2. native-adjacent diff
+[ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed          # 3. simulators need Xcode
+```
+
+- **All hold** → load `ac-qa-device/SKILL.md`, run a **smoke** pass (build, launch, auth,
+  then the journeys §Journey registry selects — surfaces ∩ diff-classes AND criticality
+  ≥ `core`). ~2–3 min on a warm sim.
+- **Smoke FAILS** → STOP before the ceremony proceeds. Report the `QA_VALIDATION` block
+  (`platform: ios-simulator`) and ask: abort (fix first) vs proceed anyway (not
+  recommended).
+- **`mac-needed`** (native-touching diff, not on a Mac) → do NOT block; surface a loud
+  report note: "native-touching change shipped without device QA — run `ac-qa-device`
+  smoke from a Mac session before the next TestFlight push."
+
+**Browser twin (any OS):** if the diff touched web UI
+(`git diff <RANGE> --name-only | grep -qE '\.(tsx|jsx|css)$|app/|components/'`), load
+`ac-qa-browser/SKILL.md`, run a **smoke** pass against the dev server. FAIL reports
+`QA_VALIDATION` (`platform: browser-local`) and STOPs the same way; no `mac-needed`
+escape. Either twin can also be run manually at any time ("run a device/browser QA
+smoke"), independent of this net.
+
+**QA-blocker check (beads projects, runs regardless of platform):**
+
+```bash
+br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
+```
+
+Open `qa-blocker` beads are unresolved user-facing breaks — treat exactly like failing
+required checks: STOP and ask (fix first vs proceed with explicit override). Valid
+resolutions: fix the bug, or — if intended behavior — update the journey doc and close
+the bead. Note: the net covers the **QA twins** only; `ac-ui-polish` is a Verify-stage
+pass, never re-run at close.
 
 ---
 

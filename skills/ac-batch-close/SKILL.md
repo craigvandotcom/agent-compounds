@@ -267,30 +267,10 @@ failing local checks.
 ### QA Smoke Gate (conditional — safety net)
 
 This is the **post-push re-proof** (J5 — the trunk-direct successor of ac-merge's
-"post-rebase re-proof": same gate logic, re-prove after the diff changes; only the
-trigger-event name changed, since there is no rebase without a branch to rebase onto).
-Identical structure and conditions to `ac-merge`'s QA Smoke Gate (hybrid/native apps only,
-native-touching diff, Mac-only for the device twin), retargeted to the batch range:
-
-```bash
-[ -d ios ] || SKIP_SIM_SMOKE=1
-git diff $ANCHOR...HEAD --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capacitor' \
-  || git diff $ANCHOR...HEAD -- package.json | grep -qE '@capacitor|capacitor' \
-  || SKIP_SIM_SMOKE=1
-[ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed
-```
-
-Same escalation rules on FAIL (STOP before proceeding, report `QA_VALIDATION`, ask abort vs
-proceed), same `mac-needed` non-blocking note, same web-shell twin (`ac-qa-browser` smoke on
-`git diff $ANCHOR...HEAD` web-UI changes).
-
-**QA-blocker check (unchanged):**
-
-```bash
-br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
-```
-
-Open `qa-blocker` beads STOP the same way `ac-merge` treats them.
+post-rebase re-proof; only the trigger-event name changed). **Run the ceremony smoke net
+per `_shared/verification-gate.md` § Ceremony smoke net** with `<RANGE>` =
+`$ANCHOR...HEAD` — device-twin conditions, browser twin, FAIL escalation (STOP before
+proceeding), `mac-needed` note, and the qa-blocker STOP all live there.
 
 Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
@@ -696,33 +676,9 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 ## Remember
 
-- **This is the single batch-closing ceremony for trunk-direct `main`** — run once per batch,
-  not per commit; `ac-merge` is unchanged and still owns the PR path for legacy branches.
-- **Batch = review-mark range, not a branch** — anchor = last commit touching `.claude/reviews/batch/`
-  (bootstrap: last `v*` tag), same probe `ac-review` uses. **Act 3 is its ONLY advance, so it marks
-  ACCEPTANCE, never review coverage — any run that skips Act 3 (a C2 hard stop, a crash) freezes it,
-  once for 7 days / 237 commits. Coverage is `_shared/board-scan.md` Scan D (bd-zl1y5).**
-- **`.claude/reviews/batch/` has exactly ONE writer: Act 3 of this skill** (bd-kudrb). Review
-  artifacts stage in `.claude/reviews/pending/` and Act 3 carries them in. A second writer makes
-  the Act 1 anchor probe return a commit inside its own range — silent under-scoping, not an
-  error. Act 1's self-check (anchor subject must start `batch-close:`) is the tripwire.
-- **Thin, on purpose.** No version bump, no tag, no deploy verification, no 6-dim review panel
-  live in this skill anymore — all four moved to `ac-publish`. This ceremony's ONLY outputs are
-  a light `VERDICT`, a green Tier 1 CI dispatch, and a committed batch-report/review-mark.
-- **Light review gates everything downstream** — a single reviewer's `VERDICT: APPROVED`, not the
-  full panel. `NEEDS_DECISION`, or a Tier-1 CI that keeps failing, stops the ceremony cold: surface
-  it and let the user decide — never claim "closed" over an unresolved gate.
-- **Tier 1 CI dispatch is the batch's ONE CI confirmation** — fire once, poll in the
-  foreground, fix-forward, never per-commit, never a backgrounded poller that outlives the
-  session.
-- **Feedback write-back here is PENDING, not final** — `status='fixed_pending_release'`, no
-  build stamp; the notification-firing `status='fixed'` + `fixed_in_build` transition happens
-  at `ac-publish`.
-- **The build slot is advisory, not a lock** — `acquire_build_slot` always grants; check
-  `conflicts` yourself and back off on a genuine overlap.
-- **Act 3's commit must be the LAST commit of the ceremony** — nothing pushes after it. A
-  fix-forward round found after this point means re-running from Act 1 and redoing Act 3 last,
-  again.
+<!-- diet: all bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — every bullet restated a live body section (grep-verified: one-writer, freeze, always-grants, last-commit, pending-write all have body twins); nothing was Remember-only -->
+
+_(Body sections are the canon — nothing summarized here.)_
 
 ---
 
