@@ -55,6 +55,10 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     without an evidence stamp or a matching demotion/deletion will fail the lint.sh
     no-net-growth gate. Run `node scripts/skill-diet-conservation.mjs` if you are
     moving or removing content, to confirm nothing unique is lost.
+  - SINGLE-HOME (ac-gcj): about to restate a rule whose canon lives in skills/_shared/*
+    or beads-standards (commit discipline, agent-mail procedure, beads canon, run-ledger,
+    verification/smoke gate)? Point at it with a `§` anchor instead. The rare deliberate
+    copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.
 
 (Fires once per session. This first attempt is blocked to surface the reminder; re-issue the edit to proceed.)
 """
