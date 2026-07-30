@@ -380,7 +380,7 @@ br sync --flush-only      # export DB -> JSONL
 
 ```bash
 git status                # what changed
-git add <files>           # stage EXPLICIT paths, never -A (see ac-implement H7d)
+git add <files>           # stage EXPLICIT paths, never -A (H7d — _shared/commit-discipline.md)
 br sync --flush-only      # export beads changes to JSONL
 git commit -m "..."
 git push

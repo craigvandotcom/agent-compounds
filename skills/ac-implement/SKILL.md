@@ -37,7 +37,10 @@ Under trunk-direct, every session works directly on `main` with no branch isolat
 
 **Inventory it; do not touch it.** Uncommitted changes in files you have not reserved via Agent Mail (Phase 1a) belong to someone else's session. Leave them exactly as found — do not stage them, do not commit them "on their behalf," do not group them into "logical" commits, do not delete or revert them. If anything in the inventory looks like a genuine red flag (unexpected deletions, sensitive files, something clearly orphaned rather than in-flight), flag it to the user before proceeding — otherwise, proceed past it.
 
-**The rule that keeps committed state clean under concurrent editing: only files YOU reserved may enter YOUR commits.** Every commit in this workflow — Phase 0 onward — is pathspec-mandatory: `git commit -- <file1> <file2> ...`. **Never `git add -A`, never `git add .`, never `git commit -a`.** A wildcard add sweeps in whatever foreign WIP happens to be sitting in the shared working tree at that moment and ships it under your bead's commit message — misattributing someone else's unreviewed work to your commit record and to your bead.
+**The rule that keeps committed state clean under concurrent editing (H7d): only files
+YOU reserved may enter YOUR commits — pathspec-mandatory, `git commit -- <files>`, never
+a wildcard add.** Full canon + rationale: `_shared/commit-discipline.md`. Binding from
+Phase 0 onward.
 
 Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked regardless of who "owns" it.
 
@@ -512,16 +515,11 @@ Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **r
 
 ### Phase 1d: Commit + Close Bead
 
-**Shared-checkout git recipe (bd-chd5p.10 / Item 6c):** the full one-stop sequence —
-fetch, 0-behind check, pathspec commit, `--pathspec-from-file` for route-group paths
-`(…)`/`[…]`, no-stash escalation ladder — lives in
-**[`references/shared-checkout-git.md`](references/shared-checkout-git.md)**. That
-snippet consolidates (and supersedes as the single source) the pathspec notes that
-used to live only here plus the foreign-WIP ladder in
-`body-compass-app/memory/auto/pull-rebase-blocked-by-foreign-wip-decision-ladder.md`.
-**Never `git stash`.** Pathspec-limited commits remain binding (H7d).
-
-**Always use the pathspec commit form (`git commit -- <files>`), not `git add` + `git commit`.** A second session sharing the checkout can sweep your staged files into THEIR commit before you call `git commit` (incident: staged-sweep — `references/incidents.md`). Pathspec commits are atomic and self-documenting — there's no window between staging and committing where state can drift.
+**Commit per the canon — `_shared/commit-discipline.md` (bd-chd5p.10 / Item 6c,
+promoted ac-gcj.3):** the full one-stop sequence — fetch, 0-behind check, H7d pathspec
+commit, `git add` first for NEW untracked files, `--pathspec-from-file` for route-group
+paths `(…)`/`[…]`, no-stash escalation ladder — lives there; do not re-derive it here.
+Bead-work commit shape:
 
 ```bash
 git commit -m "feat(<scope>): <bead title>
@@ -531,23 +529,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>" -- <file1> <file2> <file3>
 git push
 ```
 
-The `--` separator tells git: "ignore the index, commit exactly these working-tree paths." Your `git add` work and any other session's `git add` work both stay isolated.
-
-For many files at once, globs work in the pathspec: `git commit -m "..." -- 'features/auth/**/*.ts' '.beads/issues.jsonl'`.
-
-> **New (untracked) files need `git add` first.** Pathspec commits only operate on git-tracked paths. For a brand-new file (a new test guard, a new module), `git commit -- <newfile>` fails with `pathspec did not match any file(s) known to git` and exits non-zero. Stage it first, then pathspec-commit exactly that path — still scope-safe, since the pathspec limits the commit to your file regardless of what else is staged:
-> ```bash
-> git add path/to/new-file.ts
-> git commit -m "..." -- path/to/new-file.ts
-> ```
-> (incident: untracked-pathspec-close — `references/incidents.md`)
->
-> **Route-group paths need `--pathspec-from-file`.** Paths containing `(…)` or `[…]`
-> (e.g. `app/(auth)/login/page.tsx`) must not be passed bare on the shell CLI — use
-> `git commit --pathspec-from-file=/tmp/pathspec.txt` (see
-> `references/shared-checkout-git.md`).
->
-> **NEVER put `br close` in the same bash block as the `git commit`.** Bash continues past a failed commit, so a chained `br close` closes the bead in the tracker with no matching commit — a silent correctness hazard. Run the commit in one call, verify it landed (`git log --oneline -1` shows your commit, or check `$?`), then `br close` in a separate call.
+> **NEVER put `br close` in the same bash block as the `git commit`** — a chained close
+> records the wrong SHA when the commit fails (`beads-standards` § br gotchas). Commit,
+> verify it landed, then close in a separate call.
 
 Push after every bead commit prevents stranded work if the session crashes before bead-land.
 

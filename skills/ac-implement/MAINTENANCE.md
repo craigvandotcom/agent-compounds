@@ -12,8 +12,7 @@ over orch target; contradiction-wave fixes applied 2026-07-30 (ac-9hi, ac-bkg, a
 
 ## Inbox — shape signal awaiting triage
 <!-- Behavior-changing signal does NOT go here — it goes to a skill:ac-implement skill-improvement bead. -->
-- [2026-07-30 · src:audit] §Register Session Identity block (~32 lines) is a verbatim twin of ac-loop's — candidate for `_shared/agent-mail.md` (epic ac-gcj wave 2)
-- [2026-07-30 · src:audit] Pathspec-commit mechanics restated at ~L549-576 after declaring `references/shared-checkout-git.md` the single source — candidate for pointer-only (epic ac-gcj wave 3)
+- (empty)
 
 ## Holding pen — content pulled from SKILL.md, disposition undecided
 - [pulled 2026-07-30 · from §Phase 1c Review Quality · review-by 2026-08-29 · default: delete]
@@ -22,3 +21,5 @@ over orch target; contradiction-wave fixes applied 2026-07-30 (ac-9hi, ac-bkg, a
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
 - [2026-07-30] CUT "Worktree mode only: before copying files from a worktree…" — reason: stale (contradicts trunk-direct ban, same file) — relocated→holding pen above (bead ac-gwg)
+- [2026-07-30] EXTRACTED §Register Session Identity mint/caution/export block → _shared/agent-mail.md (ac-gcj.2)
+- [2026-07-30] EXTRACTED §Phase 1d pathspec mechanics + references/shared-checkout-git.md → _shared/commit-discipline.md (ac-gcj.3)

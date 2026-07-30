@@ -1,16 +1,20 @@
-# Shared-checkout git recipe (trunk-direct)
+# Commit discipline — shared-checkout git canon (H7d)
 
-**Canonical one-stop recipe** for pathspec commits + push on a shared `main`
-checkout under concurrent sessions. Supersedes the split guidance that lived in:
+**The one home for trunk-direct commit rules** (promoted from
+`ac-implement/references/shared-checkout-git.md`, ac-gcj.3 — it consolidated
+`ac-implement` § Phase 1d, the BCA foreign-WIP decision ladder, and the
+route-group `--pathspec-from-file` retro note). Every skill that commits on a
+shared checkout points here; none restates.
 
-- `ac-implement/SKILL.md` § Phase 1d pathspec commit + foreign-unstaged rebase block
-- `body-compass-app/memory/auto/pull-rebase-blocked-by-foreign-wip-decision-ladder.md`
-- Retro note: ALWAYS use `--pathspec-from-file` for paths containing `(...)` / `[...]`
-  (route groups) — loop-retro 20260716-090110-36065 ~L263
-
-**Never `git stash`.** Stash pops can surface other sessions' entries and corrupt
-unrelated files (incident: stash-corruption). **Never `git add -A` / `git add .` /
-`git commit -a`** — pathspec-only commits (H7d).
+**H7d, the core rule:** only files YOU changed (and, under Agent Mail, reserved)
+enter YOUR commits — **pathspec-mandatory**: `git commit -- <files>`. **Never
+`git add -A` / `git add .` / `git commit -a`** — a wildcard add sweeps whatever
+foreign WIP sits in the shared tree into your commit under your message
+(incident: staged-sweep). Pathspec commits are atomic and self-documenting —
+no staging window for another session to race. **Never `git stash`** — stash
+pops can surface other sessions' entries and corrupt unrelated files
+(incident: stash-corruption). Foreign uncommitted work: inventory it, never
+touch it, never commit it "on their behalf".
 
 ---
 

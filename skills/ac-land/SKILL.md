@@ -181,7 +181,7 @@ git diff --stat
 
 <!-- net-growth-ok: contradiction-wave fixes ac-hx8 (git add -A → pre-sweep-dirty exclusion + pathspec commit), ac-go2 (Tier-1/FoggyCreek teardown split), ac-56z (headless carve-out) — safety/enforcement text replacing defective one-liners; evidence in the beads, audit 2026-07-30 -->
 If the sweep modified any file, commit ONLY the files the sweep itself newly touched —
-**never `git add -A` / `git add .`** (H7d, `ac-implement/references/shared-checkout-git.md`:
+**never `git add -A` / `git add .`** (H7d, `_shared/commit-discipline.md`:
 a wildcard add ships concurrent sessions' WIP under this sweep's message; bead ac-hx8).
 Files that were already dirty before the sweep belong to other sessions — the sweep may have
 reformatted them, but they are theirs to commit:

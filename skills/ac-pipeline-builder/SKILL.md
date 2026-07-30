@@ -294,8 +294,8 @@ Wave branches protect main from in-progress code and make the green-main invaria
 
 **Hygiene is trunk-direct (migrated 2026-07-12, bd-u2lo1.14):** it no longer uses a
 worktree/`hygiene/*` branch/PR ceremony. Its 7-lens panel IS the pre-push review, auto-fixes
-commit directly to `main` as pathspec commits under the full H7 discipline (`ac-implement`
-Phase 0) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
+commit directly to `main` as pathspec commits under the full H7 discipline
+(`_shared/commit-discipline.md`) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
 never `ac-merge`. The run report commits to `.claude/reviews/` root and does not advance the
 `.claude/reviews/batch/` review-mark.
 

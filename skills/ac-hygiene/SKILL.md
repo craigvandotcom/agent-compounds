@@ -86,7 +86,7 @@ git branch --show-current   # confirm `main` before doing anything else
 not-yet-committed work may be sitting there. **Inventory it; do not touch it.** Only files YOU
 changed enter YOUR commits (pathspec-mandatory, Phase 3): never `git add -A`, never
 `git add .`, never `git commit -a`, and **never `git stash`** (a stray `stash pop` writes
-conflict markers into unrelated files — `ac-implement` Phase 0 H7d). Use `git diff HEAD` if you
+conflict markers into unrelated files — H7d, `_shared/commit-discipline.md`). Use `git diff HEAD` if you
 need to isolate uncommitted-vs-committed state. If the inventory shows a genuine red flag
 (unexpected deletions, sensitive files, something orphaned rather than in-flight), surface it to
 the user before proceeding — otherwise proceed past it.
