@@ -83,6 +83,9 @@ draft {N} · refined {N} · approved {N} · loop-ready {N} · beadified {N}
 ready {N} · unrefined {N} · blocked {N} · in-progress {N}
 epics: {title} — {closed}/{total} children ({ready} ready)
 labels: human-gate {N} · pipeline-proposal {N} · dream-proposal {N} · findings {N} · qa-blocker {N}
+queue lanes: any label with >5 open human-gate beads (machine-filed batches, e.g. curator-escalation) — count them, never itemize them
+<!-- net-growth-ok: 2 lines mirroring ac-human-session's queue-lane rule so both surfaces agree; a split render is worse than the growth. -->
+
 
 ### 🚧 WIP
 waves: {wave/NNN} — {ahead} commits ahead · last push {age}
@@ -91,6 +94,7 @@ CI:    {last 3 runs: name → conclusion}
 
 ### 🚪 Gates (needs a human)
 {N} human-gate beads ({decisions} decisions · {proposals} proposals) · {N} plans awaiting sign-off · {N} triage candidates
+🔁 queue lanes (batch sittings, NOT independent gates): {lane} {N} (oldest {age}) · …
 
 ### 🧭 Journey Debt ({N} non-peripheral)
 {N} missing stamp · {N} stale

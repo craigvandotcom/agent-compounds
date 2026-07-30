@@ -66,6 +66,15 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
   - **Discarding one:** set the proposal file `status: rejected` + `br close` the bead; do NOT invoke the owning skill.
   - **Verify before presenting (anti-rot):** human-gate beads outlive their work (agents never close them) and memos freeze step-lists that later waves can invalidate. Before surfacing an item, spend ~1 read confirming its live state against the system it gates on (external API, prod DB read, Vercel env, code grep for the mechanism the memo assumes). Present the *verified* remaining scope — often "already done → one tap to book it" — and fold corrections onto the bead as an enrichment comment. Memory: `human-gate-beads-rot-verify-before-presenting`.
     - **MANDATORY FIRST READ — the bead's own `events` table, before any other verification.** A docket bead most often gates on its OWN history, and comments do not reliably record it: `sqlite3 .beads/beads.db "SELECT created_at,event_type,comment FROM events WHERE issue_id='<id>' ORDER BY created_at;"`. **A comment is a CLAIM; `events` is the RECORD.** `label_removed human-gate` followed by a DECISION/RULING/RELEASE comment means the bead was RELEASED — do not re-gate it, and NEVER re-gate one released more than once. Evidence + why this is a step, not a memory note: `references/docket-anti-rot.md`.
+  <!-- net-growth-ok: queue-lane collapse is enforcement spine, not reference material — it changes what the render EMITS (counts, collapsing, exclusion from the headline estimate). A references/ pointer would be read after the flood already buried the gates. 13 lines. -->
+  - **Collapse QUEUE LANES before grouping — a flood must never bury the genuine gates.** Some `human-gate` beads arrive as a machine-generated BATCH from one upstream source (today: `curator-escalation`, filed 80+ at a time by `escalate-to-bead --legacy`). Those are a **queue worked in a dedicated batch sitting**, not independent gates competing for the same attention as a one-tap decision. Detect a lane mechanically: **any label carrying >5 open `human-gate` beads**. Render it as ONE line — lane · count · oldest age · its batch action — and **never itemize its members in the tier**. Apply this BEFORE the prefix grouping below, so the remaining docket is the genuinely independent gates.
+    ```
+    🔁 curator-escalation — 82 queued (oldest 4d)   → work the queue (batch sitting), not here
+    ```
+    Rationale (2026-07-30, the run that forced this rule): a single supervised conversion took the docket from 61 to 143 in one command. Itemised, the ~15 real gates became unfindable. The beads were legitimate — they made previously-invisible work visible — so suppressing them is wrong and itemising them is also wrong; **collapsing is the only honest option**.
+    Two lane-health checks to run when you render the line, because a flood hides its own defects:
+    - **Unreadable titles are a FILING DEFECT, report them.** A docket bead whose title carries a raw uuid/hash instead of its human subject (`Legacy escalation: hold 6f390127-2960-…`) cannot be triaged by a human at all. If >5 in a lane look like this, say so on the line and offer a re-title pass — the subject is almost always recoverable from the body or by joining back to the source system. Fix the FILER too, not just the rows.
+    - **A lane filed before a governing policy was ratified is STALE BY CONSTRUCTION.** If a rule/policy landed after the lane was filed, some members are now auto-resolvable and should not be on the docket at all. Say what fraction is expected to survive re-triage rather than presenting the raw count as if it were all real human work.
   - **Group the docket by title prefix (`DECISION:` vs `ACTION:`):** the two human-gate template kinds (`beads-standards` § Human-gate template) are *presented grouped by prefix*, not interleaved — `DECISION:` forks in one cluster (each a one-tap choice), `ACTION:` do-in-the-world tasks in another (each a checklist to run, often carrying a `best-done-when` ridealong hint). Batching pure-action items lets a sit-down session knock them out together (e.g. all ASC/console chores at the next version submission) instead of context-switching between deciding and doing. Same treatment in cockpit doctrine (the `/fleet.json` docket render).
 - **🟡 Plans awaiting sign-off** = board plans with `status: draft | refined` and **NOT** `loop-ready`. Most-invested first. (Drop every `loop-ready` plan — the loop owns it.)
 - **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan-init`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
@@ -122,12 +131,15 @@ Give the human the whole board at a glance before the actions:
 ## Command Center — {project | org-wide}
 
 Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any} {⚠ N journey stamps missing/stale, if any}
+{🔁 {lane}: {N} queued — batch sitting, not counted in "decisions" above · omit line if no queue lane}
 🤖 Loop:   {ready_beads} beads + {loop_ready_plans} plans flowing autonomously{, {in_progress} in-flight} — you don't touch these
 
 ⚡ {one-line sequence note IF reordering is warranted — e.g. "approve plan X before promoting pool, it unblocks 3 items"; omit if order is fine}
 ```
 
 The first line is the whole sit-down in one glance (lead with it). Rough the `~{est} min` from item counts (decision ≈ 1–2 min, plan approve ≈ 2 min, CI ≈ 5). No analysis theater — the `⚡` line appears only when there's a real sequencing call to make.
+
+**`{N} decisions` EXCLUDES queue-lane members, and `~{est} min` never prices a lane.** A lane is a separate batch sitting, so folding it into the headline destroys the number's only job — telling the human how long *this* sit-down is. Count it on its own `🔁` line instead. Concretely: 143 open `human-gate` beads of which 82 are one `curator-escalation` lane reads as **"Needs you: 61 decisions"** plus a `🔁 curator-escalation: 82 queued` line — never "Needs you: 143 decisions", which is true, useless, and reads as unsurvivable.
 
 ---
 
@@ -140,6 +152,8 @@ Age is **derived, never separately queried**: every board pull this skill alread
 ```
 ### 🔴 Blocking — the line has stopped ({N})
    For each: {what} · {one-line memo/why} · → {action}
+   • 🔁 {lane label} — {N} queued (oldest {age})            → work the queue (batch sitting)
+     (queue lanes collapse to ONE line — never itemize; see § Collapse QUEUE LANES)
    • {bead id} {age} {decision title} — {memo summary}      → decide        (tap-ready)
    • {bead id} {age} {decision title} ⚠ no memo             → frame, then decide
    • CI {run} failed                                        → investigate
