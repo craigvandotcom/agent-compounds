@@ -1,8 +1,8 @@
 ---
 skill: ac-review
 created: 2026-07-29
-last_pass: 2026-07-29
-entries: 3
+last_pass: 2026-07-30
+entries: 4
 ---
 
 # ac-review — friction log
@@ -42,11 +42,24 @@ entries: 3
 - skills: [ac-review]
 - impact: S
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-07-29
-- last_seen: 2026-07-29
+- last_seen: 2026-07-30
 - stage: ac-loop
 - status: open
 - proposed_fix: verify reservation release by re-listing the project's held reservations after the call, not by reading the release call's returned count.
-- narrative: `release_file_reservations` returned `released:0` despite 12 leases having been granted earlier — most likely because the pre-commit guard had already cleared them. The operation is idempotent so no harm was done, but the zero count makes the release unverifiable from the response alone, and reads exactly like a failure to a caller who doesn't already know that.
+- narrative: `release_file_reservations` returned `released:0` despite 12 leases having been granted earlier — most likely because the pre-commit guard had already cleared them. The operation is idempotent so no harm was done, but the zero count makes the release unverifiable from the response alone, and reads exactly like a failure to a caller who doesn't already know that. RECURRENCE 2 (2026-07-30, ac-human-session): identical shape on a single-path release — `released:0` on a lease granted ~2 minutes earlier and well inside its TTL. Independently re-derived this entry's own proposed_fix under pressure (re-listed active reservations, which showed nothing held, confirming release) before discovering this entry already prescribed it — evidence the fix is right AND that the log is not being read before the same friction is re-hit.
+
+## low-severity-findings-each-get-their-own-bead
+- skills: [ac-review, ac-tidy]
+- impact: L
+- frequency: every-run
+- recurrence: 1
+- related: []
+- first_seen: 2026-07-30
+- last_seen: 2026-07-30
+- stage: ac-human-session
+- status: promoted
+- proposed_fix: severity floor in the Phase-4 exhaust rule — a Low finding never gets its own bead; roll all of a run's Low findings into ONE bead, split out only if an item grows.
+- narrative: the exhaust rule said "nothing actionable leaves this phase as prose", and reviewers already skip Low + leave nits in the report — but a Low finding that DID surface still got its own P3 bead. The finding lane therefore inflated monotonically with nothing pruning it: 55 open findings on 2026-07-22 to 102 by 2026-07-30 (+84% in ~8 days), while ac-tidy escalated the raw count across four nightlies and produced zero action. The lane was NOT stale bookkeeping — measured, only 1 of 102 open findings carried any evidence of a merged fix — so it could not be drained by an auto-closer either; the only lever was the inflow. Landed as the severity floor (agent-compounds 4d8ec80) after Craig ruled A+D on bd-8ms5t. Recorded here because the fix was applied straight to SKILL.md core with no prior friction entry, which is the evidence-trail gap this log exists to close.
