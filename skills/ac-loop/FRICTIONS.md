@@ -1,8 +1,8 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-07-29
-entries: 10
+last_pass: 2026-07-31
+entries: 12
 ---
 
 # ac-loop — friction log
@@ -90,10 +90,10 @@ entries: 10
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement]
 - impact: M
 - frequency: every-run
-- recurrence: 15
+- recurrence: 19
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-22
+- last_seen: 2026-07-31
 - stage: ac-loop
 - status: open
 - proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
@@ -106,15 +106,25 @@ entries: 10
   path and must invent one. Identical in kind to ac-land's own teardown fix (selectors print
   literals, deletion pastes them) — the same resolve-then-paste discipline needs applying to the
   artifact-write snippets across the phase skills. bd-5ndzm tracks it.
+  **RUN 20260730-215800-loop1 (2026-07-31), +4:** the same rule blocked `_shared/board-scan.md`'s
+  Scan D and Scan E blocks VERBATIM at Phase-0 orient — both write to `$D/…` where
+  `D=$(mktemp -d)`. Cost ~4 min / 4 blocked calls before the conductor hand-rewrote them. This
+  widens the blast radius beyond artifact-write snippets: board-scan is the shared health-probe
+  substrate for FIVE skills (ac-loop, ac-tidy, ac-dashboard, ac-human-session, ac-align), so on a
+  guarded machine every one of those probes is improvised or silently absent. This run's Scan D/E
+  ALARM readings were only obtained because the conductor rewrote the blocks by hand. Filed
+  separately as **bd-nw8r3** (P1), which also carries a SECOND, unrelated defect in the same file:
+  `find .github/workflows -name '*.yaml'` is zsh-fatal without nullglob and aborts the whole Scan E
+  block in any repo with no `.yaml` files (BCA is one).
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-loop, ac-land, ac-bead-capture, beads-standards]
 - impact: S
-- frequency: occasional
-- recurrence: 1
+- frequency: frequent
+- recurrence: 2
 - related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-22
+- last_seen: 2026-07-31
 - stage: ac-land
 - status: open
 - proposed_fix: when a bead description contains markdown that could tokenise as shell metacharacters (a `>` blockquote is the common one), do not inline it in `br create -d "..."` — write the memo to a literal `/tmp/<dir>/memo.md` with the Write tool and pass `-d "$(cat /tmp/<dir>/memo.md)"`. Worth stating once in beads-standards' decision-bead template, since decision memos are exactly the beads long enough to contain blockquotes.
@@ -126,6 +136,16 @@ entries: 10
   was one blocked cycle plus a rewrite; trivial individually, but decision beads are precisely the
   ones with long prose memos, so it will recur every time a memo uses a blockquote. Resolved by
   writing the memo to a literal /tmp path and passing it via command substitution.
+  **RUN 20260730-215800-loop1 (2026-07-31) — the predicted recurrence landed, same skill, same
+  step.** This entry forecast "it will recur every time a memo uses a blockquote"; nine days
+  later ac-land's T2 decision bead (`bd-8l4a8`, the qa-blocker proposal) was blocked by the
+  identical rule for the identical reason — `>` blockquote lines inside the quoted `-d`
+  description. Cost one blocked cycle plus a rewrite (this time resolved by switching the memo to
+  4-space-indented code blocks, which also passes and needs no temp file). The friction log
+  predicted this precisely and nothing acted on it, which is the point worth noting: the
+  `proposed_fix` here is a one-line addition to beads-standards' decision-bead template, still
+  unshipped. Escalating `frequency` to `frequent` — every ac-land that files a T2/HUMAN decision
+  bead writes exactly this shape of memo.
 
 ## hand-typed-sha-not-git-rev-parsed
 - skills: [ac-loop]
@@ -165,3 +185,46 @@ entries: 10
 - status: open
 - proposed_fix: make "read the board for OPEN tooling bugs whose trigger condition this run's own configuration satisfies" a standard Phase-0 step.
 - narrative: bd-baudw (siblings sharing `ARTIFACTS_DIR` on one `RUN_ID`, cross-stamping beads) was an OPEN bug at this run's start, and width=2 is exactly its trigger condition. Giving each child a distinct RUN_ID suffix pre-empted it this time — but only because the conductor happened to remember the bug, not because Phase-0 has a step that checks for it. Despite that top-level pre-emption, a child later reproduced the identical collision live in a nested run, showing the fix doesn't cascade down automatically — it has to be re-applied consciously at every level where the trigger condition recurs. Cost this run was 0, purely because the check happened informally; the process gap remains.
+
+## c2-stop-wording-predates-trunk-direct
+- skills: [ac-loop]
+- impact: L
+- frequency: rare
+- recurrence: 1
+- related: []
+- first_seen: 2026-07-31
+- last_seen: 2026-07-31
+- stage: ac-loop
+- status: open
+- proposed_fix: restate stop condition C2 in trunk-direct terms — "do NOT run ac-batch-close, so the review acceptance mark does not advance over an unresolved regression" — and REMOVE the superseded "Do NOT merge" phrasing rather than appending a clarification beside it.
+- narrative: C2's published wording is "Hard stop. Do NOT merge." Under trunk-direct there is no
+  merge to withhold — the code is already on `main` by the time review runs. The operative meaning
+  is entirely different: do not run `ac-batch-close`, so the review acceptance mark does not
+  advance over an unresolved regression. This run hit C2 for real (ac-review returned
+  NEEDS_DECISION on bd-68bra, a Critical regression the batch itself introduced) and the conductor
+  interpreted it correctly — cost was 0. But the correct reading required knowing that the text is
+  stale. A conductor reading it literally could reasonably conclude C2 is inapplicable under
+  trunk-direct (there being no merge to stop) and run batch-close anyway, advancing the acceptance
+  mark over a known Critical regression. Impact is rated L on that failure mode, not on this run's
+  actual cost. **This is a SUPERSESSION, not a gap:** "Do NOT merge" is stale text left behind by
+  the trunk-direct migration, so the fix is to rewrite it, not to add a note next to it
+  (`promotion-ladder.md` ranks removal equally with addition).
+
+## post-merge-stamp-keyed-to-window-not-subject
+- skills: [ac-loop]
+- impact: S
+- frequency: occasional
+- recurrence: 1
+- related: []
+- first_seen: 2026-07-31
+- last_seen: 2026-07-31
+- stage: ac-loop
+- status: open
+- proposed_fix: state the trigger as a WINDOW test in the conductor-facing text — "created between batch verify and batch close ⇒ stamp `post-merge`, regardless of what the bead is about" — since the natural misreading is a subject-matter test.
+- narrative: the conductor instructed refine children NOT to stamp `post-merge` on follow-up beads,
+  reasoning that those beads were outside the batch's scope. That was wrong. The beads were created
+  INSIDE the batch's verify→review→close window, which is exactly the stamp-at-creation trigger:
+  **the window, not the bead's subject, is what decides.** No harm this run — the beads-closed gate
+  is `--beads`-scoped, so the unstamped follow-ups could not trip it — but the rule is easy to
+  misread in precisely this direction, because "is this bead part of the batch?" is the more
+  natural question to ask and gives the wrong answer.
