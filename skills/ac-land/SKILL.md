@@ -174,7 +174,7 @@ If any fail:
 **Repo-wide format sweep (separate commit).** Bead-work enforces per-bead formatter scope so individual bead diffs stay clean. Bead-land is where the whole-repo formatter runs once, in its own commit, so each bead's PR-level diff remains scope-focused while the tree still ends up consistently formatted. Run it here:
 
 ```bash
-git status --porcelain | awk '{print $2}' | sort > /tmp/pre-sweep-dirty-${RUN_ID}.txt   # foreign WIP inventory — NEVER commit these
+{ git diff --name-only; git diff --cached --name-only; } | sort -u > /tmp/pre-sweep-dirty-${RUN_ID}.txt   # foreign WIP inventory (one path per line — no porcelain column-parsing: renames list their NEW path, spaces survive) — NEVER commit these
 pnpm format   # or equivalent repo-wide prettier --write .
 git diff --stat
 ```
