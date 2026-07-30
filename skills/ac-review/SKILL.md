@@ -955,17 +955,8 @@ AskUserQuestion(
 rm -rf "$ARTIFACTS_DIR"
 ```
 
-**Self-deregister the Tier-1 identity (Layer 1).** As ac-review's true last act — after the
-final commit and reservation release — deregister the name minted in Phase 0 so the registry
-doesn't accumulate a zombie identity per review (doctrine: `_shared/agent-identity.md`
-Deregistration, Layer 1; by name — `registration_token` optional):
-
-```
-mcp__mcp-agent-mail__deregister_agent(
-  project_key: CANONICAL_PROJECT_KEY,
-  agent_name: AGENT_NAME
-)
-```
+**Self-deregister the Tier-1 identity (Layer 1)** — after the final commit and reservation
+release, per `_shared/agent-mail.md` § Release + self-deregister.
 
 **TaskUpdate(task: "Phase 8", status: "completed")**
 

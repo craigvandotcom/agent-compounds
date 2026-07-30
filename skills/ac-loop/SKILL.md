@@ -297,9 +297,9 @@ TaskCreate — one task per run phase; add a Plan-wave task per queued loop-read
 
 `TaskUpdate` each task to `in_progress` when its phase starts and `completed` at its merge/exit; mark task 1 `completed` when this orient pass finishes. If the board is empty, the ledger is just task 1 + task 4.
 
-> **The ledger tracks the RUN, never the work.** It holds *phases and iterations* — orient, which wave, ARIA/land — and nothing else. Work items stay **beads**: the bead board is the single source of truth for *what* ships (`ac-pipeline-builder` axiom 1, *the bead is the atom*). The ledger is a navigation aid over the run, not a second copy of the queue — never put bead IDs or per-bead state in it, or the two will drift.
-
-> **On resume (compaction / restart):** read the ledger first — it's your resume *anchor* (which phase you were in). Then reconcile against live board state, which remains ground truth: a wave the ledger calls `in_progress` may have merged in the moments before compaction. Trust the **board** for work state; trust the **ledger** for run position.
+> **Ledger doctrine + resume rule: `_shared/run-ledger.md`** — the ledger tracks the RUN
+> (phases/iterations), never the work (beads stay the atom, no bead IDs in the ledger);
+> on resume, ledger = position anchor, board = ground truth.
 
 If **no refined beads, no unrefined non-`human-gate` beads, no loop-ready plans to beadify, and only `human-gate` beads remain** → go straight to Phase ARIA.
 

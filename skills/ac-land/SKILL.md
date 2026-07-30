@@ -70,11 +70,10 @@ git diff --stat
 
 ### Declare the Run Ledger
 
-ac-land runs LAST and can compact mid-flight — Phase 1 alone carries one named compaction
-risk (a slow standalone-fallback `test:all` in 1b) — and
-teardown that never runs leaves zombies. Declare a run ledger with **one task per major
-section, including each of Phase 1's three sub-steps**, so a resumed session re-enters at the
-exact sub-step instead of re-running quality gates or, worse, skipping teardown:
+ac-land runs LAST and can compact mid-flight (a slow standalone-fallback `test:all` in 1b
+is a named risk) — and teardown that never runs leaves zombies. Declare the run ledger per
+`_shared/run-ledger.md` (pattern + resume doctrine there), with **each of Phase 1's three
+sub-steps as its own task** so a resume never skips teardown:
 
 ```
 TaskCreate (one per section, in run order):
@@ -88,11 +87,9 @@ TaskCreate (one per section, in run order):
   8. Teardown                              pending
 ```
 
-`TaskUpdate` each to `in_progress` when you start it and `completed` when done — the section
-headers below (`1a.` … `1c.`, then Phase 2 → Phase 4, then Teardown) map to these tasks 1:1;
-mark task 1 `completed` now. `progress.md` remains the artifact-of-record for _what was
-accomplished_; the ledger tracks _where the run is_ — so a compacted conductor knows whether
-teardown (task 8) still owes work. The ledger tracks the RUN; beads stay the work atom.
+The section headers below (`1a.` … `1c.`, then Phase 2 → Phase 4, then Teardown) map to
+these tasks 1:1; mark task 1 `completed` now. A compacted conductor reads the ledger to
+know whether teardown (task 8) still owes work.
 
 ---
 

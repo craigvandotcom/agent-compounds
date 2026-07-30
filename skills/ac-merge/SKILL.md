@@ -48,9 +48,9 @@ STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VE
 
 ### Declare the Run Ledger
 
-ac-merge spans 10-min CI polls where a session can drop. Declare a run ledger — **one task
-per major section** — so a resumed run re-enters at the exact section instead of re-polling
-from scratch or re-asking PR#/version:
+ac-merge spans long CI polls where a session can drop. Declare the run ledger per
+`_shared/run-ledger.md` (pattern + resume doctrine there — one task per section,
+advance as you go, persist captured facts to `$STATE`). This ceremony's table:
 
 ```
 TaskCreate (one per section, in run order):
@@ -66,10 +66,7 @@ TaskCreate (one per section, in run order):
   10. Report + finalize                                pending
 ```
 
-`TaskUpdate` each to `in_progress` when you start it and `completed` when done — the section
-headers below map to these tasks 1:1. As you capture `PR_NUMBER`, `NEW_VERSION`, and
-`WAIT_FOR_FEEDBACK`, append them to `$STATE` (e.g. `echo "PR_NUMBER=$PR_NUMBER" >> "$STATE"`)
-so a dropped session reloads them on resume. The ledger tracks the RUN; beads stay the work atom.
+State vars this run persists to `$STATE`: `PR_NUMBER`, `NEW_VERSION`, `WAIT_FOR_FEEDBACK`.
 
 ### Rebase on Main (first — post-rebase truth)
 

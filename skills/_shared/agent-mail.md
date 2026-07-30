@@ -63,11 +63,23 @@ On `FILE_RESERVATION_CONFLICT`: do NOT claim the work — skip or re-plan around
 holder (enforcement layers + conflict doctrine: `_shared/agent-identity.md`
 § Enforcement).
 
-## Release + self-deregister (session exit)
+## Release + self-deregister (session exit — the ceremony's true last act)
 
-`release_file_reservations` (all your paths, with token) → `deregister_agent` (own name
-only, WITH `registration_token` — Layer 1). Never `retire_agent`, never cross-session
-(ac-ycr.8), never deregister `FoggyCreek` — a Tier-2 session holds no reservations and
-skips this entirely (`_shared/agent-identity.md` § Tier 2, § Deregistration). Don't
-leave reservations to TTL-expire; if the commit failed, do NOT release — the files
-still need the work.
+Order: `release_file_reservations` (all your paths) → any skill-specific slot/waiter
+cleanup → `deregister_agent` LAST, so the registry doesn't accumulate one zombie
+identity per ceremony. Run it even on an aborted run. Don't leave reservations to
+TTL-expire; if the commit failed, do NOT release — the files still need the work.
+
+```
+mcp__mcp-agent-mail__deregister_agent(
+  project_key: CANONICAL_PROJECT_KEY,
+  agent_name: AGENT_NAME    // own name ONLY — Layer 1 self-deregister; token optional
+)                           // on the self path (the minting session is authenticated)
+```
+
+Never `retire_agent`, never deregister another session's name (name-only cross-session
+calls are rejected at runtime, ac-ycr.8), never deregister `FoggyCreek` — a Tier-2
+session holds no reservations and skips this section entirely
+(`_shared/agent-identity.md` § Tier 2, § Deregistration). Layers 2/3 (roster + stale
+sweeps) are backstops for sessions that die before reaching here — they do not replace
+this self-deregister.

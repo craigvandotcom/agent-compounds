@@ -129,9 +129,8 @@ conflicting concurrent run to notice, not a queue or a lock.
 
 ## Run Ledger
 
-Same rationale as `ac-merge`: this ceremony spans a CI poll where a session can drop. One task
-per section, so a resumed run re-enters at the exact section instead of re-polling from
-scratch:
+Declare the run ledger per `_shared/run-ledger.md` (pattern + resume doctrine there).
+This ceremony's table:
 
 ```
 TaskCreate (one per section, in run order):
@@ -143,9 +142,7 @@ TaskCreate (one per section, in run order):
   6.  Report + Slack + release build slot + finalize                     pending
 ```
 
-`TaskUpdate` each to `in_progress`/`completed` as you go. Persist `ANCHOR`, `DISPATCH_RUN_ID` to
-`$STATE` as you capture them (`echo "ANCHOR=$ANCHOR" >> "$STATE"`) so a dropped session reloads
-instead of re-deriving.
+State vars this run persists to `$STATE`: `ANCHOR`, `DISPATCH_RUN_ID`.
 
 ### Determine the Batch Anchor
 
@@ -661,17 +658,8 @@ release_build_slot(project_key=CANONICAL_PROJECT_KEY, agent_name=AGENT_NAME, slo
 
 ### Self-deregister the Tier-1 identity (Layer 1)
 
-As the ceremony's true last act — after the build slot is released — deregister the name
-minted in the Session Identity step so the registry doesn't accumulate a zombie identity per
-batch-close (doctrine: `_shared/agent-identity.md` Deregistration, Layer 1; by name —
-`registration_token` optional). Do this even on an aborted run:
-
-```
-mcp__mcp-agent-mail__deregister_agent(
-  project_key: CANONICAL_PROJECT_KEY,
-  agent_name: AGENT_NAME
-)
-```
+After the build slot is released, deregister the name minted in the Session Identity step
+per `_shared/agent-mail.md` § Release + self-deregister (even on an aborted run).
 
 ### Next Step
 
