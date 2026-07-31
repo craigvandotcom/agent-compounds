@@ -1,0 +1,20 @@
+# dcg configuration — neoMeta fleet
+#
+# Custom packs live in ~/.config/dcg/packs/.
+#
+# BEFORE TRUSTING ANY PACK HERE, run its proof harness:
+#   agent-compounds/tools/dcg/stash-pack-probe.sh
+# It must report 12 cases / 12 ok / 0 FAIL. BOTH halves matter — the guard must
+# bite on the dangerous forms AND must not over-block the safe ones.
+#
+# Two things that will waste your time, learned the hard way (2026-07-31):
+#   1. dcg SILENTLY ignores a custom pack it cannot load. No error, no warning.
+#      `dcg pack validate <file>` passing is NOT proof the pack is live.
+#      Always confirm with a real blocked/allowed probe.
+#   2. A pack `id` that previously failed to load appears to stay poisoned —
+#      the same file under a fresh `id` loaded immediately. If a valid-looking
+#      pack does nothing, change its `id` before debugging anything else.
+[packs]
+custom_paths = [
+    "~/.config/dcg/packs/*.yaml",
+]

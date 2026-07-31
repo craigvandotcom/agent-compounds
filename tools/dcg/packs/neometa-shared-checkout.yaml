@@ -1,0 +1,16 @@
+schema_version: 1
+id: neometa.stashguard
+name: neoMeta shared-checkout safety
+version: 1.0.0
+destructive_patterns:
+  - name: unscoped-stash-save
+    pattern: 'git\s+(?:-\S+\s+)*stash'
+    severity: high
+    description: "Unscoped git stash sweeps EVERY agent's uncommitted work in this shared checkout. The stash stack is repo-global and shared across all worktrees. Scope it instead: git stash push -- your/paths. Better still, commit: under trunk-direct that is free, and holding uncommitted work is the root cause."
+safe_patterns:
+  - name: scoped-stash-push
+    pattern: 'git\s+(?:-\S+\s+)*stash\s+push\b[^|;&]*\s--\s+\S'
+    description: "A pathspec after -- means the caller named their own files"
+  - name: stash-read-and-restore
+    pattern: 'git\s+(?:-\S+\s+)*stash\s+(?:list|show|pop|apply|branch)\b'
+    description: "Listing, inspecting and restoring a stash harms no other agent. drop and clear are deliberately absent: dcg core already guards those."
