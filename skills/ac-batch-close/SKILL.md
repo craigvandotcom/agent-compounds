@@ -518,13 +518,36 @@ export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this com
 # Carry Act 2's findings report from the staging sibling into the mark directory (bd-kudrb).
 # `git mv` when it was committed to pending/; a plain `mv` + `git add` when it is still
 # untracked. Both files must be in the SAME commit — that is what keeps `batch/` single-writer.
+# net-growth-ok: bd-f72as — the carry snippet IS the review-mark writer; a wrong pick makes the
+# mark attest to an unreviewed diff. The fail-loud branch and its operator guidance must be at
+# the selection site, inline in the runnable block, or a hurried child re-derives the positional
+# pick that near-missed three ceremonies in one day.
+# Select the report by CONTENT, not position. It must claim THIS batch's anchor in its own
+# `**Range:**` line (ac-review on main bases its range on the same review-mark this ceremony
+# anchors on, so the base sha matches by construction). A positional pick (`ls | head -1`) is
+# lexically-OLDEST-first and near-missed three ceremonies in one day; `pending/` legitimately
+# accumulates, because a withheld close (stop condition C2) deliberately leaves its report
+# there. Carrying the wrong file makes the review-mark attest to a diff nobody reviewed while
+# the real artifact stays in `pending/` forever — a clean-looking review blackout (bd-f72as).
 CARRIED=""
-PENDING_REPORT=$(ls -1 .claude/reviews/pending/*.md 2>/dev/null | head -1)
-if [ -n "$PENDING_REPORT" ]; then
-  CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
-  git mv "$PENDING_REPORT" "$CARRIED" 2>/dev/null \
-    || { mv "$PENDING_REPORT" "$CARRIED" && git add "$CARRIED"; }
+PENDING_REPORT=$(grep -lE "Range:.*${ANCHOR:0:8}[0-9a-f]*\.\." .claude/reviews/pending/*.md 2>/dev/null)
+N_PENDING=$(printf '%s\n' "$PENDING_REPORT" | grep -c . || true)
+if [ "$N_PENDING" -ne 1 ]; then
+  echo "FATAL: cannot identify this batch's review artifact — carrying NOTHING." >&2
+  echo "  anchor: $ANCHOR" >&2
+  echo "  reports in pending/ claiming that anchor: $N_PENDING (need exactly 1)" >&2
+  echo "  present: $(ls -1 .claude/reviews/pending/*.md 2>/dev/null | tr '\n' ' ')" >&2
+  echo "  0 matches -> Act 2's review did not run, or wrote no machine-parseable" >&2
+  echo "     '**Range:** <base>..<head>' line (ac-review Phase 6 requires it). Re-run Act 2." >&2
+  echo "  >1 matches -> two artifacts claim the same anchor; a human picks. Do NOT guess." >&2
+  echo "  There is NO positional fallback: an unidentifiable artifact is 'unknown', and" >&2
+  echo "     unknown must never collapse to ok. Only after verifying a report's Range" >&2
+  echo "     actually covers \$BATCH_RANGE may a conductor set PENDING_REPORT by hand." >&2
+  exit 1
 fi
+CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
+git mv "$PENDING_REPORT" "$CARRIED" 2>/dev/null \
+  || { mv "$PENDING_REPORT" "$CARRIED" && git add "$CARRIED"; }
 
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 # Pathspec-on-commit (bd-kskxg field-test): the trailing `-- <report path>` scopes the commit to

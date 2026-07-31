@@ -16,8 +16,15 @@ Which reviewers to expect comes from (highest precedence first):
                                             spawn time ({"round": N, "spawned":
                                             [...], "skipped": {...}}) — the
                                             normal path for the 6-dimension panel
-  3. the core four (security, performance, architecture, correctness) — fallback
-     so pre-manifest artifact dirs still validate correctly.
+There is NO third source. A missing, unparseable or empty manifest is `unknown`
+panel composition, and **`unknown` never collapses to `ok`**: the script exits
+non-zero (EXIT_PANEL_UNKNOWN) and writes nothing, because a review that cannot
+confirm its own panel composition has not reviewed anything it can attest to.
+Silently defaulting to a smaller panel is what this script exists to prevent —
+observed 2026-07-31: a dcg-blocked manifest write dropped the contracts and
+test-quality reviewers, one Critical among them, and the run still printed green
+(bd-axeyx).
+
 A dimension listed as spawned but with no parseable output file is reported in
 `reviewers_missing` — a partial failure, never a silent pass.
 
@@ -38,7 +45,8 @@ import os
 import re
 import sys
 
-DEFAULT_EXPECTED = ["security", "performance", "architecture", "correctness"]
+EXIT_NO_ARTIFACTS_DIR = 2
+EXIT_PANEL_UNKNOWN = 3
 AUTO_SEVERITIES = {"critical", "high"}
 _SEV_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
@@ -56,24 +64,49 @@ def norm_key(f):
 
 
 def load_panel(artifacts_dir, rnd, override):
-    """Resolve the expected reviewer set: CLI override > panel manifest > core four."""
+    """Resolve the expected reviewer set: CLI override > panel manifest > FAIL.
+
+    Returns (roles, source, skipped) on success, or (None, reason, None) when the
+    panel is `unknown`. There is deliberately no default panel: a verdict without a
+    denominator is not a verdict, and `unknown` must never collapse to `ok`.
+    """
     if override:
         roles = [r.strip() for r in override.split(",") if r.strip()]
         if roles:
-            return roles, "cli"
+            return roles, "cli", {}
+        return None, "--expect was given but named no reviewer roles", None
     path = os.path.join(artifacts_dir, "panel-round-{}.json".format(rnd))
-    if os.path.exists(path):
-        try:
-            with open(path) as fh:
-                data = json.load(fh)
-            spawned = data.get("spawned") or []
-            if spawned:
-                return spawned, "manifest"
-            print("WARN: panel manifest {} has empty 'spawned'; using default panel".format(path),
-                  file=sys.stderr)
-        except (json.JSONDecodeError, OSError) as e:
-            print("WARN: could not parse panel manifest {}: {}".format(path, e), file=sys.stderr)
-    return DEFAULT_EXPECTED, "default"
+    if not os.path.exists(path):
+        return None, "panel manifest not found: {}".format(path), None
+    try:
+        with open(path) as fh:
+            data = json.load(fh)
+    except (json.JSONDecodeError, OSError) as e:
+        return None, "panel manifest {} could not be parsed: {}".format(path, e), None
+    spawned = data.get("spawned") or []
+    if not spawned:
+        return None, "panel manifest {} has an empty 'spawned' list".format(path), None
+    skipped = data.get("skipped") or {}
+    return spawned, "manifest", skipped if isinstance(skipped, dict) else {}
+
+
+def panel_unknown(reason, rnd):
+    """Emit the loud failure for an unconfirmable panel and return the exit code."""
+    print("ERROR: PANEL UNKNOWN for round {} — {}".format(rnd, reason), file=sys.stderr)
+    print("ERROR: refusing to fall back to a default panel. A review that cannot confirm its",
+          file=sys.stderr)
+    print("       own panel composition has not reviewed anything it can attest to; a defaulted",
+          file=sys.stderr)
+    print("       panel silently DROPS whatever the missing reviewers found (bd-axeyx).",
+          file=sys.stderr)
+    print("FIX: write the Phase-2 panel manifest (panel-round-{}.json) with the Write tool on a".format(rnd),
+          file=sys.stderr)
+    print("     literal path — see _shared/shell-guardrails.md if dcg blocked the write — and",
+          file=sys.stderr)
+    print("     re-run. Only if the panel is genuinely known out-of-band, pass --expect.",
+          file=sys.stderr)
+    print("VERDICT: NEEDS_DECISION (panel unknown — NOT approved)", file=sys.stderr)
+    return EXIT_PANEL_UNKNOWN
 
 
 def load_round(artifacts_dir, rnd, expected):
@@ -108,7 +141,7 @@ def load_registry(path):
         return []
 
 
-def build(artifacts_dir, rnd, expected, panel_source):
+def build(artifacts_dir, rnd, expected, panel_source, panel_skipped=None):
     reg_path = os.path.join(artifacts_dir, "consensus-registry.json")
     present, missing, findings = load_round(artifacts_dir, rnd, expected)
     registry = load_registry(reg_path)
@@ -182,6 +215,7 @@ def build(artifacts_dir, rnd, expected, panel_source):
         "round": rnd,
         "reviewers_expected": expected,
         "panel_source": panel_source,
+        "panel_skipped": panel_skipped or {},
         "reviewers_present": present,
         "reviewers_missing": missing,
         "total_findings": len(findings),
@@ -193,7 +227,12 @@ def build(artifacts_dir, rnd, expected, panel_source):
 
 def print_summary(r):
     print("## Consensus — round {}".format(r["round"]))
+    # The denominator, always printed: a verdict that does not state its own scope is
+    # not a verdict. Copy this line verbatim into the report's `**Panel:**` field.
     print("Panel ({}): {}".format(r["panel_source"], ", ".join(r["reviewers_expected"])))
+    if r.get("panel_skipped"):
+        print("Panel skipped: {}".format(
+            "; ".join("{}={}".format(k, v) for k, v in sorted(r["panel_skipped"].items()))))
     if r["reviewers_missing"]:
         print("⚠ MISSING reviewers (partial failure — DO NOT treat as clean): {}".format(
             ", ".join(r["reviewers_missing"])))
@@ -221,10 +260,14 @@ def main():
 
     if not os.path.isdir(args.artifacts_dir):
         print("ERROR: artifacts dir not found: {}".format(args.artifacts_dir), file=sys.stderr)
-        return 2
+        return EXIT_NO_ARTIFACTS_DIR
 
-    expected, panel_source = load_panel(args.artifacts_dir, args.round, args.expect)
-    result = build(args.artifacts_dir, args.round, expected, panel_source)
+    expected, panel_source, panel_skipped = load_panel(
+        args.artifacts_dir, args.round, args.expect)
+    if expected is None:
+        return panel_unknown(panel_source, args.round)
+
+    result = build(args.artifacts_dir, args.round, expected, panel_source, panel_skipped)
     out = os.path.join(args.artifacts_dir, "consensus-round-{}.json".format(args.round))
     try:
         with open(out, "w") as fh:

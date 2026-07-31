@@ -49,7 +49,14 @@ ARTIFACTS_DIR=/tmp/work-review-$(date +%Y%m%d-%H%M%S)
 
 ```bash
 mkdir -p "$ARTIFACTS_DIR"
+echo "$ARTIFACTS_DIR"   # note the RESOLVED value — every later file write uses it literally
 ```
+
+> **`$ARTIFACTS_DIR` is a variable, so every shell redirect into it is a dynamic-path write —
+> the shape `dcg` blocks by design.** Produce files under it with the **Write tool on the
+> resolved literal path** (or pipe into `tee <literal path>`), never a redirect or heredoc
+> built from the variable (`_shared/shell-guardrails.md`). This is not style: a silently
+> blocked write here is a silently degraded review downstream (bd-axeyx).
 
 ### Register Session Identity (Tier 1)
 
@@ -410,14 +417,29 @@ shrink/full tiers and is never dropped by a shrink.
    full panel.
 
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
-against it (a spawned dimension with no output = partial failure, never a silent pass). If `dcg` rejects this write, do NOT bypass it — the guard blocks a redirect whose target path is variable-built; sanctioned shapes (`tee`, the Write tool) are in `_shared/shell-guardrails.md`:
+against it (a spawned dimension with no output = partial failure, never a silent pass), and
+**refuses to run at all without it** (exit 3, `PANEL UNKNOWN`) rather than defaulting to a
+smaller panel. This write is therefore load-bearing, not bookkeeping: when it was silently
+eaten by a `dcg` block on 2026-07-31, the run fell back to the core four and dropped the
+contracts and test-quality findings — one of them Critical (bd-axeyx).
 
-```bash
-cat > "$ARTIFACTS_DIR/panel-round-1.json" <<'EOF'
+<!-- net-growth-ok: bd-axeyx — the manifest write IS the control whose silent dcg-block degraded
+     a live panel; the "how to write it so the guard accepts it" instruction has to sit AT the
+     write site, and the exit-3 contract at the consensus call site. A reference-file pointer is
+     what failed here: `_shared/shell-guardrails.md` already documented the fix and the inline
+     snippet contradicted it. -->
+**Use the Write tool, on the resolved literal path** — do NOT shell-redirect into
+`$ARTIFACTS_DIR`. A heredoc or redirect whose target is built from a variable is exactly the
+shape `core.filesystem:redirect-truncate-dynamic-path` blocks, and this snippet is the one
+that got bitten (`_shared/shell-guardrails.md` § Sanctioned shapes). Echo `$ARTIFACTS_DIR`,
+paste its resolved value into the Write call, and confirm the file exists before spawning.
+
+Write `<resolved ARTIFACTS_DIR>/panel-round-1.json` with this content:
+
+```json
 {"round": 1,
  "spawned": ["security", "performance", "architecture", "correctness", "test-quality", "contracts"],
  "skipped": {}}
-EOF
 ```
 
 List only the roles you actually spawn; record each skipped lens in `skipped` with its
@@ -468,8 +490,20 @@ It reads the `round-1-{role}.json` reviewer files, writes `consensus-round-1.jso
 `consensus-registry.json` (the cross-round memory — no manual table-keeping), and prints a
 summary. Harness-agnostic: plain `python3`, stdlib only.
 
+**Exit 3 = `PANEL UNKNOWN` — a hard stop, not a warning.** The script found no usable
+Phase-2 panel manifest and **refuses to substitute a default panel**, because a check that
+cannot state its own scope has not checked anything it can attest to; `unknown` never
+collapses to `ok` (same doctrine as `_shared/board-scan.md` Scan E). Do NOT re-run with
+`--expect` to make it go green — go back to Phase 2, write the manifest with the Write tool
+on the literal path, confirm it exists, and re-run. If the panel genuinely cannot be
+reconstructed, emit **`VERDICT: NEEDS_DECISION`** and say the panel was unconfirmable.
+
 **Read the result (`consensus-round-1.json`) and act on each field:**
 
+- **`panel_source` + `reviewers_expected` + `panel_skipped` → the denominator. Copy them
+  verbatim into the report's `**Panel:**` line (Phase 6).** A degraded run must be visible
+  after the fact, so the panel that ACTUALLY ran is reported, never the panel that was
+  intended.
 - **`reviewers_missing` non-empty → partial failure.** A missing dimension is the silent-PASS
   trap — never auto-fix-and-approve around it. **Retry once:** re-spawn the missing reviewer(s)
   (Phase 2, same `{ROUND}`) and re-run consensus. **If still missing:**
@@ -695,7 +729,7 @@ Callers pass the destination via the delegation prompt, e.g. `report_dest=.claud
 
 ### Generate Review Report
 
-Create `${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings). **The `**Range:**` line is MANDATORY and machine-parsed — full 40-char SHAs, `<base>..<head>`, no prose: an artifact without it is invisible to Scan D's coverage probe, i.e. the commits you just reviewed still read as unreviewed (bd-zl1y5).**
+Create `${REPORT_DEST}YYYY-MM-DD-HHMM-[feature].md` using the template in **`references/report-template.md`** (summary table by category + auto-fixed + needs-decision + all findings). **The `**Range:**` line is MANDATORY and machine-parsed — full 40-char SHAs, `<base>..<head>`, no prose: an artifact without it is invisible to Scan D's coverage probe, i.e. the commits you just reviewed still read as unreviewed (bd-zl1y5).** **The `**Panel:**` line is equally MANDATORY and is copied verbatim from `consensus-round-{N}.json` (`panel_source` / `reviewers_expected` / `panel_skipped`) — the panel that actually ran, never a hardcoded list: that is what makes a degraded run visible after the fact (bd-axeyx).**
 
 ### Safety Check
 

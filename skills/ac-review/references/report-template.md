@@ -34,6 +34,16 @@ of the `Range:` claims in every artifact under `.claude/reviews/**` (root, `pend
   prose in this field (`"the families series"`, `"main since Tuesday"`) is silently uncountable.
 - **A bead-scoped or partial review still records a range.** If the diff you reviewed is not a
   contiguous `A..B`, emit one `**Range:**` line per contiguous span — every line is unioned.
+### The `Panel:` field is the denominator — MANDATORY, and copied from consensus, not memory
+
+**A verdict without a denominator is not a verdict.** Fill `Panel:` verbatim from
+`consensus-round-{N}.json`'s `panel_source` / `reviewers_expected` / `panel_skipped` — the
+panel that ACTUALLY ran, never the panel you meant to run. Hardcoding a reviewer list here is
+what let a run that silently dropped two dimensions (one Critical among them) read as a normal
+full review; `consensus.py` now hard-fails on an unconfirmable panel, and this line is how a
+degraded-but-legitimate run (`--expect`, a deliberate skip) stays visible after the fact
+(bd-axeyx).
+
 - **Omitting it is a silent-false-green**, the same defect family as bd-kudrb: the review really
   happened and the commits still read as unreviewed. Reviews that skipped it are precisely why the
   measured blackout could only be stated as an upper bound ("~88 code-ish, some may be reviewed
@@ -46,7 +56,7 @@ of the `Range:` claims in every artifact under `.claude/reviews/**` (root, `pend
 **Mode:** {batch-close | standalone}
 **Range:** {BASE_SHA}..{HEAD_SHA}
 **Plan:** {plan path or "none"}
-**Reviewers:** Security, Performance, Architecture, Correctness
+**Panel ({panel_source}):** {reviewers_expected} — skipped: {panel_skipped, or "none"}
 **Rounds:** {count}
 **Degraded:** {no | solo (trigger=…; lenses=…) — REQUIRED in both states, `_shared/degraded-mode.md` § 3}
 
