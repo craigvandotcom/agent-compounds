@@ -24,10 +24,12 @@ Implement this bead using strict TDD (RED → GREEN).
 
 ### TDD Flow
 
-1. **Write tests FIRST** — based on the bead spec's acceptance criteria
+1. **Write tests FIRST** — based on the bead spec's acceptance criteria AND its `## Test Scope` section (the files/describe blocks refine verified for this bead — read it; it is the bead's own test plan, not decoration)
 2. **Run tests — confirm RED** (tests fail because code doesn't exist yet)
 3. **Implement the code** — minimal code to make tests pass
 4. **Run tests — confirm GREEN** (all tests pass)
+4b. **Prove the test bites — a green test is not a fix.** After GREEN, revert ONLY your production diff (`git checkout HEAD -- <prod files>` — `git stash` is BANNED, see RULE #1 below), re-run your new tests with `VITEST_AFFECTED_DISABLED=1 pnpm vitest run <exact paths>`, and paste the RED output (test names + fail/pass counts) into your result file — same standard as the E2E/bundle rules below: pasted real output, never "expected to fail". Then restore your fix and re-confirm GREEN. **Any new test still GREEN with the production fix reverted is vacuous — rewrite it.** `VITEST_AFFECTED_DISABLED=1` is MANDATORY: a bare `pnpm vitest run <paths>` still intersects with the affected set, silently under-runs, and reports green over tests it never executed (two engineers were misled by exactly this on 2026-07-30).
+   - **Seam rule.** If the fix spans two components (write path ↔ read path, install ↔ serve, producer ↔ consumer), at least one test must go RED when EITHER half alone is reverted. Two tests that each go red on only one half is an UNTESTED SEAM — the join is exactly where the bug lives (`_shared/anti-patterns.md` §3). Concrete cost (2026-07-30, both escaped refine AND review and shipped broken): bd-mfr1d wrote an asset into one cache while the serving path only ever opened a different one — two new tests each covered ONE half of that seam, both green; bd-ghj12's tests were vacuous because the code path stripped the very characters the test used as its discriminator, so the assertions passed identically with and without the fix.
 5. **Only modify tests if you're certain there's a bug in the test itself** — not to make failing tests pass
 6. **Journey docs are test artifacts too.** If the project has
    `.claude/skills/CORE/journeys/` and your diff touches a path in its

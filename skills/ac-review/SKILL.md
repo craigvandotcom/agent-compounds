@@ -789,7 +789,13 @@ below). Dedupe via `br search` first; nits stay in the report. **SEVERITY FLOOR 
 `unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
 instead of being treated as already-refined. **`-t bug` = shipped product defect only;
 test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never
-`-t bug`** — mistyping inflates the preemptive bug lane.
+`-t bug`** — mistyping inflates the preemptive bug lane. **Every finding bead ships a
+`## Test Scope` section with grep-verified anchors** (same bar as `ac-hygiene`;
+`_shared/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
+validator runs — grep each before citing it — plus the QA modality for user-facing surfaces.
+You have the diff open right now; refine's Test Scope gate would otherwise author it cold.
+A finding bead with no test plan is how the fix ends up shipping behind a test that cannot
+fail (bd-mfr1d, bd-ghj12 — 2026-07-30).
 
 > **Route the finding bead to an epic parent + stamp `post-merge` at creation** (§3 routing
 > map, `_shared/bead-conventions.md` § Bead routing + § Claim semantics). Every

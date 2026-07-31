@@ -170,7 +170,8 @@ br create -t bug --labels triage,<source>  \
   --title "<crash culprit / error signature> (<freq>× / <users> users)" \
   --description "<source link · first-seen release · suspected wave · top stack frames
                  ## Steps to Reproduce (repro hints / crash path)
-                 ## Acceptance Criteria (crash signature gone in next release's source)>"
+                 ## Acceptance Criteria (crash signature gone in next release's source)
+                 ## Test Scope (real test file/describe anchors — grep them first)>"
 # body headers per _shared/bead-conventions.md §Body template — emit at creation
 
 ```
@@ -189,6 +190,13 @@ br create -t bug --labels triage,<source>  \
   questions, not specs. Findings still always ship `unrefined` at creation — the run-end
   `ac-bead-refine` invocation below (Phase 3c) is what earns the stamp, in-session, while
   the evidence above is still in the conductor's context.
+- **`## Test Scope` at creation, with grep-verified anchors** (same bar as `ac-hygiene`;
+  `_shared/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
+  validator would run — grep each one before citing it, never invent a describe you haven't
+  seen — plus the QA modality for user-facing surfaces (`browser:`/`device:` + journey). A
+  finding bead with no test plan is how an engineer ends up authoring tests that cannot fail;
+  refine's Test Scope gate will otherwise have to author it cold, without the crash evidence
+  you have in hand right now.
 - Always include the **source permalink** (Sentry issue URL / ASC feedback id) and the
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.

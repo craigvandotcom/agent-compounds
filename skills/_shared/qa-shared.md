@@ -237,7 +237,9 @@ behavior, plus a11y gaps and shell bugs. Do NOT bury findings in prose or
 ```bash
 # CONFIRMED finding (root cause or solid repro) → a fix bead:
 br create "fix(<area>): <finding title>" -t bug \
-  -d "QA finding (<date>, <device|browser> QA): <repro + evidence + journey ref>" \
+  -d "QA finding (<date>, <device|browser> QA): <repro + evidence + journey ref>
+      ## Test Scope (real test file/describe anchors — grep them first — plus the
+      QA modality + journey checkpoint this finding came from)" \
   --labels qa-finding,unrefined
 # User-facing break or trapped state? Add the blocker label:  --labels qa-finding,qa-blocker,unrefined
 
@@ -248,6 +250,8 @@ br create "investigate: <symptom>" -t investigation \
 ```
 
 > **Always include `unrefined`** — a raw `br create` bead skips the refine gate unless it carries the `unrefined` label; without it the bead is treated as already-refined and gets implemented on a raw QA note. `unrefined` routes it through `ac-bead-refine` first.
+>
+> **Always emit `## Test Scope` with grep-verified anchors** (same bar as `ac-hygiene`; `_shared/bead-conventions.md` §Body template) — the real file(s)/describe block(s) a validator runs, each grepped before it is cited, plus the QA modality (`browser: <journey>.md §<checkpoint>` / `device: …`) this finding surfaced from. You have the journey and the repro in hand right now; refine's Test Scope gate would otherwise have to author it cold, and a finding bead with no test plan is how the fix ships behind a test that cannot fail.
 >
 > **Type is not automatically `bug`.** `-t bug` is a shipped **product** defect only. Test-gap / missing-coverage / infrastructure findings use `-t task` (or `-t investigation` if the cause is unconfirmed), NEVER `-t bug` — mistyping them inflates the preemptive bug lane.
 

@@ -293,7 +293,7 @@ Cross-reference every bead against the original plan (if available) to ensure NO
 
 ## Method
 
-Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. **Visual-reference ACs:** if the source research doc/plan cites a `docs/design-refs/<surface>-<source>-reference.<ext>` image, check the bead's ACs against it directly — including geometry (shape, radius, spacing), not just prose intent; a bead whose AC dropped or paraphrased the reference's geometry is a finding, and a UI bead derived from a visual reference with no `docs/design-refs/` path in its ACs is a finding. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). Named test anchors (files, describe blocks) must exist — grep before citing. **Seam-proof AC for bridge-crossing beads:** if a bead's scope crosses a bridge (native plugin boundary, external service, build-time↔runtime divide), tests-green alone is not done — it needs a seam-proof acceptance criterion: the named surface observed working (a journey drive, or an un-mocked test touching the seam itself). A bridge-crossing bead with no seam-proof AC is a finding. Use your judgment on what matters most.
+Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. **Visual-reference ACs:** if the source research doc/plan cites a `docs/design-refs/<surface>-<source>-reference.<ext>` image, check the bead's ACs against it directly — including geometry (shape, radius, spacing), not just prose intent; a bead whose AC dropped or paraphrased the reference's geometry is a finding, and a UI bead derived from a visual reference with no `docs/design-refs/` path in its ACs is a finding. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). Named test anchors (files, describe blocks) must exist — grep before citing. **Seam-proof AC for bridge-crossing beads:** if a bead's scope crosses a bridge (native plugin boundary, external service, build-time↔runtime divide, **or any two-component seam INSIDE one runtime — write path↔read path, producer↔consumer, install↔serve**), tests-green alone is not done — it needs a seam-proof acceptance criterion: the named surface observed working (a journey drive, or an un-mocked test touching the seam itself). A bridge-crossing bead with no seam-proof AC is a finding. This is `_shared/anti-patterns.md` §3 *Unproven seam* — "mocks verify our logic; the bugs live at the boundary the mock removed" — and the boundary does not have to be a process boundary: bd-mfr1d (2026-07-30) wrote an asset into one cache while the serving path only ever opened a different one, both halves individually covered and green. So the AC must name a check that goes RED when EITHER side alone is reverted; two ACs each covering one half is the untested seam, not coverage. Use your judgment on what matters most.
 
 ## Output
 
@@ -618,6 +618,8 @@ bd-9bvr2 closed `decided:ACCEPT` — do not re-open a human-gate on these criter
 
 **Contract gate:** no implementable bead gets the stamp while its `## Delivers` / `## Consumes` is missing or vague (`_shared/bead-conventions.md` §Bead I/O contract) — author or fix the contract first (refine authors it for quick-capture beads). The stamp asserts the I/O contract along with everything else; ac-implement's pre-dispatch premise check reads Consumes lines at face value.
 
+**Test Scope gate (same standing as the contract gate — blocking, not a checklist wish):** no implementable bead gets the stamp while `## Test Scope` is missing, or while any anchor in it is unverified (`_shared/bead-conventions.md` §Body template). Grep every named file/describe block against HEAD **this round** — never carry an anchor over from the filing (three beads in one refine run cited describe blocks that did not exist). Missing section → refine authors it, exactly as it authors the I/O contract for quick-capture beads; anchor that does not grep → fix or drop it before stamping. Beads arriving from the origin skills that do NOT pre-emit a test plan (`ac-triage`, `ac-review`'s Exhaust Rule, the `ac-qa-*` findings path) will need it authored here. A bead reaching `refined` with no verified test scope is what lets the engineer invent tests that cannot fail (bd-mfr1d, bd-ghj12 — 2026-07-30, both shipped broken with green suites).
+
 **The stamp loop is authoritative on `target-bead-ids.txt`, NOT on the snapshot (bd-baudw).**
 The snapshot is a shared-shaped file that a sibling child could once have overwritten; the
 target list is this child's own scope, written once at Phase 0 and never re-derived. Stamping
@@ -678,10 +680,18 @@ Verify:
 - [ ] Beads are self-contained (no need to consult original plan — plan should already be archived)
 - [ ] Dependencies correctly mapped (`br dep cycles` returns clean)
 - [ ] Tasks appropriately granular for mechanical implementation
-- [ ] Test requirements included in each bead — with a declared **test scope** (paths/globs for affected-tests)
+- [ ] Test requirements included in each bead — with a declared **test scope** (paths/globs for affected-tests), every anchor grep-verified against HEAD this round (enforced by the Test Scope gate above, not optional here)
 - [ ] Each bead is independently **green + shippable**; bead order is **commit-safe** (add-before-remove; migrations additive-first)
 - [ ] Comments explain reasoning/justification
-- [ ] Acceptance criteria are clear and verifiable
+- [ ] Acceptance criteria are clear and verifiable — AND checked for the two recurring
+      false-convergence shapes: (1) every cited `file:line` anchor and quoted artifact
+      (test body, response payload, field name, count) is RE-VERIFIED against HEAD this
+      round, not carried over from the filing — a falsified premise closes or rewrites
+      the bead, it is never smoothed over; (2) every AC can actually FAIL, and fails for
+      the RIGHT reason — flag grep/pattern-shaped ACs (over-match/under-specify) and any
+      AC asserting a numeric DOM property without first establishing the property is
+      meaningful on that element type; demand a bite-proof (demonstrate the check RED)
+      for any AC that is the sole evidence for a bead
 - [ ] Title/label parity enforced — every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled reviewed bead carries `human-gate` BEFORE stamping
 - [ ] `unrefined` removed AND `refined` added to all reviewed beads
 
