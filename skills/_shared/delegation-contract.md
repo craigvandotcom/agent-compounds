@@ -69,16 +69,19 @@ pointer-only guidance, 3 distinct children self-detached and 3 independently
 rediscovered the Agent Mail token rule; after the conductor began inlining these
 clauses verbatim, recurrence dropped to zero for the rest of the run.
 
-**The preamble (copy verbatim; substitute the child's `AGENT_NAME` — you mint it; ~200 words):**
+**The preamble (copy verbatim; substitute the child's `AGENT_NAME` — you mint it; ~240 words):**
 
 > ENVIRONMENT CONTRACT (non-negotiable):
 > - WAIT for your own long-running commands in-shell (foreground, generous Bash
 >   timeout, or a foreground until-loop). Never arm a Monitor on your own command
 >   and end your turn — if a completion event already fired, read it and CONTINUE.
-> - Agent Mail: you have NO `mcp__mcp-agent-mail__*` tools — don't try to register; export
->   the `AGENT_NAME` your conductor gave you in each commit's own shell. IT owns reservations.
+> - Agent Mail: CHECK whether you hold `mcp__mcp-agent-mail__*` tools — assume neither way.
+>   Usually you do NOT: then don't try to register, and your conductor owns reservations.
+>   Either way, export the `AGENT_NAME` it gave you in each commit's own shell.
 > - After every push: verify origin SHA == local HEAD before proceeding.
-> - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass.
+> - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass. To DISCARD
+>   a change: `git checkout HEAD -- <path>` AND unscoped `git stash` are both blocked —
+>   use scoped `git stash push -- <paths>`; to read a pristine file, `git show <ref>:<path>`.
 >   Destructive commands (rm / find -delete) take FULLY-LITERAL paths: resolve
 >   first (`ls -d`), then paste literals — never `$VAR`, `$( )`, or a loop var.
 >   /tmp literals + distinctive /tmp globs are allowed; home/repo `rm -rf` never
