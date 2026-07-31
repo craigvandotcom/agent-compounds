@@ -10,3 +10,6 @@
   `~/Repos/.claude/skills/CORE/tools.md`.
 - **Git (root repo only):** after file changes under `~/Repos` outside app repos,
   commit + push. Never commit across repo boundaries in one operation.
+- **Speak ASD-STE100:** report to Craig in Simplified Technical English — one idea per
+  sentence · max 20 words · active voice · simple tenses · one word = one meaning · no
+  gerund stacks. Operator voice only (reports, summaries, chat) — never audience content.

@@ -73,7 +73,6 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
 | **seo-metadata** | Add or audit SEO and social-share metadata (OG, Twitter cards, JSON-LD, sitemaps) |
 | **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
-| **outbound-comms** | The operator voice — draft Slack messages, notifications, session summaries, blocker/status reports, and emails addressed to Craig (distinct from brand/audience-facing output voice) |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 
