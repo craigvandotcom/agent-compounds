@@ -1,8 +1,8 @@
 ---
 skill: ac-review
 created: 2026-07-29
-last_pass: 2026-07-30
-entries: 4
+last_pass: 2026-07-31
+entries: 5
 ---
 
 # ac-review — friction log
@@ -63,3 +63,16 @@ entries: 4
 - status: promoted
 - proposed_fix: severity floor in the Phase-4 exhaust rule — a Low finding never gets its own bead; roll all of a run's Low findings into ONE bead, split out only if an item grows.
 - narrative: the exhaust rule said "nothing actionable leaves this phase as prose", and reviewers already skip Low + leave nits in the report — but a Low finding that DID surface still got its own P3 bead. The finding lane therefore inflated monotonically with nothing pruning it: 55 open findings on 2026-07-22 to 102 by 2026-07-30 (+84% in ~8 days), while ac-tidy escalated the raw count across four nightlies and produced zero action. The lane was NOT stale bookkeeping — measured, only 1 of 102 open findings carried any evidence of a merged fix — so it could not be drained by an auto-closer either; the only lever was the inflow. Landed as the severity floor (agent-compounds 4d8ec80) after Craig ruled A+D on bd-8ms5t. Recorded here because the fix was applied straight to SKILL.md core with no prior friction entry, which is the evidence-trail gap this log exists to close.
+
+## contradictory-panel-consensus-needs-source-re-derivation
+- skills: [ac-review]
+- impact: M
+- frequency: rare
+- recurrence: 1
+- related: []
+- first_seen: 2026-07-31
+- last_seen: 2026-07-31
+- stage: ac-loop
+- status: open
+- proposed_fix: contradictory consensus across review lenses is a signal to RUN THE COMMAND and re-derive from source — never average or split the difference on severities.
+- narrative: two review lenses reached opposite conclusions from the same facts. Resolving it required the conductor to read a migration's call-site audit directly rather than trust either lens's stated severity. Cost ~6 minutes of conductor verification.

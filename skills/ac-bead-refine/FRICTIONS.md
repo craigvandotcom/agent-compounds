@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-07-29
-entries: 9
+last_pass: 2026-07-31
+entries: 10
 ---
 
 # ac-bead-refine — friction log
@@ -128,3 +128,16 @@ entries: 9
 - status: open
 - proposed_fix: one _shared doc (shell-guardrails.md) naming the blocked constructs and the sanctioned substitutes, referenced once from each affected skill, plus rewriting this skill's own dump-collection step to append via tee -a instead of a brace-group append-redirect. NOT six inline snippet patches (six spines = six net-growth events) and NOT inline examples (see narrative).
 - narrative: the command guard rejects a stdout redirect whose target path is built from a shell variable, which is the shape of nearly every artifacts-dir write in the ac-* pipeline. Because the blocked lines are the skills' OWN provided setup lines, each child wastes about a call rediscovering the same workaround: ~15+ in RUN 20260721-133107-10979, 8+ in RUN 20260722-085844-39967, 5 in one interactive session 2026-07-26, and 3-of-4 refine children (~2 min + 2 retries each) in RUN 20260728-234407-54469 — cumulative 26+ across four consecutive runs. It bites wider than its name: the redirect operator is matched anywhere on the command line, so long quoted payloads (bead comment bodies, commit messages, inline SQL) are blocked with no redirect present; in-place editors (perl -i, sed -i) are blocked though they contain no redirect at all; and a trailing error-stream redirect on a compound command trips the same rule, so decorating the command is not a fix. Decisive constraint on the FIX SHAPE: the rules match on command TEXT, so documentation that quotes a blocked construct is itself blocked — two bead comments were rejected for merely describing one. That is why the guidance must live in a single carefully-worded _shared doc that names constructs instead of showing them, rather than as inline examples in nine files.
+
+## ac-check-command-never-executed-during-refine
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [acceptance-criteria-that-cannot-fail, filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-07-31
+- last_seen: 2026-07-31
+- stage: ac-loop
+- status: open
+- proposed_fix: execute every AC check-command during refine — an AC whose command does not run is not refined. Verifying an AC's INTENT is not a substitute for running its literal check.
+- narrative: two acceptance criteria encoded commands that were wrong at HEAD: one referenced a non-existent capacitor build target, the other a `grep -c` line-count assertion that every 404 in the app fails. Refinement verified the ACs' intent but never executed their check-commands, so both drifted commands passed refine unnoticed. Cost ~5 minutes each to disprove once actually run.
