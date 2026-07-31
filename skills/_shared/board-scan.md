@@ -22,8 +22,9 @@ Run scans A, B, C, D, E **in parallel** (they're independent).
 ## Scan A — beads
 
 ```bash
-br list  --json --limit 1000   # ALL beads → object {issues:[...], total, has_more, limit}
+br list  --json --limit 1000   # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
 br ready --json                # unblocked + ready → a FLAT array
+cat .beads/issues.jsonl        # the ONLY complete source — includes closed beads
 ```
 
 > **`br` JSON shape differs by subcommand — don't conflate them:**
@@ -32,6 +33,18 @@ br ready --json                # unblocked + ready → a FLAT array
 > - `br ready --json` returns a **bare array** — iterate **`.[]`**.
 > Getting this wrong fails silently-ish (`jq: Cannot index array with string …`, or
 > a truncated list at 50). Verified against `br` 2026-06.
+
+> **⚠️ `br list --json` DOES NOT RETURN CLOSED BEADS** (br 0.2.x — verified 2026-08-01,
+> ac-tidy NIGHTLY). It returned 436 records with zero `status=closed` while
+> `.beads/issues.jsonl` held 2,453 records of which 2,017 were closed. `--limit` does not
+> help. This is **load-bearing**: the Tier-1 stale-`unrefined`-on-CLOSED-beads sweep and
+> the Tier-2 positive-proof archive gate both need closed beads, and both would silently
+> under-count to **zero** — a false clean, not an error. **Any predicate involving closed
+> beads must read `.beads/issues.jsonl` directly.**
+>
+> Related: `br sync` in a fresh worktree rebuilds from JSONL and reports
+> `Created: 2453 issues` while `br list` then shows 436. The two numbers are consistent
+> only once the above is understood — it is not a corrupt import.
 
 Categorize every bead:
 
@@ -121,7 +134,11 @@ blackout stayed invisible (bd-zl1y5):**
   defect. Coverage is the only honest answer to "what has actually been reviewed".
 
 ```bash
-D="${ARTIFACTS_DIR:-$(mktemp -d)}"
+# A LITERAL scratch path, not `$(mktemp -d)`. dcg blocks a truncating redirect whose
+# target is shell-expanded from a command substitution
+# (core.filesystem:redirect-truncate-dynamic-path) — verified 2026-08-01, ac-tidy NIGHTLY,
+# which had to re-run both scans by hand. The literal form is the only one that runs here.
+D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
 
 # Acceptance mark + its gap (bootstrap: last v* tag, else the root commit).
 MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
@@ -171,7 +188,11 @@ persistently-red gate is strictly worse than a missing one — it looks like cov
 providing none.
 
 ```bash
-D="${ARTIFACTS_DIR:-$(mktemp -d)}"
+# A LITERAL scratch path, not `$(mktemp -d)`. dcg blocks a truncating redirect whose
+# target is shell-expanded from a command substitution
+# (core.filesystem:redirect-truncate-dynamic-path) — verified 2026-08-01, ac-tidy NIGHTLY,
+# which had to re-run both scans by hand. The literal form is the only one that runs here.
+D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
 WF_DIR="$PROJECT_ROOT/.github/workflows"
 
 # 1. Enumerate SCHEDULED workflows FROM THE REPO — never a hardcoded list, or a gate added
