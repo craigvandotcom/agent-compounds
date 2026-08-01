@@ -47,12 +47,12 @@ it); repeated gate failure you cannot resolve (report, don't thrash).
 
 Identity & coordination
 1. Mint a Tier-1 identity at start; thread the token; re-assert `AGENT_NAME` in every
-   commit shell — `_shared/agent-mail.md`
-2. `FoggyCreek` never claims beads or reserves files — `_shared/agent-identity.md` § Tier 2
+   commit shell — `agent-mail/references/session-procedure.md`
+2. `FoggyCreek` never claims beads or reserves files — `agent-mail/references/agent-identity.md` § Tier 2
 3. Reserve files before editing; only reserved files enter your commits —
-   `_shared/agent-mail.md` § Reserve
+   `agent-mail/references/session-procedure.md` § Reserve
 4. Exit teardown: release own reservations → self-deregister own name only; never
-   `retire_agent`, never cross-session — `_shared/agent-mail.md` § Release
+   `retire_agent`, never cross-session — `agent-mail/references/session-procedure.md` § Release
 
 Git
 5. Pathspec-only commits; never `add -A` / `commit -a` / `stash`; commit = push;

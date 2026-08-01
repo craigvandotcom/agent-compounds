@@ -331,7 +331,7 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
   identity**, so the protection boundary is the *invocation* — two invocations exclude each
   other; *inside* one, there is no lock granularity, so **the conductor serializes writers**
   (ac-implement is one-bead-at-a-time). To parallelize, spawn a *separate invocation* (its own
-  identity), never a second writer under one name. Full contract: `_shared/agent-identity.md`.
+  identity), never a second writer under one name. Full contract: `agent-mail/references/agent-identity.md`.
 - **Enforcement is edit-time, not just commit-time.** Reservations are advisory; the
   global `PreToolUse(Edit\|Write)` guard blocks editing a file held by a *different* identity
   before the write lands (fail-open), with the pre-commit guard as the commit-time backstop.
@@ -380,7 +380,7 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - Runtime conductor: `ac-loop/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
-- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · session teardown: `_shared/agent-mail.md` § Release
+- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
 - Context/memory doctrine (sibling): `context-engineering`
 
 ## Reference contracts (owner-hosted here — ac-znk.7)

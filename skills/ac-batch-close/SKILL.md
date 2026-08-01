@@ -81,12 +81,12 @@ Everything else below is the same mechanism, retargeted anchor and audience.
 
 ac-batch-close is a **Tier-1 session**: on a red Tier-1 CI dispatch it **fix-forwards** —
 edits code, commits, pushes to `main` (Act 1 triage). Mint a unique identity at ceremony
-start (doctrine: `_shared/agent-identity.md` — Tier 1 lifecycle). Minting is also the
+start (doctrine: `agent-mail/references/agent-identity.md` — Tier 1 lifecycle). Minting is also the
 **prerequisite for the build slot**: `acquire_build_slot` needs a real `registration_token`
 for a pre-existing identity, and the mint is what yields one — a loop-spawned session that
 skips this step holds no token (this closes bd-kskxg's token-less graceful-degrade path):
 
-**Run the mint + token/export discipline per `_shared/agent-mail.md` (§ Mint,
+**Run the mint + token/export discipline per `agent-mail/references/session-procedure.md` (§ Mint,
 § Export)** — capture `name` + `registration_token`; the build slot below and every
 fix-forward commit consume them.
 
@@ -366,7 +366,7 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 > single-bead CI failures.
 
 <!-- net-growth-ok: ac-3rb — fix-forward edited product code with NO file reservation (Tier-1 obligation); this seals the protocol gap via the shared canon -->
-**Reserve the files you are about to fix BEFORE editing** (`_shared/agent-mail.md`
+**Reserve the files you are about to fix BEFORE editing** (`agent-mail/references/session-procedure.md`
 § Reserve, bead ac-3rb — fix-forward is Tier-1 product-code editing in the shared
 checkout; release with the rest at teardown § Release). Apply fixes, then commit under
 the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
@@ -666,7 +666,7 @@ release_build_slot(project_key=CANONICAL_PROJECT_KEY, agent_name=AGENT_NAME, slo
 ### Self-deregister the Tier-1 identity (Layer 1)
 
 After the build slot is released, deregister the name minted in the Session Identity step
-per `_shared/agent-mail.md` § Release + self-deregister (even on an aborted run).
+per `agent-mail/references/session-procedure.md` § Release + self-deregister (even on an aborted run).
 
 ### Next Step
 

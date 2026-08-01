@@ -63,8 +63,8 @@ echo "$ARTIFACTS_DIR"   # note the RESOLVED value — every later file write use
 ac-review is a **Tier-1 session**: its Phase-4 auto-fix engineer edits product code and
 Phase 6 commits + pushes. Mint a unique identity at review start so those fixes reserve
 and commit under a real name instead of falling back to `FoggyCreek` (doctrine:
-`_shared/agent-identity.md` — Tier 1 lifecycle: mint → reserve at work grain → release →
-self-deregister). **Run the mint + token/export discipline per `_shared/agent-mail.md`
+`agent-mail/references/agent-identity.md` — Tier 1 lifecycle: mint → reserve at work grain → release →
+self-deregister). **Run the mint + token/export discipline per `agent-mail/references/session-procedure.md`
 (§ Mint, § Export)** — capture `name` + `registration_token`; the reservation/release/
 message calls below REQUIRE the token.
 
@@ -614,7 +614,7 @@ released after the Phase 6 commit:
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: AGENT_NAME,               // the Tier-1 name minted in Phase 0
   paths: ["<every file in the AUTO_FIX numbered change list>"],
   ttl_seconds: 7200,
@@ -1015,7 +1015,7 @@ rm -rf "$ARTIFACTS_DIR"
 ```
 
 **Self-deregister the Tier-1 identity (Layer 1)** — after the final commit and reservation
-release, per `_shared/agent-mail.md` § Release + self-deregister.
+release, per `agent-mail/references/session-procedure.md` § Release + self-deregister.
 
 **TaskUpdate(task: "Phase 8", status: "completed")**
 

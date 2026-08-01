@@ -51,8 +51,8 @@ STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VE
 <!-- net-growth-ok: ac-1oq — ac-merge edited code and pushed with NO minted identity (commits misattributed to the Tier-2 chore identity while doing Tier-1 work); this seals the protocol gap via the shared canon -->
 
 ac-merge edits product code (quality-gate + feedback fixes) and commits + pushes in the
-shared checkout — a **Tier-1 session** (bead ac-1oq; `_shared/agent-identity.md` § Tier 1).
-**Run the mint + token/export discipline per `_shared/agent-mail.md` (§ Mint, § Export)**;
+shared checkout — a **Tier-1 session** (bead ac-1oq; `agent-mail/references/agent-identity.md` § Tier 1).
+**Run the mint + token/export discipline per `agent-mail/references/session-procedure.md` (§ Mint, § Export)**;
 reserve the files of each fix round at the work grain before editing (§ Reserve), and
 release + self-deregister at Finalize (§ Release).
 
@@ -697,7 +697,7 @@ AskUserQuestion(
 ### Finalize
 
 Release any file reservations still held and self-deregister the Phase-0 identity per
-`_shared/agent-mail.md` § Release (bead ac-1oq). Then mark the run ledger's final task
+`agent-mail/references/session-procedure.md` § Release (bead ac-1oq). Then mark the run ledger's final task
 `completed`. Then clean up — but only on the clean "Done"
 path. If the user chose a follow-up (new feature / hygiene) or the Phase-3 deploy-verify
 flagged an error, **leave `$ARTIFACTS_DIR`** — the report points at it for investigation, and

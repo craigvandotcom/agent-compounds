@@ -86,7 +86,7 @@ Confirm you're on `main` (`git branch --show-current`) before doing anything els
 
 ```
 mcp__mcp-agent-mail__install_precommit_guard(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   code_repo_path: PROJECT_ROOT
 )
 ```
@@ -226,7 +226,7 @@ ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead
 
 Register a unique identity for this implement session — used for file reservations and
 pre-commit guard attribution. **Run the mint + token/export discipline per
-`_shared/agent-mail.md` (§ Mint, § Export)** — capture `name` + `registration_token`;
+`agent-mail/references/session-procedure.md` (§ Mint, § Export)** — capture `name` + `registration_token`;
 explicit token threading and the per-shell `AGENT_NAME` re-assert (which the pre-commit
 guard depends on at every `git commit`) live there. Parallel ac-implement sessions each
 mint their own distinct name — no manual discriminators.
@@ -288,7 +288,7 @@ ONE call — not incrementally as beads are picked:
 # NOTE: this is the bead ASSIGNEE only; Agent Mail FILE reservations still use
 # your own session AGENT_NAME (they coordinate the shared checkout per-session).
 CLAIM_ASSIGNEE="${CLAIM_ASSIGNEE:-$AGENT_NAME}"
-# HARD RULE (ac-ycr.6; doctrine _shared/agent-identity.md): FoggyCreek is the Tier-2 chore
+# HARD RULE (ac-ycr.6; doctrine agent-mail/references/agent-identity.md): FoggyCreek is the Tier-2 chore
 # identity and may NEVER be a bead assignee. If CLAIM_ASSIGNEE resolved to it (a dropped
 # delegation value, or $AGENT_NAME fell back to the settings.json default in a fresh shell),
 # FAIL LOUDLY — never claim the batch under the shared chore identity (silent misattribution
@@ -366,7 +366,7 @@ If the bead is not `refined`:
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
   paths: ["<files listed in bead spec>"],
   ttl_seconds: 7200,
@@ -580,7 +580,7 @@ Release the file reservation using the **same paths reserved in Phase 1a** (the 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
   paths: ["<same paths passed to file_reservation_paths in Phase 1a>"]
 )
@@ -660,7 +660,7 @@ NOT reach a publish (nothing downstream runs the full suite), run `pnpm test:all
 This session minted a Tier-1 identity in Phase 0 and released each bead's file reservations
 in its Phase 1d as that bead closed. As the session's **final act — after the last bead's
 reservation release** — deregister its own minted `AGENT_NAME` per
-`_shared/agent-mail.md` § Release + self-deregister (Layers 2/3 backstops noted there).
+`agent-mail/references/session-procedure.md` § Release + self-deregister (Layers 2/3 backstops noted there).
 
 **TaskUpdate(task: "FINAL: Session summary + quality gate ({TARGET_BEADS} beads total)", status: "completed")**
 

@@ -273,7 +273,7 @@ if [ "${#ASSIGNEES[@]}" -eq 0 ]; then
   exit 2
 fi
 
-# HARD RULE (bd-w504y / ac-ycr.6; doctrine: _shared/agent-identity.md): FoggyCreek
+# HARD RULE (bd-w504y / ac-ycr.6; doctrine: agent-mail/references/agent-identity.md): FoggyCreek
 # is the Tier-2 chore identity and may NEVER claim beads or be a gate assignee.
 # A claimed-set under FoggyCreek always means a conductor fell back to the
 # settings.json AGENT_NAME=FoggyCreek default instead of re-asserting its minted
@@ -284,7 +284,7 @@ fi
 # caught too, not only an explicit positional arg.)
 for a in "${ASSIGNEES[@]}"; do
   if [ "$a" = "FoggyCreek" ]; then
-    echo "beads-closed-gate: REJECTED — 'FoggyCreek' is the Tier-2 chore identity and may NEVER claim beads or be a gate assignee (HARD RULE, _shared/agent-identity.md)." >&2
+    echo "beads-closed-gate: REJECTED — 'FoggyCreek' is the Tier-2 chore identity and may NEVER claim beads or be a gate assignee (HARD RULE, agent-mail/references/agent-identity.md)." >&2
     echo "  A gate query under FoggyCreek means a conductor fell back to the settings.json AGENT_NAME default instead of re-asserting its minted Tier-1 name." >&2
     echo "  Pass the conductor's actual minted identity (plus each delegated ac-implement identity), never FoggyCreek." >&2
     exit 2

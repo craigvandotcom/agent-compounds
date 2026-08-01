@@ -96,13 +96,13 @@ Use the agent name registered at session start (from `macro_start_session`). Com
 > (`file_reservation_paths` / `release_file_reservations` / `renew_file_reservations` /
 > `force_release_file_reservation`) take it as `registration_token`, `send_message` / `reply_message`
 > as `sender_token`. Do NOT rely on same-session auth carry — it is transport-conditional. Canonical
-> note: `_shared/agent-identity.md` § Call-scoped facts.
+> note: `agent-mail/references/agent-identity.md` § Call-scoped facts.
 
 **Reserve the plan file:**
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: <session agent name>,
   paths: [PLAN_REL],
   ttl_seconds: 14400,
@@ -115,7 +115,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "WIP: plan-clean — {PLAN_REL}",
@@ -467,7 +467,7 @@ find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: <session agent name>,
   paths: [PLAN_REL]
 )
@@ -477,7 +477,7 @@ mcp__mcp-agent-mail__release_file_reservations(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "DONE: plan-clean — {PLAN_REL}",

@@ -608,8 +608,8 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
    retire is rejected at runtime, decision `ac-ycr.8`). Don't leave reservations to TTL-expire.
    A land session running as `FoggyCreek` (the Tier-2 chore identity — the normal case for the
    format-sweep / report / learnings commits) holds no reservations and must NEVER be
-   deregistered or retired (`_shared/agent-identity.md` § Tier 2; bead ac-go2).
-   Then perform the **Layer-2 roster sweep** (doctrine `_shared/agent-identity.md` wiring
+   deregistered or retired (`agent-mail/references/agent-identity.md` § Tier 2; bead ac-go2).
+   Then perform the **Layer-2 roster sweep** (doctrine `agent-mail/references/agent-identity.md` wiring
    `ac-ycr.5`): the Exit-Land prompt handed you `AGENT_MAIL_ROSTER` = the loop conductor's name
    plus every child identity this run registered. Layer 2 is **reservations-only** — for each name
    on that roster (skip the live conductor — it deregisters itself after you return), run ONLY

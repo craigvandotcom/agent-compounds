@@ -146,7 +146,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 Register a unique identity for this loop run — a readable name in the agent registry +
 pre-commit attribution. **Run the mint + token/export discipline per
-`_shared/agent-mail.md` (§ Mint, § Export)** — capture `name` + `registration_token`;
+`agent-mail/references/session-procedure.md` (§ Mint, § Export)** — capture `name` + `registration_token`;
 the two call-scoped facts (explicit token threading, per-shell re-assert) live there.
 Loop-specific additions to the export block:
 
@@ -156,18 +156,18 @@ export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dir
 
 Sub-skills invoked by the loop (ac-implement, ac-land, etc.) self-register ONLY if they
 hold Agent Mail tools; stance-spawned children get a handed `AGENT_NAME` + conductor-side
-reservation (`_shared/agent-mail.md` § Export).
+reservation (`agent-mail/references/session-procedure.md` § Export).
 
 ### Sweep Stale Reservations (Layer 3 — pre-run backstop)
 
 Before reading the board, sweep any file reservations stranded by a **prior run that died before
-its `ac-land` teardown** (doctrine `_shared/agent-identity.md` Deregistration, Layer 3). List this
+its `ac-land` teardown** (doctrine `agent-mail/references/agent-identity.md` Deregistration, Layer 3). List this
 project's active reservations and, for any hold older than the reservation TTL floor (7200 s) that
 `force_release_file_reservation`'s abandonment heuristics confirm is stale, release it:
 
 ```
 mcp__mcp-agent-mail__force_release_file_reservation(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — never absolute (_shared/agent-identity.md § Project key format)
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — never absolute (agent-mail/references/agent-identity.md § Project key format)
   path: "<stale reservation path>"      // the tool validates abandonment heuristics before releasing
 )
 ```
@@ -373,7 +373,7 @@ If orphans exist:
    Mail identity from Phase 0) in ONE call, up front — never incrementally as ac-implement
    works through them:
    ```bash
-   # HARD RULE (ac-ycr.6; doctrine _shared/agent-identity.md): FoggyCreek is the Tier-2
+   # HARD RULE (ac-ycr.6; doctrine agent-mail/references/agent-identity.md): FoggyCreek is the Tier-2
    # chore identity and may NEVER claim beads. If AGENT_NAME fell back to it (a fresh shell
    # that didn't re-assert the Phase-0 minted name), FAIL LOUDLY here rather than claim a
    # batch under the shared chore identity (which silently misattributes and breaks the gate).
@@ -490,7 +490,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 ### Execute the wave
 
-1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, **strip `post-merge` from any bead being claimed** (`br label remove <id> post-merge` — the strip-at-claim half of the lifecycle above; an exhaust bead adopted into this new batch must be closeable), mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join. **Same FoggyCreek guard as Phase 1 step 1** — assert `AGENT_NAME != FoggyCreek` before the `br update` (`[ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: cannot claim beads as the Tier-2 chore identity" >&2; exit 2; }`); a plan batch claimed under the shared chore identity is the same misattribution bug the gate rejects (doctrine `_shared/agent-identity.md`).
+1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, **strip `post-merge` from any bead being claimed** (`br label remove <id> post-merge` — the strip-at-claim half of the lifecycle above; an exhaust bead adopted into this new batch must be closeable), mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join. **Same FoggyCreek guard as Phase 1 step 1** — assert `AGENT_NAME != FoggyCreek` before the `br update` (`[ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: cannot claim beads as the Tier-2 chore identity" >&2; exit 2; }`); a plan batch claimed under the shared chore identity is the same misattribution bug the gate rejects (doctrine `agent-mail/references/agent-identity.md`).
 2. **Invoke `ac-implement`** with delegation prompt. *At width >1:* same split rule as
    Phase 1 step 2 (up to WIDTH tree-disjoint children, each with own subset /
    `TARGET_BEADS` / claim id + artifacts dir; one verify → review → close for the batch):
@@ -860,7 +860,7 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > ALSO read the friction carrier `/tmp/loop-retro-<RUN_ID>.md` if it exists (the per-stage
 > aggregated friction packet — an absent or empty carrier means a clean run; proceed as today)
 > and pass its items to `reflect` as typed candidate lessons for disposition.
-> ALSO sweep the Agent Mail roster (Layer 2, `_shared/agent-identity.md` wiring `ac-ycr.5`):
+> ALSO sweep the Agent Mail roster (Layer 2, `agent-mail/references/agent-identity.md` wiring `ac-ycr.5`):
 > `AGENT_MAIL_ROSTER=<loop-conductor-name>,<child-1>,<child-2>,…` — the loop's OWN Phase-0 name
 > plus every child identity this run registered (gather the child names from the per-child
 > summaries you collected this run; if any summary omitted its registered name, `list_window_identities`
@@ -887,7 +887,7 @@ minted `AGENT_NAME` (the one registered in Phase 0). This is the Layer-1 SELF pa
 session that registered in Phase 0, so its binding authorizes a token-free `deregister_agent` — the
 self-carve-out to the blanket token rule (`ac-g93`). Still pass the captured `registration_token` if
 you hold it (harmless, and the only reliable path if the binding lapsed); the carve-out is the SELF
-path ONLY — every CROSS-session call threads the token (doctrine: `_shared/agent-identity.md`
+path ONLY — every CROSS-session call threads the token (doctrine: `agent-mail/references/agent-identity.md`
 Deregistration, Layer 1 + § Call-scoped facts):
 
 ```

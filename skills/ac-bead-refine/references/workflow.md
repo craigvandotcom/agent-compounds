@@ -57,7 +57,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 #    RUN_ID (or an inherited CHILD_ID) cannot override it. Two independent
 #    discriminators, deliberately — defence in depth on the same mechanism:
 #      AGENT_NAME → this child's Agent Mail identity; distinct per child by the two-tier
-#                   contract (_shared/agent-identity.md) and stable across compaction
+#                   contract (agent-mail/references/agent-identity.md) and stable across compaction
 #      $$         → this shell's PID; distinct even when AGENT_NAME is unset or duplicated
 unset CHILD_ID 2>/dev/null || true
 CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | tr -cd 'A-Za-z0-9')-$$"

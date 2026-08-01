@@ -2,7 +2,7 @@
 
 **Scope (ac-gcj.2):** the CALL PROCEDURE every Tier-1 session runs. The governing
 doctrine — tiers, deregistration layers, call-scoped facts, project key format,
-enforcement — lives in `_shared/agent-identity.md`; this file never restates the why.
+enforcement — lives in `agent-mail/references/agent-identity.md`; this file never restates the why.
 Skills point here and keep only their genuine deltas (build slots, backstop sweeps,
 teardown ordering, skill-specific reservation params).
 
@@ -10,7 +10,7 @@ teardown ordering, skill-specific reservation params).
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: _shared/agent-identity.md § Project key format
+  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   program: "claude-code",
   model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
 )
@@ -25,7 +25,7 @@ Capture the returned `name` AND `registration_token`.
 > `send_message` / `reply_message` (as `sender_token`), and `deregister_agent` /
 > `retire_agent`. Do NOT rely on same-session auth carry — it is transport-conditional
 > and never inherited by a separate phase child (blanket rule + verdict:
-> `_shared/agent-identity.md` § Call-scoped facts).
+> `agent-mail/references/agent-identity.md` § Call-scoped facts).
 > (2) `export` lives only in the bash call that ran it — every later bash call is a
 > fresh shell: re-assert `AGENT_NAME` (and any env the pre-commit guard reads) in the
 > SAME call as each `git commit`/`git push`, or the guard treats you as anonymous and
@@ -42,7 +42,7 @@ export AGENT_NAME=<returned-name>   # unique per session — re-assert inline at
 Parallel sessions each run their own mint and get a distinct adjective+noun name — no
 manual discriminators. A **stance-spawned** child holds no Agent Mail tools and cannot
 reserve — hand it an `AGENT_NAME` and reserve on its behalf (the two-tier contract:
-`_shared/agent-identity.md`; parallel writers need distinct identities **or** provably
+`agent-mail/references/agent-identity.md`; parallel writers need distinct identities **or** provably
 disjoint scope).
 
 ## Reserve (at the work grain, BEFORE touching files)
@@ -60,7 +60,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 ```
 
 On `FILE_RESERVATION_CONFLICT`: do NOT claim the work — skip or re-plan around the
-holder (enforcement layers + conflict doctrine: `_shared/agent-identity.md`
+holder (enforcement layers + conflict doctrine: `agent-mail/references/agent-identity.md`
 § Enforcement).
 
 ## Release + self-deregister (session exit — the ceremony's true last act)
@@ -80,6 +80,6 @@ mcp__mcp-agent-mail__deregister_agent(
 Never `retire_agent`, never deregister another session's name (name-only cross-session
 calls are rejected at runtime, ac-ycr.8), never deregister `FoggyCreek` — a Tier-2
 session holds no reservations and skips this section entirely
-(`_shared/agent-identity.md` § Tier 2, § Deregistration). Layers 2/3 (roster + stale
+(`agent-mail/references/agent-identity.md` § Tier 2, § Deregistration). Layers 2/3 (roster + stale
 sweeps) are backstops for sessions that die before reaching here — they do not replace
 this self-deregister.

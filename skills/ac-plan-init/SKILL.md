@@ -141,7 +141,7 @@ flips claimed beads back to open-with-wave-marker as it adopts each.
 
 Use the agent name registered at session start (from `macro_start_session` — NOTE: that tool takes `human_key`; the other agent-mail tools below take `project_key`). If a source backlog item was identified, compute `BACKLOG_REL` = relative path from `PROJECT_ROOT` (e.g. `_backlog/active/foo.md`). If no backlog item, use `_plans/new` as a placeholder.
 
-> **Token + shell discipline: `_shared/agent-mail.md` § Mint** — thread
+> **Token + shell discipline: `agent-mail/references/session-procedure.md` § Mint** — thread
 > `registration_token` explicitly on every mutating Agent Mail call; re-assert any
 > variable this skill carries across phases (`PROJECT_ROOT`, `BACKLOG_REL`,
 > `SOURCE_BACKLOG`, `ARTIFACTS_DIR`) in the SAME bash call that consumes it.
@@ -150,8 +150,8 @@ Use the agent name registered at session start (from `macro_start_session` — N
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-                                        # mirror: _shared/agent-identity.md — edit there first
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+                                        # mirror: agent-mail/references/agent-identity.md — edit there first
   agent_name: <session agent name>,
   paths: [BACKLOG_REL],   # or "_plans/new" if no source backlog
   ttl_seconds: 10800,
@@ -164,8 +164,8 @@ mcp__mcp-agent-mail__file_reservation_paths(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-                                        # mirror: _shared/agent-identity.md — edit there first
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+                                        # mirror: agent-mail/references/agent-identity.md — edit there first
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "WIP: ac-plan-init — {BACKLOG_REL}",
@@ -504,8 +504,8 @@ Re-derive `BACKLOG_REL` at point of use (shell vars are call-scoped — Phase 0'
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-                                        # mirror: _shared/agent-identity.md — edit there first
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+                                        # mirror: agent-mail/references/agent-identity.md — edit there first
   agent_name: <session agent name>,
   paths: [BACKLOG_REL]
 )
@@ -515,8 +515,8 @@ mcp__mcp-agent-mail__release_file_reservations(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: _shared/agent-identity.md § Project key format
-                                        # mirror: _shared/agent-identity.md — edit there first
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+                                        # mirror: agent-mail/references/agent-identity.md — edit there first
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "DONE: ac-plan-init — {BACKLOG_REL}",

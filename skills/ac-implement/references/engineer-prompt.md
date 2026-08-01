@@ -9,7 +9,7 @@ The `### Output` block at the end is part of the engineer prompt — keep it.
 minted `AGENT_NAME` — the conductor has it in scope at the spawn site (Phase 0 mint). This
 makes the engineer's set-aside commit run under the session's Tier-1 identity that holds the
 file reservations, instead of the `FoggyCreek` fallback that would trip the pre-commit guard
-against the session's own reservation (doctrine: `_shared/agent-identity.md` Tier 1).
+against the session's own reservation (doctrine: `agent-mail/references/agent-identity.md` Tier 1).
 
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """

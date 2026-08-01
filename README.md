@@ -34,6 +34,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **ac-beadify** | Convert a refined plan into a beads task structure (create) |
 | **ac-bead-refine** | Refine beads to convergence — self-contained, agent-ready |
 | **[beads-standards](./skills/beads-standards/)** | Machine-wide bead canon (not pipeline-scoped) — agent vs human bead templates, `human-gate` label taxonomy + synonym merge map, refined/unrefined semantics, status/priority/close_reason conventions, dependency-wiring requirements |
+| **[agent-mail](./skills/agent-mail/)** | Multi-agent coordination domain — session identity (two-tier contract), file reservations, release/deregister exit, build slots; owner of the session-procedure + agent-identity canons |
 | **ac-implement** | Sequential bead implementation — conductor + engineer sub-agents |
 | **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
 | **ac-merge** | Merge a branch to main via PR (surviving PR path: dependabot, human feature branches) — CI triage, version bump |
