@@ -364,6 +364,9 @@ br sync --flush-only      # export DB -> JSONL
 - **Never chain `br close` to a commit in one call.** `git commit && br close <id>` records
   the **wrong SHA** when the commit fails (untracked file, bad pathspec) — the close fires
   against whatever HEAD is. Commit, verify the SHA, *then* close as a separate step.
+- **`br dep add` does NO cycle prevention.** Edges added after an initial structure go
+  unchecked — re-run `br dep cycles` after ANY post-hoc `dep add` batch and require it
+  clean. <!-- net-growth-ok: Pass B station 2 — br tool gotcha promoted from ac-beadify inline text (universal tool behavior belongs in the floor) -->
 - **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
   closed children and epics don't auto-close on last child close — check closed children
   before triaging an epic as abandoned/empty.

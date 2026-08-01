@@ -284,11 +284,8 @@ half, wiring at decision-creation, is `beads-standards`' existing mandatory-wiri
    ```bash
    br dep add <new-bead-id> <human-gate-id>
    ```
-3. Re-run cycle detection — `br` does NO cycle prevention at `dep add`, so edges added
-   after the initial structure go unchecked unless you re-run it:
-   ```bash
-   br dep cycles   # must return clean
-   ```
+3. Re-run cycle detection (`br dep add` does NO cycle prevention — `beads-standards`
+   § br gotchas): `br dep cycles` must return clean.
 
 Manual beadify outside the loop stays a human-judgment override: this step surfaces the
 forks and wires the obvious edges, but adds **no gate CHECK** here — the plan-completion
@@ -303,12 +300,7 @@ br create "Epic: User Authentication" --priority P0 --labels "auth" --descriptio
 # Create child tasks under epics — ALWAYS unrefined at creation (refine stamps readiness)
 br create "Create user schema" --priority P0 --labels "auth,backend,unrefined" --parent <epic-id> --description "..."
 
-# Add dependencies
-br dep add <child-id> <depends-on-id>
-
-# Add rich context as comments
-br comments add <id> "Acceptance criteria: ..."
-br comments add <id> "Background: ..."
+# Deps + comments: standard br forms — beads-standards § br cheatsheet
 ```
 
 Save progress to `$ARTIFACTS_DIR/progress.md` after each epic is created (compaction recovery).
@@ -333,8 +325,8 @@ br ready --json
 # Verify dependency tree from each epic
 br dep tree <epic-id>
 
-# Visual TUI overview
-bv
+# Graph sanity (agents: robot flags ONLY — bare `bv` is a blocking TUI, human-use only)
+bv --robot-triage
 ```
 
 **TaskUpdate(task: "Verify bead structure", status: "completed")**
