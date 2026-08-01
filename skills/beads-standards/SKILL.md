@@ -119,7 +119,7 @@ Readiness for pickup = **presence** of `refined`, never inferred from the absenc
 DERIVED from the cross-epic bead edges beneath it — epics are sequenced so as to honour
 the bead edges that cross between them, never the reverse — epic order follows the bead
 edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge** (a `blocks` edge with an epic endpoint is an I2 violation —
-the epic-edge detector in `ac-pipeline-builder/references/board-scan.md` reports it).
+the epic-edge detector in `ac-pipeline/references/board-scan.md` reports it).
 
 The only legitimate cross-epic edge is a genuinely bead-shaped **consume** — bead B needs
 an artifact bead A delivers. The falsifiability test before adding any cross-epic edge:
@@ -218,7 +218,7 @@ checklist). The frozen set:
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
 - the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-bead-refine` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
 
-Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline-builder/references/degraded-mode.md`. Migration log:
+Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
 
 - *(none yet — first freeze ratified 2026-07-16, bead ac-aa7)*
 
@@ -380,7 +380,7 @@ br sync --flush-only      # export DB -> JSONL
 
 ```bash
 git status                # what changed
-git add <files>           # stage EXPLICIT paths, never -A (H7d — ac-pipeline-builder/references/commit-discipline.md)
+git add <files>           # stage EXPLICIT paths, never -A (H7d — ac-pipeline/references/commit-discipline.md)
 br sync --flush-only      # export beads changes to JSONL
 git commit -m "..."
 git push

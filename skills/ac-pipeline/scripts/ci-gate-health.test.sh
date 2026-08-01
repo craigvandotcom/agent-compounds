@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ci-gate-health.test.sh — proof harness for `ac-pipeline-builder/references/board-scan.md` Scan E, the
+# ci-gate-health.test.sh — proof harness for `ac-pipeline/references/board-scan.md` Scan E, the
 # scheduled-CI-gate health probe (bd-o9vmx).
 #
 # WHY IT EXISTS: Scan E is a pasted bash block, so its only possible regression test is to

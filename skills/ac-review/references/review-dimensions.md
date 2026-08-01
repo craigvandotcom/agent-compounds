@@ -110,7 +110,7 @@ is an architecture finding, not a style note.
 - Missing error handling at system boundaries (trace the propagation, don't just note the absence)
 - Naming inconsistencies
 
-Also hunt the three named anti-patterns in `ac-pipeline-builder/references/anti-patterns.md` (evidence
+Also hunt the three named anti-patterns in `ac-pipeline/references/anti-patterns.md` (evidence
 destruction, coordinated workaround, unproven seam) — shared with ac-hygiene's
 structural lens.
 
@@ -149,7 +149,7 @@ rollback that isn't there, in the code this diff introduces.
 - State management issues (stale closures, missing cleanup)
 - Missing test coverage for new functionality
 
-Also hunt the three named anti-patterns in `ac-pipeline-builder/references/anti-patterns.md` (evidence
+Also hunt the three named anti-patterns in `ac-pipeline/references/anti-patterns.md` (evidence
 destruction, coordinated workaround, unproven seam) — shared with ac-hygiene's
 bug-hunter lens.
 
@@ -201,7 +201,7 @@ The reading veins, in rough payoff order:
   or the test importing the SUT's own helper to build its expectation.
 - **Testing the mock** — assertions that only echo arguments the test itself passed;
   asserting a stub returns its stubbed value; mocking the module under test; mock setup
-  longer than the test body. Cross-check `ac-pipeline-builder/references/anti-patterns.md`'s unproven seam: a
+  longer than the test body. Cross-check `ac-pipeline/references/anti-patterns.md`'s unproven seam: a
   mocked boundary with no un-mocked test anywhere.
 - **Flakiness precursors** — sleeps instead of polling, unseeded randomness, un-frozen
   clocks, real network in unit tests, shared mutable fixtures, order assertions on

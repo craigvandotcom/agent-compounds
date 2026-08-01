@@ -29,7 +29,7 @@ set -euo pipefail
 
 # ============================================================================
 # Surface -> path-pattern mapping — MIRRORS the diff classifier in
-# `ac-pipeline-builder/references/verification-gate.md` Step 1. This is the one clearly-marked table
+# `ac-pipeline/references/verification-gate.md` Step 1. This is the one clearly-marked table
 # to hand-tune if an app's layout diverges from the classifier's assumptions.
 # Fail-safe rule — DELIBERATELY STRICTER than verification-gate.md Step 1
 # (which classifies an unmatched file as runtime-only): here an unclassifiable

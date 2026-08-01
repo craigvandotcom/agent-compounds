@@ -8,9 +8,9 @@
 # proves two simultaneous conductors on main produce distinct artifact
 # directories with zero collision") both name this exact test.
 #
-# REPO: agent-compounds (skills/ac-pipeline-builder/scripts/) — reused across every app that
-# threads the `ac-pipeline-builder/references/run-id.md` contract. Exercises the formula from
-# `ac-pipeline-builder/references/run-id.md` / `ac-implement/SKILL.md` Phase 0 "Configuration" block
+# REPO: agent-compounds (skills/ac-pipeline/scripts/) — reused across every app that
+# threads the `ac-pipeline/references/run-id.md` contract. Exercises the formula from
+# `ac-pipeline/references/run-id.md` / `ac-implement/SKILL.md` Phase 0 "Configuration" block
 # VERBATIM (not a paraphrase):
 #   CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"
 #   RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
@@ -19,7 +19,7 @@
 # WHAT'S ACTUALLY BEING PROVEN: two conductors picking two DIFFERENT batches
 # (different first-claimed bead ID, or the same bead on a different day) already
 # get trivially distinct CLAIM_IDs — no test needed for that case. The
-# interesting, doc-called-out collision case (`ac-pipeline-builder/references/run-id.md` § RUN_ID,
+# interesting, doc-called-out collision case (`ac-pipeline/references/run-id.md` § RUN_ID,
 # "Parallel disambiguation") is two conductors that compute the IDENTICAL
 # CLAIM_ID — a single claimed batch split across two sessions, the doc's own
 # worked example — launched at the SAME moment on the same `main` checkout.
@@ -69,7 +69,7 @@ fail() {
 }
 
 # The formula, exactly as `ac-implement/SKILL.md` Phase 0 "Configuration" states it
-# (and as `ac-pipeline-builder/references/run-id.md` "The key" + "RUN_ID" sections document it) — a single
+# (and as `ac-pipeline/references/run-id.md` "The key" + "RUN_ID" sections document it) — a single
 # function so both simulated conductors run byte-identical logic, never two
 # independently-retyped copies that could silently drift from the real contract.
 derive_artifacts_dir() {

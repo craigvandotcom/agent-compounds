@@ -15,7 +15,7 @@ executing any pool RMW / drain.
 ## Pool state store
 
 ```text
-/tmp/loop-pool-<RUN_ID>.json     # RUN-scoped per ac-pipeline-builder/references/run-id.md
+/tmp/loop-pool-<RUN_ID>.json     # RUN-scoped per ac-pipeline/references/run-id.md
                                  # NOT batch-close's per-anchor ARTIFACTS_DIR
 ```
 
@@ -62,7 +62,7 @@ alone — hard-10 still caps count). That prefix is the selected set moved to
 `in_flight`.
 
 **Line-floor range** = union of selected members' stored `pre_sha..close_sha`
-(`ac-pipeline-builder/references/risk-classification.md` binding #2) — **not** raw
+(`ac-pipeline/references/risk-classification.md` binding #2) — **not** raw
 `<last-ceremony-anchor>..HEAD`.
 
 ## Fire snapshot

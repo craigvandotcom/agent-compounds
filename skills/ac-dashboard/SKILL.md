@@ -34,7 +34,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ## Phase 1 — scan (read-only, parallel)
 
-**Read the board per `ac-pipeline-builder/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply **no filter**: unlike `ac-human-session`, keep BOTH sides of the loop boundary (ready beads, in-flight waves, and `loop-ready` plans all render here).
+**Read the board per `ac-pipeline/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply **no filter**: unlike `ac-human-session`, keep BOTH sides of the loop boundary (ready beads, in-flight waves, and `loop-ready` plans all render here).
 
 **WIP reads (beyond the board):**
 
@@ -47,7 +47,7 @@ gh run list --limit 3 --json status,conclusion,name,createdAt 2>/dev/null    # r
 
 Per wave branch, one cheap read: `git log origin/main..origin/<wave> --oneline | wc -l` (commits ahead) + last-commit age. Skip anything expensive — this is a glance, not an audit.
 
-**Journey registry read (journey debt — Invariant 9, `ac-pipeline-builder/references/verification-gate.md` §Journey registry):**
+**Journey registry read (journey debt — Invariant 9, `ac-pipeline/references/verification-gate.md` §Journey registry):**
 
 ```bash
 for f in "$PROJECT_ROOT"/CORE/journeys/*.md "$PROJECT_ROOT"/.claude/skills/CORE/journeys/*.md; do

@@ -26,7 +26,7 @@ from scratch, re-asks answered questions, or — worst — skips teardown, leavi
 
 **The ledger tracks the RUN, never the work.** It holds phases/sections — and nothing
 else. Work items stay **beads**: the board is the single source of truth for *what* ships
-(`ac-pipeline-builder` axiom 1, *the bead is the atom*). The ledger is a navigation aid
+(`ac-pipeline` axiom 1, *the bead is the atom*). The ledger is a navigation aid
 over the run, not a second copy of the queue — never put bead IDs or per-bead state in
 it, or the two will drift. (Artifact-of-record files like `progress.md` track *what was
 accomplished*; the ledger tracks *where the run is*.)

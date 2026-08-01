@@ -2,7 +2,7 @@
 
 Reusable patterns for orchestrated command workflows (content **and** code). Loaded on demand
 from `../SKILL.md` Phase 3. Engineering-specific forms of several patterns are hardened axioms
-in `ac-pipeline-builder` — those are cross-referenced, not restated.
+in `ac-pipeline` — those are cross-referenced, not restated.
 
 **Contents:** 1 Run ledger · 2 Phase skeleton · 3 Orchestrator role · 4 Delegation
 · 5 Quality gates · 6 Deferred decisions · 7 Output conventions · 8 Flexibility · 9
@@ -27,7 +27,7 @@ anchor after compaction/interruption.
 
 **The ledger tracks the RUN, never the work items.** It holds phases/iterations only. Work
 items live in their own store — a `plan.md`, a task file, or (in a bead-native code repo) the
-bead board, which stays the single source of truth for *what* ships (`ac-pipeline-builder`
+bead board, which stays the single source of truth for *what* ships (`ac-pipeline`
 axiom 1, *the bead is the atom*). Never copy work-item state into the ledger, or the two drift.
 *Live reference instance:* `ac-loop` Phase 0.
 
@@ -50,7 +50,7 @@ for headless runs. **Never 12+ micro-phases** — context-switching overhead, ha
 
 ## 3 · Orchestrator, not executor
 
-The general form of `ac-pipeline-builder`'s *altitude separation* axiom. The command runs as
+The general form of `ac-pipeline`'s *altitude separation* axiom. The command runs as
 **conductor**: coordinate agents, synthesize, judge gates, decide tactically, complete the
 run. It does **not** write the content/code itself, skip gates, or exit early. Put a short
 reminder at the end of every command file.
@@ -87,7 +87,7 @@ Tag every gate:
 
 Prefer a **classifier-gate**: inspect the diff/output and run **only** the checks it warrants,
 at the right depth — not a fixed unconditional battery. (Engineering instance:
-`ac-pipeline-builder/references/verification-gate.md`, which classifies the wave diff and runs only
+`ac-pipeline/references/verification-gate.md`, which classifies the wave diff and runs only
 the selected passes.)
 
 Run independent gates in **parallel**; dependent gates sequential. A validator reports `PASS`
@@ -103,7 +103,7 @@ A long autonomous run must not stall on a decision. Two paths:
   (`AskUserQuestion`) — interactive sessions only; headless runs defer instead.
 - **Anything else** → **defer it**: record the decision as a durable item the human clears
   later (a deferred-decision note; in the eng pipeline, a *decision bead* — the **Exhaust
-  Rule** in `ac-pipeline-builder`), and keep moving.
+  Rule** in `ac-pipeline`), and keep moving.
 
 Never convert an open-ended decision into a blocking mid-run question.
 
@@ -172,4 +172,4 @@ instance: `ac-land` as the loop's single closing ritual.)
 ---
 
 **Pattern evolution:** when a new pattern proves out, add it here (versioned). If it's an
-engineering-pipeline standard, harvest it into `ac-pipeline-builder` instead — dedup first.
+engineering-pipeline standard, harvest it into `ac-pipeline` instead — dedup first.

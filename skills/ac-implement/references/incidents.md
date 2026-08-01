@@ -10,7 +10,7 @@ Concrete incident (2026-04-08 wave/structured-modifiers session): `git stash && 
 
 ## wave-collision
 
-Hit 2026-06-26: `git fetch --prune` had dropped merged waves' refs, so a refs-only scan of `refs/remotes/origin/wave/` reused a shipped wave number and produced a triple wave/001 collision. The fix is the union-of-three-sources scan (live refs ∪ merge messages on main ∪ tags) now implemented in `skills/ac-pipeline-builder/scripts/allocate-wave-branch.sh`.
+Hit 2026-06-26: `git fetch --prune` had dropped merged waves' refs, so a refs-only scan of `refs/remotes/origin/wave/` reused a shipped wave number and produced a triple wave/001 collision. The fix is the union-of-three-sources scan (live refs ∪ merge messages on main ∪ tags) now implemented in `skills/ac-pipeline/scripts/allocate-wave-branch.sh`.
 
 ## baseline-preexisting
 

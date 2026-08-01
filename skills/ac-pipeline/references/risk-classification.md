@@ -1,6 +1,6 @@
 # Risk classification — files-touched, never self-label
 
-**Canonical path:** `agent-compounds/skills/ac-pipeline-builder/references/risk-classification.md`
+**Canonical path:** `agent-compounds/skills/ac-pipeline/references/risk-classification.md`
 (apps symlink under `.agents/skills/_shared/` / `.claude/skills/_shared/`).
 
 Consumers: **ac-loop**, **ac-batch-close**, **ac-review**, **ac-bead-refine**.

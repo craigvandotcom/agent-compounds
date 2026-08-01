@@ -129,7 +129,7 @@ conflicting concurrent run to notice, not a queue or a lock.
 
 ## Run Ledger
 
-Declare the run ledger per `ac-pipeline-builder/references/run-ledger.md` (pattern + resume doctrine there).
+Declare the run ledger per `ac-pipeline/references/run-ledger.md` (pattern + resume doctrine there).
 This ceremony's table:
 
 ```
@@ -207,11 +207,11 @@ BATCH_RANGE="$ANCHOR..HEAD"
 echo "ANCHOR=$ANCHOR" >> "$STATE"
 ```
 
-Deterministic `$ARTIFACTS_DIR` per `ac-pipeline-builder/references/run-id.md` (prefix `batch-close`) — trunk-direct
+Deterministic `$ARTIFACTS_DIR` per `ac-pipeline/references/run-id.md` (prefix `batch-close`) — trunk-direct
 has no wave branch to key on, so the key is the anchor SHA instead of a branch slug:
 
 ```bash
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule). Not folded into ARTIFACTS_DIR below: this dir is keyed on the
 # anchor SHA (stable across a resumed/dropped session), and RUN_ID is re-minted per
 # invocation — appending it would break resume detection (`[ -f "$STATE" ]` below relies
@@ -226,7 +226,7 @@ STATE="$ARTIFACTS_DIR/state.env"
 ### Gather Batch Context (retarget of "Gather PR Context" — no PR body, just scope)
 
 ```bash
-br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing. If dcg blocks a write here (variable-built redirect target), do NOT bypass — see ac-pipeline-builder/references/shell-guardrails.md
+br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing. If dcg blocks a write here (variable-built redirect target), do NOT bypass — see ac-pipeline/references/shell-guardrails.md
 git log $BATCH_RANGE --oneline > "$ARTIFACTS_DIR/commits.txt"
 git diff $BATCH_RANGE --stat > "$ARTIFACTS_DIR/diff-stats.txt"
 ```
@@ -244,7 +244,7 @@ batch's single Tier 1 CI dispatch.
 
 ### Quality Gate (post-sync)
 
-Same order `ac-merge` mirrors from `ac-pipeline-builder/references/verification-gate.md` §Format-first — format FIRST
+Same order `ac-merge` mirrors from `ac-pipeline/references/verification-gate.md` §Format-first — format FIRST
 (auto-fix), then type-check, lint, tests:
 
 ```bash
@@ -268,7 +268,7 @@ failing local checks.
 
 This is the **post-push re-proof** (J5 — the trunk-direct successor of ac-merge's
 post-rebase re-proof; only the trigger-event name changed). **Run the ceremony smoke net
-per `ac-pipeline-builder/references/verification-gate.md` § Ceremony smoke net** with `<RANGE>` =
+per `ac-pipeline/references/verification-gate.md` § Ceremony smoke net** with `<RANGE>` =
 `$ANCHOR...HEAD` — device-twin conditions, browser twin, FAIL escalation (STOP before
 proceeding), `mac-needed` note, and the qa-blocker STOP all live there.
 
@@ -295,7 +295,7 @@ infrastructure another bead is landing.
 
 ### Poll for the dispatched run against HEAD — FOREGROUND ONLY
 
-Same bounded-wait discipline as `ac-merge`'s PR-checks poll (`ac-pipeline-builder/references/delegation-contract.md`:
+Same bounded-wait discipline as `ac-merge`'s PR-checks poll (`ac-pipeline/references/delegation-contract.md`:
 hard-capped, timeout-terminal — a stalled CI run is a reportable outcome, not a pause). **This
 poll runs in the foreground, inside this turn, to completion or the cap below — never fork it
 to a background process that outlives the session.** The `$STATE` persistence above covers a
@@ -584,11 +584,11 @@ snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 3 **acks** after the report
 3. On ceremony **failure** before this ack: re-merge `in_flight` → `pending` (do not
    drop IDs); recompute `first_close_ts = min(closed_at)`.
 4. After successful ack, if `in_flight` is empty → run the **drain sequence**
-   (`ac-pipeline-builder/references/ceremony-batching-pool.md` § Drain sequence): risk_queue head first (mixed or
+   (`ac-pipeline/references/ceremony-batching-pool.md` § Drain sequence): risk_queue head first (mixed or
    pure risk-solo), else fire opportunity on `pending` (soft-8 / ~3h window / line-floor
    N≈800, hard-10 ceiling), else stop.
 
-Ceremony batch range for CI/report scope uses `ac-pipeline-builder/references/risk-classification.md`
+Ceremony batch range for CI/report scope uses `ac-pipeline/references/risk-classification.md`
 **binding #1** (pool-only union of `in_flight` `pre_sha..close_sha`; mixed ∪ risk bead
 range; planned-wave/pure risk-solo = that batch's range).
 
@@ -605,7 +605,7 @@ no change in this skill).
 
 ## Documented technique — the union allocator pattern (for the record)
 
-`ac-pipeline-builder/scripts/allocate-wave-branch.sh` is deleted alongside this skill's creation —
+`ac-pipeline/scripts/allocate-wave-branch.sh` is deleted alongside this skill's creation —
 trunk-direct has no numbered wave branches to allocate. Its collision-guard pattern is worth
 remembering for **any future numbered-artifact allocation**: compute NEXT from the union of
 live refs ∪ main-log merge/commit messages ∪ tags — never refs alone (`git fetch --prune` drops
@@ -649,7 +649,7 @@ slack-send --channel sofi --card \
 ```
 
 > **If the batch produced visual evidence, UPLOAD the images — don't just cite `/tmp`
-> paths in the card body** (Craig's directive — `ac-pipeline-builder/references/qa-shared.md` § Conductor /
+> paths in the card body** (Craig's directive — `ac-pipeline/references/qa-shared.md` § Conductor /
 > worker evidence protocol). A `/tmp` path is unreachable from his phone and transient.
 > Send only the LIVE decision surface, with context (bead id + SHA + what needs his eyes):
 > ```bash

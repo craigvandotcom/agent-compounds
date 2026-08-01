@@ -1,6 +1,6 @@
 ---
 name: workflow-builder
-description: Use when building a new orchestrated command workflow — a reusable, multi-step `/command` or scheduled job coordinating agents, gates, and outputs toward a repeatable outcome, for content OR code (newsletters, distribution runs, recurring reports, scaffolders, migration drivers, review pipelines). Triggers on "build a workflow", "create a /command", "turn this SOP into a command", "design a pipeline command", "workflow builder". NOT for authoring a SKILL.md (skill-builder), the engineering-pipeline DESIGN doctrine (ac-pipeline-builder), running the pipeline (ac-loop), or deciding where knowledge lives (context-engineering).
+description: Use when building a new orchestrated command workflow — a reusable, multi-step `/command` or scheduled job coordinating agents, gates, and outputs toward a repeatable outcome, for content OR code (newsletters, distribution runs, recurring reports, scaffolders, migration drivers, review pipelines). Triggers on "build a workflow", "create a /command", "turn this SOP into a command", "design a pipeline command", "workflow builder". NOT for authoring a SKILL.md (skill-builder), the engineering-pipeline DESIGN doctrine (ac-pipeline), running the pipeline (ac-loop), or deciding where knowledge lives (context-engineering).
 ---
 
 > **Shared skill (agent-compounds).** Symlinked into projects via `deploy.sh` — this is the
@@ -27,27 +27,27 @@ This skill is the **general** layer. Two adjacent skills are more specific; defe
 | Concern | Owner |
 | --- | --- |
 | How to author any orchestrated workflow (this) | **workflow-builder** |
-| The DESIGN doctrine of one specific workflow — the ac-* engineering factory (stage order, contracts, axioms) | **ac-pipeline-builder** |
+| The DESIGN doctrine of one specific workflow — the ac-* engineering factory (stage order, contracts, axioms) | **ac-pipeline** |
 | How to author a SKILL.md (structure, progressive disclosure, RED-GREEN) | **skill-builder** |
 | Where durable knowledge lives / placement + overlap | **context-engineering** |
 
-**`ac-pipeline-builder` is a *specialization* of this skill's doctrine**, not a peer to
+**`ac-pipeline` is a *specialization* of this skill's doctrine**, not a peer to
 duplicate. When building or evolving the engineering pipeline, its axioms win and this skill
 defers to them. The standards below are the *general* form; the engineering factory is one
 hardened instance.
 
 ### Don't restate the axioms — reference them
 
-Several standards in this skill are already first-principles axioms in `ac-pipeline-builder`.
+Several standards in this skill are already first-principles axioms in `ac-pipeline`.
 For **engineering** workflows, cite the axiom; this skill states the *general* version for the
 broader content+code case:
 
-| General standard here | Specialized axiom in ac-pipeline-builder |
+| General standard here | Specialized axiom in ac-pipeline |
 | --- | --- |
 | Orchestrator-not-executor ("conductor not musician") | *Altitude separation: thinking ≠ doing* |
 | Ask-don't-assume / approval gates | *Humans own intent; the factory owns execution* |
 | Declared progress unit (run ledger) | *The bead is the atom* (beads are the engineering progress atom; a TaskCreate run-ledger is the general one) |
-| Verify as a classifier-gate, not a fixed run | *Verification gate* (`ac-pipeline-builder/references/verification-gate.md`) |
+| Verify as a classifier-gate, not a fixed run | *Verification gate* (`ac-pipeline/references/verification-gate.md`) |
 | Don't block a run on a decision — defer it | *The Exhaust Rule* (decision beads, not mid-run `AskUserQuestion`) |
 
 ---
@@ -154,5 +154,5 @@ Pattern library with worked examples: `references/command-patterns.md`.
 - **A new reusable pattern** → add it to `references/command-patterns.md` (versioned), not to
   a project file.
 - **A standard worth enforcing on the engineering pipeline** → harvest it into
-  `ac-pipeline-builder` as (or under) an axiom — dedup first; it may already be there.
+  `ac-pipeline` as (or under) an axiom — dedup first; it may already be there.
 - **Durable cross-domain knowledge** → route via `context-engineering`.

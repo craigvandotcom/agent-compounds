@@ -7,7 +7,7 @@ procedure behind the standards in `../SKILL.md`; the pattern library it referenc
 
 > **General vs specialized:** this is the *general* method for authoring any orchestrated
 > workflow. The ac-* engineering factory is one hardened instance — when you're building or
-> evolving *that*, `ac-pipeline-builder` owns its axioms and this method defers to them (e.g.
+> evolving *that*, `ac-pipeline` owns its axioms and this method defers to them (e.g.
 > beads are the engineering progress atom; a TaskCreate run-ledger is the general one).
 
 ---
@@ -144,6 +144,6 @@ full run — where the syntax errors and unclear steps surface.
 
 - A new reusable pattern → add it to `../references/command-patterns.md` (versioned).
 - A standard worth enforcing across the **engineering** pipeline → harvest it into
-  `ac-pipeline-builder` as (or under) an axiom — dedup first, it may already be there.
+  `ac-pipeline` as (or under) an axiom — dedup first, it may already be there.
 - Worked, project-specific instances of this whole process live in `../references/examples/`
   (illustrative, not doctrine).

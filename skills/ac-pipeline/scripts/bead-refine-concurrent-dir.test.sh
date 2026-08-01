@@ -13,7 +13,7 @@
 # (2026-07-22, 2026-07-28); the id sets were FULLY DISJOINT, so a lost race mis-stamps
 # 100% of the beads in both directions at once.
 #
-# REPO: agent-compounds (skills/ac-pipeline-builder/scripts/) — shared by every app that symlinks the
+# REPO: agent-compounds (skills/ac-pipeline/scripts/) — shared by every app that symlinks the
 # registry. No `br`, no git state, no network: pure shell against the documented formulas,
 # plus a stubbed-`br` probe of the stamp loop.
 #
@@ -57,7 +57,7 @@ pass() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
 skip() { echo "  SKIP: $1"; }
 
-# skills/ac-pipeline-builder/scripts -> skills/   (works through the per-app .claude/skills symlink too)
+# skills/ac-pipeline/scripts -> skills/   (works through the per-app .claude/skills symlink too)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORKFLOW="$SKILLS_DIR/ac-bead-refine/references/workflow.md"

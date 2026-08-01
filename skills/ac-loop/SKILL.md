@@ -16,7 +16,7 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > (Task/subagent) whose prompt is the delegation text, pinned `model: "opus"` on the spawn call** —
 > let it load that skill and run its own workers, and you keep only the returned summary.
 > **Every child delegation prompt OPENS with the Child-spawn preamble from
-> `ac-pipeline-builder/references/delegation-contract.md` § Child-spawn preamble, included VERBATIM** — a pointer is not
+> `ac-pipeline/references/delegation-contract.md` § Child-spawn preamble, included VERBATIM** — a pointer is not
 > sufficient (children act before they read; verbatim inlining took the 20260719 run's
 > self-detachment + token-rediscovery recurrences to zero).
 > Phase sub-sessions are conductors themselves (they judge, gate, and spawn workers) — they run
@@ -27,10 +27,10 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > `rule-agent-mail-identity-setup`).
 > **The VERIFY-GATE passes are phases too:** each gate-selected pass (`ac-ui-polish`,
 > `ac-qa-browser`, `ac-qa-device`) runs as its own spawned opus-pinned sub-session with a
-> delegation prompt — you consult `ac-pipeline-builder/references/verification-gate.md` for selection + depth (that
+> delegation prompt — you consult `ac-pipeline/references/verification-gate.md` for selection + depth (that
 > consult is yours), then spawn the pass; you never load a verify skill or drive a
 > browser/simulator in your own context. The passes are themselves conductors over tester
-> subagents (`ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol).
+> subagents (`ac-pipeline/references/qa-shared.md` § Conductor / worker evidence protocol).
 > You **never** read a phase skill's `SKILL.md`
 > (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
 > `ac-ui-polish`, `ac-qa-browser`, `ac-qa-device`) into your
@@ -85,7 +85,7 @@ EACH ITERATION:  (phase ORDER is preserved; within each numbered step, up to
       └─ claim-at-selection (loop owns this, not ac-implement — direct to main, no branch) →
          ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
 
-  VERIFY-GATE = consult ac-pipeline-builder/references/verification-gate.md → run only the selected
+  VERIFY-GATE = consult ac-pipeline/references/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
   BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-batch-close no longer checks beads
                 itself) — genuine (non-post-merge) open beads block the close; advisory
@@ -151,7 +151,7 @@ the two call-scoped facts (explicit token threading, per-shell re-assert) live t
 Loop-specific additions to the export block:
 
 ```bash
-export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dirs; passed to every spawned stage (ac-pipeline-builder/references/run-id.md)
+export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch dirs; passed to every spawned stage (ac-pipeline/references/run-id.md)
 ```
 
 Sub-skills invoked by the loop (ac-implement, ac-land, etc.) self-register ONLY if they
@@ -182,7 +182,7 @@ reservations — the safety-critical half — are swept here.
 
 Read the current state of the board. This is the map you navigate by.
 
-> **Canonical scan spec: `ac-pipeline-builder/references/board-scan.md`** — this Phase-0 orient is a consumer of it, so read it
+> **Canonical scan spec: `ac-pipeline/references/board-scan.md`** — this Phase-0 orient is a consumer of it, so read it
 > alongside the calls below and use ITS definitions; the loop and the janitor (`ac-tidy`) must not fork on
 > what "orphan" or "illegal edge" mean. Adopt all FOUR detectors: **parentage-gap orphan** (open non-epic
 > bead, no epic parent — the I1 sense), **authored epic-edge** (any `blocks` edge with an epic endpoint —
@@ -263,7 +263,7 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
 > - **Severity floor (bd-chd5p.7 / Item 5) — classify by CAUSE via source-trace, NEVER by description keywords.** Keyword matching on titles/descriptions is **forbidden** (bd-hfdst / bd-6cibi were *described* as display/read-model divergences and were write-path persistence bugs).
 >   - **P1/P2 bugs preempt as today** — unchanged.
->   - **P3+ may join the next regular cycle's batch ONLY if confirmed render-only** via source-trace of the root-cause file set (`ac-pipeline-builder/references/risk-classification.md` **binding #4**).
+>   - **P3+ may join the next regular cycle's batch ONLY if confirmed render-only** via source-trace of the root-cause file set (`ac-pipeline/references/risk-classification.md` **binding #4**).
 >   - **Demotion requires source-trace** proving: no touch to any RISK-TOUCH persistence/write/RPC path (Item 0). Cosmetic = layout/color/spacing/copy only, underlying data correct.
 >   - **Wrong or stale value shown to user** is "wrong values" → **preemptive even if never persisted**. Example: a "wrong value shown" bug classifies preemptive.
 >   - **When a bug plausibly reads into both buckets, default to preemptive.**
@@ -297,7 +297,7 @@ TaskCreate — one task per run phase; add a Plan-wave task per queued loop-read
 
 `TaskUpdate` each task to `in_progress` when its phase starts and `completed` at its merge/exit; mark task 1 `completed` when this orient pass finishes. If the board is empty, the ledger is just task 1 + task 4.
 
-> **Ledger doctrine + resume rule: `ac-pipeline-builder/references/run-ledger.md`** — the ledger tracks the RUN
+> **Ledger doctrine + resume rule: `ac-pipeline/references/run-ledger.md`** — the ledger tracks the RUN
 > (phases/iterations), never the work (beads stay the atom, no bead IDs in the ledger);
 > on resume, ledger = position anchor, board = ground truth.
 
@@ -399,7 +399,7 @@ If orphans exist:
    `{SCOPE}` = "all N orphan beads", `{FLAVOR}` empty. (The Child friction schema the
    prompt's summary contract requires is § Child friction schema in that same file — the
    one definition of the four keys, bd-jv33f.2.)
-3. **Verify (gated)** — consult **`ac-pipeline-builder/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
+3. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
 4. **Invoke `ac-review`** — dispatch the **Review prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` empty.
 5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
@@ -409,7 +409,7 @@ If orphans exist:
    `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   bash "$PROJECT_ROOT/.claude/skills/ac-pipeline-builder/scripts/beads-closed-gate.sh" \
+   bash "$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh" \
      --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
      "$AGENT_NAME" <delegated-identities…>
@@ -497,7 +497,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    Dispatch the **Implement prompt** from `references/delegation-prompts.md` VERBATIM,
    `{SCOPE}` = "all refined ready beads for plan `<plan-name>`", `{FLAVOR}` =
    "(ac-loop autonomous run)".
-3. **Verify (gated)** — consult **`ac-pipeline-builder/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
+3. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-review`** — dispatch the **Review prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` = "(ac-loop autonomous run)".
 5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
@@ -584,7 +584,7 @@ implement-cycle, unbatched** — only the CI/report leg accumulates. Planned wav
 ceremony as their own single batch (never enter the pool; cap never force-splits a
 wave).
 
-Risk classification uses `ac-pipeline-builder/references/risk-classification.md` **binding #3** (bead's own
+Risk classification uses `ac-pipeline/references/risk-classification.md` **binding #3** (bead's own
 `pre_sha..close_sha`). Risk beads never enter `pending`/`in_flight` — `risk_queue`
 sidecar or immediate fire.
 
@@ -596,7 +596,7 @@ sidecar or immediate fire.
 | **ac-loop** conductor pre-cycle / post-close | when idle | if `in_flight` empty → drain sequence; else skip (mutex) |
 | **ac-batch-close** report-commit (Act 3) | after report lands | ack `in_flight` IDs (or no-op pool if pure risk-solo/planned-wave); then if `in_flight` empty → drain sequence |
 
-**Read `ac-pipeline-builder/references/ceremony-batching-pool.md` before executing any pool RMW or drain** — the
+**Read `ac-pipeline/references/ceremony-batching-pool.md` before executing any pool RMW or drain** — the
 full mechanics (state store + JSON shape, flock RMW, fire opportunities, selected-set/drain
 policy, report-ack, failure re-merge, risk override, bug-lane, guard-rail, fixtures) live
 there, shared with `ac-batch-close`.
@@ -721,7 +721,7 @@ fighting the machine. Hold these:
   sequential `br` writes) — a backgrounded bulk-`br` loop can stall silently; kill and
   retry foreground before assuming `br` is broken (`beads-standards/reference/bead-conventions.md` § Bulk
   `br` write-loops).
-- **Wait for your OWN long-running local command in-shell — never detach** (`ac-pipeline-builder/references/delegation-contract.md`
+- **Wait for your OWN long-running local command in-shell — never detach** (`ac-pipeline/references/delegation-contract.md`
   § clause 5, self-detachment). Backgrounding a local `pnpm test`/build/CI-poll via
   `run_in_background` + `Monitor` and ending your turn "waiting for completion" is the
   self-detachment stall — the same silent-resume-break as an abandoned child, pointed at
@@ -820,7 +820,7 @@ C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clea
 
 As each phase child returns, the conductor collects its `friction:` block (the D1 schema —
 Phase 1 step 2 "Child friction schema") and rolls the items up **per stage** into one carrier
-file, `/tmp/loop-retro-<RUN_ID>.md` (RUN_ID convention — `ac-pipeline-builder/references/run-id.md`; ephemeral, NOT
+file, `/tmp/loop-retro-<RUN_ID>.md` (RUN_ID convention — `ac-pipeline/references/run-id.md`; ephemeral, NOT
 `progress.md`). Append as children return, or aggregate once after each batch's children
 return — either is fine, provided the file is written **before** the Exit-Land spawn below so
 `ac-land` can reference it deterministically.
@@ -872,9 +872,9 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > conductor name stays on the roster but is deregistered by YOU below, after land returns — land
 > cannot reach a still-live conductor.)
 > You are post-merge on `main`. This is a HEADLESS land: system-upgrade proposals become
-> deduped `human-gate` decision beads per `ac-pipeline-builder/references/disposition.md` — never Slack cards,
+> deduped `human-gate` decision beads per `ac-pipeline/references/disposition.md` — never Slack cards,
 > never `AskUserQuestion`, do NOT block.
-> This is the loop's final step — exit after landing." (`ac-pipeline-builder/references/run-id.md`)
+> This is the loop's final step — exit after landing." (`ac-pipeline/references/run-id.md`)
 
 ### Deregister the conductor identity (Layer 1 — the loop's true last act)
 

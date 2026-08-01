@@ -2,7 +2,7 @@
 
 Platform-agnostic conventions for the QA twins. Each twin owns its toolchain,
 core loop, and shell checklist; this file owns what they share so the two stay
-in lockstep. Reference it from a twin as `ac-pipeline-builder/references/qa-shared.md`.
+in lockstep. Reference it from a twin as `ac-pipeline/references/qa-shared.md`.
 
 The split:
 
@@ -18,7 +18,7 @@ the device twin proves only what the native shell adds. Don't QA the same DOM lo
 twice — route by plane.
 
 > **Whether to run a twin at all (and how deep)** is decided upstream by
-> **`ac-pipeline-builder/references/verification-gate.md`** — it classifies the wave diff and selects passes +
+> **`ac-pipeline/references/verification-gate.md`** — it classifies the wave diff and selects passes +
 > depth so a one-line fix doesn't trigger a simulator boot. This file owns the _how_;
 > that gate owns the _whether_. Conductors (`ac-loop`,
 > `ac-merge`'s smoke net) consult the gate, not this file, to decide selection.
@@ -91,7 +91,7 @@ browser/simulator itself and never holds raw page state — it spot-reads flagge
 evidence files only. Rationale: exhaustive sweeps in one context suffer late-journey
 attention decay and compaction risk, at conductor-model prices.
 
-**Artifacts dir** — derive per `ac-pipeline-builder/references/run-id.md` (prefixes `qa-browser` / `qa-device` /
+**Artifacts dir** — derive per `ac-pipeline/references/run-id.md` (prefixes `qa-browser` / `qa-device` /
 `ui-polish`), never glob.
 
 **Manifest before spawn.** The conductor writes `$ARTIFACTS_DIR/journeys-manifest.json`
@@ -114,7 +114,7 @@ partial failure, never a silent pass:
 ```
 
 > **Schema contract (bd-g4ktj):** the validator
-> (`ac-pipeline-builder/scripts/validate-qa-run.sh`) reads **flat `dispatched[]`** —
+> (`ac-pipeline/scripts/validate-qa-run.sh`) reads **flat `dispatched[]`** —
 > `.dispatched[].journey` / `.dispatched[].lane` / …. Do **not** write a top-level
 > `workers[]` array as the completeness key (that produces false missing-verdict /
 > null iterate). **One `dispatched[]` row per journey** (= one `verdict-<journey>.json`
@@ -202,7 +202,7 @@ slack-send -c C0AQ7964ZU6 "<context>" --file a.png b.png   # #sofi
 - **Send when evidence is produced, or at the batch ceremony** — don't batch across
   ceremonies. A conductor may upload directly, or relay a worker's evidence path.
 
-**Completeness rule** (`ac-pipeline-builder/references/delegation-contract.md` applies): bound each worker's
+**Completeness rule** (`ac-pipeline/references/delegation-contract.md` applies): bound each worker's
 wait; manifest ⊖ verdict files = re-spawn each missing worker ONCE, then record it in
 the QA_VALIDATION block as `status: FAIL` with `notes: stall — <journeys>`. Missing
 output ≠ "no findings".
@@ -225,7 +225,7 @@ sessions — documented incidents).
 **Aggregation.** The conductor merges verdicts into the single QA_VALIDATION block
 below (`journeys_tested` from verdict statuses, `findings_filed` from filed beads,
 `evidence` from verdict paths). Downstream consumers (ac-merge, ac-distribute) are
-unchanged. Mechanical validation: `ac-pipeline-builder/scripts/validate-qa-run.sh $ARTIFACTS_DIR`
+unchanged. Mechanical validation: `ac-pipeline/scripts/validate-qa-run.sh $ARTIFACTS_DIR`
 asserts manifest⊖verdict completeness, parallel-lane overlap, and teardown.
 
 ## Findings = beads (file immediately, like failing tests)

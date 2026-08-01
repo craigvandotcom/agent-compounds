@@ -57,7 +57,7 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
 
 ## Phase 2: Scan (parallel), then apply the loop boundary
 
-**Read the board per `ac-pipeline-builder/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply the human-session lens below, add the non-board reads, then **filter out everything past the loop boundary before presenting** (drop ready beads, in-flight waves, `loop-ready` plans — the loop owns those).
+**Read the board per `ac-pipeline/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply the human-session lens below, add the non-board reads, then **filter out everything past the loop boundary before presenting** (drop ready beads, in-flight waves, `loop-ready` plans — the loop owns those).
 
 ### Your lens on the board
 
@@ -116,7 +116,7 @@ the URL is still the real prod surface before reporting it (bd-vp7fw).
 
 Also flag open beads explicitly blocked on a human (notes "waiting on" / "needs manual" / "requires account" / "human decision") that aren't already `human-gate`.
 
-**Journey debt** (Invariant 9, `ac-pipeline-builder/references/verification-gate.md` §Journey registry): per
+**Journey debt** (Invariant 9, `ac-pipeline/references/verification-gate.md` §Journey registry): per
 `CORE/journeys/*.md`, a non-peripheral journey (`criticality` ≥ `core`) with a missing
 `last_pass` block, or one `skills/_tools/journey-stamp-check.sh` verdicts stale
 (SHA not an ancestor of HEAD, or an intervening diff touched its `surfaces`), is
@@ -149,7 +149,7 @@ The first line is the whole sit-down in one glance (lead with it). Rough the `~{
 
 Order = distance from a stall (tier-first); **within a tier, oldest-bead-first** — the longest-stalled item surfaces above fresher ones so an aging blocker can't hide behind newer arrivals. Clear what's stopped, then feed backward. Omit any empty tier.
 
-Age is **derived, never separately queried**: every board pull this skill already makes carries `created_at` per bead — the org-wide sweep above (`br list --json --limit 1000`) AND the default single-project board pull (via `ac-pipeline-builder/references/board-scan.md`). Compute `now − created_at` from whichever pull feeds the docket and render it as a compact age token (e.g. `12d`) on each bead line — add no new `br` invocation.
+Age is **derived, never separately queried**: every board pull this skill already makes carries `created_at` per bead — the org-wide sweep above (`br list --json --limit 1000`) AND the default single-project board pull (via `ac-pipeline/references/board-scan.md`). Compute `now − created_at` from whichever pull feeds the docket and render it as a compact age token (e.g. `12d`) on each bead line — add no new `br` invocation.
 
 ```
 ### 🔴 Blocking — the line has stopped ({N})

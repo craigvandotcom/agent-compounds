@@ -115,7 +115,7 @@ routing behaviours:
 | Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |
 
 `ac-tidy` flags what stays unparented (the parentage-gap orphan class,
-`ac-pipeline-builder/references/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
+`ac-pipeline/references/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
 disposition grammar, no backfill sweep — considered and cut.
 
 ### `--parent` is CONTAINMENT only — never provenance (bd-nbn3h)
@@ -188,7 +188,7 @@ Plus, for every implementable bead (finding-sourced ones especially):
   beads in the same refine run cited nonexistent blocks). **Declare the
   validation modality, not just unit tests:** a bead that changes a user
   surface names its QA pass + journey (`browser: <journey>.md §<checkpoint>`,
-  `device: …`, `ui-polish: scoped`) per `ac-pipeline-builder/references/verification-gate.md`
+  `device: …`, `ui-polish: scoped`) per `ac-pipeline/references/verification-gate.md`
   vocabulary — the gate's diff-inference is the safety net, the bead's
   declaration is the intent. Refine verifies the named journey exists in the
   app's `CORE/journeys/`.

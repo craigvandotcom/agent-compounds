@@ -6,7 +6,7 @@ synthesizing **independent reviewer findings**. Single source of truth reference
 consensus logic can't silently diverge between them.
 
 This operationalizes the *You can't self-validate — confidence requires independence*
-through-thread in `ac-pipeline-builder`: agreement across independent agents/rounds is the
+through-thread in `ac-pipeline`: agreement across independent agents/rounds is the
 reliable signal, not any single reviewer's confidence.
 
 This is the **code-findings instantiation of `disposition.md`** (the shared AUTO / HUMAN /

@@ -1,7 +1,7 @@
 # beads-closed-gate invocation — flag rationale
 
 The loop's own pre-close gate (`ac-batch-close` no longer checks bead closure itself). The
-script is `ac-pipeline-builder/scripts/beads-closed-gate.sh`; both Phase 1 (orphan batch) and Phase 2 (plan
+script is `ac-pipeline/scripts/beads-closed-gate.sh`; both Phase 1 (orphan batch) and Phase 2 (plan
 wave) invoke it identically at their step 6. This file holds only the **why** behind each flag —
 the command, exit-code branches, and `post-merge`/nudge decision stay inline at both spine sites
 (enforcement). Substitute this batch's ids/paths.

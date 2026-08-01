@@ -69,7 +69,7 @@ entries: 3
 - proposed_fix: either make the Agent Mail edit guard enforcing for shared registry paths, or soften the written "no exceptions" rule to match what is actually enforced — a rule broken routinely and silently is worse than a narrower rule that holds.
 - narrative: the Development Context Protocol states "Before editing any file, call
   file_reservation_paths ... No exceptions." This session edited FOUR shared registry files
-  (three SKILL.md spines plus ac-pipeline-builder/references/board-scan.md) without reserving any of them, and did not
+  (three SKILL.md spines plus ac-pipeline/references/board-scan.md) without reserving any of them, and did not
   notice until Craig asked about the skill-edit hook. `am-edit-guard.py` is registered at user
   scope but in `AM_EDIT_GUARD_MODE=advisory`, so nothing blocked or warned. The instructive part
   is the contrast within one session: every convention with a GATE (line budget, net-growth token,

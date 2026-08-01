@@ -6,7 +6,7 @@ description: Use when QA-ing the NATIVE app build on a device/simulator — full
 > **The native twin.** `ac-qa-device` proves the native shell; `ac-qa-browser`
 > proves the web shell. Shared conventions — **depth levels, journey reuse,
 > findings=beads, the `QA_VALIDATION` report, and the conductor/worker evidence
-> protocol** — live in **`ac-pipeline-builder/references/qa-shared.md`**; both twins reference it so they
+> protocol** — live in **`ac-pipeline/references/qa-shared.md`**; both twins reference it so they
 > stay in lockstep. This file owns the native/simulator specifics only.
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -61,7 +61,7 @@ sparingly.
 
 ## Depth levels
 
-Defined in **`ac-pipeline-builder/references/qa-shared.md`** (smoke / full / exhaustive). Native specifics
+Defined in **`ac-pipeline/references/qa-shared.md`** (smoke / full / exhaustive). Native specifics
 per level: **smoke** = build→install→launch→splash→first-paint→auth→primary journey
 (run before TestFlight pushes); **full** adds the `references/native-shell-checklist.md` +
 appearance spot-checks; **exhaustive** adds the appearance matrix (dark/light ×
@@ -75,13 +75,13 @@ perf sanity pass (`references/perf-and-limits.md`). **Flag-gated journeys need a
 flaky and collision-prone — `references/incidents.md`; the win here is context
 isolation, not wall-clock). You hold the manifest, verdicts, and report; the worker
 holds the accessibility trees, simctl output, and screenshots. Full protocol
-(manifest/verdict schemas, completeness rule): `ac-pipeline-builder/references/qa-shared.md` § Conductor /
+(manifest/verdict schemas, completeness rule): `ac-pipeline/references/qa-shared.md` § Conductor /
 worker evidence protocol.
 
 1. **Orient + build (yours, once):** Platform Gate check; mint RUN_ID if the
-   orchestrator didn't hand one down (contract: `ac-pipeline-builder/references/run-id.md` mint-if-absent
+   orchestrator didn't hand one down (contract: `ac-pipeline/references/run-id.md` mint-if-absent
    rule): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`; derive `ARTIFACTS_DIR`
-   per `ac-pipeline-builder/references/run-id.md` (prefix `qa-device`); build + install via the app's own
+   per `ac-pipeline/references/run-id.md` (prefix `qa-device`); build + install via the app's own
    build command (from CORE — never xcodebuild alone) and boot the app's dedicated
    uniquely-named sim (§Parallel QA below). Workers never build, boot, or shut down
    simulators.
@@ -91,12 +91,12 @@ worker evidence protocol.
    reasons — e.g. sim-impossible flows from CORE).
 3. **Dispatch sequentially:** one worker per journey via
    **`references/device-tester-prompt.md`** (dispatched to the `device-tester`
-   agent; no model re-pin). Bounded wait per `ac-pipeline-builder/references/delegation-contract.md`;
+   agent; no model re-pin). Bounded wait per `ac-pipeline/references/delegation-contract.md`;
    a silent worker past the cap = `stall`, re-spawn once, then record.
 4. **Collect + aggregate:** manifest ⊖ verdicts check; file beads from verdict
    findings (you, not workers — deduped); write `last_pass` stamps for PASSes;
    emit `QA_VALIDATION` (`platform: ios-simulator`); run
-   `ac-pipeline-builder/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" --skip-teardown-check`
+   `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" --skip-teardown-check`
    (the teardown check is browser-specific; sweep agent-device sessions yourself).
 5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain; shut
    down only sims your app owns, per the ownership rule below.
@@ -279,7 +279,7 @@ XCUITest projects the DOM's accessibility tree fully: web content appears as
 
 ## Reusing the app's journeys
 
-The what/how split and journey-drift rule are in **`ac-pipeline-builder/references/qa-shared.md`**.
+The what/how split and journey-drift rule are in **`ac-pipeline/references/qa-shared.md`**.
 Native specifics: locate each step's control by its button label in
 `snapshot -i` output (not a DOM ref).
 
@@ -321,7 +321,7 @@ The headlines:
 ## Findings = beads
 
 File each finding as a bead the moment it's confirmed — conventions, types, and
-labels (`qa-finding` / `qa-blocker`) are in **`ac-pipeline-builder/references/qa-shared.md`**. A native
+labels (`qa-finding` / `qa-blocker`) are in **`ac-pipeline/references/qa-shared.md`**. A native
 finding is any divergence from the journey docs' expected behavior, plus a11y
 gaps and native-shell bugs. Tag bead descriptions with `device QA`.
 
@@ -338,7 +338,7 @@ never do — Goodhart guard). Each filed `qa-finding` bead also carries
 
 ## Reporting
 
-Emit the **`QA_VALIDATION`** block from `ac-pipeline-builder/references/qa-shared.md` with:
+Emit the **`QA_VALIDATION`** block from `ac-pipeline/references/qa-shared.md` with:
 
 - `platform: ios-simulator` (or `android-emulator`)
 - `target:` sim model + OS version
@@ -356,7 +356,7 @@ After a journey **PASS**, update its `last_pass` frontmatter block in
 (or `android-emulator`) — committed together with the QA artifacts in the same
 run that emits `QA_VALIDATION`. A **FAIL** never writes a stamp — the bead
 trail covers failures; a stamp is proof of success only. Schema + staleness
-rule: `ac-pipeline-builder/references/verification-gate.md` §Journey registry.
+rule: `ac-pipeline/references/verification-gate.md` §Journey registry.
 
 **Conflict rule:** `last_pass` is last-writer-wins. On a merge conflict, keep
 the NEWER stamp (compare `date`, then `build`) — never hand-merge a hybrid
@@ -412,8 +412,8 @@ Mac" above).
 
 ## Related files
 
-- `ac-pipeline-builder/references/qa-shared.md` — depth levels, journey reuse, findings=beads, `QA_VALIDATION` schema (shared with the twin)
-- `ac-pipeline-builder/references/verification-gate.md` — journey registry schema (`last_pass` stamp fields), staleness rule
+- `ac-pipeline/references/qa-shared.md` — depth levels, journey reuse, findings=beads, `QA_VALIDATION` schema (shared with the twin)
+- `ac-pipeline/references/verification-gate.md` — journey registry schema (`last_pass` stamp fields), staleness rule
 - `references/native-shell-checklist.md` — what ONLY the simulator/native shell can catch
 - `references/perf-and-limits.md` — CAN/MISLEADING/CANNOT taxonomy, hardware matrix,
   xctrace recipes, visual regression, automation speed tricks

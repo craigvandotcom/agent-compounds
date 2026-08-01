@@ -56,7 +56,7 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     no-net-growth gate. Run `node scripts/skill-diet-conservation.mjs` if you are
     moving or removing content, to confirm nothing unique is lost.
   - SINGLE-HOME (ac-gcj/ac-znk.7): about to restate a rule whose canon lives in an
-    owning domain skill (ac-pipeline-builder/references/* — git discipline, delegation,
+    owning domain skill (ac-pipeline/references/* — git discipline, delegation,
     run-ledger, verification gate; agent-mail/references/* — coordination;
     beads-standards — beads canon)? Point at it with a `§` anchor instead. The rare
     deliberate copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.

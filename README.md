@@ -15,14 +15,14 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
-conductor is **`ac-loop`**; the design lives in **`ac-pipeline-builder`**. Three operational
-loops feed one execution path (see `ac-pipeline-builder` § *The three operational loops*):
+conductor is **`ac-loop`**; the design lives in **`ac-pipeline`**. Three operational
+loops feed one execution path (see `ac-pipeline` § *The three operational loops*):
 the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **triage loop**
 (`ac-triage`, scheduled — production signal → defect beads), and the **audit loop**
 (`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
 | Skill | What it does |
 |-------|-------------|
-| **ac-pipeline-builder** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
+| **ac-pipeline** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
 | **ac-loop** | The runtime conductor — autonomous bead-shipping loop; drives orphan fixes + plan waves to merge unattended, pauses on genuine decisions via Slack |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |

@@ -40,4 +40,4 @@ reservations, teardown, build slots. The MCP server provides the tools
 - Build slots (advisory, always-grant): usage pattern in `ac-batch-close` § Build Slot;
   memory `agent-mail-build-slot-advisory`.
 - Child-spawn contract (children usually hold NO Agent Mail tools — conductor reserves
-  on their behalf): `ac-pipeline-builder/references/delegation-contract.md`.
+  on their behalf): `ac-pipeline/references/delegation-contract.md`.

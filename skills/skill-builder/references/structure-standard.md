@@ -72,7 +72,7 @@ skill spawns a fresh child that acts before it reads.** If the conductor pastes 
 *into* the child's context at spawn time (the child never opens the skill's files), then a
 pointer in the spine that says "read `references/x.md`" reaches nobody: the child already
 has only what was pasted. Extracting such a prompt to `references/` and leaving a pointer
-**silently breaks the spawn** — the documented failure mode behind `ac-pipeline-builder/references/delegation-contract.md`
+**silently breaks the spawn** — the documented failure mode behind `ac-pipeline/references/delegation-contract.md`
 ("a fresh child acts before it reads; a pointer is NOT sufficient").
 
 The carve-out: a child-delegation prompt body may move to a reference **only if** the spine
@@ -90,7 +90,7 @@ or more skills** lives ONCE, in the `references/` of the skill that OWNS its dom
 `beads-standards/reference/` · coordination → `agent-mail/references/` · pipeline
 contracts (git discipline, delegation, run-ledger/run-id, verification selection,
 board-scan, risk/consensus/disposition, shell guardrails) →
-`ac-pipeline-builder/references/`. Centralizing beats per-skill copies because divergent
+`ac-pipeline/references/`. Centralizing beats per-skill copies because divergent
 copies give contradictory instructions — the worst kind of nondeterminism; owner-hosting
 beats a shared directory because the owner's spine indexes the whole domain and adds no
 listing-budget cost.
@@ -100,7 +100,7 @@ its owner's `references/` and have every consumer point at (or inline-from) the 
 copy — do not duplicate. A block used by exactly one skill stays in that skill's own
 `references/`; owner-hosting is earned by a second consumer, not by anticipation. A new
 domain with a real task surface earns a new skill; otherwise the pipeline's contracts
-belong to `ac-pipeline-builder`.
+belong to `ac-pipeline`.
 
 **Consuming an owner-hosted block:** two legal forms — (a) a plain pointer at point of
 use (`load <owner>/references/x.md` when the flow reaches stage N), for payload a stage
@@ -135,8 +135,8 @@ substituting <DIFF> and <SCOPE>.
 
 > **Would this sentence be true in ANY workflow?** → it is DOMAIN CANON: it lives in the
 > domain's OWNING skill's references/ (beads → `beads-standards` +
-> `beads-standards/reference/bead-conventions.md` · git → `ac-pipeline-builder/references/commit-discipline.md` · agent mail →
-> `agent-mail/references/session-procedure.md` · verification → `ac-pipeline-builder/references/verification-gate.md`), never in a
+> `beads-standards/reference/bead-conventions.md` · git → `ac-pipeline/references/commit-discipline.md` · agent mail →
+> `agent-mail/references/session-procedure.md` · verification → `ac-pipeline/references/verification-gate.md`), never in a
 > workflow skill's text.
 > **Is it about THIS workflow's ordering, actors, or parameters?** → it is a WORKFLOW
 > BINDING: it stays in the workflow's SKILL.md as a one-liner naming the *when/who*,

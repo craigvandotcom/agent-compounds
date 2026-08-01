@@ -1,15 +1,20 @@
 ---
-name: ac-pipeline-builder
+name: ac-pipeline
 disable-model-invocation: true
-description: 'The engineering-pipeline doctrine — the canonical design of how work goes from idea to shipped (stage order, each stage''s contract, the cross-cutting invariants, and the standards for changing the pipeline). Read/maintain this when DESIGNING or EVOLVING the pipeline itself; the runtime conductor (ac-loop) and humans consult it for order + gates. Triggers: "pipeline architecture", "how should the pipeline work", "change/add a pipeline stage", "pipeline standards", "pipeline design", "ac-pipeline-builder". NOT for running the pipeline (that is ac-loop) or executing one stage (that is the stage''s own skill).'
+description: 'The engineering-pipeline domain skill — TWO lanes: (1) ARCHITECTURE: the canonical design of how work goes from idea to shipped (stage order, each stage''s contract, cross-cutting invariants, standards for changing the pipeline) — read/maintain when DESIGNING or EVOLVING the pipeline; (2) OPERATING CONTRACTS: the owner-hosted runtime canons every ceremony consults (references/: commit-discipline, delegation-contract, run-ledger, run-id, verification-gate, qa-shared, board-scan, risk/consensus/disposition, degraded-mode, shell-guardrails; scripts/: beads-closed-gate, validate-qa-run). Triggers: "pipeline architecture", "change/add a pipeline stage", "pipeline standards", "pipeline contracts", "ac-pipeline". NOT for running the pipeline (that is ac-loop) or executing one stage (that is the stage''s own skill).'
 ---
 
-# Pipeline Builder — Engineering Pipeline Doctrine
+# ac-pipeline — the engineering-pipeline domain (architecture + operating contracts)
 
-The **design reference** for the ac-* engineering pipeline. This is the map, never the
-territory: it owns *stage order, each stage's contract, and the cross-cutting invariants*
-— **not** how any stage executes (that lives in the stage's own skill). Small by design.
-The engineering-pipeline parallel to `context-engineering` (the context/memory doctrine).
+<!-- net-growth-ok: ac-znk.7 coda — Craig-confirmed rename ac-pipeline-builder → ac-pipeline; header rewritten to declare the two lanes (architecture + operating contracts) the rename exists to express -->
+
+
+Two lanes, one owner (renamed from `ac-pipeline-builder`, ac-znk.7 coda):
+**ARCHITECTURE** — the design reference for the ac-* pipeline: stage order, each stage's
+contract, cross-cutting invariants — the map, never the territory (how a stage executes
+lives in the stage's own skill). **OPERATING CONTRACTS** — § Reference contracts below:
+the owner-hosted runtime canons every ceremony consults, plus `scripts/` (the pipeline's
+deterministic gates). The engineering-pipeline parallel to `context-engineering`.
 
 ---
 
@@ -68,11 +73,11 @@ re-examine the change — not the law.
 | Law | Evidenced by |
 |---|---|
 | **State lives on disk; absence of artifact = gate never ran.** Progress files are compaction recovery; resumable by design. Silence is not "nothing happened" — it is evidence the gate was skipped. | ac-plan-init, ac-implement, ac-review, ac-hygiene, ac-land, verification-gate |
-| **Gates are accountability handoffs, not checkpoints.** Demand a fresh artifact, not a memory. A bug caught at review means implement let it through; a bug caught at merge means review was insufficient. Gates reveal *where the failure originated* — that is why they must be hard and artifact-verified. | ac-pipeline-builder, ac-merge, ac-implement, ac-distribute |
+| **Gates are accountability handoffs, not checkpoints.** Demand a fresh artifact, not a memory. A bug caught at review means implement let it through; a bug caught at merge means review was insufficient. Gates reveal *where the failure originated* — that is why they must be hard and artifact-verified. | ac-pipeline, ac-merge, ac-implement, ac-distribute |
 | **Exhaust before escalating; escalate once, batched.** Auto-apply consensus + clear technical fixes; conductor triages before the human; only irreducible design/taste/strategy forks go up, once. | ac-review, ac-hygiene, ac-land |
 | **Proportional effort: incremental in the loop, exhaustive at the boundary.** Affected-only during dev; green-main makes this sound; "don't invent issues, finish early if clean." (See Invariant 2 for the full per-surface table.) | verification-gate, ac-hygiene, ac-human-session |
 | **You can't self-validate — confidence requires independence.** The agent that did the work cannot fully review it; the model that found a bug can rationalize it away. Independent agents/models, same-round and cross-round consensus, is the only reliable signal. | ac-review, ac-hygiene, ac-plan-refine |
-| **One concern, one home; compose, don't duplicate.** "Don't reimplement the bead side." "Three skills, three concerns — don't merge them." Doctrine = map not territory. | ac-triage, ac-distribute, ac-pipeline-builder |
+| **One concern, one home; compose, don't duplicate.** "Don't reimplement the bead side." "Three skills, three concerns — don't merge them." Doctrine = map not territory. | ac-triage, ac-distribute, ac-pipeline |
 | **Fail safe; never silently destroy — and leave no live debris.** Idempotent ops; confirm before archive/move/delete; abort always available; never chain `br close` to a commit. **Every background waiter you spawn needs a hard cap (`for`/`seq`, `timeout`) — never an unbounded `until`; a waiter that can't time out is a future zombie.** This binds at the moment you *write* the loop (a stage-authoring constraint), not only at teardown. | ac-tidy, ac-align, ac-merge, ac-implement, ac-land, ac-loop |
 | **Minimize WIP; prefer nearest-to-done.** Single active wave; nearest-to-ready first; a half-shipped bead has zero compound value. | ac-implement, ac-human-session, ac-loop |
 
@@ -96,7 +101,7 @@ Sophistication is balancing opposites. Each tension has a named mechanism that r
   waves), runs the back-of-funnel chain, handles ARIA / Slack / scheduling / stop-conditions.
   Works both headless (scheduled) and interactive (terminal). Consults this doctrine for
   order + gates.
-- **`ac-pipeline-builder` = the blueprint.** This file. Design, audit, evolve the pipeline.
+- **`ac-pipeline` = the blueprint.** This file. Design, audit, evolve the pipeline.
 - **`ac-tidy` / `ac-align` = the scheduled propose-half.** Both gain a headless mode (nightly
   tidy, weekly align REVIEW) that *emits proposals* (dream-style `human-gate` beads) on a
   schedule without executing intent-bearing writes. This is a disciplined split of a single
@@ -128,7 +133,7 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 | Plan | an approved plan file | `_plans/…` exists + signed off | `ac-plan-init` |
 | Beadify | beads from the plan | `br` shows the wave | `ac-beadify` (+`ac-bead-refine`) |
 | **Implement** | code + per-bead **affected** tests; safety-push at session end | per-bead gate green | `ac-implement` |
-| **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `ac-pipeline-builder/references/verification-gate.md` |
+| **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `ac-pipeline/references/verification-gate.md` |
 | **Review** | code correctness; blocking findings | VERDICT: APPROVED | `ac-review` |
 | **Merge** | rebase → **affected tests (local)** → version bump → push → PR → CI-confirm → merge → tag | affected green + checks pass | `ac-merge` |
 | **Land** | close stragglers · session teardown/cleanup · reflect/compound | session closed cleanly | `ac-land` |
@@ -249,7 +254,7 @@ board* and *how often*.
    BCA 2.1(b) chain passed every static check; verification debt that lives only in
    prose is decoration (the system tracked "live walk pending" through four App Store
    rejections and nothing read it). Schema + selection rules:
-   `ac-pipeline-builder/references/verification-gate.md` §Journey registry. Binds `ac-qa-device`,
+   `ac-pipeline/references/verification-gate.md` §Journey registry. Binds `ac-qa-device`,
    `ac-qa-browser`, `ac-merge`, `ac-distribute`, `ac-publish`, `ac-hygiene`,
    `ac-dashboard`.
 
@@ -295,7 +300,7 @@ Wave branches protect main from in-progress code and make the green-main invaria
 **Hygiene is trunk-direct (migrated 2026-07-12, bd-u2lo1.14):** it no longer uses a
 worktree/`hygiene/*` branch/PR ceremony. Its 7-lens panel IS the pre-push review, auto-fixes
 commit directly to `main` as pathspec commits under the full H7 discipline
-(`ac-pipeline-builder/references/commit-discipline.md`) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
+(`ac-pipeline/references/commit-discipline.md`) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
 never `ac-merge`. The run report commits to `.claude/reviews/` root and does not advance the
 `.claude/reviews/batch/` review-mark.
 
@@ -309,7 +314,7 @@ report in the sibling `.claude/reviews/pending/`; `ac-publish` uses `.claude/rev
 `ac-hygiene` uses `.claude/reviews/` root. Any new skill that emits a review-shaped artifact
 picks a sibling directory too. The reason is mechanical: four readers derive a batch range from
 `git log -1 --format=%H -- .claude/reviews/batch/` (`ac-batch-close` Act 1, `ac-review` Phase 1,
-`ac-loop`'s delegated scope detection, `ac-pipeline-builder/references/verification-gate.md`), and a second writer
+`ac-loop`'s delegated scope detection, `ac-pipeline/references/verification-gate.md`), and a second writer
 touching that path mid-ceremony makes the probe return a commit *inside* the range it bounds —
 which under-scopes the batch **silently**, with no error to notice.
 
@@ -335,7 +340,7 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 - **Enforcement is edit-time, not just commit-time.** Reservations are advisory; the
   global `PreToolUse(Edit\|Write)` guard blocks editing a file held by a *different* identity
   before the write lands (fail-open), with the pre-commit guard as the commit-time backstop.
-  Private scratch (`$ARTIFACTS_DIR`) is keyed deterministically, never guessed: `ac-pipeline-builder/references/run-id.md`.
+  Private scratch (`$ARTIFACTS_DIR`) is keyed deterministically, never guessed: `ac-pipeline/references/run-id.md`.
 
 > Worktrees are deliberately rejected (filesystem multiplication, cross-worktree edits corrupt
 > state — `jef-flywheel` lesson 21). Single checkout + identity reservations is the chosen model.
@@ -349,8 +354,8 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 - **One runtime conductor.** `ac-loop`. Don't grow a second. If a stage's order changes, it
   changes here once; the conductor reads it.
 - **Stay thin / map not territory.** This doc names stages and gates; it never restates a
-  stage's internal logic. Selection logic lives in `ac-pipeline-builder/references/verification-gate.md`; QA method
-  in `ac-pipeline-builder/references/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
+  stage's internal logic. Selection logic lives in `ac-pipeline/references/verification-gate.md`; QA method
+  in `ac-pipeline/references/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
   `_shared/session-teardown.md` was *planned* but is now a RETIRED premise — Wave-B
   bd-brv39.5 cut WS5a; teardown stays inline in `ac-land` Phase 4, no shared file).
 - **Naming.** `ac-*` = the pipeline family; `-builder` = the doctrine/method meta-skill
@@ -362,7 +367,7 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 
 The doctrine is the target; these stage edits bring reality into line:
 
-- [x] **Verify gate** — `ac-pipeline-builder/references/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
+- [x] **Verify gate** — `ac-pipeline/references/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
 - [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner (this sweep, 2026-07-03).
 - [ ] **Land refocus** — bundled item SPLIT into its four sub-items (Wave-B bd-brv39.5); parent stays open while the 1b sub-item is live:
   - [x] strip **1c UI suite** — DONE (retired from `ac-land`, Wave-B bd-brv39.5).
@@ -372,7 +377,7 @@ The doctrine is the target; these stage edits bring reality into line:
 - [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
 - [x] **QA placement** — retire `ac-land` 1c (DONE, Wave-B bd-brv39.5): 1c UI suite removed from `ac-land`; per-batch smoke via `ac-batch-close`→`ac-qa-browser` (registry-driven, criticality ≥ core) + one exhaustive `ac-qa-browser` crawl at publish; `ac-implement`'s deferral re-pointed to both owners.
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
-- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `ac-pipeline-builder/references/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline-builder/references/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
+- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `ac-pipeline/references/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline/references/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
 
 ---
 
@@ -380,7 +385,7 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - Runtime conductor: `ac-loop/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
-- Shared method: `ac-pipeline-builder/references/verification-gate.md` (selection) · `ac-pipeline-builder/references/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
+- Shared method: `ac-pipeline/references/verification-gate.md` (selection) · `ac-pipeline/references/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
 - Context/memory doctrine (sibling): `context-engineering`
 
 ## Reference contracts (owner-hosted here — ac-znk.7)

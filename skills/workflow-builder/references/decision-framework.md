@@ -2,7 +2,7 @@
 
 The questions to resolve *with the user* before designing a workflow. Loaded on demand from
 `../SKILL.md`. **Principle: ask, don't assume — assumptions cause rework.** (This is the
-general form of `ac-pipeline-builder`'s *humans own intent* axiom.)
+general form of `ac-pipeline`'s *humans own intent* axiom.)
 
 ---
 

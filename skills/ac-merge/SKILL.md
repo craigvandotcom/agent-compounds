@@ -59,7 +59,7 @@ release + self-deregister at Finalize (§ Release).
 ### Declare the Run Ledger
 
 ac-merge spans long CI polls where a session can drop. Declare the run ledger per
-`ac-pipeline-builder/references/run-ledger.md` (pattern + resume doctrine there — one task per section,
+`ac-pipeline/references/run-ledger.md` (pattern + resume doctrine there — one task per section,
 advance as you go, persist captured facts to `$STATE`). This ceremony's table:
 
 ```
@@ -96,7 +96,7 @@ git rebase origin/main
 # Run project quality gate (see AGENTS.md > Project Commands > Quality gate).
 # Order MIRRORS CI: format FIRST + auto-fix, then type-check, lint, tests.
 #   format (auto-fix, e.g. `pnpm format` = prettier --write .)   <- pre-empts CI's `prettier --check .`
-# mirror: ac-pipeline-builder/references/verification-gate.md §Format-first
+# mirror: ac-pipeline/references/verification-gate.md §Format-first
 #   + type-check + lint + tests
 # Tests = the AGGREGATED affected run, pinned to the merge base:
 #   VITEST_AFFECTED_REF=origin/main pnpm test
@@ -113,7 +113,7 @@ gate; if `pnpm format` rewrites pre-existing files, commit the formatting (you'r
 a gate CI was already failing). **Commit without `--no-verify`** — the pre-commit
 `lint-staged` hook auto-formats staged files; only the *push* uses `--no-verify` (to skip
 the heavy pre-push build). Never let CI catch a formatting miss.
-<!-- mirror: ac-pipeline-builder/references/verification-gate.md §Format-first — edit there first -->
+<!-- mirror: ac-pipeline/references/verification-gate.md §Format-first — edit there first -->
 
 **If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
 
@@ -121,7 +121,7 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
-**Run the ceremony smoke net per `ac-pipeline-builder/references/verification-gate.md` § Ceremony smoke net**
+**Run the ceremony smoke net per `ac-pipeline/references/verification-gate.md` § Ceremony smoke net**
 with `<RANGE>` = `main...HEAD` — the post-rebase state, the thing that actually merges
 (device-twin conditions, browser twin, FAIL escalation, `mac-needed` note, and the
 qa-blocker STOP all live there; a smoke FAIL here means STOP before creating the PR).
@@ -282,7 +282,7 @@ Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FO
 ### Gather PR Context
 
 ```bash
-# Bead summary. NB: dcg blocks a redirect whose target path is variable-built (11 such writes in this skill) — if blocked do NOT bypass; use tee or the Write tool per ac-pipeline-builder/references/shell-guardrails.md
+# Bead summary. NB: dcg blocks a redirect whose target path is variable-built (11 such writes in this skill) — if blocked do NOT bypass; use tee or the Write tool per ac-pipeline/references/shell-guardrails.md
 br list --json > "$ARTIFACTS_DIR/beads.json"
 
 # Commit history on this branch
@@ -338,7 +338,7 @@ Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER"
 
 ## Phase 2: Wait for PR Feedback
 
-> **Bounded wait only** (`ac-pipeline-builder/references/delegation-contract.md`): the poll below is hard-capped
+> **Bounded wait only** (`ac-pipeline/references/delegation-contract.md`): the poll below is hard-capped
 > and timeout-terminal on purpose — never swap it for an open-ended "monitor" and assume it
 > wakes you. A stalled CI/agent run is a reportable outcome, not a pause.
 

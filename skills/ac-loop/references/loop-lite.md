@@ -56,7 +56,7 @@ Identity & coordination
 
 Git
 5. Pathspec-only commits; never `add -A` / `commit -a` / `stash`; commit = push;
-   foreign WIP is untouchable — `ac-pipeline-builder/references/commit-discipline.md`
+   foreign WIP is untouchable — `ac-pipeline/references/commit-discipline.md`
 6. `.beads/issues.jsonl` has ONE committer per run: you, the conductor, at the end —
    `beads-standards` § Session protocol
 
@@ -73,19 +73,19 @@ Beads
 
 Delegation
 11. Every child prompt OPENS with the verbatim Child-spawn preamble —
-    `ac-pipeline-builder/references/delegation-contract.md`; the loop's phase payloads live in
+    `ac-pipeline/references/delegation-contract.md`; the loop's phase payloads live in
     `ac-loop/references/delegation-prompts.md` (use them verbatim, fill the slots)
 12. Children return compact structured summaries (≤400 words) including the `friction:`
     block — `references/delegation-prompts.md` § Child friction schema
 13. Never read a phase skill's SKILL.md into your own context — spawn it
 
 Verification & ceremony
-14. QA selection is gate-driven — `ac-pipeline-builder/references/verification-gate.md` (classify the diff, run
+14. QA selection is gate-driven — `ac-pipeline/references/verification-gate.md` (classify the diff, run
     only selected passes at selected depth)
 15. `.claude/reviews/batch/` has exactly ONE writer: ac-batch-close Act 3 (bd-kudrb) —
     reviews stage in `pending/`
 16. Track the run in a ledger (one task per phase; ledger = run position, board = work
-    truth) — `ac-pipeline-builder/references/run-ledger.md`
+    truth) — `ac-pipeline/references/run-ledger.md`
 
 Headless conduct
 17. No `AskUserQuestion` when headless — advisory Slack nudge + open decision bead
@@ -97,7 +97,7 @@ Headless conduct
 
 Recovery procedures, poll cadences, prompt phrasing beyond the payload files, task-table
 shapes, sweep mechanics, edge-case ladders. When you need one, the full skill's
-references/ and the owner skills' references/ (`ac-pipeline-builder`, `agent-mail`,
+references/ and the owner skills' references/ (`ac-pipeline`, `agent-mail`,
 `beads-standards`) hold the canon — pull on demand. If you find yourself
 needing a rule that is neither an invariant above nor discoverable at a gate, THAT is a
 finding: log it in the friction block and file a bead (that's the ablation working).

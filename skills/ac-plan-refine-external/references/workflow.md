@@ -93,7 +93,7 @@ echo "Working directory: $WORK_DIR"
 Create the cross-round tracking file for single-model findings:
 
 > **If `dcg` rejects any file-write below, do NOT bypass it** — the guard blocks a redirect whose
-> target path is variable-built. Sanctioned shapes (`tee`, the Write tool): `ac-pipeline-builder/references/shell-guardrails.md`.
+> target path is variable-built. Sanctioned shapes (`tee`, the Write tool): `ac-pipeline/references/shell-guardrails.md`.
 > This file carries 13 such writes; it is the densest instance in the registry.
 
 ```bash

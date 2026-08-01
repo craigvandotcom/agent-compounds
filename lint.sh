@@ -346,12 +346,12 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Check 10: pipeline conformance (D-series) ---"
 
-# D2: ac-pipeline-builder conformance checklist has both ticked items with their
+# D2: ac-pipeline conformance checklist has both ticked items with their
 # "(this sweep, 2026-07-03)" annotation — content match, not line numbers.
 check
-D2_COUNT=$(grep -c "this sweep, 2026-07-03" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null || echo 0)
+D2_COUNT=$(grep -c "this sweep, 2026-07-03" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null || echo 0)
 if [ "$D2_COUNT" -lt 2 ]; then
-  fail "D2: skills/ac-pipeline-builder/SKILL.md expected >=2 '(this sweep, 2026-07-03)' ticks, found $D2_COUNT"
+  fail "D2: skills/ac-pipeline/SKILL.md expected >=2 '(this sweep, 2026-07-03)' ticks, found $D2_COUNT"
 fi
 
 # D3: zero _backlog/{version} occurrences in ac-plan-init/SKILL.md
@@ -410,7 +410,7 @@ if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
 fi
 
 # D9 retired (trunk-direct migration, epic bd-u2lo1, bd-u2lo1.3): the allocator
-# script (`ac-pipeline-builder/scripts/allocate-wave-branch.sh`) it checked is deleted —
+# script (`ac-pipeline/scripts/allocate-wave-branch.sh`) it checked is deleted —
 # ac-implement no longer allocates wave branches (bd-u2lo1.6) and ac-loop no
 # longer calls the allocator either (bd-u2lo1.7). D9b (below) is the surviving
 # check for stale `wave/` branch-naming assumptions.
@@ -434,10 +434,10 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Check 11: pipeline conformance (G-series) ---"
 
-# G1: cross-cadence schedule table present in ac-pipeline-builder
+# G1: cross-cadence schedule table present in ac-pipeline
 check
-if ! grep -qE "23:00|Cross-cadence" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null; then
-  fail "G1: skills/ac-pipeline-builder/SKILL.md missing the cross-cadence schedule table"
+if ! grep -qE "23:00|Cross-cadence" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
+  fail "G1: skills/ac-pipeline/SKILL.md missing the cross-cadence schedule table"
 fi
 
 # G2: reverse shape-check present in ac-bead-capture (routing-to-backlog language)
@@ -469,7 +469,7 @@ if ! grep -q "skill-hotfix:" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; the
 fi
 
 # G7 (Wave-B bd-brv39.5): ac-land 1c UI suite RETIRED; ac-implement deferral re-pointed to
-# BOTH owners; ac-pipeline-builder ledger reconciled (doctrine-honesty — 1b test:all stays live).
+# BOTH owners; ac-pipeline ledger reconciled (doctrine-honesty — 1b test:all stays live).
 # G7a: the 1c UI Validation Suite block is gone from ac-land.
 check
 if grep -qF "1c. UI Validation Suite" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; then
@@ -481,15 +481,15 @@ if ! { grep -qF "ac-batch-close" "$AC_ROOT/skills/ac-implement/SKILL.md" 2>/dev/
     && grep -qF "ac-qa-browser" "$AC_ROOT/skills/ac-implement/SKILL.md" 2>/dev/null; }; then
   fail "G7b: skills/ac-implement/SKILL.md UI-validation deferral must name both owners (ac-batch-close + ac-qa-browser)"
 fi
-# G7c: ac-pipeline-builder QA-placement checkbox marked DONE.
+# G7c: ac-pipeline QA-placement checkbox marked DONE.
 check
-if ! grep -qF "[x] **QA placement**" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null; then
-  fail "G7c: skills/ac-pipeline-builder/SKILL.md QA-placement checkbox not marked DONE ([x])"
+if ! grep -qF "[x] **QA placement**" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
+  fail "G7c: skills/ac-pipeline/SKILL.md QA-placement checkbox not marked DONE ([x])"
 fi
 # G7d (doctrine-honesty): the 1b test:all land-refocus sub-item stays LIVE — NOT marked done/retired.
 check
-if ! grep -qF "STILL-LIVE" "$AC_ROOT/skills/ac-pipeline-builder/SKILL.md" 2>/dev/null; then
-  fail "G7d: skills/ac-pipeline-builder/SKILL.md 1b test:all must remain a live/pending land-refocus item (not marked done/retired)"
+if ! grep -qF "STILL-LIVE" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
+  fail "G7d: skills/ac-pipeline/SKILL.md 1b test:all must remain a live/pending land-refocus item (not marked done/retired)"
 fi
 
 # ---------------------------------------------------------------------------

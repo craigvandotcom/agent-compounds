@@ -6,7 +6,7 @@ description: Use when QA-ing the WEB app build in a browser — full journey val
 > **The web twin.** `ac-qa-browser` proves the web shell; `ac-qa-device` proves
 > the native shell. Shared conventions — **depth levels, journey reuse,
 > findings=beads, the `QA_VALIDATION` report, the conductor/worker evidence
-> protocol** — live in **`ac-pipeline-builder/references/qa-shared.md`**; both twins reference it so they
+> protocol** — live in **`ac-pipeline/references/qa-shared.md`**; both twins reference it so they
 > stay in lockstep. This file owns the web/browser specifics only. The low-level
 > `agent-browser` CLI mechanics live in **`browser-testing/SKILL.md`** (loaded by
 > the tester workers, not by you).
@@ -25,9 +25,9 @@ in its own named `agent-browser` session, reporting a structured verdict file. Y
 hold the manifest, the verdicts, the gate decision, and the report; workers hold the
 DOM snapshots, console noise, and screenshots. The full evidence protocol (manifest
 schema, verdict schema, lanes, completeness rule, session naming) is
-**`ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol** — read it now.
+**`ac-pipeline/references/qa-shared.md` § Conductor / worker evidence protocol** — read it now.
 **No `Task` tool, or spawns still failing after 2 retries/rung → you have NO workers:
-read `ac-pipeline-builder/references/degraded-mode.md` before writing the manifest (bd-nreuv).**
+read `ac-pipeline/references/degraded-mode.md` before writing the manifest (bd-nreuv).**
 
 ## Platform note (read first)
 
@@ -61,7 +61,7 @@ native-shell concerns (safe-area, splash, plugins, OAuth sheets) to `ac-qa-devic
 
 ## Depth levels
 
-Defined in **`ac-pipeline-builder/references/qa-shared.md`**. Web specifics per level: **smoke** = the
+Defined in **`ac-pipeline/references/qa-shared.md`**. Web specifics per level: **smoke** = the
 registry-selected journeys (gate's affected-list; always includes auth + primary),
 zero console errors; **full** adds every journey in `CORE/journeys/` + the
 `web-shell-checklist.md` + responsive spot-checks; **exhaustive** adds the full-app
@@ -72,13 +72,13 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
 
 ### Phase 0 — Orient + serve
 
-- Selection + depth arrive from `ac-pipeline-builder/references/verification-gate.md` (a conductor upstream
+- Selection + depth arrive from `ac-pipeline/references/verification-gate.md` (a conductor upstream
   already consulted it; standalone human runs: consult it yourself, or honor the
   human's explicit depth request).
-- Mint RUN_ID if the orchestrator didn't hand one down (contract: `ac-pipeline-builder/references/run-id.md`
+- Mint RUN_ID if the orchestrator didn't hand one down (contract: `ac-pipeline/references/run-id.md`
   mint-if-absent rule — the same `qa-<app>-<RUN_ID>` session names below already
   assume RUN_ID exists): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`.
-- Derive `ARTIFACTS_DIR` per `ac-pipeline-builder/references/run-id.md` (prefix `qa-browser`);
+- Derive `ARTIFACTS_DIR` per `ac-pipeline/references/run-id.md` (prefix `qa-browser`);
   `mkdir -p "$ARTIFACTS_DIR/evidence"`.
 - **You own the local server** (workers never start/stop it): if targeting local,
   serve a **production build — never `pnpm dev`** (bd-yey1z doctrine, above) via the
@@ -86,7 +86,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   ~1–1.5h/run and skips the SHA+input-hash key):
   ```bash
   # Requires a CLEAN tree (git status --porcelain empty, incl. untracked).
-  # Dirty → script exits non-zero; commit or clean first. dcg blocks a variable-built redirect target: if the log redirect below is rejected, do NOT bypass — pipe into tee instead (ac-pipeline-builder/references/shell-guardrails.md).
+  # Dirty → script exits non-zero; commit or clean first. dcg blocks a variable-built redirect target: if the log redirect below is rejected, do NOT bypass — pipe into tee instead (ac-pipeline/references/shell-guardrails.md).
   scripts/qa/serve-prod.sh >"$ARTIFACTS_DIR/server.log" 2>&1 &
   SERVER_PID=$!
   SERVER_STARTED=1
@@ -113,7 +113,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   construction, so **parallel-lane eligible** (useful: many apps' journey sets skew
   heavily mutating, leaving the parallel lane thin) — and one **checklist worker**
   (`web-shell-checklist.md` + appearance matrix) — drives forms, so sequential.
-- Write `$ARTIFACTS_DIR/journeys-manifest.json` (schema: `ac-pipeline-builder/references/qa-shared.md`)
+- Write `$ARTIFACTS_DIR/journeys-manifest.json` (schema: `ac-pipeline/references/qa-shared.md`)
   **BEFORE any spawn** — including `skipped` with reasons (e.g. `surfaces: native` only).
   **Validator key is `dispatched[]`** (not `workers[]`) — one entry per journey /
   verdict basename even when one worker runs multiple journeys. Required fields per
@@ -161,7 +161,7 @@ narrow-tool agent; do not re-pin its model.
   (criticality-descending).
 - Session names: `qa-<app>-<RUN_ID>-w<N>` (wave slug when no RUN_ID) — assign in the
   manifest, pass via `{SESSION_NAME}`.
-- Bound every wait (`ac-pipeline-builder/references/delegation-contract.md`): cap per-worker wait at ~10 min
+- Bound every wait (`ac-pipeline/references/delegation-contract.md`): cap per-worker wait at ~10 min
   of polling; a silent worker past the cap is a `stall` outcome, not a pause.
 
 ### Phase 4 — Collect + completeness
@@ -196,7 +196,7 @@ pre-pass). No verdict leaves this phase with a `pending` finding.
   statuses, `evidence` from verdict paths, `platform: browser-local` (or
   `browser-preview`/`browser-production`), `target:` browser + viewport(s),
   `shell_checklist:` from the checklist worker, `perf_observations:` qualitative.
-- Mechanical self-check: `ac-pipeline-builder/scripts/validate-qa-run.sh "$ARTIFACTS_DIR"` must
+- Mechanical self-check: `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR"` must
   exit 0 (completeness, concurrency, teardown).
 
 ### Phase 6 — Teardown sweep (mandatory, both paths)
@@ -259,7 +259,7 @@ by the checklist worker at full/exhaustive depth.
 ## Findings = beads
 
 Conventions, types, and labels (`qa-finding` / `qa-blocker`) are in
-**`ac-pipeline-builder/references/qa-shared.md`**. Workers report findings in their verdict files with
+**`ac-pipeline/references/qa-shared.md`**. Workers report findings in their verdict files with
 `"bead": "pending"`; **the conductor files the beads** (deduped) **in Phase 4, as each
 verdict lands** — not at pass end — and stamps the id back into the verdict. Tag bead
 descriptions with `browser QA`.
@@ -283,7 +283,7 @@ After a journey **PASS**, update its `last_pass` frontmatter block in
 artifacts in the same run that emits `QA_VALIDATION`. The conductor writes stamps
 from verdicts (workers never edit files). A **FAIL** never writes a stamp — the bead
 trail covers failures; a stamp is proof of success only.
-Schema + staleness rule: `ac-pipeline-builder/references/verification-gate.md` §Journey registry.
+Schema + staleness rule: `ac-pipeline/references/verification-gate.md` §Journey registry.
 
 **Conflict rule:** `last_pass` is last-writer-wins. On a merge conflict, keep
 the NEWER stamp (compare `date`, then `build`) — never hand-merge a hybrid
@@ -293,9 +293,9 @@ bead instead (same rule as `ac-qa-device`).
 
 ## Related files
 
-- `ac-pipeline-builder/references/qa-shared.md` — depth levels, findings=beads, `QA_VALIDATION` schema, **conductor/worker evidence protocol** (manifest/verdict schemas, lanes, session naming)
-- `ac-pipeline-builder/references/verification-gate.md` — selection + depth, journey registry schema (`mutates:`, `last_pass`)
-- `ac-pipeline-builder/scripts/validate-qa-run.sh` — mechanical pass validation
+- `ac-pipeline/references/qa-shared.md` — depth levels, findings=beads, `QA_VALIDATION` schema, **conductor/worker evidence protocol** (manifest/verdict schemas, lanes, session naming)
+- `ac-pipeline/references/verification-gate.md` — selection + depth, journey registry schema (`mutates:`, `last_pass`)
+- `ac-pipeline/scripts/validate-qa-run.sh` — mechanical pass validation
 - `references/journey-tester-prompt.md` — the worker prompt template (the old inline core loop lives here now)
 - `web-shell-checklist.md` — what ONLY the web shell surfaces
 - `browser-testing/SKILL.md` — low-level `agent-browser` mechanics (worker-side)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # validate-qa-run.sh <ARTIFACTS_DIR> [--baseline-findings N] [--skip-teardown-check]
 #
-# Mechanical validation of a conductor/worker QA pass (ac-pipeline-builder/references/qa-shared.md
+# Mechanical validation of a conductor/worker QA pass (ac-pipeline/references/qa-shared.md
 # evidence protocol). Exit 0 = all assertions hold.
 #
 # Asserts:

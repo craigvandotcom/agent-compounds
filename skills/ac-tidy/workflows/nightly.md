@@ -81,7 +81,7 @@ IS the replacement for it.
 
 ### 2. Scan the board
 
-Read the board per `ac-pipeline-builder/references/board-scan.md` (already excludes `_shipped/` + `audits/`).
+Read the board per `ac-pipeline/references/board-scan.md` (already excludes `_shipped/` + `audits/`).
 
 ### 3. Dedup, then auto-apply the sanctioned subset
 

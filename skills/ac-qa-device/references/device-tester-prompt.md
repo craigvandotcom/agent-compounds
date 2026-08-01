@@ -34,12 +34,12 @@ Assert the journey's `proof.asserts`, each PASS/FAIL with screenshot evidence to
 in `proof.device_only_steps` that need a real device (not sim): exclude from
 `covered`, note why — declared residue, journey can still PASS. An **undeclared**
 assert the sim structurally cannot observe is `NOT_PROVABLE_IN_SIMULATOR`, which makes
-the journey INCONCLUSIVE (`ac-pipeline-builder/references/qa-shared.md` §Verdict files) — never PASS.
+the journey INCONCLUSIVE (`ac-pipeline/references/qa-shared.md` §Verdict files) — never PASS.
 
 ## Output (mandatory — the conductor machine-reads this)
 
 Write {ARTIFACTS_DIR}/verdict-<journey>.json EXACTLY per the schema in
-`ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
+`ac-pipeline/references/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
 ("sequential"), session ("{SESSION_NAME}"), started_at/ended_at (ISO8601, date -u),
 status PASS|FAIL|INCONCLUSIVE, assertions[], covered[], console_errors (webview console if
 inspected, else "n/a"), findings[] (severity qa-blocker only for user-facing breaks

@@ -2,7 +2,7 @@
 
 Shared by `ac-review` (correctness + architecture reviewers) and `ac-hygiene`
 (bug-hunter + structural lenses). Method only — zero app facts. Reference it as
-`ac-pipeline-builder/references/anti-patterns.md`.
+`ac-pipeline/references/anti-patterns.md`.
 
 > Origin: BCA App Store 2.1(b) post-mortem — four rejections, ~10 days, five
 > silent layers, all green under static checks (full narrative: BCA
@@ -55,7 +55,7 @@ the mock removed. A green suite over a fully-mocked seam proves nothing about
 the seam itself.
 
 **On hit:** require an un-mocked test or a journey drive (per
-`ac-pipeline-builder/references/verification-gate.md` / `ac-pipeline-builder/references/qa-shared.md`) that actually
+`ac-pipeline/references/verification-gate.md` / `ac-pipeline/references/qa-shared.md`) that actually
 exercises the seam before the surface counts as proven. No such proof in the
 diff → file it as a finding, not a nit.
 

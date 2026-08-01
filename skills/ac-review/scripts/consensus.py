@@ -6,7 +6,7 @@ round-{N}-{role}.json finding files emitted by the Phase-2 reviewers, dedups on
 file:line+category (plus a same-location any-category secondary check —
 reviewers describe one defect with different slugs), detects same-round and
 cross-round consensus, applies the
-MECHANICAL auto-apply cascade from `ac-pipeline-builder/references/review-consensus.md`, carries deferred
+MECHANICAL auto-apply cascade from `ac-pipeline/references/review-consensus.md`, carries deferred
 findings forward in a consensus registry, and surfaces any missing reviewer
 (partial-failure) instead of silently dropping it.
 
@@ -101,7 +101,7 @@ def panel_unknown(reason, rnd):
           file=sys.stderr)
     print("FIX: write the Phase-2 panel manifest (panel-round-{}.json) with the Write tool on a".format(rnd),
           file=sys.stderr)
-    print("     literal path — see ac-pipeline-builder/references/shell-guardrails.md if dcg blocked the write — and",
+    print("     literal path — see ac-pipeline/references/shell-guardrails.md if dcg blocked the write — and",
           file=sys.stderr)
     print("     re-run. Only if the panel is genuinely known out-of-band, pass --expect.",
           file=sys.stderr)

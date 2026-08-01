@@ -1,7 +1,7 @@
 # ac-loop delegation prompts (single source — Phase 1 AND Phase 2)
 
 The verbatim child-prompt payloads both loop phases dispatch. Each opens with the
-Child-spawn preamble (`ac-pipeline-builder/references/delegation-contract.md` § Child-spawn preamble — included
+Child-spawn preamble (`ac-pipeline/references/delegation-contract.md` § Child-spawn preamble — included
 VERBATIM, per the SKILL.md rule). Slots in `{BRACES}` are filled by the conductor at
 dispatch:
 
@@ -15,7 +15,7 @@ dispatch:
 > assignee `<AGENT_NAME>`, claim id `<claim-id>`). `CLAIM_ASSIGNEE=<AGENT_NAME>` (MY loop
 > identity) — make EVERY bead claim, including any incremental/replacement claim, under
 > `--assignee <AGENT_NAME>`, NOT your own session name, so the BEADS-CLOSED-GATE sees
-> them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `ac-pipeline-builder/references/run-id.md`).
+> them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `ac-pipeline/references/run-id.md`).
 > Skip the bead-count setup question — answer is pre-supplied. For baseline test failures:
 > file a P1 bead and proceed (do not ask). Report when complete as a compact structured
 > summary (≤400 words, cap unchanged: beads shipped/closed with IDs, gate outcomes,

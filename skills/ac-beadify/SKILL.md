@@ -32,10 +32,10 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ### Configuration
 
 ```
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/beadify-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline-builder/references/run-id.md)
+ARTIFACTS_DIR=/tmp/beadify-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline/references/run-id.md)
 ```
 
 ```bash
@@ -153,7 +153,7 @@ Epic: Dashboard
 
 If validators found Critical/High issues, **revise the proposed structure** and present findings for user selection.
 
-<!-- mirror of ac-pipeline-builder/references/review-consensus.md §The auto-apply cascade (conditions 1-2; beadify is single-round, no cross-round condition) — edit there first -->
+<!-- mirror of ac-pipeline/references/review-consensus.md §The auto-apply cascade (conditions 1-2; beadify is single-round, no cross-round condition) — edit there first -->
 **Auto-apply a finding if EITHER condition is met:**
 
 1. **Severity-based:** The issue is Critical or High severity — these are defects, not preferences

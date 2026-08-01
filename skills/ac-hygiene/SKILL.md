@@ -55,10 +55,10 @@ PANEL=full            # full = 7 lenses (weekly run) | light = 3 (quick pass, us
 CURRENT_ROUND=1
 MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/hygiene-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline-builder/references/run-id.md)
+ARTIFACTS_DIR=/tmp/hygiene-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline/references/run-id.md)
 ```
 
 ```bash
@@ -73,7 +73,7 @@ fixes commit straight to `main` as pathspec commits under the **full H7 discipli
 hygiene whenever it is actively *fixing code* (hygiene is exempt from H7 **only** while purely
 reading/filing beads, never while editing). The 7-lens panel below IS this run's pre-push
 review — stronger than most batches get — so there is **no separate `ac-review` step** (branch
-policy: `ac-pipeline-builder` § Branch policy).
+policy: `ac-pipeline` § Branch policy).
 
 ```bash
 git checkout main 2>/dev/null || true
@@ -86,12 +86,12 @@ git branch --show-current   # confirm `main` before doing anything else
 not-yet-committed work may be sitting there. **Inventory it; do not touch it.** Only files YOU
 changed enter YOUR commits (pathspec-mandatory, Phase 3): never `git add -A`, never
 `git add .`, never `git commit -a`, and **never `git stash`** (a stray `stash pop` writes
-conflict markers into unrelated files — H7d, `ac-pipeline-builder/references/commit-discipline.md`). Use `git diff HEAD` if you
+conflict markers into unrelated files — H7d, `ac-pipeline/references/commit-discipline.md`). Use `git diff HEAD` if you
 need to isolate uncommitted-vs-committed state. If the inventory shows a genuine red flag
 (unexpected deletions, sensitive files, something orphaned rather than in-flight), surface it to
 the user before proceeding — otherwise proceed past it.
 
-### Initialize Consensus Registry <!-- if dcg rejects this write, do NOT bypass: the guard blocks a redirect whose target path is variable-built — sanctioned shapes (tee, the Write tool) in ac-pipeline-builder/references/shell-guardrails.md -->
+### Initialize Consensus Registry <!-- if dcg rejects this write, do NOT bypass: the guard blocks a redirect whose target path is variable-built — sanctioned shapes (tee, the Write tool) in ac-pipeline/references/shell-guardrails.md -->
 
 ```bash
 cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
@@ -145,7 +145,7 @@ sampled hunt:
    from memory or a prior run's notes — derive it fresh from the current tree
    every time.
 2. **Diff against the journey registry** — parse `CORE/journeys/*.md`
-   frontmatter (`criticality`, `surfaces`; schema: `ac-pipeline-builder/references/verification-gate.md`
+   frontmatter (`criticality`, `surfaces`; schema: `ac-pipeline/references/verification-gate.md`
    §Journey registry). A doc with no frontmatter defaults to `peripheral`.
 3. **Untagged critical-looking surfaces become findings** — a derived surface
    with no matching journey doc, or one whose match reads `peripheral`/untagged
@@ -308,15 +308,15 @@ Produce a numbered change list. For each: target file, what to change, auto-fixa
 2. **Same-round consensus:** 2+ agents independently flagged the same issue (regardless of severity) — multi-agent agreement is high-signal
 3. **Cross-round consensus:** A single-agent finding from THIS round matches a deferred finding in the consensus registry from a PREVIOUS round — recurrence across rounds is high-signal
 
-<!-- mirror: ac-pipeline-builder/references/review-consensus.md §The auto-apply cascade — edit there first -->
+<!-- mirror: ac-pipeline/references/review-consensus.md §The auto-apply cascade — edit there first -->
 
 **Design decision gate (applies before all auto-apply rules):** If a finding represents a choice with no objectively superior technical answer, resolve it yourself — pick the better option. Only tag as `DESIGN_DECISION` and defer if the decision would **noticeably affect the end-user experience** or **profoundly change the development approach**. Minor design choices (spacing values, naming conventions, implementation style) — just pick the better option and auto-apply.
 
-<!-- mirror: ac-pipeline-builder/references/review-consensus.md §Design-decision gate — edit there first -->
+<!-- mirror: ac-pipeline/references/review-consensus.md §Design-decision gate — edit there first -->
 
 **Apply these immediately. Log them as "Auto-applied" in the progress file with the consensus type.**
 
-After each batch of fixes — the **round gate** (incremental, per `ac-pipeline-builder`
+After each batch of fixes — the **round gate** (incremental, per `ac-pipeline`
 Invariant 2: incremental in the loop, exhaustive once at the boundary):
 
 ```bash
@@ -327,7 +327,7 @@ format (auto-fix, e.g. `pnpm format`) + type-check + lint + AFFECTED tests only 
 Run **format FIRST and as an auto-fix** (`pnpm format` = `prettier --write .`, not
 `format:check`) — CI checks formatting first over the *whole repo*, so one unformatted file
 fails the entire gate ~10 min in; auto-fixing locally makes that impossible.
-<!-- mirror: ac-pipeline-builder/references/verification-gate.md §Format-first gate — edit there first -->
+<!-- mirror: ac-pipeline/references/verification-gate.md §Format-first gate — edit there first -->
 
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
@@ -423,7 +423,7 @@ Read the consensus registry. Collect all remaining items:
 
 **Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it.
 
-<!-- mirror: ac-pipeline-builder/references/review-consensus.md §Conductor triage — edit there first -->
+<!-- mirror: ac-pipeline/references/review-consensus.md §Conductor triage — edit there first -->
 
 **Apply all `AUTO_IMPLEMENT` items** using Edit tool. Log each with rationale.
 
@@ -487,7 +487,7 @@ format (auto-fix, e.g. `pnpm format`) + type-check + lint + full test suite   # 
 
 This is the single exhaustive local run of the workflow (rounds ran affected-only). Format runs
 FIRST as auto-fix; if it rewrites files you did NOT author, commit the formatting as part of
-this run (rule + why: `ac-pipeline-builder/references/verification-gate.md` §Format-first gate). If any check fails,
+this run (rule + why: `ac-pipeline/references/verification-gate.md` §Format-first gate). If any check fails,
 fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
 directly to `main` (pathspec, push immediately; **no `--no-verify` on the commit**, `--no-verify`
 on the push only — same rule as Phase 3).

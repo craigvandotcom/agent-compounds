@@ -38,12 +38,12 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ### Configuration
 
 ```
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 # Timestamp-keyed, not branch- or claim-id-keyed: a review scopes a batch diff range since
 # the last review-mark, not a single claimed batch, so it never had the trunk-direct
-# branch-collapse problem (ac-pipeline-builder/references/run-id.md § Prefixes).
+# branch-collapse problem (ac-pipeline/references/run-id.md § Prefixes).
 ARTIFACTS_DIR=/tmp/work-review-$(date +%Y%m%d-%H%M%S)
 ```
 
@@ -55,7 +55,7 @@ echo "$ARTIFACTS_DIR"   # note the RESOLVED value — every later file write use
 > **`$ARTIFACTS_DIR` is a variable, so every shell redirect into it is a dynamic-path write —
 > the shape `dcg` blocks by design.** Produce files under it with the **Write tool on the
 > resolved literal path** (or pipe into `tee <literal path>`), never a redirect or heredoc
-> built from the variable (`ac-pipeline-builder/references/shell-guardrails.md`). This is not style: a silently
+> built from the variable (`ac-pipeline/references/shell-guardrails.md`). This is not style: a silently
 > blocked write here is a silently degraded review downstream (bd-axeyx).
 
 ### Register Session Identity (Tier 1)
@@ -144,7 +144,7 @@ review-mark (the last commit that touched `.claude/reviews/batch/`):
 > `batch/` from here: a second writer mid-batch makes this probe return a commit INSIDE the range
 > it bounds and the batch silently under-scopes (one live case shrank a 7-commit batch to 2 and
 > still reported success). **So this probe measures ACCEPTANCE, never coverage — what has actually
-> been reviewed is Scan D's union of recorded `Range:` claims, `ac-pipeline-builder/references/board-scan.md` (bd-zl1y5).**
+> been reviewed is Scan D's union of recorded `Range:` claims, `ac-pipeline/references/board-scan.md` (bd-zl1y5).**
 
 ```bash
 REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
@@ -377,7 +377,7 @@ Three checks, each a promotion-ladder rule made adversarial:
 ### Panel scaling (ZERO-RUNTIME + no RISK-TOUCH — bd-chd5p.8 / Item 6a)
 
 Body count may shrink **only** when classification proves the batch is safe. Keys on
-**files touched** via `ac-pipeline-builder/references/risk-classification.md` (ZERO-RUNTIME allowlist + no
+**files touched** via `ac-pipeline/references/risk-classification.md` (ZERO-RUNTIME allowlist + no
 RISK-TOUCH after test-path exclusion) — **never** on a self-declared
 "doc/test/methodology" batch label. The run's Criticals were all on batches that
 self-labeled low-risk; a label-keyed shrink would have let them through.
@@ -413,7 +413,7 @@ shrink/full tiers and is never dropped by a shrink.
 3. **test-quality is its own dedicated body whenever ANY test file is present** —
    even on a shrink-eligible ZERO-RUNTIME batch.
 4. **GUARD-RAIL:** batch is shrink-eligible only if `git diff --name-only` proves
-   ZERO-RUNTIME + no RISK-TOUCH per `ac-pipeline-builder/references/risk-classification.md`. When in doubt,
+   ZERO-RUNTIME + no RISK-TOUCH per `ac-pipeline/references/risk-classification.md`. When in doubt,
    full panel.
 
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
@@ -426,12 +426,12 @@ contracts and test-quality findings — one of them Critical (bd-axeyx).
 <!-- net-growth-ok: bd-axeyx — the manifest write IS the control whose silent dcg-block degraded
      a live panel; the "how to write it so the guard accepts it" instruction has to sit AT the
      write site, and the exit-3 contract at the consensus call site. A reference-file pointer is
-     what failed here: `ac-pipeline-builder/references/shell-guardrails.md` already documented the fix and the inline
+     what failed here: `ac-pipeline/references/shell-guardrails.md` already documented the fix and the inline
      snippet contradicted it. -->
 **Use the Write tool, on the resolved literal path** — do NOT shell-redirect into
 `$ARTIFACTS_DIR`. A heredoc or redirect whose target is built from a variable is exactly the
 shape `core.filesystem:redirect-truncate-dynamic-path` blocks, and this snippet is the one
-that got bitten (`ac-pipeline-builder/references/shell-guardrails.md` § Sanctioned shapes). Echo `$ARTIFACTS_DIR`,
+that got bitten (`ac-pipeline/references/shell-guardrails.md` § Sanctioned shapes). Echo `$ARTIFACTS_DIR`,
 paste its resolved value into the Write call, and confirm the file exists before spawning.
 
 Write `<resolved ARTIFACTS_DIR>/panel-round-1.json` with this content:
@@ -460,10 +460,10 @@ Build each reviewer's prompt from **`references/reviewer-prompt-template.md`**, 
 - The `test-quality` reviewer runs probes (rerun/shuffle/sabotage) in its own disposable worktree — its prompt carries the isolation discipline; it never mutates the shared branch.
 
 **Wait for all spawned reviewers to complete.** Bound the wait per
-`ac-pipeline-builder/references/delegation-contract.md`: a reviewer that returns nothing (died on a terminal API
+`ac-pipeline/references/delegation-contract.md`: a reviewer that returns nothing (died on a terminal API
 error, or its resume chain broke) is a **failure to re-spawn or report**, not a silent pass —
 verify a `round-1-{role}.json` exists for every manifest-listed role before synthesizing;
-missing output ≠ "no findings." **When the RE-spawn keeps failing too (529/rate-limit/timeout), or you never had `Task` at all, stop retrying and read `ac-pipeline-builder/references/degraded-mode.md` — it owns the bounded full-panel→smaller-panel→solo ladder and the `Degraded:` report field that keeps a solo verdict distinguishable from a panel one (bd-nreuv).**
+missing output ≠ "no findings." **When the RE-spawn keeps failing too (529/rate-limit/timeout), or you never had `Task` at all, stop retrying and read `ac-pipeline/references/degraded-mode.md` — it owns the bounded full-panel→smaller-panel→solo ladder and the `Degraded:` report field that keeps a solo verdict distinguishable from a panel one (bd-nreuv).**
 
 **TaskUpdate(task: "Phase 2", status: "completed")**
 
@@ -479,7 +479,7 @@ missing output ≠ "no findings." **When the RE-spawn keeps failing too (529/rat
 
 The mechanical synthesis — dedup, same-round + cross-round consensus, the severity/consensus
 auto-apply cascade, and partial-failure detection — runs in **code**, not prose, so consensus
-can't be hallucinated over markdown. It implements `ac-pipeline-builder/references/review-consensus.md`:
+can't be hallucinated over markdown. It implements `ac-pipeline/references/review-consensus.md`:
 
 ```bash
 CONSENSUS="$(git rev-parse --show-toplevel)/.claude/skills/ac-review/scripts/consensus.py"
@@ -493,7 +493,7 @@ summary. Harness-agnostic: plain `python3`, stdlib only.
 **Exit 3 = `PANEL UNKNOWN` — a hard stop, not a warning.** The script found no usable
 Phase-2 panel manifest and **refuses to substitute a default panel**, because a check that
 cannot state its own scope has not checked anything it can attest to; `unknown` never
-collapses to `ok` (same doctrine as `ac-pipeline-builder/references/board-scan.md` Scan E). Do NOT re-run with
+collapses to `ok` (same doctrine as `ac-pipeline/references/board-scan.md` Scan E). Do NOT re-run with
 `--expect` to make it go green — go back to Phase 2, write the manifest with the Write tool
 on the literal path, confirm it exists, and re-run. If the panel genuinely cannot be
 reconstructed, emit **`VERDICT: NEEDS_DECISION`** and say the panel was unconfirmable.
@@ -528,7 +528,7 @@ reconstructed, emit **`VERDICT: NEEDS_DECISION`** and say the panel was unconfir
   answer → pick the better option and move it into the change list; defer as `DESIGN_DECISION`
   (→ user in Phase 7) only if it **noticeably affects end-user experience** or **profoundly
   changes the development approach**. Minor choices (spacing, naming, style) → just pick the better one.
-  <!-- mirror: ac-pipeline-builder/references/review-consensus.md §Design-decision gate — edit there first -->
+  <!-- mirror: ac-pipeline/references/review-consensus.md §Design-decision gate — edit there first -->
 
 ### Verdict comment (VERDICT grammar)
 
@@ -642,7 +642,7 @@ Read the engineer's result file. Confirm:
 **TaskUpdate(task: "Phase 5", status: "in_progress")**
 
 Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
-risk using the shared classifier in `ac-pipeline-builder/references/verification-gate.md` (Step 1) — ac-review is a
+risk using the shared classifier in `ac-pipeline/references/verification-gate.md` (Step 1) — ac-review is a
 branch review, **not** the green-main boundary (the exhaustive full-suite run is loop-close CI;
 rationale: `references/incidents.md`).
 
@@ -696,7 +696,7 @@ AskUserQuestion(
 
 ### Report Destination
 
-Three destinations, and **none of them is `.claude/reviews/batch/`** (bd-kudrb). None advancing the mark does **not** mean none counts: all three are read by `ac-pipeline-builder/references/board-scan.md` Scan D, so a root-dir report is full-weight review *coverage* — provided it carries a machine-parseable `**Range:**` line (bd-zl1y5).
+Three destinations, and **none of them is `.claude/reviews/batch/`** (bd-kudrb). None advancing the mark does **not** mean none counts: all three are read by `ac-pipeline/references/board-scan.md` Scan D, so a root-dir report is full-weight review *coverage* — provided it carries a machine-parseable `**Range:**` line (bd-zl1y5).
 
 | Invocation | Destination | Advances the review-mark? |
 |---|---|---|
@@ -719,7 +719,7 @@ Callers pass the destination via the delegation prompt, e.g. `report_dest=.claud
 > **Never write to `.claude/reviews/batch/` from this skill — not even when a caller asks you
 > to (bd-kudrb).** That directory is the trunk-direct review-mark, and the anchor probe
 > (`git log -1 --format=%H -- .claude/reviews/batch/`, used by `ac-batch-close` Act 1,
-> `ac-loop` scope detection, `ac-pipeline-builder/references/verification-gate.md`, and this skill's own Phase 1)
+> `ac-loop` scope detection, `ac-pipeline/references/verification-gate.md`, and this skill's own Phase 1)
 > takes the LATEST commit touching it. ac-review runs BEFORE `ac-batch-close` computes its
 > anchor, so a report committed there mid-batch is returned as the anchor — a commit inside
 > the range it is meant to bound. This bit four ceremonies in one day; each time only a
@@ -802,7 +802,7 @@ Report auto-fix results and skip to Phase 8.
 | `SCOPE_ESCALATION` | A technically superior option exists but requires profound structural change (new abstractions, large refactors, architectural pivots) that constitutes a strategic commitment. | Defer to user with scope context. |
 
 **Default bias: `AUTO_IMPLEMENT`.** Most findings have a correct answer — pick it. Only classify as `DESIGN_DECISION` when you genuinely cannot determine a superior option on engineering merit AND the impact is user-visible or development-transformative. Only classify as `SCOPE_ESCALATION` when the blast radius is transformative, not merely "more work."
-<!-- mirror: ac-pipeline-builder/references/review-consensus.md §Conductor triage — edit there first -->
+<!-- mirror: ac-pipeline/references/review-consensus.md §Conductor triage — edit there first -->
 
 ### Apply AUTO_IMPLEMENT Items
 
@@ -823,7 +823,7 @@ below). **ANCHOR DEDUPE — keyword search is not enough.** Before `br create`, 
 primary `file:line` anchor and check whether an OPEN bead already carries it
 (`br list --status open --limit 0 --json`, grep the descriptions for the path). Same file + same
 symbol/line-range + same defect → **`br comments add` on the existing bead instead of creating a
-second one**, and say it recurred. This mirrors `ac-pipeline-builder/references/disposition.md` § Dedupe-before-filing,
+second one**, and say it recurred. This mirrors `ac-pipeline/references/disposition.md` § Dedupe-before-filing,
 which already governs skill-improvement beads — same rule, wider scope. Two reasons it matters:
 parallel panels cannot see each other, so the same defect gets filed twice from one run (measured
 2026-08-01: the identical `--conditions=react-server` gap for the same five scripts, filed the same

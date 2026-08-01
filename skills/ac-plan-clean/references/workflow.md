@@ -35,10 +35,10 @@ CURRENT_ROUND=1
 MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
 AGENT_MODEL=sonnet
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/plan-clean-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline-builder/references/run-id.md)
+ARTIFACTS_DIR=/tmp/plan-clean-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline/references/run-id.md)
 ```
 
 ```bash
@@ -58,7 +58,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>" || true
 Create the cross-round tracking file:
 
 > **If `dcg` rejects this write, do NOT bypass it** — the guard blocks a redirect whose target path
-> is variable-built. Sanctioned shapes (`tee`, the Write tool): `ac-pipeline-builder/references/shell-guardrails.md`.
+> is variable-built. Sanctioned shapes (`tee`, the Write tool): `ac-pipeline/references/shell-guardrails.md`.
 
 ```bash
 cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
@@ -231,7 +231,7 @@ Read the plan end-to-end, checking that the logical flow holds. Trace what each 
 - Redundant sections: same information stated in multiple places
 - New user-facing surface with no registry update: plan adds a route/screen/entry point
   but doesn't add/update a `CORE/journeys/*.md` entry (schema:
-  `ac-pipeline-builder/references/verification-gate.md` §Journey registry)
+  `ac-pipeline/references/verification-gate.md` §Journey registry)
 
 Use your judgment — if the logic feels off somewhere, dig into it.
 
