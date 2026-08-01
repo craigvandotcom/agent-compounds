@@ -251,7 +251,10 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 5. Document current state
 ```
 
-**Human-shared visual references are a different artifact from the baseline screenshot above, and persisting them is not optional.** If Craig (or any human) shares a visual reference — screenshot, mockup, design comp — as the target to build toward, save it IMMEDIATELY to `docs/design-refs/<surface>-<source>-reference.<ext>` (NOT under `.claude/` — that's one harness's mount) and cite that exact path in the research doc / plan frontmatter; do not just describe it into prose. An image referenced-but-not-committed is a refine-blocking gap. Contrast with the baseline above: `research/YYYY-MM-DD-HHMM-baseline-screenshot-[feature].png` is agent-captured *current* state; `docs/design-refs/` is human-shared *target* state.
+**Human-shared visual references are a different artifact from the baseline screenshot
+above — capture them per `ac-pipeline/references/design-refs.md`** (save immediately to
+`docs/design-refs/…`, cite the exact path in the research doc / plan frontmatter, never
+prose-only; missing path = refine-blocking gap).
 
 **For API changes:** Hit current endpoint, record response shape, note errors/limitations.
 
@@ -440,11 +443,8 @@ On **Approve**, mark task "Present plan for approval" `completed`;
 
 ### Safety Check (Before Commit)
 
-```bash
-git status --short
-```
-
-**If ANY deletions (D):** STOP and ask "You're about to delete X files. Is this intentional?" Wait for confirmation.
+Run the pre-commit deletion check — `ac-pipeline/references/commit-discipline.md`
+§ Pre-commit deletion check (`git status --short`; any unexplained `D` → STOP and ask).
 
 ### Commit Plan Artifacts
 
@@ -591,26 +591,9 @@ AskUserQuestion(
 
 ## Remember
 
-- **YOU synthesize findings and create the plan** — explorers find patterns, you decide what matters
-- **Planning is thinking, not doing** — do NOT write implementation code
-- **Tests are designed in plan, built in implementation** — specs are hardcoded
-- **Artifacts survive compaction** — always read from files, not memory
-- **Progress file is compaction recovery** — parse it to know where you left off
-- **WAIT for approval** — never proceed without the user's explicit approval
+<!-- diet: restated bullets deleted (Pass B station 1, Craig ruling 2) — all six had body twins (grep-verified: synthesis L324, no-code L7, hardcoded-specs L295, compaction/progress §Compaction Recovery, approval gate Phase 4) -->
+<!-- diet: "Refinement & review — now separate skills" -> skill listing descriptions + the Phase-4 hand-off table (the table restated both); the Typical order line survives below (Pass B station 1) -->
 
----
-
-## Refinement & review — now separate skills
-
-Plan creation (above) gets you to a first draft. Deepening, verifying, and pressure-testing it are now **distinct skills** (split out of the old monolithic plan skill), each invokable on its own:
-
-| Skill | When |
-| --- | --- |
-| `/ac-plan-refine-internal` | Multi-agent refinement (light/medium/heavy), no external AI |
-| `/ac-plan-refine-external` | Multi-model iterative refinement via 3–4 external AI models (OpenRouter) |
-| `/ac-plan-clean` | 3 Sonnet agents verify accuracy, structure, completeness (final polish) |
-| `/ac-plan-lab` | Deep analysis of the plan — genius mode (first-principles forensic review) + alien mode (push beyond cognitive defaults, paradigm-breaking angles) |
-| `/ac-beadify` | Plan ready — convert plan to beads with parallel validation (then `/ac-bead-refine`) |
-| `/ac-implement` | Beads refined — sequential implementation (conductor + engineer sub-agents) |
-
-Typical order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` → (`/ac-plan-refine-external` / `/ac-plan-lab` as warranted) → `/ac-beadify`.
+Typical chain order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` →
+(`/ac-plan-refine-external` / `/ac-plan-lab` as warranted) → `/ac-beadify` (each a
+distinct skill — see the listing / hand-off table above).

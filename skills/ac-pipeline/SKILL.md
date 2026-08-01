@@ -403,4 +403,4 @@ prefixes) · `board-scan` (orient scans A–E) · `risk-classification` (panel/g
 tiers) · `review-consensus` (consensus + conductor triage) · `ceremony-batching-pool`
 (pool RMW + drain) · `disposition` (findings three-way rule + save-for-later) ·
 `degraded-mode` (capability-starved runs) · `shell-guardrails` (dcg-safe write/delete
-shapes) · `anti-patterns` (named failure modes)
+shapes) · `anti-patterns` (named failure modes) · `design-refs` (target-visual capture + AC-path gate) <!-- net-growth-ok: Pass B station 1 — design-refs canon added to the contracts index (promoted from ac-plan-init, 5 citers repointed) -->

@@ -18,6 +18,15 @@ touch it, never commit it "on their behalf".
 
 ---
 
+## Pre-commit deletion check
+
+Before any commit that could carry deletions, run `git status --short` and look for `D`
+entries. **Unexpected deletions STOP the commit** — surface them ("about to delete X
+files — intentional?") and wait for confirmation (interactive) or abort-and-report
+(headless). Deletions you authored deliberately proceed; deletions you cannot explain
+are someone else's work or an accident — never commit them. (Promoted from the
+plan-chain safety check, Pass B station 1 — six skills carried copies.)
+
 ## Commit + push sequence
 
 ```bash

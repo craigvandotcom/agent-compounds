@@ -217,7 +217,7 @@ Each bead description must be **self-contained** (typed headers per
   test, or observation that verifies it; an AC no one can name a check for is
   not an AC)
 - **UI beads derived from a visual reference** (a human-shared screenshot/mockup/comp
-  saved per `ac-plan-init`'s capture rule) MUST carry the reference-image path
+  saved per `ac-pipeline/references/design-refs.md`) MUST carry the reference-image path
   (`docs/design-refs/<surface>-<source>-reference.<ext>`) in `## Acceptance Criteria` —
   not just a prose description of it. Losing the path here is how geometry (shape,
   radius, spacing) silently drops between research doc and bead.

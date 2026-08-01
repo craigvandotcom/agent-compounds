@@ -75,7 +75,7 @@ mutex-guarded. (Light-path refine criteria are **decided ACCEPT** — bd-9bvr2 c
 branch; do not re-open a human-gate on those criteria.)
 
 **UI beads derived from a visual reference** must carry the reference-image path
-(`docs/design-refs/<surface>-<source>-reference.<ext>`, per `ac-plan-init`'s capture rule)
+(`docs/design-refs/<surface>-<source>-reference.<ext>`, per `ac-pipeline/references/design-refs.md`)
 in their `## Acceptance Criteria` — the Completeness Reviewer (see `references/workflow.md`)
 checks for this and for AC drift against the source research doc's geometry, not just
 internal bead coherence.
