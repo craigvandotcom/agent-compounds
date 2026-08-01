@@ -85,7 +85,7 @@ the delegation prompt). That workaround was needed before this key existed; it i
 unnecessary and harmful — it breaks the `-$RUN_ID` glob ac-land uses to gather the run.
 The safety lives in `CHILD_ID`, not in the prompt, so the prompt passes `RUN_ID` bare.
 
-Proof: `bash skills/_shared/scripts/bead-refine-concurrent-dir.test.sh`.
+Proof: `bash skills/ac-pipeline-builder/scripts/bead-refine-concurrent-dir.test.sh`.
 
 #### dcg-safe writes (fully-literal redirect targets only)
 

@@ -145,7 +145,7 @@ sampled hunt:
    from memory or a prior run's notes — derive it fresh from the current tree
    every time.
 2. **Diff against the journey registry** — parse `CORE/journeys/*.md`
-   frontmatter (`criticality`, `surfaces`; schema: `_shared/verification-gate.md`
+   frontmatter (`criticality`, `surfaces`; schema: `ac-pipeline-builder/references/verification-gate.md`
    §Journey registry). A doc with no frontmatter defaults to `peripheral`.
 3. **Untagged critical-looking surfaces become findings** — a derived surface
    with no matching journey doc, or one whose match reads `peripheral`/untagged
@@ -327,7 +327,7 @@ format (auto-fix, e.g. `pnpm format`) + type-check + lint + AFFECTED tests only 
 Run **format FIRST and as an auto-fix** (`pnpm format` = `prettier --write .`, not
 `format:check`) — CI checks formatting first over the *whole repo*, so one unformatted file
 fails the entire gate ~10 min in; auto-fixing locally makes that impossible.
-<!-- mirror: _shared/verification-gate.md §Format-first gate — edit there first -->
+<!-- mirror: ac-pipeline-builder/references/verification-gate.md §Format-first gate — edit there first -->
 
 If checks fail, revert the breaking fix and note it as non-auto-fixable.
 
@@ -487,7 +487,7 @@ format (auto-fix, e.g. `pnpm format`) + type-check + lint + full test suite   # 
 
 This is the single exhaustive local run of the workflow (rounds ran affected-only). Format runs
 FIRST as auto-fix; if it rewrites files you did NOT author, commit the formatting as part of
-this run (rule + why: `_shared/verification-gate.md` §Format-first gate). If any check fails,
+this run (rule + why: `ac-pipeline-builder/references/verification-gate.md` §Format-first gate). If any check fails,
 fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT triage items)
 directly to `main` (pathspec, push immediately; **no `--no-verify` on the commit**, `--no-verify`
 on the push only — same rule as Phase 3).

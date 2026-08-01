@@ -116,7 +116,7 @@ the URL is still the real prod surface before reporting it (bd-vp7fw).
 
 Also flag open beads explicitly blocked on a human (notes "waiting on" / "needs manual" / "requires account" / "human decision") that aren't already `human-gate`.
 
-**Journey debt** (Invariant 9, `_shared/verification-gate.md` §Journey registry): per
+**Journey debt** (Invariant 9, `ac-pipeline-builder/references/verification-gate.md` §Journey registry): per
 `CORE/journeys/*.md`, a non-peripheral journey (`criticality` ≥ `core`) with a missing
 `last_pass` block, or one `skills/_tools/journey-stamp-check.sh` verdicts stale
 (SHA not an ancestor of HEAD, or an intervening diff touched its `surfaces`), is

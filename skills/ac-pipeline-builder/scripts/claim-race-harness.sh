@@ -7,7 +7,7 @@
 # test (H6/L4 — gates stage 3)"), this harness must pass green before the
 # conductor-concurrency cap can be raised beyond 1.
 #
-# REPO: agent-compounds (skills/_shared/scripts/) — symlinked into every neoMeta app
+# REPO: agent-compounds (skills/ac-pipeline-builder/scripts/) — symlinked into every neoMeta app
 # that adopts trunk-direct claim-at-selection (ac-loop Phase 1/2, ac-implement Phase
 # 1a). Lives alongside beads-closed-gate.sh, the sibling script covering the SAME
 # mechanism's closing half (assignee-scoped gate vs. this file's claiming-time race

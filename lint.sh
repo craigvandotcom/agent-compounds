@@ -410,7 +410,7 @@ if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
 fi
 
 # D9 retired (trunk-direct migration, epic bd-u2lo1, bd-u2lo1.3): the allocator
-# script (`_shared/scripts/allocate-wave-branch.sh`) it checked is deleted —
+# script (`ac-pipeline-builder/scripts/allocate-wave-branch.sh`) it checked is deleted —
 # ac-implement no longer allocates wave branches (bd-u2lo1.6) and ac-loop no
 # longer calls the allocator either (bd-u2lo1.7). D9b (below) is the surviving
 # check for stale `wave/` branch-naming assumptions.

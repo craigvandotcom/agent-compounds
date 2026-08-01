@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verification-gate-class.test.sh — proof harness for `_shared/verification-gate.md`
+# verification-gate-class.test.sh — proof harness for `ac-pipeline-builder/references/verification-gate.md`
 # Step 1 diff classification (bd-55f7a native fix, bd-mdbhr logic/webrt fix).
 #
 # WHY IT EXISTS: Step 1's classifier is a pasted bash block, so its only possible

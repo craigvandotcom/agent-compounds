@@ -87,7 +87,7 @@ Tag every gate:
 
 Prefer a **classifier-gate**: inspect the diff/output and run **only** the checks it warrants,
 at the right depth — not a fixed unconditional battery. (Engineering instance:
-`_shared/verification-gate.md`, which classifies the wave diff and runs only
+`ac-pipeline-builder/references/verification-gate.md`, which classifies the wave diff and runs only
 the selected passes.)
 
 Run independent gates in **parallel**; dependent gates sequential. A validator reports `PASS`

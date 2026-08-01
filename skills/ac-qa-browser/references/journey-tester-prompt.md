@@ -60,7 +60,7 @@ agent-browser mechanics: read `browser-testing/SKILL.md`. Loop per journey step:
 ## Output (mandatory — the conductor machine-reads this)
 
 Write {ARTIFACTS_DIR}/verdict-<journey>.json (one per journey) EXACTLY per the schema
-in `_shared/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
+in `ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol: journey, lane
 ("{LANE}"), session ("{SESSION_NAME}"), started_at/ended_at (ISO8601, date -u), status
 PASS|FAIL|**INCONCLUSIVE** — INCONCLUSIVE whenever any `proof.asserts` result is
 `NOT_PROVABLE_IN_BROWSER`; a journey the harness could not observe is NOT a pass

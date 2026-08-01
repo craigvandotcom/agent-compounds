@@ -6,10 +6,10 @@ boot. This file decides, from the wave's diff, **which passes run and at what
 depth**. It is the single source; conductors (`ac-loop`
 Phase 1/2, `ac-merge`'s smoke net) consult it rather than re-deciding.
 
-Reference it as `_shared/verification-gate.md`. Method only — zero app facts.
+Reference it as `ac-pipeline-builder/references/verification-gate.md`. Method only — zero app facts.
 
 > **Companion docs.** *How* each pass runs (depth levels, journeys, findings=beads,
-> the `QA_VALIDATION` schema) lives in `_shared/qa-shared.md`. This file owns *whether*
+> the `QA_VALIDATION` schema) lives in `ac-pipeline-builder/references/qa-shared.md`. This file owns *whether*
 > and *how deep*. The two compose: this gate picks `{passes, depth}`; each pass
 > executes its own method.
 
@@ -95,7 +95,7 @@ printf '%s\n' "$CODE_FILES" | grep -q . && CLASS_RUNTIME=1
 | `webui` | visual / DOM surface | `.tsx/.jsx/.css` under `app/components/features`, design tokens, `globals.css` |
 | `webrt` | web runtime behavior | API routes, middleware, data/fetch/store/query code |
 | `logic` | backend / lib / db | `lib/`, `utils/`, `server`, `supabase/`, migrations, `.sql` |
-| `runtime` | any non-doc/test/CI code | everything except `.md`, tests, `.github/`, `docs/` — proof harness for all 5 classes: `_shared/scripts/verification-gate-class.test.sh` (run it after ANY Step 1 edit) |
+| `runtime` | any non-doc/test/CI code | everything except `.md`, tests, `.github/`, `docs/` — proof harness for all 5 classes: `ac-pipeline-builder/scripts/verification-gate-class.test.sh` (run it after ANY Step 1 edit) |
 
 ---
 

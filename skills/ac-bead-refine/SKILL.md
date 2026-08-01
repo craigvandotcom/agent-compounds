@@ -42,7 +42,7 @@ of them the **same `RUN_ID`** and the same claim id. Two consequences bind this 
 Never work around a collision by hand-suffixing `RUN_ID` per child; the safety belongs in
 the key, not the prompt. Formula, the three scope modes and the stamp loop:
 `references/workflow.md` § Phase 0 / § Phase 5. Proof:
-`bash skills/_shared/scripts/bead-refine-concurrent-dir.test.sh`.
+`bash skills/ac-pipeline-builder/scripts/bead-refine-concurrent-dir.test.sh`.
 
 ## Epic-Scoped Invocation
 

@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: Use when creating, editing, refactoring, or cleaning up Claude Code skills — including dieting an oversized SKILL.md down to its enforcement spine, extracting optional content to references/, centralizing cross-skill blocks into _shared/, and optimizing description/token cost. Triggers on "create a skill", "build a skill", "refactor this skill", "clean up our skills", "skill hygiene", "diet this skill", "trim this skill", "make skills token efficient", "extract to references", "centralize shared skill content", "convert to a skill", "description budget".
+description: Use when creating, editing, refactoring, or cleaning up Claude Code skills — including dieting an oversized SKILL.md down to its enforcement spine, extracting optional content to references/, centralizing cross-skill blocks into the owning domain skill's references/, and optimizing description/token cost. Triggers on "create a skill", "build a skill", "refactor this skill", "clean up our skills", "skill hygiene", "diet this skill", "trim this skill", "make skills token efficient", "extract to references", "centralize shared skill content", "convert to a skill", "description budget".
 ---
 
 > **Shared skill (agent-compounds).** Symlinked into projects via `deploy.sh` — this is the single source of truth; edit here, not in a consumer copy. Method-only and portable (no project facts).
@@ -88,11 +88,11 @@ Agent recognizes the scenario matches and loads the full skill for detailed guid
 
 A non-trivial skill is a **lean spine that routes to references**, not a wall of everything. The SKILL.md spine holds what the *orchestrator* needs (workflow phases, decision trees, routing rules, constraints); everything only a *sub-agent or single stage* consumes (sub-agent prompts, output templates, schemas, mode variants) goes to `references/`, loaded on demand.
 
-**The discriminator:** *Does the orchestrator itself need this to decide what to do next, or does only a spawned sub-agent / one stage consume it?* Orchestrator → spine. Sub-agent/stage → `references/`. A block consumed *verbatim by two or more skills* → `_shared/`, not a per-skill copy (the promotion rule; centralize to kill drift).
+**The discriminator:** *Does the orchestrator itself need this to decide what to do next, or does only a spawned sub-agent / one stage consume it?* Orchestrator → spine. Sub-agent/stage → `references/`. A block consumed *verbatim by two or more skills* → the OWNING domain skill's `references/` (structure-standard § Owner-hosted canon), not a per-skill copy (the promotion rule; centralize to kill drift).
 
 **Two traps the discriminator alone misses:** (1) enforcement-by-repetition — a rule re-checked at every decision point — is CORE and stays inline even though it "looks duplicated"; length there IS the enforcement. (2) A child-spawn prompt that gets pasted into a fresh sub-agent must stay inline (or be inlined-verbatim from a reference at the spawn site) — pointing a fresh child at a file it never reads silently breaks the spawn.
 
-Full rulebook (spine vs references vs `_shared/`, the orchestrator trap, pointer syntax, ToC rule): **[references/structure-standard.md](references/structure-standard.md)**. To *diet* an existing oversized skill (or batch-sweep the registry), run **`workflows/hygiene-pass.md`** — the callable "clean up our skills" procedure.
+Full rulebook (spine vs references vs owner-hosted canon, the orchestrator trap, pointer syntax, ToC rule): **[references/structure-standard.md](references/structure-standard.md)**. To *diet* an existing oversized skill (or batch-sweep the registry), run **`workflows/hygiene-pass.md`** — the callable "clean up our skills" procedure.
 
 **Moving content between tiers** (SKILL.md core ↔ `references/` ↔ holding zone) follows the promotion ladder: **up needs proof, down needs disuse, and unique content is never deleted without first aging in the holding zone** (`MAINTENANCE.md` § Holding pen) — so knowledge is never silently lost. Full rules + how ablation/metrics decide movement: **[references/promotion-ladder.md](references/promotion-ladder.md)** — it specializes `context-engineering` § PROMOTION & DEMOTION (SKILL.md:243–267) for the skill layer, is applied section-by-section by `workflows/hygiene-pass.md`, shares tier-3 holding-pen mechanics with `references/maintenance-ledger.md`, and adds the proof-gated promotion half on top of `references/structure-standard.md`'s move-out (demotion) tree.
 
@@ -373,7 +373,7 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 |----------|---------|
 | `workflows/create-skill.md` | Interactive skill creation |
 | `workflows/refine-skill.md` | Improve one skill (rule-granularity polish) |
-| `workflows/hygiene-pass.md` | **Diet an oversized skill (section-granularity) OR batch-sweep a whole `skills/` dir** — CORE/EXTRACT/CUT cartography → `_shared/` centralization → orchestrator-trap gate → pointer-integrity re-validate. The callable "clean up our skills" entry point. |
+| `workflows/hygiene-pass.md` | **Diet an oversized skill (section-granularity) OR batch-sweep a whole `skills/` dir** — CORE/EXTRACT/CUT cartography → owner-hosted centralization → orchestrator-trap gate → pointer-integrity re-validate. The callable "clean up our skills" entry point. |
 | `workflows/convert-to-skill.md` | Convert docs/subagents to skill |
 
 ---
@@ -382,7 +382,7 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 
 | File | Contents |
 |------|----------|
-| `references/structure-standard.md` | **The spine+references+`_shared` rulebook** — skill archetypes, the move-out decision tree, the orchestrator trap; read before writing/refactoring a large skill |
+| `references/structure-standard.md` | **The spine+references+owner-hosting rulebook** — skill archetypes, the move-out decision tree, the orchestrator trap; read before writing/refactoring a large skill |
 | `references/token-economics.md` | **Loading model, hard budgets, determinism framework** — read before writing/refining descriptions or cutting content |
 | `references/maintenance-ledger.md` | **The per-skill `MAINTENANCE.md` format + lifecycle** — the shape-vs-behavior risk tiers; read when a hygiene-pass or reflect deposits/triages skill signal |
 | `references/promotion-ladder.md` | **The 3-tier insertion/deletion ladder** (SKILL.md core ↔ references ↔ holding zone) — up needs proof, down needs disuse, unique-deletes age in the holding zone first; how metrics/ablation decide movement; read before promoting content to core or deleting unique content |
@@ -456,7 +456,7 @@ Before deploying a skill:
 - [ ] **Description focuses on WHEN (triggers) not HOW (workflow)**
 - [ ] Registry description budget still fits (`validate-skill.sh --registry`); manual-only skills use `disable-model-invocation: true`
 - [ ] Any content cut/moved passed the token-bucket test (no enforcement tokens weakened)
-- [ ] Blocks used verbatim by ≥2 skills centralized to `_shared/`, not duplicated per skill
+- [ ] Blocks used verbatim by ≥2 skills centralized to the OWNING domain skill's references/ (structure-standard § Owner-hosted canon), not duplicated per skill
 - [ ] Child-spawn prompts kept inline (or inlined-verbatim from a reference) — not pointed-at (orchestrator trap)
 - [ ] Pointer integrity clean after any move (`validate-skill.sh` — referenced files exist, no orphans), including sibling skills
 - [ ] Name uses lowercase/numbers/hyphens only (max 64 chars)

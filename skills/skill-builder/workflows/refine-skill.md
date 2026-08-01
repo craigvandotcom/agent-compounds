@@ -78,7 +78,7 @@ removed or relocated until its inventory entry exists.
 
 **For a structural DIET (oversized SKILL.md, section-level extraction — not just rule
 polish), use `workflows/hygiene-pass.md` instead** — it adds the section-by-section
-CORE/EXTRACT/CUT cartography, the `_shared/` centralization decision, the orchestrator-trap
+CORE/EXTRACT/CUT cartography, the owner-hosting centralization decision, the orchestrator-trap
 gate for child-spawn prompts, and a registry-wide batch mode. Phase 3.0 here is the
 rule-granularity survival gate; hygiene-pass is the section-granularity diet that calls it.
 

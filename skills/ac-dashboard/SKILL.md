@@ -47,7 +47,7 @@ gh run list --limit 3 --json status,conclusion,name,createdAt 2>/dev/null    # r
 
 Per wave branch, one cheap read: `git log origin/main..origin/<wave> --oneline | wc -l` (commits ahead) + last-commit age. Skip anything expensive — this is a glance, not an audit.
 
-**Journey registry read (journey debt — Invariant 9, `_shared/verification-gate.md` §Journey registry):**
+**Journey registry read (journey debt — Invariant 9, `ac-pipeline-builder/references/verification-gate.md` §Journey registry):**
 
 ```bash
 for f in "$PROJECT_ROOT"/CORE/journeys/*.md "$PROJECT_ROOT"/.claude/skills/CORE/journeys/*.md; do

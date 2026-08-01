@@ -642,7 +642,7 @@ Read the engineer's result file. Confirm:
 **TaskUpdate(task: "Phase 5", status: "in_progress")**
 
 Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
-risk using the shared classifier in `_shared/verification-gate.md` (Step 1) — ac-review is a
+risk using the shared classifier in `ac-pipeline-builder/references/verification-gate.md` (Step 1) — ac-review is a
 branch review, **not** the green-main boundary (the exhaustive full-suite run is loop-close CI;
 rationale: `references/incidents.md`).
 
@@ -719,7 +719,7 @@ Callers pass the destination via the delegation prompt, e.g. `report_dest=.claud
 > **Never write to `.claude/reviews/batch/` from this skill — not even when a caller asks you
 > to (bd-kudrb).** That directory is the trunk-direct review-mark, and the anchor probe
 > (`git log -1 --format=%H -- .claude/reviews/batch/`, used by `ac-batch-close` Act 1,
-> `ac-loop` scope detection, `_shared/verification-gate.md`, and this skill's own Phase 1)
+> `ac-loop` scope detection, `ac-pipeline-builder/references/verification-gate.md`, and this skill's own Phase 1)
 > takes the LATEST commit touching it. ac-review runs BEFORE `ac-batch-close` computes its
 > anchor, so a report committed there mid-batch is returned as the anchor — a commit inside
 > the range it is meant to bound. This bit four ceremonies in one day; each time only a

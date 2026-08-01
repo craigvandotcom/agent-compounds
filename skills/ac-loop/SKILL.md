@@ -27,10 +27,10 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > `rule-agent-mail-identity-setup`).
 > **The VERIFY-GATE passes are phases too:** each gate-selected pass (`ac-ui-polish`,
 > `ac-qa-browser`, `ac-qa-device`) runs as its own spawned opus-pinned sub-session with a
-> delegation prompt — you consult `_shared/verification-gate.md` for selection + depth (that
+> delegation prompt — you consult `ac-pipeline-builder/references/verification-gate.md` for selection + depth (that
 > consult is yours), then spawn the pass; you never load a verify skill or drive a
 > browser/simulator in your own context. The passes are themselves conductors over tester
-> subagents (`_shared/qa-shared.md` § Conductor / worker evidence protocol).
+> subagents (`ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol).
 > You **never** read a phase skill's `SKILL.md`
 > (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
 > `ac-ui-polish`, `ac-qa-browser`, `ac-qa-device`) into your
@@ -85,7 +85,7 @@ EACH ITERATION:  (phase ORDER is preserved; within each numbered step, up to
       └─ claim-at-selection (loop owns this, not ac-implement — direct to main, no branch) →
          ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
 
-  VERIFY-GATE = consult _shared/verification-gate.md → run only the selected
+  VERIFY-GATE = consult ac-pipeline-builder/references/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
   BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-batch-close no longer checks beads
                 itself) — genuine (non-post-merge) open beads block the close; advisory
@@ -399,7 +399,7 @@ If orphans exist:
    `{SCOPE}` = "all N orphan beads", `{FLAVOR}` empty. (The Child friction schema the
    prompt's summary contract requires is § Child friction schema in that same file — the
    one definition of the four keys, bd-jv33f.2.)
-3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
+3. **Verify (gated)** — consult **`ac-pipeline-builder/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
 4. **Invoke `ac-review`** — dispatch the **Review prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` empty.
 5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
@@ -409,7 +409,7 @@ If orphans exist:
    `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   bash "$PROJECT_ROOT/.claude/skills/_shared/scripts/beads-closed-gate.sh" \
+   bash "$PROJECT_ROOT/.claude/skills/ac-pipeline-builder/scripts/beads-closed-gate.sh" \
      --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
      "$AGENT_NAME" <delegated-identities…>
@@ -497,7 +497,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    Dispatch the **Implement prompt** from `references/delegation-prompts.md` VERBATIM,
    `{SCOPE}` = "all refined ready beads for plan `<plan-name>`", `{FLAVOR}` =
    "(ac-loop autonomous run)".
-3. **Verify (gated)** — consult **`_shared/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
+3. **Verify (gated)** — consult **`ac-pipeline-builder/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
 4. **Invoke `ac-review`** — dispatch the **Review prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` = "(ac-loop autonomous run)".
 5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.

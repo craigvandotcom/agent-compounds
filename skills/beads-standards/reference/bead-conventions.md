@@ -188,7 +188,7 @@ Plus, for every implementable bead (finding-sourced ones especially):
   beads in the same refine run cited nonexistent blocks). **Declare the
   validation modality, not just unit tests:** a bead that changes a user
   surface names its QA pass + journey (`browser: <journey>.md §<checkpoint>`,
-  `device: …`, `ui-polish: scoped`) per `_shared/verification-gate.md`
+  `device: …`, `ui-polish: scoped`) per `ac-pipeline-builder/references/verification-gate.md`
   vocabulary — the gate's diff-inference is the safety net, the bead's
   declaration is the intent. Refine verifies the named journey exists in the
   app's `CORE/journeys/`.

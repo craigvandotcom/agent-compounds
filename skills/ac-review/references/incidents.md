@@ -23,4 +23,4 @@ is the loop-close CI full `test:all` (parallel-execution doctrine §5). Running 
 full FORMAT+LINT+TYPECHECK+TEST+BUILD battery on every wave (including docs-only
 ones) violates *proportional effort: incremental in the loop, exhaustive at the
 boundary*. Hence the Phase-5 rule: cheap checks always; expensive ones (full test,
-build) scaled to the diff's risk class via `_shared/verification-gate.md` Step 1.
+build) scaled to the diff's risk class via `ac-pipeline-builder/references/verification-gate.md` Step 1.

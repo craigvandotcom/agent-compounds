@@ -244,7 +244,7 @@ batch's single Tier 1 CI dispatch.
 
 ### Quality Gate (post-sync)
 
-Same order `ac-merge` mirrors from `_shared/verification-gate.md` §Format-first — format FIRST
+Same order `ac-merge` mirrors from `ac-pipeline-builder/references/verification-gate.md` §Format-first — format FIRST
 (auto-fix), then type-check, lint, tests:
 
 ```bash
@@ -268,7 +268,7 @@ failing local checks.
 
 This is the **post-push re-proof** (J5 — the trunk-direct successor of ac-merge's
 post-rebase re-proof; only the trigger-event name changed). **Run the ceremony smoke net
-per `_shared/verification-gate.md` § Ceremony smoke net** with `<RANGE>` =
+per `ac-pipeline-builder/references/verification-gate.md` § Ceremony smoke net** with `<RANGE>` =
 `$ANCHOR...HEAD` — device-twin conditions, browser twin, FAIL escalation (STOP before
 proceeding), `mac-needed` note, and the qa-blocker STOP all live there.
 
@@ -605,7 +605,7 @@ no change in this skill).
 
 ## Documented technique — the union allocator pattern (for the record)
 
-`_shared/scripts/allocate-wave-branch.sh` is deleted alongside this skill's creation —
+`ac-pipeline-builder/scripts/allocate-wave-branch.sh` is deleted alongside this skill's creation —
 trunk-direct has no numbered wave branches to allocate. Its collision-guard pattern is worth
 remembering for **any future numbered-artifact allocation**: compute NEXT from the union of
 live refs ∪ main-log merge/commit messages ∪ tags — never refs alone (`git fetch --prune` drops
@@ -649,7 +649,7 @@ slack-send --channel sofi --card \
 ```
 
 > **If the batch produced visual evidence, UPLOAD the images — don't just cite `/tmp`
-> paths in the card body** (Craig's directive — `_shared/qa-shared.md` § Conductor /
+> paths in the card body** (Craig's directive — `ac-pipeline-builder/references/qa-shared.md` § Conductor /
 > worker evidence protocol). A `/tmp` path is unreachable from his phone and transient.
 > Send only the LIVE decision surface, with context (bead id + SHA + what needs his eyes):
 > ```bash

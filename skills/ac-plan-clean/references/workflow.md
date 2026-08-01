@@ -231,7 +231,7 @@ Read the plan end-to-end, checking that the logical flow holds. Trace what each 
 - Redundant sections: same information stated in multiple places
 - New user-facing surface with no registry update: plan adds a route/screen/entry point
   but doesn't add/update a `CORE/journeys/*.md` entry (schema:
-  `_shared/verification-gate.md` §Journey registry)
+  `ac-pipeline-builder/references/verification-gate.md` §Journey registry)
 
 Use your judgment — if the logic feels off somewhere, dig into it.
 

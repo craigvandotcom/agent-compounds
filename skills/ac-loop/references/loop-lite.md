@@ -80,7 +80,7 @@ Delegation
 13. Never read a phase skill's SKILL.md into your own context — spawn it
 
 Verification & ceremony
-14. QA selection is gate-driven — `_shared/verification-gate.md` (classify the diff, run
+14. QA selection is gate-driven — `ac-pipeline-builder/references/verification-gate.md` (classify the diff, run
     only selected passes at selected depth)
 15. `.claude/reviews/batch/` has exactly ONE writer: ac-batch-close Act 3 (bd-kudrb) —
     reviews stage in `pending/`
@@ -97,7 +97,8 @@ Headless conduct
 
 Recovery procedures, poll cadences, prompt phrasing beyond the payload files, task-table
 shapes, sweep mechanics, edge-case ladders. When you need one, the full skill's
-references/ and `_shared/` hold the canon — pull on demand. If you find yourself
+references/ and the owner skills' references/ (`ac-pipeline-builder`, `agent-mail`,
+`beads-standards`) hold the canon — pull on demand. If you find yourself
 needing a rule that is neither an invariant above nor discoverable at a gate, THAT is a
 finding: log it in the friction block and file a bead (that's the ablation working).
 

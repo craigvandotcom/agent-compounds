@@ -55,7 +55,7 @@ the mock removed. A green suite over a fully-mocked seam proves nothing about
 the seam itself.
 
 **On hit:** require an un-mocked test or a journey drive (per
-`_shared/verification-gate.md` / `_shared/qa-shared.md`) that actually
+`ac-pipeline-builder/references/verification-gate.md` / `ac-pipeline-builder/references/qa-shared.md`) that actually
 exercises the seam before the surface counts as proven. No such proof in the
 diff → file it as a finding, not a nit.
 

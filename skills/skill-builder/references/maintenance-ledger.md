@@ -51,8 +51,8 @@ spine_lines: <n> / target <≤500 orch | ≤400 knowledge>
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
 - [YYYY-MM-DD] CUT "<snippet>" — reason: <sediment|dead|stale> — <hard-delete | relocated→references/incidents.md | relocated→memory:<key>>
-- [YYYY-MM-DD] EXTRACTED §X → references/<y>.md (or _shared/<y>.md)
-- [YYYY-MM-DD] REINSTATED "<snippet>" — churn: added/removed <N>× — resolution: promoted→enforcement | _shared
+- [YYYY-MM-DD] EXTRACTED §X → references/<y>.md (or <owner-skill>/references/<y>.md)
+- [YYYY-MM-DD] REINSTATED "<snippet>" — churn: added/removed <N>× — resolution: promoted→enforcement | owner-hosted
 ```
 
 - **Inbox** is the next pass's agenda (shape only). Its behavior-tier counterpart lives in beads —

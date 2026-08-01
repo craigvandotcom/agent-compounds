@@ -128,7 +128,7 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 | Plan | an approved plan file | `_plans/…` exists + signed off | `ac-plan-init` |
 | Beadify | beads from the plan | `br` shows the wave | `ac-beadify` (+`ac-bead-refine`) |
 | **Implement** | code + per-bead **affected** tests; safety-push at session end | per-bead gate green | `ac-implement` |
-| **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `_shared/verification-gate.md` |
+| **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `ac-pipeline-builder/references/verification-gate.md` |
 | **Review** | code correctness; blocking findings | VERDICT: APPROVED | `ac-review` |
 | **Merge** | rebase → **affected tests (local)** → version bump → push → PR → CI-confirm → merge → tag | affected green + checks pass | `ac-merge` |
 | **Land** | close stragglers · session teardown/cleanup · reflect/compound | session closed cleanly | `ac-land` |
@@ -249,7 +249,7 @@ board* and *how often*.
    BCA 2.1(b) chain passed every static check; verification debt that lives only in
    prose is decoration (the system tracked "live walk pending" through four App Store
    rejections and nothing read it). Schema + selection rules:
-   `_shared/verification-gate.md` §Journey registry. Binds `ac-qa-device`,
+   `ac-pipeline-builder/references/verification-gate.md` §Journey registry. Binds `ac-qa-device`,
    `ac-qa-browser`, `ac-merge`, `ac-distribute`, `ac-publish`, `ac-hygiene`,
    `ac-dashboard`.
 
@@ -309,7 +309,7 @@ report in the sibling `.claude/reviews/pending/`; `ac-publish` uses `.claude/rev
 `ac-hygiene` uses `.claude/reviews/` root. Any new skill that emits a review-shaped artifact
 picks a sibling directory too. The reason is mechanical: four readers derive a batch range from
 `git log -1 --format=%H -- .claude/reviews/batch/` (`ac-batch-close` Act 1, `ac-review` Phase 1,
-`ac-loop`'s delegated scope detection, `_shared/verification-gate.md`), and a second writer
+`ac-loop`'s delegated scope detection, `ac-pipeline-builder/references/verification-gate.md`), and a second writer
 touching that path mid-ceremony makes the probe return a commit *inside* the range it bounds —
 which under-scopes the batch **silently**, with no error to notice.
 
@@ -349,8 +349,8 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 - **One runtime conductor.** `ac-loop`. Don't grow a second. If a stage's order changes, it
   changes here once; the conductor reads it.
 - **Stay thin / map not territory.** This doc names stages and gates; it never restates a
-  stage's internal logic. Selection logic lives in `_shared/verification-gate.md`; QA method
-  in `_shared/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
+  stage's internal logic. Selection logic lives in `ac-pipeline-builder/references/verification-gate.md`; QA method
+  in `ac-pipeline-builder/references/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
   `_shared/session-teardown.md` was *planned* but is now a RETIRED premise — Wave-B
   bd-brv39.5 cut WS5a; teardown stays inline in `ac-land` Phase 4, no shared file).
 - **Naming.** `ac-*` = the pipeline family; `-builder` = the doctrine/method meta-skill
@@ -362,7 +362,7 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 
 The doctrine is the target; these stage edits bring reality into line:
 
-- [x] **Verify gate** — `_shared/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
+- [x] **Verify gate** — `ac-pipeline-builder/references/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
 - [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner (this sweep, 2026-07-03).
 - [ ] **Land refocus** — bundled item SPLIT into its four sub-items (Wave-B bd-brv39.5); parent stays open while the 1b sub-item is live:
   - [x] strip **1c UI suite** — DONE (retired from `ac-land`, Wave-B bd-brv39.5).
@@ -372,7 +372,7 @@ The doctrine is the target; these stage edits bring reality into line:
 - [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
 - [x] **QA placement** — retire `ac-land` 1c (DONE, Wave-B bd-brv39.5): 1c UI suite removed from `ac-land`; per-batch smoke via `ac-batch-close`→`ac-qa-browser` (registry-driven, criticality ≥ core) + one exhaustive `ac-qa-browser` crawl at publish; `ac-implement`'s deferral re-pointed to both owners.
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
-- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `_shared/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline-builder/references/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
+- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `ac-pipeline-builder/references/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline-builder/references/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
 
 ---
 
@@ -380,7 +380,7 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - Runtime conductor: `ac-loop/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
-- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
+- Shared method: `ac-pipeline-builder/references/verification-gate.md` (selection) · `ac-pipeline-builder/references/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
 - Context/memory doctrine (sibling): `context-engineering`
 
 ## Reference contracts (owner-hosted here — ac-znk.7)

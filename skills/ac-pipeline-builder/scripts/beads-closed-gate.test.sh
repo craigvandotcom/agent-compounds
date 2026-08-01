@@ -21,7 +21,7 @@
 #
 # No shell-test framework exists in this repo (bats/shellspec/shunit) — this is
 # a self-contained assert harness. Run directly:
-#   bash .claude/skills/_shared/scripts/beads-closed-gate.test.sh
+#   bash .claude/skills/ac-pipeline-builder/scripts/beads-closed-gate.test.sh
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

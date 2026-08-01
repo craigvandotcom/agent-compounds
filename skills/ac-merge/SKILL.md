@@ -96,7 +96,7 @@ git rebase origin/main
 # Run project quality gate (see AGENTS.md > Project Commands > Quality gate).
 # Order MIRRORS CI: format FIRST + auto-fix, then type-check, lint, tests.
 #   format (auto-fix, e.g. `pnpm format` = prettier --write .)   <- pre-empts CI's `prettier --check .`
-# mirror: _shared/verification-gate.md §Format-first
+# mirror: ac-pipeline-builder/references/verification-gate.md §Format-first
 #   + type-check + lint + tests
 # Tests = the AGGREGATED affected run, pinned to the merge base:
 #   VITEST_AFFECTED_REF=origin/main pnpm test
@@ -113,7 +113,7 @@ gate; if `pnpm format` rewrites pre-existing files, commit the formatting (you'r
 a gate CI was already failing). **Commit without `--no-verify`** — the pre-commit
 `lint-staged` hook auto-formats staged files; only the *push* uses `--no-verify` (to skip
 the heavy pre-push build). Never let CI catch a formatting miss.
-<!-- mirror: _shared/verification-gate.md §Format-first — edit there first -->
+<!-- mirror: ac-pipeline-builder/references/verification-gate.md §Format-first — edit there first -->
 
 **If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
 
@@ -121,7 +121,7 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
-**Run the ceremony smoke net per `_shared/verification-gate.md` § Ceremony smoke net**
+**Run the ceremony smoke net per `ac-pipeline-builder/references/verification-gate.md` § Ceremony smoke net**
 with `<RANGE>` = `main...HEAD` — the post-rebase state, the thing that actually merges
 (device-twin conditions, browser twin, FAIL escalation, `mac-needed` note, and the
 qa-blocker STOP all live there; a smoke FAIL here means STOP before creating the PR).

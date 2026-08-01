@@ -23,7 +23,7 @@ journeys tagged `criticality: review-critical` gate anything. For each one:
 | `OK`      | stamp is an ancestor and no intervening diff touched a declared surface |
 
 Surface-touch detection reuses the diff classifier in
-`_shared/verification-gate.md` Step 1 (native/webui/webrt/logic/runtime),
+`ac-pipeline-builder/references/verification-gate.md` Step 1 (native/webui/webrt/logic/runtime),
 reimplemented as a path-pattern table at the top of the script. **Conservative
 by design:** a changed file that matches none of the specific patterns still
 counts as touching every surface — over-block, never under-block.
@@ -69,5 +69,5 @@ lists aren't supported — keep journey frontmatter to the documented shape in
 The path-pattern table at the top of the script is the one thing meant to be
 hand-tuned per app if its layout diverges from the classifier's assumptions
 (e.g. a monorepo with a nested `package.json`, or routes outside `app/`). Keep
-it in sync with `_shared/verification-gate.md` by hand — there is no shared
+it in sync with `ac-pipeline-builder/references/verification-gate.md` by hand — there is no shared
 source both files import from.

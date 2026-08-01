@@ -63,7 +63,7 @@ Move to `references/` anything only a sub-agent or one stage needs:
 Rules:
 - **One level deep.** All reference files link directly from SKILL.md. Don't nest references that point to further references.
 - **ToC at the top of any reference file > 100 lines** so a partial read still reveals scope.
-- Co-locate with the skill: `skills/<name>/references/<file>.md` — *unless the block is consumed by two or more skills, in which case it belongs in `_shared/` (next section).*
+- Co-locate with the skill: `skills/<name>/references/<file>.md` — *unless the block is consumed by two or more skills, in which case it belongs in its OWNING domain skill’s `references/` (§ Owner-hosted canon, next section).*
 
 ### The orchestrator trap (sub-agent prompts that must NOT extract)
 
@@ -81,24 +81,33 @@ spawning — never point the child at the file"* instruction at the spawn site. 
 guarantee that inlining step, the prompt stays in the spine. This is the one case where a
 sub-agent template is legitimately spine content.
 
-## _shared/ (cross-skill centralization — one copy, many consumers)
+## Owner-hosted canon (cross-skill centralization — one copy, in the OWNING skill)
 
-`skills/_shared/<file>.md` is the home for a block **used verbatim by two or more skills**
-(e.g. the Agent-Mail identity/registration contract, the child-delegation preamble, the
-bead-I/O conventions, a risk-classification table, a ceremony state machine two ship-path
-skills both drive). Centralizing beats per-skill copies because divergent copies give
-contradictory instructions — the worst kind of nondeterminism.
+_(`skills/_shared/` is RETIRED — ac-znk.7, 2026-08-01. Every canon it held moved into
+its owning domain skill's `references/` or `scripts/`.)_ A block **used verbatim by two
+or more skills** lives ONCE, in the `references/` of the skill that OWNS its domain
+(litmus below + § The workflow/domain litmus): beads contracts →
+`beads-standards/reference/` · coordination → `agent-mail/references/` · pipeline
+contracts (git discipline, delegation, run-ledger/run-id, verification selection,
+board-scan, risk/consensus/disposition, shell guardrails) →
+`ac-pipeline-builder/references/`. Centralizing beats per-skill copies because divergent
+copies give contradictory instructions — the worst kind of nondeterminism; owner-hosting
+beats a shared directory because the owner's spine indexes the whole domain and adds no
+listing-budget cost.
 
-**Promotion rule:** the moment a block is needed *verbatim* by a second skill, promote it to
-`_shared/` and have every consumer point at (or inline-from) the single copy — do not
-duplicate. A block used by exactly one skill stays in that skill's own `references/`;
-`_shared/` is earned by a second consumer, not by anticipation.
+**Promotion rule:** the moment a block is needed *verbatim* by a second skill, move it to
+its owner's `references/` and have every consumer point at (or inline-from) the single
+copy — do not duplicate. A block used by exactly one skill stays in that skill's own
+`references/`; owner-hosting is earned by a second consumer, not by anticipation. A new
+domain with a real task surface earns a new skill; otherwise the pipeline's contracts
+belong to `ac-pipeline-builder`.
 
-**Consuming a `_shared/` block:** two legal forms — (a) a plain pointer at point of use
-(`load `_shared/x.md`` when the flow reaches stage N), for payload a stage reads; or (b) the
-orchestrator-trap inline form for child-spawn prompts (read `_shared/x.md`, paste verbatim
-before spawning). If a skill must restate a `_shared/` block in prose, mark the copy
-`<!-- mirror of _shared/x.md — edit there first -->` so drift is managed, per token-economics § cross-file duplication.
+**Consuming an owner-hosted block:** two legal forms — (a) a plain pointer at point of
+use (`load <owner>/references/x.md` when the flow reaches stage N), for payload a stage
+reads; or (b) the orchestrator-trap inline form for child-spawn prompts (read the file,
+paste verbatim before spawning). If a skill must restate a block in prose, mark the copy
+`<!-- mirror: <owner>/references/x.md — edit there first -->` so drift is managed, per
+token-economics § cross-file duplication.
 
 ## scripts/ (executed, not read)
 
@@ -125,9 +134,9 @@ substituting <DIFF> and <SCOPE>.
 ## The workflow/domain litmus (the second discriminator — ratified 2026-07-30, ac-znk.4)
 
 > **Would this sentence be true in ANY workflow?** → it is DOMAIN CANON: it lives in the
-> domain's own skill or `_shared/` canon file (beads → `beads-standards` +
+> domain's OWNING skill's references/ (beads → `beads-standards` +
 > `beads-standards/reference/bead-conventions.md` · git → `ac-pipeline-builder/references/commit-discipline.md` · agent mail →
-> `agent-mail/references/session-procedure.md` · verification → `_shared/verification-gate.md`), never in a
+> `agent-mail/references/session-procedure.md` · verification → `ac-pipeline-builder/references/verification-gate.md`), never in a
 > workflow skill's text.
 > **Is it about THIS workflow's ordering, actors, or parameters?** → it is a WORKFLOW
 > BINDING: it stays in the workflow's SKILL.md as a one-liner naming the *when/who*,
@@ -146,7 +155,8 @@ Every block that leaves the spine has exactly one of three destinations. Decide 
 
 1. **KEEP inline** — needed on *every* run (enforcement). Doesn't leave. (Orchestrators have much
    of this; knowledge skills almost none.)
-2. **EXTRACT** → `references/` (or `_shared/` if ≥2 skills consume it verbatim) — still true and
+2. **EXTRACT** → `references/` (the OWNING domain skill's, when ≥2 skills consume it
+   verbatim — § Owner-hosted canon) — still true and
    needed, but only a sub-agent, one stage, or a conditional path uses it. Moves, leaves a pointer.
 3. **DELETE** — and this splits, which is the part people get wrong:
    - **Hard delete** — pure sediment: a verbatim duplicate whose twin survives elsewhere, or content
@@ -162,7 +172,7 @@ hard-won lesson** — demote it to its proper home, don't destroy it.
 **Churn guard (before any delete):** run `git log -S "<distinctive snippet>" -- <file>`. If the block
 has been added-and-removed before, it is *sticky sediment* — someone keeps re-injecting it. Do not
 just cut it again: either it is genuinely wanted (home it properly — promote to enforcement or
-`_shared/`) or there is a process leak re-adding it (fix that). Record the churn in the skill's
+the owner skill’s references/) or there is a process leak re-adding it (fix that). Record the churn in the skill's
 `MAINTENANCE.md` cut-log so the next pass sees the history.
 
 ## Refactoring an oversized skill (extraction, not rewrite)
@@ -173,7 +183,7 @@ To protect functionality, **move text, don't rewrite logic**. The full callable 
 1. **Cartography first — classify every section CORE / EXTRACT / CUT** by the discriminator:
    - **CORE** (stays inline): the orchestrator needs it on *every* run — routing, branches,
      run-ledger/gate lines, stop conditions, standing constraints. Enforcement length is legitimate.
-   - **EXTRACT** (→ `references/` or `_shared/`): only a sub-agent, one stage, or a conditional
+   - **EXTRACT** (→ `references/` — own or owning skill’s): only a sub-agent, one stage, or a conditional
      sub-path consumes it — templates, schemas, single-stage output shapes, off-main state machines.
    - **CUT**: duplicate / dead / stale (see token-economics § Sediment).
    Produce an explicit per-section ledger before touching anything — a line-count pass alone
@@ -182,7 +192,7 @@ To protect functionality, **move text, don't rewrite logic**. The full callable 
    never move enforcement every run needs behind a pointer. Persuasion/incident narrative riding
    inside a CORE block compresses *in place* to rule + one-clause why — it does not move.
 3. **Route each EXTRACT by consumer count:** one skill → its own `references/`; two or more skills
-   (verbatim) → `_shared/`. Check the **orchestrator trap** before extracting any child-spawn
+   (verbatim) → the owning skill’s `references/`. Check the **orchestrator trap** before extracting any child-spawn
    prompt (see § references/ above) — if it fails the carve-out, it stays inline.
 4. Cut each to its target file (add a ToC if >100 lines); in the spine replace with a one-line
    imperative pointer + the variable substitutions the consumer needs. Keep all decision/routing in the spine.
@@ -196,7 +206,7 @@ To protect functionality, **move text, don't rewrite logic**. The full callable 
 
 - [ ] SKILL.md spine ≤ ~500 lines (or justified as a true orchestrator, by token buckets not line count)
 - [ ] Every sub-agent prompt / large template lives in `references/`, not inline — *except orchestrator-trap child-spawn prompts (stay inline with a "paste verbatim" guardrail)*
-- [ ] Blocks used verbatim by ≥2 skills live in `_shared/`, not duplicated per skill
+- [ ] Blocks used verbatim by ≥2 skills live in the owning skill’s `references/`, not duplicated per skill
 - [ ] references are one level deep; >100-line files have a ToC
 - [ ] Pointers are plain markdown links / imperative prose (no `@./`)
 - [ ] Executable mechanics live in `scripts/` (run, not read)

@@ -55,10 +55,11 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     without an evidence stamp or a matching demotion/deletion will fail the lint.sh
     no-net-growth gate. Run `node scripts/skill-diet-conservation.mjs` if you are
     moving or removing content, to confirm nothing unique is lost.
-  - SINGLE-HOME (ac-gcj): about to restate a rule whose canon lives in skills/_shared/*
-    or beads-standards (commit discipline, agent-mail procedure, beads canon, run-ledger,
-    verification/smoke gate)? Point at it with a `§` anchor instead. The rare deliberate
-    copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.
+  - SINGLE-HOME (ac-gcj/ac-znk.7): about to restate a rule whose canon lives in an
+    owning domain skill (ac-pipeline-builder/references/* — git discipline, delegation,
+    run-ledger, verification gate; agent-mail/references/* — coordination;
+    beads-standards — beads canon)? Point at it with a `§` anchor instead. The rare
+    deliberate copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.
     Litmus (ac-znk.4): a rule true in ANY workflow is domain canon, not workflow text —
     workflow files keep one-line when/who bindings + pointers.
 

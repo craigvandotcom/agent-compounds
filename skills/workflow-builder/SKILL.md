@@ -47,7 +47,7 @@ broader content+code case:
 | Orchestrator-not-executor ("conductor not musician") | *Altitude separation: thinking ≠ doing* |
 | Ask-don't-assume / approval gates | *Humans own intent; the factory owns execution* |
 | Declared progress unit (run ledger) | *The bead is the atom* (beads are the engineering progress atom; a TaskCreate run-ledger is the general one) |
-| Verify as a classifier-gate, not a fixed run | *Verification gate* (`_shared/verification-gate.md`) |
+| Verify as a classifier-gate, not a fixed run | *Verification gate* (`ac-pipeline-builder/references/verification-gate.md`) |
 | Don't block a run on a decision — defer it | *The Exhaust Rule* (decision beads, not mid-run `AskUserQuestion`) |
 
 ---

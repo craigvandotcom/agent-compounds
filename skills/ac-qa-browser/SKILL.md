@@ -6,7 +6,7 @@ description: Use when QA-ing the WEB app build in a browser — full journey val
 > **The web twin.** `ac-qa-browser` proves the web shell; `ac-qa-device` proves
 > the native shell. Shared conventions — **depth levels, journey reuse,
 > findings=beads, the `QA_VALIDATION` report, the conductor/worker evidence
-> protocol** — live in **`_shared/qa-shared.md`**; both twins reference it so they
+> protocol** — live in **`ac-pipeline-builder/references/qa-shared.md`**; both twins reference it so they
 > stay in lockstep. This file owns the web/browser specifics only. The low-level
 > `agent-browser` CLI mechanics live in **`browser-testing/SKILL.md`** (loaded by
 > the tester workers, not by you).
@@ -25,7 +25,7 @@ in its own named `agent-browser` session, reporting a structured verdict file. Y
 hold the manifest, the verdicts, the gate decision, and the report; workers hold the
 DOM snapshots, console noise, and screenshots. The full evidence protocol (manifest
 schema, verdict schema, lanes, completeness rule, session naming) is
-**`_shared/qa-shared.md` § Conductor / worker evidence protocol** — read it now.
+**`ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol** — read it now.
 **No `Task` tool, or spawns still failing after 2 retries/rung → you have NO workers:
 read `ac-pipeline-builder/references/degraded-mode.md` before writing the manifest (bd-nreuv).**
 
@@ -61,7 +61,7 @@ native-shell concerns (safe-area, splash, plugins, OAuth sheets) to `ac-qa-devic
 
 ## Depth levels
 
-Defined in **`_shared/qa-shared.md`**. Web specifics per level: **smoke** = the
+Defined in **`ac-pipeline-builder/references/qa-shared.md`**. Web specifics per level: **smoke** = the
 registry-selected journeys (gate's affected-list; always includes auth + primary),
 zero console errors; **full** adds every journey in `CORE/journeys/` + the
 `web-shell-checklist.md` + responsive spot-checks; **exhaustive** adds the full-app
@@ -72,7 +72,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
 
 ### Phase 0 — Orient + serve
 
-- Selection + depth arrive from `_shared/verification-gate.md` (a conductor upstream
+- Selection + depth arrive from `ac-pipeline-builder/references/verification-gate.md` (a conductor upstream
   already consulted it; standalone human runs: consult it yourself, or honor the
   human's explicit depth request).
 - Mint RUN_ID if the orchestrator didn't hand one down (contract: `ac-pipeline-builder/references/run-id.md`
@@ -113,7 +113,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   construction, so **parallel-lane eligible** (useful: many apps' journey sets skew
   heavily mutating, leaving the parallel lane thin) — and one **checklist worker**
   (`web-shell-checklist.md` + appearance matrix) — drives forms, so sequential.
-- Write `$ARTIFACTS_DIR/journeys-manifest.json` (schema: `_shared/qa-shared.md`)
+- Write `$ARTIFACTS_DIR/journeys-manifest.json` (schema: `ac-pipeline-builder/references/qa-shared.md`)
   **BEFORE any spawn** — including `skipped` with reasons (e.g. `surfaces: native` only).
   **Validator key is `dispatched[]`** (not `workers[]`) — one entry per journey /
   verdict basename even when one worker runs multiple journeys. Required fields per
@@ -196,7 +196,7 @@ pre-pass). No verdict leaves this phase with a `pending` finding.
   statuses, `evidence` from verdict paths, `platform: browser-local` (or
   `browser-preview`/`browser-production`), `target:` browser + viewport(s),
   `shell_checklist:` from the checklist worker, `perf_observations:` qualitative.
-- Mechanical self-check: `_shared/scripts/validate-qa-run.sh "$ARTIFACTS_DIR"` must
+- Mechanical self-check: `ac-pipeline-builder/scripts/validate-qa-run.sh "$ARTIFACTS_DIR"` must
   exit 0 (completeness, concurrency, teardown).
 
 ### Phase 6 — Teardown sweep (mandatory, both paths)
@@ -259,7 +259,7 @@ by the checklist worker at full/exhaustive depth.
 ## Findings = beads
 
 Conventions, types, and labels (`qa-finding` / `qa-blocker`) are in
-**`_shared/qa-shared.md`**. Workers report findings in their verdict files with
+**`ac-pipeline-builder/references/qa-shared.md`**. Workers report findings in their verdict files with
 `"bead": "pending"`; **the conductor files the beads** (deduped) **in Phase 4, as each
 verdict lands** — not at pass end — and stamps the id back into the verdict. Tag bead
 descriptions with `browser QA`.
@@ -283,7 +283,7 @@ After a journey **PASS**, update its `last_pass` frontmatter block in
 artifacts in the same run that emits `QA_VALIDATION`. The conductor writes stamps
 from verdicts (workers never edit files). A **FAIL** never writes a stamp — the bead
 trail covers failures; a stamp is proof of success only.
-Schema + staleness rule: `_shared/verification-gate.md` §Journey registry.
+Schema + staleness rule: `ac-pipeline-builder/references/verification-gate.md` §Journey registry.
 
 **Conflict rule:** `last_pass` is last-writer-wins. On a merge conflict, keep
 the NEWER stamp (compare `date`, then `build`) — never hand-merge a hybrid
@@ -293,9 +293,9 @@ bead instead (same rule as `ac-qa-device`).
 
 ## Related files
 
-- `_shared/qa-shared.md` — depth levels, findings=beads, `QA_VALIDATION` schema, **conductor/worker evidence protocol** (manifest/verdict schemas, lanes, session naming)
-- `_shared/verification-gate.md` — selection + depth, journey registry schema (`mutates:`, `last_pass`)
-- `_shared/scripts/validate-qa-run.sh` — mechanical pass validation
+- `ac-pipeline-builder/references/qa-shared.md` — depth levels, findings=beads, `QA_VALIDATION` schema, **conductor/worker evidence protocol** (manifest/verdict schemas, lanes, session naming)
+- `ac-pipeline-builder/references/verification-gate.md` — selection + depth, journey registry schema (`mutates:`, `last_pass`)
+- `ac-pipeline-builder/scripts/validate-qa-run.sh` — mechanical pass validation
 - `references/journey-tester-prompt.md` — the worker prompt template (the old inline core loop lives here now)
 - `web-shell-checklist.md` — what ONLY the web shell surfaces
 - `browser-testing/SKILL.md` — low-level `agent-browser` mechanics (worker-side)

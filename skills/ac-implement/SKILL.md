@@ -505,7 +505,7 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
    git diff
    ```
 
-Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **retired** (Wave-B). Web-UI journey coverage is now owned by **`ac-batch-close`'s QA Smoke Gate** (a conditional, web-UI-diff-triggered delegation to `ac-qa-browser` at smoke depth — a finer, per-batch cadence than the old once-per-session 1c pass; its registry-driven selection covers every journey with `criticality ≥ core` per `_shared/verification-gate.md`, so breadth ≥ 1c) and, for cross-batch interactions, **`ac-qa-browser`'s exhaustive crawl at publish**. This saves ~N per-bead browser-tester agent spawns without reducing coverage.
+Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **retired** (Wave-B). Web-UI journey coverage is now owned by **`ac-batch-close`'s QA Smoke Gate** (a conditional, web-UI-diff-triggered delegation to `ac-qa-browser` at smoke depth — a finer, per-batch cadence than the old once-per-session 1c pass; its registry-driven selection covers every journey with `criticality ≥ core` per `ac-pipeline-builder/references/verification-gate.md`, so breadth ≥ 1c) and, for cross-batch interactions, **`ac-qa-browser`'s exhaustive crawl at publish**. This saves ~N per-bead browser-tester agent spawns without reducing coverage.
 
 **If minor issues:** Fix them directly. You are the conductor — small fixes are faster than re-spawning.
 

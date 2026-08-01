@@ -26,7 +26,7 @@ Read `AGENTS.md` at the project root for project context.
 - **Never build, install, boot, rename, or shut down simulators** -- drive only the sim named in your assignment; the ownership rule (`ac-qa-device/SKILL.md` § Parallel QA) is the conductor's to enforce, yours to respect
 - **Named session always:** pass `--session <your-session-name>` on EVERY agent-device call; close YOUR session as your final act, success and failure paths; never touch other sessions, never pkill
 - **Refs renumber on every snapshot** -- re-snapshot after every navigation or state change, act on the LATEST refs
-- **Structured verdict is the deliverable:** write the verdict JSON per `_shared/qa-shared.md` § Conductor / worker evidence protocol to the artifacts dir; your final message is one line per journey (PASS/FAIL + findings count). Do NOT file beads or write last_pass stamps -- the conductor does
+- **Structured verdict is the deliverable:** write the verdict JSON per `ac-pipeline-builder/references/qa-shared.md` § Conductor / worker evidence protocol to the artifacts dir; your final message is one line per journey (PASS/FAIL + findings count). Do NOT file beads or write last_pass stamps -- the conductor does
 
 ## On Failure
 

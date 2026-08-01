@@ -8,7 +8,7 @@
 # proves two simultaneous conductors on main produce distinct artifact
 # directories with zero collision") both name this exact test.
 #
-# REPO: agent-compounds (skills/_shared/scripts/) — reused across every app that
+# REPO: agent-compounds (skills/ac-pipeline-builder/scripts/) — reused across every app that
 # threads the `ac-pipeline-builder/references/run-id.md` contract. Exercises the formula from
 # `ac-pipeline-builder/references/run-id.md` / `ac-implement/SKILL.md` Phase 0 "Configuration" block
 # VERBATIM (not a paraphrase):
