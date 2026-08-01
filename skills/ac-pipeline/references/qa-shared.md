@@ -254,6 +254,13 @@ br create "investigate: <symptom>" -t investigation \
 > **Always emit `## Test Scope` with grep-verified anchors** (same bar as `ac-hygiene`; `beads-standards/reference/bead-conventions.md` §Body template) — the real file(s)/describe block(s) a validator runs, each grepped before it is cited, plus the QA modality (`browser: <journey>.md §<checkpoint>` / `device: …`) this finding surfaced from. You have the journey and the repro in hand right now; refine's Test Scope gate would otherwise have to author it cold, and a finding bead with no test plan is how the fix ships behind a test that cannot fail.
 >
 > **Type is not automatically `bug`.** `-t bug` is a shipped **product** defect only. Test-gap / missing-coverage / infrastructure findings use `-t task` (or `-t investigation` if the cause is unconfirmed), NEVER `-t bug` — mistyping them inflates the preemptive bug lane.
+>
+> **Dedupe + volume control per the canon** (`beads-standards/reference/bead-conventions.md`
+> § Anti-inflation rules, ac-gzb P2): anchor-dedupe BEFORE every `br create`, keyed on
+> **journey + checkpoint** (QA findings have no file:line) — re-running a journey must
+> enrich the existing open bead (`br comments add`, say it recurred), never re-file it.
+> Low findings roll into ONE per-run rollup; Medium+ NEVER roll up (one bead each; group
+> as an epic if they belong together).
 
 **Type + label semantics (compose, not compete):**
 

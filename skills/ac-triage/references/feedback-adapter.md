@@ -121,11 +121,12 @@ EOF
 )"
 ```
 
-- Use `-t bug` for `category='bug'`; `-t decision` for `category='feature'` — and a
-  `-t decision` row MUST also carry the `human-gate` label (`beads-standards` § Bead
-  taxonomy: the label, not the type, is the sole gate — without it the decision is
-  silently workable and closable by agents); `-t investigation` for `category='other'`.
-  The `triage,feedback,unrefined` labels are constant (`unrefined` routes every
+- Use `-t bug` for `category='bug'`; `-t investigation` for `category='other'`.
+- `category='feature'` → `-t decision --labels triage,feedback,human-gate,unrefined` — the
+  `human-gate` label is MANDATORY on the same command (`beads-standards` § Bead taxonomy:
+  the label, not the type, is the sole gate; without it the decision is silently workable
+  and closable by agents).
+- The `triage,feedback,unrefined` labels are constant (`unrefined` routes every
   feedback bead through `ac-bead-refine` before any implementation pickup).
 - Capture the new bead id returned by `br create` (e.g. `bd-xxxx`).
 

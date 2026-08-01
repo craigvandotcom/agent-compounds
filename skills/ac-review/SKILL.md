@@ -507,7 +507,7 @@ reconstructed, emit **`VERDICT: NEEDS_DECISION`** and say the panel was unconfir
 - **`reviewers_missing` non-empty → partial failure.** A missing dimension is the silent-PASS
   trap — never auto-fix-and-approve around it. **Retry once:** re-spawn the missing reviewer(s)
   (Phase 2, same `{ROUND}`) and re-run consensus. **If still missing:**
-  - *Autonomous (`ac-loop`) run:* this is a **blocker** — `br create -t bug --labels qa-blocker`
+  - *Autonomous (`ac-loop`) run:* this is a **blocker** — `br create -t bug --labels qa-blocker,unrefined`
     for the un-reviewed dimension, and emit **`VERDICT: NEEDS_DECISION`** (never `APPROVED`).
     The loop must not merge a wave a review dimension never saw.
   - *Interactive run:* surface the gap and let the user decide whether to proceed.
@@ -819,26 +819,16 @@ this phase as prose.** Route by type before (or instead of) asking — confirmed
 out of this wave's scope → `br create -t bug --labels review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
 --labels review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
-below). **ANCHOR DEDUPE — keyword search is not enough.** Before `br create`, take the finding's
-primary `file:line` anchor and check whether an OPEN bead already carries it
-(`br list --status open --limit 0 --json`, grep the descriptions for the path). Same file + same
-symbol/line-range + same defect → **`br comments add` on the existing bead instead of creating a
-second one**, and say it recurred. This mirrors `ac-pipeline/references/disposition.md` § Dedupe-before-filing,
-which already governs skill-improvement beads — same rule, wider scope. Two reasons it matters:
-parallel panels cannot see each other, so the same defect gets filed twice from one run (measured
-2026-08-01: the identical `--conditions=react-server` gap for the same five scripts, filed the same
-day by two sibling reviews); and **recurrence is the corroboration signal the auto-fix cascade runs
-on** — a second sighting recorded as a comment promotes the finding, while a second sighting
-recorded as a new bead just inflates the board and loses the evidence. Nits stay in the report.
-**SEVERITY FLOOR — a Low-severity finding NEVER gets its own bead:** roll ALL of a run's Low findings into ONE rollup bead (one per run, `-t task --labels review-finding,unrefined`, each item a titled paragraph naming its file:line + the report it came from), and split an item out only if it later grows.
-**ROLLUP CEILING — Low ONLY; Medium and above NEVER roll up.** One Medium+ finding = one bead. A
-rollup is indivisible: it cannot be partially closed, partially prioritised, or partially drained,
-so a `KEEP` on it says nothing about the items nobody checked. Measured 2026-08-01: 7-, 9- and
-11-item Medium rollups reached triage where only 2 items could be verified and the other 9 rode
-along unexamined under one id. If a set of Medium+ findings genuinely belongs together, group them
-as an **epic with one child per finding** (`br dep add -t parent-child <finding-id> <epic-id>`) —
-cohesion without indivisibility. The Low floor above is the deliberate exception: those are cheap
-enough that board noise costs more than tracking precision buys, which is not true of Medium+. N separate P3 beads cost more board noise than they buy in tracking precision, and the finding lane inflates monotonically because nothing prunes it (bd-8ms5t: 55 open findings on 07-22, 102 by 07-30). Proven 2026-07-29: 9 Low findings from one review, one bead. **Always include
+below). **Filing discipline — anchor-dedupe · severity floor · rollup ceiling: the canon,
+`beads-standards/reference/bead-conventions.md` § Anti-inflation rules** (promoted FROM
+this skill, ac-gzb P2 — cite it, never re-derive it). Review-specific bindings: the
+anchor is the finding's primary `file:line`; rollup beads carry
+`-t task --labels review-finding,unrefined`; Medium+ epics group via
+`br dep add -t parent-child <finding-id> <epic-id>`. Why it bites here: parallel panels
+cannot see each other, so the dedupe check is the only thing stopping one run filing the
+same defect twice (measured 2026-08-01: identical `--conditions=react-server` gap filed
+twice in one day; bd-8ms5t: the unpruned finding lane went 55 → 102 open in 8 days).
+Nits stay in the report. **Always include
 `unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
 instead of being treated as already-refined. **`-t bug` = shipped product defect only;
 test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never

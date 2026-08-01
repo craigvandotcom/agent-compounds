@@ -262,7 +262,7 @@ MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
 
 | Tier | disposition.md route | What ac-land does here | Extra gate |
 |---|---|---|---|
-| **T1 bug/defect** | AUTO (rides a bead→CI gate; auto isn't final — §2) | `br create -t bug` immediately, no filter | none — **never rate-limited** (matches the Rule-0 bug lane); the T2 cap does NOT apply to bugs |
+| **T1 bug/defect** | AUTO (rides a bead→CI gate; auto isn't final — §2) | `br create -t bug --labels unrefined` immediately — dedupe-first per 1a's rule above (same file, § File Remaining Work) | none — **never rate-limited** (matches the Rule-0 bug lane); the T2 cap does NOT apply to bugs |
 | **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
 | **T3 everything else** | AUTO additive-knowledge (§2), else DISREGARD (§1) | tag for the Step 0 reflect call → keyed observation (bd-jv33f.5), or drop if zero evidence | reversible memory observation only |
 

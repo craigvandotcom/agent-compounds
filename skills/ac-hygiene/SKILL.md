@@ -151,7 +151,7 @@ sampled hunt:
    with no matching journey doc, or one whose match reads `peripheral`/untagged
    while the surface name matches payment/auth/purchase/onboarding, files
    directly (skip the round/consensus machinery — this check is deterministic,
-   not a judgment call): `br create -t bug --labels hygiene-finding,journey-gap,unrefined
+   not a judgment call): `br create -t task --labels hygiene-finding,journey-gap,unrefined
    -d "Coverage audit: <surface> has no journey-registry entry (or is
    under-tagged) — untagged critical surfaces are unprotected by the
    runtime-proof gates."`
@@ -176,7 +176,7 @@ weekly panel run so findings feed the same triage/bead path as the other lenses.
 2. **Surface real findings** (dead exports, unused files, unused/unlisted deps) as hygiene
    findings — real dead code becomes cleanup findings/beads exactly like the other lenses'
    output: route through Phase 5 triage (`AUTO_IMPLEMENT` for unambiguous dead-code removal,
-   `br create -t bug --labels hygiene-finding,unrefined` for anything needing a human look —
+   `br create -t task --labels hygiene-finding,unrefined` for anything needing a human look —
    e.g. an export that *looks* dead but may be a public API surface).
 3. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light` (the
    quick between-session sweep).
@@ -220,7 +220,7 @@ of — `dream` Phase 2's weekly weighting pass (`dream/SKILL.md` § Phase 2, W4.
 2. **Reuse W4.5's weight/threshold verbatim — do not redefine them here:**
    `weight(id) = impact_num × frequency_num × recurrence`, threshold `weight >= 12`
    (`dream/SKILL.md` § Phase 2 is the single definition; cite it, don't fork it).
-3. **An over-bar cluster files directly** as `br create -t bug --labels
+3. **An over-bar cluster files directly** as `br create -t task --labels
    hygiene-finding,skill-improvement,unrefined -d "Friction cluster-walk: <id(s)> —
    <cluster's proposed_fix(es)>. weight=<N>, skills=<list>."` — deduped via `br search`
    first, same as any other hygiene finding (Exhaust Rule). This is the direct,
@@ -436,7 +436,8 @@ leaves as prose. Out-of-scope confirmed issues → `br create -t bug --labels
 hygiene-finding,unrefined`. Worth-chasing uncertainties → `-t investigation`. Genuine
 taste/product forks in an autonomous run (user not present) → `-t decision
 --labels human-gate` with a pre-staged memo, then continue — never stall the
-sweep on a question. Dedupe via `br search` first; nits stay in the report
+sweep on a question. Dedupe per the canon's anchor-dedupe rule
+(`beads-standards/reference/bead-conventions.md` § Anti-inflation); nits stay in the report <!-- net-growth-ok: ac-gzb P2 — canon citation replaces weaker local rule -->
 (hygiene is the highest inflation risk — a bead is something you'd schedule).
 
 > **`human-gate` is MANDATORY on every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled

@@ -58,8 +58,9 @@ nearest parent that has one, noting the intended home.
 
 ## Phase 3 — Classify & create
 
-1. **Dedupe:** `br search "<keywords>"` in the target db — hit → enrich the
-   existing bead (`br comments add`) instead of creating; tell the user.
+1. **Dedupe** per the canon’s anchor-dedupe rule <!-- net-growth-ok: ac-gzb P2 — canon citation replaces weaker local rule -->
+   (`beads-standards/reference/bead-conventions.md` § Anti-inflation): search the target
+   db — hit → enrich the existing bead (`br comments add`) instead of creating; tell the user.
 2. **Type** per conventions: `task` (work) · `feature` (capability) · `bug`
    (CONFIRMED defect — repro/cause in hand, else `investigation`) ·
    `investigation` (open question an agent can resolve) · `decision` (fork only

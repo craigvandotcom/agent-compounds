@@ -354,8 +354,11 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 - **Auto-fix:** obvious CI failures (lint/type/format), clear single-fix issues.
 - **Conductor decides:** high-severity items with clear fixes, easy improvements.
 - **Present to user:** architectural/debatable items (Exhaust Rule applies if headless —
-  `br create -t bug --labels ci-finding,unrefined` rather than blocking silently — CI is the catch stage;
-  its eventual close cites the regression test per bead-conventions § Per-type close artifacts).
+  `br create -t investigation --labels ci-finding,unrefined` rather than blocking silently
+  (debatable = cause not source-traced = investigation, never bug — ac-gzb); stamp the <!-- net-growth-ok: ac-gzb P0/P3 — type fix + perishability stamp, evidence in the bead -->
+  perishable state `observed: <ISO date> · <run id>` per bead-conventions § Body template —
+  CI is the catch stage; the eventual close cites the regression test per bead-conventions
+  § Per-type close artifacts).
 
 > **Correlated failures → escalate to the LCA, don't fix-forward N times.** If **2+** batch
 > beads fail for one shared root cause (same wrong contract/assumption/parent-decomposition

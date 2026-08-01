@@ -26,8 +26,13 @@ it:
 | `decision` | A fork only the human can resolve (taste, product, money, risk) | Human decision RECORDED, consequences executed |
 | `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-tidy` |
 
-**No confirm-ceremony beads.** If the finding stage already diagnosed it,
-file the `bug` directly. `investigation` is only for genuine unknowns.
+**No confirm-ceremony beads.** If the finding stage already diagnosed it —
+**diagnosed = source-traced, not inferred** — file the `bug` directly.
+`investigation` is only for genuine unknowns, AND for any finding whose cause
+is a hunch: **quarantine the guess, don't ban it** (ac-gzb design decision) —
+the symptom enters as fact; an inferred cause enters a clearly-marked
+*unverified* slot the implementer re-derives, never inherits. Type is the
+carrier: source-traced cause → `-t bug`; inferred cause → `-t investigation`.
 
 **Epics stay open across batches.** An epic's close criterion is that its `## Delivers`
 promise is covered — and the close itself is PROPOSED by `ac-tidy`, not "children closed"
@@ -194,6 +199,9 @@ Plus, for every implementable bead (finding-sourced ones especially):
   app's `CORE/journeys/`.
 - **Evidence** — file:line refs verified against the CURRENT default branch,
   plus a durable pointer (PR URL, commit sha) — never a run-temp artifact path.
+  **Perishability (ac-gzb P3):** a claim about currently-failing external state
+  (CI red, job failing, page 404s) is stamped `observed: <ISO date> · <run id/URL>`
+  and is **advisory, never binding** — a binding AC may not rest on it.
 - **Falsifiable ACs** — a criterion that both branches of a choice satisfy
   gates nothing; pick the branch or split the criterion.
 - **`## Delivers` + `## Consumes`** — the bead I/O contract (next section).
@@ -328,10 +336,29 @@ write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a 
 ## Anti-inflation rules (beads are scheduled work, not a notebook)
 
 1. **File only what survived verification** — a reviewer hunch that didn't
-   survive the adversarial pass stays in the report.
-2. **Dedupe first**: `br search "<keywords>"` before creating.
-3. **Nits stay in reports.** A bead is something you'd genuinely schedule.
-4. **`br lint`** enforces template sections — finding beads must carry
+   survive the adversarial pass stays in the report (an inferred CAUSE that
+   does survive files as `-t investigation` — the quarantined-guess rule above).
+2. **ANCHOR DEDUPE — keyword search is not enough** (promoted from ac-review,
+   ac-gzb P2; this is the ONE definition — sources cite, never re-derive).
+   Before `br create`, take the finding's primary anchor — `file:line` for code
+   findings; **journey + checkpoint** for QA findings (which have no file:line) —
+   and check whether an OPEN bead already carries it
+   (`br list --status open --limit 0 --json`, grep the descriptions). Same
+   anchor + same defect → **`br comments add` on the existing bead** and say it
+   recurred — never a second bead: recurrence recorded as a comment is the
+   corroboration signal the auto-fix cascades run on; recurrence filed as a new
+   bead inflates the board and loses the evidence.
+3. **SEVERITY FLOOR — a Low-severity finding NEVER gets its own bead:** roll
+   ALL of a run's Low findings into ONE rollup bead (one per run,
+   `-t task`, each item a titled paragraph naming its anchor + source report);
+   split an item out only if it later grows.
+4. **ROLLUP CEILING — Low ONLY; Medium and above NEVER roll up.** One Medium+
+   finding = one bead. A rollup is indivisible — it cannot be partially closed,
+   prioritised, or drained, so a KEEP on it says nothing about the unexamined
+   items. Medium+ findings that genuinely belong together group as an **epic
+   with one child per finding** — cohesion without indivisibility.
+5. **Nits stay in reports.** A bead is something you'd genuinely schedule.
+6. **`br lint`** enforces template sections — finding beads must carry
    repro/evidence/source reference.
-5. **ac-tidy prunes**: stale finding-beads with no activity get closed or
+7. **ac-tidy prunes**: stale finding-beads with no activity get closed or
    merged during pipeline housekeeping.

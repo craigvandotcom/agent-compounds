@@ -166,7 +166,7 @@ the conventions in `beads-standards/reference/bead-conventions.md` (the authorit
 workflow; raw `br create` per those conventions is the deliberate pattern here):
 
 ```
-br create -t bug --labels triage,<source>  \
+br create -t bug --labels triage,<source>,unrefined  \
   --title "<crash culprit / error signature> (<freq>× / <users> users)" \
   --description "<source link · first-seen release · suspected wave · top stack frames
                  ## Steps to Reproduce (repro hints / crash path)
