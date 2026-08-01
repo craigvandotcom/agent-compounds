@@ -300,8 +300,8 @@ gate itself lives in `ac-loop`.
 # Create epics (parent beads)
 br create "Epic: User Authentication" --priority P0 --labels "auth" --description "..."
 
-# Create child tasks under epics
-br create "Create user schema" --priority P0 --labels "auth,backend" --parent <epic-id> --description "..."
+# Create child tasks under epics — ALWAYS unrefined at creation (refine stamps readiness)
+br create "Create user schema" --priority P0 --labels "auth,backend,unrefined" --parent <epic-id> --description "..."
 
 # Add dependencies
 br dep add <child-id> <depends-on-id>

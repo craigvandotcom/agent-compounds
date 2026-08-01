@@ -354,7 +354,7 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 - **Auto-fix:** obvious CI failures (lint/type/format), clear single-fix issues.
 - **Conductor decides:** high-severity items with clear fixes, easy improvements.
 - **Present to user:** architectural/debatable items (Exhaust Rule applies if headless —
-  `br create -t bug --labels ci-finding` rather than blocking silently — CI is the catch stage;
+  `br create -t bug --labels ci-finding,unrefined` rather than blocking silently — CI is the catch stage;
   its eventual close cites the regression test per bead-conventions § Per-type close artifacts).
 
 > **Correlated failures → escalate to the LCA, don't fix-forward N times.** If **2+** batch
