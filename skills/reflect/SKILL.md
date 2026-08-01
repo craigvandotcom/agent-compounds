@@ -169,6 +169,21 @@ Output a compact summary: each lesson → `{type, domain}` → file written/upda
 skill-improvements awaiting approval. If nothing cleared the bar, say "nothing worth
 capturing this session" — that's a valid outcome.
 
+### 8. Open-ends checkpoint (INTERACTIVE sessions only — skip entirely when headless)
+
+<!-- net-growth-ok: Craig-directed feature 2026-07-31 — last-look sweep of open ends before session close, interactive only -->
+
+Before the session closes, sweep for loose threads and present them to the user ONCE:
+
+- **Sources:** the session task list / run ledger (incomplete tasks), beads created this
+  session still open, skill-improvements awaiting approval (step 5), anything promised in
+  conversation but not delivered, uncommitted files this session authored.
+- **Present compactly** — one line per item + what closing it would take. The user routes
+  each: act now · bead it (dedupe-first, normal conventions) · drop it. Nothing is
+  silently dropped.
+- **Headless:** skip this step entirely — the unattended equivalents already exist
+  (decision beads + advisory nudges); do not ask, do not block, do not Slack.
+
 > **Deploy dependency:** this skill loads `../context-engineering/SKILL.md` (sibling).
 > When deploying to an app via `deploy.sh`, always deploy both together.
 
