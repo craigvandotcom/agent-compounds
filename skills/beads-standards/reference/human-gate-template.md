@@ -24,7 +24,7 @@ EOF
 )"
 ```
 
-`br create -t decision` matches the type table in `_shared/bead-conventions.md`
+`br create -t decision` matches the type table in `beads-standards/reference/bead-conventions.md`
 (`decision` = a fork only the human can resolve — taste, product, money, risk).
 `HUMAN:` is the alternative prefix for a gate that isn't shaped as a decision fork
 (an approval, a credential handoff, a "go/no-go") — same fields, same wiring rule.

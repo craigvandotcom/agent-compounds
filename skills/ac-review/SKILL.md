@@ -543,7 +543,7 @@ implementer whose diff is under review (Goodhart guard). Every finding bead file
 carries the `review-finding` catch-stage label **and** `discovered-from: <bead-id|unknown>`
 linking it to the work that introduced the defect. When such a finding is later closed, its
 `close_reason` cites the per-type evidence (`bug` → regression test, etc.) per
-`_shared/bead-conventions.md` § Per-type close artifacts.
+`beads-standards/reference/bead-conventions.md` § Per-type close artifacts.
 
 ### Produce Numbered Change List
 
@@ -814,7 +814,7 @@ Log each with rationale: why this is a clear technical improvement, not a design
 
 **If no DESIGN_DECISION or SCOPE_ESCALATION items remain:** Skip to commit.
 
-**Exhaust rule (see `skills/_shared/bead-conventions.md`): nothing actionable leaves
+**Exhaust rule (see `skills/beads-standards/reference/bead-conventions.md`): nothing actionable leaves
 this phase as prose.** Route by type before (or instead of) asking — confirmed defect,
 out of this wave's scope → `br create -t bug --labels review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
@@ -844,14 +844,14 @@ instead of being treated as already-refined. **`-t bug` = shipped product defect
 test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never
 `-t bug`** — mistyping inflates the preemptive bug lane. **Every finding bead ships a
 `## Test Scope` section with grep-verified anchors** (same bar as `ac-hygiene`;
-`_shared/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
+`beads-standards/reference/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
 validator runs — grep each before citing it — plus the QA modality for user-facing surfaces.
 You have the diff open right now; refine's Test Scope gate would otherwise author it cold.
 A finding bead with no test plan is how the fix ends up shipping behind a test that cannot
 fail (bd-mfr1d, bd-ghj12 — 2026-07-30).
 
 > **Route the finding bead to an epic parent + stamp `post-merge` at creation** (§3 routing
-> map, `_shared/bead-conventions.md` § Bead routing + § Claim semantics). Every
+> map, `beads-standards/reference/bead-conventions.md` § Bead routing + § Claim semantics). Every
 > `review-finding` bead created here is in-loop exhaust filed inside the batch's
 > verify→review→close window, so on creation:
 > 1. **Epic parent (§3 routing):** parent = **the epic whose beads were in the batch under

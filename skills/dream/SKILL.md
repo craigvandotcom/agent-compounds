@@ -322,7 +322,7 @@ purpose-built line is the difference between a graspable docket item and an opaq
 
 **Each gated proposal becomes a decision bead** in its `target_repo`'s beads db (the proposal
 FILE is the memo artifact; the BEAD is the action handle — status authority lives in the bead,
-the docket is the single action surface; see `../_shared/bead-conventions.md`). **Filing is
+the docket is the single action surface; see `../beads-standards/reference/bead-conventions.md`). **Filing is
 deterministic and headless:** the daily queue job runs `infrastructure/dream-cycle/file-beads.py`,
 which files only `gated` + `pending` + unfiled proposals (full memo inline for private repos,
 pointer-only for the public agent-compounds db), writes the bead id back into `bead:`, and

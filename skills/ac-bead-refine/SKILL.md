@@ -5,7 +5,7 @@ description: 'Use to REFINE existing beads to convergence — 3 parallel reviewe
 
 # Bead Refine
 
-**Purpose:** Iterative multi-agent refinement of an existing bead structure — sizing, dependencies, acceptance criteria, self-containment — until convergence. Removes the `unrefined` label and stamps `refined` — the readiness gate is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`), and this skill's stamp is its **sole** output, exclusively — no other skill, and no conductor, ever applies it.
+**Purpose:** Iterative multi-agent refinement of an existing bead structure — sizing, dependencies, acceptance criteria, self-containment — until convergence. Removes the `unrefined` label and stamps `refined` — the readiness gate is presence of `refined`, not absence of `unrefined` (`skills/beads-standards/reference/bead-conventions.md`), and this skill's stamp is its **sole** output, exclusively — no other skill, and no conductor, ever applies it.
 
 ## When to Use
 

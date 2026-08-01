@@ -8,7 +8,7 @@ description: 'Use to CAPTURE a raw idea, bug, observation, or decision fork from
 Turn one raw utterance into one well-filed bead (occasionally a small cluster).
 **Speed is the point** — the user is capturing on the go; every second of
 ceremony costs future captures. Conventions authority:
-`../_shared/bead-conventions.md` (types, labels, lifecycle, public-db rule).
+`../beads-standards/reference/bead-conventions.md` (types, labels, lifecycle, public-db rule).
 
 ## I/O Contract
 

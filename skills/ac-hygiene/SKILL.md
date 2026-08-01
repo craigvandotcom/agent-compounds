@@ -431,7 +431,7 @@ Read the consensus registry. Collect all remaining items:
 
 **If no `DESIGN_DECISION` or `SCOPE_ESCALATION` items remain:** Skip — proceed to quality gate.
 
-**Exhaust rule (see `skills/_shared/bead-conventions.md`):** nothing actionable
+**Exhaust rule (see `skills/beads-standards/reference/bead-conventions.md`):** nothing actionable
 leaves as prose. Out-of-scope confirmed issues → `br create -t bug --labels
 hygiene-finding,unrefined`. Worth-chasing uncertainties → `-t investigation`. Genuine
 taste/product forks in an autonomous run (user not present) → `-t decision

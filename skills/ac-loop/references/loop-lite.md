@@ -65,9 +65,9 @@ Beads
    `beads-standards`
 8. Claim the FULL batch at selection (in_progress + assignee, claim id) before any
    implementation; strip `post-merge` at claim, stamp it on in-window exhaust at
-   creation — `_shared/bead-conventions.md` § Claim semantics
+   creation — `beads-standards/reference/bead-conventions.md` § Claim semantics
 9. No prose exhaust: anything actionable a phase doesn't do NOW leaves as a typed bead —
-   `_shared/bead-conventions.md`
+   `beads-standards/reference/bead-conventions.md`
 10. Run `beads-closed-gate.sh` before batch-close; only exit 0 proceeds —
     `ac-loop/references/beads-closed-gate-invocation.md`
 

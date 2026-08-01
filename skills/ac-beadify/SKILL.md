@@ -206,9 +206,9 @@ Use only the `br` tool to create and modify beads and add dependencies.
 
 ### Bead Content Requirements
 
-<!-- mirror of _shared/bead-conventions.md §Body template (incl. its Test Scope bullet) — edit there first -->
+<!-- mirror of beads-standards/reference/bead-conventions.md §Body template (incl. its Test Scope bullet) — edit there first -->
 Each bead description must be **self-contained** (typed headers per
-`_shared/bead-conventions.md` §Body template — `## Acceptance Criteria`,
+`beads-standards/reference/bead-conventions.md` §Body template — `## Acceptance Criteria`,
 `## Test Scope`, `## Steps to Reproduce` on bugs, `## Delivers` +
 `## Consumes` on every implementable bead — emitted at creation, so
 `br lint` passes and refine verifies instead of authoring):
@@ -224,9 +224,9 @@ Each bead description must be **self-contained** (typed headers per
 - Test requirements included — **plus a declared test scope**: the file paths/globs this bead
   touches, so its per-bead (Tier-1) check runs only the affected tests (feeds `vitest-affected`)
 - User-facing beads carry forward the plan's **Journeys touched** into their `## Test Scope`
-  QA-modality declaration (`_shared/bead-conventions.md` §Test Scope) — propagate the plan's
+  QA-modality declaration (`beads-standards/reference/bead-conventions.md` §Test Scope) — propagate the plan's
   named journeys, don't re-derive them from scratch
-- **Bead I/O contract** (`_shared/bead-conventions.md` §Bead I/O contract): `## Delivers`
+- **Bead I/O contract** (`beads-standards/reference/bead-conventions.md` §Bead I/O contract): `## Delivers`
   lists the concrete artifacts (file/endpoint/migration/schema/doc/decision/config) this
   bead produces; `## Consumes` names the payload taken from each blocker
   (`<blocker-id> → <artifact>`, or the literal `- none`). Beadify holds the plan's
@@ -236,7 +236,7 @@ Each bead description must be **self-contained** (typed headers per
 - No need to reference original plan
 - "So detailed that we never need the plan again"
 - Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context
-- **Binding vs advisory** (`_shared/bead-conventions.md` §Binding vs advisory): binding
+- **Binding vs advisory** (`beads-standards/reference/bead-conventions.md` §Binding vs advisory): binding
   sections (ACs, Delivers/Consumes, Test Scope, repro) reference only the present tree
   (grep before citing) or an upstream blocker's `## Delivers` — never the bead's own
   dependents or unpromised future state. Implementation how-to goes under
@@ -246,7 +246,7 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 
 ### Label All Beads as Unrefined
 
-<!-- mirror of _shared/bead-conventions.md §Lifecycle labels — edit there first -->
+<!-- mirror of beads-standards/reference/bead-conventions.md §Lifecycle labels — edit there first -->
 **Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-implement` (and the loop's prep step) that these beads have not yet been through `/ac-bead-refine`.
 
 ```bash

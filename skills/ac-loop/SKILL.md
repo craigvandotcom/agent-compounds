@@ -280,7 +280,7 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any
 
 > **Orphans ship before prep** — `ac-beadify` + `ac-bead-refine` is the loop's most expensive prep step, so a session that ends early (compaction / human override / iteration cap) still delivers the ready work if the cheap fixes go first.
 
-> **Pick order WITHIN a ready-set (tie-break — distinct from the coarse stage order above).** Once a stage's ready-set is in hand, order the individual picks by: **priority** (Rule 0 bugs first, then P0→P4) → **graph structure** (`bv` ranking / critical-path / unblock-count — clear the biggest blockers first) → **FIFO by creation time** (oldest bead wins the final tie). This is the within-set tie-break `_shared/bead-conventions.md` § pick-order doctrine defines; the numbered Work-priority list above is the *stage* order (which bucket to drain), NOT this per-bead tie-break.
+> **Pick order WITHIN a ready-set (tie-break — distinct from the coarse stage order above).** Once a stage's ready-set is in hand, order the individual picks by: **priority** (Rule 0 bugs first, then P0→P4) → **graph structure** (`bv` ranking / critical-path / unblock-count — clear the biggest blockers first) → **FIFO by creation time** (oldest bead wins the final tie). This is the within-set tie-break `beads-standards/reference/bead-conventions.md` § pick-order doctrine defines; the numbered Work-priority list above is the *stage* order (which bucket to drain), NOT this per-bead tie-break.
 
 ### Create the Run Ledger
 
@@ -423,7 +423,7 @@ If orphans exist:
    still open — not merging" (advisory nudge, no `AskUserQuestion` — this is not a genuine
    human fork). Only proceed to Invoke `ac-batch-close` once this set is empty (exit 0).
 
-> **`post-merge` lifecycle — stamp at creation, strip at claim (applies to BOTH phases; doctrine `_shared/bead-conventions.md` § post-merge claim semantics).** Any **exhaust bead** created inside a batch's **verify→review→close window** — conductor follow-ups, `ac-qa-*` QA-pass beads, and Exhaust-Rule decision beads (§ Phase ARIA) — is **stamped `post-merge` AT CREATION and parented into that batch's epic**. This is mandatory: a follow-up threaded under the loop's claim identity WITHOUT the stamp is a genuinely-open in-scope bead that trips `beads-closed-gate.sh` to exit 1 and **blocks its own batch's close**. Conversely, **every loop claim path strips `post-merge` at claim** — the orphan/bug-lane batch claim (Phase 1 / Rule 0 drain) AND the wave claim-at-selection (Phase 2) — so a bead adopted into a NEW batch is closeable again. Skipping the strip leaves permanently-gate-excluded zombies (open forever, never counted). Stamp-at-creation and strip-at-claim are the two halves of the one definition — never do one without the other.
+> **`post-merge` lifecycle — stamp at creation, strip at claim (applies to BOTH phases; doctrine `beads-standards/reference/bead-conventions.md` § post-merge claim semantics).** Any **exhaust bead** created inside a batch's **verify→review→close window** — conductor follow-ups, `ac-qa-*` QA-pass beads, and Exhaust-Rule decision beads (§ Phase ARIA) — is **stamped `post-merge` AT CREATION and parented into that batch's epic**. This is mandatory: a follow-up threaded under the loop's claim identity WITHOUT the stamp is a genuinely-open in-scope bead that trips `beads-closed-gate.sh` to exit 1 and **blocks its own batch's close**. Conversely, **every loop claim path strips `post-merge` at claim** — the orphan/bug-lane batch claim (Phase 1 / Rule 0 drain) AND the wave claim-at-selection (Phase 2) — so a bead adopted into a NEW batch is closeable again. Skipping the strip leaves permanently-gate-excluded zombies (open forever, never counted). Stamp-at-creation and strip-at-claim are the two halves of the one definition — never do one without the other.
 7. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` empty.
 8. **Slack notify** (see Milestone Notifications).
@@ -719,7 +719,7 @@ fighting the machine. Hold these:
   duration under load. Measured numbers: memory `bca-ci-and-ios-build-ops`.
 - **Bulk `br` write-loops run FOREGROUND** (batch claim/label/dep sweeps of >~10–20
   sequential `br` writes) — a backgrounded bulk-`br` loop can stall silently; kill and
-  retry foreground before assuming `br` is broken (`_shared/bead-conventions.md` § Bulk
+  retry foreground before assuming `br` is broken (`beads-standards/reference/bead-conventions.md` § Bulk
   `br` write-loops).
 - **Wait for your OWN long-running local command in-shell — never detach** (`_shared/delegation-contract.md`
   § clause 5, self-detachment). Backgrounding a local `pnpm test`/build/CI-poll via

@@ -161,7 +161,7 @@ Silent-skip is reserved for sources that were never wired.
 ### Phase 3a — route DEFECTS to beads
 
 For each confirmed, deduped **defect**, create a typed bead directly via `br create`, per
-the conventions in `_shared/bead-conventions.md` (the authority for bead shape —
+the conventions in `beads-standards/reference/bead-conventions.md` (the authority for bead shape —
 `ac-bead-capture` is the human quick-capture skill and is not invoked by this batch
 workflow; raw `br create` per those conventions is the deliberate pattern here):
 
@@ -172,7 +172,7 @@ br create -t bug --labels triage,<source>  \
                  ## Steps to Reproduce (repro hints / crash path)
                  ## Acceptance Criteria (crash signature gone in next release's source)
                  ## Test Scope (real test file/describe anchors — grep them first)>"
-# body headers per _shared/bead-conventions.md §Body template — emit at creation
+# body headers per beads-standards/reference/bead-conventions.md §Body template — emit at creation
 
 ```
 
@@ -191,7 +191,7 @@ br create -t bug --labels triage,<source>  \
   `ac-bead-refine` invocation below (Phase 3c) is what earns the stamp, in-session, while
   the evidence above is still in the conductor's context.
 - **`## Test Scope` at creation, with grep-verified anchors** (same bar as `ac-hygiene`;
-  `_shared/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
+  `beads-standards/reference/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
   validator would run — grep each one before citing it, never invent a describe you haven't
   seen — plus the QA modality for user-facing surfaces (`browser:`/`device:` + journey). A
   finding bead with no test plan is how an engineer ends up authoring tests that cannot fail;

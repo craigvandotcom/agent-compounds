@@ -59,10 +59,10 @@ If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or ch
 > label. A bead without `refined` is NOT workable: add `unrefined` to it (if it lacks
 > a lifecycle label), skip it, and report it back for the refine queue. `human-gate`
 > beads are never implemented directly. Readiness = presence of `refined`, never the
-> absence of `unrefined` (`skills/_shared/bead-conventions.md`) — a well-written
+> absence of `unrefined` (`skills/beads-standards/reference/bead-conventions.md`) — a well-written
 > description is not a refined spec.
 
-**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` (or `ac-triage`, or `ac-bead-capture`) carry the `unrefined` label until `/ac-bead-refine` — the label's sole source, with no exceptions — stamps `refined` on convergence. Beads labeled `human-gate` (decision beads — see `skills/_shared/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads carrying `refined` and NOT carrying `human-gate` are eligible:
+**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` (or `ac-triage`, or `ac-bead-capture`) carry the `unrefined` label until `/ac-bead-refine` — the label's sole source, with no exceptions — stamps `refined` on convergence. Beads labeled `human-gate` (decision beads — see `skills/beads-standards/reference/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads carrying `refined` and NOT carrying `human-gate` are eligible:
 
 ```bash
 # Ready beads that are refined AND not human-gated
@@ -296,7 +296,7 @@ CLAIM_ASSIGNEE="${CLAIM_ASSIGNEE:-$AGENT_NAME}"
 [ "$CLAIM_ASSIGNEE" = "FoggyCreek" ] && { echo "FATAL: CLAIM_ASSIGNEE=FoggyCreek — cannot claim beads under the Tier-2 chore identity; pass the loop's minted identity (or re-assert this session's AGENT_NAME)" >&2; exit 2; }
 br update <id1> <id2> ... --status in_progress --assignee "$CLAIM_ASSIGNEE"
 # Strip `post-merge` from every bead being claimed (single bead-conventions claim-semantics
-# rule — _shared/bead-conventions.md § post-merge claim semantics). An exhaust bead adopted
+# rule — beads-standards/reference/bead-conventions.md § post-merge claim semantics). An exhaust bead adopted
 # into THIS batch must be closeable again; leaving `post-merge` on it strands a gate-invisible
 # zombie (open forever, never counted by beads-closed-gate.sh). Harmless no-op if unlabeled.
 for id in <id1> <id2> ...; do br label remove "$id" post-merge 2>/dev/null || true; done
@@ -398,7 +398,7 @@ If the bead requires absent infrastructure:
 3. Get the next candidate from `br ready --json`
 4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it. (incident: env-blocked-claims — `references/incidents.md`)
 
-**Guard: premise-check `## Consumes` (I/O contract, `_shared/bead-conventions.md` §Bead I/O contract).** For each Consumes line (`<blocker-id> → <artifact>`; a literal `- none` passes trivially), verify the premise holds on the CURRENT tree before spending an engineer session on it: the named artifact exists (file path `ls`-checks, symbol/route/table greps, migration file present) and the blocker bead is closed (`br show <blocker-id> --json`). That same call returns `.close_reason`, where Phase 1d records delivered artifact paths — the fastest verification. If any consumed artifact is missing:
+**Guard: premise-check `## Consumes` (I/O contract, `beads-standards/reference/bead-conventions.md` §Bead I/O contract).** For each Consumes line (`<blocker-id> → <artifact>`; a literal `- none` passes trivially), verify the premise holds on the CURRENT tree before spending an engineer session on it: the named artifact exists (file path `ls`-checks, symbol/route/table greps, migration file present) and the blocker bead is closed (`br show <blocker-id> --json`). That same call returns `.close_reason`, where Phase 1d records delivered artifact paths — the fastest verification. If any consumed artifact is missing:
 
 1. Do NOT claim it; do NOT dispatch an engineer
 2. `br comments add <id> "Premise failure: consumes <artifact> from <blocker-id> — not found on main (checked: <what you checked>). World moved since refinement."`
@@ -537,7 +537,7 @@ Push after every bead commit prevents stranded work if the session crashes befor
 
 **Verify commit landed before closing.** (`git log --oneline -1` shows your commit hash, confirming it succeeded.) Only then:
 
-**Delivers gate (I/O contract, `_shared/bead-conventions.md` §Bead I/O contract):** before closing, verify each `## Delivers` item exists in the committed result — same grep/ls-level check as the Phase 1a premise guard, against what you just committed. A promised artifact that doesn't exist means the bead is NOT done: back to Phase 1c review, don't close around it. Then record the delivered artifacts in the close reason — downstream beads' premise checks read this:
+**Delivers gate (I/O contract, `beads-standards/reference/bead-conventions.md` §Bead I/O contract):** before closing, verify each `## Delivers` item exists in the committed result — same grep/ls-level check as the Phase 1a premise guard, against what you just committed. A promised artifact that doesn't exist means the bead is NOT done: back to Phase 1c review, don't close around it. Then record the delivered artifacts in the close reason — downstream beads' premise checks read this:
 
 ```bash
 br close <id> --reason "Implemented and tested. Delivered: <artifact paths, comma-separated>"
@@ -545,7 +545,7 @@ br close <id> --reason "Implemented and tested. Delivered: <artifact paths, comm
 
 (Legacy beads with no `## Delivers` header: close with the plain reason as before.)
 
-**Per-type close evidence** (`_shared/bead-conventions.md` § Per-type close artifacts): after
+**Per-type close evidence** (`beads-standards/reference/bead-conventions.md` § Per-type close artifacts): after
 the outcome verb, cite the evidence the bead's TYPE closes with — a `bug` names its regression
 test, an `investigation` its findings + spawned fix beads (the `discovered-from` trail), a
 `task`/`feature` its delivered-artifact refs (the `Delivered:` list above already satisfies

@@ -52,7 +52,7 @@ After the cascade and any auto-fix pass, the conductor reviews each remaining it
 - **Single-reviewer Medium/Low, no cross-round match** → append to the consensus registry; do
   NOT tag `NEEDS_DECISION` yet. It may reach cross-round consensus if a verification round runs.
 - **`DESIGN_DECISION` items** → skip the registry; surface to the user. On an autonomous run,
-  defer them as decision beads per the Exhaust Rule (`_shared/bead-conventions.md`) rather than
+  defer them as decision beads per the Exhaust Rule (`beads-standards/reference/bead-conventions.md`) rather than
   blocking on `AskUserQuestion`.
 
 ## Consensus registry format

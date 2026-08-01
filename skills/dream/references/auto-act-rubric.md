@@ -105,7 +105,7 @@ writes unreviewed content. The asymmetry is intentional.
 
 Auto-tier: `pending` → `applied` directly (the daily job wrote the target). Gated: `pending`
 → a decision bead is filed (the `bead:` field becomes the filed marker; the **bead's** open/
-closed status is the live authority, per `_shared/bead-conventions.md`) → `applied` | `rejected`
+closed status is the live authority, per `beads-standards/reference/bead-conventions.md`) → `applied` | `rejected`
 when the docket session works the bead and writes the target. `applied` is the terminal success
 state — it distinguishes "decided" from "it actually landed in the substrate". (Legacy:
 pre-cutover `approved`/`rejected`-via-Slack-button files are still drained by the daily job's

@@ -126,7 +126,7 @@ substituting <DIFF> and <SCOPE>.
 
 > **Would this sentence be true in ANY workflow?** → it is DOMAIN CANON: it lives in the
 > domain's own skill or `_shared/` canon file (beads → `beads-standards` +
-> `_shared/bead-conventions.md` · git → `_shared/commit-discipline.md` · agent mail →
+> `beads-standards/reference/bead-conventions.md` · git → `_shared/commit-discipline.md` · agent mail →
 > `_shared/agent-mail.md` · verification → `_shared/verification-gate.md`), never in a
 > workflow skill's text.
 > **Is it about THIS workflow's ordering, actors, or parameters?** → it is a WORKFLOW

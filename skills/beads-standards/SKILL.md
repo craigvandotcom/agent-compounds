@@ -1,6 +1,6 @@
 ---
 name: beads-standards
-description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own I/O-contract + batch-epic supplement lives in `skills/_shared/bead-conventions.md`; read both inside an `ac-*` skill).'
+description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own I/O-contract + batch-epic supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac-*` skill).'
 ---
 
 # Beads Standards
@@ -19,7 +19,7 @@ must do; § Backfill below is the one-time catch-up list for what's already behi
 
 Pipeline-internal extensions for the agent-compounds `ac-*` production line (bead I/O
 contract `## Delivers`/`## Consumes`, batch-epic + in-session refine, binding-vs-advisory)
-live in `skills/_shared/bead-conventions.md` — this skill is the wider floor every
+live in `skills/beads-standards/reference/bead-conventions.md` — this skill is the wider floor every
 project stands on; that file is the deeper layer `ac-*` skills also need.
 
 ## Bead taxonomy — agent bead vs human bead
@@ -99,7 +99,7 @@ Title is **verb-first** ("Fix the settings race", not "Settings race condition")
 Description carries `## Acceptance Criteria` (falsifiable — a criterion both branches
 of a choice satisfy gates nothing). Type-specific required sections and the full body
 template (`## Steps to Reproduce` for bugs, `## Test Scope`, evidence, etc.) are the
-`_shared/bead-conventions.md` § Body template contract — that's the `br lint` gate,
+`beads-standards/reference/bead-conventions.md` § Body template contract — that's the `br lint` gate,
 inherited machine-wide, not repeated here.
 
 **Refined / unrefined — the readiness gate:**
@@ -132,7 +132,7 @@ wedging a whole chain.
 **Routing is a convention, not a hard gate; `--parent` is CONTAINMENT only, never
 provenance.** The routing table (per creation source), the Arm-0 human-gate exception
 (the ONE enforced parentage), and the full `--parent`/dot-child semantics + recovery
-(`br close --force`, bd-nbn3h) are pipeline canon — `_shared/bead-conventions.md`
+(`br close --force`, bd-nbn3h) are pipeline canon — `beads-standards/reference/bead-conventions.md`
 § Bead routing + § `--parent` is CONTAINMENT only. Floor rule worth knowing everywhere:
 provenance uses `-t discovered-from`, never `--parent`.
 
@@ -155,7 +155,7 @@ clustered.
 **Typed close evidence:** after the verb, the detail names evidence appropriate to the
 bead's TYPE (bug → regression test; investigation → findings + spawned fix beads;
 task/feature → delivered artifacts). Per-type detail + enforcement model: pipeline canon,
-`_shared/bead-conventions.md` § Per-type close artifacts — not restated here.
+`beads-standards/reference/bead-conventions.md` § Per-type close artifacts — not restated here.
 
 **Priority is `0`-`4`, integers only** (`P0`-`P4` accepted as input, stored as int).
 0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself.
@@ -344,7 +344,7 @@ br sync --flush-only      # export DB -> JSONL
 
 ### `br` gotchas (learned once, applies everywhere)
 
-<!-- net-growth-ok: ac-gcj.1 audience split — this subsection RELOCATED from _shared/bead-conventions.md (matching deletion there, same commit); machine-wide tool learnings belong in the machine-wide floor -->
+<!-- net-growth-ok: ac-gcj.1 audience split — this subsection RELOCATED from beads-standards/reference/bead-conventions.md (matching deletion there, same commit); machine-wide tool learnings belong in the machine-wide floor -->
 
 - **JSON shapes differ by command.** `br list --json` returns a **paginated object**
   (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But

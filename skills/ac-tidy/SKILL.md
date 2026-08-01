@@ -181,7 +181,7 @@ Report each inference.
 
 ### 2f: Lifecycle Label Gap Lint
 
-> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac-bead-refine` convergence, no other skill (`skills/_shared/bead-conventions.md`).
+> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac-bead-refine` convergence, no other skill (`skills/beads-standards/reference/bead-conventions.md`).
 
 **Condition:** an open, non-epic bead carries none of `unrefined` / `refined` / `human-gate` — a lifecycle-label gap, i.e. unknown readiness state.
 
@@ -218,7 +218,7 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
 ### Parentage-Gap Orphans (the I1 orphan class — `_shared/board-scan.md`)
 - **An open, non-epic bead with no epic parent** (no `parent-child` edge to any epic). This is the I1 sense of "orphan" (no home epic) — **distinct** from the plan-reference orphan above. Read it from the board-scan spec's parentage-gap detector; do not re-derive.
 - **`human-gate` beads are EXCLUDED** — their parentage is wired at creation (Arm 0 owns them); never flag a `human-gate` bead as a parentage-gap orphan.
-- **FLAG-ONLY (Tier 3), never backfill.** Report the gap. When the §3 routing map (`_shared/bead-conventions.md` § Bead routing) makes a parent obvious, the report MAY carry a **Tier-3 adoption proposal** (`br dep add -t parent-child <id> <epic-id>` — the `-t` is mandatory; the default `-t blocks` would author the very I2 violation below) — but there is **NO backfill mandate and nothing is auto-applied**. Missing/ambiguous routing → leave it flagged, unparented.
+- **FLAG-ONLY (Tier 3), never backfill.** Report the gap. When the §3 routing map (`beads-standards/reference/bead-conventions.md` § Bead routing) makes a parent obvious, the report MAY carry a **Tier-3 adoption proposal** (`br dep add -t parent-child <id> <epic-id>` — the `-t` is mandatory; the default `-t blocks` would author the very I2 violation below) — but there is **NO backfill mandate and nothing is auto-applied**. Missing/ambiguous routing → leave it flagged, unparented.
 - Report: "Parentage-gap orphan {id}: open non-epic bead with no epic parent{ — obvious parent {epic-id} (proposal)| — no obvious parent}"
 - **REPORT-ONLY — never emit a `human-gate` proposal bead for this class** (ruled 2026-07-30, bd-zugqh). Measured 2026-07-30: parentage has exactly ONE consumer in the whole skill tree — Epic-Close Proposals below. It does **not** affect `br ready`, `bv --robot-triage`, scheduling, or priority; a verified orphan (bd-w782g) sat in the loop's ready set the whole time. So the class's stated harm ("they drift unscheduled") is FALSE, and its real cost is only that some epics cannot be auto-proposed for closure — lint-grade. Escalating it cost 11 days of docket residence and 4 drift comments for a harm that does not exist. Report the count in the run summary; if an epic-close proposal is actually blocked by a missing parent, raise THAT, naming the epic.
 
@@ -259,7 +259,7 @@ Scan active backlog files for merge opportunities:
 ### Stale Finding-Bead Pruning
 
 Finding beads (`qa-finding`, `review-finding`, `hygiene-finding` labels — see
-`skills/_shared/bead-conventions.md`) inflate fastest — the pipeline stages
+`skills/beads-standards/reference/bead-conventions.md`) inflate fastest — the pipeline stages
 file them automatically; ac-tidy is their pruner.
 
 ```bash

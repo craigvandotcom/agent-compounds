@@ -1,4 +1,4 @@
-# Bead Conventions — the pipeline-internal contract layer
+# Bead Conventions — the pipeline-internal contract layer (owner-hosted: beads-standards/reference/, ac-znk.7)
 
 **Scope (ratified 2026-07-30, ac-gcj.1):** this file carries ONLY what the `ac-*`
 pipeline stages enforce — I/O contract, routing, claim semantics, lifecycle wiring,
@@ -47,7 +47,7 @@ children are done.
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
 | `tooling` | Infra/toolchain work, not app code |
 
-<!-- diet: "Lifecycle labels — readiness gate (the refined-stamp doctrine)" -> ../beads-standards/SKILL.md § Agent bead template (doctrine); pipeline wiring retained below (ac-gcj.1) -->
+<!-- diet: "Lifecycle labels — readiness gate (the refined-stamp doctrine)" -> ../SKILL.md § Agent bead template (doctrine); pipeline wiring retained below (ac-gcj.1) -->
 ## Lifecycle labels — pipeline wiring (doctrine lives in beads-standards)
 
 The refined/unrefined/human-gate doctrine — presence-of-`refined` readiness, fail-safe
@@ -317,8 +317,8 @@ Fix beads spawned by an investigation/decision carry a typed dep:
 Machine-wide floor — `beads-standards` § Where beads live (per-repo `.beads/`, prefixes
 `ac`/`org`/`bd`, beads-live-with-the-work, the public-repo content rule). Not restated here.
 
-<!-- diet: "Bulk `br` write-loops — run FOREGROUND, not backgrounded" -> ../beads-standards/SKILL.md § br gotchas (ac-gcj.1) -->
-<!-- diet: "br CLI gotchas (shared tool — learned once, applies everywhere)" -> ../beads-standards/SKILL.md § br gotchas (ac-gcj.1) -->
+<!-- diet: "Bulk `br` write-loops — run FOREGROUND, not backgrounded" -> ../SKILL.md § br gotchas (ac-gcj.1) -->
+<!-- diet: "br CLI gotchas (shared tool — learned once, applies everywhere)" -> ../SKILL.md § br gotchas (ac-gcj.1) -->
 ## Operating `br`/`bv` (bulk-write foreground rule, CLI gotchas)
 
 Machine-wide tool learnings — `beads-standards` § Operating the tools (bulk `br`

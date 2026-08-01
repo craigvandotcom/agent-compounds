@@ -50,7 +50,7 @@ Categorize every bead:
 
 | Category | Test |
 |----------|------|
-| **ready (refined)** | in `br ready` AND has the `refined` label (presence, not absence of `unrefined` — `skills/_shared/bead-conventions.md`) |
+| **ready (refined)** | in `br ready` AND has the `refined` label (presence, not absence of `unrefined` — `skills/beads-standards/reference/bead-conventions.md`) |
 | **unrefined** | lacks the `refined` label — has `unrefined`, or no lifecycle label at all (needs `/ac-bead-refine`) |
 | **blocked** | `status=open`, NOT in `br ready` |
 | **in_progress** | `status=in_progress` |

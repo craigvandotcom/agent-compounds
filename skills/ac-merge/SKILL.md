@@ -443,12 +443,12 @@ git push
 
 ### Present Uncertain Items to User
 
-**Exhaust rule (see `skills/_shared/bead-conventions.md`):** review feedback
+**Exhaust rule (see `skills/beads-standards/reference/bead-conventions.md`):** review feedback
 that won't be acted on in this merge leaves as a typed bead, not a skipped
 list item — `-t bug`/`-t investigation` with `--labels review-finding`, or
 `-t decision --labels human-gate` (pre-staged memo) for taste/product forks
 when running autonomously. Don't block the merge on non-blocking exhaust.
-<!-- mirror: _shared/bead-conventions.md — edit there first -->
+<!-- mirror: beads-standards/reference/bead-conventions.md — edit there first -->
 
 **If uncertain items remain:**
 
