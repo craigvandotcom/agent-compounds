@@ -109,7 +109,7 @@ Identify internal gaps or inconsistencies in the strategy itself (e.g., a premiu
 
 **TaskUpdate("Pipeline scan", in_progress)**
 
-**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog, in parallel) — the single, shared definition of how pipeline state is read.
+**Read the board per `ac-pipeline-builder/references/board-scan.md`** (scans A beads · B plans · C backlog, in parallel) — the single, shared definition of how pipeline state is read.
 
 Your lens on the board: for every backlog item, plan, and bead, note **which folder it's in** (per the active/pool model above), the `horizon`/`priority` hints, `status` (esp. `candidate` vs `captured` — see Phase 4.5), and rough scope — the inputs to the alignment audit and to promotion.
 

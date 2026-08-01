@@ -81,7 +81,7 @@ TaskCreate("Report — tidy summary, commit changes")
 
 ## Phase 1: Scan Everything
 
-**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog) — the single shared definition of how pipeline state is read. Collect it once; the rest of this skill reconciles it.
+**Read the board per `ac-pipeline-builder/references/board-scan.md`** (scans A beads · B plans · C backlog) — the single shared definition of how pipeline state is read. Collect it once; the rest of this skill reconciles it.
 
 Your lens (the reconciliation inputs to pull from the board):
 
@@ -215,14 +215,14 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
 - Beads whose description references a plan file that doesn't exist (not in active or `_done/`)
 - Report: "Orphan bead {id}: references plan {name} which doesn't exist"
 
-### Parentage-Gap Orphans (the I1 orphan class — `_shared/board-scan.md`)
+### Parentage-Gap Orphans (the I1 orphan class — `ac-pipeline-builder/references/board-scan.md`)
 - **An open, non-epic bead with no epic parent** (no `parent-child` edge to any epic). This is the I1 sense of "orphan" (no home epic) — **distinct** from the plan-reference orphan above. Read it from the board-scan spec's parentage-gap detector; do not re-derive.
 - **`human-gate` beads are EXCLUDED** — their parentage is wired at creation (Arm 0 owns them); never flag a `human-gate` bead as a parentage-gap orphan.
 - **FLAG-ONLY (Tier 3), never backfill.** Report the gap. When the §3 routing map (`beads-standards/reference/bead-conventions.md` § Bead routing) makes a parent obvious, the report MAY carry a **Tier-3 adoption proposal** (`br dep add -t parent-child <id> <epic-id>` — the `-t` is mandatory; the default `-t blocks` would author the very I2 violation below) — but there is **NO backfill mandate and nothing is auto-applied**. Missing/ambiguous routing → leave it flagged, unparented.
 - Report: "Parentage-gap orphan {id}: open non-epic bead with no epic parent{ — obvious parent {epic-id} (proposal)| — no obvious parent}"
 - **REPORT-ONLY — never emit a `human-gate` proposal bead for this class** (ruled 2026-07-30, bd-zugqh). Measured 2026-07-30: parentage has exactly ONE consumer in the whole skill tree — Epic-Close Proposals below. It does **not** affect `br ready`, `bv --robot-triage`, scheduling, or priority; a verified orphan (bd-w782g) sat in the loop's ready set the whole time. So the class's stated harm ("they drift unscheduled") is FALSE, and its real cost is only that some epics cannot be auto-proposed for closure — lint-grade. Escalating it cost 11 days of docket residence and 4 drift comments for a harm that does not exist. Report the count in the run summary; if an epic-close proposal is actually blocked by a missing parent, raise THAT, naming the epic.
 
-### Authored Epic-Edge Violations (I2 — `_shared/board-scan.md`)
+### Authored Epic-Edge Violations (I2 — `ac-pipeline-builder/references/board-scan.md`)
 - **Any `blocks` edge with an epic endpoint** (either end an epic) is an I2 violation: containment is `parent-child`, sequencing is bead-level `blocks` (`skills/beads-standards/SKILL.md` § Sequencing & parentage). Read it from the board-scan spec's authored epic-edge detector.
 - **Report ALWAYS.** Conversion to bead↔bead edges (or dropping an arrival-order-only edge) needs judgment → **Tier 3 proposal**, never auto-applied.
 - Report: "Epic-edge violation: `blocks` edge {a}→{b} has an epic endpoint — propose bead-level rewire (Tier 3)"

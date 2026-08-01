@@ -115,7 +115,7 @@ routing behaviours:
 | Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |
 
 `ac-tidy` flags what stays unparented (the parentage-gap orphan class,
-`_shared/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
+`ac-pipeline-builder/references/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
 disposition grammar, no backfill sweep — considered and cut.
 
 ### `--parent` is CONTAINMENT only — never provenance (bd-nbn3h)

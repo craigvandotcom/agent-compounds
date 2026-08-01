@@ -61,7 +61,7 @@ So a degraded full refine is `refine-full` **+** `degraded-solo`.
   `path-label ∧ degraded-solo` a one-grep query, and needs exactly one new token for all three
   skills instead of a parallel vocabulary per skill.
 - Named `degraded-solo`, not bare `solo`, to stay clear of `risk-solo`
-  (`_shared/risk-classification.md`), which is unrelated.
+  (`ac-pipeline-builder/references/risk-classification.md`), which is unrelated.
 
 **Non-bead artifacts → a REQUIRED field, present in both states** (an always-present field makes
 its absence a detectable defect; an only-when-degraded field is indistinguishable from a writer

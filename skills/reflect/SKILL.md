@@ -148,12 +148,12 @@ just how it's SHAPED?** (full boundary: `skill-builder/references/maintenance-le
   deterministic guards (`validate-skill.sh --diff` + survival gate). Do NOT file a bead for shape.
 - **Behavior / enforcement** (a new gate, a changed branch, a contract fix — anything that alters
   what the skill does) → **GATED, unchanged.** Do not auto-apply — system-behaviour changes need a
-  human merge (rule 3 in `_shared/disposition.md`, consistent with ac-land's no-auto-apply).
+  human merge (rule 3 in `ac-pipeline-builder/references/disposition.md`, consistent with ac-land's no-auto-apply).
   **Interactive:** present the exact proposed edit (target file + diff + session evidence) and get
   explicit approval before writing. **Headless:** file a decision bead —
   `br create -t decision -p 3 -l human-gate,skill-improvement,skill:<name>` with the memo
   (target · evidence · diff · recommendation), **dedupe-first** against open `skill-improvement`
-  beads per `_shared/disposition.md` § Save-for-later. Never post to Slack, never silently drop —
+  beads per `ac-pipeline-builder/references/disposition.md` § Save-for-later. Never post to Slack, never silently drop —
   the bead is how the merge request survives an unattended session.
 
 When unsure which tier, treat it as **behavior** (escalate to the gated bead) — the shape lane is

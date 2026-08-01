@@ -129,7 +129,7 @@ conflicting concurrent run to notice, not a queue or a lock.
 
 ## Run Ledger
 
-Declare the run ledger per `_shared/run-ledger.md` (pattern + resume doctrine there).
+Declare the run ledger per `ac-pipeline-builder/references/run-ledger.md` (pattern + resume doctrine there).
 This ceremony's table:
 
 ```
@@ -207,11 +207,11 @@ BATCH_RANGE="$ANCHOR..HEAD"
 echo "ANCHOR=$ANCHOR" >> "$STATE"
 ```
 
-Deterministic `$ARTIFACTS_DIR` per `_shared/run-id.md` (prefix `batch-close`) — trunk-direct
+Deterministic `$ARTIFACTS_DIR` per `ac-pipeline-builder/references/run-id.md` (prefix `batch-close`) — trunk-direct
 has no wave branch to key on, so the key is the anchor SHA instead of a branch slug:
 
 ```bash
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
 # mint-if-absent rule). Not folded into ARTIFACTS_DIR below: this dir is keyed on the
 # anchor SHA (stable across a resumed/dropped session), and RUN_ID is re-minted per
 # invocation — appending it would break resume detection (`[ -f "$STATE" ]` below relies
@@ -226,7 +226,7 @@ STATE="$ARTIFACTS_DIR/state.env"
 ### Gather Batch Context (retarget of "Gather PR Context" — no PR body, just scope)
 
 ```bash
-br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing. If dcg blocks a write here (variable-built redirect target), do NOT bypass — see _shared/shell-guardrails.md
+br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing. If dcg blocks a write here (variable-built redirect target), do NOT bypass — see ac-pipeline-builder/references/shell-guardrails.md
 git log $BATCH_RANGE --oneline > "$ARTIFACTS_DIR/commits.txt"
 git diff $BATCH_RANGE --stat > "$ARTIFACTS_DIR/diff-stats.txt"
 ```
@@ -295,7 +295,7 @@ infrastructure another bead is landing.
 
 ### Poll for the dispatched run against HEAD — FOREGROUND ONLY
 
-Same bounded-wait discipline as `ac-merge`'s PR-checks poll (`_shared/delegation-contract.md`:
+Same bounded-wait discipline as `ac-merge`'s PR-checks poll (`ac-pipeline-builder/references/delegation-contract.md`:
 hard-capped, timeout-terminal — a stalled CI run is a reportable outcome, not a pause). **This
 poll runs in the foreground, inside this turn, to completion or the cap below — never fork it
 to a background process that outlives the session.** The `$STATE` persistence above covers a
@@ -584,11 +584,11 @@ snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 3 **acks** after the report
 3. On ceremony **failure** before this ack: re-merge `in_flight` → `pending` (do not
    drop IDs); recompute `first_close_ts = min(closed_at)`.
 4. After successful ack, if `in_flight` is empty → run the **drain sequence**
-   (`_shared/ceremony-batching-pool.md` § Drain sequence): risk_queue head first (mixed or
+   (`ac-pipeline-builder/references/ceremony-batching-pool.md` § Drain sequence): risk_queue head first (mixed or
    pure risk-solo), else fire opportunity on `pending` (soft-8 / ~3h window / line-floor
    N≈800, hard-10 ceiling), else stop.
 
-Ceremony batch range for CI/report scope uses `_shared/risk-classification.md`
+Ceremony batch range for CI/report scope uses `ac-pipeline-builder/references/risk-classification.md`
 **binding #1** (pool-only union of `in_flight` `pre_sha..close_sha`; mixed ∪ risk bead
 range; planned-wave/pure risk-solo = that batch's range).
 

@@ -2,7 +2,7 @@
 
 Shared by `ac-review` (correctness + architecture reviewers) and `ac-hygiene`
 (bug-hunter + structural lenses). Method only — zero app facts. Reference it as
-`_shared/anti-patterns.md`.
+`ac-pipeline-builder/references/anti-patterns.md`.
 
 > Origin: BCA App Store 2.1(b) post-mortem — four rejections, ~10 days, five
 > silent layers, all green under static checks (full narrative: BCA

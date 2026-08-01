@@ -295,7 +295,7 @@ Wave branches protect main from in-progress code and make the green-main invaria
 **Hygiene is trunk-direct (migrated 2026-07-12, bd-u2lo1.14):** it no longer uses a
 worktree/`hygiene/*` branch/PR ceremony. Its 7-lens panel IS the pre-push review, auto-fixes
 commit directly to `main` as pathspec commits under the full H7 discipline
-(`_shared/commit-discipline.md`) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
+(`ac-pipeline-builder/references/commit-discipline.md`) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
 never `ac-merge`. The run report commits to `.claude/reviews/` root and does not advance the
 `.claude/reviews/batch/` review-mark.
 
@@ -335,7 +335,7 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 - **Enforcement is edit-time, not just commit-time.** Reservations are advisory; the
   global `PreToolUse(Edit\|Write)` guard blocks editing a file held by a *different* identity
   before the write lands (fail-open), with the pre-commit guard as the commit-time backstop.
-  Private scratch (`$ARTIFACTS_DIR`) is keyed deterministically, never guessed: `_shared/run-id.md`.
+  Private scratch (`$ARTIFACTS_DIR`) is keyed deterministically, never guessed: `ac-pipeline-builder/references/run-id.md`.
 
 > Worktrees are deliberately rejected (filesystem multiplication, cross-worktree edits corrupt
 > state — `jef-flywheel` lesson 21). Single checkout + identity reservations is the chosen model.
@@ -372,7 +372,7 @@ The doctrine is the target; these stage edits bring reality into line:
 - [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
 - [x] **QA placement** — retire `ac-land` 1c (DONE, Wave-B bd-brv39.5): 1c UI suite removed from `ac-land`; per-batch smoke via `ac-batch-close`→`ac-qa-browser` (registry-driven, criticality ≥ core) + one exhaustive `ac-qa-browser` crawl at publish; `ac-implement`'s deferral re-pointed to both owners.
 - [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
-- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `_shared/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `_shared/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
+- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `_shared/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline-builder/references/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
 
 ---
 
@@ -380,5 +380,22 @@ The doctrine is the target; these stage edits bring reality into line:
 
 - Runtime conductor: `ac-loop/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
-- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · session teardown stays inline in `ac-land` Phase 4 (`_shared/session-teardown.md` — RETIRED premise, Wave-B bd-brv39.5: WS5a cut, never built)
+- Shared method: `_shared/verification-gate.md` (selection) · `_shared/qa-shared.md` (QA how) · session teardown: `_shared/agent-mail.md` § Release
 - Context/memory doctrine (sibling): `context-engineering`
+
+## Reference contracts (owner-hosted here — ac-znk.7)
+
+<!-- net-growth-ok: ac-znk.7 owner-hosting — this index IS the move's purpose: the pipeline's contract library, discoverable from its owning spine; each file relocated verbatim from _shared/ (matching deletions, same commit) -->
+
+The pipeline's cross-skill contracts live in `references/` of THIS skill — the pipeline's
+own behaviour shapes them, so the pipeline doctrine skill owns them. Workflow skills bind
+with one-liners + `§` pointers (litmus: `skill-builder/references/structure-standard.md`
+§ The workflow/domain litmus):
+
+`commit-discipline` (H7d git canon) · `delegation-contract` (child-spawn preamble +
+bounded-wait) · `run-ledger` (ceremony resume anchor) · `run-id` (scratch-dir scoping +
+prefixes) · `board-scan` (orient scans A–E) · `risk-classification` (panel/gate scaling
+tiers) · `review-consensus` (consensus + conductor triage) · `ceremony-batching-pool`
+(pool RMW + drain) · `disposition` (findings three-way rule + save-for-later) ·
+`degraded-mode` (capability-starved runs) · `shell-guardrails` (dcg-safe write/delete
+shapes) · `anti-patterns` (named failure modes)

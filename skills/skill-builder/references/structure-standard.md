@@ -72,7 +72,7 @@ skill spawns a fresh child that acts before it reads.** If the conductor pastes 
 *into* the child's context at spawn time (the child never opens the skill's files), then a
 pointer in the spine that says "read `references/x.md`" reaches nobody: the child already
 has only what was pasted. Extracting such a prompt to `references/` and leaving a pointer
-**silently breaks the spawn** — the documented failure mode behind `_shared/delegation-contract.md`
+**silently breaks the spawn** — the documented failure mode behind `ac-pipeline-builder/references/delegation-contract.md`
 ("a fresh child acts before it reads; a pointer is NOT sufficient").
 
 The carve-out: a child-delegation prompt body may move to a reference **only if** the spine
@@ -126,7 +126,7 @@ substituting <DIFF> and <SCOPE>.
 
 > **Would this sentence be true in ANY workflow?** → it is DOMAIN CANON: it lives in the
 > domain's own skill or `_shared/` canon file (beads → `beads-standards` +
-> `beads-standards/reference/bead-conventions.md` · git → `_shared/commit-discipline.md` · agent mail →
+> `beads-standards/reference/bead-conventions.md` · git → `ac-pipeline-builder/references/commit-discipline.md` · agent mail →
 > `_shared/agent-mail.md` · verification → `_shared/verification-gate.md`), never in a
 > workflow skill's text.
 > **Is it about THIS workflow's ordering, actors, or parameters?** → it is a WORKFLOW

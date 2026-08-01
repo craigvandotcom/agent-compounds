@@ -30,9 +30,9 @@ hookpoints" table, which this block lacks).
 ## Cut-log — append-only audit trail (feeds the churn detector)
 - [2026-07-20] EXTRACTED § Ceremony batching pool mechanics (state store, flock RMW, fire
   opportunities, selected-set/drain policy, report-ack, failure re-merge, risk override, bug-lane,
-  guard-rail, §5 fixtures) → `_shared/ceremony-batching-pool.md` (shared with ac-batch-close). Kept
+  guard-rail, §5 fixtures) → `ac-pipeline-builder/references/ceremony-batching-pool.md` (shared with ac-batch-close). Kept
   intro + hookpoints + engagement pointer inline. −109 lines (1086 → 977). Repointed ac-batch-close
-  L538 to `_shared/ceremony-batching-pool.md § Drain sequence`. `--diff` clean.
+  L538 to `ac-pipeline-builder/references/ceremony-batching-pool.md § Drain sequence`. `--diff` clean.
 - [2026-07-20] EXTRACTED beads-closed-gate flag rationale (ac-514 / ac-0wi / ac-0i1 / bd-w504y — the
   `--beads` / `--progress` / repeated-`--progress` / union-of-identities reasoning) duplicated across
   Phase 1 & Phase 2 step 6 → `references/beads-closed-gate-invocation.md`. Kept the bash command +

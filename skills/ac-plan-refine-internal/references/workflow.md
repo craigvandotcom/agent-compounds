@@ -45,10 +45,10 @@ TIER=<user selection>
 # are raised to it here; heavy's own floor of 3 already clears it, so heavy is unchanged.
 
 CURRENT_ROUND=1
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR=/tmp/plan-refine-internal-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (_shared/run-id.md)
+ARTIFACTS_DIR=/tmp/plan-refine-internal-${RUN_ID}   # RUN_ID carries the PID → no same-second collision (ac-pipeline-builder/references/run-id.md)
 ```
 
 ```bash
@@ -60,7 +60,7 @@ mkdir -p "$ARTIFACTS_DIR"
 Create the cross-round tracking file for single-agent findings:
 
 > **If `dcg` rejects this write, do NOT bypass it** — the guard blocks a redirect whose target path
-> is variable-built. Sanctioned shapes (`tee`, the Write tool): `_shared/shell-guardrails.md`.
+> is variable-built. Sanctioned shapes (`tee`, the Write tool): `ac-pipeline-builder/references/shell-guardrails.md`.
 
 ```bash
 cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'

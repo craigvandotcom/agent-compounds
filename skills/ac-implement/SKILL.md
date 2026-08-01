@@ -39,7 +39,7 @@ Under trunk-direct, every session works directly on `main` with no branch isolat
 
 **The rule that keeps committed state clean under concurrent editing (H7d): only files
 YOU reserved may enter YOUR commits — pathspec-mandatory, `git commit -- <files>`, never
-a wildcard add.** Full canon + rationale: `_shared/commit-discipline.md`. Binding from
+a wildcard add.** Full canon + rationale: `ac-pipeline-builder/references/commit-discipline.md`. Binding from
 Phase 0 onward.
 
 Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked regardless of who "owns" it.
@@ -154,7 +154,7 @@ Specifically REJECT these failure modes from being treated as "acceptable baseli
 
 The baseline read is cheap — always do it. Only the fallback full run (when no loop-close run is available) is expensive; skip that fallback only if it takes > 10 minutes AND the session targets fewer than 2 beads.
 
-> **Wait for long local runs IN-SHELL — never detach from your own command** (`_shared/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall (this exact ac-implement phase stalled twice, RUN_ID=20260710-170558-52993). Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
+> **Wait for long local runs IN-SHELL — never detach from your own command** (`ac-pipeline-builder/references/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall (this exact ac-implement phase stalled twice, RUN_ID=20260710-170558-52993). Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
 
 ### Scoped Per-Commit Readiness Gate (H7 v3) + Push Cadence
 
@@ -202,7 +202,7 @@ TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
 # Deterministic dir keyed on the CLAIM/BATCH ID, never the branch — trunk-direct puts every
 # conductor on `main`, so `git branch --show-current` no longer discriminates concurrent
-# sessions (bd-u2lo1.9 re-keying). Contract: _shared/run-id.md. ac-land lands this same path.
+# sessions (bd-u2lo1.9 re-keying). Contract: ac-pipeline-builder/references/run-id.md. ac-land lands this same path.
 #
 # If ac-loop already claimed this batch and delegated (claim id handed in the prompt, e.g.
 # "claim id `bd-u2lo1.1-20260712`"), use it verbatim below — do not re-derive.
@@ -210,14 +210,14 @@ BEADS_COMPLETED=0
 # If this is a standalone first run (no claim id handed down yet), Phase 1a's
 # claim-at-selection is the moment the batch is actually *claimed* (mint format:
 # <first-claimed-bead-id>-<YYYYMMDD>), but it writes `.claim-id` INTO $ARTIFACTS_DIR — which
-# needs to already exist. Resolve that ordering (contract: _shared/run-id.md "Mint order") by
+# needs to already exist. Resolve that ordering (contract: ac-pipeline-builder/references/run-id.md "Mint order") by
 # computing the identical string here, ahead of the `br update` mutation: the first bead ID in
 # the refined, non-human-gate ready-bead candidate list already gathered above ("Verify
 # Refined Beads Exist") + today's date. Phase 1a recomputes the same string when it actually
 # claims, from the same unmutated candidate-list ordering and the same date — no mismatch.
 CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"   # handed-down or self-derived
 WAVE_SLUG="$CLAIM_ID"   # alias for other in-file references to this key (task labels, progress.md header) — same value, not a re-derivation
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: _shared/run-id.md).
+# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline-builder/references/run-id.md).
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-bd-u2lo1.1-20260712
 ```
@@ -515,7 +515,7 @@ Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **r
 
 ### Phase 1d: Commit + Close Bead
 
-**Commit per the canon — `_shared/commit-discipline.md` (bd-chd5p.10 / Item 6c,
+**Commit per the canon — `ac-pipeline-builder/references/commit-discipline.md` (bd-chd5p.10 / Item 6c,
 promoted ac-gcj.3):** the full one-stop sequence — fetch, 0-behind check, H7d pathspec
 commit, `git add` first for NEW untracked files, `--pathspec-from-file` for route-group
 paths `(…)`/`[…]`, no-stash escalation ladder — lives there; do not re-derive it here.

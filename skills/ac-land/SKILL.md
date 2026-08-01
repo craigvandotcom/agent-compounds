@@ -13,7 +13,7 @@ Run this LAST, after merge — invoked at loop-exit (post-merge, on `main`, wave
 
 ### Gather Session Context
 
-Resolve `ARTIFACTS_DIR` **deterministically**, per `_shared/run-id.md`. ac-land runs at
+Resolve `ARTIFACTS_DIR` **deterministically**, per `ac-pipeline-builder/references/run-id.md`. ac-land runs at
 loop-exit (post-merge/batch-close, on `main`) — it never claimed a batch itself, so it CANNOT
 mint or independently recompute a claim id; the orchestrator hands it the key. Never glob as
 the primary path. There is no branch-based fallback in this chain: trunk-direct means `main` is
@@ -72,7 +72,7 @@ git diff --stat
 
 ac-land runs LAST and can compact mid-flight (a slow standalone-fallback `test:all` in 1b
 is a named risk) — and teardown that never runs leaves zombies. Declare the run ledger per
-`_shared/run-ledger.md` (pattern + resume doctrine there), with **each of Phase 1's three
+`ac-pipeline-builder/references/run-ledger.md` (pattern + resume doctrine there), with **each of Phase 1's three
 sub-steps as its own task** so a resume never skips teardown:
 
 ```
@@ -178,7 +178,7 @@ git diff --stat
 
 <!-- net-growth-ok: contradiction-wave fixes ac-hx8 (git add -A → pre-sweep-dirty exclusion + pathspec commit), ac-go2 (Tier-1/FoggyCreek teardown split), ac-56z (headless carve-out) — safety/enforcement text replacing defective one-liners; evidence in the beads, audit 2026-07-30 -->
 If the sweep modified any file, commit ONLY the files the sweep itself newly touched —
-**never `git add -A` / `git add .`** (H7d, `_shared/commit-discipline.md`:
+**never `git add -A` / `git add .`** (H7d, `ac-pipeline-builder/references/commit-discipline.md`:
 a wildcard add ships concurrent sessions' WIP under this sweep's message; bead ac-hx8).
 Files that were already dirty before the sweep belong to other sessions — the sweep may have
 reformatted them, but they are theirs to commit:
@@ -249,14 +249,14 @@ Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 
 **Goal:** Turn learnings into system improvements. User decides what ships.
 
-**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. The difference is not caution vs confidence — it's downstream gates: a review finding rides a branch through tests/CI/review/merge (auto isn't final), while a skill/doctrine edit is live agent policy the next scheduled run simply obeys. Full three-way rule (AUTO / HUMAN / DISREGARD): **`_shared/disposition.md`**.
+**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. The difference is not caution vs confidence — it's downstream gates: a review finding rides a branch through tests/CI/review/merge (auto isn't final), while a skill/doctrine edit is live agent policy the next scheduled run simply obeys. Full three-way rule (AUTO / HUMAN / DISREGARD): **`ac-pipeline-builder/references/disposition.md`**.
 
 ### Loop-retro friction disposition (D3) — runs FIRST, before Step 0
 
 **ac-land Phase 3 is the SOLE tier router.** When Phase 0 read a non-empty loop-retro carrier,
 classify **each** friction item into one of three tiers BEFORE the Step 0 `reflect` delegation
 below, and execute T1/T2 here directly — `reflect` never re-decides a tier (it only writes the
-T3 subset this router hands it). This is a **citing specialization** of `_shared/disposition.md`'s
+T3 subset this router hands it). This is a **citing specialization** of `ac-pipeline-builder/references/disposition.md`'s
 core three-way rule (DISREGARD / AUTO / HUMAN — that page § "The three-way rule", §1/§2/§3): it
 MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
 
@@ -331,7 +331,7 @@ Then continue with the system-file upgrade proposals below.
 
 ### Disposition — classify, then route by mode
 
-Classify each surviving proposal per `_shared/disposition.md`:
+Classify each surviving proposal per `ac-pipeline-builder/references/disposition.md`:
 
 - **DISREGARD** — no concrete, named waste this session → drop silently (most proposals).
 - **AUTO** — pure knowledge (fact / rule / decision / recipe) → already captured by
@@ -343,7 +343,7 @@ Classify each surviving proposal per `_shared/disposition.md`:
 
 **Headless (loop-driven land)** → NEVER `AskUserQuestion` and **NEVER post proposals to
 Slack** — a Slack card is not a decision's storage; Slack stays notification-only. File each
-HUMAN item as a decision bead per `_shared/disposition.md` § Save-for-later, **dedupe
+HUMAN item as a decision bead per `ac-pipeline-builder/references/disposition.md` § Save-for-later, **dedupe
 first** (same target file + gist as an open `skill-improvement` bead → comment on it
 instead), then skip ahead to Commit Compound Changes:
 
@@ -541,7 +541,7 @@ STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a
 # Tier 1 — universal content-aware age-gate, ONE selector over all 12 targets (11 glob
 # prefixes + literal /tmp/bead-work; globs expand at the CALL SITE, so the function only
 # ever sees concrete dirs — identical per-dir semantics to writing 12 loops longhand).
-# Prefix inventory: _shared/run-id.md § Prefixes — keep the argument list in sync.
+# Prefix inventory: ac-pipeline-builder/references/run-id.md § Prefixes — keep the argument list in sync.
 stale() { for d in "$@"; do [ -d "$d" ] || continue
   [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"; done; }
 stale /tmp/bead-work/ /tmp/bead-work-*/ /tmp/plan-init-*/ /tmp/batch-close-*/ \

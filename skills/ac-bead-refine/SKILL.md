@@ -95,7 +95,7 @@ concurrence (#4)**, not self-attested mechanism-traced alone.
 
 Light path is **forbidden** if the fix touches **any** of:
 
-- a **RISK-TOUCH** path under `_shared/risk-classification.md` **binding #5**
+- a **RISK-TOUCH** path under `ac-pipeline-builder/references/risk-classification.md` **binding #5**
   (file-set of the bead under refine — same files the refine stamp will cite),
   especially persistence/write/RPC surfaces; **OR**
 - any **async / multi-writer / SSE / poll / create** surface.
@@ -110,7 +110,7 @@ risk-classification before considering criteria 2–4.
 | **1** | **HARD GATE** above (RISK-TOUCH persistence / async-multi-writer) |
 | **2** | **Single-file scope** required |
 | **3** | Evidence from the **same run**, **< 24h old measured against `RUN_ID` start** (QA repro or review finding); paste **artifact path + ISO timestamp** into the stamp |
-| **4** | Mechanism traced to concrete `file:line`, **AND** that trace **confirmed by a single spawned adversarial subagent DISTINCT from the trace's author** (never conductor self-concurring). Output is one-line **PASS** naming the `file:line` independently confirmed. **No `Task` tool (or spawns dead after 2 retries/rung)? #4 is structurally unreachable — do NOT self-concur and do NOT fall back to the *stronger* `refine-full` claim: `_shared/degraded-mode.md` § 4 replaces #4 with an EXECUTED witness (`refine-light-solo`) and mandates the `degraded-solo` label on either path (bd-nreuv)** |
+| **4** | Mechanism traced to concrete `file:line`, **AND** that trace **confirmed by a single spawned adversarial subagent DISTINCT from the trace's author** (never conductor self-concurring). Output is one-line **PASS** naming the `file:line` independently confirmed. **No `Task` tool (or spawns dead after 2 retries/rung)? #4 is structurally unreachable — do NOT self-concur and do NOT fall back to the *stronger* `refine-full` claim: `ac-pipeline-builder/references/degraded-mode.md` § 4 replaces #4 with an EXECUTED witness (`refine-light-solo`) and mandates the `degraded-solo` label on either path (bd-nreuv)** |
 
 ### Stamp content (`refine-light`)
 

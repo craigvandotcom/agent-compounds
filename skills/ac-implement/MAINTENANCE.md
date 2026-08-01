@@ -22,4 +22,4 @@ over orch target; contradiction-wave fixes applied 2026-07-30 (ac-9hi, ac-bkg, a
 ## Cut-log — append-only audit trail (feeds the churn detector)
 - [2026-07-30] CUT "Worktree mode only: before copying files from a worktree…" — reason: stale (contradicts trunk-direct ban, same file) — relocated→holding pen above (bead ac-gwg)
 - [2026-07-30] EXTRACTED §Register Session Identity mint/caution/export block → _shared/agent-mail.md (ac-gcj.2)
-- [2026-07-30] EXTRACTED §Phase 1d pathspec mechanics + references/shared-checkout-git.md → _shared/commit-discipline.md (ac-gcj.3)
+- [2026-07-30] EXTRACTED §Phase 1d pathspec mechanics + references/shared-checkout-git.md → ac-pipeline-builder/references/commit-discipline.md (ac-gcj.3)

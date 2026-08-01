@@ -91,7 +91,7 @@ browser/simulator itself and never holds raw page state — it spot-reads flagge
 evidence files only. Rationale: exhaustive sweeps in one context suffer late-journey
 attention decay and compaction risk, at conductor-model prices.
 
-**Artifacts dir** — derive per `_shared/run-id.md` (prefixes `qa-browser` / `qa-device` /
+**Artifacts dir** — derive per `ac-pipeline-builder/references/run-id.md` (prefixes `qa-browser` / `qa-device` /
 `ui-polish`), never glob.
 
 **Manifest before spawn.** The conductor writes `$ARTIFACTS_DIR/journeys-manifest.json`
@@ -202,7 +202,7 @@ slack-send -c C0AQ7964ZU6 "<context>" --file a.png b.png   # #sofi
 - **Send when evidence is produced, or at the batch ceremony** — don't batch across
   ceremonies. A conductor may upload directly, or relay a worker's evidence path.
 
-**Completeness rule** (`_shared/delegation-contract.md` applies): bound each worker's
+**Completeness rule** (`ac-pipeline-builder/references/delegation-contract.md` applies): bound each worker's
 wait; manifest ⊖ verdict files = re-spawn each missing worker ONCE, then record it in
 the QA_VALIDATION block as `status: FAIL` with `notes: stall — <journeys>`. Missing
 output ≠ "no findings".

@@ -34,7 +34,7 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 
 ## Phase 1 — scan (read-only, parallel)
 
-**Read the board per `_shared/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply **no filter**: unlike `ac-human-session`, keep BOTH sides of the loop boundary (ready beads, in-flight waves, and `loop-ready` plans all render here).
+**Read the board per `ac-pipeline-builder/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply **no filter**: unlike `ac-human-session`, keep BOTH sides of the loop boundary (ready beads, in-flight waves, and `loop-ready` plans all render here).
 
 **WIP reads (beyond the board):**
 

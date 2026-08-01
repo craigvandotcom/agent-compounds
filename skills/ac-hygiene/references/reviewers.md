@@ -36,7 +36,7 @@ Then explore with completely fresh eyes. Start wherever interests you — recent
 
 Look super carefully for real bugs — the kind that cause wrong results, silent failures, or data corruption. Two moves that pay off: (1) invariant analysis — list what must ALWAYS be true, then try to construct the scenario that violates it; unenforced invariants are bugs waiting to happen. (2) boundary probing — empty, null, zero, negative, huge, concurrent, out-of-order. Some areas worth considering: logic errors, race conditions, null hazards, swallowed exceptions, type assertion abuse — but follow your instincts, not a checklist.
 
-Also read `_shared/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test) — real failure modes from a production incident, not speculative.
+Also read `ac-pipeline-builder/references/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test) — real failure modes from a production incident, not speculative.
 
 Rank what you find by Severity × Likelihood.
 
@@ -108,7 +108,7 @@ Read the project structure, then explore source directories with fresh eyes. Ass
 
 Think about structural integrity: are modules well-bounded? Are dependencies flowing in the right direction? Is there over-abstraction or under-abstraction? Are critical paths tested? But explore broadly — structural issues often hide in unexpected places. Trust your architectural intuition.
 
-Also read `_shared/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test).
+Also read `ac-pipeline-builder/references/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test).
 
 ## Output
 
@@ -274,7 +274,7 @@ Isolation discipline (absolute): the other reviewers are reading this tree RIGHT
 The reading veins, in rough payoff order:
 - Cannot fail — no assertions; assertions inside conditionals/catch blocks; un-awaited async assertions; trivial truths (defined-only, length-only); snapshot-only tests reflexively regenerated on every change.
 - Tautologies — expected values computed by the same logic as the code under test, or the test importing the SUT's own helper to build its expectation.
-- Testing the mock — assertions that only echo arguments the test itself passed; asserting a stub returns its stubbed value; mocking the module under test; mock setup longer than the test body. The signature failure mode of machine-written tests — expect to find it. Cross-check `_shared/anti-patterns.md`'s unproven seam: a mocked boundary with no un-mocked test anywhere.
+- Testing the mock — assertions that only echo arguments the test itself passed; asserting a stub returns its stubbed value; mocking the module under test; mock setup longer than the test body. The signature failure mode of machine-written tests — expect to find it. Cross-check `ac-pipeline-builder/references/anti-patterns.md`'s unproven seam: a mocked boundary with no un-mocked test anywhere.
 - Flakiness precursors — sleeps instead of polling, unseeded randomness, un-frozen clocks, real network in unit tests, shared mutable fixtures, order assertions on unordered collections, float equality. Prime sabotage/shuffle candidates.
 - Zombies — long-skipped tests with no linked issue (git-blame the skip), commented-out tests, tests exercising deleted features or mocking removed modules.
 - Classic smells only past threshold — assertion roulette at 3+ unmessaged assertions, eager tests calling 4+ distinct production functions, any test-body conditional logic. Below threshold, stay quiet: binary smell-flagging drowns the signal.

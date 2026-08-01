@@ -25,7 +25,7 @@ decide it):
 
 Not advancing the review-mark is **not** the same as not counting. The mark
 (`.claude/reviews/batch/`) records *acceptance* — that a batch was closed. What has actually been
-**reviewed** is computed directory-agnostically by `_shared/board-scan.md` **Scan D**, as the union
+**reviewed** is computed directory-agnostically by `ac-pipeline-builder/references/board-scan.md` **Scan D**, as the union
 of the `Range:` claims in every artifact under `.claude/reviews/**` (root, `pending/`, `publish/`,
 `batch/` alike). So this one line is the entire machine-readable coverage record of a review.
 
@@ -58,7 +58,7 @@ degraded-but-legitimate run (`--expect`, a deliberate skip) stays visible after 
 **Plan:** {plan path or "none"}
 **Panel ({panel_source}):** {reviewers_expected} — skipped: {panel_skipped, or "none"}
 **Rounds:** {count}
-**Degraded:** {no | solo (trigger=…; lenses=…) — REQUIRED in both states, `_shared/degraded-mode.md` § 3}
+**Degraded:** {no | solo (trigger=…; lenses=…) — REQUIRED in both states, `ac-pipeline-builder/references/degraded-mode.md` § 3}
 
 ---
 

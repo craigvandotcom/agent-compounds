@@ -56,7 +56,7 @@ Identity & coordination
 
 Git
 5. Pathspec-only commits; never `add -A` / `commit -a` / `stash`; commit = push;
-   foreign WIP is untouchable — `_shared/commit-discipline.md`
+   foreign WIP is untouchable — `ac-pipeline-builder/references/commit-discipline.md`
 6. `.beads/issues.jsonl` has ONE committer per run: you, the conductor, at the end —
    `beads-standards` § Session protocol
 
@@ -73,7 +73,7 @@ Beads
 
 Delegation
 11. Every child prompt OPENS with the verbatim Child-spawn preamble —
-    `_shared/delegation-contract.md`; the loop's phase payloads live in
+    `ac-pipeline-builder/references/delegation-contract.md`; the loop's phase payloads live in
     `ac-loop/references/delegation-prompts.md` (use them verbatim, fill the slots)
 12. Children return compact structured summaries (≤400 words) including the `friction:`
     block — `references/delegation-prompts.md` § Child friction schema
@@ -85,7 +85,7 @@ Verification & ceremony
 15. `.claude/reviews/batch/` has exactly ONE writer: ac-batch-close Act 3 (bd-kudrb) —
     reviews stage in `pending/`
 16. Track the run in a ledger (one task per phase; ledger = run position, board = work
-    truth) — `_shared/run-ledger.md`
+    truth) — `ac-pipeline-builder/references/run-ledger.md`
 
 Headless conduct
 17. No `AskUserQuestion` when headless — advisory Slack nudge + open decision bead

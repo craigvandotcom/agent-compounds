@@ -59,7 +59,7 @@ release + self-deregister at Finalize (§ Release).
 ### Declare the Run Ledger
 
 ac-merge spans long CI polls where a session can drop. Declare the run ledger per
-`_shared/run-ledger.md` (pattern + resume doctrine there — one task per section,
+`ac-pipeline-builder/references/run-ledger.md` (pattern + resume doctrine there — one task per section,
 advance as you go, persist captured facts to `$STATE`). This ceremony's table:
 
 ```
@@ -282,7 +282,7 @@ Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FO
 ### Gather PR Context
 
 ```bash
-# Bead summary. NB: dcg blocks a redirect whose target path is variable-built (11 such writes in this skill) — if blocked do NOT bypass; use tee or the Write tool per _shared/shell-guardrails.md
+# Bead summary. NB: dcg blocks a redirect whose target path is variable-built (11 such writes in this skill) — if blocked do NOT bypass; use tee or the Write tool per ac-pipeline-builder/references/shell-guardrails.md
 br list --json > "$ARTIFACTS_DIR/beads.json"
 
 # Commit history on this branch
@@ -338,7 +338,7 @@ Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER"
 
 ## Phase 2: Wait for PR Feedback
 
-> **Bounded wait only** (`_shared/delegation-contract.md`): the poll below is hard-capped
+> **Bounded wait only** (`ac-pipeline-builder/references/delegation-contract.md`): the poll below is hard-capped
 > and timeout-terminal on purpose — never swap it for an open-ended "monitor" and assume it
 > wakes you. A stalled CI/agent run is a reportable outcome, not a pause.
 

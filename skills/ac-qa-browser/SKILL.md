@@ -27,7 +27,7 @@ DOM snapshots, console noise, and screenshots. The full evidence protocol (manif
 schema, verdict schema, lanes, completeness rule, session naming) is
 **`_shared/qa-shared.md` § Conductor / worker evidence protocol** — read it now.
 **No `Task` tool, or spawns still failing after 2 retries/rung → you have NO workers:
-read `_shared/degraded-mode.md` before writing the manifest (bd-nreuv).**
+read `ac-pipeline-builder/references/degraded-mode.md` before writing the manifest (bd-nreuv).**
 
 ## Platform note (read first)
 
@@ -75,10 +75,10 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
 - Selection + depth arrive from `_shared/verification-gate.md` (a conductor upstream
   already consulted it; standalone human runs: consult it yourself, or honor the
   human's explicit depth request).
-- Mint RUN_ID if the orchestrator didn't hand one down (contract: `_shared/run-id.md`
+- Mint RUN_ID if the orchestrator didn't hand one down (contract: `ac-pipeline-builder/references/run-id.md`
   mint-if-absent rule — the same `qa-<app>-<RUN_ID>` session names below already
   assume RUN_ID exists): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`.
-- Derive `ARTIFACTS_DIR` per `_shared/run-id.md` (prefix `qa-browser`);
+- Derive `ARTIFACTS_DIR` per `ac-pipeline-builder/references/run-id.md` (prefix `qa-browser`);
   `mkdir -p "$ARTIFACTS_DIR/evidence"`.
 - **You own the local server** (workers never start/stop it): if targeting local,
   serve a **production build — never `pnpm dev`** (bd-yey1z doctrine, above) via the
@@ -86,7 +86,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   ~1–1.5h/run and skips the SHA+input-hash key):
   ```bash
   # Requires a CLEAN tree (git status --porcelain empty, incl. untracked).
-  # Dirty → script exits non-zero; commit or clean first. dcg blocks a variable-built redirect target: if the log redirect below is rejected, do NOT bypass — pipe into tee instead (_shared/shell-guardrails.md).
+  # Dirty → script exits non-zero; commit or clean first. dcg blocks a variable-built redirect target: if the log redirect below is rejected, do NOT bypass — pipe into tee instead (ac-pipeline-builder/references/shell-guardrails.md).
   scripts/qa/serve-prod.sh >"$ARTIFACTS_DIR/server.log" 2>&1 &
   SERVER_PID=$!
   SERVER_STARTED=1
@@ -161,7 +161,7 @@ narrow-tool agent; do not re-pin its model.
   (criticality-descending).
 - Session names: `qa-<app>-<RUN_ID>-w<N>` (wave slug when no RUN_ID) — assign in the
   manifest, pass via `{SESSION_NAME}`.
-- Bound every wait (`_shared/delegation-contract.md`): cap per-worker wait at ~10 min
+- Bound every wait (`ac-pipeline-builder/references/delegation-contract.md`): cap per-worker wait at ~10 min
   of polling; a silent worker past the cap is a `stall` outcome, not a pause.
 
 ### Phase 4 — Collect + completeness

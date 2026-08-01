@@ -48,7 +48,7 @@ and it made a child stamp `refined` onto beads it never reviewed.
 The key is therefore a **child discriminator computed by the child itself**:
 
 ```bash
-# 1. RUN_ID — the orchestrator's run scope; mint-if-absent per _shared/run-id.md.
+# 1. RUN_ID — the orchestrator's run scope; mint-if-absent per ac-pipeline-builder/references/run-id.md.
 #    Shared across siblings ON PURPOSE. It scopes, it does not discriminate.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 
@@ -62,7 +62,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 unset CHILD_ID 2>/dev/null || true
 CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | tr -cd 'A-Za-z0-9')-$$"
 
-# 3. /tmp/<prefix>-<key>[-<run-id>] — the _shared/run-id.md invariant, key = CHILD_ID.
+# 3. /tmp/<prefix>-<key>[-<run-id>] — the ac-pipeline-builder/references/run-id.md invariant, key = CHILD_ID.
 #    RUN_ID stays LAST so a run-scoped glob (/tmp/bead-refine-*-$RUN_ID) still gathers
 #    every child of this run for ac-land.
 ARTIFACTS_DIR="/tmp/bead-refine-${CHILD_ID}${RUN_ID:+-$RUN_ID}"
@@ -76,7 +76,7 @@ fresh shell with a **different `$$`**, so re-running the formula would compute a
 directory and orphan this run's scratch. Immediately after the block above: paste the
 resolved literal path into the Phase-0 `TaskCreate("Initialize …")` description and into
 the `progress.md` header, and set `ARTIFACTS_DIR=<that literal>` at the top of every
-subsequent bash call. This is the same discipline `_shared/run-id.md` already mandates for
+subsequent bash call. This is the same discipline `ac-pipeline-builder/references/run-id.md` already mandates for
 the claim id ("recover it from the `.claim-id` file, or from a TaskCreate description that
 baked in the literal resolved path").
 
@@ -222,7 +222,7 @@ done < "$ARTIFACTS_DIR/target-bead-ids.txt"
 # NOTE: append via `tee -a`, NOT a brace-group append-redirect. `dcg` blocks a redirect whose
 # target path is variable-built, and this line was the single highest-recurrence instance of that
 # block in the registry (3 of 4 refine children in one run, ~2 min + 2 retries each). Do NOT
-# "fix" a block by decorating the command — sanctioned shapes: `_shared/shell-guardrails.md`.
+# "fix" a block by decorating the command — sanctioned shapes: `ac-pipeline-builder/references/shell-guardrails.md`.
 printf '' | tee "$ARTIFACTS_DIR/beads-full-dump.txt" >/dev/null
 for id in "${IDS[@]}"; do
   {
@@ -293,7 +293,7 @@ Cross-reference every bead against the original plan (if available) to ensure NO
 
 ## Method
 
-Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. **Visual-reference ACs:** if the source research doc/plan cites a `docs/design-refs/<surface>-<source>-reference.<ext>` image, check the bead's ACs against it directly — including geometry (shape, radius, spacing), not just prose intent; a bead whose AC dropped or paraphrased the reference's geometry is a finding, and a UI bead derived from a visual reference with no `docs/design-refs/` path in its ACs is a finding. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name AND EXECUTE the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). **Then RUN it.** An AC that encodes a command must have that command executed against HEAD this round; a command that errors, targets a non-existent script/target, or cannot run is a finding — fix the AC or drop it, never stamp it. Verifying an AC's INTENT is not a substitute for running its literal check: two ACs shipped with commands that were wrong at HEAD (a non-existent capacitor build target; a `grep -c` line-count assertion every 404 in the app fails) because refine judged intent and never executed them — the same wrong build command then produced three separate false blockers (bd-g277q). Cost to disprove once actually run: ~5 minutes each. If an AC's command is genuinely unrunnable here (needs prod, a device, or a human), say so explicitly in the AC — an unrunnable check must be *labelled* unrunnable, never left looking executable. Named test anchors (files, describe blocks) must exist — grep before citing. **Seam-proof AC for bridge-crossing beads:** if a bead's scope crosses a bridge (native plugin boundary, external service, build-time↔runtime divide, **or any two-component seam INSIDE one runtime — write path↔read path, producer↔consumer, install↔serve**), tests-green alone is not done — it needs a seam-proof acceptance criterion: the named surface observed working (a journey drive, or an un-mocked test touching the seam itself). A bridge-crossing bead with no seam-proof AC is a finding. This is `_shared/anti-patterns.md` §3 *Unproven seam* — "mocks verify our logic; the bugs live at the boundary the mock removed" — and the boundary does not have to be a process boundary: bd-mfr1d (2026-07-30) wrote an asset into one cache while the serving path only ever opened a different one, both halves individually covered and green. So the AC must name a check that goes RED when EITHER side alone is reverted; two ACs each covering one half is the untested seam, not coverage. Use your judgment on what matters most.
+Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. **Visual-reference ACs:** if the source research doc/plan cites a `docs/design-refs/<surface>-<source>-reference.<ext>` image, check the bead's ACs against it directly — including geometry (shape, radius, spacing), not just prose intent; a bead whose AC dropped or paraphrased the reference's geometry is a finding, and a UI bead derived from a visual reference with no `docs/design-refs/` path in its ACs is a finding. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name AND EXECUTE the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). **Then RUN it.** An AC that encodes a command must have that command executed against HEAD this round; a command that errors, targets a non-existent script/target, or cannot run is a finding — fix the AC or drop it, never stamp it. Verifying an AC's INTENT is not a substitute for running its literal check: two ACs shipped with commands that were wrong at HEAD (a non-existent capacitor build target; a `grep -c` line-count assertion every 404 in the app fails) because refine judged intent and never executed them — the same wrong build command then produced three separate false blockers (bd-g277q). Cost to disprove once actually run: ~5 minutes each. If an AC's command is genuinely unrunnable here (needs prod, a device, or a human), say so explicitly in the AC — an unrunnable check must be *labelled* unrunnable, never left looking executable. Named test anchors (files, describe blocks) must exist — grep before citing. **Seam-proof AC for bridge-crossing beads:** if a bead's scope crosses a bridge (native plugin boundary, external service, build-time↔runtime divide, **or any two-component seam INSIDE one runtime — write path↔read path, producer↔consumer, install↔serve**), tests-green alone is not done — it needs a seam-proof acceptance criterion: the named surface observed working (a journey drive, or an un-mocked test touching the seam itself). A bridge-crossing bead with no seam-proof AC is a finding. This is `ac-pipeline-builder/references/anti-patterns.md` §3 *Unproven seam* — "mocks verify our logic; the bugs live at the boundary the mock removed" — and the boundary does not have to be a process boundary: bd-mfr1d (2026-07-30) wrote an asset into one cache while the serving path only ever opened a different one, both halves individually covered and green. So the AC must name a check that goes RED when EITHER side alone is reverted; two ACs each covering one half is the untested seam, not coverage. Use your judgment on what matters most.
 
 ## Output
 
@@ -633,7 +633,7 @@ and this section). The pair is eval-load-bearing and frozen under
 This skill **has a formal light branch**. `refine-light` is **not** an ad-hoc
 carve-out: it may be stamped only when **ALL four** criteria in
 `ac-bead-refine/SKILL.md` § Light-path hold (HARD GATE #1 first: RISK-TOUCH
-persistence / async-multi-writer via `_shared/risk-classification.md` binding #5;
+persistence / async-multi-writer via `ac-pipeline-builder/references/risk-classification.md` binding #5;
 single-file; <24h same-run evidence vs `RUN_ID` start; independent adversarial
 concurrence on `file:line`). Failing any one → full `MIN_ROUNDS` and `refine-full`.
 

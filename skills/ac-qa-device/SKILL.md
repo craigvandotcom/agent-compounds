@@ -79,9 +79,9 @@ holds the accessibility trees, simctl output, and screenshots. Full protocol
 worker evidence protocol.
 
 1. **Orient + build (yours, once):** Platform Gate check; mint RUN_ID if the
-   orchestrator didn't hand one down (contract: `_shared/run-id.md` mint-if-absent
+   orchestrator didn't hand one down (contract: `ac-pipeline-builder/references/run-id.md` mint-if-absent
    rule): `RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"`; derive `ARTIFACTS_DIR`
-   per `_shared/run-id.md` (prefix `qa-device`); build + install via the app's own
+   per `ac-pipeline-builder/references/run-id.md` (prefix `qa-device`); build + install via the app's own
    build command (from CORE — never xcodebuild alone) and boot the app's dedicated
    uniquely-named sim (§Parallel QA below). Workers never build, boot, or shut down
    simulators.
@@ -91,7 +91,7 @@ worker evidence protocol.
    reasons — e.g. sim-impossible flows from CORE).
 3. **Dispatch sequentially:** one worker per journey via
    **`references/device-tester-prompt.md`** (dispatched to the `device-tester`
-   agent; no model re-pin). Bounded wait per `_shared/delegation-contract.md`;
+   agent; no model re-pin). Bounded wait per `ac-pipeline-builder/references/delegation-contract.md`;
    a silent worker past the cap = `stall`, re-spawn once, then record.
 4. **Collect + aggregate:** manifest ⊖ verdicts check; file beads from verdict
    findings (you, not workers — deduped); write `last_pass` stamps for PASSes;
