@@ -21,7 +21,7 @@ Multiple sessions can safely share a wave — file reservations via Agent Mail p
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting (after asking user for bead count).**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting (after asking user for bead count).**
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)

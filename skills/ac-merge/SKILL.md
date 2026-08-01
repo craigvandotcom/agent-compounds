@@ -40,7 +40,7 @@ WAVE=$(git branch --show-current)   # variable name kept for both wave and chore
 # Stable per-branch artifacts dir → a session dropped during a 10-min CI poll finds the SAME dir
 # on resume (a fresh timestamped dir would orphan the prior state). ac-land sweeps /tmp/wave-merge-*
 # (the artifacts-dir prefix is unchanged regardless of branch kind — ac-land's glob depends on it).
-ARTIFACTS_DIR="/tmp/wave-merge-${WAVE//\//-}"
+ARTIFACTS_DIR="/tmp/wave-merge-${WAVE//\//-}"   # branch-keyed by design (stable resume across CI polls) — the ONE sanctioned exception to claim-id keying: ac-pipeline/references/run-id.md § Prefixes
 mkdir -p "$ARTIFACTS_DIR"
 STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VERSION, WAIT_FOR_FEEDBACK
 [ -f "$STATE" ] && . "$STATE"         # on resume, reload instead of re-asking
@@ -120,6 +120,8 @@ the heavy pre-push build). Never let CI catch a formatting miss.
 Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
+
+Scaling tiers per `ac-pipeline/references/risk-classification.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 **Run the ceremony smoke net per `ac-pipeline/references/verification-gate.md` § Ceremony smoke net**
 with `<RANGE>` = `main...HEAD` — the post-rebase state, the thing that actually merges
@@ -203,6 +205,8 @@ echo "NEW_VERSION=$NEW_VERSION" >> "$STATE"   # persist so a dropped session doe
 `package.json` alone doesn't reach the App Store binary. Propagate to the native build surfaces (iOS pbxproj `MARKETING_VERSION` ×4 + monotonic `CURRENT_PROJECT_VERSION`; Android `build.gradle` when added; the JS `NEXT_PUBLIC_APP_VERSION` is auto-derived, no script) following **`references/version-bump.md`**. Web-only projects skip this.
 
 #### Commit the bump
+
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
 git add package.json pnpm-lock.yaml ios/App/App.xcodeproj/project.pbxproj 2>/dev/null

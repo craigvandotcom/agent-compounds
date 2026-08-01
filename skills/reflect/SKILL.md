@@ -151,6 +151,8 @@ just how it's SHAPED?** (full boundary: `skill-builder/references/maintenance-le
   human merge (rule 3 in `ac-pipeline/references/disposition.md`, consistent with ac-land's no-auto-apply).
   **Interactive:** present the exact proposed edit (target file + diff + session evidence) and get
   explicit approval before writing. **Headless:** file a decision bead —
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
   `br create -t decision -p 3 -l human-gate,skill-improvement,skill:<name>` with the memo
   (target · evidence · diff · recommendation), **dedupe-first** against open `skill-improvement`
   beads per `ac-pipeline/references/disposition.md` § Save-for-later. Never post to Slack, never silently drop —

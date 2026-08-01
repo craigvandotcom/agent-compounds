@@ -11,6 +11,8 @@ Competitive framing: agents compete — only evidence-backed findings count. Cod
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Approved plan file (from `/ac-plan-init`)                                                     |
 | **Output**       | Refined plan (in-place edit), Refinement Log appended                                      |
+Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 | **Artifacts**    | Round findings in `$ARTIFACTS_DIR/round-{N}-{role}.md`, consensus registry                 |
 | **Verification** | Convergence trend (fewer findings each round), plan committed                              |
 
@@ -89,6 +91,8 @@ fi
 
 ### Checkpoint Original Plan
 
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```bash
 git add "$PLAN_FILE" && git commit -m "docs(plan): checkpoint before plan-refine-internal
 
@@ -158,6 +162,8 @@ instead of pre-committing to a round count or showing phantom rounds). `TaskUpda
 (per round: finding counts + convergence verdict), so a glance at the ledger shows exactly
 where the run is.
 
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```
 # Fixed tasks — create upfront at Phase 0:
 TaskCreate("Initialize — identify plan, select tier, checkpoint, consensus registry, agent-mail reservation")
@@ -190,6 +196,8 @@ PLAN_CONTENT = Read(PLAN_FILE)
 **Skill routing:** Scan plan content for domain keywords. Check `AGENTS.md` > "Available Skills" for relevant skills. Include a line in each subagent prompt: `"Domain skills relevant to this plan: <list>. Read the corresponding skill file when evaluating sections that touch those domains."`
 
 ### Phase 2: Parallel Subagent Review
+
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 **Spawn all agents simultaneously in a single message.** Light/Medium -> 3 agents (simple personas). Heavy -> 6 agents (heavy personas).
 

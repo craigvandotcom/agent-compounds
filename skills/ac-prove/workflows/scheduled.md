@@ -81,6 +81,8 @@ resolve, since fix-forward is never invoked here):
    only **open** matches suppress filing a duplicate.
 2. **No match →** file one:
 
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
    ```bash
    br create "ac-prove nightly: <structural failure key>" -t bug \
      --labels "ac-prove-nightly" -p 2 \

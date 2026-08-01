@@ -1,3 +1,5 @@
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 # Engineer Sub-Agent Prompt (Phase 1b)
 
 The conductor spawns one engineer per bead with this prompt. Paste the full

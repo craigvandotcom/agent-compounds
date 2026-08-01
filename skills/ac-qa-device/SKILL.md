@@ -5,6 +5,8 @@ description: Use when QA-ing the NATIVE app build on a device/simulator — full
 
 > **The native twin.** `ac-qa-device` proves the native shell; `ac-qa-browser`
 > proves the web shell. Shared conventions — **depth levels, journey reuse,
+Capability-starved runs: `ac-pipeline/references/degraded-mode.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 > findings=beads, the `QA_VALIDATION` report, and the conductor/worker evidence
 > protocol** — live in **`ac-pipeline/references/qa-shared.md`**; both twins reference it so they
 > stay in lockstep. This file owns the native/simulator specifics only.

@@ -14,6 +14,8 @@
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Plan file (from `/ac-plan-init` or `/ac-plan-refine-internal`)                                   |
 | **Output**       | Refined plan (in-place edit), `REFINEMENT-LOG.md` in `_plans/research/`             |
+Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 | **Artifacts**    | Model responses in `$WORK_DIR/`, consensus registry                                        |
 | **Verification** | Convergence trend, plan committed                                                          |
 
@@ -25,7 +27,7 @@
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
@@ -111,6 +113,8 @@ EOF
 ### Checkpoint Original Plan
 
 Commit the original plan to git before any modifications, so there's always a clean baseline to diff against or revert to.
+
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
 git add "$PLAN_FILE"
@@ -437,6 +441,8 @@ These deferred findings serve two purposes:
 - **Final presentation:** Any findings that never achieve consensus are presented to the user once in Phase 5
 
 #### Step 2: Apply Approved Changes via Sequential Haiku Subagents
+
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 **CRITICAL: Spawn one Haiku per change, sequentially (not in parallel).** Each edit shifts the file content, so subsequent edits must read the post-edit state.
 

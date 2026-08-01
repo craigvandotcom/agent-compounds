@@ -1,3 +1,5 @@
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 # Hygiene Reviewers — the 7-lens panel
 
 Spawn the panel in a **single message** (parallel). Each agent writes to

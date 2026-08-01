@@ -1,4 +1,6 @@
 
+Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 **You are the conductor.** Three Sonnet reviewers check plan correctness independently. You track consensus across rounds and apply fixes. This is a hygiene pass — targeted edits, not a rewrite.
 
 Run this as the final step before implementation. The plan's strategy and architecture are already settled; you're checking that the document is accurate, consistent, and clean.
@@ -46,6 +48,8 @@ mkdir -p "$ARTIFACTS_DIR"
 ```
 
 ### Checkpoint Plan
+
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
 git add "$PLAN_FILE" && git commit -m "docs(plan): checkpoint before plan-clean
@@ -138,6 +142,8 @@ to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` 
 it and `completed` when done; put live detail in the description (per round: finding +
 applied counts), so a glance at the ledger shows exactly where the run is.
 
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```
 # Fixed tasks — create upfront at Phase 0:
 TaskCreate("Initialize — identify plan, checkpoint, consensus registry")
@@ -158,6 +164,8 @@ sections only — keep it ~5 fixed + rounds.
 ---
 
 ## REVIEW LOOP: Phases 1-3
+
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ### Phase 1: Spawn 3 Reviewers (parallel)
 

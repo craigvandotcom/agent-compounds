@@ -51,6 +51,8 @@ This is a gate in the planning chain, not a standalone chat exercise — the imp
    git status --short
    ```
    If any deletions (`D`) appear that you didn't intend, STOP and confirm with the user before proceeding.
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
    ```bash
    git add "$PLAN_FILE"
    git commit -m "docs(plan): <genius review — {N} fixes | alien transcendence — {N} insights> integrated

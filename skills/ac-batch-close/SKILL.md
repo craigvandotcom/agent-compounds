@@ -376,6 +376,8 @@ the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
 the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard
 reads it, and a fix-forward as `FoggyCreek` would be a Tier-2-boundary violation):
 
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```bash
 export AGENT_NAME=<minted-name>   # re-assert inline — the Phase-0 mint's name
 git commit -m "batch-close: fix-forward CI failure — <summary>" -- <fixed files>

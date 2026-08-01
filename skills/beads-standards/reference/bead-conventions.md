@@ -160,6 +160,8 @@ the dependency graph.
 
 ## Claim semantics — `post-merge` exhaust (one definition)
 
+Concurrency proof harness for claim races: `ac-pipeline/scripts/claim-race-harness.sh` (run it when changing any claim path).
+
 Exhaust beads filed inside a batch's verify → review → close window would, if immediately
 `br ready`, be claimable before the batch that spawned them has even merged. So they are
 stamped **`post-merge` at creation** — the literal label `beads-closed-gate.sh` excludes

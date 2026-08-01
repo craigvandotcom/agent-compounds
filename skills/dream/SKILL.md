@@ -375,6 +375,8 @@ fi
 ```
 
 Commit (root repo, these paths only) + push — the queue must be visible cross-machine:
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 `git add infrastructure/dream-cycle && git commit -m "dream: <date> cycle — N proposals" && git push`
 (also `git add .beads` in this root commit if the CYCLE-DAILY decision bead was filed above —
 it lives in root's db; target-repo bead dbs for other proposals: commit `.beads/` in each

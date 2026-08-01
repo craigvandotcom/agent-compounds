@@ -102,6 +102,8 @@ know whether teardown (task 8) still owes work.
 - Check for any started-but-unclosed beads: `br list --json` — look for claimed/in-progress items
 - For each: either close it (if done) or add a comment documenting where you left off
 - Create new beads for any loose ends discovered during the session:
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
   ```bash
   # Dedup first: br list --json | grep -i "<keyword>"  — skip if an open match already exists.
   # -t = kind of work (task/bug/investigation; -t bug only for a shipped product defect).
@@ -232,6 +234,8 @@ Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
 **Goal:** With complete information, identify what worked, what didn't, and what friction occurred.
 
 ### Spawn Retrospective Sub-Agent
+
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 Spawn the retrospective analyst using the prompt in **`references/retrospective-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>`). It reads session artifacts + the workflow/skill files, reports what worked / what did not / patterns, and proposes evidence-backed system-upgrade opportunities under a strict minimum-waste bar.
 
@@ -572,9 +576,10 @@ literals:
 rm -rf /tmp/bead-work-buglane-20260719-102946-27401 /tmp/bead-refine-20260719-102946-27401-refA
 ```
 
-dcg (verified v0.6.7, 2026-07-19) ALLOWS `rm -rf` on literal `/tmp/...` paths and on
-distinctive `/tmp/<prefix>-*` globs; it BLOCKS variable/substituted paths everywhere and
-`rm -rf` on home/repo paths always. For repo-tree debris (a stale `.next.stale-*`, an
+Allowed/blocked delete shapes are canon — `ac-pipeline/references/shell-guardrails.md`
+(literal `/tmp/...` paths + distinctive globs allowed; variable/substituted paths and
+home/repo `rm -rf` blocked — the version-pinned details live THERE, not here). For
+repo-tree debris (a stale `.next.stale-*`, an
 orphaned scratch file): `git rm` if tracked; else gitignore-and-flag or `dcg allow-once`
 — don't fight the guard (memory: `feedback_dcg_blocks_os_unlink`). Zero `STALE:`/`OWN:`
 lines printed = nothing to delete; step 2 is skipped.

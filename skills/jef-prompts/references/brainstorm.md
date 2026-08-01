@@ -17,7 +17,7 @@ description: Pre-planning exploration when uncertain about approach - diverge wi
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
 
 ### Branch Safety Check
 

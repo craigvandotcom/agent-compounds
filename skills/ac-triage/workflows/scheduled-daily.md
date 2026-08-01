@@ -64,6 +64,8 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 
 - Stage only what triage owns: `.beads/*.jsonl`, `.claude/state/`, `_backlog/pool/`.
   Never sweep unrelated dirty files (concurrent sessions share this checkout).
+Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 - Commit on `main` with `AGENT_NAME=<name>` inline; push with `--no-verify` (the
   pre-push build hook swallows background pushes) and **verify the origin SHA** after.
 

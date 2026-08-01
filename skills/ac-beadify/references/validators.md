@@ -1,3 +1,5 @@
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 # Beadify Validators (3 parallel agents)
 
 Spawn all three in a **single message** (parallel). Each writes to

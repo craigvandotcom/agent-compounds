@@ -37,6 +37,8 @@ If any fail: file P0 issues for failures.
 
 ### 4. Git Operations (NON-NEGOTIABLE)
 
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```bash
 git pull --rebase
 git add <specific files>  # Not -A

@@ -50,6 +50,8 @@ The `auto` tier has two shapes — the classifier's reason names which (`Tier-1`
   mismatch) → leave it untouched (the classifier routes it to `gated` anyway).
 
 Both are **root-repo, revertible changes by construction** (the classifier guarantees it) —
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 commit them to root: `git add infrastructure/ && git commit -m "dream: auto-apply <N> (Tier-0/1 rubric)" && git push`.
 
 ### 4. Apply the APPROVED backlog (legacy — pre-bead Slack approvals)

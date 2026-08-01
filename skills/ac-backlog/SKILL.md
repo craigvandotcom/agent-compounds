@@ -205,7 +205,7 @@ One-line intent: what this is and why it matters.
 {context, references, related plan/bead if noted}
 ```
 
-**If a visual reference is shared alongside this capture** (screenshot, mockup, design comp) — save it immediately to `docs/design-refs/<surface>-<source>-reference.<ext>` and cite that path in `## Notes`, same as `ac-plan-init`'s research-doc convention. Don't just describe it in prose; the file is the spec artifact.
+**If a visual reference is shared alongside this capture** (screenshot, mockup, design comp) — save it immediately to `docs/design-refs/<surface>-<source>-reference.<ext>` and cite that path in `## Notes`, per `ac-pipeline/references/design-refs.md` (the canon). Don't just describe it in prose; the file is the spec artifact.
 
 **Inferring `channel` and `horizon` (light, never blocking):**
 

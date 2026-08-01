@@ -63,6 +63,8 @@ when it ends (both modes — NIGHTLY tracks the ledger internally even with no h
 it to). This run does not invoke sub-skills mid-flight; if a future revision does, that
 sub-skill keeps its own ledger — don't duplicate its steps here.
 
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```
 TaskCreate("Scope + scan — read AGENTS.md, scan beads/plans/backlog via board-scan")
 TaskCreate("2a — archive completed backlog items")
@@ -323,6 +325,8 @@ those are gated, not housekeeping.
 ### Commit Changes
 
 If any files were moved or updated:
+
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
 git add -A _backlog/ _plans/

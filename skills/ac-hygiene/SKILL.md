@@ -7,6 +7,10 @@ description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, exp
 **You are the conductor.** A panel of reviewers hunts independently, each through a different
 lens. You synthesize, fix, and iterate. Codebase-wide — not tied to any feature branch or diff.
 
+Scaling tiers per `ac-pipeline/references/risk-classification.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
+Capability-starved runs: `ac-pipeline/references/degraded-mode.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 The weekly quality pass for a repo (`PANEL=full`, 7 lenses), or a quick between-session
 sweep (`PANEL=light`, 3 lenses). For feature-scoped review, use `/ac-review` instead.
 
@@ -240,6 +244,8 @@ dynamic — 3 floor, up to 5 — so the ledger grows to the real shape instead o
 to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` when you start
 it and `completed` when done; put live detail in the description (per round: finding counts +
 commit SHA), so a glance at the ledger shows exactly where the run is.
+
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```
 # Fixed tasks — create upfront at Phase 0:

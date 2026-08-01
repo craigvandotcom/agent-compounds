@@ -44,6 +44,8 @@ Instead **emit** the scored `pool → active` promotion slate:
 
 - **Dedup first:** skip if an open `pipeline-proposal` bead already covers this slate (the
   populated `bead:` slot is the idempotency marker).
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 - **Atomic emit:** `br create "<title>" -t decision --labels "human-gate,pipeline-proposal"
   -p <prio> --description "<full memo>"`, capture the id, write it into the proposal's `bead:`
   slot. Write the file only AFTER `br create` succeeds.
@@ -59,6 +61,10 @@ Re-verify the branch guard immediately before committing: `git branch --show-cur
 still equal `main`. A concurrent session can switch the checked-out branch between preflight
 (step 0) and this step (TOCTOU) — if it's no longer `main`, **ABORT**: Slack `degraded` with
 reason `branch-guard: <branch> checked out`, zero writes, retry next cycle.
+
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
+Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
 AGENT_NAME=FoggyCreek git commit -m "chore(align): weekly pool→active proposal" -- <exact files touched>

@@ -119,6 +119,10 @@ No branch re-check is needed — the worktree is a detached checkout that no con
 can switch out from under this run (the old TOCTOU branch-guard existed only because tidy shared
 the live checkout). Commit the exact files touched and push the detached HEAD onto `main`:
 
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
+Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```bash
 # cwd is still $TIDY_WT
 AGENT_NAME=FoggyCreek git commit -m "chore(tidy): nightly reconcile + proposals" -- <exact files touched>

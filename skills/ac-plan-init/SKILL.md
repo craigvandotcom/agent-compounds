@@ -25,7 +25,7 @@ description: 'Use to CREATE a first-draft implementation plan from a backlog ite
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)

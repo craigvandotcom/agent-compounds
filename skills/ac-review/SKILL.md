@@ -29,7 +29,7 @@ For codebase-wide health checks, use `/ac-hygiene` instead.
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
@@ -746,6 +746,8 @@ Needs decision: {count}
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 git push
 ```
 

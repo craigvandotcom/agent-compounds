@@ -67,6 +67,8 @@ Contract; the Confidence/QA gate task **and** the Heavy review task both go back
 rule means a re-pin re-opens the review too). `ac-distribute`, invoked from Phase 5, keeps its
 own ledger — don't duplicate its build/sign/upload steps here.
 
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 ```
 # Fixed tasks — create upfront:
 TaskCreate("Preflight — pin candidate C, mint the release bump (R), push R, finalize feedback rows")
@@ -109,6 +111,8 @@ used to live in `ac-batch-close` Phase 2 ("Propagate to native build surfaces"):
 added, `NEXT_PUBLIC_APP_VERSION` auto-derived. Follow **`../ac-merge/references/version-bump.md`**
 verbatim — it remains the sole-owner reference for the *mechanics* of this counter regardless
 of which skill calls it. Web-only projects skip the native steps.
+
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
 git add package.json pnpm-lock.yaml ios/App/App.xcodeproj/project.pbxproj 2>/dev/null

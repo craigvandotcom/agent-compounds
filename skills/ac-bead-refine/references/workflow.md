@@ -19,7 +19,7 @@
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: Create task list with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
@@ -34,6 +34,8 @@ MAX_ROUNDS=5
 ```
 
 #### `$ARTIFACTS_DIR` is keyed per-CHILD, never per-run (bd-baudw)
+
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 This skill is **fanned out**: `ac-loop` at `PARALLEL_WIDTH>1` spawns several
 `ac-bead-refine` children on disjoint bead subsets, and by design hands every one of them

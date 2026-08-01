@@ -3,6 +3,12 @@ name: jef-flywheel
 description: Use when learning or applying the agentic build methodology end-to-end — building software with AI agents, beads (br/bv) and agent-swarm (ntm) setup, coordinating multi-agent work, AGENTS.md conventions. The conceptual/setup layer, not the per-stage pipeline skills. Triggers on flywheel, agent swarm, ntm, br/bv setup, agent coordination, multi-agent development. To convert a plan into beads use ac-beadify; to run a pipeline stage use the ac-* skills.
 ---
 
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
+Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and
 > patterns, not project specifics. **App specifics (project refs, schema names,
