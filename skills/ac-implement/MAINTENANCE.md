@@ -8,7 +8,7 @@ spine_lines: 736 / target ≤500 orch
 # ac-implement — maintenance ledger
 
 ## Health
-over orch target; contradiction-wave fixes applied 2026-07-30 (ac-9hi, ac-bkg, ac-32p, ac-gwg); horizontal dedup queued under epic ac-gcj
+over orch target; contradiction wave 2026-07-30 + Pass B station 5 2026-08-01 (commit-sequence + foreign-WIP-ladder restatements collapsed to commit-discipline pointers; remainder verified as bindings — selection guards, claim mechanics, delegation branches all incident-cited + pointer-based)
 
 ## Inbox — shape signal awaiting triage
 <!-- Behavior-changing signal does NOT go here — it goes to a skill:ac-implement skill-improvement bead. -->

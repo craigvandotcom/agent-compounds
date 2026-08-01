@@ -170,24 +170,15 @@ This is the gate that runs at **every** commit for the rest of the session (Phas
 
 **Cadence: commit every 15–20 minutes.** Do not batch a whole bead — or worse, a whole session — into one commit; granular commits are both the revert points and the unit of concurrency-safety under H7d.
 
-**Commit = push. Always. Mandatory, not optional.** There is no wave branch holding your work safe in the interim — origin is the only durability record. The sequence for every commit:
-
-```bash
-git pull --rebase
-# pre-push trip-wire runs here (installed hook) — see the --no-verify note below
-git commit -- <file1> <file2> ...
-git push --no-verify origin main
-git rev-parse HEAD                     # local
-git ls-remote origin main              # origin — confirm the SHAs match
-```
-
-`--no-verify` is deliberate: the installed pre-push hook runs a full-tree build, and under trunk-direct another session's uncommitted WIP can be sitting in that same working tree and false-positive the hook (see Multi-Session Parallelism, below) — real verification for state you don't own comes from the per-commit gate above plus post-push CI, not from a hook scanning the whole tree. **Never sit on local-only commits** — a crashed or abandoned session with unpushed commits is lost work, not "recoverable from the branch," because there is no branch.
-
-> **Race handling (unchanged):** if `git push` collides with another session's push, `git pull --rebase` and re-push — never force-push over another session's committed work.
->
-> **Foreign-unstaged rebase block (recurring — bd-x7gec).** The mandated pre-push `git pull --rebase` refuses to run while the shared checkout carries unstaged tracked foreign files (e.g. `.beads/issues.jsonl`, `skills/ac-tidy/workflows/last-run.json`) — and the no-stash rule (Phase 0) bans `git stash` as the escape hatch. This recurred in EVERY implement child of run 20260714-170945 (5+ times). Do NOT stash. Use one of two workarounds:
-> - **Fetch + fast-forward (preferred):** `git fetch origin main`, then confirm you are 0-behind (`git rev-list --count HEAD..origin/main` returns `0`); if 0-behind there is nothing to rebase — `git push --no-verify origin main` fast-forwards cleanly. If behind >0, you genuinely need to integrate — fall to the next option.
-> - **Discard the foreign ledger churn first:** `git checkout .beads/issues.jsonl` (and any other foreign generated file blocking the rebase — it is machine-local runtime state, safe to reset), then `git pull --rebase` and re-push. Only discard files you did NOT author this session; never `git checkout` a path you edited.
+**Commit = push. Always. Mandatory, not optional.** There is no wave branch holding your
+work safe in the interim — origin is the only durability record; a crashed session with
+unpushed commits is lost work, not "recoverable from the branch," because there is no
+branch. **The full sequence (fetch/0-behind check, pathspec commit, `--no-verify` push +
+its rationale, SHA verify) and the foreign-WIP escalation ladder (fetch+fast-forward;
+discard foreign generated files you did NOT author — never stash, bd-x7gec recurred 5+
+times in one run) are canon: `ac-pipeline/references/commit-discipline.md`** § Commit +
+push sequence, § No-stash escalation ladder. Push collision → `git pull --rebase` and
+re-push; never force-push over another session's committed work.
 
 ### Ask User
 
