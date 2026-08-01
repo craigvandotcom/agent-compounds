@@ -13,6 +13,16 @@ have let all three accumulate or shrink-panel.
 
 ---
 
+## ToC
+- Over-inclusive bias
+- §1 RISK-TOUCH globs
+- §2 Test-path exclusion (mandatory)
+- §3 ZERO-RUNTIME batch
+- §4 Classifier method
+- §5 Per-caller bindings
+- §6 Fixtures (examples)
+- Maintenance
+
 ## Over-inclusive bias
 
 **When unsure, a path belongs in RISK-TOUCH.** False-risky costs one un-shrunk

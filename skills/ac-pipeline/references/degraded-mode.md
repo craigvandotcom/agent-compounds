@@ -13,6 +13,12 @@ artifacts (`refine-full` stamps, review VERDICTs) that were **indistinguishable 
 panel pass**. A degraded run that isn't machine-detectably marked as degraded is worse than a
 failed one, because a failed one doesn't lie.
 
+## ToC
+- 1. The capability probe (at skill entry, before any fan-out)
+- 2. The sequential-lens path — what it does and does not buy
+- 3. Stamp grammar (machine-readable, additive, one form for all three skills)
+- 4. refine-light-solo — what the light path means with no distinct subagent
+
 ## 1. The capability probe (at skill entry, before any fan-out)
 
 Two independent triggers. Either one puts you in degraded mode:

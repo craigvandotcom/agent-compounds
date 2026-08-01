@@ -15,6 +15,23 @@ it:
 > stage doesn't act on right now leaves as a typed bead — not a report
 > paragraph, not a dangling AskUserQuestion, not a markdown TODO.
 
+## ToC
+- Types = kind of work
+- Labels = gating & provenance (orthogonal to type)
+- Lifecycle labels — pipeline wiring (doctrine lives in beads-standards)
+- Batch-producing workflows (per-run epic + in-session refine)
+- Bead routing (creation → parent) — convention, not a gate
+- Pick-order (which ready bead the loop picks next)
+- Claim semantics — post-merge exhaust (one definition)
+- Body template (the br lint contract)
+- Bead I/O contract (## Delivers / ## Consumes)
+- Binding vs advisory (the present-tree rule)
+- Per-type close artifacts
+- Lineage
+- Where beads live
+- Operating br/bv (bulk-write foreground rule, CLI gotchas)
+- Anti-inflation rules (beads are scheduled work, not a notebook)
+
 ## Types = kind of work
 
 | Type | Use when | Closure means |

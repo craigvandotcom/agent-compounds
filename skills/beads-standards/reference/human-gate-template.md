@@ -4,6 +4,14 @@ The decision-card shape is the whole point: it makes the bead a *sufficient
 statistic* for the decision — everything Craig needs to decide in 15 seconds is on
 the card, nothing requires opening a chat log or a plan doc to reconstruct.
 
+## ToC
+- Creation
+- Parentage at creation (Arm 0)
+- Mandatory dependency wiring
+- Worked example
+- ACTION cards (do-in-the-world tasks)
+- Closing a human-gate bead
+
 ## Creation
 
 ```bash

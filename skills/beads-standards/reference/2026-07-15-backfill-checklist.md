@@ -9,6 +9,14 @@ recurring job.
 Each item below: what was found, and the fix command(s). Run per-repo (`.beads/`
 db is local to each project) — `cd` into the repo before the `br` calls.
 
+## ToC
+- 1. Synonym merges
+- 2. Nine DECISION-titled beads missing human-gate
+- 3. bd-d6w79 — double-label contradiction
+- 4. defer_until gaps
+- 5. Casing/spelling variants — normalize to kebab-case
+- Verification
+
 ## 1. Synonym merges
 
 Every occurrence of a deprecated human-marker label merges to `human-gate`:

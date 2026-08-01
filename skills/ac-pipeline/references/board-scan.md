@@ -11,6 +11,16 @@ This file owns the *read* (what to scan, how to categorize). Each consumer owns 
 
 ---
 
+## ToC
+- Phase 0 — init
+- Scan A — beads
+- Scan B — plans
+- Scan C — backlog
+- Scan D — review coverage (the staleness probe)
+- Scan E — scheduled CI gate health (the other unconsumed signal)
+- The board snapshot (shape returned to the consumer)
+- Lenses (who reads this board, for what)
+
 ## Phase 0 — init
 
 ```bash

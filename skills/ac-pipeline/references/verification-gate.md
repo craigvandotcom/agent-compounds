@@ -1,6 +1,10 @@
-# Shared verification gate (ac-ui-polish + ac-qa-browser + ac-qa-device)
+# Shared verification gate — THE pass-selection brain
 
-**The selection brain for the "verify the built app" triad.** Running all three
+**Selects which verification passes run, at what depth, for any diff or scope.**
+Primary executors: the `ac-ui-polish` + `ac-qa-browser` + `ac-qa-device` triad;
+consumed by every ceremony that verifies (loop Verify stage, the merge/batch-close
+smoke net § below, `ac-prove`, `ac-distribute`). One brain — selection is never
+re-decided locally (Pass C, ac-gcj.7). Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
 boot. This file decides, from the wave's diff, **which passes run and at what
 depth**. It is the single source; conductors (`ac-loop`
@@ -14,6 +18,17 @@ Reference it as `ac-pipeline/references/verification-gate.md`. Method only — z
 > executes its own method.
 
 ---
+
+## ToC
+- Two axes
+- Step 1 — classify the diff
+- Step 1b — reachability (can the selected harness SEE the change?)
+- Step 2 — select passes + depth
+- Journey registry
+- Step 3 — override hooks (force, regardless of diff)
+- Step 4 — emit the decision line (mandatory — never skip silently)
+- Ceremony smoke net (ac-merge / ac-batch-close) — the one definition
+- Format-first gate
 
 ## Two axes
 

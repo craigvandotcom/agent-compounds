@@ -18,6 +18,12 @@ touch it, never commit it "on their behalf".
 
 ---
 
+## ToC
+- Pre-commit deletion check
+- Commit + push sequence
+- No-stash escalation ladder (when rebase/push is blocked by foreign WIP)
+- Rules
+
 ## Pre-commit deletion check
 
 Before any commit that could carry deletions, run `git status --short` and look for `D`

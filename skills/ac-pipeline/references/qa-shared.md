@@ -23,6 +23,15 @@ twice — route by plane.
 > that gate owns the _whether_. Conductors (`ac-loop`,
 > `ac-merge`'s smoke net) consult the gate, not this file, to decide selection.
 
+## ToC
+- Depth levels
+- Reusing the app's journeys
+- Flag-gated paths need a flag-ON build
+- Prod-write ban + secrets (the minimal package, Craig's decision)
+- Conductor / worker evidence protocol (both twins + ui-polish fan-out)
+- Findings = beads (file immediately, like failing tests)
+- Reporting — the QA_VALIDATION block
+
 ## Depth levels
 
 - **smoke** — build/serve, launch, first-paint, auth, primary journey. Run after

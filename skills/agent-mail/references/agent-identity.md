@@ -5,6 +5,18 @@ identity for everything that doesn't.** Ratified 2026-07-14 (epic `ac-ycr`) — 
 the earlier mint-or-inherit doctrine (one identity per top-level invocation, inherited by
 every spawned stage), which was never wired and is now rejected: see "Why not inherit" below.
 
+## ToC
+- The principle
+- Tier 1 — unique minted identity
+- Tier 2 — FoggyCreek, the explicit chore identity
+- Why not inherit (recorded so this isn't relitigated)
+- Assignee vs reservation — the two-identity split (unchanged, load-bearing)
+- Deregistration — three layers (defence in depth)
+- Call-scoped facts (verified 2026-07-08; token rule widened ac-g93 2026-07-19) — note 1 binds only sessions that HOLD the tools, note 2 binds everyone that commits, stance children included
+- Enforcement (two layers over advisory reservations)
+- Project key format (canonical — the one home for the key-format rule)
+- Conformance status
+
 ## The principle
 
 **Identity is the lock grain, and the grain must match the writer-concurrency boundary.**

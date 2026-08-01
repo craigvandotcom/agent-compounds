@@ -6,6 +6,14 @@ from keys it can compute, never by globbing `/tmp` and hoping (the newest-wins /
 parallel" heuristics caused real bugs — ac-land picking the wrong session's dir; ac-merge
 orphaning a timestamped dir on resume).
 
+## ToC
+- The key: the claim/batch id (trunk-direct — NOT the branch)
+- Mint order: the claim id comes FIRST, .claim-id lands INSIDE the dir it keys
+- RUN_ID: the orchestrator's run scope (two jobs) — mint-if-absent
+- Prefixes
+- Dual-mode
+- The ac-land exception (a consumer that can't self-derive)
+
 ## The key: the claim/batch id (trunk-direct — NOT the branch)
 
 Under trunk-direct, every conductor works directly on `main` — there is no wave branch, so
