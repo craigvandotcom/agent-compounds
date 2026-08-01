@@ -328,6 +328,45 @@ br ready --limit 0 --json | jq '[.[] | select(
 
 > If no wave is open, all refined ready beads are orphans.
 
+### Batch orphans by FILE CLUSTER, not by arrival order
+
+When the orphan set is larger than one batch (routinely true — the finding lane is the biggest
+producer on the board), **group it by the file paths cited in the beads' descriptions and ship the
+densest cluster first.** Review-findings carry `file:line` anchors, so the clustering is already
+in the data:
+
+```bash
+# Densest file clusters across the ready orphan set (drives batch selection).
+br ready --limit 0 --json | jq -r '.[] | select(
+  (.labels | index("refined")) and (.labels | index("human-gate") | not)
+) | .description' \
+  | grep -oE '[a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+' \
+  | grep -E '\.(ts|tsx|js|mjs|yml|yaml|sh|swift)$' \
+  | sort | uniq -c | sort -rn | head -20
+```
+
+> Grab the WHOLE extension first, then filter anchored on `$`. A single
+> `grep -oE '...\.(ts|js|...)'` silently truncates `issues.jsonl` → `issues.js` and
+> `tsconfig.scripts.json` → `tsconfig.scripts.js`, inventing two files that do not exist and
+> ranking them into the top cluster. (Found 2026-08-01 by running this command instead of
+> trusting it — which is the same rule `ac-bead-refine` now applies to every AC.)
+
+Two reasons, and the second is the important one:
+
+1. **Cost.** Six findings in one file fixed in one pass share the read, the mental model and the
+   test run. The same six as six batches pay all of that six times. Measured 2026-08-01: ~20 of 94
+   verified findings sat in one subsystem (`scripts/curate-foods/lib/verbs/*` + `curator-amend.ts`
+   + `escalation-beads.ts`).
+2. **Parallel safety, for free.** Disjoint file clusters are **resource-disjoint by construction**,
+   so width-N waves over distinct clusters cannot collide on file reservations, on the shared
+   staging area, or on `.next`. Clustering is not just cheaper — it is what makes `PARALLEL_WIDTH > 1`
+   structurally safe instead of merely lucky (bd-ctlqg: a whole-tree `git add` swallowed another
+   agent's staged files precisely because two agents were live in overlapping paths).
+
+**So: pick the densest cluster for batch 1; if running parallel, give each child a DIFFERENT
+cluster — never two children inside one cluster.** Beads whose descriptions cite no file path fall
+back to arrival order and ship in a mixed batch after the clusters drain.
+
 If orphans exist:
 1. **Claim the batch (loop's job, before any implementation — CLAIM-AT-SELECTION)** — mark
    the FULL set of N orphan beads `in_progress` + assignee (`AGENT_NAME`, this run's Agent

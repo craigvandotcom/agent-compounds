@@ -138,6 +138,7 @@ entries: 10
 - first_seen: 2026-07-31
 - last_seen: 2026-07-31
 - stage: ac-loop
-- status: open
+- status: fixed (2026-08-01)
+- fix: `references/workflow.md` § Method now reads "Name AND EXECUTE the check for every AC" and requires the command to run against HEAD each round; § Remove `unrefined`, Stamp `refined` makes it a BLOCKING pre-stamp gate, so an unexecuted AC command cannot reach `refined`. An AC that genuinely cannot run here must be labelled unrunnable rather than left looking executable.
 - proposed_fix: execute every AC check-command during refine — an AC whose command does not run is not refined. Verifying an AC's INTENT is not a substitute for running its literal check.
 - narrative: two acceptance criteria encoded commands that were wrong at HEAD: one referenced a non-existent capacitor build target, the other a `grep -c` line-count assertion that every 404 in the app fails. Refinement verified the ACs' intent but never executed their check-commands, so both drifted commands passed refine unnoticed. Cost ~5 minutes each to disprove once actually run.

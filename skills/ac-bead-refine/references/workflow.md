@@ -293,7 +293,7 @@ Cross-reference every bead against the original plan (if available) to ensure NO
 
 ## Method
 
-Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. **Visual-reference ACs:** if the source research doc/plan cites a `docs/design-refs/<surface>-<source>-reference.<ext>` image, check the bead's ACs against it directly — including geometry (shape, radius, spacing), not just prose intent; a bead whose AC dropped or paraphrased the reference's geometry is a finding, and a UI bead derived from a visual reference with no `docs/design-refs/` path in its ACs is a finding. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). Named test anchors (files, describe blocks) must exist — grep before citing. **Seam-proof AC for bridge-crossing beads:** if a bead's scope crosses a bridge (native plugin boundary, external service, build-time↔runtime divide, **or any two-component seam INSIDE one runtime — write path↔read path, producer↔consumer, install↔serve**), tests-green alone is not done — it needs a seam-proof acceptance criterion: the named surface observed working (a journey drive, or an un-mocked test touching the seam itself). A bridge-crossing bead with no seam-proof AC is a finding. This is `_shared/anti-patterns.md` §3 *Unproven seam* — "mocks verify our logic; the bugs live at the boundary the mock removed" — and the boundary does not have to be a process boundary: bd-mfr1d (2026-07-30) wrote an asset into one cache while the serving path only ever opened a different one, both halves individually covered and green. So the AC must name a check that goes RED when EITHER side alone is reverted; two ACs each covering one half is the untested seam, not coverage. Use your judgment on what matters most.
+Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}). If a plan file exists ({PLAN_FILE}), cross-reference plan sections against the beads — check that nothing was lost, oversimplified, or omitted. If no plan file is available, focus on bead-only completeness: missing acceptance criteria, missing edge cases, gaps in implementation context. **Visual-reference ACs:** if the source research doc/plan cites a `docs/design-refs/<surface>-<source>-reference.<ext>` image, check the bead's ACs against it directly — including geometry (shape, radius, spacing), not just prose intent; a bead whose AC dropped or paraphrased the reference's geometry is a finding, and a UI bead derived from a visual reference with no `docs/design-refs/` path in its ACs is a finding. Either way, check each bead for self-containment: could an engineer implement it without external context? **Name AND EXECUTE the check for every AC:** for each acceptance criterion, name the exact check that would verify it — the command to run, the file to grep, the test to write, the output to compare. Any AC you cannot name a concrete check for is a finding (verified-by-reading is not verified). **Then RUN it.** An AC that encodes a command must have that command executed against HEAD this round; a command that errors, targets a non-existent script/target, or cannot run is a finding — fix the AC or drop it, never stamp it. Verifying an AC's INTENT is not a substitute for running its literal check: two ACs shipped with commands that were wrong at HEAD (a non-existent capacitor build target; a `grep -c` line-count assertion every 404 in the app fails) because refine judged intent and never executed them — the same wrong build command then produced three separate false blockers (bd-g277q). Cost to disprove once actually run: ~5 minutes each. If an AC's command is genuinely unrunnable here (needs prod, a device, or a human), say so explicitly in the AC — an unrunnable check must be *labelled* unrunnable, never left looking executable. Named test anchors (files, describe blocks) must exist — grep before citing. **Seam-proof AC for bridge-crossing beads:** if a bead's scope crosses a bridge (native plugin boundary, external service, build-time↔runtime divide, **or any two-component seam INSIDE one runtime — write path↔read path, producer↔consumer, install↔serve**), tests-green alone is not done — it needs a seam-proof acceptance criterion: the named surface observed working (a journey drive, or an un-mocked test touching the seam itself). A bridge-crossing bead with no seam-proof AC is a finding. This is `_shared/anti-patterns.md` §3 *Unproven seam* — "mocks verify our logic; the bugs live at the boundary the mock removed" — and the boundary does not have to be a process boundary: bd-mfr1d (2026-07-30) wrote an asset into one cache while the serving path only ever opened a different one, both halves individually covered and green. So the AC must name a check that goes RED when EITHER side alone is reverted; two ACs each covering one half is the untested seam, not coverage. Use your judgment on what matters most.
 
 ## Output
 
@@ -430,6 +430,27 @@ For each deferred finding, append to `$ARTIFACTS_DIR/consensus-registry.md`:
 ```
 
 **Log all applied and deferred changes in the round summary.**
+
+**MANDATORY — stamp a persistent corrections record ON THE BEAD before stamping `refined`.** The
+round summary lives in `$ARTIFACTS_DIR/progress.md`, which is ephemeral run scratch: it is swept
+at land, so once the run ends there is NO record of what refine changed. Post it to the bead too:
+
+```bash
+br comments add <id> "refine-corrections: <N>
+- <premise corrected / anchor re-pointed / blocker retracted / hazard added / AC command fixed>
+- ..."
+```
+
+**Write this comment even when N is 0** — `refine-corrections: 0` is the required output for a
+bead refine touched but did not change. A missing comment and a clean pass must not look identical:
+absence is not a value, and a silent pass is indistinguishable from a skipped one. Measured
+2026-08-01: a sample of `refine-full` beads found many with **no surviving refine record at all**,
+making it impossible to tell whether refine caught anything or was pure ceremony — the step that
+exists to stop unverified claims could not itself be verified. Counting corrections is what makes
+refine's value measurable, and therefore what makes it safe to tune later.
+
+Use these categories so the record is countable: `premise-false` · `anchor-drift` ·
+`blocker-retracted` · `hazard-added` · `ac-command-fixed` · `scope-changed` · `none`.
 
 **Apply approved changes using `br` commands:**
 
@@ -591,6 +612,15 @@ done
 ### Remove `unrefined`, Stamp `refined`
 
 **On successful convergence (Phase 5 reached), remove the `unrefined` label AND add the `refined` label to all beads that were reviewed.** Readiness for implementation is presence of `refined`, not absence of `unrefined` (`skills/_shared/bead-conventions.md`) — this stamp is this skill's exclusive output.
+
+**BLOCKING PRE-STAMP GATE (both must hold, per bead):**
+1. **A `refine-corrections:` comment exists on the bead** (see Phase 2 — `0` is a valid count,
+   a MISSING comment is not). No comment → not refined; go back and write it.
+2. **Every AC that encodes a command has had that command executed against HEAD this round**,
+   or is explicitly labelled unrunnable-here. An AC whose command was never run is not verified.
+
+These are gates, not advice: `refined` is the label the loop selects on, so a bead that reaches
+it without them enters implementation carrying claims nobody checked.
 
 **Also stamp the refine-PATH that produced the convergence** — `refine-full` for the
 normal 3-reviewer × ≥3-round run this workflow codifies, or `refine-light` when the
