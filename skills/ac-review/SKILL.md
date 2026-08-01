@@ -404,17 +404,9 @@ git diff --name-only $DIFF_RANGE
 decides spawn/skip regardless of risk tier; it is not one of the panel-scaling
 shrink/full tiers and is never dropped by a shrink.
 
-**Rules (non-negotiable):**
-
-1. **Core four ALWAYS** — fewer bodies never silently drop security / performance /
-   architecture / correctness (this section's baseline rule at ~core-four ALWAYS).
-2. **Any RISK-TOUCH hit, OR any runtime-source change → full 6-dimension panel, no
-   shrink, ever.**
-3. **test-quality is its own dedicated body whenever ANY test file is present** —
-   even on a shrink-eligible ZERO-RUNTIME batch.
-4. **GUARD-RAIL:** batch is shrink-eligible only if `git diff --name-only` proves
-   ZERO-RUNTIME + no RISK-TOUCH per `ac-pipeline/references/risk-classification.md`. When in doubt,
-   full panel.
+<!-- diet: "Rules (non-negotiable)" list deleted (Pass B station 6) — all four rules restated the panel-scaling table's own rows immediately above (same-file twins); the table is the binding statement. One survivor below. -->
+**When in doubt, full panel** — shrink-eligibility must be PROVED by
+`git diff --name-only` against the classifier, never assumed.
 
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
 against it (a spawned dimension with no output = partial failure, never a silent pass), and
