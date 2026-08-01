@@ -28,7 +28,29 @@ Implement this bead using strict TDD (RED → GREEN).
 2. **Run tests — confirm RED** (tests fail because code doesn't exist yet)
 3. **Implement the code** — minimal code to make tests pass
 4. **Run tests — confirm GREEN** (all tests pass)
-4b. **Prove the test bites — a green test is not a fix.** After GREEN, revert ONLY your production diff (`git checkout HEAD -- <prod files>` — `git stash` is BANNED, see RULE #1 below), re-run your new tests with `VITEST_AFFECTED_DISABLED=1 pnpm vitest run <exact paths>`, and paste the RED output (test names + fail/pass counts) into your result file — same standard as the E2E/bundle rules below: pasted real output, never "expected to fail". Then restore your fix and re-confirm GREEN. **Any new test still GREEN with the production fix reverted is vacuous — rewrite it.** `VITEST_AFFECTED_DISABLED=1` is MANDATORY: a bare `pnpm vitest run <paths>` still intersects with the affected set, silently under-runs, and reports green over tests it never executed (two engineers were misled by exactly this on 2026-07-30).
+4b. **Prove the test bites — a green test is not a fix.** After GREEN, prove it. **Check for the
+    prover first — it does NOT exist in every app** (as of 2026-08-01 it ships only in
+    body-compass-app):
+
+    ```bash
+    test -x scripts/ci/prove-test-bites.sh && scripts/ci/prove-test-bites.sh \
+      --prod <prod paths...> --tests <test paths...>
+    ```
+
+    It snapshots your uncommitted production diff, reverts production code ONLY, re-runs the named
+    tests, asserts EVERY one goes RED, then re-applies and re-asserts green. Exit codes: `0` ok ·
+    `1` ALARM (a test is vacuous) · `2` usage · `3` restore failed (**stop and fix by hand — your
+    work is at risk**) · `4` unknown. Paste its output into your result file. For a seam-spanning
+    fix use `--seam <groupA> <groupB> --tests …` instead (see the seam rule below).
+
+    **If the prover is absent, do it BY HAND — the proof is mandatory, the script is not.** Revert
+    with a scoped `git stash push -- <prod files>`, re-run, then `git stash pop`. **NOT
+    `git checkout HEAD -- <prod files>` — dcg BLOCKS that** (measured 2026-08-01 across all five
+    discard forms), and unscoped `git stash` is blocked too because it sweeps every other agent's
+    uncommitted work in this shared checkout. To read a pristine copy without touching the tree:
+    `git show <ref>:<path>`.
+
+    Either way, re-run your tests with `VITEST_AFFECTED_DISABLED=1 pnpm vitest run <exact paths>` and paste the RED output (test names + fail/pass counts) into your result file — same standard as the E2E/bundle rules below: pasted real output, never "expected to fail". Then restore your fix and re-confirm GREEN. **Any new test still GREEN with the production fix reverted is vacuous — rewrite it.** `VITEST_AFFECTED_DISABLED=1` is MANDATORY: a bare `pnpm vitest run <paths>` still intersects with the affected set, silently under-runs, and reports green over tests it never executed (two engineers were misled by exactly this on 2026-07-30).
    - **Seam rule.** If the fix spans two components (write path ↔ read path, install ↔ serve, producer ↔ consumer), at least one test must go RED when EITHER half alone is reverted. Two tests that each go red on only one half is an UNTESTED SEAM — the join is exactly where the bug lives (`ac-pipeline/references/anti-patterns.md` §3). Concrete cost (2026-07-30, both escaped refine AND review and shipped broken): bd-mfr1d wrote an asset into one cache while the serving path only ever opened a different one — two new tests each covered ONE half of that seam, both green; bd-ghj12's tests were vacuous because the code path stripped the very characters the test used as its discriminator, so the assertions passed identically with and without the fix.
 5. **Only modify tests if you're certain there's a bug in the test itself** — not to make failing tests pass
 6. **Journey docs are test artifacts too.** If the project has
