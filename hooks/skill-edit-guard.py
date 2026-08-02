@@ -65,6 +65,9 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     deliberate copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.
     Litmus (ac-znk.4): a rule true in ANY workflow is domain canon, not workflow text —
     workflow files keep one-line when/who bindings + pointers.
+  - NO PROVENANCE IN SKILL TEXT: the edit's story (who/when/which bead/promoted-from)
+    goes in the commit message and ledgers, never the artifact. Machine tokens stay
+    minimal; bare rule-IDs only where grepped as names.
 
 (Fires once per session. This first attempt is blocked to surface the reminder; re-issue the edit to proceed.)
 """

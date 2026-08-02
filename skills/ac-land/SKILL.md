@@ -309,16 +309,14 @@ the single T2 improvement bead and **demote the rest to T3 observations** — th
 still accrues for `dream`'s full-corpus ranking (nothing lost, just deferred). T1 bugs are exempt
 from the cap.
 
-<!-- net-growth-ok: ac-znk.6 Craig-directed synthesis — sole-reflect invariant relocated for loop runs; standalone path unchanged -->
-**Ordering (preserves bd-jv33f.3's "sole reflect call" invariant — RELOCATED for loop
-runs, ac-znk.6):** (1) classify every carrier item into T1/T2/T3 here; (2) create T1 bug
-beads + the ≤1 T2 decision bead here, now — no `reflect` involvement; (3) **loop-driven**
-(the Exit-Land prompt says the conductor spawns reflect): SKIP the Step 0 `reflect`
-delegation — return the pre-classified T3 subset + skill-scoped tags in your summary; the
-conductor's reflect child is the run's single call. **Standalone** land: hand the T3
-subset to the single Step 0 `reflect` invocation below, exactly as before. Either way:
-one reflect per run, never two. Absent/empty carrier → no tiering; Step 0 (standalone)
-behaves exactly as today.
+<!-- net-growth-ok: ac-znk.6 -->
+**Ordering (the sole-reflect-call rule, bd-jv33f.3):** (1) classify every carrier item
+into T1/T2/T3; (2) create T1 bug beads + the ≤1 T2 decision bead here — no `reflect`
+involvement; (3) **loop-driven** (the Exit-Land prompt says the conductor spawns
+reflect): SKIP the Step 0 `reflect` delegation — return the pre-classified T3 subset +
+skill-scoped tags in your summary. **Standalone**: hand the T3 subset to the single
+Step 0 `reflect` invocation below. Either way: one reflect per run, never two.
+Absent/empty carrier → no tiering; Step 0 (standalone) runs as normal.
 
 ### Step 0: Capture durable lessons via `reflect`
 

@@ -131,6 +131,19 @@ substituting <DIFF> and <SCOPE>.
 > **Does the orchestrator itself need this to decide what to do next — or does only a spawned sub-agent / one stage consume it?**
 > Orchestrator → spine. Sub-agent / single-stage → `references/`.
 
+## Provenance never lives in skill text (the third discriminator)
+
+Skill text carries only what changes the next executor's behavior. The story of an
+edit — who directed it, which bead/pass/date, what it was promoted from, why it is
+correct — lives in the channels built for it: the commit message, the bead's close
+reason, MAINTENANCE/FRICTIONS ledgers, git history. A provenance tail in an artifact is
+reviewer-anxiety, not content, and it is fluff the moment the commit lands.
+
+Exemptions, kept MINIMAL: machine-read tokens (`net-growth-ok:` — bare token + tersest
+reason; `diet:`/`mirror:` markers), and a bare rule-ID **only when other files grep it
+as a name** (e.g. an invariant's `bd-*` handle). A date, a director, or a narrative
+clause is never exempt.
+
 ## The workflow/domain litmus (the second discriminator — ratified 2026-07-30, ac-znk.4)
 
 > **Would this sentence be true in ANY workflow?** → it is DOMAIN CANON: it lives in the
