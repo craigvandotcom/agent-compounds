@@ -130,4 +130,5 @@ Cheapest first — stop at the first that applies. **Never `git stash`.**
 - `--no-verify` on push is deliberate (pre-push full-tree build false-positives on
   foreign WIP); real verification is the per-commit gate + post-push CI.
 - Never force-push `main`.
+- `--force-with-lease` on a NON-main working branch (e.g. ac-merge's pre-PR wave-branch push, ac-merge/SKILL.md §Push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never stash. Never `git add -A`.
