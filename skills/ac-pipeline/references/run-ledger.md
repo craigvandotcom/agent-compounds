@@ -12,6 +12,12 @@ from scratch, re-asks answered questions, or — worst — skips teardown, leavi
 
 ## The pattern
 
+**No Task tools in your context?** (Subagent/child harness contexts routinely lack
+TaskCreate/TaskUpdate — 6 independent rediscoveries in one run, ac-qsz.) The ledger is
+then a FILE: keep it as `progress.md` (+ `$STATE` for captured vars) in the RUN_ID-scoped
+artifacts dir — same one-entry-per-section, advance-as-you-go contract, same resume
+semantics. Don't re-derive this; the file IS the ledger.
+
 1. **Declare at ceremony start:** `TaskCreate` — **one task per major section**, in run
    order, first task `in_progress`, rest `pending`. The section headers in the skill map
    to these tasks 1:1.

@@ -211,6 +211,10 @@ WAVE_SLUG="$CLAIM_ID"   # alias for other in-file references to this key (task l
 # Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md).
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-bd-u2lo1.1-20260712
+# FAN-OUT (one of N children over ONE claimed batch — the delegation prompt says so):
+# claim-id + RUN_ID are batch/run-scoped and IDENTICAL across siblings — append your own
+# per-child discriminator or siblings collide on progress.md (ac-wno; run-id.md corollary):
+# ARTIFACTS_DIR="${ARTIFACTS_DIR}-${AGENT_NAME}-$$"
 ```
 
 ### Register Session Identity

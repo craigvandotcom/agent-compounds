@@ -48,6 +48,9 @@ Skill-diet doctrine applies — before adding content, check whether it belongs 
     sign-off for conductor core). Going DOWN needs only disuse. Unique content being
     removed is NOT deleted outright -- it ages in the skill's MAINTENANCE.md holding
     pen (review-by window) before git-delete.
+    LANDING A NEW LESSON? It enters at the BOTTOM (FRICTIONS.md / references) -- never
+    straight into core: the incident that taught it is entry-grade evidence, not the
+    ladder's core-grade proof (N exercising green runs / probe-verified).
   - FRICTION CAPTURE (skills/skill-builder/references/friction-capture.md): if this
     edit is landing a lesson/fix learned from friction, log it in the skill's
     FRICTIONS.md first -- promotion should be evidence-driven, not vibes-driven.
