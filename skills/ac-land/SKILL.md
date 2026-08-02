@@ -49,7 +49,8 @@ Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplishe
 from the `RUN_ID` passed in; the ac-loop conductor writes it before Exit-Land, one `## <stage>`
 section per stage that hit friction — see ac-loop § "Friction aggregation"). Hold the parsed
 per-stage friction items **with their `stage`/`cost`/`lesson`/`class` typing intact** — they feed
-`reflect` directly in Phase 3 Step 0 (do NOT route them through the Phase 2 prose analyst, which
+`reflect` directly in Phase 3 Step 0 — standalone land; loop-driven runs return them to the
+conductor instead (§ Ordering) — (do NOT route them through the Phase 2 prose analyst, which
 would reword them and destroy the structural key D4/D5 depend on). **Graceful degrade:** if the
 carrier is absent or empty (a standalone / clean-run land), skip it entirely and proceed exactly
 as today — reflect then receives only the Phase 2 findings.
@@ -308,11 +309,16 @@ the single T2 improvement bead and **demote the rest to T3 observations** — th
 still accrues for `dream`'s full-corpus ranking (nothing lost, just deferred). T1 bugs are exempt
 from the cap.
 
-**Ordering (preserves bd-jv33f.3's "sole reflect call" invariant):** (1) classify every carrier
-item into T1/T2/T3 here; (2) create T1 bug beads + the ≤1 T2 decision bead here, now — no
-`reflect` involvement; (3) hand only the pre-classified **T3 subset** to the single Step 0
-`reflect` invocation below — do NOT add a second `reflect` call. Absent/empty carrier → no
-tiering, Step 0 behaves exactly as a standalone land.
+<!-- net-growth-ok: ac-znk.6 Craig-directed synthesis — sole-reflect invariant relocated for loop runs; standalone path unchanged -->
+**Ordering (preserves bd-jv33f.3's "sole reflect call" invariant — RELOCATED for loop
+runs, ac-znk.6):** (1) classify every carrier item into T1/T2/T3 here; (2) create T1 bug
+beads + the ≤1 T2 decision bead here, now — no `reflect` involvement; (3) **loop-driven**
+(the Exit-Land prompt says the conductor spawns reflect): SKIP the Step 0 `reflect`
+delegation — return the pre-classified T3 subset + skill-scoped tags in your summary; the
+conductor's reflect child is the run's single call. **Standalone** land: hand the T3
+subset to the single Step 0 `reflect` invocation below, exactly as before. Either way:
+one reflect per run, never two. Absent/empty carrier → no tiering; Step 0 (standalone)
+behaves exactly as today.
 
 ### Step 0: Capture durable lessons via `reflect`
 

@@ -292,7 +292,7 @@ TaskCreate — one task per run phase; add a Plan-wave task per queued loop-read
   2. Bug lane: drain all unblocked bugs    → pending      (Rule 0; omit if no ready bugs; re-checked each loop)
   3. Orphan / maintenance wave → merge     → pending      (omit if no orphans)
   4. Plan wave: <plan-name> → merge        → pending      (one per queued wave, cap 3)
-  5. Phase ARIA + ac-land                  → pending
+  5. Phase ARIA + ac-land + conductor-reflect → pending   (reflect = its own spawned child, ac-znk.6)
 ```
 
 `TaskUpdate` each task to `in_progress` when its phase starts and `completed` at its merge/exit; mark task 1 `completed` when this orient pass finishes. If the board is empty, the ledger is just task 1 + task 4.
@@ -839,7 +839,9 @@ parses an empty stage section.
 > path to read. Moving `reflect` to the conductor top-level (the rejected alternative) violates the
 > 3-level orchestration contract — the conductor never reads a phase skill's `SKILL.md`, and
 > `reflect` lives inside `ac-land`, a phase skill. The carrier is the typed hand-off across that
-> boundary.
+> boundary. **SUPERSEDED IN PART (Craig, 2026-08-02 — ac-znk.6 synthesis):** reflect now runs
+> at conductor level as a SPAWNED final child (see § Spawn reflect below) — the inline-read
+> objection stands and is honored (spawn, never inline); the carrier remains the evidence path.
 
 **Routing note (W4.3):** this carrier's `friction:` items are inherently skill-scoped (each
 keyed to the stage/skill that hit them) — `ac-land`'s Phase 3 tier router now routes the
@@ -858,8 +860,10 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > session, not one wave: the retrospective reads every `/tmp/bead-work-*-<RUN_ID>/progress.md`
 > (all waves this run shipped — `RUN_ID` scopes them safely), and teardown sweeps all of them.
 > ALSO read the friction carrier `/tmp/loop-retro-<RUN_ID>.md` if it exists (the per-stage
-> aggregated friction packet — an absent or empty carrier means a clean run; proceed as today)
-> and pass its items to `reflect` as typed candidate lessons for disposition.
+> aggregated friction packet — an absent or empty carrier means a clean run; proceed as today).
+> Run your tier router (T1/T2 filing) as normal, but SKIP your Step 0 reflect delegation —
+> the CONDUCTOR spawns reflect after you return (ac-znk.6 synthesis); hand the pre-classified
+> T3 subset + skill-scoped tags back in your return summary instead.
 > ALSO sweep the Agent Mail roster (Layer 2, `agent-mail/references/agent-identity.md` wiring `ac-ycr.5`):
 > `AGENT_MAIL_ROSTER=<loop-conductor-name>,<child-1>,<child-2>,…` — the loop's OWN Phase-0 name
 > plus every child identity this run registered (gather the child names from the per-child
@@ -875,6 +879,19 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > deduped `human-gate` decision beads per `ac-pipeline/references/disposition.md` — never Slack cards,
 > never `AskUserQuestion`, do NOT block.
 > This is the loop's final step — exit after landing." (`ac-pipeline/references/run-id.md`)
+
+### Spawn reflect (the conductor's learning step — after land returns)
+
+<!-- net-growth-ok: ac-znk.6 Craig-directed synthesis 2026-08-02 — reflect relocates to conductor level as a SPAWNED final child (3-level contract intact: spawn, never inline); supersedes-with-history the blockquote above -->
+
+After `ac-land` returns, SPAWN a `reflect` child — never read `reflect/SKILL.md` yourself
+(3-level contract). Hand it, as literal paths + text (payloads point): the friction
+carrier `/tmp/loop-retro-<RUN_ID>.md`, the T3 subset + skill-scoped tags from land's
+return summary, AND your own ≤300-word **decision trace** (what was picked/skipped and
+why, gate trips, batch shapes — the run perspective only the conductor holds; write it to
+`/tmp/loop-decision-trace-<RUN_ID>.md` first). Exactly ONE reflect per run — land skipped
+its own call because you make this one (sole-call invariant, relocated). Give it its own
+ledger line so a compacted conductor still owes it.
 
 ### Deregister the conductor identity (Layer 1 — the loop's true last act)
 
