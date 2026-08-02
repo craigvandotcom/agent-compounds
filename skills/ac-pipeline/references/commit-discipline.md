@@ -1,9 +1,6 @@
 # Commit discipline — shared-checkout git canon (H7d)
 
-**The one home for trunk-direct commit rules** (promoted from
-`ac-implement/references/shared-checkout-git.md`, ac-gcj.3 — it consolidated
-`ac-implement` § Phase 1d, the BCA foreign-WIP decision ladder, and the
-route-group `--pathspec-from-file` retro note). Every skill that commits on a
+**The one home for trunk-direct commit rules.** Every skill that commits on a
 shared checkout points here; none restates.
 
 **H7d, the core rule:** only files YOU changed (and, under Agent Mail, reserved)

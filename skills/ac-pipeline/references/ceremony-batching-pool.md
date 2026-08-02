@@ -1,4 +1,4 @@
-# Ceremony batching pool — mechanics (bd-chd5p.2 / Item 1)
+# Ceremony batching pool — mechanics (bd-chd5p.2)
 
 Shared reference for **`ac-loop`** (owns per-close append + idle-drain) and **`ac-batch-close`**
 (owns report-commit ack + drain). `ac-loop` SKILL.md § Ceremony batching pool holds the engagement

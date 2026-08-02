@@ -1,7 +1,6 @@
 # Design references — how target-state visuals travel the pipeline
 
-**The rule (promoted from ac-plan-init's capture rule, Pass B station 1 — five skills
-cited it there):** when a human shares a visual reference (screenshot, mockup, design
+**The rule:** when a human shares a visual reference (screenshot, mockup, design
 comp) as the TARGET to build toward, save it IMMEDIATELY to
 `docs/design-refs/<surface>-<source>-reference.<ext>` — NOT under `.claude/` (one
 harness's mount) — and cite that exact path in the receiving artifact. **Never describe

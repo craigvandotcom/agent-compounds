@@ -42,10 +42,10 @@ cat .beads/issues.jsonl        # the ONLY complete source — includes closed be
 >   `--limit 1000` (or page on `has_more`) and iterate **`.issues[]`**, not `.[]`.
 > - `br ready --json` returns a **bare array** — iterate **`.[]`**.
 > Getting this wrong fails silently-ish (`jq: Cannot index array with string …`, or
-> a truncated list at 50). Verified against `br` 2026-06.
+> a truncated list at 50).
 
-> **⚠️ `br list --json` DOES NOT RETURN CLOSED BEADS** (br 0.2.x — verified 2026-08-01,
-> ac-tidy NIGHTLY). It returned 436 records with zero `status=closed` while
+> **⚠️ `br list --json` DOES NOT RETURN CLOSED BEADS** (br 0.2.x). It has returned 436
+> records with zero `status=closed` while
 > `.beads/issues.jsonl` held 2,453 records of which 2,017 were closed. `--limit` does not
 > help. This is **load-bearing**: the Tier-1 stale-`unrefined`-on-CLOSED-beads sweep and
 > the Tier-2 positive-proof archive gate both need closed beads, and both would silently
@@ -101,7 +101,7 @@ ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
 Skip `README.md`, `_done/`, `research/`, `templates/`, `checkpoints/`. Per plan, read
 frontmatter:
 
-- **status** — `draft | refined | approved | beadified | loop-ready`; ANY other value is present-but-out-of-vocabulary and routes to `unclassified[]` with the raw value preserved — **never dropped**, and renderers MUST report it (bd-5ljt6: `open` + `awaiting-ratification` hid 2 of 4 live plans for 4 nights)
+- **status** — `draft | refined | approved | beadified | loop-ready`; ANY other value is present-but-out-of-vocabulary and routes to `unclassified[]` with the raw value preserved — **never dropped**, and renderers MUST report it (bd-5ljt6)
 - **loop-ready** — the autonomous hand-off flag (the loop owns these; humans don't sign them off again)
 - **refinement_rounds** — frontmatter field, else count `### Round N` headings in the `## Refinement Log` (headings only)
 - **source_backlog**, **mtime** (recency)
@@ -123,12 +123,12 @@ Per file, read frontmatter + count tasks:
 - **status** — `captured` · `candidate` (triage-promoted, awaiting human approval) · `planned` · `complete`
 - **type / horizon / channel / source** (from the `ac-backlog` frontmatter schema)
 - **unchecked task count** (`- [ ]`) vs checked (`- [x]`)
-- Skip `status: complete` **only**. Zero checkboxes means prose-captured, NOT done — route it to `unclassified[]` (raw reason preserved) and renderers MUST report it; the old task-count skip silently hid 16 live files, 3 of them in committed `active/` scope (bd-m64d5).
+- Skip `status: complete` **only**. Zero checkboxes means prose-captured, NOT done — route it to `unclassified[]` (raw reason preserved) and renderers MUST report it; the old task-count skip silently hid 16 live files, 3 of them in committed `active/` scope.
 
 ## Scan D — review coverage (the staleness probe)
 
-**One directory, two DIFFERENT facts — conflating them is how a 7-day / 237-commit review
-blackout stayed invisible (bd-zl1y5):**
+**One directory, two DIFFERENT facts — conflating them is how a review blackout stayed
+invisible (bd-zl1y5):**
 
 - **Acceptance mark** — the last commit touching `.claude/reviews/batch/`, written by exactly
   one writer, `ac-batch-close` Act 3 (bd-kudrb). It records *"a batch was closed"*, **not**
@@ -146,8 +146,7 @@ blackout stayed invisible (bd-zl1y5):**
 ```bash
 # A LITERAL scratch path, not `$(mktemp -d)`. dcg blocks a truncating redirect whose
 # target is shell-expanded from a command substitution
-# (core.filesystem:redirect-truncate-dynamic-path) — verified 2026-08-01, ac-tidy NIGHTLY,
-# which had to re-run both scans by hand. The literal form is the only one that runs here.
+# (core.filesystem:redirect-truncate-dynamic-path). The literal form is the only one that runs here.
 D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
 
 # Acceptance mark + its gap (bootstrap: last v* tag, else the root commit).
@@ -189,8 +188,8 @@ and a range naming a sha this repo doesn't have.
 ## Scan E — scheduled CI gate health (the other unconsumed signal)
 
 **A scheduled gate emits a verdict every night; if nothing consumes it, the gate protects
-nothing while appearing to exist.** Measured (bd-o9vmx): `e2e.yml` was red on **7 of its last 8
-runs across five days** and neither a person nor a process acted on any of them — it was found
+nothing while appearing to exist.** Measured (bd-o9vmx): a scheduled suite sat red for days
+and neither a person nor a process acted on any of the reds — it was found
 only because a conductor dispatched the workflow for an unrelated reason. **While a suite is red,
 its passing assertions carry no signal**, because a new genuine failure moves the count from
 1-failed to 2-failed and nothing watches either number. Hence consecutive reds **escalate**: a
@@ -200,8 +199,7 @@ providing none.
 ```bash
 # A LITERAL scratch path, not `$(mktemp -d)`. dcg blocks a truncating redirect whose
 # target is shell-expanded from a command substitution
-# (core.filesystem:redirect-truncate-dynamic-path) — verified 2026-08-01, ac-tidy NIGHTLY,
-# which had to re-run both scans by hand. The literal form is the only one that runs here.
+# (core.filesystem:redirect-truncate-dynamic-path). The literal form is the only one that runs here.
 D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
 WF_DIR="$PROJECT_ROOT/.github/workflows"
 
@@ -275,8 +273,8 @@ Verified under `bash` **and** `zsh` against the live `body-compass-app` (3 sched
 | `none` | the repo has no scheduled workflow at all (doc repos) — a real answer, distinct from `unknown` |
 
 **Alert DELIVERY is deliberately not wired** (bd-o9vmx, human-gated): there is no Slack webhook
-anywhere in the fleet and the curator's "Slack alert" is LLM-emitted prose a human reads
-(bd-al8p.10), so picking a channel and provisioning a secret is Craig's call. This scan is
+anywhere in the fleet and the curator's "Slack alert" is LLM-emitted prose a human reads,
+so picking a channel and provisioning a secret is Craig's call. This scan is
 therefore the consumer of last resort — **the loop noticing for itself** — not a notification.
 
 ---
@@ -299,7 +297,7 @@ ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health 
 > probe whose result is computed and then not printed reproduces it exactly. **The same rule governs
 > every `unclassified[]` bucket above** — a read layer must NEVER silently drop an item it cannot
 > classify; it routes it to `unclassified[]` and reports it, because an item dropped for being
-> unrecognisable is indistinguishable from an item that does not exist (bd-m64d5 + bd-5ljt6).
+> unrecognisable is indistinguishable from an item that does not exist (bd-5ljt6).
 
 ## Lenses (who reads this board, for what)
 

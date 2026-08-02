@@ -93,9 +93,9 @@ standalone run the same run-scoping safety net if it's later resumed or cross-re
 
 | Stage(s) | prefix | notes |
 |---|---|---|
-| ac-implement **+** ac-land (shared bead-work session) | `bead-work` | keyed on the claim id (bd-u2lo1.9 re-keying; was the wave slug) |
+| ac-implement **+** ac-land (shared bead-work session) | `bead-work` | keyed on the claim id (bd-u2lo1.9 re-keying) |
 | ac-review | `work-review` | keyed on a timestamp, not the claim id or branch — a review spans a batch **diff range** since the last review-mark, not a single claimed batch, so it never had a branch-collapse problem to fix |
-| ac-batch-close (trunk-direct batch closing ceremony) | `batch-close` | keyed on the batch-anchor SHA (`ac-batch-close/SKILL.md` Phase 0) — historical: this row was renamed from `wave-merge` in bd-u2lo1.3, when `ac-merge` was retargeted to `ac-batch-close` for trunk-direct |
+| ac-batch-close (trunk-direct batch closing ceremony) | `batch-close` | keyed on the batch-anchor SHA (`ac-batch-close/SKILL.md` Phase 0) |
 | ac-plan-init | `plan-init` | keyed on the plan slug — under trunk-direct there is no wave to key on, ever (no branch, no waiting for one to open); the plan slug is the permanent key here, not a placeholder "until a wave exists" |
 | ac-qa-browser | `qa-browser` | |
 | ac-qa-device | `qa-device` | |

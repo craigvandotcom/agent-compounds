@@ -163,7 +163,7 @@ of ≤ ~3 routes) run the single-context inline path (`audit-and-elevate.md`). W
 gate selects ui-polish at **`full` or `exhaustive`** depth, run the per-route fan-out
 (`ac-ui-polish/workflows/whole-app-workflow.md`) — over the wave's touched routes at
 `full`, all routes at `exhaustive`/Whole-app. Gate selection at these depths is
-**standing authorization** for that workflow's multi-agent opt-in (decision 2026-07-12);
+**standing authorization** for that workflow's multi-agent opt-in;
 manual ad-hoc invocations still require explicit opt-in.
 
 **Native pass platform gate (reuse ac-merge semantics):** `ac-qa-device` requires
@@ -224,8 +224,8 @@ class patterns over `last_pass.sha..ship-sha`, with one deliberate asymmetry —
 file matching no class counts as touching EVERY surface there (selection may err
 loose; a store-submission gate errs strict: over-block, never under-block).
 
-**The over-block only works if genuinely surface-less files are excluded first**
-(2026-07-22). Measured failure: `.beads/issues.jsonl` is written by every `br close`
+**The over-block only works if genuinely surface-less files are excluded first.**
+Measured failure: `.beads/issues.jsonl` is written by every `br close`
 — it appeared in 50 of the last 50 commits — and, being unclassifiable, over-blocked
 to *every* surface. So every bead operation marked every review-critical journey
 STALE, and the store lane was permanently BLOCKED for a reason unrelated to code

@@ -18,7 +18,7 @@ mcp__mcp-agent-mail__macro_start_session(
 
 Capture the returned `name` AND `registration_token`.
 
-> **Two call-scoped facts (shakedown-verified 2026-07-08; token rule widened `ac-g93`):**
+> **Two call-scoped facts (`ac-g93`):**
 > (1) thread `registration_token` EXPLICITLY on EVERY privileged / mutating Agent Mail
 > call — file reservations (`file_reservation_paths`, `release_file_reservations`,
 > `renew_file_reservations`, `force_release_file_reservation`), build slots,

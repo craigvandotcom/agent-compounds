@@ -181,5 +181,3 @@ File set of the bead under refine (same files the refine stamp will cite).
 - Edit this file only; consumers link here by path, never copy the glob list.
 - Bias remains over-inclusive: new runtime write/auth/native surfaces default
   into RISK-TOUCH when discovered.
-- Plan authority: `_plans/_done/2026-07-18-1130-loop-efficiency-pass.md` Item 0
-  (bd-chd5p.1).

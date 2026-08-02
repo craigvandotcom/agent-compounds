@@ -1,6 +1,6 @@
-# Bead Conventions — the pipeline-internal contract layer (owner-hosted: beads-standards/reference/, ac-znk.7)
+# Bead Conventions — the pipeline-internal contract layer (owner-hosted: beads-standards/reference/)
 
-**Scope (ratified 2026-07-30, ac-gcj.1):** this file carries ONLY what the `ac-*`
+**Scope:** this file carries ONLY what the `ac-*`
 pipeline stages enforce — I/O contract, routing, claim semantics, lifecycle wiring,
 per-type close artifacts, anti-inflation. The **machine-wide floor** (taxonomy,
 templates, status/priority + close-reason grammar, label hygiene, where beads live,
@@ -73,7 +73,7 @@ children are done.
 ## Lifecycle labels — pipeline wiring (doctrine lives in beads-standards)
 
 The refined/unrefined/human-gate doctrine — presence-of-`refined` readiness, fail-safe
-unknown, 2026-07-07 inversion rationale — is machine-wide floor:
+unknown — is machine-wide floor:
 `beads-standards` § Agent bead template. This section carries only the pipeline wiring:
 
 - **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-bead-refine`
@@ -156,8 +156,7 @@ containment: "this bead is part of that epic's `## Delivers`."**
 - **Recovery — you are NOT stuck.** If a parent is already blocked by a dot-child, closing
   or re-minting the child is **not** the only way out: `br close -f/--force` is the
   documented escape ("Close even if blocked by open dependencies", verbatim from
-  `br close --help`). Live precedent, not theory: `bd-5gl3` is closed with `.10` still
-  open and `bd-tk2b` is closed with `.9` deferred. Use it deliberately and say why in the
+  `br close --help`). Use it deliberately and say why in the
   close reason — a forced close over work that genuinely still matters just hides the work.
 - The `--parent` semantics themselves are **upstream** (`br` ships as a prebuilt binary; no
   source on this machine), so this convention is the whole of the local fix.
@@ -194,7 +193,7 @@ permanently gate-excluded zombie bead can form.
 `br lint` checks each bead's DESCRIPTION for per-type template sections (fuzzy
 phrase match — a literal markdown header is the reliable form). **Emit these at
 CREATION time** — a later refine pass verifies them, it must not have to author
-them (that's how a 2026-07-06 refine run spent its whole first round doing
+them (otherwise a refine pass spends its whole first round doing
 creation's job):
 
 | Type | Required header(s) |
@@ -232,8 +231,7 @@ the handoff otherwise lives in agents' heads and gets re-derived per session.
 These two headers write it down, making three things mechanical: pre-dispatch
 premise checks (ac-implement), close-time output verification (ac-implement),
 and split-coverage checks (ac-bead-refine). Skill-enforced, like Test Scope —
-not a `br lint` template section. (Source: ATG, arXiv 2607.01942 — plan
-`_plans/2026-07-12-bead-io-contract.md`.)
+not a `br lint` template section. (Source: ATG, arXiv 2607.01942.)
 
 ```markdown
 ## Delivers
@@ -357,8 +355,8 @@ write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a 
 1. **File only what survived verification** — a reviewer hunch that didn't
    survive the adversarial pass stays in the report (an inferred CAUSE that
    does survive files as `-t investigation` — the quarantined-guess rule above).
-2. **ANCHOR DEDUPE — keyword search is not enough** (promoted from ac-review,
-   ac-gzb P2; this is the ONE definition — sources cite, never re-derive).
+2. **ANCHOR DEDUPE — keyword search is not enough** (this is the ONE
+   definition — sources cite, never re-derive).
    Before `br create`, take the finding's primary anchor — `file:line` for code
    findings; **journey + checkpoint** for QA findings (which have no file:line) —
    and check whether an OPEN bead already carries it

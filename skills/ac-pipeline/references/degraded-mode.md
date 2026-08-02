@@ -52,7 +52,7 @@ Run the same lenses, in the same order, **sequentially in your own context**. Th
   check with detailed but **WRONG** `file:line`s. Independence is what would have caught it.
 - **AT RISK: coverage.** Sequential lenses run out of context long before a panel runs out of
   workers. A degraded `ac-qa-browser` pass once reported "exhaustive" while leaving 10–14
-  registry journeys undriven (bd-0cfn8). So a degraded run MUST enumerate what it actually
+  registry journeys undriven. So a degraded run MUST enumerate what it actually
   covered — see the `lenses`/`journeys` fields below. "Exhaustive" is a claim you have forfeited.
 
 ## 3. Stamp grammar (machine-readable, additive, one form for all three skills)

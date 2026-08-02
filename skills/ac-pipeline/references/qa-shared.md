@@ -27,7 +27,7 @@ twice — route by plane.
 - Depth levels
 - Reusing the app's journeys
 - Flag-gated paths need a flag-ON build
-- Prod-write ban + secrets (the minimal package, Craig's decision)
+- Prod-write ban + secrets (the minimal package)
 - Conductor / worker evidence protocol (both twins + ui-polish fan-out)
 - Findings = beads (file immediately, like failing tests)
 - Reporting — the QA_VALIDATION block
@@ -68,7 +68,7 @@ The same flag ABSENT from `.env.capacitor` did the inverse: `NEXT_PUBLIC_*` is i
 time, so absent reads as ENABLED and native shipped a live signup form web had disabled
 (bd-native-signup-flag-divergence-stewq — caught because device QA looked, not by any gate).
 
-## Prod-write ban + secrets (the minimal package, Craig's decision)
+## Prod-write ban + secrets (the minimal package)
 
 **Admin/shared-data writes are never QA'd against prod.** Any action that
 mutates cross-user shared data — canonical shared-data zone gates, the
@@ -194,7 +194,7 @@ bead depends on a single late aggregation step orphans when that step dies. Guar
 `validate-qa-run.sh` fails a run that still has `pending`/`none` findings.
 
 **Visual evidence goes to Slack as UPLOADED IMAGES, never a `/tmp` path in a card**
-(Craig's standing directive, 2026-07-17 — memory `visual-evidence-send-to-slack-not-paths`).
+(memory `visual-evidence-send-to-slack-not-paths`).
 Craig owns visual sign-off but acts from his phone: a `/tmp` path in a Slack card is
 unreachable and transient, so whenever a pass produces a screenshot that needs his eyes,
 UPLOAD the actual image:
@@ -289,8 +289,8 @@ br create "investigate: <symptom>" -t investigation \
   wave, the fix commit must re-run the touched path's unit tests **including the
   SIBLING test files that exercise that path** — not just the new spec written for
   the finding. A late fix that adds a gate/guard breaks the siblings that assumed
-  the old behavior, and only CI catches it (BCA wave/023: footer-Upload gate fix →
-  6 sibling specs red on the PR, 2026-07-02). Cheapest form: re-run the app's full
+  the old behavior, and only CI catches it (a late gate fix once turned 6 sibling
+  specs red on the PR). Cheapest form: re-run the app's full
   affected-test command after the LAST commit, not the first.
 
 ## Reporting — the QA_VALIDATION block
@@ -316,6 +316,5 @@ status: PASS | FAIL
 notes: [issues, platform-impossible flows skipped and why, journey-doc drift fixed]
 ```
 
-> History: this block was `SIM_QA_VALIDATION` (device-only) until the browser twin
-> landed (2026-06-18). The `platform:` field is the load-bearing addition — ship
-> gates predicate on it.
+> The `platform:` field is load-bearing — ship gates predicate on it. (This block
+> was `SIM_QA_VALIDATION`, device-only, before the browser twin.)

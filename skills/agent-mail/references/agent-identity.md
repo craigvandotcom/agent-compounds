@@ -1,7 +1,7 @@
 # Agent identity & file-reservation lifecycle (shared) — the two-tier contract
 
 **One unique identity per tree-writing session that contends; one explicit shared chore
-identity for everything that doesn't.** Ratified 2026-07-14 (epic `ac-ycr`) — this replaces
+identity for everything that doesn't** (epic `ac-ycr`). This replaces
 the earlier mint-or-inherit doctrine (one identity per top-level invocation, inherited by
 every spawned stage), which was never wired and is now rejected: see "Why not inherit" below.
 
@@ -9,10 +9,10 @@ every spawned stage), which was never wired and is now rejected: see "Why not in
 - The principle
 - Tier 1 — unique minted identity
 - Tier 2 — FoggyCreek, the explicit chore identity
-- Why not inherit (recorded so this isn't relitigated)
+- Why not inherit
 - Assignee vs reservation — the two-identity split (unchanged, load-bearing)
 - Deregistration — three layers (defence in depth)
-- Call-scoped facts (verified 2026-07-08; token rule widened ac-g93 2026-07-19) — note 1 binds only sessions that HOLD the tools, note 2 binds everyone that commits, stance children included
+- Call-scoped facts (`ac-g93`) — note 1 binds only sessions that HOLD the tools, note 2 binds everyone that commits, stance children included
 - Enforcement (two layers over advisory reservations)
 - Project key format (canonical — the one home for the key-format rule)
 - Conformance status
@@ -54,7 +54,7 @@ and corrupt both.
 > before you fan out.** A reservation protects only between distinct identities that can actually
 > take one, so a fan-out of stance children has **no lock grain at all**: the conductor must
 > partition the **file sets (or one repo per child) BEFORE dispatch**, and that partition *is* the
-> entire safety argument. Measured (RUN `agentbeads-20260729`): four implementer children at width
+> entire safety argument. Measured: four implementer children at width
 > 2 across two repos, conductor holding every reservation centrally, scope partitioned by repo —
 > **zero collisions, but the safety came from the disjointness, not from the reservations.** The
 > enforcement mechanism is `ac-loop` § Efficiency § Parallelism's pre-dispatch width-N check
@@ -80,7 +80,7 @@ silent misattribution into a loud immediate error. Chore commits stay safe witho
 reservations because the pre-commit guard blocks any commit touching a path reserved by a
 *different* identity — protection Tier 2 gets for free, in the direction that matters.
 
-## Why not inherit (recorded so this isn't relitigated)
+## Why not inherit
 
 The old model ("one identity per top-level invocation, inherited by every spawned stage")
 was written for a serial world where the conductor serialized all writers. The parallelism
@@ -116,7 +116,7 @@ These are different axes; do not conflate them:
 | 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity that actually **minted** — never a handed stance-child name, § below); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
 | 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land — stale-**reservation** sweep only, same project-key-agnostic query as layer 2; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
 
-Runtime-verified (2026-07-16, decision `ac-ycr.8`): `retire_agent`/`deregister_agent` mark
+Runtime-verified (`ac-ycr.8`): `retire_agent`/`deregister_agent` mark
 `registration_token` optional in the *schema* but **reject name-only calls at runtime** unless
 the MCP session already authenticated as that agent — tokens live with the minting session
 (call-scoped fact #1 below), so cross-session identity retirement is impossible by design.
@@ -126,7 +126,7 @@ upstream admin-sweep primitive requested of mcp-agent-mail lands. Reservations �
 safety-critical half — DO sweep cross-session: `force_release_file_reservation` releases
 another agent's hold by name after validating abandonment heuristics.
 
-### The sweep is NOT project-key-agnostic — query the store, don't loop per name (bd-ko38k)
+### The sweep is NOT project-key-agnostic — query the store, don't loop per name
 
 **One checkout mints SEVERAL project keys.** A 12-identity run on one `body-compass-app`
 checkout registered across three: `neometa/body-compass-app` (7), the **absolute path** (4),
@@ -163,13 +163,13 @@ while IFS= read -r n; do
 done < "$ROSTER_FILE"   # one name per line
 ```
 
-Verified under `bash` and `zsh` (2026-07-29): reproduced the three-key fragmentation above, and
+Verified under `bash` and `zsh`: reproduced the three-key fragmentation above, and
 a bogus name produced the loud failure rather than a silent skip. **Root cause is upstream** —
 `mcp_agent_mail` derives `project_key` from a path at several call sites, so differing child
 launch contexts fork keys for one repo. That is a third-party repo (`Dicklesworthstone/
 mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole of the local fix.
 
-## Call-scoped facts (verified 2026-07-08; token rule widened `ac-g93` 2026-07-19) — note 1 binds only sessions that HOLD the tools, note 2 binds **everyone that commits**, stance children included
+## Call-scoped facts (`ac-g93`) — note 1 binds only sessions that HOLD the tools, note 2 binds **everyone that commits**, stance children included
 
 1. **Capture `macro_start_session`'s returned `registration_token` and thread it EXPLICITLY on
    EVERY privileged / mutating Agent Mail call.** The token-requiring set is NOT the old three
@@ -177,7 +177,7 @@ mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole
    `renew_file_reservations`, `force_release_file_reservation`, `acquire_build_slot` /
    `release_build_slot` / `renew_build_slot`, `send_message` / `reply_message` (as `sender_token`),
    `deregister_agent`, `retire_agent`, `hard_delete_agent`. **Do NOT rely on same-session auth
-   carry.** Validation (`ac-g93`, 2026-07-19 — read `~/mcp_agent_mail` `app.py`): same-session
+   carry.** Validation (`ac-g93` — read `~/mcp_agent_mail` `app.py`): same-session
    token-free auth is a REAL, intended mechanism (`register_agent` / `macro_start_session` bind the
    MCP session via `_bind_session_agent`; `_authenticate_agent` then honors the binding), but it is
    **conditional** — the binding is keyed on a stable `ctx.session_id`, and (a) a separate phase
@@ -216,7 +216,7 @@ Agent Mail tool (`file_reservation_paths`, `release_file_reservations`, `install
 `send_message`, …) takes it as **`project_key`**. Same value, different parameter name — the
 one call-signature fact worth keeping inline at each call site.
 
-**Live accept-matrix (probed 2026-07-16, macro_start_session against the dev server).** The
+**Live accept-matrix (probed via `macro_start_session` against the dev server).** The
 server does **not** reject any of these — it slugifies `human_key` (lowercase; every non-alnum
 run → `-`) and maps each *distinct* key to a *distinct* project/mailbox. The coordination rule
 therefore holds because a divergent key silently forks a divergent mailbox, **not** because the
@@ -228,19 +228,18 @@ validator enforces a format:
 | `sandbox/w2-shakedown` (two-segment, non-neometa) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
 | `/Users/…/agent-compounds` (absolute path) | accepted | `users-craigvanheerden-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
 
-**Reconciliation verdict (closes the 2026-07-08 split-brain).** The 2026-07-08 shakedown saw
+**Reconciliation verdict.** An earlier shakedown saw
 `macro_start_session` *reject* a non-neometa key with `human_key must be an absolute path-like
 project key` — an error that flatly contradicted this doctrine. That error **no longer
-reproduces**: the current server accepts every form above. So the doctrine wins and is
+reproduces**: the current server accepts every form above. So the doctrine is
 accurate as stated — an absolute path *does* fork a distinct mailbox (row 3, confirmed live) —
-and the contradicting server message is gone. This is a **doctrine-correct / server-message-
-retired** outcome, not a live server bug; no upstream server bead is warranted (the probe found
-nothing to fix server-side). The `project` field the commit-guard filters on (below) is this
+and the contradicting server message is retired; no upstream server bead is warranted (the
+probe found nothing to fix server-side). The `project` field the commit-guard filters on (below) is this
 same resolved-project identity — which is exactly why a divergent key defeats the guard.
 
 ## Conformance status
 
-**Doctrine ratified 2026-07-14 (epic `ac-ycr`); wiring in flight.** Live today: Tier-1
+**Doctrine ratified (epic `ac-ycr`); wiring in flight.** Live today: Tier-1
 minting in ac-loop / ac-implement / plan family; CLAIM_ASSIGNEE threading + gate union;
 Tier-2 chore commits in scheduled workflows. Pending (blocked on this file's rewrite, now
 landed): `ac-ycr.2` (review mint+reserve) · `ac-ycr.3` (batch-close mint) · `ac-ycr.4`

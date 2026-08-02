@@ -41,12 +41,9 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
    waiting on, **wait for it in-shell**: a foreground until-loop (`pgrep`/poll on a
    fixed cadence) with a generous Bash timeout, not a background handle you detach
    from and hope wakes you. Evidence: `background-agent-resume-chains-break-silently.md`
-   § "Recurs on LOCAL long test runs" (RUN_ID=20260710-170558-52993 — an
-   `ac-implement` session AND its `ac-merge` sibling both detached from a live local
-   vitest run and stalled, each recovered only by a coordinator `SendMessage` poke).
-   Recurred again 2026-07-16: a `ac-qa-browser` conductor ended its turn **twice**
-   mid-run ("await the w6 completion event", `Monitor`-armed-then-exit) and needed
-   two coordinator pokes; a foreground until-loop with generous Bash timeouts was
+   § "Recurs on LOCAL long test runs". The same failure also appears as a
+   `Monitor`-armed-then-exit turn end ("await the completion event") needing
+   coordinator pokes; a foreground until-loop with generous Bash timeouts was
    the fix both times.
 
 **Applies to:** any `ac-*` skill that spawns background agents and continues —
