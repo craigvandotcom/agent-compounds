@@ -6,7 +6,7 @@ description: 'The engineering-pipeline domain skill — TWO lanes: (1) ARCHITECT
 
 # ac-pipeline — the engineering-pipeline domain (architecture + operating contracts)
 
-<!-- net-growth-ok: ac-znk.7 coda — Craig-confirmed rename ac-pipeline-builder → ac-pipeline; header rewritten to declare the two lanes (architecture + operating contracts) the rename exists to express -->
+<!-- net-growth-ok: ac-znk.7 -->
 
 
 Two lanes, one owner (renamed from `ac-pipeline-builder`, ac-znk.7 coda):
@@ -297,7 +297,7 @@ failure never blocks shipping — this table is the cross-cutting reference poin
 
 Wave branches protect main from in-progress code and make the green-main invariant hold. That protection is code-specific — plans are markdown, they can't break a test. Branching for docs creates two parallel histories that need reconciling and is the source of the "simultaneous plan session created another branch" problem.
 
-**Hygiene is trunk-direct (migrated 2026-07-12, bd-u2lo1.14):** it no longer uses a
+**Hygiene is trunk-direct:** it no longer uses a
 worktree/`hygiene/*` branch/PR ceremony. Its 7-lens panel IS the pre-push review, auto-fixes
 commit directly to `main` as pathspec commits under the full H7 discipline
 (`ac-pipeline/references/commit-discipline.md`) while it is actively editing, and the close ceremony is `ac-batch-close` (patch bump),
@@ -356,8 +356,8 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 - **Stay thin / map not territory.** This doc names stages and gates; it never restates a
   stage's internal logic. Selection logic lives in `ac-pipeline/references/verification-gate.md`; QA method
   in `ac-pipeline/references/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared
-  `_shared/session-teardown.md` was *planned* but is now a RETIRED premise — Wave-B
-  bd-brv39.5 cut WS5a; teardown stays inline in `ac-land` Phase 4, no shared file).
+  `_shared/session-teardown.md` was *planned* but is now a RETIRED premise —
+  teardown stays inline in `ac-land` Phase 4, no shared file).
 - **Naming.** `ac-*` = the pipeline family; `-builder` = the doctrine/method meta-skill
   (cf. `skill-builder`, `agent-builder`).
 
@@ -368,16 +368,16 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
 The doctrine is the target; these stage edits bring reality into line:
 
 - [x] **Verify gate** — `ac-pipeline/references/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
-- [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner (this sweep, 2026-07-03).
-- [ ] **Land refocus** — bundled item SPLIT into its four sub-items (Wave-B bd-brv39.5); parent stays open while the 1b sub-item is live:
-  - [x] strip **1c UI suite** — DONE (retired from `ac-land`, Wave-B bd-brv39.5).
+- [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner.
+- [ ] **Land refocus** — bundled item SPLIT into its four sub-items; parent stays open while the 1b sub-item is live:
+  - [x] strip **1c UI suite** — DONE (retired from `ac-land`).
   - [ ] strip **1b `test:all`** — SEPARATE, STILL-LIVE land-refocus item; the standalone-fallback `test:all` in `ac-land` 1b still exists. NOT a retired premise — pending.
   - [ ] add scoped `_shared/session-teardown.md` — RETIRED premise (WS5a cut; never built; teardown stays inline in `ac-land`).
   - [ ] reassign push to merge — RETIRED premise (void under trunk-direct; commit=push, no push-reassignment to `ac-merge`).
-- [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (done 2026-07-05: AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
-- [x] **QA placement** — retire `ac-land` 1c (DONE, Wave-B bd-brv39.5): 1c UI suite removed from `ac-land`; per-batch smoke via `ac-batch-close`→`ac-qa-browser` (registry-driven, criticality ≥ core) + one exhaustive `ac-qa-browser` crawl at publish; `ac-implement`'s deferral re-pointed to both owners.
-- [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor (this sweep, 2026-07-03).
-- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `ac-pipeline/references/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline/references/anti-patterns.md` (wave 2026-07-07). App-side journey tagging: BCA first, then siblings (plan §6 step 9 — in progress).
+- [x] **Test placement** — `ac-implement` final → affected; `ac-merge` post-rebase → affected only (no `test:all` at merge). (AGENTS.md pre-merge row → `pnpm test`; ac-merge rebase-before-gate; ac-implement baseline reads loop-close CI)
+- [x] **QA placement** — retire `ac-land` 1c (DONE): 1c UI suite removed from `ac-land`; per-batch smoke via `ac-batch-close`→`ac-qa-browser` (registry-driven, criticality ≥ core) + one exhaustive `ac-qa-browser` crawl at publish; `ac-implement`'s deferral re-pointed to both owners.
+- [x] **Conductor dedup** — old `ac-pipeline` → this doctrine (deprecation banner added); `ac-loop` confirmed sole runtime conductor.
+- [x] **Journey registry + stamp gates (Invariant 9)** — schema + selection in `ac-pipeline/references/verification-gate.md` §Journey registry; QA twins write `last_pass` stamps; `skills/_tools/journey-stamp-check.sh` gates store submissions via `ac-distribute`; `ac-publish` 1b refreshes stamps; dashboard/human-session surface journey debt; anti-pattern lenses in `ac-pipeline/references/anti-patterns.md`. App-side journey tagging: BCA first, then siblings (in progress).
 
 ---
 
@@ -403,4 +403,4 @@ prefixes) · `board-scan` (orient scans A–E) · `risk-classification` (panel/g
 tiers) · `review-consensus` (consensus + conductor triage) · `ceremony-batching-pool`
 (pool RMW + drain) · `disposition` (findings three-way rule + save-for-later) ·
 `degraded-mode` (capability-starved runs) · `shell-guardrails` (dcg-safe write/delete
-shapes) · `anti-patterns` (named failure modes) · `design-refs` (target-visual capture + AC-path gate) <!-- net-growth-ok: Pass B station 1 — design-refs canon added to the contracts index (promoted from ac-plan-init, 5 citers repointed) -->
+shapes) · `anti-patterns` (named failure modes) · `design-refs` (target-visual capture + AC-path gate) <!-- net-growth-ok: design-refs added to the contracts index -->

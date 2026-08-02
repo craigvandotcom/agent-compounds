@@ -12,7 +12,7 @@ Phase 2; see `version-bump-defaults-to-patch`), act as the *definitive confidenc
 production — obtain a fresh, ref-pinned proof that the full suite is green **for the exact commit
 you're about to ship** (via `ac-prove`), run the genuinely-new expensive checks (full device/browser
 QA **and** a heavy 6-dimension review over everything since the last publish — the "freight" that
-moved here when `ac-batch-close` went on its diet, `bd-pwt44` epic), confirm migrations are
+moved here when `ac-batch-close` went on its diet, `bd-pwt44`), confirm migrations are
 release-safe, fix anything that surfaces **in-session**, **tag** the proved commit, then ship web
 (via **Vercel promote, never a rebuild** — Staged Deployments) + native, and **finalize** the feedback rows
 `ac-batch-close` left pending.
@@ -26,10 +26,10 @@ light pass), you don't re-derive its dimension rubric. The native build/sign/upl
 
 > **⚠ Web ship model — promote-not-rebuild via Vercel Staged Deployments, superseding "deploy at
 > merge".** Historically `ac-merge` triggered a Vercel PROD deploy on every wave merge,
-> autonomously — so web content was already live by the time `ac-publish` ran, and this file used
-> to say so. **Under the current model that's superseded:** Vercel's **Production Branch stays
-> `main`**, but domain auto-assignment for the production branch is turned OFF (`bd-pwt44.7`,
-> Craig's Vercel Dashboard setting, live 2026-07-13). Effect: **every push to `main` still builds a
+> autonomously — so web content was already live by the time `ac-publish` ran. **Under the
+> current model:** Vercel's **Production Branch stays
+> `main`**, but domain auto-assignment for the production branch is turned OFF (a Vercel
+> Dashboard setting). Effect: **every push to `main` still builds a
 > PRODUCTION-target deployment** — production env vars baked in, exactly as a real prod build would
 > be — but it sits as a **Staged** deployment with no domain attached; nothing is user-visible until
 > `ac-publish` explicitly **promotes** that proven SHA's staged deployment (Phase 5, Step 3;
@@ -173,7 +173,7 @@ pnpm finalize:feedback "$R_VERSION"   # BCA: scripts/pipeline/finalize-feedback-
 
 `pnpm finalize:feedback <mintedVersion>` (BCA: `scripts/pipeline/finalize-feedback-sweep.mjs`) is the
 prod runner for `runFeedbackFinalizeSweep(newBuild, deps)` — the finalize path of
-`lib/pipeline/merge-feedback-writeback.ts` in the consuming app (BCA: bd-pwt44.6). Call it with the
+`lib/pipeline/merge-feedback-writeback.ts` in the consuming app. Call it with the
 version just minted above (the version baked into `R`) as the sole argument. It lists every
 still-pending row via `deps.listPendingReleaseRows()` (the state-based query above) and writes
 `status='fixed'` + `fixed_in_build=<R's version>` for each. This is the exact write that flips
@@ -240,7 +240,7 @@ Red (FAIL from `ac-prove`, no valid receipt) → Phase 4 (fix-in-session).
 **This review panel is NEW to `ac-publish`** — it was never part of `ac-batch-close`'s ceremony
 (batch-close keeps only its own single light `VERDICT` pass); the full 6-dimension panel
 consolidates here, at the publish boundary, as the heavy pre-tag adversarial gate the
-batch-close diet shed (`bd-pwt44` epic; `conductor-remedies-need-adversarial-rounds`).
+batch-close diet shed (`bd-pwt44`; `conductor-remedies-need-adversarial-rounds`).
 
 Scope it to everything merged since the last publish, against the current `R`:
 
@@ -263,7 +263,7 @@ as a Confidence-gate or migration-safety failure.
 phase has already run, the review just computed is invalidated — the fix-forward commits have
 not themselves been adversarially reviewed. Re-run this phase at the new `R′` before proceeding;
 never carry forward a review verdict computed against a superseded tip. This is the same rule
-`conductor-remedies-need-adversarial-rounds` has argued since 2026-07-02: a round that wrote a fix
+`conductor-remedies-need-adversarial-rounds` argues: a round that wrote a fix
 is never self-certifying — the fresh review at the new tip is what certifies it, not the
 fix-forward commit itself.
 
@@ -375,8 +375,8 @@ last heavy-review pass means that pass no longer covers the code you're about to
    if Phase 1 re-pinned); this step only tags what was already minted, proved, and reviewed.
 
 3. **Promote-not-rebuild — the web ship (Vercel Staged Deployments).** Vercel's Production Branch
-   stays `main`; domain auto-assignment for the production branch is OFF (`bd-pwt44.7`, Craig's
-   Vercel Dashboard setting, live 2026-07-13). Effect: the push to `main` in Phase 0/1 already
+   stays `main`; domain auto-assignment for the production branch is OFF (a Vercel
+   Dashboard setting). Effect: the push to `main` in Phase 0/1 already
    built a PRODUCTION-target deployment (production env vars) for `R` — it is sitting as
    **Staged**, with no domain attached. Production moves ONLY by promoting that staged deployment
    — no rebuild between proof and going live. The artifact `ac-prove` (and any `+qa` browser pass)
@@ -431,7 +431,7 @@ last heavy-review pass means that pass no longer covers the code you're about to
    run (defects, decision forks, refinements you KNOW need action) are filed as beads
    (`unrefined`) and cited by ID here, never left as prose-only** — a prose-only findings
    channel orphans once its consumer closes (`rule-known-action-capture-beads-not-prose`;
-   bd-pwt44 lesson).
+   bd-pwt44).
 
 **TaskUpdate("Report", completed)**
 
@@ -463,8 +463,8 @@ last heavy-review pass means that pass no longer covers the code you're about to
 - **Never promote a preview** — preview deployments bake preview env vars into `NEXT_PUBLIC_*` at
   build time; only the staged production-target build is a valid promote target. Verify via
   `vercel inspect`, never by URL naming.
-- **Production Branch stays `main`; domain auto-assignment for production is OFF** (`bd-pwt44.7`,
-  Craig's Vercel Dashboard setting, live 2026-07-13) — this is what makes every `main` push a
+- **Production Branch stays `main`; domain auto-assignment for production is OFF** (a Vercel
+  Dashboard setting) — this is what makes every `main` push a
   production-target staged deployment instead of a live prod deploy.
 - **Never inline the native ship** — call `ac-distribute`; don't duplicate build/sign/upload.
 - **Expand/contract is a hard gate** — a backward-incompatible migration in range stops the ship.

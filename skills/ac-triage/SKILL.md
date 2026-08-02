@@ -68,7 +68,7 @@ Supabase table (e.g. `public.feedback_reports`). Distinct from source #3 (error-
 
 **Sentry is source #1** — symbolicated native + JS stacks are the highest-signal, lowest-
 noise input, and it captures crashes whether or not a tester taps "report." **ASC #2 is
-validated** (2026-06-13): `GET /v1/apps/{appId}/betaFeedbackCrashSubmissions` (JWT from the
+validated**: `GET /v1/apps/{appId}/betaFeedbackCrashSubmissions` (JWT from the
 `.p8`, no `sort` param on the nested path) returns tester crash submissions with
 comment/email/deviceModel/os — it adds the human texture Sentry can't see. **GitHub Issues
 #4** is per-repo: high value on public/OSS repos (vitest-affected, neometa-brand) where

@@ -157,7 +157,7 @@ shape as the Coverage Audit above. This lens runs alongside, not instead of, the
 — the cron job is a standalone tripwire; this lens is the conductor's own pass, wired into the
 weekly panel run so findings feed the same triage/bead path as the other lenses.
 
-1. **Run `pnpm knip`** from the app root. The committed `knip.json` (bd-pwt44.12) is this lens's
+1. **Run `pnpm knip`** from the app root. The committed `knip.json` is this lens's
    provenance for what gets filtered — framework false-positives are excluded there; don't
    re-litigate its exclusions per run.
 2. **Surface real findings** (dead exports, unused files, unused/unlisted deps) as hygiene
@@ -334,7 +334,7 @@ git rev-parse HEAD && git ls-remote origin main   # confirm the SHAs match after
 > **Pathspec commits, never `git add -A`.** Use the `git commit -- <files>` form limited to the
 > exact paths YOU changed (tracked from the implementer reports). Under trunk-direct another
 > session's uncommitted WIP shares this checkout — a wildcard add sweeps that foreign work into
-> your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d; 2026-07-06 incident:
+> your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d;
 > `references/incidents.md`). New (untracked) files need `git add <file>` first, then the
 > pathspec commit of exactly that path.
 
@@ -434,7 +434,7 @@ sweep on a question. Dedupe per the canon's anchor-dedupe rule
 > `beads-standards` § human-gate). `issue_type=decision` alone gates nothing — the LABEL is
 > what every label-keyed gate reads. Do not hand-roll a `br create -t decision` that omits it;
 > a dropped `human-gate` leaves the bead silently workable/auto-closable around the human.
-> `ac-bead-refine`'s Phase 5 title/label parity check (bd-7fqgi seam 2) backstops any that slip.
+> `ac-bead-refine`'s Phase 5 title/label parity check (bd-7fqgi) backstops any that slip.
 
 **Bead bodies follow the template at creation** (bead-conventions § Body
 template): typed headers (`## Steps to Reproduce` for bugs, `## Acceptance

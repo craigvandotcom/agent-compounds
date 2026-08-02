@@ -132,8 +132,8 @@ working_since: YYYY-MM-DD
 them NOW: `br update <id> --status in_progress` on each, plus a comment on their epic
 recording the plan claim. An active ac-loop treats every un-gated open bead as committed
 work and will ship a divergent fix mid-planning — `br ready` excludes `in_progress`, making
-the claim the only race-proof gate (shipped evidence: 2026-07-10, a concurrent loop closed 3
-adopted beads with divergent implementations while the plan was being drafted). Un-gating a
+the claim the only race-proof gate (a concurrent loop once closed 3 adopted beads with
+divergent implementations while the plan was being drafted). Un-gating a
 decision bead makes it instantly loop-eligible: claim it in the same action. Beadify later
 flips claimed beads back to open-with-wave-marker as it adopts each.
 
@@ -591,8 +591,8 @@ AskUserQuestion(
 
 ## Remember
 
-<!-- diet: restated bullets deleted (Pass B station 1, Craig ruling 2) — all six had body twins (grep-verified: synthesis L324, no-code L7, hardcoded-specs L295, compaction/progress §Compaction Recovery, approval gate Phase 4) -->
-<!-- diet: "Refinement & review — now separate skills" -> skill listing descriptions + the Phase-4 hand-off table (the table restated both); the Typical order line survives below (Pass B station 1) -->
+<!-- diet: restated bullets deleted — all six had body twins (synthesis L324, no-code L7, hardcoded-specs L295, compaction/progress §Compaction Recovery, approval gate Phase 4) -->
+<!-- diet: "Refinement & review — now separate skills" -> skill listing descriptions + the Phase-4 hand-off table (the table restated both); the Typical order line survives below -->
 
 Typical chain order: `/ac-plan-init` → `/ac-plan-refine-internal` → `/ac-plan-clean` →
 (`/ac-plan-refine-external` / `/ac-plan-lab` as warranted) → `/ac-beadify` (each a

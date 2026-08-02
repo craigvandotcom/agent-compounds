@@ -70,9 +70,8 @@ end is a finding. (2) **finding beads carry `discovered-from:`** (an honest `unk
 PLUS a convention that **NEVER blocks `refined`**: refine **adopts** an unparented bead into
 an epic when §3 routing makes the parent obvious — idempotent (adopt only a parentless bead,
 re-check `br show` immediately before `br dep add`, verify single-parenthood after), never
-mutex-guarded. (Light-path refine criteria are **decided ACCEPT** — bd-9bvr2 closed
-`decided:ACCEPT` 2026-07-18 — and **implemented** below as the formal `refine-light`
-branch; do not re-open a human-gate on those criteria.)
+mutex-guarded. (Light-path refine criteria are **implemented** below as the formal
+`refine-light` branch; do not re-open a human-gate on those criteria.)
 
 **UI beads derived from a visual reference** must carry the reference-image path
 (`docs/design-refs/<surface>-<source>-reference.<ext>`, per `ac-pipeline/references/design-refs.md`)
@@ -80,13 +79,11 @@ in their `## Acceptance Criteria` — the Completeness Reviewer (see `references
 checks for this and for AC drift against the source research doc's geometry, not just
 internal bead coherence.
 
-## Light-path refine branch (`refine-light`) — formal criteria (bd-chd5p.6 / Item 4)
+## Light-path refine branch (`refine-light`) — formal criteria (bd-chd5p.6)
 
-**Decision D1 (2026-07-18):** ACCEPT plan criteria as written. **bd-9bvr2 closed
-`decided:ACCEPT`** — this section **implements** those criteria; do not re-open a
-human-gate.
+This section **implements** the accepted criteria; do not re-open a human-gate.
 
-Evidence: ≥5 clean light-paths + 1 costly failure (bd-hfdst). bd-hfdst **passed** a
+Calibration: one costly failure (bd-hfdst) **passed** a
 "mechanism traced at a named line" test with detailed but **WRONG** file:lines —
 excluding clauses are the **async/persist hard gate (#1)** plus **independent
 concurrence (#4)**, not self-attested mechanism-traced alone.
