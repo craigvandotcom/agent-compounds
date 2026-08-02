@@ -78,6 +78,8 @@ clauses verbatim, recurrence dropped to zero for the rest of the run.
 > - Agent Mail: CHECK whether you hold `mcp__mcp-agent-mail__*` tools — assume neither way.
 >   Usually you do NOT: then don't try to register, and your conductor owns reservations.
 >   Either way, export the `AGENT_NAME` it gave you in each commit's own shell.
+> - Touching beads (`br`/`bv`)? The canon is `beads-standards` (+ its
+>   reference/bead-conventions.md for pipeline contracts) — read before inventing usage.
 > - After every push: verify origin SHA == local HEAD before proceeding.
 > - A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass. To DISCARD
 >   a change: `git checkout HEAD -- <path>` AND unscoped `git stash` are both blocked —
