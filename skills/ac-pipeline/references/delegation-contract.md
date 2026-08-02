@@ -97,3 +97,58 @@ trivia (CLI flag quirks, JSON shapes) stays in the memory substrate, not here:
 those cost ~1 wasted call per hit, while a bloated preamble costs every child.
 Amend this block only for a failure class observed across MULTIPLE children or
 runs (recurrence ≥2 in the loop-retro carrier / memory bumps).
+
+---
+
+## Payloads point, contracts paste
+
+This section governs the TASK PAYLOAD only — the env-contract preamble above
+stays verbatim-pasted per its own evidence (a pointer-only preamble is
+insufficient; a fresh child acts before it reads). Payloads are the opposite
+case: conductors must not GENERATE payload context into N child prompts
+(conductor output tokens × panel width) where one artifact file or one
+deterministic command would do — a pasted payload is a drift vector as well as
+a cost (children reading primary sources beat pasted briefs). Three rules for
+every constructed child prompt:
+
+1. **Literal paths, never vars.** Payload read lines carry fully-resolved
+   literal paths/args at spawn time — never `$VAR`, `$( )`, or "the artifacts
+   dir"; the child must be able to run the line verbatim.
+2. **The payload read is numbered step 1 of the child prompt.** The child
+   acquires its payload before any task instruction acts on it.
+3. **Verdicts must cite the payload read.** Each child's output format carries
+   one payload-citation field naming the literal path(s)/command from its read
+   list — the completeness-validator tripwire: a verdict that cannot name its
+   payload is a child that never read it.
+
+**Payload transport — the invariant is NEVER paste bulk payload content
+inline.** Transport is chosen by whether a deterministic primary source exists:
+
+- **Command transport** — the payload is live repo/board state a command can
+  regenerate deterministically: point children at that command with literal,
+  resolution-anchored args (`br show <id>`, `git diff <sha-anchored range>`).
+- **Artifact transport** — the payload is conductor-authored content with no
+  primary source (e.g. `proposed-structure.md`): a written artifact file read
+  by literal path is the correct transport, not a violation.
+
+**Converted-prompt shape (exactly TWO edits per prompt; nothing else
+restructures or renumbers):**
+
+- **(i) Payload read list** — replace the pasted payload block(s) with a
+  numbered list containing ONLY payload acquisitions, one line per payload:
+  `1. Read <literal path>` (artifact transport) or `1. Run: git diff <literal
+  resolved range>` (command transport). A multi-payload prompt gets ONE list
+  replacing all its pasted blocks and their per-payload sub-headings; the
+  prompt's existing task sections ARE the task — they stay unchanged,
+  un-numbered, and nothing after the read list is renumbered.
+- **(ii) Verdict citation** (rule 3) — the prompt's output format gains exactly
+  one payload-citation field: a `**Payload read:**` line in markdown output
+  formats; a top-level `"payload_read"` string key in JSON schemas (additive —
+  conductors' findings merges ignore unknown keys).
+
+**Compliance note (verified at refine r2, ac-gcj.8):** the pointer-only
+preamble references at `ac-beadify/references/validators.md:1` and
+`ac-plan-init/references/explorers.md:1` are non-compliant with § Child-spawn
+preamble above (pointer-only is explicitly ruled insufficient there; neither
+conductor SKILL.md injects the verbatim block into its constructed child
+prompts) — needs backfilling, tracked in follow-up bead ac-08k.

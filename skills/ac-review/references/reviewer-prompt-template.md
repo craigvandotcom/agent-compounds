@@ -4,9 +4,11 @@ The shared prompt for all Phase-2 panel reviewers. Spawn one Task **per spawned
 dimension** (core four always; test-quality and contracts per their SKIP rules — see
 `review-dimensions.md`), all in a **single message** (parallel). Fill the `{...}`
 placeholders from the dimension's row in `review-dimensions.md`, and substitute
-`{DIFF}`, `{ARTIFACTS_DIR}`, `{ROUND}` (`1` for the Phase-2 pass, `2` for a Phase-5.5
-verification round), and `{N_OTHERS}` (panel size minus one — e.g. `5` for the full
-six-dimension panel).
+`{DIFF_RANGE}` (the resolved diff range recorded at Phase 1 — a point-sized string;
+reviewers run `git diff` on it themselves, the diff body is never pasted —
+`ac-pipeline/references/delegation-contract.md` § Payloads point), `{ARTIFACTS_DIR}`,
+`{ROUND}` (`1` for the Phase-2 pass, `2` for a Phase-5.5 verification round), and
+`{N_OTHERS}` (panel size minus one — e.g. `5` for the full six-dimension panel).
 
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
@@ -16,9 +18,8 @@ First: read AGENTS.md for project context, coding standards, and conventions.
 You are a {ROLE} reviewer. You compete with {N_OTHERS} other reviewers — only evidence-backed findings with file paths count.
 
 ## Diff to Review
-```diff
-{DIFF}
-```
+
+1. Run: `git diff {DIFF_RANGE}`
 
 ## Your Method
 
@@ -38,6 +39,7 @@ Write findings as **JSON only** (no prose, no markdown around it) to
 {
   "reviewer": "{ROLE}",
   "round": {ROUND},
+  "payload_read": "git diff {DIFF_RANGE}",
   "findings": [
     {
       "title": "<short title>",

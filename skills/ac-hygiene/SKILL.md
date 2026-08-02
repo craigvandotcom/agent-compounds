@@ -113,24 +113,7 @@ EOF
 
 If `$ARTIFACTS_DIR/progress.md` exists, parse the last `### Round N` entry to recover `CURRENT_ROUND` (set to N+1). Previous rounds' fixes are already applied. If `$ARTIFACTS_DIR/consensus-registry.md` exists, read it to recover the deferred findings pool for cross-round consensus detection.
 
-### Gather Codebase Context
-
-Build a brief context snapshot for the agents:
-
-```bash
-# Recent activity
-git log --oneline -20
-
-# Project structure (discover source directories)
-ls -d */ | head -20
-
-# Current test health — run project test command (see AGENTS.md > Project Commands)
-# Example: pnpm test, pytest, cargo test
-
-# Any existing lint/type issues — run project lint/type-check (see AGENTS.md > Project Commands)
-```
-
-Save this as `CODEBASE_CONTEXT` for agent prompts.
+<!-- diet: "Gather Codebase Cont…" section -> deleted (ac-gcj.8) — orphaned: its saved context variable fed no prompt; all 7 lenses consume {SCOPE_CONTEXT}, set independently in Configuration -->
 
 ### Skill Routing
 

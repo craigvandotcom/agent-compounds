@@ -3,9 +3,11 @@ Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbat
 # Beadify Validators (3 parallel agents)
 
 Spawn all three in a **single message** (parallel). Each writes to
-`$ARTIFACTS_DIR/validation-{role}.md`. Substitute `{PLAN_CONTENT}`,
-`{PROPOSED_STRUCTURE}` (from `$ARTIFACTS_DIR/proposed-structure.md`), and
-`{ARTIFACTS_DIR}`.
+`$ARTIFACTS_DIR/validation-{role}.md`. Payloads point, contracts paste
+(`ac-pipeline/references/delegation-contract.md` § Payloads point): substitute
+only `{ARTIFACTS_DIR}` and `{PLAN_PATH}` (the literal plan-file path identified
+in Phase 1) into the step-1 payload-read lines below — validators read the plan
+and `proposed-structure.md` from disk; nothing is pasted inline.
 
 ---
 
@@ -23,11 +25,8 @@ Cross-reference every section of the plan against the proposed beads. Flag anyth
 
 ## Inputs
 
-### Original Plan
-{PLAN_CONTENT}
-
-### Proposed Bead Structure
-{PROPOSED_STRUCTURE from artifacts}
+1. Read {PLAN_PATH}
+2. Read {ARTIFACTS_DIR}/proposed-structure.md
 
 ## Check
 
@@ -39,6 +38,8 @@ For each plan section/feature:
 ## Output
 
 Write findings to {ARTIFACTS_DIR}/validation-completeness.md
+
+First line: `**Payload read:** <the literal path(s) from your step-1 read list>`
 
 For each issue:
 ## Issue N: Title
@@ -65,8 +66,7 @@ Check the proposed dependency graph for correctness — missing links, wrong ord
 
 ## Inputs
 
-### Proposed Bead Structure
-{PROPOSED_STRUCTURE from artifacts}
+1. Read {ARTIFACTS_DIR}/proposed-structure.md
 
 ## Check
 
@@ -77,6 +77,8 @@ You have codebase access. Read referenced files to verify what actually exists v
 ## Output
 
 Write findings to {ARTIFACTS_DIR}/validation-dependencies.md
+
+First line: `**Payload read:** <the literal path(s) from your step-1 read list>`
 
 For each issue:
 ## Issue N: Title
@@ -103,8 +105,7 @@ Check that each bead is right-sized for a single agent session — not too big (
 
 ## Inputs
 
-### Proposed Bead Structure
-{PROPOSED_STRUCTURE from artifacts}
+1. Read {ARTIFACTS_DIR}/proposed-structure.md
 
 ## Check
 
@@ -119,6 +120,8 @@ For each proposed bead:
 ## Output
 
 Write findings to {ARTIFACTS_DIR}/validation-granularity.md
+
+First line: `**Payload read:** <the literal path(s) from your step-1 read list>`
 
 For each issue:
 ## Issue N: Title
