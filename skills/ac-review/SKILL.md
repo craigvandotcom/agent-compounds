@@ -341,7 +341,13 @@ either, it never replaces a lens.
 
 **METHOD:**
 
-Three checks, each a promotion-ladder rule made adversarial:
+Four checks, each a placement rule made adversarial:
+
+0. **Provenance leak.** Any ADDED skill-text line carrying the edit's story — a date, a
+   director, a pass/wave narrative, "promoted from", or a bead-ID that no other file
+   greps as a rule-name — is a finding (structure-standard § Provenance never lives in
+   skill text): the rule stays, the tail moves to the commit/ledger. Machine tokens
+   (`net-growth-ok:`/`diet:`/`mirror:`) pass only in their minimal form.
 
 1. **Proof-or-demotion citation.** Every content block ADDED to a SKILL.md's tier-1 core
    (not `references/`, not `workflows/`) must carry an evidence stamp
