@@ -465,6 +465,15 @@ missing output ≠ "no findings." **When the RE-spawn keeps failing too (529/rat
 
 **TaskUpdate(task: "Phase 3", status: "in_progress")**
 
+**MANDATORY tree check FIRST (ac-7rf — a panel reviewer once planted a vulnerability
+into the shared main checkout via unscoped `git stash` from a worktree):** run
+`git status --short` and diff the result against the Phase-1 inventory. **Any UNEXPECTED
+new/modified file → STOP synthesis**, inspect it, revert reviewer-authored leakage
+(reviewers are READ-ONLY — banned ops for panel workers: any `git stash` (dcg blocks the
+unscoped form fleet-wide), any write to the shared checkout; discard shapes:
+`ac-pipeline/references/commit-discipline.md` + `ac-pipeline/references/shell-guardrails.md`),
+and record the incident as a finding before continuing. <!-- net-growth-ok: ac-7rf P0 acceptance — post-panel tree check + banned-ops list, incident-driven -->
+
 **THIS IS YOUR CORE WORK. Do not delegate synthesis.**
 
 ### Run Deterministic Consensus
