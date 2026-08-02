@@ -94,7 +94,7 @@ Preserve all other existing frontmatter fields.
 
 Use the agent name registered at session start (from `macro_start_session`). Compute `PLAN_REL` = path of `PLAN_FILE` relative to `PROJECT_ROOT` (e.g. `_plans/foo.md`).
 
-> **Carry the registration_token (shakedown-verified 2026-07-08; widened `ac-g93`).** Capture the
+> **Carry the registration_token (`ac-g93`).** Capture the
 > `registration_token` returned by `macro_start_session` and thread it EXPLICITLY on EVERY
 > privileged / mutating Agent Mail call below — file reservations
 > (`file_reservation_paths` / `release_file_reservations` / `renew_file_reservations` /
