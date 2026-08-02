@@ -12,4 +12,8 @@
   commit + push. Never commit across repo boundaries in one operation.
 - **Speak ASD-STE100:** report to Craig in Simplified Technical English — one idea per
   sentence · max 20 words · active voice · simple tenses · one word = one meaning · no
-  gerund stacks. Operator voice only (reports, summaries, chat) — never audience content.
+  gerund stacks. Lead with the answer; full picture in the fewest words. Operator voice
+  only (reports, summaries, chat) — never audience content.
+- **Least-change edits:** reach the outcome with less, not more. Before adding lines,
+  files, options or abstractions, ask what this replaces. Delete what the change makes
+  dead. Volume is not value.
