@@ -48,10 +48,10 @@ STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VE
 
 ### Register Session Identity (Tier 1)
 
-<!-- net-growth-ok: ac-1oq — ac-merge edited code and pushed with NO minted identity (commits misattributed to the Tier-2 chore identity while doing Tier-1 work); this seals the protocol gap via the shared canon -->
+<!-- net-growth-ok: ac-1oq -->
 
 ac-merge edits product code (quality-gate + feedback fixes) and commits + pushes in the
-shared checkout — a **Tier-1 session** (bead ac-1oq; `agent-mail/references/agent-identity.md` § Tier 1).
+shared checkout — a **Tier-1 session** (`agent-mail/references/agent-identity.md` § Tier 1).
 **Run the mint + token/export discipline per `agent-mail/references/session-procedure.md` (§ Mint, § Export)**;
 reserve the files of each fix round at the work grain before editing (§ Reserve), and
 release + self-deregister at Finalize (§ Release).
@@ -348,11 +348,11 @@ Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER"
 
 ### Poll for Checks and Comments
 
-<!-- net-growth-ok: ac-j6v — 10-min cap timed out mid-run on full-suite-fallback batches (run 29243312437); cap + rationale aligned with ac-batch-close's evidence-stamped block -->
+<!-- net-growth-ok: ac-j6v -->
 Wait for CI checks and agent reviews to complete. Poll every 30 seconds, timeout after ~25
 minutes — a diff touching `scripts/` or CI config correctly defeats `vitest-affected` selection
 and runs the FULL suite (~19 min observed, run 29243312437); a 10-min cap times out mid-run on
-any full-suite-fallback batch (same evidence as `ac-batch-close`'s cap; bead ac-j6v).
+any full-suite-fallback batch (same cap as `ac-batch-close`'s).
 
 ```bash
 PR_NUMBER={from Phase 1}
@@ -633,8 +633,8 @@ workflow) and must COMPLETE (else assume failed).
 The merge triggers the repo's CI (e.g. `Quality Gate`) on `main`. On a **single
 self-hosted runner** that queue can sit hours behind a dependabot backlog — so "no failure
 seen" is NOT "passed": the loop can land its last commits with **zero CI confirmation** and
-only the fix-forward convention as cover (2026-07-03 incident: main Quality Gate queued 2+
-hrs behind dependabot; the session closed blind). Never treat poll-timeout silence as green.
+only the fix-forward convention as cover (a main Quality Gate once queued 2+ hrs behind
+dependabot and the session closed blind). Never treat poll-timeout silence as green.
 
 ```bash
 # The run triggered by THE MERGE COMMIT (not "latest" — a stale prior run is the trap)
@@ -701,7 +701,7 @@ AskUserQuestion(
 ### Finalize
 
 Release any file reservations still held and self-deregister the Phase-0 identity per
-`agent-mail/references/session-procedure.md` § Release (bead ac-1oq). Then mark the run ledger's final task
+`agent-mail/references/session-procedure.md` § Release. Then mark the run ledger's final task
 `completed`. Then clean up — but only on the clean "Done"
 path. If the user chose a follow-up (new feature / hygiene) or the Phase-3 deploy-verify
 flagged an error, **leave `$ARTIFACTS_DIR`** — the report points at it for investigation, and
@@ -716,7 +716,7 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 ## Remember
 
-<!-- diet: restated bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut bullets have live body twins (grep-verified); Remember-only rules survive below -->
+<!-- diet: restated bullets deleted — live body twins verified; Remember-only rules survive below -->
 
 - **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics; the PR title derives from version + content summary, the branch name (`wave/NNN` / `hygiene/YYYYMMDD`) is opaque
 - **Merge commit preserves per-bead history** — don't squash; the flywheel's atomic commits are valuable

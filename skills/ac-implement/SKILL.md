@@ -162,7 +162,7 @@ This is the gate that runs at **every** commit for the rest of the session (Phas
 
 **The gate is scoped to YOUR OWN diff, never the whole project:**
 
-1. **Format (belt-and-braces — do NOT rely on the pre-commit hook firing).** Run `lint-staged` (or the project's equivalent) on YOUR OWN staged files, THEN — independent of whether the git pre-commit hook actually executed — explicitly verify those same staged files are prettier-clean before committing: `pnpm prettier --check <your staged paths>` (staged paths only — keep it cheap). If it reports any unformatted file, `pnpm prettier --write <those paths>`, re-stage, and re-check until clean; do not commit while it reports failure. This gate keys on the staged paths themselves, never on a hook side effect: the `.husky/pre-commit` → `lint-staged` chain is correct and effective, but a bypassed or non-firing hook (an ad-hoc `--no-verify` on commit, or a working tree where `hooksPath`/`lint-staged` env isn't active) can let an unformatted staged file reach a commit and fail CI's whole-repo prettier check (incident Run-3 2026-07-13: commit c5720728 shipped an unformatted new `.tsx` test file → one CI round-trip). **Root-cause mechanism is unverified** — git objects don't record whether a hook ran — so this is a belt-and-braces check that survives a bypassed hook, NOT a fix for a specific known bypass path (config chain + pathspec form both verified clean).
+1. **Format (belt-and-braces — do NOT rely on the pre-commit hook firing).** Run `lint-staged` (or the project's equivalent) on YOUR OWN staged files, THEN — independent of whether the git pre-commit hook actually executed — explicitly verify those same staged files are prettier-clean before committing: `pnpm prettier --check <your staged paths>` (staged paths only — keep it cheap). If it reports any unformatted file, `pnpm prettier --write <those paths>`, re-stage, and re-check until clean; do not commit while it reports failure. This gate keys on the staged paths themselves, never on a hook side effect: the `.husky/pre-commit` → `lint-staged` chain is correct and effective, but a bypassed or non-firing hook (an ad-hoc `--no-verify` on commit, or a working tree where `hooksPath`/`lint-staged` env isn't active) can let an unformatted staged file reach a commit and fail CI's whole-repo prettier check. Git objects don't record whether a hook ran, so this is a belt-and-braces check that survives a bypassed hook, NOT a fix for a specific known bypass path.
 2. **`ubs <changed-files>`** — pass the exact list of files YOU changed. **Never `ubs .`** — a whole-project scan is a jef-flywheel anti-pattern: it re-surfaces every pre-existing issue in the repo on every commit and buries your own signal in noise that isn't yours to fix.
 3. **`pnpm test` (vitest-affected) scoped to YOUR OWN diff** — not the full suite (that's session-end and loop-close territory, per the Baseline Check note above).
 4. **Whole-project `tsc`** — this one check is necessarily whole-project (TypeScript has no per-file mode), so triage its output by attribution rather than treating every red line as yours to fix:
@@ -175,8 +175,7 @@ work safe in the interim — origin is the only durability record; a crashed ses
 unpushed commits is lost work, not "recoverable from the branch," because there is no
 branch. **The full sequence (fetch/0-behind check, pathspec commit, `--no-verify` push +
 its rationale, SHA verify) and the foreign-WIP escalation ladder (fetch+fast-forward;
-discard foreign generated files you did NOT author — never stash, bd-x7gec recurred 5+
-times in one run) are canon: `ac-pipeline/references/commit-discipline.md`** § Commit +
+discard foreign generated files you did NOT author — never stash) are canon: `ac-pipeline/references/commit-discipline.md`** § Commit +
 push sequence, § No-stash escalation ladder. Push collision → `git pull --rebase` and
 re-push; never force-push over another session's committed work.
 
@@ -341,7 +340,7 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
-> **`bv` ≥ 0.18 emits `br` natively.** `bv --robot-next`'s `claim_command` is already `br update <id> --status=in_progress`, so run it verbatim. The old `bd`→`br` translation was only needed on `bv` ≤ 0.16 and is retired (2026-07-16 — this repo runs `bv v0.18.0`, verified live). **Version assumption:** cross-machine `bv` parity is assumed, not re-checked per run; if some machine is pinned ≤ 0.16 and emits `bd update`, translate it to `br update`. History: `references/incidents.md` § bd-br-translation.
+> **`bv` ≥ 0.18 emits `br` natively.** `bv --robot-next`'s `claim_command` is already `br update <id> --status=in_progress`, so run it verbatim. The old `bd`→`br` translation was only needed on `bv` ≤ 0.16 and is retired. **Version assumption:** cross-machine `bv` parity is assumed, not re-checked per run; if some machine is pinned ≤ 0.16 and emits `bd update`, translate it to `br update`. History: `references/incidents.md` § bd-br-translation.
 
 **Guard: verify the selected bead carries `refined` and is not human-gated.** Readiness is presence of `refined`, not absence of `unrefined`. Check the bead's labels — if it lacks `refined`, or has `human-gate`, skip it and pick the next one:
 
@@ -425,13 +424,13 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 **Skill routing (conductor's job):** Read the bead spec and identify relevant domain skills from `AGENTS.md` > "Available Skills". Include the relevant skill paths in the engineer prompt below.
 
-**Doc/config-bead branch — no RED test, conductor-direct allowed (bd-x7gec).** The engineer-delegation default below is TDD/code-shaped: write a failing test first, then implement to green. That path is N/A for beads whose `## Delivers` are exclusively `doc:` / `config:` artifacts (skill text, doctrine, workflow JSON, prose — no code or tests), which is the shape of every SKILL-DOC/PROCESS bead. For those:
+**Doc/config-bead branch — no RED test, conductor-direct allowed.** The engineer-delegation default below is TDD/code-shaped: write a failing test first, then implement to green. That path is N/A for beads whose `## Delivers` are exclusively `doc:` / `config:` artifacts (skill text, doctrine, workflow JSON, prose — no code or tests), which is the shape of every SKILL-DOC/PROCESS bead. For those:
 
 - The conductor MAY edit the artifact directly (these edits are small, precise, and anchor-verified — often faster than a round-trip), OR spawn a non-TDD doc-implementer with the same scope contract but no "write a RED test first" gate.
 - The acceptance gate is NOT a passing test — it is the bead's own grep/diff on the edited artifact (the AC block), plus prettier-clean on touched files and a re-verify that the edit anchor still matched (skill line numbers drift between refine and implement).
 - Everything else in this workflow still applies: pathspec-scoped commit of only your files, commit=push, per-bead close with `Delivered:` artifact refs. If a bead's Delivers mix code AND doc, treat it as code-shaped (TDD path below).
 
-**Conductor-direct extension for mechanical CODE beads (bd-chd5p.9 / Item 6b).** In addition to the doc/config path above, the conductor MAY implement a **code** bead directly (no engineer spawn) **only when ALL of the following hold**:
+**Conductor-direct extension for mechanical CODE beads.** In addition to the doc/config path above, the conductor MAY implement a **code** bead directly (no engineer spawn) **only when ALL of the following hold**:
 
 1. **Grep-checkable file+line edits** — the refined spec names exact file+line (or unique anchor) edits with acceptance criteria that are themselves grep/diff-checkable (not open-ended behavior).
 2. **Mechanical over code with existing test coverage** — the edit is a mechanical transform over already-covered code (rename, wire an existing helper, one-line guard that existing tests already exercise). **No new behavioral surface** without existing coverage: if the bead introduces new behavior that current tests do not cover, conductor-direct is **forbidden** — spawn an implement child on the TDD path as today.
@@ -470,7 +469,7 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
    > - **History proof:** the same test was already red BEFORE this bead's diff — cite the Phase 0 Baseline Check result (the loop-close/`quality-gate.yml` run, or the local baseline) showing that test failing, or re-run it pinned to the pre-wave SHA with `VITEST_AFFECTED_REF=<pre-wave-SHA> pnpm test`. Do NOT use `git stash` or spawn a `git worktree` to get this (both banned under trunk-direct — Phase 0), OR
    > - **Symbol proof:** the failing assertions reference only symbols/files that this wave's diff does not touch (`git diff --stat` shows the test's subject-under-test is untouched by any commit in this session).
    >
-   > Absent either proof, treat the red test as YOURS and fix it before closing. Two independent engineers misclassified `resolution-trigger{,-state}.test.ts` regressions this way (bd-c5vg7 evidence: wave/035 cost a conductor rerun + extra spawn, commit e25f6284). "Known pre-existing" without a proof is the same evasion phrase the Baseline Check rejects.
+   > Absent either proof, treat the red test as YOURS and fix it before closing. "Known pre-existing" without a proof is the same evasion phrase the Baseline Check rejects (`references/incidents.md` § baseline-preexisting).
 
 3. **Lint + type-check** — catch errors early:
 
@@ -510,8 +509,7 @@ Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **r
 
 ### Phase 1d: Commit + Close Bead
 
-**Commit per the canon — `ac-pipeline/references/commit-discipline.md` (bd-chd5p.10 / Item 6c,
-promoted ac-gcj.3):** the full one-stop sequence — fetch, 0-behind check, H7d pathspec
+**Commit per the canon — `ac-pipeline/references/commit-discipline.md`:** the full one-stop sequence — fetch, 0-behind check, H7d pathspec
 commit, `git add` first for NEW untracked files, `--pathspec-from-file` for route-group
 paths `(…)`/`[…]`, no-stash escalation ladder — lives there; do not re-derive it here.
 Bead-work commit shape:
@@ -678,6 +676,6 @@ Pre-push `pnpm build` reads the working tree — another session's uncommitted W
 
 ## Remember
 
-<!-- diet: restated content deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut clauses have live body twins (grep-verified); the Remember-only rule survives below -->
+<!-- diet: restated content deleted — live body twins verified; the Remember-only rule survives below -->
 
 - **No new code without new tests** — verify the engineer actually wrote them before approving a bead (per-bead: tests + type-check + lint; full quality gate at session end)

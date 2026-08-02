@@ -380,7 +380,7 @@ Four checks, each a placement rule made adversarial:
 **SLUGS:** `missing-promotion-evidence`, `false-evidence-stamp`,
 `reintroduced-historical-block`, `unjustified-net-growth`, `conductor-ceiling-breach`
 
-### Panel scaling (ZERO-RUNTIME + no RISK-TOUCH — bd-chd5p.8 / Item 6a)
+### Panel scaling (ZERO-RUNTIME + no RISK-TOUCH)
 
 Body count may shrink **only** when classification proves the batch is safe. Keys on
 **files touched** via `ac-pipeline/references/risk-classification.md` (ZERO-RUNTIME allowlist + no
@@ -417,15 +417,11 @@ shrink/full tiers and is never dropped by a shrink.
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
 against it (a spawned dimension with no output = partial failure, never a silent pass), and
 **refuses to run at all without it** (exit 3, `PANEL UNKNOWN`) rather than defaulting to a
-smaller panel. This write is therefore load-bearing, not bookkeeping: when it was silently
-eaten by a `dcg` block on 2026-07-31, the run fell back to the core four and dropped the
-contracts and test-quality findings — one of them Critical (bd-axeyx).
+smaller panel. This write is therefore load-bearing, not bookkeeping: silently blocked by
+`dcg`, a run fell back to the core four and dropped the contracts and test-quality
+findings — one of them Critical (bd-axeyx).
 
-<!-- net-growth-ok: bd-axeyx — the manifest write IS the control whose silent dcg-block degraded
-     a live panel; the "how to write it so the guard accepts it" instruction has to sit AT the
-     write site, and the exit-3 contract at the consensus call site. A reference-file pointer is
-     what failed here: `ac-pipeline/references/shell-guardrails.md` already documented the fix and the inline
-     snippet contradicted it. -->
+<!-- net-growth-ok: bd-axeyx — instruction must sit AT the write site; a reference pointer is what failed -->
 **Use the Write tool, on the resolved literal path** — do NOT shell-redirect into
 `$ARTIFACTS_DIR`. A heredoc or redirect whose target is built from a variable is exactly the
 shape `core.filesystem:redirect-truncate-dynamic-path` blocks, and this snippet is the one
@@ -471,14 +467,13 @@ missing output ≠ "no findings." **When the RE-spawn keeps failing too (529/rat
 
 **TaskUpdate(task: "Phase 3", status: "in_progress")**
 
-**MANDATORY tree check FIRST (ac-7rf — a panel reviewer once planted a vulnerability
-into the shared main checkout via unscoped `git stash` from a worktree):** run
+**MANDATORY tree check FIRST (ac-7rf):** run
 `git status --short` and diff the result against the Phase-1 inventory. **Any UNEXPECTED
 new/modified file → STOP synthesis**, inspect it, revert reviewer-authored leakage
 (reviewers are READ-ONLY — banned ops for panel workers: any `git stash` (dcg blocks the
 unscoped form fleet-wide), any write to the shared checkout; discard shapes:
 `ac-pipeline/references/commit-discipline.md` + `ac-pipeline/references/shell-guardrails.md`),
-and record the incident as a finding before continuing. <!-- net-growth-ok: ac-7rf P0 acceptance — post-panel tree check + banned-ops list, incident-driven -->
+and record the incident as a finding before continuing. <!-- net-growth-ok: ac-7rf -->
 
 **THIS IS YOUR CORE WORK. Do not delegate synthesis.**
 
@@ -835,8 +830,7 @@ anchor is the finding's primary `file:line`; rollup beads carry
 `-t task --labels review-finding,unrefined`; Medium+ epics group via
 `br dep add -t parent-child <finding-id> <epic-id>`. Why it bites here: parallel panels
 cannot see each other, so the dedupe check is the only thing stopping one run filing the
-same defect twice (measured 2026-08-01: identical `--conditions=react-server` gap filed
-twice in one day; bd-8ms5t: the unpruned finding lane went 55 → 102 open in 8 days).
+same defect twice (bd-8ms5t).
 Nits stay in the report. **Always include
 `unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
 instead of being treated as already-refined. **`-t bug` = shipped product defect only;
@@ -847,7 +841,7 @@ test-gaps / missing coverage / infra findings use `-t task` or `-t investigation
 validator runs — grep each before citing it — plus the QA modality for user-facing surfaces.
 You have the diff open right now; refine's Test Scope gate would otherwise author it cold.
 A finding bead with no test plan is how the fix ends up shipping behind a test that cannot
-fail (bd-mfr1d, bd-ghj12 — 2026-07-30).
+fail (bd-mfr1d, bd-ghj12).
 
 > **Route the finding bead to an epic parent + stamp `post-merge` at creation** (§3 routing
 > map, `beads-standards/reference/bead-conventions.md` § Bead routing + § Claim semantics). Every
@@ -881,9 +875,9 @@ br dep add <downstream-bead-id> <decision-bead-id>
 > `issue_type=decision` alone gates NOTHING — every label-keyed gate (bug-lane drain,
 > beads-closed-gate, cleaning passes) keys on the LABEL. A `DECISION:`/`DESIGN_DECISION:`-titled
 > or `decision`-typed bead created WITHOUT `human-gate` sits silently workable and can be
-> auto-closed around the human. Do not hand-roll a `br create` that drops it. This has recurred
-> 14+ times across sessions despite the template being correct — `ac-bead-refine`'s Phase 5
-> title/label parity check (bd-7fqgi seam 2) is the backstop that catches any that still slip
+> auto-closed around the human. Do not hand-roll a `br create` that drops it. This recurs
+> despite the template being correct — `ac-bead-refine`'s Phase 5
+> title/label parity check (bd-7fqgi) is the backstop that catches any that still slip
 > through, but the fix belongs here at the producer.
 
 Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-session` when Craig reviews the docket.
@@ -1055,7 +1049,7 @@ Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`)
 
 ## Remember
 
-<!-- diet: restated bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — cut bullets have live body twins (grep-verified); the Remember-only rule survives below -->
+<!-- diet: restated bullets deleted — live body twins verified; the Remember-only rule survives below -->
 
 - **One human touchpoint** — remaining no-consensus + NEEDS_DECISION items are presented ONCE in Phase 7, never per-round
 

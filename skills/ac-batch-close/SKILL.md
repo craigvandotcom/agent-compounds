@@ -1,6 +1,6 @@
 ---
 name: ac-batch-close
-description: 'Trunk-direct batch closing ceremony — a THIN committed-state checkpoint: batch-anchored CI dispatch + one light review pass + commit the batch report (review-mark advance + feedback pending-write). Version mint, tag, deploy-verification, and the heavy 6-dim review all moved to ac-publish (bd-pwt44 epic). Triggers: ''batch close'', ''close the batch'', ''ac-batch-close'', ''ship the batch''.'
+description: 'Trunk-direct batch closing ceremony — a THIN committed-state checkpoint: batch-anchored CI dispatch + one light review pass + commit the batch report (review-mark advance + feedback pending-write). Version mint, tag, deploy-verification, and the heavy 6-dim review all moved to ac-publish (bd-pwt44). Triggers: ''batch close'', ''close the batch'', ''ac-batch-close'', ''ship the batch''.'
 ---
 
 
@@ -10,7 +10,7 @@ ceremony: gate the batch through a light review, dispatch Tier 1 CI for the batc
 thin batch-report checkpoint that advances the review-mark. **It is deliberately thin** — under
 3-5 concurrent conductors the heavy freight (version bump, tag, deploy-verification, the full
 6-dimension review) no longer belongs at every batch; that freight consolidates at the publish
-boundary (`ac-publish`, bd-pwt44 epic "Publish-Anchored Quality — The Batch-Close Diet"). Fired
+boundary (`ac-publish`, bd-pwt44). Fired
 once per batch, not per commit.
 
 This skill is a retarget of `ac-merge` (`skills/ac-merge/SKILL.md`) for the trunk-direct flow.
@@ -32,7 +32,7 @@ There is no branch and no PR on trunk-direct, so these have nothing to attach to
 ## Removed from this skill's own earlier (7-phase) design — relocated to `ac-publish`
 
 This skill previously carried a version bump, a git tag, and a deploy-verification act of its
-own (pre-`bd-pwt44.3`). **All three are gone from batch-close entirely** — they are not
+own. **All three are gone from batch-close entirely** — they are not
 "skipped conditionally," they do not exist in this skill anymore:
 
 - **Version bump + native-surface propagation** → relocated to `ac-publish` Phase 0
@@ -71,7 +71,7 @@ Everything else below is the same mechanism, retargeted anchor and audience.
   see Build Slot below
 - Implementation commits already landed directly on `main` (from `ac-implement`, trunk-direct — no wave branch to check out)
 - A `quality-gate.yml` workflow with `workflow_dispatch` inputs `reason` + `batch_anchor`
-  (added by the sibling bead bd-u2lo1.10). If the workflow doesn't exist yet, Tier 1 CI
+  If the workflow doesn't exist yet, Tier 1 CI
   dispatch (Act 1) is skipped silently — same escape hatch `ac-merge`'s CI-config question
   offered, now inferred from file presence instead of asked.
 
@@ -274,14 +274,14 @@ proceeding), `mac-needed` note, and the qa-blocker STOP all live there.
 
 Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
-### Gitleaks scan (CI backstop — bd-pwt44.4)
+### Gitleaks scan (CI backstop)
 
-The pre-commit `gitleaks protect --staged` hook is `--no-verify`-bypassable — zero CI
-enforcement existed before. `bd-pwt44.4` wires a gitleaks step into `quality-gate.yml`'s
-batch-close leg, scanning `$BATCH_RANGE` (honoring the repo-root `.gitleaksignore`). Nothing
-extra to invoke here — that step rides inside the SAME `reason=batch-close` dispatch fired
-below, not a separate call. If bd-pwt44.4 hasn't landed yet, the dispatched workflow simply
-doesn't have that step (same silent-gap handling as any other pre-existing-infra dependency).
+The pre-commit `gitleaks protect --staged` hook is `--no-verify`-bypassable, so a gitleaks
+step is wired into `quality-gate.yml`'s batch-close leg, scanning `$BATCH_RANGE` (honoring
+the repo-root `.gitleaksignore`). Nothing extra to invoke here — that step rides inside the
+SAME `reason=batch-close` dispatch fired below, not a separate call. If that step hasn't
+landed yet, the dispatched workflow simply doesn't have it (same silent-gap handling as any
+other pre-existing-infra dependency).
 
 ### Fire the Tier 1 CI dispatch
 
@@ -289,7 +289,7 @@ doesn't have that step (same silent-gap handling as any other pre-existing-infra
 gh workflow run quality-gate.yml -f reason=batch-close -f batch_anchor="$ANCHOR"
 ```
 
-If `quality-gate.yml` has no `workflow_dispatch` trigger yet (pre-bd-u2lo1.10), skip this
+If `quality-gate.yml` has no `workflow_dispatch` trigger yet, skip this
 phase silently and note the gap in the Act 3 report — do not block the batch on
 infrastructure another bead is landing.
 
@@ -368,9 +368,9 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 > Failure Escalation (LCA Repair). Per-bead fix-forward remains correct for uncorrelated,
 > single-bead CI failures.
 
-<!-- net-growth-ok: ac-3rb — fix-forward edited product code with NO file reservation (Tier-1 obligation); this seals the protocol gap via the shared canon -->
+<!-- net-growth-ok: ac-3rb -->
 **Reserve the files you are about to fix BEFORE editing** (`agent-mail/references/session-procedure.md`
-§ Reserve, bead ac-3rb — fix-forward is Tier-1 product-code editing in the shared
+§ Reserve — fix-forward is Tier-1 product-code editing in the shared
 checkout; release with the rest at teardown § Release). Apply fixes, then commit under
 the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
 the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard
@@ -411,7 +411,7 @@ This ceremony **NEVER closes an unreviewed batch** — the gate is unconditional
 deliberately **NOT** `ac-review`'s full 6-dimension panel (correctness/security/perf/
 architecture/test-quality/contracts) — that panel remains `ac-review`'s own mechanism when run
 standalone on a feature branch, and becomes `ac-publish`'s heavy pre-tag gate (bd-pwt44.6).
-Batch-close's gate is a single lightweight `VERDICT` pass, same as before this bead's diet.
+Batch-close's gate is a single lightweight `VERDICT` pass.
 
 What widens on trunk-direct is only the *source* of the review verdict: Act 2 accepts **either**
 a standard `ac-review` run **or** an equivalent-review artifact the invoking conductor
@@ -507,7 +507,7 @@ verification moved to `ac-publish`). **Known-action findings surfaced during the
 (defects, decision forks, refinements you KNOW need action beyond this ceremony) are filed
 as beads (`unrefined`) and cited by ID in this report, never left as prose-only** — a
 prose-only findings channel orphans once its consumer closes
-(`rule-known-action-capture-beads-not-prose`; bd-pwt44 lesson).
+(`rule-known-action-capture-beads-not-prose`; bd-pwt44).
 
 **Worker cost line (per-child / per-batch).** Add a one-line **Worker cost** entry to the
 report: per-child implementer usage (model + token cost, which the conductor received in each
@@ -523,17 +523,15 @@ export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this com
 # Carry Act 2's findings report from the staging sibling into the mark directory (bd-kudrb).
 # `git mv` when it was committed to pending/; a plain `mv` + `git add` when it is still
 # untracked. Both files must be in the SAME commit — that is what keeps `batch/` single-writer.
-# net-growth-ok: bd-f72as — the carry snippet IS the review-mark writer; a wrong pick makes the
-# mark attest to an unreviewed diff. The fail-loud branch and its operator guidance must be at
-# the selection site, inline in the runnable block, or a hurried child re-derives the positional
-# pick that near-missed three ceremonies in one day.
+# net-growth-ok: bd-f72as — the carry snippet IS the review-mark writer; guidance must sit
+# inline at the selection site.
 # Select the report by CONTENT, not position. It must claim THIS batch's anchor in its own
 # `**Range:**` line (ac-review on main bases its range on the same review-mark this ceremony
 # anchors on, so the base sha matches by construction). A positional pick (`ls | head -1`) is
-# lexically-OLDEST-first and near-missed three ceremonies in one day; `pending/` legitimately
+# lexically-OLDEST-first; `pending/` legitimately
 # accumulates, because a withheld close (stop condition C2) deliberately leaves its report
 # there. Carrying the wrong file makes the review-mark attest to a diff nobody reviewed while
-# the real artifact stays in `pending/` forever — a clean-looking review blackout (bd-f72as).
+# the real artifact stays in `pending/` forever — a clean-looking review blackout.
 CARRIED=""
 PENDING_REPORT=$(grep -lE "Range:.*${ANCHOR:0:8}[0-9a-f]*\.\." .claude/reviews/pending/*.md 2>/dev/null)
 N_PENDING=$(printf '%s\n' "$PENDING_REPORT" | grep -c . || true)
@@ -577,7 +575,7 @@ report through `pending/` removes the ambiguity at the source.
 this point, that means Act 1 (or Act 2) isn't actually done — re-run from there and redo this
 commit last, again. Nothing pushes after the batch report.
 
-### Ceremony pool ack + post-ack drain (bd-chd5p.2 / Item 1)
+### Ceremony pool ack + post-ack drain (bd-chd5p.2)
 
 When the loop handed a **pool-backed** batch (pool-only, mixed, or pure risk-solo that
 snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 3 **acks** after the report commit:
@@ -654,7 +652,7 @@ slack-send --channel sofi --card \
 ```
 
 > **If the batch produced visual evidence, UPLOAD the images — don't just cite `/tmp`
-> paths in the card body** (Craig's directive — `ac-pipeline/references/qa-shared.md` § Conductor /
+> paths in the card body** (`ac-pipeline/references/qa-shared.md` § Conductor /
 > worker evidence protocol). A `/tmp` path is unreachable from his phone and transient.
 > Send only the LIVE decision surface, with context (bead id + SHA + what needs his eyes):
 > ```bash
@@ -708,7 +706,7 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 ## Remember
 
-<!-- diet: all bullets deleted (ac-gcj.5 Remember diet, Craig ruling 2) — every bullet restated a live body section (grep-verified: one-writer, freeze, always-grants, last-commit, pending-write all have body twins); nothing was Remember-only -->
+<!-- diet: all bullets deleted — every bullet restated a live body section (body twins verified); nothing was Remember-only -->
 
 _(Body sections are the canon — nothing summarized here.)_
 

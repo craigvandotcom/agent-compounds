@@ -76,3 +76,16 @@ entries: 5
 - status: open
 - proposed_fix: contradictory consensus across review lenses is a signal to RUN THE COMMAND and re-derive from source — never average or split the difference on severities.
 - narrative: two review lenses reached opposite conclusions from the same facts. Resolving it required the conductor to read a migration's call-site audit directly rather than trust either lens's stated severity. Cost ~6 minutes of conductor verification.
+
+## panel-reviewer-wrote-to-shared-checkout
+- skills: [ac-review]
+- impact: H
+- frequency: rare
+- recurrence: 1
+- related: [ac-7rf]
+- first_seen: 2026-07-31
+- last_seen: 2026-07-31
+- stage: ac-loop
+- status: resolved
+- proposed_fix: shipped — Phase 3 mandatory post-panel tree check + banned-ops list for panel workers (ac-7rf P0 acceptance).
+- narrative: a panel reviewer planted a vulnerability into the shared main checkout via an unscoped `git stash` from a worktree. Read-only reviewers can still mutate the shared tree through guard gaps; the post-panel `git status` diff against the Phase-1 inventory is the detection layer.
