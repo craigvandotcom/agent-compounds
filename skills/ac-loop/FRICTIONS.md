@@ -29,15 +29,21 @@ entries: 13
 - skills: [ac-loop, ac-implement]
 - impact: H
 - frequency: every-run
-- recurrence: 2
+- recurrence: 3
 - related: [standing-sanctions-not-threaded-into-delegation-prompt]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-01
+- last_seen: 2026-08-02
 - stage: ac-loop
 - status: open
 - proposed_fix: delegation briefs must POINT at the bead as the authoritative spec ("read `br show <id>` in full; this brief is a pointer, not a substitute") and must NEVER restate the bead's preconditions as established fact. Pair it with an explicit escape clause so a child that finds a stated precondition false is licensed to widen scope to the bead's own ACs rather than treating the brief as a hard fence. ALSO (2026-08-01): the same prohibition applies to non-bead claims a conductor asserts — bead OPEN/CLOSED status, tool availability, an active blocker, a paraphrased doctrine rule — and it applies to the `ac-pipeline/references/delegation-contract.md` child-spawn preamble itself, which currently asserts "you have NO `mcp__mcp-agent-mail__*` tools" as flat fact when tool availability is per-agent configuration. A false claim in a VERBATIM-copied block reaches every child of every run; that line needs to be conditional ("if you have no ... tools") or dropped.
 - narrative: the conductor compressed a refined bead into a delegation brief and stated a PRECONDITION (a PostHog client flag "already set") that was in fact an unimplemented acceptance criterion of that same bead. The brief simultaneously said "one directive, nothing more" and "don't widen CSP on your own judgement" — an over-tight scope the child could not distinguish from a correct one. The child caught the error only because it read `br show` in full instead of trusting the brief; had it obeyed, an incomplete security fix would have shipped (a CSP connect-src fix that could not actually clear the QA errors it targeted). Orchestrator compression is a spec-drift vector exactly as much as filing-time staleness is.
   RUN 2026-07-31/08-01 (BCA, width 2, 4 conductor identities) escalated this from occasional to every-run and from L to H. Measured: 7+ bead premises stated in briefs were false or inverted, one batch at 3-of-6. Four further conductor-claim failures beyond bead preconditions — told a child it had no Agent Mail tools (false; the child checked anyway and the check produced a real finding), told a child a bead was closed (it was open), wrote a self-contradictory seam rule a child had to correct, and retracted a blocker twice. In EVERY instance the child that re-derived from the primary source was right and the child that trusted the brief was wrong; re-derivation costs one call, an inverted premise costs the whole child session and the output looks finished. Root cause is structural, not carelessness: a conductor compresses (drops the qualifier), caches (state moves under it mid-run), and generalizes from its own environment (its tool set is not the child's). Folded into memory `loop-retro-delegation-brief-claims-are-hints` (recurrence bumped to 2).
+  RUN 20260802-084558-9799 (agent-compounds, ac-loop-lite ablation), +1: the conductor's review
+  payload stated the bead↔commit pairing REVERSED for ac-uvj/ac-bqw relative to the commit
+  trailers; the review child caught it by reading the trailers (primary source) instead of
+  trusting the payload. Same root — conductor-composed payload facts drift; children citing
+  primary sources are right. Conductor's own noted fix: cite trailers when composing, never
+  pair from memory.
 
 ## child-has-no-upward-report-channel
 - skills: [ac-loop, ac-implement]
@@ -104,10 +110,10 @@ entries: 13
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement]
 - impact: M
 - frequency: every-run
-- recurrence: 19
+- recurrence: 23
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-31
+- last_seen: 2026-08-02
 - stage: ac-loop
 - status: open
 - proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
@@ -130,6 +136,12 @@ entries: 13
   separately as **bd-nw8r3** (P1), which also carries a SECOND, unrelated defect in the same file:
   `find .github/workflows -name '*.yaml'` is zsh-fatal without nullglob and aborts the whole Scan E
   block in any repo with no `.yaml` files (BCA is one).
+  **RUN 20260802-084558-9799 (ac-loop-lite ablation), +4:** conductor blocked twice (a
+  `> "/tmp/loop-lite-$RUN_ID/state"` redirect, then a bead description quoting the redirect
+  verbatim), batch-close child blocked on ac-batch-close's OWN run-ledger snippet (filed
+  ac-d4r), and an implement child blocked on a dynamic-path `wc -l`. All four self-corrected
+  (Write tool / literal paths) — the class persists even under the compressed loop-lite
+  contract; dream proposal ac-e8m (dcg-resolve-then-paste-writes) covers the general fix.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-loop, ac-land, ac-bead-capture, beads-standards]

@@ -2,7 +2,7 @@
 skill: beads-standards
 created: 2026-07-22
 last_pass: 2026-07-27
-entries: 2
+entries: 3
 ---
 
 # beads-standards — friction log
@@ -11,6 +11,25 @@ entries: 2
      entries below and judge same-vs-new before minting an id (see
      skill-builder/references/friction-capture.md § Deduplication) — do not append a
      duplicate root friction under a new id. -->
+
+## br-non-tty-flake-in-compound-one-liners
+- skills: [beads-standards]
+- impact: S
+- frequency: frequent
+- recurrence: 3
+- related: []
+- first_seen: 2026-08-02
+- last_seen: 2026-08-02
+- stage: ac-loop
+- status: open
+- proposed_fix: document the workaround once in beads-standards (likely § working cadence or the br cheatsheet): when `br` is chained inside a compound one-liner (`cmd && br ... && cmd`), it can fail with a "not a terminal" error — run the `br` call as its own separate Bash invocation, or pipe with `--json` where supported. Confirm the exact failing shapes before writing the rule (verify-doctrine-claims-against-live-tools).
+- narrative: hit 3 independent times in one run (RUN 20260802-084558-9799, ac-loop-lite ablation —
+  refine children r1 and r2, then a third occurrence in the implement lane): `br` invoked inside a
+  compound shell one-liner errored with a "not a terminal" flake, forcing each child to re-run the
+  command standalone. Cost per hit is one retry (~seconds), but three uncoordinated rediscoveries in
+  a single run with ZERO doctrine anywhere in the registry (grep confirms no mention) makes it a
+  documentation gap, not a tool bug we can fix here. Each child independently found the same
+  workaround: separate invocation.
 
 ## epic-endpoint-blocks-edges-make-children-unclaimable
 - skills: [beads-standards, ac-beadify, ac-loop]
