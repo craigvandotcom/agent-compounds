@@ -329,7 +329,10 @@ If any files were moved or updated:
 Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 ```bash
-git add -A _backlog/ _plans/
+# You performed every move/update yourself — commit EXACTLY those paths (ac-n12).
+# Never `git add -A <dir>`: _plans/ and _backlog/ carry other sessions' in-flight
+# WIP (ac-plan-init writes _plans/ concurrently) — a dir-wildcard sweeps it (H7d).
+git add -- <exact files this run moved/updated>
 git commit -m "$(cat <<'EOF'
 chore: backlog-tidy — archive completed items, reconcile pipeline state
 
