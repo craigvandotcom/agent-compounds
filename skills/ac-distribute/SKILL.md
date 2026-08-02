@@ -1,7 +1,5 @@
 ---
 name: ac-distribute
-Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
-
 description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The outbound last mile of the ac-* pipeline (implement → land → review → merge → QA → DISTRIBUTE). Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa-device.
 ---
 
@@ -81,6 +79,7 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
      from `ac-prove` (PROFOUND failure or iteration cap hit) stops `ac-distribute` here —
      never archive/sign/upload off an unproven tree, even mid-wave.
 QA evidence/report schema: `ac-pipeline/references/qa-shared.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 4. **Fresh native-QA PASS.** A `ac-qa-device` `QA_VALIDATION` report artifact exists whose
    **`platform:` is `ios-simulator` (or `android-emulator`)**, `status: PASS`, and

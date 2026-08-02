@@ -1,7 +1,5 @@
 ---
 name: ac-site-polish
-Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
-
 description: 'Use when polishing the PUBLIC marketing website (landing page + public routes) to premium quality and/or checking it conforms to the site''s design spec — one page or a whole-site crawl. The public twin of ac-ui-polish (which owns the authenticated app); this one anchors on CORE/design.site.md. Triggers on "polish the website", "site polish", "ac-site-polish", "polish the landing page", "marketing page polish", "elevate the homepage", "the website looks like AI slop", "make the marketing site premium", "audit the public site". Covers conversion/copy hierarchy, desktop+mobile responsive craft, link/CTA integrity, and embedded-screenshot freshness, then design-spec conformance + elevation — runs SEO and a11y inline. NOT for: the authenticated app (use ac-ui-polish — anchored on design.md), pure SEO alone (use seo-metadata), accessibility audits alone (use web-design-guidelines), React data/bundle perf (use capacitor), visual/CSS defects (use ui-debug), or multi-model design ideation (use ui-brainstorm).'
 ---
 
@@ -168,6 +166,8 @@ The craft layer lives in **ac-ui-polish's reference files**, reused **by referen
 ---
 
 ## Delegation map (orchestrate — don't reimplement)
+
+Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
 
 | Need | Defer to |
 |------|----------|
