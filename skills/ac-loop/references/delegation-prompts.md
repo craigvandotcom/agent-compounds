@@ -42,7 +42,14 @@ dispatch:
 > anything blocked, every Agent Mail identity you claimed beads under, AND a structured
 > `friction:` block — one item per stage that hit friction, keys `stage` / `cost` /
 > `lesson` / `class` (`friction: []` if the stage was clean); see § Child friction schema
-> below) — the loop advances to verify → review → close."
+> below) — the loop advances to verify → review → close.
+> **Your file territory:** you own exactly these paths: {TERRITORY — explicit list}. Do
+> not write outside them. Width-safety (parallel children on disjoint file sets) holds
+> for **source files only** — it does NOT hold for shared build/scratch state, disjoint
+> in no one's diff: `.next/`, `node_modules/.cache/`, `dist/`, the vitest cache, `/tmp`
+> artifact dirs keyed by anything less specific than the claim id, and the beads ledger.
+> Treat every one of those as contended even when your source territory is clean:
+> serialize through the conductor, or key the path by claim id."
 
 ## Child friction schema (D1)
 

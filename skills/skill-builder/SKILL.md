@@ -294,6 +294,10 @@ Skill: skill-builder
 - [ ] Verify skill activates from natural language
 - [ ] Confirm skill does NOT activate on exclusions
 - [ ] Close any rationalization loopholes discovered
+- [ ] **No bare foreground `sleep`** — `grep -nE 'sleep [0-9]' <skill files>`: every hit
+      must sit inside a wait/until loop. A bare foreground sleep is harness-blocked; in
+      an unattended run it burns a whole turn. Use a polling loop with an exit predicate,
+      or `Monitor`. <!-- net-growth-ok: dream ac-avx audit rule, Craig-applied -->
 
 **Step 4: Evidence Review**
 - [ ] Show before/after comparison
