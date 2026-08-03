@@ -611,8 +611,15 @@ if [ "$N_PENDING" -ne 1 ]; then
   exit 1
 fi
 CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
-git mv "$PENDING_REPORT" "$CARRIED" 2>/dev/null \
-  || { mv "$PENDING_REPORT" "$CARRIED" && git add "$CARRIED"; }
+# net-growth-ok: ac-ewgr.6 — the dcg reason must sit inline at the snippet or the next agent re-derives the workaround
+# RESOLVE-THEN-PASTE — do NOT "simplify" this back into a variable-built move. dcg rule
+# `core.filesystem:mv-dynamic-path` BLOCKS a move whose paths are variable-built, so a
+# `git mv "$FROM" "$TO"` over these two vars is rejected verbatim. The line below is read-only:
+# it PRINTS the two paths. Paste them as LITERALS, in THIS SAME shell (the commit below
+# still reads $CARRIED), as a single move:
+#   git mv <CARRY FROM literal> <CARRY TO literal>
+#   # source untracked / git mv fails: mv <CARRY FROM literal> <CARRY TO literal> && git add <CARRY TO literal>
+printf 'CARRY FROM: %s\nCARRY TO:   %s\n' "$PENDING_REPORT" "$CARRIED"
 
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 # Pathspec-on-commit (bd-kskxg field-test): the trailing `-- <report path>` scopes the commit to
@@ -622,7 +629,7 @@ git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 # so the moved findings report rides in this same commit (both its delete-from-pending and
 # add-to-batch halves are staged by the `git mv` above).
 git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits" \
-  -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md" ${CARRIED:+"$CARRIED" ".claude/reviews/pending/"}
+  -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md" ${CARRIED:+"$CARRIED"} ${CARRIED:+".claude/reviews/pending/"}
 git push origin main || { git pull --rebase origin main && git push origin main; }
 ```
 
