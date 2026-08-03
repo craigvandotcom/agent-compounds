@@ -157,8 +157,23 @@ else
   DIFF_RANGE="$LAST_TAG..HEAD"
 fi
 
-git diff $DIFF_RANGE --stat
-git diff $DIFF_RANGE --name-only
+# Single definition of the review pathspec (ac-ewgr.3) — EVERY consumer of $DIFF_RANGE
+# below (this block, the legacy-branch block, Phase 2's diff + size check) reuses this one
+# array; never re-inline the pathspec. `.beads/` JSONL churn dominates a registry-repo range
+# and no reviewer can act on it: measured over 44717df..0ffc1a4, 105 of 129 files (81%) were
+# `.beads/`, and excluding them cut 6989 insertions to 934 (7.5x).
+# `.claude/reviews/` was CONSIDERED AND DELIBERATELY NOT EXCLUDED — a prior run's review
+# artifacts are rare in a range and legitimately reviewable when a skill changed how they are
+# written; silent over-exclusion hides real findings, which is strictly worse than a little
+# extra noise. Do not re-open this without a fresh measurement (that would be a new bead).
+# net-growth-ok: ac-ewgr.3 — the exclusion's measurement + the .claude/reviews/ rejection must sit at the definition or the next reader re-litigates it
+DIFF_PATHSPEC=(-- ':(exclude).beads/')
+
+# The `--stat` / `--name-only` options MUST precede the range: git rejects an option after a
+# non-option argument ("option '--stat' must come before non-option arguments"), and placing
+# it after `--` silently swallows it as a pathspec (empty output, no error).
+git diff --stat $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
+git diff --name-only $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
 ```
 
 **Stale-mark fallback ladder.** There is no staleness test in the block above, so a
@@ -208,8 +223,8 @@ IS_LEGACY=$(grep -vE '^[[:space:]]*(#|$)' "$LEGACY_FILE" 2>/dev/null | grep -Fx 
   ```bash
   BASE_BRANCH=$(git merge-base --fork-point main HEAD 2>/dev/null && echo "main" || echo "master")
   DIFF_RANGE="$BASE_BRANCH...HEAD"
-  git diff $DIFF_RANGE --stat
-  git diff $DIFF_RANGE --name-only
+  git diff --stat $DIFF_RANGE "${DIFF_PATHSPEC[@]}"      # same single $DIFF_PATHSPEC as above
+  git diff --name-only $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
   ```
 
 - **Not listed -> HARD STOP.** Do not proceed, do not downgrade to a warning:
@@ -292,13 +307,13 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 ### Get Diff
 
 ```bash
-git diff $DIFF_RANGE
+git diff $DIFF_RANGE "${DIFF_PATHSPEC[@]}"      # Phase 1's single definition — .beads/ excluded
 ```
 
 ### Diff Size Check
 
 ```bash
-git diff $DIFF_RANGE --stat | tail -1
+git diff --stat $DIFF_RANGE "${DIFF_PATHSPEC[@]}" | tail -1
 ```
 
 **If diff is very large (>2000 lines):** Ask user with `AskUserQuestion`:
@@ -417,8 +432,8 @@ self-labeled low-risk; a label-keyed shrink would have let them through.
 **Classifier (binding — Item 0):**
 
 ```bash
-# DIFF_RANGE from Phase 1 scope detection
-git diff --name-only $DIFF_RANGE
+# DIFF_RANGE + DIFF_PATHSPEC from Phase 1 scope detection
+git diff --name-only $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
 # Then apply risk-classification.md: RISK-TOUCH globs + test-path exclusion +
 # ZERO-RUNTIME positive allowlist. Shrink-eligible ONLY if EVERY path is
 # ZERO-RUNTIME AND no path is RISK after exclusion.
