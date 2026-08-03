@@ -1,8 +1,8 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-01
-entries: 13
+last_pass: 2026-08-03
+entries: 15
 ---
 
 # ac-loop — friction log
@@ -110,10 +110,10 @@ entries: 13
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement]
 - impact: M
 - frequency: every-run
-- recurrence: 23
-- related: [phase-skills-mandate-panels-a-subagent-cannot-spawn]
+- recurrence: 31
+- related: [phase-skills-mandate-panels-a-subagent-cannot-spawn, dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-02
+- last_seen: 2026-08-03
 - stage: ac-loop
 - status: open
 - proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
@@ -142,6 +142,24 @@ entries: 13
   ac-d4r), and an implement child blocked on a dynamic-path `wc -l`. All four self-corrected
   (Write tool / literal paths) — the class persists even under the compressed loop-lite
   contract; dream proposal ac-e8m (dcg-resolve-then-paste-writes) covers the general fix.
+  **RUN 20260803-113231-34132, +8 — the highest-recurrence friction of the run, spread across FIVE
+  children in four different phase skills.** Refine children: a probe blocked for quoting a redirect
+  construct in its TEXT (nothing was being redirected), two blocks on redirects inside a python
+  heredoc, one on a dynamic-path write that switched to the Write tool. Implement children: a bead
+  comment whose BODY quoted a redirect construct, a verification command whose capture path was
+  variable-built, a delete-then-create fixture inside a heredoc (resolved by using a fresh unique
+  /tmp dir instead), and a close reason whose prose merely DESCRIBED repairing a file. Review child:
+  restore-to-pristine inside a disposable /tmp worktree, resolved by overwriting from a git ref
+  rather than a checkout, plus a probe driver moved out of a heredoc into a Write-tool file.
+  Two things this run adds beyond the count. (1) It confirms the fix-shape constraint recorded in
+  ac-bead-refine's sibling entry from the OTHER direction: three of the eight blocks were on
+  commands that contained no redirect at all — the construct appeared inside a quoted prose payload
+  (a bead comment, a close reason, a probe argument) — so guidance that SHOWS the blocked construct
+  is itself blocked, and "decorating the command" is never the fix. Notably one implement child was
+  blocked this way while fixing ac-d4r, the bead that documents this exact hazard. (2) The blast
+  radius now includes `ac-pipeline`'s shared substrate (board-scan, and the artifact-write shapes
+  the delegation preamble hands to every child), so a pointer entry has been added to ac-pipeline's
+  own log; this id remains the PRIMARY and the sole place occurrences are counted.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-loop, ac-land, ac-bead-capture, beads-standards]
@@ -254,3 +272,29 @@ entries: 13
   is `--beads`-scoped, so the unstamped follow-ups could not trip it — but the rule is easy to
   misread in precisely this direction, because "is this bead part of the batch?" is the more
   natural question to ask and gives the wrong answer.
+
+## task-ledger-tools-unreachable-from-a-fanned-out-child
+- skills: [ac-loop, ac-bead-refine]
+- impact: M
+- frequency: every-run
+- recurrence: 2
+- related: [child-has-no-upward-report-channel, phase-skills-mandate-panels-a-subagent-cannot-spawn]
+- first_seen: 2026-08-03
+- last_seen: 2026-08-03
+- stage: ac-loop
+- status: open
+- proposed_fix: the MANDATED run ledger must be expressed in terms a child can actually satisfy — name the file-based ledger (progress.md) as the canonical form for a delegated child and reserve the Task-tool ledger for the conductor, rather than mandating a tool the child's declared toolset does not contain. Same spawn-time check as `child-has-no-upward-report-channel`: verify the tool exists in the child's toolset before mandating its use.
+- narrative: two refine children were instructed to maintain a Task-tool run ledger and held no TaskCreate/TaskUpdate tools — the tools are simply absent to a fanned-out subagent. Both improvised the same substitute (carried the ledger in progress.md), so no ledger data was lost, but the mandate is unsatisfiable by construction in the most common invocation path and each child paid rediscovery time. This is the third member of a family this log already carries: panels a subagent cannot spawn, report channels a subagent does not hold, and now ledgers a subagent cannot write. All three share one root — the skills are written from the conductor's vantage and mandate capabilities that do not survive delegation — and all three are detectable at spawn time by the same one-line check.
+
+## agent-name-unset-yields-an-empty-child-id-segment
+- skills: [ac-loop]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [open-tooling-bug-not-checked-against-run-config-at-phase0, width-safe-on-files-not-on-shared-build-and-scratch-state]
+- first_seen: 2026-08-03
+- last_seen: 2026-08-03
+- stage: ac-loop
+- status: open
+- proposed_fix: any identity string composed from environment (CHILD_ID and the artifact dirs derived from it) must ASSERT each segment is non-empty at the point it is built, and fail loudly if not — an empty segment must never be allowed to silently degrade to a shared path.
+- narrative: a child's CHILD_ID formula read AGENT_NAME from the environment, where it was unset, and produced an identity with an EMPTY agent segment. Nothing errored. The consequence is the one that matters: CHILD_ID is what gives siblings distinct artifact directories, so an empty segment collapses two children's scratch space toward the same path — precisely the bd-baudw cross-stamping collision that width>1 runs are supposed to be protected from. Same silent-empty shape as the `tr` alias defect logged in ac-bead-refine (there a shadowed command, here an unset variable), and the same consequence, which is why the fix belongs at the ASSERTION level rather than at each individual source: the formula has several ways to yield an empty segment and no way to notice.

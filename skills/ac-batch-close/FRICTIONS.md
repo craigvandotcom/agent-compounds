@@ -1,8 +1,8 @@
 ---
 skill: ac-batch-close
 created: 2026-07-22
-last_pass: 2026-07-31
-entries: 2
+last_pass: 2026-08-03
+entries: 4
 ---
 
 # ac-batch-close — friction log
@@ -16,14 +16,41 @@ entries: 2
 - skills: [ac-batch-close, ac-loop]
 - impact: S
 - frequency: every-run
-- recurrence: 1
-- related: []
+- recurrence: 2
+- related: [delegated-close-child-cannot-satisfy-the-identity-and-slot-mandate]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-22
+- last_seen: 2026-08-03
 - stage: ac-batch-close
 - status: open
 - proposed_fix: the conductor must carry each child's task-completion usage line (model + token counts) into the batch-close delegation prompt, since that is the only place the data exists. Alternatively, drop the cost section from the ceremony report and let a separate harness-level collector own it — but do not leave a mandated report section that is structurally unfillable.
 - narrative: the batch-close ceremony report has a cost/usage section, but per-child model and token usage is never forwarded into the batch-close delegation, and a child cannot observe its OWN usage from inside its run. The section is therefore impossible to fill honestly by any agent in the chain — the ceremony either leaves it blank or invents numbers. Observed on all 3 batch-closes of RUN 20260722-085844-39967. This is a pipeline-contract gap, not a child failure.
+  **RUN 20260803-113231-34132, +1 — root cause named.** A closing child recorded the Worker-cost line as UNAVAILABLE rather than estimating it (the right call), and in doing so identified WHY the section is unfillable: the skill is written as though batch-close runs AS the conductor, but per-child token usage arrives only in the conductor's task-completion notifications, and this ceremony ran as a delegated child. So the section is not merely un-forwarded data — it is a VANTAGE mismatch baked into the skill's assumed execution position. That reframing picks a winner between the two fixes proposed above: forwarding the usage lines into the delegation prompt works precisely because the conductor is the only agent that ever holds them. Same root as `delegated-close-child-cannot-satisfy-the-identity-and-slot-mandate` — the skill assumes conductor vantage in more than one place.
+
+## delegated-close-child-cannot-satisfy-the-identity-and-slot-mandate
+- skills: [ac-batch-close, ac-loop]
+- impact: M
+- frequency: every-run
+- recurrence: 3
+- related: [per-child-usage-never-reaches-the-ceremony]
+- first_seen: 2026-08-03
+- last_seen: 2026-08-03
+- stage: ac-loop
+- status: open
+- proposed_fix: reconcile the skill with the loop's child-preamble on WHO owns identity for a spawned close child — state that when batch-close runs delegated, the Tier-1 identity mint and the advisory build slot are the CONDUCTOR's (already held), the child inherits the handed AGENT_NAME, and the `origin/main == HEAD` assertion is the operative protection. Written as a documented delegated shape, not as a skipped step.
+- narrative: three occurrences across two ceremonies in one run, all the same root. ac-batch-close mandates a Tier-1 identity mint plus an advisory build-slot acquisition at Act 0, but a delegated child (a) is handed a fixed AGENT_NAME by the conductor, (b) holds no registration_token, so there is nothing to acquire a slot WITH, and (c) runs under an environment contract that assigns file reservations to the conductor in the first place. Every child therefore SKIPPED the mandate — correctly, and at zero cost, since the skill itself names `origin/main == HEAD` as the real protection. The friction is that a correct execution has to silently no-op a MANDATORY step and hope that reads as expected rather than as a compliance failure: the doctrine and the loop's own child-preamble disagree, and the child is left adjudicating between them mid-ceremony.
+
+## findings-filed-after-the-report-force-a-second-commit
+- skills: [ac-batch-close]
+- impact: S
+- frequency: occasional
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-03
+- last_seen: 2026-08-03
+- stage: ac-loop
+- status: open
+- proposed_fix: file every known-actionable finding BEFORE writing the ceremony report — the report cites bead IDs, so any bead minted after it is written cannot be referenced without amending or re-committing it. Ordering, not extra work.
+- narrative: a closing child discovered a real defect during Act 1, wrote the ceremony report, and only then filed the bead — so the report needed a SECOND commit purely to cite the ID it had just created. Cost one extra commit. Trivial per occurrence, but it is a pure sequencing defect with a free fix: the finding was already known when the report was being drafted, and nothing about Act 3 requires the report to be written first.
 
 ## needs-decision-has-no-deferred-with-reasoning-escape
 - skills: [ac-batch-close]

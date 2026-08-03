@@ -1,8 +1,8 @@
 ---
 skill: ac-review
 created: 2026-07-29
-last_pass: 2026-07-31
-entries: 5
+last_pass: 2026-08-03
+entries: 7
 ---
 
 # ac-review — friction log
@@ -89,3 +89,30 @@ entries: 5
 - status: resolved
 - proposed_fix: shipped — Phase 3 mandatory post-panel tree check + banned-ops list for panel workers (ac-7rf P0 acceptance).
 - narrative: a panel reviewer planted a vulnerability into the shared main checkout via an unscoped `git stash` from a worktree. Read-only reviewers can still mutate the shared tree through guard gaps; the post-panel `git status` diff against the Phase-1 inventory is the detection layer.
+  **2026-08-03 — adjacent surface, not covered by this fix:** a refine-panel reviewer removed a live pre-commit guard through an MCP call, which leaves no trace in the `git status` diff this entry's fix inspects. Logged as `reviewer-prompts-must-explicitly-forbid-mutating-mcp-calls` in ac-bead-refine's file; the pairing is the point — scoping away git mutation does not scope away tool-surface mutation.
+
+## reviewers-cannot-see-harness-builtin-skills
+- skills: [ac-review]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [contradictory-panel-consensus-needs-source-re-derivation]
+- first_seen: 2026-08-03
+- last_seen: 2026-08-03
+- stage: ac-loop
+- status: open
+- proposed_fix: any finding of the form "skill/tool X does not exist" must be checked by the CONDUCTOR against the live available-skills list before it is accepted or auto-fixed — a repo-scoped reviewer's filesystem is not the harness's namespace, so absence-of-evidence from a reviewer is not evidence of absence.
+- narrative: a panel reviewer raised a Critical on the grounds that a referenced skill did not exist. It does — as a harness BUILT-IN, invisible to a reviewer whose view is the repository checkout. The finding was well-argued, correctly cited (the name genuinely appears nowhere in the repo), and wrong, and it reached the auto-fix stage before the conductor caught it. Had it landed, the fix would have DELETED a valid reference. This is the reviewer-blind-spot class at its most dangerous shape: the reviewer is not mistaken about anything it can see, so nothing in its own reasoning can flag the gap, and the finding's confidence is fully justified from inside its context. Only the conductor holds the namespace that falsifies it.
+
+## panel-undercounts-occurrences-of-a-multi-site-defect
+- skills: [ac-review]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [contradictory-panel-consensus-needs-source-re-derivation]
+- first_seen: 2026-08-03
+- last_seen: 2026-08-03
+- stage: ac-loop
+- status: open
+- proposed_fix: when a finding asserts a COUNT ("2 broken anchors", "3 call sites"), re-derive it mechanically before scoping the fix — a per-file occurrence grep, not a re-read. A reviewer's table is a sample of what it happened to inspect, not an enumeration, and the fix is scoped from the number.
+- narrative: a panel's site-by-site audit reported 2 broken anchors; a mechanical per-file occurrence count found 6. The 3x undercount came from a reviewer that presented its results as a TABLE — the format that most strongly signals exhaustiveness — while having audited only the sites it happened to open. Cost ~10 tool calls of conductor verification, and would have cost a fix that repaired a third of the defect while closing the finding. Converges with `contradictory-panel-consensus-needs-source-re-derivation` on the same remedy (re-derive from source rather than trust the panel's summary), but the trigger is different and easier to miss: there is no contradiction here to alert anyone — one reviewer, confident, internally consistent, and numerically wrong.
