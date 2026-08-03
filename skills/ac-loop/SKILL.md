@@ -328,38 +328,13 @@ br ready --limit 0 --json | jq '[.[] | select(
 
 ### Batch orphans by FILE CLUSTER, not by arrival order
 
-When the orphan set is larger than one batch (routinely true — the finding lane is the biggest
-producer on the board), **group it by the file paths cited in the beads' descriptions and ship the
-densest cluster first.** Review-findings carry `file:line` anchors, so the clustering is already
-in the data:
+When the orphan set is larger than one batch, **group it by the file paths cited in the beads'
+descriptions and ship the densest cluster first** (command:
+`ac-pipeline/references/board-scan.md` § File-cluster density). Clustered batches share the
+read, mental model, and test run; disjoint clusters are **resource-disjoint by construction** —
+the property that makes `PARALLEL_WIDTH > 1` structurally safe instead of merely lucky.
 
-```bash
-# Densest file clusters across the ready orphan set (drives batch selection).
-br ready --limit 0 --json | jq -r '.[] | select(
-  (.labels | index("refined")) and (.labels | index("human-gate") | not)
-) | .description' \
-  | grep -oE '[a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+' \
-  | grep -E '\.(ts|tsx|js|mjs|yml|yaml|sh|swift)$' \
-  | sort | uniq -c | sort -rn | head -20
-```
-
-> Grab the WHOLE extension first, then filter anchored on `$`. A single
-> `grep -oE '...\.(ts|js|...)'` silently truncates `issues.jsonl` → `issues.js` and
-> `tsconfig.scripts.json` → `tsconfig.scripts.js`, inventing two files that do not exist and
-> ranking them into the top cluster.
-
-Two reasons, and the second is the important one:
-
-1. **Cost.** Six findings in one file fixed in one pass share the read, the mental model and the
-   test run. The same six as six batches pay all of that six times. Findings cluster hard by
-   subsystem (measured: ~20 of 94 verified findings in one subsystem).
-2. **Parallel safety, for free.** Disjoint file clusters are **resource-disjoint by construction**,
-   so width-N waves over distinct clusters cannot collide on file reservations, on the shared
-   staging area, or on `.next`. Clustering is not just cheaper — it is what makes `PARALLEL_WIDTH > 1`
-   structurally safe instead of merely lucky (bd-ctlqg: a whole-tree `git add` swallowed another
-   agent's staged files precisely because two agents were live in overlapping paths).
-
-**So: pick the densest cluster for batch 1; if running parallel, give each child a DIFFERENT
+**Pick the densest cluster for batch 1; if running parallel, give each child a DIFFERENT
 cluster — never two children inside one cluster.** Beads whose descriptions cite no file path fall
 back to arrival order and ship in a mixed batch after the clusters drain.
 
@@ -601,11 +576,11 @@ there, shared with `ac-batch-close`.
 
 ## Phase pipelining permissions (bd-chd5p.3)
 
-~4h reclaim: refine work may run during ceremony CI poll / bug-lane implement /
-feature-wave implement. **Refine ships nothing**, so Rule 0's "nothing broken ships
-alongside new work" is untouched for permissions (b)/(c). Pipelining changes
-**when** refine runs, **not** `MIN_ROUNDS` — the cross-round premise catch (a later
-round inverting an earlier fix) is structurally preserved.
+Refine work may run during ceremony CI poll / bug-lane implement / feature-wave
+implement. **Refine ships nothing**, so Rule 0's "nothing broken ships alongside new
+work" is untouched for permissions (b)/(c). Pipelining changes **when** refine runs,
+**not** `MIN_ROUNDS` — the cross-round premise catch (a later round inverting an
+earlier fix) is structurally preserved.
 
 ### Permissions (explicit)
 
@@ -617,9 +592,7 @@ round inverting an earlier fix) is structurally preserved.
 
 <!-- net-growth-ok: phase-pipelining-permissions wired live -->
 
-**Engage phase-pipelining at these hookpoints** (the conductor's *when* — mirrors
-Ceremony batching pool's hookpoint table; this is what makes permissions (a)-(c)
-actionable rather than standing spec):
+**Engage phase-pipelining at these hookpoints** (the conductor's *when*):
 
 | Owner | When | Action |
 | ----- | ---- | ------ |
@@ -627,50 +600,21 @@ actionable rather than standing spec):
 | **conductor** (b) | during bug-lane implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset, **naming the subset with `TARGET_BEAD_IDS=<ids>`** |
 | **conductor** (c) | during feature-wave implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset, **naming the subset with `TARGET_BEAD_IDS=<ids>`** |
 
-> **How disjointness is ENFORCED, not just intended (bd-baudw).** These subsets have no
-> epic and no `parent-child` edge — they are ad-hoc partitions of the orphan/bug pool — so
-> a refine child cannot re-derive its own scope. Every fanned-out refine delegation MUST
-> carry `TARGET_BEAD_IDS=<comma-separated ids>` (`ac-bead-refine` Mode A); that list is the
-> child's stamping authority, so a child physically cannot stamp a sibling's beads.
-> Pass `RUN_ID=<RUN_ID>` **bare** — do **not** hand-suffix it per child (`…-refineA`).
-> The children key their own scratch dirs off their own `CHILD_ID`, and a suffixed RUN_ID
-> would break the `-$RUN_ID` glob `ac-land` uses to gather the run.
+> **Fan-out enforcement (bd-baudw):** every fanned-out refine delegation MUST carry
+> `TARGET_BEAD_IDS=<comma-separated ids>` (`ac-bead-refine` Mode A) — the child's
+> stamping authority — and `RUN_ID` passes **bare**, never hand-suffixed per child.
+> Full canon: `ac-pipeline/references/run-id.md`.
 
-WIDTH cap, homogeneity, and "refine ships nothing" invariants are unchanged — see
-Efficiency § Parallelism for the mechanics, not restated here.
-
-### GUARD-RAIL — git ledger commit (mixed-state sanctioned)
-
-The ledger rule stays: the **ceremony** commits whatever `.beads/issues.jsonl` state
-exists at report-commit time; refine children **never** commit the ledger.
-**Mixed-state commits are explicitly sanctioned** — a ceremony may land a ledger that
-includes labels/comments written by a concurrent refine child that already flushed;
-that is expected and correct under this permission set.
-
-### GUARD-RAIL — beads-DB mutation deferral (not merely flush)
-
-`br` mutation verbs (`br update` / `br close` / `br label` / `br comments add`)
-auto-flush to `.beads/issues.jsonl`. A refine child running concurrently with a
-ceremony **defers its beads-DB MUTATIONS entirely** until the ceremony's ledger
-commit has landed (not merely deferring `br sync --flush-only`). The conductor owns
-the final flush+commit; children may **read** the DB freely but **hold all writes**
-until the ceremony quiesces (or the conductor re-flushes + re-commits after children
-quiesce). Memory:
-`beads-ledger-shared-file-conductor-should-own-final-commit`.
+**Concurrency guard-rails** (ceremony owns the ledger commit, mixed-state sanctioned;
+concurrent refine children hold ALL `br` mutations until the ceremony quiesces):
+`ac-pipeline/references/ceremony-batching-pool.md` § Refine-during-ceremony guard-rails.
 
 ### SCOPE — implement/implement mixing stays forbidden
 
 A **single conductor** must not run two shipping-work **implement** phases
-concurrently. Width-N is **single-conductor fan-out** (`PARALLEL_WIDTH` children under
-one orchestrator — Efficiency § Parallelism), not multi-conductor; this SCOPE does
-**not** authorize concurrent shipping-work implement phases under that fan-out either.
-Refine-during-implement (b)/(c) is the exception that is allowed because refine does
-not ship product code.
-
-### MIN_ROUNDS untouched
-
-Permissions (a)–(c) do **not** change `MIN_ROUNDS`. Doctrine text only — no runtime
-code.
+concurrently — width-N fan-out included (`PARALLEL_WIDTH` children under one
+orchestrator, Efficiency § Parallelism, is not an authorization). Refine-during-implement
+(b)/(c) is the exception because refine does not ship product code.
 
 ---
 

@@ -10,7 +10,7 @@ executing any pool RMW / drain.
 - Concurrency (flock RMW)
 - Fire opportunities · Selected set · Fire snapshot
 - Report-commit ack · Ceremony failure · Drain sequence
-- Risk override · Bug lane reconciled · Guard-rail · Fixtures
+- Risk override · Bug lane reconciled · Guard-rail · Refine-during-ceremony guard-rails · Fixtures
 
 ## Pool state store
 
@@ -110,6 +110,28 @@ only) is permitted; folding bug **implement** into a feature wave remains
 
 Per-cycle ac-review remains **unbatched**. Bisection cost capped by selected-set
 (≤10 beads + line-floor).
+
+## Refine-during-ceremony guard-rails
+
+<!-- net-growth-ok: guard-rails extracted from ac-loop core (ac-znk.3) -->
+
+Binding whenever refine children run concurrently with a ceremony (phase-pipelining
+permissions, `ac-loop` § Phase pipelining permissions).
+
+**Git ledger commit (mixed-state sanctioned).** The **ceremony** commits whatever
+`.beads/issues.jsonl` state exists at report-commit time; refine children **never**
+commit the ledger. Mixed-state commits are explicitly sanctioned — a ceremony may land
+a ledger that includes labels/comments written by a concurrent refine child that
+already flushed; that is expected and correct.
+
+**Beads-DB mutation deferral (not merely flush).** `br` mutation verbs (`br update` /
+`br close` / `br label` / `br comments add`) auto-flush to `.beads/issues.jsonl`. A
+refine child running concurrently with a ceremony **defers its beads-DB MUTATIONS
+entirely** until the ceremony's ledger commit has landed (not merely deferring
+`br sync --flush-only`). The conductor owns the final flush+commit; children may
+**read** the DB freely but **hold all writes** until the ceremony quiesces (or the
+conductor re-flushes + re-commits after children quiesce). Memory:
+`beads-ledger-shared-file-conductor-should-own-final-commit`.
 
 ## §5 fixtures (quick reference)
 

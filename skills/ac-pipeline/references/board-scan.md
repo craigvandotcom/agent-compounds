@@ -92,6 +92,29 @@ on what "orphan" or "illegal edge" mean:
 the beads but NO dependency edges — parse the jsonl for the `blocks` / `parent-child`
 relationships these two classes need.
 
+### File-cluster density (batch-selection read)
+
+<!-- net-growth-ok: cluster command extracted from ac-loop core (ac-znk.3) -->
+
+Derived read over the ready-orphan set — ranks the file paths cited in bead descriptions
+by density. The consumer's lens (densest cluster first, disjoint clusters per parallel
+child) stays with the consumer (`ac-loop` § Batch orphans by FILE CLUSTER).
+
+```bash
+# Densest file clusters across the ready orphan set (drives batch selection).
+br ready --limit 0 --json | jq -r '.[] | select(
+  (.labels | index("refined")) and (.labels | index("human-gate") | not)
+) | .description' \
+  | grep -oE '[a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+' \
+  | grep -E '\.(ts|tsx|js|mjs|yml|yaml|sh|swift)$' \
+  | sort | uniq -c | sort -rn | head -20
+```
+
+> Grab the WHOLE extension first, then filter anchored on `$`. A single
+> `grep -oE '...\.(ts|js|...)'` silently truncates `issues.jsonl` → `issues.js` and
+> `tsconfig.scripts.json` → `tsconfig.scripts.js`, inventing two files that do not exist
+> and ranking them into the top cluster.
+
 ## Scan B — plans
 
 ```bash

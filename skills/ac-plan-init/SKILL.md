@@ -102,13 +102,9 @@ User request -> Classify:
 
 ### Surface Assumptions & Clarify (interview before you plan)
 
-**Highest-leverage step for non-trivial work** — a wrong starting assumption compounds through every later refinement round, so surface it *now*, before exploration.
-
-- **Human present + MORE/A-LOT or ambiguous:** ask the sharpest clarifying questions via `AskUserQuestion` — scope boundaries, the non-obvious constraints, UX/edge-case calls, and any either/or fork that would change the plan. Limit to the 2–4 questions whose answers most change the design.
-- **Always record an `## Assumptions` log** in the plan: the decisions you're making *absent* an answer, plus the questions that would change the plan if answered differently. For autonomous runs (no human), this *replaces* the interview — state assumptions explicitly instead of guessing silently.
+- **Human present + MORE/A-LOT or ambiguous:** ask the 2–4 clarifying questions whose answers most change the design (`AskUserQuestion`).
+- **Always record an `## Assumptions` log** in the plan: the decisions made *absent* an answer, plus the questions that would change the plan if answered differently. For autonomous runs this *replaces* the interview — state assumptions explicitly instead of guessing silently.
 - **MINIMAL with a clear one-sentence diff:** skip the interview; note any single load-bearing assumption (or "none").
-
-Refinement and review then pressure-test the *stated* assumptions, not hidden ones.
 
 ### Locate Backlog Item (if applicable)
 
@@ -230,12 +226,8 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 ### Step 1: Identify Validation Method
 
-| Task Type   | Primary Validation       | Secondary             |
-| ----------- | ------------------------ | --------------------- |
-| UI Feature  | Browser automation test  | Screenshot comparison |
-| API Change  | Response shape assertion | Integration tests     |
-| Bug Fix     | Reproduction script      | Unit tests            |
-| Performance | Baseline metrics         | Load tests            |
+Pick a primary + secondary validation method suited to the task type (e.g. UI → browser
+automation; bug fix → reproduction script).
 
 ### Step 2: Capture Current State
 

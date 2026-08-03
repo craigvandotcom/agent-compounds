@@ -2,7 +2,7 @@
 skill: ac-loop
 archetype: orchestrator
 last_pass: 2026-07-20 (W3.2 pilot)
-spine_lines: 948 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
+spine_lines: 916 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
 ---
 
 # ac-loop — maintenance ledger
@@ -13,12 +13,8 @@ done (1086 → 949 → 956 (interim additions) → 948, net −138 from baseline
 actionable shape items; 2 behavior beads open — `br list -l skill:ac-loop` (ac-uip stale
 version-bump delegation, ac-plv double-review). Near-dup scan flags `ac-loop ~ ac-implement`
 (283 shingles) — that overlap is the delegation prompts, which were assessed and deliberately
-KEPT inline (see Cut-log). **Contested block flagged for Craig's gate:** § Phase pipelining
-permissions (bd-chd5p.3 / Item 2, L~617–665) — left fully intact per W3.2 scope (do-not-touch);
-decision package in the W3.2 pilot report recommends DEMOTE-pending-hookpoint (grep found no
-runtime trigger anywhere in Phase 0–2's execution steps that actually exercises permissions
-(a)/(b)/(c) — contrast the ceremony-batching-pool's explicit "Engage the pool at these
-hookpoints" table, which this block lacks).
+KEPT inline (see Cut-log). Contested pipelining block RESOLVED via ac-znk.3 Stage-1: hookpoints
+wired live, guard-rails extracted (see Cut-log 2026-08-03).
 
 ## Inbox — shape signal awaiting triage
 <!-- Behavior-changing signal does NOT go here — it goes to a skill:ac-loop skill-improvement bead. -->
@@ -83,3 +79,15 @@ hookpoints" table, which this block lacks).
   than the original despite the line-count drop, because the compressed forward-pointer replaced
   several one-clause-per-line bullets with denser prose — verified by `--diff`/conservation, no
   heading removed, no enforcement lost).
+- [2026-08-03, ac-znk.3 Stage-1] EXTRACTED (rule stays core, procedure → references): file-cluster
+  density command + grep-truncation gotcha → `ac-pipeline/references/board-scan.md` § File-cluster
+  density; the batching rule (densest first, disjoint clusters per child) kept in core. Evidence
+  tails cut (bd-ctlqg narrative — grepped nowhere else; "20 of 94" measurement). −26 lines.
+- [2026-08-03, ac-znk.3 Stage-1] EXTRACTED: pipelining GUARD-RAILs (ledger commit mixed-state +
+  beads-DB mutation deferral) → `ac-pipeline/references/ceremony-batching-pool.md`
+  § Refine-during-ceremony guard-rails (shared ceremony-concurrency canon). Permissions +
+  hookpoint tables + SCOPE prohibition stay core (the conductor's binding *when*).
+- [2026-08-03, ac-znk.3 Stage-1] CUT (dedup): "MIN_ROUNDS untouched" subsection (restated the
+  block intro); bd-baudw enforcement blockquote compressed to 4 lines + run-id.md pointer (full
+  canon lives there); "~4h reclaim" justification tail; WIDTH-cap not-restated-here line.
+  Net Stage-1: 948 → 916 (−32 lines).
