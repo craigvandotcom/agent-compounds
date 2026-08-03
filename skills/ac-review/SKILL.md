@@ -65,8 +65,8 @@ Phase 6 commits + pushes. Mint a unique identity at review start so those fixes 
 and commit under a real name instead of falling back to `FoggyCreek` (doctrine:
 `agent-mail/references/agent-identity.md` — Tier 1 lifecycle: mint → reserve at work grain → release →
 self-deregister). **Run the mint + token/export discipline per `agent-mail/references/session-procedure.md`
-(§ Mint, § Export)** — capture `name` + `registration_token`; the reservation/release/
-message calls below REQUIRE the token.
+(§ Mint, § Export)** — capture `name` + `registration_token`, and thread that token explicitly
+on every privileged/mutating Agent Mail call (blanket rule: `agent-identity.md` § Call-scoped facts).
 
 ### Discover Project Commands
 
