@@ -636,15 +636,21 @@ AskUserQuestion(
 # `br show "$id" --json | jq` per id (multi-line descriptions break jq; bd-lsnc0).
 # Scope is still the target list (bd-baudw): this mutates beads, so it obeys the same
 # "never touch an id outside target-bead-ids.txt" rule as the stamp loop below.
-jq -c '.issues[] | select(.status == "open")' "$ARTIFACTS_DIR/beads-snapshot.json" \
-  | while IFS= read -r row; do
-    id=$(echo "$row" | jq -r '.id')
+# SINGLE-PASS: jq emits the ids directly — never re-parse a row in the shell. Piping a row
+# back through `echo` is the corrupter (ac-ewgr.1): zsh's echo expands the \n in br's JSON, so
+# 30 of 34 open beads were dropped as "jq: Invalid string: control characters" — silent under
+# bash, corrupting under zsh (the fleet's default). If a per-row loop is ever needed again,
+# it is `printf '%s'`, never `echo`.
+jq -r '.issues[]
+       | select(.status == "open")
+       | select((.issue_type == "decision")
+                or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):")))
+       | select((.labels | index("human-gate")) | not)
+       | .id' "$ARTIFACTS_DIR/beads-snapshot.json" \
+  | while IFS= read -r id; do
     grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue   # not mine — never touch it
-    needs_gate=$(echo "$row" | jq -r 'if ((.issue_type == "decision") or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):"))) and ((.labels | index("human-gate")) | not) then "yes" else "no" end')
-    if [ "$needs_gate" = "yes" ]; then
-        echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
-        br label add "$id" "human-gate" 2>/dev/null
-    fi
+    echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
+    br label add "$id" "human-gate" 2>/dev/null
 done
 ```
 
