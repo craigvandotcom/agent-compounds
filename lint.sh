@@ -356,12 +356,14 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Check 10: pipeline conformance (D-series) ---"
 
-# D2: ac-pipeline conformance checklist has both ticked items with their
-# "(this sweep, 2026-07-03)" annotation — content match, not line numbers.
+# D2: ac-pipeline conformance checklist keeps both doctrine-landing items ticked.
+# Anchored on the durable item names, not a dated sweep annotation (provenance rule:
+# skill-builder/references/structure-standard.md) — content match, not line numbers.
 check
-D2_COUNT=$(grep -c "this sweep, 2026-07-03" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null || echo 0)
+D2_COUNT=$(grep -cE '^- \[x\] \*\*(Land after merge|Conductor dedup)\*\*' "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null)
+D2_COUNT=${D2_COUNT:-0}
 if [ "$D2_COUNT" -lt 2 ]; then
-  fail "D2: skills/ac-pipeline/SKILL.md expected >=2 '(this sweep, 2026-07-03)' ticks, found $D2_COUNT"
+  fail "D2: skills/ac-pipeline/SKILL.md expected 'Land after merge' + 'Conductor dedup' ticked, found $D2_COUNT"
 fi
 
 # D3: zero _backlog/{version} occurrences in ac-plan-init/SKILL.md

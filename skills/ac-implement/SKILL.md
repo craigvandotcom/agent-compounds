@@ -16,7 +16,7 @@ Multiple sessions can safely share a wave — file reservations via Agent Mail p
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Unblocked beads (from `/ac-bead-refine`)                                       |
 | **Output**       | Implemented code, committed per bead, pushed directly to `main` (trunk-direct)             |
-| **Artifacts**    | Per-bead results in `/tmp/bead-work-<wave-slug>/bead-{id}-result.md`, progress in `/tmp/bead-work-<wave-slug>/progress.md` |
+| **Artifacts**    | Under `/tmp/bead-work-<claim-id>-<child-id>[-<run-id>]/`: per-bead results in `bead-{id}-result.md`, progress in `progress.md` |
 | **Verification** | Per-bead quality gate (test, lint, type-check), beads closed in `br`                       |
 
 ## Phase 0: Initialize
@@ -208,6 +208,7 @@ BEADS_COMPLETED=0
 CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"   # handed-down or self-derived
 WAVE_SLUG="$CLAIM_ID"   # alias for other in-file references to this key (task labels, progress.md header) — same value, not a re-derivation
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"   # mint if no orchestrator handed one down
+# net-growth-ok: ac-wno per-child bead-work key
 # Per-child key — UNCONDITIONAL, every implement session, fanned out or not (ac-wno; precedent
 # bd-baudw @ ac-bead-refine/references/workflow.md:64-71): CLAIM_ID+RUN_ID are batch/run-scoped so
 # neither separates siblings; `$$` covers AGENT_NAME being unset this early (identity is minted

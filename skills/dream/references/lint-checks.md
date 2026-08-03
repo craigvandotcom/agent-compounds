@@ -103,8 +103,9 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     `grep -rnE '\b(bd|ac|org)-[a-z]*[0-9][a-z0-9]*(\.[0-9]+)?\b|2026-[0-9]{2}|ratified|shakedown|measured 20|proven 20' skills/`
     then JUDGE each hit against the exemption taxonomy in
     `skill-builder/references/structure-standard.md` § Provenance never lives in skill text
-    (machine tokens minimal · grepped rule-handles bare · format-example dates · ledger
-    files exempt — FRICTIONS/MAINTENANCE are provenance's home). Propose: strip the tail,
+    (machine tokens minimal · grepped rule-handles bare — a date, a director, or a
+    narrative clause is never exempt; FRICTIONS/MAINTENANCE ledgers are provenance's home
+    and are not scanned by this check, not an in-text exemption). Propose: strip the tail,
     keep the rule; a unique lesson found nowhere else relocates one line to the owning
     skill's FRICTIONS first. The corpus-cadence net behind the edit-time guard and
     ac-review's doctrine-delta check 0, which only see diffs.

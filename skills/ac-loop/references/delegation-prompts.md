@@ -9,18 +9,19 @@ dispatch:
   plan `<plan-name>` ``
 - `{FLAVOR}` — Phase 1: empty; Phase 2: ``(ac-loop autonomous run)``
 
-## Refine prompt (ac-kb8 — was missing; lite run composed it from scratch)
+## Refine prompt
 
 > "Run ac-bead-refine scoped to {REFINE_SCOPE — an epic id, or explicit bead-id list}.
 > `RUN_ID=<RUN_ID>`; your artifacts dir is per-CHILD (`run-id.md` fan-out corollary —
-> compute your own discriminator, never accept one). Defer beads-DB writes per the
-> conductor's ledger-ownership rule: hold `br sync --flush-only` — the conductor owns the
-> final ledger commit. Headless: no AskUserQuestion; a genuine fork becomes a decision
-> bead (Exhaust Rule). Report ≤400 words: beads refined→stamped with IDs, premise
-> failures found (de-stamped + commented), anything blocked, + the structured `friction:`
-> block (§ Child friction schema below)."
+> compute your own discriminator, never accept one). Defer beads-DB writes per
+> `ac-pipeline/references/ceremony-batching-pool.md` § Beads-DB mutation deferral: hold
+> ALL `br` mutation verbs (`br update`/`br close`/`br label`/`br comments add`) until the
+> conductor's ledger commit lands — reads are free. Headless: no AskUserQuestion; a
+> genuine fork becomes a decision bead (Exhaust Rule). Report ≤400 words: beads
+> refined→stamped with IDs, premise failures found (de-stamped + commented), anything
+> blocked, + the structured `friction:` block (§ Child friction schema below)."
 
-## Beadify prompt (ac-kb8)
+## Beadify prompt
 
 > "Run ac-beadify on plan `{PLAN_PATH}` (status already verified loop-ready).
 > `RUN_ID=<RUN_ID>`. Skip the user-approval asks — autonomous run: auto-apply

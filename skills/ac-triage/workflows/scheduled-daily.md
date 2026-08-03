@@ -20,12 +20,12 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 ### 0. Preflight
 
 - **Isolated worktree (first, before any reads or writes) — the single-writer isolation gate.**
-  There is **no branch guard any more, by design.** The old one (`git branch --show-current`
-  must equal `main`, else abort the whole run) aborted this heartbeat wholesale for three
-  consecutive cycles on 2026-07-27 when the app checkout sat in detached HEAD: zero sources
-  fetched, zero watermarks advanced, no report — and, because the abort forbade all writes, it
-  could not even file the bead that would have escalated itself. Do NOT run triage in the live
-  checkout. **Explicitly create a dedicated worktree** off fresh `origin/<default-branch>` and
+  There is **no branch guard any more, by design.** A branch guard (`git branch --show-current`
+  must equal `main`, else abort the whole run) cannot work here: the live checkout may
+  legitimately sit on any branch or in detached HEAD, and aborting forbids all writes —
+  including the write needed to file the bead that would escalate the failure. Do NOT run
+  triage in the live checkout. **Explicitly create a dedicated worktree** off fresh
+  `origin/<default-branch>` and
   run the entire rest of this skeleton inside it — the pattern is ac-tidy's
   (`ac-tidy/workflows/nightly.md` § 0). This is EXPLICIT worktree creation in the workflow —
   never rely on the harness's background-isolation feature, which is disabled

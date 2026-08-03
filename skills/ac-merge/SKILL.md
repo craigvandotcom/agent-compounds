@@ -287,7 +287,7 @@ Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FO
 
 ```bash
 # Bead summary. NB: dcg blocks a redirect whose target path is variable-built (11 such writes in this skill) — if blocked do NOT bypass; use tee or the Write tool per ac-pipeline/references/shell-guardrails.md
-br list --json > "$ARTIFACTS_DIR/beads.json"
+br list --json | tee "$ARTIFACTS_DIR/beads.json" >/dev/null
 
 # Commit history on this branch
 BASE_BRANCH=main

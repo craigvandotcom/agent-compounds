@@ -371,13 +371,14 @@ Four checks, each a placement rule made adversarial:
 
 **CHECKLIST:**
 
+- Added skill text carrying the edit's story — a date, a director, a pass/wave narrative, or a bead-ID no other file greps as a rule-name <!-- net-growth-ok: Check-0 slug/checklist completion -->
 - Added SKILL.md core content with no evidence stamp and no offsetting demotion
 - Evidence stamp present but citing a run/probe/sign-off that can't be verified as real
 - Re-added content matching a prior `git log -S` cut (deprecated/historical/superseded block)
 - Net SKILL.md line growth with no evidence-or-demotion justification
 - Conductor-core skill growth exceeding its minted ceiling, or missing sign-off pre-mint
 
-**SLUGS:** `missing-promotion-evidence`, `false-evidence-stamp`,
+**SLUGS:** `provenance-leak`, `missing-promotion-evidence`, `false-evidence-stamp`,
 `reintroduced-historical-block`, `unjustified-net-growth`, `conductor-ceiling-breach`
 
 ### Panel scaling (ZERO-RUNTIME + no RISK-TOUCH)

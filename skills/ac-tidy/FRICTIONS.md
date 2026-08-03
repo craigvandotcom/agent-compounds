@@ -1,8 +1,8 @@
 ---
 skill: ac-tidy
 created: 2026-07-30
-last_pass: 2026-07-30
-entries: 3
+last_pass: 2026-08-03
+entries: 4
 ---
 
 # ac-tidy — friction log
@@ -74,3 +74,22 @@ entries: 3
   was the right move and is the behaviour worth keeping. Ratified fork (A) in agent-compounds
   7987960: the guardrail is now scoped to OPEN gated beads, and the Tier-1 carve-out is explicit
   at both ends so the contradiction cannot be re-derived from either side.
+
+## naive-positive-proof-arithmetic-almost-archived-kept-plans
+- skills: [ac-tidy]
+- impact: M
+- frequency: occasional
+- recurrence: 4
+- related: []
+- first_seen: 2026-07-24
+- last_seen: 2026-07-29
+- stage: ac-tidy
+- status: resolved
+- proposed_fix: exclude `pipeline-proposal`-labelled beads from `N_matching`/`N_closed` before evaluating the positive-proof gate (now the standing rule — see NIGHTLY Guardrails § Positive proof).
+- narrative: on the body-compass-app board — where this skill runs nightly — both remaining
+  loop-ready plans had exactly ONE matching bead each, `bd-pzlhv` (`br show bd-pzlhv` there
+  re-derives it): a CLOSED `pipeline-proposal` bead that merely NAMES the plan, its close
+  reason recording a human decision to KEEP both. Naive arithmetic (`N_matching = 1`,
+  `N_closed = 1`) passed the gate, which would have archived an un-beadified loop-ready plan.
+  Four consecutive nights (2026-07-24, -26, -28, -29) the arithmetic said "archive" and only a
+  run that read the matching bead's BODY prevented the loss.
