@@ -161,6 +161,31 @@ git diff $DIFF_RANGE --stat
 git diff $DIFF_RANGE --name-only
 ```
 
+**Stale-mark fallback ladder.** There is no staleness test in the block above, so a
+present-but-stale mark takes `$REVIEW_MARK..HEAD` unconditionally. When the mark is STALE —
+`MARK_AGE_DAYS > 7`, reusing `ac-pipeline/references/board-scan.md` § Scan D's shared staleness
+classification, never a second definition — resolve `DIFF_RANGE` down these rungs in order:
+<!-- net-growth-ok: ac-jj0 — the stale-mark ladder has to sit at the scope-resolution site it governs -->
+
+1. **A conductor-supplied batch range**, if one came with the invocation. Explicit scope beats inference.
+2. Else narrow on Scan D's coverage evidence: run Scan D and set
+   `DIFF_RANGE="<oldest commit in $D/uncovered>^..HEAD"` — a RANGE, because every `DIFF_RANGE`
+   consumer below takes a literal `base..head` string. Guards: an empty set there means nothing
+   is left to review (say so and stop, do not widen); a root commit has no `^`, use the commit
+   itself. Re-including already-covered commits in the middle is accepted; silent under-inclusion
+   is not.
+3. Else keep `$REVIEW_MARK..HEAD` and print Scan D's `ALARM` verdict loudly. The `v*` tag is NOT
+   a rung: `DIFF_RANGE` is `base..HEAD`, so a newer base NARROWS the range, and a release tag
+   postdating the mark is no evidence the commits before it were reviewed. **Narrow only on
+   evidence of coverage** — with none, wide is the correct conservative answer.
+
+**Honest limit:** when prior reports recorded no `Range:` claims at all (the case that motivated
+this ladder), `$D/covered` is empty, so rung 2's range reduces to exactly rung 3's — rung 1 is
+what mitigates that case. The durable fix is upstream: every report carrying its mandatory
+`**Range:**` line (§ Report Destination, bd-zl1y5). This ladder only resolves scope for an
+invocation already under way; it never self-triggers or schedules a standing review — that stays
+the weekly `ac-hygiene PANEL=full` run's duty, exactly as the next paragraph states.
+
 **Standing weekly review of `main` — NOT ac-review's duty; it belongs to the weekly hygiene
 run (plan C2).** If more than 7 days pass with no batch shipping (no new
 `.claude/reviews/batch/` commit), the review of all of `main` since the last `v*` tag is driven
