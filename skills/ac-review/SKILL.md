@@ -484,13 +484,15 @@ auto-apply cascade, and partial-failure detection — runs in **code**, not pros
 can't be hallucinated over markdown. It implements `ac-pipeline/references/review-consensus.md`:
 
 ```bash
-CONSENSUS="$(git rev-parse --show-toplevel)/.claude/skills/ac-review/scripts/consensus.py"
+PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"   # re-derive: exports do NOT survive across bash calls
+CONSENSUS="$PROJECT_ROOT/skills/ac-review/scripts/consensus.py"    # agent-compounds registry layout (canon lives at skills/)
+[ -f "$CONSENSUS" ] || CONSENSUS="$PROJECT_ROOT/.claude/skills/ac-review/scripts/consensus.py"   # consuming-app layout
 python3 "$CONSENSUS" --artifacts-dir "$ARTIFACTS_DIR" --round 1   # --round 2 for a Phase-5.5 round
 ```
 
 It reads the `round-1-{role}.json` reviewer files, writes `consensus-round-1.json` + updates
 `consensus-registry.json` (the cross-round memory — no manual table-keeping), and prints a
-summary. Harness-agnostic: plain `python3`, stdlib only.
+summary. Harness-agnostic: plain `python3`, stdlib only — and the both-roots probe above keeps it that way, never hardcoding a `.claude/` path (ac-vqf). <!-- net-growth-ok: ac-vqf both-roots consensus.py resolution -->
 
 **Exit 3 = `PANEL UNKNOWN` — a hard stop, not a warning.** The script found no usable
 Phase-2 panel manifest and **refuses to substitute a default panel**, because a check that
