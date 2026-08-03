@@ -931,6 +931,127 @@ for sskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
 done
 
 # ---------------------------------------------------------------------------
+# Check 16 — mirror fidelity (child-spawn preamble)
+#
+# Canon MANDATES this duplication: the child-spawn environment contract must be pasted
+# VERBATIM into every file that constructs a child prompt, because a pointer-only
+# reference is explicitly declared insufficient. A mandated duplicate with no drift
+# check is a guaranteed future divergence, and nothing enforced fidelity before this.
+#
+# Duplication cost being managed (re-measure with the commands below; do not trust these
+# numbers once HEAD has moved): 18 files carry a `mirror:` marker, 23 markers in total;
+# 15 files carry the preamble verbatim (14 mirrors + the canon itself); 31 files
+# reference delegation-contract.md by path, and those pointer-only consumers are correct
+# as-is — they construct no child prompt.
+#   grep -rl "<!-- mirror:" skills/ --include="*.md" | wc -l
+#   grep -rc "<!-- mirror:" skills/ --include="*.md" | awk -F: '{s+=$2} END {print s}'
+#   grep -rl "ENVIRONMENT CONTRACT (non-negotiable)" skills/ | wc -l
+#   grep -rl "delegation-contract" skills/ --include="*.md" | wc -l
+#
+# Scope — the marker corpus is NOT homogeneous, so this check is deliberately narrow:
+#   VERBATIM class  — markers citing delegation-contract.md § Child-spawn preamble.
+#                     Canon mandates a byte-identical paste. These are byte-compared.
+#   PARAPHRASE class — markers citing review-consensus.md / verification-gate.md /
+#                     bead-conventions.md. Those are deliberate prose RESTATEMENTS, which
+#                     is a documented use of the marker; byte-diffing them would fail on
+#                     an unmodified tree. Reported as skipped BY NAME, never silently.
+#   EXCLUDED        — the marker-syntax example in structure-standard.md, whose cited
+#                     path is a `<placeholder>`, not a file.
+# Every marker must land in exactly one bucket; an unaccounted marker is a hard failure,
+# because a check that silently drops what it cannot parse is a false green.
+# ---------------------------------------------------------------------------
+echo "--- Check 16: mirror fidelity (child-spawn preamble) ---"
+
+MIRROR_CANON_REF="ac-pipeline/references/delegation-contract.md"
+MIRROR_CANON_SECTION="Child-spawn preamble"
+MIRROR_CANON_FILE="$AC_ROOT/skills/$MIRROR_CANON_REF"
+
+# The canon block is blockquoted in its section; strip the quote prefix to get the
+# pasted form the carriers must match byte-for-byte.
+mirror_canon_block=$(awk '
+  f && substr($0, 1, 1) != ">" { exit }
+  /^> ENVIRONMENT CONTRACT \(non-negotiable\):/ { f = 1 }
+  f { sub(/^> ?/, ""); print }
+' "$MIRROR_CANON_FILE" 2>/dev/null)
+mirror_canon_n=$(printf '%s\n' "$mirror_canon_block" | wc -l | command tr -d ' ')
+
+check
+if [ -z "$mirror_canon_block" ] || [ "$mirror_canon_n" -lt 10 ]; then
+  fail "Check 16: could not extract the § ${MIRROR_CANON_SECTION} block from ${MIRROR_CANON_REF}"
+  mirror_canon_block=""
+fi
+
+mirror_total=0
+mirror_checked=0
+mirror_skipped=0
+mirror_excluded=0
+
+if [ -n "$mirror_canon_block" ]; then
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    mirror_total=$(( mirror_total + 1 ))
+
+    mfile=${hit%%:*}
+    mrest=${hit#*:}
+    mline=${mrest%%:*}
+    mtext=${mrest#*:}
+
+    # Marker payload: everything after `mirror:` up to the trailing comment close or the
+    # `edit there first` tail (which is written with either an em dash or a double dash).
+    mbody=${mtext#*mirror:}
+    mbody=${mbody%%--*}
+    mbody=${mbody%%— edit*}
+
+    # `§` appears with AND without a following space, and some markers carry no § at all.
+    if printf '%s' "$mbody" | grep -q '§'; then
+      mpath=${mbody%%§*}
+      msection=${mbody#*§}
+    else
+      mpath=$mbody
+      msection=""
+    fi
+    mpath=$(printf '%s' "$mpath" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    msection=$(printf '%s' "$msection" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+
+    case "$mpath" in
+      "<"*)
+        mirror_excluded=$(( mirror_excluded + 1 ))
+        echo "  EXCL  ${mfile#$AC_ROOT/}:${mline} — marker-syntax example (placeholder path)"
+        continue
+        ;;
+    esac
+
+    if [ "$mpath" != "$MIRROR_CANON_REF" ] || [ "$msection" != "$MIRROR_CANON_SECTION" ]; then
+      mirror_skipped=$(( mirror_skipped + 1 ))
+      echo "  SKIP  ${mfile#$AC_ROOT/}:${mline} — paraphrase-class mirror of ${mpath}${msection:+ § $msection} (prose restatement, not a verbatim copy)"
+      continue
+    fi
+
+    mirror_checked=$(( mirror_checked + 1 ))
+    check
+    mstart=$(awk -v m="$mline" 'NR >= m && /^ENVIRONMENT CONTRACT \(non-negotiable\):/ { print NR; exit }' "$mfile")
+    if [ -z "$mstart" ]; then
+      fail "Check 16: ${mfile#$AC_ROOT/} carries a Child-spawn-preamble mirror marker but no preamble block follows it"
+      continue
+    fi
+    mblock=$(sed -n "${mstart},$(( mstart + mirror_canon_n - 1 ))p" "$mfile")
+    if [ "$mblock" = "$mirror_canon_block" ]; then
+      printf '  PASS  %s (preamble at line %s)\n' "${mfile#$AC_ROOT/}" "$mstart"
+    else
+      fail "Check 16: ${mfile#$AC_ROOT/} preamble block (line ${mstart}) has DRIFTED from ${MIRROR_CANON_REF} § ${MIRROR_CANON_SECTION} — re-paste it verbatim from canon"
+    fi
+  done < <(grep -rn --include='*.md' -- '<!-- mirror:' "$AC_ROOT/skills" 2>/dev/null)
+fi
+
+check
+mirror_accounted=$(( mirror_checked + mirror_skipped + mirror_excluded ))
+if [ "$mirror_accounted" -ne "$mirror_total" ]; then
+  fail "Check 16: accounted for ${mirror_accounted} of ${mirror_total} mirror markers — an unparsed marker is a false green"
+else
+  echo "  mirror markers: ${mirror_total} total — ${mirror_checked} verbatim-class checked, ${mirror_skipped} paraphrase-class skipped, ${mirror_excluded} excluded"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

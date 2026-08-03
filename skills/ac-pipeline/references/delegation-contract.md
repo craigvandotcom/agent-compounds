@@ -66,6 +66,14 @@ pointer-only guidance, 3 distinct children self-detached and 3 independently
 rediscovered the Agent Mail token rule; after the conductor began inlining these
 clauses verbatim, recurrence dropped to zero for the rest of the run.
 
+**Scope of the "a pointer is not sufficient" rule — both halves.** It binds the files that
+**construct child prompts**: those must carry the block pasted verbatim, each one marked
+with a `mirror:` marker citing this section, and `lint.sh` § Check 16 byte-compares every
+such copy against the block below. For every other consumer — skills that merely cite this
+document as doctrine and spawn nothing — **pointer-only reference is correct** and no copy
+should be backfilled; the block is paid for by each child that reads it, so duplicating it
+where no child is spawned is pure cost.
+
 **The preamble (copy verbatim; substitute the child's `AGENT_NAME` — you mint it; ~240 words):**
 
 > ENVIRONMENT CONTRACT (non-negotiable):
