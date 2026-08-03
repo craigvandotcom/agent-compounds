@@ -643,6 +643,28 @@ for t in ${TARGETS[@]+"${TARGETS[@]}"}; do
   sync_target "$t" app
 done
 
+# --- memory hygiene (hoisted from deploy.sh: substrate-global + target-invariant,
+# so once per invocation, not once per target — per-target runs timed out the
+# projection-regeneration check at target 2 of ~10). Visibility only, never blocks;
+# the nightly drift-check run is the enforcement point.
+MEMORY_LINT="$(cd "$AC_ROOT/../../.." && pwd)/infrastructure/scripts/health/memory-lint.py"
+if [ -f "$MEMORY_LINT" ]; then
+  echo
+  ML_LOG="$(mktemp)"
+  if ! /usr/bin/python3 "$MEMORY_LINT" --check > "$ML_LOG" 2>&1; then
+    echo "############################################################"
+    echo "# WARNING: memory hygiene drift detected (non-blocking)     #"
+    echo "# nightly drift-check enforces this — see the report there  #"
+    echo "############################################################"
+    tail -5 "$ML_LOG"
+    echo "############################################################"
+  else
+    echo "Memory hygiene: clean"
+    tail -1 "$ML_LOG"
+  fi
+  rm -f "$ML_LOG"
+fi
+
 echo "Done. changes=$CHANGES$([ "$DRY" = 1 ] && echo ' (dry-run)')"
 if [ "$FAILURES" -gt 0 ]; then
   echo "ERROR: $FAILURES target(s) skipped by the public-target guard — fix their .gitignore and re-run" >&2

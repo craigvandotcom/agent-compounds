@@ -102,6 +102,18 @@ Refreshed against **dcg 0.6.7** (probe matrix re-run 2026-08-03; original modes 
    heredoc, and fully-**literal** `/tmp` destinations. A literal redirect target is impossible to
    write in advance whenever the path carries a runtime discriminator, which is why `tee` is the
    general escape.
+4. **`git restore <path>` / `git checkout -- <path>` (worktree discard) — blocked with
+   no bypass** (rule `core.git:restore-worktree`). This is NOT a false positive to work
+   around with `allow-once` — it's the guard working as designed. Use
+   `git stash push -- <path>` instead (recoverable via `git stash pop`); this is the
+   canonical recipe for reconciling a machine-generated tracked file (e.g.
+   `.beads/issues.jsonl`) against an incoming fast-forward pull. Two gotchas:
+   - The matcher is **string-based, not semantic** — a command whose literal TEXT
+     contains "git restore" (e.g. a `qmd search "git restore blocked"` query) trips it
+     too, even though it isn't a real invocation. Rephrase the string. (Same class as
+     entry 1's quoted-argument mode.)
+   - `git stash drop` itself emits a `DCG warn:` on stderr and exits non-zero — it
+     aborts an `&&` chain even though it isn't blocked. Run it as its own command.
 
 The allowlist (`dcg allow <rule-id>`) is rule-granular, not path-granular — allowlisting a whole
 rule to dodge one false positive disables it everywhere. Don't. Path-scoped exemptions and
