@@ -358,6 +358,7 @@ If orphans exist:
    # batch under the shared chore identity (which silently misattributes and breaks the gate).
    [ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: AGENT_NAME=FoggyCreek — cannot claim beads under the Tier-2 chore identity; re-assert the Phase-0 minted loop name" >&2; exit 2; }
    br update <id1> <id2> ... --status in_progress --assignee "$AGENT_NAME"
+   # net-growth-ok: ac-ewgr.2 — the TARGET_BEADS header mandate must sit in BOTH claim steps; the gate hard-FAILs without it
    ```
    This is the precedent from body-compass-app memory
    `claim-adopted-beads-before-planning` (claim before you plan/implement, generalized here
@@ -368,7 +369,11 @@ If orphans exist:
    `$ARTIFACTS_DIR/.claim-id` (first line = the claim id — a FILE, not an env var, since
    downstream skills read it from a fresh process) and mirror it as the first line of
    `$ARTIFACTS_DIR/progress.md`'s header. Downstream skills (RUN_ID re-keying, bd-u2lo1.9)
-   read the claim id verbatim from `.claim-id`.
+   read the claim id verbatim from `.claim-id`. **That same header MUST also carry
+   `TARGET_BEADS=<count>`** — the bead count of THIS claim (per child at width >1).
+   `ac-pipeline/scripts/beads-closed-gate.sh` parses it for the completeness union; since
+   ac-ewgr.2 a progress file that EXISTS without it is a HARD FAIL, not a warning, because
+   the union check silently short-circuits without it (`--beads` does NOT compensate).
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions.
    *At width >1:* split into up to WIDTH tree-disjoint child delegations per Efficiency
    § Parallelism (each child: own bead subset, own `TARGET_BEADS`, own claim id +
@@ -474,7 +479,7 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 
 ### Execute the wave
 
-1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, **strip `post-merge` from any bead being claimed** (`br label remove <id> post-merge` — the strip-at-claim half of the lifecycle above; an exhaust bead adopted into this new batch must be closeable), mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header. `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join. **Same FoggyCreek guard as Phase 1 step 1** — assert `AGENT_NAME != FoggyCreek` before the `br update` (`[ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: cannot claim beads as the Tier-2 chore identity" >&2; exit 2; }`); a plan batch claimed under the shared chore identity is the same misattribution bug the gate rejects (doctrine `agent-mail/references/agent-identity.md`).
+1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, **strip `post-merge` from any bead being claimed** (`br label remove <id> post-merge` — the strip-at-claim half of the lifecycle above; an exhaust bead adopted into this new batch must be closeable), mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header, and write `TARGET_BEADS=<count>` into that same header (this claim's bead count, per child at width >1 — `beads-closed-gate.sh` hard-FAILs on an existing progress file with no `TARGET_BEADS=` header since ac-ewgr.2). `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join. **Same FoggyCreek guard as Phase 1 step 1** — assert `AGENT_NAME != FoggyCreek` before the `br update` (`[ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: cannot claim beads as the Tier-2 chore identity" >&2; exit 2; }`); a plan batch claimed under the shared chore identity is the same misattribution bug the gate rejects (doctrine `agent-mail/references/agent-identity.md`).
 2. **Invoke `ac-implement`** with delegation prompt. *At width >1:* same split rule as
    Phase 1 step 2 (up to WIDTH tree-disjoint children, each with own subset /
    `TARGET_BEADS` / claim id + artifacts dir; one verify → review → close for the batch):

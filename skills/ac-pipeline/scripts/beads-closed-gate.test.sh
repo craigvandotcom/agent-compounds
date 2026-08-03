@@ -503,6 +503,48 @@ else
   fail "Case L11: expected exit 1 naming only bd-cur2, got $RC. Output: $OUT"
 fi
 
+# --- Cases NH1–NH3: the no-TARGET_BEADS-header branch (ac-ewgr.2) -----------------
+# Three states, only the third blocks. Keyed on progress-file EXISTENCE, not on
+# whether --progress was passed: the arg-resolution block always appends
+# $ARTIFACTS_DIR/progress.md when ARTIFACTS_DIR is set, so an explicit flag and a
+# silent default are indistinguishable there.
+clear_fixtures
+write_fixture "ConductorNH" '[{"id":"bd-nh1","status":"closed","labels":["infra"]},{"id":"bd-nh2","status":"closed","labels":["infra"]}]'
+
+# NH1 — not opted in at all (no --progress, no $PROGRESS_FILE, no $ARTIFACTS_DIR).
+OUT=$(GATE_AGENT="ConductorNH" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-nh1,bd-nh2 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case NH1: no progress file opted in -> completeness skipped, exit 0"
+else
+  fail "Case NH1: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# NH2 — resolved via $ARTIFACTS_DIR but the file does not exist on disk.
+OUT=$(GATE_AGENT="ConductorNH" PROGRESS_FILE= ARTIFACTS_DIR="$WORKDIR/no-such-artifacts-dir" \
+        run_gate --beads bd-nh1,bd-nh2 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -qi "progress file not found"; then
+  pass "Case NH2: resolved-but-missing progress file -> warn + exit 0 (invocation doc stays true)"
+else
+  fail "Case NH2: expected exit 0 with a not-found warning, got $RC. Output: $OUT"
+fi
+
+# NH3 — the file EXISTS but carries no TARGET_BEADS= header. Without the header the
+# completeness union short-circuits BEFORE the coverage check, so this batch (which is
+# genuinely incomplete: bd-nh2 has no entry) would otherwise pass green even with
+# --beads supplied. Hard fail.
+PROG_NH="$WORKDIR/progress-nh.md"
+printf '%s\n' \
+  'bd-nh1-20260803' 'WAVE=nh-batch' '' \
+  '### Bead bd-nh1: first bead' '- Status: COMPLETE' '- Commit: nnn111' '' \
+  'COMPLETED: 1 / 2' \
+  >"$PROG_NH"
+OUT=$(GATE_AGENT="ConductorNH" run_gate --beads bd-nh1,bd-nh2 --progress "$PROG_NH" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q "PROGRESS-NO-HEADER"; then
+  pass "Case NH3: existing progress file with no TARGET_BEADS= header -> hard fail (not a silent no-op)"
+else
+  fail "Case NH3: expected non-zero exit with PROGRESS-NO-HEADER, got $RC. Output: $OUT"
+fi
+
 # ============================================================================
 # Case I: bleed check needs a real BASE..HEAD diff — put HEAD ahead of main.
 # ============================================================================

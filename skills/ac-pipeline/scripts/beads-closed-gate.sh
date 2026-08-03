@@ -138,14 +138,16 @@ warn_bead_bleed() {
 # truly-missing ids. A single-bead batch (<=1 id) never blocks on coverage.
 # Back-compat: exactly one file reproduces the pre-multi-file behavior. A parallel
 # wave passes every child's progress.md as repeated --progress flags in ONE call.
-# A missing/unresolvable progress file is skipped in the union (warns); if NO file
-# yields a TARGET_BEADS header the whole check is a skip (return 0), never a block.
+# A missing/unresolvable progress file is skipped in the union (warns). If NO file
+# yields a TARGET_BEADS header: HARD-FAIL when at least one resolved file EXISTS on
+# disk (the check would otherwise be a silent no-op — ac-ewgr.2), skip (return 0)
+# when none exists (not opted in, or the file is simply absent).
 check_progress_completeness() {
   local in_scope="$1"; shift
   local files=("$@")
   [ "${#files[@]}" -eq 0 ] && return 0   # not opted in — skip
 
-  local union_ids="" valid_files=0 structural_problem=""
+  local union_ids="" valid_files=0 existing_files=0 structural_problem=""
   local pf n entry_count status_count tally done_n ids
   for pf in "${files[@]}"; do
     [ -z "$pf" ] && continue
@@ -153,6 +155,7 @@ check_progress_completeness() {
       echo "beads-closed-gate: WARNING — progress file not found at '$pf'; skipping it in the completeness union." >&2
       continue
     fi
+    existing_files=$((existing_files + 1))
     n=$(grep -oE 'TARGET_BEADS=[0-9]+' "$pf" | head -1 | grep -oE '[0-9]+')
     if [ -z "$n" ]; then
       echo "beads-closed-gate: WARNING — no 'TARGET_BEADS=' header in '$pf'; skipping it in the completeness union." >&2
@@ -191,9 +194,27 @@ check_progress_completeness() {
     fi
   done
 
-  # No file yielded a TARGET_BEADS header — nothing to assess (matches the
-  # pre-multi-file "unresolvable progress file is a skip" behavior).
-  [ "$valid_files" -eq 0 ] && return 0
+  # No file yielded a TARGET_BEADS header. Two sub-cases, deliberately split (ac-ewgr.2):
+  #  - At least one resolved file EXISTS on disk but none carries the header -> HARD FAIL.
+  #    The caller handed us a real progress file and the completeness union silently became
+  #    a no-op (proven: a genuinely incomplete batch exited 0 even with --beads supplied,
+  #    because this short-circuit runs BEFORE the coverage check). This repo already names
+  #    "gate silently downgrades to a no-op" a defect (ac-batch-close-ci-gate-vacuous-adbq);
+  #    a gate that cannot fail is not a gate.
+  #  - No resolved file exists (not opted in, or the file is simply absent) -> skip, return 0.
+  #    Keyed on FILE EXISTENCE, not on "was --progress passed", because the arg-resolution
+  #    block ALWAYS appends $ARTIFACTS_DIR/progress.md when ARTIFACTS_DIR is set — explicit
+  #    opt-in and silent default are indistinguishable here. This keeps
+  #    ac-loop/references/beads-closed-gate-invocation.md's "omitting --progress skips the
+  #    check entirely" true. Rejected: hard-fail on valid_files==0 unconditionally (breaks
+  #    the file-missing case and contradicts that doc); keep-as-warning (no teeth).
+  if [ "$valid_files" -eq 0 ]; then
+    if [ "$existing_files" -gt 0 ]; then
+      echo "beads-closed-gate: PROGRESS-NO-HEADER — $existing_files progress file(s) exist but none carries a 'TARGET_BEADS=' header, so the completeness check would be a silent no-op. Add 'TARGET_BEADS=<count>' to the progress.md header (ac-loop's CLAIM-AT-SELECTION step writes it)." >&2
+      return 1
+    fi
+    return 0
+  fi
 
   # Union coverage (identity-first): only a MULTI-bead in-scope batch blocks.
   # Identity-first (a2ce4bd) defeats the duplicate/extra-entry count-evasion where
