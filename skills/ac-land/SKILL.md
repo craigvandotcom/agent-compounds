@@ -629,6 +629,35 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
    upstream admin-sweep primitive lands. Then VERIFY the reservations are clear — re-list the
    project's holds and confirm no swept child reservation remains. This is the backstop for children
    that died before their own Layer-1 self-deregister; do not skip it on an empty-looking roster.
+
+   <!-- net-growth-ok: ac-zqj — the guard's uninstall condition is only correct next to the
+   teardown step that performs it; a pointer would be read after the damage. -->
+   **Pre-commit guard (decision `ac-4an`, harm-scoped by `ac-zqj`).** This is separate from the
+   roster sweep above and deregisters/retires nobody. Uninstall the mcp-agent-mail guard **only
+   when this repo's hooks are TRACKED** — i.e. `git config core.hooksPath` names a directory whose
+   `pre-commit` appears in `git ls-files`. That is the only shape in which the chain-runner wraps
+   the repo's own tracked hook and dirties the working tree, which is the harm `ac-4an` was filed
+   to stop; everywhere else the guard lives in the untracked gitdir hooks directory, is invisible
+   to the tree, and must be LEFT IN PLACE. Do NOT gate on "did THIS session install it" — neither
+   tool carries session or agent identity, so that condition is trivially true and gates nothing.
+   Do NOT call it unconditionally either: the guard is repo-scoped, two concurrent `ac-loop` runs
+   can share this checkout (§ Concurrency-safe, two-tier teardown), and idempotence is not
+   concurrency-safety — an unconditional uninstall strips a live sibling session's protection.
+   Fail safe toward leaving it: `ac-implement` re-installs it idempotently every session, so
+   leaving it costs nothing while removing it wrongly does. When the condition holds, call
+   `uninstall_precommit_guard(project_key, code_repo_path)`. A `removed:false` result simply means
+   nothing was installed — a clean no-op that needs no error handling and no "is a guard present?"
+   probe first.
+
+   **Tracked-hook integrity check — run this UNCONDITIONALLY** (it is read-only unless something
+   was actually modified). Resolve the hooks directory with `git rev-parse --git-path hooks`, or
+   honour `core.hooksPath`; never assume a fixed path inside the gitdir, which does not even
+   resolve in a submodule (there `.git` is a file, not a directory). The check can only bite in
+   repos whose hooks are tracked — in the common untracked case there is nothing to find, so do
+   not hunt for a modification that cannot exist. If a tracked hook comes back modified, restore
+   it from the committed version: `git checkout -- <hook-path>`, or read the pristine copy with
+   `git show HEAD:<hook-path>` when the tree must not be touched. The file is tracked by
+   definition of the condition, so no snapshot or backup mechanism exists or needs inventing.
 3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session
    trips over is a teardown failure. If concurrent-session files are present and not yours
    (unmerged `UU`, stray staged files), surface them in the summary — don't silently leave
