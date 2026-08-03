@@ -1,6 +1,6 @@
 ---
 name: ac-merge
-description: 'The single merge-to-main path for ANY branch — feature wave or chore/hygiene. PR creation, CI/agent feedback triage + fix-forward, always-patch version bump, tag, land. Triggers: ''merge the wave'', ''ship the branch'', ''merge to main'', ''merge this branch''.'
+description: 'The merge-to-main path for a PR BRANCH — feature wave or chore/hygiene. PR creation, CI/agent feedback triage + fix-forward, always-patch version bump, tag, land. Triggers: ''merge the wave'', ''ship the branch'', ''merge to main'', ''merge this branch''. NOT for a trunk-direct batch, which never branches and closes via ac-batch-close.'
 ---
 
 

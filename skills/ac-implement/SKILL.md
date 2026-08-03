@@ -1,6 +1,6 @@
 ---
 name: ac-implement
-description: 'Sequential bead implementation — conductor reviews, engineer sub-agents implement, loops until the wave is done. Triggers: ''work the beads'', ''implement the wave'', ''bead work'', ''run the wave'', ''start implementation''.'
+description: 'Sequential bead implementation — conductor reviews, engineer sub-agents implement, loops until the wave is done. Triggers: ''work the beads'', ''implement the wave'', ''bead work'', ''run the wave'', ''start implementation'' (of a refined bead wave). NOT for a bare coding request with no bead behind it — just write the code.'
 ---
 
 

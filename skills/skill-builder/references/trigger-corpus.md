@@ -1,0 +1,202 @@
+# Trigger precision/recall corpus
+
+The cheapest skill eval in the promotion ladder (`references/promotion-ladder.md`
+§ cheapest-first item 1): per skill, a **should-activate** set of natural prompts and a
+**should-NOT-activate** exclusion set, judged against that skill's frontmatter
+`description:` **alone** — that is all the router sees. A should-activate phrasing that
+would not select the skill is a **recall** failure; a should-NOT phrasing that would
+select it is a **precision** failure. Both are findings; the fix is a description edit,
+re-judged after.
+
+**This is a judged eval, not a machine-runnable check.** There is no router to assert
+against — the verdicts below are model judgments recorded as evidence. Row grammar, so
+un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, or
+`- PASS (after fix)`.
+
+**Coverage: batch B1 only — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in
+`lint.sh`). The remaining registry skills are the follow-on batch; enumerate them from
+`skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
+skill, so a `*/` loop reports a phantom `MISSING _tools` forever).
+
+---
+
+## ac-loop
+
+should-activate
+
+- PASS — "run the loop"
+- PASS — "ship everything available tonight, don't check in with me"
+- PASS — "go autonomous on the backlog until it's clear"
+- PASS — "work through all the ready beads without asking me anything"
+- PASS — "kick off the scheduled overnight agent run"
+
+should-NOT-activate
+
+- PASS — "review this PR"
+- PASS — "implement bead ac-xyz" (single named goal — the description routes that to the
+  stages directly)
+- FAIL (precision) → PASS (after fix) — "loop this prompt every 5 minutes". The
+  description opened "Autonomous bead-shipping loop — runs scheduled…"; `loop` +
+  `scheduled` is enough surface for a router to select it over the `loop` skill, which is
+  what actually schedules an arbitrary prompt on an interval. Fix: an explicit exclusion
+  clause naming the `loop` skill.
+- PASS — "write a plan for the new feature"
+- PASS — "close the batch"
+
+## ac-implement
+
+should-activate
+
+- PASS — "work the beads"
+- PASS — "start implementation on the refined beads"
+- PASS — "run the wave"
+- PASS — "implement the next three beads"
+- PASS — "let's do the bead work for this epic"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "start implementing the login form". The listed
+  trigger `start implementation` was unqualified, so a bare coding request with no bead
+  behind it matched the strongest phrase in the description. Fix: qualify the trigger to a
+  refined bead wave and add the explicit no-bead exclusion.
+- PASS — "run the loop" (routes to ac-loop; ac-implement's own "loops until the wave is
+  done" is body prose about its inner loop, not an autonomous-mode claim)
+- PASS — "review the implementation"
+- PASS — "refine these beads"
+- PASS — "close out the session"
+
+## ac-review
+
+should-activate
+
+- PASS — "review the branch"
+- PASS — "pre-merge review"
+- PASS — "code review this feature before we merge"
+- PASS — "run the review panel over the wave's diff"
+- FAIL (recall) → PASS (after fix) — "review the batch before we close it". The
+  description said **Feature-branch** code review with `pre-merge review` as its latest
+  trigger — under trunk-direct there is no feature branch and no merge, so the pipeline's
+  actual pre-close gate phrasing did not match its own gate's description. Fix: name the
+  trunk-direct batch case and add `review the batch` / `pre-close review` triggers.
+
+should-NOT-activate
+
+- PASS — "review my calendar for tomorrow"
+- PASS — "review this book chapter"
+- PASS — "review the plan document"
+- PASS — "security review of the pending changes" (the built-in `security-review` is the
+  narrower match; ac-review's security dimension is one lens of a 6-dimension panel, and
+  the description scopes it to a branch/batch diff)
+- PASS — "review these design mockups"
+
+## ac-batch-close
+
+should-activate
+
+- PASS — "close the batch"
+- PASS — "batch close"
+- PASS — "ship the batch"
+- PASS — "run the closing ceremony for these beads"
+- PASS — "dispatch CI for this batch and commit the batch report"
+
+should-NOT-activate
+
+- PASS — "cut a release and tag it" (the description's explicit "moved to ac-publish"
+  clause does the exclusion work — the clearest single precision win in B1)
+- PASS — "close this bead"
+- PASS — "land the session"
+- PASS — "merge the wave"
+- PASS — "close the sprint in Jira"
+
+## ac-merge
+
+should-activate
+
+- PASS — "merge the wave"
+- PASS — "merge to main"
+- PASS — "ship the branch"
+- PASS — "open a PR and land this branch"
+- PASS — "merge this hygiene branch"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "land my trunk-direct batch on main". The
+  description claimed to be "The single merge-to-main path for ANY branch", so a
+  trunk-direct session — which never branches and closes via ac-batch-close — matched it
+  on the strongest phrase it has. Over-claiming scope is a precision bug even when every
+  word was true at the time it was written. Fix: scope to a PR branch and name the
+  trunk-direct exclusion.
+- PASS — "ship the batch"
+- PASS — "close the batch"
+- PASS — "resolve these merge conflicts"
+- PASS — "git merge origin/main into my branch" (inverse direction; the description is a
+  merge-TO-main path)
+
+## ac-land
+
+should-activate
+
+- PASS — "land the session"
+- PASS — "wrap up session"
+- PASS — "close out the bead work"
+- PASS — "clean up the spawned tasks and release the Agent Mail reservations"
+- PASS — "do the retrospective for this wave"
+
+should-NOT-activate
+
+- PASS — "capture what I learned today" (the description's explicit "NOT for standalone
+  lesson capture… that is reflect" clause catches it)
+- PASS — "land this branch on main"
+- PASS — "close the batch"
+- PASS — "clean up my desktop files"
+- PASS — "land the plane"
+
+---
+
+## Findings and fixes
+
+| Skill | Failure | Class | Fix applied |
+|---|---|---|---|
+| ac-loop | "loop this prompt every 5 minutes" selected it | precision | exclusion clause naming the `loop` skill |
+| ac-implement | "start implementing the login form" selected it | precision | `start implementation` qualified to a refined bead wave + no-bead exclusion |
+| ac-review | "review the batch before we close it" did NOT select it | recall | trunk-direct batch named; `review the batch` / `pre-close review` triggers added |
+| ac-merge | "land my trunk-direct batch on main" selected it | precision | scoped to a PR branch + trunk-direct exclusion naming ac-batch-close |
+| ac-batch-close | — | — | none needed |
+| ac-land | — | — | none needed |
+
+Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
+re-judged PASS after the description edit; the re-judged verdicts are recorded inline
+above as `PASS (after fix)`. Whether the follow-on batch runs at all is gated on the
+method verdict below, not on this score.
+
+Observation carried to the follow-on batch (not a precision/recall failure, so not fixed
+here): ac-batch-close's description embeds a bare bead id, `(bd-pwt44)`. It costs router
+tokens and says nothing to a router; provenance belongs in the ledger. Sweep bead-id
+tokens out of descriptions as a batch, not one-off.
+
+## Method verdict
+
+**GO.**
+
+Judging from the `description:` alone produced usable, non-noisy signal on all 6
+conductors: a 4/6 hit rate with zero coin-flip calls, and every failure traced to a
+specific clause that could be edited. Three properties made it work, and they are the
+conditions the follow-on batch inherits:
+
+1. **The failures were not stylistic.** Each one was a real routing error a user would
+   hit — two of them (ac-review, ac-merge) were descriptions that had gone stale against
+   trunk-direct while their bodies had already been updated. The eval found doctrine
+   drift that no lint check sees, which is more value than "test the router" promised.
+2. **Explicit exclusion clauses are what pass.** The two clean skills (ac-batch-close,
+   ac-land) are exactly the two whose descriptions already carry a NOT-for clause. That
+   is the transferable fix shape, and it predicts the follow-on's failures: skills with
+   no NOT-for clause and a generic verb in their trigger list.
+3. **The near-miss set is where the signal is.** Unrelated negatives ("review my
+   calendar") are free passes and prove nothing; every finding came from a phrasing that
+   sits between two sibling skills. Weight the follow-on's exclusion sets toward
+   same-family near-misses, not distant domains.
+
+Caveat on the method, recorded so the follow-on does not over-trust it: the judge is the
+same model that will later be routed, judging its own description text with the whole
+registry in context — it can see distinctions a cold router may miss, so these verdicts
+are a **lower bound** on the true failure rate, never an upper one.
