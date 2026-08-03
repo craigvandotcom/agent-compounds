@@ -581,8 +581,12 @@ The consensus `VERDICT:` line is this review ceremony's verdict — record it on
 reviewed bead(s) as a structured comment per **`beads-standards` § Verification verdicts**
 (exact CLI: `br comments add <id> "VERDICT: passed: <detail>"` — plural `comments`
 subcommand only; do not invent a singular verb):
-`VERDICT: passed:` for a clean `APPROVED`, `VERDICT: failed:` when the panel surfaced a
-merge-blocking finding (`VERDICT: blocked:` for a `NEEDS_DECISION` partial-failure gate).
+Key the token on the ceremony's emitted OUTCOME, never on whether findings existed. `VERDICT:
+APPROVED` → `VERDICT: passed:`, INCLUDING an APPROVED reached after the panel auto-fixed
+Critical/High findings in place — a resolved finding is what a pass looks like, so name it in
+`<detail>`. `VERDICT: NEEDS_DECISION` → `VERDICT: blocked:`, the partial-failure/escalation gate.
+`VERDICT: failed:` is not emitted by ac-review at all: it belongs to verifier ceremonies whose
+subject is a pass/fail run — a red CI dispatch in `ac-batch-close`, a QA repro. <!-- net-growth-ok: the outcome→token mapping has to sit at the rule it disambiguates -->
 Review is a *verifier* ceremony — the panel/conductor writes the verdict, never the
 implementer whose diff is under review (Goodhart guard). Every finding bead filed here
 carries the `review-finding` catch-stage label **and** `discovered-from: <bead-id|unknown>`
