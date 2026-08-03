@@ -285,30 +285,73 @@ SAME `reason=batch-close` dispatch fired below, not a separate call. If that ste
 landed yet, the dispatched workflow simply doesn't have it — and that gap is *reported*, not
 swallowed, under the same assert-don't-assume rule the dispatch below carries.
 
-### Fire the Tier 1 CI dispatch
+### Resolve THIS repo's gate workflow (never hardcode a name)
 
 ```bash
-gh workflow run quality-gate.yml -f reason=batch-close -f batch_anchor="$ANCHOR"
+# net-growth-ok: ac-ewgr.5 — Act 1 gate resolution must be inline at the assert
+# The assert POLICY generalizes; the workflow NAME does not (ac-ewgr.5). `quality-gate.yml`
+# exists only in body-compass-app; agent-compounds' live gate is `registry-lint.yml`, which is
+# push-triggered AND paths-filtered. Probe, then branch on the trigger shape.
+GATE_WORKFLOW="${GATE_WORKFLOW:-}"   # a conductor may pin one explicitly; else probe
+if [ -z "$GATE_WORKFLOW" ]; then
+  for w in quality-gate.yml registry-lint.yml ci.yml lint.yml; do
+    [ -f ".github/workflows/$w" ] && { GATE_WORKFLOW="$w"; break; }
+  done
+fi
+GATE_DISPATCHABLE=no
+[ -n "$GATE_WORKFLOW" ] && grep -q 'workflow_dispatch' ".github/workflows/$GATE_WORKFLOW" && GATE_DISPATCHABLE=yes
+echo "GATE_WORKFLOW=${GATE_WORKFLOW:-<none>} dispatchable=$GATE_DISPATCHABLE"
+```
+
+No gate workflow at all → report `Tier 1 CI: NOT GATED (no gate workflow in .github/workflows/)`
+and go straight to the local-equivalent arm (ii) below. Never let the absence read as a pass.
+
+### Fire the Tier 1 CI dispatch (dispatchable gates ONLY — `GATE_DISPATCHABLE=yes`)
+
+```bash
+gh workflow run "$GATE_WORKFLOW" -f reason=batch-close -f batch_anchor="$ANCHOR"
 ```
 
 **Assert this gate; never assume it** (canon: `ac-pipeline/references/verification-gate.md`
-§ Assert the gate). If `quality-gate.yml` is absent or has no `workflow_dispatch` trigger, the
+§ Assert the gate). If no gate workflow resolved, or it has no `workflow_dispatch` trigger, the
 dispatch is skipped — but the GATE is not waived, and you may NOT report Tier 1 CI green. The
 same hole opens even where a workflow DOES exist: a path-filtered one (`on.push.paths`)
 creates **zero runs** for a batch touching none of its paths (a docs-only, `templates/`-only or
 ledger-only batch, including the Act 3 mark commit itself), so "skip silently and continue"
 reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
 
-- **(i) an executed run** — completed, successful, head SHA == the batch anchor. Verify it:
+- **(i) an executed run.** Which SHA(s) to assert depends on the trigger shape resolved above —
+  asserting the single anchor SHA against a push-triggered gate is vacuous (the anchor commit
+  often has no run of its own once `paths:` filters bite):
 
   ```bash
-  GH_DEBUG= gh run list --workflow quality-gate.yml --json headSha,conclusion --limit 100 \
-    2>/dev/null | jq -r --arg s "$ANCHOR" '[.[] | select((.headSha|startswith($s)) and .conclusion=="success")] | length'
+  # DISPATCHABLE gate: one run, head SHA == the batch anchor.
+  # (Untested in agent-compounds — neither workflow here has a workflow_dispatch trigger.)
+  if [ "$GATE_DISPATCHABLE" = yes ]; then
+    GH_DEBUG= gh run list --workflow "$GATE_WORKFLOW" --json headSha,conclusion --limit 100 \
+      2>/dev/null | jq -r --arg s "$ANCHOR" '[.[] | select((.headSha|startswith($s)) and .conclusion=="success")] | length'
+  else
+    # PUSH-TRIGGERED gate: one run PER COMMIT — assert every commit in the range, and report
+    # the no-run case as its own verdict. It is NOT a pass.
+    RUNS=$(GH_DEBUG= gh run list --workflow "$GATE_WORKFLOW" --json headSha,conclusion --limit 200 2>/dev/null)
+    for c in $(git rev-list "$BATCH_RANGE"); do
+      green=$(printf '%s' "$RUNS" | jq -r --arg s "$c" '[.[] | select((.headSha|startswith($s)) and .conclusion=="success")] | length')
+      any=$(printf '%s' "$RUNS" | jq -r --arg s "$c" '[.[] | select(.headSha|startswith($s))] | length')
+      if [ "$green" -gt 0 ]; then      echo "${c:0:8} green"
+      elif [ "$any" -gt 0 ]; then      echo "${c:0:8} FAILED"
+      else                             echo "${c:0:8} no-run (paths-filtered)"
+      fi
+    done
+  fi
   ```
 
   The `.conclusion=="success"` filter IS the assertion — counting SHA matches alone passes on a
   FAILED run, the same vacuous shape this section exists to close. `GH_DEBUG=`/`2>/dev/null` are
   load-bearing too: a tracing `gh` prefixes non-JSON, making `jq` exit 5 — a false "check errored", not a false green. `0` = no run PASSED for this anchor; never report green.
+  On the push-triggered arm, `Tier 1 CI: green` requires EVERY commit `green`. Any `FAILED` →
+  triage below. Any `no-run (paths-filtered)` → report
+  `Tier 1 CI: PARTIAL (<n>/<N> commits gated; <m> no-run, paths-filtered)` and name those SHAs —
+  a commit no gate ever executed against must never read as `Tier 1 CI: green`.
 - **(ii) a recorded local-equivalent gate**, naming all three of: the exact command(s) run,
   their exit codes, and the SHA they ran against (e.g. "`./lint.sh` exit 0 + the three touched
   proof scripts exit 0, at `<sha>`"). Fewer than three is not recorded and does not count.
@@ -352,7 +395,7 @@ RUN_DB_ID=""
 for i in $(seq 1 50); do
     sleep 30
     if [ -z "$RUN_DB_ID" ]; then
-        RUN_DB_ID=$(gh run list --workflow=quality-gate.yml --branch main \
+        RUN_DB_ID=$(gh run list --workflow="$GATE_WORKFLOW" --branch main \
           --json databaseId,headSha --limit 10 2>/dev/null \
           | jq -r --arg sha "$HEAD_SHA" '[.[] | select(.headSha == $sha)][0].databaseId // empty')
         [ -z "$RUN_DB_ID" ] && { echo "Run not registered yet... ($i/50)"; continue; }
