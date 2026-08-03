@@ -140,25 +140,37 @@ for skill_dir in "$AC_ROOT/skills"/*/; do
     fail "skills/$skill_name/SKILL.md: description is empty or missing"
   fi
 
-  # Frontmatter BLOCK INTEGRITY (ac-mah). The two presence greps above are blind
-  # to corruption INSIDE the block: a prose sentence mis-inserted between name:
-  # and description: is invalid YAML but still leaves both greps green (observed
-  # 2026-08-02 in ac-distribute + ac-site-polish, repaired under ac-uvj).
-  # Invariant: the block opens with `---` on line 1, closes at the next `---`,
-  # and every non-blank line between is a YAML mapping entry (`key:` at column 0)
-  # or an indented continuation/list line. Key COUNT and IDENTITY are deliberately
-  # NOT constrained — six skills legitimately carry extra keys (accessory:,
-  # disable-model-invocation:, tools:), and in ac-idea-lab those extra keys sit
-  # BETWEEN name: and description(:) — the same position the real corruption took —
-  # so line position is not a valid discriminator. Key-shape-vs-prose is.
+  # Frontmatter BLOCK INTEGRITY. The two presence greps above are blind to
+  # corruption INSIDE the block: a prose sentence mis-inserted between name: and
+  # description: is invalid YAML but still leaves both greps green.
+  # Invariant: SKILL.md is a regular file (never a symlink — a symlinked SKILL.md
+  # would have an out-of-tree target's content scanned and echoed into a failure
+  # message); the block opens with `---` on line 1, closes at the next `---`; every
+  # non-blank line between is a YAML mapping entry (`key:` at column 0) or an
+  # indented continuation/list line BELOW a mapping entry. Key COUNT and IDENTITY
+  # are deliberately NOT constrained — six skills legitimately carry extra keys
+  # (accessory:, disable-model-invocation:, tools:), and in ac-idea-lab those extra
+  # keys sit BETWEEN name: and description(:) — the same position the real
+  # corruption took — so line position is not a valid discriminator.
+  # Key-shape-vs-prose is, PROVIDED the key shape is tight: the first character
+  # must be LOWERCASE (`^[a-z][A-Za-z0-9_-]*:`, which admits every key the registry
+  # actually uses — name/description/accessory/tools/model/memory/
+  # disable-model-invocation/permissionMode). A looser `^[A-Za-z_]` start admits
+  # sentence-cased prose that happens to carry a colon ("Note: ...", "TODO: ...",
+  # "IMPORTANT: ..."), i.e. the corruption class this check exists to catch.
   check
   fm_err=""
   fm_closed=false
-  if [ "$(sed -n '1p' "$skill_md")" != "---" ]; then
+  fm_seen_key=false
+  if [ -L "$skill_md" ]; then
+    fm_err="SKILL.md is a symlink — must be a regular file"
+  elif [ "$(sed -n '1p' "$skill_md")" != "---" ]; then
     fm_err="line 1 is not '---' — no frontmatter block"
   else
     fm_lineno=1
-    while IFS= read -r fm_line; do
+    # `|| [ -n "$fm_line" ]` — a final line with no trailing newline is still a
+    # line; a bare `read` returns 1 there and would drop it silently.
+    while IFS= read -r fm_line || [ -n "$fm_line" ]; do
       fm_lineno=$(( fm_lineno + 1 ))
       if [ "$fm_line" = "---" ]; then
         fm_closed=true
@@ -166,14 +178,21 @@ for skill_dir in "$AC_ROOT/skills"/*/; do
       fi
       # blank / whitespace-only: skip
       [ -z "${fm_line//[[:space:]]/}" ] && continue
-      # indented continuation or list item: legal YAML inside a mapping
+      # indented continuation or list item: legal YAML only BELOW a mapping entry
       case "$fm_line" in
-        [[:space:]]*) continue ;;
+        [[:space:]]*)
+          if [ "$fm_seen_key" != true ]; then
+            fm_err="line ${fm_lineno} is indented with no mapping entry above it: ${fm_line:0:80}"
+            break
+          fi
+          continue
+          ;;
       esac
-      if ! printf '%s' "$fm_line" | grep -Eq '^[A-Za-z_][A-Za-z0-9_-]*:'; then
-        fm_err="line ${fm_lineno} is not a YAML mapping entry: ${fm_line}"
+      if ! printf '%s' "$fm_line" | grep -Eq '^[a-z][A-Za-z0-9_-]*:'; then
+        fm_err="line ${fm_lineno} is not a YAML mapping entry: ${fm_line:0:80}"
         break
       fi
+      fm_seen_key=true
     done < <(tail -n +2 "$skill_md")
     if [ -z "$fm_err" ] && [ "$fm_closed" != true ]; then
       fm_err="frontmatter block opened at line 1 is never closed by a '---'"
@@ -773,16 +792,13 @@ fi
 # not an aspirational one — it locks in the pilot's proven size as the cap.
 #
 # Standard-tier ceiling: PROVISIONAL ratchet (not measured-from-pilot like the
-# conductor ceiling above). RATCHETED 2026-08-03 (ac-gcj.6) from 770 to 730.
-# Re-measured basis: the largest standard-tier SKILL.md is ac-hygiene at 660
-# lines (it was 664 when the 770 ceiling was set). Multiplier is x1.10 —
-# deliberately TIGHTER than the x1.15 the conductor ceiling above uses, because
-# a 10% ratchet is what makes this a real tightening rather than a restatement
-# (x1.15 would give 660 x 1.15 = 759 -> 760, which also ratchets but leaves
-# more slack). 660 x 1.10 = 726 -> 730 (clean round-up). Rule for the next
-# ratchet: ceil_to_10(max(standard-tier SKILL.md line counts) x 1.10), and it
-# may only ever move DOWN — do not raise it to accommodate a bloated skill,
-# diet the skill instead.
+# conductor ceiling above). Basis: the largest standard-tier SKILL.md is
+# ac-hygiene at 660 lines; 660 x 1.10 = 726 -> 730 (clean round-up). The x1.10
+# multiplier is deliberately TIGHTER than the x1.15 the conductor ceiling above
+# uses, so each re-measure is a real tightening rather than a restatement.
+# Rule for the next ratchet: ceil_to_10(max(standard-tier SKILL.md line counts)
+# x 1.10), and it may only ever move DOWN — do not raise it to accommodate a
+# bloated skill, diet the skill instead.
 CONDUCTOR_CEILING=1110
 STANDARD_CEILING=730
 
@@ -811,7 +827,7 @@ for cskill in "${CONDUCTOR_SKILLS[@]}"; do
     printf '  PASS  %-16s %5s / %s lines\n' "$cskill" "$cskill_lines" "$CONDUCTOR_CEILING"
   fi
 done
-echo "standard-tier ceiling: ${STANDARD_CEILING} lines (ac-hygiene 660 +10%, ratcheted 2026-08-03 — lower as standard skills get dieted)"
+echo "standard-tier ceiling: ${STANDARD_CEILING} lines (largest standard skill +10%, ratchet-down only — lower as standard skills get dieted)"
 check
 for sskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
   [ -f "$sskill_path" ] || continue

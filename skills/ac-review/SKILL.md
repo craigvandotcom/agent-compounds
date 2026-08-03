@@ -4,7 +4,7 @@ description: 'Code review for a feature branch OR a trunk-direct batch — paral
 ---
 
 
-**You are the conductor.** A panel of up to seven reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts), plus a 7th lens (doctrine-delta) that activates only when the diff touches `skills/`. You synthesize, auto-fix, and escalate. Feature-branch scoped — run after implementation, before merge.
+**You are the conductor.** A panel of up to seven reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts), plus a 7th lens (doctrine-delta) that activates only when the diff touches `skills/`. You synthesize, auto-fix, and escalate. Scoped to one committed diff range — a trunk-direct batch since the review-mark (primary) or a feature branch (legacy) — run after implementation, before close/merge.
 
 For codebase-wide health checks, use `/ac-hygiene` instead.
 
@@ -14,7 +14,7 @@ For codebase-wide health checks, use `/ac-hygiene` instead.
 
 |                  |                                                                                                            |
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Input**        | Feature branch with implementation commits (from `/ac-implement` or manual coding)                  |
+| **Input**        | A committed diff range — trunk-direct batch since the review-mark (primary) or a feature branch (legacy), from `/ac-implement` or manual coding |
 | **Output**       | Review report in `.claude/reviews/` (default) or `.claude/reviews/pending/` (when `ac-batch-close` passes `report_dest` — staged for that ceremony to carry into the mark; **never** advances the review-mark itself), auto-fixed issues committed, NEEDS_DECISION items presented |
 | **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.json`, consensus in `consensus-round-1.json` + `consensus-registry.json`, progress in `progress.md` |
 | **Verification** | All project checks pass (test, lint, type-check), fixes committed, decisions resolved or documented        |

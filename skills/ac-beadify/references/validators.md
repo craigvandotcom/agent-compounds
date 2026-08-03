@@ -1,5 +1,11 @@
 <!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
 
+**Conductor: paste the block below VERBATIM at the head of EACH of the three `Task(...)`
+prompts in this file, above its `First: read AGENTS.md` line, substituting the child's
+minted `AGENT_NAME`.** It is the child-side environment contract and a pointer to it is
+explicitly insufficient (canon § Child-spawn preamble) — a preamble that stays in this
+header and never enters the constructed prompt has not been delivered to any child.
+
 ENVIRONMENT CONTRACT (non-negotiable):
 - WAIT for your own long-running commands in-shell (foreground, generous Bash
   timeout, or a foreground until-loop). Never arm a Monitor on your own command

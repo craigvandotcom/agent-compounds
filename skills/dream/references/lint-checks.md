@@ -128,9 +128,10 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     58 skills — data sparsity, not disuse. Once armed, each zero-read skill emits ONE gated
     proposal carrying the read count, the window bounds and the coverage denominator that
     armed the run; proposals become `unrefined`, `human-gate` beads and nothing is ever
-    auto-applied. Blindness caveat carried verbatim in every proposal: `skill_reads` counts
-    hook-instrumented loads only — a skill read by direct `Read` access, or inlined into a
-    prompt by a conductor, is uncounted. Separately, and behind the same arming gate
+    auto-applied. Every proposal carries the script's blindness caveat (its `CAVEAT`
+    constant is the authoritative wording): `skill_reads` counts hook-instrumented loads
+    only — a skill read by direct `Read` tool access, or inlined into a prompt by a
+    conductor, is uncounted. Separately, and behind the same arming gate
     (a re-ablation is only meaningful once an uptake baseline exists to invalidate): if the
     set of `model=` values in the `WORKER:` bead stamps
     (`grep 'WORKER:' .beads/issues.jsonl`; grammar
