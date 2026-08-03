@@ -256,7 +256,7 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 > — this structuralizes what plan prose already did.
 
 <!-- net-growth-ok: dream ac-fxq Phase-0 tooling-bug precondition check -->
-**Open tooling bugs vs THIS run's config (precondition check, dream ac-fxq):** among the
+**Open tooling bugs vs THIS run's config (precondition check):** among the
 ready/open beads labelled `tooling`/`infra` (or typed `bug` against pipeline skills), ask
 whether this run's configuration satisfies any bead's trigger. A known open bug whose
 trigger you are about to satisfy is a **precondition failure, not a background risk** —

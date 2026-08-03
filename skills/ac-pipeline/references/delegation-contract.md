@@ -145,7 +145,7 @@ restructures or renumbers):**
   formats; a top-level `"payload_read"` string key in JSON schemas (additive —
   conductors' findings merges ignore unknown keys).
 
-**Anchor-assert gate (decision ac-ewgr.7):** any instruction that tells a future
+**Anchor-assert gate:** any instruction that tells a future
 conductor to paste a block "at/after `<anchor>`" is EXECUTED at authoring time — grep the
 anchor inside the actual `Task(` prompt body (or fence) it names, not merely the file: an
 anchor found only in a header instruction is the inert-paste failure mode (shipped 6/12

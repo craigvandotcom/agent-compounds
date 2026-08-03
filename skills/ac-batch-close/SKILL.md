@@ -608,7 +608,7 @@ CARRIED=""
 [ -n "$ANCHOR" ] || { echo "FATAL: ANCHOR is empty — batch scope is unknown; refusing to select a report." >&2; exit 1; }
 BATCH_RANGE="${BATCH_RANGE:-$ANCHOR..HEAD}"
 BATCH_HEAD=$(git rev-parse HEAD)
-# CONDUCTOR-SCOPE MODE (ac-nsb). The content-grep below requires the report's `Range:` BASE to
+# CONDUCTOR-SCOPE MODE. The content-grep below requires the report's `Range:` BASE to
 # EQUAL this batch's anchor. That premise breaks when ac-review ran against a conductor-defined
 # range — e.g. a review-mark stale for weeks — and it FATALs on a report that genuinely covers
 # this batch. When the conductor hands down an explicit path in $CONDUCTOR_PENDING_REPORT, that

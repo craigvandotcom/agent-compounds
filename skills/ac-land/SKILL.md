@@ -632,7 +632,7 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
 
    <!-- net-growth-ok: ac-zqj — the guard's uninstall condition is only correct next to the
    teardown step that performs it; a pointer would be read after the damage. -->
-   **Pre-commit guard (decision `ac-4an`, harm-scoped by `ac-zqj`).** This is separate from the
+   **Pre-commit guard.** This is separate from the
    roster sweep above and deregisters/retires nobody. Uninstall the mcp-agent-mail guard **only
    when this repo's hooks are TRACKED** — i.e. `git config core.hooksPath` names a directory whose
    `pre-commit` appears in `git ls-files`. That is the only shape in which the chain-runner wraps

@@ -72,9 +72,8 @@ Use this sparingly and only when you understand the risk.
 
 ## Known False-Positives — Sanctioned Workarounds
 
-Refreshed against **dcg 0.6.7** (probe matrix re-run 2026-08-03; original modes from decision
-`ac-umq`, 2026-07-17). Use these workarounds instead of rediscovering them or reaching for
-`allow-once`.
+Refreshed against **dcg 0.6.7**. Use these workarounds instead of rediscovering them or
+reaching for `allow-once`.
 
 1. **Prose that merely quotes a destructive command — STILL LIVE, but the reason changed.**
    Evaluated in isolation, `dcg test` now returns ALLOWED for a string that merely *mentions*

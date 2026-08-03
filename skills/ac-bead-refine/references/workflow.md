@@ -484,7 +484,7 @@ refine's value measurable, and therefore what makes it safe to tune later.
 Use these categories so the record is countable: `premise-false` · `anchor-drift` ·
 `blocker-retracted` · `hazard-added` · `ac-command-fixed` · `scope-changed` · `none`.
 
-**Execute-at-draft gate (mandatory — decision ac-ewgr.7).** Every AC command you author
+**Execute-at-draft gate (mandatory).** Every AC command you author
 or edit is EXECUTED against its literal target BEFORE it lands in the bead — paste the
 run (command + exit/output) into the `refine-corrections` comment. An AC verified by
 construction is unverified: baselines come from HEAD at execution time, targets are
