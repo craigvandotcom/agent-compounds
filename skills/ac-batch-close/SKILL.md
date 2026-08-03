@@ -653,6 +653,38 @@ if [ "$N_PENDING" -ne 1 ]; then
   echo "     through CONDUCTOR_PENDING_REPORT above (ancestry-verified), never by hand." >&2
   exit 1
 fi
+# net-growth-ok: ac-ya71.1 — the narrower-range seam check belongs at the selector site
+# BEGIN Act3-rhead-assert
+# Range-HEAD assert, NON-conductor path only (the conductor branch above is already
+# ancestry-verified, and wider-is-fine there — asserting this rule on it would reject every
+# legitimately wider report). The grep selector matches the Range BASE alone, so a report whose
+# head sits BEHIND $BATCH_HEAD passes it and the review-mark then attests to commits nothing
+# reviewed — ac-review's own Phase 6 fix commit is exactly that shape. Standalone-drivable:
+# set RHEAD + BATCH_HEAD and source this block.
+if [ -z "${CONDUCTOR_PENDING_REPORT:-}" ]; then
+  BATCH_HEAD="${BATCH_HEAD:-$(git rev-parse HEAD)}"
+  if [ -z "${RHEAD:-}" ]; then
+    RHEAD=$(grep -m1 -oE 'Range:[^0-9a-f]*[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' "$PENDING_REPORT" 2>/dev/null \
+            | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}')
+    RHEAD="${RHEAD##*..}"
+  fi
+  if [ -z "$RHEAD" ] || ! git merge-base --is-ancestor "$RHEAD" "$BATCH_HEAD" 2>/dev/null; then
+    echo "FATAL: report head ${RHEAD:-<none parseable>} is not an ancestor of batch head $BATCH_HEAD — carrying NOTHING." >&2
+    exit 1
+  fi
+  GAP=$(git log --format='%h|%s' "$RHEAD".."$BATCH_HEAD")
+  if [ -n "$GAP" ]; then
+    if printf '%s\n' "$GAP" | grep -qv '|review:'; then
+      echo "FATAL: non-review commits inside the closed-but-unreviewed gap" >&2
+      printf '%s\n' "$GAP" | command tr '|' ' ' >&2
+      exit 1
+    fi
+    # PROCEED-with-seam: paste these lines into the batch report verbatim — the gap is
+    # ac-review's own fix commit(s), covered by the mark but reviewed by nothing.
+    printf '%s\n' "$GAP" | command sed 's/^/Review seam: /; s/|/ /'
+  fi
+fi
+# END Act3-rhead-assert
 CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
 # net-growth-ok: ac-ewgr.6 — the dcg reason must sit inline at the snippet or the next agent re-derives the workaround
 # RESOLVE-THEN-PASTE — do NOT "simplify" this back into a variable-built move. dcg rule
