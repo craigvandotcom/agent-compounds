@@ -555,8 +555,47 @@ export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this com
 # accumulates, because a withheld close (stop condition C2) deliberately leaves its report
 # there. Carrying the wrong file makes the review-mark attest to a diff nobody reviewed while
 # the real artifact stays in `pending/` forever — a clean-looking review blackout.
+# net-growth-ok: ac-nsb — the conductor-scope mode is a property of THIS selector; its
+# coverage proof has to sit at the selection site or it is not read when it is needed.
 CARRIED=""
-PENDING_REPORT=$(grep -lE "Range:.*${ANCHOR:0:8}[0-9a-f]*\.\." .claude/reviews/pending/*.md 2>/dev/null)
+# Re-derive the range HERE. `BATCH_RANGE="$ANCHOR..HEAD"` is assigned in the anchor block, a
+# SEPARATE fenced block; only ANCHOR is persisted to $STATE, so BATCH_RANGE may be empty in
+# this shell (same bug class as ac-loop's PROJECT_ROOT). FATAL on an empty ANCHOR rather than
+# silently computing "..HEAD".
+[ -n "$ANCHOR" ] || { echo "FATAL: ANCHOR is empty — batch scope is unknown; refusing to select a report." >&2; exit 1; }
+BATCH_RANGE="${BATCH_RANGE:-$ANCHOR..HEAD}"
+BATCH_HEAD=$(git rev-parse HEAD)
+# CONDUCTOR-SCOPE MODE (ac-nsb). The content-grep below requires the report's `Range:` BASE to
+# EQUAL this batch's anchor. That premise breaks when ac-review ran against a conductor-defined
+# range — e.g. a review-mark stale for weeks — and it FATALs on a report that genuinely covers
+# this batch. When the conductor hands down an explicit path in $CONDUCTOR_PENDING_REPORT, that
+# report is CONSIDERED instead of the grep. It is never ACCEPTED unverified: its own
+# `**Range:** <base>..<head>` line must COVER $BATCH_RANGE by git ANCESTRY — base an
+# ancestor-or-equal of $ANCHOR, head a descendant-or-equal of the batch head. A SHA-string
+# compare (the shape of the grep below) would accept any report whose base text happens to
+# match and reject every legitimately wider one, which is the entire defect being fixed.
+# A conductor-supplied report whose Range does NOT cover the batch range is REJECTED with the
+# same FATAL as an unidentifiable one — this mode changes which report is considered, never
+# whether an unverified report may be accepted. Unknown must never collapse to ok.
+if [ -n "$CONDUCTOR_PENDING_REPORT" ]; then
+  RRANGE=$(grep -m1 -oE 'Range:[^0-9a-f]*[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' "$CONDUCTOR_PENDING_REPORT" 2>/dev/null \
+           | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}')
+  RBASE="${RRANGE%%..*}"
+  RHEAD="${RRANGE##*..}"
+  if [ -n "$RRANGE" ] \
+     && git merge-base --is-ancestor "$RBASE" "$ANCHOR" 2>/dev/null \
+     && git merge-base --is-ancestor "$BATCH_HEAD" "$RHEAD" 2>/dev/null; then
+    PENDING_REPORT="$CONDUCTOR_PENDING_REPORT"
+  else
+    echo "FATAL: CONDUCTOR_PENDING_REPORT does not cover $BATCH_RANGE — carrying NOTHING." >&2
+    echo "  report: $CONDUCTOR_PENDING_REPORT" >&2
+    echo "  its claimed Range: ${RRANGE:-<none parseable>}" >&2
+    echo "  needed: base ancestor-or-equal of $ANCHOR AND head descendant-or-equal of $BATCH_HEAD" >&2
+    exit 1
+  fi
+else
+  PENDING_REPORT=$(grep -lE "Range:.*${ANCHOR:0:8}[0-9a-f]*\.\." .claude/reviews/pending/*.md 2>/dev/null)
+fi
 N_PENDING=$(printf '%s\n' "$PENDING_REPORT" | grep -c . || true)
 if [ "$N_PENDING" -ne 1 ]; then
   echo "FATAL: cannot identify this batch's review artifact — carrying NOTHING." >&2
@@ -567,8 +606,8 @@ if [ "$N_PENDING" -ne 1 ]; then
   echo "     '**Range:** <base>..<head>' line (ac-review Phase 6 requires it). Re-run Act 2." >&2
   echo "  >1 matches -> two artifacts claim the same anchor; a human picks. Do NOT guess." >&2
   echo "  There is NO positional fallback: an unidentifiable artifact is 'unknown', and" >&2
-  echo "     unknown must never collapse to ok. Only after verifying a report's Range" >&2
-  echo "     actually covers \$BATCH_RANGE may a conductor set PENDING_REPORT by hand." >&2
+  echo "     unknown must never collapse to ok. A report scoped off a stale mark goes" >&2
+  echo "     through CONDUCTOR_PENDING_REPORT above (ancestry-verified), never by hand." >&2
   exit 1
 fi
 CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
