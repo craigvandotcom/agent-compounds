@@ -44,9 +44,9 @@ own. **All three are gone from batch-close entirely** — they are not
 - **Deploy verification (Vercel served-version + intermediate-commit scan, native
   archive-watch-head)** → not batch-close's job anymore; `ac-publish` is the definitive
   ship/verify gate for the boundary that actually matters (mint + prove + ship).
-- **The full 6-dimension review panel** → stays `ac-review`'s own standalone mechanism
-  (feature-branch / on-demand) and becomes `ac-publish`'s heavy pre-tag gate (bd-pwt44.6);
-  batch-close keeps only the single light `VERDICT` pass described in Act 2 below.
+- **The full 6-dimension review panel** → stays `ac-review`'s own standalone mechanism (dual-mode:
+  a trunk-direct batch on `main` is PRIMARY, a feature branch is LEGACY) and becomes `ac-publish`'s
+  heavy pre-tag gate (bd-pwt44.6); batch-close keeps only the light `VERDICT` pass in Act 2 below.
 
 If you're looking for any of the above, it now lives in `ac-publish/SKILL.md`.
 
