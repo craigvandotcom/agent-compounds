@@ -69,6 +69,69 @@ else
   pass "Case 0: live derivation composes CHILD_ID before a trailing RUN_ID suffix"
 fi
 
+echo
+echo "=== Case 0a (SHAPE GUARD): the extracted assignments match their sanctioned shape ==="
+# Cases 1-3 SPLICE the extracted text into a `bash -c` / `zsh -c` payload and execute it.
+# Reading the real on-disk file is the whole point (that is what makes the seam proof
+# convict), so this is NOT replaced with a hardcoded copy — instead the extracted text is
+# VALIDATED BEFORE it can ever be executed. A whole-line ALLOW-LIST is used, not a
+# metacharacter blocklist: the sanctioned CHILD_ID line legitimately contains a PIPE
+# (`| command tr -cd ...`), so a "no metacharacters" rule would reject the correct text,
+# and a blocklist can always be defeated by the one character it forgot.
+#
+# If you deliberately change either derivation in ac-implement/SKILL.md, update the
+# matching pattern here in the same commit — a mismatch is a hard failure by design.
+CHILD_ID_SHAPE_RE='^[[:space:]]*CHILD_ID="\$\(printf '\''%s'\'' "\$\{AGENT_NAME:-[A-Za-z0-9_]+\}" \| command tr -cd '\''[A-Za-z0-9-]+'\''\)-\$\$"$'
+ARTIFACTS_DIR_SHAPE_RE='^[[:space:]]*ARTIFACTS_DIR="/tmp/bead-work-\$\{CLAIM_ID\}-\$\{CHILD_ID\}\$\{RUN_ID:\+-\$RUN_ID\}"$'
+
+assign_shape_ok() {   # $1=allow-list regex  $2=extracted line
+  printf '%s\n' "$2" | grep -Eq "$1"
+}
+
+# The ONLY path by which extracted text reaches a shell. Text that fails the allow-list is
+# REPORTED and returned as rejected — it is never handed to `bash -c`.
+run_if_shaped() {     # $1=allow-list regex  $2=extracted line
+  if assign_shape_ok "$1" "$2"; then
+    bash -c "$2"
+    return 0
+  fi
+  echo "  REJECTED (reported, NOT executed): $2"
+  return 1
+}
+
+SHAPE_OK=1
+if ! assign_shape_ok "$CHILD_ID_SHAPE_RE" "$CHILD_EXPR"; then
+  fail "Case 0a: the CHILD_ID line extracted from ac-implement/SKILL.md does not match its sanctioned shape — refusing to execute it. Got: ${CHILD_EXPR:-<none>}"
+  SHAPE_OK=0
+elif ! assign_shape_ok "$ARTIFACTS_DIR_SHAPE_RE" "$DIR_EXPR"; then
+  fail "Case 0a: the ARTIFACTS_DIR line extracted from ac-implement/SKILL.md does not match its sanctioned shape — refusing to execute it. Got: ${DIR_EXPR:-<none>}"
+  SHAPE_OK=0
+else
+  pass "Case 0a: both extracted assignments match the sanctioned allow-list (pipe inside the CHILD_ID command substitution included)"
+fi
+
+echo
+echo "=== Case 0b (NEGATIVE): unsanctioned extracted text is reported, never executed ==="
+# Proves the guard actually fires on the execution path, using a payload whose execution
+# would leave an observable trace. If the guard is ever weakened, this sentinel appears.
+SHAPE_SENTINEL="$(mktemp -u /tmp/bead-work-shape-guard-XXXXXX)"
+HOSTILE_EXPR="CHILD_ID=\"\$(touch '$SHAPE_SENTINEL')\""
+if run_if_shaped "$CHILD_ID_SHAPE_RE" "$HOSTILE_EXPR"; then
+  fail "Case 0b: the shape guard ACCEPTED unsanctioned text and executed it — eval-of-markdown is still live"
+elif [ -e "$SHAPE_SENTINEL" ]; then
+  fail "Case 0b: the guard reported the text but it still executed (sentinel $SHAPE_SENTINEL exists)"
+else
+  pass "Case 0b: unsanctioned text was reported and NOT executed (no sentinel)"
+fi
+rm -f "$SHAPE_SENTINEL"
+
+if [ "$SHAPE_OK" -ne 1 ]; then
+  echo
+  echo "Shape guard failed — Cases 1-3 are NOT run (that would execute unvalidated text)."
+  echo "$FAILURES bead-work assertion(s) FAILED."
+  exit 1
+fi
+
 # --- run the extracted derivation in a genuinely separate process ------------------
 # `bash -c '...' &` (never `( ... ) &`): bash pins `$$` to the TOP-LEVEL shell for the
 # whole life of that shell, subshells included — a `( ) &` harness would measure its
