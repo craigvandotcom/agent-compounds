@@ -539,7 +539,7 @@ if [ "$N_PENDING" -ne 1 ]; then
   echo "FATAL: cannot identify this batch's review artifact — carrying NOTHING." >&2
   echo "  anchor: $ANCHOR" >&2
   echo "  reports in pending/ claiming that anchor: $N_PENDING (need exactly 1)" >&2
-  echo "  present: $(ls -1 .claude/reviews/pending/*.md 2>/dev/null | tr '\n' ' ')" >&2
+  echo "  present: $(ls -1 .claude/reviews/pending/*.md 2>/dev/null | command tr '\n' ' ')" >&2
   echo "  0 matches -> Act 2's review did not run, or wrote no machine-parseable" >&2
   echo "     '**Range:** <base>..<head>' line (ac-review Phase 6 requires it). Re-run Act 2." >&2
   echo "  >1 matches -> two artifacts claim the same anchor; a human picks. Do NOT guess." >&2

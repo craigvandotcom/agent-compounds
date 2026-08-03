@@ -213,7 +213,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"   # mint if no orchestrator handed
 # bd-baudw @ ac-bead-refine/references/workflow.md:64-71): CLAIM_ID+RUN_ID are batch/run-scoped so
 # neither separates siblings; `$$` covers AGENT_NAME being unset this early (identity is minted
 # below); RUN_ID stays LAST or ac-land's `/tmp/bead-work-*-$RUN_ID` glob stops matching.
-CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | tr -cd 'A-Za-z0-9')-$$"
+CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | command tr -cd 'A-Za-z0-9')-$$"
 ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}-${CHILD_ID}${RUN_ID:+-$RUN_ID}"
 ```
 

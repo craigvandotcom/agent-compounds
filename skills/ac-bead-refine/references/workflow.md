@@ -62,7 +62,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
 #                   contract (agent-mail/references/agent-identity.md) and stable across compaction
 #      $$         → this shell's PID; distinct even when AGENT_NAME is unset or duplicated
 unset CHILD_ID 2>/dev/null || true
-CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | tr -cd 'A-Za-z0-9')-$$"
+CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | command tr -cd 'A-Za-z0-9')-$$"
 
 # 3. /tmp/<prefix>-<key>[-<run-id>] — the ac-pipeline/references/run-id.md invariant, key = CHILD_ID.
 #    RUN_ID stays LAST so a run-scoped glob (/tmp/bead-refine-*-$RUN_ID) still gathers
@@ -165,7 +165,7 @@ belonging to a sibling. When the delegation prompt supplies `TARGET_BEAD_IDS`
 TARGET_IDS=()
 while IFS= read -r line; do
   [ -n "$line" ] && TARGET_IDS+=("$line")
-done < <(printf '%s\n' "$TARGET_BEAD_IDS" | tr ',' '\n' | tr -d ' ' | grep -v '^$')
+done < <(printf '%s\n' "$TARGET_BEAD_IDS" | command tr ',' '\n' | command tr -d ' ' | grep -v '^$')
 
 [ "${#TARGET_IDS[@]}" -gt 0 ] || { echo "FATAL: TARGET_BEAD_IDS set but empty" >&2; exit 2; }
 
@@ -235,7 +235,7 @@ for id in "${IDS[@]}"; do
   } | tee -a "$ARTIFACTS_DIR/beads-full-dump.txt" >/dev/null
 done
 
-echo "SCOPE: ${#IDS[@]} bead(s) — $(tr '\n' ' ' < "$ARTIFACTS_DIR/target-bead-ids.txt")"
+echo "SCOPE: ${#IDS[@]} bead(s) — $(command tr '\n' ' ' < "$ARTIFACTS_DIR/target-bead-ids.txt")"
 ```
 
 Everything downstream (reviewer prompts, convergence, the final `refined`-stamp loop)
@@ -674,7 +674,7 @@ MISSING=$(comm -23 \
   <(sort -u "$ARTIFACTS_DIR/target-bead-ids.txt") \
   <(jq -r '.issues[].id' "$ARTIFACTS_DIR/beads-snapshot.json" | sort -u))
 if [ -n "$MISSING" ]; then
-    echo "WARN: snapshot does not cover targets ($(echo "$MISSING" | tr '\n' ' ')) — rebuilding from the target list"
+    echo "WARN: snapshot does not cover targets ($(echo "$MISSING" | command tr '\n' ' ')) — rebuilding from the target list"
     REBUILD_FLAGS=()
     while IFS= read -r t; do [ -n "$t" ] && REBUILD_FLAGS+=(--id "$t"); done < "$ARTIFACTS_DIR/target-bead-ids.txt"
     br list --json "${REBUILD_FLAGS[@]}" --all | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
