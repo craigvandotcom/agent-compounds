@@ -139,6 +139,49 @@ for skill_dir in "$AC_ROOT/skills"/*/; do
   if [ -z "$desc_val" ]; then
     fail "skills/$skill_name/SKILL.md: description is empty or missing"
   fi
+
+  # Frontmatter BLOCK INTEGRITY (ac-mah). The two presence greps above are blind
+  # to corruption INSIDE the block: a prose sentence mis-inserted between name:
+  # and description: is invalid YAML but still leaves both greps green (observed
+  # 2026-08-02 in ac-distribute + ac-site-polish, repaired under ac-uvj).
+  # Invariant: the block opens with `---` on line 1, closes at the next `---`,
+  # and every non-blank line between is a YAML mapping entry (`key:` at column 0)
+  # or an indented continuation/list line. Key COUNT and IDENTITY are deliberately
+  # NOT constrained — six skills legitimately carry extra keys (accessory:,
+  # disable-model-invocation:, tools:), and in ac-idea-lab those extra keys sit
+  # BETWEEN name: and description(:) — the same position the real corruption took —
+  # so line position is not a valid discriminator. Key-shape-vs-prose is.
+  check
+  fm_err=""
+  fm_closed=false
+  if [ "$(sed -n '1p' "$skill_md")" != "---" ]; then
+    fm_err="line 1 is not '---' — no frontmatter block"
+  else
+    fm_lineno=1
+    while IFS= read -r fm_line; do
+      fm_lineno=$(( fm_lineno + 1 ))
+      if [ "$fm_line" = "---" ]; then
+        fm_closed=true
+        break
+      fi
+      # blank / whitespace-only: skip
+      [ -z "${fm_line//[[:space:]]/}" ] && continue
+      # indented continuation or list item: legal YAML inside a mapping
+      case "$fm_line" in
+        [[:space:]]*) continue ;;
+      esac
+      if ! printf '%s' "$fm_line" | grep -Eq '^[A-Za-z_][A-Za-z0-9_-]*:'; then
+        fm_err="line ${fm_lineno} is not a YAML mapping entry: ${fm_line}"
+        break
+      fi
+    done < <(tail -n +2 "$skill_md")
+    if [ -z "$fm_err" ] && [ "$fm_closed" != true ]; then
+      fm_err="frontmatter block opened at line 1 is never closed by a '---'"
+    fi
+  fi
+  if [ -n "$fm_err" ]; then
+    fail "skills/$skill_name/SKILL.md: frontmatter block integrity — $fm_err"
+  fi
 done
 
 # agents/*.md must have name: == filename (sans .md)
