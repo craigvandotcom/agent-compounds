@@ -249,6 +249,12 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    screenshots (2622px tall) read fine early in a session and then ALL new
    image reads fail late in it. Tree-first keeps screenshot count low to
    begin with.
+12. **Verify the symptom, not the hypothesis.** When device-QAing a fix for a filed
+   native bug, re-run the bead's ORIGINAL repro/symptom first — a plausible root-cause
+   fix can target the wrong sub-issue and still pass its own narrower test while the
+   reported symptom survives. Unit/browser suites cannot see this class of gap.
+   Close only after the ORIGINAL symptom is confirmed absent on-device.
+   <!-- net-growth-ok: symptom-verification rule (dream ac-v0m, Craig-applied) -->
 
 ## Seeing the WebView (hybrid/Capacitor apps)
 

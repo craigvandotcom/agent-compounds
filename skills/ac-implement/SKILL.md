@@ -402,6 +402,15 @@ If the bead requires absent infrastructure:
 
 A bead with no `## Consumes` header at all predates the contract (legacy) — log it and proceed; do not bounce legacy beads for missing paperwork.
 
+<!-- net-growth-ok: premise-check data-values guard (dream ac-tmp, Craig-applied) -->
+**Guard: premise-check embedded factual claims.** Beyond artifact-existence, grep the
+bead's spec for any stated data value or factual claim the fix logic depends on (a DB
+row's field value, "column already exists", an assumed parent/child relationship) and
+re-verify it against LIVE ground truth — DB query, schema, git tree — before coding.
+Do not trust the refined spec's premise at face value even post-refine: specs go stale
+between filing and implementation. A falsified premise turns the bead into a revert or a
+close, not a fix.
+
 **Once a refined, conflict-free, env-supported, premise-verified bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
 Then read bead details:

@@ -52,6 +52,7 @@ Four things make it bite wider than its name suggests, all measured:
 | a long quoted CLI payload (`br comments add`, `br update --description`, a commit body) | write the body with the **Write tool** to a literal `/tmp` file, then pass it as a command substitution that reads that literal path. Strip backslash line-continuations and nested escaped quotes from the payload first — they are what the escaping heuristic matches. |
 | a heredoc into a variable-built path | the **Write tool** (and note heredocs containing a dollar sigil have been blocked independently of their target) |
 | the git verb that discards a path from a ref | `git show <ref>:<path>` piped onward — into `tee`, or into a tool's stdin flag such as `eslint --stdin`. Read-only and accepted. |
+| a truncating write that must stay in shell (script context, no Write tool in reach) | **resolve-then-paste**: `echo` the variable path ONCE, then paste the printed LITERAL into the redirect (`> /tmp/bead-work-…/beads.json`, never the raw `$ARTIFACTS_DIR` token) — the same compose-from-printed-literals discipline the teardown delete path uses. Skill snippets showing `> "$ARTIFACTS_DIR/…"` are illustrative shorthand, not runnable forms. |
 | `gh ... --template` with escaped interpolation | `gh ... --jq '<program>'` with the program in **single** quotes |
 
 ## The rule of thumb
