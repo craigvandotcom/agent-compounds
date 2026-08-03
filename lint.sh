@@ -122,6 +122,13 @@ done <<< "$DISTINCT_AC"
 # ---------------------------------------------------------------------------
 echo "--- Check 3: frontmatter conformance ---"
 
+# Every column-0 frontmatter key the registry actually uses. Census over all
+# SKILL.md at the time of writing: name (58) · description (58) ·
+# disable-model-invocation (3) · tools (2) · accessory (2). Nothing else.
+# Escape hatch for a genuinely new key: add it HERE, in the same commit that
+# introduces it — a reviewable one-line diff instead of a silent widening.
+FM_ALLOWED_KEYS="name description accessory tools disable-model-invocation"
+
 # skills/*/SKILL.md must have name: == dir name AND non-empty description:
 for skill_dir in "$AC_ROOT/skills"/*/; do
   [ -f "$skill_dir/SKILL.md" ] || continue
@@ -152,12 +159,12 @@ for skill_dir in "$AC_ROOT/skills"/*/; do
   # (accessory:, disable-model-invocation:, tools:), and in ac-idea-lab those extra
   # keys sit BETWEEN name: and description(:) — the same position the real
   # corruption took — so line position is not a valid discriminator.
-  # Key-shape-vs-prose is, PROVIDED the key shape is tight: the first character
-  # must be LOWERCASE (`^[a-z][A-Za-z0-9_-]*:`, which admits every key the registry
-  # actually uses — name/description/accessory/tools/model/memory/
-  # disable-model-invocation/permissionMode). A looser `^[A-Za-z_]` start admits
-  # sentence-cased prose that happens to carry a colon ("Note: ...", "TODO: ...",
-  # "IMPORTANT: ..."), i.e. the corruption class this check exists to catch.
+  # Key-shape-vs-prose is, PROVIDED the test is an ALLOWLIST (FM_ALLOWED_KEYS
+  # above) rather than a shape regex. A shape test admits any single lowercase
+  # word plus a colon — `todo: fix this`, `note: see below` — which is the same
+  # prose-corruption class this check exists to catch; the allowlist fails those
+  # closed. It is also fork-free: a shell `case` membership test, not a
+  # `printf | grep` pipeline per frontmatter line (Check 3 was ~360 forks/run).
   check
   fm_err=""
   fm_closed=false
@@ -188,11 +195,24 @@ for skill_dir in "$AC_ROOT/skills"/*/; do
           continue
           ;;
       esac
-      if ! printf '%s' "$fm_line" | grep -Eq '^[a-z][A-Za-z0-9_-]*:'; then
-        fm_err="line ${fm_lineno} is not a YAML mapping entry: ${fm_line:0:80}"
-        break
-      fi
-      fm_seen_key=true
+      case "$fm_line" in
+        *:*) : ;;
+        *)
+          fm_err="line ${fm_lineno} is not a YAML mapping entry: ${fm_line:0:80}"
+          break
+          ;;
+      esac
+      # Membership, not shape. `${fm_line%%:*}` is the text left of the first
+      # colon; a prefix of a real key (`tool:` vs `tools:`) fails closed.
+      case " $FM_ALLOWED_KEYS " in
+        *" ${fm_line%%:*} "*)
+          fm_seen_key=true
+          ;;
+        *)
+          fm_err="line ${fm_lineno} is not a known frontmatter key (allowed: ${FM_ALLOWED_KEYS}): ${fm_line:0:80}"
+          break
+          ;;
+      esac
     done < <(tail -n +2 "$skill_md")
     if [ -z "$fm_err" ] && [ "$fm_closed" != true ]; then
       fm_err="frontmatter block opened at line 1 is never closed by a '---'"
