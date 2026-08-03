@@ -3,8 +3,9 @@
 <!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
 
 **Conductor: paste the block below VERBATIM at the head of EACH of the one `Task(...)`
-prompt in this file, above its `First: read AGENTS.md` line, substituting the child's
-minted `AGENT_NAME`.** It is the child-side environment contract and a pointer to it is
+prompt in this file — as the FIRST lines inside its `prompt: """` fence, above the
+`You are a retrospective analyst…` opening line — substituting the child's minted
+`AGENT_NAME`.** It is the child-side environment contract and a pointer to it is
 explicitly insufficient (canon § Child-spawn preamble) — a preamble that stays in this
 header and never enters the constructed prompt has not been delivered to any child.
 

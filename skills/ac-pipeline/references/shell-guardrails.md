@@ -36,8 +36,10 @@ Four things make it bite wider than its name suggests, all measured:
    an angle-bracket placeholder. No redirect need be present.
 2. **In-place editors are caught with no redirect at all.** `perl -i` and `sed -i` write temp
    files; the source command contains no redirect and is still rejected.
-3. **Appending an error-stream redirect is not an escape.** An error redirect trailing a
-   compound command trips the same rule. Compound commands must be split, not decorated.
+3. **A trailing error-stream redirect is not an escape.** An error redirect (`2>…`) tacked onto
+   a compound command trips the same rule — this is about the STDERR redirect on a compound
+   command, not about the `>>` append operator covered above. Compound commands must be split,
+   not decorated.
 4. **A separate rule, `core.git:checkout-ref-discard`, covers the git verb that restores a path
    from another ref** — including on a clean path.
 

@@ -645,7 +645,7 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
    concurrency-safety — an unconditional uninstall strips a live sibling session's protection.
    Fail safe toward leaving it: `ac-implement` re-installs it idempotently every session, so
    leaving it costs nothing while removing it wrongly does. When the condition holds, call
-   `uninstall_precommit_guard(project_key, code_repo_path)`. A `removed:false` result simply means
+   `uninstall_precommit_guard(code_repo_path)` — repo path ONLY, no `project_key` (unlike its `install_precommit_guard` sibling). A `removed:false` result simply means
    nothing was installed — a clean no-op that needs no error handling and no "is a guard present?"
    probe first.
 

@@ -303,12 +303,12 @@ reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
 
   ```bash
   GH_DEBUG= gh run list --workflow quality-gate.yml --json headSha,conclusion --limit 100 \
-    2>/dev/null | jq -r --arg s "$ANCHOR" '[.[] | select(.headSha | startswith($s))] | length'
+    2>/dev/null | jq -r --arg s "$ANCHOR" '[.[] | select((.headSha|startswith($s)) and .conclusion=="success")] | length'
   ```
 
-  `GH_DEBUG=` and `2>/dev/null` are load-bearing — a tracing `gh` otherwise prefixes non-JSON
-  lines and makes `jq` exit 5, i.e. a false "check errored", not a false green. `0` means no
-  gate ran, whatever the workflow's presence implies.
+  The `.conclusion=="success"` filter IS the assertion — counting SHA matches alone passes on a
+  FAILED run, the same vacuous shape this section exists to close. `GH_DEBUG=`/`2>/dev/null` are
+  load-bearing too: a tracing `gh` prefixes non-JSON, making `jq` exit 5 — a false "check errored", not a false green. `0` = no run PASSED for this anchor; never report green.
 - **(ii) a recorded local-equivalent gate**, naming all three of: the exact command(s) run,
   their exit codes, and the SHA they ran against (e.g. "`./lint.sh` exit 0 + the three touched
   proof scripts exit 0, at `<sha>`"). Fewer than three is not recorded and does not count.
@@ -549,8 +549,8 @@ export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this com
 # net-growth-ok: bd-f72as — the carry snippet IS the review-mark writer; guidance must sit
 # inline at the selection site.
 # Select the report by CONTENT, not position. It must claim THIS batch's anchor in its own
-# `**Range:**` line (ac-review on main bases its range on the same review-mark this ceremony
-# anchors on, so the base sha matches by construction). A positional pick (`ls | head -1`) is
+# `**Range:**` line (ac-review on main USUALLY anchors on this same review-mark, so the base sha
+# usually matches — NOT by construction: see CONDUCTOR-SCOPE MODE below). A positional pick (`ls | head -1`) is
 # lexically-OLDEST-first; `pending/` legitimately
 # accumulates, because a withheld close (stop condition C2) deliberately leaves its report
 # there. Carrying the wrong file makes the review-mark attest to a diff nobody reviewed while

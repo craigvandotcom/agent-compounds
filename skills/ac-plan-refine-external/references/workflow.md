@@ -444,9 +444,10 @@ These deferred findings serve two purposes:
 
 <!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
 
-**Conductor: paste the block below VERBATIM at the head of EACH of the one `Task(...)`
-prompt in this file, above its `First: read AGENTS.md` line, substituting the child's
-minted `AGENT_NAME`.** It is the child-side environment contract and a pointer to it is
+**Conductor: paste the block below VERBATIM at the head of the one child prompt in this
+file — the fenced block beginning `You are making a single targeted edit to a plan
+document.`, which is what gets handed to the `Task(...)` call below it (that call carries
+no `prompt:` argument of its own) — substituting the child's minted `AGENT_NAME`.** It is the child-side environment contract and a pointer to it is
 explicitly insufficient (canon § Child-spawn preamble) — a preamble that stays in this
 header and never enters the constructed prompt has not been delivered to any child.
 
