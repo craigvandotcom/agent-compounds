@@ -36,7 +36,7 @@ Substitute `{INTENT}`, `{FIXES}`, `{CMD_TEST/LINT/TYPECHECK}`, `{ARTIFACTS_DIR}`
 
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-Read AGENTS.md for project context.
+First: read AGENTS.md for project context.
 
 ## Your Task
 

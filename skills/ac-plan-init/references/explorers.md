@@ -41,7 +41,7 @@ compete — only evidence-backed findings count.
 
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: Read AGENTS.md for project context and conventions.
+First: read AGENTS.md for project context and conventions.
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 
 You are finding existing patterns for [feature] in this codebase. You compete with 2 other explorers — only evidence-backed findings with file paths count.
@@ -73,7 +73,7 @@ Limit: top 7 patterns. Under 500 words. Cite files, not guesses.
 
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: Read AGENTS.md for project context and conventions.
+First: read AGENTS.md for project context and conventions.
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 
 You are identifying dependencies and APIs needed for [feature]. You compete with 2 other explorers — only evidence-backed findings count.
@@ -106,7 +106,7 @@ Limit: top 7 dependencies. Under 500 words. Cite files, not guesses.
 
 ```
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
-First: Read AGENTS.md for project context and conventions.
+First: read AGENTS.md for project context and conventions.
 {If relevant skills identified: "Read the relevant skill file for domain patterns (see AGENTS.md > Available Skills)."}
 
 You are researching constraints for [feature]. You compete with 2 other explorers — only evidence-backed constraints with file citations count.
