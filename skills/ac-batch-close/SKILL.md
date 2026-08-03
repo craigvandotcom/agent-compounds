@@ -226,9 +226,9 @@ STATE="$ARTIFACTS_DIR/state.env"
 ### Gather Batch Context (retarget of "Gather PR Context" — no PR body, just scope)
 
 ```bash
-br list --json > "$ARTIFACTS_DIR/beads.json"           # the claim set this batch is closing. If dcg blocks a write here (variable-built redirect target), do NOT bypass — see ac-pipeline/references/shell-guardrails.md
-git log $BATCH_RANGE --oneline > "$ARTIFACTS_DIR/commits.txt"
-git diff $BATCH_RANGE --stat > "$ARTIFACTS_DIR/diff-stats.txt"
+br list --json | tee "$ARTIFACTS_DIR/beads.json" >/dev/null           # the claim set this batch is closing. `| tee` is the dcg-sanctioned write shape — destination is an ARGUMENT, so there is no redirect operator to match (ac-pipeline/references/shell-guardrails.md)
+git log $BATCH_RANGE --oneline | tee "$ARTIFACTS_DIR/commits.txt" >/dev/null
+git diff $BATCH_RANGE --stat | tee "$ARTIFACTS_DIR/diff-stats.txt" >/dev/null
 ```
 
 No PR body is constructed. This context feeds the Act 3 batch-close report only.
