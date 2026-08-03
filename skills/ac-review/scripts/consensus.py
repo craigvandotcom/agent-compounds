@@ -56,11 +56,89 @@ def sev_rank(s):
 
 
 def norm_key(f):
-    """Stable match key: normalized file path + line + lowercased category."""
+    """Stable match key: normalized file path + line + lowercased category.
+
+    Deliberately UNCHANGED by ac-ewgr.4. This key is the registry's cross-round
+    identity and the exact-line consensus index; loosening it would silently
+    re-bucket carried-forward findings. Adjacent-line anchoring of ONE defect is
+    handled by the separate near-location pass in `build()` — see the comment at
+    `NEAR_LINE_WINDOW` for the chosen approach, its rejected alternatives, and the
+    false-merge trade.
+    """
     file = re.sub(r"^\./", "", (f.get("file") or "").strip())
     line = f.get("line")
     cat = (f.get("category") or "").strip().lower()
     return "{}:{}|{}".format(file, line, cat)
+
+
+# --- Near-location consensus (ac-ewgr.4) ------------------------------------
+# Two reviewers who find the SAME defect often anchor it to adjacent lines (:17
+# and :19). Under exact-line keying neither reaches the 2-reviewer threshold, so
+# both stay DEFERRED and the defect ships.
+#
+# CHOSEN: candidate (a) — a small line-proximity window — GATED BY LEXICAL
+# OVERLAP of the findings' own title+fix text. The gate is what makes this
+# implementable at all. Refine proved the RED pair (one defect, :17/:19) and the
+# anti-false-merge control (two genuinely different defects, :17/:19) are
+# BYTE-IDENTICAL in every field `norm_key` reads — file, line, category — and
+# differ ONLY in title/fix. So a location-only rule provably merges both or
+# neither. Reading the text is the only signal that separates them, and it does:
+# the RED pair shares null/deref/handler/guard; the control shares nothing.
+# REJECTED: (a) bare proximity — merges the control, an accepted-blind false
+# merge; (b) enclosing-symbol keying — same limitation, plus it needs source
+# access this script does not have; (c) a third NEAR-MISS output bucket routed to
+# the conductor — correct but strictly more surface (new dict key, new summary
+# section, new conductor step) than the text gate needs, and it defers to a human
+# what the text signal already decides.
+# ACCEPTED TRADE: two different defects at adjacent lines that ALSO describe
+# themselves in overlapping words will merge. That is the same trade HEAD already
+# takes at exact-line granularity (the `by_loc` index merges distinct-titled
+# findings at the same line), narrowed here by the text gate rather than widened.
+# The window is small and the reasons string names it, so a wrong merge is
+# visible in the summary rather than silent.
+NEAR_LINE_WINDOW = 5          # lines; |a.line - b.line| must be within this
+NEAR_TEXT_MIN_SHARED = 2      # shared content tokens
+NEAR_TEXT_MIN_JACCARD = 0.3   # and this much set overlap
+
+_STOPWORDS = {
+    "a", "an", "and", "are", "at", "be", "by", "for", "from", "in", "is", "it",
+    "its", "may", "no", "not", "of", "on", "or", "that", "the", "this", "to",
+    "with",
+}
+
+
+def text_tokens(f):
+    """Content-word set of a finding's own prose (title + fix) — ac-ewgr.4."""
+    raw = "{} {}".format(f.get("title") or "", f.get("fix") or "").lower()
+    return {t for t in re.findall(r"[a-z0-9]+", raw) if t not in _STOPWORDS}
+
+
+def _line_of(f):
+    try:
+        return int(f.get("line"))
+    except (TypeError, ValueError):
+        return None
+
+
+def near_match(a, b):
+    """True when a and b plausibly describe ONE defect anchored a few lines apart."""
+    if a.get("_reviewer") == b.get("_reviewer"):
+        return False
+    if a["_key"].rsplit(":", 1)[0] != b["_key"].rsplit(":", 1)[0]:
+        return False  # different file
+    la, lb = _line_of(a), _line_of(b)
+    if la is None or lb is None:
+        return False
+    delta = abs(la - lb)
+    if delta == 0 or delta > NEAR_LINE_WINDOW:
+        return False  # 0 is the exact-line index's job; beyond the window is not near
+    ta, tb = text_tokens(a), text_tokens(b)
+    shared = ta & tb
+    union = ta | tb
+    if not union:
+        return False
+    return (len(shared) >= NEAR_TEXT_MIN_SHARED
+            and len(shared) / float(len(union)) >= NEAR_TEXT_MIN_JACCARD)
 
 
 def load_panel(artifacts_dir, rnd, override):
@@ -161,6 +239,18 @@ def build(artifacts_dir, rnd, expected, panel_source, panel_skipped=None):
         loc = f["_key"].rsplit("|", 1)[0]
         by_loc.setdefault(loc, set()).add(f["_reviewer"])
 
+    # Near-location index (ac-ewgr.4): same defect, adjacent lines. Deliberately
+    # SEPARATE from by_loc so the exact-line behaviour above is untouched — by_loc
+    # merges on location alone; this pass additionally requires the text gate.
+    near_by_key = {}
+    for f in findings:
+        peers = {f["_reviewer"]}
+        for g in findings:
+            if g is not f and near_match(f, g):
+                peers.add(g["_reviewer"])
+        if len(peers) >= 2:
+            near_by_key.setdefault(f["_key"], set()).update(peers)
+
     auto_fix, deferred = [], []
     for key, group in by_key.items():
         rep = max(group, key=lambda x: sev_rank(x.get("severity")))
@@ -175,6 +265,10 @@ def build(artifacts_dir, rnd, expected, panel_source, panel_skipped=None):
             reasons.append(
                 "same-location-consensus:{}".format(",".join(sorted(loc_reviewers)))
             )
+        near_reviewers = near_by_key.get(key, set())
+        if len(reviewers) < 2 and len(loc_reviewers) < 2 and len(near_reviewers) >= 2:
+            reasons.append("near-location-consensus(<={}L):{}".format(
+                NEAR_LINE_WINDOW, ",".join(sorted(near_reviewers))))
         if key in prior_keys:
             reasons.append("cross-round-consensus:round-{}".format(prior_keys[key].get("round")))
         entry = {
