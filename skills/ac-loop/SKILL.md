@@ -380,7 +380,12 @@ If orphans exist:
    `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   bash "$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh" \
+   # net-growth-ok: ac-ji5 — both-roots gate-script probe; a single hardcoded `.claude/` path
+   # is unrunnable from the agent-compounds registry itself (the script lives at skills/… there).
+   PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"   # re-derive HERE — the assignment above is in a different bash call
+   GATE="$PROJECT_ROOT/skills/ac-pipeline/scripts/beads-closed-gate.sh"                    # registry layout
+   [ -f "$GATE" ] || GATE="$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh"   # harness layout
+   bash "$GATE" \
      --beads "<this-batch's-bead-ids,comma-separated>" \
      --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
      "$AGENT_NAME" <delegated-identities…>

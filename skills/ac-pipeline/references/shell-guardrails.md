@@ -13,10 +13,20 @@ file, keep that discipline.
 
 ## What actually gets blocked
 
-`core.filesystem:redirect-truncate-dynamic-path` is the frequent one. It fires on a stdout
-redirect — truncating or appending, and on a heredoc-fed one — whose target path is built from
-a shell variable rather than written out literally. That covers nearly every artifacts-dir and
-state-file write in the `ac-*` pipeline.
+`core.filesystem:redirect-truncate-dynamic-path` is the frequent one. It fires on a
+**truncating** stdout redirect whose target path is built from a shell variable rather than
+written out literally. That covers nearly every artifacts-dir and state-file write in the
+`ac-*` pipeline.
+
+**The rule keys on truncation only — appending is never blocked, and a heredoc is not an
+independent trigger.** Probed five ways against **dcg 0.6.7** (2026-08-03, all targets
+variable-built): the truncating form, and that same truncating form when fed by a heredoc, are
+BLOCKED; the appending form, a brace-group append, and an append fed by a heredoc are all
+ALLOWED. dcg's own
+explain text lists the appending form as a safer alternative, so do not read this rule as a
+ban on preserving-writes. Re-probe before trusting this paragraph on a newer dcg: the parse
+is positional, so write the candidate to a literal `/tmp` file first and pass it to `dcg test`
+as a command substitution — a command that merely quotes the construct is itself blocked.
 
 Four things make it bite wider than its name suggests, all measured:
 
