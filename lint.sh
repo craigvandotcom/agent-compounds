@@ -785,11 +785,12 @@ fi
 # Conductor-tier ceiling: each of the 6 ratified pipeline-conductor skills'
 # SKILL.md must be <= CONDUCTOR_CEILING lines. HARD FAIL if any exceeds.
 #
-# Derivation: the W3.2 pilot dieted+wired ac-loop to a live-run-accepted GREEN
-# operating core of 963 lines. The conductor-tier ceiling = that measured size
-# + ~15% headroom = 963 x 1.15 ~= 1107 -> 1110 (clean round-up). Post-W3.2-pilot,
-# live-run-accepted 2026-07-21. This is a MEASURED ceiling (from a shipped skill),
-# not an aspirational one — it locks in the pilot's proven size as the cap.
+# Derivation (ORIGIN, 2026-07-21): the W3.2 pilot dieted+wired ac-loop to a
+# live-run-accepted GREEN operating core of 963 lines; the conductor-tier ceiling
+# = that measured size + ~15% headroom = 963 x 1.15 ~= 1107 -> 1110 (clean
+# round-up). That origin is HISTORY, not the live basis: ac-loop has since shrunk
+# and the tier maximum is now ac-review. The constant stands as a cap TIGHTER than
+# what the tier would derive today — a MEASURED ceiling, never an aspirational one.
 #
 # Standard-tier ceiling: PROVISIONAL ratchet (not measured-from-pilot like the
 # conductor ceiling above). Basis: the largest standard-tier SKILL.md is
@@ -798,7 +799,8 @@ fi
 # uses, so each re-measure is a real tightening rather than a restatement.
 # Rule for the next ratchet: ceil_to_10(max(standard-tier SKILL.md line counts)
 # x 1.10), and it may only ever move DOWN — do not raise it to accommodate a
-# bloated skill, diet the skill instead.
+# bloated skill, diet the skill instead. The ratchet self-check below enforces
+# the half a run-time recompute CAN enforce (constant must not exceed derived).
 CONDUCTOR_CEILING=1110
 STANDARD_CEILING=730
 
@@ -812,7 +814,61 @@ CONDUCTOR_SKILLS=(
 )
 
 echo "--- Check 15: post-pilot line ceilings ---"
-echo "conductor-tier ceiling: ${CONDUCTOR_CEILING} lines (ac-loop 963 +15%, post-W3.2-pilot, live-run-accepted 2026-07-21)"
+
+# Ratchet self-check — ONE-WAY, by construction.
+# Recomputes each tier's derived ceiling from the live SKILL.md line counts and
+# FAILS when the hand-set constant EXCEEDS it. It is NOT symmetric: a derived
+# value LOOSER than the constant is never licence to raise the constant. Real
+# monotonicity needs the committed constant as its own high-water mark, which a
+# run-time recompute cannot see — so a raise stays a reviewed edit, and this
+# check catches the raise that outruns the measured tier. The constant is a
+# CACHE of a derived value that may only ever get tighter.
+# Integer form of ceil_to_10(max x mult): truncate max*mult to a whole line count,
+# then round that up to the next multiple of 10 (660 x1.10 -> 726 -> 730;
+# 591 x1.10 -> 650 -> 650; 1101 x1.15 -> 1266 -> 1270).
+ratchet_derived() {   # $1 = tier max lines, $2 = multiplier as a percentage
+  local rd_raw=$(( $1 * $2 / 100 ))
+  echo $(( (rd_raw + 9) / 10 * 10 ))
+}
+RATCHET_STD_MAX=0; RATCHET_STD_OWNER="(none)"
+RATCHET_CON_MAX=0; RATCHET_CON_OWNER="(none)"
+for rskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
+  [ -f "$rskill_path" ] || continue
+  rskill_name=$(basename "$(dirname "$rskill_path")")
+  rskill_lines=$(wc -l < "$rskill_path" | tr -d ' ')
+  rskill_tier=standard
+  for cskill in "${CONDUCTOR_SKILLS[@]}"; do
+    if [ "$rskill_name" = "$cskill" ]; then rskill_tier=conductor; break; fi
+  done
+  if [ "$rskill_tier" = conductor ]; then
+    if [ "$rskill_lines" -gt "$RATCHET_CON_MAX" ]; then
+      RATCHET_CON_MAX=$rskill_lines; RATCHET_CON_OWNER=$rskill_name
+    fi
+  else
+    grep -q '^accessory: true' "$rskill_path" 2>/dev/null && continue
+    if [ "$rskill_lines" -gt "$RATCHET_STD_MAX" ]; then
+      RATCHET_STD_MAX=$rskill_lines; RATCHET_STD_OWNER=$rskill_name
+    fi
+  fi
+done
+RATCHET_STD_DERIVED=$(ratchet_derived "$RATCHET_STD_MAX" 110)
+RATCHET_CON_DERIVED=$(ratchet_derived "$RATCHET_CON_MAX" 115)
+check
+if [ "$STANDARD_CEILING" -gt "$RATCHET_STD_DERIVED" ]; then
+  fail "Check 15: ratchet violated — STANDARD_CEILING (${STANDARD_CEILING}) exceeds derived ceiling (${RATCHET_STD_DERIVED} = ceil_to_10(${RATCHET_STD_MAX} x 1.10), tier max ${RATCHET_STD_OWNER}) — the ratchet moves DOWN only; diet the skill instead of raising the constant"
+else
+  printf '  PASS  ratchet         STANDARD_CEILING %s <= derived %s = ceil_to_10(%s x 1.10), tier max %s\n' \
+    "$STANDARD_CEILING" "$RATCHET_STD_DERIVED" "$RATCHET_STD_MAX" "$RATCHET_STD_OWNER"
+fi
+check
+if [ "$CONDUCTOR_CEILING" -gt "$RATCHET_CON_DERIVED" ]; then
+  fail "Check 15: ratchet violated — CONDUCTOR_CEILING (${CONDUCTOR_CEILING}) exceeds derived ceiling (${RATCHET_CON_DERIVED} = ceil_to_10(${RATCHET_CON_MAX} x 1.15), tier max ${RATCHET_CON_OWNER}) — the ratchet moves DOWN only; diet the skill instead of raising the constant"
+else
+  printf '  PASS  ratchet         CONDUCTOR_CEILING %s <= derived %s = ceil_to_10(%s x 1.15), tier max %s\n' \
+    "$CONDUCTOR_CEILING" "$RATCHET_CON_DERIVED" "$RATCHET_CON_MAX" "$RATCHET_CON_OWNER"
+fi
+
+echo "conductor-tier ceiling: ${CONDUCTOR_CEILING} lines (W3.2-pilot measured cap, live-run-accepted 2026-07-21; the live tier max is ac-review — see the ratchet line above)"
 check
 for cskill in "${CONDUCTOR_SKILLS[@]}"; do
   cskill_path="$AC_ROOT/skills/$cskill/SKILL.md"
