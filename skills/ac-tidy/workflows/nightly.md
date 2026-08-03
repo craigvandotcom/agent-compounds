@@ -92,8 +92,11 @@ Read the board per `ac-pipeline/references/board-scan.md` (already excludes `_sh
   dedup, not the lease, prevents double-emit.
 - **Tier 1** (always): apply Phase 2d + 2e reconciliation.
 - **Tier 2** (only if the toggle is ON): apply provably-done archives that pass the
-  positive-proof gate (`N_matching > 0` AND `N_closed == N_matching` AND parseable non-empty
-  `br` result — else fall through to a Tier-3 proposal). Never touch `human-gate`/`qa-blocker`.
+  **positive-proof gate defined in `SKILL.md` § NIGHTLY Guardrails** — that bullet is the SINGLE
+  definition of the gate *and* of which beads count toward it (proposal beads are excluded).
+  Read it there; do not restate the predicate here — a second copy is how it drifted before.
+  An item that fails the gate falls through to a Tier-3 proposal (§ 4 below).
+  Never touch `human-gate`/`qa-blocker`.
 
 ### 4. Emit Tier-3 proposals atomically
 
