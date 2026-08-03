@@ -430,6 +430,9 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 **Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Bead specs go stale between refine and implement — refine verifies against the codebase as of ITS run, and intervening beads invalidate claims (incident: stale-spec-claims — `references/incidents.md`). Do this for every bead, not just ones the native-testing skill flags.
 
+<!-- net-growth-ok: dream ac-r5g affected-graph subset rule -->
+**The affected-graph can silently subset an explicit test selection (conductor's job to pre-empt).** `vitest --affected` derives the suite set from the import graph, so a test asserting against a shared interface that does NOT import the changed file is silently dropped — and the run still exits 0. When the bead touches a shared interface (a type, schema, mock, fixture, API contract): (1) **name the affected suites in the engineer prompt** — the conductor knows what changed, the child sees only its own diff; (2) find the mock/assertion owners with `grep -rl "<changed symbol>" --include='*.test.*' .` — any hit outside the changed file's own suite is in scope; (3) `VITEST_AFFECTED_DISABLED=1` is pre-authorized for this case — the child does not need to ask.
+
 **Engineering skill first (conductor's job):** Before identifying domain skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps this is `capacitor` (`capacitor/SKILL.md`). Include it in the engineer prompt for any bead touching UI, navigation, data fetching, auth, storage, lifecycle, or build.
 
 **Skill routing (conductor's job):** Read the bead spec and identify relevant domain skills from `AGENTS.md` > "Available Skills". Include the relevant skill paths in the engineer prompt below.
@@ -599,7 +602,10 @@ mcp__mcp-agent-mail__release_file_reservations(
 TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", status: "completed")
 ```
 
-Append to `$ARTIFACTS_DIR/progress.md` (include header on first write):
+Append to `$ARTIFACTS_DIR/progress.md` (include header on first write). **This exact
+shape is parsed by `beads-closed-gate.sh` — reproduce it literally: APPEND sections to
+the one `progress.md`, never a sibling per-bead result file in its place; a fanned-out
+implement child inherits this contract verbatim** <!-- net-growth-ok: dream ac-3ao -->:
 
 ```markdown
 <!-- Header (first bead only) -->

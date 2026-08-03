@@ -116,6 +116,17 @@ skill's existing `FRICTIONS.md` entries and judges same-vs-new against them dire
   (if sharper) `proposed_fix`.
 - **New root friction** → mint a new kebab-slug `id`.
 
+**Cross-skill dedup (BEFORE minting an id).** A friction living in shared tooling — the
+guard layer, the beads CLI, the delegation contract, git — is felt by many skills and
+re-discovered by each. Before minting, search the whole sensor:
+`grep -rl "<2-3 distinctive words>" skills/*/FRICTIONS.md`. If a sibling already logs it:
+do NOT mint a second id — bump the EXISTING id's `recurrence` in its primary skill, add
+your skill to its `related` field, and add a pointer entry in your own file (`see <id> in
+<primary-skill>` **plus a one-line local manifestation** — how it bit THIS skill — so
+every affected skill keeps local visibility; pointers are not re-counted by the weighting
+pass). Load-bearing because promotion weighting counts once per id: two ids for one
+friction split the real recurrence and neither half reflects the true cost.
+
 Per-skill sets are small (~5-30 entries), so an agent reading and judging the whole file
 directly is cheap and reliable — no index is needed at this scale. `qmd` vector-search is
 **demoted to a secondary "candidate-pull" role only**: it may surface maybe-related entries

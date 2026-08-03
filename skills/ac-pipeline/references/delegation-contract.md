@@ -145,9 +145,20 @@ restructures or renumbers):**
   formats; a top-level `"payload_read"` string key in JSON schemas (additive —
   conductors' findings merges ignore unknown keys).
 
-**Compliance note (verified at refine r2, ac-gcj.8):** the pointer-only
-preamble references at `ac-beadify/references/validators.md:1` and
-`ac-plan-init/references/explorers.md:1` are non-compliant with § Child-spawn
-preamble above (pointer-only is explicitly ruled insufficient there; neither
-conductor SKILL.md injects the verbatim block into its constructed child
-prompts) — needs backfilling, tracked in follow-up bead ac-08k.
+## Brief claims are HINTS — `br show` is authoritative
+
+A delegation brief is written by a conductor at spawn time and read by a child at act
+time. Everything factual in it — bead status, preconditions already satisfied, which
+files are clean, which tools are available — may have drifted in between, or may have
+been wrong when written.
+
+**The child re-derives before acting:**
+- Bead spec, status and ACs → `br show <id>` (never the brief's restatement).
+- Working-tree/branch state → ask git, never the brief and never the filesystem
+  (`git-state-checks-ask-git-not-the-filesystem`).
+- Tool availability → probe it; a brief asserting a tool works is not a probe.
+
+**Standing sanctions go in VERBATIM, not as a pointer.** A prose control reaches exactly
+the agents whose prompt contains it — it does not cascade to grandchildren the conductor
+never sees. If a rule must hold at arbitrary delegation depth, either machine-enforce it
+(hook / dcg pack / pre-commit gate) or paste it verbatim into the leaf prompt.
