@@ -730,13 +730,18 @@ fi
 # not an aspirational one — it locks in the pilot's proven size as the cap.
 #
 # Standard-tier ceiling: PROVISIONAL ratchet (not measured-from-pilot like the
-# conductor ceiling above). Derived as: largest standard-tier skill today
-# (ac-hygiene, 664 lines) x 1.15 headroom ~= 764 -> 770 (clean round-up). This
-# locks in "no worse than today's largest standard skill" as a floor-first
-# ratchet; lower it as standard skills get dieted post-pilot (do not raise it
-# to accommodate a bloated skill — diet the skill instead).
+# conductor ceiling above). RATCHETED 2026-08-03 (ac-gcj.6) from 770 to 730.
+# Re-measured basis: the largest standard-tier SKILL.md is ac-hygiene at 660
+# lines (it was 664 when the 770 ceiling was set). Multiplier is x1.10 —
+# deliberately TIGHTER than the x1.15 the conductor ceiling above uses, because
+# a 10% ratchet is what makes this a real tightening rather than a restatement
+# (x1.15 would give 660 x 1.15 = 759 -> 760, which also ratchets but leaves
+# more slack). 660 x 1.10 = 726 -> 730 (clean round-up). Rule for the next
+# ratchet: ceil_to_10(max(standard-tier SKILL.md line counts) x 1.10), and it
+# may only ever move DOWN — do not raise it to accommodate a bloated skill,
+# diet the skill instead.
 CONDUCTOR_CEILING=1110
-STANDARD_CEILING=770
+STANDARD_CEILING=730
 
 CONDUCTOR_SKILLS=(
   "ac-loop"
@@ -763,7 +768,7 @@ for cskill in "${CONDUCTOR_SKILLS[@]}"; do
     printf '  PASS  %-16s %5s / %s lines\n' "$cskill" "$cskill_lines" "$CONDUCTOR_CEILING"
   fi
 done
-echo "standard-tier ceiling: ${STANDARD_CEILING} lines (ac-hygiene 664 +15%, provisional ratchet — lower as standard skills get dieted)"
+echo "standard-tier ceiling: ${STANDARD_CEILING} lines (ac-hygiene 660 +10%, ratcheted 2026-08-03 — lower as standard skills get dieted)"
 check
 for sskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
   [ -f "$sskill_path" ] || continue
