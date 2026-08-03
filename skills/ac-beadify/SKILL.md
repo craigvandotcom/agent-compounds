@@ -141,7 +141,7 @@ Epic: Dashboard
 
 **TaskUpdate(task: "Validate proposed structure (3 parallel agents) + synthesize", status: "in_progress")**
 
-**Spawn all 3 validators in a single message for parallel execution.** Use the prompts in **`references/validators.md`** (Completeness, Dependency, Granularity — all Sonnet), substituting only `{ARTIFACTS_DIR}` and `{PLAN_PATH}` (the literal plan-file path from Phase 1) into the step-1 payload-read lines — validators read the plan and `proposed-structure.md` from disk, nothing is pasted inline (`ac-pipeline/references/delegation-contract.md` § Payloads point). Each writes findings to `$ARTIFACTS_DIR/validation-{role}.md`.
+**Spawn all 3 validators in a single message for parallel execution.** Use the prompts in **`references/validators.md`** (Completeness, Dependency, Granularity — all Sonnet), substituting only `{ARTIFACTS_DIR}` and `{PLAN_PATH}` (the literal plan-file path identified at Phase 0 § Identify Plan File) into the step-1 payload-read lines — validators read the plan and `proposed-structure.md` from disk, nothing is pasted inline (`ac-pipeline/references/delegation-contract.md` § Payloads point). Each writes findings to `$ARTIFACTS_DIR/validation-{role}.md`.
 
 ### Synthesize Validation Results
 

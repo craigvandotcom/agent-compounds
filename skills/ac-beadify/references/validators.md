@@ -6,7 +6,7 @@ Spawn all three in a **single message** (parallel). Each writes to
 `$ARTIFACTS_DIR/validation-{role}.md`. Payloads point, contracts paste
 (`ac-pipeline/references/delegation-contract.md` § Payloads point): substitute
 only `{ARTIFACTS_DIR}` and `{PLAN_PATH}` (the literal plan-file path identified
-in Phase 1) into the step-1 payload-read lines below — validators read the plan
+at Phase 0 § Identify Plan File) into the step-1 payload-read lines below — validators read the plan
 and `proposed-structure.md` from disk; nothing is pasted inline.
 
 ---
