@@ -26,12 +26,35 @@ Table: `public.feedback_reports` (Supabase project `spilwpcqjncrxptqdggn`, schem
 | `fixed_in_build`  | text NULL                         | Set by the ac-merge write-back hook (bd-vbmre.16)            |
 | `created_at`      | timestamptz default now()         | Watermark column                                             |
 
-**Auth:** service-role client (pointer: `SUPABASE_SERVICE_ROLE_KEY` in app env). The
-`service_role` bypasses RLS — no `authenticated` policy is needed here.
+**Auth:** service-role client, read the key name from the consuming app's env — do NOT assume
+`SUPABASE_SERVICE_ROLE_KEY`. In body-compass-app the variable is **`SUPABASE_SECRET_KEY`**
+(`.env.local`, `lib/supabase/admin.ts`); other apps may differ. The `service_role` bypasses RLS —
+no `authenticated` policy is needed here.
 
 ---
 
 ## Adapter Method
+
+### Preferred path — run the app's sweep script if it has one
+
+If the consuming app defines a `triage:feedback` script, **run it instead of hand-executing
+Steps 0–6**:
+
+```bash
+# only if package.json defines it — check first, do not assume
+node -e "process.exit(require('./package.json').scripts?.['triage:feedback']?0:1)" \
+  && pnpm triage:feedback
+```
+
+It implements Steps 0–6 below as one transactional pass, so the watermark advances from the
+rows actually claimed rather than from wall-clock time.
+
+**This is deliberately conditional.** As of 2026-08-03, seven apps carry this skill
+(`art-still-app`, `body-compass-app`, `cv-site`, `move-free-app`, `neometa-app`, `unsit-app`,
+`vitest-affected`) and **only body-compass-app** defines `triage:feedback` or references
+`feedback_reports` at all. An unconditional "run the script" instruction would tell six apps to
+execute something they do not have. When the script is absent, the inline steps below ARE the
+procedure — they are the spec, not dead prose.
 
 ### Step 0 — Watermark
 

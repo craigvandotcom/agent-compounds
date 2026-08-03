@@ -198,10 +198,17 @@ batch-closes before the next publish.
 Phase 1 drops the `fixed_in_build` field from the body:**
 
 ```bash
-curl -s -X PATCH \
+# Resolve the service-role key under EITHER naming convention, and fail loudly if neither is
+# set. This previously hardcoded `SUPABASE_SERVICE_ROLE_KEY`, which is NOT the variable name in
+# body-compass-app (it uses SUPABASE_SECRET_KEY — see .env.local and lib/supabase/admin.ts).
+# An unset variable expands to empty, so the request went out with a blank apikey and PostgREST
+# answered 401 — a silent no-op write-back, not an error anyone saw.
+SR_KEY="${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:?neither SUPABASE_SECRET_KEY nor SUPABASE_SERVICE_ROLE_KEY is set — cannot authenticate the write-back}}"
+
+curl -s --fail-with-body -X PATCH \
   "${SUPABASE_URL}/rest/v1/feedback_reports?id=eq.${SOURCE_ROW_ID}&linked_bead=not.is.null" \
-  -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
-  -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+  -H "apikey: ${SR_KEY}" \
+  -H "Authorization: Bearer ${SR_KEY}" \
   -H "Content-Type: application/json" \
   -H "Prefer: return=representation" \
   -d "{\"status\": \"fixed\", \"fixed_in_build\": \"${NEW_BUILD}\"}"
