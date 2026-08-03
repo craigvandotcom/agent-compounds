@@ -207,13 +207,13 @@ BEADS_COMPLETED=0
 # claims, from the same unmutated candidate-list ordering and the same date — no mismatch.
 CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"   # handed-down or self-derived
 WAVE_SLUG="$CLAIM_ID"   # alias for other in-file references to this key (task labels, progress.md header) — same value, not a re-derivation
-# Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md).
-RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-bd-u2lo1.1-20260712
-# FAN-OUT (one of N children over ONE claimed batch — the delegation prompt says so):
-# claim-id + RUN_ID are batch/run-scoped and IDENTICAL across siblings — append your own
-# per-child discriminator or siblings collide on progress.md (ac-wno; run-id.md corollary):
-# ARTIFACTS_DIR="${ARTIFACTS_DIR}-${AGENT_NAME}-$$"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"   # mint if no orchestrator handed one down
+# Per-child key — UNCONDITIONAL, every implement session, fanned out or not (ac-wno; precedent
+# bd-baudw @ ac-bead-refine/references/workflow.md:64-71): CLAIM_ID+RUN_ID are batch/run-scoped so
+# neither separates siblings; `$$` covers AGENT_NAME being unset this early (identity is minted
+# below); RUN_ID stays LAST or ac-land's `/tmp/bead-work-*-$RUN_ID` glob stops matching.
+CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | tr -cd 'A-Za-z0-9')-$$"
+ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}-${CHILD_ID}${RUN_ID:+-$RUN_ID}"
 ```
 
 ### Register Session Identity

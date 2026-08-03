@@ -33,7 +33,9 @@ body-compass-app memory `claim-adopted-beads-before-planning`): format
 stage that touches that batch, and requires no handshake beyond reading a file:
 
 ```bash
-ARTIFACTS_DIR="/tmp/<prefix>-<claim-id>${RUN_ID:+-$RUN_ID}"   # e.g. /tmp/bead-work-bd-u2lo1.1-20260712
+ARTIFACTS_DIR="/tmp/<prefix>-<claim-id>${RUN_ID:+-$RUN_ID}"   # generic single-session formula; fan-out
+                                                             # stages insert a per-child key — see the
+                                                             # `bead-work` / `bead-refine` rows under § Prefixes
 mkdir -p "$ARTIFACTS_DIR"
 ```
 
@@ -75,7 +77,8 @@ does two jobs:
 
 1. **Parallel disambiguation** — two sessions working the *same* claimed batch (rare, but
    possible if a batch is split across sessions) would otherwise both compute
-   `/tmp/bead-work-bd-u2lo1.1-20260712`; distinct RUN_IDs keep them apart.
+   `/tmp/bead-work-bd-u2lo1.1-<child-id>`; distinct RUN_IDs keep them apart. RUN_ID separates
+   *runs*, never siblings inside one run — that is the per-child key's job (see § Prefixes).
 2. **Run scoping** — every dir this run created carries the RUN_ID suffix, so a consumer can
    safely gather *exactly this run's* dirs with a scoped glob (`/tmp/bead-work-*-$RUN_ID`), never
    a stale or foreign one. This is what lets **ac-land learn from every batch a multi-batch run
@@ -93,14 +96,14 @@ standalone run the same run-scoping safety net if it's later resumed or cross-re
 
 | Stage(s) | prefix | notes |
 |---|---|---|
-| ac-implement **+** ac-land (shared bead-work session) | `bead-work` | keyed on the claim id (bd-u2lo1.9 re-keying) |
+| ac-implement **+** ac-land (shared bead-work session) | `bead-work` | keyed on the claim id (bd-u2lo1.9 re-keying) **plus a per-CHILD id** — `/tmp/bead-work-<claim-id>-<AGENT_NAME>-<pid>[-<run-id>]`, the child key computed by the child and applied UNCONDITIONALLY, never conditioned on the child knowing whether it is one of N (ac-wno). `RUN_ID` still trails LAST so ac-land's `/tmp/bead-work-*-$RUN_ID` glob keeps gathering every child of the run. Derivation: `ac-implement/SKILL.md` Phase 0 § Configuration. Proof: `ac-pipeline/scripts/bead-work-concurrent-dir.test.sh` |
 | ac-review | `work-review` | keyed on a timestamp, not the claim id or branch — a review spans a batch **diff range** since the last review-mark, not a single claimed batch, so it never had a branch-collapse problem to fix |
 | ac-batch-close (trunk-direct batch closing ceremony) | `batch-close` | keyed on the batch-anchor SHA (`ac-batch-close/SKILL.md` Phase 0) |
 | ac-plan-init | `plan-init` | keyed on the plan slug — under trunk-direct there is no wave to key on, ever (no branch, no waiting for one to open); the plan slug is the permanent key here, not a placeholder "until a wave exists" |
 | ac-qa-browser | `qa-browser` | |
 | ac-qa-device | `qa-device` | |
 | ac-ui-polish | `ui-polish` | |
-| ac-bead-refine | `bead-refine` | keyed on a **per-CHILD** id — `<AGENT_NAME>-$$`, computed by the child, never accepted from the caller (bd-baudw). **The same corollary binds `bead-work` under fan-out** (ac-wno: two implement children over ONE claimed batch derived the identical `/tmp/bead-work-<claim-id>-<RUN_ID>` and collided on progress.md — benign only by timing): an implement child that knows it is one of N appends its own `<AGENT_NAME>-$$` discriminator. This stage is fanned out: `ac-loop` runs up to `PARALLEL_WIDTH` refine children on disjoint bead subsets and hands them all the SAME `RUN_ID` **and** the same claim id, so neither key discriminates siblings — they collapsed onto one dir and clobbered each other's `beads-snapshot.json`, making a child stamp `refined` onto beads it never reviewed. `RUN_ID` still trails (`/tmp/bead-refine-<child-id>-<run-id>`) so the run-scoped glob keeps working. Proof: `ac-pipeline/scripts/bead-refine-concurrent-dir.test.sh` (sibling proof for the generic prefix formula: `ac-pipeline/scripts/run-id-concurrent-dir.test.sh`) |
+| ac-bead-refine | `bead-refine` | keyed on a **per-CHILD** id — `<AGENT_NAME>-$$`, computed by the child, never accepted from the caller (bd-baudw). **The same corollary binds `bead-work`, and binds it UNCONDITIONALLY** (ac-wno: two implement children over ONE claimed batch derived the identical `/tmp/bead-work-<claim-id>-<RUN_ID>` and collided on progress.md — benign only by timing): EVERY implement child computes its own `<AGENT_NAME>-$$` key and inserts it BEFORE the RUN_ID suffix, whether or not the delegation prompt told it that it was fanned out — a child under context pressure failing to self-identify as one of N is precisely what produced that collision, so the safety may not be conditioned on it. This stage is fanned out: `ac-loop` runs up to `PARALLEL_WIDTH` refine children on disjoint bead subsets and hands them all the SAME `RUN_ID` **and** the same claim id, so neither key discriminates siblings — they collapsed onto one dir and clobbered each other's `beads-snapshot.json`, making a child stamp `refined` onto beads it never reviewed. `RUN_ID` still trails (`/tmp/bead-refine-<child-id>-<run-id>`) so the run-scoped glob keeps working. Proof: `ac-pipeline/scripts/bead-refine-concurrent-dir.test.sh` (sibling proof for the generic prefix formula: `ac-pipeline/scripts/run-id-concurrent-dir.test.sh`) |
 
 > **Fan-out corollary (general).** The claim-id key is **batch-scoped** and `RUN_ID` is
 > **run-scoped** — neither is child-scoped. Any stage a conductor fans out over subsets of
@@ -117,7 +120,8 @@ still-live code path with a real branch to key on, not a stale reference.
 ## Dual-mode
 
 - **Standalone (human):** one session, one claimed batch → `RUN_ID` absent (or minted locally
-  per the mint-if-absent rule above) → `/tmp/bead-work-bd-u2lo1.1-20260712`.
+  per the mint-if-absent rule above) → `/tmp/bead-work-bd-u2lo1.1-<AGENT_NAME>-<pid>-20260712`
+  (the per-child key is unconditional — a lone session carries it too).
 - **In ac-loop, single session per batch (the common case):** identical — the claim id suffices,
   no cross-session disambiguation needed. `RUN_ID` is still minted at ac-loop's own Phase 0 and
   threaded through, purely for the loop-exit scoping job (below).
