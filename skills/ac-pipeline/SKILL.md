@@ -360,6 +360,20 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
   teardown stays inline in `ac-land` Phase 4, no shared file).
 - **Naming.** `ac-*` = the pipeline family; `-builder` = the doctrine/method meta-skill
   (cf. `skill-builder`, `agent-builder`).
+- **A mechanical gate wired into `ac-loop` must SHIP unit fixtures covering `ac-loop`'s
+  documented run shapes.** The requirement binds the gate's OWN test suite at shipping time; it
+  adds no step to any ceremony. All three shapes: parallel-wave children (repeated per-child
+  progress files, union coverage), multi-batch identity-lifetime (an identity still holding beads
+  from a prior batch), and batch-scoped `--beads` invocation. Copy the worked exemplar —
+  `skills/ac-pipeline/scripts/beads-closed-gate.test.sh` cases L8–L9 (parallel wave) and L10–L11
+  (explicit `--beads` scope, L10a being the identity-lifetime case). Motivating incident: the
+  `ac-514` beads-closed-gate shipped with two scoping defects (`ac-0wi` / `ac-0i1`, RUN
+  20260719-185059-58770) that its unit tests did not catch, because they never exercised those
+  shapes. The live multi-batch dry-run alternative was **considered and REJECTED** (decision
+  `ac-n7h`): both defects self-healed within ~1h through the bug lane with zero reverts, and a
+  ceremony-wired gate structurally gets its first live exercise at its own shipping ceremony.
+  <!-- net-growth-ok: ac-j4u — decision ac-n7h's shipping rule belongs with the pipeline's change standards -->
+
 
 ---
 
