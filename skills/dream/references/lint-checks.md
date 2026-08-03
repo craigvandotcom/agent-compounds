@@ -110,6 +110,37 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     skill's FRICTIONS first. The corpus-cadence net behind the edit-time guard and
     ac-review's doctrine-delta check 0, which only see diffs.
 
+14. **Skill-uptake decay** `[T2 weekly, script-driven, data-gated]` — a registry skill that
+    has earned no read across the trailing window is a DEMOTION candidate (retire, fold
+    into a sibling, or keep-with-reason). Sibling of check 12 in every respect: it is the
+    deterministic script `infrastructure/dream-cycle/skill_uptake_lint.py` (root repo, NOT
+    agent-compounds), which reads the `skill_reads` table in `~/.claude/logs/activity.db`,
+    aggregated **per skill** (the `path` column is recorded but reference-file granularity
+    is deliberately out of scope — its arming denominator is a different, larger corpus and
+    no threshold below tests it). It **SELF-ARMS**, and the gate is the load-bearing part,
+    not a nicety: it emits nothing until **all three** hold — (a) >=**28** days elapsed since
+    the earliest `skill_reads.timestamp`; (b) the `skill_reads` table exists AND is
+    non-empty; (c) a coverage guard, >=**50%** of registry skills recorded >=1 read inside
+    the window, the denominator computed at run time from `skills/*/SKILL.md` (never from
+    `skills/*/` — `skills/_tools/` has no SKILL.md and is not a skill). Until armed it
+    prints its own disarmed state and files nothing; when first written the table held 7
+    rows across 3 skills, where a naive zero-read rule would have proposed demoting ~55 of
+    58 skills — data sparsity, not disuse. Once armed, each zero-read skill emits ONE gated
+    proposal carrying the read count, the window bounds and the coverage denominator that
+    armed the run; proposals become `unrefined`, `human-gate` beads and nothing is ever
+    auto-applied. Blindness caveat carried verbatim in every proposal: `skill_reads` counts
+    hook-instrumented loads only — a skill read by direct `Read` access, or inlined into a
+    prompt by a conductor, is uncounted. Separately, and behind the same arming gate
+    (a re-ablation is only meaningful once an uptake baseline exists to invalidate): if the
+    set of `model=` values in the `WORKER:` bead stamps
+    (`grep 'WORKER:' .beads/issues.jsonl`; grammar
+    `WORKER: model=<id> session=<name> skill@version=<SHA> duration=<wall-clock>`) in the
+    trailing window differs from the preceding window of equal length — both non-empty, so
+    a first observation is never a "change" — it files a re-ablation review proposal,
+    because the uptake baseline does not survive a model generation. Emit-only: the script
+    never demotes, moves or deletes. Predicate + thresholds live in the script docstring
+    (the authority — keep them in sync).
+
 ## Ouroboros guard (merge/dedupe proposals)
 
 Named for the anti-pattern it defends against — "ouroboros compression": repeated
