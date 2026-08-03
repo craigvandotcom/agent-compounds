@@ -27,7 +27,8 @@ There is no branch and no PR on trunk-direct, so these have nothing to attach to
   `--delete-branch`, local branch deletion, branch-rebase-onto-main.
 - The interactive "Does this project have GitHub CI checks…" `AskUserQuestion` — Tier 1 CI
   dispatch (Act 1) is now a fixed mechanism, not a per-project optional wait; the only
-  remaining conditional is a file-existence check (does `quality-gate.yml` exist at all).
+  remaining conditional is a file-existence check (does `quality-gate.yml` exist at all) —
+  and it gates the DISPATCH only, never the gate outcome, which is asserted or `NOT GATED`.
 
 ## Removed from this skill's own earlier (7-phase) design — relocated to `ac-publish`
 
@@ -70,10 +71,11 @@ Everything else below is the same mechanism, retargeted anchor and audience.
 - Agent Mail MCP tools available (`acquire_build_slot`/`renew_build_slot`/`release_build_slot`) —
   see Build Slot below
 - Implementation commits already landed directly on `main` (from `ac-implement`, trunk-direct — no wave branch to check out)
-- A `quality-gate.yml` workflow with `workflow_dispatch` inputs `reason` + `batch_anchor`
-  If the workflow doesn't exist yet, Tier 1 CI
-  dispatch (Act 1) is skipped silently — same escape hatch `ac-merge`'s CI-config question
-  offered, now inferred from file presence instead of asked.
+- A `quality-gate.yml` workflow with `workflow_dispatch` inputs `reason` + `batch_anchor`.
+  <!-- net-growth-ok: adbq — Act 1's silent-skip replaced by an assert-or-report-NOT-GATED
+       branch; a vacuous CI gate that reads "green" is the defect being closed -->
+  If the workflow doesn't exist yet, the Act 1 DISPATCH is skipped — the gate is not waived:
+  Act 1 must then assert a local-equivalent gate or report `Tier 1 CI: NOT GATED`, never green.
 
 ---
 
@@ -280,8 +282,8 @@ The pre-commit `gitleaks protect --staged` hook is `--no-verify`-bypassable, so 
 step is wired into `quality-gate.yml`'s batch-close leg, scanning `$BATCH_RANGE` (honoring
 the repo-root `.gitleaksignore`). Nothing extra to invoke here — that step rides inside the
 SAME `reason=batch-close` dispatch fired below, not a separate call. If that step hasn't
-landed yet, the dispatched workflow simply doesn't have it (same silent-gap handling as any
-other pre-existing-infra dependency).
+landed yet, the dispatched workflow simply doesn't have it — and that gap is *reported*, not
+swallowed, under the same assert-don't-assume rule the dispatch below carries.
 
 ### Fire the Tier 1 CI dispatch
 
@@ -289,9 +291,30 @@ other pre-existing-infra dependency).
 gh workflow run quality-gate.yml -f reason=batch-close -f batch_anchor="$ANCHOR"
 ```
 
-If `quality-gate.yml` has no `workflow_dispatch` trigger yet, skip this
-phase silently and note the gap in the Act 3 report — do not block the batch on
-infrastructure another bead is landing.
+**Assert this gate; never assume it** (canon: `ac-pipeline/references/verification-gate.md`
+§ Assert the gate). If `quality-gate.yml` is absent or has no `workflow_dispatch` trigger, the
+dispatch is skipped — but the GATE is not waived, and you may NOT report Tier 1 CI green. The
+same hole opens even where a workflow DOES exist: a path-filtered one (`on.push.paths`)
+creates **zero runs** for a batch touching none of its paths (a docs-only, `templates/`-only or
+ledger-only batch, including the Act 3 mark commit itself), so "skip silently and continue"
+reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
+
+- **(i) an executed run** — completed, successful, head SHA == the batch anchor. Verify it:
+
+  ```bash
+  GH_DEBUG= gh run list --workflow quality-gate.yml --json headSha,conclusion --limit 100 \
+    2>/dev/null | jq -r --arg s "$ANCHOR" '[.[] | select(.headSha | startswith($s))] | length'
+  ```
+
+  `GH_DEBUG=` and `2>/dev/null` are load-bearing — a tracing `gh` otherwise prefixes non-JSON
+  lines and makes `jq` exit 5, i.e. a false "check errored", not a false green. `0` means no
+  gate ran, whatever the workflow's presence implies.
+- **(ii) a recorded local-equivalent gate**, naming all three of: the exact command(s) run,
+  their exit codes, and the SHA they ran against (e.g. "`./lint.sh` exit 0 + the three touched
+  proof scripts exit 0, at `<sha>`"). Fewer than three is not recorded and does not count.
+
+Neither → report `Tier 1 CI: NOT GATED (<reason>)` in Act 3. Still do not block the batch on
+infrastructure another bead is landing — but never let an un-executed gate read as a passed one.
 
 ### Poll for the dispatched run against HEAD — FOREGROUND ONLY
 
@@ -632,7 +655,8 @@ future skill needs to allocate a numbered artifact; don't resurrect the deleted 
 **VERDICT:** APPROVED — {N} auto-fixed, {M} decisions resolved
 
 ### Tier 1 CI
-{run URL} — {green | fixed after N rounds}
+{run URL} — {green | fixed after N rounds}, or `NOT GATED (<reason>)` when neither Act 1
+branch (i) nor (ii) held. "green" asserts a gate that EXECUTED — never a skipped one.
 
 ### Feedback write-back
 {N} rows marked fixed_pending_release ({M} warnings)

@@ -275,6 +275,25 @@ State every skip and its reason. This is the *silent-failure → add-visibility*
 the gate decides what to skip, but it always says so. Also append the §Journey
 registry enumeration-tripwire flag when it fires — same visible-not-silent treatment.
 
+### Assert the gate, never assume it — `NOT GATED` is a real outcome
+
+Same rule one level up: **a gate that did not execute may never be reported as passed.** The
+decision line above makes a skipped *pass* visible; this makes a vacuous *CI gate* visible.
+A conductor may report a CI tier green ONLY on one of:
+
+- **(i) an executed run**, i.e. a *completed*, *successful* run whose **head SHA is the batch
+  anchor**. Verify that run exists — never infer it from the workflow merely existing. Zero
+  matching runs means zero gate, and that is the common case: a path-filtered workflow
+  (`on.push.paths`) creates NO run for a batch touching none of its paths, so a docs-only or
+  ledger-only batch sails through with nothing executed.
+- **(ii) a recorded local-equivalent gate**, which must name all three of: the exact
+  command(s) run, their exit codes, and the SHA they ran against. Fewer than three is not
+  *recorded* and does not satisfy this branch.
+
+Neither present → report `<tier>: NOT GATED (<reason>)`. Never "green", and never a silent
+skip that leaves the tier unmentioned. Binding on `ac-batch-close` Act 1 (its
+file-absence branch routes here) and on any future ceremony that dispatches CI.
+
 ---
 
 ## Ceremony smoke net (ac-merge / ac-batch-close) — the one definition
