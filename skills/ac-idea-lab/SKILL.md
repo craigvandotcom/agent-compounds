@@ -2,7 +2,7 @@
 name: ac-idea-lab
 accessory: true
 disable-model-invocation: true
-description: Use to deeply work a raw IDEA, framework, concept, or strategy (anything without execution steps yet) — two modes: GENIUS forensic first-principles critique (stress-test, find flaws, distill) and ALIEN paradigm transcendence (escape the frame, cross-domain transplants, expand). Triggers on "review this idea", "stress-test this", "devil's advocate", "critique this concept", "find flaws in this", "first-principles review", "transcend this idea", "go deeper", "push beyond analysis", "alien perspective", "escape local optima", "what am I missing at a deeper level". For a written implementation plan with steps/timelines use ac-plan-lab.
+description: Use to deeply work a raw IDEA, framework, concept, or strategy (anything without execution steps yet) — two modes: GENIUS forensic first-principles critique (stress-test, find flaws, distill) and ALIEN paradigm transcendence (escape the frame, cross-domain transplants, expand). Triggers on "review this idea", "stress-test this", "devil's advocate", "critique this concept", "find flaws in this", "first-principles review", "transcend this idea", "go deeper", "push beyond analysis", "alien perspective", "escape local optima", "what am I missing at a deeper level". For a written implementation plan with steps/timelines use ac-plan-lab; for open-ended generation of new options use brainstorming; for a multi-model panel use expert-consensus.
 ---
 
 # Idea Lab — deep analysis for raw ideas

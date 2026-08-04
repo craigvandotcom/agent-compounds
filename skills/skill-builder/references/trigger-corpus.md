@@ -13,12 +13,11 @@ against — the verdicts below are model judgments recorded as evidence. Row gra
 un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, or
 `- PASS (after fix)`.
 
-**Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) —
-plus **B2, the 5 `ac-plan-*` skills**, plus **B3, the 2 `ac-qa-*` skills**, plus **B4, the 6 bead-lifecycle skills**, plus **B5, the 4 polish/publish skills**. The
-remaining
-registry skills are the follow-on
-batches; enumerate them from
-`skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
+**Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) — plus
+**B2, the 5 `ac-plan-*` skills**, **B3, the 2 `ac-qa-*` skills**, **B4, the 6 bead-lifecycle
+skills**, **B5, the 4 polish/publish skills**, and **B6, the 8 remaining `ac-*` skills** —
+**31 skills judged**. The remaining registry skills are the follow-on batches; enumerate them
+from `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
 skill, so a `*/` loop reports a phantom `MISSING _tools` forever).
 
 ---
@@ -589,6 +588,215 @@ should-NOT-activate
 - PASS — "design ideation for a new dashboard" (routes to ui-brainstorm, named there)
 - PASS — "the modal has a z-index bug" (routes to ui-debug, named there)
 - PASS — "polish my shoes"
+
+## ac-align
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "align pipeline"
+- PASS — "is my pipeline on strategy"
+- PASS — "audit the backlog against my goals"
+- PASS — "what should we plan next"
+- PASS — "promote something from the pool to active"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "what should I work on next". One word off the listed
+  trigger `what should we plan next`, but the destination is the human docket (ac-human-session)
+  or the board read (ac-dashboard) — ac-align decides what to PLAN, not what to touch now, and
+  it carried no NOT-for clause. Fix: exclusion clause naming ac-dashboard / ac-human-session.
+- FAIL (precision) → PASS (after fix) — "stress-test my strategy". The description says
+  `against current strategy` and `against live strategy`; that is enough strategy surface to
+  select it over ac-idea-lab, which owns working the idea itself. Named confusion cluster in
+  the bead, and it bit. Fix: the same clause names ac-idea-lab (and strategist for org
+  strategy).
+- PASS — "clean up the backlog" (routes to ac-tidy — reconciling what is on the board, not
+  judging it against strategy)
+- PASS — "show me the board" (routes to ac-dashboard — ac-align writes, it does not render)
+- PASS — "align the paragraph to the left margin"
+
+## ac-dashboard
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "dashboard"
+- PASS — "show the board"
+- PASS — "state of the pipeline"
+- PASS — "what's the factory doing"
+- PASS — "give me the full WIP picture across waves, PRs and CI"
+
+should-NOT-activate
+
+- PASS — "what needs me" (routes to ac-human-session, named explicitly in ac-dashboard's own
+  routing tail — one of only three skills in this family that already carried one)
+- PASS — "reconcile the board and archive what's done" (routes to ac-tidy, named inline)
+- PASS — "re-prioritize the backlog against strategy" (routes to ac-align, named inline)
+- PASS — "is main green" (routes to ac-prove, which carries that exact phrase as a literal
+  trigger; ac-dashboard only lists CI among the panes it renders, so the literal wins)
+- PASS — "build me an analytics dashboard page for the app"
+
+## ac-human-session
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "human session"
+- PASS — "what needs me"
+- PASS — "what's blocked on me"
+- PASS — "sit down"
+- PASS — "I have twenty minutes — what needs my approval"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "unblock this failing build". The listed trigger
+  `unblock work` is unscoped, so a technical blocker reads as a human-gate blocker; the
+  destination is debug (or ac-triage for inbound signal). No NOT-for clause existed. Fix:
+  exclusion clause scoping `unblock` to human gates and naming debug.
+- PASS — "show me the whole board including the loop-side work" (routes to ac-dashboard —
+  ac-human-session deliberately shows only gated work)
+- PASS — "tidy the pipeline" (routes to ac-tidy — ac-human-session only mentions tidy as an
+  optional pre-pass, not as its job)
+- PASS — "run the loop overnight" (routes to ac-loop — ac-human-session hands off TO it)
+- PASS — "book me a sit-down with the team"
+
+## ac-hygiene
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "hygiene"
+- PASS — "clean up the codebase"
+- PASS — "weekly hygiene run"
+- PASS — "run a multi-round adversarial review over the code"
+- PASS — "find correctness and security cleanups across the app"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "review this feature branch before merge". The
+  description opens `Iterative codebase review` and lists the trigger `iterative review`;
+  `review` plus `codebase` is enough surface to beat ac-review, which owns the branch/PR gate.
+  Telling: ac-registry-audit's own tail already names `ac-review for a feature branch` while
+  ac-hygiene, the skill actually colliding, carried no NOT-for clause at all. Fix: exclusion
+  clause naming ac-review.
+- FAIL (precision) → PASS (after fix) — "audit the auth module for security holes". The
+  description advertises `correctness/security/resilience/contract/reuse cleanups`, so a
+  single-module deep audit selects the 7-lens whole-codebase panel; the destination is the
+  audit skill. Fix: the same clause names audit.
+- PASS — "audit the skill registry for trigger collisions" (routes to ac-registry-audit, which
+  names ac-hygiene inline as its counterpart)
+- PASS — "tidy the pipeline" (routes to ac-tidy — board housekeeping, not code)
+- PASS — "clean up my downloads folder"
+
+## ac-idea-lab
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "stress-test this idea"
+- PASS — "devil's advocate on this concept"
+- PASS — "what am I missing at a deeper level"
+- PASS — "give me the alien perspective on this framework"
+- PASS — "first-principles critique of this positioning"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "brainstorm twenty new product ideas". ALIEN mode
+  advertises `paradigm transcendence`, `cross-domain transplants`, `expand`, which reads as
+  open-ended generation; the destination is brainstorming. The one exclusion the description
+  carried named only ac-plan-lab. Fix: extend the tail to name brainstorming (and
+  expert-consensus for the multi-model case).
+- PASS — "write a plan with steps and timelines" (routes to ac-plan-lab, named inline)
+- PASS — "is my pipeline on strategy" (routes to ac-align, which carries that phrase as a
+  literal trigger — the named ac-idea-lab/ac-align cluster resolves correctly in this
+  direction)
+- PASS — "review this PR" (routes to ac-review — ac-idea-lab is explicitly for things without
+  execution steps yet)
+- PASS — "get several models to weigh in on this" (routes to expert-consensus — ac-idea-lab is
+  a single-judge critique)
+
+## ac-pipeline
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+This is a canon-holder, not an action skill, so its negatives are weighted toward phrasings
+that must wake a conductor or a stage skill instead.
+
+should-activate
+
+- PASS — "pipeline architecture"
+- PASS — "add a new stage to the pipeline"
+- PASS — "what are the pipeline standards"
+- PASS — "where is commit discipline documented"
+- PASS — "what's the contract for the verification gate"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "run validate-qa-run". The description enumerates its
+  hosted scripts by name (`scripts/: beads-closed-gate, validate-qa-run`), which reads as a
+  capability rather than an inventory, and the NOT-for clause excluded only RUNNING THE
+  PIPELINE and EXECUTING A STAGE — never firing a gate/script the skill merely hosts, which
+  the calling ceremony owns. Fix: widen the clause to exclude running anything, hosted
+  scripts included. Net-neutral-adjacent edit: this is the family's tightest description
+  (821/1024, 203 headroom), and the rewrite stays inside it.
+- PASS — "run the pipeline" (routes to ac-loop, named in its own NOT-for clause)
+- PASS — "implement the ready beads" (routes to ac-implement — covered by the stage-skill
+  exclusion)
+- PASS — "close the batch" (routes to ac-batch-close, same exclusion)
+- PASS — "show me the state of the pipeline" (routes to ac-dashboard, which carries `state of
+  the pipeline` as a literal trigger)
+
+## ac-prove
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "prove this commit"
+- PASS — "is main green"
+- PASS — "get a fresh checkpoint"
+- PASS — "gate on a full proof before shipping"
+- PASS — "dispatch a full-suite run and fix forward"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "run the full test suite". The description sells
+  `tip-valid full-suite proof` and `the full leg`, so plain local execution selects the
+  CI-trust primitive; the destination is the testing skill (or just running the command).
+  No NOT-for clause existed. Fix: exclusion clause naming testing.
+- PASS — "show CI status on the board" (routes to ac-dashboard — ac-prove obtains a proof, it
+  does not render panes)
+- PASS — "publish the release" (routes to ac-publish, the ship path that CALLS ac-prove)
+- PASS — "review the code quality across the app" (routes to ac-hygiene — the named
+  hygiene/registry-audit/prove cluster separates cleanly here)
+- PASS — "audit the skill registry" (routes to ac-registry-audit)
+
+## ac-registry-audit
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "registry audit"
+- PASS — "audit the skill registry"
+- PASS — "dedup the skills"
+- PASS — "skill collision check"
+- PASS — "are any of our skill triggers colliding"
+
+should-NOT-activate
+
+- PASS — "clean up the codebase" (routes to ac-hygiene, named inline in its own NOT-for tail —
+  the strongest exclusion clause in this family, and it is why this skill needed no fix)
+- PASS — "review this feature branch" (routes to ac-review, named inline)
+- PASS — "clean up the backlog" (routes to ac-tidy, named inline)
+- PASS — "audit the auth module" (routes to audit, named inline as the single-domain case)
+- PASS — "write me a new skill for X" (routes to skill-builder — authoring, not auditing;
+  not named inline but the description is scoped to auditing an existing corpus)
 
 ---
 

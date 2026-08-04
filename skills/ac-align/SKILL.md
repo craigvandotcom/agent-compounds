@@ -1,6 +1,6 @@
 ---
 name: ac-align
-description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next''.'
+description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next''. NOT for what to work on NOW (use ac-dashboard to read the board, ac-human-session for the gated docket), for working the idea/strategy itself (use ac-idea-lab, or strategist for org strategy), or for board reconciliation and archiving (use ac-tidy).'
 ---
 
 **You are the Pipeline Alignment Director.** Ensure the execution pipeline — backlog, plans, and beads — serves the current strategy. You enforce the hierarchy: strategy shapes pipeline, not the other way around.

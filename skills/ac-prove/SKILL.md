@@ -1,6 +1,6 @@
 ---
 name: ac-prove
-description: Use to obtain-or-produce a tip-valid full-suite proof for a commit — the shared freshness-probe/dispatch/fix-forward primitive every ship path calls instead of re-implementing its own CI-trust logic. Wraps scripts/ci/publish-checkpoint-gate.mjs (freshness) + quality-gate.yml's reason=prove dispatch (the full leg). Three modes — probe (read-only), ensure (probe + dispatch-if-stale), ensure --fix-forward (blocking, ship-path only). Triggers on "prove this commit", "ac-prove", "is main green", "get a fresh checkpoint", "prove the tip", "gate on a full proof".
+description: Use to obtain-or-produce a tip-valid full-suite proof for a commit — the shared freshness-probe/dispatch/fix-forward primitive every ship path calls instead of re-implementing its own CI-trust logic. Wraps scripts/ci/publish-checkpoint-gate.mjs (freshness) + quality-gate.yml's reason=prove dispatch (the full leg). Three modes — probe (read-only), ensure (probe + dispatch-if-stale), ensure --fix-forward (blocking, ship-path only). Triggers on "prove this commit", "ac-prove", "is main green", "get a fresh checkpoint", "prove the tip", "gate on a full proof". NOT for running tests locally (use testing) or for reading CI state as a board pane (use ac-dashboard).
 ---
 
 # ac-prove — Obtain-or-Produce a Tip-Valid Full Proof

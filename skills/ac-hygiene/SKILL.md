@@ -1,6 +1,6 @@
 ---
 name: ac-hygiene
-description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes commit directly to `main` (trunk-direct); deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''.'
+description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes commit directly to `main` (trunk-direct); deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''. NOT for a feature-branch/PR review (use ac-review), a single-module or single-domain deep dive (use audit), the skill/agent registry (use ac-registry-audit), or pipeline/board housekeeping (use ac-tidy).'
 ---
 
 
