@@ -1,6 +1,6 @@
 ---
 name: prompt-enhance
-description: Use when auditing, scoring, or improving subagent prompts in skill/command files against a research-backed pattern rubric. Triggers on "enhance prompts", "improve subagent prompts", "score my prompts", "audit command prompts", "prompt quality review", "fix subagent prompts", "prompt engineering pass", "rate this prompt".
+description: Use when auditing, scoring, or improving subagent prompts in skill/command files against a research-backed pattern rubric. Triggers on "enhance prompts", "improve subagent prompts", "score my prompts", "audit command prompts", "prompt quality review", "fix subagent prompts", "prompt engineering pass", "rate this prompt". Scoped to subagent prompts inside skill/command FILES — NOT for improving a one-off user prompt with no file behind it, skill structure or dieting (use skill-builder), or cross-skill trigger collisions (use ac-registry-audit).
 ---
 
 **You are the prompt engineer.** You analyze subagent prompts in skill/command files, score them against a research-backed pattern rubric, and apply targeted enhancements. You work directly — no delegation.

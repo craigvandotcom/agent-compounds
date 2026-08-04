@@ -15,8 +15,9 @@ un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, o
 
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) — plus
 **B2, the 5 `ac-plan-*` skills**, **B3, the 2 `ac-qa-*` skills**, **B4, the 6 bead-lifecycle
-skills**, **B5, the 4 polish/publish skills**, and **B6, the 8 remaining `ac-*` skills** —
-**31 skills judged**. The remaining registry skills are the follow-on batches; enumerate them
+skills**, **B5, the 4 polish/publish skills**, **B6, the 8 remaining `ac-*` skills**, and
+**B7, the 12 agent-system + build-platform domain skills** — **43 skills judged**. The
+remaining registry skills are the follow-on batch; enumerate them
 from `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
 skill, so a `*/` loop reports a phantom `MISSING _tools` forever).
 
@@ -797,6 +798,321 @@ should-NOT-activate
 - PASS — "audit the auth module" (routes to audit, named inline as the single-domain case)
 - PASS — "write me a new skill for X" (routes to skill-builder — authoring, not auditing;
   not named inline but the description is scoped to auditing an existing corpus)
+
+## agent-mail
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "register agent identity"
+- PASS — "reserve files before I edit"
+- PASS — "I hit FILE_RESERVATION_CONFLICT"
+- PASS — "release reservations and deregister"
+- PASS — "should this session mint a Tier-1 identity or use FoggyCreek"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "how do I commit safely in the shared checkout". The
+  description advertises `reserving files before editing a shared checkout` and `a pre-commit
+  guard block`, but commit discipline itself is owned by ac-pipeline (references/
+  commit-discipline); agent-mail owns the reservation, not the commit sequence. No NOT-for
+  clause existed. Fix: exclusion clause naming ac-pipeline.
+- PASS — "email the release notes to the list" (routes to ac-distribute — Agent Mail is
+  agent-to-agent coordination, not outbound publishing)
+- PASS — "which agent should I delegate this to" (routes to ac-pipeline's delegation-contract —
+  agent-mail is identity and locking, not stance selection)
+- PASS — "run the loop with two children in parallel" (routes to ac-loop, which CALLS agent-mail
+  rather than being it)
+- PASS — "check my inbox"
+
+## beads-standards
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "which label should this bead carry"
+- PASS — "what close reason do I use"
+- PASS — "how do I write a human-gate bead"
+- PASS — "refined vs unrefined — what's the rule"
+- PASS — "bead template"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "refine these beads until they're workable". The
+  description opens `Use when creating, refining, or reviewing a bead` and lists the trigger
+  `refined unrefined`, which is enough surface to beat ac-bead-refine — the skill that actually
+  DOES the refining. beads-standards is the standard those skills follow, not an executor, and
+  it carried no NOT-for clause. Fix: exclusion clause naming the ac-bead-* executors.
+- FAIL (precision) → PASS (after fix) — "file a bead for this crash". `create a bead` is a
+  LITERAL listed trigger, so a capture request selects the canon doc instead of
+  ac-bead-capture. Same root cause, same fix.
+- PASS — "generate a wave of beads from this plan" (routes to ac-beadify — named in the fix
+  clause for the same reason)
+- PASS — "triage the board and tell me what's ready" (routes to bv / ac-dashboard — reading the
+  board is not writing a bead)
+- PASS — "what beads are on my necklace"
+
+## capacitor
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "capacitor"
+- PASS — "the tab switch flashes a skeleton"
+- PASS — "cold start is slow on iOS"
+- PASS — "how should I do keep-mounted tab navigation"
+- PASS — "static export plus WKWebView safe-area handling"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "write a test for this component". The description
+  claims `ALL engineering decisions` on the stack and lists `plugin`, `background`, `app
+  resume` — an unbounded scope statement with no NOT-for clause, so testing loses. Fix:
+  exclusion clause naming testing.
+- FAIL (precision) → PASS (after fix) — "write the migration for this schema change". The
+  stack line names `Supabase` explicitly, and `data fetching` plus `storage` covers the DB
+  surface, so this beats supabase — which reciprocally already names capacitor in its own
+  clause while capacitor named nothing. Fix: the same clause names supabase.
+- PASS — "the modal has a z-index bug" (routes to ui-debug, which owns visual/CSS defects)
+- PASS — "is this form accessible" (routes to web-design-guidelines, which already names
+  capacitor as the React-performance destination — the reciprocal now exists)
+- PASS — "how do capacitors work in a circuit"
+
+## context-engineering
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+This is the sharpest cluster in the batch — context-engineering / reflect / dream — so the
+negatives below are weighted onto its two siblings.
+
+should-activate
+
+- PASS — "where should this live"
+- PASS — "how do we store and remember X"
+- PASS — "what loads when"
+- PASS — "audit our CLAUDE.md and CORE structure"
+- PASS — "design the memory architecture for this new repo"
+
+should-NOT-activate
+
+- FAIL (stale) → PASS (after fix) — "organize these files into folders". The NOT-for clause
+  routed this to `librarian`, a skill that DOES NOT EXIST — no `skills/librarian/SKILL.md` in
+  agent-compounds and none in the root agent home either (both checked; the root registry is a
+  symlink to this one). A dangling destination cannot route, so the exclusion was decorative.
+  This is the staleness class the batch was warned about, not an imprecision. Fix: drop the
+  phantom name and state the exclusion behaviorally.
+- PASS — "capture what we learned this session" (routes to reflect, named inline)
+- PASS — "run the dream cycle" (routes to dream — cross-session synthesis, not a routing
+  decision)
+- PASS — "write a new skill" (routes to skill-builder — authoring, not architecture)
+- PASS — "what's the context for this ticket"
+
+## dream
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "run the dream cycle"
+- PASS — "synthesize the week's lessons"
+- PASS — "lint the memory substrate"
+- PASS — "review dream proposals"
+- PASS — "what did the dream cycle find"
+
+should-NOT-activate
+
+- PASS — "capture what we learned this session" (routes to reflect, named inline in dream's own
+  NOT-for clause — the cluster resolves correctly in this direction)
+- PASS — "save this one rule somewhere durable" (routes to context-engineering, also named
+  inline)
+- PASS — "where should this decision live" (routes to context-engineering — the routing
+  question, not the synthesis run)
+- PASS — "audit the skill registry" (routes to ac-registry-audit — dream lints memory, not the
+  prompt corpus)
+- PASS — "interpret my dream last night"
+
+## openrouter
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "which model for this task"
+- PASS — "ask Gemini directly"
+- PASS — "list available models"
+- PASS — "run this on DeepSeek"
+- PASS — "switch to a non-default model for this step"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "get several models to weigh in and rank the answers".
+  `ask GPT/Gemini/Grok directly` plus `400+ models` is enough surface to select the transport
+  when the destination is expert-consensus, which owns the multi-model panel and ranking. No
+  NOT-for clause existed. Fix: exclusion clause naming expert-consensus.
+- PASS — "give me multiple divergent design options from different models" (routes to
+  ui-brainstorm, which names cross-model consensus ranking as its own job)
+- PASS — "what are Claude's pricing tiers" (routes to the claude-api reference — openrouter is
+  the multi-provider gateway, not the Anthropic API doc)
+- PASS — "improve this prompt before I send it" (routes to prompt-enhance — the prompt, not the
+  model)
+- PASS — "open the router config on my wifi box"
+
+## planning
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "explain scope oscillation"
+- PASS — "what are the divergent-convergent lenses"
+- PASS — "I'm planning something outside the pipeline — what's the method"
+- PASS — "the plan stage cites a methodology, show me it"
+- PASS — "Jeffrey Emanuel planning methodology"
+
+should-NOT-activate
+
+- PASS — "create a plan for this feature" (routes to ac-plan-init, named inline — the
+  description is explicit that it is reference-only and NOT a direct entry point)
+- PASS — "refine this plan" (routes to ac-plan-refine-internal / ac-plan-refine-external, both
+  named inline with their routine/high-stakes split)
+- PASS — "do a final correctness pass on the plan" (routes to ac-plan-clean, named inline)
+- PASS — "improve the prompts inside this plan command" (routes to prompt-enhance — the named
+  planning/prompt-enhance cluster separates cleanly, planning carries no prompt surface)
+- PASS — "plan my week"
+
+## prompt-enhance
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "enhance prompts"
+- PASS — "score the subagent prompts in this skill"
+- PASS — "audit command prompts against the rubric"
+- PASS — "prompt engineering pass over our commands"
+- PASS — "fix the subagent prompts in this command file"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "rate this prompt" applied to a one-off user prompt
+  (a marketing brief, an image prompt). It is a LITERAL listed trigger, but the skill only
+  audits subagent prompts inside skill/command FILES against a rubric — there is no artifact
+  to score for an ad-hoc prompt. No NOT-for clause existed to scope it. Fix: exclusion clause
+  stating the skill/command-file scope.
+- PASS — "clean up our skills" (routes to skill-builder — dieting and structure, not prompt
+  rubric scoring)
+- PASS — "audit the registry for trigger collisions" (routes to ac-registry-audit — cross-skill
+  collisions, not within-file prompt quality)
+- PASS — "what's the planning methodology" (routes to planning — the named
+  planning/prompt-enhance cluster, which separates on the word `prompt`)
+- PASS — "prompt me before you delete anything"
+
+## reflect
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "reflect"
+- PASS — "capture learnings"
+- PASS — "what did we learn"
+- PASS — "compound this session"
+- PASS — "save the lessons before I close this out"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "where should this decision live". `remember this` and
+  `save lessons` are listed triggers, and the NOT-for clause named ac-land and dream but NOT
+  context-engineering — the sibling that actually owns the WHERE-to-save routing. The
+  asymmetry is the tell: dream's clause names both reflect and context-engineering, and
+  context-engineering's names reflect, while reflect's named neither. Fix: add
+  context-engineering to the clause.
+- PASS — "run the full bead-work closure" (routes to ac-land, named inline)
+- PASS — "synthesize the week's lessons across sessions" (routes to dream, named inline)
+- PASS — "audit our memory architecture" (routes to context-engineering — design, not capture)
+- PASS — "reflect the light off this surface"
+
+## skill-builder
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+Self-referential caveat: this is the skill that OWNS the corpus file being written, so its
+verdicts are judged by the very method it defines — an even weaker lower bound than the rest.
+
+should-activate
+
+- PASS — "create a skill"
+- PASS — "diet this SKILL.md down"
+- PASS — "extract this section to references/"
+- PASS — "our description budget is over — trim it"
+- PASS — "refactor this skill"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "build a /command that runs this SOP end to end". The
+  triggers `convert to a skill` and `build a skill` sit right on workflow-builder's territory,
+  and the asymmetry is the tell: workflow-builder's clause names skill-builder, skill-builder
+  named nothing back. Fix: exclusion clause naming workflow-builder.
+- FAIL (precision) → PASS (after fix) — "audit the registry for trigger collisions". `clean up
+  our skills` and `skill hygiene` are listed triggers that collide directly with
+  ac-registry-audit's `registry hygiene` — one skill authors, the other audits the corpus.
+  Fix: the same clause names ac-registry-audit.
+- PASS — "score the subagent prompts in this skill file" (routes to prompt-enhance — prompt
+  rubric, not skill structure)
+- PASS — "where should this knowledge live" (routes to context-engineering — placement
+  doctrine, not authoring)
+- PASS — "build me a skill-based training plan"
+
+## supabase
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "write a migration for this schema change"
+- PASS — "review this RLS policy"
+- PASS — "generate TypeScript types from the schema"
+- PASS — "this query needs an index"
+- PASS — "supabase db reset is failing locally"
+
+should-NOT-activate
+
+- FAIL (stale) → PASS (after fix) — "build the UI for this table". The NOT-for clause routed UI
+  component work to `design-system`, a skill that DOES NOT EXIST — no
+  `skills/design-system/SKILL.md` in agent-compounds and none in the root agent home (both
+  checked). The exclusion could not route, which is the staleness class this batch was warned
+  about rather than an imprecision. Fix: name the live destinations instead
+  (web-design-guidelines for correctness, ac-ui-polish for polish).
+- PASS — "React tab-switch performance on native" (routes to capacitor, named inline and
+  still live)
+- PASS — "write a test for this query helper" (routes to testing — supabase owns the SQL, not
+  its harness)
+- PASS — "how do I store a token on device" (routes to capacitor — Preferences storage, not
+  Postgres)
+- PASS — "set up a supabase for the kitchen"
+
+## workflow-builder
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "build a workflow"
+- PASS — "create a /command"
+- PASS — "turn this SOP into a command"
+- PASS — "design a pipeline command for the newsletter run"
+- PASS — "scaffold a recurring report job"
+
+should-NOT-activate
+
+- PASS — "author a new SKILL.md" (routes to skill-builder, named inline in its own NOT-for
+  clause — the strongest exclusion in this family, and why it needed no fix)
+- PASS — "change how the engineering pipeline is designed" (routes to ac-pipeline, named
+  inline)
+- PASS — "run the pipeline tonight" (routes to ac-loop, named inline)
+- PASS — "where should this knowledge live" (routes to context-engineering, named inline)
+- PASS — "build a workflow for my morning routine"
 
 ---
 

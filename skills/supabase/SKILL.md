@@ -1,6 +1,6 @@
 ---
 name: supabase
-description: Supabase development. Use when writing or reviewing SQL and migrations, designing or modifying database schema, working with RLS policies, optimizing queries or indexes, using the Supabase CLI (supabase db, supabase migration), generating TypeScript types from schema, debugging database or auth issues, or touching lib/db.ts, lib/supabase/, or supabase/migrations/. NOT for UI component work (use design-system), general React patterns (use capacitor), or auth UI flows (use CORE + auth spec).
+description: Supabase development. Use when writing or reviewing SQL and migrations, designing or modifying database schema, working with RLS policies, optimizing queries or indexes, using the Supabase CLI (supabase db, supabase migration), generating TypeScript types from schema, debugging database or auth issues, or touching lib/db.ts, lib/supabase/, or supabase/migrations/. NOT for UI component work (use web-design-guidelines for correctness, ac-ui-polish for polish), general React patterns or device storage (use capacitor), or auth UI flows (use CORE + auth spec).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

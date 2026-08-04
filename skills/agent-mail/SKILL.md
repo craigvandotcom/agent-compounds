@@ -1,6 +1,6 @@
 ---
 name: agent-mail
-description: 'Multi-agent coordination via Agent Mail — registering a session identity, reserving files before editing a shared checkout, releasing + self-deregistering at exit, build slots, messaging. Use when starting any session that will commit code alongside concurrent agents, when hitting FILE_RESERVATION_CONFLICT or a pre-commit guard block, or when choosing between a minted Tier-1 identity and the FoggyCreek chore fallback. Triggers: "register agent identity", "reserve files", "file reservation", "agent mail", "macro_start_session", "release reservations", "deregister agent", "build slot", "FoggyCreek".'
+description: 'Multi-agent coordination via Agent Mail — registering a session identity, reserving files before editing a shared checkout, releasing + self-deregistering at exit, build slots, messaging. Use when starting any session that will commit code alongside concurrent agents, when hitting FILE_RESERVATION_CONFLICT or a pre-commit guard block, or when choosing between a minted Tier-1 identity and the FoggyCreek chore fallback. Triggers: "register agent identity", "reserve files", "file reservation", "agent mail", "macro_start_session", "release reservations", "deregister agent", "build slot", "FoggyCreek". NOT for commit discipline itself (that is ac-pipeline references/commit-discipline), for choosing a delegation stance (ac-pipeline references/delegation-contract), or for actual email/outbound comms (ac-distribute).'
 ---
 
 # agent-mail — the multi-agent coordination domain

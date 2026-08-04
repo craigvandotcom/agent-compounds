@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Called by ac-land; also runs standalone. NOT for full bead-work closure (that is ac-land) or cross-session synthesis/lint (that is dream).
+description: Capture session learnings into the AI-native-org memory substrate. Use at the end of any session, or when asked to "reflect", "capture learnings", "what did we learn", "save lessons", "remember this", "compound this session". Called by ac-land; also runs standalone. NOT for full bead-work closure (that is ac-land), cross-session synthesis/lint (that is dream), or deciding WHERE something durable should live (that is context-engineering).
 ---
 
 # reflect — close the write loop

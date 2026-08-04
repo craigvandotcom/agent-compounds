@@ -1,6 +1,6 @@
 ---
 name: openrouter
-description: Use when a task needs a specific or non-default AI model — Claude, GPT, Gemini, Grok, DeepSeek, or another of 400+ models via OpenRouter. Triggers on "query a model", "which model for", "use OpenRouter", "list available models", "ask GPT/Gemini/Grok directly", "run this on <model>", "switch model for this task", "non-default model".
+description: Use when a task needs a specific or non-default AI model — Claude, GPT, Gemini, Grok, DeepSeek, or another of 400+ models via OpenRouter. Triggers on "query a model", "which model for", "use OpenRouter", "list available models", "ask GPT/Gemini/Grok directly", "run this on <model>", "switch model for this task", "non-default model". NOT for a multi-model panel or consensus ranking (use expert-consensus), cross-model design ideation (use ui-brainstorm), or Anthropic API/model reference (use claude-api).
 tools: [openrouter (infrastructure/tools)]
 ---
 
