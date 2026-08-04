@@ -328,7 +328,7 @@ which under-scopes the batch **silently**, with no error to notice.
 
 ## Coordination & identity (how sessions don't collide)
 
-The pipeline shares one checkout (no worktrees), so concurrent work is kept safe by **identity-scoped file reservations**, not branch isolation. Two invariants govern it:
+Concurrent pipeline ceremonies share one app checkout (no worktrees between ceremonies — carve-out below), so concurrent work is kept safe by **identity-scoped file reservations**, not branch isolation. Two invariants govern it:
 
 - **Identity is minted at the top-level invocation and inherited by everything it spawns.** One
   Agent Mail name per invocation (an `ac-loop` run · a human `/ac-<skill>` invocation · a casual
@@ -342,8 +342,8 @@ The pipeline shares one checkout (no worktrees), so concurrent work is kept safe
   before the write lands (fail-open), with the pre-commit guard as the commit-time backstop.
   Private scratch (`$ARTIFACTS_DIR`) is keyed deterministically, never guessed: `ac-pipeline/references/run-id.md`.
 
-> Worktrees are deliberately rejected (filesystem multiplication, cross-worktree edits corrupt
-> state — `jef-flywheel` lesson 21). Single checkout + identity reservations is the chosen model.
+> Worktrees are deliberately rejected **for concurrent pipeline ceremonies sharing one checkout** (filesystem multiplication, cross-worktree edits corrupt state — `jef-flywheel` lesson 21); single checkout + identity reservations is the chosen model there.
+> **Scheduled-heartbeat carve-out:** a single-writer scheduled job running in an app checkout whose state it does not control DOES create an isolated worktree — `ac-tidy/workflows/nightly.md` § 0, `ac-triage/workflows/scheduled-daily.md` § 0. It has no siblings to reserve against, and the branch guard the worktree replaced is what caused an outage. Both are correct as written; do not converge them onto the ceremony rule.
 
 ---
 

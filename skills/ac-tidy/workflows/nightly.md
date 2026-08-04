@@ -27,7 +27,10 @@ the *run skeleton*; the skill is the *behavior*.
   the live checkout. Instead, **explicitly create a dedicated worktree** off fresh `origin/main`
   and run the entire rest of this skeleton inside it. This is EXPLICIT worktree creation in the
   workflow — never rely on the harness's background-isolation feature, which is disabled
-  (`bg-worktree-isolation-disabled`: `bgIsolation=none`).
+  (`bg-worktree-isolation-disabled`: `bgIsolation=none`). This is the **scheduled-heartbeat
+  carve-out** to `ac-pipeline`'s no-worktrees invariant (`ac-pipeline/SKILL.md` § Coordination
+  & identity): that ban scopes to concurrent pipeline ceremonies sharing one checkout, not to a
+  single-writer scheduled job in a checkout it does not control.
 
   ```bash
   BCA="$HOME/Repos/neometa/software/body-compass-app"   # canonical live checkout (has the board + .beads DB)

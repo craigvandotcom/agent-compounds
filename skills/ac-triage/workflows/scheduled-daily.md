@@ -29,7 +29,10 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   run the entire rest of this skeleton inside it — the pattern is ac-tidy's
   (`ac-tidy/workflows/nightly.md` § 0). This is EXPLICIT worktree creation in the workflow —
   never rely on the harness's background-isolation feature, which is disabled
-  (`bg-worktree-isolation-disabled`: `bgIsolation=none`).
+  (`bg-worktree-isolation-disabled`: `bgIsolation=none`). This is the **scheduled-heartbeat
+  carve-out** to `ac-pipeline`'s no-worktrees invariant (`ac-pipeline/SKILL.md` § Coordination
+  & identity): that ban scopes to concurrent pipeline ceremonies sharing one checkout, not to a
+  single-writer scheduled job in a checkout it does not control.
 
   **App-generic: capture the root from the invocation, never hardcode one app.** This job runs
   `cwd`'d into whichever app scheduled it, so the live checkout is derived, not pinned (ac-tidy
