@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Use for security audits, performance audits, comprehensive pre-deployment UI/UX sweeps (not ad-hoc single-component reviews), test-quality checks, vulnerability assessments, or compliance reviews. Triggers on "audit", "pre-deployment audit", "vulnerability assessment", "compliance review", "run the security audit", "run the performance audit". NOT for feature-branch pre-merge code review (use ac-review), codebase health sweeps between sessions (use ac-hygiene), objective accessibility/best-practices checks (use web-design-guidelines), or design-spec conformance + premium polish (use ac-ui-polish).
+description: Use for security audits, performance audits, pre-deployment UI/UX sweeps, vulnerability assessments, or compliance reviews. Triggers on "audit", "pre-deployment audit", "vulnerability assessment", "compliance review", "run the security audit", "run the performance audit". NOT for feature-branch pre-merge review (ac-review), codebase health sweeps (ac-hygiene), accessibility/best-practices checks (web-design-guidelines), or design-spec conformance and polish (ac-ui-polish).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

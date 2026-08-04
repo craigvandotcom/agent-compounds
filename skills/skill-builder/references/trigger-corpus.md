@@ -16,10 +16,10 @@ un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, o
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) — plus
 **B2, the 5 `ac-plan-*` skills**, **B3, the 2 `ac-qa-*` skills**, **B4, the 6 bead-lifecycle
 skills**, **B5, the 4 polish/publish skills**, **B6, the 8 remaining `ac-*` skills**, and
-**B7, the 12 agent-system + build-platform domain skills** — **43 skills judged**. The
-remaining registry skills are the follow-on batch; enumerate them
-from `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
-skill, so a `*/` loop reports a phantom `MISSING _tools` forever).
+**B7, the 12 agent-system + build-platform domain skills**, and **B8, the 15 testing/creative/
+publishing domain skills** — **58 skills judged: the complete registry**. Enumerate skills from
+`skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a skill, so
+a `*/` loop reports a phantom `MISSING _tools` forever).
 
 ---
 
@@ -1114,6 +1114,384 @@ should-NOT-activate
 - PASS — "where should this knowledge live" (routes to context-engineering, named inline)
 - PASS — "build a workflow for my morning routine"
 
+## testing
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+Cluster 1 of 3 (verification) — the bead's predicted failure profile, no NOT-for clause plus a
+generic verb, describes this skill exactly, and it bit.
+
+should-activate
+
+- PASS — "write a test for this helper"
+- PASS — "this Vitest spec is flaky"
+- PASS — "add test coverage for the reducer"
+- PASS — "mock MSW for this endpoint"
+- PASS — "review these RTL component tests"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "test the login flow in the browser". The trigger list
+  is bare verbs — `test`, `spec`, `coverage`, `mock` — and `E2E tests` plus `Playwright` add
+  browser surface, so this beats browser-testing, whose literal trigger `check login` it should
+  have lost to. Shortest description in the family (300 chars) and the only one with no NOT-for
+  clause at all. Fix: exclusion clause naming browser-testing.
+- FAIL (precision) → PASS (after fix) — "run the structured full-app QA before we close the
+  batch". Same root cause: `E2E tests` reads as pipeline QA, whose destination is ac-qa-browser
+  / ac-qa-device. Fix: the same clause names both.
+- PASS — "the modal has a z-index bug" (routes to ui-debug — a visual defect, not a test)
+- PASS — "run the pre-deployment security audit" (routes to audit, which names its own scope
+  broadly and excludes the code-review siblings inline)
+- PASS — "test my patience"
+
+## browser-testing
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "validate the login flow on preview"
+- PASS — "quick smoke test after this deploy"
+- PASS — "check the browser behaves on production"
+- PASS — "test this flow with the agent-browser CLI"
+- PASS — "preview validation before I share the link"
+
+should-NOT-activate
+
+- PASS — "run the full web QA with QA_VALIDATION reporting" (routes to ac-qa-browser, named
+  explicitly in its own NOT-for clause — the sharpest sibling, and it is excluded)
+- PASS — "record the screen on the simulator" (routes to device-testing — native capture, not
+  a browser check)
+- PASS — "the flex layout breaks at 768px" (routes to ui-debug — a CSS defect, not a flow
+  validation)
+- PASS — "write a Playwright spec for this" (routes to testing — authoring a test file, not
+  driving a browser ad hoc)
+- PASS — "test the brakes on my car"
+
+## device-testing
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "record the screen on the simulator"
+- PASS — "drive the simulator through this flow"
+- PASS — "capture a bug repro on device"
+- PASS — "grab a screenshot on device for the demo"
+- PASS — "record a marketing clip from the real app"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "grab the screenshots for the App Store listing". The
+  triggers `screenshot the app` (native simulator capture) and `grab a screenshot on device`
+  cover exactly how store assets are captured, and the NOT-for clause named ac-qa-device,
+  browser-testing and screenshot-refresh — but NOT app-store-screenshots, the one sibling whose
+  job is native captures. The asymmetry is the tell: app-store-screenshots excludes
+  screenshot-refresh and device-testing excludes screenshot-refresh, so the trio's third edge
+  was simply missing. Fix: add app-store-screenshots to the clause.
+- PASS — "run the structured native QA gate" (routes to ac-qa-device, named inline)
+- PASS — "refresh the landing page screenshots" (routes to screenshot-refresh, named inline)
+- PASS — "check the login flow in the browser" (routes to browser-testing, named inline)
+- PASS — "test the device driver on my printer"
+
+## ui-debug
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "this CSS isn't applying"
+- PASS — "the layout breaks on mobile"
+- PASS — "z-index issue on the dropdown"
+- PASS — "element is misaligned in Safari only"
+- PASS — "overflow is clipping the tooltip"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "this screen looks off, make it feel premium". The
+  description covers `unexpected visual behavior` and `element misaligned`, which reads as
+  subjective polish; the destination is ac-ui-polish. The asymmetry is the tell: ui-brainstorm
+  and web-design-guidelines BOTH name ac-ui-polish in their clauses, while ui-debug — the
+  closest neighbor — carried no NOT-for clause at all. Fix: exclusion clause naming
+  ac-ui-polish.
+- FAIL (precision) → PASS (after fix) — "the visual regression test is failing in CI".
+  `visual regression` is a LITERAL listed trigger, but a failing test routes to testing (author
+  the spec) or ac-qa-browser (the gated run) — ui-debug fixes the defect, it does not own the
+  harness. Fix: the same clause names testing / ac-qa-browser.
+- PASS — "is this form accessible" (routes to web-design-guidelines — objective compliance, not
+  a rendering defect)
+- PASS — "tab switching feels slow on native" (routes to capacitor — React/lifecycle
+  performance, not CSS)
+- PASS — "debug why my UI mockup looks bad in Figma"
+
+## audit
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+**Prediction refuted, recorded honestly:** the bead predicted `audit` would fail alongside
+`testing` on the generic-verb profile. It does not — its NOT-for clause already names four
+destinations and does the work. Only `testing` fit the predicted profile in this cluster.
+
+should-activate
+
+- PASS — "run the security audit"
+- PASS — "pre-deployment audit"
+- PASS — "vulnerability assessment on this service"
+- PASS — "performance audit before we ship"
+- PASS — "compliance review of this data flow"
+
+should-NOT-activate
+
+- PASS — "review this feature branch before merge" (routes to ac-review, named inline)
+- PASS — "codebase health sweep between sessions" (routes to ac-hygiene, named inline)
+- PASS — "is this form accessible" (routes to web-design-guidelines, named inline)
+- PASS — "audit the skill registry for collisions" (routes to ac-registry-audit — `registry
+  audit` is its literal trigger, and specificity beats the bare verb `audit` here)
+- PASS — "audit my tax return"
+
+## brainstorming
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+Cluster 2 of 3 (creative / ideation).
+
+should-activate
+
+- PASS — "brainstorm"
+- PASS — "explore ideas before I commit to an approach"
+- PASS — "what are the options here"
+- PASS — "I'm uncertain which approach to take"
+- PASS — "weigh these competing visions"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "push this concept deeper, what am I missing". `think
+  through approaches` is a literal listed trigger and the description is otherwise
+  scope-generic, so it beats ac-idea-lab, which owns forensic critique and paradigm
+  transcendence. The clause named only ui-brainstorm. Fix: add ac-idea-lab to the clause. (The
+  reciprocal already exists: ac-idea-lab was given a brainstorming exclusion in batch B6.)
+- PASS — "multiple models' opinions on this screen" (routes to ui-brainstorm, named inline)
+- PASS — "poll several models on this decision" (routes to expert-consensus — brainstorming is
+  a single-track divergent-convergent pass, no multi-model surface)
+- PASS — "create the plan now" (routes to ac-plan-init — brainstorming is explicitly
+  pre-planning)
+- PASS — "brainstorm baby names"
+
+## ui-brainstorm
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "ui brainstorm"
+- PASS — "give me several design options for this screen"
+- PASS — "what would different models suggest for this layout"
+- PASS — "explore alternatives for the onboarding UI"
+- PASS — "cross-model consensus on this design"
+
+should-NOT-activate
+
+- PASS — "polish this screen" (routes to ac-ui-polish, named inline)
+- PASS — "is this accessible" (routes to web-design-guidelines, named inline)
+- PASS — "the dropdown renders behind the header" (routes to ui-debug, named inline)
+- PASS — "poll several models on this architecture decision" (routes to expert-consensus — the
+  description's `on a UI` scoping is what keeps the non-UI case out, and it holds)
+- PASS — "brainstorm the product name" (routes to brainstorming — non-UI ideation)
+
+## expert-consensus
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "ask the experts"
+- PASS — "model consensus on this"
+- PASS — "what do other models think"
+- PASS — "get a second opinion from other AIs"
+- PASS — "panel of AI models on this decision"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "get multiple models' opinions on this screen design".
+  `multiple AI models to weigh in` and `poll multiple models` are the strongest phrases in the
+  description and carry no UI exclusion, so it beats ui-brainstorm — which does scope itself to
+  UI, but only from its own side. No NOT-for clause existed. Fix: exclusion clause naming
+  ui-brainstorm.
+- FAIL (precision) → PASS (after fix) — "stress-test this idea". The description literally
+  contained `stress-testing an idea`, which is ac-idea-lab's literal trigger — a phrase collision
+  in the description text itself, not merely an adjacent domain. Fix: the colliding phrase was
+  REMOVED from the description outright (an exclusion clause alone would have left the magnet in
+  place) and the same clause names ac-idea-lab.
+- PASS — "run this one prompt on Gemini" (routes to openrouter — single non-default model, not
+  a synthesized panel)
+- PASS — "review this branch with the 6-lens panel" (routes to ac-review — a review panel of
+  lenses, not of models)
+- PASS — "find me an expert consultant to hire"
+
+## app-store-screenshots
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "app store screenshots"
+- PASS — "generate the store listing images"
+- PASS — "build the App Store Connect assets"
+- PASS — "marketing screenshots for the Play Store listing"
+- PASS — "screenshot generator for the store listing"
+
+should-NOT-activate
+
+- PASS — "refresh the landing page screenshots" (routes to screenshot-refresh, named inline)
+- PASS — "record the simulator for a bug repro" (routes to device-testing — the store-listing
+  scoping in every trigger is what keeps ad-hoc native capture out, and it holds)
+- PASS — "polish the landing page hero" (routes to ac-site-polish)
+- PASS — "add Open Graph images to the marketing site" (routes to seo-metadata — social preview
+  assets, not store listings)
+- PASS — "take a screenshot of my desktop"
+
+## screenshot-refresh
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+The strongest clause of the screenshot trio — it excludes BOTH siblings, which is why the only
+missing edge in this trio was on device-testing's side.
+
+should-activate
+
+- PASS — "refresh screenshots"
+- PASS — "the landing page images are stale"
+- PASS — "recapture the marketing site screenshots"
+- PASS — "update the screenshots on the website"
+- PASS — "screenshot the app for the landing page"
+
+should-NOT-activate
+
+- PASS — "grab a screenshot on the simulator" (routes to device-testing, named inline)
+- PASS — "build the App Store listing assets" (routes to app-store-screenshots, named inline)
+- PASS — "check the landing page renders on preview" (routes to browser-testing — validation,
+  not capture)
+- PASS — "add meta tags to the landing page" (routes to seo-metadata)
+- PASS — "refresh my screensaver"
+
+## seo-metadata
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+Cluster 3 of 3 (publishing / content).
+
+should-activate
+
+- PASS — "add Open Graph tags to this page"
+- PASS — "audit our meta descriptions"
+- PASS — "the sitemap needs regenerating"
+- PASS — "add JSON-LD structured data"
+- PASS — "set canonical URLs across the marketing site"
+
+should-NOT-activate
+
+- PASS — "Core Web Vitals are bad on this page" (routes to capacitor and web-design-guidelines,
+  both named inline)
+- PASS — "is this page accessible" (routes to web-design-guidelines — objective compliance, not
+  discoverability metadata)
+- PASS — "polish the landing page visually" (routes to ac-site-polish — the trigger list is
+  entirely metadata-specific, so visual phrasings do not reach it)
+- PASS — "recapture the landing page screenshots" (routes to screenshot-refresh)
+- PASS — "improve my search ranking on Google Ads"
+
+## web-design-guidelines
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "is this accessible"
+- PASS — "a11y check on this component"
+- PASS — "audit this form"
+- PASS — "does this meet WCAG"
+- PASS — "review this UI code for best practices"
+
+should-NOT-activate
+
+- PASS — "make this feel premium" (routes to ac-ui-polish, named inline)
+- PASS — "tab switching is slow on native" (routes to capacitor, named inline)
+- PASS — "give me several design options" (routes to ui-brainstorm, named inline)
+- PASS — "run the pre-deployment UI/UX sweep" (routes to audit, which reciprocally names
+  web-design-guidelines for the single-check case — the pair is symmetric)
+- PASS — "what are the design guidelines for my living room"
+
+## jef-flywheel
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "flywheel"
+- PASS — "set up agent swarm with ntm"
+- PASS — "how does the agentic build methodology work end to end"
+- PASS — "br/bv setup for a new repo"
+- PASS — "AGENTS.md conventions for this project"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "two agents are about to edit the same file, coordinate
+  them". `coordinating multi-agent work` and `agent coordination` are listed triggers, but the
+  actual mechanism — identity, file reservations, the pre-commit guard — is agent-mail's.
+  jef-flywheel is the conceptual/setup layer and its routing tail named only ac-beadify and the
+  ac-* stages. Fix: extend the tail to name agent-mail (and beads-standards for bead canon).
+- PASS — "convert this plan into beads" (routes to ac-beadify, named inline)
+- PASS — "run a pipeline stage" (routes to the ac-* stage skills, named inline)
+- PASS — "which label does this bead need" (routes to beads-standards — now named in the fix
+  clause for the same `beads (br/bv)` surface)
+- PASS — "how does a flywheel work in an engine"
+
+## jef-prompts
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "give me a prompt for bug hunting"
+- PASS — "is there a prompt for refactoring"
+- PASS — "find a prompt for planning"
+- PASS — "/jef-prompts performance"
+- PASS — "show me the jef pack"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "score and improve the subagent prompts in this skill".
+  The description is a prompt LIBRARY, but `performance audit prompt` and `find a prompt` give
+  it enough prompt-quality surface to beat prompt-enhance, which owns rubric scoring of prompts
+  already written. No NOT-for clause existed. Fix: exclusion clause naming prompt-enhance.
+- PASS — "create a new skill" (routes to skill-builder — authoring an artifact, not retrieving
+  a canned prompt)
+- PASS — "what's the planning methodology" (routes to planning — the method, not a prompt for
+  it)
+- PASS — "run the pre-deployment audit" (routes to audit — doing the audit, not fetching the
+  prompt that describes one)
+- PASS — "prompt me before overwriting files"
+
+## wiki
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "write this up as a wiki page"
+- PASS — "seed a concept page"
+- PASS — "garden the wiki"
+- PASS — "dedupe the wiki"
+- PASS — "build a contradiction page from these facts"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "synthesize this week's lessons". `weekly distillation`
+  is a LITERAL listed trigger and the description leads with `synthesis`, which collides head-on
+  with dream — the skill that actually runs weekly cross-session synthesis. The clause named
+  context-engineering and reflect but not dream, even though dream is the closest phrase match.
+  Fix: add dream to the clause.
+- PASS — "save this one decision somewhere durable" (routes to context-engineering, named
+  inline)
+- PASS — "capture what we learned this session" (routes to reflect, named inline)
+- PASS — "where should this knowledge live" (routes to context-engineering — the routing
+  question, not the derived view)
+- PASS — "edit the Wikipedia article"
+
 ---
 
 ## Findings and fixes
@@ -1143,6 +1521,41 @@ should-NOT-activate
 | ac-publish | — | — | none needed |
 | ac-site-polish | — | — | none needed |
 | ac-ui-polish | — | — | none needed |
+| ac-align | "what should I work on next" and "stress-test my strategy" selected it | precision | NOT-for clause naming ac-dashboard / ac-human-session, ac-idea-lab / strategist, ac-tidy |
+| ac-human-session | "unblock this failing build" selected it | precision | "unblock" scoped to human gates; clause naming debug, ac-dashboard, ac-implement / ac-loop |
+| ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, ac-registry-audit, ac-tidy |
+| ac-idea-lab | "brainstorm twenty new product ideas" selected it | precision | tail extended to name brainstorming and expert-consensus |
+| ac-pipeline | "run validate-qa-run" selected it | precision | NOT-for widened to exclude RUNNING anything it documents, hosted scripts included |
+| ac-prove | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-dashboard |
+| ac-dashboard | — | — | none needed |
+| ac-registry-audit | — | — | none needed |
+| agent-mail | "how do I commit safely in the shared checkout" selected it | precision | clause naming ac-pipeline (commit-discipline, delegation-contract) and ac-distribute |
+| beads-standards | "refine these beads" and "file a bead for this crash" selected it | precision | STANDARD-not-executor clause naming ac-bead-refine, ac-bead-capture, ac-beadify |
+| capacitor | "write a test for this" and "write the migration" selected it | precision | clause naming testing, supabase, ui-debug, web-design-guidelines |
+| context-engineering | its exclusion routed to `librarian`, a skill that does not exist | stale | phantom destination dropped, dream added, file organization stated behaviorally |
+| openrouter | "get several models to weigh in and rank the answers" selected it | precision | clause naming expert-consensus, ui-brainstorm, claude-api |
+| prompt-enhance | bare "rate this prompt" on a one-off user prompt selected it | precision | scoped to skill/command FILES; clause naming skill-builder and ac-registry-audit |
+| reflect | "where should this decision live" selected it | precision | context-engineering added to a clause that named only ac-land and dream |
+| skill-builder | "build a /command" and "audit the registry" selected it | precision | clause naming workflow-builder, ac-registry-audit, prompt-enhance |
+| supabase | its exclusion routed to `design-system`, a skill that does not exist | stale | repointed at web-design-guidelines and ac-ui-polish |
+| dream | — | — | none needed |
+| planning | — | — | none needed |
+| workflow-builder | — | — | none needed |
+| testing | "test the login flow in the browser" and "run the full-app QA" selected it | precision | clause naming browser-testing, device-testing, ac-qa-browser / ac-qa-device, audit |
+| device-testing | "grab the screenshots for the App Store listing" selected it | precision | app-store-screenshots added — the screenshot trio's one missing edge |
+| ui-debug | "make it feel premium" and "the visual-regression test is failing" selected it | precision | clause naming ac-ui-polish, testing / ac-qa-browser, web-design-guidelines, capacitor |
+| brainstorming | "push this concept deeper, what am I missing" selected it | precision | ac-idea-lab and expert-consensus added to a clause that named only ui-brainstorm |
+| expert-consensus | multi-model UI opinions, and "stress-test this idea" selected it | precision | the colliding phrase "stress-testing an idea" removed from the description, plus a clause naming ui-brainstorm, ac-idea-lab, openrouter |
+| jef-flywheel | "coordinate two agents on the same file" selected it | precision | routing tail extended to name agent-mail and beads-standards |
+| jef-prompts | "score and improve the subagent prompts in this skill" selected it | precision | RETRIEVES-only scoping plus a clause naming prompt-enhance and skill-builder |
+| wiki | "synthesize this week's lessons" selected it | precision | dream added to a clause that named only context-engineering and reflect |
+| audit | — | — | none needed (the B8 prediction that it would fail was refuted) |
+| app-store-screenshots | — | — | none needed |
+| browser-testing | — | — | none needed |
+| screenshot-refresh | — | — | none needed |
+| seo-metadata | — | — | none needed |
+| ui-brainstorm | — | — | none needed |
+| web-design-guidelines | — | — | none needed |
 
 Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
 re-judged PASS after the description edit; the re-judged verdicts are recorded inline
@@ -1184,7 +1597,49 @@ ac-distribute vs ac-publish, is also the most consequential found across B2–B5
 it to production" to ac-distribute skips the version bump, the full-suite proof, the heavy
 review and the tag.
 
-Running total, B1–B5: 230 judgments, 10 failures (9 precision, 1 recall) across 23 skills.
+B6 score: 80 judgments, 8 failures (all precision), across 6 of the 8 remaining `ac-*` skills.
+All re-judged PASS after the description edit. The predictor held a fifth time and cleanly: the
+four skills carrying NO NOT-for clause (ac-align, ac-human-session, ac-hygiene, ac-prove) all
+failed, and the two with the richest clauses (ac-dashboard's routing tail, ac-registry-audit's
+four-destination exclusion) passed all 20 judgments clean. ac-pipeline, the canon-holder, failed
+in a new way worth naming: its description ENUMERATES the scripts it hosts, which reads to a
+router as a capability rather than an inventory, so "run validate-qa-run" selected the doc
+instead of the calling ceremony.
+
+B7 score: 120 judgments, 12 failures (10 precision, 2 stale), across 9 of the 12 agent-system +
+build-platform skills. All re-judged PASS after the description edit. **This batch introduced a
+second failure class the predictor does not catch: STALE destinations.** context-engineering
+excluded to `librarian` and supabase excluded to `design-system` — neither skill exists in
+agent-compounds/skills or the root agent home (the root registry is a symlink into this one), so
+both clauses were decorative and could not route. A skill can carry a well-formed NOT-for clause
+and still fail. Add "does every named destination resolve to a live SKILL.md" to the batch scan;
+the no-clause heuristic alone would have passed both.
+
+B8 score: 150 judgments, 11 failures (all precision), across 8 of the 15 testing/creative/
+publishing skills. All re-judged PASS after the description edit. The predictor held on
+`testing` — no clause, bare verbs, and the shortest description in the registry at 300 chars —
+but was REFUTED on `audit`, which the bead predicted would fail on the same profile and which
+passed all 20 judgments on the strength of a four-destination clause it already carried. The
+richest finding is structural: three of the eight failures were MISSING RECIPROCAL EDGES in
+otherwise well-clued families (device-testing excluded two of the screenshot trio but not
+app-store-screenshots; ui-debug was the only member of the UI quartet with no clause at all;
+reflect named two of its three memory siblings). Asymmetry inside a family is a stronger
+predictor than clause-absence once most skills carry clauses.
+
+**Registry-wide budget finding (B8, cross-batch — the epic's method did not model it).** Check
+13 has TWO limits: a per-skill 1024-char cap, which every batch bead measured, and a
+registry-wide ~30,000-char listing budget across all model-invocable descriptions, which none of
+them did. Adding exclusion clauses to 35 skills across B6-B8 pushed the registry to 31,033 and
+turned Check 13 RED — the aggregate, not any single description, was the binding constraint. B8
+resolved it inside its own family per the beads' net-neutral instruction: all 15 descriptions
+were tightened (elaborative prose and parentheticals cut, every trigger token and every named
+destination preserved), taking the family from 7,268 to 7,040 chars — net **-228** while ADDING
+eight exclusion clauses. Registry closed at 29,618/30,000. Anyone extending this corpus must
+budget at the registry level first: roughly 380 chars of headroom remain, so further clauses have
+to be paid for by tightening, not by growth.
+
+Running total, B1–B8: 580 judgments, 41 failures (38 precision, 1 recall, 2 stale) across all 58
+non-conductor-excluded registry skills. The corpus now covers the complete registry.
 
 ## Method verdict
 

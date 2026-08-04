@@ -1,6 +1,6 @@
 ---
 name: wiki
-description: Use when writing, updating, or gardening wiki synthesis pages — concept, entity, topic, or contradiction pages that integrate multiple atomic facts and decisions into one coherent, cited narrative. Triggers on "wiki page", "synthesis page", "seed a wiki page", "garden the wiki", "concept page", "entity page", "contradiction page", "write X up as a wiki page", "dedupe the wiki", "WIKI.md front door", "weekly distillation", "STRATEGY.md decisions log". NOT for saving one fact/rule/decision (context-engineering routes those) or session-end capture (reflect) — a wiki page is a DERIVED view over facts already saved there.
+description: Use when writing, updating, or gardening wiki synthesis pages — concept, entity, topic, or contradiction pages integrating atomic facts into one cited narrative. Triggers on "wiki page", "synthesis page", "seed a wiki page", "garden the wiki", "concept page", "entity page", "contradiction page", "write X up as a wiki page", "dedupe the wiki", "WIKI.md front door", "weekly distillation", "STRATEGY.md decisions log". NOT for saving one fact/rule/decision (context-engineering), session-end capture (reflect), or the weekly cross-session synthesis run (dream).
 ---
 
 > **Shared skill (agent-compounds).** Symlinked into projects via `deploy.sh` — this is

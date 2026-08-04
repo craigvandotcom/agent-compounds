@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Use when writing, fixing, or reviewing tests for TypeScript/Next.js code — unit tests, component tests, integration tests, or E2E tests. Triggers on test, spec, coverage, mock, assertion, Vitest, Playwright, React Testing Library (RTL), MSW, flaky test, failing test, write a test, add test coverage.
+description: Use when writing, fixing, or reviewing tests for TypeScript/Next.js code — unit, component, integration, or E2E tests. Triggers on test, spec, coverage, mock, assertion, Vitest, Playwright, React Testing Library (RTL), MSW, flaky test, failing test, write a test, add test coverage. NOT for ad-hoc browser or simulator runs (browser-testing, device-testing), pipeline-gated QA (ac-qa-browser, ac-qa-device), or security/performance sweeps (audit).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

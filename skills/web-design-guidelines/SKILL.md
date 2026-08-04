@@ -1,6 +1,6 @@
 ---
 name: web-design-guidelines
-description: Use when auditing UI code for objective correctness and compliance during implementation or PR review — accessibility (ARIA, labels, keyboard, semantics, focus states), forms, motion-safety, typography mechanics, image dimensions, hydration safety, touch interactions. Triggers on "is this accessible", "a11y", "check this for best practices", "audit this form", "review this UI code", "WCAG", "fix UX issues". NOT for subjective premium polish or anti-slop (use ac-ui-polish), React performance (use capacitor), or multi-model design ideation (use ui-brainstorm).
+description: Use when auditing UI code for objective correctness and compliance — accessibility (ARIA, labels, keyboard, semantics, focus states), forms, motion-safety, typography, image dimensions, hydration safety, touch interactions. Triggers on "is this accessible", "a11y", "check this for best practices", "audit this form", "review this UI code", "WCAG", "fix UX issues". NOT for subjective polish or anti-slop (ac-ui-polish), React performance (capacitor), or multi-model design ideation (ui-brainstorm).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
