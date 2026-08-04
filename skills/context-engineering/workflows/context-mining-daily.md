@@ -79,8 +79,12 @@ for home in infrastructure/memory/auto neometa/memory/auto \
   # emits nothing in a non-TTY shell, which silently zeroes the left operand and makes
   # this check report "0 drift" unconditionally. Also drop `slug.md`: it is the
   # format-doc example on line 3 of most MEMORY.md files, not an index line.
+  # The slug class MUST include `_`: ~30 legacy notes use snake_case names
+  # (`feedback_*`, `reference_*`, `project_*`). A `[a-z0-9-]` class silently drops
+  # them from the LEFT operand — they then never get drift-checked, and they show up
+  # as phantom "orphans" if you also run the reverse `comm -13`.
   comm -23 \
-    <(command grep -oE '\(([a-z0-9-]+\.md)\)' "$home/MEMORY.md" | command tr -d '()' \
+    <(command grep -oE '\(([a-z0-9_-]+\.md)\)' "$home/MEMORY.md" | command tr -d '()' \
         | command grep -vx 'slug.md' | sort -u) \
     <(ls "$home" | command grep -vE 'MEMORY|README' | sort -u)
 done
