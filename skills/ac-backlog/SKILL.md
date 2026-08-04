@@ -1,6 +1,6 @@
 ---
 name: ac-backlog
-description: 'Capture ideas into the backlog pool — cohesive grouping (one theme = one wave), shape-routing (small+clear goes straight to a bead), strategy-aware horizon, no version guessing at capture. Triggers: ''add to backlog'', ''capture idea'', ''backlog this'', ''note for later'', ''park this''.'
+description: 'Capture ideas into the backlog pool — cohesive grouping (one theme = one wave), shape-routing (small+clear goes straight to a bead), strategy-aware horizon, no version guessing at capture. Triggers: ''add to backlog'', ''capture idea'', ''backlog this'', ''note for later'', ''park this''. For a typed bead right now — a bug, a defect, a decision fork — use ac-bead-capture; for decomposing a whole plan use ac-beadify.'
 ---
 
 

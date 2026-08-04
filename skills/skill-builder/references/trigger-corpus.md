@@ -14,7 +14,7 @@ un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, o
 `- PASS (after fix)`.
 
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) —
-plus **B2, the 5 `ac-plan-*` skills**, plus **B3, the 2 `ac-qa-*` skills**. The remaining
+plus **B2, the 5 `ac-plan-*` skills**, plus **B3, the 2 `ac-qa-*` skills**, plus **B4, the 6 bead-lifecycle skills**. The remaining
 registry skills are the follow-on
 batches; enumerate them from
 `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
@@ -338,6 +338,154 @@ should-NOT-activate
   in React, not a native journey run)
 - PASS — "set up a new iOS provisioning profile"
 
+## ac-backlog
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "add to backlog"
+- PASS — "backlog this for a future wave"
+- PASS — "park this idea for now"
+- PASS — "note this one for later"
+- PASS — "capture this theme into the backlog pool"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "capture this bug I just hit". ac-backlog was the one
+  skill in this six-way cluster carrying NO cross-reference clause, while its trigger
+  `capture idea` and its own "shape-routing (small+clear goes straight to a bead)" phrase both
+  claim bead-creation surface — but a typed bug belongs to ac-bead-capture. Fix: add the
+  exclusion clause naming ac-bead-capture for a typed bead now, and ac-beadify for a plan.
+- PASS — "beadify this plan" (routes to ac-beadify — backlog is an idea pool, not a plan
+  decomposer)
+- PASS — "refine the beads" (routes to ac-bead-refine — backlog never touches existing beads)
+- PASS — "clean up the backlog" (routes to ac-tidy, whose literal trigger it is — ac-backlog
+  fills the pool, ac-tidy grooms it)
+- PASS — "add milk to my shopping list"
+
+## ac-bead-capture
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "bead this"
+- PASS — "file this as a bead"
+- PASS — "log a bug"
+- PASS — "track this item"
+- PASS — "remember to do X"
+
+should-NOT-activate
+
+- PASS — "park this idea for later" (routes to ac-backlog, which capture's own tail names for
+  the grouped backlog pool)
+- PASS — "turn this plan into beads" (routes to ac-beadify — also named in that tail)
+- PASS — "refine these beads" (routes to ac-bead-refine — the third name in that tail; capture
+  creates, refine converges)
+- PASS — "pull the new Sentry crashes onto the board" (routes to ac-triage — a fetch-and-cluster
+  run over external systems, not a user-dictated capture)
+- PASS — "remember my birthday"
+
+## ac-bead-refine
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "refine the beads"
+- PASS — "bead refine"
+- PASS — "make these beads implementation-ready"
+- PASS — "refine bead structure before we implement"
+- PASS — "get the unrefined beads to convergence"
+
+should-NOT-activate
+
+- PASS — "refine the plan" (routes to ac-plan-refine-internal, the B2 sibling; every
+  ac-bead-refine trigger is bead-scoped)
+- PASS — "create beads from this plan" (routes to ac-beadify, which refine's own tail names —
+  "creating plan-decomposition beads is ac-beadify's job")
+- PASS — "bead this observation" (routes to ac-bead-capture — capture creates one, refine
+  converges what exists)
+- PASS — "work the refined beads" (routes to ac-implement — refine stamps the label,
+  ac-implement consumes it)
+- PASS — "refine the wording of this email"
+
+## ac-beadify
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "beadify"
+- PASS — "turn this plan into beads"
+- PASS — "create beads from the plan"
+- PASS — "break the plan into tasks"
+- PASS — "decompose the approved plan into a bead structure"
+
+should-NOT-activate
+
+- PASS — "refine the beads afterwards" (routes to ac-bead-refine, which beadify's own tail
+  names)
+- PASS — "bead this one thing" (routes to ac-bead-capture — beadify requires an existing plan
+  and creates a whole structure)
+- PASS — "turn these hygiene findings into an epic of beads" (routes to ac-hygiene, which owns
+  "deferred findings become an epic of beads" verbatim — this skill's highest-overlap
+  neighbour in the registry at 100 shared shingles)
+- PASS — "make a plan for this feature" (routes to ac-plan-init — beadify starts where the
+  planning chain ends)
+- PASS — "break this rock into gravel"
+
+## ac-tidy
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "tidy the pipeline"
+- PASS — "clean up the backlog"
+- PASS — "reconcile plans and beads"
+- PASS — "pipeline housekeeping"
+- PASS — "archive the completed items and flag orphans"
+
+should-NOT-activate
+
+- PASS — "clean up the codebase" (routes to ac-hygiene, named explicitly in ac-tidy's own tail —
+  one of only two skills in this family that already carried a NOT-for clause)
+- PASS — "add this idea to the backlog" (routes to ac-backlog — ac-tidy grooms the pool, it
+  does not fill it)
+- PASS — "clean the plan" (routes to ac-plan-clean — a plan-draft hygiene pass, not pipeline
+  housekeeping)
+- PASS — "triage the new crash reports" (routes to ac-triage — inbound external signal, not
+  board reconciliation)
+- PASS — "tidy my downloads folder"
+
+## ac-triage
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "triage crashes"
+- PASS — "check sentry"
+- PASS — "any new errors in prod"
+- PASS — "pull the TestFlight feedback"
+- PASS — "triage github issues"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "triage the open beads and tell me what to work on".
+  The bare verb `triage` plus the trigger `triage production signal` was enough surface to
+  select it, but triaging the board is `bv`'s job (read-only) and getting beads workable is
+  ac-bead-refine's — ac-triage is strictly INBOUND external signal, and it carried no NOT-for
+  clause. Fix: add an exclusion clause naming bv / ac-bead-refine for board triage.
+- PASS — "clean up the backlog" (routes to ac-tidy — reconciling what is already on the board)
+- PASS — "bead this crash I just saw" (routes to ac-bead-capture — one user-dictated item, not
+  a fetch-and-cluster run over external systems)
+- PASS — "post the release notes out to the list" (routes to ac-distribute, which ac-triage
+  names inline as its outbound counterpart)
+- PASS — "triage the patients in the waiting room"
+
 ---
 
 ## Findings and fixes
@@ -357,6 +505,12 @@ should-NOT-activate
 | ac-plan-refine-internal | — | — | none needed |
 | ac-qa-browser | "QA the TestFlight build" selected it | precision | trigger qualified from `QA the deployed app` to `QA the deployed web app` |
 | ac-qa-device | — | — | none needed |
+| ac-backlog | "capture this bug I just hit" selected it | precision | exclusion clause added naming ac-bead-capture (typed bead now) and ac-beadify (whole plan) |
+| ac-triage | "triage the open beads and tell me what to work on" selected it | precision | NOT-for clause added naming bv / ac-bead-refine for board triage |
+| ac-bead-capture | — | — | none needed |
+| ac-bead-refine | — | — | none needed |
+| ac-beadify | — | — | none needed |
+| ac-tidy | — | — | none needed |
 
 Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
 re-judged PASS after the description edit; the re-judged verdicts are recorded inline
@@ -379,6 +533,14 @@ PASS after the description edit. As the designated calibration run this pair con
 sharpest form of the B1 finding: where two siblings differ ONLY by execution surface, any
 trigger phrase left un-qualified for that surface is the failure — every other trigger in
 both descriptions carried its qualifier and passed.
+
+B4 score: 60 judgments, 2 failures (both precision), across 2 of the 6 bead-lifecycle skills.
+Both re-judged PASS after the description edit. Three batches in, the predictor is now
+unambiguous and has not missed once: **the skill in a family that carries no NOT-for clause is
+the skill that fails.** ac-backlog and ac-triage were the only two of these six without one;
+ac-bead-capture, ac-bead-refine, ac-beadify and ac-tidy all carry sibling cross-references and
+all passed clean. Same result in B2 (ac-plan-refine-external) and B3 (the one unqualified
+trigger in ac-qa-browser). Treat "has no exclusion clause" as the batch-scan heuristic.
 
 ## Method verdict
 
