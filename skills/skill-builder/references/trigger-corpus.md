@@ -13,8 +13,9 @@ against — the verdicts below are model judgments recorded as evidence. Row gra
 un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, or
 `- PASS (after fix)`.
 
-**Coverage: batch B1 only — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in
-`lint.sh`). The remaining registry skills are the follow-on batch; enumerate them from
+**Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) —
+plus **B2, the 5 `ac-plan-*` skills**. The remaining registry skills are the follow-on
+batches; enumerate them from
 `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
 skill, so a `*/` loop reports a phantom `MISSING _tools` forever).
 
@@ -151,6 +152,138 @@ should-NOT-activate
 - PASS — "clean up my desktop files"
 - PASS — "land the plane"
 
+## ac-plan-clean
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "clean the plan"
+- PASS — "correctness pass on the plan before we beadify"
+- PASS — "run the hygiene pass over the plan draft"
+- PASS — "check that the plan's structure holds together"
+- PASS — "final polish on the plan before it becomes beads"
+
+should-NOT-activate
+
+- PASS — "make a plan for the migration" (routes to ac-plan-init, which clean's own
+  "Requires an existing plan file; to create a plan use ac-plan-init" clause names)
+- PASS — "refine the plan" (routes to ac-plan-refine-internal, whose literal trigger it is;
+  clean scopes itself to "targeted fixes, not a rewrite")
+- PASS — "get other models to critique this plan" (routes to ac-plan-refine-external —
+  clean's 3 reviewers are its own hygiene pass, not external models)
+- FAIL (precision) → PASS (after fix) — "check the plan for anything it's missing".
+  `check the plan` is a literal ac-plan-clean trigger and the description claimed
+  **completeness**, while `what is the plan missing` is a literal ac-plan-lab trigger and
+  substantive gap-hunting is lab's job — two siblings claiming one phrasing with no
+  discriminator between them. Fix: narrow clean's third axis from "completeness" to
+  "internal consistency" and add an exclusion clause naming ac-plan-lab for gap-hunting.
+- PASS — "clean up the stale files in my repo"
+
+## ac-plan-init
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "make a plan"
+- PASS — "plan this feature"
+- PASS — "start a plan for the offline-sync work"
+- PASS — "write me an implementation plan for this backlog item"
+- PASS — "plan init"
+
+should-NOT-activate
+
+- PASS — "clean the plan" (routes to ac-plan-clean, named in init's own "To improve an
+  existing draft use ac-plan-clean / ac-plan-refine-internal / ac-plan-refine-external" tail)
+- PASS — "pressure-test this plan" (routes to ac-plan-lab, also named in that tail)
+- PASS — "refine the plan with subagents" (routes to ac-plan-refine-internal — same tail;
+  init is scoped to CREATE a first draft)
+- PASS — "turn this plan into beads" (routes to ac-beadify — the cross-family confusable;
+  init is the entry point of the planning chain and ends at the plan)
+- PASS — "plan my week"
+
+## ac-plan-lab
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "genius review the plan"
+- PASS — "pressure-test this plan"
+- PASS — "what is the plan missing"
+- PASS — "alien perspective on this roadmap"
+- PASS — "find the flaws in our Q3 delivery plan"
+
+should-NOT-activate
+
+- PASS — "take this raw concept somewhere new" (routes to ac-idea-lab, which lab's own
+  closing clause names — the B1-predicted exclusion-clause shape)
+- PASS — "check the plan" (routes to ac-plan-clean; lab's surface is entirely
+  critique/transcendence verbs, with no correctness or hygiene claim)
+- PASS — "refine external" (routes to ac-plan-refine-external — lab critiques in-session and
+  never claims external models)
+- PASS — "review the branch before we merge" (routes to ac-review; every lab trigger is
+  plan/roadmap-scoped, never a diff)
+- PASS — "run the weekly strategy review" (routes to the `strategist` skill — lab's
+  "strategy" is qualified inline to "(steps/timelines/resources)", i.e. an executable plan,
+  not an org review cadence)
+
+## ac-plan-refine-external
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "refine external"
+- PASS — "multi-model refine of this plan"
+- PASS — "get other models to critique this plan"
+- PASS — "run the plan past a couple of other models through openrouter"
+- PASS — "external plan refinement on this high-stakes migration plan"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "refine the plan with a panel of reviewers". This
+  was the one description in the family carrying NO sibling exclusion clause (clean names
+  init; init names clean/refine-internal/refine-external/lab; lab names ac-idea-lab;
+  refine-internal names refine-external; refine-external named nobody) — exactly the shape
+  B1's method verdict predicted would fail. "refine … panel of reviewers" matches
+  "multi-model refine" and "3–4 diverse … models" strongly, but the correct destination is
+  ac-plan-refine-internal, whose reviewers are subagents. Fix: add the reciprocal exclusion
+  clause naming ac-plan-refine-internal.
+- PASS — "improve this plan with subagents" (routes to ac-plan-refine-internal — its literal
+  trigger, and internal is explicit about "no external models")
+- PASS — "clean the plan" (routes to ac-plan-clean; external's whole surface is external
+  models plus the openrouter CLI)
+- PASS — "ask another model what it thinks of this code" (not a plan — external scopes
+  itself to "a HIGH-STAKES plan" and "external plan refinement")
+- PASS — "compare pricing across OpenRouter models"
+
+## ac-plan-refine-internal
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "refine the plan"
+- PASS — "refine internal"
+- PASS — "improve this plan with subagents"
+- PASS — "multi-agent plan refinement, heavy tier"
+- PASS — "deepen the plan until the reviewers converge"
+
+should-NOT-activate
+
+- PASS — "multi-model refine" (routes to ac-plan-refine-external, which internal's own
+  "for external multi-model refinement use ac-plan-refine-external" tail names — the
+  reciprocal of the fix applied to external above)
+- PASS — "refine these beads" (routes to ac-bead-refine, the cross-family confusable; every
+  internal trigger is plan-scoped)
+- PASS — "check the plan for correctness" (routes to ac-plan-clean — internal DEEPENS,
+  clean verifies; "correctness pass" appears only in clean)
+- PASS — "make a plan for this feature" (routes to ac-plan-init; internal's "Requires an
+  existing plan" is the discriminator)
+- PASS — "refine the copy on the landing page"
+
 ---
 
 ## Findings and fixes
@@ -163,6 +296,11 @@ should-NOT-activate
 | ac-merge | "land my trunk-direct batch on main" selected it | precision | scoped to a PR branch + trunk-direct exclusion naming ac-batch-close |
 | ac-batch-close | — | — | none needed |
 | ac-land | — | — | none needed |
+| ac-plan-clean | "check the plan for anything it's missing" selected it | precision | third axis narrowed from "completeness" to "internal consistency" + exclusion naming ac-plan-lab for gap-hunting |
+| ac-plan-refine-external | "refine the plan with a panel of reviewers" selected it | precision | reciprocal exclusion clause naming ac-plan-refine-internal added |
+| ac-plan-init | — | — | none needed |
+| ac-plan-lab | — | — | none needed |
+| ac-plan-refine-internal | — | — | none needed |
 
 Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
 re-judged PASS after the description edit; the re-judged verdicts are recorded inline
@@ -173,6 +311,12 @@ Observation carried to the follow-on batch (not a precision/recall failure, so n
 here): ac-batch-close's description embeds a bare bead id, `(bd-pwt44)`. It costs router
 tokens and says nothing to a router; provenance belongs in the ledger. Sweep bead-id
 tokens out of descriptions as a batch, not one-off.
+
+B2 score: 50 judgments, 2 failures (both precision), across 2 of the 5 `ac-plan-*` skills.
+Both re-judged PASS after the description edit. The bead-id sweep carried from B1 was run
+across all 17 skills in batches B2–B5 and returned zero hits — nothing to strip. B1's
+prediction held exactly: the only skill with no sibling exclusion clause
+(ac-plan-refine-external) is the one that failed on an inter-sibling near-miss.
 
 ## Method verdict
 

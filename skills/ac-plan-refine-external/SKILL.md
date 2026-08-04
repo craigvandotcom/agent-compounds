@@ -1,6 +1,6 @@
 ---
 name: ac-plan-refine-external
-description: 'Use to refine a HIGH-STAKES plan via 3–4 diverse EXTERNAL AI models through OpenRouter — catches architectural blind spots a single model misses. Triggers: ''refine external'', ''multi-model refine'', ''get other models to critique this plan'', ''external plan refinement''. Requires an existing plan and the openrouter CLI.'
+description: 'Use to refine a HIGH-STAKES plan via 3–4 diverse EXTERNAL AI models through OpenRouter — catches architectural blind spots a single model misses. Triggers: ''refine external'', ''multi-model refine'', ''get other models to critique this plan'', ''external plan refinement''. Requires an existing plan and the openrouter CLI; for internal multi-agent refinement with no external models use ac-plan-refine-internal.'
 ---
 
 # Plan Refine (External / Multi-Model)
