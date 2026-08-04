@@ -289,7 +289,7 @@ swallowed, under the same assert-don't-assume rule the dispatch below carries.
 
 ```bash
 # net-growth-ok: ac-ewgr.5 — Act 1 gate resolution must be inline at the assert
-# The assert POLICY generalizes; the workflow NAME does not (ac-ewgr.5). `quality-gate.yml`
+# The assert POLICY generalizes; the workflow NAME does not. `quality-gate.yml`
 # exists only in body-compass-app; agent-compounds' live gate is `registry-lint.yml`, which is
 # push-triggered AND paths-filtered. Probe, then branch on the trigger shape.
 GATE_WORKFLOW="${GATE_WORKFLOW:-}"   # a conductor may pin one explicitly; else probe
@@ -333,6 +333,10 @@ reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
   else
     # PUSH-TRIGGERED gate: one run PER COMMIT — assert every commit in the range, and report
     # the no-run case as its own verdict. It is NOT a pass.
+    # Re-derive the range HERE (same rule as Act 3): BATCH_RANGE is assigned in the anchor
+    # block, a SEPARATE fenced block, so it may be empty — and `git rev-list ""` errors into an
+    # EMPTY loop, i.e. zero per-commit verdicts that read as "nothing to report".
+    BATCH_RANGE="${BATCH_RANGE:-$ANCHOR..HEAD}"
     RUNS=$(GH_DEBUG= gh run list --workflow "$GATE_WORKFLOW" --json headSha,conclusion --limit 200 2>/dev/null)
     for c in $(git rev-list "$BATCH_RANGE"); do
       green=$(printf '%s' "$RUNS" | jq -r --arg s "$c" '[.[] | select((.headSha|startswith($s)) and .conclusion=="success")] | length')
@@ -359,7 +363,13 @@ reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
 Neither → report `Tier 1 CI: NOT GATED (<reason>)` in Act 3. Still do not block the batch on
 infrastructure another bead is landing — but never let an un-executed gate read as a passed one.
 
-### Poll for the dispatched run against HEAD — FOREGROUND ONLY
+### Poll for the dispatched run against HEAD — DISPATCHABLE GATES ONLY, FOREGROUND ONLY
+
+<!-- net-growth-ok: the dispatchable gate + stall verdict must sit at the poll they govern -->
+**Skip this whole section unless `GATE_DISPATCHABLE=yes`.** No dispatch was fired on a
+push-triggered gate, so there is nothing to poll for: the per-commit `RUNS` assertion above IS
+this repo's verdict and the ~25-min loop below would burn its full cap waiting on a run that
+was never dispatched.
 
 Same bounded-wait discipline as `ac-merge`'s PR-checks poll (`ac-pipeline/references/delegation-contract.md`:
 hard-capped, timeout-terminal — a stalled CI run is a reportable outcome, not a pause). **This
@@ -383,6 +393,7 @@ running after this turn ends.
 > the same turn is NOT backgrounding — it stays foreground.
 
 ```bash
+[ "$GATE_DISPATCHABLE" = yes ] || { echo "poll skipped: $GATE_WORKFLOW is not dispatchable"; }
 HEAD_SHA=$(git rev-parse HEAD)
 # Resolve the dispatched run's id ONCE (list + match by headSha to get its databaseId), then
 # poll THAT id deterministically with `gh run view <id>` — re-listing + jq-selecting by headSha
@@ -408,6 +419,9 @@ for i in $(seq 1 50); do
     fi
     echo "Waiting... ($i/50)"
 done
+# Terminal verdict on cap exhaustion — a stalled/never-registered run is a REPORTABLE outcome,
+# never a silent fall-through into the triage step below.
+[ "$STATUS" = completed ] || echo "Tier 1 CI: STALLED (no completed run for $HEAD_SHA within the cap)"
 echo "$MATCH" >> "$ARTIFACTS_DIR/dispatch-run.json"
 ```
 

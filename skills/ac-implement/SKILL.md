@@ -402,7 +402,7 @@ If the bead requires absent infrastructure:
 
 A bead with no `## Consumes` header at all predates the contract (legacy) — log it and proceed; do not bounce legacy beads for missing paperwork.
 
-<!-- net-growth-ok: premise-check data-values guard (dream ac-tmp, Craig-applied) -->
+<!-- net-growth-ok: ac-tmp premise-check data-values guard -->
 **Guard: premise-check embedded factual claims.** Beyond artifact-existence, grep the
 bead's spec for any stated data value or factual claim the fix logic depends on (a DB
 row's field value, "column already exists", an assumed parent/child relationship) and

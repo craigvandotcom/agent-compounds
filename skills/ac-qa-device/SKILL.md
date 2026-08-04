@@ -254,7 +254,7 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    fix can target the wrong sub-issue and still pass its own narrower test while the
    reported symptom survives. Unit/browser suites cannot see this class of gap.
    Close only after the ORIGINAL symptom is confirmed absent on-device.
-   <!-- net-growth-ok: symptom-verification rule (dream ac-v0m, Craig-applied) -->
+   <!-- net-growth-ok: ac-v0m symptom-verification rule -->
 
 ## Seeing the WebView (hybrid/Capacitor apps)
 

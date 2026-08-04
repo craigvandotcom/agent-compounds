@@ -29,7 +29,10 @@ case "$BLOCK" in
   *) echo "HARNESS FAIL: could not extract the Scan E bash block"; exit 1 ;;
 esac
 
-W=/tmp/ci-gate-proof
+# mktemp -d, not a fixed path: two concurrent runs of this harness on a fixed dir clobber each
+# other's fixtures and report false failures (proven by a concurrent-run probe). Siblings all
+# use mktemp -d; this was the outlier.
+W=$(mktemp -d)
 FIX="$W/fix"
 PROJECT_ROOT="$W/repo"
 ARTIFACTS_DIR="$W/art"

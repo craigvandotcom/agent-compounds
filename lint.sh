@@ -1045,7 +1045,12 @@ fi
 
 check
 mirror_accounted=$(( mirror_checked + mirror_skipped + mirror_excluded ))
-if [ "$mirror_accounted" -ne "$mirror_total" ]; then
+if [ "$mirror_total" -eq 0 ]; then
+  # 0 == 0 accounts for nothing. Reached when canon extraction failed above and the marker
+  # loop was skipped wholesale — every real carrier then goes unchecked while the accounting
+  # line reads clean. Zero markers in a registry that has them is itself the false green.
+  fail "Check 16: zero mirror markers scanned — accounting is vacuous (canon block unreadable?)"
+elif [ "$mirror_accounted" -ne "$mirror_total" ]; then
   fail "Check 16: accounted for ${mirror_accounted} of ${mirror_total} mirror markers — an unparsed marker is a false green"
 else
   echo "  mirror markers: ${mirror_total} total — ${mirror_checked} verbatim-class checked, ${mirror_skipped} paraphrase-class skipped, ${mirror_excluded} excluded"

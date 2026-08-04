@@ -157,9 +157,9 @@ else
   DIFF_RANGE="$LAST_TAG..HEAD"
 fi
 
-# Single definition of the review pathspec (ac-ewgr.3) — EVERY consumer of $DIFF_RANGE
-# below (this block, the legacy-branch block, Phase 2's diff + size check) reuses this one
-# array; never re-inline the pathspec. `.beads/` JSONL churn dominates a registry-repo range
+# Single definition of the review pathspec — EVERY consumer of $DIFF_RANGE (this block, the
+# legacy-branch block, Phase 2's diff + size check) uses this one array, restated VERBATIM in
+# any later bash call (an array does not survive one). `.beads/` JSONL churn dominates a range
 # and no reviewer can act on it: measured over 44717df..0ffc1a4, 105 of 129 files (81%) were
 # `.beads/`, and excluding them cut 6989 insertions to 934 (7.5x).
 # `.claude/reviews/` was CONSIDERED AND DELIBERATELY NOT EXCLUDED — a prior run's review
@@ -307,7 +307,11 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 ### Get Diff
 
 ```bash
-git diff $DIFF_RANGE "${DIFF_PATHSPEC[@]}"      # Phase 1's single definition — .beads/ excluded
+# net-growth-ok: the re-derivation must sit at the consuming call, not in a Phase-1 pointer
+# Arrays do NOT survive across bash calls (same rule as PROJECT_ROOT below); unset,
+# `"${DIFF_PATHSPEC[@]}"` expands to NOTHING and the .beads/ exclusion silently stops applying.
+DIFF_PATHSPEC=(-- ':(exclude).beads/')          # Phase 1's single definition, restated verbatim
+git diff $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
 ```
 
 ### Diff Size Check
