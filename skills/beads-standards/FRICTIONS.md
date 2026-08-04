@@ -2,7 +2,7 @@
 skill: beads-standards
 created: 2026-07-22
 last_pass: 2026-08-04
-entries: 4
+entries: 6
 ---
 
 # beads-standards — friction log
@@ -105,3 +105,29 @@ entries: 4
   What actually fired was the mirror image: a DUPLICATE update between two independent SCHEDULED JOBS, which
   the conductor-owns-the-commit fix does not cover at all, because no conductor sits above both jobs.
   Hence the fix must be scoped per-writer-scope, not per-run.
+
+## br-json-shapes-differ-across-subcommands
+- skills: [beads-standards]
+- impact: S
+- frequency: frequent
+- recurrence: 1
+- related: [br-non-tty-flake-in-compound-one-liners]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: document the shapes in the br cheatsheet: `br list --json` returns an OBJECT (`{issues:[…], total, limit, offset, has_more}`) and needs an explicit `--limit 0`; `br ready --json` and `br show --json` return BARE ARRAYS. Give the defensive filter form (`(.issues // .)`) so one jq expression survives both. Confirm against the live tool before writing (per `verify-doctrine-claims-against-live-tools`).
+- narrative: a jq filter written for `br ready --json` errored with "Cannot index array with string" when reused against `br list --json`, because the two subcommands of the same CLI return different top-level shapes; `br list` additionally truncates unless given `--limit 0`, so a board scan silently under-reports without it. A third shape showed up in the same run from the refine side: a bead AC specified parsing `br show --json` as an object and was unbuildable as written because it too returns a bare array. Cost is one wasted call per rediscovery, but the shape is rediscovered independently by every agent that scripts a board scan, and nothing in the registry documents it. Knowledge captured meanwhile as the neoMeta memory fact `br-cli-json-shapes-and-body-quoting`; this entry tracks the doctrine gap that keeps making it necessary.
+
+## br-d-body-is-shell-expanded
+- skills: [beads-standards]
+- impact: S
+- frequency: frequent
+- recurrence: 2
+- related: [br-json-shapes-differ-across-subcommands, dcg-false-positives-on-angle-bracket-inside-quoted-prose]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: state the positive form in the br cheatsheet — **a bead body longer than one line goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d`. Cover the reason in one clause (a double-quoted `-d` argument is shell text: backticks run command substitution and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it.
+- narrative: hit TWICE in one run by two different agents (RUN 20260804-202200-loop: the conductor at Phase 0, then a review child at bead-filing) and solved independently both times. A `br create -d "…"` body containing backticks and an angle-bracket placeholder triggered command substitution plus a redirect parse error; the failure message names shell syntax, so neither agent's first hypothesis was about the bead at all. `-f` avoids the whole class, including the dcg prose-payload false positives that the same inline shape triggers — two independent reasons for one rule, which is a good sign it belongs in doctrine rather than in each agent's scar tissue. Two uncoordinated rediscoveries in a single run with zero registry coverage is the same documentation-gap shape as `br-non-tty-flake-in-compound-one-liners` above.

@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-03
 last_pass: 2026-08-04
-entries: 2
+entries: 4
 ---
 
 # ac-pipeline — friction log
@@ -38,3 +38,29 @@ entries: 2
 - status: open
 - proposed_fix: see primary — write prose payloads to a literal temp file with the Write tool and pass them by command substitution, rather than inlining them. ac-pipeline's own stake: the delegation preamble and the disposition/close-reason templates it hands every child are exactly the long-prose payloads that trip this, so the sanctioned "payload goes in a file, never on the command line" shape belongs in the shared substrate, not in each phase skill.
 - narrative: POINTER ENTRY, not a copy — the PRIMARY is `dcg-false-positives-on-angle-bracket-inside-quoted-prose` in `skills/ac-loop/FRICTIONS.md`, where occurrences are counted. Recorded here for the same reason as the sibling above: the shapes originate in ac-pipeline-owned shared text. RUN 20260803-221658-19787 contributed three occurrences (counted at the primary) that widen the class well beyond the markdown blockquote the primary was minted from. (a) A command was blocked because the word `restore` appeared as an ordinary English verb in a quoted prose payload — the guard's destructive-operation matcher reads command TEXT, so a bead comment that merely *describes* restoring a file is indistinguishable from one that does it. (b) An arrow written in prose was tokenised as a redirect, with nothing being redirected. (c) A placeholder in angle brackets inside a bead description body was read as a redirect target. All three are the same root as the primary and all three landed on payloads whose SHAPE this skill supplies. Two operational points worth carrying: the failure is per-call and self-inflicted at compose time, so it is fully preventable by never putting prose on a command line; and guidance that tries to warn about these shapes by showing them is itself blocked, which is why the fix must name constructs rather than demonstrate them.
+
+## delegation-brief-restates-bead-preconditions
+- skills: [ac-pipeline]
+- impact: H
+- frequency: every-run
+- recurrence: see primary
+- related: [delegation-brief-restates-bead-preconditions, dispatch-scoped-from-spec-not-comment-history]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: see primary — briefs POINT at the bead, never restate it. ac-pipeline's local half is the one that is mechanically checkable and belongs in `references/delegation-contract.md`: **a brief may state a fact only if it carries a citation — a commit SHA or a `br show` verdict. A narrative claim about work that is still in flight is not citable and must not be stated.** Add it as a compose-time rule next to the child-spawn preamble, with the escape phrasing for the uncitable case ("premise, NOT verified — check it") that the memory fact already recommends.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is `delegation-brief-restates-bead-preconditions` in `skills/ac-loop/FRICTIONS.md`, where occurrences are counted. Recorded here because the contract this friction keeps violating is ac-pipeline's own: `references/delegation-contract.md` defines what a brief may contain and currently says nothing about citation, so every conductor re-derives the rule after paying for it. Local manifestation (RUN 20260804-202200-loop): a refine brief asserted a sibling bead's parts were being implemented concurrently when they had landed five days earlier; all three round-1 reviewers spent ~15 minutes refuting the brief before refining could start. The distinguishing feature versus the primary's earlier occurrences is that this claim was not stale — it was PREMATURE, composed from the dispatch plan before the implement child reported back — which is why the fix has to be a citation test rather than a freshness reminder.
+
+## dispatch-scoped-from-spec-not-comment-history
+- skills: [ac-pipeline, ac-loop]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [delegation-brief-restates-bead-preconditions]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: state in `references/delegation-contract.md` that a dispatch is scoped from the WHOLE bead — spec AND comment history — and that any instruction to FILE something (a decision bead, a follow-up, a gate) must be checked against the bead's comment tail first, since that is where prior sessions record decisions, retractions and already-shipped verdicts. Cheap mechanical form: `br show <id>` including comments, and grep the tail for DECISION/SHIPPED/RETRACTED before composing an order to create anything.
+- narrative: the conductor ordered an implement child to file a B2 atomicity DECISION bead. That decision had been recorded ON THE SAME BEAD five days earlier ("ATOMICITY DECISION: TWO-STEP, WITH A NAMED RACE WINDOW"). The child refused and was right; had it complied, a settled question would have been re-escalated to a human gate. Root cause is structural rather than careless: conductor triage surfaces the TITLE and DESCRIPTION, and a long refined bead's spec section reads as complete, so the comment tail — which is exactly where later sessions put corrections — is the part a compressing conductor never opens. Same shape as the board-truth defect this run's other findings cover (a session that finds work already shipped writes it into COMMENTS, where the next conductor's triage cannot see it), which is why the two fixes are complements: amend the TITLE when the truth changes, and read the COMMENTS when scoping.

@@ -2,7 +2,7 @@
 skill: ac-bead-refine
 created: 2026-07-22
 last_pass: 2026-08-04
-entries: 17
+entries: 19
 ---
 
 # ac-bead-refine — friction log
@@ -241,3 +241,29 @@ entries: 17
 - status: resolved (ac-e5a3, shipped 2026-08-03)
 - proposed_fix: shipped — `workflow.md`'s `tr` invocations now call the binary explicitly rather than the bare name, so the fleet's interactive alias cannot shadow them (ac-e5a3: 8 invocations across 7 lines in 4 files).
 - narrative: bare `tr` is aliased to tmux in the fleet's interactive zsh, so four `workflow.md` sites silently produced EMPTY STRINGS instead of the transformed values they computed. The values were CHILD_ID components, which meant the bd-baudw sibling-collision safety (distinct per-child artifact dirs) was degraded run-wide without any child seeing an error: two children hit it directly (~6 min, 3 retries, 4 orphaned /tmp dirs across siblings; one had to re-derive `paste -sd' '` as a substitute), and the rest inherited weakened isolation. Logged as resolved rather than omitted because the shape is the one this ledger exists to catch — a silently-empty result from a shadowed command name — and because the fix shipped the same day it was observed, which is the evidence trail a future promotion pass needs to see WORKED.
+
+## final-round-audits-the-input-not-the-draft
+- skills: [ac-bead-refine]
+- impact: H
+- frequency: frequent
+- recurrence: 1
+- related: [late-round-findings-are-contradictions-from-earlier-patches, heavy-review-does-not-mean-converged]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: make the FINAL round's target the conductor's own DRAFT, not the original bead — "verify every factual claim in the text you are about to stamp, against the live tree/board" — and say so in the round prompt. The earlier rounds hunt gaps in the input; the last round audits the output. Without that switch, no round in the ceremony ever checks the thing that actually ships.
+- narrative: the refine conductor's round-3 drafts had inherited reviewer summaries uncritically, and an audit OF THE DRAFT (rather than of the original bead) found **8 wrong factual claims** in text that was one step from being stamped refined. Cost a full round-3 rewrite of both bead bodies, ~20 minutes — but the alternative was shipping 8 false claims into beads that implement children would have treated as spec. The generalisable shape: reviewers report on the INPUT, the conductor writes the OUTPUT, and every round after round 1 is reviewing a document nobody has audited. This is the sibling of `late-round-findings-are-contradictions-from-earlier-patches` (there: the patches contradict each other; here: the patches assert things that are not true) and both are cured by the same switch of target in the last round. The claims were not sloppy paraphrase — they were reviewer summaries adopted verbatim, which is exactly the material a conductor is least likely to re-derive because it arrived already-formatted as a finding.
+
+## findings-dropped-without-a-disposition-ledger
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [final-round-audits-the-input-not-the-draft, heavy-review-does-not-mean-converged]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: require a per-finding DISPOSITION LEDGER in the refine artifact — every finding raised by any round gets exactly one of applied / rejected-with-reason / deferred-to-<bead>, and the round cannot close until each row has one. Silence must be impossible to confuse with a decision; a rejected finding with a stated reason is a cheap, honest outcome, an unlisted finding is not an outcome at all.
+- narrative: two findings raised during refine were silently dropped — not rejected on the merits, just never carried forward into the next round's draft or the artifact. Nothing in the ceremony detects this: the panel reports findings, the conductor patches the draft, and the only record of what happened to any individual finding is whether its text happens to appear in the result. That makes "was this considered and rejected?" and "was this lost?" indistinguishable after the fact, for the conductor AND for the human reading the artifact later. Low cost this run (both were minor), but the failure mode is invisible by construction and scales with round count and panel width, so it will not announce itself in a run where the dropped finding mattered.

@@ -2,7 +2,7 @@
 skill: ac-loop
 created: 2026-07-21
 last_pass: 2026-08-04
-entries: 15
+entries: 16
 ---
 
 # ac-loop — friction log
@@ -27,13 +27,13 @@ entries: 15
   **RUN 20260803-221658-19787, +1 — the same gap at the LAND end of the pipeline, which widens the fix.** Landing on agent-compounds ran into `ac-land` prescribing pnpm-repo commands (the format sweep and the build/lint gates it composes) in a repo that has no pnpm project at all. The child translated by hand, as the operator did on the 2026-07-21 occurrence, and at zero cost — but that is now two skills, at opposite ends of one pipeline, each independently assuming a Next.js/pnpm app and each leaving the translation to whoever is running. The generalisation the original entry did not have: this is not an ac-loop adaptation note, it is a PIPELINE-WIDE precondition. The cheap form is to establish the repo's shape once at Phase 0 (does a package manager project exist; is there CI, a version, a QA surface) and carry that answer to every phase, so a doc-only repo collapses each gate to its available equivalent by construction rather than by improvisation at four separate call sites. A pointer entry now sits in ac-land's log; occurrences stay counted here.
 
 ## delegation-brief-restates-bead-preconditions
-- skills: [ac-loop, ac-implement]
+- skills: [ac-loop, ac-implement, ac-pipeline]
 - impact: H
 - frequency: every-run
-- recurrence: 3
-- related: [standing-sanctions-not-threaded-into-delegation-prompt]
+- recurrence: 4
+- related: [standing-sanctions-not-threaded-into-delegation-prompt, dispatch-scoped-from-spec-not-comment-history]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-02
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: delegation briefs must POINT at the bead as the authoritative spec ("read `br show <id>` in full; this brief is a pointer, not a substitute") and must NEVER restate the bead's preconditions as established fact. Pair it with an explicit escape clause so a child that finds a stated precondition false is licensed to widen scope to the bead's own ACs rather than treating the brief as a hard fence. ALSO (2026-08-01): the same prohibition applies to non-bead claims a conductor asserts — bead OPEN/CLOSED status, tool availability, an active blocker, a paraphrased doctrine rule — and it applies to the `ac-pipeline/references/delegation-contract.md` child-spawn preamble itself, which currently asserts "you have NO `mcp__mcp-agent-mail__*` tools" as flat fact when tool availability is per-agent configuration. A false claim in a VERBATIM-copied block reaches every child of every run; that line needs to be conditional ("if you have no ... tools") or dropped.
@@ -45,6 +45,18 @@ entries: 15
   trusting the payload. Same root — conductor-composed payload facts drift; children citing
   primary sources are right. Conductor's own noted fix: cite trailers when composing, never
   pair from memory.
+  **RUN 20260804-202200-loop (BCA, width 2), +1 — the failure is TIMING, and the fix is a
+  citation requirement.** The conductor's refine brief asserted that a sibling bead's Parts A+B
+  were "being implemented RIGHT NOW" by a concurrent child, and instructed the refiner to write
+  against that post-implementation world (possibly wiring a dep edge). All false: A+B had landed
+  five days earlier (2026-07-29). All three round-1 reviewers independently had to refute the
+  brief before any refining could begin — ~15 minutes of panel time spent disproving the
+  conductor. The root cause is not compression this time but ORDER: the brief was composed from
+  the dispatch PLAN before the implement child had reported back, so the claim described an
+  intention, not a state. Hence the sharpened rule, which is mechanically checkable at compose
+  time: **a dispatch brief may state a fact only if it can cite a commit SHA or a `br show`
+  verdict — never a narrative claim about in-flight work.** If no citation exists yet, the claim
+  is not ready to be stated; say "premise, NOT verified" or wait for the child's return.
 
 ## child-has-no-upward-report-channel
 - skills: [ac-loop, ac-implement]
@@ -76,15 +88,31 @@ entries: 15
 - skills: [ac-loop]
 - impact: L
 - frequency: every-run
-- recurrence: 2
-- related: [standing-sanctions-not-threaded-into-delegation-prompt, open-tooling-bug-not-checked-against-run-config-at-phase0]
+- recurrence: 3
+- related: [standing-sanctions-not-threaded-into-delegation-prompt, open-tooling-bug-not-checked-against-run-config-at-phase0, divergence-check-while-a-child-is-live-proves-nothing]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-29
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: (a) make the explicit per-child FILE-TERRITORY FENCE standard delegation-prompt text — it is the mechanism that made width 3 safe; (b) add a width-safety caveat: parallelism is safe on source FILES but NOT on shared BUILD state (`.next`) or shared SCRATCH state (RUN_ID-derived artifact dirs) — never schedule two prod-build consumers (qa-browser / site-polish / anything triggering the pre-push build) concurrently until a real build slot or a per-consumer `distDir` exists; (c) ramp evidence now covers width=2 as well as width=3 — width 2 is workable on a shared checkout, width 3 would likely need real build isolation.
 - narrative: PARALLEL_WIDTH=3 (Craig-chosen) held cleanly — three tree-disjoint implementers committed to `main` concurrently across two batches with ZERO lost work and zero pathspec collisions. The explicit per-child file-territory fence in the delegation prompt is what made that safe, and it is currently improvised per-run rather than standard text. Both genuine collisions this run were on shared NON-SOURCE state, not source: (1) refine siblings share a RUN_ID so their `beads-snapshot.json` collided, a near-miss that nearly stamped another child's beads (filed bd-baudw); (2) two prod-build consumers clobbered each other's `.next`, costing ~35min and a false-positive product investigation (filed bd-y5mza). Ramp conclusion: width 3 is sustainable for refine and implement; it is NOT yet safe for concurrent prod-build consumers.
   RUN 20260728-234407-54469 (width=2, shared trunk-direct checkout) added three more distinct, all non-fatal, cross-child collisions to the ramp evidence: (a) a sibling's uncommitted `lib/**` type error broke the OTHER child's `next build` moments after that child's own `tsc` had passed cleanly; (b) a transient whole-project `tsc` failure caused by in-flight sibling WIP; (c) foreign format churn appearing in the working tree from a sibling's pass. All three were correctly attributed by the children to sibling interference rather than self-blamed as regressions in their own change. This strengthens the width=2-is-workable / width=3-needs-isolation conclusion above.
+  **RUN 20260804-202200-loop (BCA, width=2), +1 — the positive form of the disjointness rule:
+  HOIST the shared file, do not hunt for beads that share none.** Both beads in batch 2 implied
+  edits to the same file (`scripts/curate-foods/cli.ts`). Rather than dropping one bead or
+  serialising the batch, the conductor kept that ONE file conductor-owned and gave each
+  implementer the rest of its territory — the two children then ran genuinely disjoint at zero
+  collision cost. This reframes batch selection: the constraint that makes width>1 safe is not
+  "select beads whose file sets are disjoint" (a rare and shrinking set as batches grow), it is
+  "make the selected set disjoint by HOISTING the intersection to the conductor". The
+  intersection is typically one or two files and the conductor is already the serialising agent,
+  so the hoist is cheap. Fold this into the file-territory fence asked for in (a): the fence must
+  name both the child's territory AND the conductor-retained files. The same run also shows the
+  ledger is this case in disguise — `.beads/issues.jsonl` cannot be staged per-line, so telling
+  one child "you own the ledger for this window" while telling another "hold ALL br mutations" is
+  not an ownership protocol; the two instructions are not jointly satisfiable on one file, and the
+  implement child ended up committing two ledger lines it did not author (they were the
+  conductor's own Phase-0 comments). Hoist the ledger too: the conductor commits it.
 
 ## phase-skills-mandate-panels-a-subagent-cannot-spawn
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser]
@@ -108,10 +136,10 @@ entries: 15
   of signal about which reviews had real independence. bd-nreuv tracks the decision.
 
 ## dcg-blocks-the-skills-own-canonical-artifact-redirects
-- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement]
+- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline]
 - impact: M
 - frequency: every-run
-- recurrence: 36
+- recurrence: 39
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn, dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-07-22
 - last_seen: 2026-08-04
@@ -179,6 +207,21 @@ entries: 15
   a variable to the guard. The only shapes that worked were the Write tool, a pasted literal at the
   call site, and `tee`. `tee` should be named as the sanctioned redirect substitute in the shared
   substrate; four children re-derived it independently this run.
+  **RUN 20260804-202200-loop (BCA), +3 — and the root cause is now named: bd-5ndzm's sweep was
+  botched, not incomplete.** Three published idioms blocked in one run, in three separate documents:
+  `ac-pipeline/references/board-scan.md`'s Scan E snippet, `ac-loop/SKILL.md` Phase 1's MANDATED
+  `$ARTIFACTS_DIR/.claim-id` write, and `ac-bead-refine`'s tee idiom (already on the board as
+  bd-qfqdv). **Correction to this run's first-pass diagnosis** — the carrier initially reported that
+  Scan D passes while Scan E is blocked, and inferred an inconsistently-firing rule. A direct probe
+  of dcg 0.6.7 refuted that: **both Scan D and Scan E are blocked**, the rule fires consistently, and
+  the doc's own claim that "the literal form is the only one that runs here" is simply false for both.
+  The real root cause is process, not guard behaviour: bd-5ndzm (the bead this entry names as its
+  tracker) was **closed as Fixed on 2026-07-30 having scoped 6 skills and mechanically fixed exactly
+  one** — so the blocked shapes were never removed from the other five, and nothing detects a
+  reintroduction. Refiled with that framing as bd-scjgv. Two things follow: (a) the fix needs a
+  mechanical DETECTOR (grep the registry for redirects to a non-literal destination) or the sweep
+  will rot again; (b) a bead closed Fixed after a partial sweep is worse than one left open — it
+  removes the signal that anything remains.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-loop, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
@@ -222,6 +265,29 @@ entries: 15
   temp file with the Write tool and pass it by command substitution. A pointer entry now exists in
   ac-pipeline's log because the payload SHAPES (delegation preamble, disposition and close-reason
   templates) are shared substrate it owns; occurrences stay counted here.
+
+## divergence-check-while-a-child-is-live-proves-nothing
+- skills: [ac-loop]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [width-safe-on-files-not-on-shared-build-and-scratch-state, hand-typed-sha-not-git-rev-parsed]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: assert the origin/local SHA relationship ONLY at a quiescent point — after a child has returned, never mid-flight — and treat a push rejection or a local-ahead reading as a QUESTION (re-read after the writer settles), never as a finding. Corollary for the run report: a "known bug recurrence" claim about push/divergence needs the same citation discipline as any other brief claim, because the cheapest confirmation is one re-check and the cost of publishing it wrong is a false bug report the next conductor believes.
+- narrative: the conductor checked origin divergence while an implement child was still live, saw
+  local ahead of `origin/main` by one commit, and wrote it up as a recurrence of a known
+  push-swallowing hook bug. FALSE ALARM — the check had landed in the gap between the child's
+  commit and its push, and reconciled on the next read; it had to be retracted in the carrier.
+  Separately and in the same run, a genuine `cannot lock ref` push rejection SELF-RESOLVED once a
+  concurrent writer pushed the same commit forward. Both halves teach the identical thing:
+  **trunk state read while another writer is mid-operation is not evidence.** The second half also
+  falsifies a standing loop assumption — the nightly curator job committed to `main` DURING this
+  run, so the loop and its children are not the only writers on trunk, and any check that assumes
+  they are will manufacture findings. Verify by SHA after the writer settles; a rejected push does
+  not mean lost work.
 
 ## hand-typed-sha-not-git-rev-parsed
 - skills: [ac-loop]
@@ -323,11 +389,20 @@ entries: 15
 - skills: [ac-loop]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [open-tooling-bug-not-checked-against-run-config-at-phase0, width-safe-on-files-not-on-shared-build-and-scratch-state]
 - first_seen: 2026-08-03
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
-- proposed_fix: any identity string composed from environment (CHILD_ID and the artifact dirs derived from it) must ASSERT each segment is non-empty at the point it is built, and fail loudly if not — an empty segment must never be allowed to silently degrade to a shared path.
+- proposed_fix: two halves, and the second is cheaper. (a) any identity string composed from environment (CHILD_ID and the artifact dirs derived from it) must ASSERT each segment is non-empty at the point it is built, and fail loudly if not — an empty segment must never be allowed to silently degrade to a shared path. (b) UPSTREAM of that: the conductor must hand EVERY spawned child an explicit `AGENT_NAME` in its brief, including children not expected to claim or commit — an unset variable is the input both failure shapes read from, and the conductor is the only agent that can set it.
 - narrative: a child's CHILD_ID formula read AGENT_NAME from the environment, where it was unset, and produced an identity with an EMPTY agent segment. Nothing errored. The consequence is the one that matters: CHILD_ID is what gives siblings distinct artifact directories, so an empty segment collapses two children's scratch space toward the same path — precisely the bd-baudw cross-stamping collision that width>1 runs are supposed to be protected from. Same silent-empty shape as the `tr` alias defect logged in ac-bead-refine (there a shadowed command, here an unset variable), and the same consequence, which is why the fix belongs at the ASSERTION level rather than at each individual source: the formula has several ways to yield an empty segment and no way to notice.
+  **RUN 20260804-202200-loop (BCA), +1 — the other branch of the same unset variable: a silent
+  identity FALLBACK rather than an empty segment.** A refine child spawned without an `AGENT_NAME`
+  fell back to the Tier-2 chore identity FoggyCreek (artifacts dir
+  `/tmp/bead-refine-FoggyCreek-47404-…`). Harmless ONLY because that child had been told to defer
+  every `br` mutation and claimed nothing — the FoggyCreek claim guard would have fired otherwise,
+  mid-refine, on a child with no standing to fix it. Two children of one run read the same unset
+  variable and degraded in two different directions (empty path segment / borrowed identity), which
+  is precisely the argument for fixing it at the SPAWN site: whatever each downstream consumer does
+  with the empty value, the conductor knows the right value and simply did not pass it.

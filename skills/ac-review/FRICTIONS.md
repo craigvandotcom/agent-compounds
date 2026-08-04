@@ -2,7 +2,7 @@
 skill: ac-review
 created: 2026-07-29
 last_pass: 2026-08-04
-entries: 10
+entries: 12
 ---
 
 # ac-review — friction log
@@ -142,3 +142,29 @@ entries: 10
 - status: open
 - proposed_fix: when a finding asserts a COUNT ("2 broken anchors", "3 call sites"), re-derive it mechanically before scoping the fix — a per-file occurrence grep, not a re-read. A reviewer's table is a sample of what it happened to inspect, not an enumeration, and the fix is scoped from the number.
 - narrative: a panel's site-by-site audit reported 2 broken anchors; a mechanical per-file occurrence count found 6. The 3x undercount came from a reviewer that presented its results as a TABLE — the format that most strongly signals exhaustiveness — while having audited only the sites it happened to open. Cost ~10 tool calls of conductor verification, and would have cost a fix that repaired a third of the defect while closing the finding. Converges with `contradictory-panel-consensus-needs-source-re-derivation` on the same remedy (re-derive from source rather than trust the panel's summary), but the trigger is different and easier to miss: there is no contradiction here to alert anyone — one reviewer, confident, internally consistent, and numerically wrong.
+
+## unasked-adversarial-priors-come-back-as-silence
+- skills: [ac-review]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [contradictory-panel-consensus-needs-source-re-derivation, panel-undercounts-occurrences-of-a-multi-site-defect]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: add `conductor_questions` as a standard OPTIONAL slot in the review delegation prompt, alongside the `findings` contract — the conductor lists its specific adversarial priors, and the reviewer must answer each one with file:line evidence whether or not it produces a finding. A reasoned negative is a deliverable, not a non-result.
+- narrative: the conductor passed four specific adversarial priors as a mandatory `conductor_questions` block next to the normal findings contract. All four came back answered concretely with file:line evidence — and the two that produced NO finding were among the most valuable answers of the review (the skipped-validation exclusion held; no automated caller breaks on exit 2), because they retired hypotheses the conductor would otherwise have carried into batch-close and possibly re-investigated. The friction this exposes is the default state: an unasked reviewer returns silence, and silence is indistinguishable from "checked and clean". The panel contract currently only has a channel for POSITIVE findings, so every prior the conductor holds either becomes a finding or vanishes. Zero cost this run because the conductor improvised the block; the cost is what the same run would have looked like without it, which is why this belongs in the prompt rather than in a conductor's habits.
+
+## fixture-shape-validity-not-covered-by-green-or-sabotage
+- skills: [ac-review]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [unasked-adversarial-priors-come-back-as-silence]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: add **fixture SHAPE validity** to the test-quality reviewer's rubric as a dimension distinct from coverage and mutation-sensitivity — for each fixture, name the production write path that persists this exact row/state including its NULLs, and flag any fixture whose shape an invariant forbids. Cheap probe the reviewer can always run: grep the writer for the columns the fixture populates.
+- narrative: ac-review found THREE High defects in code that had just shipped with a 741-file / 11048-test green AND a sabotage-revert proof. Root cause of all three was a single test-design fault: every fixture in the new 503-line suite was a RED row with a NON-NULL green column — a shape the production pipeline never persists, because `zone-pipeline.ts:566` nulls `green_gate_results` on derived-red rows BY INVARIANT. The headline defect, `computeGateDivergence` firing a false `!!! DIVERGENCE` on 100% of real RED rows, was therefore invisible to the suite: the fixtures agreed with the bug. Neither of the two proofs we normally treat as decisive detects this — a green run only says fixture and assertion agree, and a sabotage revert only says the test is sensitive to the code, which an impossible-state fixture still is. This is the concrete argument for the wave-level review on safety surfaces, and the generalisable half is written up as the memory fact `fixture-shape-validity-is-a-test-quality-dimension` in the neoMeta substrate.
