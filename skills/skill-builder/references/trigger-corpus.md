@@ -14,7 +14,8 @@ un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, o
 `- PASS (after fix)`.
 
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) —
-plus **B2, the 5 `ac-plan-*` skills**. The remaining registry skills are the follow-on
+plus **B2, the 5 `ac-plan-*` skills**, plus **B3, the 2 `ac-qa-*` skills**. The remaining
+registry skills are the follow-on
 batches; enumerate them from
 `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
 skill, so a `*/` loop reports a phantom `MISSING _tools` forever).
@@ -284,6 +285,59 @@ should-NOT-activate
   existing plan" is the discriminator)
 - PASS — "refine the copy on the landing page"
 
+## ac-qa-browser
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "browser QA"
+- PASS — "validate the web build before we ship"
+- PASS — "QA in browser against the production build"
+- PASS — "web smoke test of the deployed URL"
+- PASS — "run the appearance matrix and grab screenshots in the browser"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "QA the TestFlight build". `QA the deployed app` was
+  the one trigger in this list carrying no surface qualifier, and in a pair whose ENTIRE
+  distinction is the execution surface (browser vs device) that is the one place ambiguity is
+  fatal — a TestFlight build is native and belongs to ac-qa-device, but "deployed app" matched
+  browser's most generic trigger. Fix: qualify the trigger to `QA the deployed web app`.
+- PASS — "QA on device" (routes to ac-qa-device — its literal trigger, and this description
+  names itself "the web twin of ac-qa-device")
+- PASS — "quick post-deploy smoke test of the login flow" (routes to browser-testing, which
+  owns "quick post-deploy smoke tests, login/auth flows" verbatim and carries the reciprocal
+  NOT-for clause pointing back here)
+- PASS — "this flexbox layout is broken on mobile" (routes to ui-debug — a CSS/rendering
+  defect, not a journey validation run)
+- PASS — "test the API endpoint with curl"
+
+## ac-qa-device
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "device QA"
+- PASS — "QA on device"
+- PASS — "test on iOS"
+- PASS — "validate the native build on the simulator"
+- PASS — "native smoke test with the appearance matrix"
+
+should-NOT-activate
+
+- PASS — "browser QA" (routes to ac-qa-browser — its literal trigger; this description names
+  itself "the native twin of ac-qa-browser")
+- PASS — "record a screen video of the app on the simulator for App Review" (routes to
+  device-testing, which owns capture-as-deliverable verbatim and carries the reciprocal
+  NOT-for clause pointing back here)
+- PASS — "validate the web build" (routes to ac-qa-browser; every ac-qa-device trigger carries
+  a native/device/simulator/iOS qualifier — the asymmetry the browser-side fix above closed)
+- PASS — "the safe-area padding is wrong in this component" (routes to ui-debug — a CSS defect
+  in React, not a native journey run)
+- PASS — "set up a new iOS provisioning profile"
+
 ---
 
 ## Findings and fixes
@@ -301,6 +355,8 @@ should-NOT-activate
 | ac-plan-init | — | — | none needed |
 | ac-plan-lab | — | — | none needed |
 | ac-plan-refine-internal | — | — | none needed |
+| ac-qa-browser | "QA the TestFlight build" selected it | precision | trigger qualified from `QA the deployed app` to `QA the deployed web app` |
+| ac-qa-device | — | — | none needed |
 
 Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
 re-judged PASS after the description edit; the re-judged verdicts are recorded inline
@@ -317,6 +373,12 @@ Both re-judged PASS after the description edit. The bead-id sweep carried from B
 across all 17 skills in batches B2–B5 and returned zero hits — nothing to strip. B1's
 prediction held exactly: the only skill with no sibling exclusion clause
 (ac-plan-refine-external) is the one that failed on an inter-sibling near-miss.
+
+B3 score: 20 judgments, 1 failure (precision), across 1 of the 2 `ac-qa-*` skills. Re-judged
+PASS after the description edit. As the designated calibration run this pair confirmed the
+sharpest form of the B1 finding: where two siblings differ ONLY by execution surface, any
+trigger phrase left un-qualified for that surface is the failure — every other trigger in
+both descriptions carried its qualifier and passed.
 
 ## Method verdict
 

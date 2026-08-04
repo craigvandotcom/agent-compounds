@@ -1,6 +1,6 @@
 ---
 name: ac-qa-browser
-description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a local production build (via scripts/qa/serve-prod.sh) or a deployed URL — never the pnpm dev server. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed app".
+description: Use when QA-ing the WEB app build in a browser — full journey validation against the real web shell (SPA routing, storage/session persistence, service worker, CORS, console hygiene, hydration, responsive viewports), appearance matrix, screenshot evidence. The web twin of ac-qa-device. Runs on any OS against a local production build (via scripts/qa/serve-prod.sh) or a deployed URL — never the pnpm dev server. Triggers on "test web app", "browser QA", "QA in browser", "validate web build", "web smoke test", "QA the deployed web app".
 ---
 
 > **The web twin.** `ac-qa-browser` proves the web shell; `ac-qa-device` proves
