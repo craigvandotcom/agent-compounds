@@ -14,7 +14,8 @@ un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, o
 `- PASS (after fix)`.
 
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) —
-plus **B2, the 5 `ac-plan-*` skills**, plus **B3, the 2 `ac-qa-*` skills**, plus **B4, the 6 bead-lifecycle skills**. The remaining
+plus **B2, the 5 `ac-plan-*` skills**, plus **B3, the 2 `ac-qa-*` skills**, plus **B4, the 6 bead-lifecycle skills**, plus **B5, the 4 polish/publish skills**. The
+remaining
 registry skills are the follow-on
 batches; enumerate them from
 `skills/*/SKILL.md`, never `skills/*/` (`skills/_tools/` has no SKILL.md and is not a
@@ -486,6 +487,109 @@ should-NOT-activate
   names inline as its outbound counterpart)
 - PASS — "triage the patients in the waiting room"
 
+## ac-distribute
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "ship to testflight"
+- PASS — "push a build"
+- PASS — "release to app store"
+- PASS — "cut a build for the beta testers"
+- PASS — "submit for review"
+
+should-NOT-activate
+
+- FAIL (precision) → PASS (after fix) — "ship it to production". ac-distribute opens "Use to
+  SHIP a built app out the door" and calls itself "the outbound last mile", so it owned the
+  strongest `ship` surface in the registry — but the production release GATE is ac-publish,
+  which pins main, mints the version bump, calls ac-prove, runs the heavy review, tags, and
+  only THEN calls ac-distribute. Routing "ship it to production" here skips every gate, which
+  makes this the most consequential miss found across B2–B5 rather than a cosmetic one. The
+  reference was asymmetric: ac-publish names ac-distribute, ac-distribute named ac-triage and
+  ac-qa-device but not ac-publish. Fix: add the reciprocal clause naming ac-publish.
+- PASS — "pull the crashes back in" (routes to ac-triage, which ac-distribute's own tail names
+  as the inbound counterpart)
+- PASS — "prove the build works on device first" (routes to ac-qa-device — also named in that
+  tail)
+- PASS — "is main green" (routes to ac-prove — its literal trigger; ac-distribute makes no
+  CI-trust claim)
+- PASS — "distribute these flyers at the conference"
+
+## ac-publish
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "publish"
+- PASS — "release to prod"
+- PASS — "ship it to production"
+- PASS — "cut the release"
+- PASS — "run the release gate and tag the proved commit"
+
+should-NOT-activate
+
+- PASS — "ship to testflight" (routes to ac-distribute — the beta lane it composes; every
+  ac-publish trigger is production-scoped)
+- PASS — "is main green" (routes to ac-prove, which ac-publish explicitly names as a component
+  it calls rather than a job it does)
+- PASS — "run the heavy review over everything since the last publish" (routes to ac-review —
+  the sharpest near-miss here, since ac-publish's description contains that phrase verbatim;
+  what saves it is the "Composes ac-prove + ac-review + ac-distribute" framing, which reads to
+  a router as parts, not scope)
+- PASS — "close the batch" (routes to ac-batch-close — the per-batch checkpoint, not the
+  human-triggered production gate)
+- PASS — "publish this article to the blog"
+
+## ac-site-polish
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "polish the website"
+- PASS — "polish the landing page"
+- PASS — "the website looks like AI slop"
+- PASS — "audit the public site"
+- PASS — "elevate the homepage"
+
+should-NOT-activate
+
+- PASS — "polish this UI" (routes to ac-ui-polish, which this description names inline as the
+  owner of the authenticated app — the sharpest sibling pair in the batch at 210 shared
+  shingles, and the mutual "public twin / NOT for the authenticated app" wording separates it
+  cleanly in both directions)
+- PASS — "just fix the SEO metadata on these pages" (routes to seo-metadata, named in the
+  5-item NOT-for clause)
+- PASS — "run an accessibility audit" (routes to web-design-guidelines, also named there)
+- PASS — "brainstorm three directions for the hero section" (routes to ui-brainstorm, also
+  named there)
+- PASS — "this div overflows on mobile" (routes to ui-debug, also named there — a CSS defect,
+  not a polish pass)
+
+## ac-ui-polish
+
+Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
+
+should-activate
+
+- PASS — "polish this UI"
+- PASS — "make this feel premium"
+- PASS — "check design conformance"
+- PASS — "tighten the visuals on the settings screen"
+- PASS — "this screen looks like AI slop"
+
+should-NOT-activate
+
+- PASS — "polish the landing page" (routes to ac-site-polish, named first in ui-polish's own
+  NOT-for clause — the reciprocal of the row above)
+- PASS — "accessibility audit of this flow" (routes to web-design-guidelines, named there)
+- PASS — "design ideation for a new dashboard" (routes to ui-brainstorm, named there)
+- PASS — "the modal has a z-index bug" (routes to ui-debug, named there)
+- PASS — "polish my shoes"
+
 ---
 
 ## Findings and fixes
@@ -511,6 +615,10 @@ should-NOT-activate
 | ac-bead-refine | — | — | none needed |
 | ac-beadify | — | — | none needed |
 | ac-tidy | — | — | none needed |
+| ac-distribute | "ship it to production" selected it | precision | reciprocal clause added naming ac-publish as the production release gate that calls it |
+| ac-publish | — | — | none needed |
+| ac-site-polish | — | — | none needed |
+| ac-ui-polish | — | — | none needed |
 
 Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
 re-judged PASS after the description edit; the re-judged verdicts are recorded inline
@@ -541,6 +649,18 @@ the skill that fails.** ac-backlog and ac-triage were the only two of these six 
 ac-bead-capture, ac-bead-refine, ac-beadify and ac-tidy all carry sibling cross-references and
 all passed clean. Same result in B2 (ac-plan-refine-external) and B3 (the one unqualified
 trigger in ac-qa-browser). Treat "has no exclusion clause" as the batch-scan heuristic.
+
+B5 score: 40 judgments, 1 failure (precision), across 1 of the 4 polish/publish skills.
+Re-judged PASS after the description edit. The predictor held a fourth time and, usefully,
+predicted the NON-failures too: ac-site-polish and ac-ui-polish carry the registry's richest
+NOT-for clauses (5 and 5 named alternatives) and passed all 20 judgments clean despite being
+the batch's highest-overlap pair at 210 shared shingles — so the refine-flagged hard
+constraint on ac-site-polish's 1018-char description never bound. The one failure,
+ac-distribute vs ac-publish, is also the most consequential found across B2–B5: routing "ship
+it to production" to ac-distribute skips the version bump, the full-suite proof, the heavy
+review and the tag.
+
+Running total, B1–B5: 230 judgments, 10 failures (9 precision, 1 recall) across 23 skills.
 
 ## Method verdict
 
