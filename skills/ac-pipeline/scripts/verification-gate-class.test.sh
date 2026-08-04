@@ -20,7 +20,7 @@
 # Exit 0 = all cases pass.
 
 SELF_DIR=$(cd "$(dirname "$0")" && pwd)
-DOC="$SELF_DIR/../verification-gate.md"
+DOC="$SELF_DIR/../references/verification-gate.md"
 [ -f "$DOC" ] || { echo "HARNESS FAIL: doc not found at $DOC"; exit 1; }
 
 # First fenced bash block = Step 1. Drop the git-dependent FILES assignment (fixture instead).

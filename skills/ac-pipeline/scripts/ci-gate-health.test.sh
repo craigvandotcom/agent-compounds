@@ -20,7 +20,7 @@
 # Exit 0 = all cases pass.
 
 SELF_DIR=$(cd "$(dirname "$0")" && pwd)
-DOC="$SELF_DIR/../board-scan.md"
+DOC="$SELF_DIR/../references/board-scan.md"
 [ -f "$DOC" ] || { echo "HARNESS FAIL: doc not found at $DOC"; exit 1; }
 
 BLOCK=$(awk '/^## Scan E/{s=1} s&&/^```bash$/{f=1;next} f&&/^```$/{exit} f' "$DOC")

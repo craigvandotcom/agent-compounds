@@ -66,14 +66,14 @@ AC_LOOP="$SKILLS_DIR/ac-loop/SKILL.md"
 # The child's derivation, byte-identical to workflow.md § Phase 0 "Configuration".
 # Case 6 asserts these two lines still exist verbatim in the doc, so the test cannot
 # silently drift away from the contract it claims to gate.
-CHILD_ID_LINE='CHILD_ID="$(printf '"'"'%s'"'"' "${AGENT_NAME:-anon}" | tr -cd '"'"'A-Za-z0-9'"'"')-$$"'
+CHILD_ID_LINE='CHILD_ID="$(printf '"'"'%s'"'"' "${AGENT_NAME:-anon}" | command tr -cd '"'"'A-Za-z0-9'"'"')-$$"'
 DIR_LINE='ARTIFACTS_DIR="/tmp/bead-refine-${CHILD_ID}${RUN_ID:+-$RUN_ID}"'
 
 # Body run inside each simulated child process (fresh PID per invocation).
 CHILD_BODY='
   RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
   unset CHILD_ID 2>/dev/null || true
-  CHILD_ID="$(printf "%s" "${AGENT_NAME:-anon}" | tr -cd "A-Za-z0-9")-$$"
+  CHILD_ID="$(printf "%s" "${AGENT_NAME:-anon}" | command tr -cd "A-Za-z0-9")-$$"
   ARTIFACTS_DIR="/tmp/bead-refine-${CHILD_ID}${RUN_ID:+-$RUN_ID}"
   printf "%s\n" "$ARTIFACTS_DIR"
 '
