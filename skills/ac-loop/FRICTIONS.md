@@ -1,7 +1,7 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-03
+last_pass: 2026-08-04
 entries: 15
 ---
 
@@ -13,17 +13,18 @@ entries: 15
      duplicate root friction under a new id. -->
 
 ## doc-only-repo-no-loop-adaptation
-- skills: [ac-loop]
+- skills: [ac-loop, ac-land]
 - impact: M
-- frequency: rare
-- recurrence: 1
+- frequency: occasional
+- recurrence: 2
 - related: []
 - first_seen: 2026-07-21
-- last_seen: 2026-07-21
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: add a short "doc-only / non-app repo" adaptation note to ac-loop — when the target repo has no vitest/app-CI/version/QA (e.g. agent-compounds itself), the verify-gate collapses to `lint.sh` + `validate-skill.sh`, and CI-dispatch / version-bump / browser-device passes are skipped; the operator shouldn't have to hand-translate the whole ceremony.
 - narrative: during the W3.2 pilot's live-run acceptance (G2), a fresh conductor ran the Rule-0 bug lane on agent-compounds. The loop's Phase-0 board-scan and the verify→CI-dispatch→ac-publish spine all assume a Next.js app; on a doc-only repo the "gate" is really lint.sh + validate-skill.sh and there is no CI/version/QA. The run succeeded, but only because the operator translated the ceremony by hand — the skill has no documented adaptation for this case.
+  **RUN 20260803-221658-19787, +1 — the same gap at the LAND end of the pipeline, which widens the fix.** Landing on agent-compounds ran into `ac-land` prescribing pnpm-repo commands (the format sweep and the build/lint gates it composes) in a repo that has no pnpm project at all. The child translated by hand, as the operator did on the 2026-07-21 occurrence, and at zero cost — but that is now two skills, at opposite ends of one pipeline, each independently assuming a Next.js/pnpm app and each leaving the translation to whoever is running. The generalisation the original entry did not have: this is not an ac-loop adaptation note, it is a PIPELINE-WIDE precondition. The cheap form is to establish the repo's shape once at Phase 0 (does a package manager project exist; is there CI, a version, a QA surface) and carry that answer to every phase, so a doc-only repo collapses each gate to its available equivalent by construction rather than by improvisation at four separate call sites. A pointer entry now sits in ac-land's log; occurrences stay counted here.
 
 ## delegation-brief-restates-bead-preconditions
 - skills: [ac-loop, ac-implement]
@@ -110,10 +111,10 @@ entries: 15
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement]
 - impact: M
 - frequency: every-run
-- recurrence: 31
+- recurrence: 36
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn, dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
@@ -160,15 +161,33 @@ entries: 15
   radius now includes `ac-pipeline`'s shared substrate (board-scan, and the artifact-write shapes
   the delegation preamble hands to every child), so a pointer entry has been added to ac-pipeline's
   own log; this id remains the PRIMARY and the sole place occurrences are counted.
+  **RUN 20260803-221658-19787 (agent-compounds, 27 beads / 5 batches / 16 children), +5 — the run
+  that maps the rule's BOUNDARY rather than just adding volume.** Four of the five are the redirect
+  family and are detailed in ac-pipeline's pointer entry (that skill owns the substrate that emits
+  them): a read-redirect whose source path came from a variable; an error-stream redirect nested
+  inside a command substitution; a `br list` write blocked even though the destination was a literal
+  value that merely lived in a variable; and a write to a PID-suffixed scratch file. The fifth was a
+  genuine `git checkout --` used to restore a file — the destructive-operation rule firing correctly,
+  a recurrence of the same shape this entry logged last run (restore-to-pristine in a disposable
+  worktree), and resolved the same way: overwrite from a git ref instead of restoring. Three further
+  blocks this run were prose-payload false positives and are counted at
+  `dcg-false-positives-on-angle-bracket-inside-quoted-prose` instead, not here.
+  What this run adds to the FIX, beyond the count: the four redirect blocks between them falsify
+  every workaround short of the real one. Reading rather than writing does not escape the rule;
+  nesting the construct deeper does not escape it; and — the one that costs the most rediscovery —
+  making the path *literal* does not escape it either, because a literal held in a variable is still
+  a variable to the guard. The only shapes that worked were the Write tool, a pasted literal at the
+  call site, and `tee`. `tee` should be named as the sanctioned redirect substitute in the shared
+  substrate; four children re-derived it independently this run.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
-- skills: [ac-loop, ac-land, ac-bead-capture, beads-standards]
-- impact: S
+- skills: [ac-loop, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
+- impact: M
 - frequency: frequent
-- recurrence: 2
+- recurrence: 5
 - related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-31
+- last_seen: 2026-08-04
 - stage: ac-land
 - status: open
 - proposed_fix: when a bead description contains markdown that could tokenise as shell metacharacters (a `>` blockquote is the common one), do not inline it in `br create -d "..."` — write the memo to a literal `/tmp/<dir>/memo.md` with the Write tool and pass `-d "$(cat /tmp/<dir>/memo.md)"`. Worth stating once in beads-standards' decision-bead template, since decision memos are exactly the beads long enough to contain blockquotes.
@@ -190,6 +209,19 @@ entries: 15
   `proposed_fix` here is a one-line addition to beads-standards' decision-bead template, still
   unshipped. Escalating `frequency` to `frequent` — every ac-land that files a T2/HUMAN decision
   bead writes exactly this shape of memo.
+  **RUN 20260803-221658-19787, +3 — the class is wider than a blockquote, and impact rises to M.**
+  Three blocks this run, none of them a blockquote and none of them redirecting anything. (a) A
+  command was rejected because the ordinary English word `restore` appeared inside a quoted prose
+  payload — the destructive-operation matcher reads command text, so a bead comment that *describes*
+  restoring a file is indistinguishable to it from one that performs the restore. (b) An arrow
+  written in prose was tokenised as a redirect. (c) A placeholder in angle brackets inside a bead
+  description body was read as a redirect target. The generalisation this settles: the trigger is
+  not the `>` character and not markdown — it is **prose on a command line**, where any shell-
+  significant token or destructive-sounding verb inside a quoted payload is a live match. That makes
+  the fix one rule instead of three exceptions: never inline a prose payload, write it to a literal
+  temp file with the Write tool and pass it by command substitution. A pointer entry now exists in
+  ac-pipeline's log because the payload SHAPES (delegation preamble, disposition and close-reason
+  templates) are shared substrate it owns; occurrences stay counted here.
 
 ## hand-typed-sha-not-git-rev-parsed
 - skills: [ac-loop]
@@ -221,14 +253,15 @@ entries: 15
 - skills: [ac-loop]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [width-safe-on-files-not-on-shared-build-and-scratch-state]
 - first_seen: 2026-07-29
-- last_seen: 2026-07-29
+- last_seen: 2026-08-04
 - stage: ac-loop
-- status: open
+- status: open (fix shipped as the Phase-0 precondition check; first live firing 2026-08-04 — see confirmation below)
 - proposed_fix: make "read the board for OPEN tooling bugs whose trigger condition this run's own configuration satisfies" a standard Phase-0 step.
 - narrative: bd-baudw (siblings sharing `ARTIFACTS_DIR` on one `RUN_ID`, cross-stamping beads) was an OPEN bug at this run's start, and width=2 is exactly its trigger condition. Giving each child a distinct RUN_ID suffix pre-empted it this time — but only because the conductor happened to remember the bug, not because Phase-0 has a step that checks for it. Despite that top-level pre-emption, a child later reproduced the identical collision live in a nested run, showing the fix doesn't cascade down automatically — it has to be re-applied consciously at every level where the trigger condition recurs. Cost this run was 0, purely because the check happened informally; the process gap remains.
+  **CONFIRMATION — RUN 20260803-221658-19787, the shipped check fired for the first time and paid immediately.** The Phase-0 precondition step this entry asked for now exists (ac-fxq) and ran on first use. It found that ALL SEVEN ready bug beads were self-triggering — every one of them described a condition this run's own configuration satisfied — which is exactly the state the informal 2026-07-29 check caught by luck. The conductor answered it structurally: bug-lane-first ordering, plus the known route-arounds seeded into every child brief rather than left to be rediscovered. Result: **zero retries burned on any of the seven**, against a baseline where the same class cost blocked calls and rediscovery time in each of the three preceding runs. Logged as a confirmation rather than a friction because the promotion ladder needs the evidence trail of a shipped fix WORKING as much as it needs the pain that motivated it — and because the mechanism generalises past this bug class: pre-seeding a known route-around into the brief is cheaper than every child re-deriving it, which is the same economics that `standing-sanctions-not-threaded-into-delegation-prompt` argues from the failure side.
 
 ## c2-stop-wording-predates-trunk-direct
 - skills: [ac-loop]

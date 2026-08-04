@@ -1,8 +1,8 @@
 ---
 skill: ac-review
 created: 2026-07-29
-last_pass: 2026-08-03
-entries: 7
+last_pass: 2026-08-04
+entries: 10
 ---
 
 # ac-review — friction log
@@ -103,6 +103,32 @@ entries: 7
 - status: open
 - proposed_fix: any finding of the form "skill/tool X does not exist" must be checked by the CONDUCTOR against the live available-skills list before it is accepted or auto-fixed — a repo-scoped reviewer's filesystem is not the harness's namespace, so absence-of-evidence from a reviewer is not evidence of absence.
 - narrative: a panel reviewer raised a Critical on the grounds that a referenced skill did not exist. It does — as a harness BUILT-IN, invisible to a reviewer whose view is the repository checkout. The finding was well-argued, correctly cited (the name genuinely appears nowhere in the repo), and wrong, and it reached the auto-fix stage before the conductor caught it. Had it landed, the fix would have DELETED a valid reference. This is the reviewer-blind-spot class at its most dangerous shape: the reviewer is not mistaken about anything it can see, so nothing in its own reasoning can flag the gap, and the finding's confidence is fully justified from inside its context. Only the conductor holds the namespace that falsifies it.
+
+## no-net-growth-ratchet-bites-documentation-only-fixes
+- skills: [ac-review]
+- impact: M
+- frequency: frequent
+- recurrence: see primary
+- related: [no-net-growth-ratchet-bites-documentation-only-fixes]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: see primary — budget for compression, not for the stamp. ac-review's local form: **when scoping a review auto-fix that lands in a conductor-core SKILL.md, budget the ratchet cost UP FRONT as part of the fix estimate**, and decide compress-vs-stamp before starting the edit rather than after the ratchet refuses it.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is `no-net-growth-ratchet-bites-documentation-only-fixes` in `skills/ac-implement/FRICTIONS.md`, where occurrences are counted. Local manifestation this run (RUN 20260803-221658-19787): the review phase's auto-fix lane repeatedly landed in conductor-core SKILL.md files, where the per-file ratchet is tightest, and the fixes were by nature additive prose. The review-specific twist is one of SEQUENCING rather than of the ratchet itself. A review auto-fix is scoped from a FINDING — "add the missing caveat", "correct this sentence" — and the finding never carries a line budget, so the fix is estimated as free and the compression work is discovered only when the ratchet refuses the edit. That inverts the order the primary recommends: by the time compression is being considered, the reviewer has already written the addition and is now motivated to reach for the `net-growth-ok` stamp to preserve work it has done, rather than choosing between compress and stamp on the merits. Costed a small number of extra edit cycles this run; the durable fix is to make the ratchet cost part of the finding's fix estimate, so it is priced before any text is written.
+
+## br-non-tty-flake-in-compound-one-liners
+- skills: [ac-review]
+- impact: S
+- frequency: frequent
+- recurrence: see primary
+- related: [br-non-tty-flake-in-compound-one-liners]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: see primary — run the call as its own Bash invocation rather than embedding it in a compound construct. Widened by this run: the trigger is not the `&&` chain specifically but ANY construct that costs the call its terminal, a `for` loop over beads included, which is exactly the shape a review phase reaches for when it has a list of findings or beads to walk.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is `br-non-tty-flake-in-compound-one-liners` in `skills/beads-standards/FRICTIONS.md`, where occurrences are counted. Local manifestation this run: a review child batching a per-bead command inside a `for` loop hit the same "not a terminal" failure previously seen only in `&&` chains, and applied the same workaround (one invocation per call). Recorded here because the review phase is where the looping shape is most tempting — a panel finishes holding a LIST (beads to comment, findings to file), and a loop is the obvious way to walk it, so this skill will keep re-meeting a friction whose doctrine lives in a skill it does not load. Note per `verify-doctrine-claims-against-live-tools`: the primary's `proposed_fix` still asks for the exact failing shapes to be confirmed against the live tool before the rule is written up, and this occurrence adds the loop form to the list of shapes that need confirming, not a confirmation of it.
 
 ## panel-undercounts-occurrences-of-a-multi-site-defect
 - skills: [ac-review]

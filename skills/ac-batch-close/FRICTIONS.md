@@ -1,7 +1,7 @@
 ---
 skill: ac-batch-close
 created: 2026-07-22
-last_pass: 2026-08-03
+last_pass: 2026-08-04
 entries: 4
 ---
 
@@ -14,17 +14,18 @@ entries: 4
 
 ## per-child-usage-never-reaches-the-ceremony
 - skills: [ac-batch-close, ac-loop]
-- impact: S
+- impact: M
 - frequency: every-run
-- recurrence: 2
+- recurrence: 3
 - related: [delegated-close-child-cannot-satisfy-the-identity-and-slot-mandate]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-batch-close
 - status: open
 - proposed_fix: the conductor must carry each child's task-completion usage line (model + token counts) into the batch-close delegation prompt, since that is the only place the data exists. Alternatively, drop the cost section from the ceremony report and let a separate harness-level collector own it — but do not leave a mandated report section that is structurally unfillable.
 - narrative: the batch-close ceremony report has a cost/usage section, but per-child model and token usage is never forwarded into the batch-close delegation, and a child cannot observe its OWN usage from inside its run. The section is therefore impossible to fill honestly by any agent in the chain — the ceremony either leaves it blank or invents numbers. Observed on all 3 batch-closes of RUN 20260722-085844-39967. This is a pipeline-contract gap, not a child failure.
   **RUN 20260803-113231-34132, +1 — root cause named.** A closing child recorded the Worker-cost line as UNAVAILABLE rather than estimating it (the right call), and in doing so identified WHY the section is unfillable: the skill is written as though batch-close runs AS the conductor, but per-child token usage arrives only in the conductor's task-completion notifications, and this ceremony ran as a delegated child. So the section is not merely un-forwarded data — it is a VANTAGE mismatch baked into the skill's assumed execution position. That reframing picks a winner between the two fixes proposed above: forwarding the usage lines into the delegation prompt works precisely because the conductor is the only agent that ever holds them. Same root as `delegated-close-child-cannot-satisfy-the-identity-and-slot-mandate` — the skill assumes conductor vantage in more than one place.
+  **RUN 20260803-221658-19787, +3 (third consecutive run) — recorded verbatim again from the delegated vantage, which is now the DEFAULT rather than an edge case.** The combined ceremony over five batches again could not fill Worker-cost, and again correctly recorded it as unfillable rather than estimating. Three runs is enough to stop treating this as a data-plumbing oversight: the ceremony has run delegated in every recent loop, so a section that is only fillable from the conductor's seat is unfillable in practice, and the skill's mandated report shape has been wrong-by-default for three runs while every closer independently re-derives the same "UNAVAILABLE" conclusion. Impact raised S→M on that basis — the per-run cost is still small, but a mandatory section that no correct execution can satisfy trains closers to treat mandated sections as advisory, which is the expensive part and does not stay local to this field. The fix choice is unchanged and already picked by the previous entry (forward the per-child usage lines into the delegation prompt, since the conductor is the only agent that ever holds them); this run adds only that the alternative — deleting the section — is now equally defensible and cheaper, because three runs of "UNAVAILABLE" is the same information as no section at all.
 
 ## delegated-close-child-cannot-satisfy-the-identity-and-slot-mandate
 - skills: [ac-batch-close, ac-loop]

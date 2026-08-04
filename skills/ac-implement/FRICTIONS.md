@@ -1,8 +1,8 @@
 ---
 skill: ac-implement
 created: 2026-07-29
-last_pass: 2026-08-03
-entries: 9
+last_pass: 2026-08-04
+entries: 10
 ---
 
 # ac-implement — friction log
@@ -94,27 +94,42 @@ entries: 9
 - skills: [ac-implement, ac-review]
 - impact: M
 - frequency: frequent
-- recurrence: 2
+- recurrence: 3
 - related: []
 - first_seen: 2026-08-03
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: budget for compression, not for the stamp — fold an added explanation into an existing bullet rather than appending a new line, and reach for `net-growth-ok` only when the added content is genuinely executable. Note the mechanical constraint when drafting: an HTML-comment stamp cannot live inside a bash fence, so a fenced addition forces the stamp onto an added prose line outside the fence.
 - narrative: two children hit the registry's own per-file SKILL.md ratchet while making corrections that are, by nature, additive prose. (1) An implementer fixing doc defects paid two extra edit cycles reworking additions into existing bullets, and where the new content was executable had to ride the `net-growth-ok` stamp on an added prose line because the stamp cannot sit inside the bash fence it was justifying. (2) A review child fixing a Critical in a conductor-core SKILL.md paid three extra edit cycles for the same reason. The ratchet is working as designed — the friction is that neither child had budgeted compression time into a fix that read as "one line of text", and both reached for the stamp before reaching for the shrink.
+  **RUN 20260803-221658-19787, +1 — the fix is a BUDGETING step, not a technique, and it belongs before the first edit.** Review auto-fixes landing in conductor-core SKILL.md files hit the ratchet again. The sharpened lesson is about ordering: an auto-fix is scoped from a finding, findings never carry a line budget, so the fix is priced as free and the compression work surfaces only when the ratchet refuses the edit — at which point the text is already written and the author is motivated to preserve it with a `net-growth-ok` stamp rather than choose on the merits. Budget the ratchet cost UP FRONT as part of the fix estimate and decide compress-vs-stamp before writing. A pointer entry now sits in ac-review's log because that phase meets this most often; occurrences stay counted here. Also worth pairing with the memory `loop-retro-origin-main-diffed-checks-zero-headroom`: a check diffed against `origin/main` gives back no headroom for trims that are already pushed, so compression banked in an earlier commit does not fund a later addition.
 
 ## bash-isms-in-pasted-snippets-diverge-silently-under-zsh
 - skills: [ac-implement]
-- impact: M
+- impact: H
 - frequency: frequent
-- recurrence: 3
-- related: [tr-shadowed-by-tmux-alias-in-interactive-zsh]
+- recurrence: 4
+- related: [tr-shadowed-by-tmux-alias-in-interactive-zsh, test-harness-strictness-manufactures-a-false-red]
 - first_seen: 2026-08-03
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
-- proposed_fix: the fleet's interactive shell is zsh, so treat every bash-ism in a pasted snippet as a defect: read `$?` directly instead of `${PIPESTATUS[0]}` (drop the pipe rather than translate it), and never rely on word-splitting an unquoted expansion — put multi-item loops in a bash script file or feed them a here-string.
+- proposed_fix: the fleet's interactive shell is zsh, so treat every bash-ism in a pasted snippet as a defect: read `$?` directly instead of `${PIPESTATUS[0]}` (drop the pipe rather than translate it), and never rely on word-splitting an unquoted expansion — put multi-item loops in a bash script file or feed them a here-string. **And when the DEFECT is zsh-only, the RED proof must run under zsh** — a bash-run RED for a zsh-only bug is green, so the seam proof silently proves the wrong thing and the fix ships unverified.
 - narrative: three occurrences in one run, all silent rather than loud. (1) A verification step read `${PIPESTATUS[0]}` and got an empty string — zsh spells it `$pipestatus[1]` — producing a confusing empty result rather than an error. (2) The same construct after a trailing `echo` had already been reset by the `echo` itself, costing an extra turn. (3) `for f in $FILES` passed the entire whitespace-joined list as ONE filename, because zsh does not word-split unquoted expansions; the loop ran once against a path that did not exist. None of the three failed loudly — each produced a plausible-looking wrong answer, which is what makes the class expensive relative to its trivial per-instance fix. Sibling shapes in the refine snippets (`echo` expanding `\n`, `tr` shadowed by a tmux alias) are logged in ac-bead-refine's file.
+  **RUN 20260803-221658-19787, +1 — the class now has a PROOF requirement attached, and impact rises to H.** A live P1 found this run was a zsh-only pathspec collapse: correct under bash, wrong under zsh, in a snippet that runs under the fleet's interactive shell. The trap is in the verification rather than the fix. A RED demonstration written the ordinary way runs under bash, where the defect does not exist, so the RED comes back GREEN — and a green RED reads as "already fixed" or "the bug isn't real", not as "the harness is wrong". So the seam proof for a zsh-only defect must be run under zsh explicitly, and the fix's GREEN must be under zsh too. This is the same root as `test-harness-strictness-manufactures-a-false-red` with the sign flipped: there the harness was STRICTER than production and manufactured a false failure; here it is a DIFFERENT INTERPRETER than production and manufactures a false pass, which is the more dangerous direction because nothing prompts investigation. The unifying rule for this skill: **a seam harness must reproduce the production shell — same interpreter, same strictness — and the interpreter is part of the RED's specification, not an implementation detail.** Escalated M→H: this run's instance was a P1 that reached the live tree, and the failure mode of a false-green RED is a shipped unfixed defect with a proof attached.
+
+## verification-outlives-the-bash-timeout-cap
+- skills: [ac-implement, ac-review, ac-qa-browser]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [test-harness-strictness-manufactures-a-false-red, affected-graph-silently-subsets-explicit-test-selection]
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-implement
+- status: open
+- proposed_fix: any verification step that can plausibly run past the harness's 600s Bash ceiling must be launched as a BACKGROUND runner that writes a done-marker file, with the agent then polling for that marker — never invoked in the foreground and hoped for. State this once alongside the full-suite / long-gate steps, because the failure is discovered at the worst possible moment: after the run has already burned the full ten minutes.
+- narrative: a verification command exceeded the harness's hard 600s Bash timeout and was killed mid-run. The cost is not the ten minutes — it is that a timeout is a NON-ANSWER that is easy to misfile. The step produced no verdict, and the next moves available (re-run it and hope, narrow the scope and lose coverage, or declare it unverifiable) are all worse than the one that works, which is to restructure the invocation: start the command detached so it survives the tool call, have it write a completion marker when it finishes, and poll the marker. The child that hit this re-derived that pattern under pressure. Worth logging as its own id rather than as a note on the test entries because it is a HARNESS-CAPACITY constraint, not a test-quality one, and it applies identically to any long gate — full suites, builds, device runs, browser journeys — so the fix belongs wherever a long-running command is prescribed rather than in any single skill's test step. Adjacent failure worth naming: retrying a timed-out gate in the foreground makes it look like a flake, which invites the fix of narrowing the gate's scope — trading real coverage away to fit a clock.
 
 ## test-harness-strictness-manufactures-a-false-red
 - skills: [ac-implement]

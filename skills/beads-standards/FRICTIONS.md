@@ -1,8 +1,8 @@
 ---
 skill: beads-standards
 created: 2026-07-22
-last_pass: 2026-07-27
-entries: 3
+last_pass: 2026-08-04
+entries: 4
 ---
 
 # beads-standards — friction log
@@ -16,10 +16,10 @@ entries: 3
 - skills: [beads-standards]
 - impact: S
 - frequency: frequent
-- recurrence: 3
+- recurrence: 4
 - related: []
 - first_seen: 2026-08-02
-- last_seen: 2026-08-02
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: document the workaround once in beads-standards (likely § working cadence or the br cheatsheet): when `br` is chained inside a compound one-liner (`cmd && br ... && cmd`), it can fail with a "not a terminal" error — run the `br` call as its own separate Bash invocation, or pipe with `--json` where supported. Confirm the exact failing shapes before writing the rule (verify-doctrine-claims-against-live-tools).
@@ -30,6 +30,31 @@ entries: 3
   a single run with ZERO doctrine anywhere in the registry (grep confirms no mention) makes it a
   documentation gap, not a tool bug we can fix here. Each child independently found the same
   workaround: separate invocation.
+  **RUN 20260803-221658-19787, +1 — the trigger is broader than the `&&` chain this entry was minted
+  from.** A review child hit the identical "not a terminal" failure with the call inside a `for` LOOP
+  rather than an `&&` chain, and reached the same workaround independently (one invocation per call).
+  That is a fourth uncoordinated rediscovery and it reframes the rule that still needs writing: the
+  condition is not a particular chaining operator but any construct that costs the call its terminal,
+  so doctrine phrased as "don't chain it with `&&`" would have failed to cover this occurrence. Phrase
+  it as the positive form instead — a `br` call gets its own Bash invocation — which covers loops,
+  chains, substitutions and pipes in one line. A pointer entry now sits in ac-review's log, since a
+  panel finishing with a LIST of beads to walk is the shape that most invites the loop. Still
+  undocumented anywhere in the registry, and per this entry's own `verify-doctrine-claims-against-live-tools`
+  caveat the loop form is one more shape to confirm against the live tool before the rule is written,
+  not a confirmation of the rule.
+
+## br-lint-wants-success-criteria-where-doctrine-says-delivers
+- skills: [beads-standards, ac-beadify, ac-bead-refine]
+- impact: S
+- frequency: frequent
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
+- stage: ac-loop
+- status: open
+- proposed_fix: decide and record which side gives, then make the other side quiet. Either `bead-conventions.md`'s epic template adopts the heading `br lint` expects, or the standard states explicitly that this particular lint warning is EXPECTED on epics authored to our conventions and is not to be actioned. Do not leave both in place: an unexplained warning on every correctly-authored epic is the shape that trains agents to ignore lint output wholesale.
+- narrative: `br lint` warns that an epic is missing a `## Success Criteria` section, while `beads-standards/reference/bead-conventions.md` prescribes `## Delivers` for exactly that content. Both are "right" — the tool ships its own expectation, the convention is ours and deliberate — so an epic authored correctly against our doctrine is warned about by our own linter, every time. Warning-only, so nothing blocked and the run cost was zero; logged because the cost is not per-occurrence. A standing warning that correct work always produces is a broken detector: it teaches every agent that reads `br lint` output that some of it is noise, and the judgement of WHICH part is noise is then re-made by each agent under time pressure. That is how a real lint finding gets waved through later. Also a heading-drift hazard in its own right, since two names for one section means beads in the wild will carry both and any grep over epic structure has to know that. This is a doctrine-vs-tool divergence rather than a defect on either side, which is why it wants an explicit recorded decision rather than a fix.
 
 ## epic-endpoint-blocks-edges-make-children-unclaimable
 - skills: [beads-standards, ac-beadify, ac-loop]

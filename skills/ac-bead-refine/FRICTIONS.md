@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-03
-entries: 15
+last_pass: 2026-08-04
+entries: 17
 ---
 
 # ac-bead-refine — friction log
@@ -16,28 +16,56 @@ entries: 15
 - skills: [ac-bead-refine]
 - impact: M
 - frequency: every-run
-- recurrence: 2
+- recurrence: 3
 - related: []
 - first_seen: 2026-07-22
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-bead-refine
 - status: open
 - proposed_fix: keep (and make explicit in the workflow) the rule that EVERY cited `file:line` anchor and every quoted artifact in a bead must be re-verified against HEAD during refine, and that a falsified premise closes or rewrites the bead rather than being smoothed over. This is not overhead — it is the highest-yield thing refine does, and it paid off on every batch of this run.
 - narrative: filed beads carried drifted `file:line` refs at a steady rate of ~3 per batch, every batch (RUN 20260722-085844-39967, 27 beads refined across 3 batches). Several carried outright FALSE premises, not just stale line numbers: bd-iahbm's cited test asserted the OPPOSITE of the claimed behavior; bd-nnzjv quoted a 500 response body that did not exist; bd-vyyaw requested a field the type does not have; bd-zz6ah claimed "all 8" when it was 4 of 8; bd-0q96x said "62 commits" when it was 145. Every one of these would have become wasted or wrong implementation had refine trusted the filing. Downstream sibling fact: `refined-spec-staleness-query-ground-truth-first` (the same class of drift, observed at implement time instead).
   **RUN 20260803-113231-34132, +1 — drift is not only a FILING-time problem, it happens DURING the refine.** The shared checkout moved 5 commits mid-run under a width-2 conductor: `lint.sh` grew from 314 to 372 lines and its anchor lines shifted twice while beads referencing them were being authored. ~8 minutes of re-verification, and any bead that had been stamped `refined` an hour earlier was already stale. The sharpened rule this yields is about what a bead may CITE, not just when it is checked: beads must carry **grep targets, never line coordinates, and must never assert a check COUNT** (e.g. "lint.sh has 42 checks") — a target survives a moving trunk, a coordinate or a count does not. This is the cheap structural fix that makes the re-verification rule above less load-bearing.
+  **RUN 20260803-221658-19787 — CONFIRMATION: the final-round re-execution of HEAD-anchored claims is now load-bearing under a shared checkout, not belt-and-braces.** Children that re-ran every HEAD-anchored claim in their FINAL round (rather than only at draft time) caught drift that had appeared during the refine itself, exactly as the previous run predicted. What this run adds is that the practice pays even when nothing about the bead changed: on a shared checkout with concurrent siblings, the tree moves under a stationary draft, so a claim verified in round 1 is not verified in round 4 and the elapsed time is the whole risk. The operating rule that follows is cheap and worth stating as sequence rather than diligence — **the last thing a refine does before stamping is re-execute its own citations**, because every check has a shelf life measured in sibling commits, and a stamp asserts freshness at stamp time rather than at check time.
 
 ## acceptance-criteria-that-cannot-fail
 - skills: [ac-bead-refine]
+- impact: H
+- frequency: every-run
+- recurrence: 5
+- related: [filed-beads-carry-drifted-anchors-and-false-premises, ac-check-command-never-executed-during-refine, line-oriented-checks-break-on-wrapped-text]
+- first_seen: 2026-07-22
+- last_seen: 2026-08-04
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: add a refine lens that asks of every acceptance criterion "can this check actually FAIL, and does it fail for the RIGHT reason?" Specifically flag (a) grep/pattern-shaped ACs, which encode intent but no structural constraint and both over-match and under-specify; and (b) any AC asserting a numeric DOM property without first establishing that the property is meaningful on the element type in question. Require a bite-proof (demonstrate the check RED) for any AC that is the sole evidence for a bead. **The bite-proof must be run BEFORE the work exists and its RED recorded** — a grep executed only after the fix proves nothing, and a grep whose pattern can match the fix's own comment or close reason is self-satisfying rather than vacuous, which is worse because it will go green for a change that did nothing.
+- narrative: two ACs this run specified checks that were vacuously true. bd-ket5c's grep-shaped AC over-matched an unrelated component AND failed to express the real structural constraint (that 212 of 278 DB-only families REQUIRE the fallback be removed) — only reading the call sites plus running a coverage query surfaced it. bd-145wb's AC prescribed `scrollWidth <= clientWidth` on an anchor element, but both are 0 on non-replaced inline elements, so the assertion passes no matter what the page does. A refined AC that cannot fail is worse than no AC: it launders an unverified change as verified.
+  **RUN 20260803-221658-19787, +4 — and the vacuous-AC class splits into two distinct shapes, only one of which the 2026-07-22 lens catches.** Escalated to H / every-run: four occurrences in one run, in refine output that had otherwise been executed. (1) *Self-satisfying:* a bead's bite-proof AC grepped for a phrase that the implementer's own fix COMMENT would contain — so the check goes green the moment anyone writes about the fix, whether or not the fix works. This is not the "cannot fail" shape the existing lens hunts; the check CAN fail, it just fails on the wrong thing, and the artifact that satisfies it is produced as a side effect of closing the bead. Bead comments, close reasons and commit messages are all inside the grep's blast radius, so any AC pattern that could appear in prose about the change is disqualified. (2) *Pre-green:* three ACs authored during refine were GREEN when first executed, before any implementation existed — the pattern already matched something in the tree. These passed the execute-at-draft mandate (the command ran, it returned successfully) while proving nothing at all, which is the precise gap between "the AC's command executes" and "the AC discriminates". The cheap mechanical fix follows from the pairing: **executing an AC is necessary but not sufficient — record its result at draft time and REJECT any AC that is already green**, because a check that is green before the work is a check that cannot testify about the work. That one rule catches shape (2) outright and most of shape (1).
+
+## line-oriented-checks-break-on-wrapped-text
+- skills: [ac-bead-refine, ac-implement, ac-review]
+- impact: M
+- frequency: frequent
+- recurrence: 3
+- related: [acceptance-criteria-that-cannot-fail, filed-beads-carry-drifted-anchors-and-false-premises, panel-undercounts-occurrences-of-a-multi-site-defect]
+- first_seen: 2026-07-16
+- last_seen: 2026-08-04
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: never let a refine-authored check depend on where a line break falls. Two rules: (a) a grep target must be a short distinctive fragment that cannot straddle a wrap — never a long sentence, and never read from a display-formatted source such as `br show`; read the underlying field with `--json` when the check needs the true text. (b) An occurrence COUNT must be derived position-wise (count matches, not matching lines) so a re-wrap of the source cannot change the answer. Sibling memory: `loop-retro-grep-test-scope-soft-wrap`.
+- narrative: two occurrences this run, same root and opposite signs, which is what makes the pair worth one id. (1) FALSE NEGATIVE: an AC grepped for a phrase in `br show` output. `br show` hard-wraps its display at a fixed width, so the phrase was split across two physical lines and the grep reported "not found" for text that was present and correct — the check was reading a RENDERING, not the data. (2) FALSE POSITIVE: an occurrence-count check over source files reported a defect count that was wrong because the source had been re-wrapped; the same content spread across a different number of lines changed a line-based count. The child that hit it re-derived the count position-wise (matches, not lines) and got a stable answer that survives reformatting. The generalisation refine needs is that **any check keyed to physical lines is keyed to formatting**, and formatting is exactly what moves under a shared checkout, a prettier pass, or a display width. This extends the older `loop-retro-grep-test-scope-soft-wrap` memory (2026-07-16, +1 there): that entry's advice was to keep the target phrase on one line — an author-side fix that does not survive a formatter and cannot help at all when the source is a tool's wrapped display. The check-side fix (short fragments, `--json` for tool output, position-based counts) is the durable one. Related in effect but not in root: `panel-undercounts-occurrences-of-a-multi-site-defect` in ac-review's log — there a count was wrong because a reviewer sampled, here because the counting method was formatting-dependent; both cases end at the same remedy of re-deriving counts mechanically.
+
+## sibling-specs-carry-byte-identical-boilerplate
+- skills: [ac-bead-refine, ac-beadify]
 - impact: M
 - frequency: occasional
 - recurrence: 1
 - related: [filed-beads-carry-drifted-anchors-and-false-premises]
-- first_seen: 2026-07-22
-- last_seen: 2026-07-22
+- first_seen: 2026-08-04
+- last_seen: 2026-08-04
 - stage: ac-bead-refine
 - status: open
-- proposed_fix: add a refine lens that asks of every acceptance criterion "can this check actually FAIL, and does it fail for the RIGHT reason?" Specifically flag (a) grep/pattern-shaped ACs, which encode intent but no structural constraint and both over-match and under-specify; and (b) any AC asserting a numeric DOM property without first establishing that the property is meaningful on the element type in question. Require a bite-proof (demonstrate the check RED) for any AC that is the sole evidence for a bead.
-- narrative: two ACs this run specified checks that were vacuously true. bd-ket5c's grep-shaped AC over-matched an unrelated component AND failed to express the real structural constraint (that 212 of 278 DB-only families REQUIRE the fallback be removed) — only reading the call sites plus running a coverage query surfaced it. bd-145wb's AC prescribed `scrollWidth <= clientWidth` on an anchor element, but both are 0 on non-replaced inline elements, so the assertion passes no matter what the page does. A refined AC that cannot fail is worse than no AC: it launders an unverified change as verified.
+- proposed_fix: when refining a set of sibling beads split from one epic, diff the drafts against each other before stamping and factor the shared preamble UP into the epic (or a single cited reference), leaving each child only the lines that are actually about that child. A cheap detector: if two sibling specs share a large run of byte-identical lines, the shared run belongs to the parent, not to each child.
+- narrative: refine of one epic's sibling children produced roughly 125 byte-identical lines duplicated across the specs — shared context, shared conventions and shared verification preamble, restated verbatim in every child. Nothing was wrong in any single bead, which is why it survived the round: each spec read as complete and correct on its own. The costs are all downstream and all real. Every duplicated line is re-read by every implement child (paid at model prices, once per child), it is a spec-drift surface (a correction applied to one sibling silently leaves the others stating the old thing — the same drift mechanism this log already tracks at filing time), and it inflates the refine round itself because reviewers re-read the same paragraphs N times and can raise the same finding N times. It also hides the actual per-child difference in a wall of sameness, which is the part a reviewer most needs to see. Worth logging even though the run shipped fine: the duplication is invisible from inside any one bead and only shows up when the siblings are diffed against each other, so it will recur by default on every epic split unless the diff is an explicit step.
 
 ## no-new-beads-guardrail-must-be-in-round-1-prompt
 - skills: [ac-bead-refine]
@@ -69,15 +97,16 @@ entries: 15
 - skills: [ac-bead-refine]
 - impact: M
 - frequency: occasional
-- recurrence: 2
+- recurrence: 3
 - related: [late-round-findings-are-contradictions-from-earlier-patches]
 - first_seen: 2026-07-29
-- last_seen: 2026-08-03
+- last_seen: 2026-08-04
 - stage: ac-loop
 - status: open
 - proposed_fix: do not treat a heavily reviewed draft as converged because the panel is tired — keep MIN_ROUNDS honest and let rounds run their full course even when earlier rounds reported clean. The floor also protects against the CONDUCTOR's own errors, not just the panel's: a round that exists purely to re-examine an accepted objection is what catches a correct decision that was wrongly inverted.
 - narrative: rounds 3 and 4 each found a REAL defect — a Critical AC self-contradiction in round 3, then a citation drift in round 4 — in text that rounds 1 and 2 had already "verified" clean. Those two extra rounds cost time beyond MIN_ROUNDS but earned their keep: had the refine stopped at round 2 on the strength of two clean passes, both defects would have shipped.
   **RUN 20260803-113231-34132, +1 — this time the floor caught the conductor, not the draft.** A refine child accepted a plausible reviewer objection at round 2 and INVERTED a decision that had been correct, without working through the git semantics it turned on (a newer base NARROWS the range, it does not widen it). The error survived the round in which it was made; only the fact that MIN_ROUNDS forced a further round surfaced and reverted it. Cost one full extra round. The generalisable point: a conductor that adopts a reviewer's objection without re-deriving the underlying semantics has introduced a defect no reviewer will flag — they agree with it — so the round floor is the only thing standing between that and the stamp.
+  **RUN 20260803-221658-19787 — CONFIRMATION: the floor earned its keep again, and this run says why it must stay a FLOOR rather than a judgement call.** The point is the economics, not the incident: across six refine children, EVERY subset carried at least one premise failure, and the refine spend is what made the implement spend clean — zero implement sessions were wasted on dead ends across 27 beads. A floor is the right instrument precisely because the value is unevenly distributed and invisible in advance: nobody can tell which child's extra round is the one that pays, so a per-draft "this looks converged" call will systematically underspend on exactly the drafts that most need the round. Every prior instance in this cluster is a clean-looking round immediately preceding a real find. Recurrence bumped to 3; keep MIN_ROUNDS.
 
 ## deferred-br-writes-leave-reviewers-blind-to-br-show
 - skills: [ac-bead-refine]
@@ -146,6 +175,7 @@ entries: 15
 - proposed_fix: execute every AC check-command during refine — an AC whose command does not run is not refined. Verifying an AC's INTENT is not a substitute for running its literal check.
 - narrative: two acceptance criteria encoded commands that were wrong at HEAD: one referenced a non-existent capacitor build target, the other a `grep -c` line-count assertion that every 404 in the app fails. Refinement verified the ACs' intent but never executed their check-commands, so both drifted commands passed refine unnoticed. Cost ~5 minutes each to disprove once actually run.
   **RUN 20260803-113231-34132, +1 — recurred TWO DAYS after the fix landed, in two independent children.** Child D: every one of 9 ACs drafted from reading rather than execution carried a defect (~15 min). Child F: 2 vacuous ACs and 2 wrong baselines, each corrected only by running the command, costing 2 extra rounds. So the § Method wording and the pre-stamp gate recorded above are NOT self-enforcing — a child can satisfy them by intending to and still draft-then-verify rather than execute-at-draft. This is why the lesson escalated out of this log: it is now the run's T2 decision bead **ac-ewgr.7** (mandate execute-at-draft for ACs *and* for preamble paste-sites in `ac-pipeline/references/delegation-contract.md`) — the scope widened beyond refine's own ACs, so the fix does not belong to this skill alone. Do not re-derive it here; track it there.
+  **RUN 20260803-221658-19787 — CONFIRMATION: the mandate landed and worked on its first binding use.** ac-ewgr.7's execute-at-draft rule bound every refine child of this run, and the evidence is that it caught defects nothing else in the pipeline would have: a live P1 (a zsh pathspec collapse) that existed in the tree and in no bead, three of one child's own ACs, six of another's, and the run's largest premise failures — including failures in the FILER's output, not just the refiner's. That last part is the load-bearing generalisation: the mandate was argued from refine's own drafting errors, but it bites hardest on INHERITED claims, so its value scales with how much of a bead someone else wrote. Two boundary conditions this run also establishes, logged in full at `acceptance-criteria-that-cannot-fail`: executing an AC does not make it discriminating (three ACs ran clean and were already GREEN before any work existed), and an AC that greps for text the fix's own comment will contain satisfies the mandate while proving nothing. Execute-at-draft is therefore necessary and not sufficient — the missing half is recording the draft-time RESULT and rejecting any AC that starts green. Kept open on that basis rather than closed as fixed.
 
 ## br-update-has-no-description-file-flag
 - skills: [ac-bead-refine]
