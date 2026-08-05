@@ -187,7 +187,7 @@ BASE=${MARK:-$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null)}
 ACCEPT_GAP=$(git rev-list --count "$BASE..HEAD")
 
 # COVERAGE WINDOW — anchored on the last RELEASE TAG, never on the moving mark.
-# This is load-bearing (bd-zo3kq): if the window were `$MARK..HEAD`, advancing the mark
+# This is load-bearing: if the window were `$MARK..HEAD`, advancing the mark
 # would SHRINK the window as well as reset the gap, so `UNCOVERED`/`CODEISH` would collapse
 # to ~0 no matter how much history is genuinely unreviewed — gating on the coverage half
 # would then mask exactly as badly as gating on the acceptance half did. A `v*` tag moves
@@ -219,26 +219,14 @@ and a range naming a sha this repo doesn't have.
 **Staleness classification** (shared so consumers can't fork on what "stale" means):
 
 **Classify on the COVERAGE half, never the ACCEPTANCE half.** `ACCEPT_GAP` and
-`MARK_AGE_DAYS` describe *when a batch last closed*; `UNCOVERED`/`CODEISH` describe *what
-has actually been reviewed*. Only the second is the question this probe exists to answer,
-and the two come apart precisely when it matters most — a single tiny batch-close resets
-the acceptance half to zero while the coverage half is untouched.
+`MARK_AGE_DAYS` say *when a batch last closed*; `UNCOVERED`/`CODEISH` say *what has been
+reviewed*. Only the second answers this probe's question, and a single small batch-close
+resets the acceptance half while leaving the coverage half untouched.
 
-**Both halves of that fix are load-bearing — changing the gate variable alone is NOT
-enough.** The coverage window must also be anchored on the last **release tag**
-(`COV_BASE`), never on the moving mark. Measured while implementing this: with the window
-left at `$MARK..HEAD`, advancing the mark shrank the window as well as resetting the gap,
-so `CODEISH` collapsed to `0` and the table still emitted `ok` — the same masking, one
-level down. With `COV_BASE` anchored on `v1.5.14` the identical repo state reported
-`153 uncovered (35 code-ish) · ALARM`, which is the truth.
-
-> **Measured (ac-loop RUN 20260804-202200-loop, bd-zo3kq).** Orient read
-> `ACCEPT_GAP=134 · MARK_AGE=4d · 116 uncovered` → `ALARM`. One **2-commit** batch then
-> closed, advancing the mark. `ACCEPT_GAP` → 0 and `MARK_AGE` → 0d, so the old table
-> emitted **`ok`** — while `UNCOVERED` had *risen* to 148, because commits kept landing
-> and only 6 files were reviewed. The verdict inverted on the strength of reviewing 6
-> files out of 148 commits. `UNCOVERED` was already computed ~10 lines above the table
-> and simply was not read.
+**Anchor the coverage window on the last release tag (`COV_BASE`), never on the mark.**
+Changing the gate variable alone is insufficient: with the window at `$MARK..HEAD`,
+advancing the mark shrinks the window as well as resetting the gap, so `CODEISH` collapses
+to `0` and the table reads `ok` however much history is unreviewed.
 
 | `staleness` | Condition |
 |---|---|
@@ -246,21 +234,16 @@ level down. With `COV_BASE` anchored on `v1.5.14` the identical repo state repor
 | `warn` | `CODEISH` > 5 |
 | `ALARM` | `CODEISH` > 20, **or** `MARK_AGE_DAYS` > 7 (the same 7-day line `ac-review` § Standing weekly review already draws) |
 
-`CODEISH` (not raw `UNCOVERED`) is the gate input: it is the actionable subset — commits
-whose subject matches `feat|fix|perf|refactor|test` — so routine chore/docs/beads traffic
-does not raise an alarm nobody can action. A healthy loop reviews each batch's own commits,
-so `CODEISH` hovers near zero; the thresholds are calibrated to read `ok` in that steady
-state and `ALARM` on a genuine blackout.
+`CODEISH`, not raw `UNCOVERED`, is the gate input: the actionable subset, whose subjects
+match `feat|fix|perf|refactor|test`, so routine chore/docs traffic raises no alarm nobody
+can action. Thresholds read `ok` when each batch reviews its own commits.
 
-**`MARK_AGE_DAYS` is retained as an ALARM condition only** — a mark that has not moved in
-over a week means no batch has closed at all, which is a real signal in its own right and
-is not visible in the coverage numbers. `ACCEPT_GAP` is still *reported* in the one-liner
-(it is useful context) but **gates nothing**.
+**`MARK_AGE_DAYS` gates only the ALARM arm** — a mark that has not moved in a week means no
+batch closed at all, which the coverage numbers cannot show. `ACCEPT_GAP` is reported and
+gates nothing.
 
-> **Do not "fix" a non-`ok` verdict by closing a batch.** Under the old table that worked
-> and was the bug. Under this table only reviewing the uncovered commits moves the number —
-> which is the entire point. The catch-up path is a review whose artifact records a
-> `**Range:**` covering the uncovered span (see the Coverage bullet above).
+**Do not clear a non-`ok` verdict by closing a batch.** Only reviewing the uncovered commits
+moves the number: publish a review artifact whose `**Range:**` covers the uncovered span.
 
 ## Scan E — scheduled CI gate health (the other unconsumed signal)
 
@@ -360,17 +343,13 @@ therefore the consumer of last resort — **the loop noticing for itself** — n
 ## Scan F — board truth (the already-shipped probe)
 
 **An open bead whose work has already merged is invisible to every other scan.** It keeps
-its `refined` label, keeps appearing in `br ready`, and is therefore selected as ordinary
-implement work — so a conductor spends a full opus child to discover the code exists.
-Measured (ac-loop RUN 20260804, `bd-board-truth-reconciliation-gate-x1o01`): **3 of 10**
-refined ready bugs were already shipped, and `bd-8yhvb` had consumed **four** separate agent
-sessions before anyone amended its title. Nothing else catches this — `ac-tidy` reconciles
-labels and its staleness notion is `br stale` (**age-based, not artifact-based**), and Scans
-A–E never open a file or read a commit message.
+its `refined` label, keeps appearing in `br ready`, and is selected as ordinary implement
+work — so a conductor spends a full opus child to discover the code already exists. No
+other scan catches it: `ac-tidy`'s staleness notion is `br stale` (**age-based, not
+artifact-based**), and Scans A–E never open a file or read a commit message.
 
-The cheapest real signal is that **the fixing commit often names the bead**. `c654b4ed`
-carries `Bead: bd-3mm9t` in its own trailer, and that bead still sat open + `refined` +
-`br ready` four days later.
+The cheapest signal is that **the fixing commit often names the bead** — in its subject or
+a `Bead:` trailer.
 
 ```bash
 D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
@@ -416,15 +395,14 @@ conductor skip real work, which is strictly worse than the wasted child this exi
 prevent. The output is a shortlist for a conductor to adjudicate by reading the bead's
 `## Delivers` and checking those artifacts at HEAD — cheap, because the list is short.
 
-**Verify it still bites after ANY edit** (a detector that silently matches nothing is worse
-than none): `awk -F'\t' '$1=="bd-3mm9t"' "$D/cited"` must be non-empty in `body-compass-app`
-— that is the known-true-positive fixture, `c654b4ed`, whose trailer names the bead.
+**Verify it still bites after ANY edit** — a detector that silently matches nothing is worse
+than none. Pipe a synthetic record (`<epoch>|<sha>|fix(x): thing|Bead: bd-probe`) through
+the extraction `awk` and assert `bd-probe` comes out.
 
 **Known limitation, deliberately accepted:** a bead someone merely *comments* on gets a
-fresh `updated_at` and stops flagging. This scan is the cheap Tier-1 net for the
-`bd-3mm9t` class (id cited, nobody closed it); the `bd-8yhvb` class — work shipped with no
-commit naming the bead at all — is only caught by checking a bead's declared artifacts at
-HEAD, which is Tier 2 and is not automated here.
+fresh `updated_at` and stops flagging. This scan is the cheap net for the **cited-but-open**
+class. The **shipped-uncited** class — work merged with no commit naming the bead — is
+caught only by checking a bead's declared artifacts at HEAD, which is not automated here.
 
 ---
 
