@@ -11,9 +11,13 @@ delivered as an advisory exit-2 block. (Whether Claude's PreToolUse *alone* coul
 is contested and moot here — a portable hook can't rely on it; Grok gets the doctrine separately
 via harness-sync's render_context_grok.)
 
-Behavior: an Edit|Write whose target is ANY file under a `skills/` directory
-(`skills/**`) gets an ADVISORY reminder of the skill-diet doctrine (promotion ladder,
-conservation gate, no-net-growth discipline) printed to stderr, signaled via exit 2.
+Behavior: an edit reaching ANY file under a `skills/` directory (`skills/**`) gets an
+ADVISORY reminder of the skill-diet doctrine (rule voice, provenance, no-net-growth,
+promotion ladder) printed to stderr, signaled via exit 2. Two entry points, because
+Edit|Write is not the only way to change a skill file: a `file_path` under skills/, OR
+a Bash `command` that writes there (redirect, tee, in-place sed/perl, cp/mv). Wire the
+hook on BOTH the Edit|Write and Bash matchers — on Bash alone it never sees Edit, and on
+Edit|Write alone a one-line `perl -0pi` rewrites doctrine ungoverned.
 Scope was SKILL.md-only until 2026-08-05; broadened on Craig's call — the standards
 (promotion ladder, friction capture, single-home, no-provenance) bind every file in a
 skill, not just the spine, so references/ and FRICTIONS.md edits must see them too.
@@ -39,7 +43,21 @@ Env: SKILL_EDIT_GUARD_FLAG_DIR (default /tmp/skill-edit-guard).
 import datetime
 import fnmatch
 import os
+import re
 import sys
+
+# Shell constructs that WRITE into skills/. Edit|Write is not the only way to change a
+# skill file: a redirect, tee, in-place sed/perl, or cp/mv reaches the same bytes and
+# would otherwise skip this guard entirely. Heuristic and deliberately generous — the
+# hook is advisory and fires once per session, so a false positive costs one retry
+# while a miss costs an ungoverned edit.
+BASH_WRITES_SKILLS = re.compile(
+    r""">>?\s*"?[^"'|;&\s]*skills/"""              # > or >> into skills/
+    r"""|\btee\s+(?:-\S+\s+)*"?[^"'|;&\s]*skills/"""  # tee into skills/
+    r"""|\bsed\s+[^|;&]*-i[^|;&]*skills/"""        # in-place sed
+    r"""|\bperl\s+[^|;&]*-[a-zA-Z0-9]*i[^|;&]*skills/"""  # in-place perl (-i, -pi, -0pi)
+    r"""|\b(?:cp|mv|install|truncate)\s+[^|;&]*skills/"""  # copy/move/truncate
+)
 
 FLAG_DIR = os.environ.get("SKILL_EDIT_GUARD_FLAG_DIR", "/tmp/skill-edit-guard")
 
@@ -111,12 +129,18 @@ def main():
         data = json.load(sys.stdin)
     except Exception:
         allow()
-    path = (data.get("tool_input") or {}).get("file_path")
-    if not path:
-        allow()
+    tool_input = data.get("tool_input") or {}
+    path = tool_input.get("file_path")
+    command = tool_input.get("command")
 
-    rel = path.replace(os.sep, "/")
-    if not (fnmatch.fnmatch(rel, "*/skills/*") or fnmatch.fnmatch(rel, "skills/*")):
+    if path:
+        rel = path.replace(os.sep, "/")
+        if not (fnmatch.fnmatch(rel, "*/skills/*") or fnmatch.fnmatch(rel, "skills/*")):
+            allow()
+    elif isinstance(command, str) and command:
+        if not BASH_WRITES_SKILLS.search(command):
+            allow()
+    else:
         allow()
 
     if already_fired(session_key()):
