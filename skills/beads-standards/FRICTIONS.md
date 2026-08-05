@@ -2,7 +2,7 @@
 skill: beads-standards
 created: 2026-07-22
 last_pass: 2026-08-04
-entries: 6
+entries: 7
 ---
 
 # beads-standards — friction log
@@ -131,3 +131,17 @@ entries: 6
 - status: open
 - proposed_fix: state the positive form in the br cheatsheet — **a bead body longer than one line goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d`. Cover the reason in one clause (a double-quoted `-d` argument is shell text: backticks run command substitution and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it.
 - narrative: hit TWICE in one run by two different agents (RUN 20260804-202200-loop: the conductor at Phase 0, then a review child at bead-filing) and solved independently both times. A `br create -d "…"` body containing backticks and an angle-bracket placeholder triggered command substitution plus a redirect parse error; the failure message names shell syntax, so neither agent's first hypothesis was about the bead at all. `-f` avoids the whole class, including the dcg prose-payload false positives that the same inline shape triggers — two independent reasons for one rule, which is a good sign it belongs in doctrine rather than in each agent's scar tissue. Two uncoordinated rediscoveries in a single run with zero registry coverage is the same documentation-gap shape as `br-non-tty-flake-in-compound-one-liners` above.
+
+## board-truth-belongs-in-the-title-not-a-comment
+- skills: [beads-standards, ac-loop, ac-bead-refine]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [dispatch-scoped-from-spec-not-comment-history]
+- first_seen: 2026-08-05
+- last_seen: 2026-08-05
+- stage: ac-loop
+- status: open
+- proposed_fix: state in beads-standards that **a session finding a bead's work already shipped, partially shipped, or void AMENDS THE TITLE AND DESCRIPTION — a comment is not a board-truth mechanism.** Give the amended-title form so it is mechanical rather than a judgement call (prefix the residual scope: `[Parts A+B SHIPPED <sha>] <remaining scope>`). Pair it with the complement already logged in ac-pipeline: amend the TITLE when the truth changes, read the COMMENTS when scoping. Either half alone leaves a lane where truth is written where nobody reads.
+- narrative: a bead consumed four agent sessions after the work it specified had merged. Each of the first three sessions discovered the shipped state correctly and recorded it in a bead COMMENT, leaving the description reading as unbuilt spec — and conductor triage surfaces the title and description, never the comment tail. So each next session read an unbuilt spec, dispatched an agent to build it, and rediscovered the same truth. The comment was a correct finding delivered through a channel with no reader: three uses, zero deliveries. Resolved on the fourth pass by rewriting the title rather than commenting again. Not one bead's accident — an adversarial HEAD-verified audit of the 10 refined ready bugs alongside it found 3 already shipped and 2 partial, so half the ready lane misrepresented its own state through the same mechanism. Logged against beads-standards because the standard prescribes where a close reason and a comment go but never says which field triage READS, so every session re-decides it and most choose the polite option.
+

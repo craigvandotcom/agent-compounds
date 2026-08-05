@@ -78,17 +78,18 @@ entries: 10
 - narrative: bd-l7tvt looked claimable but was structurally unclosable in an autonomous lane: its binding seam-proof acceptance criterion needs a live DB write, and `.env.local` points at PRODUCTION. The child correctly declined rather than make an unsupervised production write; the conductor released the claim and substituted another bead. Cost ~35 minutes on the replacement bead swap.
 
 ## lint-piped-to-pager-does-not-gate-the-commit
-- skills: [ac-implement]
-- impact: L
+- skills: [ac-implement, ac-loop]
+- impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-08-03
-- last_seen: 2026-08-03
+- last_seen: 2026-08-05
 - stage: ac-loop
 - status: open
-- proposed_fix: never put a pipe between the gate and the `&&` — chain as `bash lint.sh >/dev/null 2>&1 && git commit …`. If the gate's output is wanted, redirect it to a literal file and read `$?`, then commit in a separate call.
+- proposed_fix: **a quality gate and the irreversible action it guards never share a command block.** Run the gate alone, read its exit status, then commit or push in a separate call. The narrower "no pipe between the gate and the `&&`" form does not cover the recurrence below, where there was no `&&` at all — state the positive rule instead: one block per side, and the second block runs only after the first is read.
 - narrative: an implementer chained its quality gate as `bash lint.sh | tail -3 && git commit …`, intending "commit only if lint passes". A pipeline's exit status is the LAST command's, so the `&&` tested `tail` (always 0) and the commit landed on a FAILING lint. Caught after the fact and amended before push, so the cost was one bad commit rather than a broken trunk — but the shape is silent by construction: the gate appears to run, its output appears in the transcript, and the commit proceeds regardless. Any snippet that pipes a gate into a pager/`head`/`tail` for readability has disarmed it.
+  **RECURRENCE 2 — the conductor's variant, and it defeats the fix above.** A conductor ran the lint script and `git push` in one command block with NO operator between them. Lint FAILED on a net line growth; the push ran anyway, because nothing was ever gated on the exit status — there was no `&&` to disarm. Same outcome, one step earlier in the causal chain: the first occurrence gates on the wrong exit code, this one gates on none. Both are cured by separating the blocks and neither is cured by fixing the operator, which is why the rule has to be stated as a co-location ban rather than as pipe advice. Note the failure mode is not the gate: the ratchet fired correctly and reported correctly, and the only defect was the shell around it.
 
 ## no-net-growth-ratchet-bites-documentation-only-fixes
 - skills: [ac-implement, ac-review]
