@@ -16,9 +16,7 @@ Run this LAST, after merge — invoked at loop-exit (post-merge, on `main`, wave
 Resolve `ARTIFACTS_DIR` **deterministically**, per `ac-pipeline/references/run-id.md`. ac-land runs at
 loop-exit (post-merge/batch-close, on `main`) — it never claimed a batch itself, so it CANNOT
 mint or independently recompute a claim id; the orchestrator hands it the key. Never glob as
-the primary path. There is no branch-based fallback in this chain: trunk-direct means `main` is
-always there, so a "standalone session still sitting on the wave branch" case can no longer
-occur — that dead fallback is removed outright, not left dormant.
+the primary path. There is no branch-based fallback in this chain.
 
 ```bash
 # 0. Loop-exit: RUN_ID set → ALL this run's dirs (scoped glob is SAFE — RUN_ID excludes
@@ -103,7 +101,7 @@ know whether teardown (task 8) still owes work.
 - Check for any started-but-unclosed beads: `br list --json` — look for claimed/in-progress items
 - For each: either close it (if done) or add a comment documenting where you left off
 - Create new beads for any loose ends discovered during the session:
-Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
 
   ```bash
   # Dedup first: br list --json | grep -i "<keyword>"  — skip if an open match already exists.
@@ -118,18 +116,10 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
 > **Quality gates at land (tiered-testing model — parallel-execution doctrine §5, bd-pwt44).**
 > Format / lint / type-check are cheap — always run. Do NOT run a blocking local `test:all` or
-> fire a full-suite CI run here — that's the exact full run the doctrine keeps OFF the loop's
-> critical path (it starves the shared self-hosted runner), and wave merges run **affected-only**
-> CI, so no fresh full `test:all` for HEAD exists at land time BY DESIGN. The between-publish
-> full-suite proof is obtained at PUBLISH START instead: `ac-publish` calls
-> `ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to the commit being
-> published, before release. A nightly idle-time full run (`ac-prove`/`workflows/scheduled.md`) is
-> planned but DEFERRED/unwired — until it ships, the publish-start run is the only full-suite
-> checkpoint. Two exceptions: (1) a GREEN full `test:all` / Quality-Gate pass for the current
-> HEAD already exists (legacy `ac-merge` PR path, or a publish just ran) — **note-and-skip**,
-> don't validate the same HEAD twice (`test:all` + `build:check` re-runs cost ~45-50 min on the
-> shared runner); (2) standalone landing with **no CI path at all** — run a local `test:all` once
-> here. (Reconciles the former skip-if-fresh + tiered-testing blocks; bead ac-bkg.)
+> fire a full-suite CI run here. Two exceptions: (1) a GREEN full `test:all` / Quality-Gate pass
+> for the current HEAD already exists (legacy `ac-merge` PR path, or a publish just ran) —
+> **note-and-skip**, don't validate the same HEAD twice; (2) standalone landing with **no CI path
+> at all** — run a local `test:all` once here.
 
 > **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball.** At land time, the
 > just-merged commit's own CI Quality Gate for HEAD is frequently STILL RUNNING (the merge step
@@ -140,9 +130,7 @@ Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 > `gh run view <id> --json createdAt,jobs` (or the job's `startedAt`) vs `date -u` now, and flag only
 > when elapsed > ~2× typical (this suite is ~15-20 min → threshold ~40 min+). Under the threshold →
 > report "CI in-progress, on track (Nm elapsed)" and move on; do NOT alarm, do NOT block landing.
-> Asserting an unmeasured duration is a **fabricated finding** — cost: the RUN_ID 20260708-191557
-> land falsely flagged `e77abbae` "stuck in_progress 2+ hours" when its gate was 15 min old and
-> passed clean, sending the conductor on a false-alarm CI hunt. If you flag a run, paste the two
+> Asserting an unmeasured duration is a **fabricated finding**. If you flag a run, paste the two
 > timestamps + the arithmetic; a flag without the math is not allowed.
 
 ```bash
@@ -164,14 +152,12 @@ pnpm build:check
 > pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
 > ```
 
-> **Why `tee`, not bare `tail`:** vitest's reporter buffers nontrivially and the final summary doesn't necessarily land in the last 20 lines if failures occurred earlier. A bare `pnpm test:all 2>&1 | tail -15` discards mid-run failure detail and forces a second 10-minute re-run to diagnose. The full log at `$ARTIFACTS_DIR/test-all.log` is grep-addressable for `FAIL`, `❯`, `×`, `AssertionError`, etc.
-
 If any fail:
 
 - **Fixable in <5 min:** Fix them now, commit the fix
 - **Larger issues:** Create a P0 bead, document the failure, continue landing
 
-**Repo-wide format sweep (separate commit).** Bead-work enforces per-bead formatter scope so individual bead diffs stay clean. Bead-land is where the whole-repo formatter runs once, in its own commit, so each bead's PR-level diff remains scope-focused while the tree still ends up consistently formatted. Run it here:
+**Repo-wide format sweep (separate commit).** Run it here:
 
 ```bash
 { git diff --name-only; git diff --cached --name-only; } | sort -u > /tmp/pre-sweep-dirty-${RUN_ID}.txt   # foreign WIP inventory (one path per line — no porcelain column-parsing: renames list their NEW path, spaces survive) — NEVER commit these
@@ -179,7 +165,6 @@ pnpm format   # or equivalent repo-wide prettier --write .
 git diff --stat
 ```
 
-<!-- net-growth-ok: ac-hx8 ac-go2 ac-56z -->
 If the sweep modified any file, commit ONLY the files the sweep itself newly touched —
 **never `git add -A` / `git add .`** (H7d, `ac-pipeline/references/commit-discipline.md`:
 a wildcard add ships concurrent sessions' WIP under this sweep's message).
@@ -217,14 +202,7 @@ git status   # Must show "up to date with origin"
 
 **If push fails:** Resolve and retry. Do not proceed until pushed.
 
-**No full-suite CI fire here (retired, bd-pwt44).** ac-land used to kick off an async full
-`test:all` on CI at close; that role has moved to PUBLISH START instead — `ac-publish` calls
-`ac-prove ensure --fix-forward`, which runs the exhaustive gate SHA-pinned to the commit being
-published, before release. ac-land's job here is done once `main` is pushed and up to date: no
-CI dispatch, nothing to wait on. (A nightly idle-time full run via `ac-prove`/
-`workflows/scheduled.md` is planned but DEFERRED/unwired — until it ships, the publish-start run
-is the only full-suite checkpoint. Historical full-run receipts already on the evidence-log
-ancestry chain remain valid regardless — this doesn't touch them.)
+**No full-suite CI fire here.** ac-land's job here is done once `main` is pushed and up to date: no CI dispatch, nothing to wait on.
 
 Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
 
@@ -236,7 +214,7 @@ Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
 
 ### Spawn Retrospective Sub-Agent
 
-Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns.
 
 Spawn the retrospective analyst using the prompt in **`references/retrospective-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>`). It reads session artifacts + the workflow/skill files, reports what worked / what did not / patterns, and proposes evidence-backed system-upgrade opportunities under a strict minimum-waste bar.
 
@@ -254,7 +232,7 @@ Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 
 **Goal:** Turn learnings into system improvements. User decides what ships.
 
-**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. The difference is not caution vs confidence — it's downstream gates: a review finding rides a branch through tests/CI/review/merge (auto isn't final), while a skill/doctrine edit is live agent policy the next scheduled run simply obeys. Full three-way rule (AUTO / HUMAN / DISREGARD): **`ac-pipeline/references/disposition.md`**.
+**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. Full three-way rule (AUTO / HUMAN / DISREGARD): **`ac-pipeline/references/disposition.md`**.
 
 ### Loop-retro friction disposition (D3) — runs FIRST, before Step 0
 
@@ -277,8 +255,7 @@ MUST also consider removing/demoting the stale content, not only filing the new 
 `skill-builder/references/promotion-ladder.md` ranks the two moves equally, never
 addition-plus-optional-cleanup. Removal of unique content routes through the skill's
 `MAINTENANCE.md` holding-pen (that doc's holding-zone rule), not an outright delete; a
-verbatim duplicate may still hard-delete immediately. This is what keeps ac-land a
-net-neutral-or-shrinking force rather than an accretion ratchet.
+verbatim duplicate may still hard-delete immediately.
 
 **T3 sub-route — skill-scoped friction vs general lesson (W4.3).** Before handing a T3 item
 to `reflect` in Step 0, tag it as either *skill-scoped friction* (about a specific skill's
@@ -309,7 +286,6 @@ the single T2 improvement bead and **demote the rest to T3 observations** — th
 still accrues for `dream`'s full-corpus ranking (nothing lost, just deferred). T1 bugs are exempt
 from the cap.
 
-<!-- net-growth-ok: ac-znk.6 -->
 **Ordering (the sole-reflect-call rule):** (1) classify every carrier item
 into T1/T2/T3; (2) create T1 bug beads + the ≤1 T2 decision bead here — no `reflect`
 involvement; (3) **loop-driven** (the Exit-Land prompt says the conductor spawns
@@ -411,10 +387,9 @@ AskUserQuestion(
 > files AND `AGENTS.md` / `CLAUDE.md` / `MEMORY.md`). **`dream` is PRIMARY** — but only
 > for *proposal-originated* edits (unreviewed/accumulated edit proposals it emits and
 > later applies in REVIEW mode). "dream is primary" does NOT make it a router for
-> already-approved same-session work: that work legitimately stays here, on the hatch,
-> because dream CYCLE never applies and dream REVIEW runs rarely. Neither path owns the
-> whole apply surface — this hatch owns approved same-session hotfixes for all four target
-> classes; dream owns proposals. (Mirrored in `skills/dream/SKILL.md`.)
+> already-approved same-session work: that work legitimately stays here, on the hatch.
+> This hatch owns approved same-session hotfixes for all four target classes; dream owns
+> proposals. (Mirrored in `skills/dream/SKILL.md`.)
 
 For each approved upgrade, apply the edit directly. Common targets:
 
@@ -433,9 +408,9 @@ retrospective/memory-substrate saves (the common case, fires every land) AND any
 edits the Apply-Approved-Upgrades hatch applied this session. **When ≥1 approved
 doctrine/skill/memory upgrade was actually applied this session** (any of the four target
 classes in the Apply-Approved-Upgrades table — skill files, `AGENTS.md`, `CLAUDE.md`,
-`MEMORY.md`; the name is historical, the class scope is all four), **EMIT the commit with a
-`skill-hotfix:` prefix** so the out-of-band apply is greppable by dream's Phase 5 dedupe
-(`git log --grep='^skill-hotfix' -- <target_file>`). **A land with no approved upgrade
+`MEMORY.md`), **EMIT the commit with a `skill-hotfix:` prefix** so the out-of-band apply is
+greppable by dream's Phase 5 dedupe (`git log --grep='^skill-hotfix' -- <target_file>`).
+**A land with no approved upgrade
 (routine compound/reflect-only saves) keeps `chore:`** — do NOT blanket-relabel every
 land-session commit, or you pollute the exact dedupe signal dream keys on.
 
@@ -505,12 +480,8 @@ AskUserQuestion(
 
 ### Preserve the raw friction carrier (before teardown discards /tmp)
 
-Step 0's `reflect` already wrote this run's **distilled** lessons to the git-tracked memory
-substrate — but the **raw** stage-keyed carrier `/tmp/loop-retro-<RUN_ID>.md` (read in Phase 0)
-does NOT survive: it dies with /tmp in the teardown sweep below, taking the qualitative
-skills-eval feed with it. Copy it — `stage`/`cost`/`lesson`/`class` typing intact — into a
-git-tracked artifacts path FIRST, mirroring the `.claude/reviews/batch/` convention
-`ac-batch-close` already uses:
+Copy it — `stage`/`cost`/`lesson`/`class` typing intact — into a git-tracked artifacts path
+FIRST, mirroring the `.claude/reviews/batch/` convention `ac-batch-close` already uses:
 
 ```bash
 if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
@@ -523,25 +494,16 @@ if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
 fi
 ```
 
-The raw packets join the committed review-artifact trail instead of evaporating — the
-qualitative before/after feed for skills-eval.
-
 ### Cleanup Temp Files
 
 Remove session artifacts (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
 
-**Concurrency-safe, two-tier teardown.** Under the homogeneous-width doctrine two ac-loop runs can overlap in time, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. A naive "just suffix every glob with `$RUN_ID`" fix is *unimplementable*, because only 7 of the producer prefixes actually embed the handed loop RUN_ID in their dir name (`bead-work`, `plan-init`, `plan-refine-internal`, `plan-clean`, `bead-refine`, `beadify`, `hygiene`); the others (`work-review` → bare timestamp, `batch-close` → commit-SHA anchor, `plan-refine` external → bare timestamp, and the fixed-name `/tmp/bead-work`) never do, so a RUN_ID glob would silently no-op on them. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
+**Concurrency-safe, two-tier teardown.** Under the homogeneous-width doctrine two ac-loop runs can overlap in time, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
 
 - **Tier 1 — universal content-aware age-gate (LOAD-BEARING).** A dir is stale ONLY if nothing inside it — nor the dir itself — was modified within `STALE_MIN` minutes: `find "$d" -mmin -$STALE_MIN -print -quit` returning non-empty means something is fresh ⇒ LIVE ⇒ keep; empty output ⇒ demonstrably abandoned ⇒ delete. Do NOT gate on the parent dir's own mtime: in-place rewrites of files like `progress.md` do NOT bump the containing dir's mtime, so a dir-mtime gate would reap a live long-running run. Each loop is keyed to its exact `/tmp/<prefix>-*/` glob (or the literal `/tmp/bead-work`) — nothing can reach unrelated `/tmp` content.
 - **Tier 2 — RUN_ID exact-match (optimization; the 7 embedding prefixes ONLY).** Immediately delete THIS run's own dirs so it cleans up after itself without waiting out the age gate. The `[ -n "$RUN_ID" ]` guard on every line is MANDATORY: with `RUN_ID` unset or empty, the unguarded glob degenerates right back to the original unscoped bug. `work-review-*`, `batch-close-*`, external `plan-refine-*`, and bare `/tmp/bead-work` get NO tier-2 line — a RUN_ID glob never matches them, and a silent no-op masquerading as cleanup is worse than no line — they rely on the age gate alone.
 
-`STALE_MIN=1440` (24h) rationale: the bound is the maximum plausible gap between WRITES inside a live run — NOT total run duration. A live run that writes any file at least once per 24h stays safe even if it runs for days; the pathological tail this file cites (a ~16.5h zombie waiter) still fits under 24h.
-
-Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is deleted inside the loops — deletion happens in the compose step below, so a wrongful sweep is diagnosable post-hoc. The external `plan-refine-*` glob also matches `plan-refine-internal-*` dirs — harmless idempotent double-handling; both prefixes stay listed for clarity.
-
-**Residual risk (accepted, bounded by STALE_MIN):** a live FOREIGN run that writes NOTHING for >24h can still be reaped by the age gate. Accepted — no healthy run goes 24h between artifact writes. (Follow-up, not required here: thread the loop RUN_ID into `ac-review` / `ac-plan-refine-external` / `ac-batch-close` dir naming so every prefix gains a tier-2 line and the age gate becomes belt-and-suspenders.)
-
-**Explicitly out of scope** (considered, deliberately left): Phase 0's read-only fallback `ls` (a guess for the retrospective, not a delete) and the `ps … grep` waiter-kill below (already identity-scoped with a confirm-before-kill step). Neither deletes artifact dirs; if hardening is wanted there, file a separate bead.
+Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is deleted inside the loops — deletion happens in the compose step below, so a wrongful sweep is diagnosable post-hoc.
 
 ```bash
 STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a bound on total run duration)
@@ -570,10 +532,8 @@ fi
 
 **Step 2 — compose the delete from the PRINTED LITERALS (the dcg contract).** The loops
 above are SELECTORS ONLY — they print candidates and delete nothing. `rm -rf "$d"` inside
-a loop is a dynamic-path delete and dcg blocks it (this exact pattern made teardown
-silently inert for whole runs — RUN 20260719-102946-27401 left ~30 scratch dirs). Read
-the `STALE:`/`OWN:` lines and issue ONE command with the printed paths pasted verbatim as
-literals:
+a loop is a dynamic-path delete and dcg blocks it. Read the `STALE:`/`OWN:` lines and
+issue ONE command with the printed paths pasted verbatim as literals:
 
 ```bash
 # example — paste the actual printed paths; never $VAR, never $( ), never a bare loop var
@@ -596,8 +556,8 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
 (clean finish, iteration cap, regression stop, human "stop", or error):
 
 1. **Kill spawned background tasks/waiters.** Long-running poll/wait loops are the classic
-   zombie — a `until cond; do sleep N; done` whose condition never fires runs forever (a
-   prior session left one alive ~16.5h). Stop them by IDENTITY, not a broad sweep:
+   zombie — a `until cond; do sleep N; done` whose condition never fires runs forever.
+   Stop them by IDENTITY, not a broad sweep:
    - For harness-tracked background tasks: `TaskStop` each one you started this session.
    - For stray shells, list candidates and confirm each is yours before killing — match the
      specific command, never a blanket pattern:
@@ -630,16 +590,14 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
    project's holds and confirm no swept child reservation remains. This is the backstop for children
    that died before their own Layer-1 self-deregister; do not skip it on an empty-looking roster.
 
-   <!-- net-growth-ok: ac-zqj — the guard's uninstall condition is only correct next to the
-   teardown step that performs it; a pointer would be read after the damage. -->
    **Pre-commit guard.** This is separate from the
    roster sweep above and deregisters/retires nobody. Uninstall the mcp-agent-mail guard **only
    when this repo's hooks are TRACKED** — i.e. `git config core.hooksPath` names a directory whose
    `pre-commit` appears in `git ls-files`. That is the only shape in which the chain-runner wraps
-   the repo's own tracked hook and dirties the working tree, which is the harm `ac-4an` was filed
-   to stop; everywhere else the guard lives in the untracked gitdir hooks directory, is invisible
-   to the tree, and must be LEFT IN PLACE. Do NOT gate on "did THIS session install it" — neither
-   tool carries session or agent identity, so that condition is trivially true and gates nothing.
+   the repo's own tracked hook and dirties the working tree; everywhere else the guard lives in
+   the untracked gitdir hooks directory, is invisible to the tree, and must be LEFT IN PLACE.
+   Do NOT gate on "did THIS session install it" — neither tool carries session or agent
+   identity, so that condition is trivially true and gates nothing.
    Do NOT call it unconditionally either: the guard is repo-scoped, two concurrent `ac-loop` runs
    can share this checkout (§ Concurrency-safe, two-tier teardown), and idempotence is not
    concurrency-safety — an unconditional uninstall strips a live sibling session's protection.
@@ -672,16 +630,3 @@ br ready --json     # What's left
 ```
 
 Mark ledger task 8 `completed` — the run is landed.
-
----
-
-## Remember
-
-<!-- diet: restated bullets deleted — live body twins verified; Remember-only rules survive below -->
-
-- **Learn from evidence, not speculation** — every finding needs a concrete example from this session
-- **Compound aggressively but ALWAYS user-gated** — no auto-apply; every upgrade needs explicit approval (unlike review commands)
-
----
-
-_Bead land: close clean, learn deep, compound forward. The flywheel spins faster every session._
