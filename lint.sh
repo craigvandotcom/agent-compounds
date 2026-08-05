@@ -777,9 +777,7 @@ for dir in "${CONSUMER_DIRS[@]}"; do
   done <<< "$nng_local"
 done
 
-# One verdict over BOTH legs. The message names the EXACT token, because the
-# near-miss is real: bd-curate-…xu5tz's own AC asked for an `evidence:` comment, and
-# implementing it literally would have produced a "stamp" this grep does not see.
+# One verdict over BOTH legs.
 if [ "${#NNG_VIOLATIONS[@]}" -gt 0 ]; then
   fail "no-net-growth: net-positive SKILL.md file(s): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — core is loaded every invocation, so it holds or shrinks. Move the content to references/, or delete an equivalent amount from THIS file. A written justification is not a payment, and a shrink in another file does NOT offset it."
 fi

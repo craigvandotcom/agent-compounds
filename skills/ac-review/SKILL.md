@@ -371,16 +371,13 @@ Four checks, each a placement rule made adversarial:
    director, a pass/wave narrative, "promoted from", or a bead-ID that no other file
    greps as a rule-name — is a finding (structure-standard § Provenance never lives in
    skill text): the rule stays, the tail moves to the commit/ledger. Machine tokens
-   (`net-growth-ok:`/`diet:`/`mirror:`) pass only in their minimal form.
+   (`diet:`/`mirror:`) pass only in their minimal form.
 
-1. **Proof-or-demotion citation.** Every content block ADDED to a SKILL.md's tier-1 core
-   (not `references/`, not `workflows/`) must carry an evidence stamp
-   (`<!-- evidence: <N green runs | probe-fact | Craig sign-off> -->` — the
-   promotion-ladder's proof gate) OR the same diff carries a matching demotion — an
-   equal-or-greater shrink elsewhere in that SKILL.md, or a `references/` file gaining
-   the demoted content. No stamp and no demotion = a finding. A stamp citing a
-   run/probe/sign-off that can't be verified as real is a separate finding — the gate
-   verifies form, not truth; this dimension is the judgment backstop.
+1. **Demotion citation.** Every content block ADDED to a SKILL.md's tier-1 core (not
+   `references/`, not `workflows/`) must be paid for by a matching demotion in the same
+   diff — an equal-or-greater shrink elsewhere in that SKILL.md, or a `references/` file
+   gaining the demoted content. No demotion = a finding. There is no written-justification
+   alternative: a stamp is prose, and prose is not payment.
 2. **No reintroduced historical blocks.** The diff doesn't re-add struck-through,
    deprecated, superseded, or holding-zone-quarantined content the registry has been
    purging. Check `git log -S "<snippet>"` (the churn guard from `hygiene-pass.md` A2)
