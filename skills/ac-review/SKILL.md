@@ -542,8 +542,8 @@ reconstructed, emit **`VERDICT: NEEDS_DECISION`** and say the panel was unconfir
   impact estimate (N × unit cost weighed against the operation's real budget) is
   DOWNGRADED to Medium and re-routed through the deferred/design-decision gate, with
   the downgrade noted in the report — perf severities are the least grounded (reviewers
-  pattern-match allocation/loop shapes without estimating magnitude; incident:
-  `references/incidents.md`). Correctness/security severities are not subject to this check.
+  pattern-match allocation/loop shapes without estimating magnitude). Correctness/security
+  severities are not subject to this check.
 - **`deferred`** — single-reviewer Medium/Low, no consensus; the script has already carried them
   into `consensus-registry.json` for cross-round matching. **Apply the design-decision gate
   yourself** — the one judgment the script can't make: a choice with no objectively superior
@@ -669,8 +669,7 @@ Read the engineer's result file. Confirm:
 
 Run the cheap checks always; scale the **expensive** ones (full test, build) to the diff's
 risk using the shared classifier in `ac-pipeline/references/verification-gate.md` (Step 1) — ac-review is a
-branch review, **not** the green-main boundary (the exhaustive full-suite run is loop-close CI;
-rationale: `references/incidents.md`).
+branch review, **not** the green-main boundary (the exhaustive full-suite run is loop-close CI).
 
 ```bash
 {CMD_FORMAT}    # always (cheap)

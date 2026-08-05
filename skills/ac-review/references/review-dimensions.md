@@ -65,8 +65,8 @@ step? nightly cron?). An O(n²) over a bounded n of 12 is not a finding.
 
 Discipline: **a Critical/High rating REQUIRES a quantified impact estimate in the
 evidence — without one, rate it Medium.** The conductor downgrades unquantified
-Critical/High performance findings anyway (`references/incidents.md`), so supply the
-estimate or the honest severity.
+Critical/High performance findings anyway, so supply the estimate or the honest
+severity.
 
 **CHECKLIST:**
 

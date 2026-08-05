@@ -222,8 +222,7 @@ declares whether it writes app state (create/edit/delete, settings, transactions
 never data races; app test accounts are typically shared). Parallel-eligible =
 `mutates: false` and no `device_only_steps`. Browser twin: parallel lane cap **3**
 concurrent workers (dev-server load), sequential lane for everything else. Device twin:
-**sequential only** (simulator concurrency is flaky and collision-prone — see
-`ac-qa-device/references/incidents.md`).
+**sequential only** (simulator concurrency is flaky and collision-prone).
 
 **Session naming + teardown.** Worker sessions are `qa-<app>-<RUN_ID>-w<N>` (or the
 wave slug when no RUN_ID). Each worker tears down ONLY its own named session, on

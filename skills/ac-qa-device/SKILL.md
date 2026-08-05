@@ -30,8 +30,7 @@ only on webview apps — see `references/setup.md`).
 
 > Tool choice is settled: AXe/XcodeBuildMCP tree dumps are **webview-blind**;
 > agent-device's XCUITest snapshot sees everything. Re-evaluate the tool layer
-> when Xcode 27's first-party agent automation ships (~fall 2026). Bake-off
-> record: `references/incidents.md`.
+> when Xcode 27's first-party agent automation ships (~fall 2026).
 
 Android (emulator) support: planned — agent-device drives Android with the same
 commands, so the structure (layers, checklist, journey reuse) carries over.
@@ -74,11 +73,11 @@ perf sanity pass (`references/perf-and-limits.md`). **Flag-gated journeys need a
 
 **You are the conductor.** Journeys are executed by **`device-tester`** subagents —
 **strictly one worker at a time, sequential lane only** (simulator concurrency is
-flaky and collision-prone — `references/incidents.md`; the win here is context
-isolation, not wall-clock). You hold the manifest, verdicts, and report; the worker
-holds the accessibility trees, simctl output, and screenshots. Full protocol
-(manifest/verdict schemas, completeness rule): `ac-pipeline/references/qa-shared.md` § Conductor /
-worker evidence protocol.
+flaky and collision-prone; the win here is context isolation, not wall-clock). You
+hold the manifest, verdicts, and report; the worker holds the accessibility trees,
+simctl output, and screenshots. Full protocol (manifest/verdict schemas,
+completeness rule): `ac-pipeline/references/qa-shared.md` § Conductor / worker
+evidence protocol.
 
 1. **Orient + build (yours, once):** Platform Gate check; mint RUN_ID if the
    orchestrator didn't hand one down (contract: `ac-pipeline/references/run-id.md` mint-if-absent
@@ -137,8 +136,7 @@ sim, a sim NAME, or an agent-device session. Isolate with three layers:
    `--tenant`/`--state-dir` give full daemon isolation if needed.
 3. **Ownership rule (non-negotiable):** only ever rename/boot/shutdown a sim your
    app owns (`<APP>-QA-*`). Hijacking a shared sim mid-session breaks BOTH apps —
-   the build (name race) and agent-device (wrong-device match). Incident
-   record: `references/incidents.md`.
+   the build (name race) and agent-device (wrong-device match).
 
 ## Core loop (worker-side — device-tester agents execute this)
 
@@ -230,8 +228,8 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    not authoritative — verify by outcome (wait/assert), not by flag. But some
    interactions are *reproducibly* un-automatable (backdrop fall-through, etc.) —
    before planning, check the **known automation-limited interactions registry**
-   (`references/incidents.md`) and plan those to the boundary + route the real
-   step to device, rather than re-discovering the limit at ~60 min/attempt.
+   and plan those to the boundary + route the real step to device, rather than
+   re-discovering the limit at ~60 min/attempt.
 9. **Catch toasts — success waits race past them.** Toasts are transient
    (~4s) and a `wait "<next screen>"` that passes can still have skipped an
    error toast the user would have seen. The toast container IS in the tree
@@ -385,8 +383,7 @@ Mac" above).
 
 - Stop any recordings (`agent-device record stop`, `kill -INT` simctl video).
 - **Close your agent-device session** (`agent-device close --session <app>`) —
-  a lingering session stays bound to its device and can collide later
-  (incident record: `references/incidents.md`).
+  a lingering session stays bound to its device and can collide later.
 - `xcrun simctl status_bar <udid> clear` if you overrode it (target YOUR sim's
   UDID, not `booted` — multiple sims may be booted on a shared Mac).
 - Reset appearance/content-size if you changed them.
@@ -427,7 +424,6 @@ Mac" above).
   xctrace recipes, visual regression, automation speed tricks
 - `references/setup.md` — Mac setup, AXe fallback, Linux→Mac remote appendix,
   Appium webview escape hatch (Layer 3)
-- `references/incidents.md` — full incident narratives behind the compressed rules
 - `ac-qa-browser/SKILL.md` — the web-shell twin (Layer 1, exhaustive DOM coverage)
 - `browser-testing/SKILL.md` — the low-level `agent-browser` mechanics the twin wraps
 - Consuming app's `CORE/journeys/` + `CORE/journeys/native.md` — the what

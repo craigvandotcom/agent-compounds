@@ -26,8 +26,7 @@ the build — that's **`ac-qa-device`** (run it first; this gates on its report)
 (the proven headless shape: fastlane **match** git-stored signing + Admin ASC API key —
 no Apple 2FA at any point). The ASC API owns the read/submit miles. Never introduce a
 second build tool to an app that already has a working lane — rewriting a working lane
-is churn for zero user value. Decision record: `references/_DECISION-distribution-stack.md`
-· incident log: `references/incidents.md`.
+is churn for zero user value. Decision record: `references/_DECISION-distribution-stack.md`.
 
 ---
 
@@ -97,9 +96,8 @@ Pass selection defers to `ac-pipeline/references/verification-gate.md` — one s
    (memory: `rule-review-critical-journeys-sim-pass-before-submission`), against the
    commit being submitted. `ac-distribute` does not additionally dispatch the BLOCKING
    `--lane store` journey-stamp-check itself in parallel — one gate, not two. Why:
-   runtime behavior, not static presence, is the only
-   sufficient proof — above all on COMMERCE surfaces (live store data + enabled CTA;
-   the four-rejection incident: `references/incidents.md` §1). StoreKit offering/product fetch
+   runtime behavior, not static presence, is the only sufficient proof — above all on
+   COMMERCE surfaces (live store data + enabled CTA). StoreKit offering/product fetch
    WORKS on the simulator; only purchase COMPLETION is device-only — "sim can't test
    payments" never excuses a missing/stale stamp. A stamp is refreshed by driving the
    journey again (`ac-qa-device`/`ac-qa-browser` writing `last_pass`) — see
@@ -188,16 +186,16 @@ dsym:         uploaded ✓ | SKIPPED (Sentry not wired — see ac-triage)
   "build shipped" from an archive success; the proof is the build appearing in ASC with
   `processingState == VALID`. CORE/distribution.md must state explicitly whether the
   merge-triggered native build UPLOADS or is health-check-only — this ambiguity has burned
-  an evening (`references/incidents.md` §2).
+  an evening.
 - **`setup_ci` on a PERSONAL-Mac runner hijacks the user's keychain** — it makes
   `fastlane_tmp_keychain` the user's DEFAULT keychain and drops login from the search list.
   Fine on ephemeral CI VMs; on a self-hosted personal Mac it breaks the owner's GUI session
   (system dialogs demanding the tmp keychain's password — which is the empty string). Any
   lane using `setup_ci` on such a runner MUST restore in `after_all` AND `error` hooks:
   `security list-keychains -s ~/Library/Keychains/login.keychain-db` + `default-keychain -s`
-  + `delete_keychain`. (Reference implementation + incident: `references/incidents.md` §3.)
+  + `delete_keychain`.
 
-Store-submit footguns (validated live — `references/incidents.md` §4):
+Store-submit footguns (validated live):
 
 - **A stuck rejected `reviewSubmission` blocks a new one** — "Cannot submit for review – a
   review submission is already in progress." A prior rejection sits in `UNRESOLVED_ISSUES`
@@ -222,7 +220,7 @@ Store-submit footguns (validated live — `references/incidents.md` §4):
 
 ---
 
-## Workflow B — store-release (validated live — `references/incidents.md` §4)
+## Workflow B — store-release (validated live)
 
 Production App Store submission. ASC **API** work — runs anywhere the API key exists; NOT
 Mac-bound (the build it submits was already produced by testflight-push). **Human-gated at

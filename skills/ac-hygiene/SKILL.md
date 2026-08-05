@@ -334,9 +334,8 @@ git rev-parse HEAD && git ls-remote origin main   # confirm the SHAs match after
 > **Pathspec commits, never `git add -A`.** Use the `git commit -- <files>` form limited to the
 > exact paths YOU changed (tracked from the implementer reports). Under trunk-direct another
 > session's uncommitted WIP shares this checkout — a wildcard add sweeps that foreign work into
-> your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d;
-> `references/incidents.md`). New (untracked) files need `git add <file>` first, then the
-> pathspec commit of exactly that path.
+> your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d). New (untracked)
+> files need `git add <file>` first, then the pathspec commit of exactly that path.
 
 > **Commit WITHOUT `--no-verify`; push WITH it.** The pre-commit hook runs `lint-staged`
 > (prettier `--write` + eslint `--fix`) on your staged files and re-stages them — the cheap

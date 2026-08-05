@@ -106,7 +106,7 @@ The script should already handle: auth (cookie injection / login), navigation be
 
 If the embedded images are screenshots of a **native mobile app** (e.g. landing-page phone mockups of an iOS app), capture from the **real app on a simulator/device** via `agent-device` — authentic native rendering, and often the *only* path that works: a local `pnpm dev` web server may render demo/mock data and/or auto-authenticate a fixed dev user, so DB seeding has no effect on what renders there. **Seed the account the native app auto-uses, in the backend the app actually points at (usually prod), not whatever the web default is.** (Marketing *site pages* are browser work; the *app-screen mockups* embedded in them are native-app work.)
 
-> **MANDATORY protocol (each maps to a real escaped defect — see references/incidents.md):**
+> **MANDATORY protocol (each maps to a real escaped defect):**
 > 1. **Seed FIRST, always** — relative-date seed data goes stale; re-seed before every capture run.
 > 2. **Verify data is CURRENT *in the app* before capturing** — seeding the DB is not enough: the app
 >    may show a cached/pre-seed state (e.g. recent days blank, wrong streak count). After seeding,
