@@ -291,10 +291,10 @@ br list --json | tee "$ARTIFACTS_DIR/beads.json" >/dev/null
 
 # Commit history on this branch
 BASE_BRANCH=main
-git log "$BASE_BRANCH"..HEAD --oneline > "$ARTIFACTS_DIR/commits.txt"
+git log "$BASE_BRANCH"..HEAD --oneline | tee "$ARTIFACTS_DIR/commits.txt" >/dev/null
 
 # Diff stats
-git diff "$BASE_BRANCH"...HEAD --stat > "$ARTIFACTS_DIR/diff-stats.txt"
+git diff "$BASE_BRANCH"...HEAD --stat | tee "$ARTIFACTS_DIR/diff-stats.txt" >/dev/null
 
 # Review report (if exists)
 ls .claude/reviews/*.md 2>/dev/null | tail -1
@@ -383,16 +383,16 @@ After checks complete (or timeout):
 
 ```bash
 # CI check results
-gh pr checks "$PR_NUMBER" > "$ARTIFACTS_DIR/ci-checks.txt"
+gh pr checks "$PR_NUMBER" | tee "$ARTIFACTS_DIR/ci-checks.txt" >/dev/null
 
 # PR comments (agent reviews, bot feedback)
-gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --paginate > "$ARTIFACTS_DIR/pr-comments.json"
+gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --paginate | tee "$ARTIFACTS_DIR/pr-comments.json" >/dev/null
 
 # PR review comments (review-level feedback)
-gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews --paginate > "$ARTIFACTS_DIR/pr-reviews.json"
+gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews --paginate | tee "$ARTIFACTS_DIR/pr-reviews.json" >/dev/null
 
 # Issue comments on the PR
-gh pr view "$PR_NUMBER" --comments > "$ARTIFACTS_DIR/pr-discussion.txt"
+gh pr view "$PR_NUMBER" --comments | tee "$ARTIFACTS_DIR/pr-discussion.txt" >/dev/null
 ```
 
 ### Assess Feedback

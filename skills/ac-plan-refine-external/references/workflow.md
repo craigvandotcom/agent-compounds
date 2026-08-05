@@ -99,7 +99,7 @@ Create the cross-round tracking file for single-model findings:
 > This file carries 13 such writes; it is the densest instance in the registry.
 
 ```bash
-cat > "$WORK_DIR/consensus-registry.md" <<'EOF'
+tee "$WORK_DIR/consensus-registry.md" >/dev/null <<'EOF'
 # Consensus Registry
 
 Tracks single-model findings across rounds. If a finding recurs in a later round, it achieves cross-round consensus and is auto-applied.
@@ -238,7 +238,7 @@ Phase 5: Finalize
 
 ```bash
 # Build the review prompt for this round
-cat > "$WORK_DIR/review-prompt-round-$CURRENT_ROUND.md" <<'PROMPT_END'
+tee "$WORK_DIR/review-prompt-round-$CURRENT_ROUND.md" >/dev/null <<'PROMPT_END'
 # Project Context
 
 $( [ -n "$AGENTS_FILE" ] && cat "$AGENTS_FILE" || echo "No AGENTS.md available" )
@@ -298,7 +298,7 @@ for model in "${MODELS[@]}"; do
     $OPENROUTER --model "$model" \
         --file "$WORK_DIR/review-prompt-round-$CURRENT_ROUND.md" \
         --no-stream \
-        2>/dev/null > "$WORK_DIR/round-$CURRENT_ROUND-$model.md" &
+        2>/dev/null | tee "$WORK_DIR/round-$CURRENT_ROUND-$model.md" >/dev/null &
 done
 
 # Wait for ALL background jobs to complete
@@ -335,7 +335,7 @@ for model in "${RETRY_MODELS[@]}"; do
     $OPENROUTER --model "$model" \
         --file "$WORK_DIR/review-prompt-round-$CURRENT_ROUND.md" \
         --no-stream \
-        2>/dev/null > "$WORK_DIR/round-$CURRENT_ROUND-$model.md"
+        2>/dev/null | tee "$WORK_DIR/round-$CURRENT_ROUND-$model.md" >/dev/null
     word_count=$(wc -w < "$WORK_DIR/round-$CURRENT_ROUND-$model.md")
     echo "  ✓ $model (retry): $word_count words"
 done
@@ -516,7 +516,7 @@ echo "Round $CURRENT_ROUND snapshot saved"
 **Create changelog for this round:**
 
 ```bash
-cat > "$WORK_DIR/changelog-round-$CURRENT_ROUND.md" <<CHANGELOG_END
+tee "$WORK_DIR/changelog-round-$CURRENT_ROUND.md" >/dev/null <<CHANGELOG_END
 # Round $CURRENT_ROUND Changes
 
 **Date:** $(date +%Y-%m-%d\ %H:%M)
@@ -792,7 +792,7 @@ echo "✓ Final plan written to: $PLAN_FILE"
 **Combine all round changelogs into comprehensive log:**
 
 ```bash
-cat > "$WORK_DIR/REFINEMENT-LOG.md" <<MASTER_LOG
+tee "$WORK_DIR/REFINEMENT-LOG.md" >/dev/null <<MASTER_LOG
 # Plan Refinement Log
 
 **Plan:** $PLAN_FILE

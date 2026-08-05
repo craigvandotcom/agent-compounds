@@ -18,6 +18,7 @@ This file owns the *read* (what to scan, how to categorize). Each consumer owns 
 - Scan C — backlog
 - Scan D — review coverage (the staleness probe)
 - Scan E — scheduled CI gate health (the other unconsumed signal)
+- Scan F — board truth (the already-shipped probe)
 - The board snapshot (shape returned to the consumer)
 - Lenses (who reads this board, for what)
 
@@ -167,12 +168,17 @@ invisible (bd-zl1y5):**
   defect. Coverage is the only honest answer to "what has actually been reviewed".
 
 ```bash
-# A LITERAL scratch path, not `$(mktemp -d)`. dcg blocks a truncating redirect whose
-# target is shell-expanded from a command substitution
-# (core.filesystem:redirect-truncate-dynamic-path). The literal form is the only one that runs here.
+# Per-run scratch dir. Writes below go through `tee`, NEVER a truncating redirect:
+# dcg's core.filesystem:redirect-truncate-dynamic-path blocks `> "$VAR/path"` because it
+# cannot prove the target before O_TRUNC. `tee "$VAR/path"` is ALLOWED, and so is a
+# redirect to a fully-literal path (`>/dev/null`). Appends (`>>`) are allowed too.
+# Probed against dcg 0.6.7 — the discriminator is literal-vs-variable TARGET, not
+# compound-vs-simple command. See ac-pipeline/references/shell-guardrails.md.
 D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
 
 # Acceptance mark + its gap (bootstrap: last v* tag, else the root commit).
+# NOTE: ACCEPT_GAP and MARK_AGE_DAYS are REPORTED; only MARK_AGE_DAYS still gates
+# (ALARM arm). The staleness verdict is driven by CODEISH — see the table below.
 MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
 MARK_AGE_DAYS=-1
 [ -n "$MARK" ] && MARK_AGE_DAYS=$(( ( $(date +%s) - $(git log -1 --format=%ct "$MARK") ) / 86400 ))
@@ -180,16 +186,26 @@ BASE=${MARK:-$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null)}
 [ -n "$BASE" ] || BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
 ACCEPT_GAP=$(git rev-list --count "$BASE..HEAD")
 
+# COVERAGE WINDOW — anchored on the last RELEASE TAG, never on the moving mark.
+# This is load-bearing (bd-zo3kq): if the window were `$MARK..HEAD`, advancing the mark
+# would SHRINK the window as well as reset the gap, so `UNCOVERED`/`CODEISH` would collapse
+# to ~0 no matter how much history is genuinely unreviewed — gating on the coverage half
+# would then mask exactly as badly as gating on the acceptance half did. A `v*` tag moves
+# only on publish, so the window is stable across batch closes.
+COV_BASE=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null)
+[ -n "$COV_BASE" ] || COV_BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
+
 # Coverage. `git grep -h` (no xargs — empty input must not hang); anchored on `Range:` so only
 # an EXPLICIT claim counts, and an unparseable/rewritten sha is dropped by `rev-list 2>/dev/null`.
 # Both choices UNDER-credit coverage: this probe fails loud, never silently green.
 git grep -hE 'Range:.*[0-9a-f]{7,}\.\.[0-9a-f]{7,}' -- .claude/reviews 2>/dev/null \
-  | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' | sort -u > "$D/ranges"
-: > "$D/covered"
-while IFS= read -r r; do git rev-list "$r" 2>/dev/null >> "$D/covered"; done < "$D/ranges"
-sort -u "$D/covered" -o "$D/covered"
-git rev-list "$BASE..HEAD" | sort -u > "$D/inrange"
-comm -23 "$D/inrange" "$D/covered" > "$D/uncovered"
+  | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' | sort -u | tee "$D/ranges" >/dev/null
+# One pipeline, so no truncate-then-append dance: empty input yields an empty `covered`,
+# which `comm` still needs to exist.
+while IFS= read -r r; do git rev-list "$r" 2>/dev/null; done < "$D/ranges" \
+  | sort -u | tee "$D/covered" >/dev/null
+git rev-list "$COV_BASE..HEAD" | sort -u | tee "$D/inrange" >/dev/null
+comm -23 "$D/inrange" "$D/covered" | tee "$D/uncovered" >/dev/null
 UNCOVERED=$(( $(wc -l < "$D/uncovered") ))   # NOT `| tr -d ' '` — `tr` is a tmux alias in the fleet's interactive profile
 CODEISH=0   # the actionable subset — ONE git call, not one per commit
 [ -s "$D/uncovered" ] && CODEISH=$(git log --no-walk --format='%s' --stdin < "$D/uncovered" \
@@ -202,11 +218,49 @@ and a range naming a sha this repo doesn't have.
 
 **Staleness classification** (shared so consumers can't fork on what "stale" means):
 
+**Classify on the COVERAGE half, never the ACCEPTANCE half.** `ACCEPT_GAP` and
+`MARK_AGE_DAYS` describe *when a batch last closed*; `UNCOVERED`/`CODEISH` describe *what
+has actually been reviewed*. Only the second is the question this probe exists to answer,
+and the two come apart precisely when it matters most — a single tiny batch-close resets
+the acceptance half to zero while the coverage half is untouched.
+
+**Both halves of that fix are load-bearing — changing the gate variable alone is NOT
+enough.** The coverage window must also be anchored on the last **release tag**
+(`COV_BASE`), never on the moving mark. Measured while implementing this: with the window
+left at `$MARK..HEAD`, advancing the mark shrank the window as well as resetting the gap,
+so `CODEISH` collapsed to `0` and the table still emitted `ok` — the same masking, one
+level down. With `COV_BASE` anchored on `v1.5.14` the identical repo state reported
+`153 uncovered (35 code-ish) · ALARM`, which is the truth.
+
+> **Measured (ac-loop RUN 20260804-202200-loop, bd-zo3kq).** Orient read
+> `ACCEPT_GAP=134 · MARK_AGE=4d · 116 uncovered` → `ALARM`. One **2-commit** batch then
+> closed, advancing the mark. `ACCEPT_GAP` → 0 and `MARK_AGE` → 0d, so the old table
+> emitted **`ok`** — while `UNCOVERED` had *risen* to 148, because commits kept landing
+> and only 6 files were reviewed. The verdict inverted on the strength of reviewing 6
+> files out of 148 commits. `UNCOVERED` was already computed ~10 lines above the table
+> and simply was not read.
+
 | `staleness` | Condition |
 |---|---|
-| `ok` | `ACCEPT_GAP` ≤ 50 and `MARK_AGE_DAYS` ≤ 7 |
-| `warn` | `ACCEPT_GAP` > 50 |
-| `ALARM` | `ACCEPT_GAP` > 100, **or** `MARK_AGE_DAYS` > 7 (the same 7-day line `ac-review` § Standing weekly review already draws) |
+| `ok` | `CODEISH` ≤ 5 **and** `MARK_AGE_DAYS` ≤ 7 |
+| `warn` | `CODEISH` > 5 |
+| `ALARM` | `CODEISH` > 20, **or** `MARK_AGE_DAYS` > 7 (the same 7-day line `ac-review` § Standing weekly review already draws) |
+
+`CODEISH` (not raw `UNCOVERED`) is the gate input: it is the actionable subset — commits
+whose subject matches `feat|fix|perf|refactor|test` — so routine chore/docs/beads traffic
+does not raise an alarm nobody can action. A healthy loop reviews each batch's own commits,
+so `CODEISH` hovers near zero; the thresholds are calibrated to read `ok` in that steady
+state and `ALARM` on a genuine blackout.
+
+**`MARK_AGE_DAYS` is retained as an ALARM condition only** — a mark that has not moved in
+over a week means no batch has closed at all, which is a real signal in its own right and
+is not visible in the coverage numbers. `ACCEPT_GAP` is still *reported* in the one-liner
+(it is useful context) but **gates nothing**.
+
+> **Do not "fix" a non-`ok` verdict by closing a batch.** Under the old table that worked
+> and was the bug. Under this table only reviewing the uncovered commits moves the number —
+> which is the entire point. The catch-up path is a review whose artifact records a
+> `**Range:**` covering the uncovered span (see the Coverage bullet above).
 
 ## Scan E — scheduled CI gate health (the other unconsumed signal)
 
@@ -220,19 +274,20 @@ persistently-red gate is strictly worse than a missing one — it looks like cov
 providing none.
 
 ```bash
-# A LITERAL scratch path, not `$(mktemp -d)`. dcg blocks a truncating redirect whose
-# target is shell-expanded from a command substitution
-# (core.filesystem:redirect-truncate-dynamic-path). The literal form is the only one that runs here.
+# Per-run scratch dir. Writes go through `tee`, never a truncating redirect — dcg's
+# core.filesystem:redirect-truncate-dynamic-path blocks `> "$VAR/path"`. `tee "$VAR/path"`
+# is allowed; a redirect to a fully-literal path (`>/dev/null`, `2>/tmp/…`) is allowed.
+# gh's stdout is kept in a shell variable (10 runs — small) so no per-workflow file write
+# is needed at all, and its stderr goes to a LITERAL path.
 D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
 WF_DIR="$PROJECT_ROOT/.github/workflows"
 
 # 1. Enumerate SCHEDULED workflows FROM THE REPO — never a hardcoded list, or a gate added
 #    tomorrow is unwatched from the day it lands.
-: > "$D/sched"
-[ -d "$WF_DIR" ] && find "$WF_DIR" -maxdepth 1 \( -name '*.yml' -o -name '*.yaml' \) | sort \
+{ [ -d "$WF_DIR" ] && find "$WF_DIR" -maxdepth 1 \( -name '*.yml' -o -name '*.yaml' \) | sort \
   | while IFS= read -r f; do
       awk '/^[[:space:]]+schedule:[[:space:]]*$/{s=1} END{exit !s}' "$f" && printf '%s\n' "$f"
-    done > "$D/sched"
+    done; } | tee "$D/sched" >/dev/null
 
 # 2. ONE `gh run list` per workflow, no more — orient runs on every loop iteration. ANY failure
 #    of the probe (no gh, no auth, no network, no remote, unparseable JSON) yields `unknown`.
@@ -240,22 +295,22 @@ GH_REPO=$(git -C "$PROJECT_ROOT" remote get-url origin 2>/dev/null \
           | sed -E 's#^(git@[^:]+:|ssh://[^/]+/|https?://[^/]+/)##; s#\.git$##')
 epoch_of() { date -u -d "$1" +%s 2>/dev/null || date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null; }
 NOW=$(date -u +%s)
-: > "$D/ci-gates"
 while IFS= read -r f; do
   wf=$(basename "$f")
   # Cadence grace from the cron fields: daily (DOM and DOW both `*`) -> 48h, sparser -> 8d.
   cad=$(awk -F"'" '/^[[:space:]]+- cron:/{split($2,c," "); print (c[3]=="*" && c[5]=="*")?48:192; exit}' "$f")
   [ -n "$cad" ] || cad=192
-  if gh run list -R "$GH_REPO" --workflow "$wf" --limit 10 \
-       --json conclusion,createdAt,event > "$D/runs.json" 2>"$D/gh.err"; then
+  # LITERAL stderr path (variable target would be blocked); stdout captured, not redirected.
+  if runs=$(gh run list -R "$GH_REPO" --workflow "$wf" --limit 10 \
+              --json conclusion,createdAt,event 2>/tmp/ac_board_scan_gh_err) && [ -n "$runs" ]; then
     # streak = consecutive non-`success` verdicts from newest; still-running runs are skipped,
     # never counted green. Verdict/streak read EVERY event (freshest truth about the suite)...
-    res=$(jq -r '[.[]|select(.conclusion!="" and .conclusion!=null)] as $d | ($d|length) as $n
+    res=$(printf '%s' "$runs" | jq -r '[.[]|select(.conclusion!="" and .conclusion!=null)] as $d | ($d|length) as $n
       | if $n==0 then "unknown 0"
         else (($d|map(.conclusion)|index("success")) // $n) as $s
-             | (if $s==0 then "green" else "red" end)+" "+($s|tostring) end' "$D/runs.json" 2>/dev/null)
+             | (if $s==0 then "green" else "red" end)+" "+($s|tostring) end' 2>/dev/null)
     # ...but staleness reads ONLY `schedule` events, else a manual dispatch masks a dead cron.
-    last=$(jq -r '[.[]|select(.event=="schedule")|.createdAt]|max // ""' "$D/runs.json" 2>/dev/null)
+    last=$(printf '%s' "$runs" | jq -r '[.[]|select(.event=="schedule")|.createdAt]|max // ""' 2>/dev/null)
   else
     res=""; last=""
   fi
@@ -263,8 +318,8 @@ while IFS= read -r f; do
   verdict=${res%% *}; streak=${res##* }
   age_h=-1
   [ -n "$last" ] && age_h=$(( (NOW - $(epoch_of "$last")) / 3600 ))
-  printf '%s\t%s\t%s\t%s\t%s\n' "$wf" "$verdict" "$streak" "$age_h" "$cad" >> "$D/ci-gates"
-done < "$D/sched"
+  printf '%s\t%s\t%s\t%s\t%s\n' "$wf" "$verdict" "$streak" "$age_h" "$cad"
+done < "$D/sched" | tee "$D/ci-gates" >/dev/null
 
 # 3. Classify. Precedence ALARM > unknown > warn > ok: a gate the probe could not read must
 #    NEVER print as green, and a red gate must not be softened by a healthy sibling.
@@ -276,7 +331,7 @@ CI_HEALTH=$(awk -F'\t' '{ s=0
 CI_GATES=$(awk -F'\t' '{ printf "%s%s=%s%s%s", (NR>1?" · ":""), $1, $2, ($2=="red"?"×"$3:""),
     ($2=="unknown"?"":($4>=0?"("$4"h)":"(no-sched-run)")) } END{ print "" }' "$D/ci-gates")
 CI_WHY=""
-[ "$CI_HEALTH" = unknown ] && CI_WHY=" · probe: $(head -1 "$D/gh.err" 2>/dev/null || echo 'gh unavailable')"
+[ "$CI_HEALTH" = unknown ] && CI_WHY=" · probe: $(head -1 /tmp/ac_board_scan_gh_err 2>/dev/null || echo 'gh unavailable')"
 
 echo "ci-gates: $(( $(wc -l < "$D/sched") )) scheduled · ${CI_GATES:-none} · ci_health: $CI_HEALTH$CI_WHY"
 ```
@@ -302,6 +357,77 @@ therefore the consumer of last resort — **the loop noticing for itself** — n
 
 ---
 
+## Scan F — board truth (the already-shipped probe)
+
+**An open bead whose work has already merged is invisible to every other scan.** It keeps
+its `refined` label, keeps appearing in `br ready`, and is therefore selected as ordinary
+implement work — so a conductor spends a full opus child to discover the code exists.
+Measured (ac-loop RUN 20260804, `bd-board-truth-reconciliation-gate-x1o01`): **3 of 10**
+refined ready bugs were already shipped, and `bd-8yhvb` had consumed **four** separate agent
+sessions before anyone amended its title. Nothing else catches this — `ac-tidy` reconciles
+labels and its staleness notion is `br stale` (**age-based, not artifact-based**), and Scans
+A–E never open a file or read a commit message.
+
+The cheapest real signal is that **the fixing commit often names the bead**. `c654b4ed`
+carries `Bead: bd-3mm9t` in its own trailer, and that bead still sat open + `refined` +
+`br ready` four days later.
+
+```bash
+D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
+# COV_BASE from Scan D (last release tag). One `git log`, one `br list` — no per-bead calls.
+git log "$COV_BASE..HEAD" --format='%ct|%H|%s|%b' \
+  | awk '/^[0-9]+\|/{if(r)print r; r=$0; next}{r=r" "$0} END{if(r)print r}' \
+  | tee "$D/commits-flat" >/dev/null
+
+# HIGH-PRECISION extraction. Only two shapes count as a claim that a bead was WORKED:
+# an id in the SUBJECT, or an id introduced by a `Bead:`/`Beads:` trailer. A bare mention
+# in prose does NOT count — ledger and report commits list dozens of ids they never touched.
+# Bookkeeping commits are dropped wholesale: they NAME beads without implementing them.
+awk -F'|' '{ ct=$1+0; subj=$3
+    if (subj ~ /^chore\(beads\)/ || $0 ~ /\[no-bead\]/) next
+    body=""; for(i=4;i<=NF;i++) body=body "|" $i
+    n=split(subj, t, /[^A-Za-z0-9._-]/)
+    for(i=1;i<=n;i++) if (t[i] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[t[i]]+0) seen[t[i]]=ct
+    m=split(body, w, /[[:space:]]+/)
+    for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
+  } END { for (k in seen) printf "%s\t%d\n", k, seen[k] }' "$D/commits-flat" \
+  | tee "$D/cited" >/dev/null
+
+br list --status open --limit 0 --json 2>/dev/null \
+  | jq -r '.issues[] | [.id, .updated_at, .created_at] | @tsv' | tee "$D/open-beads" >/dev/null
+
+to_epoch() { s=${1%.*}; s=${s%Z}; date -u -j -f '%Y-%m-%dT%H:%M:%S' "$s" +%s 2>/dev/null \
+             || date -u -d "$1" +%s 2>/dev/null; }
+: | tee "$D/board-truth" >/dev/null
+while IFS="$(printf '\t')" read -r id upd crt; do
+  cit=$(awk -F'\t' -v k="$id" '$1==k{print $2}' "$D/cited"); [ -n "$cit" ] || continue
+  ue=$(to_epoch "$upd"); ce=$(to_epoch "$crt"); [ -n "$ue" ] && [ -n "$ce" ] || continue
+  # Post-dates the last touch AND is not the commit that FILED the bead (a review commit
+  # cites the beads it creates; that is never evidence the work is done).
+  [ "$cit" -gt "$ue" ] && [ "$cit" -gt $(( ce + 7200 )) ] \
+    && printf '%s\t%s\n' "$id" "$cit" >> "$D/board-truth"
+done < "$D/open-beads"
+BOARD_TRUTH=$(wc -l < "$D/board-truth" | xargs)
+echo "board-truth: ${BOARD_TRUTH:-0} open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close"
+```
+
+**FLAG-ONLY. This scan MUST NOT close, label, or defer anything.** A false STALE makes the
+conductor skip real work, which is strictly worse than the wasted child this exists to
+prevent. The output is a shortlist for a conductor to adjudicate by reading the bead's
+`## Delivers` and checking those artifacts at HEAD — cheap, because the list is short.
+
+**Verify it still bites after ANY edit** (a detector that silently matches nothing is worse
+than none): `awk -F'\t' '$1=="bd-3mm9t"' "$D/cited"` must be non-empty in `body-compass-app`
+— that is the known-true-positive fixture, `c654b4ed`, whose trailer names the bead.
+
+**Known limitation, deliberately accepted:** a bead someone merely *comments* on gets a
+fresh `updated_at` and stops flagging. This scan is the cheap Tier-1 net for the
+`bd-3mm9t` class (id cited, nobody closed it); the `bd-8yhvb` class — work shipped with no
+commit naming the bead at all — is only caught by checking a bead's declared artifacts at
+HEAD, which is Tier 2 and is not automated here.
+
+---
+
 ## The board snapshot (shape returned to the consumer)
 
 ```
@@ -310,6 +436,7 @@ plans:    { draft[], refined[], approved[], beadified[], loop_ready[], unclassif
 backlog:  { active[], pool[], candidates[], unclassified[] }   # candidates = status:candidate
 review:   { mark, mark_age_days, accept_gap, uncovered, codeish_uncovered, staleness }
 ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health }
+truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory shortlist, never an action
 ```
 
 > **A non-`ok` `staleness` — and ANY `ci_health` other than `ok`/`none` — is NEVER silent.** Every
@@ -330,7 +457,7 @@ ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health 
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), prod health, org-wide `human-gate` sweep — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-dashboard`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
-| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan D's staleness verdict, and on `ALARM` file/refresh a P1 review-blackout bead before selecting work; print Scan E's `ci-gates` line EVERY run, `ok` included** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan D's staleness verdict, and on `ALARM` file/refresh a P1 review-blackout bead before selecting work; print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.

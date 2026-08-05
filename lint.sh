@@ -1057,6 +1057,66 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 17 — dcg-blocked shell idioms in published snippets
+# ---------------------------------------------------------------------------
+echo "--- Check 17: dcg-blocked dynamic-path redirects ---"
+
+# dcg's `core.filesystem:redirect-truncate-dynamic-path` refuses a TRUNCATING redirect whose
+# target is shell-expanded — it cannot prove the path before the file is opened O_TRUNC. A
+# published snippet prescribing that shape is UNRUNNABLE on this fleet.
+#
+# Why this check exists (bd-scjgv): bd-5ndzm was closed as Fixed on 2026-07-30 having scoped
+# six skills and mechanically fixed exactly ONE. Nothing re-detected the rest, so the class
+# read as "fixed" on the board while three separate published snippets still shipped it and
+# kept costing conductors live time in Phase 0. The DETECTOR is the deliverable — without it
+# the next snippet reintroduces the class and no one learns until someone loses a run.
+#
+# The discriminator is literal-vs-variable TARGET, not compound-vs-simple command (probed
+# against dcg 0.6.7). NOT matched, because all three are allowed:
+#   >> "$VAR/path"      appends never truncate
+#   >/dev/null          fully-literal target
+#   tee "$VAR/path"     tee is not a redirect
+# Escape hatch: put `dcg-allow` in a comment on the same line to document the antipattern
+# deliberately (shell-guardrails.md does exactly that).
+# The `/` is anchored directly after the variable name ON PURPOSE. An earlier form used
+# `[^"[:space:]]*/` and matched NOTHING under macOS grep's leftmost-longest semantics (no
+# backtracking) — a detector that silently matches nothing is worse than no detector, so
+# this pattern is proved red-then-green against fixtures before being trusted.
+DCG_BAD_RE='(^|[[:space:]]|[0-9]|&)>[[:space:]]*"?\$\{?[A-Za-z_][A-Za-z0-9_:%+-]*/'
+
+# SCOPE: markdown PRESCRIPTIONS only, deliberately not `*.sh`. dcg intercepts commands an
+# agent submits to its Bash tool; a shell script executed as a FILE (`bash foo.sh`) is never
+# inspected, so the same shape inside a committed script is not broken and flagging it would
+# be a false positive that erodes trust in the check. The risk this guards is a snippet an
+# agent COPIES OUT of a skill and runs inline.
+dcg_hits=0
+dcg_scanned=0
+while IFS= read -r f; do
+  # Only lines INSIDE ```bash / ```sh fences are prescriptions. Prose naming the antipattern
+  # (shell-guardrails.md, and the rationale comments in board-scan.md) must not trip it.
+  body=$(awk '/^[[:space:]]*```(bash|sh)[[:space:]]*$/{inb=1;next}
+              /^[[:space:]]*```/{inb=0;next}
+              inb{print FILENAME":"FNR":"$0}' "$f" 2>/dev/null)
+  dcg_scanned=$(( dcg_scanned + 1 ))
+  [ -n "$body" ] || continue
+  hits=$(printf '%s\n' "$body" | grep -E -- "$DCG_BAD_RE" | grep -v 'dcg-allow' || true)
+  [ -n "$hits" ] || continue
+  while IFS= read -r h; do
+    [ -n "$h" ] || continue
+    fail "Check 17: dcg-blocked truncating redirect to a variable path — ${h#$AC_ROOT/}"
+    dcg_hits=$(( dcg_hits + 1 ))
+  done <<< "$hits"
+done < <(find "$AC_ROOT/skills" -type f -name '*.md' 2>/dev/null | sort)
+
+check
+if [ "$dcg_scanned" -eq 0 ]; then
+  # Zero files scanned accounts for nothing — a broken find reads identical to a clean sweep.
+  fail "Check 17: zero files scanned under skills/ — the sweep is vacuous"
+elif [ "$dcg_hits" -eq 0 ]; then
+  echo "  dcg redirect shapes: 0 violations across ${dcg_scanned} skill files"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

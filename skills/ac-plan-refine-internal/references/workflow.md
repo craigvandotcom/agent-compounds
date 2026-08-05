@@ -65,7 +65,7 @@ Create the cross-round tracking file for single-agent findings:
 > is variable-built. Sanctioned shapes (`tee`, the Write tool): `ac-pipeline/references/shell-guardrails.md`.
 
 ```bash
-cat > "$ARTIFACTS_DIR/consensus-registry.md" <<'EOF'
+tee "$ARTIFACTS_DIR/consensus-registry.md" >/dev/null <<'EOF'
 # Consensus Registry
 
 Tracks single-agent findings across rounds. If a finding recurs in a later round, it achieves cross-round consensus and is auto-applied.

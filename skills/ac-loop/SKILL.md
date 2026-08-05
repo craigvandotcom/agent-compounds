@@ -183,13 +183,19 @@ Read the current state of the board. This is the map you navigate by.
 
 > **Canonical scan spec: `ac-pipeline/references/board-scan.md`** — this Phase-0 orient is a consumer of it, so read it
 > alongside the calls below and use ITS definitions; the loop and the janitor (`ac-tidy`) must not fork on
-> what "orphan" or "illegal edge" mean. Adopt all FOUR detectors: **parentage-gap orphan** (open non-epic
+> what "orphan" or "illegal edge" mean. Adopt all FIVE detectors: **parentage-gap orphan** (open non-epic
 > bead, no epic parent — the I1 sense), **authored epic-edge** (any `blocks` edge with an epic endpoint —
 > report ALWAYS), **Scan D review-coverage staleness** (PRINT its verdict below; on `ALARM` file/refresh a
 > P1 review-blackout bead BEFORE selecting work — bd-zl1y5: stop paths that skip `ac-batch-close`
-> do not advance the mark), and **Scan E scheduled-CI gate health** (PRINT the
+> do not advance the mark), **Scan E scheduled-CI gate health** (PRINT the
 > `ci-gates` line EVERY run, `ok` included — bd-o9vmx: a red gate nobody reads gates
-> nothing; **`unknown` is NOT green**). The `bv`/`br` calls below are that spec's ready-set lens.
+> nothing; **`unknown` is NOT green**), and **Scan F board truth** (PRINT the `board-truth`
+> line EVERY run, `0` included; **adjudicate every flagged bead BEFORE dispatching an
+> implement child at it** — read its `## Delivers` and check those artifacts at HEAD.
+> bd-board-truth-reconciliation-gate-x1o01: 3 of 10 refined ready bugs were already shipped
+> and one bead burned FOUR agent sessions. Scan F **flags only** — never close a bead on its
+> say-so; a false STALE skips real work, which is worse than the wasted child).
+> The `bv`/`br` calls below are that spec's ready-set lens.
 
 > **Discovery uses `bv` for triage, `br` for data.**
 > (`br ready` now defaults to `--limit 0` — the full ready set. An explicit `--limit 0`
@@ -263,7 +269,7 @@ trigger you are about to satisfy is a **precondition failure, not a background r
 resolve it, route around it, or surface it before dispatching children (a tr-alias bug
 open on the board while five children tripped it cost a run ~6 min + 4 orphaned dirs).
 
-Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when they are `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>` AND Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; and a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when they are `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>` AND Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>` AND Scan F's `board-truth: <n> open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green; and a non-zero `board-truth` count means those beads may already be DONE — adjudicate each before spending a child on it). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked **preemptive** bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
@@ -374,6 +380,28 @@ If orphans exist:
    `ac-pipeline/scripts/beads-closed-gate.sh` parses it for the completeness union; since
    ac-ewgr.2 a progress file that EXISTS without it is a HARD FAIL, not a warning, because
    the union check silently short-circuits without it (`--beads` does NOT compensate).
+
+   <!-- net-growth-ok: bd-scjgv AC3 + bd-0sde8 AC3/AC4 — both beads REQUIRE their idiom and
+        rationale to sit INLINE at the point of use. A pointer is precisely what already
+        failed: shell-guardrails.md was correct the whole time and three published snippets
+        still shipped the blocked shape, and the "Non-bug REFINE" ambiguity cost live
+        conductor adjudication because the reason lived elsewhere. Moving either to
+        references/ would re-create the defect being fixed. -->
+
+   > **HOW to write those two files (bd-scjgv).** The obvious idiom is blocked: `printf … >
+   > "$ARTIFACTS_DIR/.claim-id"` trips dcg's `core.filesystem:redirect-truncate-dynamic-path`,
+   > because a truncating redirect to a shell-expanded target cannot be proved before
+   > O_TRUNC. This cost a live conductor time in Phase 0 for want of one line here. Use the
+   > **Write tool** (simplest — no shell involved), or `tee`, which is not a redirect:
+   >
+   > ```bash
+   > printf '%s\n' "$CLAIM_ID" | tee "$ARTIFACTS_DIR/.claim-id" >/dev/null
+   > printf '%s\nTARGET_BEADS=%s\n' "$CLAIM_ID" "$N" | tee "$ARTIFACTS_DIR/progress.md" >/dev/null
+   > ```
+   >
+   > Appends (`>>`) and redirects to a fully-literal path (`>/dev/null`) are also fine.
+   > Full rule: `ac-pipeline/references/shell-guardrails.md`; `lint.sh` Check 17 enforces it
+   > across every published snippet.
 2. **Invoke `ac-implement`** — use this delegation prompt to suppress overhead questions.
    *At width >1:* split into up to WIDTH tree-disjoint child delegations per Efficiency
    § Parallelism (each child: own bead subset, own `TARGET_BEADS`, own claim id +
@@ -605,8 +633,20 @@ earlier fix) is structurally preserved.
 | | Permission |
 | - | ---------- |
 | **(a)** | Refine for batch **N+1** may run during batch **N**'s ceremony (CI poll included). |
-| **(b)** | Non-bug **REFINE** children may run during a **bug-lane** implement. |
-| **(c)** | Non-bug **REFINE** children may run during a **feature-wave** implement. |
+| **(b)** | **REFINE** children may run during a **bug-lane** implement — **any bead type, bugs included**. What makes this safe is that refine ships no product code, not what kind of bead it refines. |
+| **(c)** | **REFINE** children may run during a **feature-wave** implement — same rule, same reason: **any bead type**. |
+
+> **Why the qualifier is gone (bd-0sde8).** (b)/(c) previously read "Non-bug **REFINE**
+> children", which could modify either the WORK KIND (refine ships nothing → safe) or the
+> BEAD TYPE (only refine non-bug beads). The two readings give opposite behaviour, and a
+> live conductor had to stop and adjudicate mid-run. **Work-kind is the intended reading**,
+> on the file's own evidence: the rationale directly above says *"Refine ships nothing, so
+> Rule 0's 'nothing broken ships alongside new work' is untouched"* — an argument entirely
+> about what refine does, never about bead type — and the hookpoint table below says only
+> "a disjoint unrefined-bead subset", with no bug exclusion anywhere. The qualifier was
+> redundant under the correct reading and actively misleading under the wrong one, so it is
+> deleted rather than reworded. **No behavioural change** — this states what the rules
+> already meant.
 
 <!-- net-growth-ok: phase-pipelining-permissions wired live -->
 
@@ -627,12 +667,20 @@ earlier fix) is structurally preserved.
 concurrent refine children hold ALL `br` mutations until the ceremony quiesces):
 `ac-pipeline/references/ceremony-batching-pool.md` § Refine-during-ceremony guard-rails.
 
-### SCOPE — implement/implement mixing stays forbidden
+### SCOPE — two concurrent implement PHASES stay forbidden
 
-A **single conductor** must not run two shipping-work **implement** phases
-concurrently — width-N fan-out included (`PARALLEL_WIDTH` children under one
-orchestrator, Efficiency § Parallelism, is not an authorization). Refine-during-implement
-(b)/(c) is the exception because refine does not ship product code.
+A **single conductor** must not run two shipping-work **implement** phases concurrently.
+Holding `PARALLEL_WIDTH` children is **not** an authorization to open a second phase: width
+is a budget for fanning out the ONE phase in flight, never a licence to start another.
+
+**Width-N fan-out of a single implement phase is explicitly ALLOWED** — up to
+`PARALLEL_WIDTH` implementers on tree-disjoint beads, one ceremony after they all return
+(Efficiency § Parallelism, "How width is enacted"). That is the normal shape of a width>1
+run, not an exception to this rule. The thing forbidden here is *two phases*, e.g. running
+the bug-lane batch and a feature-wave batch at the same time.
+
+Refine-during-implement (b)/(c) is a genuine exception, because refine ships no product
+code.
 
 ---
 
@@ -729,14 +777,14 @@ fighting the machine. Hold these:
   (shared counting breaks TARGET_BEADS recovery after compaction). The ceremony
   (verify → review → close) still runs **once** per batch, after ALL children return;
   the BEADS-CLOSED-GATE already takes the union of every child identity.
-- **What NEVER parallelizes (shipping work):** two **implement** phases under one
-  conductor; beadify-while-implement; implement/implement mixing under Width-N fan-out
-  (SCOPE: Efficiency § Parallelism + Phase pipelining permissions); **two verify/QA
+- **What NEVER parallelizes (shipping work):** two **implement** PHASES under one
+  conductor — width-N fan-out of ONE phase across disjoint beads is **not** two phases, it
+  is how width is enacted (see the bullet above); beadify-while-implement; **two verify/QA
   passes on ONE checkout** — they share `.next` and the serve port, so they are not
   resource-disjoint however same-kind they look (bd-3sh8k — build-dir contention makes a
   mandated "full depth" pass silently read as achieved). Serialize them, or give each its
   own build dir / worktree. **What MAY
-  pipeline (bd-chd5p.3):** non-bug **refine** during ceremony CI poll (a), during
+  pipeline (bd-chd5p.3):** **refine** during ceremony CI poll (a), during
   bug-lane implement (b), or during feature-wave implement (c) — refine ships nothing;
   children defer beads-DB mutations until the ceremony ledger commit lands. Still
   serial: batch-close ceremonies (serial by construction); two writers on the same
