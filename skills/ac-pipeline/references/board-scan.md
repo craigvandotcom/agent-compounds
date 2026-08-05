@@ -352,52 +352,22 @@ The cheapest signal is that **the fixing commit often names the bead** — in it
 a `Bead:` trailer.
 
 ```bash
-D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
-# COV_BASE from Scan D (last release tag). One `git log`, one `br list` — no per-bead calls.
-git log "$COV_BASE..HEAD" --format='%ct|%H|%s|%b' \
-  | awk '/^[0-9]+\|/{if(r)print r; r=$0; next}{r=r" "$0} END{if(r)print r}' \
-  | tee "$D/commits-flat" >/dev/null
-
-# HIGH-PRECISION extraction. Only two shapes count as a claim that a bead was WORKED:
-# an id in the SUBJECT, or an id introduced by a `Bead:`/`Beads:` trailer. A bare mention
-# in prose does NOT count — ledger and report commits list dozens of ids they never touched.
-# Bookkeeping commits are dropped wholesale: they NAME beads without implementing them.
-awk -F'|' '{ ct=$1+0; subj=$3
-    if (subj ~ /^chore\(beads\)/ || $0 ~ /\[no-bead\]/) next
-    body=""; for(i=4;i<=NF;i++) body=body "|" $i
-    n=split(subj, t, /[^A-Za-z0-9._-]/)
-    for(i=1;i<=n;i++) if (t[i] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[t[i]]+0) seen[t[i]]=ct
-    m=split(body, w, /[[:space:]]+/)
-    for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
-  } END { for (k in seen) printf "%s\t%d\n", k, seen[k] }' "$D/commits-flat" \
-  | tee "$D/cited" >/dev/null
-
-br list --status open --limit 0 --json 2>/dev/null \
-  | jq -r '.issues[] | [.id, .updated_at, .created_at] | @tsv' | tee "$D/open-beads" >/dev/null
-
-to_epoch() { s=${1%.*}; s=${s%Z}; date -u -j -f '%Y-%m-%dT%H:%M:%S' "$s" +%s 2>/dev/null \
-             || date -u -d "$1" +%s 2>/dev/null; }
-: | tee "$D/board-truth" >/dev/null
-while IFS="$(printf '\t')" read -r id upd crt; do
-  cit=$(awk -F'\t' -v k="$id" '$1==k{print $2}' "$D/cited"); [ -n "$cit" ] || continue
-  ue=$(to_epoch "$upd"); ce=$(to_epoch "$crt"); [ -n "$ue" ] && [ -n "$ce" ] || continue
-  # Post-dates the last touch AND is not the commit that FILED the bead (a review commit
-  # cites the beads it creates; that is never evidence the work is done).
-  [ "$cit" -gt "$ue" ] && [ "$cit" -gt $(( ce + 7200 )) ] \
-    && printf '%s\t%s\n' "$id" "$cit" >> "$D/board-truth"
-done < "$D/open-beads"
-BOARD_TRUTH=$(wc -l < "$D/board-truth" | xargs)
-echo "board-truth: ${BOARD_TRUTH:-0} open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close"
+"$PROJECT_ROOT"/.claude/skills/ac-pipeline/scripts/board-truth.sh   # --cov-base <ref> optional
 ```
+
+Prints `board-truth: <n> open bead(s) …` then one `<bead-id>\t<cited-epoch>` line per flag.
+Exits 0 always. Counts only an id in a commit SUBJECT or behind a `Bead:` trailer; drops
+`chore(beads)`/`[no-bead]` bookkeeping and any commit that FILED the bead. Mechanism and
+proof harness: `scripts/board-truth.sh` + `scripts/board-truth.test.sh`.
 
 **FLAG-ONLY. This scan MUST NOT close, label, or defer anything.** A false STALE makes the
 conductor skip real work, which is strictly worse than the wasted child this exists to
 prevent. The output is a shortlist for a conductor to adjudicate by reading the bead's
 `## Delivers` and checking those artifacts at HEAD — cheap, because the list is short.
 
-**Verify it still bites after ANY edit** — a detector that silently matches nothing is worse
-than none. Pipe a synthetic record (`<epoch>|<sha>|fix(x): thing|Bead: bd-probe`) through
-the extraction `awk` and assert `bd-probe` comes out.
+**Verify it still bites after ANY edit:** run `scripts/board-truth.test.sh` (8 synthetic
+cases, no repo or beads DB needed). A detector that silently matches nothing is worse
+than none.
 
 **Known limitation, deliberately accepted:** a bead someone merely *comments* on gets a
 fresh `updated_at` and stops flagging. This scan is the cheap net for the **cited-but-open**
