@@ -46,34 +46,32 @@ FLAG_DIR = os.environ.get("SKILL_EDIT_GUARD_FLAG_DIR", "/tmp/skill-edit-guard")
 REMINDER = """\
 ADVISORY (skill-edit-guard): you are editing a file under skills/.
 
-Skill-diet doctrine applies to EVERY file in a skill — spine (SKILL.md), references/,
-FRICTIONS.md, MAINTENANCE.md, tools/. Before adding content, check whether it belongs here:
-  - PROMOTION LADDER (skills/skill-builder/references/promotion-ladder.md): going UP
-    (references/ -> core) needs PROOF (N green runs / probe-verified fact, + Craig
-    sign-off for conductor core). Going DOWN needs only disuse. Unique content being
-    removed is NOT deleted outright -- it ages in the skill's MAINTENANCE.md holding
-    pen (review-by window) before git-delete.
-    LANDING A NEW LESSON? It enters at the BOTTOM (FRICTIONS.md / references) -- never
-    straight into core: the incident that taught it is entry-grade evidence, not the
-    ladder's core-grade proof (N exercising green runs / probe-verified).
-  - FRICTION CAPTURE (skills/skill-builder/references/friction-capture.md): if this
-    edit is landing a lesson/fix learned from friction, log it in the skill's
-    FRICTIONS.md first -- promotion should be evidence-driven, not vibes-driven.
+Skill-diet doctrine binds EVERY file in a skill — SKILL.md, references/, FRICTIONS.md,
+MAINTENANCE.md, tools/.
+  - RULE VOICE: state the rule, not its cause, discovery, or author. Imperative,
+    present tense. One idea per line. A rule that needs a paragraph to be believed is
+    not yet well stated -- sharpen it instead of defending it. Minimum necessary change
+    in the optimal location: prefer deleting to adding, and name what a new line replaces.
+  - NO PROVENANCE IN SKILL TEXT: who / when / which bead / promoted-from goes in the
+    commit message and ledgers, never the artifact. Bare rule-IDs only where grepped
+    as names. No dates, no run ids, no "measured", no discovery narrative.
   - NO-NET-GROWTH: SKILL.md core is loaded every invocation, so it holds or shrinks.
     Growth is bought with an offsetting DELETION or a move to references/ — never with
-    a written justification. There is no stamp and no textual exception. Run
-    `node scripts/skill-diet-conservation.mjs` when moving or removing content, to
-    confirm nothing unique is lost.
-  - SINGLE-HOME (ac-gcj/ac-znk.7): about to restate a rule whose canon lives in an
-    owning domain skill (ac-pipeline/references/* — git discipline, delegation,
-    run-ledger, verification gate; agent-mail/references/* — coordination;
-    beads-standards — beads canon)? Point at it with a `§` anchor instead. The rare
-    deliberate copy carries a `<!-- mirror: <canon> §... -- edit there first -->` mark.
-    Litmus (ac-znk.4): a rule true in ANY workflow is domain canon, not workflow text —
-    workflow files keep one-line when/who bindings + pointers.
-  - NO PROVENANCE IN SKILL TEXT: the edit's story (who/when/which bead/promoted-from)
-    goes in the commit message and ledgers, never the artifact. Machine tokens stay
-    minimal; bare rule-IDs only where grepped as names.
+    a written justification. No stamp, no textual exception. Run
+    `node scripts/skill-diet-conservation.mjs` when moving content, to confirm nothing
+    unique is lost.
+  - PROMOTION LADDER (skills/skill-builder/references/promotion-ladder.md): UP needs
+    PROOF (N green runs / probe-verified, + Craig sign-off for conductor core); DOWN
+    needs only disuse. A NEW LESSON enters at the BOTTOM (FRICTIONS.md / references),
+    never straight into core. Removed content ages in MAINTENANCE.md before git-delete.
+  - FRICTION CAPTURE (skills/skill-builder/references/friction-capture.md): landing a
+    lesson learned from friction? Log it in FRICTIONS.md first — promotion is
+    evidence-driven, not vibes-driven.
+  - SINGLE-HOME (ac-gcj/ac-znk.7): restating a rule whose canon lives in an owning
+    domain skill (ac-pipeline/references/*, agent-mail/references/*, beads-standards)?
+    Point at it with a `§` anchor. A deliberate copy carries
+    `<!-- mirror: <canon> §... -- edit there first -->`. A rule true in ANY workflow is
+    domain canon, not workflow text.
 
 (Fires once per session. This first attempt is blocked to surface the reminder; re-issue the edit to proceed.)
 """

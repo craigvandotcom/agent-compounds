@@ -139,10 +139,20 @@ correct — lives in the channels built for it: the commit message, the bead's c
 reason, MAINTENANCE/FRICTIONS ledgers, git history. A provenance tail in an artifact is
 reviewer-anxiety, not content, and it is fluff the moment the commit lands.
 
-Exemptions, kept MINIMAL: machine-read tokens (`net-growth-ok:` — bare token + tersest
-reason; `diet:`/`mirror:` markers), and a bare rule-ID **only when other files grep it
-as a name** (e.g. an invariant's `bd-*` handle). A date, a director, or a narrative
+Exemptions, kept MINIMAL: machine-read tokens (`diet:`/`mirror:` markers), and a bare
+rule-ID **only when other files grep it as a name**. A date, a director, or a narrative
 clause is never exempt.
+
+## Rule voice (how skill text is written)
+
+**State the rule. Not its cause, its discovery, or who learned it.**
+
+- **Imperative, present tense.** "Classify staleness on CODEISH." Never "we found
+  that…", "measured on 2026-08-04…", "this exists because…".
+- **One idea per line.** A rule that needs a paragraph to be believed is not yet well
+  stated. Sharpen it instead of defending it.
+- **Minimum necessary change, in the optimal location.** Prefer deleting to adding.
+  Before adding a line, name what it replaces.
 
 ## The workflow/domain litmus (the second discriminator — ratified 2026-07-30, ac-znk.4)
 
