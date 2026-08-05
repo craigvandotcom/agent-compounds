@@ -10,8 +10,8 @@ Feature waves run after `/ac-review` (the pre-merge gate for waves); chore/hygie
 
 **Trunk-direct migration:** agents committing directly to `main` no longer open PRs — that
 closing ceremony is **`ac-batch-close`** (`skills/ac-batch-close/SKILL.md`). This skill
-(`ac-merge`) is unchanged and remains the PR-merge path for legacy branches (dependabot,
-human feature branches — see `.claude/legacy-branches.txt`).
+(`ac-merge`) remains the PR-merge path for legacy branches (dependabot, human feature
+branches — see `.claude/legacy-branches.txt`).
 
 ---
 
@@ -36,10 +36,7 @@ human feature branches — see `.claude/legacy-branches.txt`).
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-WAVE=$(git branch --show-current)   # variable name kept for both wave and chore/hygiene branches
-# Stable per-branch artifacts dir → a session dropped during a 10-min CI poll finds the SAME dir
-# on resume (a fresh timestamped dir would orphan the prior state). ac-land sweeps /tmp/wave-merge-*
-# (the artifacts-dir prefix is unchanged regardless of branch kind — ac-land's glob depends on it).
+WAVE=$(git branch --show-current)
 ARTIFACTS_DIR="/tmp/wave-merge-${WAVE//\//-}"   # branch-keyed by design (stable resume across CI polls) — the ONE sanctioned exception to claim-id keying: ac-pipeline/references/run-id.md § Prefixes
 mkdir -p "$ARTIFACTS_DIR"
 STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VERSION, WAIT_FOR_FEEDBACK
@@ -47,8 +44,6 @@ STATE="$ARTIFACTS_DIR/state.env"      # durable resume anchor: PR_NUMBER, NEW_VE
 ```
 
 ### Register Session Identity (Tier 1)
-
-<!-- net-growth-ok: ac-1oq -->
 
 ac-merge edits product code (quality-gate + feedback fixes) and commits + pushes in the
 shared checkout — a **Tier-1 session** (`agent-mail/references/agent-identity.md` § Tier 1).
@@ -81,7 +76,7 @@ State vars this run persists to `$STATE`: `PR_NUMBER`, `NEW_VERSION`, `WAIT_FOR_
 ### Rebase on Main (first — post-rebase truth)
 
 Rebase BEFORE the quality gate: `main` is what actually merges, so the gate must run on the
-rebased state, not the pre-rebase branch (through-thread: post-rebase truth).
+rebased state, not the pre-rebase branch.
 
 ```bash
 git fetch origin main
@@ -100,19 +95,14 @@ git rebase origin/main
 #   + type-check + lint + tests
 # Tests = the AGGREGATED affected run, pinned to the merge base:
 #   VITEST_AFFECTED_REF=origin/main pnpm test
-# Post-rebase this selects everything the WHOLE branch changed vs the exact state
-# that merges — per-commit affected runs during implementation never saw current
-# main (semantic-conflict class) nor the final tree (review fixups, conflict
-# resolutions). Pin the ref: the config default 'main' is the LOCAL branch, which
-# can be stale even right after `git fetch origin main` — origin/main is truth.
 ```
 
 **Format is the first step and it AUTO-FIXES** — CI runs `prettier --check .` repo-wide as
 its *first* step, so any unformatted file (even one already red on `main`) fails the whole
-gate; if `pnpm format` rewrites pre-existing files, commit the formatting (you're repairing
-a gate CI was already failing). **Commit without `--no-verify`** — the pre-commit
-`lint-staged` hook auto-formats staged files; only the *push* uses `--no-verify` (to skip
-the heavy pre-push build). Never let CI catch a formatting miss.
+gate; if `pnpm format` rewrites pre-existing files, commit the formatting. **Commit without
+`--no-verify`** — the pre-commit `lint-staged` hook auto-formats staged files; only the
+*push* uses `--no-verify` (to skip the heavy pre-push build). Never let CI catch a
+formatting miss.
 <!-- mirror: ac-pipeline/references/verification-gate.md §Format-first — edit there first -->
 
 **If any fail:** Fix before proceeding. Do not create a PR with failing local checks.
@@ -121,31 +111,24 @@ Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
 ### QA Smoke Gate (conditional — safety net)
 
-Scaling tiers per `ac-pipeline/references/risk-classification.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Scaling tiers per `ac-pipeline/references/risk-classification.md`.
 
 **Run the ceremony smoke net per `ac-pipeline/references/verification-gate.md` § Ceremony smoke net**
 with `<RANGE>` = `main...HEAD` — the post-rebase state, the thing that actually merges
 (device-twin conditions, browser twin, FAIL escalation, `mac-needed` note, and the
 qa-blocker STOP all live there; a smoke FAIL here means STOP before creating the PR).
-The Verify stage already ran the gate-selected passes at full depth pre-land; this net
-re-checks at smoke because the rebase above can change the diff.
 
 Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
 
 ### Version Bump
 
-**Every merge bumps `patch` by default — waves AND hygiene/chores alike.** These app
-versions are a build / marketing number, not a published-library API contract — so
-neither a feature wave nor a chore pass auto-escalates to minor. `minor` and `major` are
-**deliberate, explicitly-chosen** bumps that a human directs for a milestone or an
-announced breaking release; they are NEVER auto-derived from commit prefixes. The
+**Every merge bumps `patch` by default — waves AND hygiene/chores alike.** `minor` and
+`major` are **deliberate, explicitly-chosen** bumps that a human directs for a milestone
+or an announced breaking release; they are NEVER auto-derived from commit prefixes. The
 version-bump commit lands on the branch BEFORE the push, so the PR shows it as part of
 the merge unit.
 
 **The default path is non-interactive: apply `patch` automatically, without asking.**
-This is the normal case — autonomous/delegated runs (`ac-loop`, `ac-hygiene`) and any
-other invocation that doesn't explicitly ask for interactive control all take the patch
-bump silently.
 
 ```bash
 BASE_BRANCH=main
@@ -167,8 +150,7 @@ echo "Current version: $CURRENT_VERSION → bump: patch"
 **The only thing that stops the patch bump is an explicit skip/freeze directive.** If
 the caller passes a freeze/skip directive (e.g. `MERGE_SKIP_BUMP=1`, or a standing
 version-freeze such as an App Store submission in review — see the app-version-pin
-rule), do NOT bump; carry the current version forward unchanged. There is no other
-"skip" path — every non-frozen merge bumps patch.
+rule), do NOT bump; carry the current version forward unchanged.
 
 **Verify the freeze fact before honoring it — never trust its prose alone.** A
 freeze/pin memory fact (e.g. `app-version-pinned-*`) goes stale silently: it can outlive
@@ -181,9 +163,7 @@ bump on the strength of such a fact, check BOTH ground truths, in this order:
 2. **`package.json` ground truth** — read the current version. If it already moved past
    the pinned version, the pin is contradicted by reality; do NOT honor the fact.
 Only when the gating bead is still open AND `package.json` still sits at the pinned
-version do you carry the version forward. (Incident: a 1.2.0 App Store pin outlived its
-bead's close by 7 days and would have wrongly skipped a bump — caught only by this
-double-check. Memory: `app-version-pinned-*`.)
+version do you carry the version forward.
 
 **Interactive human-run merge only:** if a human is running this skill directly
 (not via `ac-loop` / `ac-hygiene` delegation) and wants to override the default,
@@ -206,7 +186,7 @@ echo "NEW_VERSION=$NEW_VERSION" >> "$STATE"   # persist so a dropped session doe
 
 #### Commit the bump
 
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 ```bash
 git add package.json pnpm-lock.yaml ios/App/App.xcodeproj/project.pbxproj 2>/dev/null
@@ -286,7 +266,7 @@ Save as `WAIT_FOR_FEEDBACK` (true/false), and persist for resume: `echo "WAIT_FO
 ### Gather PR Context
 
 ```bash
-# Bead summary. NB: dcg blocks a redirect whose target path is variable-built (11 such writes in this skill) — if blocked do NOT bypass; use tee or the Write tool per ac-pipeline/references/shell-guardrails.md
+# Bead summary. NB: dcg blocks a redirect whose target path is variable-built — if blocked do NOT bypass; use tee or the Write tool per ac-pipeline/references/shell-guardrails.md
 br list --json | tee "$ARTIFACTS_DIR/beads.json" >/dev/null
 
 # Commit history on this branch
@@ -313,19 +293,19 @@ post-merge tails) rather than treating them as blockers — closure of genuinely
 is checked upstream of this skill (by `ac-loop`, for a wave) before it invokes ac-merge.
 
 **The branch is the merge unit — include by default, gate on the full diff, surface the extras**
-(pipeline-builder Invariant 8). This branch may carry commits you didn't author — a
-concurrent session's fix, a scheduled triage/ops commit landed on the checked-out branch. Do
-**not** drop them because they're "not yours": the merge validates the *entire* branch diff as a
-unit (CI + review + gitleaks are the gate, not authorship). Before writing the body, diff the
-whole branch against main (`git diff --stat main...HEAD`) and **name any change beyond this
-branch's headline scope** — an `.env`/secret edit, a migration, a foreign commit — in a
-**"Also carried"** line of the PR body, so a human sees what actually shipped. Exclude a change
-only on a real signal (`WIP`/`DO-NOT-MERGE` marker, CI failure, gitleaks hit, explicit scope
-conflict), and when you do, **say so in the PR body** — never a silent drop.
+This branch may carry commits you didn't author — a concurrent session's fix, a scheduled
+triage/ops commit landed on the checked-out branch. Do **not** drop them because they're "not
+yours": the merge validates the *entire* branch diff as a unit (CI + review + gitleaks are the
+gate, not authorship). Before writing the body, diff the whole branch against main
+(`git diff --stat main...HEAD`) and **name any change beyond this branch's headline scope** —
+an `.env`/secret edit, a migration, a foreign commit — in a **"Also carried"** line of the PR
+body, so a human sees what actually shipped. Exclude a change only on a real signal
+(`WIP`/`DO-NOT-MERGE` marker, CI failure, gitleaks hit, explicit scope conflict), and when you
+do, **say so in the PR body** — never a silent drop.
 
 ### Create PR
 
-The branch name (e.g. `wave/042` or `hygiene/20260707`) is just an identifier — it doesn't describe content. Derive the PR title from the version bump + a 4-7 word summary of what actually changed, scanned from commit subjects + the bead list.
+Derive the PR title from the version bump + a 4-7 word summary of what actually changed, scanned from commit subjects + the bead list.
 
 ```bash
 gh pr create --title "v{NEW_VERSION}: {short summary derived from commits}" --body "$(cat <<'EOF'
@@ -348,11 +328,8 @@ Save the PR number and URL, and persist for resume: `echo "PR_NUMBER=$PR_NUMBER"
 
 ### Poll for Checks and Comments
 
-<!-- net-growth-ok: ac-j6v -->
 Wait for CI checks and agent reviews to complete. Poll every 30 seconds, timeout after ~25
-minutes — a diff touching `scripts/` or CI config correctly defeats `vitest-affected` selection
-and runs the FULL suite (~19 min observed, run 29243312437); a 10-min cap times out mid-run on
-any full-suite-fallback batch (same cap as `ac-batch-close`'s).
+minutes.
 
 ```bash
 PR_NUMBER={from Phase 1}
@@ -373,7 +350,7 @@ for i in $(seq 1 50); do
         break
     fi
 
-    echo "Waiting... ($i/20, ${PENDING} checks still running)"
+    echo "Waiting... ($i/50, ${PENDING} checks still running)"
 done
 ```
 
@@ -532,8 +509,6 @@ AskUserQuestion(
 gh pr merge "$PR_NUMBER" --merge --delete-branch
 ```
 
-Uses merge commit to preserve per-bead commit history.
-
 ### Switch to Main + Tag the Release
 
 ```bash
@@ -602,10 +577,6 @@ vercel ls <project> 2>/dev/null | head -5   # latest deployment: ● Ready or �
   cause). Do not close the session claiming "shipped."
 - No Vercel project → skip silently.
 
-> Why: a broken main build fails silently on Vercel — no alert, prod just keeps serving
-> the last good build (simil8's prod was frozen ~447 days this way — full incident:
-> `references/incidents.md`).
-
 **Native (iOS) build — the same boundary, the same check.** If the app's merge to main ALSO
 triggers a native build (Xcode Cloud archive on push, or a self-hosted-runner release lane),
 verify it here too — it's the iOS twin of the Vercel check, because the build is *triggered by
@@ -625,16 +596,14 @@ workflow) and must COMPLETE (else assume failed).
   never reaches TestFlight (BCA's Xcode Cloud archive is exactly this). CORE/distribution.md
   must say which it is; when it's health-check-only, report "archive health-check green — no
   TestFlight build produced; ship via the app's release lane" instead of implying a shippable
-  build exists — a wrong wording here caused the BCA 2026-07-02 incident (`references/incidents.md`).
+  build exists.
 - No native-build-on-merge → skip silently.
 
 ### Confirm the main-branch CI run — silence ≠ pass
 
 The merge triggers the repo's CI (e.g. `Quality Gate`) on `main`. On a **single
-self-hosted runner** that queue can sit hours behind a dependabot backlog — so "no failure
-seen" is NOT "passed": the loop can land its last commits with **zero CI confirmation** and
-only the fix-forward convention as cover (a main Quality Gate once queued 2+ hrs behind
-dependabot and the session closed blind). Never treat poll-timeout silence as green.
+self-hosted runner** that queue can sit hours behind a dependabot backlog. Never treat
+poll-timeout silence as green.
 
 ```bash
 # The run triggered by THE MERGE COMMIT (not "latest" — a stale prior run is the trap)
@@ -702,11 +671,10 @@ AskUserQuestion(
 
 Release any file reservations still held and self-deregister the Phase-0 identity per
 `agent-mail/references/session-procedure.md` § Release. Then mark the run ledger's final task
-`completed`. Then clean up — but only on the clean "Done"
-path. If the user chose a follow-up (new feature / hygiene) or the Phase-3 deploy-verify
-flagged an error, **leave `$ARTIFACTS_DIR`** — the report points at it for investigation, and
-`ac-land`'s teardown sweeps `/tmp/wave-merge-*` later anyway. Don't delete state a follow-up
-still needs.
+`completed`. Then clean up — but only on the clean "Done" path. If the user chose a follow-up
+(new feature / hygiene) or the Phase-3 deploy-verify flagged an error, **leave
+`$ARTIFACTS_DIR`** — the report points at it for investigation, and `ac-land`'s teardown
+sweeps `/tmp/wave-merge-*` later anyway.
 
 ```bash
 rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
@@ -721,7 +689,3 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 - **Wave = release unit, not feature unit** — a wave can carry mixed work from multiple epics; the PR title derives from version + content summary, the branch name (`wave/NNN` / `hygiene/YYYYMMDD`) is opaque
 - **Merge commit preserves per-bead history** — don't squash; the flywheel's atomic commits are valuable
 - **Bot-agnostic** — works with any CI/agent setup (Claude Code Review, CodeRabbit, Vercel, custom)
-
----
-
-_Universal merge: create PR, triage feedback, fix, ship — wave or chore/hygiene. For session closure: `/ac-land`. For next feature: `/ac-plan-init`._
