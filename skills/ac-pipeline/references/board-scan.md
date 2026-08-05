@@ -247,9 +247,7 @@ moves the number: publish a review artifact whose `**Range:**` covers the uncove
 ## Scan E — scheduled CI gate health (the other unconsumed signal)
 
 **A scheduled gate emits a verdict every night; if nothing consumes it, the gate protects
-nothing while appearing to exist.** Measured (bd-o9vmx): a scheduled suite sat red for days
-and neither a person nor a process acted on any of the reds — it was found
-only because a conductor dispatched the workflow for an unrelated reason. **While a suite is red,
+nothing while appearing to exist.** **While a suite is red,
 its passing assertions carry no signal**, because a new genuine failure moves the count from
 1-failed to 2-failed and nothing watches either number. Hence consecutive reds **escalate**: a
 persistently-red gate is strictly worse than a missing one — it looks like coverage while
@@ -394,7 +392,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 > probe whose result is computed and then not printed reproduces it exactly. **The same rule governs
 > every `unclassified[]` bucket above** — a read layer must NEVER silently drop an item it cannot
 > classify; it routes it to `unclassified[]` and reports it, because an item dropped for being
-> unrecognisable is indistinguishable from an item that does not exist (bd-5ljt6).
+> unrecognisable is indistinguishable from an item that does not exist.
 
 ## Lenses (who reads this board, for what)
 
