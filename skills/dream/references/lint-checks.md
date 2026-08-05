@@ -107,7 +107,10 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     narrative clause is never exempt; FRICTIONS/MAINTENANCE ledgers are provenance's home
     and are not scanned by this check, not an in-text exemption). Propose: strip the tail,
     keep the rule; a unique lesson found nowhere else relocates one line to the owning
-    skill's FRICTIONS first. The corpus-cadence net behind the edit-time guard and
+    skill's `MAINTENANCE.md` § Holding pen — tier 3, the quarantine for content on its way
+    out. NOT `FRICTIONS.md`: that is a sensor log and an *input* to promotion decisions,
+    never a destination for demoted content (`skill-builder/references/promotion-ladder.md`
+    § What is NOT a rung). The corpus-cadence net behind the edit-time guard and
     ac-review's doctrine-delta check 0, which only see diffs.
 
 14. **Skill-uptake decay** `[T2 weekly, script-driven, data-gated]` — a registry skill that
