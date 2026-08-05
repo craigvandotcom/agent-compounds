@@ -99,20 +99,23 @@ def allow():
     sys.exit(0)
 
 
-def session_key():
-    # Subagents INHERIT the parent's CLAUDE_CODE_SESSION_ID, so a session-only key means
-    # the conductor's first skills/ edit disarms the guard for every child it spawns —
-    # and in a delegation-heavy pipeline the children do nearly all the editing.
-    # CLAUDE_PID is per agent PROCESS, so session+PID gives each editing agent exactly
-    # one reminder. AGENT_NAME is NOT usable here: children default to the shared
-    # FoggyCreek chore identity, so keying on it collapses them back onto one flag.
-    sid = os.environ.get("CLAUDE_CODE_SESSION_ID")
-    pid = os.environ.get("CLAUDE_PID") or ""
-    if sid:
-        return sid + ("-" + pid if pid else "")
-    # No session id available (other harnesses / manual invocation) -> degrade to a
-    # daily key so the guard still fires at most once per day, never every call.
-    return "daily-" + datetime.date.today().isoformat() + ("-" + pid if pid else "")
+def session_key(target=""):
+    # Key on session + TARGET FILE, not on the agent.
+    #
+    # No environment variable identifies a subagent. CLAUDE_CODE_SESSION_ID, CLAUDE_PID
+    # and AGENT_NAME are all shared with the parent (PID is the session's own process;
+    # AGENT_NAME defaults to the FoggyCreek chore identity), so any agent-keyed flag
+    # collapses every child onto the conductor's. A session-only key is worse still: in
+    # a delegation-heavy pipeline the conductor's first edit disarms the guard for the
+    # children who do nearly all the editing.
+    #
+    # Per-file is deterministic, needs no env, and scales with blast radius: whoever
+    # first edits a given skill file this session gets the doctrine for it.
+    slug = re.sub(r"[^A-Za-z0-9._-]", "_", target)[-120:] if target else ""
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID") or (
+        "daily-" + datetime.date.today().isoformat()
+    )
+    return sid + ("-" + slug if slug else "")
 
 
 def already_fired(key):
@@ -144,13 +147,19 @@ def main():
         rel = path.replace(os.sep, "/")
         if not (fnmatch.fnmatch(rel, "*/skills/*") or fnmatch.fnmatch(rel, "skills/*")):
             allow()
+        # Key on the skill DIRECTORY, not the exact file: a pass that edits SKILL.md and
+        # its references/ in one sitting is one piece of work and warrants one reminder.
+        m = re.search(r"skills/([^/]+)/", rel)
+        target = m.group(1) if m else rel
     elif isinstance(command, str) and command:
         if not BASH_WRITES_SKILLS.search(command):
             allow()
+        m = re.search(r"skills/([^/\s\"';|&]+)/", command)
+        target = m.group(1) if m else "bash"
     else:
         allow()
 
-    if already_fired(session_key()):
+    if already_fired(session_key(target)):
         allow()
 
     print(REMINDER, file=sys.stderr)
