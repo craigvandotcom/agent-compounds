@@ -116,7 +116,7 @@ Classify before cutting:
 |---|---|
 | **Enforcement** (run-ledger lines, explicit branches, exact option sets, point-of-use repetition, completion criteria, Remember blocks) | Keep. Replace only with something *stronger* (script/hook), never merely cheaper |
 | **Discovery** (frontmatter description) | Trigger-only, front-loaded, hard-pruned — cutting here *increases* reliability |
-| **Persuasion** (rationale, anecdotes) | Compress to rule + one-clause why; full stories → `references/incidents.md` or memory |
+| **Persuasion** (rationale, anecdotes) | Compress to rule + one-clause why. The story goes in the commit message — never a file the reader pays for |
 | **Sediment** (same content twice in one file, dead paths, stale layers, redundant syntax) | Pure cut, no tradeoff |
 
 Sentence-level: the **no-op test** — does it change behavior vs. the default? If not,

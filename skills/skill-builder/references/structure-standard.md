@@ -184,9 +184,10 @@ Every block that leaves the spine has exactly one of three destinations. Decide 
 3. **DELETE** — and this splits, which is the part people get wrong:
    - **Hard delete** — pure sediment: a verbatim duplicate whose twin survives elsewhere, or content
      that is dead / stale / superseded (no longer true). Nothing of value is lost. Git preserves history.
-   - **Relocate-then-delete** — the content has residual value but not *here*: an incident story, a
-     rationale, a decision record. It goes to `references/incidents.md`, the **memory substrate**, or
-     the **diet commit message** *first*; only the inline copy is removed.
+   - **Relocate-then-delete** — the content has residual value but not *here*: a rationale, a
+     decision record. It goes to the **memory substrate** or the **diet commit message** *first*;
+     only the inline copy is removed. An incident story has no destination in a skill — the
+     commit message holds it, and `FRICTIONS.md` is what decides whether a rule is needed at all.
 
 **The discriminator between the two delete kinds:** *if this vanished entirely, would we lose a fact
 or lesson not recoverable anywhere else?* No → hard delete. Yes → relocate first. **Never vaporize a

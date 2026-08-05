@@ -78,7 +78,8 @@ Verdict rubric (apply the discriminator from structure-standard.md to *every* bl
 - **CUT** — sediment: same content twice in this file, dead paths, stale/superseded layers,
   deprecation history in prose or description (token-economics § Sediment). Apply the **move-out
   decision** (structure-standard § The move-out decision): hard-delete pure sediment vs
-  relocate-then-delete anything with residual value (incident → `references/incidents.md`/memory).
+  relocate-then-delete anything with residual value (rationale → memory; an incident story has no
+  destination in a skill — it belongs in the commit message).
   **Before any delete run the churn guard:** `git log -S "<snippet>" -- <SKILL.md>` — a block cut
   before is sticky sediment; home it properly or fix the re-adder, and note it in the Cut-log, don't
   silently re-cut.
@@ -91,8 +92,8 @@ Verdict rubric (apply the discriminator from structure-standard.md to *every* bl
    decision is CUT. When unsure, keep it.
 2. **Persuasion inside a CORE block compresses in place — it does not move.** Incident
    narrative (dates, RUN_IDs, SHAs, minutes-lost) riding alongside an operational rule: keep
-   the rule + one-clause causal why, cut or relocate the story to `references/incidents.md` or
-   a memory key. The block stays CORE; only its narrative weight drops.
+   the rule + one-clause causal why, and cut the story — the commit message holds it. The block
+   stays CORE; only its narrative weight drops.
 
 Sum the ledger: approximate CORE vs EXTRACT vs CUT line counts. State what the spine becomes
 post-diet, and confirm it reads as a coherent "what the conductor does every run" narrative with

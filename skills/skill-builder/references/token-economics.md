@@ -93,7 +93,7 @@ a fragile bash procedure duplicated as prose → a bundled script (level 5 → l
 |---|---|---|
 | **Enforcement** | Run-ledger TaskCreate/TaskUpdate lines · explicit fully-written branches · exact AskUserQuestion option sets · point-of-use repetition · completion criteria · Remember blocks (standing-instruction re-anchors after a long body) · mandated output formats | **Keep.** Replace only with something *stronger* (script/hook), never merely cheaper. |
 | **Discovery** | Frontmatter descriptions | **Trigger-only, front-loaded, hard-pruned** (§4). Over-budget descriptions cause silent skill invisibility; workflow summaries cause body-skipping. Cutting here *increases* reliability. |
-| **Persuasion** | Rationale, incident anecdotes, "why this matters" | **Compress to rule + one-clause why.** The causal why binds behavior ("never `git add -A` — it stages build artifacts"); the date, bead ID, and minutes lost don't. Full narratives → `references/incidents.md` or the memory substrate. |
+| **Persuasion** | Rationale, incident anecdotes, "why this matters" | **Compress to rule + one-clause why.** The causal why binds behavior ("never `git add -A` — it stages build artifacts"); the date, bead ID, and minutes lost don't. Full narratives go in the commit message. |
 | **Sediment** | Same content twice in one file · dead paths for stacks the skill never meets · deprecation history in descriptions · JSON syntax around content the model already knows · stale layers nobody pruned | **Pure cut, no tradeoff.** Sediment is "the default fate of any skill without a pruning discipline." |
 
 Cross-file verbatim duplication is a fifth, mixed case: deterministic today, but copies
