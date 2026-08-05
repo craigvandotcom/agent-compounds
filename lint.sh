@@ -1110,6 +1110,67 @@ elif [ "$dcg_hits" -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Check 18 — guard liveness (a guard that cannot fire protects nothing)
+# ---------------------------------------------------------------------------
+echo "--- Check 18: guard liveness ---"
+
+# Correct doctrine that never reaches the actor is this registry's most expensive
+# failure mode. skill-edit-guard.py carried the right rule for three days while being
+# non-executable, and nothing noticed. Executability alone is not the assertion either:
+# a hook that runs and always exits 0 is equally dead. So every guard asserts that it
+# RUNS, and every guard we can drive asserts that it FIRES on a positive case and stays
+# SILENT on a negative one.
+rm -rf /tmp/lint-guard-probe
+mkdir -p /tmp/lint-guard-probe
+
+for guard_path in "$AC_ROOT"/hooks/*.py; do
+  [ -e "$guard_path" ] || continue
+  check
+  [ -x "$guard_path" ] || fail "Check 18: hooks/$(basename "$guard_path") is not executable — the hook is wired but dead"
+done
+
+SEG="$AC_ROOT/hooks/skill-edit-guard.py"
+probe_guard() { # payload expected_exit label
+  local flagdir="/tmp/lint-guard-probe/p$2-$RANDOM"
+  printf '%s' "$1" | SKILL_EDIT_GUARD_FLAG_DIR="$flagdir" "$SEG" >/dev/null 2>&1
+  local got=$?
+  check
+  [ "$got" = "$2" ] || fail "Check 18: skill-edit-guard $3 (exit $got, expected $2)"
+}
+if [ -x "$SEG" ]; then
+  probe_guard '{"tool_input":{"file_path":"/x/skills/y/SKILL.md"}}' 2 "did not fire on a skills/ file_path"
+  probe_guard '{"tool_input":{"command":"perl -0pi -e s/a/b/ skills/y/references/z.md"}}' 2 "did not fire on a Bash write into skills/"
+  probe_guard '{"tool_input":{"file_path":"/x/lint.sh"}}' 0 "fired on a non-skill file"
+  probe_guard '{"tool_input":{"command":"grep -rn foo skills/"}}' 0 "fired on a read-only command"
+  echo "  skill-edit-guard: fires on both entry points, silent on both negatives"
+else
+  fail "Check 18: skill-edit-guard.py missing or not executable — cannot probe behaviour"
+fi
+
+# Wiring lives in the harness settings, not this repo, so a missing/renamed matcher is
+# reported rather than failed — but it is ALWAYS printed: an unwired guard is exactly as
+# dead as a non-executable one, and silence here would hide that.
+SETTINGS="$HOME/Repos/.claude/settings.json"
+check
+if [ -r "$SETTINGS" ]; then
+  seg_wiring=$(python3 -c "
+import json,sys
+try: d=json.load(open('$SETTINGS'))
+except Exception: sys.exit(0)
+m=[e.get('matcher','*') for e in d.get('hooks',{}).get('PreToolUse',[])
+   for h in e.get('hooks',[]) if 'skill-edit-guard' in h.get('command','')]
+print(','.join(m) if m else 'NONE')
+" 2>/dev/null)
+  case "$seg_wiring" in
+    *Bash*Edit*|*Edit*Bash*) echo "  wiring: skill-edit-guard on [$seg_wiring] — both entry points covered" ;;
+    NONE|"")                 echo "  NOTICE: skill-edit-guard is NOT wired in $SETTINGS — it cannot fire on this machine" ;;
+    *)                       echo "  NOTICE: skill-edit-guard wired on [$seg_wiring] only — the uncovered entry point is ungoverned" ;;
+  esac
+else
+  echo "  NOTICE: $SETTINGS unreadable — wiring not verified on this machine"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
