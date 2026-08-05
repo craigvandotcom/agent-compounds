@@ -7,50 +7,7 @@ description: 'Trunk-direct batch closing ceremony — a THIN committed-state che
 **You are the conductor closing out a batch of trunk-direct commits on `main`.** Agents commit
 directly to `main` — no wave branch, no PR. This is the periodic (or on-demand) closing
 ceremony: gate the batch through a light review, dispatch Tier 1 CI for the batch, and commit a
-thin batch-report checkpoint that advances the review-mark. **It is deliberately thin** — under
-3-5 concurrent conductors the heavy freight (version bump, tag, deploy-verification, the full
-6-dimension review) no longer belongs at every batch; that freight consolidates at the publish
-boundary (`ac-publish`, bd-pwt44). Fired
-once per batch, not per commit.
-
-This skill is a retarget of `ac-merge` (`skills/ac-merge/SKILL.md`) for the trunk-direct flow.
-`ac-merge` is **unchanged** and remains the PR-merge path for legacy branches (dependabot,
-human feature branches — `.claude/legacy-branches.txt`). Nothing from `ac-merge` is silently
-dropped: the PR ceremony below is removed with cause; everything else is either retargeted to
-the batch anchor or relocated to `ac-publish` (also with cause, see below).
-
-## Removed from ac-merge (PR ceremony — `ac-merge` still owns this path)
-
-There is no branch and no PR on trunk-direct, so these have nothing to attach to:
-
-- `gh pr create`, PR body assembly (`ac-merge/references/pr-body-template.md`), `gh pr merge`,
-  `--delete-branch`, local branch deletion, branch-rebase-onto-main.
-- The interactive "Does this project have GitHub CI checks…" `AskUserQuestion` — Tier 1 CI
-  dispatch (Act 1) is now a fixed mechanism, not a per-project optional wait; the only
-  remaining conditional is a file-existence check (does `quality-gate.yml` exist at all) —
-  and it gates the DISPATCH only, never the gate outcome, which is asserted or `NOT GATED`.
-
-## Removed from this skill's own earlier (7-phase) design — relocated to `ac-publish`
-
-This skill previously carried a version bump, a git tag, and a deploy-verification act of its
-own. **All three are gone from batch-close entirely** — they are not
-"skipped conditionally," they do not exist in this skill anymore:
-
-- **Version bump + native-surface propagation** → relocated to `ac-publish` Phase 0
-  ("mint-at-publish" — `ac-publish/SKILL.md`, `version-bump-defaults-to-patch`). Batch-close
-  never touches `package.json`.
-- **Git tag** → relocated to `ac-publish` (tags at the explicit release candidate `R`, once
-  the publish-side heavy-review/promote work lands — bd-pwt44.6). Batch-close never tags.
-- **Deploy verification (Vercel served-version + intermediate-commit scan, native
-  archive-watch-head)** → not batch-close's job anymore; `ac-publish` is the definitive
-  ship/verify gate for the boundary that actually matters (mint + prove + ship).
-- **The full 6-dimension review panel** → stays `ac-review`'s own standalone mechanism (dual-mode:
-  a trunk-direct batch on `main` is PRIMARY, a feature branch is LEGACY) and becomes `ac-publish`'s
-  heavy pre-tag gate (bd-pwt44.6); batch-close keeps only the light `VERDICT` pass in Act 2 below.
-
-If you're looking for any of the above, it now lives in `ac-publish/SKILL.md`.
-
-Everything else below is the same mechanism, retargeted anchor and audience.
+thin batch-report checkpoint that advances the review-mark. Fired once per batch, not per commit.
 
 ---
 
@@ -72,8 +29,6 @@ Everything else below is the same mechanism, retargeted anchor and audience.
   see Build Slot below
 - Implementation commits already landed directly on `main` (from `ac-implement`, trunk-direct — no wave branch to check out)
 - A `quality-gate.yml` workflow with `workflow_dispatch` inputs `reason` + `batch_anchor`.
-  <!-- net-growth-ok: adbq — Act 1's silent-skip replaced by an assert-or-report-NOT-GATED
-       branch; a vacuous CI gate that reads "green" is the defect being closed -->
   If the workflow doesn't exist yet, the Act 1 DISPATCH is skipped — the gate is not waived:
   Act 1 must then assert a local-equivalent gate or report `Tier 1 CI: NOT GATED`, never green.
 
@@ -115,12 +70,9 @@ acquire_build_slot(project_key=CANONICAL_PROJECT_KEY, agent_name=AGENT_NAME, slo
     abort, so a stalled conductor doesn't leave a stale advisory lease for the next run
 ```
 
-> **Token custody + concurrency assertion (bd-kskxg field-test, resolved).** The Session
-> Identity mint above gives this ceremony a real `registration_token`, so `acquire_build_slot`
-> succeeds — there is no longer a token-less path to degrade around. What remains, unconditionally,
-> is the concurrency assertion the slot only ever *hinted* at: assert `git rev-parse origin/main`
-> equals your local `HEAD` immediately before and after each CI-affecting step (dispatch, any
-> fix-forward push, the Act 3 report commit). A mismatch is the real signal a concurrent conductor
+> **Concurrency assertion.** Assert `git rev-parse origin/main` equals your local `HEAD`
+> immediately before and after each CI-affecting step (dispatch, any fix-forward push, the
+> Act 3 report commit). A mismatch is the real signal a concurrent conductor
 > moved `main` under you — the slot is advisory (memory `agent-mail-build-slot-advisory`), so this
 > assertion, not the lease, is what actually protects the range.
 
@@ -160,15 +112,9 @@ git pull --rebase origin main   # never --force; re-verify HEAD after
 The **batch anchor** — same mechanism `ac-review` uses to find its scope (`ac-review/SKILL.md`
 Phase 1 "Scope Detection"), computed identically here so both skills agree on the range:
 
-> <!-- net-growth-ok: bd-kudrb — the single-writer invariant and its self-check tripwire must
-> live AT the probe. This bug's whole shape is silent under-scoping (no error, just a wrong
-> range); a reader who reaches this snippet without the invariant in view re-introduces it. -->
 > **The probe is only correct because `.claude/reviews/batch/` has exactly ONE writer per
 > ceremony — Act 3 below (bd-kudrb).** `ac-review` stages its report in the sibling
 > `.claude/reviews/pending/`; Act 3 `git mv`s it into `batch/` in the same commit as the summary.
-> Before that split `ac-review` committed straight into `batch/` mid-batch, so this probe
-> returned *that* report — a commit INSIDE the range it bounds. It failed SILENTLY: one live
-> case would have shrunk a 7-commit batch to 2 and still reported success.
 
 ```bash
 ANCHOR=$(git log -1 --format=%H -- .claude/reviews/batch/)
@@ -257,11 +203,8 @@ Same order `ac-merge` mirrors from `ac-pipeline/references/verification-gate.md`
 VITEST_AFFECTED_REF=$ANCHOR pnpm test
 ```
 
-> **Runner self-contention (bd-kskxg field-test).** On a single self-hosted Mac runner, this
-> local affected pre-flight and the Tier 1 CI dispatch fired below run on the SAME machine —
-> executing the local suite while CI is already dispatched makes both contend for one runner and
-> stretches wall-clock. Sequence them: finish (or skip) this local pre-flight BEFORE firing the
-> dispatch; never overlap them.
+> **Sequence the local pre-flight and the CI dispatch — never overlap them.** Finish (or skip)
+> this local pre-flight BEFORE firing the dispatch below.
 
 **If any fail:** fix before proceeding — same rule as `ac-merge`: never dispatch Tier 1 CI with
 failing local checks.
@@ -288,10 +231,7 @@ swallowed, under the same assert-don't-assume rule the dispatch below carries.
 ### Resolve THIS repo's gate workflow (never hardcode a name)
 
 ```bash
-# net-growth-ok: ac-ewgr.5 — Act 1 gate resolution must be inline at the assert
-# The assert POLICY generalizes; the workflow NAME does not. `quality-gate.yml`
-# exists only in body-compass-app; agent-compounds' live gate is `registry-lint.yml`, which is
-# push-triggered AND paths-filtered. Probe, then branch on the trigger shape.
+# Probe, then branch on the trigger shape.
 GATE_WORKFLOW="${GATE_WORKFLOW:-}"   # a conductor may pin one explicitly; else probe
 if [ -z "$GATE_WORKFLOW" ]; then
   for w in quality-gate.yml registry-lint.yml ci.yml lint.yml; do
@@ -326,7 +266,6 @@ reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
 
   ```bash
   # DISPATCHABLE gate: one run, head SHA == the batch anchor.
-  # (Untested in agent-compounds — neither workflow here has a workflow_dispatch trigger.)
   if [ "$GATE_DISPATCHABLE" = yes ]; then
     GH_DEBUG= gh run list --workflow "$GATE_WORKFLOW" --json headSha,conclusion --limit 100 \
       2>/dev/null | jq -r --arg s "$ANCHOR" '[.[] | select((.headSha|startswith($s)) and .conclusion=="success")] | length'
@@ -365,7 +304,6 @@ infrastructure another bead is landing — but never let an un-executed gate rea
 
 ### Poll for the dispatched run against HEAD — DISPATCHABLE GATES ONLY, FOREGROUND ONLY
 
-<!-- net-growth-ok: the dispatchable gate + stall verdict must sit at the poll they govern -->
 **Skip this whole section unless `GATE_DISPATCHABLE=yes`.** No dispatch was fired on a
 push-triggered gate, so there is nothing to poll for: the per-commit `RUNS` assertion above IS
 this repo's verdict and the ~25-min loop below would burn its full cap waiting on a run that
@@ -380,13 +318,12 @@ running after this turn ends.
 
 > **Cap must be WIDE — the wall-clock is batch-CONTENT-dependent.** A batch whose diff touches
 > `scripts/` or CI config correctly defeats `vitest-affected` selection (fail-closed, by design)
-> and runs the **FULL suite (~19min observed, run 29243312437)**, not the ~4-min affected leg.
-> The poll below is therefore capped at ~25min (`seq 1 50` at 30s), NOT the old 10min — a 10-min
-> cap times out mid-run on any full-suite-fallback batch.
+> and runs the **FULL suite**, not the ~4-min affected leg. The poll below is therefore capped
+> at ~25min (`seq 1 50` at 30s).
 >
 > **Invoke this poll with Bash `timeout: 600000`** (the tool's 120000ms default silently kills a
-> multi-minute poll mid-loop — cost 2 extra Bash turns, RUN_ID 20260713-222115). 600000ms is the
-> Bash-tool MAX (10min), which is shorter than the 25-min logical cap, so a full-suite-fallback
+> multi-minute poll mid-loop). 600000ms is the Bash-tool MAX (10min), which is shorter than
+> the 25-min logical cap, so a full-suite-fallback
 > run will span **2–3 foreground Bash invocations**: each returns with `$STATUS` still not
 > `completed`, and you re-invoke (the loop re-resolves `RUN_DB_ID` from `HEAD_SHA` each call, so
 > it resumes cleanly) until `completed` or the ~25-min logical cap is exhausted. Re-invoking in
@@ -397,8 +334,8 @@ running after this turn ends.
 HEAD_SHA=$(git rev-parse HEAD)
 # Resolve the dispatched run's id ONCE (list + match by headSha to get its databaseId), then
 # poll THAT id deterministically with `gh run view <id>` — re-listing + jq-selecting by headSha
-# every iteration is fragile (bd-kskxg field-test). The run may take a cycle to register, so
-# keep resolving until the id is known, then switch to the deterministic view.
+# every iteration is fragile. The run may take a cycle to register, so keep resolving until the
+# id is known, then switch to the deterministic view.
 RUN_DB_ID=""
 # ~25-min logical cap (50 × 30s) — wide enough for a full-suite-fallback batch (~19min).
 # Invoke with Bash timeout: 600000; a full-suite run spans 2-3 foreground re-invocations
@@ -435,7 +372,7 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 - **Conductor decides:** high-severity items with clear fixes, easy improvements.
 - **Present to user:** architectural/debatable items (Exhaust Rule applies if headless —
   `br create -t investigation --labels ci-finding,unrefined` rather than blocking silently
-  (debatable = cause not source-traced = investigation, never bug — ac-gzb); stamp the <!-- net-growth-ok: ac-gzb P0/P3 — type fix + perishability stamp, evidence in the bead -->
+  (debatable = cause not source-traced = investigation, never bug — ac-gzb); stamp the
   perishable state `observed: <ISO date> · <run id>` per bead-conventions § Body template —
   CI is the catch stage; the eventual close cites the regression test per bead-conventions
   § Per-type close artifacts).
@@ -448,7 +385,6 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 > Failure Escalation (LCA Repair). Per-bead fix-forward remains correct for uncorrelated,
 > single-bead CI failures.
 
-<!-- net-growth-ok: ac-3rb -->
 **Reserve the files you are about to fix BEFORE editing** (`agent-mail/references/session-procedure.md`
 § Reserve — fix-forward is Tier-1 product-code editing in the shared
 checkout; release with the rest at teardown § Release). Apply fixes, then commit under
@@ -456,7 +392,7 @@ the minted Tier-1 identity — **re-assert `AGENT_NAME` inline in
 the fix-forward commit shell** (exports don't survive across bash calls; the pre-commit guard
 reads it, and a fix-forward as `FoggyCreek` would be a Tier-2-boundary violation):
 
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 ```bash
 export AGENT_NAME=<minted-name>   # re-assert inline — the Phase-0 mint's name
@@ -578,10 +514,9 @@ mark and `pending/` is empty again for the next batch.
 
 **Single source of truth for the shared sections:** `ac-review/references/report-template.md`.
 The **Summary**, **Beads Completed**, **Changes**, **Test Coverage**, **Known post-merge tails**,
-and **Also carried** sections are that template's — do NOT re-specify their contents here (a
-second hand-rolled copy is exactly the drift bug ac-vgt filed). Fill them per the template's
-field descriptions; `$BATCH_RANGE` is the range those sections' `git diff`/`git log` commands
-key on. Batch-close's own addition beyond the template is a short **Feedback write-back** line
+and **Also carried** sections are that template's — do NOT re-specify their contents here.
+Fill them per the template's field descriptions; `$BATCH_RANGE` is the range those sections'
+`git diff`/`git log` commands key on. Batch-close's own addition beyond the template is a short **Feedback write-back** line
 (the pending-write count logged above) — there is no Deploy section anymore (deploy
 verification moved to `ac-publish`). **Known-action findings surfaced during the batch
 (defects, decision forks, refinements you KNOW need action beyond this ceremony) are filed
@@ -603,22 +538,15 @@ export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this com
 # Carry Act 2's findings report from the staging sibling into the mark directory (bd-kudrb).
 # `git mv` when it was committed to pending/; a plain `mv` + `git add` when it is still
 # untracked. Both files must be in the SAME commit — that is what keeps `batch/` single-writer.
-# net-growth-ok: bd-f72as — the carry snippet IS the review-mark writer; guidance must sit
-# inline at the selection site.
 # Select the report by CONTENT, not position. It must claim THIS batch's anchor in its own
 # `**Range:**` line (ac-review on main USUALLY anchors on this same review-mark, so the base sha
-# usually matches — NOT by construction: see CONDUCTOR-SCOPE MODE below). A positional pick (`ls | head -1`) is
-# lexically-OLDEST-first; `pending/` legitimately
-# accumulates, because a withheld close (stop condition C2) deliberately leaves its report
-# there. Carrying the wrong file makes the review-mark attest to a diff nobody reviewed while
-# the real artifact stays in `pending/` forever — a clean-looking review blackout.
-# net-growth-ok: ac-nsb — the conductor-scope mode is a property of THIS selector; its
-# coverage proof has to sit at the selection site or it is not read when it is needed.
+# usually matches — NOT by construction: see CONDUCTOR-SCOPE MODE below). A positional pick
+# (`ls | head -1`) is lexically-OLDEST-first; `pending/` legitimately accumulates, because a
+# withheld close (stop condition C2) deliberately leaves its report there.
 CARRIED=""
 # Re-derive the range HERE. `BATCH_RANGE="$ANCHOR..HEAD"` is assigned in the anchor block, a
 # SEPARATE fenced block; only ANCHOR is persisted to $STATE, so BATCH_RANGE may be empty in
-# this shell (same bug class as ac-loop's PROJECT_ROOT). FATAL on an empty ANCHOR rather than
-# silently computing "..HEAD".
+# this shell. FATAL on an empty ANCHOR rather than silently computing "..HEAD".
 [ -n "$ANCHOR" ] || { echo "FATAL: ANCHOR is empty — batch scope is unknown; refusing to select a report." >&2; exit 1; }
 BATCH_RANGE="${BATCH_RANGE:-$ANCHOR..HEAD}"
 BATCH_HEAD=$(git rev-parse HEAD)
@@ -628,9 +556,7 @@ BATCH_HEAD=$(git rev-parse HEAD)
 # this batch. When the conductor hands down an explicit path in $CONDUCTOR_PENDING_REPORT, that
 # report is CONSIDERED instead of the grep. It is never ACCEPTED unverified: its own
 # `**Range:** <base>..<head>` line must COVER $BATCH_RANGE by git ANCESTRY — base an
-# ancestor-or-equal of $ANCHOR, head a descendant-or-equal of the batch head. A SHA-string
-# compare (the shape of the grep below) would accept any report whose base text happens to
-# match and reject every legitimately wider one, which is the entire defect being fixed.
+# ancestor-or-equal of $ANCHOR, head a descendant-or-equal of the batch head.
 # A conductor-supplied report whose Range does NOT cover the batch range is REJECTED with the
 # same FATAL as an unidentifiable one — this mode changes which report is considered, never
 # whether an unverified report may be accepted. Unknown must never collapse to ok.
@@ -667,14 +593,10 @@ if [ "$N_PENDING" -ne 1 ]; then
   echo "     through CONDUCTOR_PENDING_REPORT above (ancestry-verified), never by hand." >&2
   exit 1
 fi
-# net-growth-ok: ac-ya71.1 — the narrower-range seam check belongs at the selector site
 # BEGIN Act3-rhead-assert
 # Range-HEAD assert, NON-conductor path only (the conductor branch above is already
 # ancestry-verified, and wider-is-fine there — asserting this rule on it would reject every
-# legitimately wider report). The grep selector matches the Range BASE alone, so a report whose
-# head sits BEHIND $BATCH_HEAD passes it and the review-mark then attests to commits nothing
-# reviewed — ac-review's own Phase 6 fix commit is exactly that shape. Standalone-drivable:
-# set RHEAD + BATCH_HEAD and source this block.
+# legitimately wider report). Standalone-drivable: set RHEAD + BATCH_HEAD and source this block.
 if [ -z "${CONDUCTOR_PENDING_REPORT:-}" ]; then
   BATCH_HEAD="${BATCH_HEAD:-$(git rev-parse HEAD)}"
   if [ -z "${RHEAD:-}" ]; then
@@ -700,7 +622,6 @@ if [ -z "${CONDUCTOR_PENDING_REPORT:-}" ]; then
 fi
 # END Act3-rhead-assert
 CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
-# net-growth-ok: ac-ewgr.6 — the dcg reason must sit inline at the snippet or the next agent re-derives the workaround
 # RESOLVE-THEN-PASTE — do NOT "simplify" this back into a variable-built move. dcg rule
 # `core.filesystem:mv-dynamic-path` BLOCKS a move whose paths are variable-built, so a
 # `git mv "$FROM" "$TO"` over these two vars is rejected verbatim. The line below is read-only:
@@ -711,23 +632,15 @@ CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
 printf 'CARRY FROM: %s\nCARRY TO:   %s\n' "$PENDING_REPORT" "$CARRIED"
 
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
-# Pathspec-on-commit (bd-kskxg field-test): the trailing `-- <report path>` scopes the commit to
-# ONLY these files, so pre-staged foreign WIP in the shared checkout cannot be swept into the
-# batch-report commit (happened live; a soft-reset recovered it). The `git add` above is still
-# needed because the report is a brand-new untracked file. $CARRIED is included in the pathspec
-# so the moved findings report rides in this same commit (both its delete-from-pending and
-# add-to-batch halves are staged by the `git mv` above).
+# Pathspec-on-commit: the trailing `-- <report path>` scopes the commit to ONLY these files, so
+# pre-staged foreign WIP in the shared checkout cannot be swept into the batch-report commit.
+# The `git add` above is still needed because the report is a brand-new untracked file.
+# $CARRIED is included in the pathspec so the moved findings report rides in this same commit
+# (both its delete-from-pending and add-to-batch halves are staged by the `git mv` above).
 git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits" \
   -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md" ${CARRIED:+"$CARRIED"} ${CARRIED:+".claude/reviews/pending/"}
 git push origin main || { git pull --rebase origin main && git push origin main; }
 ```
-
-**Why this commit is the operative review-mark — and the ONLY writer of that path (bd-kudrb):**
-the probe takes the **latest** commit touching `batch/`. Correctness used to rest on ordering
-("this commit lands later, so it supersedes `ac-review`'s"), which holds for the *next* batch but
-not this one — Act 1's probe runs **after** Act 2's review, so it returned `ac-review`'s report,
-inside the range being closed. Ordering cannot fix a probe that runs mid-ceremony; routing the
-report through `pending/` removes the ambiguity at the source.
 
 **This must be the LAST commit of the ceremony.** If a fix-forward round is still needed after
 this point, that means Act 1 (or Act 2) isn't actually done — re-run from there and redo this
@@ -757,24 +670,6 @@ Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 
 ---
 
-## Beads-closed gate
-
-`ac-merge` never invoked `beads-closed-gate.sh` directly — only `ac-loop` does, as its own
-pre-merge gate, upstream of whichever closing skill it calls. Nothing to retarget here: the
-gate stays `ac-loop`'s responsibility (its assignee-scoping rewrite is a sibling bead and needs
-no change in this skill).
-
-## Documented technique — the union allocator pattern (for the record)
-
-`ac-pipeline/scripts/allocate-wave-branch.sh` is deleted alongside this skill's creation —
-trunk-direct has no numbered wave branches to allocate. Its collision-guard pattern is worth
-remembering for **any future numbered-artifact allocation**: compute NEXT from the union of
-live refs ∪ main-log merge/commit messages ∪ tags — never refs alone (`git fetch --prune` drops
-merged refs, so a refs-only scan can reuse a shipped number). Re-derive this pattern fresh if a
-future skill needs to allocate a numbered artifact; don't resurrect the deleted script.
-
----
-
 ## Report + Slack + Finalize
 
 ### Report
@@ -799,8 +694,6 @@ branch (i) nor (ii) held. "green" asserts a gate that EXECUTED — never a skipp
 ### What Shipped
 {1-3 bullet summary}
 ```
-
-No Deploy section — deploy verification is `ac-publish`'s job now, not this ceremony's.
 
 ### Slack Notify
 
@@ -866,8 +759,6 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 ## Remember
 
 <!-- diet: all bullets deleted — every bullet restated a live body section (body twins verified); nothing was Remember-only -->
-
-_(Body sections are the canon — nothing summarized here.)_
 
 ---
 
