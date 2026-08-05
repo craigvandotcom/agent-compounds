@@ -19,6 +19,36 @@ and cross-round consensus can match.
 
 ---
 
+## Review surface
+
+**Review code a user reaches in production.** Everything else is out of scope: do not hunt
+it, and a finding anchored there is **report-only, never a bead**.
+
+| IN — hunt and file | OUT — report only |
+|---|---|
+| `app/` · `components/` · `features/` | `scripts/` (operator + curation tooling) |
+| `lib/` on a request path · `middleware.ts` | `__tests__/` · `e2e/` · `*.test.*` · `*.spec.*` |
+| `supabase/migrations/` (mutates prod data) | `.github/` (CI) |
+| shipped native plugin code | `.claude/` · `_plans/` · docs |
+
+**Tiebreak** when a path is ambiguous — much of `lib/` is: *can a user action or a
+production request reach this line?* A research or curation pipeline that only a cron or
+an operator invokes is factory, not product.
+
+**Carve-out — mutation-probe-convicted test findings.** `test-quality` MAY file a bead
+anchored on a test or guard **if and only if** its `evidence` carries a probe showing the
+guard cannot fail: revert the fix, or delete the guarded line, and the suite still passes.
+No probe, no bead. File it `-t task`. This is the one defect class CI cannot catch, because
+the defect is that CI stays green.
+
+Applies to the code panel. The docs-lens set on a docs-only diff is a different mission and
+is unaffected.
+
+**A range touching no product surface yields APPROVED with zero findings** — a clean
+result, not a degraded run.
+
+---
+
 ## security
 
 - **ROLE:** `security`

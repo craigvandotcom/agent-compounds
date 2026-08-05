@@ -337,13 +337,13 @@ The panel is the six dimensions in **`references/review-dimensions.md`**. The **
 (security, performance, architecture, correctness) ALWAYS spawn. The two diff-conditional
 lenses use **negative gating** — spawn by default, skip only when provably irrelevant:
 
-- **test-quality** — skip ONLY if the diff contains zero test files AND zero runtime
-  source (a docs/CI-only diff).
-- **contracts** — skip ONLY if the diff touches no exported surface (no type/interface
-  files, route handlers, exported function signatures, or docs).
+- **test-quality** · **contracts** — each dimension's SKIP rule lives in
+  `references/review-dimensions.md`; apply it there. When in doubt, **spawn**.
 
-Two cheap checks against the Phase-1 changed-file list. When in doubt, **spawn** — a
-wasted reviewer costs one agent; a wrongly skipped lens is a silent coverage gap.
+**Review surface — the product, not the factory.** Hunt and file only code a user reaches
+in production; factory findings (`scripts/`, tests, CI, `.claude/`, docs) are report-only.
+One carve-out: mutation-probe-convicted test findings. Canon + IN/OUT table:
+`references/review-dimensions.md` § Review surface.
 
 ### Doctrine-Delta — the 7th, skills/-gated dimension
 
@@ -846,11 +846,11 @@ below). **Filing discipline — anchor-dedupe · severity floor · rollup ceilin
 anchor is the finding's primary `file:line`; rollup beads carry
 `-t task --labels review-finding,unrefined`; Medium+ epics group via
 `br dep add -t parent-child <finding-id> <epic-id>`.
-Nits stay in the report. **Always include
-`unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
-instead of being treated as already-refined. **`-t bug` = shipped product defect only;
-test-gaps / missing coverage / infra findings use `-t task` or `-t investigation`, never
-`-t bug`** — mistyping inflates the preemptive bug lane. **Every finding bead ships a
+**Surface gate FIRST** (`references/review-dimensions.md` § Review surface): a finding
+anchored outside the product surface is report-only — do not file it. Sole exception: a
+mutation-probe-convicted test finding, filed `-t task`. **Always include `unrefined`**
+(matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine` instead of being
+treated as already-refined. **`-t bug` = shipped product defect only.** **Every finding bead ships a
 `## Test Scope` section with grep-verified anchors** (same bar as `ac-hygiene`;
 `beads-standards/reference/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
 validator runs — grep each before citing it — plus the QA modality for user-facing surfaces.
