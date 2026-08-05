@@ -9,3 +9,6 @@
 # Temporary
 last-touched
 *.tmp
+
+# Local history backups (large, transient)
+.br_history/
