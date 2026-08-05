@@ -102,15 +102,17 @@ def allow():
 def session_key():
     # Subagents INHERIT the parent's CLAUDE_CODE_SESSION_ID, so a session-only key means
     # the conductor's first skills/ edit disarms the guard for every child it spawns —
-    # and in a delegation-heavy pipeline the children are the ones doing the editing.
-    # Key on session + agent so each editing agent gets exactly one reminder.
+    # and in a delegation-heavy pipeline the children do nearly all the editing.
+    # CLAUDE_PID is per agent PROCESS, so session+PID gives each editing agent exactly
+    # one reminder. AGENT_NAME is NOT usable here: children default to the shared
+    # FoggyCreek chore identity, so keying on it collapses them back onto one flag.
     sid = os.environ.get("CLAUDE_CODE_SESSION_ID")
-    agent = os.environ.get("AGENT_NAME") or os.environ.get("CLAUDE_AGENT_ID") or ""
+    pid = os.environ.get("CLAUDE_PID") or ""
     if sid:
-        return sid + ("-" + agent if agent else "")
+        return sid + ("-" + pid if pid else "")
     # No session id available (other harnesses / manual invocation) -> degrade to a
     # daily key so the guard still fires at most once per day, never every call.
-    return "daily-" + datetime.date.today().isoformat() + ("-" + agent if agent else "")
+    return "daily-" + datetime.date.today().isoformat() + ("-" + pid if pid else "")
 
 
 def already_fired(key):
