@@ -44,7 +44,7 @@ Phase 0 onward.
 
 Exception: machine-local scaffolding (`.beads/` runtime DB, `.claude/` symlinks, tool caches) is neither committed nor a blocker — leave it untracked regardless of who "owns" it.
 
-**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** A `stash pop` can surface pre-existing stash entries from other sessions and write merge-conflict markers into files unrelated to the current session (incident: stash-corruption — `references/incidents.md`). If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` — stash is not a reversible tool in a shared, concurrently-edited working tree.
+**Never use `git stash` at any point during or between beads — not even as a diagnostic tool.** If you need to isolate uncommitted-vs-committed differences, use `git diff HEAD` — stash is not a reversible tool in a shared, concurrently-edited working tree.
 
 ### Verify Refined Beads Exist
 
@@ -80,7 +80,7 @@ git checkout main 2>/dev/null || true
 git pull --rebase
 ```
 
-Confirm you're on `main` (`git branch --show-current`) before doing anything else. If you find yourself on some other branch, `git checkout main` — there is nothing to "join," and no second branch to defensively guard against.
+Confirm you're on `main` (`git branch --show-current`) before doing anything else. If you find yourself on some other branch, `git checkout main`.
 
 ### Install Pre-Commit Guard
 
@@ -91,7 +91,7 @@ mcp__mcp-agent-mail__install_precommit_guard(
 )
 ```
 
-Idempotent — safe to re-run every session. Installs a git hook that blocks commits to files reserved by another agent. Closes the window between Phase 1a's conflict check and the actual commit — a second enforcement layer on top of the reservation.
+Idempotent — safe to re-run every session. Installs a git hook that blocks commits to files reserved by another agent.
 
 ### Pre-Flight Type-Check
 
@@ -106,11 +106,8 @@ If type-check fails:
 
 ### Baseline Check (read the last full-suite run; don't re-run full per wave)
 
-Confirm you're starting from a green `main` before building on it. With the `vitest-affected`
-fixture-cascade upgrade, affected-mode is trustworthy, so the full-suite masking-catch is
-**relocated to PUBLISH START** (`ac-publish` runs `ac-prove ensure --fix-forward`, SHA-pinned to
-the commit being published — bd-pwt44; `ac-land` fires nothing at loop close).
-Read the most recent full-suite result instead of re-running the suite per wave.
+Confirm you're starting from a green `main` before building on it. Read the most recent
+full-suite result instead of re-running the suite per wave.
 **Guard first** — only body-compass-app has this workflow today; if `quality-gate.yml` doesn't
 exist in this repo, skip straight to the local fallback:
 
@@ -129,7 +126,7 @@ fi
   app has no full-test CI gate) → run the full suite once locally to establish the baseline:
   `pnpm test:all 2>&1 | tail -20`.
 
-**Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them — silent absorption removes the user's opportunity to catch real regressions dressed as "known" debt (incident: baseline-preexisting — `references/incidents.md`).
+**Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them.
 
 Behavior:
 
@@ -154,30 +151,28 @@ Specifically REJECT these failure modes from being treated as "acceptable baseli
 
 The baseline read is cheap — always do it. Only the fallback full run (when no loop-close run is available) is expensive; skip that fallback only if it takes > 10 minutes AND the session targets fewer than 2 beads.
 
-> **Wait for long local runs IN-SHELL — never detach from your own command** (`ac-pipeline/references/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall (this exact ac-implement phase stalled twice, RUN_ID=20260710-170558-52993). Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
+> **Wait for long local runs IN-SHELL — never detach from your own command** (`ac-pipeline/references/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall. Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
 
 ### Scoped Per-Commit Readiness Gate (H7 v3) + Push Cadence
 
-This is the gate that runs at **every** commit for the rest of the session (Phase 1d), not just once here — establishing it in Phase 0 so it's binding for the whole loop. Under trunk-direct there is no wave branch acting as a buffer, so this gate — plus post-push CI — is the only thing keeping `main` clean.
+This is the gate that runs at **every** commit for the rest of the session (Phase 1d), not just once here — establishing it in Phase 0 so it's binding for the whole loop.
 
 **The gate is scoped to YOUR OWN diff, never the whole project:**
 
-1. **Format (belt-and-braces — do NOT rely on the pre-commit hook firing).** Run `lint-staged` (or the project's equivalent) on YOUR OWN staged files, THEN — independent of whether the git pre-commit hook actually executed — explicitly verify those same staged files are prettier-clean before committing: `pnpm prettier --check <your staged paths>` (staged paths only — keep it cheap). If it reports any unformatted file, `pnpm prettier --write <those paths>`, re-stage, and re-check until clean; do not commit while it reports failure. This gate keys on the staged paths themselves, never on a hook side effect: the `.husky/pre-commit` → `lint-staged` chain is correct and effective, but a bypassed or non-firing hook (an ad-hoc `--no-verify` on commit, or a working tree where `hooksPath`/`lint-staged` env isn't active) can let an unformatted staged file reach a commit and fail CI's whole-repo prettier check. Git objects don't record whether a hook ran, so this is a belt-and-braces check that survives a bypassed hook, NOT a fix for a specific known bypass path.
-2. **`ubs <changed-files>`** — pass the exact list of files YOU changed. **Never `ubs .`** — a whole-project scan is a jef-flywheel anti-pattern: it re-surfaces every pre-existing issue in the repo on every commit and buries your own signal in noise that isn't yours to fix.
+1. **Format (belt-and-braces — do NOT rely on the pre-commit hook firing).** Run `lint-staged` (or the project's equivalent) on YOUR OWN staged files, THEN — independent of whether the git pre-commit hook actually executed — explicitly verify those same staged files are prettier-clean before committing: `pnpm prettier --check <your staged paths>` (staged paths only — keep it cheap). If it reports any unformatted file, `pnpm prettier --write <those paths>`, re-stage, and re-check until clean; do not commit while it reports failure.
+2. **`ubs <changed-files>`** — pass the exact list of files YOU changed. **Never `ubs .`**.
 3. **`pnpm test` (vitest-affected) scoped to YOUR OWN diff** — not the full suite (that's session-end and loop-close territory, per the Baseline Check note above).
 4. **Whole-project `tsc`** — this one check is necessarily whole-project (TypeScript has no per-file mode), so triage its output by attribution rather than treating every red line as yours to fix:
    > A `tsc` error in a file you didn't touch that does NOT import your changed files is foreign-WIP noise → log it and proceed (push-CI re-checks committed state in ~4 min). An error in your own file, or in a file that imports your changes, is yours → fix it before committing.
 
 **Cadence: commit every 15–20 minutes.** Do not batch a whole bead — or worse, a whole session — into one commit; granular commits are both the revert points and the unit of concurrency-safety under H7d.
 
-**Commit = push. Always. Mandatory, not optional.** There is no wave branch holding your
-work safe in the interim — origin is the only durability record; a crashed session with
-unpushed commits is lost work, not "recoverable from the branch," because there is no
-branch. **The full sequence (fetch/0-behind check, pathspec commit, `--no-verify` push +
-its rationale, SHA verify) and the foreign-WIP escalation ladder (fetch+fast-forward;
-discard foreign generated files you did NOT author — never stash) are canon: `ac-pipeline/references/commit-discipline.md`** § Commit +
-push sequence, § No-stash escalation ladder. Push collision → `git pull --rebase` and
-re-push; never force-push over another session's committed work.
+**Commit = push. Always. Mandatory, not optional.** **The full sequence (fetch/0-behind
+check, pathspec commit, `--no-verify` push + its rationale, SHA verify) and the foreign-WIP
+escalation ladder (fetch+fast-forward; discard foreign generated files you did NOT author —
+never stash) are canon: `ac-pipeline/references/commit-discipline.md`** § Commit + push
+sequence, § No-stash escalation ladder. Push collision → `git pull --rebase` and re-push;
+never force-push over another session's committed work.
 
 ### Ask User
 
@@ -190,9 +185,8 @@ Ask one question via `AskUserQuestion`:
 ```bash
 TARGET_BEADS=<user input>
 BEADS_COMPLETED=0
-# Deterministic dir keyed on the CLAIM/BATCH ID, never the branch — trunk-direct puts every
-# conductor on `main`, so `git branch --show-current` no longer discriminates concurrent
-# sessions (bd-u2lo1.9 re-keying). Contract: ac-pipeline/references/run-id.md. ac-land lands this same path.
+# Deterministic dir keyed on the CLAIM/BATCH ID, never the branch.
+# Contract: ac-pipeline/references/run-id.md. ac-land lands this same path.
 #
 # If ac-loop already claimed this batch and delegated (claim id handed in the prompt, e.g.
 # "claim id `bd-u2lo1.1-20260712`"), use it verbatim below — do not re-derive.
@@ -208,11 +202,8 @@ BEADS_COMPLETED=0
 CLAIM_ID="${CLAIM_ID:-<first-candidate-bead-id>-$(date +%Y%m%d)}"   # handed-down or self-derived
 WAVE_SLUG="$CLAIM_ID"   # alias for other in-file references to this key (task labels, progress.md header) — same value, not a re-derivation
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"   # mint if no orchestrator handed one down
-# net-growth-ok: ac-wno per-child bead-work key
-# Per-child key — UNCONDITIONAL, every implement session, fanned out or not (ac-wno; precedent
-# bd-baudw @ ac-bead-refine/references/workflow.md:64-71): CLAIM_ID+RUN_ID are batch/run-scoped so
-# neither separates siblings; `$$` covers AGENT_NAME being unset this early (identity is minted
-# below); RUN_ID stays LAST or ac-land's `/tmp/bead-work-*-$RUN_ID` glob stops matching.
+# Per-child key — UNCONDITIONAL, every implement session, fanned out or not.
+# RUN_ID stays LAST or ac-land's `/tmp/bead-work-*-$RUN_ID` glob stops matching.
 CHILD_ID="$(printf '%s' "${AGENT_NAME:-anon}" | command tr -cd 'A-Za-z0-9')-$$"
 ARTIFACTS_DIR="/tmp/bead-work-${CLAIM_ID}-${CHILD_ID}${RUN_ID:+-$RUN_ID}"
 ```
@@ -286,8 +277,7 @@ CLAIM_ASSIGNEE="${CLAIM_ASSIGNEE:-$AGENT_NAME}"
 # HARD RULE (ac-ycr.6; doctrine agent-mail/references/agent-identity.md): FoggyCreek is the Tier-2 chore
 # identity and may NEVER be a bead assignee. If CLAIM_ASSIGNEE resolved to it (a dropped
 # delegation value, or $AGENT_NAME fell back to the settings.json default in a fresh shell),
-# FAIL LOUDLY — never claim the batch under the shared chore identity (silent misattribution
-# the BEADS-CLOSED-GATE then rejects anyway).
+# FAIL LOUDLY — never claim the batch under the shared chore identity.
 [ "$CLAIM_ASSIGNEE" = "FoggyCreek" ] && { echo "FATAL: CLAIM_ASSIGNEE=FoggyCreek — cannot claim beads under the Tier-2 chore identity; pass the loop's minted identity (or re-assert this session's AGENT_NAME)" >&2; exit 2; }
 br update <id1> <id2> ... --status in_progress --assignee "$CLAIM_ASSIGNEE"
 # Strip `post-merge` from every bead being claimed (single bead-conventions claim-semantics
@@ -297,20 +287,14 @@ br update <id1> <id2> ... --status in_progress --assignee "$CLAIM_ASSIGNEE"
 for id in <id1> <id2> ...; do br label remove "$id" post-merge 2>/dev/null || true; done
 ```
 
-This is the CLAIM-AT-SELECTION mechanism (precedent: body-compass-app memory
-`claim-adopted-beads-before-planning` — claim before you plan/implement, generalized here to
-every batch): a claimed bead's status is `in_progress`, so `br ready` naturally excludes it
-for every other conductor — no new gating logic needed. If this session was itself invoked by
-`ac-loop`, the loop already did this claim before delegating — skip re-claiming beads whose
-IDs were handed to you as "already claimed" in the delegation prompt.
+This is the CLAIM-AT-SELECTION mechanism: a claimed bead's status is `in_progress`, so
+`br ready` naturally excludes it for every other conductor — no new gating logic needed. If
+this session was itself invoked by `ac-loop`, the loop already did this claim before
+delegating — skip re-claiming beads whose IDs were handed to you as "already claimed" in the
+delegation prompt.
 
-> **Single-identity contract (bd-w504y).** The loop's pre-close BEADS-CLOSED-GATE scopes by
-> bead ASSIGNEE. If a delegated session claimed replacement beads under its OWN self-registered
-> name instead of the loop's, `br list --assignee <loop-identity>` would MISS them and the gate
-> would fail OPEN (green-light a merge with a genuinely open in-scope bead). Threading
-> `CLAIM_ASSIGNEE` onto EVERY claim keeps the whole batch visible under one identity. The gate
-> ALSO unions any delegated identities it was told about (defense in depth), but do not rely on
-> that — claim under `CLAIM_ASSIGNEE` and report your registered name back in your summary.
+> **Single-identity contract (bd-w504y).** Claim under `CLAIM_ASSIGNEE` and report your
+> registered name back in your summary.
 
 Mint the batch's CLAIM ID **once**, at the moment of claiming: `<first-claimed-bead-id>-<YYYYMMDD>`
 (e.g. `bd-u2lo1.1-20260712`). Write it to `$ARTIFACTS_DIR/.claim-id` (first line = the claim
@@ -327,13 +311,13 @@ replacement claim strips `post-merge` too** (`br label remove <id> post-merge`) 
 strip-at-claim rule holds on EVERY claim path, not just the up-front batch claim, so no
 adopted exhaust bead ever re-enters work still carrying its gate-excluding label.
 
-**Re-verify branch context BEFORE claiming.** Branch state is dynamic in this workflow — multiple Claude sessions sharing one git checkout can switch the branch between operations via serial hand-off. Phase 0's branch check is a snapshot; treat it as stale on every loop iteration.
+**Re-verify branch context BEFORE claiming.** Phase 0's branch check is a snapshot; treat it as stale on every loop iteration.
 
 ```bash
 git branch --show-current
 ```
 
-If the branch is not `main`, STOP. Do not silently `git checkout` back (that could clobber another session's uncommitted work sitting in the shared tree). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — trunk-direct means a single shared checkout is the deliberate convention here; spawning a worktree forks state invisibly (incident: worktree-drift — `references/incidents.md`).
+If the branch is not `main`, STOP. Do not silently `git checkout` back (that could clobber another session's uncommitted work sitting in the shared tree). Surface the drift to the user, ask whether to wait, switch back, or exit. **Do NOT create a git worktree** — trunk-direct means a single shared checkout is the deliberate convention here.
 
 ```bash
 bv --robot-next
@@ -341,7 +325,7 @@ bv --robot-next
 
 This returns the top pick AND a claim command.
 
-> **`bv` ≥ 0.18 emits `br` natively.** `bv --robot-next`'s `claim_command` is already `br update <id> --status=in_progress`, so run it verbatim. The old `bd`→`br` translation was only needed on `bv` ≤ 0.16 and is retired. **Version assumption:** cross-machine `bv` parity is assumed, not re-checked per run; if some machine is pinned ≤ 0.16 and emits `bd update`, translate it to `br update`. History: `references/incidents.md` § bd-br-translation.
+> **`bv` ≥ 0.18 emits `br` natively.** `bv --robot-next`'s `claim_command` is already `br update <id> --status=in_progress`, so run it verbatim. **Version assumption:** cross-machine `bv` parity is assumed, not re-checked per run; if some machine is pinned ≤ 0.16 and emits `bd update`, translate it to `br update`.
 
 **Guard: verify the selected bead carries `refined` and is not human-gated.** Readiness is presence of `refined`, not absence of `unrefined`. Check the bead's labels — if it lacks `refined`, or has `human-gate`, skip it and pick the next one:
 
@@ -377,7 +361,7 @@ On `FILE_RESERVATION_CONFLICT`:
 
 On success: reservation is held. The pre-commit guard (installed in Phase 0) will enforce it at commit time as a second layer.
 
-**Guard: verify environment prerequisites.** Bead specs sometimes assume infrastructure that isn't available in the current session (Mac/Xcode for iOS native, local Supabase for integration tests, Android emulator for ADB-driven tests). `bv --robot-next` does NOT check this — it scores by priority and unblocks only, and it will happily recommend `in_progress` beads whose remaining ACs are Mac-only or whose specs reference local infra that was never set up.
+**Guard: verify environment prerequisites.** Bead specs sometimes assume infrastructure that isn't available in the current session (Mac/Xcode for iOS native, local Supabase for integration tests, Android emulator for ADB-driven tests).
 
 After `br show <id>` + `br comments <id>` but BEFORE claiming, scan the spec's Files / Steps / Acceptance Criteria for these signals:
 
@@ -391,7 +375,6 @@ If the bead requires absent infrastructure:
 1. Do NOT claim it
 2. Add a comment via `br comments add <id> "Env-blocked: <reason>. Needs <required-env> or a /ac-bead-refine round to pick an alternative path."`
 3. Get the next candidate from `br ready --json`
-4. Burning a bead slot on a no-op attempt is equivalent to claiming a not-yet-`refined` bead — skip it. (incident: env-blocked-claims — `references/incidents.md`)
 
 **Guard: premise-check `## Consumes` (I/O contract, `beads-standards/reference/bead-conventions.md` §Bead I/O contract).** For each Consumes line (`<blocker-id> → <artifact>`; a literal `- none` passes trivially), verify the premise holds on the CURRENT tree before spending an engineer session on it: the named artifact exists (file path `ls`-checks, symbol/route/table greps, migration file present) and the blocker bead is closed (`br show <blocker-id> --json`). That same call returns `.close_reason`, where Phase 1d records delivered artifact paths — the fastest verification. If any consumed artifact is missing:
 
@@ -402,7 +385,6 @@ If the bead requires absent infrastructure:
 
 A bead with no `## Consumes` header at all predates the contract (legacy) — log it and proceed; do not bounce legacy beads for missing paperwork.
 
-<!-- net-growth-ok: ac-tmp premise-check data-values guard -->
 **Guard: premise-check embedded factual claims.** Beyond artifact-existence, grep the
 bead's spec for any stated data value or factual claim the fix logic depends on (a DB
 row's field value, "column already exists", an assumed parent/child relationship) and
@@ -428,9 +410,8 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 ### Phase 1b: Identify Skills + Spawn Engineer Sub-Agent
 
-**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Bead specs go stale between refine and implement — refine verifies against the codebase as of ITS run, and intervening beads invalidate claims (incident: stale-spec-claims — `references/incidents.md`). Do this for every bead, not just ones the native-testing skill flags.
+**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Do this for every bead, not just ones the native-testing skill flags.
 
-<!-- net-growth-ok: dream ac-r5g affected-graph subset rule -->
 **The affected-graph can silently subset an explicit test selection (conductor's job to pre-empt).** `vitest --affected` derives the suite set from the import graph, so a test asserting against a shared interface that does NOT import the changed file is silently dropped — and the run still exits 0. When the bead touches a shared interface (a type, schema, mock, fixture, API contract): (1) **name the affected suites in the engineer prompt** — the conductor knows what changed, the child sees only its own diff; (2) find the mock/assertion owners with `grep -rl "<changed symbol>" --include='*.test.*' .` — any hit outside the changed file's own suite is in scope; (3) `VITEST_AFFECTED_DISABLED=1` is pre-authorized for this case — the child does not need to ask.
 
 **Engineering skill first (conductor's job):** Before identifying domain skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps this is `capacitor` (`capacitor/SKILL.md`). Include it in the engineer prompt for any bead touching UI, navigation, data fetching, auth, storage, lifecycle, or build.
@@ -447,7 +428,7 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 1. **Grep-checkable file+line edits** — the refined spec names exact file+line (or unique anchor) edits with acceptance criteria that are themselves grep/diff-checkable (not open-ended behavior).
 2. **Mechanical over code with existing test coverage** — the edit is a mechanical transform over already-covered code (rename, wire an existing helper, one-line guard that existing tests already exercise). **No new behavioral surface** without existing coverage: if the bead introduces new behavior that current tests do not cover, conductor-direct is **forbidden** — spawn an implement child on the TDD path as today.
-3. **Affected-test gate green post-edit** — after the edit, the conductor runs the project's affected tests (`pnpm test` / vitest-affected, or the bead's named test targets) and they pass green. This is the hard guard: **grep-checkable ≠ behaviorally safe**. The zero-defect record rode on the affected-test-green gate; never close a conductor-direct code bead on grep alone.
+3. **Affected-test gate green post-edit** — after the edit, the conductor runs the project's affected tests (`pnpm test` / vitest-affected, or the bead's named test targets) and they pass green. This is the hard guard: **grep-checkable ≠ behaviorally safe**. Never close a conductor-direct code bead on grep alone.
 
 If any of the three fails (or is uncertain), fall through to the engineer-spawn path below. The doc/config conductor-direct doctrine above is unchanged and does not require the affected-test gate (its AC is the bead's own grep/diff).
 
@@ -474,15 +455,15 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
    - E2e: `pnpm playwright test tests/e2e/<spec>.spec.ts --reporter=line`
    - Bundle exclusion: `pnpm build && pnpm verify:no-scripted` (fresh build, not cached `.next/`)
 
-   These two claim types had a 2/2 false-green rate on first engineer rounds (incident: false-green-claims — `references/incidents.md`). Do NOT approve until you have personally observed green output.
+   Do NOT approve until you have personally observed green output.
 
-2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports). **When the diff widens a shared type or changes which client/method a route calls, this grep must reach the mock OWNERS too** (hand-rolled `requireAuth`/supabase mocks), you must run that named set with **`VITEST_AFFECTED_DISABLED=1`** — `pnpm test <named-files>` INTERSECTS your explicit list with the git-diff set and silently runs a subset (observed 2-of-5 and 7-of-12) *while reporting green* — and the conductor must **pre-authorize the mock-owning suites in the engineer's scope contract**, or the child correctly refuses to edit the very files it must update (incident: affected-graph-intersects-explicit-selection — `references/incidents.md`).
+2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports). **When the diff widens a shared type or changes which client/method a route calls, this grep must reach the mock OWNERS too** (hand-rolled `requireAuth`/supabase mocks), you must run that named set with **`VITEST_AFFECTED_DISABLED=1`** — `pnpm test <named-files>` INTERSECTS your explicit list with the git-diff set and silently runs a subset *while reporting green* — and the conductor must **pre-authorize the mock-owning suites in the engineer's scope contract**, or the child correctly refuses to edit the very files it must update.
 
-   > **Red-test classification requires EVIDENCE — never accept "pre-existing" or "concurrent-session" at face value** (memory `verify-red-tests-against-history-before-preexisting-claim`). When an engineer's result file (or your own triage) classifies a failing test as pre-existing debt or another session's WIP rather than a regression THIS bead caused, that classification is only valid with one of two concrete proofs, recorded in the bead's progress/result notes:
+   > **Red-test classification requires EVIDENCE — never accept "pre-existing" or "concurrent-session" at face value**. When an engineer's result file (or your own triage) classifies a failing test as pre-existing debt or another session's WIP rather than a regression THIS bead caused, that classification is only valid with one of two concrete proofs, recorded in the bead's progress/result notes:
    > - **History proof:** the same test was already red BEFORE this bead's diff — cite the Phase 0 Baseline Check result (the loop-close/`quality-gate.yml` run, or the local baseline) showing that test failing, or re-run it pinned to the pre-wave SHA with `VITEST_AFFECTED_REF=<pre-wave-SHA> pnpm test`. Do NOT use `git stash` or spawn a `git worktree` to get this (both banned under trunk-direct — Phase 0), OR
    > - **Symbol proof:** the failing assertions reference only symbols/files that this wave's diff does not touch (`git diff --stat` shows the test's subject-under-test is untouched by any commit in this session).
    >
-   > Absent either proof, treat the red test as YOURS and fix it before closing. "Known pre-existing" without a proof is the same evasion phrase the Baseline Check rejects (`references/incidents.md` § baseline-preexisting).
+   > Absent either proof, treat the red test as YOURS and fix it before closing.
 
 3. **Lint + type-check** — catch errors early:
 
@@ -512,7 +493,7 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
    git diff
    ```
 
-Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **retired** (Wave-B). Web-UI journey coverage is now owned by **`ac-batch-close`'s QA Smoke Gate** (a conditional, web-UI-diff-triggered delegation to `ac-qa-browser` at smoke depth — a finer, per-batch cadence than the old once-per-session 1c pass; its registry-driven selection covers every journey with `criticality ≥ core` per `ac-pipeline/references/verification-gate.md`, so breadth ≥ 1c) and, for cross-batch interactions, **`ac-qa-browser`'s exhaustive crawl at publish**. This saves ~N per-bead browser-tester agent spawns without reducing coverage.
+Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **retired**. Web-UI journey coverage is now owned by **`ac-batch-close`'s QA Smoke Gate** (a conditional, web-UI-diff-triggered delegation to `ac-qa-browser` at smoke depth; its registry-driven selection covers every journey with `criticality ≥ core` per `ac-pipeline/references/verification-gate.md`) and, for cross-batch interactions, **`ac-qa-browser`'s exhaustive crawl at publish**.
 
 **If minor issues:** Fix them directly. You are the conductor — small fixes are faster than re-spawning.
 
@@ -538,8 +519,6 @@ git push
 > **NEVER put `br close` in the same bash block as the `git commit`** — a chained close
 > records the wrong SHA when the commit fails (`beads-standards` § br gotchas). Commit,
 > verify it landed, then close in a separate call.
-
-Push after every bead commit prevents stranded work if the session crashes before bead-land.
 
 **Verify commit landed before closing.** (`git log --oneline -1` shows your commit hash, confirming it succeeded.) Only then:
 
@@ -567,20 +546,15 @@ br comments add <id> "WORKER: model=<model-id> session=<AGENT_NAME> skill@versio
 ```
 
 - `skill@version` = the agent-compounds git SHA resolved at skill-load (skills load via symlink
-  from this repo) — the skills-eval before/after axis for measuring doctrine changes.
+  from this repo).
 - `duration` = wall-clock from bead-claim to bead-close in the child session.
-- **Per-bead TOKEN cost is deliberately OUT** — a child can't see its own token usage, so a
-  per-bead number would be fabricated precision. Token cost lands at BATCH/child granularity in
-  `ac-batch-close`'s report (the conductor receives per-child usage in task notifications).
 
 **On close, check for memory facts that cite this bead.** A freeze/pin or other
 lifecycle-scoped fact often names the exact bead whose closure retires it (e.g. an
 `app-version-pinned-*` fact tied to an App Store-submission bead). When you close such a
 bead, grep the memory substrate for facts referencing its id and retire/update any that
-are now stale — otherwise the fact stays silently wrong until some later session trusts it:
-`grep -rl "<bead-id>" memory/auto/` (a manual reminder is enough; even a one-line check
-here would have caught a 7-day-stale version pin within a day). This is the retirement
-trigger the freeze-check in `ac-merge` (§ Version Bump) relies on upstream.
+are now stale: `grep -rl "<bead-id>" memory/auto/`. This is the retirement trigger the
+freeze-check in `ac-merge` (§ Version Bump) relies on upstream.
 
 Release the file reservation using the **same paths reserved in Phase 1a** (the bead spec file list, not just the files committed — releasing over-reserved paths is harmless; leaving them locked starves parallel sessions):
 
@@ -605,7 +579,7 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", status: "comple
 Append to `$ARTIFACTS_DIR/progress.md` (include header on first write). **This exact
 shape is parsed by `beads-closed-gate.sh` — reproduce it literally: APPEND sections to
 the one `progress.md`, never a sibling per-bead result file in its place; a fanned-out
-implement child inherits this contract verbatim** <!-- net-growth-ok: dream ac-3ao -->:
+implement child inherits this contract verbatim**:
 
 ```markdown
 <!-- Header (first bead only) -->
