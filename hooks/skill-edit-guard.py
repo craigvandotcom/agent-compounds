@@ -11,19 +11,23 @@ delivered as an advisory exit-2 block. (Whether Claude's PreToolUse *alone* coul
 is contested and moot here — a portable hook can't rely on it; Grok gets the doctrine separately
 via harness-sync's render_context_grok.)
 
-Behavior: an Edit|Write whose target matches a skill spine (`skills/**/SKILL.md`) gets an
-ADVISORY reminder of the skill-diet doctrine (promotion ladder, conservation gate,
-no-net-growth discipline) printed to stderr, signaled via exit 2. Exit 2 BLOCKS this first
+Behavior: an Edit|Write whose target is ANY file under a `skills/` directory
+(`skills/**`) gets an ADVISORY reminder of the skill-diet doctrine (promotion ladder,
+conservation gate, no-net-growth discipline) printed to stderr, signaled via exit 2.
+Scope was SKILL.md-only until 2026-08-05; broadened on Craig's call — the standards
+(promotion ladder, friction capture, single-home, no-provenance) bind every file in a
+skill, not just the spine, so references/ and FRICTIONS.md edits must see them too.
+Exit 2 BLOCKS this first
 attempt — that is how the reminder reaches the model (an exit-0 hook's stderr is not shown to
 it). The once-per-session flag (below) then lets the agent's RE-ISSUE of the edit through
 (exit 0), so the edit lands on retry. Net effect = a one-time speed-bump, not a hard wall — but
 it does depend on the agent choosing to retry, so it is not a silent pass-through. Enforcement
 proper is the commit-time lint.sh no-net-growth gate; this hook is only the doorbell.
 
-CRITICAL — must not infinite-loop: firing on every SKILL.md edit in a session would make the
+CRITICAL — must not infinite-loop: firing on every skills/ edit in a session would make the
 agent retry into the same exit-2 forever. Fire ONCE PER SESSION via a session-scoped flag
-file: first skill-spine edit in a session prints the reminder + exits 2; every subsequent
-skill-spine edit in the same session exits 0 silently (flag already present).
+file: first skills/ edit in a session prints the reminder + exits 2; every subsequent
+skills/ edit in the same session exits 0 silently (flag already present).
 
 Session key: CLAUDE_CODE_SESSION_ID when set (per-session flag, matches am-edit-guard.py's
 `resolve_self()` idiom); falls back to a daily key (YYYY-MM-DD) when no session id is present
@@ -40,9 +44,10 @@ import sys
 FLAG_DIR = os.environ.get("SKILL_EDIT_GUARD_FLAG_DIR", "/tmp/skill-edit-guard")
 
 REMINDER = """\
-ADVISORY (skill-edit-guard): you are editing a SKILL.md spine file.
+ADVISORY (skill-edit-guard): you are editing a file under skills/.
 
-Skill-diet doctrine applies — before adding content, check whether it belongs here:
+Skill-diet doctrine applies to EVERY file in a skill — spine (SKILL.md), references/,
+FRICTIONS.md, MAINTENANCE.md, tools/. Before adding content, check whether it belongs here:
   - PROMOTION LADDER (skills/skill-builder/references/promotion-ladder.md): going UP
     (references/ -> core) needs PROOF (N green runs / probe-verified fact, + Craig
     sign-off for conductor core). Going DOWN needs only disuse. Unique content being
@@ -112,7 +117,7 @@ def main():
         allow()
 
     rel = path.replace(os.sep, "/")
-    if not (fnmatch.fnmatch(rel, "*/skills/*/SKILL.md") or fnmatch.fnmatch(rel, "skills/*/SKILL.md")):
+    if not (fnmatch.fnmatch(rel, "*/skills/*") or fnmatch.fnmatch(rel, "skills/*")):
         allow()
 
     if already_fired(session_key()):
