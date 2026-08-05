@@ -657,9 +657,9 @@ fi
 #  promotion-ladder.md + token-economics.md. This is the PRIMARY shrink
 #  mechanism (Check 15's line ceilings are a coarse backstop, not the ratchet).
 #  Judged PER FILE, not as a corpus sum: each skills/*/SKILL.md's own net line
-#  delta vs a base ref must be <=0 (neutral/shrinking) to PASS. A file's own
-#  net growth PASSes only if THAT file's own diff carries an added-line
-#  `<!-- net-growth-ok: <reason> -->` stamp, else HARD FAILs. Per-file scoping
+#  delta vs a base ref must be <=0 (neutral/shrinking) to PASS. There is NO
+#  textual exception: growth is bought with an offsetting DELETION or a move to
+#  references/, never with a written justification. Per-file scoping
 #  closes the corpus-sum loophole where a big file's shrink could offset a
 #  small file's unstamped growth ("rob Peter to pay Paul") — every file holds
 #  or shrinks on its own, or proves its own exception. Supersedes the old
@@ -690,7 +690,7 @@ echo "--- Check 14: no-net-growth (SKILL.md — registry + deploy-target-local) 
 NNG_VIOLATIONS=()
 nng_scan() {
   local nng_repo="$1" nng_label="$2" nng_base="$3" nng_spec="$4"
-  local nng_add nng_del nng_path nng_net nng_file_diff nng_stamp nng_seen=0
+  local nng_add nng_del nng_path nng_net nng_seen=0
   while IFS=$'\t' read -r nng_add nng_del nng_path; do
     [ -n "$nng_add" ] || continue
     [ "$nng_add" = "-" ] && continue   # binary numstat marker; SKILL.md is never binary
@@ -700,14 +700,7 @@ nng_scan() {
       echo "no-net-growth: $nng_label/$nng_path net $nng_net line(s) vs $nng_base — PASS (neutral or shrinking)"
       continue
     fi
-    nng_file_diff=$(git --no-optional-locks -C "$nng_repo" diff "$nng_base" -- "$nng_path" 2>/dev/null || true)
-    nng_stamp=$(printf '%s\n' "$nng_file_diff" | grep -E '^\+[^+].*net-growth-ok:' || true)
-    if [ -n "$nng_stamp" ]; then
-      echo "no-net-growth: $nng_label/$nng_path net +$nng_net line(s) but carries its OWN net-growth-ok stamp — PASS"
-      printf '%s\n' "$nng_stamp" | sed 's/^/  /'
-    else
-      NNG_VIOLATIONS+=("$nng_label/$nng_path (+$nng_net)")
-    fi
+    NNG_VIOLATIONS+=("$nng_label/$nng_path (+$nng_net)")
   done < <(git --no-optional-locks -C "$nng_repo" diff --numstat "$nng_base" -- "$nng_spec" 2>/dev/null || true)
   # Name the pathspec, not just the repo: one repo can hold several consumer dirs
   # ($HOME/Repos holds four), and a bare repo label would print an identical line for
@@ -788,7 +781,7 @@ done
 # near-miss is real: bd-curate-…xu5tz's own AC asked for an `evidence:` comment, and
 # implementing it literally would have produced a "stamp" this grep does not see.
 if [ "${#NNG_VIOLATIONS[@]}" -gt 0 ]; then
-  fail "no-net-growth: net-positive SKILL.md file(s) without their OWN net-growth-ok stamp: $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — move content to references/, or add an ADDED line to the growing file's own diff carrying the EXACT token <!-- net-growth-ok: <reason> --> (the literal string 'net-growth-ok:' is what is grepped: an 'evidence:'/'why:' comment does NOT count, and a shrink in another file does NOT offset it)."
+  fail "no-net-growth: net-positive SKILL.md file(s): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — core is loaded every invocation, so it holds or shrinks. Move the content to references/, or delete an equivalent amount from THIS file. A written justification is not a payment, and a shrink in another file does NOT offset it."
 fi
 
 # ---------------------------------------------------------------------------

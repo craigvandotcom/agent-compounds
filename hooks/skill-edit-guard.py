@@ -59,10 +59,11 @@ FRICTIONS.md, MAINTENANCE.md, tools/. Before adding content, check whether it be
   - FRICTION CAPTURE (skills/skill-builder/references/friction-capture.md): if this
     edit is landing a lesson/fix learned from friction, log it in the skill's
     FRICTIONS.md first -- promotion should be evidence-driven, not vibes-driven.
-  - NO-NET-GROWTH: SKILL.md core is loaded every invocation. Net line growth in core
-    without an evidence stamp or a matching demotion/deletion will fail the lint.sh
-    no-net-growth gate. Run `node scripts/skill-diet-conservation.mjs` if you are
-    moving or removing content, to confirm nothing unique is lost.
+  - NO-NET-GROWTH: SKILL.md core is loaded every invocation, so it holds or shrinks.
+    Growth is bought with an offsetting DELETION or a move to references/ — never with
+    a written justification. There is no stamp and no textual exception. Run
+    `node scripts/skill-diet-conservation.mjs` when moving or removing content, to
+    confirm nothing unique is lost.
   - SINGLE-HOME (ac-gcj/ac-znk.7): about to restate a rule whose canon lives in an
     owning domain skill (ac-pipeline/references/* — git discipline, delegation,
     run-ledger, verification gate; agent-mail/references/* — coordination;
