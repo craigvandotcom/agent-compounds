@@ -78,7 +78,7 @@ best-done-when:  <the ridealong hint — e.g. "on the next ASC version submissio
 
 Motivating case: BCA `bd-l6khg.13` (ASC intro-offer config) — no options, pure action,
 must ride a version submission. Copy-paste blocks + worked examples for both kinds:
-[reference/human-gate-template.md](reference/human-gate-template.md).
+`reference/human-gate-template.md`.
 
 **MANDATORY dependency wiring — not optional, not "if convenient":** every bead this
 decision gates gets a `blocks` edge back to the decision, at creation time:
@@ -91,7 +91,7 @@ This is the Exhaust Rule applied to human-gate beads. Without the edge, `br read
 can't exclude the gated subtree and the cockpit's leverage metric reads zero for a
 gate that's actually stalling real work (see cockpit ground truth #3 — 30/31 open
 human-gate beads had zero downstream reach before this rule existed). Full copy-paste
-template + worked example: [reference/human-gate-template.md](reference/human-gate-template.md).
+template + worked example: `reference/human-gate-template.md`.
 
 ## Agent bead template
 
@@ -258,7 +258,7 @@ precision); token cost is reported at batch/child granularity by `ac-batch-close
 A one-time catch-up pass across existing repos, run **after** this skill exists so it
 aligns to the standard above, not the other way round. Full checklist (synonym
 merges, the 9 DECISION-titled beads missing `human-gate`, the `bd-d6w79` double-label
-contradiction, `defer_until` gaps): [reference/2026-07-15-backfill-checklist.md](reference/2026-07-15-backfill-checklist.md).
+contradiction, `defer_until` gaps): `reference/2026-07-15-backfill-checklist.md`.
 
 ## Where beads live
 

@@ -100,12 +100,17 @@ def allow():
 
 
 def session_key():
+    # Subagents INHERIT the parent's CLAUDE_CODE_SESSION_ID, so a session-only key means
+    # the conductor's first skills/ edit disarms the guard for every child it spawns —
+    # and in a delegation-heavy pipeline the children are the ones doing the editing.
+    # Key on session + agent so each editing agent gets exactly one reminder.
     sid = os.environ.get("CLAUDE_CODE_SESSION_ID")
+    agent = os.environ.get("AGENT_NAME") or os.environ.get("CLAUDE_AGENT_ID") or ""
     if sid:
-        return sid
+        return sid + ("-" + agent if agent else "")
     # No session id available (other harnesses / manual invocation) -> degrade to a
     # daily key so the guard still fires at most once per day, never every call.
-    return "daily-" + datetime.date.today().isoformat()
+    return "daily-" + datetime.date.today().isoformat() + ("-" + agent if agent else "")
 
 
 def already_fired(key):

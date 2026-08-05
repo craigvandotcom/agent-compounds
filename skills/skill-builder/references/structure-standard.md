@@ -115,7 +115,7 @@ Python/bash utilities that get **run**, not loaded — validators, analyzers, ge
 
 ## Pointer syntax (portable form)
 
-Use plain markdown links and imperative prose. Do **not** use `@./references/x.md` — that auto-inline syntax is a compound-engineering *plugin* extension, not the Anthropic spec, and won't behave portably in a symlink-deployed skill.
+Use a backticked path in imperative prose, as the examples below do. Never `[path](path)` — a link whose text repeats its target pays twice for one path, and nothing clicks it. Do **not** use `@./references/x.md` — that auto-inline syntax is a compound-engineering *plugin* extension, not the Anthropic spec, and won't behave portably in a symlink-deployed skill.
 
 ```markdown
 # Demand-loaded at a specific stage (preferred for stage-specific detail):

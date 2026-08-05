@@ -92,9 +92,9 @@ A non-trivial skill is a **lean spine that routes to references**, not a wall of
 
 **Two traps the discriminator alone misses:** (1) enforcement-by-repetition — a rule re-checked at every decision point — is CORE and stays inline even though it "looks duplicated"; length there IS the enforcement. (2) A child-spawn prompt that gets pasted into a fresh sub-agent must stay inline (or be inlined-verbatim from a reference at the spawn site) — pointing a fresh child at a file it never reads silently breaks the spawn.
 
-Full rulebook (spine vs references vs owner-hosted canon, the orchestrator trap, pointer syntax, ToC rule): **[references/structure-standard.md](references/structure-standard.md)**. To *diet* an existing oversized skill (or batch-sweep the registry), run **`workflows/hygiene-pass.md`** — the callable "clean up our skills" procedure.
+Full rulebook (spine vs references vs owner-hosted canon, the orchestrator trap, pointer syntax, ToC rule): **`references/structure-standard.md`**. To *diet* an existing oversized skill (or batch-sweep the registry), run **`workflows/hygiene-pass.md`** — the callable "clean up our skills" procedure.
 
-**Moving content between tiers** (SKILL.md core ↔ `references/` ↔ holding zone) follows the promotion ladder: **up needs proof, down needs disuse, and unique content is never deleted without first aging in the holding zone** (`MAINTENANCE.md` § Holding pen) — so knowledge is never silently lost. Full rules + how ablation/metrics decide movement: **[references/promotion-ladder.md](references/promotion-ladder.md)** — it specializes `context-engineering` § PROMOTION & DEMOTION (SKILL.md:243–267) for the skill layer, is applied section-by-section by `workflows/hygiene-pass.md`, shares tier-3 holding-pen mechanics with `references/maintenance-ledger.md`, and adds the proof-gated promotion half on top of `references/structure-standard.md`'s move-out (demotion) tree.
+**Moving content between tiers** (SKILL.md core ↔ `references/` ↔ holding zone) follows the promotion ladder: **up needs proof, down needs disuse, and unique content is never deleted without first aging in the holding zone** (`MAINTENANCE.md` § Holding pen) — so knowledge is never silently lost. Full rules + how ablation/metrics decide movement: **`references/promotion-ladder.md`** — it specializes `context-engineering` § PROMOTION & DEMOTION (SKILL.md:243–267) for the skill layer, is applied section-by-section by `workflows/hygiene-pass.md`, shares tier-3 holding-pen mechanics with `references/maintenance-ledger.md`, and adds the proof-gated promotion half on top of `references/structure-standard.md`'s move-out (demotion) tree.
 
 ### 5. Token Economy — determinism first
 
@@ -122,7 +122,7 @@ Classify before cutting:
 Sentence-level: the **no-op test** — does it change behavior vs. the default? If not,
 delete the sentence, don't trim its words. Full payload (loading model, hard budgets
 incl. the ~15k-char registry listing cliff, evidence, sources):
-**[references/token-economics.md](references/token-economics.md)** — read it when
+**`references/token-economics.md`** — read it when
 writing/refining descriptions, cutting from a skill, or auditing registry footprint.
 
 ---

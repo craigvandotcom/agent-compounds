@@ -13,22 +13,22 @@ reservations, teardown, build slots. The MCP server provides the tools
 
 1. **Mint** a Tier-1 identity at session start if you will reserve files or commit under
    your own name; capture `name` + `registration_token`
-   ([references/session-procedure.md](references/session-procedure.md) § Mint, § Export).
+   (`references/session-procedure.md` § Mint, § Export).
 2. **Reserve** the files you are about to edit, at the work grain, BEFORE editing
    (§ Reserve). On `FILE_RESERVATION_CONFLICT`: skip or re-plan — never claim over it.
 3. **Release + self-deregister** as your true last act (§ Release) — own name only,
    never `retire_agent`, never cross-session, never `FoggyCreek`.
 4. `FoggyCreek` is the shared **Tier-2 chore identity** — it may commit chore files but
    may NEVER claim beads or reserve files
-   ([references/agent-identity.md](references/agent-identity.md) § Tier 2).
+   (`references/agent-identity.md` § Tier 2).
 
 ## References (the domain canon)
 
-- **[references/session-procedure.md](references/session-procedure.md)** — the CALL
+- **`references/session-procedure.md`** — the CALL
   PROCEDURE: mint template, the two call-scoped facts (explicit token threading;
   per-shell `AGENT_NAME` re-assert), export block, reservation cycle, release/deregister
   exit ordering.
-- **[references/agent-identity.md](references/agent-identity.md)** — the DOCTRINE: the
+- **`references/agent-identity.md`** — the DOCTRINE: the
   two-tier contract (minted Tier-1 vs FoggyCreek Tier-2), the three deregistration
   layers + ac-ycr.8 runtime facts, assignee-vs-reservation split, enforcement layers
   (pre-commit guard), canonical project-key format.

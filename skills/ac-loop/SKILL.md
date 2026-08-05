@@ -883,7 +883,7 @@ Always notify on Slack at meaningful milestones. Use `slack-send --channel sofi 
 
 ## Scheduling
 
-PAI job config, triage decoupling, keep-awake layers: [references/scheduling.md](references/scheduling.md).
+PAI job config, triage decoupling, keep-awake layers: `references/scheduling.md`.
 
 ---
 
