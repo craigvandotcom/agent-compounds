@@ -9,7 +9,7 @@ description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fi
 
 When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal for simple bounded forks. When invoked by the scheduler (headless), never `AskUserQuestion` — apply the Exhaust Rule: leave the `human-gate` decision bead in place, post an advisory Slack nudge, and keep working everything else. Decisions are answered via `ac-human-session` (the docket), not mid-run. **One exception:** the Phase 0 **width prompt** never uses `AskUserQuestion` (it has no timeout) — it is a timed plain-text ask, first output of the run (see Phase 0 § Width Prompt).
 
-> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not `human-gate` is loop-eligible** — if `unrefined`, you refine it (`ac-bead-refine`) first, then implement; if `refined`, you implement. The `unrefined` label routes a bead *through* refinement — **it is NOT a human gate** (memory `feedback-conductor-beads-need-unrefined-label`: the label forces the QA refine pass, it does not withhold sign-off). The **only** thing exempt from autonomous implementation is a **`human-gate`** bead (surfaced, never auto-closed). Craig controls what *enters* the pipeline **upstream** — at the backlog pool (`ac-backlog`) and via plan `loop-ready` sign-off; once an idea is a *bead* it is already committed work, so drive it to merge, furthest-advanced first. (Refinement *priority* still favours signed-off/furthest-advanced work — but nothing non-`human-gate` is gated *out*.)
+> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not `human-gate` is loop-eligible** — if `unrefined`, you refine it (`ac-bead-refine`) first, then implement; if `refined`, you implement. The `unrefined` label routes a bead *through* refinement — **it is NOT a human gate**. The **only** thing exempt from autonomous implementation is a **`human-gate`** bead (surfaced, never auto-closed). Craig controls what *enters* the pipeline **upstream** — at the backlog pool (`ac-backlog`) and via plan `loop-ready` sign-off; once an idea is a *bead* it is already committed work, so drive it to merge, furthest-advanced first. (Refinement *priority* still favours signed-off/furthest-advanced work — but nothing non-`human-gate` is gated *out*.)
 
 > **Orchestration contract — 3-level, non-negotiable.** You are a *conductor*, not a doer. Every
 > "Invoke `<skill>`" / "Run `<skill>`" step in this file means **spawn a fresh sub-session
@@ -174,7 +174,7 @@ mcp__mcp-agent-mail__force_release_file_reservation(
 This is a stale-**RESERVATION** sweep ONLY — mirror the Exit-Land teardown's force_release loop, and
 like it do NOT `retire_agent`/`deregister_agent`: there is **no identity TTL**, and name-only
 cross-session identity retire is rejected at runtime (decision `ac-ycr.8`). A dead run's identity
-persists as harmless roster noise until the upstream admin-sweep primitive (`ac-rjh`) lands; only its
+persists as harmless roster noise; only its
 reservations — the safety-critical half — are swept here.
 
 ### Read Current Board State
@@ -192,8 +192,7 @@ Read the current state of the board. This is the map you navigate by.
 > nothing; **`unknown` is NOT green**), and **Scan F board truth** (PRINT the `board-truth`
 > line EVERY run, `0` included; **adjudicate every flagged bead BEFORE dispatching an
 > implement child at it** — read its `## Delivers` and check those artifacts at HEAD.
-> bd-board-truth-reconciliation-gate-x1o01: 3 of 10 refined ready bugs were already shipped
-> and one bead burned FOUR agent sessions. Scan F **flags only** — never close a bead on its
+> Scan F **flags only** — never close a bead on its
 > say-so; a false STALE skips real work, which is worse than the wasted child).
 > The `bv`/`br` calls below are that spec's ready-set lens.
 
@@ -258,16 +257,13 @@ grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 > conductor's actual enforcement point for this gate, not here. Unrelated plans (no
 > declared `depends-on`) may parallelize within the beadify phase. Bead-level
 > `depends-on` edges + `bv --robot-plan` tracks continue to govern within-*implement*
-> partitioning. Prior art: memory `plan-internal-gates-outrank-blanket-loop-directives`
-> — this structuralizes what plan prose already did.
+> partitioning.
 
-<!-- net-growth-ok: dream ac-fxq Phase-0 tooling-bug precondition check -->
 **Open tooling bugs vs THIS run's config (precondition check):** among the
 ready/open beads labelled `tooling`/`infra` (or typed `bug` against pipeline skills), ask
 whether this run's configuration satisfies any bead's trigger. A known open bug whose
 trigger you are about to satisfy is a **precondition failure, not a background risk** —
-resolve it, route around it, or surface it before dispatching children (a tr-alias bug
-open on the board while five children tripped it cost a run ~6 min + 4 orphaned dirs).
+resolve it, route around it, or surface it before dispatching children.
 
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when they are `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>` AND Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>` AND Scan F's `board-truth: <n> open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green; and a non-zero `board-truth` count means those beads may already be DONE — adjudicate each before spending a child on it). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
@@ -277,7 +273,7 @@ Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any
 >   - **P1/P2 bugs preempt as today** — unchanged.
 >   - **P3+ may join the next regular cycle's batch ONLY if confirmed render-only** via source-trace of the root-cause file set (`ac-pipeline/references/risk-classification.md` **binding #4**).
 >   - **Demotion requires source-trace** proving: no touch to any RISK-TOUCH persistence/write/RPC path (Item 0). Cosmetic = layout/color/spacing/copy only, underlying data correct.
->   - **Wrong or stale value shown to user** is "wrong values" → **preemptive even if never persisted**. Example: a "wrong value shown" bug classifies preemptive.
+>   - **Wrong or stale value shown to user** is "wrong values" → **preemptive even if never persisted**.
 >   - **When a bug plausibly reads into both buckets, default to preemptive.**
 >   - **Class trumps priority** — any bug whose trace touches persistence, auth, money, or produces wrong values is preemptive **regardless of P-label**.
 >   - **GUARD-RAIL:** a mislabeled P3 waits at most one cycle (~2–3h); source-trace (not description) catches data-integrity mislabels.
@@ -344,9 +340,7 @@ br ready --limit 0 --json | jq '[.[] | select(
 
 When the orphan set is larger than one batch, **group it by the file paths cited in the beads'
 descriptions and ship the densest cluster first** (command:
-`ac-pipeline/references/board-scan.md` § File-cluster density). Clustered batches share the
-read, mental model, and test run; disjoint clusters are **resource-disjoint by construction** —
-the property that makes `PARALLEL_WIDTH > 1` structurally safe instead of merely lucky.
+`ac-pipeline/references/board-scan.md` § File-cluster density).
 
 **Pick the densest cluster for batch 1; if running parallel, give each child a DIFFERENT
 cluster — never two children inside one cluster.** Beads whose descriptions cite no file path fall
@@ -364,11 +358,8 @@ If orphans exist:
    # batch under the shared chore identity (which silently misattributes and breaks the gate).
    [ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: AGENT_NAME=FoggyCreek — cannot claim beads under the Tier-2 chore identity; re-assert the Phase-0 minted loop name" >&2; exit 2; }
    br update <id1> <id2> ... --status in_progress --assignee "$AGENT_NAME"
-   # net-growth-ok: ac-ewgr.2 — the TARGET_BEADS header mandate must sit in BOTH claim steps; the gate hard-FAILs without it
    ```
-   This is the precedent from body-compass-app memory
-   `claim-adopted-beads-before-planning` (claim before you plan/implement, generalized here
-   to every batch) — once claimed, **`br ready` naturally excludes these beads** for every
+   Once claimed, **`br ready` naturally excludes these beads** for every
    other conductor (its status filter already returns only open/unclaimed beads — no new
    gating logic needed). Mint the batch's CLAIM ID **once**, at this moment:
    `<first-claimed-bead-id>-<YYYYMMDD>` (e.g. `bd-u2lo1.1-20260712`). Write it to
@@ -377,21 +368,14 @@ If orphans exist:
    `$ARTIFACTS_DIR/progress.md`'s header. Downstream skills (RUN_ID re-keying, bd-u2lo1.9)
    read the claim id verbatim from `.claim-id`. **That same header MUST also carry
    `TARGET_BEADS=<count>`** — the bead count of THIS claim (per child at width >1).
-   `ac-pipeline/scripts/beads-closed-gate.sh` parses it for the completeness union; since
-   ac-ewgr.2 a progress file that EXISTS without it is a HARD FAIL, not a warning, because
+   `ac-pipeline/scripts/beads-closed-gate.sh` parses it for the completeness union; a
+   progress file that EXISTS without it is a HARD FAIL, not a warning, because
    the union check silently short-circuits without it (`--beads` does NOT compensate).
 
-   <!-- net-growth-ok: bd-scjgv AC3 + bd-0sde8 AC3/AC4 — both beads REQUIRE their idiom and
-        rationale to sit INLINE at the point of use. A pointer is precisely what already
-        failed: shell-guardrails.md was correct the whole time and three published snippets
-        still shipped the blocked shape, and the "Non-bug REFINE" ambiguity cost live
-        conductor adjudication because the reason lived elsewhere. Moving either to
-        references/ would re-create the defect being fixed. -->
-
-   > **HOW to write those two files (bd-scjgv).** The obvious idiom is blocked: `printf … >
+   > **HOW to write those two files.** The obvious idiom is blocked: `printf … >
    > "$ARTIFACTS_DIR/.claim-id"` trips dcg's `core.filesystem:redirect-truncate-dynamic-path`,
    > because a truncating redirect to a shell-expanded target cannot be proved before
-   > O_TRUNC. This cost a live conductor time in Phase 0 for want of one line here. Use the
+   > O_TRUNC. Use the
    > **Write tool** (simplest — no shell involved), or `tee`, which is not a redirect:
    >
    > ```bash
@@ -421,8 +405,6 @@ If orphans exist:
    `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   # net-growth-ok: ac-ji5 — both-roots gate-script probe; a single hardcoded `.claude/` path
-   # is unrunnable from the agent-compounds registry itself (the script lives at skills/… there).
    PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"   # re-derive HERE — the assignment above is in a different bash call
    GATE="$PROJECT_ROOT/skills/ac-pipeline/scripts/beads-closed-gate.sh"                    # registry layout
    [ -f "$GATE" ] || GATE="$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh"   # harness layout
@@ -594,8 +576,7 @@ After a nudge, re-check on the next scheduled loop fire. If the block persists: 
 
 ## Ceremony batching pool (bd-chd5p.2)
 
-~4h reclaim target: the **tiny-solo-ceremony tail** pays full fixed cost per
-independently-closed bead. **"Ceremony" here** = the `ac-batch-close` CI-dispatch +
+**"Ceremony" here** = the `ac-batch-close` CI-dispatch +
 report-commit + review-mark advance. The full 6-dimension **ac-review runs per
 implement-cycle, unbatched** — only the CI/report leg accumulates. Planned waves
 ceremony as their own single batch (never enter the pool; cap never force-splits a
@@ -635,20 +616,6 @@ earlier fix) is structurally preserved.
 | **(a)** | Refine for batch **N+1** may run during batch **N**'s ceremony (CI poll included). |
 | **(b)** | **REFINE** children may run during a **bug-lane** implement — **any bead type, bugs included**. What makes this safe is that refine ships no product code, not what kind of bead it refines. |
 | **(c)** | **REFINE** children may run during a **feature-wave** implement — same rule, same reason: **any bead type**. |
-
-> **Why the qualifier is gone (bd-0sde8).** (b)/(c) previously read "Non-bug **REFINE**
-> children", which could modify either the WORK KIND (refine ships nothing → safe) or the
-> BEAD TYPE (only refine non-bug beads). The two readings give opposite behaviour, and a
-> live conductor had to stop and adjudicate mid-run. **Work-kind is the intended reading**,
-> on the file's own evidence: the rationale directly above says *"Refine ships nothing, so
-> Rule 0's 'nothing broken ships alongside new work' is untouched"* — an argument entirely
-> about what refine does, never about bead type — and the hookpoint table below says only
-> "a disjoint unrefined-bead subset", with no bug exclusion anywhere. The qualifier was
-> redundant under the correct reading and actively misleading under the wrong one, so it is
-> deleted rather than reworded. **No behavioural change** — this states what the rules
-> already meant.
-
-<!-- net-growth-ok: phase-pipelining-permissions wired live -->
 
 **Engage phase-pipelining at these hookpoints** (the conductor's *when*):
 
@@ -784,7 +751,7 @@ fighting the machine. Hold these:
   resource-disjoint however same-kind they look (bd-3sh8k — build-dir contention makes a
   mandated "full depth" pass silently read as achieved). Serialize them, or give each its
   own build dir / worktree. **What MAY
-  pipeline (bd-chd5p.3):** **refine** during ceremony CI poll (a), during
+  pipeline:** **refine** during ceremony CI poll (a), during
   bug-lane implement (b), or during feature-wave implement (c) — refine ships nothing;
   children defer beads-DB mutations until the ceremony ledger commit lands. Still
   serial: batch-close ceremonies (serial by construction); two writers on the same
@@ -833,20 +800,6 @@ run therefore yields an empty-or-absent carrier, and `ac-land` (the consume leg)
 gracefully to today's behavior when the carrier is empty/absent — nothing downstream ever
 parses an empty stage section.
 
-> **Why a dedicated carrier file, not `progress.md`:** children NEVER share a `progress.md`
-> (shared counting breaks `TARGET_BEADS` recovery after compaction — the "children NEVER share
-> a progress file" invariant in Efficiency § above); a separate carrier keeps that invariant
-> intact and gives `ac-land` ONE path to read. Reflect runs at conductor level as a SPAWNED
-> final child (see § Spawn reflect below) — spawn, never inline: the conductor never reads a
-> phase skill's `SKILL.md`, and the carrier remains the evidence path across that boundary.
-
-**Routing note:** this carrier's `friction:` items are inherently skill-scoped (each
-keyed to the stage/skill that hit them) — `ac-land`'s Phase 3 tier router now routes the
-skill-scoped T3 subset to that skill's `FRICTIONS.md` instead of `memory/auto/` (see
-`ac-land/SKILL.md` § "Loop-retro friction disposition" and
-`skill-builder/references/friction-capture.md` § Routing). Nothing changes here — the
-carrier still just aggregates and hands off; the destination logic lives entirely downstream.
-
 ### Exit-Land — the loop's single closing invocation
 
 ac-land runs **once here**, not per-wave. The loop shipped one or more waves, each writing
@@ -879,15 +832,13 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 
 ### Spawn reflect (the conductor's learning step — after land returns)
 
-<!-- net-growth-ok: ac-znk.6 -->
-
 After `ac-land` returns, SPAWN a `reflect` child — never read `reflect/SKILL.md` yourself
 (3-level contract). Hand it, as literal paths + text (payloads point): the friction
 carrier `/tmp/loop-retro-<RUN_ID>.md`, the T3 subset + skill-scoped tags from land's
 return summary, AND your own ≤300-word **decision trace** (what was picked/skipped and
 why, gate trips, batch shapes — the run perspective only the conductor holds; write it to
 `/tmp/loop-decision-trace-<RUN_ID>.md` first). Exactly ONE reflect per run — land skipped
-its own call because you make this one (sole-call invariant, relocated). Give it its own
+its own call because you make this one (sole-call invariant). Give it its own
 ledger line so a compacted conductor still owes it.
 
 ### Deregister the conductor identity (Layer 1 — the loop's true last act)
@@ -913,11 +864,6 @@ mcp__mcp-agent-mail__deregister_agent(
 
 Only then does the loop process exit.
 
-> **No token-budget stop** (removed deliberately) — an unmeasurable budget only becomes a
-> vague excuse to quit early; the loop is bounded by the **measurable** conditions instead:
-> C1 (pipeline empty) or C3 (iteration cap). A run needing a hard ceiling gets one
-> explicitly (an iteration cap or a stated goal).
-
 ---
 
 ## Milestone Notifications
@@ -937,27 +883,7 @@ Always notify on Slack at meaningful milestones. Use `slack-send --channel sofi 
 
 ## Scheduling
 
-ac-loop is designed to run as a scheduled PAI job (headless). Configure in `infrastructure/jobs/<app>.json`:
-
-```json
-{
-  "name": "ac-loop-<app>",
-  "prompt": "Load the ac-loop skill and run the autonomous shipping loop for <app>. Working directory: <app-path>.",
-  "schedule": "0 */4 * * *",
-  "enabled_on": ["<hostname>"],
-  "channel": "<slack-channel-id>"
-}
-```
-
-Headless runs never `AskUserQuestion` — all decisions fall through to advisory nudges + open `human-gate` decision beads by design (Exhaust Rule). The channel ID is used by the scheduler to post nudges and thread updates.
-
-Run `ac-triage` as a **separate** scheduled job before `ac-loop` (e.g., 30 min earlier). Triage feeds beads into the board; the loop ships them. Keep them decoupled so triage failures don't block shipping.
-
-**Keep-awake for overnight/headless runs (defence in depth).** A scheduled loop that outruns the display-sleep timer stalls silently when the Mac sleeps. Three layers, in priority order:
-
-1. **Wrap the run in `caffeinate -ims`** (keep-awake) — the primary mechanism. This is what actually keeps a long headless loop alive across the night.
-2. **launchd watchdog + SessionEnd resume file** — restarts / resumes a run that dropped.
-3. **In-session `ScheduleWakeup`** — arm it ONLY as the third, last-resort layer. It is **in-memory and dies with the process**, so sleep kills the wake chain (memory: `schedulewakeup-in-memory-only-sleep-kills-chains`); never rely on it as the primary keep-awake.
+**Scheduling** (PAI job config, triage decoupling, keep-awake layers): [references/scheduling.md](references/scheduling.md).
 
 ---
 
@@ -979,4 +905,3 @@ The loop never touches these. It nudges Craig when they're bottlenecks.
 <!-- diet: restated bullets deleted — live body twins verified; the one Remember-only rule survives below -->
 
 - **Findings channels are bead-first (known-action capture)** — field-test / ceremony / error-handling findings that you KNOW need action beyond this session are filed as a bead (`unrefined`) and cited by ID in the report, never left as prose-only; a prose-only findings channel needs a NAMED consumer or it orphans the moment that consumer closes (bd-pwt44). Litmus: "we know action must be taken" = bead; "worth mentioning" = prose (`rule-known-action-capture-beads-not-prose`)
-- The friction-block child-summary contract lives in `references/delegation-prompts.md` § Child friction schema (the one definition of the four keys, bd-jv33f.2)
