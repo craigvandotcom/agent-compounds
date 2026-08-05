@@ -28,8 +28,11 @@ A proposal is Tier-1 `auto` **iff ALL of these hold** (any failure → `gated`):
 1. `status: pending` (already-decided proposals route elsewhere).
 2. `category` ∈ {`fact`, `rule`} (a `lint-fix` that creates a brand-new note also qualifies).
 3. `target_repo: root`.
-4. `target_file` is under `infrastructure/memory/auto/` **and is not `MEMORY.md`** (the
-   always-loaded hot lane is never auto-edited beyond its one new index line).
+4. `target_file` is **one literal `.md` path** directly under `infrastructure/memory/auto/`
+   **and is not `MEMORY.md`** (the always-loaded hot lane is never auto-edited beyond its one
+   new index line). A prose value naming several files (`".../auto/ (5 files) + foo.py"`)
+   is `gated` — it would otherwise pass both the prefix and the not-exists test in clause 6
+   and false-auto a multi-file EDIT as a pure ADD.
 5. `judge.score ≥ 9` (high-confidence only; the ≥7 ship bar is for *existence*, ≥9 for *autonomy*).
 6. The `target_file` **does not yet exist** — a pure ADD, never an edit to existing knowledge.
 
