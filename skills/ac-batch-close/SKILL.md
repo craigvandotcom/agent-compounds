@@ -756,10 +756,6 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 
 ---
 
-## Remember
-
-<!-- diet: all bullets deleted — every bullet restated a live body section (body twins verified); nothing was Remember-only -->
-
 ---
 
 _Trunk-direct batch closing: gate through a light review, dispatch CI once, commit the thin
