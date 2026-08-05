@@ -127,7 +127,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 
 - Stage only what triage owns: `.beads/*.jsonl`, `.claude/state/`, `_backlog/pool/`.
   Never sweep unrelated dirty files (concurrent sessions share this checkout).
-Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Identity + reservations per `agent-mail/references/session-procedure.md` (mint · export · reserve · release).
 
 - Commit **from inside `$TRIAGE_WT`** (a detached checkout — there is no branch to re-check,
   and no concurrent session can switch it out from under this run), with `AGENT_NAME=<name>`

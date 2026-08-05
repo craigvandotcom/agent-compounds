@@ -71,7 +71,7 @@ exhaustive and no "pass" is inferred. Then:
   the Do's/Don'ts, required interaction states. File each deviation as a bead
   (`qa-finding`, + `qa-blocker` if it breaks the spec materially). **Be specific:**
   "change X to Y because design.md says Z" — never vague "feels off." This phase
-Visual references per `ac-pipeline/references/design-refs.md` (save immediately, cite the path, never prose-only). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Visual references per `ac-pipeline/references/design-refs.md` (save immediately, cite the path, never prose-only).
 
   does not edit code; it produces the deviation list. **If `docs/design-refs/` has a
   reference image for the surface under polish, anchor on it explicitly:** do a
@@ -93,7 +93,7 @@ Gains plateau after ~3 elevation cycles per surface — don't loop past diminish
 here to avoid colliding with the "ledger" term already owned by Conformance/Elevation. One task
 per major section, created at the start of the run:
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 TaskCreate("Baseline — read design.md + theme siblings + ui-audit.md")

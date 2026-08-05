@@ -7,9 +7,9 @@ description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, exp
 **You are the conductor.** A panel of reviewers hunts independently, each through a different
 lens. You synthesize, fix, and iterate. Codebase-wide — not tied to any feature branch or diff.
 
-Scaling tiers per `ac-pipeline/references/risk-classification.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Scaling tiers per `ac-pipeline/references/risk-classification.md`.
 
-Capability-starved runs: `ac-pipeline/references/degraded-mode.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Capability-starved runs: `ac-pipeline/references/degraded-mode.md`.
 
 The weekly quality pass for a repo (`PANEL=full`, 7 lenses), or a quick between-session
 sweep (`PANEL=light`, 3 lenses). For feature-scoped review, use `/ac-review` instead.
@@ -228,7 +228,7 @@ to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` 
 it and `completed` when done; put live detail in the description (per round: finding counts +
 commit SHA), so a glance at the ledger shows exactly where the run is.
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 # Fixed tasks — create upfront at Phase 0:
@@ -425,7 +425,7 @@ hygiene-finding,unrefined`. Worth-chasing uncertainties → `-t investigation`. 
 taste/product forks in an autonomous run (user not present) → `-t decision
 --labels human-gate` with a pre-staged memo, then continue — never stall the
 sweep on a question. Dedupe per the canon's anchor-dedupe rule
-(`beads-standards/reference/bead-conventions.md` § Anti-inflation); nits stay in the report <!-- net-growth-ok: ac-gzb P2 — canon citation replaces weaker local rule -->
+(`beads-standards/reference/bead-conventions.md` § Anti-inflation); nits stay in the report
 (hygiene is the highest inflation risk — a bead is something you'd schedule).
 
 > **`human-gate` is MANDATORY on every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled
@@ -549,9 +549,7 @@ Produce the summary using the template in **`references/report-template.md`** (c
 
 **Commit the run report to `.claude/reviews/` root** (the standalone/mid-batch review
 destination — same rule as any non-batch-close `ac-review` invocation). *Hygiene itself* **must
-NOT** write to `.claude/reviews/batch/`: <!-- net-growth-ok: bd-kudrb — hygiene is a third
-potential writer of the review-mark path; the existing warning here explained only the
-stale-mark risk, not the mid-ceremony under-scoping one. --> that directory is the review-mark, and under the
+NOT** write to `.claude/reviews/batch/`: that directory is the review-mark, and under the
 single-writer invariant (bd-kudrb) **only `ac-batch-close`'s Act 3 commit may touch it** — not
 hygiene, not `ac-review`. A hygiene run on its own is not a batch close; writing there would
 spuriously advance the review-mark and make the next standing-review-of-`main` skip real commits,

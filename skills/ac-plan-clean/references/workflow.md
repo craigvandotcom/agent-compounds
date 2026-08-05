@@ -1,5 +1,5 @@
 
-Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork).
 
 **You are the conductor.** Three Sonnet reviewers check plan correctness independently. You track consensus across rounds and apply fixes. This is a hygiene pass — targeted edits, not a rewrite.
 
@@ -49,7 +49,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 ### Checkpoint Plan
 
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 ```bash
 git add "$PLAN_FILE" && git commit -m "docs(plan): checkpoint before plan-clean
@@ -142,7 +142,7 @@ to a round count or showing phantom rounds). `TaskUpdate` each to `in_progress` 
 it and `completed` when done; put live detail in the description (per round: finding +
 applied counts), so a glance at the ledger shows exactly where the run is.
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 # Fixed tasks — create upfront at Phase 0:

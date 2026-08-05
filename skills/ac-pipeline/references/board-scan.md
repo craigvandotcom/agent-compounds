@@ -95,7 +95,6 @@ relationships these two classes need.
 
 ### File-cluster density (batch-selection read)
 
-<!-- net-growth-ok: cluster command extracted from ac-loop core (ac-znk.3) -->
 
 Derived read over the ready-orphan set — ranks the file paths cited in bead descriptions
 by density. The consumer's lens (densest cluster first, disjoint clusters per parallel

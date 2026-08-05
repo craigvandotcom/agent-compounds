@@ -6,7 +6,6 @@ description: 'The engineering-pipeline domain skill — TWO lanes: (1) ARCHITECT
 
 # ac-pipeline — the engineering-pipeline domain (architecture + operating contracts)
 
-<!-- net-growth-ok: ac-znk.7 -->
 
 
 Two lanes, one owner (renamed from `ac-pipeline-builder`, ac-znk.7 coda):
@@ -304,9 +303,6 @@ commit directly to `main` as pathspec commits under the full H7 discipline
 never `ac-merge`. The run report commits to `.claude/reviews/` root and does not advance the
 `.claude/reviews/batch/` review-mark.
 
-<!-- net-growth-ok: bd-kudrb — this skill is the DESIGN doctrine for new pipeline skills; the
-single-writer rule belongs here so the next skill that emits a review artifact does not pick
-`batch/` and silently re-break every batch range. -->
 
 **Single-writer invariant on the review-mark (bd-kudrb).** `.claude/reviews/batch/` is written
 by exactly ONE commit per ceremony — `ac-batch-close`'s Act 3. `ac-review` stages its findings
@@ -369,7 +365,6 @@ Concurrent pipeline ceremonies share one app checkout (no worktrees between cere
   (explicit `--beads` scope, L10a being the identity-lifetime case). A live multi-batch dry-run
   is **not** an acceptable substitute: a ceremony-wired gate structurally gets its first live
   exercise at its own shipping ceremony, so the fixtures are the only pre-ship exercise it gets.
-  <!-- net-growth-ok: ac-j4u — decision ac-n7h's shipping rule belongs with the pipeline's change standards -->
 
 
 ---
@@ -401,7 +396,6 @@ The doctrine is the target; these stage edits bring reality into line:
 
 ## Reference contracts (owner-hosted here — ac-znk.7)
 
-<!-- net-growth-ok: ac-znk.7 owner-hosting — this index IS the move's purpose: the pipeline's contract library, discoverable from its owning spine; each file relocated verbatim from _shared/ (matching deletions, same commit) -->
 
 The pipeline's cross-skill contracts live in `references/` of THIS skill — the pipeline's
 own behaviour shapes them, so the pipeline doctrine skill owns them. Workflow skills bind
@@ -414,4 +408,4 @@ prefixes) · `board-scan` (orient scans A–E) · `risk-classification` (panel/g
 tiers) · `review-consensus` (consensus + conductor triage) · `ceremony-batching-pool`
 (pool RMW + drain) · `disposition` (findings three-way rule + save-for-later) ·
 `degraded-mode` (capability-starved runs) · `shell-guardrails` (dcg-safe write/delete
-shapes) · `anti-patterns` (named failure modes) · `design-refs` (target-visual capture + AC-path gate) <!-- net-growth-ok: design-refs added to the contracts index -->
+shapes) · `anti-patterns` (named failure modes) · `design-refs` (target-visual capture + AC-path gate)

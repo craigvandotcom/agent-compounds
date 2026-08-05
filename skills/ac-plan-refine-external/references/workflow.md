@@ -14,7 +14,7 @@
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | Plan file (from `/ac-plan-init` or `/ac-plan-refine-internal`)                                   |
 | **Output**       | Refined plan (in-place edit), `REFINEMENT-LOG.md` in `_plans/research/`             |
-Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork).
 
 | **Artifacts**    | Model responses in `$WORK_DIR/`, consensus registry                                        |
 | **Verification** | Convergence trend, plan committed                                                          |
@@ -114,7 +114,7 @@ EOF
 
 Commit the original plan to git before any modifications, so there's always a clean baseline to diff against or revert to.
 
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 ```bash
 git add "$PLAN_FILE"

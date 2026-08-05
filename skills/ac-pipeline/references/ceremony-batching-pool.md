@@ -113,7 +113,6 @@ Per-cycle ac-review remains **unbatched**. Bisection cost capped by selected-set
 
 ## Refine-during-ceremony guard-rails
 
-<!-- net-growth-ok: guard-rails extracted from ac-loop core (ac-znk.3) -->
 
 Binding whenever refine children run concurrently with a ceremony (phase-pipelining
 permissions, `ac-loop` § Phase pipelining permissions).

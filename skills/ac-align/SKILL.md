@@ -55,7 +55,7 @@ upfront; `TaskUpdate` each to `in_progress` when its phase starts and `completed
 ends. **"Present user decisions" is INTERACTIVE-only** — REVIEW mode skips Phase 6
 entirely (it emits proposals, never asks), so don't create that task on a REVIEW run.
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 TaskCreate("Init — resolve _strategy/ or a stated north star")

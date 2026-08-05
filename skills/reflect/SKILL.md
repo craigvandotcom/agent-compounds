@@ -151,7 +151,7 @@ just how it's SHAPED?** (full boundary: `skill-builder/references/maintenance-le
   human merge (rule 3 in `ac-pipeline/references/disposition.md`, consistent with ac-land's no-auto-apply).
   **Interactive:** present the exact proposed edit (target file + diff + session evidence) and get
   explicit approval before writing. **Headless:** file a decision bead —
-Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
 
   `br create -t decision -p 3 -l human-gate,skill-improvement,skill:<name>` with the memo
   (target · evidence · diff · recommendation), **dedupe-first** against open `skill-improvement`
@@ -173,7 +173,6 @@ capturing this session" — that's a valid outcome.
 
 ### 8. Open-ends checkpoint (INTERACTIVE sessions only — skip entirely when headless)
 
-<!-- net-growth-ok: Craig-directed feature 2026-07-31 — last-look sweep of open ends before session close, interactive only -->
 
 Before the session closes, sweep for loose threads and present them to the user ONCE:
 

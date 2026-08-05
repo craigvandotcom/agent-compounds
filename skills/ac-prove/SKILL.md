@@ -154,7 +154,7 @@ fix-forward round commits.
 After a green receipt (whether reached with zero or several fix-forward rounds), `+qa` runs the
 device/browser QA layer on top of the proven tip:
 
-Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally.
 
 - `ac-qa-device` — including the review-critical sim-PASS rule
   (memory: `rule-review-critical-journeys-sim-pass-before-submission`) when the caller's context
@@ -221,7 +221,7 @@ uses `probe`, a caller that needs "is this commit actually proven" uses `ensure`
 All of a/c/d/e are **active this plan**; b is deferred (spec is shipped, not wired to any
 scheduler entry).
 
-QA evidence/report schema: `ac-pipeline/references/qa-shared.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+QA evidence/report schema: `ac-pipeline/references/qa-shared.md`.
 
 `+qa` depth (consumers a and d) = `ac-qa-device` (including the review-critical sim-PASS rule,
 memory `rule-review-critical-journeys-sim-pass-before-submission`) / `ac-qa-browser` /

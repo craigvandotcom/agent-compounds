@@ -63,7 +63,7 @@ when it ends (both modes — NIGHTLY tracks the ledger internally even with no h
 it to). This run does not invoke sub-skills mid-flight; if a future revision does, that
 sub-skill keeps its own ledger — don't duplicate its steps here.
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 TaskCreate("Scope + scan — read AGENTS.md, scan beads/plans/backlog via board-scan")
@@ -275,7 +275,6 @@ reproducible, or (c) superseded by a fix that already merged. Propose
 close/merge per item. **Never touch OPEN `human-gate` or `qa-blocker` beads** —
 those are gated, not housekeeping.
 
-<!-- net-growth-ok: bd-8ms5t + bd-zugqh rulings must sit inline at the decision point -->
 > **The RAW OPEN COUNT is not debt and is never escalated alone** (bd-8ms5t).
 > Report the lane's **age distribution** (oldest, median, how many carry merged-fix evidence),
 > never a bare total, and escalate ONLY the actionable subset per (a)/(b)/(c); empty subset → one
@@ -325,7 +324,7 @@ those are gated, not housekeeping.
 
 If any files were moved or updated:
 
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 ```bash
 # You performed every move/update yourself — commit EXACTLY those paths.

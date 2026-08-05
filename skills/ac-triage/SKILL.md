@@ -30,7 +30,7 @@ does NOT ship builds (that's `ac-distribute`) and does NOT itself reimplement th
 conventions — it hands off. Headless, source-agnostic, cross-app; only the *sources* are
 app-specific.
 
-Findings disposition per `ac-pipeline/references/disposition.md` (this skill is its external-signal instantiation). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Findings disposition per `ac-pipeline/references/disposition.md` (this skill is its external-signal instantiation).
 
 **Route by shape, not by source** (the same rule `ac-backlog` uses): a *defect* — something
 broken, a specific reproducible crash/error — becomes a **bead** (execution-ready). A *desire
@@ -85,7 +85,7 @@ run itself, not just its report).** Create these upfront; `TaskUpdate` each to
 `in_progress` when its phase starts and `completed` when it ends. `ac-bead-refine`,
 invoked mid-run in Phase 3c, keeps its own ledger — don't duplicate its rounds here.
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 TaskCreate("Scope + watermark — read CORE/triage.md, load per-source watermarks")

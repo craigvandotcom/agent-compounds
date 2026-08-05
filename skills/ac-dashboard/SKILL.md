@@ -84,7 +84,6 @@ ready {N} · unrefined {N} · blocked {N} · in-progress {N}
 epics: {title} — {closed}/{total} children ({ready} ready)
 labels: human-gate {N} · pipeline-proposal {N} · dream-proposal {N} · findings {N} · qa-blocker {N}
 queue lanes: any label with >5 open human-gate beads (machine-filed batches, e.g. curator-escalation) — count them, never itemize them
-<!-- net-growth-ok: 2 lines mirroring ac-human-session's queue-lane rule so both surfaces agree; a split render is worse than the growth. -->
 
 
 ### 🚧 WIP

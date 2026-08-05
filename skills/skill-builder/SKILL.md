@@ -297,7 +297,7 @@ Skill: skill-builder
 - [ ] **No bare foreground `sleep`** — `grep -nE 'sleep [0-9]' <skill files>`: every hit
       must sit inside a wait/until loop. A bare foreground sleep is harness-blocked; in
       an unattended run it burns a whole turn. Use a polling loop with an exit predicate,
-      or `Monitor`. <!-- net-growth-ok: ac-avx audit rule -->
+      or `Monitor`.
 
 **Step 4: Evidence Review**
 - [ ] Show before/after comparison

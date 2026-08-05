@@ -91,7 +91,7 @@ A runtime **progress list** (`TaskCreate`/`TaskUpdate`) — distinct from the Co
 ledgers below, which are the audit's *findings* output — so a glance shows where a long whole-site
 crawl actually is. One task per major section, created at the start of the run:
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 TaskCreate("Baseline — read design.site.md (or bootstrap DRAFT) + ui-audit.md")
@@ -167,7 +167,7 @@ The craft layer lives in **ac-ui-polish's reference files**, reused **by referen
 
 ## Delegation map (orchestrate — don't reimplement)
 
-Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally.
 
 | Need | Defer to |
 |------|----------|

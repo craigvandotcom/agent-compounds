@@ -279,7 +279,7 @@ If working in agent-compounds and a sync target exists (e.g., vitest-affected):
 
 Commit changes:
 
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 ```bash
 git add skills/ commands/

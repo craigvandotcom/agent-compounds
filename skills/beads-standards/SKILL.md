@@ -344,7 +344,6 @@ br sync --flush-only      # export DB -> JSONL
 
 ### `br` gotchas (learned once, applies everywhere)
 
-<!-- net-growth-ok: ac-gcj.1 audience split — this subsection RELOCATED from beads-standards/reference/bead-conventions.md (matching deletion there, same commit); machine-wide tool learnings belong in the machine-wide floor -->
 
 - **JSON shapes differ by command.** `br list --json` returns a **paginated object**
   (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But
@@ -366,7 +365,7 @@ br sync --flush-only      # export DB -> JSONL
   against whatever HEAD is. Commit, verify the SHA, *then* close as a separate step.
 - **`br dep add` does NO cycle prevention.** Edges added after an initial structure go
   unchecked — re-run `br dep cycles` after ANY post-hoc `dep add` batch and require it
-  clean. <!-- net-growth-ok: Pass B station 2 — br tool gotcha promoted from ac-beadify inline text (universal tool behavior belongs in the floor) -->
+  clean.
 - **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
   closed children and epics don't auto-close on last child close — check closed children
   before triaging an epic as abandoned/empty.

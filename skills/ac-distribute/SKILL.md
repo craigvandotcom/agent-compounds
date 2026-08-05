@@ -41,7 +41,7 @@ Long-running and failure-prone (signing probes, processing hangs, keychain footg
 open a `TaskCreate` run ledger, one task per section, so a stalled/hung step is visible
 rather than silent:
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
 ```
 TaskCreate("Preconditions — macOS + clean merge + fresh QA PASS + signing probe + prod-backend check")
@@ -77,8 +77,8 @@ wait or a signing-probe failure shows up as a stuck task instead of a silent han
      `runId` (attribution) + `conclusion=success` (its three-condition trust rule). A FAIL
      from `ac-prove` (PROFOUND failure or iteration cap hit) stops `ac-distribute` here —
      never archive/sign/upload off an unproven tree, even mid-wave.
-QA evidence/report schema: `ac-pipeline/references/qa-shared.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
-Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+QA evidence/report schema: `ac-pipeline/references/qa-shared.md`.
+Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally.
 
 4. **Fresh native-QA PASS.** A `ac-qa-device` `QA_VALIDATION` report artifact exists whose
    **`platform:` is `ios-simulator` (or `android-emulator`)**, `status: PASS`, and

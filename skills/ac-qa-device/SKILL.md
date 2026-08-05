@@ -5,7 +5,7 @@ description: Use when QA-ing the NATIVE app build on a device/simulator — full
 
 > **The native twin.** `ac-qa-device` proves the native shell; `ac-qa-browser`
 > proves the web shell. Shared conventions — **depth levels, journey reuse,
-Capability-starved runs: `ac-pipeline/references/degraded-mode.md`. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Capability-starved runs: `ac-pipeline/references/degraded-mode.md`.
 
 > findings=beads, the `QA_VALIDATION` report, and the conductor/worker evidence
 > protocol** — live in **`ac-pipeline/references/qa-shared.md`**; both twins reference it so they
@@ -252,7 +252,6 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    fix can target the wrong sub-issue and still pass its own narrower test while the
    reported symptom survives. Unit/browser suites cannot see this class of gap.
    Close only after the ORIGINAL symptom is confirmed absent on-device.
-   <!-- net-growth-ok: ac-v0m symptom-verification rule -->
 
 ## Seeing the WebView (hybrid/Capacitor apps)
 

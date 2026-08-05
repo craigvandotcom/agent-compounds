@@ -56,11 +56,11 @@ pipeline/registry → agent-compounds (`ac` prefix) · org/infra/memory → root
 repo (`org` prefix). No `.beads/` where it belongs → say so and file in the
 nearest parent that has one, noting the intended home.
 
-Visual references per `ac-pipeline/references/design-refs.md` (save immediately, cite the path, never prose-only). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Visual references per `ac-pipeline/references/design-refs.md` (save immediately, cite the path, never prose-only).
 
 ## Phase 3 — Classify & create
 
-1. **Dedupe** per the canon’s anchor-dedupe rule <!-- net-growth-ok: ac-gzb P2 — canon citation replaces weaker local rule -->
+1. **Dedupe** per the canon’s anchor-dedupe rule
    (`beads-standards/reference/bead-conventions.md` § Anti-inflation): search the target
    db — hit → enrich the existing bead (`br comments add`) instead of creating; tell the user.
 2. **Type** per conventions: `task` (work) · `feature` (capability) · `bug`
@@ -89,7 +89,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
 5. **Public-db rule:** agent-compounds beads publish — neutral title,
    pointer-only for anything sensitive (conventions §Public-repo rule).
 6. **Commit** `.beads/` in the target repo (own repo, own commit; discipline:
-   `ac-pipeline/references/commit-discipline.md` — pathspec-only, never a wildcard add). <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+   `ac-pipeline/references/commit-discipline.md` — pathspec-only, never a wildcard add).
 
 ## Phase 4 — Confirm (one line)
 
