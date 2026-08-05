@@ -358,14 +358,26 @@ write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a 
    does survive files as `-t investigation` — the quarantined-guess rule above).
 2. **ANCHOR DEDUPE — keyword search is not enough** (this is the ONE
    definition — sources cite, never re-derive).
-   Before `br create`, take the finding's primary anchor — `file:line` for code
-   findings; **journey + checkpoint** for QA findings (which have no file:line) —
+   Before `br create`, take the finding's primary anchor — per the lane table
+   below. Every filing lane has one; a lane with no defined anchor cannot dedupe —
    and check whether an OPEN bead already carries it
    (`br list --status open --limit 0 --json`, grep the descriptions). Same
    anchor + same defect → **`br comments add` on the existing bead** and say it
    recurred — never a second bead: recurrence recorded as a comment is the
    corroboration signal the auto-fix cascades run on; recurrence filed as a new
    bead inflates the board and loses the evidence.
+
+   | Lane | Anchor |
+   |---|---|
+   | review-finding · hygiene-finding | `file:line` |
+   | qa-finding | journey + checkpoint |
+   | curator | canonical ingredient slug + rule id (`R0`–`R9`) |
+   | curator-escalation | ingredient slug + escalation reason |
+   | prod-finding | Sentry issue fingerprint |
+   | triage | source system + external id (GH issue #, TestFlight id) |
+   | proposals (dream · pipeline · skill-improvement) | target skill/file + rule name |
+
+   A new lane declares its anchor here before it files its first bead.
 3. **SEVERITY FLOOR — a Low-severity finding NEVER gets its own bead:** roll
    ALL of a run's Low findings into ONE rollup bead (one per run,
    `-t task`, each item a titled paragraph naming its anchor + source report);

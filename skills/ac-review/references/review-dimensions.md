@@ -26,14 +26,16 @@ it, and a finding anchored there is **report-only, never a bead**.
 
 | IN — hunt and file | OUT — report only |
 |---|---|
-| `app/` · `components/` · `features/` | `scripts/` (operator + curation tooling) |
+| `app/` · `components/` · `features/` | `scripts/` with no data effect (CI, build, dev tooling) |
 | `lib/` on a request path · `middleware.ts` | `__tests__/` · `e2e/` · `*.test.*` · `*.spec.*` |
 | `supabase/migrations/` (mutates prod data) | `.github/` (CI) |
 | shipped native plugin code | `.claude/` · `_plans/` · docs |
+| **data pipelines that populate what a user reads** (the curator/research lane: `scripts/curate-foods/`, `lib/research/`, catalog writers) | |
 
-**Tiebreak** when a path is ambiguous — much of `lib/` is: *can a user action or a
-production request reach this line?* A research or curation pipeline that only a cron or
-an operator invokes is factory, not product.
+**Tiebreak** when a path is ambiguous — much of `lib/` is: *does a user reach this line,
+**or read what it writes**?* Either answer yes means product. A pipeline invoked only by a
+cron still writes the catalog a user browses, so it is product; a script that touches no
+user-visible data is not.
 
 **Carve-out — mutation-probe-convicted test findings.** `test-quality` MAY file a bead
 anchored on a test or guard **if and only if** its `evidence` carries a probe showing the

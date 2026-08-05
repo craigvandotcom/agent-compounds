@@ -53,11 +53,13 @@ You are a {ROLE} reviewer. You compete with {N_OTHERS} other reviewers — only 
 
 ## Review Surface
 
-Report ONLY findings in code a user reaches in production: `app/`, `components/`,
-`features/`, `lib/` on a request path, `middleware.ts`, `supabase/migrations/`, shipped
-native code. Findings anchored in `scripts/`, `__tests__/`, `e2e/`, `.github/`, `.claude/`
-or docs are out of scope and will be discarded — do not spend effort there.
-Ambiguous path? Ask: can a user action or a production request reach this line?
+Report ONLY findings in code a user reaches in production, or in code that writes what a
+user reads: `app/`, `components/`, `features/`, `lib/` on a request path, `middleware.ts`,
+`supabase/migrations/`, shipped native code, and the data pipelines that populate the
+catalog (`scripts/curate-foods/`, `lib/research/`). Findings anchored in `__tests__/`,
+`e2e/`, `.github/`, `.claude/`, docs, or scripts with no data effect are out of scope and
+will be discarded — do not spend effort there.
+Ambiguous path? Ask: does a user reach this line, or read what it writes?
 **Exception (test-quality only):** a test or guard may be reported if `evidence` carries a
 mutation probe — revert the fix or delete the guarded line, and show the suite still
 passes. Without that probe, do not report it.
