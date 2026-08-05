@@ -3,8 +3,7 @@
 **Selects which verification passes run, at what depth, for any diff or scope.**
 Primary executors: the `ac-ui-polish` + `ac-qa-browser` + `ac-qa-device` triad;
 consumed by every ceremony that verifies (loop Verify stage, the merge/batch-close
-smoke net § below, `ac-prove`, `ac-distribute`). One brain — selection is never
-re-decided locally (Pass C, ac-gcj.7). Running all three
+smoke net § below, `ac-prove`, `ac-distribute`). Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
 boot. This file decides, from the wave's diff, **which passes run and at what
 depth**. It is the single source; conductors (`ac-loop`
@@ -117,10 +116,7 @@ printf '%s\n' "$CODE_FILES" | grep -q . && CLASS_RUNTIME=1
 ## Step 1b — reachability (can the selected harness SEE the change?)
 
 Class-based selection alone can mandate a pass whose harness structurally **cannot observe**
-the changed surface — and that pass then reports PASS. Observed (RUN 20260729-170058-3584):
-paywall trial copy classified `webui`+`logic`, Step 3's payment override forced qa-browser at
-`full`, but the copy sits behind an `isNativePlatform()` gate and cannot render in a browser at
-all; 2 of 3 assertions returned `NOT_PROVABLE_IN_BROWSER` and the verdict still read PASS.
+the changed surface — and that pass then reports PASS.
 
 Before selecting, intersect the changed surface with what each harness can observe, using
 §Journey registry fields already present: a journey whose `proof.required` is `sim-drive` or
@@ -225,11 +221,8 @@ file matching no class counts as touching EVERY surface there (selection may err
 loose; a store-submission gate errs strict: over-block, never under-block).
 
 **The over-block only works if genuinely surface-less files are excluded first.**
-Measured failure: `.beads/issues.jsonl` is written by every `br close`
-— it appeared in 50 of the last 50 commits — and, being unclassifiable, over-blocked
-to *every* surface. So every bead operation marked every review-critical journey
-STALE, and the store lane was permanently BLOCKED for a reason unrelated to code
-risk. A QA drive could never hold: pass, stamp, close one bead, blocked again.
+`.beads/issues.jsonl` is written by every `br close` and, being unclassifiable,
+over-blocked to *every* surface.
 Excluding `^\.beads/` and `^scripts/ci/` restores the intended behaviour. Dependency
 manifests (`package.json`, `pnpm-lock.yaml`) are deliberately NOT swept into that
 exclusion — they are classified explicitly so the capacitor content check decides
@@ -246,8 +239,7 @@ git diff "$RANGE" --name-only | grep -q 'CORE/journeys/.*\.md$' && TOUCHED_JOURN
 `ADDED_ROUTE=1` and `TOUCHED_JOURNEY_DOC` unset → flag it in the Step 4 decision line
 ("wave adds a route with no matching journey-doc update — tag it in the registry").
 Never blocks; pure file-pattern detection closing the hole where a new user-facing
-surface ships untagged and silently unprotected — the failure one level up from the
-registry itself.
+surface ships untagged and silently unprotected.
 
 ---
 
@@ -305,7 +297,7 @@ depth; the ceremony re-proves post-change code at smoke (the diff can change bet
 verify and close). If a fresh gate-selected PASS exists for the current `HEAD` SHA,
 note-and-skip; otherwise run the net below with the ceremony's own `<RANGE>`
 (`main...HEAD` on the PR path; `$ANCHOR...HEAD` on the batch path). Both ceremonies
-read THIS section — the conditions never fork (ac-gcj.5).
+read THIS section — the conditions never fork.
 
 **Device twin (hybrid/native apps only) — three conditions, all must hold, else skip
 silently:**

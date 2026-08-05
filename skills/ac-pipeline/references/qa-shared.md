@@ -62,11 +62,9 @@ report and treat its first enablement as a first-run, not a re-run. **"Flag is o
 is zero evidence, not low risk** — it is a reason to ADD that build, not to skip the path.
 **Audit flag-dark ERROR branches first**: they are the least-observed code in the system.
 
-Both directions bite. `NEXT_PUBLIC_SIGNUP_ENABLED` OFF in every environment meant every gate
-rendered `SignupDisabled` while signup was 100% broken in prod for months (bd-zszse/bd-lxyzl).
-The same flag ABSENT from `.env.capacitor` did the inverse: `NEXT_PUBLIC_*` is inlined at build
-time, so absent reads as ENABLED and native shipped a live signup form web had disabled
-(bd-native-signup-flag-divergence-stewq — caught because device QA looked, not by any gate).
+Both directions bite. A flag OFF everywhere renders the disabled state while the real path
+is broken unseen. A `NEXT_PUBLIC_*` flag ABSENT from `.env.capacitor` does the inverse: it is
+inlined at build time, so absent reads as ENABLED and native can ship a path web has disabled.
 
 ## Prod-write ban + secrets (the minimal package)
 
@@ -84,11 +82,6 @@ consult it before picking a target environment for a given journey.
 
 **Secrets stay redacted.** Env values (API keys, credentials, tokens) are
 always redacted in agent output, regardless of which environment is under test.
-
-**Deferred by explicit decision, not rejected.** Heavier options considered for
-this problem — a three-class data model, a seed/reset pipeline, CSP lockdown —
-are DEFERRED-UNTIL-PAIN. Don't re-propose them from scratch; only re-open if
-the minimal rule above stops being enough.
 
 ## Conductor / worker evidence protocol (both twins + ui-polish fan-out)
 
@@ -170,9 +163,6 @@ result among its `proof.asserts` MUST NOT be `PASS`: it is `INCONCLUSIVE` — no
 write, and the residue gets a tracking bead.** For downstream gates INCONCLUSIVE counts as
 not-yet-verified, never as a pass (fail-safe: `ac-merge`/`ac-distribute` read PASS/FAIL only,
 so an INCONCLUSIVE journey can never make the pass-level `status:` PASS on its own strength).
-Observed: a browser worker correctly returned NOT_PROVABLE_IN_BROWSER on 2 of 3 paywall
-assertions while the journey verdict still read PASS — recording a native-only payment change
-as browser-verified.
 
 > Scope, so this does not swallow the two residues that already work: a step declared in
 > `proof.device_only_steps` is **known, human-reviewed** residue — keep the existing handling
@@ -184,9 +174,7 @@ as browser-verified.
 
 **Every finding carries a `bead` field — no ambiguous sentinel (bd-xx9yv).** Legal values: a
 real id, `pending` (worker wrote it, conductor has not filed yet), or `not-bead-worthy:
-<reason>` (a deliberate decision). **Never `none`** — it conflates the two, and a conductor
-triaging a stalled child read 5 `none` findings as orphaned and filed all 5; the child then
-woke and filed its own richer 5 → 4 duplicates + 1 false P2 compliance bead to retract.
+<reason>` (a deliberate decision). **Never `none`** — it conflates the two.
 Workers still never touch the ledger (single-writer); the conductor files and stamps the id
 back, so `pending` is a resumable state, not a silent loss. **File as each verdict LANDS, not
 in one batch at pass end** — per `rule-known-action-capture-beads-not-prose`, a finding whose
@@ -228,7 +216,7 @@ concurrent workers (dev-server load), sequential lane for everything else. Devic
 wave slug when no RUN_ID). Each worker tears down ONLY its own named session, on
 success AND failure paths. The conductor sweeps leftovers matching its
 `session_prefix` at pass end. Never `close --all`, never bare `pkill` (kills sibling
-sessions — documented incidents).
+sessions).
 
 **Aggregation.** The conductor merges verdicts into the single QA_VALIDATION block
 below (`journeys_tested` from verdict statuses, `findings_filed` from filed beads,
@@ -288,8 +276,7 @@ br create "investigate: <symptom>" -t investigation \
   wave, the fix commit must re-run the touched path's unit tests **including the
   SIBLING test files that exercise that path** — not just the new spec written for
   the finding. A late fix that adds a gate/guard breaks the siblings that assumed
-  the old behavior, and only CI catches it (a late gate fix once turned 6 sibling
-  specs red on the PR). Cheapest form: re-run the app's full
+  the old behavior, and only CI catches it. Cheapest form: re-run the app's full
   affected-test command after the LAST commit, not the first.
 
 ## Reporting — the QA_VALIDATION block
@@ -315,5 +302,4 @@ status: PASS | FAIL
 notes: [issues, platform-impossible flows skipped and why, journey-doc drift fixed]
 ```
 
-> The `platform:` field is load-bearing — ship gates predicate on it. (This block
-> was `SIM_QA_VALIDATION`, device-only, before the browser twin.)
+> The `platform:` field is load-bearing — ship gates predicate on it.
