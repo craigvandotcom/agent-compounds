@@ -227,9 +227,10 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
    snapshot is deterministic. `hittable:false` in `--raw` output is advisory,
    not authoritative — verify by outcome (wait/assert), not by flag. But some
    interactions are *reproducibly* un-automatable (backdrop fall-through, etc.) —
-   before planning, check the **known automation-limited interactions registry**
-   and plan those to the boundary + route the real step to device, rather than
-   re-discovering the limit at ~60 min/attempt.
+   before planning, search the memory substrate for known automation-limited
+   interactions (`qmd search "automation-limited"`) and plan those to the
+   boundary + route the real step to device, rather than re-discovering the
+   limit at ~60 min/attempt.
 9. **Catch toasts — success waits race past them.** Toasts are transient
    (~4s) and a `wait "<next screen>"` that passes can still have skipped an
    error toast the user would have seen. The toast container IS in the tree
