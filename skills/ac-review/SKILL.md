@@ -41,9 +41,6 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 # Mint RUN_ID if the orchestrator didn't hand one down (contract: ac-pipeline/references/run-id.md
 # mint-if-absent rule) — keeps standalone and orchestrated runs on the same formula.
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
-# Timestamp-keyed, not branch- or claim-id-keyed: a review scopes a batch diff range since
-# the last review-mark, not a single claimed batch, so it never had the trunk-direct
-# branch-collapse problem (ac-pipeline/references/run-id.md § Prefixes).
 ARTIFACTS_DIR=/tmp/work-review-$(date +%Y%m%d-%H%M%S)
 ```
 
@@ -55,8 +52,7 @@ echo "$ARTIFACTS_DIR"   # note the RESOLVED value — every later file write use
 > **`$ARTIFACTS_DIR` is a variable, so every shell redirect into it is a dynamic-path write —
 > the shape `dcg` blocks by design.** Produce files under it with the **Write tool on the
 > resolved literal path** (or pipe into `tee <literal path>`), never a redirect or heredoc
-> built from the variable (`ac-pipeline/references/shell-guardrails.md`). This is not style: a silently
-> blocked write here is a silently degraded review downstream (bd-axeyx).
+> built from the variable (`ac-pipeline/references/shell-guardrails.md`).
 
 ### Register Session Identity (Tier 1)
 
@@ -141,9 +137,7 @@ review-mark (the last commit that touched `.claude/reviews/batch/`):
 > **`.claude/reviews/batch/` is written by EXACTLY ONE commit per ceremony — `ac-batch-close`'s
 > Act 3 (bd-kudrb).** Your findings report goes to the sibling `.claude/reviews/pending/` (Phase 6
 > § Report Destination), which this probe deliberately does not see. Never "helpfully" write into
-> `batch/` from here: a second writer mid-batch makes this probe return a commit INSIDE the range
-> it bounds and the batch silently under-scopes (one live case shrank a 7-commit batch to 2 and
-> still reported success). **So this probe measures ACCEPTANCE, never coverage — what has actually
+> `batch/` from here. **So this probe measures ACCEPTANCE, never coverage — what has actually
 > been reviewed is Scan D's union of recorded `Range:` claims, `ac-pipeline/references/board-scan.md` (bd-zl1y5).**
 
 ```bash
@@ -160,13 +154,11 @@ fi
 # Single definition of the review pathspec — EVERY consumer of $DIFF_RANGE (this block, the
 # legacy-branch block, Phase 2's diff + size check) uses this one array, restated VERBATIM in
 # any later bash call (an array does not survive one). `.beads/` JSONL churn dominates a range
-# and no reviewer can act on it: measured over 44717df..0ffc1a4, 105 of 129 files (81%) were
-# `.beads/`, and excluding them cut 6989 insertions to 934 (7.5x).
+# and no reviewer can act on it.
 # `.claude/reviews/` was CONSIDERED AND DELIBERATELY NOT EXCLUDED — a prior run's review
 # artifacts are rare in a range and legitimately reviewable when a skill changed how they are
 # written; silent over-exclusion hides real findings, which is strictly worse than a little
 # extra noise. Do not re-open this without a fresh measurement (that would be a new bead).
-# net-growth-ok: ac-ewgr.3 — the exclusion's measurement + the .claude/reviews/ rejection must sit at the definition or the next reader re-litigates it
 DIFF_PATHSPEC=(-- ':(exclude).beads/')
 
 # The `--stat` / `--name-only` options MUST precede the range: git rejects an option after a
@@ -180,7 +172,6 @@ git diff --name-only $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
 present-but-stale mark takes `$REVIEW_MARK..HEAD` unconditionally. When the mark is STALE —
 `MARK_AGE_DAYS > 7`, reusing `ac-pipeline/references/board-scan.md` § Scan D's shared staleness
 classification, never a second definition — resolve `DIFF_RANGE` down these rungs in order:
-<!-- net-growth-ok: ac-jj0 — the stale-mark ladder has to sit at the scope-resolution site it governs -->
 
 1. **A conductor-supplied batch range**, if one came with the invocation. Explicit scope beats inference.
 2. Else narrow on Scan D's coverage evidence: run Scan D and set
@@ -194,21 +185,11 @@ classification, never a second definition — resolve `DIFF_RANGE` down these ru
    postdating the mark is no evidence the commits before it were reviewed. **Narrow only on
    evidence of coverage** — with none, wide is the correct conservative answer.
 
-**Honest limit:** when prior reports recorded no `Range:` claims at all (the case that motivated
-this ladder), `$D/covered` is empty, so rung 2's range reduces to exactly rung 3's — rung 1 is
-what mitigates that case. The durable fix is upstream: every report carrying its mandatory
-`**Range:**` line (§ Report Destination, bd-zl1y5). This ladder only resolves scope for an
-invocation already under way; it never self-triggers or schedules a standing review — that stays
-the weekly `ac-hygiene PANEL=full` run's duty, exactly as the next paragraph states.
-
 **Standing weekly review of `main` — NOT ac-review's duty; it belongs to the weekly hygiene
 run (plan C2).** If more than 7 days pass with no batch shipping (no new
 `.claude/reviews/batch/` commit), the review of all of `main` since the last `v*` tag is driven
 proactively by the weekly `ac-hygiene` `PANEL=full` run (its 7-lens panel IS that review) —
-see `ac-hygiene/SKILL.md` § "When to Use This". ac-review owns only the *mechanism* for that
-range (the bootstrap `DIFF_RANGE` above, `git describe --tags --match 'v*' --abbrev=0`), which
-`ac-hygiene`'s close path and any standalone invocation reuse; it does not schedule or
-self-trigger the standing review. Exactly one owner.
+see `ac-hygiene/SKILL.md` § "When to Use This".
 
 **On a branch (legacy mode):** read `.claude/legacy-branches.txt` (ignore blank lines
 and `#`-comment lines):
@@ -307,7 +288,6 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 ### Get Diff
 
 ```bash
-# net-growth-ok: the re-derivation must sit at the consuming call, not in a Phase-1 pointer
 # Arrays do NOT survive across bash calls (same rule as PROJECT_ROOT below); unset,
 # `"${DIFF_PATHSPEC[@]}"` expands to NOTHING and the .beads/ exclusion silently stops applying.
 DIFF_PATHSPEC=(-- ':(exclude).beads/')          # Phase 1's single definition, restated verbatim
@@ -415,7 +395,7 @@ Four checks, each a placement rule made adversarial:
 
 **CHECKLIST:**
 
-- Added skill text carrying the edit's story — a date, a director, a pass/wave narrative, or a bead-ID no other file greps as a rule-name <!-- net-growth-ok: Check-0 slug/checklist completion -->
+- Added skill text carrying the edit's story — a date, a director, a pass/wave narrative, or a bead-ID no other file greps as a rule-name
 - Added SKILL.md core content with no evidence stamp and no offsetting demotion
 - Evidence stamp present but citing a run/probe/sign-off that can't be verified as real
 - Re-added content matching a prior `git log -S` cut (deprecated/historical/superseded block)
@@ -430,8 +410,7 @@ Four checks, each a placement rule made adversarial:
 Body count may shrink **only** when classification proves the batch is safe. Keys on
 **files touched** via `ac-pipeline/references/risk-classification.md` (ZERO-RUNTIME allowlist + no
 RISK-TOUCH after test-path exclusion) — **never** on a self-declared
-"doc/test/methodology" batch label. The run's Criticals were all on batches that
-self-labeled low-risk; a label-keyed shrink would have let them through.
+"doc/test/methodology" batch label.
 
 **Classifier (binding — Item 0):**
 
@@ -449,7 +428,7 @@ git diff --name-only $DIFF_RANGE "${DIFF_PATHSPEC[@]}"
 | ---- | --------- | ------ | ------------------- |
 | **Full (default)** | any RISK-TOUCH hit **OR** any non-ZERO-RUNTIME / runtime-source change | up to 6 | **core four** (security, performance, architecture, correctness) **ALWAYS** + test-quality + contracts (negative-gating skip rules above still apply) |
 | **Shrink** | ZERO-RUNTIME **AND** no RISK-TOUCH (proved by `git diff --name-only`) | 2–3 | **core four still covered** (may share bodies; fewer bodies never silently drop a dimension) |
-| **test-quality dedicated** | ANY test file present in the diff (`**/__tests__/**` or `**/*.{test,spec}.*`) | +1 body | **test-quality is its own dedicated body** — never merged into another body. The reduced-motion Critical was caught by a test-quality body tracing a self-defeating e2e; that probe does not survive a merged body. |
+| **test-quality dedicated** | ANY test file present in the diff (`**/__tests__/**` or `**/*.{test,spec}.*`) | +1 body | **test-quality is its own dedicated body** — never merged into another body. |
 
 **Doctrine-delta stacks independently of this table** — its `skills/`-touch gate above
 decides spawn/skip regardless of risk tier; it is not one of the panel-scaling
@@ -462,15 +441,12 @@ shrink/full tiers and is never dropped by a shrink.
 **Write the panel manifest BEFORE spawning** — the Phase-3 consensus script validates
 against it (a spawned dimension with no output = partial failure, never a silent pass), and
 **refuses to run at all without it** (exit 3, `PANEL UNKNOWN`) rather than defaulting to a
-smaller panel. This write is therefore load-bearing, not bookkeeping: silently blocked by
-`dcg`, a run fell back to the core four and dropped the contracts and test-quality
-findings — one of them Critical (bd-axeyx).
+smaller panel.
 
-<!-- net-growth-ok: bd-axeyx — instruction must sit AT the write site; a reference pointer is what failed -->
 **Use the Write tool, on the resolved literal path** — do NOT shell-redirect into
 `$ARTIFACTS_DIR`. A heredoc or redirect whose target is built from a variable is exactly the
-shape `core.filesystem:redirect-truncate-dynamic-path` blocks, and this snippet is the one
-that got bitten (`ac-pipeline/references/shell-guardrails.md` § Sanctioned shapes). Echo `$ARTIFACTS_DIR`,
+shape `core.filesystem:redirect-truncate-dynamic-path` blocks
+(`ac-pipeline/references/shell-guardrails.md` § Sanctioned shapes). Echo `$ARTIFACTS_DIR`,
 paste its resolved value into the Write call, and confirm the file exists before spawning.
 
 Write `<resolved ARTIFACTS_DIR>/panel-round-1.json` with this content:
@@ -518,7 +494,7 @@ new/modified file → STOP synthesis**, inspect it, revert reviewer-authored lea
 (reviewers are READ-ONLY — banned ops for panel workers: any `git stash` (dcg blocks the
 unscoped form fleet-wide), any write to the shared checkout; discard shapes:
 `ac-pipeline/references/commit-discipline.md` + `ac-pipeline/references/shell-guardrails.md`),
-and record the incident as a finding before continuing. <!-- net-growth-ok: ac-7rf -->
+and record the incident as a finding before continuing.
 
 **THIS IS YOUR CORE WORK. Do not delegate synthesis.**
 
@@ -537,7 +513,7 @@ python3 "$CONSENSUS" --artifacts-dir "$ARTIFACTS_DIR" --round 1   # --round 2 fo
 
 It reads the `round-1-{role}.json` reviewer files, writes `consensus-round-1.json` + updates
 `consensus-registry.json` (the cross-round memory — no manual table-keeping), and prints a
-summary. Harness-agnostic: plain `python3`, stdlib only — and the both-roots probe above keeps it that way, never hardcoding a `.claude/` path (ac-vqf). <!-- net-growth-ok: ac-vqf both-roots consensus.py resolution -->
+summary. Harness-agnostic: plain `python3`, stdlib only — and the both-roots probe above keeps it that way, never hardcoding a `.claude/` path (ac-vqf).
 
 **Exit 3 = `PANEL UNKNOWN` — a hard stop, not a warning.** The script found no usable
 Phase-2 panel manifest and **refuses to substitute a default panel**, because a check that
@@ -590,7 +566,7 @@ APPROVED` → `VERDICT: passed:`, INCLUDING an APPROVED reached after the panel 
 Critical/High findings in place — a resolved finding is what a pass looks like, so name it in
 `<detail>`. `VERDICT: NEEDS_DECISION` → `VERDICT: blocked:`, the partial-failure/escalation gate.
 `VERDICT: failed:` is not emitted by ac-review at all: it belongs to verifier ceremonies whose
-subject is a pass/fail run — a red CI dispatch in `ac-batch-close`, a QA repro. <!-- net-growth-ok: the outcome→token mapping has to sit at the rule it disambiguates -->
+subject is a pass/fail run — a red CI dispatch in `ac-batch-close`, a QA repro.
 Review is a *verifier* ceremony — the panel/conductor writes the verdict, never the
 implementer whose diff is under review (Goodhart guard). Every finding bead filed here
 carries the `review-finding` catch-stage label **and** `discovered-from: <bead-id|unknown>`
@@ -766,18 +742,13 @@ mkdir -p "$REPORT_DEST"
 
 Callers pass the destination via the delegation prompt, e.g. `report_dest=.claude/reviews/pending/`.
 
-> <!-- net-growth-ok: bd-kudrb — this skill is the WRITER whose misrouted report caused the
-> silent under-scoping; the prohibition has to sit at the write site, and the destination table
-> replaces prose that only described two of the three real destinations. -->
 > **Never write to `.claude/reviews/batch/` from this skill — not even when a caller asks you
 > to (bd-kudrb).** That directory is the trunk-direct review-mark, and the anchor probe
 > (`git log -1 --format=%H -- .claude/reviews/batch/`, used by `ac-batch-close` Act 1,
 > `ac-loop` scope detection, `ac-pipeline/references/verification-gate.md`, and this skill's own Phase 1)
 > takes the LATEST commit touching it. ac-review runs BEFORE `ac-batch-close` computes its
 > anchor, so a report committed there mid-batch is returned as the anchor — a commit inside
-> the range it is meant to bound. This bit four ceremonies in one day; each time only a
-> hand-supplied step-back to the prior batch-close mark prevented a silently under-scoped
-> batch. If a delegation prompt still says `report_dest=.claude/reviews/batch/` (a stale
+> the range it is meant to bound. If a delegation prompt still says `report_dest=.claude/reviews/batch/` (a stale
 > caller), write to `.claude/reviews/pending/` instead and say so in your summary.
 
 ### Generate Review Report
@@ -807,7 +778,7 @@ Needs decision: {count}
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check. <!-- net-growth-ok: ac-gcj.7 Pass C canon binding -->
+Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
 git push
 ```
@@ -875,13 +846,10 @@ out of this wave's scope → `br create -t bug --labels review-finding,unrefined
 plausible-but-unverified concern an agent could chase → `br create -t investigation
 --labels review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
 below). **Filing discipline — anchor-dedupe · severity floor · rollup ceiling: the canon,
-`beads-standards/reference/bead-conventions.md` § Anti-inflation rules** (promoted FROM
-this skill, ac-gzb P2 — cite it, never re-derive it). Review-specific bindings: the
+`beads-standards/reference/bead-conventions.md` § Anti-inflation rules**. Review-specific bindings: the
 anchor is the finding's primary `file:line`; rollup beads carry
 `-t task --labels review-finding,unrefined`; Medium+ epics group via
-`br dep add -t parent-child <finding-id> <epic-id>`. Why it bites here: parallel panels
-cannot see each other, so the dedupe check is the only thing stopping one run filing the
-same defect twice (bd-8ms5t).
+`br dep add -t parent-child <finding-id> <epic-id>`.
 Nits stay in the report. **Always include
 `unrefined`** (matches `ac-hygiene`) so the raw bead routes through `ac-bead-refine`
 instead of being treated as already-refined. **`-t bug` = shipped product defect only;
@@ -890,9 +858,6 @@ test-gaps / missing coverage / infra findings use `-t task` or `-t investigation
 `## Test Scope` section with grep-verified anchors** (same bar as `ac-hygiene`;
 `beads-standards/reference/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
 validator runs — grep each before citing it — plus the QA modality for user-facing surfaces.
-You have the diff open right now; refine's Test Scope gate would otherwise author it cold.
-A finding bead with no test plan is how the fix ends up shipping behind a test that cannot
-fail (bd-mfr1d, bd-ghj12).
 
 > **Route the finding bead to an epic parent + stamp `post-merge` at creation** (§3 routing
 > map, `beads-standards/reference/bead-conventions.md` § Bead routing + § Claim semantics). Every
@@ -926,10 +891,7 @@ br dep add <downstream-bead-id> <decision-bead-id>
 > `issue_type=decision` alone gates NOTHING — every label-keyed gate (bug-lane drain,
 > beads-closed-gate, cleaning passes) keys on the LABEL. A `DECISION:`/`DESIGN_DECISION:`-titled
 > or `decision`-typed bead created WITHOUT `human-gate` sits silently workable and can be
-> auto-closed around the human. Do not hand-roll a `br create` that drops it. This recurs
-> despite the template being correct — `ac-bead-refine`'s Phase 5
-> title/label parity check (bd-7fqgi) is the backstop that catches any that still slip
-> through, but the fix belongs here at the producer.
+> auto-closed around the human. Do not hand-roll a `br create` that drops it.
 
 Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-session` when Craig reviews the docket.
 
@@ -1076,10 +1038,7 @@ release, per `agent-mail/references/session-procedure.md` § Release + self-dere
 **"Docs-only wave"** (diff touches only non-code paths — `_plans/`, `docs/`,
 `references/`, `*.md`; no `app|lib|scripts|supabase|features` hits)
 -> Spawn the **docs-lens set** (findings-integrity / consistency / discipline) from
-`references/review-dimensions-docs.md` instead of the code four — reviewed against the
-org's documentation-standards skills (`context-engineering`, `skill-builder`, wiki/memory
-doctrine). Auto-detected in Assemble the Panel; named here so it's discoverable, not
-reinvented per docs wave.
+`references/review-dimensions-docs.md` instead of the code four.
 
 **"Review these files only: [list]"**
 -> Scope diff to specified files instead of full branch diff
@@ -1103,7 +1062,3 @@ Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`)
 <!-- diet: restated bullets deleted — live body twins verified; the Remember-only rule survives below -->
 
 - **One human touchpoint** — remaining no-consensus + NEEDS_DECISION items are presented ONCE in Phase 7, never per-round
-
----
-
-_Work review: parallel reviewers, severity-based auto-fix, user-gated decisions. For codebase health: `/ac-hygiene`. For implementation: `/ac-implement`._
