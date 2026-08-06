@@ -24,6 +24,11 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
 (none — both extractions were clean verbatim moves, nothing parked)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- [2026-08-06] CUT the review step from both phases (steps 4+5 → gone, tail renumbered), the
+  Review prompt from `references/delegation-prompts.md`, and every `ac-review` reference. C2
+  rebound from a panel verdict to the verification gate / red CI leg. No holding pen: the
+  content is dead by construction, not deferred — `ac-review` is being retired and `ac-hygiene`
+  is the single quality lane. −8 SKILL.md, −13 delegation-prompts.
 - [2026-07-20] EXTRACTED § Ceremony batching pool mechanics (state store, flock RMW, fire
   opportunities, selected-set/drain policy, report-ack, failure re-merge, risk override, bug-lane,
   guard-rail, §5 fixtures) → `ac-pipeline/references/ceremony-batching-pool.md` (shared with ac-batch-close). Kept

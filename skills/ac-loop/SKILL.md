@@ -1,11 +1,11 @@
 ---
 name: ac-loop
-description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, surfaces genuine decisions as human-gate decision beads + advisory nudges, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-review → ac-batch-close) gating between them via ac-human-session. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode". NOT for running an arbitrary prompt on a repeating interval — that is the `loop` skill.'
+description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fixes + plan waves to merge without human checkpoints, surfaces genuine decisions as human-gate decision beads + advisory nudges, nudges human about remaining blocks until acted on. Multi-item queue clearance, no per-stage human gates; for a single named goal with human checkpoints, run the stages directly (ac-plan-init → ac-beadify → ac-bead-refine → ac-implement → ac-batch-close) gating between them via ac-human-session. Stop conditions: completeness, critical regression, iteration cap, human override. Triggers: "/ac-loop", scheduled PAI job, "run the loop", "ship everything available", "autonomous mode". NOT for running an arbitrary prompt on a repeating interval — that is the `loop` skill.'
 ---
 
 # ac-loop — Autonomous Shipping Loop
 
-**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same stage skills the pipeline uses (ac-implement, ac-review, ac-merge, etc.), but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only in interactive sessions.
+**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same stage skills the pipeline uses (ac-implement, ac-merge, etc.), but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only in interactive sessions.
 
 When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal for simple bounded forks. When invoked by the scheduler (headless), never `AskUserQuestion` — apply the Exhaust Rule: leave the `human-gate` decision bead in place, post an advisory Slack nudge, and keep working everything else. Decisions are answered via `ac-human-session` (the docket), not mid-run. **One exception:** the Phase 0 **width prompt** never uses `AskUserQuestion` (it has no timeout) — it is a timed plain-text ask, first output of the run (see Phase 0 § Width Prompt).
 
@@ -31,7 +31,7 @@ When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the termin
 > browser/simulator in your own context. The passes are themselves conductors over tester
 > subagents (`ac-pipeline/references/qa-shared.md` § Conductor / worker evidence protocol).
 > You **never** read a phase skill's `SKILL.md`
-> (`ac-implement`, `ac-review`, `ac-batch-close`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
+> (`ac-implement`, `ac-batch-close`, `ac-beadify`, `ac-bead-refine`, `ac-land`,
 > `ac-ui-polish`, `ac-qa-browser`, `ac-qa-device`) into your
 > OWN context — that collapses to 2-level and bloats the conductor with every phase's skill +
 > working detail until it compacts mid-run. Orchestrator holds *decisions*; sub-sessions hold
@@ -74,15 +74,15 @@ EACH ITERATION:  (phase ORDER is preserved; within each numbered step, up to
       │      SOLO close (ship immediately as a batch-of-one): P0/urgent; migration- or native-touching;
       │      conductor judges the fix risky enough to isolate. Never fold a bug into a feature wave.
       └─ the BATCH runs the chain ONCE: ac-implement (per bug, sequential, direct-to-main) → VERIFY-GATE
-             → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify   (one batch-close for the whole drain)
+             → BEADS-CLOSED-GATE → ac-batch-close → Slack notify   (one batch-close for the whole drain)
       ⟳ RE-CHECK the Bug-Lane filter after every close; repeat until ZERO unblocked bugs remain, THEN step 1
   1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships after the bug lane is dry)
-      └─ ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
+      └─ ac-implement → VERIFY-GATE → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
       │      (prep — only now, AFTER the bug lane + maintenance wave have shipped)
       └─ claim-at-selection (loop owns this, not ac-implement — direct to main, no branch) →
-         ac-implement → VERIFY-GATE → ac-review → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
+         ac-implement → VERIFY-GATE → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
 
   VERIFY-GATE = consult ac-pipeline/references/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
@@ -237,7 +237,7 @@ br ready --limit 0 --json | jq '[.[] | select(
 )]'
 
 # Legacy branches still in flight (trunk-direct works on `main`; wave-branches are retired —
-# mirror ac-merge/ac-review's .claude/legacy-branches.txt awareness)
+# mirror ac-merge's .claude/legacy-branches.txt awareness)
 LEGACY_FILE="$(git rev-parse --show-toplevel)/.claude/legacy-branches.txt"
 [ -f "$LEGACY_FILE" ] && grep -v '^[[:space:]]*$' "$LEGACY_FILE" 2>/dev/null
 
@@ -396,10 +396,7 @@ If orphans exist:
    prompt's summary contract requires is § Child friction schema in that same file — the
    one definition of the four keys, bd-jv33f.2.)
 3. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
-4. **Invoke `ac-review`** — dispatch the **Review prompt** from
-   `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` empty.
-5. **Read `VERDICT:` from ac-review output** — `APPROVED` → proceed to merge. `NEEDS_DECISION` with open blockers → hard stop (C2).
-6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
+4. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
    Pass the UNION of identities (loop + each delegated `ac-implement` identity), this batch's ids, and
    its progress file(s). **Flag rationale (union / `--progress` / repeated-`--progress` parallel /
    `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
@@ -423,12 +420,12 @@ If orphans exist:
    human fork). Only proceed to Invoke `ac-batch-close` once this set is empty (exit 0).
 
 > **`post-merge` lifecycle — stamp at creation, strip at claim (applies to BOTH phases; doctrine `beads-standards/reference/bead-conventions.md` § post-merge claim semantics).** Any **exhaust bead** created inside a batch's **verify→review→close window** — conductor follow-ups, `ac-qa-*` QA-pass beads, and Exhaust-Rule decision beads (§ Phase ARIA) — is **stamped `post-merge` AT CREATION and parented into that batch's epic**. This is mandatory: a follow-up threaded under the loop's claim identity WITHOUT the stamp is a genuinely-open in-scope bead that trips `beads-closed-gate.sh` to exit 1 and **blocks its own batch's close**. Conversely, **every loop claim path strips `post-merge` at claim** — the orphan/bug-lane batch claim (Phase 1 / Rule 0 drain) AND the wave claim-at-selection (Phase 2) — so a bead adopted into a NEW batch is closeable again. Skipping the strip leaves permanently-gate-excluded zombies (open forever, never counted). Stamp-at-creation and strip-at-claim are the two halves of the one definition — never do one without the other.
-7. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
+5. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` empty.
-8. **Slack notify** (see Milestone Notifications).
-9. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land).
+6. **Slack notify** (see Milestone Notifications).
+7. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land).
 
-If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
+If the verification gate files an open `qa-blocker` → hard stop (see Stop Conditions §C2).
 
 ---
 
@@ -497,20 +494,17 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
    `{SCOPE}` = "all refined ready beads for plan `<plan-name>`", `{FLAVOR}` =
    "(ac-loop autonomous run)".
 3. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
-4. **Invoke `ac-review`** — dispatch the **Review prompt** from
-   `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` = "(ac-loop autonomous run)".
-5. **Read `VERDICT:`** — APPROVED → merge. NEEDS_DECISION with blockers → C2 stop.
-6. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
+4. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
    **Identical invocation to Phase 1 step 6** (the bash block there, unchanged) — pass the
    UNION of identities, this batch's ids, and its progress file(s); same exit-code handling,
    same `post-merge` exclusion, same advisory-nudge-not-merge on exit 1. Flag rationale:
    `references/beads-closed-gate-invocation.md`.
-7. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
+5. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
    `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` = "(ac-loop autonomous run)".
-8. **Slack notify** — batch shipped.
-9. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
+6. **Slack notify** — batch shipped.
+7. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
 
-If `ac-review` surfaces a **Critical regression** → hard stop (see Stop Conditions §C2).
+If the verification gate files an open `qa-blocker` → hard stop (see Stop Conditions §C2).
 
 ---
 
@@ -577,8 +571,7 @@ After a nudge, re-check on the next scheduled loop fire. If the block persists: 
 ## Ceremony batching pool (bd-chd5p.2)
 
 **"Ceremony" here** = the `ac-batch-close` CI-dispatch +
-report-commit + review-mark advance. The full 6-dimension **ac-review runs per
-implement-cycle, unbatched** — only the CI/report leg accumulates. Planned waves
+report-commit + review-mark advance. Only the CI/report leg accumulates. Planned waves
 ceremony as their own single batch (never enter the pool; cap never force-splits a
 wave).
 
@@ -679,10 +672,9 @@ fighting the machine. Hold these:
   is planned but DEFERRED/unwired. Not per bead, not per wave, not to "prove" a flake.
 - "Is this a flake?" is a CHEAP question → re-run the ONE failing file in isolation. Never
   answer it with a full-suite re-run — that's the heaviest tool on the cheapest question.
-- The wave-level `ac-review` is scoped to **cross-bead integration** (per-bead conductor
-  reviews already cover each bead's internals). If a dedicated pass already cleared a
-  dimension on a bead (e.g. a `security-reviewer` on a privacy keystone), the wave review
-  **skips that dimension** instead of re-deriving the same verdict.
+- Cross-bead integration is the wave's own risk, and the verification gate is what covers it:
+  per-bead conductor reviews already cover each bead's internals, and standing code quality is
+  `ac-hygiene`'s lane on its own cadence.
 
 **Pacing & contention**
 - Match the wakeup to the wait. A known ~5-min job → poll ~270s (stay in the prompt-cache
@@ -776,7 +768,7 @@ Check before each iteration begins.
 | # | Condition | Action |
 |---|-----------|--------|
 | **C1** | No eligible work and no human-gate unblocks remaining | End session cleanly. Notify Slack: "Pipeline clear." |
-| **C2** | `ac-review` returns a Critical blocking finding (regression) | Hard stop. Do NOT merge. Notify Slack with the finding. File a P0 bead. Wait for human. **This path skips `ac-batch-close`, so the acceptance mark does NOT advance — by design. Before halting, commit the review artifact with its `**Range:**` line (that is what records the coverage the stop earned) and state the Scan D gap in the stop notice, else this correctly-honoured stop widens a blackout nobody can see (bd-zl1y5).** |
+| **C2** | The verification gate files an open `qa-blocker`, or the batch's CI leg is red | Hard stop. Do NOT merge. Notify Slack with the finding. File a P0 bead. Wait for human. **This path skips `ac-batch-close`, so the acceptance mark does NOT advance — by design.** |
 | **C3** | Iteration cap reached (default: 3 plan waves per session) | Stop after current merge. Notify Slack: "Iteration cap reached." |
 | **C4** | Human override (Slack message "stop" / "pause the loop") | Honour immediately after current bead. Notify confirmation. |
 
@@ -874,7 +866,7 @@ Always notify on Slack at meaningful milestones. Use `slack-send --channel sofi 
 |-------|---------|
 | Orphan beads shipped | "✅ Shipped <N> orphan fix(es) — <bead titles> — merged to main." |
 | Plan batch shipped | "🚀 Batch for *<plan name>* merged — <N> beads shipped (claim `<batch-id>`)." |
-| Critical regression found | "🛑 Loop stopped — ac-review found a critical regression in `<file>`. Needs your review before merge." |
+| Critical regression found | "🛑 Loop stopped — the verification gate flagged a blocker in `<file>`. Needs your review before merge." |
 | Iteration cap | "⏹️ Iteration cap reached (<N> waves this session). Remaining work queued for next run." |
 | Pipeline clear | "✓ Pipeline clear — no eligible work remaining. <H> human-gate items waiting if you want to review." |
 | ARIA nudge | See Phase ARIA advisory format above. |

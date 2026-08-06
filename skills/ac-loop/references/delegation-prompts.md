@@ -71,23 +71,10 @@ never treat it as authoritative. This file is the ONE definition of the four key
 SKILL.md's `## Remember` child-summary bullet references it (bd-jv33f.2 aggregates on
 them).
 
-## Review prompt
-
-> "Run ac-review (trunk-direct: on main, scope = batch since the review-mark — no branch
-> argument){FLAVOR}. `report_dest=.claude/reviews/pending/` (stage the findings report
-> there so ac-batch-close's Act 2(a) can accept it instead of re-running the panel; NEVER
-> `.claude/reviews/batch/` — that path is the review-mark and only ac-batch-close's Act 3
-> may write it, bd-kudrb). This is an autonomous loop run. For DESIGN_DECISION or
-> SCOPE_ESCALATION items: apply the Exhaust Rule (create decision beads, do not
-> AskUserQuestion). Do not ask 'what's next?' at Phase 8 — exit after printing the summary
-> with VERDICT: line."
-
 ## Batch-close prompt
 
 > "Run ac-batch-close for batch `<batch-id>`{FLAVOR}. CI config for this project:
-> `<cached-answer>`. The step-4 ac-review already reviewed this exact diff and committed
-> its findings report (with a `VERDICT:` line) to `.claude/reviews/pending/` — take that
-> as the pre-supplied equivalent-review artifact (Act 2(a)) and carry it into
-> `.claude/reviews/batch/` in your Act 3 commit; do NOT re-run the review panel on the
-> same diff. For uncertain CI-finding items: create decision beads (Exhaust Rule). Do not
-> ask 'what's next?' after merge."
+> `<cached-answer>`. This pipeline has no review panel — the verification gate cleared this
+> batch, and standing code quality is ac-hygiene's lane on its own cadence. For uncertain
+> CI-finding items: create decision beads (Exhaust Rule). Do not ask 'what's next?' after
+> merge."
