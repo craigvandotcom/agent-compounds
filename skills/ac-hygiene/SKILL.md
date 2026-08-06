@@ -1,6 +1,6 @@
 ---
 name: ac-hygiene
-description: 'Iterative codebase review — a 7-lens Opus panel (bug hunter, explorer, structural, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus — surfaces correctness/security/resilience/contract/reuse cleanups. Fixes commit directly to `main` (trunk-direct); deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''. NOT for a feature-branch/PR review (use ac-review), a single-module or single-domain deep dive (use audit), the skill/agent registry (use ac-registry-audit), or pipeline/board housekeeping (use ac-tidy).'
+description: 'The single code-quality lane — a 5-lens Opus panel (bug hunter, adversary, failure engineer, promise keeper, test warden), minimum 3 rounds for cross-round consensus, scoped to code a user reaches in production. Audits the TEST SUITE as hard as the code: mutation probes convict hollow tests and trimming counts as much as fixing. Fixes commit directly to `main` (trunk-direct); deferred findings become an epic of beads. Triggers: ''hygiene'', ''clean up the codebase'', ''iterative review'', ''tidy the code'', ''weekly hygiene run''. NOT for a single-module or single-domain deep dive (use audit), the skill/agent registry (use ac-registry-audit), or pipeline/board housekeeping (use ac-tidy).'
 ---
 
 
@@ -11,8 +11,8 @@ Scaling tiers per `ac-pipeline/references/risk-classification.md`.
 
 Capability-starved runs: `ac-pipeline/references/degraded-mode.md`.
 
-The weekly quality pass for a repo (`PANEL=full`, 7 lenses), or a quick between-session
-sweep (`PANEL=light`, 3 lenses). For feature-scoped review, use `/ac-review` instead.
+The weekly quality pass for a repo (`PANEL=full`, 5 lenses), or a quick between-session
+sweep (`PANEL=light`, 3 lenses). Scoped to the product surface — `references/reviewers.md` § THE BAR.
 
 ---
 
@@ -55,7 +55,7 @@ skipped too (the Exhaust Rule routes what would have been asked into beads).
 ```
 SCOPE=<user selection or Full codebase>
 SCOPE_CONTEXT=<commit list or directory listing, if scoped>
-PANEL=full            # full = 7 lenses (weekly run) | light = 3 (quick pass, user asked for "light")
+PANEL=full            # full = 5 lenses (weekly run) | light = 3 (quick pass, user asked for "light")
 CURRENT_ROUND=1
 MIN_ROUNDS=3          # ABSOLUTE floor — cross-round consensus needs recurrence opportunities; never finalize before this, even on consecutive zero-finding rounds
 MAX_ROUNDS=5
@@ -75,9 +75,8 @@ Hygiene **conforms to trunk-direct**: there is no hygiene branch and no worktree
 fixes commit straight to `main` as pathspec commits under the **full H7 discipline** the
 `ac-implement` Phase 0 spells out — the implementing-conductor concurrency rules apply to
 hygiene whenever it is actively *fixing code* (hygiene is exempt from H7 **only** while purely
-reading/filing beads, never while editing). The 7-lens panel below IS this run's pre-push
-review — stronger than most batches get — so there is **no separate `ac-review` step** (branch
-policy: `ac-pipeline` § Branch policy).
+reading/filing beads, never while editing). The 5-lens panel below IS this run's pre-push
+review, so there is **no separate review step** (branch policy: `ac-pipeline` § Branch policy).
 
 ```bash
 git checkout main 2>/dev/null || true
@@ -242,7 +241,7 @@ TaskCreate("Report — hygiene summary + Slack (headless)")
 TaskCreate("Cleanup / teardown — artifacts")
 
 # Per-round task — create ONE as each round begins (not upfront):
-TaskCreate("Round {N} — 7-lens panel → synthesize → auto-apply → gate → commit")
+TaskCreate("Round {N} — 5-lens panel → synthesize → auto-apply → gate → commit")
 # On completion, TaskUpdate its description: "{C}/{H}/{M} findings, {n} auto-fixed, commit {sha}"
 ```
 
@@ -259,10 +258,10 @@ this ledger tracks the hygiene run's top-level sections only.
 
 **All panel agents in a single message for parallel execution.**
 
-Spawn the panel per `PANEL` (full = Bug Hunter, Explorer, Structural, Adversary, Failure
-Engineer, Promise Keeper, Test Warden; light = first three — all Opus) using the prompts in
-**`references/reviewers.md`**, substituting `{SCOPE_CONTEXT}`, `{CURRENT_ROUND}`, and
-`{ARTIFACTS_DIR}`. Each writes to `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`.
+Spawn the panel per `PANEL` (full = Bug Hunter, Adversary, Failure Engineer, Promise Keeper,
+Test Warden; light = Bug Hunter + Adversary + Test Warden — all Opus) using the prompts in
+**`references/reviewers.md`**, whose § THE BAR scopes every lens to the product surface.
+Substitute `{SCOPE_CONTEXT}`, `{CURRENT_ROUND}`, and `{ARTIFACTS_DIR}`. Each writes to `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`.
 **Between rounds**, add the "Files already reviewed: {list}. Look elsewhere." line to each
 prompt (see Phase 4).
 
@@ -276,7 +275,7 @@ Synthesis principles:
   Lens-diverse consensus is *rarer and stronger* — don't lower the bar to compensate;
   single-agent findings are what the consensus registry and Phase 5 triage are for.
 - **Evidence over opinion** — findings need file paths and line numbers
-- **Don't pile on** — if explorer finds dead code, that's cleanup, not a bug
+- **Trim counts as much as fix** — a net-negative test count with coverage held is a good round (`references/reviewers.md` § Trim as hard as you fix)
 - **Critical/High first** — skip Medium unless trivial to fix
 - **Deletion mandate** — a finding of stale/superseded/duplicated content is not flag-and-leave;
   REMOVAL/demotion ranks as a first-class disposition, equal to additions/fixes, and follows the
@@ -498,7 +497,7 @@ human PRs). `ac-batch-close` owns the trunk-direct close: version bump → Tier 
 fix-forward → tag → deploy verification. Delegation prompt:
 
 > "Run ac-batch-close for this hygiene run's commits on `main`. Version bump = patch (existing
-> hygiene-bumps-patch policy — accept without asking); the 7-lens panel already served as this
+> hygiene-bumps-patch policy — accept without asking); the 5-lens panel already served as this
 > batch's review — **pass the panel run report as the pre-supplied review artifact for Phase 1
 > path (a)** (it carries an explicit `VERDICT:` line; stage it in `.claude/reviews/pending/` and
 > carry it into `.claude/reviews/batch/` via your Act 3 commit — never write to `batch/` outside
@@ -619,7 +618,7 @@ this run is reviewing is CI-green.
 
 ## Flexibility / Overrides
 
-- **"light"** in the prompt → 3-lens panel (Bug Hunter, Explorer, Structural), same rounds/rules
+- **"light"** in the prompt → 3-lens panel (Bug Hunter, Adversary, Test Warden), same rounds/rules
 - **"headless" / scheduled** → no `AskUserQuestion` anywhere; full codebase, full panel; Exhaust Rule owns all decisions; Slack report mandatory
 - **Scope override** — "hygiene on features/auth" → Specific-directory scope, no question asked
 - **Round override** — "single round" / "quick pass" → MIN_ROUNDS=1 (accept: cross-round consensus disabled; deferred singles go straight to Phase 5 triage)

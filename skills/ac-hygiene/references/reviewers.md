@@ -28,7 +28,7 @@ ENVIRONMENT CONTRACT (non-negotiable):
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
-# Hygiene Reviewers — the 7-lens panel
+# Hygiene Reviewers — the 5-lens panel
 
 Spawn the panel in a **single message** (parallel). Each agent writes to
 `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`. Substitute `{SCOPE_CONTEXT}`,
@@ -36,8 +36,25 @@ Spawn the panel in a **single message** (parallel). Each agent writes to
 `Files already reviewed: {list from previous round findings}. Look elsewhere.`
 
 **Panels:**
-- `PANEL=full` (default, the weekly run): all 7 lenses below.
-- `PANEL=light` (quick between-session pass): Bug Hunter + Explorer + Structural only.
+- `PANEL=full` (default, the weekly run): all 5 lenses below.
+- `PANEL=light` (quick between-session pass): Bug Hunter + Adversary + Test Warden.
+
+## THE BAR — hunt the product, not the factory
+
+Review code a user reaches in production, or code that writes what a user reads:
+`app/` · `components/` · `features/` · `lib/` on a request path · `middleware.ts` ·
+`supabase/migrations/` · shipped native code · the pipelines that populate the catalog.
+
+Do not report findings in `.github/`, `.claude/`, `_plans/`, docs, or scripts with no data
+effect. Ambiguous path? Ask: *does a user reach this line, or read what it writes?* Either
+yes means in scope.
+
+Name a mechanism and a consequence a user could meet. "Consider extracting", "this could be
+cleaner" and "add a comment" are not findings. If you cannot say what breaks and for whom,
+you found nothing — say so.
+
+Dead code and module shape are out of panel scope: `knip` covers unused code
+deterministically. Do not reintroduce that output under another lens.
 
 All lenses share the rules that make consensus work: open-ended hunting (seed lists are
 inspiration, never a checklist), evidence with file:line required, competitive framing,
@@ -81,76 +98,6 @@ For each finding:
 **Evidence:** What you read, what's wrong, why it's a problem
 **Fix:** Specific change needed
 **Auto-fixable:** YES | NO (YES = unambiguous single fix, NO = needs judgment)
-
-Limit: top 7 findings. Skip Low severity. Under 600 words total.
-If nothing found, say so — don't invent issues.
-""")
-```
-
-## Agent 2: Explorer (Opus)
-
-```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-
-You are a codebase explorer doing deep random investigation. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
-
-## Scope
-{SCOPE_CONTEXT or "Full codebase — explore freely."}
-
-## Your Method
-
-Pick random starting points across the codebase and go deep. Read files thoroughly, follow import chains, trace data flows end-to-end, check callers and callees. Do this for 3-4 different entry points — let curiosity guide you.
-
-You're looking for anything a fresh pair of eyes would catch — dead code, inconsistent patterns, missing error handling, stale comments, copy-paste drift, unnecessary dependencies. But don't limit yourself to these categories. If something feels off, investigate it. Trust your instincts.
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-explorer.md
-
-For each finding:
-## Finding N: Title
-**Severity:** Critical | High | Medium
-**File:** path/to/file:line
-**Evidence:** What you traced, what's inconsistent/dead/wrong
-**Fix:** Specific change needed
-**Auto-fixable:** YES | NO
-
-Limit: top 7 findings. Skip Low severity. Under 600 words total.
-If nothing found, say so — don't invent issues.
-""")
-```
-
-## Agent 3: Structural Reviewer (Opus)
-
-```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
-First: read AGENTS.md for project context, coding standards, and conventions.
-
-You are a structural reviewer checking architecture health. You compete with 6 other reviewers — only structural improvements backed by evidence count.
-
-## Scope
-{SCOPE_CONTEXT or "Full codebase — assess overall health."}
-
-## Your Method
-
-Read the project structure, then explore source directories with fresh eyes. Assess the overall health of the architecture — dependency cleanliness, test coverage, module boundaries, abstraction levels.
-
-Think about structural integrity: are modules well-bounded? Are dependencies flowing in the right direction? Is there over-abstraction or under-abstraction? Are critical paths tested? But explore broadly — structural issues often hide in unexpected places. Trust your architectural intuition.
-
-Also read `ac-pipeline/references/anti-patterns.md` and hunt its three named anti-patterns — evidence destruction (swallowed errors), coordinated workaround (the same error silenced in ≥2 config layers), unproven seam (a bridge crossing with no un-mocked test).
-
-## Output
-
-Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-structural.md
-
-For each finding:
-## Finding N: Title
-**Severity:** Critical | High | Medium
-**File:** path/to/file:line (or pattern across files)
-**Evidence:** What you checked, what's wrong, why it matters
-**Fix:** Specific change needed
-**Auto-fixable:** YES | NO
 
 Limit: top 7 findings. Skip Low severity. Under 600 words total.
 If nothing found, say so — don't invent issues.
@@ -310,6 +257,20 @@ The reading veins, in rough payoff order:
 - Classic smells only past threshold — assertion roulette at 3+ unmessaged assertions, eager tests calling 4+ distinct production functions, any test-body conditional logic. Below threshold, stay quiet: binary smell-flagging drowns the signal.
 
 `audit/tests-audit.md` has rubric seeds — inspiration, not a checklist. Discipline: never nominate a test for deletion on coverage evidence alone — a sabotage probe that stays green IS deletion-grade evidence; for bloated-but-load-bearing tests, prescribe simplification instead.
+
+## Trim as hard as you fix
+
+A suite earns its keep by DENSITY, not size. Every test costs runtime on every run forever, and a hollow one also buys false confidence — it is worse than the gap it hides.
+
+So deletion is a first-class finding, not a consolation prize. Report a **net test-count delta** for your slice and justify its sign. Flat or negative while behaviour coverage holds is a GOOD outcome and must be reported as one; a run that only ever adds tests has not audited the suite, it has grown it.
+
+Nominate for removal:
+- probe-convicted cannot-fail tests (a sabotage stayed green) — delete outright;
+- duplicates — several tests covering one behaviour through the same seam, keep the clearest one;
+- zombies — long-skipped, commented-out, or exercising deleted features;
+- mock-echo tests that assert only what the test itself passed in.
+
+The one thing you may NOT delete: the last remaining test over a behaviour, however weak. Strengthen it instead. Deleting weak coverage and leaving none is how a regression ships silently — say so explicitly when a suspect is the only cover a behaviour has.
 
 ## Output
 
