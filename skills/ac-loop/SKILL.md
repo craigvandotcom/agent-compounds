@@ -183,11 +183,9 @@ Read the current state of the board. This is the map you navigate by.
 
 > **Canonical scan spec: `ac-pipeline/references/board-scan.md`** — this Phase-0 orient is a consumer of it, so read it
 > alongside the calls below and use ITS definitions; the loop and the janitor (`ac-tidy`) must not fork on
-> what "orphan" or "illegal edge" mean. Adopt all FIVE detectors: **parentage-gap orphan** (open non-epic
+> what "orphan" or "illegal edge" mean. Adopt all FOUR detectors: **parentage-gap orphan** (open non-epic
 > bead, no epic parent — the I1 sense), **authored epic-edge** (any `blocks` edge with an epic endpoint —
-> report ALWAYS), **Scan D review-coverage staleness** (PRINT its verdict below; on `ALARM` file/refresh a
-> P1 review-blackout bead BEFORE selecting work — bd-zl1y5: stop paths that skip `ac-batch-close`
-> do not advance the mark), **Scan E scheduled-CI gate health** (PRINT the
+> report ALWAYS), **Scan E scheduled-CI gate health** (PRINT the
 > `ci-gates` line EVERY run, `ok` included — bd-o9vmx: a red gate nobody reads gates
 > nothing; **`unknown` is NOT green**), and **Scan F board truth** (PRINT the `board-truth`
 > line EVERY run, `0` included; **adjudicate every flagged bead BEFORE dispatching an
@@ -265,7 +263,7 @@ whether this run's configuration satisfies any bead's trigger. A known open bug 
 trigger you are about to satisfy is a **precondition failure, not a background risk** —
 resolve it, route around it, or surface it before dispatching children.
 
-Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when they are `ok` — Scan D's one-liner `review-mark: <sha|none> · <age>d · <accept_gap> behind · <uncovered> uncovered (<codeish> code-ish) · <staleness>` AND Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>` AND Scan F's `board-truth: <n> open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green; and a non-zero `board-truth` count means those beads may already be DONE — adjudicate each before spending a child on it). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
+Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when it is `ok` — Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>` AND Scan F's `board-truth: <n> open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green; and a non-zero `board-truth` count means those beads may already be DONE — adjudicate each before spending a child on it). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
 > **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked **preemptive** bugs remain do you touch the non-bug order below.
 > - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.

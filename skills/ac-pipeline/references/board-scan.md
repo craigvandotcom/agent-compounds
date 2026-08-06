@@ -16,7 +16,6 @@ This file owns the *read* (what to scan, how to categorize). Each consumer owns 
 - Scan A — beads
 - Scan B — plans
 - Scan C — backlog
-- Scan D — review coverage (the staleness probe)
 - Scan E — scheduled CI gate health (the other unconsumed signal)
 - Scan F — board truth (the already-shipped probe)
 - The board snapshot (shape returned to the consumer)
@@ -147,102 +146,6 @@ Per file, read frontmatter + count tasks:
 - **type / horizon / channel / source** (from the `ac-backlog` frontmatter schema)
 - **unchecked task count** (`- [ ]`) vs checked (`- [x]`)
 - Skip `status: complete` **only**. Zero checkboxes means prose-captured, NOT done — route it to `unclassified[]` (raw reason preserved) and renderers MUST report it; the old task-count skip silently hid 16 live files, 3 of them in committed `active/` scope.
-
-## Scan D — review coverage (the staleness probe)
-
-**One directory, two DIFFERENT facts — conflating them is how a review blackout stayed
-invisible (bd-zl1y5):**
-
-- **Acceptance mark** — the last commit touching `.claude/reviews/batch/`, written by exactly
-  one writer, `ac-batch-close` Act 3 (bd-kudrb). It records *"a batch was closed"*, **not**
-  *"review has looked this far"*. Every legitimate non-close exit leaves it frozen while commits
-  keep landing: an `ac-loop` **C2 hard stop** (correctly refuses to merge, so batch-close never
-  runs), a C1/C3/C4 mid-batch exit, a crashed run, or any standalone `ac-review`. The mark going
-  stale is therefore an **expected consequence of honouring a stop condition** — which is exactly
-  why it must be *reported*, not trusted.
-- **Coverage** — the union of the `**Range:** <sha>..<sha>` claims recorded by review artifacts
-  in **whatever directory they landed in** (`.claude/reviews/` root, `pending/`, `publish/`,
-  `batch/`). Directory-agnostic on purpose: root is `ac-review`'s *documented default* dest and
-  writing into `batch/` from it is forbidden, so "the artifact wasn't in `batch/`" is never the
-  defect. Coverage is the only honest answer to "what has actually been reviewed".
-
-```bash
-# Per-run scratch dir. Writes below go through `tee`, NEVER a truncating redirect:
-# dcg's core.filesystem:redirect-truncate-dynamic-path blocks `> "$VAR/path"` because it
-# cannot prove the target before O_TRUNC. `tee "$VAR/path"` is ALLOWED, and so is a
-# redirect to a fully-literal path (`>/dev/null`). Appends (`>>`) are allowed too.
-# Probed against dcg 0.6.7 — the discriminator is literal-vs-variable TARGET, not
-# compound-vs-simple command. See ac-pipeline/references/shell-guardrails.md.
-D="${ARTIFACTS_DIR:-/tmp/ac_board_scan_scratch}"; mkdir -p "$D"
-
-# Acceptance mark + its gap (bootstrap: last v* tag, else the root commit).
-# NOTE: ACCEPT_GAP and MARK_AGE_DAYS are REPORTED; only MARK_AGE_DAYS still gates
-# (ALARM arm). The staleness verdict is driven by CODEISH — see the table below.
-MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
-MARK_AGE_DAYS=-1
-[ -n "$MARK" ] && MARK_AGE_DAYS=$(( ( $(date +%s) - $(git log -1 --format=%ct "$MARK") ) / 86400 ))
-BASE=${MARK:-$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null)}
-[ -n "$BASE" ] || BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
-ACCEPT_GAP=$(git rev-list --count "$BASE..HEAD")
-
-# COVERAGE WINDOW — anchored on the last RELEASE TAG, never on the moving mark.
-# This is load-bearing: if the window were `$MARK..HEAD`, advancing the mark
-# would SHRINK the window as well as reset the gap, so `UNCOVERED`/`CODEISH` would collapse
-# to ~0 no matter how much history is genuinely unreviewed — gating on the coverage half
-# would then mask exactly as badly as gating on the acceptance half did. A `v*` tag moves
-# only on publish, so the window is stable across batch closes.
-COV_BASE=$(git describe --tags --match 'v*' --abbrev=0 2>/dev/null)
-[ -n "$COV_BASE" ] || COV_BASE=$(git rev-list --max-parents=0 HEAD | tail -1)
-
-# Coverage. `git grep -h` (no xargs — empty input must not hang); anchored on `Range:` so only
-# an EXPLICIT claim counts, and an unparseable/rewritten sha is dropped by `rev-list 2>/dev/null`.
-# Both choices UNDER-credit coverage: this probe fails loud, never silently green.
-git grep -hE 'Range:.*[0-9a-f]{7,}\.\.[0-9a-f]{7,}' -- .claude/reviews 2>/dev/null \
-  | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' | sort -u | tee "$D/ranges" >/dev/null
-# One pipeline, so no truncate-then-append dance: empty input yields an empty `covered`,
-# which `comm` still needs to exist.
-while IFS= read -r r; do git rev-list "$r" 2>/dev/null; done < "$D/ranges" \
-  | sort -u | tee "$D/covered" >/dev/null
-git rev-list "$COV_BASE..HEAD" | sort -u | tee "$D/inrange" >/dev/null
-comm -23 "$D/inrange" "$D/covered" | tee "$D/uncovered" >/dev/null
-UNCOVERED=$(( $(wc -l < "$D/uncovered") ))   # NOT `| tr -d ' '` — `tr` is a tmux alias in the fleet's interactive profile
-CODEISH=0   # the actionable subset — ONE git call, not one per commit
-[ -s "$D/uncovered" ] && CODEISH=$(git log --no-walk --format='%s' --stdin < "$D/uncovered" \
-  | grep -cE '^(feat|fix|perf|refactor|test)([(!]|:)' || true)
-```
-
-Verified under `bash` **and** `zsh`, and on all three degenerate inputs: no `.claude/reviews/`
-at all (doc repos — `mark=none`, bootstraps to the root commit), artifacts with no `Range:` line,
-and a range naming a sha this repo doesn't have.
-
-**Staleness classification** (shared so consumers can't fork on what "stale" means):
-
-**Classify on the COVERAGE half, never the ACCEPTANCE half.** `ACCEPT_GAP` and
-`MARK_AGE_DAYS` say *when a batch last closed*; `UNCOVERED`/`CODEISH` say *what has been
-reviewed*. Only the second answers this probe's question, and a single small batch-close
-resets the acceptance half while leaving the coverage half untouched.
-
-**Anchor the coverage window on the last release tag (`COV_BASE`), never on the mark.**
-Changing the gate variable alone is insufficient: with the window at `$MARK..HEAD`,
-advancing the mark shrinks the window as well as resetting the gap, so `CODEISH` collapses
-to `0` and the table reads `ok` however much history is unreviewed.
-
-| `staleness` | Condition |
-|---|---|
-| `ok` | `CODEISH` ≤ 5 **and** `MARK_AGE_DAYS` ≤ 7 |
-| `warn` | `CODEISH` > 5 |
-| `ALARM` | `CODEISH` > 20, **or** `MARK_AGE_DAYS` > 7 (the same 7-day line `ac-review` § Standing weekly review already draws) |
-
-`CODEISH`, not raw `UNCOVERED`, is the gate input: the actionable subset, whose subjects
-match `feat|fix|perf|refactor|test`, so routine chore/docs traffic raises no alarm nobody
-can action. Thresholds read `ok` when each batch reviews its own commits.
-
-**`MARK_AGE_DAYS` gates only the ALARM arm** — a mark that has not moved in a week means no
-batch closed at all, which the coverage numbers cannot show. `ACCEPT_GAP` is reported and
-gates nothing.
-
-**Do not clear a non-`ok` verdict by closing a batch.** Only reviewing the uncovered commits
-moves the number: publish a review artifact whose `**Range:**` covers the uncovered span.
 
 ## Scan E — scheduled CI gate health (the other unconsumed signal)
 
@@ -379,17 +282,15 @@ caught only by checking a bead's declared artifacts at HEAD, which is not automa
 beads:    { ready[], unrefined[], blocked[], in_progress[], epics[], byLabel{} }
 plans:    { draft[], refined[], approved[], beadified[], loop_ready[], unclassified[] }
 backlog:  { active[], pool[], candidates[], unclassified[] }   # candidates = status:candidate
-review:   { mark, mark_age_days, accept_gap, uncovered, codeish_uncovered, staleness }
 ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health }
 truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory shortlist, never an action
 ```
 
-> **A non-`ok` `staleness` — and ANY `ci_health` other than `ok`/`none` — is NEVER silent.** Every
-> consumer must surface both in its own opening output, **`ci_health` even when it is `ok`** (that
-> line is the only thing standing between an autonomous run and proceeding on the belief that CI is
-> green). That is the entire reason these two scans exist. A review blackout or a five-day red
-> nightly that can only be found by a later accident is the failure mode being fixed here, and a
-> probe whose result is computed and then not printed reproduces it exactly. **The same rule governs
+> **ANY `ci_health` other than `ok`/`none` is NEVER silent.** Every consumer must surface it in its
+> own opening output, **even when it is `ok`** — that line is the only thing standing between an
+> autonomous run and proceeding on the belief that CI is green. A five-day red nightly that can
+> only be found by a later accident is the failure mode being fixed here, and a probe whose result
+> is computed and then not printed reproduces it exactly. **The same rule governs
 > every `unclassified[]` bucket above** — a read layer must NEVER silently drop an item it cannot
 > classify; it routes it to `unclassified[]` and reports it, because an item dropped for being
 > unrecognisable is indistinguishable from an item that does not exist.
@@ -402,7 +303,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), prod health, org-wide `human-gate` sweep — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-dashboard`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
-| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan D's staleness verdict, and on `ALARM` file/refresh a P1 review-blackout bead before selecting work; print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.
