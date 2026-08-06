@@ -1,13 +1,13 @@
 ---
 name: ac-batch-close
-description: 'Trunk-direct batch closing ceremony — a THIN committed-state checkpoint: batch-anchored CI dispatch + one light review pass + commit the batch report (review-mark advance + feedback pending-write). Version mint, tag, deploy-verification, and the heavy 6-dim review all moved to ac-publish (bd-pwt44). Triggers: ''batch close'', ''close the batch'', ''ac-batch-close'', ''ship the batch''.'
+description: 'Trunk-direct batch closing ceremony — a THIN committed-state checkpoint: batch-anchored CI dispatch + commit the batch report (batch mark advance + feedback pending-write). Version mint, tag and deploy-verification live in ac-publish; code quality is ac-hygiene's lane. Triggers: ''batch close'', ''close the batch'', ''ac-batch-close'', ''ship the batch''.'
 ---
 
 
 **You are the conductor closing out a batch of trunk-direct commits on `main`.** Agents commit
 directly to `main` — no wave branch, no PR. This is the periodic (or on-demand) closing
-ceremony: gate the batch through a light review, dispatch Tier 1 CI for the batch, and commit a
-thin batch-report checkpoint that advances the review-mark. Fired once per batch, not per commit.
+ceremony: dispatch Tier 1 CI for the batch, and commit a thin batch-report checkpoint that
+advances the batch mark. Fired once per batch, not per commit.
 
 ---
 
@@ -16,10 +16,10 @@ thin batch-report checkpoint that advances the review-mark. Fired once per batch
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
 | **Input**        | `main`, with implementation commits already pushed directly since the last batch anchor (no branch, no PR) |
-| **Output**       | Batch reviewed (light `VERDICT: APPROVED`), Tier 1 CI confirmed for the batch, batch report committed, review-mark advanced, in-scope `triage,feedback` beads marked `fixed_pending_release` |
+| **Output**       | Tier 1 CI confirmed for the batch, batch report committed, batch mark advanced, in-scope `triage,feedback` beads marked `fixed_pending_release` |
 | **Not in scope** | Version bump/tag, deploy verification, the 6-dim review panel (all `ac-publish`) |
 | **Artifacts**    | Batch-close summary in `.claude/reviews/batch/`, scratch in `$ARTIFACTS_DIR`                |
-| **Verification** | Light-review `VERDICT: APPROVED`; Tier 1 CI dispatch green for the batch                    |
+| **Verification** | Tier 1 CI dispatch green for the batch                                                       |
 
 ## Prerequisites
 
@@ -66,13 +66,13 @@ acquire_build_slot(project_key=CANONICAL_PROJECT_KEY, agent_name=AGENT_NAME, slo
   → renew_build_slot before TTL expiry if the ceremony runs long (the CI poll below can eat
     most of a lease); renew CANNOT resurrect a lapsed lease — check its return and hard-stop if
     the lease is already gone
-  → release_build_slot() at the very end, after Act 3's report commit lands — release even on
+  → release_build_slot() at the very end, after Act 2's report commit lands — release even on
     abort, so a stalled conductor doesn't leave a stale advisory lease for the next run
 ```
 
 > **Concurrency assertion.** Assert `git rev-parse origin/main` equals your local `HEAD`
 > immediately before and after each CI-affecting step (dispatch, any fix-forward push, the
-> Act 3 report commit). A mismatch is the real signal a concurrent conductor
+> Act 2 report commit). A mismatch is the real signal a concurrent conductor
 > moved `main` under you — the slot is advisory (memory `agent-mail-build-slot-advisory`), so this
 > assertion, not the lease, is what actually protects the range.
 
@@ -91,9 +91,8 @@ TaskCreate (one per section, in run order):
   1.  Acquire build slot; determine batch anchor + scope + quality gate   in_progress
   2.  QA smoke gate (conditional)                                         pending
   3.  Gitleaks scan + Tier 1 CI dispatch + fix-forward (Act 1)            pending
-  4.  Light review gate — VERDICT required (Act 2)                       pending
-  5.  Feedback pending-write + commit batch report (Act 3)               pending
-  6.  Report + Slack + release build slot + finalize                     pending
+  4.  Feedback pending-write + commit batch report (Act 2)               pending
+  5.  Report + Slack + release build slot + finalize                     pending
 ```
 
 State vars this run persists to `$STATE`: `ANCHOR`, `DISPATCH_RUN_ID`.
@@ -109,17 +108,18 @@ git fetch origin main
 git pull --rebase origin main   # never --force; re-verify HEAD after
 ```
 
-The **batch anchor** — same mechanism `ac-review` uses to find its scope (`ac-review/SKILL.md`
-Phase 1 "Scope Detection"), computed identically here so both skills agree on the range:
+The **batch anchor** — the last commit that touched `.claude/reviews/batch/`, i.e. where the
+previous ceremony left off. Every batch consumer shares this range, including the verification
+gate (`ac-pipeline/references/verification-gate.md`):
 
 > **The probe is only correct because `.claude/reviews/batch/` has exactly ONE writer per
-> ceremony — Act 3 below (bd-kudrb).** `ac-review` stages its report in the sibling
-> `.claude/reviews/pending/`; Act 3 `git mv`s it into `batch/` in the same commit as the summary.
+> ceremony — Act 2 below (bd-kudrb).** Any second writer puts a commit inside the very range
+> the anchor is meant to bound.
 
 ```bash
 ANCHOR=$(git log -1 --format=%H -- .claude/reviews/batch/)
 if [ -z "$ANCHOR" ]; then
-  # Bootstrap fallback: no batch review-mark exists yet. The `batch_anchor`
+  # Bootstrap fallback: no batch batch mark exists yet. The `batch_anchor`
   # workflow input is a COMMIT SHA (quality-gate.yml peels it via `^{commit}`
   # and diffs `<anchor>...HEAD`), so resolve the newest v* tag to the SHA it
   # POINTS TO — never pass the bare tag NAME. Passing a tag name works only
@@ -141,9 +141,10 @@ if [ -z "$ANCHOR_FROM_BOOTSTRAP" ]; then
     *)
       echo "FATAL: batch anchor $ANCHOR is not a batch-close mark." >&2
       echo "  subject: $ANCHOR_SUBJECT" >&2
-      echo "  Something other than ac-batch-close Act 3 wrote to .claude/reviews/batch/." >&2
+      echo "  Something other than ac-batch-close Act 2 wrote to .claude/reviews/batch/." >&2
       echo "  Using it would silently UNDER-SCOPE this batch (bd-kudrb)." >&2
-      echo "  Fix the offending writer (reports belong in .claude/reviews/pending/), then" >&2
+      echo "  Fix the offending writer — this ceremony is the only one that may write" >&2
+      echo "  .claude/reviews/batch/ — then" >&2
       echo "  step the anchor back to the previous batch-close mark:" >&2
       echo "    git log --format='%H %s' -- .claude/reviews/batch/ | grep -m1 ' batch-close:'" >&2
       exit 2
@@ -179,7 +180,7 @@ git log $BATCH_RANGE --oneline | tee "$ARTIFACTS_DIR/commits.txt" >/dev/null
 git diff $BATCH_RANGE --stat | tee "$ARTIFACTS_DIR/diff-stats.txt" >/dev/null
 ```
 
-No PR body is constructed. This context feeds the Act 3 batch-close report only.
+No PR body is constructed. This context feeds the Act 2 batch-close report only.
 
 Mark ledger task 1 `completed`; `TaskUpdate` task 2 `in_progress`.
 
@@ -257,7 +258,7 @@ gh workflow run "$GATE_WORKFLOW" -f reason=batch-close -f batch_anchor="$ANCHOR"
 dispatch is skipped — but the GATE is not waived, and you may NOT report Tier 1 CI green. The
 same hole opens even where a workflow DOES exist: a path-filtered one (`on.push.paths`)
 creates **zero runs** for a batch touching none of its paths (a docs-only, `templates/`-only or
-ledger-only batch, including the Act 3 mark commit itself), so "skip silently and continue"
+ledger-only batch, including the Act 2 mark commit itself), so "skip silently and continue"
 reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
 
 - **(i) an executed run.** Which SHA(s) to assert depends on the trigger shape resolved above —
@@ -272,7 +273,7 @@ reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
   else
     # PUSH-TRIGGERED gate: one run PER COMMIT — assert every commit in the range, and report
     # the no-run case as its own verdict. It is NOT a pass.
-    # Re-derive the range HERE (same rule as Act 3): BATCH_RANGE is assigned in the anchor
+    # Re-derive the range HERE (same rule as Act 2): BATCH_RANGE is assigned in the anchor
     # block, a SEPARATE fenced block, so it may be empty — and `git rev-list ""` errors into an
     # EMPTY loop, i.e. zero per-commit verdicts that read as "nothing to report".
     BATCH_RANGE="${BATCH_RANGE:-$ANCHOR..HEAD}"
@@ -299,7 +300,7 @@ reads clean while nothing executed. Report `Tier 1 CI: green` ONLY on:
   their exit codes, and the SHA they ran against (e.g. "`./lint.sh` exit 0 + the three touched
   proof scripts exit 0, at `<sha>`"). Fewer than three is not recorded and does not count.
 
-Neither → report `Tier 1 CI: NOT GATED (<reason>)` in Act 3. Still do not block the batch on
+Neither → report `Tier 1 CI: NOT GATED (<reason>)` in Act 2. Still do not block the batch on
 infrastructure another bead is landing — but never let an un-executed gate read as a passed one.
 
 ### Poll for the dispatched run against HEAD — DISPATCHABLE GATES ONLY, FOREGROUND ONLY
@@ -381,8 +382,8 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 > beads fail for one shared root cause (same wrong contract/assumption/parent-decomposition
 > error, not just the same file), do not queue per-bead fix-forwards: trace them to their
 > lowest common ancestor and route that parent node back to `/ac-bead-refine`, keeping
-> closed+verified beads frozen. Full detection + frozen-region rule: `ac-review` § Correlated-
-> Failure Escalation (LCA Repair). Per-bead fix-forward remains correct for uncorrelated,
+> closed+verified beads frozen — re-open and re-decompose the parent; never edit a bead already
+> closed and verified in this batch. Per-bead fix-forward remains correct for uncorrelated,
 > single-bead CI failures.
 
 **Reserve the files you are about to fix BEFORE editing** (`agent-mail/references/session-procedure.md`
@@ -421,58 +422,7 @@ commit is under test (Goodhart guard). A finding filed from a CI failure carries
 
 ---
 
-## Act 2 — One Light Review Pass
-
-This ceremony **NEVER closes an unreviewed batch** — the gate is unconditional. This is
-deliberately **NOT** `ac-review`'s full 6-dimension panel (correctness/security/perf/
-architecture/test-quality/contracts) — that panel remains `ac-review`'s own mechanism when run
-standalone on a feature branch, and becomes `ac-publish`'s heavy pre-tag gate (bd-pwt44.6).
-Batch-close's gate is a single lightweight `VERDICT` pass.
-
-What widens on trunk-direct is only the *source* of the review verdict: Act 2 accepts **either**
-a standard `ac-review` run **or** an equivalent-review artifact the invoking conductor
-pre-supplies. In both cases the accepted artifact must carry an explicit `VERDICT:` line and
-must reach `.claude/reviews/batch/` **only via Act 3's single commit** — never by a writer of
-its own (bd-kudrb). Until then it lives in `.claude/reviews/pending/`.
-
-**(a) Pre-supplied equivalent-review artifact.** If the delegation prompt hands you a completed
-review of this same diff — e.g. `ac-hygiene`'s 7-lens panel run report (same severity bar,
-already adversarial) — do **not** re-run `ac-review` on the same diff (double-review). Take that
-report as the review artifact: confirm it contains an explicit `VERDICT:` line, place it in
-`.claude/reviews/pending/` (uncommitted, or committed there — either way it is invisible to the
-anchor probe), then carry it into `.claude/reviews/batch/` via **Act 3's commit** (the same
-commit that lands the batch-close summary), so the trunk-direct review-mark is backed by a
-committed artifact exactly as the `ac-review` path is. Read its `VERDICT:` and gate on it below.
-No supplied artifact, or one lacking an explicit `VERDICT:` line → fall through to (b); never
-proceed unreviewed.
-
-**(b) No artifact supplied → run `ac-review` yourself.** There is no PR to attach a review to, so
-`ac-review` runs directly on `main` and its `VERDICT` gates this ceremony — the same severity bar
-`ac-merge` enforced at PR-merge, moved here since there's no PR-merge choke point left on
-trunk-direct. Delegate (do not inline its work — `ac-review/SKILL.md` is a full skill, not a
-sub-step of this one):
-
-> "Run ac-review on main (trunk-direct mode, single light pass — not the full 6-dim panel unless
-> ac-review's own default routing says otherwise). report_dest=.claude/reviews/pending/"
-
-`ac-review`'s own Phase 6 commits its findings report to that destination and pushes. Because
-`pending/` is a sibling of `batch/`, that commit does **not** touch the review-mark path and the
-Act 1 anchor probe never sees it — Act 3 below is the only commit that advances the mark
-(bd-kudrb). **Do not pass `report_dest=.claude/reviews/batch/`**: that is the exact wiring that
-made the anchor probe return a commit inside its own range.
-
-**Read the supplied-or-produced artifact for `VERDICT:`.**
-
-- **`VERDICT: APPROVED`** → proceed to Act 3.
-- **`VERDICT: NEEDS_DECISION`** → STOP. Do not dispatch further, do not commit the batch report.
-  Report the gap the same way `ac-review` reports it (missing reviewer dimension, open
-  `qa-blocker`, or unresolved decision bead) — never proceed past a `NEEDS_DECISION` verdict.
-
-Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
-
----
-
-## Act 3 — Commit the Batch Report (feedback pending-write + review-mark advance)
+## Act 2 — Commit the Batch Report (feedback pending-write + batch-mark advance)
 
 ### Feedback write-back — PHASE 1 (pending, not final)
 
@@ -507,14 +457,12 @@ Feedback pending-write: <N> rows marked fixed_pending_release
 ### Commit the batch report
 
 Write `.claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md` — the batch-close summary,
-distinct from `ac-review`'s own findings report staged in `.claude/reviews/pending/` in Act 2.
-**Both files land in this one commit** (bd-kudrb): the summary is created here, and the Act 2
-findings report is `git mv`'d out of `pending/` into `batch/` so the ceremony leaves exactly one
-mark and `pending/` is empty again for the next batch.
+and this single file IS the mark. One commit, one writer, so the next ceremony's anchor probe
+cannot return a commit inside its own range (bd-kudrb).
 
-**Single source of truth for the shared sections:** `ac-review/references/report-template.md`.
-The **Summary**, **Beads Completed**, **Changes**, **Test Coverage**, **Known post-merge tails**,
-and **Also carried** sections are that template's — do NOT re-specify their contents here.
+Sections: **Summary**, **Beads Completed**, **Changes**, **Test Coverage**, **Known post-merge
+tails**. Keep each to what a later reader needs to reconstruct the batch — this report IS the
+mark, so it is the only durable record of what the range contained.
 Fill them per the template's field descriptions; `$BATCH_RANGE` is the range those sections'
 `git diff`/`git log` commands key on. Batch-close's own addition beyond the template is a short **Feedback write-back** line
 (the pending-write count logged above) — there is no Deploy section anymore (deploy
@@ -533,112 +481,18 @@ stamp, which carries model/session/skill@version/duration per bead but explicitl
 Format: `Worker cost: <child-session> (<model>) <tokens>; … — batch total <tokens>`.
 
 ```bash
-export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this commit is the operative review-mark; attribute it to the minted identity, not FoggyCreek
+export AGENT_NAME=<minted-name>   # re-assert inline (Phase-0 mint) — this commit is the operative batch mark; attribute it to the minted identity, not FoggyCreek
 
-# Carry Act 2's findings report from the staging sibling into the mark directory (bd-kudrb).
-# `git mv` when it was committed to pending/; a plain `mv` + `git add` when it is still
-# untracked. Both files must be in the SAME commit — that is what keeps `batch/` single-writer.
-# Select the report by CONTENT, not position. It must claim THIS batch's anchor in its own
-# `**Range:**` line (ac-review on main USUALLY anchors on this same review-mark, so the base sha
-# usually matches — NOT by construction: see CONDUCTOR-SCOPE MODE below). A positional pick
-# (`ls | head -1`) is lexically-OLDEST-first; `pending/` legitimately accumulates, because a
-# withheld close (stop condition C2) deliberately leaves its report there.
-CARRIED=""
-# Re-derive the range HERE. `BATCH_RANGE="$ANCHOR..HEAD"` is assigned in the anchor block, a
-# SEPARATE fenced block; only ANCHOR is persisted to $STATE, so BATCH_RANGE may be empty in
-# this shell. FATAL on an empty ANCHOR rather than silently computing "..HEAD".
-[ -n "$ANCHOR" ] || { echo "FATAL: ANCHOR is empty — batch scope is unknown; refusing to select a report." >&2; exit 1; }
-BATCH_RANGE="${BATCH_RANGE:-$ANCHOR..HEAD}"
-BATCH_HEAD=$(git rev-parse HEAD)
-# CONDUCTOR-SCOPE MODE. The content-grep below requires the report's `Range:` BASE to
-# EQUAL this batch's anchor. That premise breaks when ac-review ran against a conductor-defined
-# range — e.g. a review-mark stale for weeks — and it FATALs on a report that genuinely covers
-# this batch. When the conductor hands down an explicit path in $CONDUCTOR_PENDING_REPORT, that
-# report is CONSIDERED instead of the grep. It is never ACCEPTED unverified: its own
-# `**Range:** <base>..<head>` line must COVER $BATCH_RANGE by git ANCESTRY — base an
-# ancestor-or-equal of $ANCHOR, head a descendant-or-equal of the batch head.
-# A conductor-supplied report whose Range does NOT cover the batch range is REJECTED with the
-# same FATAL as an unidentifiable one — this mode changes which report is considered, never
-# whether an unverified report may be accepted. Unknown must never collapse to ok.
-if [ -n "$CONDUCTOR_PENDING_REPORT" ]; then
-  RRANGE=$(grep -m1 -oE 'Range:[^0-9a-f]*[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' "$CONDUCTOR_PENDING_REPORT" 2>/dev/null \
-           | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}')
-  RBASE="${RRANGE%%..*}"
-  RHEAD="${RRANGE##*..}"
-  if [ -n "$RRANGE" ] \
-     && git merge-base --is-ancestor "$RBASE" "$ANCHOR" 2>/dev/null \
-     && git merge-base --is-ancestor "$BATCH_HEAD" "$RHEAD" 2>/dev/null; then
-    PENDING_REPORT="$CONDUCTOR_PENDING_REPORT"
-  else
-    echo "FATAL: CONDUCTOR_PENDING_REPORT does not cover $BATCH_RANGE — carrying NOTHING." >&2
-    echo "  report: $CONDUCTOR_PENDING_REPORT" >&2
-    echo "  its claimed Range: ${RRANGE:-<none parseable>}" >&2
-    echo "  needed: base ancestor-or-equal of $ANCHOR AND head descendant-or-equal of $BATCH_HEAD" >&2
-    exit 1
-  fi
-else
-  PENDING_REPORT=$(grep -lE "Range:.*${ANCHOR:0:8}[0-9a-f]*\.\." .claude/reviews/pending/*.md 2>/dev/null)
-fi
-N_PENDING=$(printf '%s\n' "$PENDING_REPORT" | grep -c . || true)
-if [ "$N_PENDING" -ne 1 ]; then
-  echo "FATAL: cannot identify this batch's review artifact — carrying NOTHING." >&2
-  echo "  anchor: $ANCHOR" >&2
-  echo "  reports in pending/ claiming that anchor: $N_PENDING (need exactly 1)" >&2
-  echo "  present: $(ls -1 .claude/reviews/pending/*.md 2>/dev/null | command tr '\n' ' ')" >&2
-  echo "  0 matches -> Act 2's review did not run, or wrote no machine-parseable" >&2
-  echo "     '**Range:** <base>..<head>' line (ac-review Phase 6 requires it). Re-run Act 2." >&2
-  echo "  >1 matches -> two artifacts claim the same anchor; a human picks. Do NOT guess." >&2
-  echo "  There is NO positional fallback: an unidentifiable artifact is 'unknown', and" >&2
-  echo "     unknown must never collapse to ok. A report scoped off a stale mark goes" >&2
-  echo "     through CONDUCTOR_PENDING_REPORT above (ancestry-verified), never by hand." >&2
-  exit 1
-fi
-# BEGIN Act3-rhead-assert
-# Range-HEAD assert, NON-conductor path only (the conductor branch above is already
-# ancestry-verified, and wider-is-fine there — asserting this rule on it would reject every
-# legitimately wider report). Standalone-drivable: set RHEAD + BATCH_HEAD and source this block.
-if [ -z "${CONDUCTOR_PENDING_REPORT:-}" ]; then
-  BATCH_HEAD="${BATCH_HEAD:-$(git rev-parse HEAD)}"
-  if [ -z "${RHEAD:-}" ]; then
-    RHEAD=$(grep -m1 -oE 'Range:[^0-9a-f]*[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}' "$PENDING_REPORT" 2>/dev/null \
-            | grep -oE '[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}')
-    RHEAD="${RHEAD##*..}"
-  fi
-  if [ -z "$RHEAD" ] || ! git merge-base --is-ancestor "$RHEAD" "$BATCH_HEAD" 2>/dev/null; then
-    echo "FATAL: report head ${RHEAD:-<none parseable>} is not an ancestor of batch head $BATCH_HEAD — carrying NOTHING." >&2
-    exit 1
-  fi
-  GAP=$(git log --format='%h|%s' "$RHEAD".."$BATCH_HEAD")
-  if [ -n "$GAP" ]; then
-    if printf '%s\n' "$GAP" | grep -qv '|review:'; then
-      echo "FATAL: non-review commits inside the closed-but-unreviewed gap" >&2
-      printf '%s\n' "$GAP" | command tr '|' ' ' >&2
-      exit 1
-    fi
-    # PROCEED-with-seam: paste these lines into the batch report verbatim — the gap is
-    # ac-review's own fix commit(s), covered by the mark but reviewed by nothing.
-    printf '%s\n' "$GAP" | command sed 's/^/Review seam: /; s/|/ /'
-  fi
-fi
-# END Act3-rhead-assert
-CARRIED=".claude/reviews/batch/$(basename "$PENDING_REPORT")"
-# RESOLVE-THEN-PASTE — do NOT "simplify" this back into a variable-built move. dcg rule
-# `core.filesystem:mv-dynamic-path` BLOCKS a move whose paths are variable-built, so a
-# `git mv "$FROM" "$TO"` over these two vars is rejected verbatim. The line below is read-only:
-# it PRINTS the two paths. Paste them as LITERALS, in THIS SAME shell (the commit below
-# still reads $CARRIED), as a single move:
-#   git mv <CARRY FROM literal> <CARRY TO literal>
-#   # source untracked / git mv fails: mv <CARRY FROM literal> <CARRY TO literal> && git add <CARRY TO literal>
-printf 'CARRY FROM: %s\nCARRY TO:   %s\n' "$PENDING_REPORT" "$CARRIED"
+# FATAL on an empty ANCHOR rather than silently computing "..HEAD" — an unknown batch
+# scope must stop the ceremony, never widen it.
+[ -n "$ANCHOR" ] || { echo "FATAL: ANCHOR is empty — batch scope is unknown; refusing to write the mark." 1>&2; exit 1; }
 
 git add ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
-# Pathspec-on-commit: the trailing `-- <report path>` scopes the commit to ONLY these files, so
-# pre-staged foreign WIP in the shared checkout cannot be swept into the batch-report commit.
-# The `git add` above is still needed because the report is a brand-new untracked file.
-# $CARRIED is included in the pathspec so the moved findings report rides in this same commit
-# (both its delete-from-pending and add-to-batch halves are staged by the `git mv` above).
+# Pathspec-on-commit: the trailing `-- <report path>` scopes the commit to ONLY this file,
+# so pre-staged foreign WIP in the shared checkout cannot be swept into it. The `git add`
+# above is still needed because the report is a brand-new untracked file.
 git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N} beads, {commit count} commits" \
-  -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md" ${CARRIED:+"$CARRIED"} ${CARRIED:+".claude/reviews/pending/"}
+  -- ".claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md"
 git push origin main || { git pull --rebase origin main && git push origin main; }
 ```
 
@@ -649,7 +503,7 @@ commit last, again. Nothing pushes after the batch report.
 ### Ceremony pool ack + post-ack drain (bd-chd5p.2)
 
 When the loop handed a **pool-backed** batch (pool-only, mixed, or pure risk-solo that
-snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 3 **acks** after the report commit:
+snapshot'd into `/tmp/loop-pool-<RUN_ID>.json`), Act 2 **acks** after the report commit:
 
 1. Under `flock` on `/tmp/loop-pool-<RUN_ID>.json`, remove **only this batch's
    `in_flight` IDs** (never whole-file wipe).
@@ -680,9 +534,6 @@ Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 **Batch report:** `.claude/reviews/batch/YYYY-MM-DD-HHMM-batch-close.md`
 **Beads completed:** {count}
 **Commits:** {count}
-
-### Light Review
-**VERDICT:** APPROVED — {N} auto-fixed, {M} decisions resolved
 
 ### Tier 1 CI
 {run URL} — {green | fixed after N rounds}, or `NOT GATED (<reason>)` when neither Act 1
@@ -759,5 +610,5 @@ rm -rf "$ARTIFACTS_DIR"   # ONLY on the clean "Done" path
 ---
 
 _Trunk-direct batch closing: gate through a light review, dispatch CI once, commit the thin
-batch report, advance the review-mark. Version/tag/deploy/heavy-review: `/ac-publish`. For
+batch report, advance the batch mark. Version/tag/deploy/heavy-review: `/ac-publish`. For
 legacy branches: `/ac-merge`. For next feature: `/ac-plan-init`._
