@@ -1,15 +1,15 @@
 ---
 skill: ac-loop
 archetype: orchestrator
-last_pass: 2026-07-20 (W3.2 pilot)
-spine_lines: 916 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
+last_pass: 2026-08-06 (correctness pass)
+spine_lines: 897 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
 ---
 
 # ac-loop — maintenance ledger
 
 ## Health
-Over the line target but an orchestrator (length is largely enforcement). Three diet passes
-done (1086 → 949 → 956 (interim additions) → 948, net −138 from baseline). Inbox clear of
+Over the line target but an orchestrator (length is largely enforcement). Diet passes
+done (1086 → 949 → 956 (interim additions) → 948 → 916 → 897, net −189 from baseline). Inbox clear of
 actionable shape items; 2 behavior beads open — `br list -l skill:ac-loop` (ac-uip stale
 version-bump delegation, ac-plv double-review). Near-dup scan flags `ac-loop ~ ac-implement`
 (283 shingles) — that overlap is the delegation prompts, which were assessed and deliberately
@@ -24,6 +24,20 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
 (none — both extractions were clean verbatim moves, nothing parked)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- [2026-08-06] CORRECTNESS PASS (no diet). Completed the same-day review cut, which had left
+  live text: 5 ceremony chains still read `verify → review → close` (Rule 0 drain, Phase 1
+  step 2, the `post-merge` window definition, Phase 2 step 2, Efficiency § Parallelism) and
+  `references/delegation-prompts.md`'s Implement prompt still told every child the loop
+  advances to review. All 5 + the prompt now read `verify → close`. `review-mark` sites were
+  CHECKED and KEPT — `.claude/reviews/batch/` is the verification-gate diff anchor and
+  outlives ac-review's retirement. Fixed the cross-ref the same cut broke: Phase 2 step 4
+  pointed at "Phase 1 step 6" (the Slack notify) instead of step 4 (the beads-closed gate).
+  ADDED to `references/delegation-prompts.md` § Brief-claim rule: compose-time citation
+  requirement (a fact needs a commit SHA or `br show` verdict; an in-flight claim is not
+  citable) + the verbatim child-facing pointer/escape clause — ships the ac-loop half of
+  friction `delegation-brief-restates-bead-preconditions` (impact H, every-run). The
+  ac-pipeline half (same rule in `delegation-contract.md`) stays open in that skill's log.
+  SKILL.md 898 → 897; growth is references-only.
 - [2026-08-06] CUT the review step from both phases (steps 4+5 → gone, tail renumbered), the
   Review prompt from `references/delegation-prompts.md`, and every `ac-review` reference. C2
   rebound from a panel verdict to the verification gate / red CI leg. No holding pen: the

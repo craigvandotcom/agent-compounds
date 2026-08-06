@@ -546,13 +546,9 @@ if ! grep -q "fast-forward-equivalent" "$AC_ROOT/skills/ac-distribute/SKILL.md" 
   fail "G4: skills/ac-distribute/SKILL.md missing the fast-forward-equivalent QA-freshness rule"
 fi
 
-# G5: VERDICT-read step present in ac-loop (moved there by the universal-merge
-# refactor 432517e — the loop reads ac-review's VERDICT before invoking ac-merge;
-# ac-merge itself no longer performs the read)
-check
-if ! grep -q "VERDICT" "$AC_ROOT/skills/ac-loop/SKILL.md" 2>/dev/null; then
-  fail "G5: skills/ac-loop/SKILL.md missing the VERDICT read step (review->merge gate)"
-fi
+# G5 RETIRED (review-step cut 4c291a3): guarded the loop's read of ac-review's VERDICT
+# before ac-merge. The loop has no review step and ships trunk-direct via ac-batch-close,
+# so both premises are dead. Slot left numbered to keep G6+ stable.
 
 # G6 (Wave-B bd-brv39.2): ac-land's inline Apply-Approved-Upgrades path EMITS a
 # skill-hotfix:-prefixed commit for the approved-upgrade case (conditional; routine

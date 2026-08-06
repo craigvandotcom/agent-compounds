@@ -9,6 +9,20 @@ dispatch:
   plan `<plan-name>` ``
 - `{FLAVOR}` — Phase 1: empty; Phase 2: ``(ac-loop autonomous run)``
 
+## Brief-claim rule (binds every prompt below)
+
+Compose-time: state a fact only with a citation — a commit SHA or a `br show`
+verdict. A claim about work still in flight is not citable. Write "premise, NOT
+verified" or wait for the child's return. Never restate a bead's preconditions as
+established fact.
+
+Dispatch-time: append this clause VERBATIM to every prompt below.
+
+> This brief is a POINTER, not a substitute for the spec — read `br show <id>` in
+> full. Any uncited claim here is a premise, not a fact; verify it against the
+> primary source. If a stated premise is false, follow the bead's own acceptance
+> criteria, not this brief.
+
 ## Refine prompt
 
 > "Run ac-bead-refine scoped to {REFINE_SCOPE — an epic id, or explicit bead-id list}.
@@ -42,7 +56,7 @@ dispatch:
 > anything blocked, every Agent Mail identity you claimed beads under, AND a structured
 > `friction:` block — one item per stage that hit friction, keys `stage` / `cost` /
 > `lesson` / `class` (`friction: []` if the stage was clean); see § Child friction schema
-> below) — the loop advances to verify → review → close.
+> below) — the loop advances to verify → close.
 > **Your file territory:** you own exactly these paths: {TERRITORY — explicit list}. Do
 > not write outside them. Width-safety (parallel children on disjoint file sets) holds
 > for **source files only** — it does NOT hold for shared build/scratch state, disjoint
