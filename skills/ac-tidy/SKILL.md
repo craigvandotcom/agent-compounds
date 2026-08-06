@@ -278,8 +278,9 @@ those are gated, not housekeeping.
 > **The RAW OPEN COUNT is not debt and is never escalated alone** (bd-8ms5t).
 > Report the lane's **age distribution** (oldest, median, how many carry merged-fix evidence),
 > never a bare total, and escalate ONLY the actionable subset per (a)/(b)/(c); empty subset → one
-> line, file nothing. A count that only rises trains the reader to ignore the lane. The
-> `ac-review` severity floor stops the inflow at source.
+> line, file nothing. A count that only rises trains the reader to ignore the lane. Inflow is
+> bounded at source: Low findings never become beads (`beads-standards/reference/bead-conventions.md`
+> § Anti-inflation rules).
 
 **INTERACTIVE:** present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
 

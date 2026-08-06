@@ -843,11 +843,10 @@ this phase as prose.** Route by type before (or instead of) asking — confirmed
 out of this wave's scope → `br create -t bug --labels review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
 --labels review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
-below). **Filing discipline — anchor-dedupe · severity floor · rollup ceiling: the canon,
+below). **Filing discipline — anchor-dedupe · never-roll-up: the canon,
 `beads-standards/reference/bead-conventions.md` § Anti-inflation rules**. Review-specific bindings: the
-anchor is the finding's primary `file:line`; rollup beads carry
-`-t task --labels review-finding,unrefined`; Medium+ epics group via
-`br dep add -t parent-child <finding-id> <epic-id>`.
+anchor is the finding's primary `file:line`; Low findings stay in the report; Medium+ epics
+group via `br dep add -t parent-child <finding-id> <epic-id>`.
 **Surface gate FIRST** (`references/review-dimensions.md` § Review surface): a finding
 anchored outside the product surface is report-only — do not file it. Sole exception: a
 mutation-probe-convicted test finding, filed `-t task`. **Always include `unrefined`**

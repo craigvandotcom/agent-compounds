@@ -378,17 +378,17 @@ write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a 
    | proposals (dream · pipeline · skill-improvement) | target skill/file + rule name |
 
    A new lane declares its anchor here before it files its first bead.
-3. **SEVERITY FLOOR — a Low-severity finding NEVER gets its own bead:** roll
-   ALL of a run's Low findings into ONE rollup bead (one per run,
-   `-t task`, each item a titled paragraph naming its anchor + source report);
-   split an item out only if it later grows.
-4. **ROLLUP CEILING — Low ONLY; Medium and above NEVER roll up.** One Medium+
-   finding = one bead. A rollup is indivisible — it cannot be partially closed,
-   prioritised, or drained, so a KEEP on it says nothing about the unexamined
-   items. Medium+ findings that genuinely belong together group as an **epic
-   with one child per finding** — cohesion without indivisibility.
-5. **Nits stay in reports.** A bead is something you'd genuinely schedule.
-6. **`br lint`** enforces template sections — finding beads must carry
+3. **NEVER ROLL UP — one finding, one bead, or no bead at all.** A rollup is
+   indivisible: it cannot be partially closed, prioritised, or drained, so a
+   KEEP on it says nothing about the unexamined items. Measured: every rollup
+   ever filed on a mature board was still open — a rollup is a write-only bead.
+   - **Low severity → the report, never a bead.** Not its own bead, not a
+     shared one. The report is the durable record.
+   - **Medium and above → one bead each.** Findings that genuinely belong
+     together group as an **epic with one child per finding** — cohesion
+     without indivisibility.
+4. **Nits stay in reports.** A bead is something you'd genuinely schedule.
+5. **`br lint`** enforces template sections — finding beads must carry
    repro/evidence/source reference.
-7. **ac-tidy prunes**: stale finding-beads with no activity get closed or
+6. **ac-tidy prunes**: stale finding-beads with no activity get closed or
    merged during pipeline housekeeping.
