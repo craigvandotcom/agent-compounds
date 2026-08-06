@@ -42,7 +42,7 @@ invocation. Breaking this boundary in either direction is a design flaw.
 The orchestrating agent decides and *is* the quality gate; spawned sub-agents do the work.
 The conductor maintains altitude — overview, synthesis, gate-judgment — while engineers
 have depth. "YOU synthesize, explorers find" (ac-plan-init). "YOU review, engineers
-implement" (ac-implement). "YOU synthesize, engineers fix" (ac-review). The moment a
+implement" (ac-implement). The moment a
 conductor starts digging, it loses the vantage to decide — that is a *system design error*
 with predictable failure modes: scope creep, gate drift, context collapse.
 
@@ -133,7 +133,6 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 | Beadify | beads from the plan | `br` shows the wave | `ac-beadify` (+`ac-bead-refine`) |
 | **Implement** | code + per-bead **affected** tests; safety-push at session end | per-bead gate green | `ac-implement` |
 | **Verify** | gate-selected ui-polish / QA at selected depth | selected passes PASS; no open `qa-blocker` | `ac-pipeline/references/verification-gate.md` |
-| **Review** | code correctness; blocking findings | VERDICT: APPROVED | `ac-review` |
 | **Merge** | rebase → **affected tests (local)** → version bump → push → PR → CI-confirm → merge → tag | affected green + checks pass | `ac-merge` |
 | **Land** | close stragglers · session teardown/cleanup · reflect/compound | session closed cleanly | `ac-land` |
 | **Publish** *(manual, post-loop)* | SHA-pinned full-CI read + full device/browser QA + migration expand/contract → ship web + native | green-for-this-SHA + QA pass + migration-safe | `ac-publish` |
@@ -239,7 +238,7 @@ board* and *how often*.
    work (it's still on the branch, the author notices); including a bad change ships a **defect**
    silently. That asymmetry is defused by the gate + the visible manifest, **not** by trusting
    authorship — which is why include-by-default is correct only when paired with a real gate and
-   a surfaced manifest. Binds `ac-merge`, `ac-hygiene`, `ac-review`, `ac-loop`.
+   a surfaced manifest. Binds `ac-merge`, `ac-hygiene`, `ac-loop`.
 
 9. **Runtime proof over static presence.** Every app maintains a journey registry
    (`CORE/journeys/*.md` frontmatter) naming its critical surfaces, each with a
@@ -273,7 +272,7 @@ skills) point here rather than restating times in more than one place.
 | Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` |
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-loop` run | scheduled, feeds beads ahead of shipping | `ac-triage` |
-| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes commit direct to `main` (trunk-direct), close via `ac-batch-close`; deferred → epic beads. **Sole owner of the standing review of `main`** when no batch shipped in >7 days (plan C2) — `ac-review` provides only the diff-range mechanism and never self-schedules it | `ac-hygiene` |
+| Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 5-lens panel; fixes commit direct to `main` (trunk-direct), close via `ac-batch-close`; deferred → epic beads. **Sole owner of the standing review of `main`** when no batch shipped in >7 days (plan C2) — `ac-review` provides only the diff-range mechanism and never self-schedules it | `ac-hygiene` |
 | Audit | **Not yet scheduled** — human-triggered today; checklists serve as reference depth behind the weekly hygiene panel | findings → beads, never fixes in place | `audit` |
 
 **Triage-before-loop ordering** is the one cadence rule with a *hard dependency* on another
@@ -305,11 +304,11 @@ never `ac-merge`. The run report commits to `.claude/reviews/` root and does not
 
 
 **Single-writer invariant on the review-mark (bd-kudrb).** `.claude/reviews/batch/` is written
-by exactly ONE commit per ceremony — `ac-batch-close`'s Act 3. `ac-review` stages its findings
+by exactly ONE commit per ceremony — `ac-batch-close`'s Act 2. Nothing else stages findings
 report in the sibling `.claude/reviews/pending/`; `ac-publish` uses `.claude/reviews/publish/`;
 `ac-hygiene` uses `.claude/reviews/` root. Any new skill that emits a review-shaped artifact
 picks a sibling directory too. The reason is mechanical: four readers derive a batch range from
-`git log -1 --format=%H -- .claude/reviews/batch/` (`ac-batch-close` Act 1, `ac-review` Phase 1,
+`git log -1 --format=%H -- .claude/reviews/batch/` (`ac-batch-close` Act 1,
 `ac-loop`'s delegated scope detection, `ac-pipeline/references/verification-gate.md`), and a second writer
 touching that path mid-ceremony makes the probe return a commit *inside* the range it bounds —
 which under-scopes the batch **silently**, with no error to notice.
@@ -374,7 +373,7 @@ Concurrent pipeline ceremonies share one app checkout (no worktrees between cere
 The doctrine is the target; these stage edits bring reality into line:
 
 - [x] **Verify gate** — `ac-pipeline/references/verification-gate.md` built; `ac-loop`/`ac-pipeline`/`ac-merge` consult it.
-- [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-review → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner.
+- [x] **Land after merge** — `ac-loop` already runs `ac-implement → VERIFY-GATE → ac-merge`, land once at exit; old `ac-pipeline` runtime conductor retired via deprecation banner.
 - [ ] **Land refocus** — bundled item SPLIT into its four sub-items; parent stays open while the 1b sub-item is live:
   - [x] strip **1c UI suite** — DONE (retired from `ac-land`).
   - [ ] strip **1b `test:all`** — SEPARATE, STILL-LIVE land-refocus item; the standalone-fallback `test:all` in `ac-land` 1b still exists. NOT a retired premise — pending.
@@ -390,7 +389,7 @@ The doctrine is the target; these stage edits bring reality into line:
 ## Pointers
 
 - Runtime conductor: `ac-loop/SKILL.md`
-- Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-review` · `ac-merge` · `ac-land` · `ac-distribute`
+- Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-merge` · `ac-land` · `ac-distribute`
 - Shared method: `ac-pipeline/references/verification-gate.md` (selection) · `ac-pipeline/references/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
 - Context/memory doctrine (sibling): `context-engineering`
 

@@ -21,7 +21,7 @@ Phase 1 constructs the PR body from gathered context (plan, beads, diff stats, q
 
 ## Review
 
-{link to .claude/reviews/ report if exists, or "Local review via /ac-review"}
+{link to .claude/reviews/ report if one exists, else omit}
 
 ## Known post-merge tails
 

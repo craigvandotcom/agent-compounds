@@ -634,9 +634,9 @@ NOT reach a publish (nothing downstream runs the full suite), run `pnpm test:all
 
 ### Next Steps
 
-**Run `/ac-review` next (recommended).** `/ac-review` is the sole pre-close gate — it must complete before the closing ceremony (`/ac-batch-close` under trunk-direct, the default; `/ac-merge` only on the legacy PR-branch path — see `ac-merge` § When to use). `/ac-land` is NOT a pre-close gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has closed to main — run it manually when not driven by `/ac-loop`. Do NOT run the closing ceremony until review has completed. Do NOT run `/ac-land` before it — it has nothing to close out yet.
+**Run the closing ceremony next** — `/ac-batch-close` under trunk-direct (the default), or `/ac-merge` on the legacy PR-branch path (see `ac-merge` § When to use). There is no review gate between them: each bead was verified by its own tests at implement time, and standing code quality is `ac-hygiene`'s lane on its own cadence. `/ac-land` is NOT a pre-close gate: it's the closing ritual (teardown + retrospective) that runs LAST, after the wave has closed to main — run it manually when not driven by `/ac-loop`. Do NOT run `/ac-land` before the ceremony — it has nothing to close out yet.
 
-**Present next step with `AskUserQuestion`** — Ask (header: "Next step", single-select): "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?" — options: "Review work (Recommended)" (Run /ac-review — the pre-close gate. Then /ac-batch-close, or /ac-merge on a PR branch.) / "Continue implementing" (Run /ac-implement again for more beads (review + close later)) / "Done for now" (Stop here — remember to run /ac-review then the closing ceremony; /ac-land runs after it).
+**Present next step with `AskUserQuestion`** — Ask (header: "Next step", single-select): "Bead-work session complete ({BEADS_COMPLETED} beads). What's next?" — options: "Close the batch (Recommended)" (Run /ac-batch-close, or /ac-merge on a PR branch.) / "Continue implementing" (Run /ac-implement again for more beads, close later) / "Done for now" (Stop here — remember to run the closing ceremony; /ac-land runs after it).
 
 ### Deregister Session Identity (Layer 1 — true last act)
 

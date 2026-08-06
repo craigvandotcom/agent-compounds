@@ -1,10 +1,12 @@
 ---
 name: ac-review
-description: 'Code review for a feature branch OR a trunk-direct batch — parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Triggers: ''review the branch'', ''work review'', ''code review this feature'', ''pre-merge review'', ''review the batch'', ''pre-close review''.'
+description: 'MANUAL, human-triggered code review over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. NOT a pipeline stage: it is not a pre-merge gate, not a pre-close gate, and no skill may recommend or auto-invoke it — ac-implement closes straight to ac-batch-close/ac-merge, ac-publish gates on the QA proof, and standing code quality is ac-hygiene''s lane on its own cadence.'
 ---
 
 
-**You are the conductor.** A panel of up to seven reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts), plus a 7th lens (doctrine-delta) that activates only when the diff touches `skills/`. You synthesize, auto-fix, and escalate. Scoped to one committed diff range — a trunk-direct batch since the review-mark (primary) or a feature branch (legacy) — run after implementation, before close/merge.
+**You are the conductor.** A panel of up to seven reviewers hunts independently — the core four dimensions always, plus two diff-conditional lenses (test-quality, contracts), plus a 7th lens (doctrine-delta) that activates only when the diff touches `skills/`. You synthesize, auto-fix, and escalate. Scoped to one committed diff range that CRAIG NAMES — a batch since the batch mark, a feature branch, or any range he gives you.
+
+**This is not a pipeline stage.** Nothing recommends it and nothing auto-invokes it; it runs when asked for by name. Bead-level TDD and `ac-hygiene` carry standing quality.
 
 For codebase-wide health checks, use `/ac-hygiene` instead.
 
@@ -14,8 +16,8 @@ For codebase-wide health checks, use `/ac-hygiene` instead.
 
 |                  |                                                                                                            |
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Input**        | A committed diff range — trunk-direct batch since the review-mark (primary) or a feature branch (legacy), from `/ac-implement` or manual coding |
-| **Output**       | Review report in `.claude/reviews/` (default) or `.claude/reviews/pending/` (when `ac-batch-close` passes `report_dest` — staged for that ceremony to carry into the mark; **never** advances the review-mark itself), auto-fixed issues committed, NEEDS_DECISION items presented |
+| **Input**        | A committed diff range Craig names — a batch since the batch mark, a feature branch, or an explicit range |
+| **Output**       | Review report in `.claude/reviews/` — **never** `.claude/reviews/batch/`, which is `ac-batch-close`'s single-writer batch mark. Auto-fixed issues committed, NEEDS_DECISION items presented |
 | **Artifacts**    | Reviewer findings in `$ARTIFACTS_DIR/round-1-*.json`, consensus in `consensus-round-1.json` + `consensus-registry.json`, progress in `progress.md` |
 | **Verification** | All project checks pass (test, lint, type-check), fixes committed, decisions resolved or documented        |
 

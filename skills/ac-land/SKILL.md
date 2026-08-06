@@ -461,7 +461,7 @@ headless by `ac-loop`'s Exit-Land prompt ("never `AskUserQuestion`"), skip this 
 just emit the summary — the loop, not a human, decides what runs next (same carve-out as
 `ac-merge` / `ac-batch-close`):
 
-Note: `ac-land` runs **LAST** — after `ac-review` AND `ac-merge`. Review and merge are the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to review or merge for it. The only next steps are starting the next wave or stopping.
+Note: `ac-land` runs **LAST** — after the merge. Merging is the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to merge for it. The only next steps are starting the next wave or stopping.
 
 ```
 AskUserQuestion(

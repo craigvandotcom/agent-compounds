@@ -600,7 +600,7 @@ on `main` with no PR diff to gate them, the weekly `PANEL=full` run doubles as t
 review of `main`: **if no batch has shipped (no `.claude/reviews/batch/` commit) in >7 days,
 the weekly hygiene run is the review of everything on `main` since the last `v*` tag** — it is
 not optional in that window. This is the trunk-direct analogue of the pre-merge review a PR used
-to force; when batches ship regularly, `ac-batch-close`'s own `ac-review` gate covers `main` and
+to force; when batches ship regularly, the verification gate covers `main` and
 this weekly pass is the ordinary quality sweep on top.
 
 **Baseline pointer only — `ac-prove` `probe` mode (Consumer Roster row (e)).** The weekly

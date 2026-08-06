@@ -37,25 +37,25 @@ Selection and depth are independent — don't conflate them:
 - **Depth** — smoke / full / exhaustive (defined in `qa-shared.md`); for ui-polish,
   Scoped vs Whole-app → driven by **blast radius / risk**.
 
-`ac-review` (code-correctness) is **not** in this triad — it is near-mandatory and
-gated only on *effort*, not existence (see the table). The triad is the *runtime/visual*
-verification; review is the *static* one. Both are pre-merge.
+This triad is the *runtime/visual* verification and it is the whole pre-merge gate.
+There is no static review stage: each bead is verified by its own tests at implement
+time, and standing code quality is `ac-hygiene`'s lane on its own cadence.
 
 ---
 
 ## Step 1 — classify the diff
 
 Run against the batch's range: everything since the review-mark (the last commit that
-touched `.claude/reviews/batch/` — same anchor as `ac-review`'s trunk-direct scope
-detection; bootstrap fallback when no batch commit exists yet: the last `v*` tag).
+touched `.claude/reviews/batch/` — the batch mark `ac-batch-close` advances;
+bootstrap fallback when no batch commit exists yet: the last `v*` tag).
 Fail-safe: a class flips on when **any** file matches; ambiguity counts as a match,
 never a skip.
 
 ```bash
-# Review-mark anchor (identical computation to ac-review Phase 1 — keep in sync).
-# Single-writer invariant (bd-kudrb): ONLY ac-batch-close's Act 3 commits to
-# .claude/reviews/batch/. ac-review stages its findings report in the sibling
-# .claude/reviews/pending/, which this probe deliberately cannot see — otherwise the
+# Batch-mark anchor (the range every batch consumer shares).
+# Single-writer invariant (bd-kudrb): ONLY ac-batch-close's Act 2 commits to
+# .claude/reviews/batch/. Any second writer would land a commit inside the very
+# range this probe bounds — which is exactly the under-scoping it exists to stop; otherwise the
 # probe returns a commit inside the range it is meant to bound and the gate silently
 # under-scopes (no error, just fewer files classified).
 REVIEW_MARK=$(git log -1 --format=%H -- .claude/reviews/batch/)
@@ -132,15 +132,15 @@ out-of-reach surface is UNVERIFIED and can never be discharged by a PASS
 
 ## Step 2 — select passes + depth
 
-| Wave touches… | ac-review | ac-ui-polish | ac-qa-browser | ac-qa-device |
-|---|---|---|---|---|
-| Docs / comments only (`!runtime`) | — | — | — | — |
-| Tests / CI only (`!runtime`) | low effort | — | — | — |
-| Backend logic / db, no UI (`logic`, `!webui !webrt`) | ✓ (effort ∝ risk) | — | smoke *if it feeds UI* | — |
-| Web runtime only (`webrt`, `!webui`) | ✓ | — | **smoke/full** | — |
-| Web UI (`webui`) | ✓ | **Scoped** | **smoke/full** | — |
-| Native shell (`native`) | ✓ | Scoped *if `webui` too* | smoke | **✓** (Mac only) |
-| Release / auth / payments / migration / version bump | ✓ high | Whole-app *if `webui`* | full | full (Mac) |
+| Wave touches… | ac-ui-polish | ac-qa-browser | ac-qa-device |
+|---|---|---|---|
+| Docs / comments only (`!runtime`) | — | — | — |
+| Tests / CI only (`!runtime`) | — | — | — |
+| Backend logic / db, no UI (`logic`, `!webui !webrt`) | — | smoke *if it feeds UI* | — |
+| Web runtime only (`webrt`, `!webui`) | — | **smoke/full** | — |
+| Web UI (`webui`) | **Scoped** | **smoke/full** | — |
+| Native shell (`native`) | Scoped *if `webui` too* | smoke | **✓** (Mac only) |
+| Release / auth / payments / migration / version bump | Whole-app *if `webui`* | full | full (Mac) |
 
 **Depth derivation** (take the highest that applies):
 

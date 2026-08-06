@@ -6,7 +6,7 @@ description: 'The merge-to-main path for a PR BRANCH — feature wave or chore/h
 
 **You are the conductor closing out a branch — feature wave or chore/hygiene.** Create the PR, wait for CI and agent feedback, triage and fix, merge when clean.
 
-Feature waves run after `/ac-review` (the pre-merge gate for waves); chore/hygiene branches are self-reviewed and skip it. `/ac-land` runs AFTER this merge, as session closure. Per-branch, not per-session (contrast: bead-land).
+There is no review gate before this merge — beads are verified by their own tests at implement time, and standing code quality is `ac-hygiene`'s lane. `/ac-land` runs AFTER this merge, as session closure. Per-branch, not per-session (contrast: bead-land).
 
 **Trunk-direct migration:** agents committing directly to `main` no longer open PRs — that
 closing ceremony is **`ac-batch-close`** (`skills/ac-batch-close/SKILL.md`). This skill
@@ -19,7 +19,7 @@ branches — see `.claude/legacy-branches.txt`).
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | The current branch (wave or chore/hygiene), pushed. For a wave, post `/ac-review` (the pre-merge gate); hygiene/chore branches are self-reviewed and skip that gate. |
+| **Input**        | The current branch (wave or chore/hygiene), pushed. |
 | **Output**       | PR merged to main, branch deleted, work shipped                                    |
 | **Artifacts**    | PR on GitHub, feedback triage in `$ARTIFACTS_DIR/`                                         |
 | **Verification** | All CI checks green, PR merged, on main branch                                            |
