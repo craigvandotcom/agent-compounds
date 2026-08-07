@@ -1,8 +1,8 @@
 ---
 skill: ac-loop
 archetype: orchestrator
-last_pass: 2026-08-06 (correctness pass)
-spine_lines: 897 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
+last_pass: 2026-08-07 (run telemetry)
+spine_lines: 896 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
 ---
 
 # ac-loop — maintenance ledger
@@ -24,6 +24,14 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
 (none — both extractions were clean verbatim moves, nothing parked)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- [2026-08-07] RENAMED + EXTRACTED: § "Friction aggregation — the loop-retro carrier (D2)"
+  → § "Run telemetry + friction carrier (D2)". The carrier now always carries a telemetry
+  header (requested/peak/idle-slots + reason, one line per ceremony); friction sections stay
+  conditional, so a clean run yields header-only instead of an absent file. Exit-Land's
+  "absent or empty carrier means a clean run" instruction was corrected to match. Format
+  block + reason-token set + worked examples → NEW `references/run-carrier.md` (procedure
+  tier); the rule stays core. Ramp-evidence bullet compressed to point at it. Conservation:
+  the removed heading is this rename — no unique content lost. SKILL.md 897 → 896.
 - [2026-08-06] CORRECTNESS PASS (no diet). Completed the same-day review cut, which had left
   live text: 5 ceremony chains still read `verify → review → close` (Rule 0 drain, Phase 1
   step 2, the `post-merge` window definition, Phase 2 step 2, Efficiency § Parallelism) and

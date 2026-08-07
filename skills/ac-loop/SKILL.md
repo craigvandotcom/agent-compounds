@@ -753,9 +753,8 @@ fighting the machine. Hold these:
   child. Pull heavy sub-steps (e2e / prod-build) OUT of the implementer into their own
   gated step so they're visible and pace-able — don't let one bead's engineer run
   100+ min hidden inside a sub-agent.
-- **Ramp evidence:** the exit retrospective (ac-land) notes any tree collisions, child
-  stalls, or conductor compactions this run — Craig moves width run-by-run at the
-  prompt; the skill default only rises after green windows at the current default.
+- **Ramp evidence:** the carrier's `width:` line is the ramp input (§ Run telemetry) — Craig
+  moves width at the prompt; the default rises only after green windows at the current default.
 
 ---
 
@@ -774,21 +773,20 @@ C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clea
 
 **Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
 
-### Friction aggregation — the loop-retro carrier (D2)
+### Run telemetry + friction carrier (D2)
 
-As each phase child returns, the conductor collects its `friction:` block (the D1 schema —
-Phase 1 step 2 "Child friction schema") and rolls the items up **per stage** into one carrier
-file, `/tmp/loop-retro-<RUN_ID>.md` (RUN_ID convention — `ac-pipeline/references/run-id.md`; ephemeral, NOT
-`progress.md`). Append as children return, or aggregate once after each batch's children
-return — either is fine, provided the file is written **before** the Exit-Land spawn below so
-`ac-land` can reference it deterministically.
+The conductor writes ONE carrier per run, `/tmp/loop-retro-<RUN_ID>.md` (RUN_ID convention —
+`ac-pipeline/references/run-id.md`; ephemeral, NOT `progress.md`), **before** the Exit-Land spawn
+so `ac-land` reads it deterministically. Schema: `references/run-carrier.md`.
 
-Structure: one `## <stage>` section per stage that ran **and produced ≥1 friction item**, that
-stage's children's `friction:` items listed under it. **Zero-friction rule:** a stage that ran
-but returned only `friction: []` is **OMITTED** — no empty `## <stage>` header. A fully-clean
-run therefore yields an empty-or-absent carrier, and `ac-land` (the consume leg) degrades
-gracefully to today's behavior when the carrier is empty/absent — nothing downstream ever
-parses an empty stage section.
+**Telemetry header — ALWAYS written, clean run included.** Emit the run's requested width, its
+observed peak concurrency, idle slots with a reason, and one line per ceremony. Take `peak` from
+your own dispatch record — the most children in flight at once, never the width you asked for.
+
+**Friction sections — conditional.** Roll each returning child's `friction:` block (schema —
+Phase 1 step 2 "Child friction schema") up **per stage**: one `## <stage>` section per stage
+that ran **and produced ≥1 item**; a stage returning only `friction: []` is **OMITTED**. A
+clean run yields a header-only carrier, and `ac-land` never parses an empty stage section.
 
 ### Exit-Land — the loop's single closing invocation
 
@@ -799,8 +797,9 @@ scopes to *this run's* dirs (never a stale or foreign one) and learns from **eve
 > "Run ac-land to close this loop session (autonomous run). `RUN_ID=<RUN_ID>`. Land the WHOLE
 > session, not one wave: the retrospective reads every `/tmp/bead-work-*-<RUN_ID>/progress.md`
 > (all waves this run shipped — `RUN_ID` scopes them safely), and teardown sweeps all of them.
-> ALSO read the friction carrier `/tmp/loop-retro-<RUN_ID>.md` if it exists (the per-stage
-> aggregated friction packet — an absent or empty carrier means a clean run; proceed as today).
+> ALSO read the run carrier `/tmp/loop-retro-<RUN_ID>.md` — it ALWAYS exists: a telemetry
+> header (`width:`/`ceremony:`) plus per-stage friction sections only where friction occurred.
+> Header with no stage sections = a clean run. Carry the `width:` line into the retrospective.
 > Run your tier router (T1/T2 filing) as normal, but SKIP your Step 0 reflect delegation —
 > the CONDUCTOR spawns reflect after you return (ac-znk.6); hand the pre-classified
 > T3 subset + skill-scoped tags back in your return summary instead.
