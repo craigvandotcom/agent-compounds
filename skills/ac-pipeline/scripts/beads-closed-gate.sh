@@ -54,8 +54,10 @@
 #
 # --- progress.md completeness gate (ac-514; decision ac-x9a apply-modified) ---
 # At the close checkpoint, parse the wave's progress.md (written by ac-implement
-# Phase 1e — header `TARGET_BEADS={N}`, per-bead `### Bead <id>: <title>` + a
-# `- Status:` line, footer `COMPLETED: {done} / {N}`):
+# Phase 1e — header `TARGET_BEADS={N}` + `KIND=implement`, per-bead
+# `### Bead <id>: <title>` + a `- Status:` line, footer `COMPLETED: {done} / {N}`).
+# Only `KIND=implement` files carry closure obligations; refine/beadify files are
+# skipped in the union entirely (absent KIND = implement, for back-compat):
 #   * wave with N>1 beads: HARD-FAIL the close if progress.md lacks a per-bead
 #     result entry for each bead OR the `COMPLETED: n/N` tally is absent/short
 #     (message names the missing in-scope bead ids).
@@ -148,13 +150,26 @@ check_progress_completeness() {
   [ "${#files[@]}" -eq 0 ] && return 0   # not opted in — skip
 
   local union_ids="" valid_files=0 existing_files=0 structural_problem=""
-  local pf n entry_count status_count tally done_n ids
+  local pf n entry_count status_count tally done_n ids kind
   for pf in "${files[@]}"; do
     [ -z "$pf" ] && continue
     if [ ! -f "$pf" ]; then
       echo "beads-closed-gate: WARNING — progress file not found at '$pf'; skipping it in the completeness union." >&2
       continue
     fi
+
+    # KIND header — only implement-kind files carry closure obligations. Refine and
+    # beadify children stamp beads and ship no code, so their progress files neither
+    # contribute ids to the union nor owe per-bead result entries. Skip BEFORE the
+    # existing_files++ : a prep file counted there would trip the PROGRESS-NO-HEADER
+    # hard fail below, false-blocking a run whose only children were prep.
+    # Absent KIND = implement (back-compat with files predating mixed-kind runs).
+    kind=$(grep -oE '^KIND=[a-z]+' "$pf" 2>/dev/null | head -1 | sed -E 's/^KIND=//')
+    if [ -n "$kind" ] && [ "$kind" != "implement" ]; then
+      echo "beads-closed-gate: INFO — '$pf' is KIND=$kind (ships no code); not counted in the completeness union." >&2
+      continue
+    fi
+
     existing_files=$((existing_files + 1))
     n=$(grep -oE 'TARGET_BEADS=[0-9]+' "$pf" | head -1 | grep -oE '[0-9]+')
     if [ -z "$n" ]; then

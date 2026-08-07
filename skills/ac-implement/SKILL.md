@@ -576,15 +576,15 @@ mcp__mcp-agent-mail__release_file_reservations(
 TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", status: "completed")
 ```
 
-Append to `$ARTIFACTS_DIR/progress.md` (include header on first write). **This exact
-shape is parsed by `beads-closed-gate.sh` — reproduce it literally: APPEND sections to
-the one `progress.md`, never a sibling per-bead result file in its place; a fanned-out
-implement child inherits this contract verbatim**:
+Append to `$ARTIFACTS_DIR/progress.md` (header on first write). **`beads-closed-gate.sh`
+parses this exact shape — reproduce it literally: APPEND to the one `progress.md`, never a
+sibling per-bead result file; a fanned-out child inherits this verbatim**:
 
 ```markdown
 <!-- Header (first bead only) -->
 
 TARGET_BEADS={TARGET_BEADS}
+KIND=implement
 WAVE={WAVE_SLUG}
 
 ### Bead <id>: <title>

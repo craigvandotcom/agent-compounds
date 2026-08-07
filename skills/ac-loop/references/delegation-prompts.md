@@ -27,7 +27,9 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 
 > "Run ac-bead-refine scoped to {REFINE_SCOPE — an epic id, or explicit bead-id list}.
 > `RUN_ID=<RUN_ID>`; your artifacts dir is per-CHILD (`run-id.md` fan-out corollary —
-> compute your own discriminator, never accept one). Defer beads-DB writes per
+> compute your own discriminator, never accept one). If you write a `progress.md`, its
+> header MUST carry `KIND=refine` — you ship no code and close no beads, and the marker
+> is what keeps your file out of the close gate's completeness union. Defer beads-DB writes per
 > `ac-pipeline/references/ceremony-batching-pool.md` § Beads-DB mutation deferral: hold
 > ALL `br` mutation verbs (`br update`/`br close`/`br label`/`br comments add`) until the
 > conductor's ledger commit lands — reads are free. Headless: no AskUserQuestion; a
@@ -40,8 +42,9 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > "Run ac-beadify on plan `{PLAN_PATH}` (status already verified loop-ready).
 > `RUN_ID=<RUN_ID>`. Skip the user-approval asks — autonomous run: auto-apply
 > Critical/High + consensus validator findings, log the rest. Always proceed to
-> ac-bead-refine at the end (no confirmation question). Same beads-DB-hold + report +
-> `friction:` contract as the Refine prompt above."
+> ac-bead-refine at the end (no confirmation question). If you write a `progress.md`,
+> its header MUST carry `KIND=beadify` (same reason as the Refine prompt). Same
+> beads-DB-hold + report + `friction:` contract as the Refine prompt above."
 
 ## Implement prompt
 

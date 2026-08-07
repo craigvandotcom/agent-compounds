@@ -545,6 +545,68 @@ else
   fail "Case NH3: expected non-zero exit with PROGRESS-NO-HEADER, got $RC. Output: $OUT"
 fi
 
+# --- Cases MK1–MK3: mixed-kind runs — only KIND=implement files carry closure ----
+# A continuous scheduler holds implement, refine and beadify children at once, so the
+# conductor's one end-of-run gate call unions progress files of several kinds. Refine
+# and beadify ship no code and close no beads; their files must neither satisfy nor
+# obstruct the implement completeness union. Absent KIND = implement (Cases L1/L2
+# already cover that back-compat path).
+clear_fixtures
+write_fixture "ConductorMK" '[{"id":"bd-mk1","status":"closed","labels":["infra"]},{"id":"bd-mk2","status":"closed","labels":["infra"]}]'
+
+# MK1 — a prep file alongside a COMPLETE implement file: prep is ignored, close proceeds.
+PROG_MK_IMPL="$WORKDIR/progress-mk-impl.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' 'KIND=implement' '' \
+  '### Bead bd-mk1: first bead' '- Status: COMPLETE' '- Commit: mmm111' '' \
+  '### Bead bd-mk2: second bead' '- Status: COMPLETE' '- Commit: mmm222' '' \
+  'COMPLETED: 2 / 2' \
+  >"$PROG_MK_IMPL"
+PROG_MK_REFINE="$WORKDIR/progress-mk-refine.md"
+printf '%s\n' \
+  'TARGET_BEADS=3' 'KIND=refine' '' \
+  '### Bead bd-other9: refined, not implemented' '- Status: REFINED' \
+  >"$PROG_MK_REFINE"
+OUT=$(GATE_AGENT="ConductorMK" run_gate --beads bd-mk1,bd-mk2 \
+        --progress "$PROG_MK_IMPL" --progress "$PROG_MK_REFINE" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "KIND=refine"; then
+  pass "Case MK1: refine-kind file ignored beside a complete implement file -> exit 0"
+else
+  fail "Case MK1: expected exit 0 with a KIND=refine INFO line, got $RC. Output: $OUT"
+fi
+
+# MK2 — ONLY prep files exist. These must NOT count toward PROGRESS-NO-HEADER, or a
+# run whose children were all prep would false-block its own close.
+OUT=$(GATE_AGENT="ConductorMK" run_gate --beads bd-mk1,bd-mk2 \
+        --progress "$PROG_MK_REFINE" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && ! echo "$OUT" | grep -q "PROGRESS-NO-HEADER"; then
+  pass "Case MK2: prep-only progress files -> exit 0, no PROGRESS-NO-HEADER false block"
+else
+  fail "Case MK2: expected exit 0 without PROGRESS-NO-HEADER, got $RC. Output: $OUT"
+fi
+
+# MK3 — a prep file must not MASK an incomplete implement file: its '### Bead' entries
+# never enter the union, so the missing in-scope bead is still named.
+PROG_MK_THIN="$WORKDIR/progress-mk-thin.md"
+printf '%s\n' \
+  'TARGET_BEADS=2' 'KIND=implement' '' \
+  '### Bead bd-mk1: first bead' '- Status: COMPLETE' '- Commit: mmm111' '' \
+  'COMPLETED: 2 / 2' \
+  >"$PROG_MK_THIN"
+PROG_MK_MASK="$WORKDIR/progress-mk-mask.md"
+printf '%s\n' \
+  'TARGET_BEADS=1' 'KIND=beadify' '' \
+  '### Bead bd-mk2: created, not implemented' '- Status: CREATED' '' \
+  'COMPLETED: 1 / 1' \
+  >"$PROG_MK_MASK"
+OUT=$(GATE_AGENT="ConductorMK" run_gate --beads bd-mk1,bd-mk2 \
+        --progress "$PROG_MK_THIN" --progress "$PROG_MK_MASK" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" && echo "$OUT" | grep -q "bd-mk2"; then
+  pass "Case MK3: beadify-kind file cannot mask an incomplete implement file -> exit 1 naming bd-mk2"
+else
+  fail "Case MK3: expected exit 1 naming bd-mk2, got $RC. Output: $OUT"
+fi
+
 # ============================================================================
 # Case I: bleed check needs a real BASE..HEAD diff — put HEAD ahead of main.
 # ============================================================================
