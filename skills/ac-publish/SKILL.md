@@ -10,9 +10,8 @@ promoter (parallel-execution doctrine §6). Your job spans several things no oth
 end-to-end: **mint the single release version** (Phase 0 — relocated here from `ac-batch-close`
 Phase 2; see `version-bump-defaults-to-patch`), act as the *definitive confidence gate* before
 production — obtain a fresh, ref-pinned proof that the full suite is green **for the exact commit
-you're about to ship** (via `ac-prove`), run the genuinely-new expensive checks (full device/browser
-QA **and** a heavy 6-dimension review over everything since the last publish — the "freight" that
-moved here when `ac-batch-close` went on its diet, `bd-pwt44`), confirm migrations are
+you're about to ship** (via `ac-prove`), run the genuinely-new expensive check (full device/browser
+QA over everything since the last publish), confirm migrations are
 release-safe, fix anything that surfaces **in-session**, **tag** the proved commit, then ship web
 (via **Vercel promote, never a rebuild** — Staged Deployments) + native, and **finalize** the feedback rows
 `ac-batch-close` left pending.
@@ -63,9 +62,8 @@ native build/sign/upload is owned by
 the fixed tasks below now; **add a "Fix-in-session — round N" task each time Phase 1, 2, or 3
 surfaces an issue** (dynamic, per the re-entrant loop — a fix commit re-invokes `ac-prove`
 against the new tip, which returns whatever `R` it actually proved per its Returned-SHA
-Contract; the Confidence/QA gate task **and** the Heavy review task both go back to
-`in_progress` on that return, they do not get re-created — Phase 2's stale-review invalidation
-rule means a re-pin re-opens the review too). `ac-distribute`, invoked from Phase 4, keeps its
+Contract; the Confidence/QA gate task goes back to
+`in_progress` on that return, it does not get re-created). `ac-distribute`, invoked from Phase 4, keeps its
 own ledger — don't duplicate its build/sign/upload steps here.
 
 Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
@@ -221,13 +219,11 @@ make it a different artifact than the one that will actually ship.
 
 **Fix-forward re-pin.** If `ac-prove` fixes forward, it returns a **new tip `R′ ≠ R`** (its
 Returned-SHA Contract — never assume your input `--ref` still holds). Re-pin `R ← R′` and
-re-scope every downstream step (migration diff, heavy review, tag) to `R′`. **Do not re-bump** —
+re-scope every downstream step (migration diff, tag) to `R′`. **Do not re-bump** —
 a fix-forward round is a code fix, never a `package.json` touch; the Phase-0 mint already rides
 along on `R′` since it descends from `R`, so mint-once holds across re-pins. This loop is
 inherently bounded: evidence/bead-writing commits are `[skip ci]` and can't themselves
-re-trigger a `reason=prove` dispatch, and `ac-prove`'s own fix-forward mini-loop is capped. If
-Phase 2's heavy review already ran against the old `R`, this re-pin **invalidates** it — see
-Phase 2's stale-review rule below.
+re-trigger a `reason=prove` dispatch, and `ac-prove`'s own fix-forward mini-loop is capped.
 
 Red (FAIL from `ac-prove`, no valid receipt) → Phase 3 (fix-in-session).
 
@@ -304,16 +300,14 @@ This gate blocks the ship; it is not a warning.
 ## Phase 3: Fix-in-session
 
 If `ac-prove` reports FAIL (Phase 1 — its own internal fix-forward loop already exhausted, or a
-`+qa` blocker it doesn't auto-fix), the heavy review (Phase 2) surfaces a Critical/High finding,
-or migrations (Phase 2) surface an issue: **add a "Fix-in-session — round {N}" task now**
-(`in_progress`) and fix it — you may ask Craig. Get to 100% before shipping. File a bead only if
-the fix is genuinely bigger than this session (then stop). A fix commit moves the tip, so
-**re-invoke `ac-prove` against the new commit** (never re-bump — see Phase 1's Fix-forward
-re-pin) and adopt whatever `R` it returns — **mark "Fix-in-session — round {N}" `completed`**
-(note the new SHA in its description), set **"Confidence/QA gate" back to `in_progress`** (it is
-re-entered, not re-created), and — because the tip moved — set **"Heavy review" back to
-`in_progress`** too (Phase 2's stale-review invalidation rule: a fix commit landed after the
-last heavy-review pass means that pass no longer covers the code you're about to ship).
+`+qa` blocker it doesn't auto-fix), or migrations (Phase 2) surface an issue: **add a
+"Fix-in-session — round {N}" task now** (`in_progress`) and fix it — you may ask Craig. Get to
+100% before shipping. Publish is human-present, so fixing here is the rule: **only Craig elects
+to stop and file a bead instead** — never file one on your own judgement. A fix commit moves the
+tip, so **re-invoke `ac-prove` against the new commit** (never re-bump — see Phase 1's
+Fix-forward re-pin) and adopt whatever `R` it returns — **mark "Fix-in-session — round {N}"
+`completed`** (note the new SHA in its description) and set **"Confidence/QA gate" back to
+`in_progress`** (it is re-entered, not re-created).
 
 ## Phase 4: Ship
 
@@ -441,6 +435,6 @@ last heavy-review pass means that pass no longer covers the code you're about to
 ---
 
 _ac-publish is the terminal, human-facing gate: mint the release, finalize pending feedback rows,
-get a fresh green-for-this-SHA proof (via `ac-prove`) + full QA + a heavy 6-dimension review +
+get a fresh green-for-this-SHA proof (via `ac-prove`) + full QA +
 migration-safe, tag the proved commit, then ship web (promote, never rebuild) + native. This is
 the only place production risk is finally weighed._
