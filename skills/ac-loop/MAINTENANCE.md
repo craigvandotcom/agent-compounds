@@ -1,8 +1,8 @@
 ---
 skill: ac-loop
 archetype: orchestrator
-last_pass: 2026-08-07 (run telemetry)
-spine_lines: 896 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
+last_pass: 2026-08-07 (continuous scheduler)
+spine_lines: 843 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
 ---
 
 # ac-loop — maintenance ledger
@@ -24,6 +24,25 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
 (none — both extractions were clean verbatim moves, nothing parked)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- [2026-08-07] CONTINUOUS SCHEDULER. § Efficiency "Parallelism" rewritten from cohort
+  fan-out to a queue with refill: one eligible-work queue in priority order, dispatch on
+  every child return, ceremony waits for the QUEUE to drain rather than a cohort to land.
+  DELETE-UNIQUE (3 headings, all dead by construction — no successor to extract to):
+  (1) § "Phase pipelining permissions (bd-chd5p.3)" and (2) its § "Permissions (explicit)"
+  — the (a)/(b)/(c) permission table and hookpoint table existed ONLY to carve exceptions
+  to homogeneity; with kinds mixing freely, "may refine run during implement?" is not a
+  question the doctrine needs to answer. Survivors (MIN_ROUNDS-unchanged, ledger/mixed-state
+  pointer) kept in a new § Concurrency guard-rails. (3) the section
+  "SCOPE — two concurrent implement PHASES stay forbidden"
+  — its cause was shared build state and ceremony-range cleanliness;
+  the first is now an explicit serialisation point, the second is Phase 6's to remove.
+  Also cut: the homogeneity invariant + the CLOSED list of 3 fannable kinds; "How width is
+  enacted"; the per-phase partition prose. Kept verbatim: both disjointness tests (now the
+  ONLY eligibility rules), per-child isolation, bug-lane internal sequencing, the still-serial
+  list. `ac-land`'s teardown premise restated — it never depended on homogeneity, only on
+  runs overlapping in time. Rule 0 demoted from drain barrier to priority: bugs take the
+  first slot and land first in commit order; remaining slots take file-disjoint non-bug work.
+  SKILL.md 896 → 843 (−53).
 - [2026-08-07] RENAMED + EXTRACTED: § "Friction aggregation — the loop-retro carrier (D2)"
   → § "Run telemetry + friction carrier (D2)". The carrier now always carries a telemetry
   header (requested/peak/idle-slots + reason, one line per ceremony); friction sections stay

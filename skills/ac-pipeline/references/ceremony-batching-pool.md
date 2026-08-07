@@ -114,8 +114,8 @@ Per-cycle ac-review remains **unbatched**. Bisection cost capped by selected-set
 ## Refine-during-ceremony guard-rails
 
 
-Binding whenever refine children run concurrently with a ceremony (phase-pipelining
-permissions, `ac-loop` § Phase pipelining permissions).
+Binding whenever refine children run concurrently with a ceremony (`ac-loop`
+§ Concurrency guard-rails).
 
 **Git ledger commit (mixed-state sanctioned).** The **ceremony** commits whatever
 `.beads/issues.jsonl` state exists at report-commit time; refine children **never**

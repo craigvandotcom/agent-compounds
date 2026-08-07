@@ -58,38 +58,40 @@ RUN START (once, before anything else):
   (2-min chunked wait → default 2); headless: no prompt, width = 2.
   Sets PARALLEL_WIDTH for the run. See Phase 0 § Width Prompt + Efficiency § Parallelism.
 
-EACH ITERATION:  (phase ORDER is preserved; within each numbered step, up to
-                 PARALLEL_WIDTH HOMOGENEOUS children may run — same-kind only, one of the
-                 3 fannable kinds (implement|refine|beadify — CLOSED list, verify is NOT
-                 one), AND resource-disjoint — see Efficiency § Parallelism)
-  0. BUG LANE  (Rule 0 — health-first; drains COMPLETELY before steps 1-2)
+EACH ITERATION:  (ONE eligible-work queue, dispatched CONTINUOUSLY up to PARALLEL_WIDTH.
+                 Kinds MIX. An item is eligible when it is file-disjoint AND
+                 resource-disjoint from every in-flight child — Efficiency § Parallelism.
+                 The list below is PRIORITY (what leaves the queue next), NOT a barrier.)
+  0. BUG LANE  (Rule 0 — health-first: bugs take the FIRST slot and start first)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
       ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
       ├─ CLAIM the ready-bug set as ONE batch (claim-at-selection): mark all in_progress + assignee
-      │      ($AGENT_NAME) in one br update, mint the claim id, write .claim-id — then ac-implement
-      │      commits each fix DIRECTLY to main, one bug per commit, each independently green on affected
-      │      tests BEFORE the next starts — main is never broken mid-sequence. A fix that goes bad is
-      │      REVERTED (its own commit) and the bead reopened, never a blocker. Cap ~8 bugs/batch;
-      │      overflow forms the next batch after this one closes.
+      │      ($AGENT_NAME) in one br update, mint the claim id, write .claim-id — then ONE ac-implement
+      │      child commits each fix DIRECTLY to main, one bug per commit, each independently green on
+      │      affected tests BEFORE the next starts — main is never broken mid-sequence. Never fan bugs
+      │      across children. A fix that goes bad is REVERTED (its own commit) and the bead reopened,
+      │      never a blocker. Cap ~8 bugs/batch; overflow forms the next batch after this one closes.
       │      SOLO close (ship immediately as a batch-of-one): P0/urgent; migration- or native-touching;
       │      conductor judges the fix risky enough to isolate. Never fold a bug into a feature wave.
       └─ the BATCH runs the chain ONCE: ac-implement (per bug, sequential, direct-to-main) → VERIFY-GATE
              → BEADS-CLOSED-GATE → ac-batch-close → Slack notify   (one batch-close for the whole drain)
-      ⟳ RE-CHECK the Bug-Lane filter after every close; repeat until ZERO unblocked bugs remain, THEN step 1
-  1. Orphan beads  (refined, no plan wave — the "maintenance wave"; ships after the bug lane is dry)
+      ⟳ RE-CHECK the Bug-Lane filter whenever a child returns — a just-landed item may unblock a bug,
+        and that bug takes the next free slot. Bugs land FIRST in commit order; they do not gate
+        dispatch of file-disjoint non-bug work.
+  1. Orphan beads  (refined, no plan wave — the "maintenance wave")
       └─ ac-implement → VERIFY-GATE → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
-      │      (prep — only now, AFTER the bug lane + maintenance wave have shipped)
       └─ claim-at-selection (loop owns this, not ac-implement — direct to main, no branch) →
          ac-implement → VERIFY-GATE → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
+  PREP (refine/beadify) is a STANDING lane — always eligible, fills any idle slot, no window needed.
 
   VERIFY-GATE = consult ac-pipeline/references/verification-gate.md → run only the selected
                 passes (ui-polish / qa-browser / qa-device) at the selected depth.
   BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-batch-close no longer checks beads
                 itself) — genuine (non-post-merge) open beads block the close; advisory
                 Slack nudge, not a hard stop.
-  3. Loop — RE-CHECK the bug lane FIRST (a just-merged non-bug may have unblocked a bug), then orphans/plans
+  3. Loop — on every child return RE-CHECK the bug lane first, then refill from orphans/plans/prep
   4. Nothing left → Phase ARIA (unlock human blocks, then stop)
 
 STOP CONDITIONS checked before each iteration (see below).
@@ -265,8 +267,8 @@ resolve it, route around it, or surface it before dispatching children.
 
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when it is `ok` — Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>` AND Scan F's `board-truth: <n> open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green; and a non-zero `board-truth` count means those beads may already be DONE — adjudicate each before spending a child on it). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
-> **Rule 0 — the Bug Lane (preempts the entire order below).** Health first: **nothing broken ships alongside new work.** Before selecting ANY non-bug item, drain every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** — across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Only when zero unblocked **preemptive** bugs remain do you touch the non-bug order below.
-> - **Bugs are preemptive, re-checked every selection.** After each merge, re-run the Bug-Lane filter *before* picking the next unit of work — a just-merged non-bug may have unblocked a bug, and that bug now goes first. This is what makes "all unblocked bugs first *always*" hold across a run.
+> **Rule 0 — the Bug Lane (takes priority over the order below, and is NOT a barrier).** Health first: **nothing broken ships alongside new work** — which is satisfied by COMMIT ORDER, not by an idle machine. Every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** takes the FIRST dispatch slot and starts first, across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Remaining slots immediately take file-disjoint non-bug work — holding them empty while the bug lane drains buys no safety, because each bug commit is independently green regardless of what else is in flight.
+> - **Bugs are preemptive, re-checked on every child return.** Whenever a child returns, re-run the Bug-Lane filter *before* dispatching the next item — a just-landed non-bug may have unblocked a bug, and that bug takes the next free slot. This is what makes "all unblocked bugs first *always*" hold across a run.
 > - **Severity floor — classify by CAUSE via source-trace, NEVER by description keywords.** Keyword matching on titles/descriptions is **forbidden** — bugs *described* as display/read-model divergences have turned out to be write-path persistence bugs.
 >   - **P1/P2 bugs preempt as today** — unchanged.
 >   - **P3+ may join the next regular cycle's batch ONLY if confirmed render-only** via source-trace of the root-cause file set (`ac-pipeline/references/risk-classification.md` **binding #4**).
@@ -592,53 +594,18 @@ there, shared with `ac-batch-close`.
 
 ---
 
-## Phase pipelining permissions (bd-chd5p.3)
+## Concurrency guard-rails
 
-Refine work may run during ceremony CI poll / bug-lane implement / feature-wave
-implement. **Refine ships nothing**, so Rule 0's "nothing broken ships alongside new
-work" is untouched for permissions (b)/(c). Pipelining changes **when** refine runs,
-**not** `MIN_ROUNDS` — the cross-round premise catch (a later round inverting an
-earlier fix) is structurally preserved.
+Mixed-kind dispatch is the norm — eligibility, not kind, decides what runs (Efficiency
+§ Parallelism). Two rules bind it:
 
-### Permissions (explicit)
-
-| | Permission |
-| - | ---------- |
-| **(a)** | Refine for batch **N+1** may run during batch **N**'s ceremony (CI poll included). |
-| **(b)** | **REFINE** children may run during a **bug-lane** implement — **any bead type, bugs included**. What makes this safe is that refine ships no product code, not what kind of bead it refines. |
-| **(c)** | **REFINE** children may run during a **feature-wave** implement — same rule, same reason: **any bead type**. |
-
-**Engage phase-pipelining at these hookpoints** (the conductor's *when*):
-
-| Owner | When | Action |
-| ----- | ---- | ------ |
-| **conductor** (a) | post-close, ceremony's CI-poll wait (batch N) | if ≥1 unclaimed unrefined non-`human-gate` bead exists AND no refine child is already in flight → spawn ONE `ac-bead-refine` child on the highest-priority such bead (Work priority #2/#3 delegation prompt), under the concurrency rules in Efficiency § Parallelism |
-| **conductor** (b) | during bug-lane implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset, **naming the subset with `TARGET_BEAD_IDS=<ids>`** |
-| **conductor** (c) | during feature-wave implement | if `PARALLEL_WIDTH`>1 gives headroom AND a disjoint unrefined-bead subset exists → spawn a refine child on that disjoint subset, **naming the subset with `TARGET_BEAD_IDS=<ids>`** |
-
-> **Fan-out enforcement (bd-baudw):** every fanned-out refine delegation MUST carry
-> `TARGET_BEAD_IDS=<comma-separated ids>` (`ac-bead-refine` Mode A) — the child's
-> stamping authority — and `RUN_ID` passes **bare**, never hand-suffixed per child.
-> Full canon: `ac-pipeline/references/run-id.md`.
-
-**Concurrency guard-rails** (ceremony owns the ledger commit, mixed-state sanctioned;
-concurrent refine children hold ALL `br` mutations until the ceremony quiesces):
-`ac-pipeline/references/ceremony-batching-pool.md` § Refine-during-ceremony guard-rails.
-
-### SCOPE — two concurrent implement PHASES stay forbidden
-
-A **single conductor** must not run two shipping-work **implement** phases concurrently.
-Holding `PARALLEL_WIDTH` children is **not** an authorization to open a second phase: width
-is a budget for fanning out the ONE phase in flight, never a licence to start another.
-
-**Width-N fan-out of a single implement phase is explicitly ALLOWED** — up to
-`PARALLEL_WIDTH` implementers on tree-disjoint beads, one ceremony after they all return
-(Efficiency § Parallelism, "How width is enacted"). That is the normal shape of a width>1
-run, not an exception to this rule. The thing forbidden here is *two phases*, e.g. running
-the bug-lane batch and a feature-wave batch at the same time.
-
-Refine-during-implement (b)/(c) is a genuine exception, because refine ships no product
-code.
+- **Concurrency never changes refine rounds.** Running refine alongside implement changes
+  **when** refine runs, **not** `MIN_ROUNDS` — the cross-round premise catch (a later
+  round inverting an earlier fix) is structurally preserved.
+- **Ledger + mixed state:** `ac-pipeline/references/ceremony-batching-pool.md`
+  § Refine-during-ceremony guard-rails. The conductor is the ledger's only git writer; a
+  ceremony may commit a ledger that includes a concurrent child's already-flushed writes,
+  and that is correct.
 
 ---
 
@@ -691,62 +658,42 @@ fighting the machine. Hold these:
   yourself. Foreground it with a generous Bash timeout (or a foreground `pgrep`/poll
   until-loop); the turn does not end until the command returns.
 
-**Parallelism — the `PARALLEL_WIDTH` dial (fan-out under ONE conductor)**
-- The conductor may hold up to **`PARALLEL_WIDTH`** phase sub-sessions in flight —
-  set per run by the Phase 0 width prompt (default 2; headless 2; 1 = fully serial).
-  More width means more sub-sessions under THIS one orchestrator, never additional
-  loops/conductors (single-conductor fan-out).
-- **Machine headroom:** up to 3 opus sub-sessions + a live CI job all share this ONE
-  Mac (the runner is self-hosted); the per-run width prompt is the throttle — keep the
-  ramp-evidence discipline (below) unchanged and don't ramp the default past green windows.
-- **What may parallelize — HOMOGENEOUS within-phase fan-out.** Widening a phase runs up
-  to `PARALLEL_WIDTH` children **of the SAME kind of work** — you never mix an implement
-  child with a refine or beadify child. The three parallelizable phase kinds — **a CLOSED
-  list; a kind not named here does not become fannable by being homogeneous** (bd-3sh8k):
-  **(a) implement** — implementers on **tree-disjoint** independent beads (dep-graph
-  antichains — `bv --robot-plan` computes the parallel tracks); **(b) refine** —
-  `ac-bead-refine` children on **disjoint unrefined-bead subsets** (no two children
-  refine the same bead — enforce it by passing each child `TARGET_BEAD_IDS=<ids>`, which
-  is also its stamping authority; bd-baudw); **(c) beadify** — `ac-beadify` children on **independent plans**
-  (no shared `depends-on`). **The invariant:** all children in flight at one moment are
-  the same kind — uniform supervision, clean failure attribution. Genuinely read-only
-  sessions (board triage/discovery reads) still run freely alongside any phase.
-  **Disjointness check before dispatch — BOTH tests must pass (bd-3sh8k):**
-  *(i) Tree-disjointness (implement):* compare the beads' expected
-  file sets from their bead specs (the lists each child will reserve in ac-implement
-  Phase 1a — reservations themselves don't exist until the child starts); any overlap →
-  serialize those beads behind each other. When a dependency chain exists (A blocks B),
-  stay sequential.
-  *(ii) Resource-disjointness (EVERY kind):* kind-homogeneity is necessary but **not
-  sufficient** — same-kind children can still contend for a non-shareable resource.
-  Before dispatching >1 child of any kind, confirm they do not share the checkout's
-  build output (`.next`, `.next-builds/`), a serve port or a running dev/prod server,
-  the local Supabase stack, or the beads ledger (already conductor-owned). Any overlap →
-  serialize, or give each child its own build dir / worktree.
-- **How width is enacted (per-phase fan-out):** at width >1, partition the phase's work
-  into up to WIDTH children along that phase's **disjointness unit** — implement →
-  `bv --robot-plan` tracks (file-set disjoint); refine → disjoint unrefined-bead subsets
-  (no two children refine the same bead; hand each child its subset as
-  `TARGET_BEAD_IDS=<ids>`); beadify → independent plans (no shared
-  `depends-on`). Each child gets its OWN delegation: its work subset, its own
-  `TARGET_BEADS`, and its own claim id (`<first-bead-of-subset>-<YYYYMMDD>`) → own
-  `.claim-id` + artifacts dir + `progress.md` — children NEVER share a progress file
-  (shared counting breaks TARGET_BEADS recovery after compaction). The ceremony
-  (verify → close) still runs **once** per batch, after ALL children return;
-  the BEADS-CLOSED-GATE already takes the union of every child identity.
-- **What NEVER parallelizes (shipping work):** two **implement** PHASES under one
-  conductor — width-N fan-out of ONE phase across disjoint beads is **not** two phases, it
-  is how width is enacted (see the bullet above); beadify-while-implement; **two verify/QA
-  passes on ONE checkout** — they share `.next` and the serve port, so they are not
-  resource-disjoint however same-kind they look (bd-3sh8k — build-dir contention makes a
-  mandated "full depth" pass silently read as achieved). Serialize them, or give each its
-  own build dir / worktree. **What MAY
-  pipeline:** **refine** during ceremony CI poll (a), during
-  bug-lane implement (b), or during feature-wave implement (c) — refine ships nothing;
-  children defer beads-DB mutations until the ceremony ledger commit lands. Still
-  serial: batch-close ceremonies (serial by construction); two writers on the same
-  product file; bug-lane **implement** sequencing (each fix independently green BEFORE
-  the next starts); prove/publish (outside the loop, unchanged).
+**Parallelism — the `PARALLEL_WIDTH` dial (continuous fan-out under ONE conductor)**
+- The conductor holds up to **`PARALLEL_WIDTH`** sub-sessions in flight — set per run by
+  the Phase 0 width prompt (default 2; headless 2; 1 = fully serial). More width means
+  more sub-sessions under THIS one orchestrator, never additional loops/conductors.
+- **Machine headroom:** up to 3 opus sub-sessions + a live CI job share this ONE Mac (the
+  runner is self-hosted). The width prompt is the throttle; never ramp past green windows.
+- **Dispatch is a QUEUE WITH REFILL, never a cohort.** Hold ONE eligible-work queue in
+  priority order (Rule 0 bugs → orphans → plan waves; then priority → graph structure →
+  FIFO). The moment a child returns, dispatch the next eligible item. The ceremony waits
+  for the QUEUE TO DRAIN, never for a set of children to land together. A cohort barrier
+  idles every other slot behind the slowest child — the largest single reason a run never
+  reaches its width.
+- **Kinds MIX.** Implement, refine and beadify children run in flight together.
+  Attribution is per-bead (claim id, `br` assignee, commit trailers, per-child artifacts
+  dir) and supervision is the run ledger's job, so uniformity buys nothing.
+- **Eligibility — BOTH tests pass before dispatch:**
+  *(i) File-disjointness:* compare the item's expected file set (its bead spec — the list
+  the child reserves in ac-implement Phase 1a) against every in-flight child's. Any
+  overlap → not eligible yet. A dependency chain (A blocks B) stays sequential.
+  *(ii) Resource-disjointness:* confirm no in-flight child shares the checkout's build
+  output (`.next`), a serve port or running dev/prod server, or the local Supabase stack.
+  Any overlap → not eligible yet. The ledger is conductor-owned, so it never blocks here.
+- **Serialisation points — dispatch NOTHING new while these run:** the per-batch ceremony
+  smoke net and any verify/QA pass (prod-build consumers; two on one checkout clobber
+  `.next`), and the bug-lane child's internal sequence (each fix independently green
+  BEFORE the next starts — main is never broken mid-sequence).
+- **Per-child isolation:** each child gets its OWN delegation — work subset,
+  `TARGET_BEADS`, claim id (`<first-bead-of-subset>-<YYYYMMDD>`), `.claim-id`, artifacts
+  dir and `progress.md`, whose header carries its `KIND`. Children NEVER share a progress
+  file (shared counting breaks TARGET_BEADS recovery after compaction).
+- **Prep is a standing lane.** Refine and beadify ship no product code, so they are always
+  eligible to fill an idle slot and need no permission window. Every fanned-out refine
+  delegation carries `TARGET_BEAD_IDS=<ids>` (its stamping authority); `RUN_ID` passes
+  bare, never hand-suffixed (`ac-pipeline/references/run-id.md`).
+- **Still serial at any width:** ceremonies (serial by construction); two writers on the
+  same product file; prove/publish (outside the loop, unchanged).
 - **Mandatory at width >1** (best-practice at width 1): ledger touch at every
   dispatch/return; ≤200–400-word child summaries; a watchdog/poke on every child
   (background resume chains break silently); strict repo + pathspec instructions per
