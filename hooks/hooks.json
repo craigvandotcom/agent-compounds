@@ -37,12 +37,12 @@
     {
       "id": "skill-edit-guard",
       "event": "PreToolUse",
-      "matcher": "Edit|Write",
+      "matcher": "Bash|Edit|Write",
       "command": "{HOOKS}/skill-edit-guard.py",
       "harnesses": ["claude", "codex", "droid", "grok"],
       "scope": ["org", "app", "machine"],
       "timeout": 10,
-      "_doc": "Advisory reminder of the skill-diet promotion ladder + no-net-growth gate on Edit/Write to a skills/**/SKILL.md spine file (plan 2026-07-19-2338-skill-doctrine-diet-promotion-governance.md, D4/W2a). PreToolUse cannot inject context here (exit code + stderr only, verified against am-edit-guard.py) — signals via exit 2 + stderr, once per session (session-scoped flag file keyed on CLAUDE_CODE_SESSION_ID, falling back to a daily key), never blocks the edit. `machine` scope (mirroring trauma-guard) is required for this to actually reach Grok — its build_hooks_obj call only reads scope=machine (render_hooks_grok), so scope:[org] alone would silently drop grok despite being listed in harnesses. `app` scope added 2026-07-30 (bd-klyfr) and is the one that matters most: registry SKILL.md files are symlinked into every app, so a spine edit almost always happens in an APP session — where org (repos-rooted only) and machine (grok only) both miss it. Measured dead 7+ days; /tmp/skill-edit-guard/ had never been created. Explicit timeout because Grok defaults to 5s and fails open."
+      "_doc": "Advisory reminder of the skill-diet promotion ladder + no-net-growth gate on Edit/Write to a skills/**/SKILL.md spine file (plan 2026-07-19-2338-skill-doctrine-diet-promotion-governance.md, D4/W2a). PreToolUse cannot inject context here (exit code + stderr only, verified against am-edit-guard.py) — signals via exit 2 + stderr, once per session (session-scoped flag file keyed on CLAUDE_CODE_SESSION_ID, falling back to a daily key), never blocks the edit. `machine` scope (mirroring trauma-guard) is required for this to actually reach Grok — its build_hooks_obj call only reads scope=machine (render_hooks_grok), so scope:[org] alone would silently drop grok despite being listed in harnesses. `app` scope added 2026-07-30 (bd-klyfr) and is the one that matters most: registry SKILL.md files are symlinked into every app, so a spine edit almost always happens in an APP session — where org (repos-rooted only) and machine (grok only) both miss it. Measured dead 7+ days; /tmp/skill-edit-guard/ had never been created. Explicit timeout because Grok defaults to 5s and fails open. `Bash` added to the matcher 2026-08-07 (Pi morning): the guard's own docstring requires BOTH entry points (a Bash redirect/tee/sed into skills/ bypasses Edit|Write entirely), and lint Check 18 probes that Bash case. Commit ac43f0a5 had hand-wired Bash into the RENDERED .claude/settings.json instead of here, so every harness-sync render silently stripped it — three restore/clobber cycles before the canon was fixed."
     },
     {
       "id": "activity-logger",
