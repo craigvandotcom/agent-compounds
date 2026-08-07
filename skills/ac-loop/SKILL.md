@@ -508,10 +508,8 @@ other batch's proof defers here: one verify, one beads-closed gate, one close, o
    # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
    # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
    ```
-   Only `KIND=implement` progress files enter the completeness union — refine/beadify files are
-   reported and skipped, and never mask an incomplete implement file. `post-merge`-labelled beads
-   are excluded: deliberately un-closeable until the run ships, carried forward as known tails,
-   never blockers. If any genuinely open (non-`post-merge`) beads remain (exit 1), do NOT close —
+   `post-merge`-labelled beads are excluded: deliberately un-closeable until the run ships,
+   carried forward as known tails, never blockers. If any genuinely open beads remain (exit 1), do NOT close —
    surface the loop's Slack nudge instead: "run `<claim-id>` has `<N>` beads still open — not
    closing" (advisory, no `AskUserQuestion` — not a genuine human fork). Proceed only on exit 0.
 3. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
@@ -684,10 +682,12 @@ fighting the machine. Hold these:
   smoke net and any verify/QA pass (prod-build consumers; two on one checkout clobber
   `.next`), and the bug-lane child's internal sequence (each fix independently green
   BEFORE the next starts — main is never broken mid-sequence).
-- **Per-child isolation:** each child gets its OWN delegation — work subset,
-  `TARGET_BEADS`, claim id (`<first-bead-of-subset>-<YYYYMMDD>`), `.claim-id`, artifacts
-  dir and `progress.md`, whose header carries its `KIND`. Children NEVER share a progress
-  file (shared counting breaks TARGET_BEADS recovery after compaction).
+- **Per-child isolation:** each child gets its OWN delegation — an **explicit `AGENT_NAME`
+  (hand it to EVERY child, claiming or not)**, work subset, `TARGET_BEADS`, claim id
+  (`<first-bead-of-subset>-<YYYYMMDD>`), `.claim-id`, artifacts dir and `progress.md`, whose
+  header carries its `KIND`. Children NEVER share a progress file (shared counting breaks
+  TARGET_BEADS recovery after compaction). ASSERT every identity segment non-empty where it
+  is built — an unset variable degrades silently (`references/delegation-prompts.md`).
 - **Prep is a standing lane.** Refine and beadify ship no product code, so they are always
   eligible to fill an idle slot and need no permission window. Every fanned-out refine
   delegation carries `TARGET_BEAD_IDS=<ids>` (its stamping authority); `RUN_ID` passes
@@ -695,11 +695,11 @@ fighting the machine. Hold these:
 - **Still serial at any width:** ceremonies (serial by construction); two writers on the
   same product file; prove/publish (outside the loop, unchanged).
 - **Mandatory at width >1** (best-practice at width 1): ledger touch at every
-  dispatch/return; ≤200–400-word child summaries; a watchdog/poke on every child
-  (background resume chains break silently); strict repo + pathspec instructions per
-  child. Pull heavy sub-steps (e2e / prod-build) OUT of the implementer into their own
-  gated step so they're visible and pace-able — don't let one bead's engineer run
-  100+ min hidden inside a sub-agent.
+  dispatch/return — **the Task-tool ledger is the CONDUCTOR's; a child holds no Task tools,
+  so its ledger is its `progress.md`. Never mandate a capability a child's toolset lacks.**
+  ≤200–400-word child summaries; a watchdog/poke on every child (background resume chains
+  break silently); strict repo + pathspec instructions per child. Pull heavy sub-steps
+  (e2e / prod-build) OUT of the implementer into their own gated step.
 - **Ramp evidence:** the carrier's `width:` line is the ramp input (§ Run telemetry) — Craig
   moves width at the prompt; the default rises only after green windows at the current default.
 

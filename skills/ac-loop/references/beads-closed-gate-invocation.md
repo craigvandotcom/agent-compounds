@@ -25,6 +25,13 @@ call as REPEATED `--progress` flags — the completeness check unions the `### B
 across every provided file and validates coverage against the whole in-scope set. A single child
 file alone would false-fail for missing its siblings' beads. Do **NOT** glob.
 
+## `KIND` — mixed-kind runs
+Only `KIND=implement` progress files enter the completeness union. Refine and beadify children
+ship no code and close no beads, so their files are reported and skipped — and they can never
+mask an incomplete implement file, because their `### Bead` entries never join the union. A
+prep file is also skipped BEFORE the existing-files counter, so a run whose children were all
+prep cannot trip PROGRESS-NO-HEADER and false-block its own close. Absent `KIND` = implement.
+
 ## `--beads` batch-scoping (ac-0i1)
 ALSO pass `--beads` with THIS batch's bead ids (comma-separated) so the completeness check scopes
 to exactly this batch. The identity-lifetime default would re-demand per-bead entries (and

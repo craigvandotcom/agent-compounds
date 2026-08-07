@@ -9,6 +9,20 @@ dispatch:
   plan `<plan-name>` ``
 - `{FLAVOR}` — Phase 1: empty; Phase 2: ``(ac-loop autonomous run)``
 
+## Spawn-site rule (binds every prompt below)
+
+Every dispatched prompt carries an **explicit `AGENT_NAME=<name>`** — every child, claiming
+or not. An unset `AGENT_NAME` degrades silently in two directions: an empty `CHILD_ID`
+segment that collapses two children onto one artifacts path, or a fallback to the Tier-2
+chore identity FoggyCreek. The conductor is the only agent that can set it.
+
+Append this clause VERBATIM to every prompt below:
+
+> `AGENT_NAME=<name>` — export it in every shell you commit from. ASSERT each segment of
+> any identity you build from it is non-empty, and FAIL LOUDLY if not: never let an empty
+> segment degrade to a shared path. Your run ledger is your `progress.md` — you hold no
+> Task tools; the conductor owns the Task-tool ledger.
+
 ## Brief-claim rule (binds every prompt below)
 
 Compose-time: state a fact only with a citation — a commit SHA or a `br show`
