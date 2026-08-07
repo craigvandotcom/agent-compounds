@@ -73,26 +73,28 @@ EACH ITERATION:  (ONE eligible-work queue, dispatched CONTINUOUSLY up to PARALLE
       │      never a blocker. Cap ~8 bugs/batch; overflow forms the next batch after this one closes.
       │      SOLO close (ship immediately as a batch-of-one): P0/urgent; migration- or native-touching;
       │      conductor judges the fix risky enough to isolate. Never fold a bug into a feature wave.
-      └─ the BATCH runs the chain ONCE: ac-implement (per bug, sequential, direct-to-main) → VERIFY-GATE
-             → BEADS-CLOSED-GATE → ac-batch-close → Slack notify   (one batch-close for the whole drain)
+      └─ the BATCH: ONE ac-implement child (per bug, sequential, direct-to-main) → SMOKE NET
       ⟳ RE-CHECK the Bug-Lane filter whenever a child returns — a just-landed item may unblock a bug,
         and that bug takes the next free slot. Bugs land FIRST in commit order; they do not gate
         dispatch of file-disjoint non-bug work.
   1. Orphan beads  (refined, no plan wave — the "maintenance wave")
-      └─ ac-implement → VERIFY-GATE → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
+      └─ ac-implement → SMOKE NET
   2. Next plan's wave  (highest-priority loop-ready plan with refined ready beads)
       ├─ [if plan has no beads yet] ac-beadify → ac-bead-refine
       └─ claim-at-selection (loop owns this, not ac-implement — direct to main, no branch) →
-         ac-implement → VERIFY-GATE → BEADS-CLOSED-GATE → ac-batch-close → Slack notify
+         ac-implement → SMOKE NET
   PREP (refine/beadify) is a STANDING lane — always eligible, fills any idle slot, no window needed.
-
-  VERIFY-GATE = consult ac-pipeline/references/verification-gate.md → run only the selected
-                passes (ui-polish / qa-browser / qa-device) at the selected depth.
-  BEADS-CLOSED-GATE = the loop's own pre-merge gate (ac-batch-close no longer checks beads
-                itself) — genuine (non-post-merge) open beads block the close; advisory
-                Slack nudge, not a hard stop.
   3. Loop — on every child return RE-CHECK the bug lane first, then refill from orphans/plans/prep
-  4. Nothing left → Phase ARIA (unlock human blocks, then stop)
+  4. Queue drained → THE CEREMONY (once per run):
+         VERIFY-GATE (whole run range) → BEADS-CLOSED-GATE (union of EVERY child identity)
+         → ac-batch-close (one CI dispatch, one report commit) → Slack notify
+  5. Nothing left → Phase ARIA (unlock human blocks, then stop)
+
+  SMOKE NET = per-batch tripwire on the state that ships (verification-gate.md § Ceremony
+                smoke net) — catches what per-bead tests cannot (won't boot, login broken,
+                hydration crash, dead route). Self-skipping. A SERIALISATION POINT. FAIL → C2.
+  RISK CARVE-OUT = a migration / native / auth / persistence batch does NOT wait: its own full
+                ceremony, immediately, solo — then the run continues. See § The Ceremony.
 
 STOP CONDITIONS checked before each iteration (see below).
 
@@ -395,37 +397,14 @@ If orphans exist:
    `{SCOPE}` = "all N orphan beads", `{FLAVOR}` empty. (The Child friction schema the
    prompt's summary contract requires is § Child friction schema in that same file — the
    one definition of the four keys, bd-jv33f.2.)
-3. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` / `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's decision line into the Slack notify (which ran, which skipped + why). Beads any pass files feed the retrospective; an open `qa-blocker` bead stops at merge.
-4. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
-   Pass the UNION of identities (loop + each delegated `ac-implement` identity), this batch's ids, and
-   its progress file(s). **Flag rationale (union / `--progress` / repeated-`--progress` parallel /
-   `--beads` scoping / exit codes / `post-merge`): `references/beads-closed-gate-invocation.md`.**
-   ```bash
-   export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
-   PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"   # re-derive HERE — the assignment above is in a different bash call
-   GATE="$PROJECT_ROOT/skills/ac-pipeline/scripts/beads-closed-gate.sh"                    # registry layout
-   [ -f "$GATE" ] || GATE="$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh"   # harness layout
-   bash "$GATE" \
-     --beads "<this-batch's-bead-ids,comma-separated>" \
-     --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
-     "$AGENT_NAME" <delegated-identities…>
-   # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
-   # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
-   ```
-   `post-merge`-labelled beads are excluded — they're deliberately un-closeable until the
-   merge ships (carried forward as known tails, listed in the PR body), never blockers. If
-   any genuinely open (non-`post-merge`) beads remain for this batch (exit 1), do NOT merge —
-   surface via the loop's Slack-nudge pattern instead: "batch `<batch-id>` has `<N>` beads
-   still open — not merging" (advisory nudge, no `AskUserQuestion` — this is not a genuine
-   human fork). Only proceed to Invoke `ac-batch-close` once this set is empty (exit 0).
-
-> **`post-merge` lifecycle — stamp at creation, strip at claim (applies to BOTH phases; doctrine `beads-standards/reference/bead-conventions.md` § post-merge claim semantics).** Any **exhaust bead** created inside a batch's **verify→close window** — conductor follow-ups, `ac-qa-*` QA-pass beads, and Exhaust-Rule decision beads (§ Phase ARIA) — is **stamped `post-merge` AT CREATION and parented into that batch's epic**. This is mandatory: a follow-up threaded under the loop's claim identity WITHOUT the stamp is a genuinely-open in-scope bead that trips `beads-closed-gate.sh` to exit 1 and **blocks its own batch's close**. Conversely, **every loop claim path strips `post-merge` at claim** — the orphan/bug-lane batch claim (Phase 1 / Rule 0 drain) AND the wave claim-at-selection (Phase 2) — so a bead adopted into a NEW batch is closeable again. Skipping the strip leaves permanently-gate-excluded zombies (open forever, never counted). Stamp-at-creation and strip-at-claim are the two halves of the one definition — never do one without the other.
-5. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
-   `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` empty.
-6. **Slack notify** (see Milestone Notifications).
-7. **Loop** — return to Phase 0 check after merge. **`ac-land` does NOT run per-wave** — it runs ONCE at loop exit (see ON EXIT / Exit-Land).
-
-If the verification gate files an open `qa-blocker` → hard stop (see Stop Conditions §C2).
+3. **Smoke net (per batch — a SERIALISATION POINT).** Run the ceremony smoke net
+   (`ac-pipeline/references/verification-gate.md` § Ceremony smoke net) against the state that
+   ships. Dispatch nothing new while it runs; it self-skips when its conditions don't hold.
+   FAIL → C2 stop, before the bad state buries itself under later batches. **RISK CARVE-OUT:**
+   a migration / native / auth / persistence diff runs § The Ceremony now, solo, then continues.
+4. **Refill** — return to the queue (Execution Order step 3). This batch's beads are closed and
+   its commits are on `main`; its verify, beads-closed gate and `ac-batch-close` happen ONCE, at
+   § The Ceremony, when the queue drains. **`ac-land` runs once at loop exit**, never per-wave.
 
 ---
 
@@ -489,22 +468,57 @@ Cross-reference with `$LOOP_READY_PLANS` — only advance a plan wave if its par
 1. **Claim the batch (loop's job — CLAIM-AT-SELECTION)** — same mechanism as Phase 1 step 1: mark ALL refined ready beads for this plan `in_progress` + assignee (`AGENT_NAME`) in ONE `br update` call, **strip `post-merge` from any bead being claimed** (`br label remove <id> post-merge` — the strip-at-claim half of the lifecycle above; an exhaust bead adopted into this new batch must be closeable), mint the claim id (`<first-claimed-bead-id>-<YYYYMMDD>`), write it to `$ARTIFACTS_DIR/.claim-id` + the `progress.md` header, and write `TARGET_BEADS=<count>` + `KIND=implement` into that same header (this claim's bead count, per child at width >1 — `beads-closed-gate.sh` hard-FAILs on an existing progress file with no `TARGET_BEADS=` header). `br ready` naturally excludes them for every other conductor — no branch to pre-allocate or join. **Same FoggyCreek guard as Phase 1 step 1** — assert `AGENT_NAME != FoggyCreek` before the `br update` (`[ "$AGENT_NAME" = "FoggyCreek" ] && { echo "FATAL: cannot claim beads as the Tier-2 chore identity" >&2; exit 2; }`); a plan batch claimed under the shared chore identity is the same misattribution bug the gate rejects (doctrine `agent-mail/references/agent-identity.md`).
 2. **Invoke `ac-implement`** with delegation prompt. *At width >1:* same split rule as
    Phase 1 step 2 (up to WIDTH tree-disjoint children, each with own subset /
-   `TARGET_BEADS` / claim id + artifacts dir; one verify → close for the batch):
+   `TARGET_BEADS` / claim id + artifacts dir):
    Dispatch the **Implement prompt** from `references/delegation-prompts.md` VERBATIM,
    `{SCOPE}` = "all refined ready beads for plan `<plan-name>`", `{FLAVOR}` =
    "(ac-loop autonomous run)".
-3. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the batch diff, run **only** the selected passes at the selected depth (never all three unconditionally). Emit the decision line into the Slack notify. Open `qa-blocker` bead → stops at merge.
-4. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
-   **Identical invocation to Phase 1 step 4** (the bash block there, unchanged) — pass the
-   UNION of identities, this batch's ids, and its progress file(s); same exit-code handling,
-   same `post-merge` exclusion, same advisory-nudge-not-merge on exit 1. Flag rationale:
-   `references/beads-closed-gate-invocation.md`.
-5. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
-   `references/delegation-prompts.md` VERBATIM, `{FLAVOR}` = "(ac-loop autonomous run)".
-6. **Slack notify** — batch shipped.
-7. **Check stop conditions** — then loop back to Phase 0. (No per-wave `ac-land`; it lands once at exit.)
+3. **Smoke net + RISK CARVE-OUT** — identical to Phase 1 step 3.
+4. **Refill** — identical to Phase 1 step 4; check stop conditions on the way past.
 
-If the verification gate files an open `qa-blocker` → hard stop (see Stop Conditions §C2).
+---
+
+## The Ceremony (once per run)
+
+Fires when the work queue drains — or **immediately and solo** for a RISK CARVE-OUT batch. Every
+other batch's proof defers here: one verify, one beads-closed gate, one close, one CI dispatch.
+
+> **Why deferring is safe.** Trunk-direct means commits reach `main` at commit time, each
+> independently green: the ceremony defers **proof, not exposure**. **Per-bead affected tests
+> stay per commit — that invariant does not move.** Only verification and CI dispatch defer.
+
+1. **Verify (gated)** — consult **`ac-pipeline/references/verification-gate.md`**: classify the
+   **whole run's** diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` /
+   `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's
+   decision line into the Slack notify (which ran, which skipped + why). Beads any pass files
+   feed the retrospective; an open `qa-blocker` bead is a hard stop (§C2) — do not close.
+2. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
+   Pass the UNION of identities (loop + EVERY delegated child identity this run), every bead id
+   claimed this run, and every child's progress file. **Flag rationale (union / `--progress` /
+   repeated-`--progress` parallel / `--beads` scoping / exit codes / `post-merge`):
+   `references/beads-closed-gate-invocation.md`.**
+   ```bash
+   export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
+   PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"   # re-derive HERE — the assignment above is in a different bash call
+   GATE="$PROJECT_ROOT/skills/ac-pipeline/scripts/beads-closed-gate.sh"                    # registry layout
+   [ -f "$GATE" ] || GATE="$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh"   # harness layout
+   bash "$GATE" \
+     --beads "<every-bead-id-claimed-this-run,comma-separated>" \
+     --progress "$ARTIFACTS_DIR/progress.md" [--progress <each-other-child-progress.md>…] \
+     "$AGENT_NAME" <delegated-identities…>
+   # prints the genuinely-open bead set; exit 0 = empty (safe to close), exit 1 = open beads remain,
+   # exit 2 = FAIL-CLOSED (empty claimed-set / no identity — surface, do NOT proceed to close)
+   ```
+   Only `KIND=implement` progress files enter the completeness union — refine/beadify files are
+   reported and skipped, and never mask an incomplete implement file. `post-merge`-labelled beads
+   are excluded: deliberately un-closeable until the run ships, carried forward as known tails,
+   never blockers. If any genuinely open (non-`post-merge`) beads remain (exit 1), do NOT close —
+   surface the loop's Slack nudge instead: "run `<claim-id>` has `<N>` beads still open — not
+   closing" (advisory, no `AskUserQuestion` — not a genuine human fork). Proceed only on exit 0.
+3. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
+   `references/delegation-prompts.md` VERBATIM.
+4. **Slack notify** (see Milestone Notifications).
+
+> **`post-merge` lifecycle — stamp at creation, strip at claim** (doctrine `beads-standards/reference/bead-conventions.md` § post-merge claim semantics). Any **exhaust bead** created during the run — conductor follow-ups, `ac-qa-*` QA-pass beads, Exhaust-Rule decision beads (§ Phase ARIA) — is **stamped `post-merge` AT CREATION** and parented into the relevant epic. Mandatory: a follow-up under the loop's claim identity WITHOUT the stamp is a genuinely-open in-scope bead that trips the gate to exit 1 and **blocks the run's own close**. Conversely **every claim path strips `post-merge` at claim** — bug-lane drain and wave claim-at-selection alike — so a bead adopted into a new claim is closeable again. Skipping the strip leaves permanently-gate-excluded zombies. The two halves are one rule; never do one alone.
 
 ---
 
@@ -568,29 +582,15 @@ After a nudge, re-check on the next scheduled loop fire. If the block persists: 
 
 ---
 
-## Ceremony batching pool (bd-chd5p.2)
+## Risk classification (which batches skip the wait)
 
-**"Ceremony" here** = the `ac-batch-close` CI-dispatch +
-report-commit + review-mark advance. Only the CI/report leg accumulates. Planned waves
-ceremony as their own single batch (never enter the pool; cap never force-splits a
-wave).
+**"Ceremony"** = the `ac-batch-close` CI-dispatch + report-commit + review-mark advance. The
+loop fires it **once per run**, so nothing accumulates and the loop never populates the
+ceremony pool — `ac-batch-close` treats an unpopulated pool as a no-op.
 
-Risk classification uses `ac-pipeline/references/risk-classification.md` **binding #3** (bead's own
-`pre_sha..close_sha`). Risk beads never enter `pending`/`in_flight` — `risk_queue`
-sidecar or immediate fire.
-
-**Engage the pool at these hookpoints** (the conductor's *when*):
-
-| Owner | When | Action |
-| ----- | ---- | ------ |
-| **ac-loop** post-close | each independent bead close | flock → classify per-close risk (**binding #3** = bead's own `pre_sha..close_sha`, not `..HEAD`); RISK-TOUCH → risk override; else append to `pending` |
-| **ac-loop** conductor pre-cycle / post-close | when idle | if `in_flight` empty → drain sequence; else skip (mutex) |
-| **ac-batch-close** report-commit (Act 3) | after report lands | ack `in_flight` IDs (or no-op pool if pure risk-solo/planned-wave); then if `in_flight` empty → drain sequence |
-
-**Read `ac-pipeline/references/ceremony-batching-pool.md` before executing any pool RMW or drain** — the
-full mechanics (state store + JSON shape, flock RMW, fire opportunities, selected-set/drain
-policy, report-ack, failure re-merge, risk override, bug-lane, guard-rail, fixtures) live
-there, shared with `ac-batch-close`.
+Classify each batch with `ac-pipeline/references/risk-classification.md` **binding #3** (the
+bead's own `pre_sha..close_sha`, never `..HEAD`). A RISK-TOUCH batch — migration, native, auth
+or persistence — takes the RISK CARVE-OUT; everything else defers to § The Ceremony.
 
 ---
 

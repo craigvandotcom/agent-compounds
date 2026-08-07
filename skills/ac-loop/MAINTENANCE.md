@@ -1,7 +1,7 @@
 ---
 skill: ac-loop
 archetype: orchestrator
-last_pass: 2026-08-07 (continuous scheduler)
+last_pass: 2026-08-07 (end-loaded ceremony)
 spine_lines: 843 / target ≤500 orch (legitimately long — enforcement spine; remaining trim is bounded)
 ---
 
@@ -24,6 +24,23 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
 (none — both extractions were clean verbatim moves, nothing parked)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- [2026-08-07] END-LOADED CEREMONY. Per-lane ceremonies collapse to ONE per run: bug lane,
+  orphan wave and plan wave each end at the per-batch SMOKE NET, and verify /
+  BEADS-CLOSED-GATE / ac-batch-close / CI dispatch fire once from a new § The Ceremony when
+  the queue drains. RENAMED: § "Ceremony batching pool (bd-chd5p.2)" → § "Risk classification
+  (which batches skip the wait)" — with one fire per run there is nothing to accumulate, so
+  the hookpoint table and the pool-engagement prose are DELETE-UNIQUE; what survives is the
+  binding-#3 classification and the RISK CARVE-OUT (migration/native/auth/persistence closes
+  immediately and solo). The loop no longer populates the pool; `ac-pipeline/references/
+  ceremony-batching-pool.md` and ac-batch-close's Act-2 ack are UNTOUCHED (an unpopulated pool
+  is already a defined no-op there, and the file still hosts the ledger guard-rails).
+  Phase 1/Phase 2 steps 3-7 collapse to 3 (smoke net + carve-out) and 4 (refill); the
+  beads-closed-gate bash block moves to § The Ceremony as the single remaining spine site —
+  NOT to references/, per the standing enforcement-stays-inline decision in
+  references/beads-closed-gate-invocation.md. Kept load-bearing and unmoved: per-bead affected
+  tests per commit. SKILL.md 843 → 843 (net 0 — the ceremony section is paid for by the
+  deleted pool hookpoints, the collapsed per-lane chains and the re-densified post-merge
+  blockquote).
 - [2026-08-07] CONTINUOUS SCHEDULER. § Efficiency "Parallelism" rewritten from cohort
   fan-out to a queue with refill: one eligible-work queue in priority order, dispatch on
   every child return, ceremony waits for the QUEUE to drain rather than a cohort to land.
