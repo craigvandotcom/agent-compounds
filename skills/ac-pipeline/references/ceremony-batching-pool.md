@@ -124,12 +124,19 @@ a ledger that includes labels/comments written by a concurrent refine child that
 already flushed; that is expected and correct.
 
 **Beads-DB mutation deferral (not merely flush).** `br` mutation verbs (`br update` /
-`br close` / `br label` / `br comments add`) auto-flush to `.beads/issues.jsonl`. A
-refine child running concurrently with a ceremony **defers its beads-DB MUTATIONS
-entirely** until the ceremony's ledger commit has landed (not merely deferring
-`br sync --flush-only`). The conductor owns the final flush+commit; children may
-**read** the DB freely but **hold all writes** until the ceremony quiesces (or the
-conductor re-flushes + re-commits after children quiesce). Memory:
+`br close` / `br label` / `br comments add`) auto-flush to `.beads/issues.jsonl`, which
+has **no per-line staging**. Two rules follow, and they are NOT the same rule:
+
+1. **The ledger has exactly ONE git writer: the conductor.** No child ever
+   `git add`s or commits `.beads/issues.jsonl`, whatever its kind. **Unconditional** —
+   never scoped to "while a ceremony is in flight".
+2. **Prep children hold their MUTATIONS as well.** A refine or beadify child defers every
+   `br` mutation verb until told the ledger is flushed, and reads freely meanwhile.
+   Implement children DO mutate — closing their beads is the job — but rule 1 still binds
+   them: they mutate, they never commit the ledger.
+
+Handing one child the ledger for a window while telling another to hold is not an
+ownership protocol on a file that cannot be staged per line. Memory:
 `beads-ledger-shared-file-conductor-should-own-final-commit`.
 
 ## §5 fixtures (quick reference)
