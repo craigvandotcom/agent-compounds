@@ -17,7 +17,7 @@ orphaning a timestamped dir on resume).
 ## The key: the claim/batch id (trunk-direct — NOT the branch)
 
 Under trunk-direct, every conductor works directly on `main` — there is no wave branch, so
-`WAVE_SLUG="$(git branch --show-current | tr '/' '-')"` collapses to the constant `main` for
+`WAVE_SLUG="$(git branch --show-current | command tr '/' '-')"` collapses to the constant `main` for
 every session. Keying the artifact dir on that constant would make every concurrent conductor
 compute the identical `/tmp/bead-work-main` and clobber each other's scratch — this is exactly
 the bug bd-u2lo1.9 re-keys away from. The wave-slug convention this doc used to document is

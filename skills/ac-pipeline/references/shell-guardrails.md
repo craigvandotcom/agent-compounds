@@ -1,4 +1,10 @@
-# Shell guardrails — writing commands the dcg command guard accepts
+# Shell guardrails — writing commands an agent shell actually executes as written
+
+Two classes live here. **Blocked shapes** — the `dcg` command guard rejects the command, loudly
+(§ What actually gets blocked, § Sanctioned shapes). **Silent shapes** — the command runs, exits
+without complaint, and returns something that is not what you asked for (§ Silent failures).
+The second class is the expensive one: a loud block costs a retry, a silent one costs a wrong
+conclusion that nothing downstream contradicts.
 
 **Read this the first time a `dcg` rule blocks one of your commands.** Cumulative measured
 recurrence across four consecutive loop runs: **26+ blocks**, most of them children running a
@@ -56,6 +62,56 @@ Four things make it bite wider than its name suggests, all measured:
 | the git verb that discards a path from a ref | `git show <ref>:<path>` piped onward — into `tee`, or into a tool's stdin flag such as `eslint --stdin`. Read-only and accepted. |
 | a truncating write that must stay in shell (script context, no Write tool in reach) | **resolve-then-paste**: `echo` the variable path ONCE, then paste the printed LITERAL into the redirect (`> /tmp/bead-work-…/beads.json`, never the raw `$ARTIFACTS_DIR` token) — the same compose-from-printed-literals discipline the teardown delete path uses. Skill snippets showing `> "$ARTIFACTS_DIR/…"` are illustrative shorthand, not runnable forms. |
 | `gh ... --template` with escaped interpolation | `gh ... --jq '<program>'` with the program in **single** quotes |
+
+## Silent failures
+
+### An alias can shadow a POSIX utility name — verify with `type` before you rely on one
+
+**The rule: before a pipeline's correctness depends on a short utility name, run `type <cmd>`.
+If it resolves to anything but a file or a shell builtin, invoke it as `command <cmd>` (or its
+absolute path) — on this fleet that means `command tr`, never bare `tr`. Never assume a two- or
+three-letter name reaches the POSIX utility.**
+
+Agent shells are spawned from the user's interactive profile, so every alias in that profile is
+live. An alias is looked up *before* `$PATH`, so the utility can be on `$PATH`, be perfectly
+functional, and still never run. Measured on this fleet (re-confirmed 2026-08-08):
+
+```
+$ type tr
+tr is an alias for tmux new-session -A -s repos -c ~/Repos
+$ printf 'a,b\n' | tr ',' '\n'
+open terminal failed: not a terminal        # stderr
+                                            # stdout: EMPTY
+$ printf 'a,b\n' | command tr ',' '\n'
+a
+b
+```
+
+tmux cannot attach in a non-interactive shell, so the substitution yields an **empty string** —
+and an assignment swallows the exit status, so nothing in the pipeline notices. Anything shaped
+`N=$(… | tr …)` then evaluates to empty and takes the "nothing to do" branch: the reassuring
+answer. Two instances in a single refine run — an empty target-id array at Phase 0 (caught only
+by an explicit `-gt 0` guard) and an 8-bead verification loop blanked with no error surfaced.
+
+The rule is stated for *any* short name, not for `tr`, because a machine-global alias shadows the
+utility **everywhere**; a per-site warning can never cover the next one. `type` is the check.
+
+**Scope: `.md` snippets only. `.sh` files are NOT in scope and must not be "fixed."** The hazard
+is specific to a snippet an agent **copies into its own interactive-profile shell** — the
+markdown case. A script under a `#!/usr/bin/env bash` shebang runs as a non-interactive
+subprocess that never loads the user's zsh aliases, so bare `tr` inside `skills/**/*.sh` is
+harmless. Sweeps have conflated these two risk classes three times; they are different, and
+re-churning the shell scripts is wasted diff. The sweep that matters:
+
+```bash
+grep -rn "| *tr " --include='*.md' skills/ \
+  | grep -v "command tr" | grep -v "/usr/bin/tr" \
+  | grep -v "shell-guardrails.md"   # this file quotes the broken form on purpose, above
+```
+
+Expected output: nothing. A hit is a prescribed snippet an agent will copy verbatim.
+
+**The alias itself is the human's own shell — propose a rename, never edit their profile.**
 
 ## The rule of thumb
 
