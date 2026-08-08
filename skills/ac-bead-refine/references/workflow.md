@@ -125,8 +125,15 @@ The destructive-command-guard hook rule `core.filesystem:redirect-truncate-dynam
 so a literal `/tmp/...` redirect target is impossible to write down in advance. Every
 truncating write below therefore goes through **`tee <path> >/dev/null`**: the path is an
 *argument* (not a redirect target) and the only redirect is the fully-literal `/dev/null`.
-Verified with `dcg test`: the `>` form is BLOCKED, the `tee` form is ALLOWED, and `>>`
-(append) is ALLOWED. **Do not "simplify" these back to `>` — they will not run.**
+Verified with `dcg test`: the `>` form is BLOCKED, the `tee` form is ALLOWED — including
+inside a multi-statement compound command — and `>>` (append) is ALLOWED. **Do not "simplify"
+these back to `>` — they will not run.**
+
+A refused block is almost never the `tee` lines. The verdict is whole-command: one
+non-compliant statement blocks every statement sent with it. Find that statement instead of
+rewriting the `tee` calls. Assign and use `$ARTIFACTS_DIR` in the SAME bash call, and recover
+it from `.claim-id` rather than re-deriving it. Diagnosis and every sanctioned shape:
+`ac-pipeline/references/shell-guardrails.md` § What actually gets blocked.
 
 ### Initialize Consensus Registry
 

@@ -36,10 +36,12 @@ Four things make it bite wider than its name suggests, all measured:
    an angle-bracket placeholder. No redirect need be present.
 2. **In-place editors are caught with no redirect at all.** `perl -i` and `sed -i` write temp
    files; the source command contains no redirect and is still rejected.
-3. **A trailing error-stream redirect is not an escape.** An error redirect (`2>…`) tacked onto
-   a compound command trips the same rule — this is about the STDERR redirect on a compound
-   command, not about the `>>` append operator covered above. Compound commands must be split,
-   not decorated.
+3. **The verdict is whole-command.** One non-compliant statement blocks every statement sent in
+   the same call, the compliant ones included. So a sanctioned write looks broken whenever a
+   neighbour in the same block still truncates into a variable-built path — find the offending
+   statement, do not rewrite the compliant ones. An error-stream redirect to a variable-built
+   path is non-compliant on its own and takes the whole compound with it. Split compound
+   commands; never decorate them.
 4. **A separate rule, `core.git:checkout-ref-discard`, covers the git verb that restores a path
    from another ref** — including on a clean path.
 
@@ -47,7 +49,7 @@ Four things make it bite wider than its name suggests, all measured:
 
 | Instead of | Use |
 |---|---|
-| a redirect into a variable-built path | the **Write tool**, or pipe into **`tee <path>`** — `tee` takes its destination as an *argument*, so there is no redirect operator to match. `tee -a` appends. Prefer a fully-literal `/tmp/...` destination where the run does not need per-run scoping. |
+| a redirect into a variable-built path | the **Write tool**, or pipe into **`tee <path>`** — `tee` takes its destination as an *argument*, so there is no redirect operator to match. `tee -a` appends. Prefer a fully-literal `/tmp/...` destination where the run does not need per-run scoping. Keep `tee`'s own redirect fully literal: giving `tee` a variable-built redirect target reintroduces the block. This shape holds inside a multi-statement compound command — see the whole-command rule above. |
 | `perl -i` / `sed -i` in-place rewrites | the **Edit tool** (one call per file; `replace_all` for repeated tokens) |
 | a long quoted CLI payload (`br comments add`, `br update --description`, a commit body) | write the body with the **Write tool** to a literal `/tmp` file, then pass it as a command substitution that reads that literal path. Strip backslash line-continuations and nested escaped quotes from the payload first — they are what the escaping heuristic matches. |
 | a heredoc into a variable-built path | the **Write tool** (and note heredocs containing a dollar sigil have been blocked independently of their target) |
