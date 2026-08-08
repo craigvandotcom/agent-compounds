@@ -20,3 +20,6 @@ harnesses.local.json
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# dcg probe payloads — regenerated on every probe run
+tools/dcg/fixtures/

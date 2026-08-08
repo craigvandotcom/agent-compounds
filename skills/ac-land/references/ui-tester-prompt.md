@@ -25,8 +25,11 @@ ENVIRONMENT CONTRACT (non-negotiable):
   first (`ls -d`), then paste literals — never `$VAR`, `$( )`, or a loop var.
   /tmp literals + distinctive /tmp globs are allowed; home/repo `rm -rf` never
   is — `git rm` if tracked, else gitignore-and-flag or ask the human.
-- Shared checkout: commit your bead's files (pathspec-scoped) the INSTANT its
-  ACs verify — minimal working-tree dwell; run `br` from the bead-board repo root.
+- Shared checkout: `git commit -- <your files>` the INSTANT its ACs verify —
+  pathspec on the COMMIT, because scoping only the `add` still publishes the
+  shared index. **Never `git add -A` / `git add .` / `git commit -a`** — they
+  sweep a concurrent agent's staged work into your bead's commit, silently.
+  Minimal working-tree dwell; run `br` from the bead-board repo root.
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
