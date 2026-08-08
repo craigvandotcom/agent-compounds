@@ -28,6 +28,10 @@
 #   6  drift guard: the formulas here match workflow.md verbatim                         [AC1]
 #   7  ac-loop's rendered refine delegation passes RUN_ID BARE + TARGET_BEAD_IDS         [AC5]
 #   8  Phase 0 writes are dcg-safe (no `>` into a variable path)                         [AC6]
+#   9a parity gate on a MALFORMED snapshot            -> ABORTS, never "clean"    [bd-br-json…]
+#   9b parity gate on a VALID snapshot                -> proceeds AND acts        [bd-br-json…]
+#   9c stamp loop resolving 0/N targets               -> ABORTS, zero label calls [bd-br-json…]
+#   9d NEGATIVE CONTROL: pre-fix parity gate          -> exits 0 on the same input [bd-br-json…]
 #
 # WHY `bash -c ... &` AND NOT `( ... ) &`: bash's `$$` stays fixed to the TOP-LEVEL
 # shell's PID inside `( )` subshells, so a subshell harness would measure its own process
@@ -185,8 +189,12 @@ chmod +x "$PROBE_DIR/bin/br"
 # STAMP_SHELL is parameterised so Case 5c can re-run the identical body under real zsh — the
 # fleet's default shell, where a variable named `status` is READ-ONLY and aborts the loop
 # (bd-x8ios). Running this only under bash is exactly why that bug survived.
-run_stamp_loop() {
-  ARTIFACTS_DIR="$PROBE_DIR" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" "${STAMP_SHELL:-bash}" -c '
+#
+# The fail-closed guards (bd-br-json-control-chars-21ljf) are part of the retyped body: jq's
+# exit status is checked per read, and a non-empty target list that resolves NOTHING aborts
+# instead of printing N x SKIP. Case 9c/9d prove those guards bite; Case 6 pins them to the doc.
+run_stamp_loop() { # $1 = br call log   $2 = artifacts dir (default: $PROBE_DIR)
+  ARTIFACTS_DIR="${2:-$PROBE_DIR}" PATH="${STUB_BIN:-$PROBE_DIR/bin}:$PATH" BR_CALL_LOG="$1" "${STAMP_SHELL:-bash}" -c '
     set -uo pipefail
     REFINE_PATH="refine-full"
     [ -s "$ARTIFACTS_DIR/target-bead-ids.txt" ] || { echo "FATAL: no target list" >&2; exit 2; }
@@ -194,19 +202,78 @@ run_stamp_loop() {
       <(sort -u "$ARTIFACTS_DIR/target-bead-ids.txt") \
       <(jq -r ".issues[].id" "$ARTIFACTS_DIR/beads-snapshot.json" | sort -u))
     if [ -n "$MISSING" ]; then
-        echo "  (loop) WARN: snapshot does not cover targets ($(echo "$MISSING" | tr "\n" " ")) — rebuilding from the target list"
+        echo "  (loop) WARN: snapshot does not cover targets ($(echo "$MISSING" | command tr "\n" " ")) — rebuilding from the target list"
         REBUILD_FLAGS=()
         while IFS= read -r t; do [ -n "$t" ] && REBUILD_FLAGS+=(--id "$t"); done < "$ARTIFACTS_DIR/target-bead-ids.txt"
         br list --json "${REBUILD_FLAGS[@]}" --all | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
     fi
+    TARGET_N=0; RESOLVED_N=0
     while IFS= read -r id; do
         [ -n "$id" ] || continue
-        bstatus=$(jq -r --arg id "$id" "first(.issues[] | select(.id == \$id) | .status) // \"unknown\"" "$ARTIFACTS_DIR/beads-snapshot.json")
+        TARGET_N=$((TARGET_N + 1))
+        bstatus=$(jq -r --arg id "$id" "first(.issues[] | select(.id == \$id) | .status) // \"unknown\"" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+        if [ "$jq_exit" -ne 0 ]; then
+            printf "  (loop) FATAL: cannot parse beads-snapshot.json (jq exit=%s, at %s) — ABORTING\n" "$jq_exit" "$id" >&2
+            exit 2
+        fi
+        [ "$bstatus" = "unknown" ] || RESOLVED_N=$((RESOLVED_N + 1))
         [ "$bstatus" = "open" ] || { echo "  (loop) SKIP $id (status=$bstatus)"; continue; }
         br label remove "$id" "unrefined" 2>/dev/null
         br label add "$id" "refined" 2>/dev/null
         br label add "$id" "$REFINE_PATH" 2>/dev/null
     done < "$ARTIFACTS_DIR/target-bead-ids.txt"
+    if [ "$TARGET_N" -gt 0 ] && [ "$RESOLVED_N" -eq 0 ]; then
+        printf "  (loop) FATAL: all %s target bead(s) resolved to status=unknown — ABORTING\n" "$TARGET_N" >&2
+        exit 2
+    fi
+  '
+}
+
+# The Phase 5 Title/Label Parity Gate, retyped from workflow.md § Title/Label Parity Gate.
+# Fail-closed: a preflight proves the snapshot parses and is non-empty, and the select query
+# checks jq'"'"'s status BEFORE any loop runs. Pre-fix this piped jq straight into `while read`,
+# so a parse error yielded zero iterations and the gate reported clean — silent and OPEN.
+run_parity_gate() { # $1 = br call log   $2 = artifacts dir
+  ARTIFACTS_DIR="$2" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" bash -c '
+    set -uo pipefail
+    SNAP_N=$(jq -r ".issues | length" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+    if [ "$jq_exit" -ne 0 ] || ! printf "%s" "${SNAP_N:-}" | grep -qE "^[0-9]+$" || [ "$SNAP_N" -eq 0 ]; then
+        printf "  (parity) FATAL: cannot read beads-snapshot.json (jq exit=%s, issues=%s) — ABORTING\n" "$jq_exit" "${SNAP_N:-<none>}" >&2
+        exit 2
+    fi
+    PARITY_IDS=$(jq -r ".issues[]
+           | select(.status == \"open\")
+           | select((.issue_type == \"decision\")
+                    or (.title | ascii_upcase | test(\"^(DECISION|DESIGN_DECISION):\")))
+           | select((.labels | index(\"human-gate\")) | not)
+           | .id" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+    if [ "$jq_exit" -ne 0 ]; then
+        printf "  (parity) FATAL: query failed (jq exit=%s) — ABORTING\n" "$jq_exit" >&2
+        exit 2
+    fi
+    printf "%s\n" "$PARITY_IDS" | while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue
+        echo "  (parity) PARITY FIX: $id is a decision bead missing human-gate — adding label"
+        br label add "$id" "human-gate" 2>/dev/null
+    done
+  '
+}
+
+# NEGATIVE CONTROL body: the pre-fix parity gate, jq piped straight into the loop with no
+# status check. On malformed input this exits 0 having examined nothing — the bug itself.
+run_parity_gate_prefix() { # $1 = br call log   $2 = artifacts dir
+  ARTIFACTS_DIR="$2" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" bash -c '
+    jq -r ".issues[]
+           | select(.status == \"open\")
+           | select((.issue_type == \"decision\")
+                    or (.title | ascii_upcase | test(\"^(DECISION|DESIGN_DECISION):\")))
+           | select((.labels | index(\"human-gate\")) | not)
+           | .id" "$ARTIFACTS_DIR/beads-snapshot.json" 2>/dev/null \
+      | while IFS= read -r id; do
+        grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue
+        br label add "$id" "human-gate" 2>/dev/null
+    done
   '
 }
 
@@ -271,6 +338,92 @@ JSON
 fi
 
 echo
+echo "=== Case 9: Phase 5 gates FAIL CLOSED on unreadable / unresolvable input (bd-br-json-control-chars-21ljf) ==="
+# The rule under proof: a gate that reports clean because it READ NOTHING is worse than no gate.
+# Both Phase 5 jq call sites used to swallow the parser's status — the parity gate reported
+# clean without checking a single bead, and the stamp loop printed N x SKIP and moved on.
+if ! command -v jq >/dev/null 2>&1; then
+  skip "Case 9: jq not installed — cannot exercise the fail-closed gates"
+else
+  FC_DIR="$TMP_ROOT/failclosed"
+  mkdir -p "$FC_DIR/bin"
+  printf '%s\n' bd-dec01 bd-dec02 | tee "$FC_DIR/target-bead-ids.txt" >/dev/null
+  cp "$PROBE_DIR/bin/br" "$FC_DIR/bin/br"
+  FC_LOG="$FC_DIR/calls.log"
+
+  # --- 9a RED: malformed snapshot (truncated mid-object, exactly what a corrupt payload looks
+  #     like to jq). The gate must ABORT, not report clean.
+  tee "$FC_DIR/beads-snapshot.json" >/dev/null <<'JSON'
+{"issues":[
+ {"id":"bd-dec01","status":"open","title":"DECISION: which cache",
+JSON
+  printf '' | tee "$FC_LOG" >/dev/null
+  if run_parity_gate "$FC_LOG" "$FC_DIR" >/dev/null 2>"$FC_DIR/9a.err"; then
+    fail "Case 9a: the parity gate reported CLEAN on a malformed snapshot — it is still silent and open"
+  else
+    pass "Case 9a: malformed snapshot -> parity gate ABORTS (exit non-zero), nothing stamped"
+  fi
+
+  # --- 9d NEGATIVE CONTROL: the pre-fix gate on the SAME fixture must exit 0 having done
+  #     nothing. Without this, 9a could be passing for an unrelated reason.
+  printf '' | tee "$FC_DIR/prefix.log" >/dev/null
+  if run_parity_gate_prefix "$FC_DIR/prefix.log" "$FC_DIR" >/dev/null 2>&1; then
+    pass "Case 9d: the pre-fix gate exits 0 on the identical malformed input — 9a is measuring the fix"
+  else
+    fail "Case 9d: the negative control also failed — 9a may be passing for the wrong reason"
+  fi
+
+  # --- 9b GREEN: valid snapshot, one in-scope decision bead missing human-gate. The gate must
+  #     proceed (exit 0) AND actually act on it — proving the abort is not a blanket refusal.
+  tee "$FC_DIR/beads-snapshot.json" >/dev/null <<'JSON'
+{"issues":[
+ {"id":"bd-dec01","status":"open","title":"DECISION: which cache","issue_type":"decision","labels":["unrefined"]},
+ {"id":"bd-dec02","status":"open","title":"ordinary task","issue_type":"task","labels":["unrefined","human-gate"]}
+]}
+JSON
+  printf '' | tee "$FC_LOG" >/dev/null
+  if run_parity_gate "$FC_LOG" "$FC_DIR" >/dev/null 2>"$FC_DIR/9b.err"; then
+    FIXED=$(grep -c 'label add bd-dec01 human-gate' "$FC_LOG" || true)
+    if [ "$FIXED" -eq 1 ]; then
+      pass "Case 9b: valid snapshot -> gate proceeds and labels the one decision bead missing human-gate"
+    else
+      fail "Case 9b: gate proceeded but made $FIXED parity fix(es), expected exactly 1"
+    fi
+  else
+    fail "Case 9b: the gate aborted on VALID input ($(command tr '\n' ' ' < "$FC_DIR/9b.err")) — over-blocking"
+  fi
+
+  # --- 9c: stamp loop with a non-empty target list that resolves NOTHING. Reproduced the way
+  #     it actually happens: the snapshot is foreign, so the rebuild branch fires, and the
+  #     rebuild comes back EMPTY. Pre-fix this printed 2 x SKIP and exited 0.
+  SL_DIR="$TMP_ROOT/stamp-unknown"
+  mkdir -p "$SL_DIR/bin"
+  printf '%s\n' bd-mine01 bd-mine02 | tee "$SL_DIR/target-bead-ids.txt" >/dev/null
+  tee "$SL_DIR/beads-snapshot.json" >/dev/null <<'JSON'
+{"issues":[{"id":"bd-alien9","status":"open","title":"sibling","issue_type":"task","labels":[]}]}
+JSON
+  # A `br` whose list returns nothing — a stale/failed rebuild, not a crash.
+  tee "$SL_DIR/bin/br" >/dev/null <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$BR_CALL_LOG"
+[ "${1:-}" = "list" ] && printf '{"issues":[]}\n'
+exit 0
+STUB
+  chmod +x "$SL_DIR/bin/br"
+  SL_LOG="$SL_DIR/calls.log"; printf '' | tee "$SL_LOG" >/dev/null
+  if STUB_BIN="$SL_DIR/bin" run_stamp_loop "$SL_LOG" "$SL_DIR" >/dev/null 2>"$SL_DIR/9c.err"; then
+    fail "Case 9c: the stamp loop exited 0 after resolving 0/2 targets — still N x SKIP, still silent"
+  else
+    SL_STAMPED=$(grep -c 'label add' "$SL_LOG" || true)
+    if [ "$SL_STAMPED" -eq 0 ]; then
+      pass "Case 9c: every target unresolved -> stamp loop ABORTS with zero label calls"
+    else
+      fail "Case 9c: loop aborted but had already made $SL_STAMPED label call(s) — abort is too late"
+    fi
+  fi
+fi
+
+echo
 echo "=== Case 6: drift guard — the formula under test matches workflow.md verbatim ==="
 if [ ! -f "$WORKFLOW" ]; then
   skip "Case 6: workflow.md not reachable from $SKILLS_DIR"
@@ -282,6 +435,12 @@ else
   grep -qF 'TARGET_BEAD_IDS' "$WORKFLOW" || { fail "Case 6: workflow.md has no TARGET_BEAD_IDS scope branch"; ok=0; }
   # bd-x8ios: the documented loop must not reintroduce a zsh read-only special as its own variable.
   grep -qE '^ *(status|path|argv|pipestatus|options|signals)=' "$WORKFLOW" && { fail "Case 6: workflow.md assigns a zsh read-only special (bd-x8ios) — rename it"; ok=0; }
+  # bd-br-json-control-chars-21ljf: both Phase 5 jq call sites must still check the parser's
+  # status, and the stamp loop must still count what it resolved. Losing either guard restores
+  # the silent-and-open failure Case 9 exists to catch.
+  [ "$(grep -c 'jq_exit' "$WORKFLOW")" -ge 3 ] || { fail "Case 6: workflow.md no longer checks jq's exit status at both Phase 5 call sites (bd-br-json-control-chars-21ljf)"; ok=0; }
+  grep -qF 'RESOLVED_N' "$WORKFLOW" || { fail "Case 6: workflow.md stamp loop lost its resolved-count guard — an all-unknown run is silent again"; ok=0; }
+  grep -qF 'SNAP_N' "$WORKFLOW" || { fail "Case 6: workflow.md parity gate lost its non-empty-snapshot preflight"; ok=0; }
   [ "$ok" -eq 1 ] && pass "Case 6: workflow.md still documents exactly the formulas + scope channel this test exercises"
 fi
 

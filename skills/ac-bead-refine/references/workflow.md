@@ -648,13 +648,35 @@ AskUserQuestion(
 # 30 of 34 open beads were dropped as "jq: Invalid string: control characters" — silent under
 # bash, corrupting under zsh (the fleet's default). If a per-row loop is ever needed again,
 # it is `printf '%s'`, never `echo`.
-jq -r '.issues[]
+#
+# FAIL-CLOSED (bd-br-json-control-chars-21ljf). This gate used to pipe jq straight into a
+# `while read` and never looked at jq's exit status, so ANY parse failure delivered zero ids
+# and the gate reported CLEAN without checking a single bead — a decision bead missing
+# `human-gate` sailed through to `refined`. jq's status is now checked explicitly and an
+# unreadable snapshot ABORTS Phase 5. An empty result is only trustworthy once the snapshot
+# has been proven readable: see ac-pipeline/references/shell-guardrails.md § Empty is not clean.
+
+# 1. Preflight — prove the snapshot parses AND is non-empty BEFORE trusting an empty result.
+SNAP_N=$(jq -r '.issues | length' "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+if [ "$jq_exit" -ne 0 ] || ! printf '%s' "${SNAP_N:-}" | grep -qE '^[0-9]+$' || [ "$SNAP_N" -eq 0 ]; then
+    printf 'FATAL: parity gate cannot read beads-snapshot.json (jq exit=%s, issues=%s) — ABORTING Phase 5; nothing stamped.\n' "$jq_exit" "${SNAP_N:-<none>}" >&2
+    exit 2
+fi
+
+# 2. The gate itself — still SINGLE-PASS, but jq's status is captured before any loop runs.
+PARITY_IDS=$(jq -r '.issues[]
        | select(.status == "open")
        | select((.issue_type == "decision")
                 or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):")))
        | select((.labels | index("human-gate")) | not)
-       | .id' "$ARTIFACTS_DIR/beads-snapshot.json" \
-  | while IFS= read -r id; do
+       | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+if [ "$jq_exit" -ne 0 ]; then
+    printf 'FATAL: parity gate query failed (jq exit=%s) — ABORTING Phase 5; nothing stamped.\n' "$jq_exit" >&2
+    exit 2
+fi
+
+printf '%s\n' "$PARITY_IDS" | while IFS= read -r id; do
+    [ -n "$id" ] || continue
     grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue   # not mine — never touch it
     echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
     br label add "$id" "human-gate" 2>/dev/null
@@ -730,17 +752,32 @@ if [ -n "$MISSING" ]; then
     br list --json "${REBUILD_FLAGS[@]}" --all | tee "$ARTIFACTS_DIR/beads-snapshot.json" >/dev/null
 fi
 
+# FAIL-CLOSED counters (bd-br-json-control-chars-21ljf). Without them an unparseable or
+# foreign snapshot resolved EVERY id to "unknown" and the loop printed N x `SKIP` — output a
+# conductor skims as intentional. N targets in, zero resolved, is a broken snapshot, not a no-op.
+TARGET_N=0; RESOLVED_N=0
 while IFS= read -r id; do
     [ -n "$id" ] || continue
+    TARGET_N=$((TARGET_N + 1))
     # bstatus comes from the (now target-consistent) snapshot; scope comes from the list.
     # NEVER name this `status` — it is a READ-ONLY special in zsh (alias for $?), so the
     # assignment aborts the loop on the fleet's default shell (bd-x8ios).
-    bstatus=$(jq -r --arg id "$id" 'first(.issues[] | select(.id == $id) | .status) // "unknown"' "$ARTIFACTS_DIR/beads-snapshot.json")
+    bstatus=$(jq -r --arg id "$id" 'first(.issues[] | select(.id == $id) | .status) // "unknown"' "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+    if [ "$jq_exit" -ne 0 ]; then
+        printf 'FATAL: stamp loop cannot parse beads-snapshot.json (jq exit=%s, at %s) — ABORTING; nothing further stamped.\n' "$jq_exit" "$id" >&2
+        exit 2
+    fi
+    [ "$bstatus" = "unknown" ] || RESOLVED_N=$((RESOLVED_N + 1))
     [ "$bstatus" = "open" ] || { echo "SKIP $id (status=$bstatus)"; continue; }
     br label remove "$id" "unrefined" 2>/dev/null
     br label add "$id" "refined" 2>/dev/null
     br label add "$id" "$REFINE_PATH" 2>/dev/null
 done < "$ARTIFACTS_DIR/target-bead-ids.txt"
+
+if [ "$TARGET_N" -gt 0 ] && [ "$RESOLVED_N" -eq 0 ]; then
+    printf 'FATAL: all %s target bead(s) resolved to status=unknown — the snapshot is stale, foreign or unparseable. ABORTING; nothing was stamped.\n' "$TARGET_N" >&2
+    exit 2
+fi
 ```
 
 This signals to `/ac-human-session` and `/ac-implement` that these beads have been through refinement and are agent-ready — `/ac-implement`'s intake gate checks for `refined` explicitly.

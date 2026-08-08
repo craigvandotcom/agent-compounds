@@ -113,6 +113,43 @@ Expected output: nothing. A hit is a prescribed snippet an agent will copy verba
 
 **The alias itself is the human's own shell — propose a rename, never edit their profile.**
 
+### Empty is not clean — check the exit status of every structured-input parse
+
+**The rule: a gate that reports clean because it read nothing is worse than no gate. Empty or
+unparseable structured input is a HARD FAILURE, never a pass.** Whenever a check's verdict is
+computed from parsed input — `jq`, `yq`, `--json` output, a CSV, a snapshot file — capture the
+parser's exit status and abort on non-zero, and treat an empty result set as failure whenever the
+input list it was derived from is non-empty.
+
+The dangerous shape is the pipeline, because it discards the producer's status silently:
+
+```bash
+jq -r '<select>' snapshot.json | while IFS= read -r id; do …; done   # parse error -> zero
+                                                                    # iterations -> "clean"
+```
+
+The fixed shape captures first, checks, then loops — and proves the input was readable at all
+before trusting an empty answer:
+
+```bash
+IDS=$(jq -r '<select>' snapshot.json); jq_exit=$?
+[ "$jq_exit" -eq 0 ] || { printf 'FATAL: parse failed (jq exit=%s) — aborting.\n' "$jq_exit" >&2; exit 2; }
+printf '%s\n' "$IDS" | while IFS= read -r id; do [ -n "$id" ] || continue; …; done
+```
+
+Two independent guards, because they catch different failures: **the status check** catches a
+malformed payload; **a non-empty-input canary** (e.g. `jq '.issues | length'` must be > 0 when
+the target list is non-empty) catches a well-formed but wrong/stale/foreign file. A loop that
+skips every item is the same failure as a loop that ran zero times — count what resolved and
+abort when a non-empty input resolved nothing.
+
+`set -o pipefail` helps inside a script but does not save a pipeline whose consumer legitimately
+exits 0 on empty input; capture-then-check is the shape that always works. Live instance:
+`ac-bead-refine/references/workflow.md` § Phase 5 (parity gate + `refined` stamp loop), where
+both call sites failed silent and open — a decision bead missing `human-gate` could reach
+`refined` without a single bead being checked. Bite-proof:
+`ac-pipeline/scripts/bead-refine-concurrent-dir.test.sh` Case 9.
+
 ## The rule of thumb
 
 Reach for a **tool call** (Write / Edit / Read) before a shell construct whenever the target
