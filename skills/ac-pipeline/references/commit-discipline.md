@@ -17,6 +17,7 @@ touch it, never commit it "on their behalf".
 
 ## ToC
 - Pre-commit deletion check
+- Never blind-commit formatter output on markdown
 - Commit + push sequence
 - No-stash escalation ladder (when rebase/push is blocked by foreign WIP)
 - Rules
@@ -29,6 +30,19 @@ files — intentional?") and wait for confirmation (interactive) or abort-and-re
 (headless). Deletions you authored deliberately proceed; deletions you cannot explain
 are someone else's work or an accident — never commit them. (Promoted from the
 plan-chain safety check, Pass B station 1 — six skills carried copies.)
+
+## Never blind-commit formatter output on markdown
+
+**Diff a formatter's markdown output before committing it. Never run a repo-wide format and
+commit the result unread.** Check the diff for prose that has become a pipe-delimited table
+cell — that is the known failure mode.
+
+The trap is that the corruption arrives disguised as the fix. A formatter absorbs prose
+that abuts a table row into the table, so the format gate goes red, and the obvious remedy —
+format, then commit — is what destroys the text. The correct fix is a blank line between the
+table and the prose, THEN format. The prose stays visible, so review does not catch it.
+
+Never format a file wholesale to fix one file's gate failure. Format the file you changed.
 
 ## Commit + push sequence
 
