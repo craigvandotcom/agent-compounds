@@ -1,23 +1,34 @@
 {
-  "status": "done",
+  "status": "degraded",
   "mode": "REVIEW",
-  "date": "2026-07-18",
+  "date": "2026-08-08",
   "machine": "darwin",
   "branch": "main",
+  "degraded_reason": "push rejected — concurrent ac-tidy pushed d21482745f8004172bb1544af24eb223cc142cb4 mid-run touching the same paths; local main is 1 ahead / 1 behind and rebase/merge are deny-listed",
   "counts": {
-    "pool_items_scanned": 42,
-    "active_open_estimate": 10,
-    "proposed_promotions": 1,
-    "findings": 2,
-    "files_moved": 0
+    "pool_items_scanned": 44,
+    "active_open_estimate": 11,
+    "proposed_promotions": 0,
+    "findings": 4,
+    "files_moved": 0,
+    "beads_created": 1,
+    "recurrence_comments": 2,
+    "open_beads": 470
   },
   "proposal": {
-    "file": "_plans/_proposals/2026-07-18/01-promote-post-launch-activation.md",
-    "bead": "bd-7jz3p",
-    "commit": "d0473730c6c37270d33addc0c02df1c8af44c20f"
+    "file": "_plans/_proposals/2026-08-08/01-release-gate-approved-build-unowned.md",
+    "bead": "bd-4fk2c",
+    "commit": "0afa2ab8921de9e4c969facc2246532c046b9b30",
+    "pushed": false,
+    "stranded": true
   },
-  "slate": [
-    "pool/010-post-launch-activation.md"
+  "slate": [],
+  "slate_deduped_to": "bd-e10w8",
+  "recurrence_comments_on": ["bd-4umzi", "bd-e10w8"],
+  "followups": [
+    "bd-4fk2c exists only in the local beads DB — absent from origin/main .beads/issues.jsonl (bd-kt6al hazard class)",
+    "_plans/_proposals/2026-08-08/ has an NN collision: 01-close-delivered-epic-ybvak.md (from ac-tidy, on origin) and 01-release-gate-approved-build-unowned.md (this run, local)",
+    "next cycle's `git pull --ff-only` will also fail while main is diverged — needs a human"
   ],
-  "slack": { "channel": "sofi", "status": "healthy", "ts": "1784347819.162329" }
+  "slack": { "channel": "sofi", "status": "degraded", "ts": "1786162450.546129" }
 }
