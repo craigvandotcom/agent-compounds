@@ -424,9 +424,9 @@ commit.
   directly — stamps and discovery filings ARE their deliverable — but never stage or commit
   `.beads/`; it is outside every territory manifest. The conductor flushes and commits the
   ledger at each barrier (`br sync --flush-only`;
-  `beads-ledger-shared-file-conductor-should-own-final-commit`). This supersedes
-  `ceremony-batching-pool.md` § Beads-DB mutation deferral for this loop — barriers give
-  v2 the flush point v1's ceremonies lack.
+  `beads-ledger-shared-file-conductor-should-own-final-commit`). Canon:
+  `ceremony-batching-pool.md` § Beads-DB mutation deferral — the prep-hold binds only
+  while a ceremony is in flight, and a barrier phase has none.
 - **Reservations are epic-level territory locks**, held by lane coordinators — never per-file.
 - **`AGENT_NAME` is handed to EVERY child**, claiming or not. `FoggyCreek` is the Tier-2
   chore identity and may NEVER claim beads — assert `[ "$AGENT_NAME" != "FoggyCreek" ]`

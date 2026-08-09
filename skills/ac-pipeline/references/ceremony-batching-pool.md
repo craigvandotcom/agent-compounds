@@ -130,10 +130,13 @@ has **no per-line staging**. Two rules follow, and they are NOT the same rule:
 1. **The ledger has exactly ONE git writer: the conductor.** No child ever
    `git add`s or commits `.beads/issues.jsonl`, whatever its kind. **Unconditional** —
    never scoped to "while a ceremony is in flight".
-2. **Prep children hold their MUTATIONS as well.** A refine or beadify child defers every
-   `br` mutation verb until told the ledger is flushed, and reads freely meanwhile.
-   Implement children DO mutate — closing their beads is the job — but rule 1 still binds
-   them: they mutate, they never commit the ledger.
+2. **Prep children hold their MUTATIONS as well — while a ceremony is in flight** (the
+   scope of this whole section). A refine or beadify child defers every `br` mutation verb
+   until told the ledger is flushed, and reads freely meanwhile. Where no ceremony can be
+   concurrent — a phase-gated loop's prep phase behind a barrier (ac-loop-2 Phase 1) — the
+   hold has nothing to protect: prep children mutate directly, and the conductor flushes +
+   commits the ledger at the barrier. Implement children DO mutate — closing their beads is
+   the job — but rule 1 still binds them: they mutate, they never commit the ledger.
 
 Handing one child the ledger for a window while telling another to hold is not an
 ownership protocol on a file that cannot be staged per line. Memory:

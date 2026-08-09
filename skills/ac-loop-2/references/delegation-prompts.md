@@ -106,8 +106,8 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 >
 > If you write a `progress.md`, its header MUST carry `KIND=refine` — you ship no code and
 > close no beads, and the marker is what keeps your file out of the close gate's completeness
-> union. Beads-DB rule (v2 phase model — supersedes `ceremony-batching-pool.md` § Beads-DB
-> mutation deferral for this loop): run your `br` verbs directly — the stamps ARE your
+> union. Beads-DB rule (`ceremony-batching-pool.md` § Beads-DB mutation deferral — no
+> ceremony is in flight, so the prep-hold does not bind): run your `br` verbs directly — the stamps ARE your
 > deliverable, and the frozen HEAD means nothing collides. NEVER stage or commit `.beads/`
 > or anything else — the conductor is the ledger's only git writer and commits at the barrier.
 > Headless: no AskUserQuestion; a genuine fork becomes a decision bead (Exhaust Rule).
