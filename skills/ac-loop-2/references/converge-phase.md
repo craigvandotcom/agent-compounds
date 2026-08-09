@@ -24,7 +24,9 @@ overlapping repair workers.
 
 **Format/lint first-pass rule:** a formatter's own output is applied and committed as ONE
 bookkeeping commit before attribution starts, so formatting noise never lands in a bisect
-range. Never blind-commit formatter output on markdown.
+range. Never blind-commit formatter output on markdown. Record that commit's sha: a
+failure that later bisects to IT is formatting-caused — repair it as its own cluster,
+attributed to no bead and excluded from `repair%`.
 
 ## 2. Mechanical attribution by bisect
 
@@ -32,7 +34,10 @@ One bead = one commit is what makes this work. For each failing test:
 
 ```bash
 git bisect start "$PHASE_TIP" "$PHASE_BASE"
-git bisect run sh -c 'pnpm vitest run <path/to/failing.test.ts> -t "<test name>"'
+# exit 125 = SKIP, not bad. Most Phase-3 failures are tests ADDED this phase: at commits
+# before the test file existed, a bare vitest run exits non-zero, bisect reads "bad", and
+# the walk converges on the base — misfiling the new test's failure as pre-existing debt.
+git bisect run sh -c 'test -f <path/to/failing.test.ts> || exit 125; pnpm vitest run <path/to/failing.test.ts> -t "<test name>"'
 git bisect reset
 ```
 
@@ -40,6 +45,11 @@ git bisect reset
   reading, no judgment call.**
 - A failure that bisects to `$PHASE_BASE` itself pre-dates the phase: file it as an
   `unrefined` bead, exclude it from `repair%`, and move on. It is not this cycle's debt.
+  This verdict is trustworthy ONLY under the exit-125 guard above.
+- A commit touching `package.json`/`pnpm-lock.yaml` inside the range makes mid-range
+  checkouts run against a mismatched `node_modules` — spurious bads. When the range
+  contains one, add `pnpm install --frozen-lockfile >/dev/null 2>&1 || exit 125` to the
+  bisect script, after the test-file guard.
 - A failure that does not reproduce deterministically is a **flake**: re-run that ONE file
   in isolation before spending a bisect on it (a bisect over a flake returns a random
   commit and slanders a bead).
@@ -85,12 +95,19 @@ measures convenience.
 Excluded from the sample and from the `hollow%` denominator: beads whose contract declared
 `RED: n/a` (pure refactor, config, docs).
 
-**Per sampled bead:**
+**Per sampled bead:** one bead = one commit means the TEST and the fix live in the SAME
+commit — a bare revert deletes the test it is about to run. Restore the test files from
+the bead commit before running, or every probe degenerates to a missing-file error.
 
 ```bash
-git revert --no-commit <bead-commit>            # working tree only — nothing is committed
-pnpm vitest run <the bead's test path> -t "<the declared test name>"
-git checkout -- .                                # restore; the revert is never committed
+git revert --no-commit <bead-commit>                  # stages the full revert — fix AND test now gone
+git show <bead-commit>:<test-path> > <test-path>      # per test file: put the TEST back
+                                                      # probe state = test present, fix absent
+pnpm vitest run <test-path> -t "<the declared test name>"
+git reset --hard HEAD                                 # the ONLY restore that works — `git checkout -- .`
+                                                      # cannot undo a staged revert (pathspec matches
+                                                      # nothing known to git) and leaves the tree
+                                                      # reverted, poisoning every later probe
 ```
 
 - **PASS (healthy):** the test FAILS, and its failure resembles the declared RED

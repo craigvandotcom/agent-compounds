@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-2
 archetype: orchestrator
-last_pass: never
-spine_lines: 585 / target ≤500 orch (orchestrator — length is enforcement spine)
+last_pass: 2026-08-09 (pre-ratification review)
+spine_lines: 601 / target ≤500 orch (orchestrator — length is enforcement spine)
 ---
 
 # ac-loop-2 — maintenance ledger
@@ -23,6 +23,18 @@ identity/land/deregister spine and are deliberately NOT centralised until v2 is 
 (none)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- Pre-ratification review pass. FIXED (probe-verified defects): mutation probe now restores
+  the test from the bead commit before running and restores via `git reset --hard` (a bare
+  revert deletes the test with the fix; `git checkout -- .` cannot undo a staged revert);
+  bisect script gained the exit-125 missing-test-file guard (+ lockfile-commit guard).
+  RESOLVED contradictions: children run `br` verbs directly, conductor stays the ledger's
+  only git writer (explicit supersede of ceremony-batching-pool deferral); AskUserQuestion
+  now names both the sitting and ARIA. HARDENED: mutex 15-min bound + stale-lock steal +
+  origin-assert moved inside the lock (single canonical copy now in delegation-prompts —
+  spine script deleted); FREEZE_SHA recorded and diff-checked at the sitting; bypass-during-
+  Phase-1 re-freeze; risk-queue sequence rule; conductor owns global width via lane budgets;
+  ARTIFACTS_DIR derivation restored at the gate site. Net +16 spine lines — growth bought
+  with the mutex-script deletion; remainder is barrier-integrity enforcement.
 - INITIAL. Authored as a rewrite of the ac-loop copy into the five-phase model. DELETED as
   no-longer-applicable: the width prompt and the whole continuous-width Efficiency
   § Parallelism block (v2's widths are fixed per phase), the queue-with-refill dispatch

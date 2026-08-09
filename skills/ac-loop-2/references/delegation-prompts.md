@@ -106,9 +106,10 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 >
 > If you write a `progress.md`, its header MUST carry `KIND=refine` — you ship no code and
 > close no beads, and the marker is what keeps your file out of the close gate's completeness
-> union. Defer beads-DB writes per `ac-pipeline/references/ceremony-batching-pool.md`
-> § Beads-DB mutation deferral: hold ALL `br` mutation verbs (`br update`/`br close`/
-> `br label`/`br comments add`) until the conductor's ledger commit lands — reads are free.
+> union. Beads-DB rule (v2 phase model — supersedes `ceremony-batching-pool.md` § Beads-DB
+> mutation deferral for this loop): run your `br` verbs directly — the stamps ARE your
+> deliverable, and the frozen HEAD means nothing collides. NEVER stage or commit `.beads/`
+> or anything else — the conductor is the ledger's only git writer and commits at the barrier.
 > Headless: no AskUserQuestion; a genuine fork becomes a decision bead (Exhaust Rule).
 > Report ≤400 words: beads stamped with IDs, beads HELD BACK with the missing contract
 > element named, premise failures found, + the structured `friction:` block (§ Child friction
@@ -123,7 +124,7 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > Every bead you create must at minimum name its **territory manifest** (element 3) and its
 > **sequence position within the epic** (element 5); the refine child completes the other
 > four. If you write a `progress.md`, its header MUST carry `KIND=beadify`. Same
-> beads-DB-hold + report + `friction:` contract as the refine prompt above."
+> beads-DB rule + report + `friction:` contract as the refine prompt above."
 
 ---
 
@@ -151,7 +152,8 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > **Migration and native beads are NOT yours** — return them to the conductor for the serial
 > risk queue at the phase tail, even if they are in your lane's sequence.
 >
-> Hold ALL `br` mutation verbs until the conductor says the ledger is flushed; reads are free.
+> Beads-DB rule: run `br` verbs directly (discovery filings included) but NEVER stage or
+> commit `.beads/` — the conductor is the ledger's only git writer and commits at the barrier.
 > Your ledger is your `progress.md` (header: claim id, `TARGET_BEADS=<n>`, `KIND=implement`).
 > Report ≤400 words: bead ids with their commit shas, beads returned to the risk queue,
 > discovery beads filed with IDs, anything blocked, every Agent Mail identity used, + the
@@ -171,20 +173,31 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > the push are the one unavoidable collision on a shared tree:
 > ```
 > LOCK="$PROJECT_ROOT/.git/ac-loop2-commit.lock"; locked=0
-> for _ in $(seq 1 150); do if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi; sleep 2; done
-> [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired' >&2; exit 2; }
+> for _ in $(seq 1 450); do                     # ~15 min bound — a busy tail at width 9 is legitimate
+>   if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi
+>   # Steal a stale lock: EXIT traps do not fire on SIGKILL/sleep — a dead holder blocks every lane.
+>   find "$LOCK" -maxdepth 0 -mmin +10 2>/dev/null | grep -q . && rmdir "$LOCK" 2>/dev/null && continue
+>   sleep 2
+> done
+> [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired in 15 min — report, do not commit' >&2; exit 2; }
 > trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 > git add -- <your territory paths>
 > git commit -m '<type>(<scope>): <subject> ({BEAD_ID})' -- <your territory paths>
 > git push --no-verify
+> # INSIDE the lock — after release a sibling's commit moves HEAD and false-fails this
+> [ "$(git rev-parse origin/<branch>)" = "$(git rev-parse HEAD)" ] || { echo 'FATAL: push not on origin' >&2; exit 2; }
 > rmdir "$LOCK"; trap - EXIT
 > ```
 > Never `git add -A` / `git add .` / `git commit -a` — they sweep a concurrent agent's staged
-> work into your commit, silently. After the push, verify `git rev-parse origin/<branch>` ==
-> local HEAD.
+> work into your commit, silently.
 > **(c) Trust no global signal.** A local run scoped to your OWN files is permitted as
 > advisory information only. It is NEVER blocking. Red output from anything outside your
 > territory is a sibling's in-flight work, not a bug you found.
+>
+> **Anchors drift; quoted text does not.** Your bead's `file:line` anchors were verified at
+> the Phase-1 freeze; earlier beads in your lane may have shifted lines since. Relocate by
+> the QUOTED text — a moved line number is not a broken spec. If the quoted text itself is
+> gone, STOP and return the bead as spec-stale; never improvise.
 >
 > **ONE BEAD = ONE COMMIT.** Do not fold a second bead, a drive-by cleanup, or a formatting
 > sweep into it. The converge phase attributes failures by bisecting this commit range; a

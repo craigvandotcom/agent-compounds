@@ -23,7 +23,8 @@ convergence pass (Phase 3), so implementation can run at maximum width with no g
 
 Headless: never `AskUserQuestion` — apply the Exhaust Rule (leave the `human-gate`
 decision bead in place, post an advisory Slack nudge, keep working). Interactive:
-`AskUserQuestion` is permitted only at the Phase-1 barrier, for simple bounded forks.
+`AskUserQuestion` is permitted only at the Phase-1 barrier and in Phase ARIA — simple
+bounded forks (≤3 options, answerable in ≤10 words).
 
 > **Scope contract.** You work the pipeline, not the backlog. You never touch raw backlog
 > items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not
@@ -203,7 +204,9 @@ straight to Phase ARIA.
 
 ## Phase 1 — SPEC (width 5–6, HEAD FROZEN)
 
-**HEAD is frozen for the whole phase: no implementation commit lands.** Every child in this
+**HEAD is frozen for the whole phase: no implementation commit lands.** Record
+`FREEZE_SHA=$(git rev-parse HEAD)` in the run ledger at phase open — every anchor verifies
+against it, and the sitting's staleness check diffs against it. Every child in this
 phase writes to the beads DB only, so children are collision-free at width and the anchors
 they verify cannot move under them.
 
@@ -254,6 +257,11 @@ Phase 1 ends at a human sitting, not at a timer:
 - **Decision docket cleared** — every `human-gate` bead answered or explicitly deferred,
   every I2 violation dispositioned.
 - **Wave blessed** — the human confirms the lane set and its ordering.
+- **Staleness check (mechanical, at the crossing)** — `git diff --name-only
+  $FREEZE_SHA..HEAD` ∩ each bead's territory manifest. HEAD legitimately moves between a
+  headless spec run and the sitting (a bypass ship, an `ac-loop` v1 run, a human commit).
+  A bead whose territory intersects the drift goes back through refine before Phase 2
+  dispatches; disjoint beads proceed. Empty diff = cross clean.
 
 Headless runs cannot cross this barrier. Post the docket as an advisory Slack nudge, keep
 the ledger at task 3, and stop cleanly (C1) — the next invocation resumes from a board that
@@ -265,6 +273,8 @@ one gate that pays for the other four phases having none.
 ## Phase 2 — BUILD (width 6–9, one shared tree, NO GATES)
 
 One **coordinator per epic lane**, spawned in parallel across territory-disjoint lanes.
+**The conductor owns the global width:** each lane gets a worker budget at dispatch
+(budgets sum within the phase band); a coordinator never exceeds its grant.
 Workers are **persistent and lane-sticky** where the harness allows — a worker that keeps
 its lane keeps its warm model of that territory. **One bead = one assignment = ONE
 pathspec-scoped commit.**
@@ -278,21 +288,12 @@ pathspec-scoped commit.**
   in-flight work. A local run scoped to your own files is permitted as advisory
   information; **it is never blocking, and a red global signal is never yours to act on.**
 
-```bash
-# The commit mutex — bounded, self-releasing. mkdir is atomic on every fs this fleet uses.
-LOCK="$PROJECT_ROOT/.git/ac-loop2-commit.lock"
-locked=0
-for _ in $(seq 1 150); do            # ~5 min cap — an unbounded wait is a stalled worker
-  if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi
-  sleep 2
-done
-[ "$locked" = 1 ] || { echo "FATAL: commit mutex not acquired in 5 min — report, do not commit" >&2; exit 2; }
-trap 'rmdir "$LOCK" 2>/dev/null' EXIT
-git add -- <your territory paths>          # NEVER git add -A / git add . / git commit -a
-git commit -m "<type>(<scope>): <subject> (<bead-id>)" -- <your territory paths>
-git push --no-verify
-rmdir "$LOCK"; trap - EXIT
-```
+The commit mutex is a lock directory (`.git/ac-loop2-commit.lock`; `mkdir` is atomic),
+bounded (~15 min), stale-stealable (a lock older than 10 min belongs to a dead worker —
+EXIT traps do not fire on SIGKILL), self-releasing on exit. The origin==HEAD assert runs
+INSIDE the lock — after release, a sibling's commit false-fails it. **The ONE canonical
+script is `references/delegation-prompts.md` § Build-worker prompt** — workers execute the
+prompt, never this spine; never fork a second copy here.
 
 **Discoveries are FILED, never fixed.** A worker that finds an adjacent defect, a missing
 test, or a better shape creates an `unrefined` bead for the NEXT cycle's spec phase and
@@ -315,6 +316,11 @@ A broken migration poisons the shared local stack for every worker and cannot de
 Phase 3 — by the time the batched pass runs, every downstream result is contaminated. A
 risk bead that fails its immediate verification is **reverted (its own commit)** and its
 bead reopened; the queue continues.
+
+**Sequence rule:** a lane bead sequenced after a risk bead in its epic follows it to the
+phase tail and runs only after the risk bead verifies — never build against a stack the
+migration has not reached. The exception: a contract that explicitly declares independence
+from the risk bead's effect.
 
 ---
 
@@ -370,6 +376,7 @@ Bisect invocation, cluster formation, sampling rule and the probe protocol:
    ```bash
    export AGENT_NAME="$AGENT_NAME"   # re-assert in THIS call — exports don't persist across bash calls
    PROJECT_ROOT="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"   # re-derive HERE
+   ARTIFACTS_DIR="/tmp/bead-work-<claim-id>-$RUN_ID"   # the conductor's own dir (run-id.md formula)
    GATE="$PROJECT_ROOT/skills/ac-pipeline/scripts/beads-closed-gate.sh"                    # registry layout
    [ -f "$GATE" ] || GATE="$PROJECT_ROOT/.claude/skills/ac-pipeline/scripts/beads-closed-gate.sh"   # harness layout
    bash "$GATE" \
@@ -385,7 +392,7 @@ Bisect invocation, cluster formation, sampling rule and the probe protocol:
    `references/delegation-prompts.md` VERBATIM. One close, one CI dispatch, one report commit.
 5. **Slack notify** (see Milestone Notifications), then exit via `ac-land`.
 
-> **`post-merge` lifecycle — stamp at creation, strip at claim** (`beads-standards/reference/bead-conventions.md` § post-merge claim semantics). Every exhaust bead created during the run — Phase-2 discoveries, QA-pass beads, Exhaust-Rule decision beads — is **stamped `post-merge` AT CREATION** and parented into its epic; an unstamped follow-up under the run's identity is a genuinely-open in-scope bead that blocks the run's own close. Every claim path **strips `post-merge` at claim**, so an adopted bead is closeable again. The two halves are one rule; never do one alone.
+> **`post-merge` lifecycle — stamp at creation, strip at claim** (`beads-standards/reference/bead-conventions.md` § Claim semantics — `post-merge` exhaust). Every exhaust bead created during the run — Phase-2 discoveries, QA-pass beads, Exhaust-Rule decision beads — is **stamped `post-merge` AT CREATION** and parented into its epic; an unstamped follow-up under the run's identity is a genuinely-open in-scope bead that blocks the run's own close. Every claim path **strips `post-merge` at claim**, so an adopted bead is closeable again. The two halves are one rule; never do one alone.
 
 **Publish stays human.** `ac-loop-2` never releases — that is `ac-publish`, invoked by Craig.
 
@@ -405,20 +412,29 @@ P-label. When a bead plausibly reads both ways, default to bypass.
 The bypass lane is the ONLY legal barrier crossing. It never carries a non-urgent bead
 along for the ride.
 
+A bypass ship during Phase 1 moves the frozen HEAD: record the new `FREEZE_SHA` and
+re-verify the anchors of any in-flight spec bead whose territory intersects the bypass
+commit.
+
 ---
 
 ## Invariants that hold across all five phases
 
-- **The conductor is the beads-ledger's only git writer.** Children hold ALL `br` mutation
-  verbs (`br update`/`close`/`label`/`comments add`) until told the ledger is flushed; reads
-  are free (`beads-ledger-shared-file-conductor-should-own-final-commit`).
+- **The conductor is the beads-ledger's only git writer.** Children run their `br` verbs
+  directly — stamps and discovery filings ARE their deliverable — but never stage or commit
+  `.beads/`; it is outside every territory manifest. The conductor flushes and commits the
+  ledger at each barrier (`br sync --flush-only`;
+  `beads-ledger-shared-file-conductor-should-own-final-commit`). This supersedes
+  `ceremony-batching-pool.md` § Beads-DB mutation deferral for this loop — barriers give
+  v2 the flush point v1's ceremonies lack.
 - **Reservations are epic-level territory locks**, held by lane coordinators — never per-file.
 - **`AGENT_NAME` is handed to EVERY child**, claiming or not. `FoggyCreek` is the Tier-2
   chore identity and may NEVER claim beads — assert `[ "$AGENT_NAME" != "FoggyCreek" ]`
   before any claim and FAIL LOUDLY if it is (`ac-ycr.6`).
 - **Children never share a progress file** — each gets its own artifacts dir and
   `progress.md` whose header carries the claim id, `TARGET_BEADS=<n>` and `KIND=`.
-- **After every push, assert `git rev-parse origin/<branch>` == local HEAD.** Push with
+- **After every push, assert `git rev-parse origin/<branch>` == local HEAD — INSIDE the
+  commit mutex** (after release, a sibling's commit false-fails it). Push with
   `git push --no-verify`: the husky pre-push build is redundant with CI and silently
   swallows backgrounded pushes (`prepush-build-hook-swallows-background-pushes`).
 - **Wait for your OWN long-running command in-shell** — never background it and end the

@@ -13,8 +13,9 @@ metrics: repair=<X>% (<r>/<b>) hollow=<Y>% (<h>/<s> sampled)
 risk-queue: <n> bead(s) — <migration|native>:<pass|reverted> …
 ```
 
-- `width` — the fixed per-phase width (spec 5–6, build 6–9). Not a per-run dial: ac-loop-2
-  has no width prompt; the phase model sets it.
+- `width` — the conductor's pick within the phase model's band (spec 5–6, build 6–9). Not
+  a free per-run dial: ac-loop-2 has no width prompt; the band is fixed by the phase model,
+  and the conductor apportions it across lanes as worker budgets.
 - `peak` — the most children in flight at one moment in that phase, from the conductor's own
   dispatch record. Never the requested width.
 - `idle-slots` — `width - peak`. A phase that never filled its width reports it here.
