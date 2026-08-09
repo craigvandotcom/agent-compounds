@@ -1,0 +1,266 @@
+<!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
+
+**Conductor: paste the block below VERBATIM at the head of EVERY prompt in this file — as
+the FIRST lines of the constructed child prompt, above its opening line — substituting the
+child's minted `AGENT_NAME`.** It is the child-side environment contract and a pointer to it
+is explicitly insufficient (canon § Child-spawn preamble) — a preamble that stays in this
+header and never enters the constructed prompt has not been delivered to any child.
+
+ENVIRONMENT CONTRACT (non-negotiable):
+- WAIT for your own long-running commands in-shell (foreground, generous Bash
+  timeout, or a foreground until-loop). Never arm a Monitor on your own command
+  and end your turn — if a completion event already fired, read it and CONTINUE.
+- Agent Mail: CHECK whether you hold `mcp__mcp-agent-mail__*` tools — assume neither way.
+  Usually you do NOT: then don't try to register, and your conductor owns reservations.
+  Either way, export the `AGENT_NAME` it gave you in each commit's own shell.
+- Touching beads (`br`/`bv`)? The canon is `beads-standards` (+ its
+  reference/bead-conventions.md for pipeline contracts) — read before inventing usage.
+- After every push: verify origin SHA == local HEAD before proceeding.
+- A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass. To DISCARD
+  a change: `git checkout HEAD -- <path>` AND unscoped `git stash` are both blocked —
+  use scoped `git stash push -- <paths>`; to read a pristine file, `git show <ref>:<path>`.
+  Destructive commands (rm / find -delete) take FULLY-LITERAL paths: resolve
+  first (`ls -d`), then paste literals — never `$VAR`, `$( )`, or a loop var.
+  /tmp literals + distinctive /tmp globs are allowed; home/repo `rm -rf` never
+  is — `git rm` if tracked, else gitignore-and-flag or ask the human.
+- Shared checkout: `git commit -- <your files>` the INSTANT its ACs verify —
+  pathspec on the COMMIT, because scoping only the `add` still publishes the
+  shared index. **Never `git add -A` / `git add .` / `git commit -a`** — they
+  sweep a concurrent agent's staged work into your bead's commit, silently.
+  Minimal working-tree dwell; run `br` from the bead-board repo root.
+- Autonomous run: never AskUserQuestion — Exhaust Rule.
+- Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
+
+# ac-loop-2 delegation prompts
+
+The verbatim child-prompt payloads each phase dispatches. Slots in `{BRACES}` are filled by
+the conductor at dispatch.
+
+**This file is the implementation contract's SOLE enforcement point** until bead
+`ac-ac-loop2-contract-native-support-fb8k` lands native support in `ac-beadify`/`ac-bead-refine` and
+`beads-standards/reference/bead-conventions.md`. The six-element demand in § Spec-phase
+prompt is not a summary of a schema that exists elsewhere — it IS the schema. Edit it here or
+it is not enforced anywhere.
+
+## Spawn-site rule (binds every prompt below)
+
+Every dispatched prompt carries an **explicit `AGENT_NAME=<name>`** — every child, claiming
+or not. An unset `AGENT_NAME` degrades silently in two directions: an empty `CHILD_ID`
+segment that collapses two children onto one artifacts path, or a fallback to the Tier-2
+chore identity FoggyCreek. The conductor is the only agent that can set it.
+
+Append this clause VERBATIM to every prompt below:
+
+> `AGENT_NAME=<name>` — export it in every shell you commit from. ASSERT each segment of
+> any identity you build from it is non-empty, and FAIL LOUDLY if not: never let an empty
+> segment degrade to a shared path. Your run ledger is your `progress.md` — you hold no
+> Task tools; the conductor owns the Task-tool ledger.
+
+## Brief-claim rule (binds every prompt below)
+
+Compose-time: state a fact only with a citation — a commit SHA or a `br show` verdict. A
+claim about work still in flight is not citable. Write "premise, NOT verified" or wait for
+the child's return. Never restate a bead's preconditions as established fact.
+
+Dispatch-time: append this clause VERBATIM to every prompt below.
+
+> This brief is a POINTER, not a substitute for the spec — read `br show <id>` in
+> full. Any uncited claim here is a premise, not a fact; verify it against the
+> primary source. If a stated premise is false, follow the bead's own acceptance
+> criteria, not this brief.
+
+---
+
+## Spec-phase prompt (Phase 1 — refine)
+
+> "Run ac-bead-refine scoped to {REFINE_SCOPE — an epic id, or an explicit bead-id list}.
+> `TARGET_BEAD_IDS=<ids>` — refine EXACTLY these and stamp nothing else. `RUN_ID=<RUN_ID>`
+> passed BARE, never per-child-suffixed; compute your own per-CHILD artifacts discriminator.
+>
+> **HEAD IS FROZEN for this phase.** You write to the beads DB only — no implementation
+> commit, no file edit outside the beads ledger. Every anchor you verify stays valid because
+> nothing moves under you. Record the HEAD sha you verified against.
+>
+> **Each bead you stamp `refined` MUST carry ALL SIX elements of the implementation
+> contract. A bead missing any element is NOT refined — leave it unrefined, comment why:**
+> 1. **Verified anchors** — every cited `file:line` OPENED at the frozen HEAD, quoted text
+>    matching. A citation you did not open is a fabrication, not an anchor.
+> 2. **Executed baselines** — every countable claim RUN, with the LITERAL output pasted.
+>    Never a reasoned or estimated count.
+> 3. **Territory manifest** — the exact file list this bead may touch. Paths, not globs
+>    (globs only for files the bead CREATES). A bead whose territory cannot be bounded is
+>    not ready: split it, or flag it for the human docket.
+> 4. **Declared RED expectation** — 'Test `<name>` added by this bead must FAIL before the
+>    fix, with approximately: `<error text / assertion shape>`'. A bead that adds no test
+>    declares `RED: n/a — <why>`. This is consumed verbatim by a mutation sampler later; a
+>    vague declaration cannot be sampled.
+> 5. **Sequence position + risk flags** — index within its epic, plus zero or more of
+>    `migration` / `native` / `hot-tier` / `cold-tier`. `migration` and `native` route the
+>    bead to a serial risk queue, so flag them accurately.
+> 6. **No-op-proof ACs** — each acceptance criterion adversarially checked against 'could an
+>    empty diff satisfy this?'. If yes, rewrite it against an executed baseline.
+>
+> Convergence discipline unchanged: execute-at-draft (run the command WHILE drafting, never
+> after), `br lint` first, and a final adversarial round whose job is to BREAK the contract,
+> not bless it.
+>
+> If you write a `progress.md`, its header MUST carry `KIND=refine` — you ship no code and
+> close no beads, and the marker is what keeps your file out of the close gate's completeness
+> union. Defer beads-DB writes per `ac-pipeline/references/ceremony-batching-pool.md`
+> § Beads-DB mutation deferral: hold ALL `br` mutation verbs (`br update`/`br close`/
+> `br label`/`br comments add`) until the conductor's ledger commit lands — reads are free.
+> Headless: no AskUserQuestion; a genuine fork becomes a decision bead (Exhaust Rule).
+> Report ≤400 words: beads stamped with IDs, beads HELD BACK with the missing contract
+> element named, premise failures found, + the structured `friction:` block (§ Child friction
+> schema below)."
+
+## Spec-phase prompt (Phase 1 — beadify)
+
+> "Run ac-beadify on plan `{PLAN_PATH}` (status already verified loop-ready).
+> `RUN_ID=<RUN_ID>`. HEAD is frozen — beads-DB writes only. Skip the user-approval asks
+> (autonomous run): auto-apply Critical/High + consensus validator findings, log the rest.
+> Do NOT proceed to refinement yourself — the conductor dispatches the refine children.
+> Every bead you create must at minimum name its **territory manifest** (element 3) and its
+> **sequence position within the epic** (element 5); the refine child completes the other
+> four. If you write a `progress.md`, its header MUST carry `KIND=beadify`. Same
+> beads-DB-hold + report + `friction:` contract as the refine prompt above."
+
+---
+
+## Lane-coordinator prompt (Phase 2)
+
+> "You are the coordinator for epic lane `{LANE_ID}` in a phase-gated build phase.
+> `RUN_ID=<RUN_ID>`, claim id `<claim-id>`, `CLAIM_ASSIGNEE=<AGENT_NAME>`.
+> Your lane's beads, in sequence order: `<bead ids>`. Your lane's territory manifest is the
+> union of their manifests: {LANE_TERRITORY}.
+>
+> **This phase has NO GATES.** No test gate, no type gate, no smoke, no build. The tree is
+> shared with other lanes and is legitimately dirty with their in-flight work. Every global
+> signal you might read is meaningless right now and is NOT yours to act on. A batched
+> converge phase owns all of it after the barrier.
+>
+> Dispatch one worker per bead, respecting sequence position; workers may run concurrently
+> within your lane only where their territories are disjoint. Keep workers lane-sticky —
+> reuse a returning worker for the next bead in YOUR lane rather than spawning fresh.
+>
+> **Discoveries are FILED, never fixed.** Any adjacent defect, missing test, or better shape
+> a worker finds becomes an `unrefined` bead (stamped `post-merge` at creation, parented into
+> this epic) for the next cycle's spec phase. Fixing inline breaks one-bead-one-commit, which
+> is the entire basis of the converge phase's attribution.
+>
+> **Migration and native beads are NOT yours** — return them to the conductor for the serial
+> risk queue at the phase tail, even if they are in your lane's sequence.
+>
+> Hold ALL `br` mutation verbs until the conductor says the ledger is flushed; reads are free.
+> Your ledger is your `progress.md` (header: claim id, `TARGET_BEADS=<n>`, `KIND=implement`).
+> Report ≤400 words: bead ids with their commit shas, beads returned to the risk queue,
+> discovery beads filed with IDs, anything blocked, every Agent Mail identity used, + the
+> structured `friction:` block."
+
+## Build-worker prompt (Phase 2)
+
+> "Implement bead `{BEAD_ID}` on the shared checkout. Read `br show {BEAD_ID}` in full — it
+> carries a six-element implementation contract; that contract is your whole brief, and you
+> should never need to ask a question. `AGENT_NAME=<name>`, `CLAIM_ASSIGNEE=<AGENT_NAME>`.
+>
+> **THREE RULES. There is no fourth.**
+> **(a) Territory.** Write ONLY inside the bead's territory manifest: {TERRITORY — explicit
+> list}. Not one file more, for any reason. If the fix genuinely needs a file outside it,
+> STOP and return — do not widen your own permission.
+> **(b) COMMIT MUTEX.** Take the global commit lock around add+commit+push. The git index and
+> the push are the one unavoidable collision on a shared tree:
+> ```
+> LOCK="$PROJECT_ROOT/.git/ac-loop2-commit.lock"; locked=0
+> for _ in $(seq 1 150); do if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi; sleep 2; done
+> [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired' >&2; exit 2; }
+> trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+> git add -- <your territory paths>
+> git commit -m '<type>(<scope>): <subject> ({BEAD_ID})' -- <your territory paths>
+> git push --no-verify
+> rmdir "$LOCK"; trap - EXIT
+> ```
+> Never `git add -A` / `git add .` / `git commit -a` — they sweep a concurrent agent's staged
+> work into your commit, silently. After the push, verify `git rev-parse origin/<branch>` ==
+> local HEAD.
+> **(c) Trust no global signal.** A local run scoped to your OWN files is permitted as
+> advisory information only. It is NEVER blocking. Red output from anything outside your
+> territory is a sibling's in-flight work, not a bug you found.
+>
+> **ONE BEAD = ONE COMMIT.** Do not fold a second bead, a drive-by cleanup, or a formatting
+> sweep into it. The converge phase attributes failures by bisecting this commit range; a
+> combined commit makes its own failures unattributable.
+>
+> Write the bead's test with its DECLARED RED expectation in mind — the declared failure will
+> be sampled later by reverting your fix. A test that passes with the fix reverted is hollow
+> and reopens this bead.
+>
+> Adjacent defects: FILE an `unrefined` bead (stamped `post-merge`), never fix. Hold all `br`
+> mutation verbs until told the ledger is flushed. Report ≤200 words: commit sha, files
+> touched, discovery bead ids, + the structured `friction:` block."
+
+## Risk-queue prompt (Phase 2 tail — serial, one at a time)
+
+> "Implement risk bead `{BEAD_ID}` (flags: {RISK_FLAGS}) SOLO. Nothing else is running.
+> Same three worker rules and the same commit mutex as a build worker, PLUS an immediate
+> local verification that must pass BEFORE you return:
+> - **migration** — apply against the LOCAL stack and prove RED→GREEN: capture the failing
+>   state before, apply, capture the passing state after. Paste both. A broken migration
+>   poisons the shared local stack for every subsequent worker and cannot wait for the
+>   converge phase — by then every downstream result is contaminated.
+> - **native** — compile, then launch in the simulator. Paste both outcomes.
+>
+> If the verification fails, REVERT your commit (its own revert commit), reopen the bead with
+> the output pasted in, and return. A revert here is a normal outcome, not an escalation.
+> Report ≤200 words: commit sha, verification output, + the `friction:` block."
+
+---
+
+## Repair-worker prompt (Phase 3)
+
+> "Repair failure cluster `{CLUSTER_ID}` on a QUIESCENT tree — the build phase is closed and
+> nothing else is writing. Attributed failures: {FAILURES — each with its bisected first-bad
+> commit and bead id}.
+>
+> **Unlike the build phase, you DO run checks per fix.** The tree is quiescent, so a gate
+> costs nothing and catches everything: run the affected tests after each fix, and the
+> type-check before you commit.
+>
+> Commit with a pathspec under the same commit mutex, citing BOTH the repair and the bead it
+> repairs. Stay inside the union of the affected beads' territory manifests.
+>
+> If a fix cannot be made safe, REVERT the offending bead's commit (its own revert commit)
+> and reopen that bead with the failure pasted in. Reverting is a normal outcome — do not
+> escalate, do not widen scope, do not fix a second cluster.
+>
+> Report ≤300 words: fixes applied with commit shas, beads reverted+reopened with IDs,
+> failures you could not attribute, + the structured `friction:` block."
+
+---
+
+## Batch-close prompt (Phase 4)
+
+> "Run ac-batch-close for cycle `<claim-id>` (ac-loop-2 phase-gated run). CI config for this
+> project: `<cached-answer>`. This pipeline has no review panel — the verification gate
+> cleared this cycle, and standing code quality is ac-hygiene's lane on its own cadence. For
+> uncertain CI-finding items: create decision beads (Exhaust Rule). Do not ask 'what's next?'
+> after merge."
+
+---
+
+## Child friction schema
+
+The `friction:` block every summary contract above asks for. Structured (not prose) so the
+conductor can aggregate it mechanically and `dream` can key on `stage`/`cost` later. One list
+item per phase-stage that hit friction; a clean stage returns `friction: []`. Lives INSIDE
+the existing summary word cap — a slot in that summary, not a new unbounded field.
+
+```
+friction:
+  - stage: build              # graph|spec|build|risk-queue|converge|verify
+    cost: material|minor       # + optional "~Nmin" when quantifiable
+    lesson: "territory manifest omitted the test file, worker had to return"
+    class: defect|improvement|observation   # child's pre-classification HINT
+```
+
+`class` is a HINT only — `ac-land`/`reflect` re-adjudicate it against the objective bar;
+never treat it as authoritative. This file is the ONE definition of the four keys.
