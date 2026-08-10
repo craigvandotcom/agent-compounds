@@ -76,9 +76,28 @@ any other cross-user shared record — is proven against the **local stack**
 genuinely needed) and never against prod. Prod stays the **default** target for
 user-scoped journeys — the test account's own food/signal/wellness/settings
 data — plus read-only smoke. Each journey doc's `prod_unsafe:` frontmatter key
-names the concrete buttons/actions this applies to for that journey (an empty
-list is a deliberate "nothing unsafe here" statement, not an omission) —
-consult it before picking a target environment for a given journey.
+names the concrete buttons/actions this applies to for that journey — consult it
+before picking a target environment for a given journey.
+
+**`prod_unsafe: []` alone is unaudited, not safe.** An empty list is a "nothing
+unsafe here" statement only when a `prod_unsafe_audited:` date sits beside it.
+Absent the stamp, treat the journey as potentially prod-unsafe.
+
+```yaml
+prod_unsafe: []                      # or a list of concrete button/action strings
+prod_unsafe_audited: <ISO date>      # date of the audit; absent = never audited
+prod_unsafe_target: 'local-stack …'  # required when prod_unsafe is non-empty
+```
+
+`prod_unsafe_target:` names the environment the journey runs against and which
+subset, if any, stays prod-safe.
+
+A write is cross-user shared when its table carries no `user_id` column, when it
+hits the research/classifier/retrigger pipeline, when it mutates a shared external
+system, or when it mints an account in the shared auth tenant.
+
+No automated check proves a `prod_unsafe:` list complete. It is an audit claim
+about runtime side effects; the stamp records that someone stands behind it.
 
 **Secrets stay redacted.** Env values (API keys, credentials, tokens) are
 always redacted in agent output, regardless of which environment is under test.
