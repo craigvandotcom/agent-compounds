@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-04
-entries: 19
+last_pass: 2026-08-10
+entries: 21
 ---
 
 # ac-bead-refine — friction log
@@ -267,3 +267,29 @@ entries: 19
 - status: open
 - proposed_fix: require a per-finding DISPOSITION LEDGER in the refine artifact — every finding raised by any round gets exactly one of applied / rejected-with-reason / deferred-to-<bead>, and the round cannot close until each row has one. Silence must be impossible to confuse with a decision; a rejected finding with a stated reason is a cheap, honest outcome, an unlisted finding is not an outcome at all.
 - narrative: two findings raised during refine were silently dropped — not rejected on the merits, just never carried forward into the next round's draft or the artifact. Nothing in the ceremony detects this: the panel reports findings, the conductor patches the draft, and the only record of what happened to any individual finding is whether its text happens to appear in the result. That makes "was this considered and rejected?" and "was this lost?" indistinguishable after the fact, for the conductor AND for the human reading the artifact later. Low cost this run (both were minor), but the failure mode is invisible by construction and scales with round count and panel width, so it will not announce itself in a run where the dropped finding mattered.
+
+## write-the-patch-dry-run-beats-another-review-round
+- skills: [ac-bead-refine]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [acceptance-criteria-that-cannot-fail, final-round-audits-the-input-not-the-draft, filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-08-10
+- last_seen: 2026-08-10
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: add a 4th, code-beads-only reviewer role — "write the smallest patch that would satisfy these ACs, then report what broke your assumptions" — run once convergence looks near, ADDITIVE to (not replacing) the existing Completeness/Implementability/Structure panel, which caught real independent defects in the same run's other batches (R25/R27).
+- narrative: R20 refined 5 code beads (`rxngh.5/.6/.12/.13/.14`) through a full 3-reviewer panel with 0 premise deaths — and the panel still missed three criticals that ONE attempted write-the-patch dry-run caught: (i) `.12`'s AC was hollow — the real write site is `loadSlugSetOnce().then()`, not the site the AC named; (ii) `.6` cited `signup/route.ts`, which is DEAD CODE — the live door is `signup-form-client`; (iii) a Suspense boundary in `signup/page.tsx` is REQUIRED for static export and no reviewer noticed. All three are exactly the "can this actually fail / does it point at the live code" class this skill's existing `acceptance-criteria-that-cannot-fail` entry already tracks, but reached by a different lens: a prose review panel reasons ABOUT the fix, a dry-run patch attempt IS the fix and surfaces what the prose review can't see (a wrong write site, a dead-code target, a missing structural requirement) as soon as someone tries to actually make the change. Reconstructed from the run carrier — R20's own artifact dir did not survive the /tmp sweep (see the sibling ac-loop entry on artifact durability), so this narrative is a reconstruction, not a fresh read of the original artifact. evidence: ledger commits `118465a6` (R20 banked), `9d69c7f8` (batch35 closed); RUN 20260808-221219-47229, 2026-08-10. This was DEMOTED from a T2 improvement bead by ac-land's per-land cap of 1 (the T2 slot went to `ac-28nm`, /tmp artifact durability) — its recurrence should accrue here for `dream`'s ranking.
+
+## unrunnable-ac-test-command-must-name-the-repo-runner
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [ac-check-command-never-executed-during-refine, affected-graph-silently-subsets-explicit-test-selection]
+- first_seen: 2026-08-10
+- last_seen: 2026-08-10
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: an AC that names a test command must name a RUNNABLE one — `pnpm vitest run <path>` finds nothing repo-wide when `vitest-affected` narrows the include set, so ACs must specify `test:one` (or the repo's documented single-file runner), never a hand-composed vitest invocation. Second half, same root: transcribing a command at draft time BREAKS it — extract the command from the bead text verbatim and run THAT literal string, never a retyped variant.
+- narrative: R19 (4 bug beads refine-full, commit `025df721`, RUN 20260808-221219-47229) hit both halves. This is a DIFFERENT root from `ac-implement`'s `affected-graph-silently-subsets-explicit-test-selection` (~line 51 there) — that entry is about `vitest-affected` under-selecting sibling mock files at IMPLEMENT time (a tool under-selection problem); this one is about an AC prescribing a test command that cannot resolve to any test AT ALL under the repo's runner wrapper (an authoring-time unrunnable-command problem), caught during REFINE before any implement child wastes a cycle on it. Judged same-family-but-distinct per friction-capture.md's dedup rule — a pointer to the ac-implement entry is recorded here for cross-reference, not a merge, since the two failure mechanisms and the stage they bite at are different.

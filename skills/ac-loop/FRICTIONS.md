@@ -1,8 +1,8 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-04
-entries: 16
+last_pass: 2026-08-10
+entries: 17
 ---
 
 # ac-loop — friction log
@@ -139,10 +139,10 @@ entries: 16
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline]
 - impact: M
 - frequency: every-run
-- recurrence: 39
+- recurrence: 40
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn, dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-04
+- last_seen: 2026-08-10
 - stage: ac-loop
 - status: open
 - proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
@@ -222,6 +222,12 @@ entries: 16
   mechanical DETECTOR (grep the registry for redirects to a non-literal destination) or the sweep
   will rot again; (b) a bead closed Fixed after a partial sweep is worse than one left open — it
   removes the signal that anything remains.
+  **RUN 20260808-221219-47229, +1 — an assign-then-redirect shape, same root.** dcg blocked a
+  command of the form `> $A/f` (assign a path to a shell variable, then redirect to it) during
+  bd-8q26b. Same class as every prior occurrence here: the destination is not a pasted literal at
+  the call site, whatever intermediate form it takes (direct substitution, a heredoc, or — this
+  time — a plain variable assignment one line earlier). No new workaround needed; resolved the
+  same way as the rest of this family (Write tool / literal-paste). Counted here, not as a new id.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-loop, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
@@ -406,3 +412,16 @@ entries: 16
   variable and degraded in two different directions (empty path segment / borrowed identity), which
   is precisely the argument for fixing it at the SPAWN site: whatever each downstream consumer does
   with the empty value, the conductor knows the right value and simply did not pass it.
+
+## tmp-artifacts-not-durable-across-a-long-run
+- skills: [ac-loop]
+- impact: H
+- frequency: rare
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-10
+- last_seen: 2026-08-10
+- stage: ac-loop
+- status: open
+- proposed_fix: tracked as a decision bead under human gate (`ac-28nm`, /tmp artifact durability) — do not re-derive the fix here. Note for this skill specifically: ac-land's own teardown selector globs `/tmp/<prefix>-*` for cleanup, so any fix that moves the artifact root must also update that selector or teardown will silently stop matching its own targets.
+- narrative: macOS periodic cleanup destroyed the run's own artifact carrier plus ~35 of the run's 41 claim dirs UNDER /tmp mid-run — R20's refine artifact dir was lost between rounds 2 and 3 (forcing a reconstruction from the ledger rather than a fresh read for the B1 write-the-patch-dry-run finding logged in ac-bead-refine's log), and the run's own beads-closed-gate Ceremony ran its final check on degraded evidence as a result. This is the run-level incident this retrospective almost missed entirely: it was not on the conductor's candidate list of things to investigate, and surfaced only when asked "what got treated as unavoidable that shouldn't have been?" (see the paired `conductor-supplied-candidates-are-leads-not-findings` entry in ac-land's log). /tmp is not a durable artifact root for anything a long-running loop needs to survive past an OS-level cleanup window; the pipeline's use of it for run carriers and claim dirs is a latent single point of failure that this run made visible by chance rather than by design.

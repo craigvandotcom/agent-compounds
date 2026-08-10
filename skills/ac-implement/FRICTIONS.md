@@ -1,7 +1,7 @@
 ---
 skill: ac-implement
 created: 2026-07-29
-last_pass: 2026-08-04
+last_pass: 2026-08-10
 entries: 10
 ---
 
@@ -42,14 +42,15 @@ entries: 10
 - skills: [ac-implement]
 - impact: H
 - frequency: frequent
-- recurrence: 4
+- recurrence: 5
 - related: [unverified-causal-story-in-review-finding]
 - first_seen: 2026-07-14
-- last_seen: 2026-07-29
+- last_seen: 2026-08-10
 - stage: ac-implement
 - status: open
 - proposed_fix: for any shared-interface / client-call-chain diff, grep the mock-OWNING test files (not just the obvious suites), run that named set with VITEST_AFFECTED_DISABLED=1, and have the conductor pre-authorize those mock-owning suites in the engineer's scope contract. Upstream fix: vitest-affected should honour an explicit selection verbatim or fail loudly when it would drop named files.
 - narrative: vitest-affected INTERSECTS an explicitly-named file list with the git-diff set instead of honouring it, so a per-bead gate runs a subset of the suites the engineer named and still exits 0. Observed 3x in RUN 20260714-170945-6308, 7-of-12 named files in RUN 20260728-234407-54469, and 2-of-5 named suites in two independent children in RUN 20260729-170058-3584 (one reported GREEN on 40% of its evidence). The paired half: the per-file affected run under-selects sibling MOCK files, so widening a shared type (optional supabase? on AuthenticatedRequest) or changing which client a route calls breaks hand-rolled requireAuth mocks only after commit — bd-8b61b put main briefly RED plus 3 fix commits, bd-7vta3 cost ~5 rounds. Third shape, 2026-07-28: a scope contract naming only the TOUCHED files stranded the files that MOCK them, so the engineer correctly refused to fix them and the conductor paid a round trip. Same family as org-8f0 (ubs exits 0 having checked nothing) — trusted tools that report success without checking.
+  **RUN 20260808-221219-47229, +1 — a fourth shape: a NEW call site breaks OTHER files' mocks, not just the touched ones.** bd-3wfq4.5 (commit b0193509) added a route's first call into an existing repo-module — the route itself had no mock gap, but repo-module mocks living in OTHER test files (never touched by the diff) started returning 500 once the new call landed, because those sibling files' mocks had no stub for the newly-exercised method. The fix pattern from the existing entries (grep mock-owning files, pre-authorize the scope) generalizes to this trigger too, but the trigger itself is new and worth naming explicitly: **a route gaining a new repo-module CALL requires a repo-wide `grep vi.mock` across the whole suite, not just the route's own test file** — the affected-graph gap here is not under-selecting the route's tests, it's failing to notice that unrelated-looking test files now depend on a mock surface the diff silently widened.
 
 ## own-suite-only-run-misses-cross-suite-stale-assertions
 - skills: [ac-implement]
