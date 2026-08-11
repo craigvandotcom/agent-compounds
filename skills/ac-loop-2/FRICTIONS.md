@@ -154,3 +154,32 @@ entries: 6
   pair asserting the OPPOSITE of Craig's ruling; a refine without that round would have stamped it
   refined. Both elements earned their cost in measured terms this run — record that before anyone
   proposes trimming them.
+
+## refine-all-degrades-to-priority-cut-when-set-exceeds-width
+- skills: [ac-loop-2]
+- impact: H
+- frequency: every-run
+- recurrence: 0
+- related: []
+- first_seen: 2026-08-11
+- last_seen: 2026-08-11
+- stage: spec
+- status: fixed
+- proposed_fix: LANDED — Phase 1 item 2 restated as a DRAIN (width bounds concurrency, never
+  coverage; conductor decides ORDER, never MEMBERSHIP), grouping/order/assertion moved to
+  `references/refine-drain.md`, and a `refine-drain:` assertion added to the sitting barrier.
+- narrative: Phase 1 said refine "every unrefined non-`human-gate` bead" but fixed width at 5-6 and
+  defined NO overflow behaviour. RUN 20260811-113939-36193 opened with 83 unrefined beads against a
+  width of 5, so "every" silently degraded to "as many as fit" and the conductor improvised a cut.
+  The nearest signal to hand was `priority` — which on this board encodes WHO FILED THE BEAD, not
+  its value. Measured: 9 of 9 Craig-reported beads sat at P2; 14 of 26 agent-filed beads sat at
+  P0/P1. A `priority <= 1` cut therefore admitted 14 agent-filed beads and STRUCTURALLY ZERO
+  human-reported ones — it was arithmetically impossible for a Craig bug report to enter the wave.
+  Eleven of his product bugs (input hidden behind the keyboard, credit-failed rows never
+  self-healing, widget staleness) were ready, unblocked, non-human-gate, and invisible; one was
+  re-discovered hours later by an expensive device-QA pass in the same run. The loop shipped
+  beads-ledger guards and husky hooks instead. NOTE the regression direction: `ac-loop` v1 already
+  states the correct doctrine ("ONE eligible-work queue, dispatched CONTINUOUSLY up to
+  PARALLEL_WIDTH... the list is PRIORITY, NOT a barrier") and carries a Rule-0 Bug Lane that would
+  have caught these. v2's phase-gated redesign dropped both and replaced them with nothing, so this
+  is a restoration, not an invention. v1 needs no edit.

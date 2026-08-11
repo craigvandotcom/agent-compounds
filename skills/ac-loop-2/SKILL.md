@@ -217,8 +217,11 @@ they verify cannot move under them.
    parallelize unless a plan declares `depends-on:` naming an upstream plan that is not yet
    complete; a `depends-on:` naming an epic id is the deprecated form — **ERROR**, skip that
    plan's admission this pass, post an advisory nudge, never a hard stop.
-2. **Refine-all** — one child per bead group (`ac-bead-refine`) over every unrefined
-   non-`human-gate` bead, including the freshly beadified ones.
+2. **Refine-all** — a DRAIN over every unrefined non-`human-gate` bead (plus freshly
+   beadified ones): one child per group, successive waves of `width` until the set is EMPTY.
+   Width bounds concurrency, never coverage. The conductor decides ORDER, never MEMBERSHIP —
+   never cut by priority, which ranks who filed a bead, not its value. Grouping, order and
+   the `refine-drain` barrier assertion: **`references/refine-drain.md`**.
 
 ### The IMPLEMENTATION CONTRACT (what refinement must produce)
 
@@ -257,6 +260,9 @@ Convergence discipline carries over from `ac-bead-refine` unchanged: **execute-a
 
 Phase 1 ends at a human sitting, not at a timer:
 
+- **Drain proved** — PRINT `refine-drain: <N> at open · <R> refined · <H> held · <U> STILL
+  UNREFINED` (`references/refine-drain.md`). `U > 0` names every remaining id and is a C3
+  stop, never a default.
 - **Decision docket cleared** — every WAVE-BLOCKING `human-gate` bead answered or explicitly
   deferred, every I2 violation dispositioned. A blocker deferred here drops its dependent
   bead from the wave; the lane ships the rest.
