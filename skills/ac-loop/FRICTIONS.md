@@ -1,7 +1,7 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-10
+last_pass: 2026-08-11
 entries: 17
 ---
 
@@ -230,13 +230,13 @@ entries: 17
   same way as the rest of this family (Write tool / literal-paste). Counted here, not as a new id.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
-- skills: [ac-loop, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
+- skills: [ac-loop, ac-loop-2, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
 - impact: M
 - frequency: frequent
-- recurrence: 5
+- recurrence: 6
 - related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-04
+- last_seen: 2026-08-11
 - stage: ac-land
 - status: open
 - proposed_fix: when a bead description contains markdown that could tokenise as shell metacharacters (a `>` blockquote is the common one), do not inline it in `br create -d "..."` — write the memo to a literal `/tmp/<dir>/memo.md` with the Write tool and pass `-d "$(cat /tmp/<dir>/memo.md)"`. Worth stating once in beads-standards' decision-bead template, since decision memos are exactly the beads long enough to contain blockquotes.
@@ -271,6 +271,21 @@ entries: 17
   temp file with the Write tool and pass it by command substitution. A pointer entry now exists in
   ac-pipeline's log because the payload SHAPES (delegation preamble, disposition and close-reason
   templates) are shared substrate it owns; occurrences stay counted here.
+  **RUN 20260811-113939-36193 (BCA, ac-loop-2 phase-gated, 6 beads / 5 lanes), +5 — first
+  occurrences under the v2 phase model, so this id now spans BOTH loop skills.** Hit
+  independently by the conductor (a literal placeholder in angle brackets inside a `br create -d`
+  body parsed as a shell redirect), the doctrine refine child, the ledger build child, and twice
+  more during the closing/reflect ceremonies — including by the reflect agent writing THIS entry,
+  whose memory-fact prose merely *named* angle-bracket placeholders. Each agent rediscovered the
+  same heredoc-to-file workaround at its own cost; none had it in front of them at the moment of
+  the block. Two things this run adds. (1) The trigger set is wider than the redirect family
+  alone: `-` plus a closing angle bracket and `=` plus a closing angle bracket (ASCII arrows in
+  ordinary prose) tokenise the same way, which makes ordinary technical writing a trigger.
+  (2) The v2 delegation prompts inherit the hazard unchanged from v1, so the fix belongs in
+  `ac-loop-2/references/delegation-prompts.md` too, in every prompt that writes bead body text:
+  **never interpolate prose into a double-quoted shell argument — write it to a literal temp file
+  and pass the file.** Sharper still, and cheaper than remembering: keep placeholders out of prose
+  entirely (write `ID`, `FILE`, `SLUG` bare) so the construct never reaches the tokeniser.
 
 ## divergence-check-while-a-child-is-live-proves-nothing
 - skills: [ac-loop]

@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-10
-entries: 21
+last_pass: 2026-08-11
+entries: 22
 ---
 
 # ac-bead-refine — friction log
@@ -13,19 +13,31 @@ entries: 21
      duplicate root friction under a new id. -->
 
 ## filed-beads-carry-drifted-anchors-and-false-premises
-- skills: [ac-bead-refine]
+- skills: [ac-bead-refine, ac-loop-2]
 - impact: M
 - frequency: every-run
-- recurrence: 3
+- recurrence: 4
 - related: []
 - first_seen: 2026-07-22
-- last_seen: 2026-08-04
+- last_seen: 2026-08-11
 - stage: ac-bead-refine
 - status: open
 - proposed_fix: keep (and make explicit in the workflow) the rule that EVERY cited `file:line` anchor and every quoted artifact in a bead must be re-verified against HEAD during refine, and that a falsified premise closes or rewrites the bead rather than being smoothed over. This is not overhead — it is the highest-yield thing refine does, and it paid off on every batch of this run.
 - narrative: filed beads carried drifted `file:line` refs at a steady rate of ~3 per batch, every batch (RUN 20260722-085844-39967, 27 beads refined across 3 batches). Several carried outright FALSE premises, not just stale line numbers: bd-iahbm's cited test asserted the OPPOSITE of the claimed behavior; bd-nnzjv quoted a 500 response body that did not exist; bd-vyyaw requested a field the type does not have; bd-zz6ah claimed "all 8" when it was 4 of 8; bd-0q96x said "62 commits" when it was 145. Every one of these would have become wasted or wrong implementation had refine trusted the filing. Downstream sibling fact: `refined-spec-staleness-query-ground-truth-first` (the same class of drift, observed at implement time instead).
   **RUN 20260803-113231-34132, +1 — drift is not only a FILING-time problem, it happens DURING the refine.** The shared checkout moved 5 commits mid-run under a width-2 conductor: `lint.sh` grew from 314 to 372 lines and its anchor lines shifted twice while beads referencing them were being authored. ~8 minutes of re-verification, and any bead that had been stamped `refined` an hour earlier was already stale. The sharpened rule this yields is about what a bead may CITE, not just when it is checked: beads must carry **grep targets, never line coordinates, and must never assert a check COUNT** (e.g. "lint.sh has 42 checks") — a target survives a moving trunk, a coordinate or a count does not. This is the cheap structural fix that makes the re-verification rule above less load-bearing.
   **RUN 20260803-221658-19787 — CONFIRMATION: the final-round re-execution of HEAD-anchored claims is now load-bearing under a shared checkout, not belt-and-braces.** Children that re-ran every HEAD-anchored claim in their FINAL round (rather than only at draft time) caught drift that had appeared during the refine itself, exactly as the previous run predicted. What this run adds is that the practice pays even when nothing about the bead changed: on a shared checkout with concurrent siblings, the tree moves under a stationary draft, so a claim verified in round 1 is not verified in round 4 and the elapsed time is the whole risk. The operating rule that follows is cheap and worth stating as sequence rather than diligence — **the last thing a refine does before stamping is re-execute its own citations**, because every check has a shelf life measured in sibling commits, and a stamp asserts freshness at stamp time rather than at check time.
+  **RUN 20260811-113939-36193 (BCA, ac-loop-2 phase-gated), +1 — the first run to MEASURE the base
+  rate, and it is 100%.** Anchors had drifted in EVERY bead audited, with 13 separate drifts in one
+  bead. That converts this entry from "happens often" to "assume it, always": there is no bead
+  population for which skipping the re-open is defensible, and a "verified" claim inherited from a
+  prior refine round is not evidence of anything. Two further data points from the same run. (1) The
+  adversarial break-attempt round caught a territory omission that would have shipped a
+  self-contradictory, byte-parity-CI-enforced prompt pair asserting the OPPOSITE of Craig's ruling —
+  a refine without that round would have stamped the bead refined. (2) Two refined beads had a FALSE
+  central claim (bd-pntbn asserted missing dispositions; 26/26 beads carried them) and a DEAD premise
+  (bd-a3b0p, closed as superseded) — so premise falsification is not a rare outcome of the check, it
+  is a routine one. Recorded in ac-loop-2's log as a pointer entry: the same discipline is that
+  skill's implementation-contract element 1, and this run is its strongest validation to date.
 
 ## acceptance-criteria-that-cannot-fail
 - skills: [ac-bead-refine]
@@ -293,3 +305,28 @@ entries: 21
 - status: open
 - proposed_fix: an AC that names a test command must name a RUNNABLE one — `pnpm vitest run <path>` finds nothing repo-wide when `vitest-affected` narrows the include set, so ACs must specify `test:one` (or the repo's documented single-file runner), never a hand-composed vitest invocation. Second half, same root: transcribing a command at draft time BREAKS it — extract the command from the bead text verbatim and run THAT literal string, never a retyped variant.
 - narrative: R19 (4 bug beads refine-full, commit `025df721`, RUN 20260808-221219-47229) hit both halves. This is a DIFFERENT root from `ac-implement`'s `affected-graph-silently-subsets-explicit-test-selection` (~line 51 there) — that entry is about `vitest-affected` under-selecting sibling mock files at IMPLEMENT time (a tool under-selection problem); this one is about an AC prescribing a test command that cannot resolve to any test AT ALL under the repo's runner wrapper (an authoring-time unrunnable-command problem), caught during REFINE before any implement child wastes a cycle on it. Judged same-family-but-distinct per friction-capture.md's dedup rule — a pointer to the ac-implement entry is recorded here for cross-reference, not a merge, since the two failure mechanisms and the stage they bite at are different.
+
+## gate-liveness-ruling-must-read-the-targets-comment-tail
+- skills: [ac-bead-refine]
+- impact: L
+- frequency: occasional
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises, comment-trusted-over-the-events-audit-trail, dispatch-scoped-from-spec-not-comment-history, board-truth-belongs-in-the-title-not-a-comment]
+- first_seen: 2026-08-11
+- last_seen: 2026-08-11
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: when a refine RULES on whether another bead is a live human gate (or on any state a human can change out-of-band), it must read that target bead's COMMENT TAIL newest-first, not body plus notes alone, and record the timestamp of the newest evidence it read. A ruling with no evidence timestamp cannot be TOCTOU-checked at execution time.
+- narrative: NEAR-MISS, caught only by a downstream TOCTOU re-check. bd-kxcwr's refine ruled bd-bt9n8
+  a genuine live human gate, reading its body and Notes. bd-bt9n8 carried a comment timestamped
+  09:34:38Z recording Craig's ratification of 3 of 4 downgrades — posted 34 MINUTES BEFORE the refine
+  ruled at 10:08. The row set actually awaiting Craig was EMPTY. Executing the ruling would have
+  written a marker creating a FALSE gate, re-arming the exact reason-less-gate alarm that a sibling
+  bead had spent its entire run clearing (62 reason-less gates down to 1). Caught only because the
+  ledger lane's own AC8 re-checked at execution time instead of trusting the refine. The asymmetry
+  that makes this worth a rule: a human's decision lands as a COMMENT — humans do not edit bead
+  bodies — so the evidence layer a refine skips is precisely the layer human rulings live in. Note
+  the deliberate tension with `comment-trusted-over-the-events-audit-trail` in ac-human-session's log
+  (a comment is a CLAIM, the events table is the RECORD): these do not conflict, they compose. Read
+  EVERY evidence layer and reconcile them; the failure in both cases was reading one layer and
+  stopping. Filed bd-bt9n8-gate-ruling-overtaken-odrmg (P1 fork).

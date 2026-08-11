@@ -1,8 +1,8 @@
 ---
 skill: beads-standards
 created: 2026-07-22
-last_pass: 2026-08-04
-entries: 7
+last_pass: 2026-08-11
+entries: 9
 ---
 
 # beads-standards — friction log
@@ -110,14 +110,26 @@ entries: 7
 - skills: [beads-standards]
 - impact: S
 - frequency: frequent
-- recurrence: 1
+- recurrence: 2
 - related: [br-non-tty-flake-in-compound-one-liners]
 - first_seen: 2026-08-04
-- last_seen: 2026-08-04
+- last_seen: 2026-08-11
 - stage: ac-loop
 - status: open
 - proposed_fix: document the shapes in the br cheatsheet: `br list --json` returns an OBJECT (`{issues:[…], total, limit, offset, has_more}`) and needs an explicit `--limit 0`; `br ready --json` and `br show --json` return BARE ARRAYS. Give the defensive filter form (`(.issues // .)`) so one jq expression survives both. Confirm against the live tool before writing (per `verify-doctrine-claims-against-live-tools`).
 - narrative: a jq filter written for `br ready --json` errored with "Cannot index array with string" when reused against `br list --json`, because the two subcommands of the same CLI return different top-level shapes; `br list` additionally truncates unless given `--limit 0`, so a board scan silently under-reports without it. A third shape showed up in the same run from the refine side: a bead AC specified parsing `br show --json` as an object and was unbuildable as written because it too returns a bare array. Cost is one wasted call per rediscovery, but the shape is rediscovered independently by every agent that scripts a board scan, and nothing in the registry documents it. Knowledge captured meanwhile as the neoMeta memory fact `br-cli-json-shapes-and-body-quoting`; this entry tracks the doctrine gap that keeps making it necessary.
+  **RUN 20260811-113939-36193 (BCA), +1 — same root (br subcommand defaults and shapes silently
+  narrow or reshape the result set), and this time it cost a dispatched child.** Two confirmations
+  and one addition. CONFIRMED: `br show --json` does return a bare array, as this entry already
+  documents — an agent re-derived it at its own cost, which is the argument for finally writing the
+  cheatsheet rather than logging the friction a third time. NEW AND WORSE: **`br list` hides CLOSED
+  beads by default; `--all` is required.** This turns an existence probe into a false negative,
+  which is the most expensive shape available — a conductor concluded a plan had zero beads and
+  dispatched a beadify child, when the epic was 18/20 closed and shipped. The sound probe form is
+  `br list --all --limit 0 --json` matched against title AND labels AND description; the run's probe
+  matched a plan filename slug against descriptions only and missed beads titled from the plan's own
+  heading. Both failures are silent: no warning, exit 0, an empty-looking board. Add `--all` to the
+  cheatsheet line that already carries `--limit 0` — they are the same defect twice.
 
 ## br-d-body-is-shell-expanded
 - skills: [beads-standards]
@@ -145,3 +157,38 @@ entries: 7
 - proposed_fix: state in beads-standards that **a session finding a bead's work already shipped, partially shipped, or void AMENDS THE TITLE AND DESCRIPTION — a comment is not a board-truth mechanism.** Give the amended-title form so it is mechanical rather than a judgement call (prefix the residual scope: `[Parts A+B SHIPPED <sha>] <remaining scope>`). Pair it with the complement already logged in ac-pipeline: amend the TITLE when the truth changes, read the COMMENTS when scoping. Either half alone leaves a lane where truth is written where nobody reads.
 - narrative: a bead consumed four agent sessions after the work it specified had merged. Each of the first three sessions discovered the shipped state correctly and recorded it in a bead COMMENT, leaving the description reading as unbuilt spec — and conductor triage surfaces the title and description, never the comment tail. So each next session read an unbuilt spec, dispatched an agent to build it, and rediscovered the same truth. The comment was a correct finding delivered through a channel with no reader: three uses, zero deliveries. Resolved on the fourth pass by rewriting the title rather than commenting again. Not one bead's accident — an adversarial HEAD-verified audit of the 10 refined ready bugs alongside it found 3 already shipped and 2 partial, so half the ready lane misrepresented its own state through the same mechanism. Logged against beads-standards because the standard prescribes where a close reason and a comment go but never says which field triage READS, so every session re-decides it and most choose the polite option.
 
+## br-label-add-silently-noops-on-multiple-labels
+- skills: [beads-standards]
+- impact: S
+- frequency: occasional
+- recurrence: 1
+- related: [br-json-shapes-differ-across-subcommands, br-non-tty-flake-in-compound-one-liners]
+- first_seen: 2026-08-11
+- last_seen: 2026-08-11
+- stage: ac-loop
+- status: open
+- proposed_fix: state the working form in the br cheatsheet — labels are applied ONE PER CALL with an explicit `-l` flag each; passing several bare label words in a single `br label add` call is accepted, exits 0, and applies NOTHING. Pair it with the standing verify step (`br show` after labelling) since the CLI gives no signal.
+- narrative: an agent labelled several beads in what looked like the obvious batch form and the
+  labels never landed. There is no error, no warning, and a zero exit status, so the loss is
+  invisible until something downstream filters on a label that is not there — which in a
+  gate-counting run means a bead silently drops out of or into the wrong population. Cheap to fix
+  once known, expensive to discover, and exactly the class the cheatsheet exists for.
+
+## br-lint-scans-description-only-not-notes
+- skills: [beads-standards]
+- impact: S
+- frequency: occasional
+- recurrence: 1
+- related: [br-lint-wants-success-criteria-where-doctrine-says-delivers, br-d-body-is-shell-expanded]
+- first_seen: 2026-08-11
+- last_seen: 2026-08-11
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: state in the br cheatsheet that `br lint` reads the DESCRIPTION field only and never reads notes, so every lint-required section must be folded into the description body — and, per `br-d-body-is-shell-expanded`, that body goes through a file rather than an inline argument.
+- narrative: an agent added a lint-required section via `--notes`, re-ran `br lint`, and watched the
+  same finding persist. The natural reading is that the fix failed or the linter is flaky; the
+  actual cause is that notes are outside the linter's scan surface entirely. The wasted loop is
+  short but it recurs per agent, and it interacts with the sibling finding above
+  (`br-lint-wants-success-criteria-where-doctrine-says-delivers`): an agent chasing a heading-name
+  mismatch while also writing to the wrong FIELD can conclude the linter is simply wrong and start
+  ignoring it, which is the real cost.
