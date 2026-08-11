@@ -23,6 +23,10 @@ identity/land/deregister spine and are deliberately NOT centralised until v2 is 
 (none)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- Pre-first-run board contact. The decision docket is now WAVE-SCOPED (human-gate beads
+  holding a `blocks` edge into the lane set, not the whole board): a live board carries 146
+  standing human-gate beads, which made "docket cleared" unsatisfiable by construction and
+  the sitting uncrossable. Deferring a blocker now drops its dependent bead, not the wave.
 - Pre-ratification review pass. FIXED (probe-verified defects): mutation probe now restores
   the test from the bead commit before running and restores via `git reset --hard` (a bare
   revert deletes the test with the fix; `git checkout -- .` cannot undo a staged revert);

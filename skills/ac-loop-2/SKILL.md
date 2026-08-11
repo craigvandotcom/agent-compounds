@@ -180,8 +180,11 @@ printed reproduces the blackout it exists to catch:
    width 9 costs more than it protects).
 
 **Phase 0 output:** an ordered list of territory-disjoint epic lanes, plus the **human
-decision docket** — every `human-gate` bead, every I2 violation, every un-scopable epic,
-every `board-truth` flag needing adjudication.
+decision docket — WAVE-SCOPED**: only `human-gate` beads that BLOCK a lane bead (a `blocks`
+edge into the lane set), plus THIS run's I2 violations, un-scopable epics and `board-truth`
+flags. Every other `human-gate` bead is `ac-human-session`'s standing backlog — report the
+count, never dock it. A docket that grows with the board instead of with the wave makes the
+sitting uncrossable.
 
 ### Create the run ledger
 
@@ -254,8 +257,9 @@ Convergence discipline carries over from `ac-bead-refine` unchanged: **execute-a
 
 Phase 1 ends at a human sitting, not at a timer:
 
-- **Decision docket cleared** — every `human-gate` bead answered or explicitly deferred,
-  every I2 violation dispositioned.
+- **Decision docket cleared** — every WAVE-BLOCKING `human-gate` bead answered or explicitly
+  deferred, every I2 violation dispositioned. A blocker deferred here drops its dependent
+  bead from the wave; the lane ships the rest.
 - **Wave blessed** — the human confirms the lane set and its ordering.
 - **Staleness check (mechanical, at the crossing)** — `git diff --name-only
   $FREEZE_SHA..HEAD` ∩ each bead's territory manifest. HEAD legitimately moves between a
