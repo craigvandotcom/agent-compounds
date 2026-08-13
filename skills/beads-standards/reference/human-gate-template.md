@@ -124,6 +124,19 @@ EOF
 not "decided". The `best-done-when` field is the ridealong hint that lets a sit-down
 session batch the action against the moment it naturally belongs to.
 
+### Capture that needs a PLAN is an ACTION card
+
+Work too large or too consequential to implement directly — a model rework, an
+architecture change, anything where inventing the design inside a ticket is the wrong
+shape — files as an `ACTION:` card, never an agent bead.
+
+The action is *kick off the planning chain*: `ac-plan-init` → refine → approve →
+`ac-beadify`. Put the analysis already done in the body as the brief. Close the card when
+the plan is beadified.
+
+Do not file it as a task bead and do not start planning unprompted. The "this needs a
+plan" judgement belongs in the human session, not buried in a backlog nobody can pick up.
+
 ### Worked example (modelled on BCA bd-l6khg.13)
 
 ```bash
