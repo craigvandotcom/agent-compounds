@@ -25,6 +25,7 @@ it:
 - Claim semantics — post-merge exhaust (one definition)
 - Body template (the br lint contract)
 - Bead I/O contract (## Delivers / ## Consumes)
+- Implementation contract (six elements)
 - Binding vs advisory (the present-tree rule)
 - Per-type close artifacts
 - Lineage
@@ -268,6 +269,50 @@ Emit at creation (ac-beadify holds the cross-bead data flow; batch workflows
 per their conventions); quick-capture (`ac-bead-capture`) is exempt — refine
 authors the contract there, as it does for whatever capture omits.
 
+## Implementation contract (six elements)
+
+What a `refined` implementable bead (`task` / `feature` / `bug`) must carry
+so a worker can execute it without asking. Skill-enforced at the `refined`
+stamp (`ac-bead-refine`) — not a `br lint` template. Epics, decisions, and
+investigations are exempt.
+
+`ac-loop-2` Phase 2 has no gates *because* these are true. `ac-loop` v1,
+`ac-implement`, and a human running refine consume the same schema — there
+is no loop-2-only variant.
+
+| # | Header | Bar |
+|---|--------|-----|
+| 1 | `## Anchors` | Every cited `file:line` was OPENED at the HEAD sha recorded on the header. Quoted text matches. An unopened citation is a fabrication. |
+| 2 | `## Baselines` | Every countable claim was RUN; paste the command and its literal output. A reasoned count is a failure. |
+| 3 | `## Territory` | Exact file list this bead may touch (paths, not globs — glob only for files the bead CREATES). **Required sub-field `### Test-tier exposure`:** which test tiers that territory can break. |
+| 4 | `## Declared RED` | `Test <name> must FAIL before the fix, with approximately: <assertion shape>`. No new test → `RED: n/a — <why>` (excluded from `hollow%`). |
+| 5 | `## Sequence + risk` | Index within its epic (`N of M`), plus zero or more of `migration` / `native` / `hot-tier` / `cold-tier`. |
+| 6 | `## Acceptance Criteria` | Each AC adversarially checked: an empty diff cannot satisfy it. |
+
+**Who emits what.** `ac-beadify` stamps elements 3 and 5 (territory +
+test-tier + sequence) at creation, while the plan's file list and order
+are in context. `ac-bead-refine` verifies all six, authors whatever
+capture omitted, and **withholds `refined`** if any element is missing
+or a cited anchor was not re-opened this pass. A bead whose territory
+cannot be bounded is not ready — split it.
+
+**Test-tier exposure (element 3 sub-field).** One or more of:
+
+| Slug | Meaning |
+|------|---------|
+| `standing-vitest` | The repo's default unit/component gate (`pnpm test` / `pnpm test:all`) |
+| `supabase-integration` | Local-stack DB suite (`pnpm test:integration:local` or the repo equivalent) |
+| `e2e` | Playwright / device / browser journey suite |
+| `none` | Docs, config, or prose — no executable suite applies |
+
+A territory touching `supabase/migrations/**`, `lib/db/**`, or any
+SQL / RLS / RPC / GRANT surface **MUST** name `supabase-integration`.
+`none` is valid only when no executable suite can break. Each slug
+gets a one-line justification.
+
+Worked example (the checkable shape, not a second schema):
+`ac-loop-2/references/implementation-contract.md`.
+
 ## Binding vs advisory (the present-tree rule)
 
 Beads are written at plan time and executed later, against a tree that has
@@ -277,11 +322,13 @@ bead's own dependents) is the same event: a load-bearing claim pointing at
 imagined state. The rule that removes the class:
 
 **Binding sections** — `## Acceptance Criteria`, `## Delivers`, `## Consumes`,
-`## Test Scope` (+ `## Steps to Reproduce` on bugs) — **may only reference two
-things: what exists in the tree NOW (grep-verified), or what an upstream
-blocker's `## Delivers` explicitly promises.** A binding claim resting on
-anything else — the bead's own dependents, unwired components, unpromised
-future state — is a refine-blocking defect.
+`## Test Scope`, `## Anchors`, `## Baselines`, `## Territory`,
+`## Declared RED`, `## Sequence + risk` (+ `## Steps to Reproduce` on bugs)
+— **may only reference two things: what exists in the tree NOW
+(grep-verified), or what an upstream blocker's `## Delivers` explicitly
+promises.** A binding claim resting on anything else — the bead's own
+dependents, unwired components, unpromised future state — is a
+refine-blocking defect.
 
 **Everything else is advisory.** Suggested implementation, imagined wiring,
 file-by-file how-to goes under `## Approach (advisory)` (or in comments).

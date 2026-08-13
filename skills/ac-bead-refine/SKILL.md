@@ -23,7 +23,7 @@ description: 'Use to REFINE existing beads to convergence — 3 parallel reviewe
 |            |                                                              |
 | ---------- | ------------------------------------------------------------ |
 | **Input**  | Open beads in `br` (from `/ac-beadify` or any other source). **Scope, in precedence order:** `TARGET_BEAD_IDS` (explicit id list) › `EPIC_ID` (epic + `parent-child` children) › whole board |
-| **Output** | Refined beads ready for `/ac-implement` (`unrefined` removed, `refined` added) — **only** the beads in this run's target list |
+| **Output** | Refined beads ready for `/ac-implement` (`unrefined` removed, `refined` added) — **only** the beads in this run's target list. Every implementable bead carries the six-element implementation contract (`beads-standards/reference/bead-conventions.md` § Implementation contract) — that is part of the stamp, not a loop-2 extra. |
 | **Next**   | `/ac-implement`                                              |
 
 ## Fan-out safety (bd-baudw) — read before running concurrently

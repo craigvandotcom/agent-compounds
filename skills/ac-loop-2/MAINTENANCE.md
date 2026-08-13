@@ -23,6 +23,10 @@ identity/land/deregister spine and are deliberately NOT centralised until v2 is 
 (none)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- Native contract support. Schema moved to bead-conventions § Implementation
+  contract (incl. test-tier exposure). Deleted the 12-line INTERIM/enforcement
+  provenance block from the spine; spec-phase prompts now point, they do not
+  restate the six elements. Phase 3 gained the covered/excluded tier report.
 - Pre-first-run board contact. The decision docket is now WAVE-SCOPED (human-gate beads
   holding a `blocks` edge into the lane set, not the whole board): a live board carries 146
   standing human-gate beads, which made "docket cleared" unsatisfiable by construction and

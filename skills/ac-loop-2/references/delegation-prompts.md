@@ -36,11 +36,10 @@ ENVIRONMENT CONTRACT (non-negotiable):
 The verbatim child-prompt payloads each phase dispatches. Slots in `{BRACES}` are filled by
 the conductor at dispatch.
 
-**This file is the implementation contract's SOLE enforcement point** until bead
-`ac-ac-loop2-contract-native-support-fb8k` lands native support in `ac-beadify`/`ac-bead-refine` and
-`beads-standards/reference/bead-conventions.md`. The six-element demand in § Spec-phase
-prompt is not a summary of a schema that exists elsewhere — it IS the schema. Edit it here or
-it is not enforced anywhere.
+The six-element implementation contract is native in
+`beads-standards/reference/bead-conventions.md` § Implementation contract —
+`ac-beadify` / `ac-bead-refine` emit and gate it. Spec-phase prompts below
+point at that schema; they do not restate it. Edit the contract there.
 
 ## Spawn-site rule (binds every prompt below)
 
@@ -82,27 +81,11 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > nothing moves under you. Record the HEAD sha you verified against.
 >
 > **Each bead you stamp `refined` MUST carry ALL SIX elements of the implementation
-> contract. A bead missing any element is NOT refined — leave it unrefined, comment why:**
-> 1. **Verified anchors** — every cited `file:line` OPENED at the frozen HEAD, quoted text
->    matching. A citation you did not open is a fabrication, not an anchor.
-> 2. **Executed baselines** — every countable claim RUN, with the LITERAL output pasted.
->    Never a reasoned or estimated count.
-> 3. **Territory manifest** — the exact file list this bead may touch. Paths, not globs
->    (globs only for files the bead CREATES). A bead whose territory cannot be bounded is
->    not ready: split it, or flag it for the human docket.
-> 4. **Declared RED expectation** — 'Test `<name>` added by this bead must FAIL before the
->    fix, with approximately: `<error text / assertion shape>`'. A bead that adds no test
->    declares `RED: n/a — <why>`. This is consumed verbatim by a mutation sampler later; a
->    vague declaration cannot be sampled.
-> 5. **Sequence position + risk flags** — index within its epic, plus zero or more of
->    `migration` / `native` / `hot-tier` / `cold-tier`. `migration` and `native` route the
->    bead to a serial risk queue, so flag them accurately.
-> 6. **No-op-proof ACs** — each acceptance criterion adversarially checked against 'could an
->    empty diff satisfy this?'. If yes, rewrite it against an executed baseline.
->
-> Convergence discipline unchanged: execute-at-draft (run the command WHILE drafting, never
-> after), `br lint` first, and a final adversarial round whose job is to BREAK the contract,
-> not bless it.
+> contract** (`beads-standards/reference/bead-conventions.md` § Implementation contract,
+> including `### Test-tier exposure` on element 3). A bead missing any element is NOT
+> refined — leave it unrefined, comment why. Re-open every cited `file:line` at the
+> frozen HEAD. Convergence discipline unchanged: execute-at-draft, `br lint` first,
+> final adversarial round whose job is to BREAK the contract, not bless it.
 >
 > If you write a `progress.md`, its header MUST carry `KIND=refine` — you ship no code and
 > close no beads, and the marker is what keeps your file out of the close gate's completeness
@@ -121,10 +104,12 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > `RUN_ID=<RUN_ID>`. HEAD is frozen — beads-DB writes only. Skip the user-approval asks
 > (autonomous run): auto-apply Critical/High + consensus validator findings, log the rest.
 > Do NOT proceed to refinement yourself — the conductor dispatches the refine children.
-> Every bead you create must at minimum name its **territory manifest** (element 3) and its
-> **sequence position within the epic** (element 5); the refine child completes the other
-> four. If you write a `progress.md`, its header MUST carry `KIND=beadify`. Same
-> beads-DB rule + report + `friction:` contract as the refine prompt above."
+> Every bead you create must stamp implementation-contract elements 3 and 5
+> (`## Territory` with `### Test-tier exposure`, `## Sequence + risk`) per
+> `beads-standards/reference/bead-conventions.md` § Implementation contract; the
+> refine child completes the other four. If you write a `progress.md`, its
+> header MUST carry `KIND=beadify`. Same beads-DB rule + report + `friction:`
+> contract as the refine prompt above."
 
 ---
 

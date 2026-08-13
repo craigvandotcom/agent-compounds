@@ -22,6 +22,20 @@ Output is **the failure set** — a list of `(check, failing unit)` pairs. It is
 verdict, and no fix starts until the whole set is enumerated. A partial set produces
 overlapping repair workers.
 
+**Tier-scope report (required before any green).** The phase report MUST list:
+
+```
+covered:  standing-vitest=`<command>` · supabase-integration=`<command|NOT RUN>` · e2e=`<command|NOT RUN>`
+excluded: <tier> (<why>)
+```
+
+A green whose scope is unstated is not a green. Read every bead's
+`### Test-tier exposure`. If any bead names a tier the standing commands
+above did not run, **run that tier** (repo command from AGENTS.md / the
+project test map) and fold its failures into the set before attribution
+starts. You cannot call those beads green on a pass that never saw their
+declared tier.
+
 **Format/lint first-pass rule:** a formatter's own output is applied and committed as ONE
 bookkeeping commit before attribution starts, so formatting noise never lands in a bisect
 range. Never blind-commit formatter output on markdown. Record that commit's sha: a

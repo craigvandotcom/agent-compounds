@@ -147,6 +147,7 @@ For each proposed bead:
 4. Is the acceptance criteria clear enough for mechanical implementation?
 5. Are priorities (P0/P1/P2) assigned correctly? (P0 = critical path, P2 = deferrable)
 6. Does it include test requirements? (Every bead should specify what to test)
+7. Does each implementable bead name a bounded `## Territory` (paths, not a vibe) plus `### Test-tier exposure` and a `## Sequence + risk` slot (`beads-standards/reference/bead-conventions.md` § Implementation contract)? An unbounded or missing territory is a split/hold, not a later refine problem.
 
 ## Output
 

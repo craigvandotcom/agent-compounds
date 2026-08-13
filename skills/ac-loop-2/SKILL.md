@@ -232,29 +232,20 @@ v2 bet: Phase 2 has no gates *because* these are true.
 |---|---|---|
 | 1 | **Verified anchors** | Every cited `file:line` was OPENED at the frozen HEAD. An unopened citation is a fabrication. |
 | 2 | **Executed baselines** | Every countable claim was RUN and its literal output pasted. A reasoned count is a failure, not a shortcut. |
-| 3 | **Territory manifest** | The exact file list this bead may touch — the worker's whole write permission in Phase 2. |
+| 3 | **Territory manifest** | The exact file list this bead may touch — the worker's whole write permission in Phase 2 — plus **which test tiers that territory can break**. |
 | 4 | **Declared RED expectation** | "Test X added by this bead must FAIL pre-fix with approximately this error." Phase 3's mutation sampler consumes this verbatim. |
 | 5 | **Sequence position + risk flags** | Position within its epic, plus `migration` / `native` / `hot-tier` / `cold-tier`. |
 | 6 | **No-op-proof ACs** | Acceptance criteria adversarially checked to be **unsatisfiable by a no-op**. |
 
-Schema, per-element failure modes, and a worked example: **`references/implementation-contract.md`**.
+Schema (including test-tier slugs) lives in
+`beads-standards/reference/bead-conventions.md` § Implementation contract —
+`ac-beadify` stamps elements 3+5, `ac-bead-refine` verifies all six and
+withholds `refined` if any is missing. Loop-2 consumption (freeze SHA,
+mutation sampler, Phase 3 tier report): **`references/implementation-contract.md`**.
 
 Convergence discipline carries over from `ac-bead-refine` unchanged: **execute-at-draft**
 (run the command while drafting, never after), **`br lint` first**, and a final
 **adversarial round** whose job is to break the contract, not to bless it.
-
-> **Enforcement point — read this before assuming the contract is automatic.** The six
-> elements are enforced by **ac-loop-2's OWN delegation prompts**, not by the refine skill's
-> schema. The current `ac-bead-refine` already produces elements 1, 2 and 6 under its
-> standard discipline; the spec-phase prompt in `references/delegation-prompts.md`
-> additionally demands elements 3, 4 and 5 as bead-content and report obligations. **No
-> modification to `ac-beadify` or `ac-bead-refine` is required to run ac-loop-2 today.**
->
-> **INTERIM:** first-class contract support (a schema in
-> `beads-standards/reference/bead-conventions.md` plus native `ac-beadify`/`ac-bead-refine`
-> output) is tracked by bead `ac-ac-loop2-contract-native-support-fb8k` in this repo's beads. Until
-> it lands, `references/delegation-prompts.md` is the contract's SOLE enforcement point —
-> edit the contract there or it is not enforced anywhere.
 
 ### THE SITTING (the run's only human barrier)
 
@@ -339,7 +330,11 @@ from the risk bead's effect.
 Every check Phase 2 skipped fires here, once, over a quiescent tree.
 
 1. **One global pass** — tree-wide type-check, the full test suite, lint/format. Output is
-   **the failure set**, not a verdict.
+   **the failure set**, not a verdict. **A green is not reportable until the phase
+   report enumerates the test tiers the command covered and names the ones it
+   excluded.** If any bead's `### Test-tier exposure` names a tier the standing
+   pass does not run, that tier MUST be run (repo command from AGENTS.md) before
+   the phase can call those beads green.
 2. **Mechanical attribution.** For each failing test, `git bisect run` over the phase's
    commit range. One bead = one commit is what makes this work; there is no judgment call
    and no reading of diffs to guess an author.

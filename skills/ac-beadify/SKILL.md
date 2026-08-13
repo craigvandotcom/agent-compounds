@@ -233,6 +233,15 @@ Each bead description must be **self-contained** (typed headers per
   cross-bead data flow — emit the contract here, while it's in context; every Consumes
   line must match a dep edge you create in this phase. Epics carry `## Delivers` only,
   derived from the plan's Outcome Definition
+- **Implementation contract, elements 3 + 5** (`beads-standards/reference/bead-conventions.md`
+  § Implementation contract) — stamp at creation, while the plan's file list and order
+  are in context. Every implementable bead gets `## Territory` (exact paths; globs only
+  for files it CREATES) with required `### Test-tier exposure` (`standing-vitest` /
+  `supabase-integration` / `e2e` / `none`, plus a one-line why), and `## Sequence + risk`
+  (`N of M` inside its epic, plus `migration` / `native` / `hot-tier` / `cold-tier` as
+  they apply). Territory touching `supabase/migrations/**`, `lib/db/**`, or any SQL
+  surface MUST name `supabase-integration`. Refine completes elements 1, 2, 4, 6 and
+  verifies these two.
 - No need to reference original plan
 - "So detailed that we never need the plan again"
 - Sufficient background and reasoning that an agent cold-starting on this bead can implement without any other context

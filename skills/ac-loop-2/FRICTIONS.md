@@ -54,8 +54,8 @@ entries: 6
 - first_seen: 2026-08-11
 - last_seen: 2026-08-11
 - stage: converge
-- status: open
-- proposed_fix: two edits, one per phase. Phase 3 — a green is not reportable until the phase report ENUMERATES the test tiers the command covered and NAMES the ones it excludes. Phase 1 — add a required sub-field to implementation-contract element 3 (territory manifest): "Test-tier exposure: name every tier this territory could break, including tiers the standing Phase 3 gate does not run; territory touching `supabase/migrations/**`, `lib/db/**`, or any SQL/RLS/RPC/GRANT surface MUST name the integration tier explicitly."
+- status: fixed
+- proposed_fix: LANDED — element 3 requires `### Test-tier exposure` in bead-conventions § Implementation contract; Phase 3 must enumerate covered/excluded tiers and run any declared tier the standing pass skipped (`converge-phase.md` § 1).
 - narrative: Phase 3 reported `pnpm test:all` 12366 passed / 0 failures on 0c1ca0a7. The identical
   commit then failed CI's DB Deploy validate leg TWICE with 23514 constraint violations, because
   `__tests__/supabase-integration/**` (74 files / 705 tests) is excluded from the standing vitest
