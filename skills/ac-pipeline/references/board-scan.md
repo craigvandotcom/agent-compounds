@@ -27,7 +27,7 @@ This file owns the *read* (what to scan, how to categorize). Each consumer owns 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 ```
 
-Run scans A, B, C, D, E **in parallel** (they're independent).
+Run scans A, B, C, E **in parallel** (they're independent).
 
 ## Scan A — beads
 
@@ -307,7 +307,7 @@ therefore the consumer of last resort — **the loop noticing for itself** — n
 its `refined` label, keeps appearing in `br ready`, and is selected as ordinary implement
 work — so a conductor spends a full opus child to discover the code already exists. No
 other scan catches it: `ac-tidy`'s staleness notion is `br stale` (**age-based, not
-artifact-based**), and Scans A–E never open a file or read a commit message.
+artifact-based**), and Scans A–C and E never open a file or read a commit message.
 
 The cheapest signal is that **the fixing commit often names the bead** — in its subject or
 a `Bead:` trailer.
