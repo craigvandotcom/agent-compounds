@@ -50,10 +50,27 @@ two kinds below differ only by **title prefix** and body template, so the cockpi
 `is_pending` + `human-gate` predicates are untouched — the split is at the template
 level, not the label level.
 
+**`human-gate` is INVALID without an explicit `Gate-reason:` marker in the body.** The
+label is legal only when the body states one of the two reasons:
+
+```
+Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
+```
+
+or
+
+```
+Gate-reason: authorization — <why this needs Craig's authorization>
+```
+
+A `human-gate` label with neither marker is invalid — do not file it. Mechanical work is
+never gated by default.
+
 **`DECISION:` — a decision card** (a fork only Craig can resolve). Description fields:
 
 ```
 decision: <one-sentence question — what is Craig actually choosing?>
+Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
 options:
   a) <option> — <one-line tradeoff>
   b) <option> — <one-line tradeoff>
@@ -69,6 +86,7 @@ toggle, a store submission, a credential handoff). Not a fork, so **no options b
 instead:
 
 ```
+Gate-reason: authorization — <why this needs Craig's authorization>
 what:            <the action, one line>
 where:           <the exact surface — console / app / URL / menu path>
 checklist:       <ordered steps to complete it>

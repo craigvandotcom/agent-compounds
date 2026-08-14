@@ -20,6 +20,7 @@ br create -t decision --labels human-gate \
   --title "DECISION: <the fork, in one line>" \
   -d "$(cat <<'EOF'
 decision: <one-sentence question>
+Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
 
 options:
   a) <option A> — <one-line tradeoff>
@@ -79,6 +80,7 @@ br create -t decision --labels human-gate \
   -d "$(cat <<'EOF'
 decision: Which push-notification provider do we standardize on for Move Free's
 reminder system?
+Gate-reason: fork — provider choice is a product/risk fork only Craig can resolve
 
 options:
   a) OneSignal — free tier covers current scale, fastest to wire, but adds a
@@ -109,6 +111,7 @@ a *choose-between*.
 br create -t task --labels human-gate \
   --title "ACTION: <the action, one line>" \
   -d "$(cat <<'EOF'
+Gate-reason: authorization — <why this needs Craig's authorization>
 what:            <the action, one line>
 where:           <the exact surface — console / app / URL / menu path>
 checklist:
@@ -143,6 +146,7 @@ plan" judgement belongs in the human session, not buried in a backlog nobody can
 br create -t task --labels human-gate \
   --title "ACTION: configure the ASC intro-offer for Body Compass" \
   -d "$(cat <<'EOF'
+Gate-reason: authorization — ASC console toggle only Craig can perform
 what: Set up the introductory offer (7-day free trial) on the Body Compass
 subscription in App Store Connect so it ships with the next version.
 

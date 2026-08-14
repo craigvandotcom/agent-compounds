@@ -70,7 +70,7 @@ children are done.
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
 | `human-ratified` | Fast-track provenance from `ac-human-session` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
 | `tooling` | Infra/toolchain work, not app code |
-| `pipeline-proposal` | Names a plan for a human to decide on — it does NOT implement one, so it **never counts as implementation proof**. Any gate that counts beads as evidence of work done (archive gates, coverage counts, "all matching beads closed") MUST exclude these, closed ones included: a workflow that emits proposal beads and then counts them is self-certifying. Usually paired with `human-gate`. |
+| `pipeline-proposal` | Names a plan for a human to decide on — it does NOT implement one, so it **never counts as implementation proof**. Any gate that counts beads as evidence of work done (archive gates, coverage counts, "all matching beads closed") MUST exclude these, closed ones included: a workflow that emits proposal beads and then counts them is self-certifying. Pair with `human-gate` **only** when the body states `Gate-reason: fork —` or `Gate-reason: authorization —`; otherwise the pairing is invalid. |
 
 <!-- diet: "Lifecycle labels — readiness gate (the refined-stamp doctrine)" -> ../SKILL.md § Agent bead template (doctrine); pipeline wiring retained below (ac-gcj.1) -->
 ## Lifecycle labels — pipeline wiring (doctrine lives in beads-standards)
