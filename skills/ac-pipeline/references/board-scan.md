@@ -71,6 +71,51 @@ Surface these labels (consumers filter on them): `human-gate`, `dream-proposal`,
 For **epics** (dependent_count > 3 or "epic" in title): count total / ready / blocked / closed
 children.
 
+### Docket health (open gates + reason-less gates)
+
+**Always print.** Every listed consumer inherits this line — do not make it
+consumer-only. Key ONLY on the explicit `Gate-reason:` marker (never infer
+"this looks mechanical"). A deferred bead is not on the docket: exclude
+`status=deferred` AND exclude `status=open` rows whose `defer_until` is in
+the future. Empty/`br` failure is NOT clean (same doctrine as Scan E
+`unknown`): fail loud, never print `0` as healthy.
+
+```bash
+# FAIL LOUD if br list --json cannot be read — do not print 0 as clean.
+DOCKET=$(br list --json --limit 0 --all) || { echo "docket-health: ERROR — br list --json failed (empty-is-not-clean)"; exit 2; }
+printf '%s' "$DOCKET" | python3 -c "
+import json, sys, datetime
+raw = sys.stdin.read()
+try:
+    data = json.loads(raw)
+except Exception as e:
+    print('docket-health: ERROR — unparseable br list --json (empty-is-not-clean):', e)
+    sys.exit(2)
+issues = data.get('issues') if isinstance(data, dict) else data
+if issues is None:
+    print('docket-health: ERROR — unexpected br list shape (empty-is-not-clean)')
+    sys.exit(2)
+now = datetime.datetime.now(datetime.timezone.utc)
+def parse_until(s):
+    if not s: return None
+    s = str(s).replace('Z', '+00:00')
+    try: return datetime.datetime.fromisoformat(s)
+    except Exception: return None
+def on_docket(i):
+    st = i.get('status')
+    if st == 'deferred': return False
+    until = parse_until(i.get('defer_until'))
+    if until and until > now: return False
+    return st in ('open', 'blocked', 'in_progress')
+hg = [i for i in issues if 'human-gate' in (i.get('labels') or [])]
+docket = [i for i in hg if on_docket(i)]
+reasonless = [i for i in docket if 'Gate-reason:' not in (i.get('description') or '')]
+print(f'docket-health: {len(docket)} open human-gate · {len(reasonless)} reason-less')
+for i in reasonless:
+    print(i.get('id'))
+"
+```
+
 ### Structural lint (parentage + edges)
 
 Beyond the status categories above, Scan A also computes two structural lint classes —
@@ -303,7 +348,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), prod health, org-wide `human-gate` sweep — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-dashboard`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
-| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.
