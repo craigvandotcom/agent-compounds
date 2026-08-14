@@ -40,8 +40,9 @@ echo "--- proves writeback ---"
 RED=$(mktemp -d /tmp/qa-proves-red-XXXXXX)
 mkfix "$RED"
 expect_exit "$RED" 1 "fails when proves[] beads have no writeback record"
-# the script must name the missing id
-if bash "$TARGET" "$RED" --skip-teardown-check 2>&1 | grep -q 'no writeback record for bd-example'; then
+# the script must name the missing id (script exits 1 — capture, don't pipefail)
+red_out=$(bash "$TARGET" "$RED" --skip-teardown-check 2>&1 || true)
+if printf '%s' "$red_out" | grep -q 'no writeback record for bd-example'; then
   CASES=$((CASES + 1)); printf '  PASS  red output names bd-example\n'
 else
   CASES=$((CASES + 1)); printf '  FAIL  red output names bd-example\n'; FAILURES=$((FAILURES + 1))
