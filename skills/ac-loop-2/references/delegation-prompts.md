@@ -186,10 +186,15 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired in 480s — report, do not commit' >&2; exit 2; }
 > echo "commit-mutex: acquired in $(($(date +%s) - _mutex_t0))s path=$LOCK"
 > trap 'rmdir "$LOCK" 2>/dev/null' EXIT
+> # Never unquoted $PATHS (zsh default: no SH_WORD_SPLIT). Each path is its
+> # own quoted argument on both git add -- and git commit --.
+> # Do not read git commit / git push exit through a pipe.
 > git add -- <your territory paths>
+> HEAD_BEFORE=$(git rev-parse HEAD)
 > git commit -m '<type>(<scope>): <subject> ({BEAD_ID})' -- <your territory paths>
 > git push --no-verify
 > # INSIDE the lock — after release a sibling's commit moves HEAD and false-fails this
+> [ "$(git rev-parse HEAD)" != "$HEAD_BEFORE" ] || { echo 'FATAL: HEAD did not advance — commit landed nothing' >&2; exit 2; }
 > [ "$(git rev-parse origin/<branch>)" = "$(git rev-parse HEAD)" ] || { echo 'FATAL: push not on origin' >&2; exit 2; }
 > rmdir "$LOCK"; trap - EXIT
 > ```
