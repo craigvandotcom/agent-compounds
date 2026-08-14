@@ -137,8 +137,9 @@ on a failed or partial fetch.
 **Configured-but-failing ≠ not-configured.** A source that CORE/triage.md marks live but
 that errors at fetch (auth 401, network, schema change) is an **escalation**, not a skip:
 mark it `✗ FAILING (<error>)` in the Phase-4 report and file ONE ops bead
-(`br create -t task --labels triage,ops,human-gate`) so it surfaces in `ac-human-session`
-— dedupe first, update the existing open ops bead if one already tracks this failure.
+(`br create -t task --labels triage,ops`) so it surfaces in `ac-human-session`.
+Add `human-gate` ONLY if the body states `Gate-reason: authorization —`.
+Dedupe first, update the existing open ops bead if one already tracks this failure.
 Silent-skip is reserved for sources that were never wired.
 
 **TaskUpdate("Fetch", completed)**

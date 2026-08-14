@@ -429,11 +429,12 @@ sweep on a question. Dedupe per the canon's anchor-dedupe rule
 (`beads-standards/reference/bead-conventions.md` § Anti-inflation); nits stay in the report
 (hygiene is the highest inflation risk — a bead is something you'd schedule).
 
-> **`human-gate` is MANDATORY on every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled
-> bead at filing, not optional** (memory `decision-beads-need-human-gate-label-at-filing`;
-> `beads-standards` § human-gate). `issue_type=decision` alone gates nothing — the LABEL is
-> what every label-keyed gate reads. Do not hand-roll a `br create -t decision` that omits it;
-> a dropped `human-gate` leaves the bead silently workable/auto-closable around the human.
+> **`human-gate` is added ONLY when the body states `Gate-reason: fork —` or
+> `Gate-reason: authorization —`.** Those two reasons are the only legal add
+> (`beads-standards` § human-gate). Mechanical work is never gated by default.
+> `issue_type=decision` alone gates nothing — the LABEL is what every label-keyed
+> gate reads. A genuine fork still needs `human-gate` plus the marker; a dropped
+> pair leaves the bead silently workable/auto-closable around the human.
 > `ac-bead-refine`'s Phase 5 title/label parity check (bd-7fqgi) backstops any that slip.
 
 **Bead bodies follow the template at creation** (bead-conventions § Body

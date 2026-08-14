@@ -876,19 +876,21 @@ validator runs — grep each before citing it — plus the QA modality for user-
 **Default (including all autonomous/headless runs): apply the Exhaust Rule.** Create a `decision` bead for each remaining item — do NOT ask:
 
 ```bash
-br create -t decision --labels "human-gate,review-finding" \
+br create -t decision --labels "review-finding" \
   -t "DESIGN_DECISION: <title>" \
-  --description "Context: <finding>\nOptions: <A vs B>\nRecommendation: <agent pick>"
+  --description "Context: <finding>\nGate-reason: fork — <why this is a genuine fork>\nOptions: <A vs B>\nRecommendation: <agent pick>"
+# Add human-gate ONLY when the body states Gate-reason: fork — or Gate-reason: authorization —
 # Block any downstream wave beads on it:
 br dep add <downstream-bead-id> <decision-bead-id>
 ```
 
-> **The `human-gate` label is MANDATORY at filing, not optional** (memory
-> `decision-beads-need-human-gate-label-at-filing`; `beads-standards` § human-gate).
+> **`human-gate` is added ONLY when the body states `Gate-reason: fork —` or
+> `Gate-reason: authorization —`.** Those two reasons are the only legal add
+> (`beads-standards` § human-gate). Mechanical work is never gated by default.
 > `issue_type=decision` alone gates NOTHING — every label-keyed gate (bug-lane drain,
-> beads-closed-gate, cleaning passes) keys on the LABEL. A `DECISION:`/`DESIGN_DECISION:`-titled
-> or `decision`-typed bead created WITHOUT `human-gate` sits silently workable and can be
-> auto-closed around the human. Do not hand-roll a `br create` that drops it.
+> beads-closed-gate, cleaning passes) keys on the LABEL. A genuine fork still
+> needs `human-gate` plus the marker; a dropped pair leaves the bead silently
+> workable and auto-closable around the human.
 
 Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-session` when Craig reviews the docket.
 
