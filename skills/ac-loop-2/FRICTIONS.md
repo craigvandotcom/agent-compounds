@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-2
 created: 2026-08-09
-last_pass: 2026-08-13
-entries: 8
+last_pass: 2026-08-14
+entries: 9
 ---
 
 # ac-loop-2 — friction log
@@ -210,3 +210,26 @@ entries: 8
   half of bd-nreuv held — children stamped `degraded-solo` rather than faking a panel. What this
   run adds is a conductor-facing rule: do not collapse drain width because quality is solo
   (throughput across beads is still paid), and a sitting must not be read as panel-quality.
+
+## later-overlap-revert-is-unprobeable-not-hollow
+- skills: [ac-loop-2]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-14
+- last_seen: 2026-08-14
+- stage: converge
+- status: open
+- proposed_fix: when a later commit rewrites a shared file, a full-commit revert that auto-merges and stays green is UNPROBEABLE, not hollow. Probe by isolated-file revert of the bead's exclusive paths; exclude unprobeable from the hollow% denominator; do not reopen.
+- narrative: RUN 20260814-062417-51731 (BCA, ac-loop-2 Phase 3). The mutation probe on the
+  onboarding bead reverted its commit into 7oss7's later `page.tsx` rewrite; git auto-merged
+  and the named test stayed green. That is not a hollow test — the later overlap made the
+  commit-revert a no-op on the shared file, so the probe never removed the onboarding change.
+  Isolated-file revert of 6iikv's exclusive `entries-view` path was the honest probe on the
+  same sample (page.tsx is shared; that file is not). converge-phase.md § 5 currently has
+  only PASS / HOLLOW / MISMATCH — a later-overlap stay-green scores as HOLLOW and would
+  reopen a working bead and inflate hollow%. Cost this run was minor (classified correctly
+  in the carrier; hollow% stayed 0/6) but the skill text will mis-score it next time.
+  Evidence: carrier `/tmp/loop-retro-20260814-062417-51731.md`; commits `7771f324` (7oss7
+  page.tsx) vs the onboarding commit it overlapped.

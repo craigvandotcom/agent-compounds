@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-13
-entries: 22
+last_pass: 2026-08-14
+entries: 23
 ---
 
 # ac-bead-refine — friction log
@@ -331,3 +331,25 @@ entries: 22
   (a comment is a CLAIM, the events table is the RECORD): these do not conflict, they compose. Read
   EVERY evidence layer and reconcile them; the failure in both cases was reading one layer and
   stopping. Filed bd-bt9n8-gate-ruling-overtaken-odrmg (P1 fork).
+
+## element-4-must-name-the-firing-assertion
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [acceptance-criteria-that-cannot-fail]
+- first_seen: 2026-08-14
+- last_seen: 2026-08-14
+- stage: converge
+- status: open
+- proposed_fix: when a bead's test file has more than one new test, element 4 (`## Declared RED`) must name the assertion that actually goes RED on revert — not a hollow sibling. Execute each candidate at draft time; stamp the one that fires.
+- narrative: RUN 20260814-062417-51731 (BCA, ac-loop-2 Phase 3). bd-nx1s5 shipped two tests in
+  `__tests__/unit/use-personal-zones.test.ts`: (1) `patchPersonalZonesCache` parent-must-not-flip-variant
+  and (2) a parent-level insights upsert via `patchInsightsPersonalZonesCache`. Element 4 named
+  test 1. The mutation probe found test 1 hollow (stays green with the fix reverted); test 2
+  catches via the missing export. The bead is not hollow — a sibling assertion does catch —
+  but the contract pointed the probe at the one that does not. Adjacent to
+  `acceptance-criteria-that-cannot-fail` (vacuous AC) but a different write-site: element 4
+  is the mutation-sampler input, and naming the file or the first test is not enough when
+  only one assertion fires. Cost this run was minor (hollow% stayed 0/6; classified as
+  improvement not reopen). Evidence: closed bd-nx1s5; repair commit `48a3abc8`.
