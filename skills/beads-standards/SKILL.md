@@ -252,6 +252,9 @@ precision); token cost is reported at batch/child granularity by `ac-batch-close
 - **kebab-case, lowercase only.** `human-gate`, not `Human-Gate` or `human_gate`.
 - **No slashes** — `br` rejects them outright. `wave-NNN`, never `wave/NNN` (the git
   branch `wave/NNN` is a different namespace and is fine).
+- **50-character cap.** `br` rejects a label longer than 50 characters with an
+  explicit validation error (`Validation failed: label: exceeds 50 characters`).
+  It never silently truncates. Keep labels short enough to survive the cap.
 - **Prefer an existing label over inventing one.** Check first: `br label list-all`
   (falls back to `grep -o '"labels":\[[^]]*\]' .beads/issues.jsonl` if that command
   isn't available in an older `br`).
