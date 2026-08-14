@@ -196,8 +196,13 @@ pre-pass). No verdict leaves this phase with a `pending` finding.
   statuses, `evidence` from verdict paths, `platform: browser-local` (or
   `browser-preview`/`browser-production`), `target:` browser + viewport(s),
   `shell_checklist:` from the checklist worker, `perf_observations:` qualitative.
+- **VERDICT writeback (blocking):** if the manifest lists `proves: [<bead-id>, …]`,
+  `br comments add <id> "VERDICT: <verb>: …"` on each id and append `{id, verdict}`
+  to `$ARTIFACTS_DIR/writeback.json`. A certified bead with no writeback record
+  is a failed run, not a silent pass.
 - Mechanical self-check: `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR"` must
-  exit 0 (completeness, concurrency, teardown).
+  exit 0 (completeness, concurrency, teardown, proves-writeback). Must run AFTER
+  the VERDICT writeback bullet above.
 
 ### Phase 6 — Teardown sweep (mandatory, both paths)
 

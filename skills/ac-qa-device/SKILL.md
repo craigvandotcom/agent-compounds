@@ -96,7 +96,10 @@ evidence protocol.
    a silent worker past the cap = `stall`, re-spawn once, then record.
 4. **Collect + aggregate:** manifest ⊖ verdicts check; file beads from verdict
    findings (you, not workers — deduped); write `last_pass` stamps for PASSes;
-   emit `QA_VALIDATION` (`platform: ios-simulator`); run
+   emit `QA_VALIDATION` (`platform: ios-simulator`). **Blocking writeback:** if
+   the manifest lists `proves: [<bead-id>, …]`, `br comments add <id> "VERDICT:
+   <verb>: …"` on each id and append `{id, verdict}` to
+   `$ARTIFACTS_DIR/writeback.json` BEFORE
    `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" --skip-teardown-check`
    (the teardown check is browser-specific; sweep agent-device sessions yourself).
 5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain; shut

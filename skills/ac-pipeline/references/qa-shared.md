@@ -130,7 +130,8 @@ partial failure, never a silent pass:
   ],
   "skipped": {
     "<journey>": "<reason — visible skips only, per verification-gate.md>"
-  }
+  },
+  "proves": ["bd-xxxxx"]
 }
 ```
 
@@ -241,7 +242,15 @@ sessions).
 below (`journeys_tested` from verdict statuses, `findings_filed` from filed beads,
 `evidence` from verdict paths). Downstream consumers (ac-merge, ac-distribute) are
 unchanged. Mechanical validation: `ac-pipeline/scripts/validate-qa-run.sh $ARTIFACTS_DIR`
-asserts manifest⊖verdict completeness, parallel-lane overlap, and teardown.
+asserts manifest⊖verdict completeness, parallel-lane overlap, teardown, and
+(when `proves` is non-empty) a writeback record covering every certified bead.
+
+**`proves: [<bead-id>, …]`** (optional). When the pass is supposed to certify
+named beads (a re-prove), list those ids on the manifest. After each
+`br comments add <id> "VERDICT: <verb>: …"` the conductor appends
+`{ "id": "<id>", "verdict": "<verb>" }` to `$ARTIFACTS_DIR/writeback.json`.
+`validate-qa-run.sh` assertion 7 diffs `proves[]` against that file — it does
+not call `br`. An empty or omitted `proves` skips the check.
 
 ## Findings = beads (file immediately, like failing tests)
 

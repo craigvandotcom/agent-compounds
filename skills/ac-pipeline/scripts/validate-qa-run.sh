@@ -13,6 +13,8 @@
 #   5. (optional) total findings across verdicts >= --baseline-findings N (parity)
 #   6. every verdict finding carries a bead id or an explicit not-bead-worthy reason
 #      (no `pending`/`none` left as prose-only capture — bd-xx9yv)
+#   7. if manifest.proves is a non-empty array: $ARTIFACTS_DIR/writeback.json
+#      covers every id (bd-qa-verdict-writeback-gap-26ww1)
 
 set -euo pipefail
 
@@ -110,6 +112,31 @@ if [ -n "$UNCAPTURED" ]; then
   done <<< "$UNCAPTURED"
 else
   ok "every finding carries a bead id or an explicit not-bead-worthy reason"
+fi
+
+# 7. Writeback of ceremony VERDICT onto every bead the run certified (bd-qa-verdict-writeback-gap-26ww1).
+# Hermetic: read writeback.json, do not call `br`.
+PROVES=$(jq -c '(.proves // []) | map(select(type=="string" and . != ""))' "$MANIFEST")
+PROVES_N=$(printf '%s' "$PROVES" | jq 'length')
+if [ "$PROVES_N" -gt 0 ]; then
+  WB="$ARTIFACTS_DIR/writeback.json"
+  if ! jq -e . "$WB" >/dev/null 2>&1; then
+    while IFS= read -r id; do
+      [ -n "$id" ] && bad "proves: no writeback record for $id"
+    done < <(printf '%s' "$PROVES" | jq -r '.[]')
+  else
+    MISSING_WB=$(jq -r --argjson proves "$PROVES" '
+      ([.[] | .id] | unique) as $have
+      | $proves[] | select(. as $id | ($have | index($id) | not))
+    ' "$WB")
+    if [ -n "$MISSING_WB" ]; then
+      while IFS= read -r id; do
+        [ -n "$id" ] && bad "proves: no writeback record for $id"
+      done <<< "$MISSING_WB"
+    else
+      ok "proves: writeback covers $PROVES_N certified bead(s)"
+    fi
+  fi
 fi
 
 exit $FAIL
