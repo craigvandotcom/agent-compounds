@@ -54,6 +54,7 @@ echo "order: NATIVE,WEBUI,WEBRT,LOGIC,RUNTIME"
 
 # --- native doc exclusion (bd-55f7a) stays fixed ---
 run_case "native README only (bd-55f7a)"        'ios/App/fastlane/README.md'                  '' '0,0,0,0,0'
+run_case "review_notes.txt alone"               'ios/App/fastlane/review_notes.txt'           '' '0,0,0,0,0'
 run_case "real native code"                     'ios/App/AppDelegate.swift'                   '' '1,0,0,0,1'
 run_case "MIXED native code + native doc"       'ios/App/AppDelegate.swift
 ios/App/fastlane/README.md'                                                                   '' '1,0,0,0,1'

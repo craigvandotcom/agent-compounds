@@ -47,7 +47,8 @@ set -euo pipefail
 #   webrt   | app/api/ | route\.(ts|js)$ | middleware | hooks/ | lib/.*(fetch|client|store|query)
 #   logic   | lib/ | utils/ | server | supabase/ | migrations?/ | \.sql$
 #   runtime | NOT ( \.(md|mdx)$ | \.test\. | \.spec\. | __tests__/ | ^\.github/
-#           |       | ^docs/ | ^\.beads/ | ^scripts/ci/ )
+#           |       | ^docs/ | ^\.beads/ | ^scripts/ci/
+#           |       | ios/App/fastlane/review_notes\.txt )
 # ============================================================================
 #
 # 2026-07-22 — two classifier corrections. The over-block rule below is correct
@@ -123,9 +124,10 @@ PAT_LOGIC='lib/|utils/|server|supabase/|migrations?/|\.sql$'
 # catch-all over-block pre-empting it.
 PAT_DEPS='^package\.json$|^pnpm-lock\.yaml$'
 # `^\.beads/` = issue-tracker ledger, `^scripts/ci/` = CI tooling. Neither has a
-# runtime surface. See the 2026-07-22 note above before adding to this list —
-# anything excluded here can never mark a journey stale again.
-PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/'
+# runtime surface. `ios/App/fastlane/review_notes.txt` is App Store Review notes
+# (fastlane metadata, never compiled). See the 2026-07-22 note above before
+# adding to this list — anything excluded here can never mark a journey stale again.
+PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/|ios/App/fastlane/review_notes\.txt'
 
 # ---------------------------------------------------------------------------
 # Args

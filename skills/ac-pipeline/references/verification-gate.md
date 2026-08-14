@@ -76,7 +76,7 @@ CLASS_NATIVE=0 CLASS_WEBUI=0 CLASS_WEBRT=0 CLASS_LOGIC=0 CLASS_RUNTIME=0
 # keep in sync (`^\.beads/`/`^scripts/ci/` rationale: §Journey registry). EXACTLY ONE probe
 # opts out and reads unfiltered $FILES — CLASS_WEBUI's design-token line, where markdown IS the
 # surface. A second $FILES reader re-opens this hole; a blanket hoist breaks that opt-out.
-PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/'
+PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^scripts/ci/|ios/App/fastlane/review_notes\.txt'
 CODE_FILES=$(printf '%s\n' "$FILES" | grep -vE "$PAT_DOC_TEST_CI" || true)
 
 # Native shell — plugins, native projects, capacitor config/deps. The package.json content
