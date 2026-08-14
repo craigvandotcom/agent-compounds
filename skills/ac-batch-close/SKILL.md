@@ -422,6 +422,31 @@ commit is under test (Goodhart guard). A finding filed from a CI failure carries
 `ci-finding` catch-stage label (the CI token in beads-standards' closed set) plus
 `discovered-from: <bead-id|unknown>`.
 
+### Epic adjudication comment (required)
+
+When this ceremony decides an epic is **not closeable**, the comment's evidentiary
+value IS the blocking child id. Do not write "open child named below" and then name
+none — that verdict silently expires the moment the child closes.
+
+**FAIL LOUD — do not publish** a "not closeable" / "NOT closeable" verdict when
+`blocker_ids` is empty. Resolve the open blocking child first; if none exists the
+epic is closeable, not "not closeable with an unnamed child".
+
+Required comment shape (`br comments add <epic-id> "…"`):
+
+```
+EPIC-ADJUDICATION: NOT closeable
+blocker_ids: {blocker_ids}
+blocking child: {blocker_ids}
+observed: {ISO-8601 timestamp} · HEAD sha {git rev-parse HEAD}
+```
+
+Interpolate `{blocker_ids}` with the actual bead id(s) (comma-separated if several).
+Stamp `{ISO-8601 timestamp}` from `date -u +%Y-%m-%dT%H:%M:%SZ` and
+`{git rev-parse HEAD}` from a real `git rev-parse HEAD` so a later reader can see
+staleness. An empty `blocker_ids:` line is the same defect as "named below" with
+no id — do not publish it.
+
 ---
 
 ## Act 2 — Commit the Batch Report (feedback pending-write + batch-mark advance)
