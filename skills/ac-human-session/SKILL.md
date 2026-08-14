@@ -30,6 +30,12 @@ You surface what must cross a **human gate before it can flow autonomously** —
 session: the rendered dashboard (Phase 3/4) IS the live progress view. No run ledger
 is added.
 
+**`human-ratified` — this skill stamps human-ratified only.** After a recorded
+lightweight completeness check (≥1 AC an empty diff cannot satisfy + greppable
+`## Delivers` + implementable type `task`/`feature`/`bug`), stamp that label.
+Do NOT apply `refined` / `refine-full` / `refine-light` (exclusive stamper of
+those remains `ac-bead-refine`). `ac-bead-refine` never stamps `human-ratified`.
+
 ## Prerequisites
 
 - `br` installed — verify with `which br`

@@ -68,6 +68,7 @@ children are done.
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
+| `human-ratified` | Fast-track provenance from `ac-human-session` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
 | `tooling` | Infra/toolchain work, not app code |
 | `pipeline-proposal` | Names a plan for a human to decide on — it does NOT implement one, so it **never counts as implementation proof**. Any gate that counts beads as evidence of work done (archive gates, coverage counts, "all matching beads closed") MUST exclude these, closed ones included: a workflow that emits proposal beads and then counts them is self-certifying. Usually paired with `human-gate`. |
 

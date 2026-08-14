@@ -62,11 +62,11 @@ If no unblocked beads, STOP: "No unblocked beads. Run `/ac-beadify` first, or ch
 > absence of `unrefined` (`skills/beads-standards/reference/bead-conventions.md`) — a well-written
 > description is not a refined spec.
 
-**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` (or `ac-triage`, or `ac-bead-capture`) carry the `unrefined` label until `/ac-bead-refine` — the label's sole source, with no exceptions — stamps `refined` on convergence. Beads labeled `human-gate` (decision beads — see `skills/beads-standards/reference/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Only beads carrying `refined` and NOT carrying `human-gate` are eligible:
+**Filter to beads carrying `refined`, excluding human-gated beads.** Beads created by `/ac-beadify` (or `ac-triage`, or `ac-bead-capture`) carry the `unrefined` label until `/ac-bead-refine` — the label's sole source, with no exceptions — stamps `refined` on convergence. Beads labeled `human-gate` (decision beads — see `skills/beads-standards/reference/bead-conventions.md`) may be ENRICHED by agents but never selected for implementation or closed. Non-bug types: `refined` ∧ ¬`human-gate`. **Bugs** use provenance (`refine-full` ∨ `refine-light` ∨ `human-ratified`) and do NOT require `refined` (preserves the exclusive stamper). A bare-`refined` bug is destamped `refined` → `unrefined` and skipped.
 
 ```bash
-# Ready beads that are refined AND not human-gated
-br ready --json | jq '[.[] | select((.labels | index("refined")) and (.labels | index("human-gate") | not))]'
+# Non-bug: refined ∧ ¬human-gate. Bug: ¬human-gate ∧ (refine-full ∨ refine-light ∨ human-ratified)
+br ready --json | jq '[.[] | select(if .issue_type == "bug" then (.labels | index("human-gate") | not) and ((.labels | index("refine-full")) or (.labels | index("refine-light")) or (.labels | index("human-ratified"))) else (.labels | index("refined")) and (.labels | index("human-gate") | not) end)]'
 ```
 
 If NO ready beads carry the `refined` label, STOP: "No refined beads ready. Run `/ac-bead-refine` first to make them implementation-ready." If only `human-gate` beads remain, STOP: "Remaining ready beads need the human — run `/ac-human-session` for the decision docket."
@@ -340,19 +340,19 @@ This returns the top pick AND a claim command.
 
 > **`bv` ≥ 0.18 emits `br` natively.** `bv --robot-next`'s `claim_command` is already `br update <id> --status=in_progress`, so run it verbatim. **Version assumption:** cross-machine `bv` parity is assumed, not re-checked per run; if some machine is pinned ≤ 0.16 and emits `bd update`, translate it to `br update`.
 
-**Guard: verify the selected bead carries `refined` and is not human-gated.** Readiness is presence of `refined`, not absence of `unrefined`. Check the bead's labels — if it lacks `refined`, or has `human-gate`, skip it and pick the next one:
+**Guard: verify the selected bead is implement-eligible and is not human-gated.** Non-bug: presence of `refined`. Bug: `refine-full` ∨ `refine-light` ∨ `human-ratified` (does not require `refined`). A bare-`refined` bug is destamped `refined` → `unrefined` and skipped.
 
 ```bash
-# Check the selected bead's labels: must have refined, must not have human-gate
-br show <id> --json | jq '.[0].labels | ((index("refined") | not) or index("human-gate"))'
+# Skip if: human-gate, OR (bug without refine-full/refine-light/human-ratified), OR (non-bug without refined)
+br show <id> --json | jq '.[0] | if .issue_type == "bug" then ((.labels | index("human-gate")) or ((.labels | index("refine-full") | not) and (.labels | index("refine-light") | not) and (.labels | index("human-ratified") | not))) else ((.labels | index("refined") | not) or (.labels | index("human-gate"))) end'
 ```
 
-If the bead is not `refined`:
+If the guard is true (skip):
 1. Do NOT claim it
-2. If it carries no lifecycle label at all, add `unrefined`: `br label add <id> "unrefined"`
-3. Log: "Skipping <id> (missing `refined` — needs `/ac-bead-refine` first)"
-4. Get the next candidate from `br ready --json | jq '[.[] | select((.labels | index("refined")) and (.labels | index("human-gate") | not))] | .[0]'`
-5. If no refined beads remain, STOP the session early
+2. If it is a bug with bare `refined` (no provenance), destamp: `br label remove <id> refined && br label add <id> unrefined`. If it carries no lifecycle label at all, add `unrefined`: `br label add <id> "unrefined"`
+3. Log: "Skipping <id> (missing provenance / `refined` — needs `/ac-bead-refine` first)"
+4. Get the next candidate from the Phase 0 intake jq
+5. If no eligible beads remain, STOP the session early
 
 **Guard: reserve bead files via Agent Mail.** Before claiming, reserve the bead's files using `AGENT_NAME` (registered via `macro_start_session` in Phase 0 — unique per session). If the call returns a conflict, this bead is taken:
 

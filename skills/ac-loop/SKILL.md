@@ -64,7 +64,7 @@ EACH ITERATION:  (ONE eligible-work queue, dispatched CONTINUOUSLY up to PARALLE
                  The list below is PRIORITY (what leaves the queue next), NOT a barrier.)
   0. BUG LANE  (Rule 0 — health-first: bugs take the FIRST slot and start first)
       ├─ pull ready bugs: issue_type=="bug", br ready, non-human-gate — EVERY priority (the Bug-Lane filter)
-      ├─ if unrefined: ac-bead-refine the bug first, then implement (refined bugs go first within the lane)
+      ├─ classify on IMPLEMENT vs REFINE-half (not index("refined")): IMPLEMENT first; REFINE-half destamps bare-`refined` → unrefined then refine. Lane not dry while REFINE-half nonempty
       ├─ CLAIM the ready-bug set as ONE batch (claim-at-selection): mark all in_progress + assignee
       │      ($AGENT_NAME) in one br update, mint the claim id, write .claim-id — then ONE ac-implement
       │      child commits each fix DIRECTLY to main, one bug per commit, each independently green on
@@ -234,9 +234,21 @@ br ready --limit 0 --json | jq '[.[] | select(.labels | index("human-gate"))]'
 # BUG LANE (Rule 0 — see Work priority). ALL unblocked bugs drain before ANY non-bug work.
 # issue_type == "bug", ready (= unblocked, deps satisfied), non-human-gate — EVERY priority.
 # `br ready` already excludes blocked bugs; blocked / human-gate bugs are surfaced, never shipped.
+# RULE-0 ENTER (lane admission — unchanged)
 br ready --limit 0 --json | jq '[.[] | select(
   (.issue_type == "bug") and (.labels | index("human-gate") | not)
 )]'
+# RULE-0 IMPLEMENT (ENTER ∧ provenance; does NOT require `refined`)
+br ready --limit 0 --json | jq '[.[] | select(
+  (.issue_type == "bug") and (.labels | index("human-gate") | not) and ((.labels | index("refine-full")) or (.labels | index("refine-light")) or (.labels | index("human-ratified")))
+)]'
+# RULE-0 REFINE-half (ENTER ∧ ¬IMPLEMENT — unrefined AND bare-`refined`)
+br ready --limit 0 --json | jq '[.[] | select(
+  (.issue_type == "bug") and (.labels | index("human-gate") | not) and ((.labels | index("refine-full") | not) and (.labels | index("refine-light") | not) and (.labels | index("human-ratified") | not))
+)]'
+# When classifying a bare-`refined` bug into REFINE-half: destamp `refined` → add
+# `unrefined` (orphan filter `Orphan beads: refined, no wave-NNN` cannot pick it).
+# Never destamp `human-ratified` / `refine-full` / `refine-light`.
 
 # Legacy branches still in flight (trunk-direct works on `main`; wave-branches are retired —
 # mirror ac-merge's .claude/legacy-branches.txt awareness)
@@ -269,7 +281,7 @@ resolve it, route around it, or surface it before dispatching children.
 
 Summarise: N orphan beads (carrying `refined`), M plan beads across K plans, any legacy branches in flight, H human-gated waiting, L loop-ready plans with no beads yet, U unrefined non-`human-gate` beads needing refine (classified by absence of `refined`, whether labeled `unrefined` or lacking any lifecycle label), **and — always, even when it is `ok` — Scan E's `ci-gates: <n> scheduled · <wf>=<green|red×N|unknown>(<sched-age>h) · ci_health: <ok|warn|ALARM|unknown|none>` AND Scan F's `board-truth: <n> open bead(s) cited by a later non-bookkeeping commit — VERIFY, never auto-close`** (a probe that is computed and not printed reproduces the exact blackout it exists to catch; a `ci_health` of `unknown` means the probe COULD NOT CHECK — never proceed on it as if green; and a non-zero `board-truth` count means those beads may already be DONE — adjudicate each before spending a child on it). **All U are loop-eligible** — refine then ship; the split below is a *priority* ordering, not a gate.
 
-> **Rule 0 — the Bug Lane (takes priority over the order below, and is NOT a barrier).** Health first: **nothing broken ships alongside new work** — which is satisfied by COMMIT ORDER, not by an idle machine. Every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** takes the FIRST dispatch slot and starts first, across BOTH stages: implement the `refined` bugs, then refine-and-ship the `unrefined` ones. Remaining slots immediately take file-disjoint non-bug work — holding them empty while the bug lane drains buys no safety, because each bug commit is independently green regardless of what else is in flight.
+> **Rule 0 — the Bug Lane (takes priority over the order below, and is NOT a barrier).** Health first: **nothing broken ships alongside new work** — which is satisfied by COMMIT ORDER, not by an idle machine. Every *unblocked* bug (`issue_type == "bug"`, `br ready`, non-`human-gate`) that is **preemptive under the severity floor below** takes the FIRST dispatch slot and starts first, across BOTH stages: implement the IMPLEMENT-predicate bugs, then refine-and-ship the REFINE-half (unrefined AND bare-`refined`). The lane is not dry while REFINE-half is non-empty. Remaining slots immediately take file-disjoint non-bug work — holding them empty while the bug lane drains buys no safety, because each bug commit is independently green regardless of what else is in flight.
 > - **Bugs are preemptive, re-checked on every child return.** Whenever a child returns, re-run the Bug-Lane filter *before* dispatching the next item — a just-landed non-bug may have unblocked a bug, and that bug takes the next free slot. This is what makes "all unblocked bugs first *always*" hold across a run.
 > - **Severity floor — classify by CAUSE via source-trace, NEVER by description keywords.** Keyword matching on titles/descriptions is **forbidden** — bugs *described* as display/read-model divergences have turned out to be write-path persistence bugs.
 >   - **P1/P2 bugs preempt as today** — unchanged.
