@@ -32,8 +32,9 @@ substantive-but-unreflected sessions deterministically:
 Each `GAP` line is a session that did work but captured nothing. **Mine those transcripts**
 (read the `.jsonl` paths printed) for lessons — do NOT try to "re-run reflect" on them, the
 live context is gone; the transcript is all that remains. Fold any lessons found into the
-candidates from step 1. (Heartbeat/cron sessions often show as GAP and legitimately have no
-lesson — that's fine; over-flagging costs one cheap read, under-flagging loses a lesson.)
+candidates from step 1. For sessions marked `headless`, read only the final assistant message; open the full
+transcript only when that summary reports a surprise or a failure. Never skip one
+outright — under-flagging loses a lesson.
 
 ### 3. Check Structured Memory
 Review recent writes in:
