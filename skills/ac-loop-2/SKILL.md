@@ -194,7 +194,7 @@ TaskCreate — one task per phase, plus one per epic lane:
   2. Phase 1 spec (frozen HEAD)        → pending
   3. THE SITTING (human barrier)       → pending
   4. Phase 2 build: lane <name>        → pending   (one per lane)
-  5. Phase 2 serial risk queue         → pending   (omit if no migration/native beads)
+  5. Phase 2 serial risk queue         → pending   (omit ONLY if `br ready` has zero refined non-hg beads flagged native/migration — a BOARD count, never "none after I filtered them out of the wave")
   6. Phase 3 converge                  → pending
   7. Phase 4 verify + ship             → pending
   8. ac-land + conductor-reflect       → pending
@@ -258,6 +258,10 @@ Phase 1 ends at a human sitting, not at a timer:
   deferred, every I2 violation dispositioned. A blocker deferred here drops its dependent
   bead from the wave; the lane ships the rest.
 - **Wave blessed** — the human confirms the lane set and its ordering.
+  PRINT two sets on the sitting card: **(A) parallel lanes** and **(B) serial risk
+  queue** = every refined ready non-`human-gate` bead whose contract flags
+  `native`/`migration` (or whose territory is `ios/`/`android/`/`supabase/migrations`).
+  Bless is A+B unless Craig explicitly parks (B). Never build WAVE with `minus native`.
 - **Staleness check (mechanical, at the crossing)** — `git diff --name-only
   $FREEZE_SHA..HEAD` ∩ each bead's territory manifest. HEAD legitimately moves between a
   headless spec run and the sitting (a bypass ship, an `ac-loop` v1 run, a human commit).
@@ -305,8 +309,10 @@ attribution depends on — an unattributable failure costs more than the defect 
 
 ### SERIAL RISK QUEUE (non-negotiable carve-out)
 
-**Migration and native beads NEVER run in the parallel body of Phase 2.** They queue at the
-phase tail and run **serially, one at a time, each with immediate local verification**:
+**Migration and native beads NEVER run in the parallel body of Phase 2.** They stay
+**in-cycle** and run **serially at the tail**, one at a time, each with immediate
+local verification. Do not start Phase 3 while sitting-set (B) is non-empty and this
+queue is unrun. Compaction resume re-derives (B) from `br ready`, never from "none claimed":
 
 | Class | Immediate verification (before the next risk bead starts) |
 |---|---|
