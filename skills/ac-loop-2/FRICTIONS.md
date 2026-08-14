@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-2
 created: 2026-08-09
-last_pass: 2026-08-11
-entries: 6
+last_pass: 2026-08-13
+entries: 8
 ---
 
 # ac-loop-2 — friction log
@@ -72,13 +72,13 @@ entries: 6
 - skills: [ac-loop-2]
 - impact: M
 - frequency: every-run
-- recurrence: 1
+- recurrence: 2
 - related: [filed-beads-carry-drifted-anchors-and-false-premises]
 - first_seen: 2026-08-11
-- last_seen: 2026-08-11
-- stage: orient
+- last_seen: 2026-08-13
+- stage: spec
 - status: open
-- proposed_fix: stop treating FREEZE_SHA as a guarantee and state its real status in the skill: it is a LABEL for a moment, not a lock. Every barrier crossing and every anchor re-check must MEASURE drift (`git diff --name-only FREEZE..HEAD`) and intersect the changed paths against each lane's territory, rather than trusting that the freeze held. Say explicitly which artifact classes survive drift (file-derived anchors) and which do not (board-derived counts).
+- proposed_fix: stop treating FREEZE_SHA as a guarantee and state its real status in the skill: it is a LABEL for a moment, not a lock. Every barrier crossing and every anchor re-check must MEASURE drift (`git diff --name-only FREEZE..HEAD`) and intersect the changed paths against each lane's territory, rather than trusting that the freeze held. Say explicitly which artifact classes survive drift (file-derived anchors) and which do not (board-derived counts). JSONL ADDITION: last-line-wins on `.beads/issues.jsonl` can destamp a `refined` record when nightly tidy (or any out-of-loop writer) rebases the same rows — on that conflict, prefer the refined side.
 - narrative: reported independently THREE times in one run by three different agents. A concurrent
   non-loop curator session moved HEAD twice during Phase 1 alone (853fcd8c to cdc22bc3 to 96c01acb).
   Nothing in ac-loop-2 can stop this — the checkout is shared with sessions that never read the
@@ -89,6 +89,13 @@ entries: 6
   stamps). The run's own Phase 1-to-2 barrier did the right thing — it diffed the freeze against
   live HEAD and confirmed the changed paths were disjoint from every refined bead's territory — so
   the correct behaviour already exists in practice and just needs to be the written contract.
+  **RUN 20260813-235654-12053 (BCA, ac-loop-2 Phase 1), +1 — a new writer class, and a new
+  artifact class that does not survive.** Nightly tidy moved origin during Phase 1 (rebase
+  conflict). Last-line-wins on `.beads/issues.jsonl` can destamp a `refined` record when the
+  tidy rewrite of the same rows lands after the refine stamp. Prefer the refined side on that
+  conflict. This extends the original split: file-derived anchors still hold, board-derived
+  counts still drift, and now the jsonl row itself can lose its stamp. Same root — the freeze
+  is a label, not a lock — with a merge-resolution rule the first run did not have.
 
 ## skill-edit-guard-fires-on-reads-under-skills
 - skills: [ac-loop-2]
@@ -183,3 +190,23 @@ entries: 6
   PARALLEL_WIDTH... the list is PRIORITY, NOT a barrier") and carries a Rule-0 Bug Lane that would
   have caught these. v2's phase-gated redesign dropped both and replaced them with nothing, so this
   is a restoration, not an invention. v1 needs no edit.
+
+## phase-skills-mandate-panels-a-subagent-cannot-spawn
+- skills: [ac-loop-2]
+- impact: L
+- frequency: every-run
+- recurrence: 0
+- related: [refine-all-degrades-to-priority-cut-when-set-exceeds-width]
+- first_seen: 2026-08-13
+- last_seen: 2026-08-13
+- stage: spec
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `skills/ac-loop/FRICTIONS.md`,
+  where occurrences are counted (recurrence 31 as of RUN 20260813-235654-12053). Land suggested
+  minting `phase-1-refine-all-degraded-solo-no-task-tool`; judged same-root (no Task tool, sequential
+  lenses, independence lost) and not minted. LOCAL MANIFESTATION: every Phase-1 refine child this
+  run was degraded-solo (no Task tool in this harness) and ran 3-4 sequential lenses. The honesty
+  half of bd-nreuv held — children stamped `degraded-solo` rather than faking a panel. What this
+  run adds is a conductor-facing rule: do not collapse drain width because quality is solo
+  (throughput across beads is still paid), and a sitting must not be read as panel-quality.

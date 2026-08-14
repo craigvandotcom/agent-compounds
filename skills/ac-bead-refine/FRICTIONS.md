@@ -1,7 +1,7 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-11
+last_pass: 2026-08-13
 entries: 22
 ---
 
@@ -193,14 +193,15 @@ entries: 22
 - skills: [ac-bead-refine]
 - impact: M
 - frequency: frequent
-- recurrence: 2
+- recurrence: 3
 - related: [dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-08-03
-- last_seen: 2026-08-03
+- last_seen: 2026-08-13
 - stage: ac-bead-refine
 - status: open
-- proposed_fix: there is no file-input flag for a bead description — the only safe apply path is a literal /tmp file written with the Write tool, passed via command substitution. State this once at the refine apply step, because the failure it prevents is SILENT: shell-expandable tokens in the description are consumed before br ever sees them.
+- proposed_fix: there is no file-input flag for a bead description — the only safe apply path is a literal /tmp file written with the Write tool, verified present and non-empty, then passed via command substitution. Never pass `--description` from a missing path or an empty substitution: that WIPES the body. If a wipe happens, restore from the child artifact then redact. State this once at the refine apply step, because every failure mode is SILENT.
 - narrative: two children independently expected `br update` to accept a description from a file and found the flag does not exist. The workaround (command substitution over a literal /tmp path) is also load-bearing for a second, unrelated reason, which is why this matters more than a missing convenience flag. (1) Child E caught pre-emptively that passing refined prose inline would have stored `$(...)` and `$$` sequences LITERALLY — the descriptions being applied contained the children's own verification loops, so every `$s` in them would have been silently eaten; a near-miss that would have shipped corrupted ACs to implement. (2) Child F needed the same substitution for a different reason: prose containing redirect characters is rejected by the command guard when inlined. One workaround, two independent failure modes it prevents, and neither is discoverable from the flag list.
+  **RUN 20260813-235654-12053 (BCA, ac-loop-2 Phase 1), +1 — third failure mode, worse than the first two: a wipe, not a corruption.** `br update --description` sourced from a missing file emptied the body. Cost ~15 min. Recovery that worked: restore the body from the child's refine artifact, then redact. The apply-step check this entry already asked for was not in front of the conductor at the moment of the call; the missing-file case is now the reason it cannot stay advisory.
 
 ## tracing-gh-wrapper-prefixes-non-json-lines
 - skills: [ac-bead-refine]

@@ -1,7 +1,7 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-11
+last_pass: 2026-08-13
 entries: 17
 ---
 
@@ -115,16 +115,16 @@ entries: 17
   conductor's own Phase-0 comments). Hoist the ledger too: the conductor commits it.
 
 ## phase-skills-mandate-panels-a-subagent-cannot-spawn
-- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser]
+- skills: [ac-loop, ac-loop-2, ac-bead-refine, ac-review, ac-qa-browser]
 - impact: L
 - frequency: every-run
-- recurrence: 30
-- related: [standing-sanctions-not-threaded-into-delegation-prompt]
+- recurrence: 31
+- related: [standing-sanctions-not-threaded-into-delegation-prompt, refine-all-degrades-to-priority-cut-when-set-exceeds-width]
 - first_seen: 2026-07-22
-- last_seen: 2026-07-22
+- last_seen: 2026-08-13
 - stage: ac-loop
 - status: open
-- proposed_fix: declare an explicit DEGRADED SINGLE-CONDUCTOR MODE in each panel-mandating phase skill (`ac-bead-refine`, `ac-review`, `ac-qa-browser`) — when the skill is invoked from inside a subagent (no spawn capability), the mandated N-way parallel panel collapses to N sequential inline LENSES run by the one agent, and that degradation is declared in the artifact rather than silently substituted. Tracked by bd-nreuv.
+- proposed_fix: declare an explicit DEGRADED SINGLE-CONDUCTOR MODE in each panel-mandating phase skill (`ac-bead-refine`, `ac-review`, `ac-qa-browser`) — when the skill is invoked from inside a subagent (no spawn capability), the mandated N-way parallel panel collapses to N sequential inline LENSES run by the one agent, and that degradation is declared in the artifact rather than silently substituted. Tracked by bd-nreuv. LOOP-2 ADDITION (2026-08-13): a sitting that finished a degraded drain must not be read as panel-quality, and drain WIDTH must not be collapsed because of it — throughput across beads is still paid.
 - narrative: recurred across ~30 children in one day (2026-07-22, BCA — three ac-loop batches plus
   an infra-four batch). `ac-bead-refine`, `ac-review` and `ac-qa-browser` all MANDATE a parallel
   reviewer/lens panel as their core mechanism, but every one of them is routinely invoked from
@@ -134,6 +134,15 @@ entries: 17
   artifact still reads as though a real panel ran, so the conductor cannot tell a genuine 3-reviewer
   consensus from one agent wearing three hats. The cost is not the degradation itself but the loss
   of signal about which reviews had real independence. bd-nreuv tracks the decision.
+  **RUN 20260813-235654-12053 (BCA, ac-loop-2 Phase 1), +1 — first observation under the v2
+  drain model, and the honesty half of bd-nreuv held.** Every refine child this run was
+  degraded-solo (no Task tool in this harness) and ran 3-4 sequential lenses; independence was
+  lost, as this entry already predicts. Children stamped `degraded-solo` rather than faking a
+  panel, so the undeclared-substitution failure that motivated bd-nreuv did not recur. What this
+  run adds is a conductor-facing rule the v1 entry never needed: a finished degraded drain is
+  still a drain — do not collapse Phase-1 width because quality is solo, and a sitting must not
+  be read as panel-quality. Pointer in `skills/ac-loop-2/FRICTIONS.md` (same id). Land's mint
+  suggestion `phase-1-refine-all-degraded-solo-no-task-tool` was judged same-root and not minted.
 
 ## dcg-blocks-the-skills-own-canonical-artifact-redirects
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline]
