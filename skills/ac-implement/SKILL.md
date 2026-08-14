@@ -175,7 +175,8 @@ This is the gate that runs at **every** commit for the rest of the session (Phas
 1. **Format (belt-and-braces — do NOT rely on the pre-commit hook firing).** Run `lint-staged` (or the project's equivalent) on YOUR OWN staged files, THEN — independent of whether the git pre-commit hook actually executed — explicitly verify those same staged files are prettier-clean before committing: `pnpm prettier --check <your staged paths>` (staged paths only — keep it cheap). If it reports any unformatted file, `pnpm prettier --write <those paths>`, re-stage, and re-check until clean; do not commit while it reports failure.
 2. **`ubs <changed-files>`** — pass the exact list of files YOU changed. **Never `ubs .`**.
 3. **`pnpm test` (vitest-affected) scoped to YOUR OWN diff** — not the full suite (that's session-end and loop-close territory, per the Baseline Check note above).
-4. **Whole-project `tsc`** — this one check is necessarily whole-project (TypeScript has no per-file mode), so triage its output by attribution rather than treating every red line as yours to fix:
+4. **CONTRACT-sweep** — if this commit changes a CONTRACT (type/export/RPC/schema/required-field), `grep -rl "<changed symbol>" memory/auto/` and update or retire matching facts before commit.
+5. **Whole-project `tsc`** — this one check is necessarily whole-project (TypeScript has no per-file mode), so triage its output by attribution rather than treating every red line as yours to fix:
    > A `tsc` error in a file you didn't touch that does NOT import your changed files is foreign-WIP noise → log it and proceed (push-CI re-checks committed state in ~4 min). An error in your own file, or in a file that imports your changes, is yours → fix it before committing.
 
 **Cadence: commit every 15–20 minutes.** Do not batch a whole bead — or worse, a whole session — into one commit; granular commits are both the revert points and the unit of concurrency-safety under H7d.
@@ -567,12 +568,9 @@ br comments add <id> "WORKER: model=<model-id> session=<AGENT_NAME> skill@versio
   from this repo).
 - `duration` = wall-clock from bead-claim to bead-close in the child session.
 
-**On close, check for memory facts that cite this bead.** A freeze/pin or other
-lifecycle-scoped fact often names the exact bead whose closure retires it (e.g. an
-`app-version-pinned-*` fact tied to an App Store-submission bead). When you close such a
-bead, grep the memory substrate for facts referencing its id and retire/update any that
-are now stale: `grep -rl "<bead-id>" memory/auto/`. This is the retirement trigger the
-freeze-check in `ac-merge` (§ Version Bump) relies on upstream.
+**On close, check for memory facts that cite this bead.** `grep -rl "<bead-id>" memory/auto/`
+and retire stale facts (freeze-check in `ac-merge` § Version Bump). A CONTRACT change
+already ran the same-commit symbol sweep above; close still greps the bead id.
 
 Release the file reservation using the **same paths reserved in Phase 1a** (the bead spec file list, not just the files committed — releasing over-reserved paths is harmless; leaving them locked starves parallel sessions):
 
