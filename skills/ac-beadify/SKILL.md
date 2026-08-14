@@ -93,7 +93,12 @@ TaskCreate(subject: "Report + handoff to ac-bead-refine", description: "Present 
 
 ### Compaction Recovery
 
-If `$ARTIFACTS_DIR/progress.md` exists, parse it to recover state. If beads already exist (`br list --json` returns non-empty), skip to Phase 4 (Verify).
+If `$ARTIFACTS_DIR/progress.md` exists, parse it to recover state. Probe already-beadified
+with `br list --all --limit 0 --json` matching title + labels + description (never
+description-only, never open-only). A `plan-<slug>` / `plan-${PLAN_SLUG}` hit →
+**archive-and-skip** (Phase 4 Archive only; do not re-beadify). Any other non-empty hit →
+skip to Phase 4 (Verify). Empty → continue from the recovered phase. Full jq:
+`references/existence-probe.md`.
 
 ---
 
@@ -115,21 +120,7 @@ If `$ARTIFACTS_DIR/progress.md` exists, parse it to recover state. If beads alre
 
 ### Present Proposed Structure
 
-Present to user for approval:
-
-```
-Epic: User Authentication
-├── BR-1: Create user schema (P0, labels: auth,backend)
-├── BR-2: Implement JWT middleware (P0, depends: BR-1, labels: auth,backend)
-├── BR-3: Add login endpoint (P0, depends: BR-2, labels: auth,api)
-├── BR-4: Add registration endpoint (P1, depends: BR-2, labels: auth,api)
-└── BR-5: Add password reset (P2, depends: BR-3, labels: auth,api)
-
-Epic: Dashboard
-├── BR-6: Create layout component (P0, labels: dashboard,frontend)
-├── BR-7: Add navigation (P0, depends: BR-6, labels: dashboard,frontend)
-...
-```
+Present to user for approval (shape: `references/proposed-structure-example.md`).
 
 **Save proposed structure to `$ARTIFACTS_DIR/proposed-structure.md` for validator reference.**
 
@@ -355,12 +346,17 @@ beadified_at: YYYY-MM-DD
 
 2. Move plan to `_done/`:
 ```bash
-mv "$PLAN_FILE" "$PROJECT_ROOT/_plans/_done/$(basename $PLAN_FILE)"
+mv "$PLAN_FILE" "$PROJECT_ROOT/_plans/_done/$(basename "$PLAN_FILE")"
+# Fail-close: a missing mv must not reach TaskUpdate(... completed).
+if ! { test ! -e "$PLAN_FILE" && test -e "$PROJECT_ROOT/_plans/_done/$(basename "$PLAN_FILE")"; }; then
+  echo "FATAL: plan archive mv did not land — source still present or dest missing" >&2
+  exit 2
+fi
 ```
 
 3. Add a reference comment to the epic bead:
 ```bash
-br comments add <epic-id> "Source plan archived: _plans/_done/$(basename $PLAN_FILE)"
+br comments add <epic-id> "Source plan archived: _plans/_done/$(basename "$PLAN_FILE")"
 ```
 
 **Why archive?** If beads still need the plan, they're not self-contained enough — archiving forces this discipline (the plan is preserved in `_done/`, not deleted).
