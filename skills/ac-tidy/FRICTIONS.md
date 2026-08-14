@@ -1,8 +1,8 @@
 ---
 skill: ac-tidy
 created: 2026-07-30
-last_pass: 2026-08-03
-entries: 4
+last_pass: 2026-08-15
+entries: 5
 ---
 
 # ac-tidy — friction log
@@ -93,3 +93,16 @@ entries: 4
   `N_closed = 1`) passed the gate, which would have archived an un-beadified loop-ready plan.
   Four consecutive nights (2026-07-24, -26, -28, -29) the arithmetic said "archive" and only a
   run that read the matching bead's BODY prevented the loss.
+
+## absence-of-label-inferred-as-needs-human
+- skills: [ac-tidy]
+- impact: M
+- frequency: frequent
+- recurrence: 5
+- related: []
+- first_seen: 2026-07-10
+- last_seen: 2026-08-14
+- stage: ac-tidy
+- status: promoted
+- proposed_fix: never infer re-gate from missing `human-gate`; require a positive no-decision test; repeat-release exemption. Measured instance: bd-06opv.12 (gated and released four times in 20 days, fifth re-gate 2026-08-08 / released 2026-08-14).
+- narrative: the "route open DECISION beads to the human gate" cluster inferred needs-a-human from `issue_type==decision` AND no `human-gate` label, which cannot tell never-gated from decided-and-released. bd-06opv.12 is the measured instance.

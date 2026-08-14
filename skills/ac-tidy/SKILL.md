@@ -28,6 +28,30 @@ INTERACTIVE mode is unchanged from the sections below — every move requires us
 - **Positive proof, never empty-parse.** Before any Tier-2 archive: require `N_matching > 0` **and** `N_closed == N_matching` **and** the `br list --json` result parsed to a non-empty, expected shape. **`N_matching` and `N_closed` count IMPLEMENTATION beads ONLY — beads carrying `pipeline-proposal` or `dream-proposal` are EXCLUDED from both** (a proposal bead never counts as implementation proof). A bead "matches" a plan only via a plan-provenance field (`plan:` / `source_plan` / a beadify-authored link) — a free-text mention of the path in a memo is not a match. **`N_closed` counts only delivery-shaped `close_reason` values** (`shipped:` / `fixed:` / `done:`). `out-of-scope` / `wontfix` / `descoped` / `obsolete` (without a delivery verb) is NOT delivered — that bead is dropped from both counts (bd-0y49x). This skill emits proposal beads itself, so the exclusion binds at every site that defines "matching" here — the Tier-2 archive gate above and Phases 2b and 2c below. *Worked negative example:* a loop-ready plan's only match is `bd-pzlhv`, a CLOSED `pipeline-proposal` bead that merely NAMES the plan, its close reason recording a human decision to KEEP it. Naive arithmetic `N_matching = 1` / `N_closed = 1` → gate passes → an un-beadified loop-ready plan is archived. Under the exclusion `bd-pzlhv` is dropped, so `N_matching = 0`, the `N_matching > 0` clause fails, and the plan falls through to a **Tier-3 proposal** — never a silent no-op, never an archive. `br` output shape varies (`{issues:[]}` vs a bare array — `bca-br-tooling-flaky`); an empty or misparsed result MUST abort the archive and fall through to a Tier-3 proposal — never read emptiness as "done".
 - **Never touch OPEN `human-gate` or `qa-blocker` beads** — gated, not housekeeping. A CLOSED one gates nothing (a gate withholds FUTURE work, and there is none), so the Tier-1 stale-label carve-out below applies to it.
 - **Provable, never heuristic** — keyword/similarity-inferred "looks done" is a Tier-3 proposal, never an auto-move.
+- **Absence of a label is never evidence that work is needed** (bd-rc9kk). A `decision`-typed bead is a re-gate candidate ONLY if it has NO recorded decision — no DECISION/RULING comment, no resolution in close metadata, AND no `label_removed` `human-gate` event followed by a decision comment. Do not infer "needs a human" from `issue_type == decision` AND missing `human-gate` — that cannot tell never-gated from gated-decided-and-released (the release ritual is to REMOVE the label). **Repeat-release exemption:** a bead that has been gated and released MORE THAN ONCE is exempt from re-proposal outright.
+
+  Gate/release history (runnable; label name lives in `events.comment`):
+
+  ```bash
+  sqlite3 .beads/beads.db -header -column \
+    "SELECT created_at, event_type, comment
+     FROM events
+     WHERE issue_id = 'bd-06opv.12'
+       AND (
+         (event_type IN ('label_added','label_removed') AND comment LIKE '%human-gate%')
+         OR (event_type = 'commented' AND (
+              comment LIKE '%DECISION%' OR comment LIKE '%RULING%'
+              OR comment LIKE '%DOCKET RELEASE%' OR comment LIKE '%VALIDATE-THEN-SHIP%'
+         ))
+       )
+     ORDER BY created_at;"
+  ```
+
+  **Worked examples** (the deciding `events` rows):
+
+  1. *Never-gated* — `issue_type=decision`, no `human-gate` ever, no DECISION/RULING comment, no close resolution. `events` has `created` only. **MUST propose** (route it to the docket once).
+  2. *Decided-then-released* — **bd-06opv.12**. Trail (2026-07-10 add → 07-11 remove after "DECISION (Craig): VALIDATE-THEN-SHIP" → 07-12 / 07-15 / 07-27 / 07-30 / 08-14 re-gate+release cycles). Live DB as of 2026-08-14 still shows `commented` DOCKET RELEASE + `label_removed` `human-gate`. **MUST NOT propose.**
+  3. *Released-then-spuriously-re-gated* — same bead after a sweep re-adds `human-gate` despite the recorded decision. Repeat-release (`label_removed` human-gate more than once) fires the exemption. **MUST NOT re-fire.**
 
 ---
 
