@@ -21,6 +21,7 @@ touch it, never commit it "on their behalf".
 - Commit + push sequence
 - Cross-repo skill/infra beads (commit-root)
 - No-stash escalation ladder (when rebase/push is blocked by foreign WIP)
+- Abandoned-rebase recovery protocol
 - Rules
 
 ## Pre-commit deletion check
@@ -51,14 +52,37 @@ Never format a file wholesale to fix one file's gate failure. Format the file yo
 export GIT_IDENTITY_ENABLED=1
 export AGENT_NAME=<your session name>   # re-assert every shell
 
+# 0. Refuse detached HEAD or mid-rebase BEFORE committing (ask git, never the
+#    filesystem — this repo is a submodule; `.git` is a file, so `ls .git/rebase-merge`
+#    is a false negative). Empty segments FAIL LOUDLY.
+HEAD_REF=$(git rev-parse --abbrev-ref HEAD)
+GIT_DIR=$(git rev-parse --git-dir)
+[ -n "$HEAD_REF" ] || { echo "FATAL: empty HEAD ref" >&2; exit 2; }
+[ -n "$GIT_DIR" ] || { echo "FATAL: empty git-dir" >&2; exit 2; }
+if [ "$HEAD_REF" = "HEAD" ]; then
+  echo "REFUSE: detached HEAD — will not commit. Recover per § Abandoned-rebase recovery protocol." >&2
+  exit 2
+fi
+if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
+  echo "REFUSE: rebase in progress at $GIT_DIR — will not commit. Recover per § Abandoned-rebase recovery protocol." >&2
+  exit 2
+fi
+
 # 1. Fetch + 0-behind check (preferred over pull --rebase when foreign WIP exists)
 git fetch origin main
 BEHIND=$(git rev-list --count HEAD..origin/main)
 if [ "$BEHIND" = "0" ]; then
   : # nothing to integrate
 else
-  # See no-stash escalation ladder below before pull --rebase
-  git pull --rebase origin main || true
+  # See no-stash escalation ladder below before pull --rebase.
+  # --empty=drop + rebase.empty=drop: an empty replay must never pause for
+  # --skip/--continue (no operator). Do NOT swallow failure with `|| true` —
+  # a paused rebase used to look like a successful integrate and every later
+  # commit landed detached (2026-07-27, 8h, ~26 sessions).
+  if ! git -c rebase.empty=drop pull --rebase origin main; then
+    echo "REFUSE: pull --rebase failed (conflict or mid-rebase). Do not commit. See § Abandoned-rebase recovery protocol." >&2
+    exit 2
+  fi
 fi
 
 # 2. Pathspec commit (tracked files)
@@ -151,7 +175,7 @@ Cheapest first — stop at the first that applies. **Never `git stash`.**
    ```bash
    # Safe examples: .beads/issues.jsonl, skills/*/workflows/last-run.json
    git checkout -- .beads/issues.jsonl   # only if YOU did not edit it this session
-   git pull --rebase origin main
+   git -c rebase.empty=drop pull --rebase origin main
    git push --no-verify origin main
    ```
 
@@ -168,6 +192,34 @@ Cheapest first — stop at the first that applies. **Never `git stash`.**
 
 ---
 
+## Abandoned-rebase recovery protocol
+
+**May I continue this rebase?** Answer from this section — do not escalate a
+conflict-free empty-commit stall.
+
+Ask git, never the filesystem (submodule `.git` is a file):
+
+```bash
+git status
+git rev-parse --abbrev-ref HEAD          # "HEAD" when detached
+git rev-parse --git-dir                  # resolves the real git dir
+ls "$(git rev-parse --git-dir)"/rebase-merge
+```
+
+| State | Who may act | What to do |
+|---|---|---|
+| Rebase **this session started**, still in progress | This session | Finish it (`--continue` / `--skip` / `--abort` as appropriate). |
+| Rebase **another session started**, age **< 8 hours** | Nobody else | Leave it. Do not `--continue`, `--abort`, or `git checkout` a different branch. Surface and wait. |
+| Rebase **abandoned ≥ 8 hours**, **conflict-free**, empty-commit stall (`You are currently editing a commit while rebasing`, no conflicted paths, often a `drop_redundant_commits` marker) | Any conductor | `GIT_EDITOR=true git rebase --skip` when the replay is empty; `--continue` only if `git status` shows a real commit to keep. Then push. |
+| Rebase with **conflicts** | Human | Do not auto-continue. Surface the conflicted paths. |
+| Checkout has **26+ live agent processes** | Nobody | Do **not** `git checkout` / switch branches under them — that is a worse failure than a paused rebase (2026-07-27: 26–36 live agents). |
+
+Automated `git pull --rebase` MUST pass `--empty=drop` (or `rebase.empty=drop`) so
+an empty replay cannot pause. Failures are not swallowed (`|| true` is banned on
+this path).
+
+---
+
 ## Rules
 
 - Pathspec-limited commits for every trunk-direct agent commit (H7d).
@@ -177,3 +229,6 @@ Cheapest first — stop at the first that applies. **Never `git stash`.**
 - `--force-with-lease` on a NON-main working branch (e.g. ac-merge's pre-PR wave-branch push, ac-merge/SKILL.md §Push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never stash. Never `git add -A`.
 - `cross-repo` beads: commit in the repo that tracks the files (see § Cross-repo).
+- One scheduled writer per generated artifact (`.beads/issues.jsonl`, tidy
+  proposals). Mapping lives on the job objects in `infrastructure/jobs/daily.json`
+  / `weekly.json` (`_authorized_commits` / `_do_not_commit`).
