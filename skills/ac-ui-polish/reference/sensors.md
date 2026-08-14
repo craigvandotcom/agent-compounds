@@ -28,42 +28,105 @@ under threshold (4.5:1 body, 3:1 large/bold). Pure measurement — no eyeballing
 ```js
 (() => {
   const parse = c => { const m = (c||'').match(/rgba?\(([^)]+)\)/); if (!m) return null;
-    const p = m[1].split(',').map(s => parseFloat(s)); return { r:p[0], g:p[1], b:p[2], a:p[3]==null?1:p[3] }; };
+    const p = m[1].split(/[\s,/]+/).map(s => parseFloat(s)).filter(n => !Number.isNaN(n));
+    return { r:p[0], g:p[1], b:p[2], a:p[3]==null?1:p[3] }; };
   const lin = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
   const lum = c => 0.2126*lin(c.r) + 0.7152*lin(c.g) + 0.0722*lin(c.b);
   const ratio = (a,b) => { const L1=lum(a), L2=lum(b), hi=Math.max(L1,L2), lo=Math.min(L1,L2); return (hi+0.05)/(lo+0.05); };
   const bgOf = el => { let n = el; while (n) { const bg = parse(getComputedStyle(n).backgroundColor);
     if (bg && bg.a >= 0.95) return bg; n = n.parentElement; } return { r:255, g:255, b:255, a:1 }; };
+  // Worst-case stop, never an average: a gradient that is AA on the first stop
+  // and 1.61:1 on the yellow stop must fail. getComputedStyle resolves hsl()/var()
+  // to rgb() so this regex sees the painted colours.
+  const stopsOf = img => {
+    const out = [];
+    const re = /rgba?\(([^)]+)\)/g;
+    let m; while ((m = re.exec(img || ''))) {
+      const c = parse('rgb(' + m[1] + ')'); if (c) out.push(c);
+    }
+    return out;
+  };
   const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-  const out = [];
+  const out = [], unmeas = [];
   document.querySelectorAll('body *').forEach(el => {
     if (!hasText(el)) return;
     const s = getComputedStyle(el);
     if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity === 0) return;
     const fg = parse(s.color); if (!fg) return;
-    const bg = bgOf(el), a = fg.a;
-    const eff = { r: fg.r*a + bg.r*(1-a), g: fg.g*a + bg.g*(1-a), b: fg.b*a + bg.b*(1-a) };
-    const cr = ratio(eff, bg);
+    const bg = bgOf(el);
     const size = parseFloat(s.fontSize), bold = (parseInt(s.fontWeight) || 400) >= 700;
     const min = (size >= 24 || (bold && size >= 18.66)) ? 3 : 4.5;
-    if (cr < min) out.push({ t: el.textContent.trim().slice(0,40), cr: Math.round(cr*100)/100, min,
+    const rec = (cr, extra) => ({ t: el.textContent.trim().slice(0,40), cr: Math.round(cr*100)/100, min,
       color: s.color, bg: `rgb(${Math.round(bg.r)},${Math.round(bg.g)},${Math.round(bg.b)})`,
-      cls: (el.className?.toString?.() || '').slice(0,70) });
+      cls: (el.className?.toString?.() || '').slice(0,70), ...extra });
+    // Alpha-0 (bg-clip-text): NEVER blend transparent color against bg — that
+    // collapses to cr===1.0 and is triaged as noise. Measure the gradient.
+    if (fg.a === 0) {
+      const stops = stopsOf(s.backgroundImage);
+      if (!stops.length) { unmeas.push(rec(0, { why: 'alpha-0 and no parseable backgroundImage' })); return; }
+      let worst = Infinity, worstStop = stops[0];
+      for (const st of stops) { const cr = ratio(st, bg); if (cr < worst) { worst = cr; worstStop = st; } }
+      if (worst < min) out.push(rec(worst, { stop: `rgb(${Math.round(worstStop.r)},${Math.round(worstStop.g)},${Math.round(worstStop.b)})` }));
+      return;
+    }
+    const a = fg.a;
+    const eff = { r: fg.r*a + bg.r*(1-a), g: fg.g*a + bg.g*(1-a), b: fg.b*a + bg.b*(1-a) };
+    const cr = ratio(eff, bg);
+    if (cr < min) out.push(rec(cr, {}));
   });
-  const seen = new Set(), uniq = [];
-  for (const f of out) { const k = f.t + f.cls; if (!seen.has(k)) { seen.add(k); uniq.push(f); } }
-  return JSON.stringify({ theme: document.documentElement.className, failures: uniq.length, items: uniq.slice(0,40) });
+  const dedupe = arr => { const seen = new Set(), uniq = [];
+    for (const f of arr) { const k = f.t + f.cls; if (!seen.has(k)) { seen.add(k); uniq.push(f); } }
+    return uniq; };
+  const failures = dedupe(out), unmeasurable = dedupe(unmeas);
+  return JSON.stringify({ theme: document.documentElement.className,
+    failures: failures.length, unmeasurable: unmeasurable.length,
+    items: failures.slice(0,40), unmeasurableItems: unmeasurable.slice(0,20) });
 })()
 ```
 
-- **Pass = `failures: 0` in BOTH themes.** Each failure is a finding (≥ High):
-  `text "Broccoli" cr 1.3 < 4.5 on rgb(255,255,255)` → the ingredient-name bug,
-  surfaced objectively.
+- **Pass = `failures === 0` AND `unmeasurable === 0` in BOTH themes.** An
+  `unmeasurable` node is not a pass and not a bare `cr: 1` — it is a loud
+  fail (the sensor could not resolve paint). Each `failures` item is a finding
+  (≥ High): `text "Broccoli" cr 1.3 < 4.5 on rgb(255,255,255)`.
+- **Worst-case gradient stop, never an average.** `bg-clip-text` paints the
+  `backgroundImage` gradient; computed `color` is `rgba(0,0,0,0)`. Score every
+  parsed rgb() stop against the resolved background and keep the **lowest**
+  ratio. Averaging (or taking the first stop) would hide the 1.61:1 yellow
+  stop on the auth headline (704ab9a3^).
 - Limitations: it assumes white behind background *images*; manually check text
   over photos. It can't judge *aesthetic* low-contrast intent — that's the rubric's job.
 - This overlaps `web-design-guidelines` (a11y compliance). Use that skill's audit
   for the authoritative WCAG pass; this sweep is the fast in-loop sensor so polish
   never *introduces* a contrast regression between rubric runs.
+
+## Sensor 1b — Theme-blind image sources — catches `*-white.*` / `*-black.*` on flipping surfaces
+
+A theme-blind **asset** (white logo on a light card) is invisible to Sensor 1:
+computed text colour and class strings are fine; the *image source* is wrong.
+
+```js
+(() => {
+  const flipping = el => { let n = el; while (n) {
+    const c = (n.className?.toString?.() || '');
+    if (/\b(card|bg-background|bg-card|bg-surface|theme-flip)\b/.test(c) || n === document.documentElement) return true;
+    n = n.parentElement; } return false; };
+  const hits = [];
+  document.querySelectorAll('img, [style*="background-image"], [class*="bg-["]').forEach(el => {
+    const src = el.getAttribute('src') || el.getAttribute('srcset') || getComputedStyle(el).backgroundImage || '';
+    const m = src.match(/(?:^|\/)([^/"']+-(?:white|black)\.[a-zA-Z0-9]+)/);
+    if (!m) return;
+    if (!flipping(el)) return;
+    hits.push({ src: m[1], tag: el.tagName, cls: (el.className?.toString?.() || '').slice(0,70) });
+  });
+  return JSON.stringify({ themeBlind: hits.length, items: hits.slice(0,20) });
+})()
+```
+
+- **Pass = `themeBlind === 0`.** A `*-white.*` / `*-black.*` source on a
+  theme-flipping surface (card / `bg-background` / `bg-card`) is a finding
+  (≥ High) — swap to a tokenized or dual-asset treatment. A white mark on a
+  permanently-dark overlay is out of scope (Sensor 2's "legitimate text-white"
+  carve-out).
 
 ## Sensor 2 — Hardcoded-colour grep — catches raw values at the source
 
