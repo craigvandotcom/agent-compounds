@@ -349,6 +349,25 @@ Fix-forward re-pin) and adopt whatever `R` it returns — **mark "Fix-in-session
                                                     # production-target build (production env
                                                     # vars) — never a preview
    vercel promote "$STAGED_URL"                    # dashboard equivalent: "Promote to Production"
+   # vercel/vercel#15095: `vercel promote` silently resets autoAssignCustomDomains
+   # to true. Re-assert false or the next main push aliases to www.
+   PROJECT_ID="prj_Qg3T27oyWJ7QIjdfJLzy6aTRFxty"
+   FLAG=$(curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
+     "https://api.vercel.com/v9/projects/$PROJECT_ID" \
+     | python3 -c 'import json,sys; print(json.load(sys.stdin).get("autoAssignCustomDomains"))')
+   if [ "$FLAG" != "False" ] && [ "$FLAG" != "false" ]; then
+     echo "WARN: autoAssignCustomDomains=$FLAG after promote — PATCHing back to false"
+     curl -sS -X PATCH -H "Authorization: Bearer $VERCEL_TOKEN" \
+       -H "Content-Type: application/json" \
+       "https://api.vercel.com/v9/projects/$PROJECT_ID" \
+       -d '{"autoAssignCustomDomains":false}' >/dev/null
+     FLAG=$(curl -sS -H "Authorization: Bearer $VERCEL_TOKEN" \
+       "https://api.vercel.com/v9/projects/$PROJECT_ID" \
+       | python3 -c 'import json,sys; print(json.load(sys.stdin).get("autoAssignCustomDomains"))')
+     [ "$FLAG" = "False" ] || [ "$FLAG" = "false" ] \
+       || { echo "FATAL: autoAssignCustomDomains still $FLAG after PATCH — do not ship"; exit 2; }
+   fi
+   echo "autoAssignCustomDomains=$FLAG (must stay false)"
    ```
 
    Assert there is **no** `vercel deploy --prod` call anywhere in this step — promotion is an
