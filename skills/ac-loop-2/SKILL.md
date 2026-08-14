@@ -287,7 +287,7 @@ pathspec-scoped commit.**
   in-flight work. A local run scoped to your own files is permitted as advisory
   information; **it is never blocking, and a red global signal is never yours to act on.**
 
-The commit mutex is a lock directory (`.git/ac-loop2-commit.lock` **of the repo
+The commit mutex is a lock directory (`$(git rev-parse --git-common-dir)/ac-loop2-commit.lock` **of the repo
 you are committing into**; `mkdir` is atomic). A `cross-repo` skill edit takes the
 lock under agent-compounds (or root), not under the app checkout — two git indexes,
 two locks. Bounded (~15 min), stale-stealable (a lock older than 10 min belongs to a dead worker —

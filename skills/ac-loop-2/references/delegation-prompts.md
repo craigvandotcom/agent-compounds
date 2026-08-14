@@ -160,11 +160,14 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > `COMMIT_ROOT` with `git -C "$(realpath <an edited file>)" rev-parse --show-toplevel`
 > and run add/commit/push **there**. A clean `git status` in the app checkout after a
 > symlink edit means you have not committed yet
-> (`ac-pipeline/references/commit-discipline.md` § Cross-repo). The lock lives in
-> `$COMMIT_ROOT/.git/ac-loop2-commit.lock`, not the app's `.git`.
+> (`ac-pipeline/references/commit-discipline.md` § Cross-repo). The lock lives at
+> `$(git rev-parse --git-common-dir)/ac-loop2-commit.lock` of the commit-root repo.
+> Never derive LOCK via `--git-dir` (worktree-private; would silently un-share the mutex).
 > ```
 > COMMIT_ROOT="${COMMIT_ROOT:-$PROJECT_ROOT}"
-> LOCK="$COMMIT_ROOT/.git/ac-loop2-commit.lock"; locked=0
+> LOCK="$(git rev-parse --git-common-dir)/ac-loop2-commit.lock"; locked=0
+> echo "commit-mutex: $LOCK"
+> _mutex_t0=$(date +%s)
 > for _ in $(seq 1 450); do                     # ~15 min bound — a busy tail at width 9 is legitimate
 >   if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi
 >   # Steal a stale lock: EXIT traps do not fire on SIGKILL/sleep — a dead holder blocks every lane.
@@ -172,6 +175,7 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 >   sleep 2
 > done
 > [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired in 15 min — report, do not commit' >&2; exit 2; }
+> echo "commit-mutex: acquired in $(($(date +%s) - _mutex_t0))s path=$LOCK"
 > trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 > git add -- <your territory paths>
 > git commit -m '<type>(<scope>): <subject> ({BEAD_ID})' -- <your territory paths>
