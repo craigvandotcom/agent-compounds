@@ -155,9 +155,16 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > list}. Not one file more, for any reason. If the fix genuinely needs a file outside it,
 > STOP and return — do not widen your own permission.
 > **(b) COMMIT MUTEX.** Take the global commit lock around add+commit+push. The git index and
-> the push are the one unavoidable collision on a shared tree:
+> the push are the one unavoidable collision on a shared tree. **Commit root:** if this
+> bead is `cross-repo` (or Repo ownership names agent-compounds / root ~/Repos), resolve
+> `COMMIT_ROOT` with `git -C "$(realpath <an edited file>)" rev-parse --show-toplevel`
+> and run add/commit/push **there**. A clean `git status` in the app checkout after a
+> symlink edit means you have not committed yet
+> (`ac-pipeline/references/commit-discipline.md` § Cross-repo). The lock lives in
+> `$COMMIT_ROOT/.git/ac-loop2-commit.lock`, not the app's `.git`.
 > ```
-> LOCK="$PROJECT_ROOT/.git/ac-loop2-commit.lock"; locked=0
+> COMMIT_ROOT="${COMMIT_ROOT:-$PROJECT_ROOT}"
+> LOCK="$COMMIT_ROOT/.git/ac-loop2-commit.lock"; locked=0
 > for _ in $(seq 1 450); do                     # ~15 min bound — a busy tail at width 9 is legitimate
 >   if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi
 >   # Steal a stale lock: EXIT traps do not fire on SIGKILL/sleep — a dead holder blocks every lane.

@@ -30,8 +30,11 @@ answerable in ≤10 words). The invoke already blessed the run; do not ask again
 > items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not
 > `human-gate` is loop-eligible** — `unrefined` routes a bead *through* Phase 1, it is NOT
 > a human gate. The only class exempt from autonomous implementation is `human-gate`
-> (surfaced, never auto-closed). Craig controls what *enters* the pipeline upstream
-> (`ac-backlog`, plan `loop-ready` sign-off).
+> (surfaced, never auto-closed). **`cross-repo` is not an exemption.** Those IDs live on
+> THIS board; the target repo's beads db does not have them. This cycle implements them.
+> Workers commit in the repo that tracks the files
+> (`ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra beads). Craig
+> controls what *enters* the pipeline upstream (`ac-backlog`, plan `loop-ready` sign-off).
 
 > **Orchestration contract — 3-level, non-negotiable.** Every "Invoke `<skill>`" / "Run
 > `<skill>`" step means **spawn a fresh sub-session whose prompt is the delegation text,
@@ -253,7 +256,9 @@ Convergence discipline carries over from `ac-bead-refine` unchanged: **execute-a
 parallel lanes** and **(B) serial risk queue** (every refined ready non-`human-gate` bead
 flagged `native`/`migration`, or territory `ios/`/`android/`/`supabase/migrations`) and
 **proceed** — never `AskUserQuestion`. Wave-blocking `human-gate`: Exhaust Rule (leave the
-bead, drop dependents, keep going). HOLDs and `cross-repo` stay out. Never `minus native`.
+bead, drop dependents, keep going). HOLDs stay out. **`cross-repo` stay in** — they
+are this board's work; commit in the target repo (commit-discipline § Cross-repo).
+Never `minus native`.
 
 **Headless:** cannot cross. Post A+B as an advisory Slack nudge, keep the ledger at task 3,
 C1 stop. A headless run that self-blesses has deleted the one gate that pays for the
@@ -282,8 +287,10 @@ pathspec-scoped commit.**
   in-flight work. A local run scoped to your own files is permitted as advisory
   information; **it is never blocking, and a red global signal is never yours to act on.**
 
-The commit mutex is a lock directory (`.git/ac-loop2-commit.lock`; `mkdir` is atomic),
-bounded (~15 min), stale-stealable (a lock older than 10 min belongs to a dead worker —
+The commit mutex is a lock directory (`.git/ac-loop2-commit.lock` **of the repo
+you are committing into**; `mkdir` is atomic). A `cross-repo` skill edit takes the
+lock under agent-compounds (or root), not under the app checkout — two git indexes,
+two locks. Bounded (~15 min), stale-stealable (a lock older than 10 min belongs to a dead worker —
 EXIT traps do not fire on SIGKILL), self-releasing on exit. The origin==HEAD assert runs
 INSIDE the lock — after release, a sibling's commit false-fails it. **The ONE canonical
 script is `references/delegation-prompts.md` § Build-worker prompt** — workers execute the
