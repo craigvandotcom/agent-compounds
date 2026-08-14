@@ -83,6 +83,11 @@ before picking a target environment for a given journey.
 unsafe here" statement only when a `prod_unsafe_audited:` date sits beside it.
 Absent the stamp, treat the journey as potentially prod-unsafe.
 
+An empty `prod_unsafe:` list (even with `prod_unsafe_audited:` set) is **not**
+sufficient warrant to route a journey that can write shared catalog / shared-data
+rows at prod. Catalog minting and other shared-row writes stay on the local stack
+regardless of the audit stamp.
+
 ```yaml
 prod_unsafe: []                      # or a list of concrete button/action strings
 prod_unsafe_audited: <ISO date>      # date of the audit; absent = never audited
