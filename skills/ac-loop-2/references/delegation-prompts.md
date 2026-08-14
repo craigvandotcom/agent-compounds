@@ -168,13 +168,22 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > LOCK="$(git rev-parse --git-common-dir)/ac-loop2-commit.lock"; locked=0
 > echo "commit-mutex: $LOCK"
 > _mutex_t0=$(date +%s)
-> for _ in $(seq 1 450); do                     # ~15 min bound — a busy tail at width 9 is legitimate
->   if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi
->   # Steal a stale lock: EXIT traps do not fire on SIGKILL/sleep — a dead holder blocks every lane.
->   find "$LOCK" -maxdepth 0 -mmin +10 2>/dev/null | grep -q . && rmdir "$LOCK" 2>/dev/null && continue
->   sleep 2
-> done
-> [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired in 15 min — report, do not commit' >&2; exit 2; }
+> if mkdir "$LOCK" 2>/dev/null; then locked=1; else
+>   # First mkdir ENOTDIR/EACCES: path permanently unusable — abort, do not burn the bound.
+>   _parent="$(dirname "$LOCK")"
+>   if [ ! -d "$_parent" ] || [ ! -w "$_parent" ]; then
+>     echo 'FATAL: commit mutex path unusable' >&2; exit 2
+>   fi
+> fi
+> if [ "$locked" != 1 ]; then
+>   for _ in $(seq 1 240); do                     # 240*2s = 480s < 600s Bash cap
+>     if mkdir "$LOCK" 2>/dev/null; then locked=1; break; fi
+>     # Steal a stale lock: EXIT traps do not fire on SIGKILL/sleep — a dead holder blocks every lane.
+>     find "$LOCK" -maxdepth 0 -mmin +10 2>/dev/null | grep -q . && rmdir "$LOCK" 2>/dev/null && continue
+>     sleep 2
+>   done
+> fi
+> [ "$locked" = 1 ] || { echo 'FATAL: commit mutex not acquired in 480s — report, do not commit' >&2; exit 2; }
 > echo "commit-mutex: acquired in $(($(date +%s) - _mutex_t0))s path=$LOCK"
 > trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 > git add -- <your territory paths>

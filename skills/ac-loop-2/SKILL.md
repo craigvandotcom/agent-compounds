@@ -290,7 +290,7 @@ pathspec-scoped commit.**
 The commit mutex is a lock directory (`$(git rev-parse --git-common-dir)/ac-loop2-commit.lock` **of the repo
 you are committing into**; `mkdir` is atomic). A `cross-repo` skill edit takes the
 lock under agent-compounds (or root), not under the app checkout — two git indexes,
-two locks. Bounded (~15 min), stale-stealable (a lock older than 10 min belongs to a dead worker —
+two locks. Bounded (480s; 240 x 2s < 600s Bash cap), stale-stealable (a lock older than 10 min belongs to a dead worker —
 EXIT traps do not fire on SIGKILL), self-releasing on exit. The origin==HEAD assert runs
 INSIDE the lock — after release, a sibling's commit false-fails it. **The ONE canonical
 script is `references/delegation-prompts.md` § Build-worker prompt** — workers execute the
