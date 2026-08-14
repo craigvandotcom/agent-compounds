@@ -27,7 +27,7 @@ Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` 
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting. If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.**
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)

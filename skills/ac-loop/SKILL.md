@@ -109,6 +109,8 @@ ON EXIT — ALWAYS, every stop path (C1/C2/C3/C4, Phase ARIA, or an error):
 
 > The run's progress through these phases is tracked in the Phase 0 **run ledger**
 > (`TaskCreate`) — update it at each phase boundary; it is the anti-early-exit anchor
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 > and the resume point after compaction.
 
 ---

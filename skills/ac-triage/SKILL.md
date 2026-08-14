@@ -89,6 +89,8 @@ Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section
 
 ```
 TaskCreate("Scope + watermark — read CORE/triage.md, load per-source watermarks")
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 TaskCreate("Fetch — pull new signal from enabled sources in parallel")
 TaskCreate("Cluster + dedupe — fingerprint raw events into findings")
 TaskCreate("Route defects → beads")

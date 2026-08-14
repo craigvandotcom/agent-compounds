@@ -71,6 +71,8 @@ Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section
 ```
 # Fixed tasks — create upfront:
 TaskCreate("Preflight — pin candidate C, mint the release bump (R), push R, finalize feedback rows")
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 TaskCreate("Confidence/QA gate — ac-prove ensure --fix-forward --ref R (+qa)")
 TaskCreate("Migration safety — expand/contract audit since last release")
 TaskCreate("Ship — tag vX at R, promote web (not rebuild), invoke ac-distribute for native")

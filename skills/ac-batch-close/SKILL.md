@@ -88,6 +88,8 @@ This ceremony's table:
 
 ```
 TaskCreate (one per section, in run order):
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
   1.  Acquire build slot; determine batch anchor + scope + quality gate   in_progress
   2.  QA smoke gate (conditional)                                         pending
   3.  Gitleaks scan + Tier 1 CI dispatch + fix-forward (Act 1)            pending

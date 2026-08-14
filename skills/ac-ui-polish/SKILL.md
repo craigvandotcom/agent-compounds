@@ -89,6 +89,8 @@ Gains plateau after ~3 elevation cycles per surface — don't loop past diminish
 
 **Not the Conformance/Elevation ledgers above** — those are the audit's *findings* output
 (defects + scored surfaces). This is a separate, runtime **progress list** (`TaskCreate` /
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 `TaskUpdate`) so a glance shows where a long whole-app crawl actually is — call it "run tasks"
 here to avoid colliding with the "ledger" term already owned by Conformance/Elevation. One task
 per major section, created at the start of the run:

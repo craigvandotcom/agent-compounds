@@ -91,6 +91,8 @@ Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section
 
 ```
 TaskCreate("Scope + scan — read AGENTS.md, scan beads/plans/backlog via board-scan")
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 TaskCreate("2a — archive completed backlog items")
 TaskCreate("2b — archive beadified plans")
 TaskCreate("2c — archive completed plans (all beads closed)")

@@ -103,7 +103,9 @@ strands every lesson in the transcript.
 
 > Track the run's position in the Phase-0 **run ledger** (`TaskCreate`) — update it at every
 > barrier; it is the anti-early-exit anchor and the resume point after compaction. Doctrine:
-> `ac-pipeline/references/run-ledger.md` (ledger tracks the RUN, never the work).
+> `ac-pipeline/references/run-ledger.md` (ledger tracks the RUN, never the work). If
+> TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in
+> progress.md; this is a sanctioned equivalent, not a deviation.
 
 ---
 

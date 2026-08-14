@@ -88,7 +88,9 @@ TaskCreate (one per section, in run order):
 
 The section headers below (`1a.` … `1c.`, then Phase 2 → Phase 4, then Teardown) map to
 these tasks 1:1; mark task 1 `completed` now. A compacted conductor reads the ledger to
-know whether teardown (task 8) still owes work.
+know whether teardown (task 8) still owes work. If TaskCreate is unavailable (subagent /
+fan-out path), track the same 8 sections inline in `$ARTIFACTS_DIR/progress.md`; this is
+a sanctioned equivalent, not a deviation.
 
 ---
 
@@ -553,7 +555,11 @@ Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
 ### Teardown (operational — part of landing)
 
 Landing means leaving NO live debris. Run this regardless of how the session reached land
-(clean finish, iteration cap, regression stop, human "stop", or error):
+(clean finish, iteration cap, regression stop, human "stop", or error). **Child-path
+teardown-resume:** if TaskCreate is unavailable (subagent / fan-out path), the resume
+artifact is `$ARTIFACTS_DIR/progress.md` section `### Teardown` — write it `in_progress`
+before this section starts and `completed` only after Final Verification. A compacted
+child that cannot find that section still owes teardown; do not skip it.
 
 1. **Kill spawned background tasks/waiters.** Long-running poll/wait loops are the classic
    zombie — a `until cond; do sleep N; done` whose condition never fires runs forever.

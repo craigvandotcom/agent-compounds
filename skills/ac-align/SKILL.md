@@ -59,6 +59,8 @@ Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section
 
 ```
 TaskCreate("Init — resolve _strategy/ or a stated north star")
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 TaskCreate("Strategy ingestion — synthesize value prop, user, milestone, launch sequence")
 TaskCreate("Pipeline scan — read the board (beads/plans/backlog)")
 TaskCreate("Alignment audit — strategic necessity, timing, missing execution")

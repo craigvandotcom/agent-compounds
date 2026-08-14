@@ -162,7 +162,7 @@ instead of pre-committing to a round count or showing phantom rounds). `TaskUpda
 (per round: finding counts + convergence verdict), so a glance at the ledger shows exactly
 where the run is.
 
-Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
+Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items. If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 
 ```
 # Fixed tasks — create upfront at Phase 0:

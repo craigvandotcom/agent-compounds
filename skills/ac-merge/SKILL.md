@@ -59,6 +59,8 @@ advance as you go, persist captured facts to `$STATE`). This ceremony's table:
 
 ```
 TaskCreate (one per section, in run order):
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
   1.  Rebase on main + quality gate                    in_progress
   2.  QA smoke gate (conditional)                      pending
   3.  Version bump + native propagation                pending

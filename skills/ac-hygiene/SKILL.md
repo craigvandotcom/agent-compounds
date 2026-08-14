@@ -232,6 +232,8 @@ Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section
 ```
 # Fixed tasks — create upfront at Phase 0:
 TaskCreate("Initialize — scope, confirm on main (trunk-direct), consensus registry, baseline gate")
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 TaskCreate("Coverage audit — surface inventory vs journey registry; file journey-gap beads")
 TaskCreate("Triage deferred findings + file bead epic (Exhaust Rule)")
 TaskCreate("Exhaustive quality gate — format → type-check → lint → full suite")

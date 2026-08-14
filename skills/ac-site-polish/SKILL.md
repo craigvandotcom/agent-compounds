@@ -88,6 +88,8 @@ is absent, **halt and prompt** — do not fall back to a directory scan (path ge
 ### Run tasks (whole-site mode)
 
 A runtime **progress list** (`TaskCreate`/`TaskUpdate`) — distinct from the Conformance/Elevation
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 ledgers below, which are the audit's *findings* output — so a glance shows where a long whole-site
 crawl actually is. One task per major section, created at the start of the run:
 

@@ -39,6 +39,8 @@ The fast, repeatable closed-beta push. Apps typically reduce this to **one comma
 
 Long-running and failure-prone (signing probes, processing hangs, keychain footguns) —
 open a `TaskCreate` run ledger, one task per section, so a stalled/hung step is visible
+
+If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
 rather than silent:
 
 Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
