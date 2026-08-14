@@ -1,8 +1,8 @@
 ---
 skill: ac-implement
 created: 2026-07-29
-last_pass: 2026-08-14
-entries: 11
+last_pass: 2026-08-15
+entries: 12
 ---
 
 # ac-implement — friction log
@@ -158,3 +158,16 @@ entries: 11
 - status: open
 - proposed_fix: never author ACs that exclude `cross-repo` beads at selection (the bd-wozho AC1/3/6 shape). Live contract (agent-compounds `b0fff17`): implement in THIS session, commit in the owning repo via `git -C "$(realpath <file>)" rev-parse --show-toplevel`. Exclusion hides the only board that holds the id.
 - narrative: RUN 20260814-213141-15553. Implementing bd-wozho, exclusion-at-selection ACs would have undone `b0fff17` (cross-repo stays selectable; exclusion limbos the id). Closed as "Implemented under b0fff17 contract (exclusion refused)." Delivered beads-standards definition, ac-implement env row, `ac-pipeline/scripts/cross-repo-gate.test.sh`. SHA `88e7964d`. The older corollary in `loop-retro-gate-that-cannot-confirm-scope-must-fail-loud` ("cross-repo has no enforcement") is the PRE-b0fff17 state; do not re-derive exclusion from it.
+
+## stale-perishable-failure-premise-not-reverified
+- skills: [ac-implement]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [prod-only-env-blocks-live-db-ac-undetected-at-claim]
+- first_seen: 2026-08-14
+- last_seen: 2026-08-15
+- stage: ac-implement
+- status: open
+- proposed_fix: before claim, re-verify a currently-failing external state (CI red, prod 500, failing-probe) with the matching live check; if the failure is gone, follow the Consumes-failure protocol and do not implement the original framing.
+- narrative: a bead framed as "fix the red CI / still-broken probe" can be claimed after the cited failure has already cleared. Implementing the original framing then ships a no-op or a revert of a later fix. Artifact-existence premise-check does not catch this class — the file still exists; the perishable claim (currently-failing external state) is what went stale. The Phase 0 quality-gate baseline is a session-health read, not this gate.

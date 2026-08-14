@@ -401,11 +401,13 @@ A bead with no `## Consumes` header at all predates the contract (legacy) — lo
 
 **Guard: premise-check embedded factual claims.** Beyond artifact-existence, grep the
 bead's spec for any stated data value or factual claim the fix logic depends on (a DB
-row's field value, "column already exists", an assumed parent/child relationship) and
-re-verify it against LIVE ground truth — DB query, schema, git tree — before coding.
-Do not trust the refined spec's premise at face value even post-refine: specs go stale
-between filing and implementation. A falsified premise turns the bead into a revert or a
-close, not a fix.
+row's field value, "column already exists", a parent/child, a currently-failing external state
+— CI red, prod 500, a failing-probe) and re-verify it against LIVE ground truth — DB query,
+schema, git tree, matching live check — before claim. Specs go stale: a falsified premise is
+a revert or a close, not a fix. If the live check shows the cited failure is gone, follow
+the Consumes-failure protocol above. Do not implement the original framing. Close only when
+no remaining work is named; else leave de-stamped. Trigger on title/body signals or an
+`observed:` stamp — not a new label, not the Phase 0 baseline.
 
 **Once a refined, conflict-free, env-supported, premise-verified bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
