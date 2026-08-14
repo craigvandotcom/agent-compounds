@@ -206,10 +206,12 @@ mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole
 ## Project key format (canonical — the one home for the key-format rule)
 
 **Rule: always pass the app's canonical two-segment key `neometa/<app-dir>` (e.g.
-`neometa/body-compass-app`, `neometa/agent-compounds`) — from the app's `session-start.md`.
-NEVER an absolute path, and never an ad-hoc project slug.** One canonical key = one shared
-mailbox; a divergent key forks a *separate* project (a separate mailbox) and the coordinating
-sessions can no longer see each other — split-brain.
+`neometa/body-compass-app`, `neometa/agent-compounds`) — READ the pinned `human_key`
+from the app's `.claude/hooks/session-start.md`. NEVER derive it from cwd, the repo
+root, or `git rev-parse --show-toplevel`, and never an absolute path or ad-hoc slug.**
+One canonical key = one shared mailbox; a divergent key forks a *separate* project
+(a separate mailbox) and the coordinating sessions can no longer see each other — split-brain.
+Every `ac-*` call site that names `CANONICAL_PROJECT_KEY` resolves it that way.
 
 **Which arg takes it:** `macro_start_session` takes it as **`human_key`**; every other
 Agent Mail tool (`file_reservation_paths`, `release_file_reservations`, `install_precommit_guard`,

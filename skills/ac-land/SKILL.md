@@ -580,7 +580,28 @@ Landing means leaving NO live debris. Run this regardless of how the session rea
    deregistered or retired (`agent-mail/references/agent-identity.md` § Tier 2).
    Then perform the **Layer-2 roster sweep** (doctrine `agent-mail/references/agent-identity.md` wiring
    `ac-ycr.5`): the Exit-Land prompt handed you `AGENT_MAIL_ROSTER` = the loop conductor's name
-   plus every child identity this run registered. Layer 2 is **reservations-only** — for each name
+   plus every child identity this run registered.
+
+   **Project-key resolution (bd-8kdjl).** Any Agent Mail call that still takes `project_key` /
+   `human_key` MUST use the pinned literal from `.claude/hooks/session-start.md`
+   (`human_key: "neometa/<app-dir>"`). READ that file — do not derive a key from cwd,
+   `$PROJECT_ROOT`, `git rev-parse --show-toplevel`, or any absolute path. An absolute
+   path slugifies into a **forked mailbox** and the sweep reports "roster clean" by
+   absence. Observed resolver (run this, do not invent the string):
+
+   ```bash
+   PINNED_KEY=$(sed -n 's/.*human_key: *"\(neometa\/[^"]*\)".*/\1/p' \
+     .claude/hooks/session-start.md | head -1)
+   [ -n "$PINNED_KEY" ] || { echo "FATAL: no pinned human_key in session-start.md" >&2; exit 2; }
+   # Layer-2 existence check uses ONLY $PINNED_KEY (never $PROJECT_ROOT / pwd).
+   ```
+
+   Layer 2's *release* sweep itself is **not** keyed on one project_key — use the
+   sqlite query in `agent-mail/references/agent-identity.md` § "The sweep is NOT
+   project-key-agnostic" so a forked mailbox cannot hide holds. `whois` / verify
+   calls that still need a key use `$PINNED_KEY` only.
+
+   Layer 2 is **reservations-only** — for each name
    on that roster (skip the live conductor — it deregisters itself after you return), run ONLY
    `force_release_file_reservation` on any stale holds it left (the tool validates abandonment
    heuristics before releasing). Do NOT `retire_agent`/`deregister_agent` the roster names:
