@@ -90,6 +90,14 @@ evidence protocol.
    `proof.required: sim-drive|device-only`), ALL in the `sequential` lane; write
    `$ARTIFACTS_DIR/journeys-manifest.json` BEFORE any spawn (visible `skipped`
    reasons — e.g. sim-impossible flows from CORE).
+   **Cross-ceremony account (per-lane):** this ceremony is already sequential
+   inside the device lane (`serialize_auth` is implicit). That does **not**
+   isolate you from a concurrent `ac-qa-browser` run. Read the consuming app's
+   `CORE/journeys/environments.md` ceremony column and authenticate as the
+   `device` row — never the `browser` row. Intra-lane serialize does not cover
+   cross-ceremony concurrency (onboarding-gate + GLOBAL signOut confound). If
+   this lane flips the admin "Force onboarding on next login" toggle, restore
+   it before releasing the account.
 3. **Dispatch sequentially:** one worker per journey via
    **`references/device-tester-prompt.md`** (dispatched to the `device-tester`
    agent; no model re-pin). Bounded wait per `ac-pipeline/references/delegation-contract.md`;

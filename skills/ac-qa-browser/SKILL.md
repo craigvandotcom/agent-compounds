@@ -147,6 +147,13 @@ without applying the session (0-for-4 across the 2026-07-12 shakedown; also
 >   per-worker account pool is NOT provisioned, OR run against a quiescent dev server / local
 >   Supabase with a seeded account (no HMR churn). Serialize is the cheap stopgap; per-worker
 >   accounts is the robust answer.
+> - **CROSS-CEREMONY — do not share the browser account with `ac-qa-device`:** intra-lane
+>   `serialize_auth` covers parallel workers inside THIS ceremony only. It does **not**
+>   cover a concurrent device-lane run (ac-publish Phase 1 fans both out). Assign accounts
+>   by ceremony from the consuming app's `CORE/journeys/environments.md` table (`ceremony`
+>   column): browser lane → that table's `browser` row; device lane → the `device` row.
+>   Mutually exclusive lanes on one account are obsolete once those two rows exist. Onboarding
+>   / GLOBAL signOut findings from a shared-account cross-ceremony run are CONFOUNDED.
 
 ### Phase 3 — Dispatch workers
 
