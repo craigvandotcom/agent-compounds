@@ -351,7 +351,7 @@ If the bead is not `refined`:
 1. Do NOT claim it
 2. If it carries no lifecycle label at all, add `unrefined`: `br label add <id> "unrefined"`
 3. Log: "Skipping <id> (missing `refined` — needs `/ac-bead-refine` first)"
-4. Get the next candidate from `br ready --json | jq '[.[] | select(.labels | index("refined"))] | .[0]'`
+4. Get the next candidate from `br ready --json | jq '[.[] | select((.labels | index("refined")) and (.labels | index("human-gate") | not))] | .[0]'`
 5. If no refined beads remain, STOP the session early
 
 **Guard: reserve bead files via Agent Mail.** Before claiming, reserve the bead's files using `AGENT_NAME` (registered via `macro_start_session` in Phase 0 — unique per session). If the call returns a conflict, this bead is taken:
@@ -383,6 +383,7 @@ After `br show <id>` + `br comments <id>` but BEFORE claiming, scan the spec's F
 | `*.swift`, `*.metal`, `xcodebuild`, `npx cap open ios`, "Mac-only", "TestFlight" | macOS + Xcode |
 | `supabase migration up --local`, `pnpm test:integration`, `supabase_db_*` container, `supabase status` | Local Supabase stack |
 | `*.kt`, `gradle`, `adb`, "emulator" | Android SDK + emulator |
+| `cross-repo` label / `Repo: <name>` | that repo is reachable (symlink or checkout); **commit there** (`git -C "$(realpath <file>)" rev-parse --show-toplevel`). Do not skip the bead — the board that holds the id is this session (b0fff17). |
 
 If the bead requires absent infrastructure:
 1. Do NOT claim it

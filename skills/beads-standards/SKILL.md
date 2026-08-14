@@ -113,6 +113,14 @@ inherited machine-wide, not repeated here.
 Readiness for pickup = **presence** of `refined`, never inferred from the absence of
 `unrefined`. This is what gates loop/agent pickup everywhere this labelling is adopted.
 
+**`cross-repo` — work whose bytes live in a different git repo than the board that
+holds the ticket.** Mandatory body line: `Repo: <name>` (the owning checkout —
+`agent-compounds`, root `~/Repos`, etc.). Enforcement: `ac-implement/SKILL.md`
+selection filter still *selects* these beads (the board that holds the id is the
+only one that can see them); the env-prerequisite table + `ac-pipeline/references/commit-discipline.md`
+§ Cross-repo skill/infra beads require the session to **commit in that repo**,
+never into the board repo. Do not overload `human-gate` as a routing stopgap.
+
 ## Sequencing & parentage (derived, not authored)
 
 **Bead-level `blocks` edges are the only authored sequencing truth.** Epic order is
