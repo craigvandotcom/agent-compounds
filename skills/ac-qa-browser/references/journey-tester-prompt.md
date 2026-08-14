@@ -107,6 +107,14 @@ concurrent same-account run is likely environmental (refresh-token rotation + HM
 bd-iro5f) — record it in the verdict `findings` with the recovery note, but do NOT mark it
 `qa-blocker`; the conductor re-confirms in a clean env before any blocker-class treatment.
 
+## Dead-server bound (infra-flake, do not idle)
+
+If `open` / `wait` hits connection-refused, INTEGRITY_VIOLATION, or the
+server is otherwise gone, stop within ~5 minutes and return status
+INCONCLUSIVE with an infra-flake note. Do not poll a dead-server. A
+concurrent `next build` can replace `.next/BUILD_ID` and serve-prod.sh
+exits 7; sitting on the dead port burns the rest of the run.
+
 ## Teardown (non-negotiable, success AND failure paths)
 
 `agent-browser --session {SESSION_NAME} close` — your session, ONLY yours. Never
