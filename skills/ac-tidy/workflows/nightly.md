@@ -107,8 +107,10 @@ For each remaining cluster (consolidation, dedup, finding-bead prune, or a Tier-
 failed the gate / toggle-off):
 
 ```bash
-br create "<title>" -t decision --labels "human-gate,pipeline-proposal" -p <prio> \
+br create "<title>" -t decision --labels "pipeline-proposal" -p <prio> \
   --description "<full self-contained memo>"
+# Add human-gate to --labels ONLY when the memo states
+# `Gate-reason: fork — …` or `Gate-reason: authorization — …` (bd-zmqh2 / bd-l6o90).
 ```
 
 Capture the returned id and write it into the proposal file's `bead:` slot. **Write the

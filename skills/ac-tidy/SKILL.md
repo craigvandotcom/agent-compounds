@@ -16,7 +16,7 @@ In **NIGHTLY** mode:
 
 - **Tier 1 — auto-apply** (non-destructive reconciliation): Phase 2d (`captured → planned`) + Phase 2e (fix/infer plan frontmatter) + adding missing `plans:` fields + stripping a stale `unrefined` label from any CLOSED bead — **including one labelled `human-gate`/`qa-blocker`**, which the guardrail below explicitly scopes to OPEN beads (a closed bead is past refinement by definition — pure label reconciliation; `br label remove <id> unrefined`, verify via the issues.jsonl, not `br show`) + Phase 2f (stamping fail-safe `unrefined` onto any OPEN bead with a lifecycle-label gap — never `refined`, that stamp is only earned). Always runs.
 - **Tier 2 — auto-apply provably-done archive** (Phases 2b/2c): ONLY when the Tier-2 toggle is ON *and* the positive-proof gate passes (see NIGHTLY Guardrails). Otherwise the item falls through to a Tier-3 proposal.
-- **Tier 3 — propose only** (Phases 3–4: orphans, consolidation, dedup, finding-bead prune): emit a proposal file + a `human-gate,pipeline-proposal` bead. **Never** `AskUserQuestion` — there is no human. `ac-human-session` applies approved proposals later by re-invoking this skill's INTERACTIVE flow.
+- **Tier 3 — propose only** (Phases 3–4: orphans, consolidation, dedup, finding-bead prune): emit a proposal file + a `pipeline-proposal` bead. Add `human-gate` ONLY when the memo states a two-reasons-test reason (`Gate-reason: fork — …` or `Gate-reason: authorization — …`). **Never** `AskUserQuestion` — there is no human. `ac-human-session` applies approved proposals later by re-invoking this skill's INTERACTIVE flow.
 
 INTERACTIVE mode is unchanged from the sections below — every move requires user confirmation.
 
@@ -24,8 +24,8 @@ INTERACTIVE mode is unchanged from the sections below — every move requires us
 
 *(This exact header is the deterministic marker the `nightly.md` heartbeat greps to read the toggle.)*
 
-- **Tier-2 auto-archive: ON** — the toggle. Default OFF for the pilot. It lives here in the SKILL **body** (never YAML frontmatter — the scheduler strips frontmatter before the agent sees the prompt). Flip to ON only via the post-observation sign-off; because it is an agent-compounds edit, it takes effect only after re-sync + `pm2 restart pai-scheduler`.
-- **Positive proof, never empty-parse.** Before any Tier-2 archive: require `N_matching > 0` **and** `N_closed == N_matching` **and** the `br list --json` result parsed to a non-empty, expected shape. **`N_matching` and `N_closed` count IMPLEMENTATION beads ONLY — beads carrying the `pipeline-proposal` label are EXCLUDED from both** (label semantics: `beads-standards/reference/bead-conventions.md` § Labels — a proposal bead never counts as implementation proof). This skill emits those beads itself, so the exclusion binds at every site that defines "matching" here — the Tier-2 archive gate above and Phases 2b and 2c below. *Worked negative example:* a loop-ready plan's only match is `bd-pzlhv`, a CLOSED `pipeline-proposal` bead that merely NAMES the plan, its close reason recording a human decision to KEEP it. Naive arithmetic `N_matching = 1` / `N_closed = 1` → gate passes → an un-beadified loop-ready plan is archived. Under the exclusion `bd-pzlhv` is dropped, so `N_matching = 0`, the `N_matching > 0` clause fails, and the plan falls through to a **Tier-3 proposal** — never a silent no-op, never an archive. `br` output shape varies (`{issues:[]}` vs a bare array — `bca-br-tooling-flaky`); an empty or misparsed result MUST abort the archive and fall through to a Tier-3 proposal — never read emptiness as "done".
+- **Tier-2 auto-archive: OFF** — the toggle. Default OFF for the pilot. Flipped OFF 2026-08-14 (Craig, bd-350ku / bd-0y49x): the gate twice passed on a live plan (proposal beads as proof, then a descoped close as "delivered"). It lives here in the SKILL **body** (never YAML frontmatter — the scheduler strips frontmatter before the agent sees the prompt). Flip to ON only via a later post-observation sign-off; because it is an agent-compounds edit, it takes effect only after re-sync + `pm2 restart pai-scheduler`.
+- **Positive proof, never empty-parse.** Before any Tier-2 archive: require `N_matching > 0` **and** `N_closed == N_matching` **and** the `br list --json` result parsed to a non-empty, expected shape. **`N_matching` and `N_closed` count IMPLEMENTATION beads ONLY — beads carrying `pipeline-proposal` or `dream-proposal` are EXCLUDED from both** (a proposal bead never counts as implementation proof). A bead "matches" a plan only via a plan-provenance field (`plan:` / `source_plan` / a beadify-authored link) — a free-text mention of the path in a memo is not a match. **`N_closed` counts only delivery-shaped `close_reason` values** (`shipped:` / `fixed:` / `done:`). `out-of-scope` / `wontfix` / `descoped` / `obsolete` (without a delivery verb) is NOT delivered — that bead is dropped from both counts (bd-0y49x). This skill emits proposal beads itself, so the exclusion binds at every site that defines "matching" here — the Tier-2 archive gate above and Phases 2b and 2c below. *Worked negative example:* a loop-ready plan's only match is `bd-pzlhv`, a CLOSED `pipeline-proposal` bead that merely NAMES the plan, its close reason recording a human decision to KEEP it. Naive arithmetic `N_matching = 1` / `N_closed = 1` → gate passes → an un-beadified loop-ready plan is archived. Under the exclusion `bd-pzlhv` is dropped, so `N_matching = 0`, the `N_matching > 0` clause fails, and the plan falls through to a **Tier-3 proposal** — never a silent no-op, never an archive. `br` output shape varies (`{issues:[]}` vs a bare array — `bca-br-tooling-flaky`); an empty or misparsed result MUST abort the archive and fall through to a Tier-3 proposal — never read emptiness as "done".
 - **Never touch OPEN `human-gate` or `qa-blocker` beads** — gated, not housekeeping. A CLOSED one gates nothing (a gate withholds FUTURE work, and there is none), so the Tier-1 stale-label carve-out below applies to it.
 - **Provable, never heuristic** — keyword/similarity-inferred "looks done" is a Tier-3 proposal, never an auto-move.
 
@@ -202,6 +202,12 @@ br list --json --limit 1000 | jq -r '
 
 Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
 
+### Human-gate reason lint (bd-l6o90 deliverable 3)
+
+**NIGHTLY (Tier 3) / INTERACTIVE (report):** flag every OPEN `human-gate` bead whose description + comments do not contain a `Gate-reason: fork` or `Gate-reason: authorization` line. Report the id. Propose reclassification (drop `human-gate` if neither reason applies; add the missing line if one does). **Never auto-strip the label** — that is a docket write.
+
+Report: "human-gate missing Gate-reason: {id} — propose reclassification (Tier 3)."
+
 **TaskUpdate("2f", completed)**
 **TaskUpdate("Flag orphans + suggest consolidation", in_progress)**
 
@@ -284,7 +290,7 @@ those are gated, not housekeeping.
 
 **INTERACTIVE:** present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
 
-**NIGHTLY (Tier 3):** do NOT `AskUserQuestion` (no human present). Instead emit a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`) + one `human-gate,pipeline-proposal` bead per cluster, per `workflows/nightly.md`. Before emitting, **dedup**: skip any cluster already covered by an open `pipeline-proposal` bead (the populated-`bead:` slot is the idempotency marker). `ac-human-session` applies approved proposals by re-invoking this skill's INTERACTIVE flow.
+**NIGHTLY (Tier 3):** do NOT `AskUserQuestion` (no human present). Instead emit a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`) + one `pipeline-proposal` bead per cluster, per `workflows/nightly.md`. Add `human-gate` only when the memo states `Gate-reason: fork` or `Gate-reason: authorization`. Before emitting, **dedup**: skip any cluster already covered by an open `pipeline-proposal` bead (the populated-`bead:` slot is the idempotency marker). `ac-human-session` applies approved proposals by re-invoking this skill's INTERACTIVE flow.
 
 **TaskUpdate("Flag orphans + suggest consolidation", completed)**
 **TaskUpdate("Report", in_progress)**
