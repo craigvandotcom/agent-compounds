@@ -127,7 +127,7 @@ frontmatter:
 - **loop-ready** — the autonomous hand-off flag (the loop owns these; humans don't sign them off again)
 - **refinement_rounds** — frontmatter field, else count `### Round N` headings in the `## Refinement Log` (headings only)
 - **source_backlog**, **mtime** (recency)
-- **Fallback** (no frontmatter): `## Refinement Log` → `refined`; `Status: Approved` text → `approved`; referenced by a bead description → `beadified`; else `draft`. Flag the missing frontmatter for `/ac-tidy`.
+- **Fallback** (no frontmatter): `## Refinement Log` → `refined`; `Status: Approved` text → `approved`; referenced by a bead record (description OR comments — match the whole record, then filter) → `beadified`; else `draft`. Flag the missing frontmatter for `/ac-tidy`. An unparseable board (jsonl unreadable, `br` error) is an ERROR, not `N_matching=0` — empty and error stay distinguishable (never fail toward "nothing to do").
 
 ## Scan C — backlog
 
