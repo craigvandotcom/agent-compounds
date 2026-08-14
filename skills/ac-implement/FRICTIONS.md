@@ -1,8 +1,8 @@
 ---
 skill: ac-implement
 created: 2026-07-29
-last_pass: 2026-08-10
-entries: 10
+last_pass: 2026-08-14
+entries: 11
 ---
 
 # ac-implement — friction log
@@ -145,3 +145,16 @@ entries: 10
 - status: open
 - proposed_fix: a seam/RED harness must reproduce the PRODUCTION shell context, not a stricter one — if the code under test runs without `set -e`, the harness must not impose it. When a RED fires, check the harness's own strictness before believing the failure.
 - narrative: a seam harness running under `set -e` aborted its 0-match legacy case at `grep`'s exit 2, BEFORE the FATAL branch that case exists to prove could fire. The production context has no `set -e`, so the failure was manufactured entirely by the harness and the RED said nothing about the code. Cost one turn to diagnose. The general hazard: fixture infrastructure that is stricter than production produces failures that look like real defects and cannot be reproduced by the thing being tested.
+
+## cross-repo-exclusion-acs-undo-b0fff17
+- skills: [ac-implement]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-14
+- last_seen: 2026-08-14
+- stage: implement
+- status: open
+- proposed_fix: never author ACs that exclude `cross-repo` beads at selection (the bd-wozho AC1/3/6 shape). Live contract (agent-compounds `b0fff17`): implement in THIS session, commit in the owning repo via `git -C "$(realpath <file>)" rev-parse --show-toplevel`. Exclusion hides the only board that holds the id.
+- narrative: RUN 20260814-213141-15553. Implementing bd-wozho, exclusion-at-selection ACs would have undone `b0fff17` (cross-repo stays selectable; exclusion limbos the id). Closed as "Implemented under b0fff17 contract (exclusion refused)." Delivered beads-standards definition, ac-implement env row, `ac-pipeline/scripts/cross-repo-gate.test.sh`. SHA `88e7964d`. The older corollary in `loop-retro-gate-that-cannot-confirm-scope-must-fail-loud` ("cross-repo has no enforcement") is the PRE-b0fff17 state; do not re-derive exclusion from it.

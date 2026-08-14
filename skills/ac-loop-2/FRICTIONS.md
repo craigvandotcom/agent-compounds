@@ -198,18 +198,20 @@ entries: 9
 - recurrence: 0
 - related: [refine-all-degrades-to-priority-cut-when-set-exceeds-width]
 - first_seen: 2026-08-13
-- last_seen: 2026-08-13
+- last_seen: 2026-08-14
 - stage: spec
 - status: open
 - proposed_fix: see the primary entry.
 - narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `skills/ac-loop/FRICTIONS.md`,
-  where occurrences are counted (recurrence 31 as of RUN 20260813-235654-12053). Land suggested
+  where occurrences are counted (recurrence 32 as of RUN 20260814-213141-15553). Land suggested
   minting `phase-1-refine-all-degraded-solo-no-task-tool`; judged same-root (no Task tool, sequential
   lenses, independence lost) and not minted. LOCAL MANIFESTATION: every Phase-1 refine child this
   run was degraded-solo (no Task tool in this harness) and ran 3-4 sequential lenses. The honesty
   half of bd-nreuv held — children stamped `degraded-solo` rather than faking a panel. What this
   run adds is a conductor-facing rule: do not collapse drain width because quality is solo
   (throughput across beads is still paid), and a sitting must not be read as panel-quality.
+  **RUN 20260814-213141-15553 — same root under ac-loop (not v2):** sequential 3-round refine,
+  no Task tool, `degraded-solo` stamped. Counted at the primary.
 
 ## later-overlap-revert-is-unprobeable-not-hollow
 - skills: [ac-loop-2]

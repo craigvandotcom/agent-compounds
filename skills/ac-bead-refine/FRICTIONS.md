@@ -2,7 +2,7 @@
 skill: ac-bead-refine
 created: 2026-07-22
 last_pass: 2026-08-14
-entries: 23
+entries: 24
 ---
 
 # ac-bead-refine — friction log
@@ -353,3 +353,22 @@ entries: 23
   is the mutation-sampler input, and naming the file or the first test is not enough when
   only one assertion fires. Cost this run was minor (hollow% stayed 0/6; classified as
   improvement not reopen). Evidence: closed bd-nx1s5; repair commit `48a3abc8`.
+
+## phase-skills-mandate-panels-a-subagent-cannot-spawn
+- skills: [ac-bead-refine]
+- impact: L
+- frequency: every-run
+- recurrence: 0
+- related: [heavy-review-does-not-mean-converged]
+- first_seen: 2026-08-14
+- last_seen: 2026-08-14
+- stage: refine
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in
+  `skills/ac-loop/FRICTIONS.md`, where occurrences are counted (recurrence 32 as of
+  RUN 20260814-213141-15553). Recorded here because land tagged this run's instance
+  skill-scoped to ac-bead-refine. LOCAL MANIFESTATION: sequential 3-round refine with
+  no Task tool, stamped `degraded-solo` rather than faking a panel. Independence lost
+  as the primary already predicts. Not a new root — do not mint
+  `no-task-tool-degraded-solo`.

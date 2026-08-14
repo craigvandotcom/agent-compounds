@@ -1,7 +1,7 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-13
+last_pass: 2026-08-14
 entries: 17
 ---
 
@@ -118,10 +118,10 @@ entries: 17
 - skills: [ac-loop, ac-loop-2, ac-bead-refine, ac-review, ac-qa-browser]
 - impact: L
 - frequency: every-run
-- recurrence: 31
+- recurrence: 32
 - related: [standing-sanctions-not-threaded-into-delegation-prompt, refine-all-degrades-to-priority-cut-when-set-exceeds-width]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-13
+- last_seen: 2026-08-14
 - stage: ac-loop
 - status: open
 - proposed_fix: declare an explicit DEGRADED SINGLE-CONDUCTOR MODE in each panel-mandating phase skill (`ac-bead-refine`, `ac-review`, `ac-qa-browser`) — when the skill is invoked from inside a subagent (no spawn capability), the mandated N-way parallel panel collapses to N sequential inline LENSES run by the one agent, and that degradation is declared in the artifact rather than silently substituted. Tracked by bd-nreuv. LOOP-2 ADDITION (2026-08-13): a sitting that finished a degraded drain must not be read as panel-quality, and drain WIDTH must not be collapsed because of it — throughput across beads is still paid.
@@ -143,6 +143,10 @@ entries: 17
   still a drain — do not collapse Phase-1 width because quality is solo, and a sitting must not
   be read as panel-quality. Pointer in `skills/ac-loop-2/FRICTIONS.md` (same id). Land's mint
   suggestion `phase-1-refine-all-degraded-solo-no-task-tool` was judged same-root and not minted.
+  **RUN 20260814-213141-15553 (BCA, ac-loop), +1 — refine again sequential 3-round solo vs panel.**
+  No Task tool → degraded-solo. Honesty half held (label stamped, panel not faked). Pointer
+  added in `skills/ac-bead-refine/FRICTIONS.md` (same id) — this run's land tagged the
+  friction skill-scoped to refine, which is a consumer of the mandate, not a new root.
 
 ## dcg-blocks-the-skills-own-canonical-artifact-redirects
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline]
