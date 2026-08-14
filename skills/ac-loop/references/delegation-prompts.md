@@ -80,7 +80,11 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > in no one's diff: `.next/`, `node_modules/.cache/`, `dist/`, the vitest cache, `/tmp`
 > artifact dirs keyed by anything less specific than the claim id, and the beads ledger.
 > Treat every one of those as contended even when your source territory is clean:
-> serialize through the conductor, or key the path by claim id."
+> serialize through the conductor, or key the path by claim id.
+> If any claimed ID is `cross-repo` (or its Repo ownership names agent-compounds /
+> root ~/Repos): implement it in THIS session; commit in the repo that tracks the
+> bytes per `ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra
+> beads. Do not skip; the other repo's loop cannot see this id."
 
 ## Child friction schema (D1)
 

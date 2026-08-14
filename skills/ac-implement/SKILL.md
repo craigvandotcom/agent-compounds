@@ -82,6 +82,19 @@ git pull --rebase
 
 Confirm you're on `main` (`git branch --show-current`) before doing anything else. If you find yourself on some other branch, `git checkout main`.
 
+### Cross-repo beads stay in THIS session
+
+A ready bead labelled `cross-repo` (or whose `## Repo ownership` names
+`agent-compounds` / root `~/Repos`) is **in-scope**. Do not skip it, do not
+hand it to a loop in the other repo (that board does not have the id). Edit
+via the checkout's skill symlinks; **commit in the repo `git -C "$(realpath
+<file>)" rev-parse --show-toplevel` names**, on that repo's mainline. Full
+rule: `ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra
+beads. Skill/markdown-only beads skip Phase 0 `pnpm type-check` / full-suite
+baseline and the per-commit `pnpm test` / `ubs` app gates — the AC is the
+bead's own grep/diff. Reserve Agent Mail paths in **both** project keys
+before editing.
+
 ### Install Pre-Commit Guard
 
 ```
@@ -505,7 +518,9 @@ Per-bead UI validation is deferred — `ac-land`'s 1c UI validation suite is **r
 
 **Commit per the canon — `ac-pipeline/references/commit-discipline.md`:** the full one-stop sequence — fetch, 0-behind check, H7d pathspec
 commit, `git add` first for NEW untracked files, `--pathspec-from-file` for route-group
-paths `(…)`/`[…]`, no-stash escalation ladder — lives there; do not re-derive it here.
+paths `(…)`/`[…]`, no-stash escalation ladder, **and § Cross-repo skill/infra beads
+when the bead is `cross-repo`** (commit in the target repo; a clean BCA `git status`
+after a symlink edit means you have not committed yet) — lives there; do not re-derive it here.
 Bead-work commit shape:
 
 ```bash

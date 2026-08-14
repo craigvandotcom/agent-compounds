@@ -19,6 +19,7 @@ touch it, never commit it "on their behalf".
 - Pre-commit deletion check
 - Never blind-commit formatter output on markdown
 - Commit + push sequence
+- Cross-repo skill/infra beads (commit-root)
 - No-stash escalation ladder (when rebase/push is blocked by foreign WIP)
 - Rules
 
@@ -85,6 +86,38 @@ git ls-remote origin main   # must match
 
 ---
 
+## Cross-repo skill/infra beads (commit-root)
+
+**The board that holds the ticket is not always the git repo that holds the files.**
+App boards (body-compass-app especially) file `cross-repo` beads whose `## Repo
+ownership` names `agent-compounds` (shared skills, via the app's `.claude/skills/*`
+symlinks) or root `~/Repos` (infra/jobs). The **app loop must implement them** —
+the target repo's beads db does not contain these IDs, so they are invisible there.
+Skipping them in the app loop is how they sit in limbo.
+
+**Detect:** label `cross-repo`, **or** the bead body names `CROSS-REPO` / `Repo
+ownership` pointing at a repo that is not `git rev-parse --show-toplevel` of the
+checkout you claimed from.
+
+**Commit in the repo that tracks the bytes, on that repo's mainline.** Resolve
+the target: `git -C "$(realpath <edited-file>)" rev-parse --show-toplevel`.
+A BCA checkout's `.claude/skills/ac-tidy` is a symlink — editing it dirties
+**agent-compounds**, not BCA. `git status` in BCA staying clean is the signal
+you are about to close a bead against an empty commit. Run `git status` in the
+resolved target before committing.
+
+**Never one commit across a repo boundary.** A bead that edits both an app file
+and a skill file is two pathspec commits (app repo, then target repo), then one
+`br close` citing both SHAs. Skill/markdown-only diffs skip app gates (`pnpm
+test` / `test:all` / `type-check` / the build hook) — the gate is the bead's
+own grep/diff ACs. Reserve files in **both** Agent Mail projects (board repo +
+target repo) before editing.
+
+**Do not open a BCA `wave/*` branch for these.** Doctrine and skill text go
+to the target's `main`.
+
+---
+
 ## No-stash escalation ladder (when rebase/push is blocked by foreign WIP)
 
 Cheapest first — stop at the first that applies. **Never `git stash`.**
@@ -143,3 +176,4 @@ Cheapest first — stop at the first that applies. **Never `git stash`.**
 - Never force-push `main`.
 - `--force-with-lease` on a NON-main working branch (e.g. ac-merge's pre-PR wave-branch push, ac-merge/SKILL.md §Push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never stash. Never `git add -A`.
+- `cross-repo` beads: commit in the repo that tracks the files (see § Cross-repo).
