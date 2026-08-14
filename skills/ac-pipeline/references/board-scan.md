@@ -80,6 +80,11 @@ consumer-only. Key ONLY on the explicit `Gate-reason:` marker (never infer
 the future. Empty/`br` failure is NOT clean (same doctrine as Scan E
 `unknown`): fail loud, never print `0` as healthy.
 
+**ALARM** if open human-gate count is `>25` OR any reason-less gate is older
+than `48h` (age from `created_at`). Print the same standing as the Scan E
+`ci-gates` / `ci_health` echo — one first-class `docket-health:` line every
+run, `ok` included.
+
 ```bash
 # FAIL LOUD if br list --json cannot be read — do not print 0 as clean.
 DOCKET=$(br list --json --limit 0 --all) || { echo "docket-health: ERROR — br list --json failed (empty-is-not-clean)"; exit 2; }
@@ -110,7 +115,18 @@ def on_docket(i):
 hg = [i for i in issues if 'human-gate' in (i.get('labels') or [])]
 docket = [i for i in hg if on_docket(i)]
 reasonless = [i for i in docket if 'Gate-reason:' not in (i.get('description') or '')]
-print(f'docket-health: {len(docket)} open human-gate · {len(reasonless)} reason-less')
+stale = []
+for i in reasonless:
+    created = parse_until(i.get('created_at') or i.get('created'))
+    if created and (now - created).total_seconds() > 48 * 3600:
+        stale.append(i)
+alarms = []
+if len(docket) > 25:
+    alarms.append(str(len(docket)) + ' open gates >25')
+if stale:
+    alarms.append(str(len(stale)) + ' reason-less >48h')
+suffix = (' · ALARM (' + '; '.join(alarms) + ')') if alarms else ''
+print(f'docket-health: {len(docket)} open human-gate · {len(reasonless)} reason-less{suffix}')
 for i in reasonless:
     print(i.get('id'))
 "

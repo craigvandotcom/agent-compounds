@@ -84,7 +84,17 @@ IS the replacement for it.
 
 ### 2. Scan the board
 
-Read the board per `ac-pipeline/references/board-scan.md` (already excludes `_shipped/` + `audits/`).
+Read the board per `ac-pipeline/references/board-scan.md` (already excludes `_shipped/` + `audits/`). Print Scan A's `docket-health` line (open human-gate count + reason-less count; ALARM if `>25` open gates OR any reason-less gate older than `48h`).
+
+### 2b. Surviving-gate verify (prep pass — not de-gating)
+
+For every OPEN `human-gate` bead still on the docket (Scan A's set — exclude deferred and future `defer_until`):
+
+1. Re-read live state (`br show <id>`). Confirm the two-reasons test still holds and the work is still blocked on a human.
+2. Stamp a comment `verified: <YYYY-MM-DD>` on the bead so the docket is not a stale snapshot.
+3. Do **not** remove `human-gate`, close, or rewrite the gate body. De-gating is a human/session act, not nightly housekeeping.
+
+This pass verifies surviving gates. It does not de-gate.
 
 ### 3. Dedup, then auto-apply the sanctioned subset
 
