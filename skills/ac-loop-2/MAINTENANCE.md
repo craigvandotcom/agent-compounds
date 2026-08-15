@@ -23,6 +23,11 @@ identity/land/deregister spine and are deliberately NOT centralised until v2 is 
 (none)
 
 ## Cut-log — append-only audit trail (feeds the churn detector)
+- Drain-until-C1. Phase 2 is a lane queue with refill (width bounds concurrency, never
+  coverage). C3 is an optional safety cap (default none), not "one cycle then park
+  leftovers." Phase 4 re-enters Phase 0 when eligible work remains; invoke blesses the
+  RUN. A stuck refine contract is a named skip (`refine-drain.md`), not a C3 halt.
+  Discoveries still wait for the next cycle's Phase 1 — that cycle now happens in-run.
 - Native contract support. Schema moved to bead-conventions § Implementation
   contract (incl. test-tier exposure). Deleted the 12-line INTERIM/enforcement
   provenance block from the spine; spec-phase prompts now point, they do not

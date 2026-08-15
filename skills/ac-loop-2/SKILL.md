@@ -70,22 +70,26 @@ answerable in ≤10 words). The invoke already blessed the run; do not ask again
 ```
 RUN START (once): register identity, mint RUN_ID, sweep stale reservations, create the run ledger.
 
+EACH CYCLE until C1 (no eligible work except human-gate):
 PHASE 0 — GRAPH     (conductor, solo)
       board-scan → epic lanes (ordered, territory-disjoint) + human decision docket
    ══ BARRIER ══
 PHASE 1 — SPEC      (width 5–6 · HEAD FROZEN · beads-DB writes only)
       beadify-all → refine-all → every lane bead carries an IMPLEMENTATION CONTRACT
-   ══ BARRIER — THE SITTING: interactive invoke already blessed; headless C1 ══
+   ══ BARRIER — THE SITTING: invoke blessed the RUN (cycle 1 only); later cycles do not sit; headless C1 ══
 PHASE 2 — BUILD     (width 6–9 · one shared tree · NO GATES)
-      one coordinator per lane; one bead = one assignment = ONE pathspec commit
+      lane QUEUE + refill: on coordinator return, next territory-disjoint lane takes the slot
+      one bead = one assignment = ONE pathspec commit
       └─ SERIAL RISK QUEUE at the phase tail: migration + native beads, locally verified
-   ══ BARRIER ══
+   ══ BARRIER — lane queue empty AND risk queue done ══
 PHASE 3 — CONVERGE  (one batched check pass)
       global checks → bisect attribution → fix-forward (gated) → loop to green
       → sampled mutation probes → emit repair% + hollow%
    ══ BARRIER — green + metrics emitted ══
 PHASE 4 — VERIFY & SHIP
       verification gate → journey stamps → beads-closed gate → ac-batch-close → Slack
+      → eligible work remains? re-enter Phase 0 (do not sit, do not land)
+      → else C1
 
 BYPASS LANE (any time, cuts every barrier): a P0/P1 urgent bead ships as a fully-checked solo.
 
@@ -97,9 +101,11 @@ strands every lesson in the transcript.
 ```
 
 > **Barriers are strict.** No Phase-2 dispatch before Phase 1's barrier clears; no Phase-3
-> check before every Phase-2 worker has returned; no Phase-4 pass before Phase 3 is green.
-> A barrier is what makes the phase's simplifying assumption true — crossing one early
-> deletes the reason the phase has no gates. The only legal barrier crossing is the bypass lane.
+> check before the Phase-2 lane queue is empty and every worker has returned; no Phase-4
+> pass before Phase 3 is green. A cycle ships; the run drains — Phase 4 is not exit.
+> Crossing a barrier early deletes the reason the phase has no gates. The only legal
+> barrier crossing is the bypass lane. A worker must never pull `br ready` for the next
+> bead: refill is the next already-spec'd lane, not raw board work.
 
 > Track the run's position in the Phase-0 **run ledger** (`TaskCreate`) — update it at every
 > barrier; it is the anti-early-exit anchor and the resume point after compaction. Doctrine:
@@ -205,8 +211,9 @@ TaskCreate — one task per phase, plus one per epic lane:
   8. ac-land + conductor-reflect       → pending
 ```
 
-If there are no beads, no loop-ready plans, and only `human-gate` beads remain → go
-straight to Phase ARIA.
+If there are no beads, no loop-ready plans, and only `human-gate` beads remain → C1,
+then Phase ARIA. A run that continues after Phase 4 appends the next cycle's tasks —
+do not treat Phase 4 complete as run-complete.
 
 ---
 
@@ -254,31 +261,40 @@ Convergence discipline carries over from `ac-bead-refine` unchanged: **execute-a
 
 ### THE SITTING (the run's only human barrier)
 
-**Interactive `/ac-loop-2`:** the invocation IS the sitting. After drain, PRINT **(A)
-parallel lanes** and **(B) serial risk queue** (every refined ready non-`human-gate` bead
-flagged `native`/`migration`, or territory `ios/`/`android/`/`supabase/migrations`) and
-**proceed** — never `AskUserQuestion`. Wave-blocking `human-gate`: Exhaust Rule (leave the
-bead, drop dependents, keep going). HOLDs stay out. **`cross-repo` stay in** — they
-are this board's work; commit in the target repo (commit-discipline § Cross-repo).
-Never `minus native`.
+**Interactive `/ac-loop-2`:** the invocation IS the sitting, and it blesses the **RUN**
+(every later cycle included). After drain, PRINT **(A) parallel lanes** and **(B) serial
+risk queue** (every refined ready non-`human-gate` bead flagged `native`/`migration`, or
+territory `ios/`/`android/`/`supabase/migrations`) and **proceed** — never
+`AskUserQuestion`. Later cycles skip this sitting. Wave-blocking `human-gate`: Exhaust
+Rule (leave the bead, drop dependents, keep going). HOLDs stay out. **`cross-repo` stay
+in** — they are this board's work; commit in the target repo (commit-discipline §
+Cross-repo). Never `minus native`.
 
-**Headless:** cannot cross. Post A+B as an advisory Slack nudge, keep the ledger at task 3,
-C1 stop. A headless run that self-blesses has deleted the one gate that pays for the
-other four phases having none.
+**Headless:** cannot cross cycle 1. Post A+B as an advisory Slack nudge, keep the ledger
+at task 3, C1 stop. A headless run that self-blesses has deleted the one gate that pays
+for the other four phases having none.
 
-Both modes still require **drain proved** (`U > 0` is C3) and the **staleness check**
+Both modes still require the **drain report** (`U > 0` names each id, skips it, continues
+— never a silent cut and never a C3 halt) and the **staleness check**
 (`git diff --name-only $FREEZE_SHA..HEAD` ∩ each territory → re-refine those beads).
 
 ---
 
 ## Phase 2 — BUILD (width 6–9, one shared tree, NO GATES)
 
-One **coordinator per epic lane**, spawned in parallel across territory-disjoint lanes.
-**The conductor owns the global width:** each lane gets a worker budget at dispatch
-(budgets sum within the phase band); a coordinator never exceeds its grant.
-Workers are **persistent and lane-sticky** where the harness allows — a worker that keeps
-its lane keeps its warm model of that territory. **One bead = one assignment = ONE
-pathspec-scoped commit.**
+**The conductor owns the global width and the lane queue.** Phase 0's ordered list is the
+queue. Hold up to `width` slots (budgets sum within the phase band). Dispatch one
+coordinator per in-flight lane; a coordinator never exceeds its grant. On coordinator
+return: release its territory lock, then give that slot to the next lane that is
+territory-disjoint from every in-flight lane — a **fresh** coordinator (lanes are slots,
+not souls). Overlapping leftovers become eligible when the conflicting sibling returns.
+Phase 2 ends when the lane queue is empty AND the serial risk queue has run. Never park
+a leftover lane for "the next run" while a slot is free.
+
+Workers are **lane-sticky inside one lane** where the harness allows — a worker that
+keeps its lane keeps its warm model of that territory. **One bead = one assignment =
+ONE pathspec-scoped commit.** Do not pull `br ready` / `bv --robot-next` for the next
+bead; that is unspec'd work and belongs in the next cycle's Phase 1.
 
 **There are three worker rules. There is no fourth.**
 
@@ -399,7 +415,10 @@ Bisect invocation, cluster formation, sampling rule and the probe protocol:
    still open — not closing" and proceed to exit. Proceed to step 4 only on exit 0.
 4. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
    `references/delegation-prompts.md` VERBATIM. One close, one CI dispatch, one report commit.
-5. **Slack notify** (see Milestone Notifications), then exit via `ac-land`.
+5. **Slack notify** (see Milestone Notifications). Then re-query eligible work (same
+   Phase-0 filters: non-`human-gate`, ready or unrefined, plus loop-ready plans with no
+   beads). Any remain → re-enter Phase 0 for the next cycle (do not sit, do not land).
+   None remain → C1, then `ac-land`.
 
 > **`post-merge` lifecycle — stamp at creation, strip at claim** (`beads-standards/reference/bead-conventions.md` § Claim semantics — `post-merge` exhaust). Every exhaust bead created during the run — Phase-2 discoveries, QA-pass beads, Exhaust-Rule decision beads — is **stamped `post-merge` AT CREATION** and parented into its epic; an unstamped follow-up under the run's identity is a genuinely-open in-scope bead that blocks the run's own close. Every claim path **strips `post-merge` at claim**, so an adopted bead is closeable again. The two halves are one rule; never do one alone.
 
@@ -461,9 +480,9 @@ Checked at every barrier.
 
 | # | Condition | Action |
 |---|-----------|--------|
-| **C1** | No eligible work, or the Phase-1 barrier cannot be crossed headless | End cleanly. Slack: "Pipeline clear" / "Wave specified — awaiting the sitting." |
+| **C1** | No eligible work (only `human-gate` / HOLD / unscopable remain), or the Phase-1 barrier cannot be crossed headless | End cleanly. Slack: "Pipeline clear" / "Wave specified — awaiting the sitting." |
 | **C2** | **Phase 3 cannot reach green within 2 repair loops**, OR the verification gate files an open `qa-blocker` | Hard stop. Do NOT close. Slack the finding, file a P0 bead, wait for human. **Skips `ac-batch-close`, so the acceptance mark does NOT advance — by design.** |
-| **C3** | Cycle cap reached (default: ONE full five-phase cycle per run; a second only starts if Phase 3 closed green and a disjoint lane remains) | Stop after the current phase completes. Slack: "Cycle cap reached." |
+| **C3** | Safety cap — **default none** (run until C1). Honoured only when the invoke names one (`cap=N` cycles or a wall-clock) | Stop after the current phase. Slack: "Safety cap reached — <N> eligible remain." A stuck refine contract is a **named skip**, not C3. |
 | **C4** | Human override ("stop" / "pause the loop") | Honour at the next barrier, or immediately if between beads. Notify confirmation. |
 
 C2 is the only **hard** stop. C1/C3/C4 are clean stops.
@@ -565,9 +584,9 @@ Every CROSS-session call threads the token. Only then does the process exit.
 | Phase 1 complete | "📐 Spec complete — <B> beads carry a full implementation contract. Interactive: proceeding (A+B). Headless: awaiting invoke." |
 | Phase 2 complete | "🔨 Build complete — <B> commits across <L> lanes, <R> risk-queue beads verified locally." |
 | Phase 3 complete | "🧪 Converge green — repair <X>% · hollow <Y>%/<S> sampled. <N> beads reopened." |
-| Cycle shipped | "🚀 Cycle shipped — <B> beads closed (claim `<claim-id>`)." |
+| Cycle shipped | "🚀 Cycle <K> shipped — <B> beads closed (claim `<claim-id>`). <N> eligible remain — <continuing \| C1>." |
 | Hard stop (C2) | "🛑 ac-loop-2 stopped — <converge failed to reach green in 2 loops \| qa-blocker in `<file>`>. Needs review before close." |
-| Cycle cap | "⏹️ Cycle cap reached. Remaining lanes queued for the next run." |
+| Safety cap | "⏹️ Safety cap reached. <N> eligible remain." |
 | Pipeline clear | "✓ Pipeline clear — <H> human-gate items waiting if you want to review." |
 | ARIA nudge | See Phase ARIA. |
 
@@ -587,7 +606,7 @@ headless run can only ever specify a wave and stop.
 |------|-----|
 | Moving backlog → plan | Product/priority decision |
 | Unrefined plans | Scope and intent need sign-off before beadify |
-| **The invoke (interactive sitting)** | Starting `/ac-loop-2` blesses the cycle; headless still cannot self-bless |
+| **The invoke (interactive sitting)** | Starting `/ac-loop-2` blesses the RUN (every later cycle included); headless still cannot self-bless |
 | Closing `human-gate` decision beads | Domain/taste/risk — agent prepares, human decides |
 | Release (`ac-publish`) | Production exposure |
 
@@ -595,6 +614,7 @@ headless run can only ever specify a wave and stop.
 
 ## Remember
 
+- **A cycle ships; the run drains.** Phase 4 is not exit. Re-graph until C1. Land once.
 - **Barriers, not gates, are the safety mechanism.** Every rule Phase 2 drops is paid for by
   a Phase-1 contract element or a Phase-3 check. Crossing a barrier early (outside the
   bypass lane) deletes the payment and keeps the cost.

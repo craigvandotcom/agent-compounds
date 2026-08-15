@@ -11,8 +11,9 @@ children file beads, and more arrive mid-phase.
 **The conductor decides ORDER, never MEMBERSHIP.** Never narrow the set by priority, type,
 label, age or theme.
 
-An undrained set at the barrier is a **C3 stop naming every remaining id**. Never a silent
-selection.
+An undrained set at the barrier is **named, left open, and skipped** — list every
+remaining id. Never a silent selection. Never a C3 halt: one stuck contract must not
+stop the drain.
 
 **Priority does not rank value on a mixed board — it ranks who filed the bead.** Human
 reports and agent-filed pipeline findings use different default priorities, so any
@@ -49,5 +50,5 @@ Print at the Phase-1 barrier, every run, zeros included:
 refine-drain: <N> unrefined at phase open · <R> refined · <H> held (contract gap) · <U> STILL UNREFINED
 ```
 
-`U > 0` is a reported stop condition, never a default. List every remaining id in the
-sitting docket.
+`U > 0` is a reported **skip**, never a stop. List every remaining id. The rest of the
+wave proceeds.
