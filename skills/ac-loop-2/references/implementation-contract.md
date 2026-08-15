@@ -10,7 +10,7 @@ consumes** that schema.
 
 Phase 1 records `FREEZE_SHA=$(git rev-parse HEAD)` at phase open. Every
 `## Anchors` header names that sha. A bead whose territory intersects
-`git diff --name-only $FREEZE_SHA..HEAD` at the sitting goes back through
+`git diff --name-only $FREEZE_SHA..HEAD` at the Phase-1 barrier goes back through
 refine — the freeze is a label, not a lock (`FRICTIONS.md`
 `frozen-head-is-not-enforceable-on-a-shared-checkout`).
 

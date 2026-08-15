@@ -12,10 +12,9 @@ disable-model-invocation: true
 > substitute for `ac-loop`, never wire it into a scheduled job without a human decision,
 > and never mix the two models inside one run.
 
-**You are the loop conductor.** You drive a whole cycle of work through five phases
-separated by strict barriers, without waiting for human sign-off inside a phase. You
-delegate every phase to fresh spawned sessions and keep only their returned summaries.
-The ONE human barrier is the **invoke** (interactive) or a C1 stop (headless). Do not pause again at Phase 1. Everything else is autonomous.
+**You are the loop conductor.** You drive cycles through five phases separated by
+strict barriers. Delegate every phase to a fresh spawned session and keep only the
+returned summary. Do not pause at Phase 1. Headless stops at C1 before Phase 2.
 
 **The v2 bet, in one line:** move the cost of correctness OUT of implementation (where
 per-bead gates serialise a shared tree) and INTO specification (Phase 1) and one batched
@@ -24,7 +23,7 @@ convergence pass (Phase 3), so implementation can run at maximum width with no g
 Headless: never `AskUserQuestion` — apply the Exhaust Rule (leave the `human-gate`
 decision bead in place, post an advisory Slack nudge, keep working). Interactive:
 `AskUserQuestion` is permitted only in Phase ARIA — simple bounded forks (≤3 options,
-answerable in ≤10 words). The invoke already blessed the run; do not ask again at Phase 1.
+answerable in ≤10 words).
 
 > **Scope contract.** You work the pipeline, not the backlog. You never touch raw backlog
 > items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not
@@ -76,7 +75,7 @@ PHASE 0 — GRAPH     (conductor, solo)
    ══ BARRIER ══
 PHASE 1 — SPEC      (width 5–6 · HEAD FROZEN · beads-DB writes only)
       beadify-all → refine-all → every lane bead carries an IMPLEMENTATION CONTRACT
-   ══ BARRIER — THE SITTING: invoke blessed the RUN (cycle 1 only); later cycles do not sit; headless C1 ══
+   ══ BARRIER — print A+B; headless C1; interactive proceeds ══
 PHASE 2 — BUILD     (width 6–9 · one shared tree · NO GATES)
       lane QUEUE + refill: on coordinator return, next territory-disjoint lane takes the slot
       one bead = one assignment = ONE pathspec commit
@@ -88,7 +87,7 @@ PHASE 3 — CONVERGE  (one batched check pass)
    ══ BARRIER — green + metrics emitted ══
 PHASE 4 — VERIFY & SHIP
       verification gate → journey stamps → beads-closed gate → ac-batch-close → Slack
-      → eligible work remains? re-enter Phase 0 (do not sit, do not land)
+      → eligible work remains? re-enter Phase 0 (do not land)
       → else C1
 
 BYPASS LANE (any time, cuts every barrier): a P0/P1 urgent bead ships as a fully-checked solo.
@@ -194,8 +193,7 @@ printed reproduces the blackout it exists to catch:
 decision docket — WAVE-SCOPED**: only `human-gate` beads that BLOCK a lane bead (a `blocks`
 edge into the lane set), plus THIS run's I2 violations, un-scopable epics and `board-truth`
 flags. Every other `human-gate` bead is `ac-human-session`'s standing backlog — report the
-count, never dock it. A docket that grows with the board instead of with the wave makes the
-sitting uncrossable.
+count, never dock it. A docket that grows with the board instead of with the wave is unusable.
 
 ### Create the run ledger
 
@@ -203,7 +201,7 @@ sitting uncrossable.
 TaskCreate — one task per phase, plus one per epic lane:
   1. Phase 0 graph + docket            → in_progress
   2. Phase 1 spec (frozen HEAD)        → pending
-  3. THE SITTING (human barrier)       → pending
+  3. Phase 1 drain report              → pending
   4. Phase 2 build: lane <name>        → pending   (one per lane)
   5. Phase 2 serial risk queue         → pending   (omit ONLY if `br ready` has zero refined non-hg beads flagged native/migration — a BOARD count, never "none after I filtered them out of the wave")
   6. Phase 3 converge                  → pending
@@ -221,7 +219,7 @@ do not treat Phase 4 complete as run-complete.
 
 **HEAD is frozen for the whole phase: no implementation commit lands.** Record
 `FREEZE_SHA=$(git rev-parse HEAD)` in the run ledger at phase open — every anchor verifies
-against it, and the sitting's staleness check diffs against it. Every child in this
+against it, and the Phase-1 staleness check diffs against it. Every child in this
 phase writes to the beads DB only, so children are collision-free at width and the anchors
 they verify cannot move under them.
 
@@ -259,24 +257,19 @@ Convergence discipline carries over from `ac-bead-refine` unchanged: **execute-a
 (run the command while drafting, never after), **`br lint` first**, and a final
 **adversarial round** whose job is to break the contract, not to bless it.
 
-### THE SITTING (the run's only human barrier)
+### Phase 1 close
 
-**Interactive `/ac-loop-2`:** the invocation IS the sitting, and it blesses the **RUN**
-(every later cycle included). After drain, PRINT **(A) parallel lanes** and **(B) serial
-risk queue** (every refined ready non-`human-gate` bead flagged `native`/`migration`, or
-territory `ios/`/`android/`/`supabase/migrations`) and **proceed** — never
-`AskUserQuestion`. Later cycles skip this sitting. Wave-blocking `human-gate`: Exhaust
-Rule (leave the bead, drop dependents, keep going). HOLDs stay out. **`cross-repo` stay
-in** — they are this board's work; commit in the target repo (commit-discipline §
-Cross-repo). Never `minus native`.
+PRINT **(A) parallel lanes** and **(B) serial risk queue** (every refined ready
+non-`human-gate` bead flagged `native`/`migration`, or territory
+`ios/`/`android/`/`supabase/migrations`). Wave-blocking `human-gate`: Exhaust Rule
+(leave the bead, drop dependents, keep going). HOLDs stay out. **`cross-repo` stay
+in** — commit in the target repo (commit-discipline § Cross-repo). Never `minus native`.
 
-**Headless:** cannot cross cycle 1. Post A+B as an advisory Slack nudge, keep the ledger
-at task 3, C1 stop. A headless run that self-blesses has deleted the one gate that pays
-for the other four phases having none.
+**Interactive:** proceed. **Headless:** Slack A+B, C1 — do not enter Phase 2.
 
-Both modes still require the **drain report** (`U > 0` names each id, skips it, continues
-— never a silent cut and never a C3 halt) and the **staleness check**
-(`git diff --name-only $FREEZE_SHA..HEAD` ∩ each territory → re-refine those beads).
+Require the **drain report** (`U > 0` names each id, skips it, continues) and the
+**staleness check** (`git diff --name-only $FREEZE_SHA..HEAD` ∩ each territory →
+re-refine those beads).
 
 ---
 
@@ -325,7 +318,7 @@ attribution depends on — an unattributable failure costs more than the defect 
 
 **Migration and native beads NEVER run in the parallel body of Phase 2.** They stay
 **in-cycle** and run **serially at the tail**, one at a time, each with immediate
-local verification. Do not start Phase 3 while sitting-set (B) is non-empty and this
+local verification. Do not start Phase 3 while risk-set (B) is non-empty and this
 queue is unrun. Compaction resume re-derives (B) from `br ready`, never from "none claimed":
 
 | Class | Immediate verification (before the next risk bead starts) |
@@ -417,7 +410,7 @@ Bisect invocation, cluster formation, sampling rule and the probe protocol:
    `references/delegation-prompts.md` VERBATIM. One close, one CI dispatch, one report commit.
 5. **Slack notify** (see Milestone Notifications). Then re-query eligible work (same
    Phase-0 filters: non-`human-gate`, ready or unrefined, plus loop-ready plans with no
-   beads). Any remain → re-enter Phase 0 for the next cycle (do not sit, do not land).
+   beads). Any remain → re-enter Phase 0 for the next cycle (do not land).
    None remain → C1, then `ac-land`.
 
 > **`post-merge` lifecycle — stamp at creation, strip at claim** (`beads-standards/reference/bead-conventions.md` § Claim semantics — `post-merge` exhaust). Every exhaust bead created during the run — Phase-2 discoveries, QA-pass beads, Exhaust-Rule decision beads — is **stamped `post-merge` AT CREATION** and parented into its epic; an unstamped follow-up under the run's identity is a genuinely-open in-scope bead that blocks the run's own close. Every claim path **strips `post-merge` at claim**, so an adopted bead is closeable again. The two halves are one rule; never do one alone.
@@ -480,7 +473,7 @@ Checked at every barrier.
 
 | # | Condition | Action |
 |---|-----------|--------|
-| **C1** | No eligible work (only `human-gate` / HOLD / unscopable remain), or the Phase-1 barrier cannot be crossed headless | End cleanly. Slack: "Pipeline clear" / "Wave specified — awaiting the sitting." |
+| **C1** | No eligible work (only `human-gate` / HOLD / unscopable remain), or this run is headless at the Phase-1 barrier | End cleanly. Slack: "Pipeline clear" / "Wave specified — headless stop before Phase 2." |
 | **C2** | **Phase 3 cannot reach green within 2 repair loops**, OR the verification gate files an open `qa-blocker` | Hard stop. Do NOT close. Slack the finding, file a P0 bead, wait for human. **Skips `ac-batch-close`, so the acceptance mark does NOT advance — by design.** |
 | **C3** | Safety cap — **default none** (run until C1). Honoured only when the invoke names one (`cap=N` cycles or a wall-clock) | Stop after the current phase. Slack: "Safety cap reached — <N> eligible remain." A stuck refine contract is a **named skip**, not C3. |
 | **C4** | Human override ("stop" / "pause the loop") | Honour at the next barrier, or immediately if between beads. Notify confirmation. |
@@ -517,7 +510,7 @@ clean run yields a header-only carrier.
 |--------|--------|
 | `human-gate` bead, ≤3 options, answerable in ≤10 words | Interactive: `AskUserQuestion` in-terminal. Headless: advisory Slack card, bead stays open for `ac-human-session` — never pause |
 | `human-gate` bead, complex/open-ended | Advisory Slack card — do NOT pause |
-| Wave specified but this run is headless | Advisory nudge: "Wave for `<lanes>` is specified — run `/ac-loop-2` interactively to cross (invoke = bless)" |
+| Wave specified but this run is headless | Advisory nudge: "Wave for `<lanes>` is specified — run `/ac-loop-2` interactively to continue" |
 | Unrefined non-`human-gate` bead of any origin | **NOT an ARIA case** — that is Phase 1 work. Nudge only if refinement itself surfaced a `human-gate` fork (then it is row 1) |
 | Loop-ready plans exist but no beads | **NOT an ARIA case** — Phase 1 beadifies them |
 | Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
@@ -595,8 +588,7 @@ Every CROSS-session call threads the token. Only then does the process exit.
 ## Scheduling
 
 PAI job config, triage decoupling, keep-awake layers: **`references/scheduling.md`**.
-**ac-loop-2 is not scheduled by default** — its Phase-1 barrier needs a human, so a
-headless run can only ever specify a wave and stop.
+**ac-loop-2 is not scheduled by default** — headless stops at C1 before Phase 2.
 
 ---
 
@@ -606,7 +598,6 @@ headless run can only ever specify a wave and stop.
 |------|-----|
 | Moving backlog → plan | Product/priority decision |
 | Unrefined plans | Scope and intent need sign-off before beadify |
-| **The invoke (interactive sitting)** | Starting `/ac-loop-2` blesses the RUN (every later cycle included); headless still cannot self-bless |
 | Closing `human-gate` decision beads | Domain/taste/risk — agent prepares, human decides |
 | Release (`ac-publish`) | Production exposure |
 

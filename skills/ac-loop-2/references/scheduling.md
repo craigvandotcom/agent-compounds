@@ -1,17 +1,16 @@
 # ac-loop-2 — Scheduling
 
-**ac-loop-2 is not scheduled by default.** Its Phase-1 barrier (THE SITTING) needs a human,
-so a headless run can only specify a wave and stop cleanly at C1. `ac-loop` remains the
-scheduled autonomous conductor; do not repoint an existing `ac-loop-*` job at ac-loop-2
-without a human decision.
+**ac-loop-2 is not scheduled by default.** Headless stops at C1 before Phase 2.
+`ac-loop` remains the scheduled autonomous conductor; do not repoint an existing
+`ac-loop-*` job at ac-loop-2 without a human decision.
 
-A deliberate headless "specify only" run — board scan, beadify-all, refine-all to contract,
-then stop at the barrier — is legitimate and configured in `infrastructure/jobs/<app>.json`:
+A deliberate headless spec-only run — Phase 0 + Phase 1, then C1 — is legitimate and
+configured in `infrastructure/jobs/<app>.json`:
 
 ```json
 {
   "name": "ac-loop-2-spec-<app>",
-  "prompt": "Load the ac-loop-2 skill and run PHASE 0 + PHASE 1 ONLY for <app>, then stop at the sitting (C1). Working directory: <app-path>.",
+  "prompt": "Load the ac-loop-2 skill and run PHASE 0 + PHASE 1 ONLY for <app>, then stop (C1). Working directory: <app-path>.",
   "schedule": "0 5 * * *",
   "enabled_on": ["<hostname>"],
   "channel": "<slack-channel-id>"
