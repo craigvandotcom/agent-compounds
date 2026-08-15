@@ -86,6 +86,17 @@ evidence protocol.
    build command (from CORE — never xcodebuild alone) and boot the app's dedicated
    uniquely-named sim (§Parallel QA below). Workers never build, boot, or shut down
    simulators.
+   **Orphan-runner preflight (do this before `agent-device open`):** cross-check
+   `agent-device session list` against live `AgentDeviceRunnerUITests-Runner`
+   PIDs bound to **this app's** sim UDID (consuming app: BCA-QA-iPhone17Pro /
+   `$BCA_QA_SIM`, session `bca`). An **orphan** is: runner live AND no registry
+   entry AND no recent non-keepalive request. `agent-device close --session bca`
+   is insufficient for this class — it returns `SESSION_NOT_FOUND` when the
+   registry is empty. Clearance is ownership-scoped: only this app's sim UDID /
+   session `bca`. Never kill art-still (or any other app's) runners — sibling
+   apps QA on the same Mac. Remedy that works: confirm no interactive owner,
+   `kill -TERM` the `xcodebuild test-without-building` parent then the runner,
+   then a throwaway probe session (open, snapshot, close).
 2. **Manifest:** journey list per depth (`surfaces` includes `native`, or
    `proof.required: sim-drive|device-only`), ALL in the `sequential` lane; write
    `$ARTIFACTS_DIR/journeys-manifest.json` BEFORE any spawn (visible `skipped`
@@ -110,7 +121,13 @@ evidence protocol.
    `$ARTIFACTS_DIR/writeback.json` BEFORE
    `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" --skip-teardown-check`
    (the teardown check is browser-specific; sweep agent-device sessions yourself).
-5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain; shut
+5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain;
+   **and** apply the same orphan predicate as Orient step 1 — a live
+   `AgentDeviceRunnerUITests-Runner` on this app's sim UDID with an empty
+   registry (no recent non-keepalive request) is a leftover even when
+   `session list` is empty. `agent-device close --session bca` is insufficient
+   for this class (`SESSION_NOT_FOUND`). Reap only this app's sim UDID /
+   session `bca`; never kill art-still or any other app's runners. Then shut
    down only sims your app owns, per the ownership rule below.
 
 Everything from **Core loop** down is **worker-side doctrine** — the
