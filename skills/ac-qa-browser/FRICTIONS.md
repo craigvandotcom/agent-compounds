@@ -2,7 +2,7 @@
 skill: ac-qa-browser
 created: 2026-07-22
 last_pass: 2026-07-29
-entries: 4
+entries: 5
 ---
 
 # ac-qa-browser — friction log
@@ -63,3 +63,16 @@ entries: 4
 - status: open
 - proposed_fix: poll caps must exceed realistic worker runtime, or skip polling altogether and just await the completion notification instead.
 - narrative: a bounded 10-minute poll loop capped out while a worker was still running; the completion notification for that same worker arrived shortly after anyway. Cost ~10 minutes of wall time to an avoidable poll-cap mismatch.
+
+## local-prod-serve-missing-site-origin
+- skills: [ac-qa-browser]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [serve-prod-dirty-guard-unusable-in-shared-checkout]
+- first_seen: 2026-08-15
+- last_seen: 2026-08-15
+- stage: verify
+- status: open
+- proposed_fix: inject SITE_ORIGIN (e.g. http://localhost:$PORT) in scripts/qa/serve-prod.sh so the mandated local-prod target can walk password-reset; treat a fail-closed 500 when SITE_ORIGIN is unset as env-gap / qa-infra, not a product qa-blocker.
+- narrative: exhaustive browser QA on the prescribed local-prod serve (`scripts/qa/serve-prod.sh` / `next start`) failed auth journey assert 4 — POST /api/auth/reset-password returned 500 and the UI showed a connection error instead of the anti-enumeration success copy. Product fail-closed is intentional (bd-iahbm) when SITE_ORIGIN is unset in production; the gap is that the official QA serve never injects it (absent from .env.local, only in .env.example). Auth is in every smoke+ depth, so the mandated target cannot walk password-reset until the serve supplies SITE_ORIGIN. Filed bd-wqzv7 (not a product regression). evidence: RUN 20260815-001616-13976, class=env-gap.
