@@ -9,11 +9,11 @@ description: 'The human command center — sit down and keep the factory moving.
 
 You surface **only work at a human gate.** The instant work becomes autonomous-handleable it belongs to `ac-loop`, not to you — surfacing it is noise and duplication. Never show:
 
-- ❌ **ready beads** — the loop implements them
+- ❌ **ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`** — the loop implements them
 - ❌ **in-progress beads / waves** — the loop is running them
 - ❌ **`loop-ready` plans** — the loop beadifies + implements them
 
-You surface what must cross a **human gate before it can flow autonomously** — and nothing else. The `loop-ready` flag (on plans) and the ready-bead state are the boundary line.
+Ready + a docket label **is the docket**, not the loop — do not drop it. You surface what must cross a **human gate before it can flow autonomously** — and nothing else.
 
 ---
 
@@ -63,7 +63,7 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
 
 ## Phase 2: Scan (parallel), then apply the loop boundary
 
-**Read the board per `ac-pipeline/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply the human-session lens below, add the non-board reads, then **filter out everything past the loop boundary before presenting** (drop ready beads, in-flight waves, `loop-ready` plans — the loop owns those).
+**Read the board per `ac-pipeline/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Apply the human-session lens below, add the non-board reads, then **filter out everything past the loop boundary before presenting** (drop ready beads that lack a docket label, in-flight waves, `loop-ready` plans — the loop owns those).
 
 ### Your lens on the board
 
@@ -72,11 +72,11 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
   - **Discarding one:** set the proposal file `status: rejected` + `br close` the bead; do NOT invoke the owning skill.
   - **Verify before presenting (anti-rot):** human-gate beads outlive their work (agents never close them) and memos freeze step-lists that later waves can invalidate. Before surfacing an item, spend ~1 read confirming its live state against the system it gates on (external API, prod DB read, Vercel env, code grep for the mechanism the memo assumes). Present the *verified* remaining scope — often "already done → one tap to book it" — and fold corrections onto the bead as an enrichment comment. Memory: `human-gate-beads-rot-verify-before-presenting`.
     - **MANDATORY FIRST READ — the bead's own `events` table, before any other verification.** A docket bead most often gates on its OWN history, and comments do not reliably record it: `sqlite3 .beads/beads.db "SELECT created_at,event_type,comment FROM events WHERE issue_id='<id>' ORDER BY created_at;"`. **A comment is a CLAIM; `events` is the RECORD.** `label_removed human-gate` followed by a DECISION/RULING/RELEASE comment means the bead was RELEASED — do not re-gate it, and NEVER re-gate one released more than once. Evidence + why this is a step, not a memory note: `references/docket-anti-rot.md`.
-  - **Collapse QUEUE LANES before grouping — a flood must never bury the genuine gates.** Some `human-gate` beads arrive as a machine-generated BATCH from one upstream source (today: `curator-escalation`, filed 80+ at a time by `escalate-to-bead --legacy`). Those are a **queue worked in a dedicated batch sitting**, not independent gates competing for the same attention as a one-tap decision. Detect a lane mechanically: **any label carrying >5 open `human-gate` beads**. Render it as ONE line — lane · count · oldest age · its batch action — and **never itemize its P2+ members in the tier**. Apply this BEFORE the prefix grouping below, so the remaining docket is the genuinely independent gates.
+  - **Collapse QUEUE LANES before grouping — a flood must never bury the genuine gates.** Some `human-gate` beads arrive as a machine-generated BATCH from one upstream source (today: `curator-escalation`, filed 80+ at a time by `escalate-to-bead --legacy`). Detect a lane mechanically: **any label carrying >5 open `human-gate` beads**. Render it as ONE line — lane · count · oldest age · its batch action — and **never itemize its P2+ members in the tier**. Collapse is presentation only: the lane line **is work in this sitting**, not a "come back later." After independent P0/P1s, auto-advance into the lane. Apply this BEFORE the prefix grouping below.
     **P0 and P1 members are NEVER collapsed — itemize them individually ABOVE the lane line, and subtract them from its count.** A lane label is a *filing* channel, not a statement of importance: the same label lands both a bulk machine batch and the P0 that batch was filed to fix. Caught live on the run that created this rule — a naive whole-label collapse would have hidden `bd-8yhvb` (**P0**, the frozen-lane bug) plus three P1s inside an 82-bead `curator-escalation` flood, which is a strictly worse failure than the flood itself. Collapse the queue, never the emergency.
     ```
     • bd-8yhvb 4d P0 Curator escalations UNRELEASABLE — …   → decide   (P0/P1 lane members stay itemized)
-    🔁 curator-escalation — 89 more queued (oldest 4d)      → work the queue (batch sitting), not here
+    🔁 curator-escalation — 89 more queued (oldest 4d)      → work the queue
     ```
     Rationale (2026-07-30, the run that forced this rule): a single supervised conversion took the docket from 61 to 143 in one command. Itemised, the ~15 real gates became unfindable. The beads were legitimate — they made previously-invisible work visible — so suppressing them is wrong and itemising them is also wrong; **collapsing is the only honest option**.
     Two lane-health checks to run when you render the line, because a flood hides its own defects:
@@ -85,7 +85,7 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
   - **Group the docket by title prefix (`DECISION:` vs `ACTION:`):** the two human-gate template kinds (`beads-standards` § Human-gate template) are *presented grouped by prefix*, not interleaved — `DECISION:` forks in one cluster (each a one-tap choice), `ACTION:` do-in-the-world tasks in another (each a checklist to run, often carrying a `best-done-when` ridealong hint). Batching pure-action items lets a sit-down session knock them out together (e.g. all ASC/console chores at the next version submission) instead of context-switching between deciding and doing. Same treatment in cockpit doctrine (the `/fleet.json` docket render).
 - **🟡 Plans awaiting sign-off** = board plans with `status: draft | refined` and **NOT** `loop-ready`. Most-invested first. (Drop every `loop-ready` plan — the loop owns it.)
 - **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan-init`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
-- **Loop awareness (count only)** = board ready beads + `loop-ready` plans + in-progress waves → a single header line, never itemized (tells the human the factory is running).
+- **Loop awareness (count only)** = ready beads that lack a docket label + `loop-ready` plans + in-progress waves → a single header line, never itemized (tells the human the factory is running).
 
 ### Extend the docket org-wide
 
@@ -137,8 +137,8 @@ Give the human the whole board at a glance before the actions:
 ```
 ## Command Center — {project | org-wide}
 
-Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any} {⚠ N journey stamps missing/stale, if any}
-{🔁 {lane}: {N} queued — batch sitting, not counted in "decisions" above · omit line if no queue lane}
+Needs you: {N} remaining · {ci_state} · {plans_pending} plan(s) to approve · {hopper} to plan — ~{est} min  {⚠ N proposals pending, if any} {⚠ N journey stamps missing/stale, if any}
+{🔁 {lane}: {N} queued — collapsed; still this sitting · omit line if no queue lane}
 🤖 Loop:   {ready_beads} beads + {loop_ready_plans} plans flowing autonomously{, {in_progress} in-flight} — you don't touch these
 
 ⚡ {one-line sequence note IF reordering is warranted — e.g. "approve plan X before promoting pool, it unblocks 3 items"; omit if order is fine}
@@ -146,21 +146,21 @@ Needs you: {N} decisions · {ci_state} · {plans_pending} plan(s) to approve · 
 
 The first line is the whole sit-down in one glance (lead with it). Rough the `~{est} min` from item counts (decision ≈ 1–2 min, plan approve ≈ 2 min, CI ≈ 5). No analysis theater — the `⚡` line appears only when there's a real sequencing call to make.
 
-**`{N} decisions` EXCLUDES queue-lane members, and `~{est} min` never prices a lane.** A lane is a separate batch sitting, so folding it into the headline destroys the number's only job — telling the human how long *this* sit-down is. Count it on its own `🔁` line instead. Concretely: 143 open `human-gate` beads of which 82 are one `curator-escalation` lane reads as **"Needs you: 61 decisions"** plus a `🔁 curator-escalation: 82 queued` line — never "Needs you: 143 decisions", which is true, useless, and reads as unsurvivable.
+**`{N} remaining` EXCLUDES collapsed lane members, and `~{est} min` never prices a lane.** Folding 82 curator rows into the headline makes the sit-down look unsurvivable; count them on the `🔁` line instead. The lane is still this sitting — after independent P0/P1s, drive it. Concretely: 143 open `human-gate` of which 82 are one lane reads as **"Needs you: 61 remaining"** plus `🔁 curator-escalation: 82 queued`.
 
 ---
 
 ## Phase 4: The Three Tiers (silver platter, exit-first)
 
-Order = distance from a stall (tier-first); **within a tier, oldest-bead-first** — the longest-stalled item surfaces above fresher ones so an aging blocker can't hide behind newer arrivals. Clear what's stopped, then feed backward. Omit any empty tier.
+Order = distance from a stall (tier-first); **within a tier, P0→P4 then oldest** — urgency first, then the longest-stalled item so an aging blocker can't hide behind newer arrivals. Clear what's stopped, then feed backward. Omit any empty tier.
 
 Age is **derived, never separately queried**: every board pull this skill already makes carries `created_at` per bead — the org-wide sweep above (`br list --json --limit 1000`) AND the default single-project board pull (via `ac-pipeline/references/board-scan.md`). Compute `now − created_at` from whichever pull feeds the docket and render it as a compact age token (e.g. `12d`) on each bead line — add no new `br` invocation.
 
 ```
 ### 🔴 Blocking — the line has stopped ({N})
    For each: {what} · {one-line memo/why} · → {action}
-   • 🔁 {lane label} — {N} queued (oldest {age})            → work the queue (batch sitting)
-     (queue lanes collapse to ONE line — never itemize; see § Collapse QUEUE LANES)
+   • 🔁 {lane label} — {N} queued (oldest {age})            → work the queue
+     (queue lanes collapse to ONE line — never itemize; still this sitting)
    • {bead id} {age} {decision title} — {memo summary}      → decide        (tap-ready)
    • {bead id} {age} {decision title} ⚠ no memo             → frame, then decide
    • CI {run} failed                                        → investigate
@@ -187,34 +187,22 @@ Age is **derived, never separately queried**: every board pull this skill alread
 
 After rendering, *drive* the session one item at a time, top of 🔴 downward — each action a **tap, not a typing task** — and surface the next item automatically; never dump the dashboard and wait.
 
-**Pick-next prompt** (when several items remain — `AskUserQuestion`, max 4 options, so offer the top of the queue + escape hatches):
-
-```
-AskUserQuestion(
-  question: "Next? (clearing 🔴 first)",
-  options: [
-    { label: "{top 🔴 item, short}",  description: "{what acting does}" },
-    { label: "{next 🔴/🟡 item}",     description: "..." },
-    { label: "Apply pending proposals",  description: "Review + apply/discard pending pipeline-proposal beads (nightly tidy / weekly align)" },   // include only if pipeline-proposal beads pending
-    { label: "Freshen (tidy/align)",  description: "Board looks stale — reconcile first" },   // include only if stale (legacy heuristic; nightly tidy usually covers this)
-    { label: "Done for now",          description: "Stop — hand off to the loop" }
-  ]
-)
-```
+**Present the next item — do not pick a subset.** Immediately open the single most-urgent remaining item (P0→P4, oldest first; independent gates before a collapsed lane). Put **Done** on that item's prompt as the escape (`Stop — leftover stays on the docket`). Never build a 4-option "which would you like" menu that omits the rest of the docket. Freshen / apply-proposals stay as optional buttons on the item prompt only when those signals are live — they do not replace the next docket item.
 
 **Per item type — present, then one tap:**
 
 - **🔴 Decision (human-gate bead) — check the memo first:** a tap-able decision needs a *pre-staged memo* — context · options with trade-offs · a recommendation (the `-t decision` contract in `beads-standards/reference/bead-conventions.md`). Assess the bead's description + comments:
     - **Memo present** → show it in 2–4 lines, then put its **options as buttons**, recommendation first + `(Recommended)`:
       ```
-      AskUserQuestion(question: "{decision title}", options: [{option A (Recommended)}, {B}, {C}, {Defer}])
+      AskUserQuestion(question: "{decision title}", options: [{option A (Recommended)}, {B}, {C}, {Defer}, {Done}])
       ```
     - **Memo missing/thin** (a bare "CRAIG: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer:
       ```
       AskUserQuestion(question: "{title} has no decision memo. Handle how?", options: [
         { label: "Frame it now (Recommended)", description: "I research the fork + draft options + a recommendation, then you tap" },
         { label: "Decide raw",                 description: "Skip the memo — tell me the call directly" },
-        { label: "Skip",                        description: "Leave it for later" } ])
+        { label: "Skip",                        description: "Leave it for later" },
+        { label: "Done",                        description: "Stop — leftover stays on the docket" } ])
       ```
       On **Frame it** → research the fork, write a proper memo onto the bead (`br comments add <id> "MEMO: …"` or update its description, per the convention), then present its options as buttons (above). The dashboard **self-heals** bare beads into tap-ready ones.
   On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance:
@@ -236,7 +224,7 @@ drafted against what was kept *before* closing the item. Hand that diff to `refl
 lesson candidate (routed through its normal type/domain taxonomy and gates). It's the
 cheapest, highest-signal capture channel in the session — don't close the gate and lose it.
 
-**Auto-advance:** after each action, confirm the result + ripple, then immediately present the next item — never re-render the whole dashboard mid-flow. Stop when the human picks "Done" or every tier is empty.
+**Auto-advance:** after each action, confirm the result + ripple + `{N} remaining`, then immediately present the next most-urgent item — never re-render the whole dashboard mid-flow, never offer a subset picker. Stop only when the human picks "Done" or every tier is empty.
 
 **Migration duty:** any human-pending item found in a legacy file scan (e.g. `_backlog-manual/`, plan `needs-approval`) that is NOT yet a bead → convert to a `human-gate` bead (`-t decision` for choices, `-t task` for manual actions) so the docket stays the system of record. File scans are a safety net, not the source of truth.
 
@@ -244,27 +232,30 @@ cheapest, highest-signal capture channel in the session — don't close the gate
 
 ## Phase 6: Hand-off
 
-Close the session by pointing at what now flows autonomously:
+When the human taps **Done** and docket items remain: leftover stays `human-gate` by default. Report `{N} remaining`. Offer:
+
+```
+AskUserQuestion(question: "{N} remaining on the docket.", header: "Hand-off", options: [
+  { label: "Leave on docket (Recommended)", description: "Next sitting sees the same list, shorter" },
+  { label: "Mark some loop-eligible", description: "You name them; I strip human-gate — never auto-strip" },
+  { label: "Start /ac-loop", description: "Ship whatever is already loop-side" } ])
+```
+
+If the docket is empty, point at what now flows autonomously:
 
 ```
 ✅ Gates cleared. The loop will pick up {ready_beads} beads + {loop_ready_plans} loop-ready plans on its next run.
 ```
 
-If anything was just unblocked or signed off, offer to kick the loop now:
-
-```
-AskUserQuestion(question: "Start the autonomous loop now?", header: "Hand-off", options: [
-  { label: "Start /ac-loop", description: "Ship the now-ready work autonomously" },
-  { label: "Leave it for the schedule", description: "The loop will pick it up on its next scheduled run" } ])
-```
+and offer Start /ac-loop vs leave-for-schedule.
 
 ---
 
 ## Principles
 
-1. **The loop boundary is sacred** — never surface ready beads, in-flight waves, or loop-ready plans. If the loop can handle it, it's not your concern.
+1. **The loop boundary is sacred** — never surface ready beads that lack a docket label, in-flight waves, or loop-ready plans. Ready + a docket label stays here.
 2. **Exit-first ordering** — clear what's stalled (🔴), then feed the builders (🟡), then stock the hopper (🟢). Distance from a stall, not category neatness.
-3. **Human time is scarce** — only surface what genuinely needs a human. Lead with the one-line "needs you" + a time estimate. If a tier is empty, say so and move on. No nag.
+3. **Docket in, docket out** — if it is on the docket, present it in urgency order (P0→P4, oldest first). The human decides act / defer / send-to-loop. Never drop, demote, or close a sitting because the list is long. Lead with "needs you" + remaining count. If a tier is empty, say so and move on.
 4. **Tap, not type** — every action is a button (`AskUserQuestion`), never "tell me your choice." Decisions show the memo's options with the recommendation pre-marked; the human taps and you execute. Batch the trivial (dependabot PRs, chores) into one tap.
 5. **Drive, don't dump** — render the board, then *conduct* it: act on one item, confirm the ripple, auto-advance to the next. Don't print a wall and wait.
 6. **Writes are gated** — tidy/align/approve/promote are offered and confirmed, never silent (except headless runs). Freshen is an in-loop action, not an upfront gate — show the board first.
