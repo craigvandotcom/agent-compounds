@@ -122,10 +122,11 @@ If type-check fails:
 Confirm you're starting from a green `main` before building on it. Read the most recent
 full-suite result instead of re-running the suite per wave.
 **Guard first** — only body-compass-app has this workflow today; if `quality-gate.yml` doesn't
-exist in this repo, skip straight to the local fallback:
+exist in this repo, skip straight to the local fallback. Key on the workflow **file path**,
+never the display-name hyphen (`Quality Gate` ≠ `quality-gate`):
 
 ```bash
-if gh workflow list --json name --jq '.[].name' 2>/dev/null | grep -qi quality-gate; then
+if test -f .github/workflows/quality-gate.yml; then
   gh run list --workflow=quality-gate.yml --branch main --event workflow_dispatch \
     --limit 1 --json conclusion,headSha,createdAt
 else
