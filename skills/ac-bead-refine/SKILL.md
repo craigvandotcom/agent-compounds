@@ -124,6 +124,16 @@ independent concurrence is the guard.
 Failing any criterion → run full `MIN_ROUNDS` and stamp `refine-full` (+ `degraded-solo` if the
 probe tripped). Procedure detail: `references/workflow.md` § Light-path / refine-light.
 
+## Anchor default (distinct from the light-path mechanism `file:line` above)
+
+Bead `## Anchors` / AC citations default to symbol/string anchors — function/type
+name, unique quoted string, or test name — never a bare `file.ts:NNN` alone. A line
+number may ride along as a **hint** only: it drifts on this shared trunk-direct
+checkout (concurrent writers, scheduled jobs) even within one round. No stable symbol
+(config block, data table, YAML list)? Pin a unique string of ≥20 characters plus a
+nearby heading; only if that also fails may a bare line number stand alone, labelled
+`hint-only`.
+
 ## Procedure
 
 This is a multi-agent conductor workflow. **Load and follow [`references/workflow.md`](references/workflow.md)** — it holds the full phased procedure (reviewer prompts, round structure, fix application, convergence, label removal), including the formal light-path branch.
