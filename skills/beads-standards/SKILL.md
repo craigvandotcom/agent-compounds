@@ -282,6 +282,10 @@ precision); token cost is reported at batch/child granularity by `ac-batch-close
   `appstore`/`app-store`, `preflight`/`pre-flight`, `browser-qa`/`browser-QA`,
   `repo:agent-compounds`/`repo-agent-compounds`). Pick the kebab-case form, rename
   with `br label rename <old> <new>`.
+- **`qa-blocker` is REPO-WIDE, not per-bead.** It is a gate label: Hard-stops
+  ac-batch-close and ac-merge for every batch in this repo until removed. Use it only
+  when the whole ship path must halt pending QA. To mark a single bead blocked, use a
+  `blocks` dependency — never this label. (There is no `blocked` status.)
 
 ## Backfill (2026-07-15 audit) — one-time alignment checklist
 

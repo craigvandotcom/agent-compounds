@@ -64,7 +64,7 @@ children are done.
 | Label | Meaning |
 | ----- | ------- |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
-| `qa-blocker` | Gates the next merge — ac-merge refuses while open |
+| `qa-blocker` | REPO-WIDE gate — Hard-stops ac-batch-close and ac-merge for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |

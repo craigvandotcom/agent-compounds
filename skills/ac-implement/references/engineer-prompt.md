@@ -139,6 +139,9 @@ Implement this bead using strict TDD (RED → GREEN).
 - Follow existing code patterns (read neighboring files first)
 - Follow domain skill guidelines (loaded above)
 - Follow project type discipline (see AGENTS.md > Rules)
+- **`qa-blocker` is REPO-WIDE, not per-bead**: it Hard-stops ac-batch-close and ac-merge
+  for every batch in this repo while open. For a single bead, use a `blocks`
+  dependency — never this label.
 - **Before implementing**, search for existing test files that import or test the files you will modify (use the Grep tool with pattern `from.*<module>` and glob `*.test.*` across `__tests__/` and `features/`). Run these after your changes to confirm no regressions. List any existing test files you verified in your report.
 - **For API/mock contract sweeps** (e.g., `.single()` → `.maybeSingle()`, mock-chain additions, exported-type renames, signature changes, fetcher implementation swaps, request-body shape changes): tests live in FOUR locations, not two. Search ALL of:
   - `__tests__/` (top-level)

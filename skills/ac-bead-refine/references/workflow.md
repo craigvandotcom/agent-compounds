@@ -539,6 +539,9 @@ fi
 # Adjust priority or labels
 br update <id> --priority P0
 br label add <id> "new-label"
+# qa-blocker is REPO-WIDE: Hard-stops ac-batch-close and ac-merge for every batch in
+# this repo while open, not a per-bead "blocked" marker. For a single bead, use a
+# `blocks` dependency — never this label.
 
 # Split a bead that's too large
 # Split rule: partition the original's ## Delivers across the children — nothing
