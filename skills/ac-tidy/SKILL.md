@@ -26,7 +26,7 @@ INTERACTIVE mode is unchanged from the sections below — every move requires us
 
 - **Tier-2 auto-archive: OFF** — the toggle. Default OFF for the pilot. Flipped OFF 2026-08-14 (Craig, bd-350ku / bd-0y49x): the gate twice passed on a live plan (proposal beads as proof, then a descoped close as "delivered"). It lives here in the SKILL **body** (never YAML frontmatter — the scheduler strips frontmatter before the agent sees the prompt). Flip to ON only via a later post-observation sign-off; because it is an agent-compounds edit, it takes effect only after re-sync + `pm2 restart pai-scheduler`.
 - **Positive proof, never empty-parse.** Before any Tier-2 archive: require `N_matching > 0` **and** `N_closed == N_matching` **and** the `br list --json` result parsed to a non-empty, expected shape. **`N_matching` and `N_closed` count IMPLEMENTATION beads ONLY — beads carrying `pipeline-proposal` or `dream-proposal` are EXCLUDED from both** (a proposal bead never counts as implementation proof). A bead "matches" a plan only via a plan-provenance field (`plan:` / `source_plan` / a beadify-authored link) — a free-text mention of the path in a memo is not a match. **`N_closed` counts only delivery-shaped `close_reason` values** (`shipped:` / `fixed:` / `done:`). `out-of-scope` / `wontfix` / `descoped` / `obsolete` (without a delivery verb) is NOT delivered — that bead is dropped from both counts (bd-0y49x). This skill emits proposal beads itself, so the exclusion binds at every site that defines "matching" here — the Tier-2 archive gate above and Phases 2b and 2c below. *Worked negative example:* a loop-ready plan's only match is `bd-pzlhv`, a CLOSED `pipeline-proposal` bead that merely NAMES the plan, its close reason recording a human decision to KEEP it. Naive arithmetic `N_matching = 1` / `N_closed = 1` → gate passes → an un-beadified loop-ready plan is archived. Under the exclusion `bd-pzlhv` is dropped, so `N_matching = 0`, the `N_matching > 0` clause fails, and the plan falls through to a **Tier-3 proposal** — never a silent no-op, never an archive. `br` output shape varies (`{issues:[]}` vs a bare array — `bca-br-tooling-flaky`); an empty or misparsed result MUST abort the archive and fall through to a Tier-3 proposal — never read emptiness as "done".
-- **Never touch OPEN `human-gate` or `qa-blocker` beads** — gated, not housekeeping. A CLOSED one gates nothing (a gate withholds FUTURE work, and there is none), so the Tier-1 stale-label carve-out below applies to it.
+- **Never touch OPEN `human-gate` or `qa-blocker` beads** — gated, not housekeeping. A CLOSED one gates nothing (a gate withholds FUTURE work, and there is none), so the Tier-1 stale-label carve-out below applies to it. **Exception (Phase 2g only):** an OPEN `human-gate,pipeline-proposal` bead whose target epic is already closed IS in scope — the gate is spent. `qa-blocker` beads are never in scope.
 - **Surviving-gate prep (NIGHTLY):** verify live state of every OPEN `human-gate` still on the docket and stamp `verified: <date>`. Procedure lives in `workflows/nightly.md`. This is a prep pass, not a de-gate.
 - **Provable, never heuristic** — keyword/similarity-inferred "looks done" is a Tier-3 proposal, never an auto-move.
 - **Absence of a label is never evidence that work is needed** (bd-rc9kk). A `decision`-typed bead is a re-gate candidate ONLY if it has NO recorded decision — no DECISION/RULING comment, no resolution in close metadata, AND no `label_removed` `human-gate` event followed by a decision comment. Do not infer "needs a human" from `issue_type == decision` AND missing `human-gate` — that cannot tell never-gated from gated-decided-and-released (the release ritual is to REMOVE the label). **Repeat-release exemption:** a bead that has been gated and released MORE THAN ONCE is exempt from re-proposal outright.
@@ -100,6 +100,7 @@ TaskCreate("2c — archive completed plans (all beads closed)")
 TaskCreate("2d — update backlog status for planned items")
 TaskCreate("2e — fix missing plan frontmatter")
 TaskCreate("2f — lifecycle label gap lint")
+TaskCreate("2g — reconcile stale epic-close proposals")
 TaskCreate("Flag orphans + suggest consolidation")
 TaskCreate("Report — tidy summary, commit changes")
 ```
@@ -236,6 +237,13 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
 Report: "human-gate missing Gate-reason: {id} — propose reclassification (Tier 3)."
 
 **TaskUpdate("2f", completed)**
+**TaskUpdate("2g", in_progress)**
+
+### 2g: Reconcile Stale Epic-Close Proposals (bd-0ak3h)
+
+**NIGHTLY (Tier 1): auto-applies** in both modes — pure bookkeeping, the epic-close decision already happened via another path. **Matcher:** an OPEN bead labelled `pipeline-proposal` whose title begins `Close delivered epic` / `Close delivered findings epic`, or that carries an explicit `target: bd-...` field. For each match, check the target epic's status; if it's already closed, close the proposal bead `obsolete: moot — target <id> already closed (<X close_reason>)` and, if a `_plans/_proposals/**` file is named on the bead, set that file's status to `moot` (no file named → skip the file half). Reconciles a stale proposal after the fact — distinct from Epic-Close Proposals below, which only emits new ones.
+
+**TaskUpdate("2g", completed)**
 **TaskUpdate("Flag orphans + suggest consolidation", in_progress)**
 
 ---
@@ -263,7 +271,7 @@ Report: "human-gate missing Gate-reason: {id} — propose reclassification (Tier
 - Report: "Epic-edge violation: `blocks` edge {a}→{b} has an epic endpoint — propose bead-level rewire (Tier 3)"
 
 ### Epic-Close Proposals (the epic-close home — NOT `beads-closed-gate.sh`)
-- Tidy already collects epic child-completion ratios (total / closed / open — § Scope + scan, from `board-scan.md`). Add the close action: **when every child of an epic is closed AND the epic's `## Delivers` is covered by the delivered artifacts of those children → propose closing the epic.** This is the single home for epic-close proposals; `beads-closed-gate.sh` stays focused on the claimed set and never closes epics.
+- Tidy already collects epic child-completion ratios (total / closed / open — § Scope + scan, from `board-scan.md`). Add the close action: **when every child of an epic is closed AND the epic's `## Delivers` is covered by the delivered artifacts of those children → propose closing the epic.**
 - **NIGHTLY (Tier 3):** emit a proposal (do not auto-close). **INTERACTIVE (Tier 2):** confirm via `AskUserQuestion` before closing.
 - Report: "Epic {id}: all {n} children closed + Delivers covered — propose close"
 
@@ -293,27 +301,16 @@ Scan active backlog files for merge opportunities:
 
 ### Stale Finding-Bead Pruning
 
-Finding beads (`qa-finding`, `review-finding`, `hygiene-finding` labels — see
-`skills/beads-standards/reference/bead-conventions.md`) inflate fastest — the pipeline stages
-file them automatically; ac-tidy is their pruner.
+Finding beads (`qa-finding`, `review-finding`, `hygiene-finding` labels — see `skills/beads-standards/reference/bead-conventions.md`) inflate fastest — the pipeline stages file them automatically; ac-tidy is their pruner.
 
 ```bash
 br list --json --limit 1000 | jq -r '.issues[] | select(.labels // [] | (index("qa-finding") or index("review-finding") or index("hygiene-finding"))) | select(.status != "closed") | "\(.id) \(.status) \(.title)"'
 br stale --json 2>/dev/null   # age-based staleness
 ```
 
-Flag for the user (never auto-close): finding beads that are (a) duplicates of
-each other or of an existing bug, (b) stale with no activity and no longer
-reproducible, or (c) superseded by a fix that already merged. Propose
-close/merge per item. **Never touch OPEN `human-gate` or `qa-blocker` beads** —
-those are gated, not housekeeping.
+Flag for the user (never auto-close): finding beads that are (a) duplicates of each other or of an existing bug, (b) stale with no activity and no longer reproducible, or (c) superseded by a fix that already merged. Propose close/merge per item. **Never touch OPEN `human-gate` or `qa-blocker` beads** (§ NIGHTLY Guardrails, including the Phase 2g exception).
 
-> **The RAW OPEN COUNT is not debt and is never escalated alone** (bd-8ms5t).
-> Report the lane's **age distribution** (oldest, median, how many carry merged-fix evidence),
-> never a bare total, and escalate ONLY the actionable subset per (a)/(b)/(c); empty subset → one
-> line, file nothing. A count that only rises trains the reader to ignore the lane. Inflow is
-> bounded at source: Low findings never become beads (`beads-standards/reference/bead-conventions.md`
-> § Anti-inflation rules).
+> **The RAW OPEN COUNT is not debt and is never escalated alone** (bd-8ms5t). Report the lane's **age distribution** (oldest, median, how many carry merged-fix evidence), never a bare total, and escalate ONLY the actionable subset per (a)/(b)/(c); empty subset → one line, file nothing. A count that only rises trains the reader to ignore the lane. Inflow is bounded at source: Low findings never become beads (`beads-standards/reference/bead-conventions.md` § Anti-inflation rules).
 
 **INTERACTIVE:** present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
 
