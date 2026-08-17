@@ -504,7 +504,7 @@ other batch's proof defers here: one verify, one beads-closed gate, one close, o
    **whole run's** diff, run **only** the selected passes (`ac-ui-polish` / `ac-qa-browser` /
    `ac-qa-device`) at the selected depth. Do NOT run all three unconditionally. Emit the gate's
    decision line into the Slack notify (which ran, which skipped + why). Beads any pass files
-   feed the retrospective; an open `qa-blocker` bead is a hard stop (§C2) — do not close.
+   feed the retrospective; an open `qa-blocker` bead is a hard stop for this batch's close (§C2) — do not close.
 2. **Verify beads closed (the loop's own pre-close gate — `ac-batch-close` no longer checks this itself).**
    Pass the UNION of identities (loop + EVERY delegated child identity this run), every bead id
    claimed this run, and every child's progress file. **Flag rationale (union / `--progress` /
@@ -726,13 +726,13 @@ Check before each iteration begins.
 | # | Condition | Action |
 |---|-----------|--------|
 | **C1** | No eligible work and no human-gate unblocks remaining | End session cleanly. Notify Slack: "Pipeline clear." |
-| **C2** | The verification gate files an open `qa-blocker`, or the batch's CI leg is red | Hard stop. Do NOT merge. Notify Slack with the finding. File a P0 bead. Wait for human. **This path skips `ac-batch-close`, so the acceptance mark does NOT advance — by design.** |
+| **C2** | The verification gate files an open `qa-blocker`, or the batch's CI leg is red | **Hard stop on the AFFECTED batch: do NOT run `ac-batch-close` for it.** Under trunk-direct the code is already on `main` — what is withheld is the CLOSE, not the work. Notify Slack with the finding, file the regression as a P0 `human-gate` bead, leave that batch unclosed. **This path skips `ac-batch-close`, so the acceptance mark does NOT advance — by design.** **C2 does NOT stop the board** — unrelated lanes continue under the standing goal. Halt all work only under C4, or when every remaining lane depends on the regressed code. |
 | **C3** | Iteration cap reached (default: 3 plan waves per session) | Stop after current merge. Notify Slack: "Iteration cap reached." |
 | **C4** | Human override (Slack message "stop" / "pause the loop") | Honour immediately after current bead. Notify confirmation. |
 
-C2 is the only **hard** stop — it never merges a regression. C1/C3/C4 are clean stops (current work finishes, then exit).
+C2 is the only **hard** stop, and it is hard on ONE batch — a regressed batch is never closed and accepted, while the rest of the board keeps running. C1/C3/C4 are clean stops (current work finishes, then exit).
 
-**Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
+**Every stop path ends in `ac-land`** (the teardown + learn close) — including C2's hard stop when it ends the run. A regression stop still tears down spawned processes, releases Agent Mail, and reflects the lesson before halting. "Stopped" without landing = not stopped, just abandoned.
 
 ### Run telemetry + friction carrier (D2)
 
