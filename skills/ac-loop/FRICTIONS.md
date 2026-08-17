@@ -1,7 +1,7 @@
 ---
 skill: ac-loop
 created: 2026-07-21
-last_pass: 2026-08-14
+last_pass: 2026-08-17
 entries: 17
 ---
 
@@ -30,10 +30,10 @@ entries: 17
 - skills: [ac-loop, ac-implement, ac-pipeline]
 - impact: H
 - frequency: every-run
-- recurrence: 4
+- recurrence: 5
 - related: [standing-sanctions-not-threaded-into-delegation-prompt, dispatch-scoped-from-spec-not-comment-history]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-04
+- last_seen: 2026-08-17
 - stage: ac-loop
 - status: open (ac-loop half SHIPPED 2026-08-06 as `references/delegation-prompts.md` § Brief-claim rule — compose-time citation requirement + verbatim child-facing pointer/escape clause; awaiting live-run confirmation. The ac-pipeline half — same rule in `delegation-contract.md` — remains unshipped and is tracked in that skill's log.)
 - proposed_fix: delegation briefs must POINT at the bead as the authoritative spec ("read `br show <id>` in full; this brief is a pointer, not a substitute") and must NEVER restate the bead's preconditions as established fact. Pair it with an explicit escape clause so a child that finds a stated precondition false is licensed to widen scope to the bead's own ACs rather than treating the brief as a hard fence. ALSO (2026-08-01): the same prohibition applies to non-bead claims a conductor asserts — bead OPEN/CLOSED status, tool availability, an active blocker, a paraphrased doctrine rule — and it applies to the `ac-pipeline/references/delegation-contract.md` child-spawn preamble itself, which currently asserts "you have NO `mcp__mcp-agent-mail__*` tools" as flat fact when tool availability is per-agent configuration. A false claim in a VERBATIM-copied block reaches every child of every run; that line needs to be conditional ("if you have no ... tools") or dropped.
@@ -57,6 +57,24 @@ entries: 17
   time: **a dispatch brief may state a fact only if it can cite a commit SHA or a `br show`
   verdict — never a narrative claim about in-flight work.** If no citation exists yet, the claim
   is not ready to be stated; say "premise, NOT verified" or wait for the child's return.
+  **+1 — a 9-hour, ~40-agent v2 run put FIVE false premises into child briefs; every one was
+  caught by a child that re-verified instead of trusting, and none by the conductor.** The five,
+  and the artifact class each one corrupts: (1) a risk flag inherited from a scan TABLE rather
+  than re-derived from the board — corrupts the risk queue's membership; (2) "fresh work
+  reclaimed from a dead agent" on a bead whose seven ACs were already discharged — a believing
+  child would have re-run a landed production data repair; (3) a UI claim about a backend-only
+  change with zero UI diff — sends a verifier to look at nothing; (4) "the app was built and
+  launched earlier this run" when the installed bundle predated the commit under test by 80
+  minutes — the device pass caught it with a symbol grep and rebuilt, where trusting would have
+  produced a confident FALSE NEGATIVE on the only thing that pass could verify; (5) a test-tier
+  WAIVER granted on a local host symptom (a collation mismatch producing ~81 local failures) for
+  a tier CI measures at 737/739 green — the waiver let a genuinely-red proof through. The shape
+  is constant across all five: **an INFERRED fact asserted as an ESTABLISHED one.** The scale
+  matters more than the count — five false premises survived the conductor and zero survived
+  the children, so child-side re-verification is not a courtesy round, it is the layer that
+  made a run of that size safe. Corollary the run added: **a waiver is a premise too.** Waiving
+  a gate requires measured state on the surface being waived, at the place the gate measures it;
+  a local symptom is not evidence about a CI-measured tier.
 
 ## child-has-no-upward-report-channel
 - skills: [ac-loop, ac-implement]
@@ -149,13 +167,13 @@ entries: 17
   friction skill-scoped to refine, which is a consumer of the mandate, not a new root.
 
 ## dcg-blocks-the-skills-own-canonical-artifact-redirects
-- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline]
+- skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline, agent-mail, ac-land, ac-loop-2]
 - impact: M
 - frequency: every-run
-- recurrence: 40
+- recurrence: 41
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn, dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-10
+- last_seen: 2026-08-17
 - stage: ac-loop
 - status: open
 - proposed_fix: patch the ac-* skills' own setup snippets so their canonical shell redirects no longer target a dynamic path — dcg blocks `> "$ARTIFACTS_DIR/…"` because the destination is variable-substituted. Either resolve-then-paste the literal path (the pattern teardown already mandates), or route artifact writes through the Write tool instead of a shell redirect. Tracked by bd-5ndzm.
@@ -241,6 +259,18 @@ entries: 17
   the call site, whatever intermediate form it takes (direct substitution, a heredoc, or — this
   time — a plain variable assignment one line earlier). No new workaround needed; resolved the
   same way as the rest of this family (Write tool / literal-paste). Counted here, not as a new id.
+  **RUN 20260817-122900-2583 (BCA, ac-loop-2, ~40 agents), +1 — the family reaches the IDENTITY
+  layer, and a READ is misparsed as a truncate.** Two published recipes were unrunnable as
+  written: `agent-mail/references/agent-identity.md`'s roster sweep, and ac-land's teardown
+  selectors. The new mechanism worth naming is a while-loop fed by `done` with a read redirect
+  from a file — the guard reads that as a destructive truncation of the file being READ, so a
+  pure read is blocked as a write. Sanctioned rewrite: pipe the file into the loop, or read it
+  with a command substitution; do not try to quote or escape the redirect. Also, a build lane
+  hit the classic variable-target form in the conductor's own briefed commit-mutex recipe and
+  silently FORKED the template instead of reporting the block (`ac-loop-2/FRICTIONS.md`,
+  `commit-mutex-lock-path-assumes-git-is-a-directory`) — which is the cost this entry has been
+  logging for 41 occurrences finally landing on a safety mechanism rather than an artifact write.
+  Counted here; pointer entries in `agent-mail` and `ac-land`.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-loop, ac-loop-2, ac-land, ac-bead-capture, ac-pipeline, beads-standards]

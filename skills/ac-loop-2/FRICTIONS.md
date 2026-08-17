@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-2
 created: 2026-08-09
-last_pass: 2026-08-14
-entries: 9
+last_pass: 2026-08-17
+entries: 15
 ---
 
 # ac-loop-2 — friction log
@@ -21,10 +21,10 @@ entries: 9
 - skills: [ac-loop-2]
 - impact: L
 - frequency: every-run
-- recurrence: 1
-- related: []
+- recurrence: 2
+- related: [harness-tool-defects-are-the-machinery-bead-volume-driver]
 - first_seen: 2026-08-11
-- last_seen: 2026-08-11
+- last_seen: 2026-08-17
 - stage: build
 - status: open
 - proposed_fix: derive the lock path with `git rev-parse --git-common-dir` (NOT `--git-dir`, which is per-worktree and re-opens the collision under linked worktrees), add a liveness assertion logging seconds-to-acquire, fail LOUD on "cannot create" (ENOTDIR/EACCES) instead of folding it into the "held by someone else" retry path, and cut the retry bound to safely under the Bash tool's 600s cap.
@@ -44,6 +44,14 @@ entries: 9
   specifies the narrower `--git-dir` and needs amending), ac-ac-loop2-commit-mutex-submodule-fsmh
   (agent-compounds board), bd-giy7u (P1, the 900s-vs-600s collision). Fleet fact:
   `neometa/memory/auto/loop-retro-neometa-app-dotgit-is-a-pointer-file.md`.
+  **+1 — the briefed template is itself unrunnable, and lanes fork it silently.** A build lane
+  handed the mutex recipe could not run the RELEASE line: dcg blocks any redirect whose target
+  is a runtime-expanded variable, which is exactly the shape the briefed recipe is written in.
+  The lane wrote its own variant rather than reporting the block, so the run held two different
+  mutex implementations with no way to tell which lanes shared a lock. Two properties compound
+  here — the recipe cannot be executed as briefed, and a lane's cheapest response to that is a
+  private fork — so the fix must be a LITERAL-path, copy-paste-runnable snippet in
+  `references/`, verified against dcg before it is briefed, never a shape a child must adapt.
 
 ## phase-3-global-pass-does-not-state-which-test-tiers-it-covers
 - skills: [ac-loop-2]
@@ -236,15 +244,146 @@ entries: 9
   Evidence: carrier `/tmp/loop-retro-20260814-062417-51731.md`; commits `7771f324` (7oss7
   page.tsx) vs the onboarding commit it overlapped.
 
-- **31% of a run's filed beads were machinery, not product.** 51 beads filed, 16 about the
-  pipeline. Root causes, in order of volume: (1) the harness has a high real defect rate —
-  dcg blocking variable-target redirects, `br comments <ID> add` silently no-opping,
-  `rg -rn` parsing as `rg -r n` and rewriting matches, vitest-affected excluding a named
-  file, `pnpm ... -- <pattern>` dropping the pattern, `git commit -- <path> -m` failing,
-  zsh not word-splitting `$PATHS` — each hit by multiple independent children, and each
-  encounter is a "known action"; (2) the findings rule had no product axis, so a broken
-  tool flag and a user-facing bug routed identically; (3) the same rule told children a
-  prose channel "orphans", so anyone who cared about a finding rationally chose a bead
-  over `friction:`; (4) nothing classified at the filing site — labels describe, they do
-  not gate. Fixing the harness collapses the rate without any discipline change.
-  Evidence: carrier `/tmp/loop-retro-20260817-122900-2583.md` § NON-PRODUCT BEAD ROOT-CAUSE.
+## machinery-findings-route-to-the-board-as-beads
+- skills: [ac-loop-2]
+- impact: L
+- frequency: every-run
+- recurrence: 1
+- related: [harness-tool-defects-are-the-machinery-bead-volume-driver, discoveries-filed-never-fixed-has-no-trivial-harness-exception]
+- first_seen: 2026-08-17
+- last_seen: 2026-08-17
+- stage: build
+- status: open (policy half SHIPPED — `references/filing-bar.md` gives the loop a kind-then-bar router and `beads-standards` gives priority an admission test; the two causes below survive that fix and are logged as their own ids)
+- proposed_fix: keep the kind-then-bar router as the single filing gate and measure it next run — machinery percentage of filed beads is the metric; if it does not collapse, the residual is the harness defect rate, not the policy.
+- narrative: 51 beads filed in one run, 16 of them about the pipeline rather than the app — a
+  third of the board's intake was the factory describing itself. Four causes, in volume order,
+  two of which are now fixed. FIXED: the known-action rule had no PRODUCT AXIS, so a broken tool
+  flag and a user-facing bug routed identically; the same sentence told children that a prose
+  findings channel ORPHANS, so a child that cared about its finding rationally preferred a bead
+  to a friction entry (we told them frictions do not survive, then were surprised they avoided
+  them); and nothing CLASSIFIED at the filing site, since labels describe after the fact and
+  gate nothing. Those three are answered by the filing bar. SURVIVING: the harness's own defect
+  rate (the volume driver) and the no-trivial-fix absolute, both logged separately below. The
+  structural lesson is the ordering — the policy was the easy half, and the run's own root-cause
+  pass found that fixing the tools would have collapsed the rate with no discipline change at
+  all. Evidence: carrier `/tmp/loop-retro-20260817-122900-2583.md` § NON-PRODUCT BEAD ROOT-CAUSE
+  ANALYSIS; 13 of the 16 were closed and their substance migrated into that carrier.
+
+## harness-tool-defects-are-the-machinery-bead-volume-driver
+- skills: [ac-loop-2]
+- impact: L
+- frequency: every-run
+- recurrence: 1
+- related: [machinery-findings-route-to-the-board-as-beads, commit-mutex-lock-path-assumes-git-is-a-directory]
+- first_seen: 2026-08-17
+- last_seen: 2026-08-17
+- stage: build
+- status: open
+- proposed_fix: treat the seven footguns below as a fix LIST, not a lore list — each is a one-line tool or wrapper fix, and each is currently paid for by every child that meets it. Until they are fixed, carry them as a verbatim ENVIRONMENT CONTRACT block in every child brief (the run that did this saw children pre-empt three of them); a footgun a child must rediscover is a footgun charged once per child per run.
+- narrative: the run's root-cause pass named this THE volume driver behind machinery beads, above
+  any policy cause. Seven harness defects, each hit by MULTIPLE independent children in a single
+  run: dcg blocks any redirect whose target is a runtime-expanded variable (6-plus lanes, and the
+  conductor's own briefed mutex recipe is written in exactly that shape); `br comments ID add`
+  silently no-ops at exit 0 while echoing the text back, so a child believes it filed a comment
+  that does not exist (2-plus lanes); `rg -rn` parses as `rg -r n` and SILENTLY REWRITES the
+  matched files (2 lanes, one of which nearly filed a bogus P1 off the corrupted output);
+  vitest-affected silently excludes a directly-NAMED file when that file is absent from its
+  graph; `pnpm test:integration:local` with a file pattern after the double-dash ignores the
+  pattern and runs all 82 integration files (157s instead of ~1s, with the wanted file buried in
+  93 unrelated failures — trivially misread as "my change broke everything"); `git commit --
+  PATH -m MSG` fails because a dash-m after the double-dash reads as a pathspec; and zsh does
+  not word-split unquoted variables, so a `git add --` with a variable holding several paths
+  collapses to one pathspec. What makes these expensive is not the individual cost but the shape:
+  every one is SILENT (exit 0, or a coherent-looking wrong result), so the child's next action is
+  built on a false observation, and every encounter qualifies as a "known action" that the filing
+  rule then routes to the board. The defect rate is a tooling-quality problem wearing a
+  discipline problem's clothes.
+
+## discoveries-filed-never-fixed-has-no-trivial-harness-exception
+- skills: [ac-loop-2]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [machinery-findings-route-to-the-board-as-beads]
+- first_seen: 2026-08-17
+- last_seen: 2026-08-17
+- stage: build
+- status: open
+- proposed_fix: admit one bounded exception to "discoveries are filed, never fixed" — a MACHINERY fix that touches no product file, is a single line or a single flag, and is committed as its OWN commit with no bead trailer, may be fixed in place and reported in the `friction:` block. One-bead-one-commit is preserved because the fix carries no bead; bisect attribution is preserved because the commit is separate and product-empty. Everything touching a product file stays filed, unchanged.
+- narrative: the absolute exists for a real reason — one-bead-one-commit is the basis of Phase 3's
+  bisect attribution, and a worker that opportunistically fixes things destroys the mapping from
+  commit to bead. But it admits NO exception for a one-line harness fix a worker could make
+  safely in seconds, so a broken flag in a wrapper script becomes a bead, a refine cycle, a
+  dispatch, and a commit — process weight two orders of magnitude above the fix. Combined with
+  the harness defect rate this is a multiplier, not an additive cost: the tools the rule forbids
+  fixing are precisely the tools generating the findings, so each run re-files what the last run
+  was forbidden from repairing. Note the interaction with the new filing bar: machinery may no
+  longer be filed as a bead at all, which means without a fix exception a trivial harness defect
+  now has NO route to repair — it lands in a friction log and waits for a promotion pass. That
+  makes the exception more load-bearing after the bar than before it.
+
+## device-only-native-beads-are-dead-dispatches-in-the-risk-queue
+- skills: [ac-loop-2]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-17
+- last_seen: 2026-08-17
+- stage: risk-queue
+- status: open
+- proposed_fix: pre-filter the Phase-2 risk queue before dispatching it — a bead whose acceptance criteria already state that a physical device is required is UNRUNNABLE in this harness, and re-deriving that fact costs a full serial dispatch each time. Filter on the ACs' own words at queue-build time, mark the beads `device-blocked`, and report them as a queue exclusion rather than sending an agent to read them.
+- narrative: the risk queue held 13 beads; 9 of them returned `unrunnable` for the same reason —
+  a real iPhone is required — and in every case the bead's own acceptance criteria SAID SO in
+  text the queue builder had already read. Nine serial dispatches (the risk queue runs at width
+  1, so this is the most expensive place in the pipeline to waste a slot) produced nine
+  re-derivations of a fact that was sitting in the input. The generalisation worth keeping: a
+  queue that dispatches an agent to discover something stated in the queue's own source data is
+  paying agent-minutes for a grep. Any phase that builds a work list from bead text should extract
+  the runnability preconditions at BUILD time, not at dispatch time.
+
+## concurrent-qa-browser-and-qa-device-contend-for-one-test-account
+- skills: [ac-loop-2]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-17
+- last_seen: 2026-08-17
+- stage: verify
+- status: open
+- proposed_fix: run qa-browser and qa-device SEQUENTIALLY. They are territory-disjoint in files and NOT disjoint in state — one shared test account, one shared journey-stamp store — so the loop's file-based disjointness test does not model them. State the rule in the verify phase rather than leaving it to the conductor's wall-clock judgement.
+- narrative: the conductor ran both QA passes in parallel to save wall-clock and they contended
+  over a single test account, overwriting three sim-drive journey stamps — evidence destroyed,
+  not merely delayed, since a stamp is the artifact the pass exists to produce. The interesting
+  part is WHY the conductor believed it was safe: territory disjointness in ac-loop-2 is defined
+  over FILES, and these two passes touch no common file. The disjointness model has no term for
+  shared external state (a test account, a simulator, a stamp store, a build slot), so anything
+  whose collision surface is outside the repo reads as safe to parallelise. Recorded here rather
+  than as a QA-skill friction because the defect is in the loop's concurrency model, not in
+  either QA skill.
+
+## conductor-briefs-assert-inferred-facts-as-established
+- skills: [ac-loop-2]
+- impact: H
+- frequency: every-run
+- recurrence: 0
+- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-08-17
+- last_seen: 2026-08-17
+- stage: spec
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is `delegation-brief-restates-bead-preconditions`
+  in `skills/ac-loop/FRICTIONS.md`, where occurrences are counted (recurrence 5), with the
+  canonical statement in memory `loop-retro-delegation-brief-claims-are-hints`. LOCAL
+  MANIFESTATION, and the strongest evidence the v2 phase model has produced for the rule: across
+  a 9-hour, ~40-agent run the conductor put FIVE false premises into child briefs — an inherited
+  risk flag, a discharged bead described as fresh work, a UI claim about a backend-only change,
+  an "already built" app whose installed bundle predated the commit under test by 80 minutes, and
+  a test-tier waiver argued from a local symptom against a tier CI measured green. Five caught by
+  children, zero caught by the conductor. At v2's width and duration the conductor writes more
+  briefs from more compacted context than any earlier loop version, so the defect rate scales with
+  the very thing v2 exists to increase — which makes child-side re-verification a STRUCTURAL
+  requirement of the phase model, not a quality nicety, and it should be stated that way wherever
+  v2 composes a brief.

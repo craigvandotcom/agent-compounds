@@ -1,7 +1,7 @@
 ---
 skill: ac-land
 created: 2026-07-29
-last_pass: 2026-08-10
+last_pass: 2026-08-17
 entries: 7
 ---
 
@@ -39,17 +39,27 @@ entries: 7
 - narrative: local `pnpm lint` scans gitignored scratch under `_artifacts/*/local/` that CI never checks out, so CI lint is green while the local land gate fails with 10 phantom errors on 4-day-old non-source files. `build:check` is a composite that runs lint, so it inherited the same false red. Cost ~3 lint/build runs plus diagnosis during this land before the mismatch was understood.
 
 ## zsh-nullglob-aborts-the-teardown-selector
-- skills: [ac-land]
+- skills: [ac-land, agent-mail]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [format-first-doctrine-conflicts-with-shared-checkout-pathspec]
 - first_seen: 2026-08-04
-- last_seen: 2026-08-04
+- last_seen: 2026-08-17
 - stage: ac-land
 - status: open
 - proposed_fix: no glob pattern in a teardown selector may be allowed to reach zsh unmatched — the fleet's shell aborts the command on a no-match instead of passing the pattern through, so a selector that finds nothing kills the block it sits in rather than returning an empty set. Write selectors to tolerate the empty case explicitly (match through a command that accepts zero results, or guard the glob before expanding it), and never assume the bash `nullglob`-off behaviour of leaving the pattern literal.
 - narrative: a teardown selector in ac-land's own cleanup step used a glob that matched nothing in this repo. Under zsh a no-match is a FATAL error, not an empty expansion, so the failure was not "the selector selected nothing" — it was the whole teardown block aborting at that line, with the steps after it silently never running. That is the expensive part: the visible symptom is one error, while the actual damage is everything downstream of it being skipped, and teardown is exactly the phase whose omissions nobody notices because it produces no artifact anyone reads. Same family as the `find … -name '*.yaml'` zsh-fatal defect recorded against `ac-pipeline/references/board-scan.md` (noted inside ac-loop's dcg entry) and as the memory `loop-retro-zsh-nomatch-glob-wait-predicate` — three independent occurrences of one root, which is that snippets throughout the pipeline are authored with bash glob semantics in mind and run under zsh. Cheap to fix per site and structurally recurring, since the defect is invisible in any repo where the glob happens to match.
+  **+1, and the surface widens to the identity layer.** The teardown selectors failed again with
+  no-match errors, and the sibling roster-sweep recipe in `agent-mail/references/agent-identity.md`
+  fails the same way — so the two recipes an unattended run depends on to leave the machine clean
+  are both unrunnable as published. Second mechanism found in the same pass: a while-loop fed by
+  `done` with a read redirect from a file is blocked by dcg as a truncation of the file being read
+  (counted at `dcg-blocks-the-skills-own-canonical-artifact-redirects` in ac-loop). The two
+  together justify a standing rule for teardown snippets specifically: every selector and sweep
+  recipe must be executed once, in zsh, under the guard, before it is published — a teardown step
+  that aborts produces no artifact and therefore no failure signal, which is the only phase where
+  an unrunnable recipe can persist indefinitely without anyone noticing.
 
 ## ac-land-assumes-a-pnpm-repo
 - skills: [ac-land]
