@@ -85,10 +85,9 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   findings every single day. Keep all `br` ops in `$TRIAGE_WT`; step 4 commits the flushed
   `.beads/issues.jsonl` from there alongside the state changes, so beads + report land in one push.
 
-- **Slack probe (before any mutation):**
-  `"$HOME/Repos/infrastructure/tools/bin/slack-send" --channel <channel from CORE/triage.md> --dry-run`
-  (absolute path — this job runs `cwd`'d into the app). If the channel doesn't resolve,
-  fall back to `pi`.
+- **Do not probe Slack.** `slack-send` has no `--dry-run`; it exits 2. Send the real report at
+  step 5 and read its exit code. Use the absolute path — this job runs `cwd`'d into the app.
+  If the channel does not resolve, retry once against `pi`.
 - **No Agent-Mail reservation** — a raw scheduler `prompt_file` run is not a
   self-registering Agent-Mail entry point (`agent-mail-project-keying-gotcha`). The
   append-only write set (step 3) is the collision guard.
