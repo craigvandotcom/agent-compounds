@@ -126,7 +126,7 @@ Same steps 2–4 over the supplied file set (no git range).
 
 ## §5 Per-caller bindings
 
-Five bindings — **3 git-range + 2 file-set**. Callers reference these by name;
+Six bindings — **3 git-range + 3 file-set**. Callers reference these by name;
 do not invent alternate windows.
 
 ### 1. ac-batch-close (git-range)
@@ -163,6 +163,28 @@ File set from the bug's root-cause trace (trace precedes the fix).
 ### 5. Item 4 light-path hard gate (file-set)
 
 File set of the bead under refine (same files the refine stamp will cite).
+
+### 6. Rule-0 blast-radius disjointness (file-set)
+
+Two file sets: the bug's root-cause trace (binding #4) and the candidate
+non-bug wave's touched set. **This is NOT the child fan-out disjointness test**
+(`ac-loop` § Efficiency — which siblings may run side by side); this one decides
+whether a bug freezes the board.
+
+A P2 or P3 bug releases the board only when ALL THREE hold — a conjunction, not
+a heuristic:
+
+- **a.** the two file sets share no file
+- **b.** they share no migration or schema surface
+- **c.** neither set is RISK-TOUCH (§1)
+
+Any clause failing → board-wide freeze. Either set unenumerable → board-wide
+freeze. **Unproven is not disjoint**: absence of evidence of overlap does not
+satisfy (a). P0/P1 bugs never take this path.
+
+**Log inputs and verdict** on every evaluation — both file sets, the three
+clause results, the disjoint-or-freeze verdict. A wrong `disjoint` is invisible
+until something races.
 
 ---
 
