@@ -184,7 +184,9 @@ task/feature → delivered artifacts). Per-type detail + enforcement model: pipe
 `beads-standards/reference/bead-conventions.md` § Per-type close artifacts — not restated here.
 
 **Priority is `0`-`4`, integers only** (`P0`-`P4` accepted as input, stored as int).
-0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself.
+0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself. Each level admits
+on a TEST — `reference/bead-conventions.md` § Priority admission. Without one everything lands
+`2` and priority ranks nothing.
 
 ## Verification verdicts (structured comments)
 

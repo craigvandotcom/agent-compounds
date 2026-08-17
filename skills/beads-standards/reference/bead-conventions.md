@@ -440,3 +440,22 @@ write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a 
    repro/evidence/source reference.
 6. **ac-tidy prunes**: stale finding-beads with no activity get closed or
    merged during pipeline housekeeping.
+
+## Priority admission
+
+Each level admits on a test, not a feeling. Without one, everything lands `2` and priority
+ranks nothing.
+
+| P | Admits only if |
+|---|---|
+| `0` | Production is broken NOW for real users — data loss, auth failure, payment failure. Blocks release. |
+| `1` | A user hits it on a normal path AND has no workaround, or the workaround costs data or time. Reproduction verified. |
+| `2` | A user hits it but a workaround exists; OR the defect is on an admin or internal path. |
+| `3` | Cosmetic, or a path users rarely reach. |
+| `4` | Idea or backlog. Not scheduled. |
+
+An admin-surface defect is `2` by definition — an operator is not a user.
+
+A filed bead states its reproduction as fact: a `file:line` re-read at the current HEAD, or a
+driven step with its observed output. *May*, *likely*, *appears*, *probably* and *seems* do not
+belong in a filed claim; a finding that cannot be stated as a fact is not finished.

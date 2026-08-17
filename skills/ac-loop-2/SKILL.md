@@ -614,8 +614,8 @@ PAI job config, triage decoupling, keep-awake layers: **`references/scheduling.m
   broken the phase, not tidied it.
 - **A declared RED expectation that never gets sampled is a comment.** The mutation probe is
   what makes element 4 real; skipping it turns the contract into paperwork.
-- **Findings are bead-first — PRODUCT only** (`rule-known-action-capture-beads-not-prose`). A
-  finding that makes a user or their data worse is an `unrefined` bead, cited by ID. Pipeline,
-  skill text, lint, bead schema, CI wrappers, harness ergonomics, tool flags and local-stack
-  findings are NEVER beads: they go in `friction:`, which the conductor owes to the carrier and
-  the session report. Exception: a gate that failed to catch product defects IS a bead.
+- **Findings route by KIND, then by BAR** (`references/filing-bar.md`). Machinery — pipeline,
+  skill text, lint, bead schema, CI wrappers, harness ergonomics, tool flags, local stack —
+  goes in `friction:`, never a bead. Product reaches the board ONLY at priority `0`/`1` with a
+  verified reproduction; product at `2`-`4` goes to the session report's product-findings list,
+  never `friction:`. A gate that failed to catch product defects IS a bead, at any priority.
