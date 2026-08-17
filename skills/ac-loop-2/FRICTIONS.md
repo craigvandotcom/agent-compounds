@@ -235,3 +235,16 @@ entries: 9
   in the carrier; hollow% stayed 0/6) but the skill text will mis-score it next time.
   Evidence: carrier `/tmp/loop-retro-20260814-062417-51731.md`; commits `7771f324` (7oss7
   page.tsx) vs the onboarding commit it overlapped.
+
+- **31% of a run's filed beads were machinery, not product.** 51 beads filed, 16 about the
+  pipeline. Root causes, in order of volume: (1) the harness has a high real defect rate —
+  dcg blocking variable-target redirects, `br comments <ID> add` silently no-opping,
+  `rg -rn` parsing as `rg -r n` and rewriting matches, vitest-affected excluding a named
+  file, `pnpm ... -- <pattern>` dropping the pattern, `git commit -- <path> -m` failing,
+  zsh not word-splitting `$PATHS` — each hit by multiple independent children, and each
+  encounter is a "known action"; (2) the findings rule had no product axis, so a broken
+  tool flag and a user-facing bug routed identically; (3) the same rule told children a
+  prose channel "orphans", so anyone who cared about a finding rationally chose a bead
+  over `friction:`; (4) nothing classified at the filing site — labels describe, they do
+  not gate. Fixing the harness collapses the rate without any discipline change.
+  Evidence: carrier `/tmp/loop-retro-20260817-122900-2583.md` § NON-PRODUCT BEAD ROOT-CAUSE.

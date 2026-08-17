@@ -614,8 +614,8 @@ PAI job config, triage decoupling, keep-awake layers: **`references/scheduling.m
   broken the phase, not tidied it.
 - **A declared RED expectation that never gets sampled is a comment.** The mutation probe is
   what makes element 4 real; skipping it turns the contract into paperwork.
-- **Findings channels are bead-first (known-action capture)** — anything you KNOW needs
-  action beyond this run is filed as an `unrefined` bead and cited by ID, never left as
-  prose; a prose-only findings channel orphans the moment its consumer closes. Litmus: "we
-  know action must be taken" = bead; "worth mentioning" = prose
-  (`rule-known-action-capture-beads-not-prose`).
+- **Findings are bead-first — PRODUCT only** (`rule-known-action-capture-beads-not-prose`). A
+  finding that makes a user or their data worse is an `unrefined` bead, cited by ID. Pipeline,
+  skill text, lint, bead schema, CI wrappers, harness ergonomics, tool flags and local-stack
+  findings are NEVER beads: they go in `friction:`, which the conductor owes to the carrier and
+  the session report. Exception: a gate that failed to catch product defects IS a bead.
