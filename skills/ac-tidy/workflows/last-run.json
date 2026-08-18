@@ -2,45 +2,40 @@
   "status": "done",
   "mode": "NIGHTLY",
   "machine": "Craigs-MacBook-Air",
-  "date": "2026-08-17T00:45:00Z",
-  "pushed_sha": "e1609b42",
-  "base_sha": "c152435a",
+  "date": "2026-08-19T00:45:00Z",
+  "pushed_sha": "83a569cd",
+  "base_sha": "bfaf210d",
   "push_verified": true,
   "counts": {
-    "surviving_gates_verified": 61,
+    "surviving_gates_verified": 42,
     "surviving_gates_closed_skip": 0,
-    "tier1_closed_unrefined_stripped": 13,
-    "tier1_gap_set": 6,
-    "tier1_applied_2f": 6,
+    "tier1_closed_unrefined_stripped": 23,
+    "tier1_gap_set": 7,
+    "tier1_applied_2f": 7,
     "tier1_epics_excluded": 3,
-    "proposals_emitted": 2,
-    "proposals_deduped": 0,
+    "proposals_emitted": 1,
+    "proposals_deduped": 1,
     "archived": 0,
     "tier2_toggle": "OFF",
     "tier2_plans_evaluated": 4,
-    "epic_edge_violations": 8,
+    "epic_edge_violations": 0,
     "epic_close_candidates": 2,
-    "parentage_gap_orphans": 92,
+    "parentage_gap_orphans": 86,
     "orphan_plans": 0,
     "orphan_beads": 0,
     "stale_backlog": 0,
     "active_plans": 4,
-    "backlog_files": 61,
+    "backlog_files": 56,
     "push_races_survived": 0,
-    "docket_open_human_gate": 61,
-    "docket_reasonless": 10
+    "docket_open_human_gate": 42,
+    "docket_reasonless": 7
   },
   "proposals": [
     {
-      "bead": "bd-p2ai5",
-      "title": "DECISION: 10 open human-gate beads carry no Gate-reason marker — reclassify or backfill (docket-health reason-less)",
-      "human_gate": true
-    },
-    {
-      "bead": "bd-56y3c",
-      "title": "PROPOSAL: 2 epics fully closed by their children — propose epic close (bd-curator-qa-minted-junk-canonicals-xpn51, bd-h2q92)",
+      "bead": "bd-7gras",
+      "title": "PROPOSAL: 2 epics fully closed by their children — propose epic close (bd-c82ky, bd-idbgq)",
       "human_gate": false
     }
   ],
-  "notes": "Isolated worktree at /var/folders/sl/3xgpnygn73784cg0rsf8qmpr0000gn/T/ac_tidy_run-20260817-004543-65894 (detached at c152435a, fresh origin/main). Docket-health ALARM going in: 61 open human-gate · 10 reason-less (7 >48h). Surviving-gate verify: all 61 docket IDs re-read live, all still status=open, all stamped `verified: 2026-08-17` via `br comments add` — 0 closed-skip, 0 parse errors. Tier-1: 2f gap-lint found 6 open non-epic beads (3 epics correctly excluded) with no unrefined/refined/human-gate label, stamped `unrefined` (one, bd-g4cri, is itself last night's still-open pipeline-proposal bead — stamped same as any other). Stale-unrefined-on-closed sweep (issues.jsonl re-grep, not br show) found 13 closed beads still carrying `unrefined`, stripped. Tier-2 toggle confirmed OFF (SKILL.md grep) — 4 active plans evaluated against the positive-proof gate (post-cleanup-backlog-handoff, curator-tie-break-policy, go-live-runbook, device-session-v1.5.16); all 4 fail the gate (either N_matching=0 after excluding pipeline-proposal beads, or matching implementation beads still open, or no delivery-verb close_reason) — 0 archived, and since none passed, no new archive-Tier-3 proposal filed (matches last night's convention: a failing gate is not itself a proposal-worthy finding). All 4 live plans carry non-vocabulary `status:` values (open/ratified/runbook/runbook) — reported as unclassified[], not corrected (Phase 2e only fires for plans missing frontmatter entirely; these all have frontmatter, just an out-of-vocab status). 2d=0 (no backlog file's title/plans field matches any of the 4 live plans). 2e=0 (all 4 plans already have frontmatter). Backlog scan: 61 files, all `status: captured` except 1 `draft` (feature-priorities-post-v1.md) and 1 `research-complete` (pool/033-content-strategy.md) — both out-of-vocab, reported unclassified. 17 backlog files have 0 checkboxes (prose-captured, not done per board-scan.md) — informational only. Phase 3: orphan plans 0, orphan beads 0 (scanned _plans/ refs in all OPEN bead descriptions against the real _plans tree, none dangling). Parentage-gap orphans 92 (open, non-epic, non-human-gate beads with no parent-child edge to an epic) — report-only per bd-zugqh, no individual proposals (down from 149 on 08-15, consistent with ongoing epic adoption elsewhere). Authored epic-edge violations: 8, all on the same closed legacy 'Epic 1-6' board flagged 2026-08-15 (bd-0uxw/bd-fpnm/bd-1kfg/bd-8nse/bd-9tbl/bd-khtj cluster) — already covered by the still-open bd-g4cri proposal, no new bead filed; verified strict issue_type=='epic' finds 0 (confirms these are the documented title-prefix 'Epic N:' heuristic, not a parse error) and a broader substring-only heuristic was tested and rejected (17 false-positive hits from unrelated task titles containing the word 'epic' mid-compound, e.g. 'epic-close reconcile' prose) before settling on the title-prefix form. Epic-close candidates: 2 new — bd-curator-qa-minted-junk-canonicals-xpn51 (10/10 children closed, Delivers covered) and bd-h2q92 (3/3 children closed, Delivers covered) — filed as one Tier-3 proposal bd-56y3c (no existing open pipeline-proposal covered either). Human-gate reason-less lint: 10 open human-gate beads confirmed still missing `Gate-reason:` (cross-checked against the orchestrator-supplied subset) — filed as one Tier-3 decision bd-p2ai5 (human-gate itself, Gate-reason: fork — the A/B/C reclassification per bead is a human judgment call). Finding-bead prune: 33 open qa/review/hygiene-finding beads, oldest 38d, median 17d, newest 1d — no actionable duplicate/stale-no-repro/superseded-by-merge subset identified this run (many already carry human-gate and are excluded from housekeeping); reported age distribution only, nothing escalated, nothing closed. Small-file merge / duplicate detection: no confident same-domain pairs found among the low-checkbox-count backlog files; none proposed (suggest-never-force). Dedup checked against both existing open pipeline-proposal beads (bd-gnu7p, bd-g4cri) before filing bd-p2ai5/bd-56y3c — no overlap. Commit e1609b42 pushed clean to origin/main (base c152435a), rev-parse verified local==origin/main, no push race. Worktree torn down after run."
+  "notes": "Isolated worktree at /var/folders/sl/3xgpnygn73784cg0rsf8qmpr0000gn/T/ac_tidy_run-20260819-004536-69783 (detached at bfaf210d, fresh origin/main). Docket-health ALARM going in: 42 open human-gate · 7 reason-less. Surviving-gate verify: all 42 docket IDs re-read live via `br show --json` (array-wrapped, not a bare object — earlier attempt silently mis-parsed and was corrected before any writes), all still status=open, all stamped `verified: 2026-08-19` via `br comments add` — 0 closed-skip, 0 errors. Tier-1: stale-unrefined-on-closed sweep (issues.jsonl re-grep, not br show) found 23 closed beads still carrying `unrefined`, stripped one-at-a-time (`br label remove` silently failed to find any issue when given multiple positional IDs in one call — single-ID form works; looped instead). 2f gap-lint found 10 open beads with no unrefined/refined/human-gate label, 3 correctly excluded as epics (bd-acreview-20260729-batch-findings-12qvg, bd-foods-family-zone-db-truth-zlyl0, bd-fswt7), 7 stamped `unrefined`. Tier-2 toggle confirmed OFF (SKILL.md grep) — same 4 active plans as 08-17 (post-cleanup-backlog-handoff, curator-tie-break-policy, go-live-runbook, device-session-v1.5.16) checked for plan-provenance bead links (not free-text mention, per the positive-proof guardrail): none carry a `plan:`/`source_plan`/beadify-authored link field, two are explicitly marked NOT loop-ready runbooks in their own frontmatter — 0 archived, no new proposal (unchanged from 08-17). 2d=0, 2e=0 (all 4 plans already have frontmatter). Backlog scan: 56 files (down from 61), status distribution unchanged in kind (captured + 1 draft + 1 research-complete out-of-vocab), 17 files with 0 checkboxes (prose-captured, informational only). Phase 3: orphan plans 0, orphan beads 0 (all 4 plan filenames have bead refs). Parentage-gap orphans 86 (down from 92 on 08-17) — report-only per bd-zugqh, no individual proposals. Authored epic-edge violations: 0 (down from 8 on 08-17 — the previously-flagged legacy 'Epic 1-6' cluster edges no longer present in issues.jsonl, consistent with that cluster being covered by bd-g4cri's resolution). Epic-close candidates: 2 new — bd-c82ky (40/40 children closed) and bd-idbgq (9/9 children closed) — neither carries an explicit `## Delivers` section (unlike 08-17's bd-56y3c pair, which did), so filed with a lower-confidence caveat asking for a human skim of child close reasons before closing; filed as bd-7gras (no existing open pipeline-proposal covered either). Human-gate reason-less lint: 7 open human-gate beads confirmed still missing `Gate-reason:` — already covered by the still-open 08-17 proposal bd-p2ai5 (DEDUP: skipped, populated `bead:` slot is the marker) — 1 proposal deduped, 0 new filed for this class. Finding-bead prune: 48 open qa/review/hygiene-finding beads (up from 33 on 08-17), oldest 40d, median 7d, newest 1d — no actionable duplicate/stale-no-repro/superseded-by-merge subset identified; reported age distribution only, nothing escalated, nothing closed. Small-file merge / duplicate detection: 17 zero-checkbox files (informational) + 2 files with 1-2 unchecked tasks, no confident same-domain pairs found; none proposed. Commit 83a569cd pushed clean to origin/main (base bfaf210d), rev-parse verified local==origin/main, no push race. Worktree torn down after run."
 }
