@@ -1,8 +1,8 @@
 ---
 skill: ac-human-session
 created: 2026-07-30
-last_pass: 2026-07-30
-entries: 3
+last_pass: 2026-08-18
+entries: 5
 ---
 
 # ac-human-session — friction log
@@ -16,10 +16,10 @@ entries: 3
 - skills: [ac-human-session, ac-tidy]
 - impact: L
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [memo-harm-never-verified-only-its-facts]
 - first_seen: 2026-07-30
-- last_seen: 2026-07-30
+- last_seen: 2026-08-18
 - stage: ac-human-session
 - status: promoted
 - proposed_fix: read the bead's own `events` table FIRST, before any other anti-rot verification — a comment is a CLAIM, `events` is the RECORD.
@@ -35,6 +35,15 @@ entries: 3
   injected on that turn. Two written rules lost to one unread audit trail. That is why the check
   was escalated out of memory into a step in this skill (agent-compounds a7ac7f2) rather than
   restated a third time. Reverted same session.
+  RECURRED 2026-08-18, same bead, SIXTH spurious re-gate — and the escalated step did not stop
+  it, because the step is written for "before surfacing an item" and this was a BULK RELABEL.
+  A sweep found DECISION-titled beads carrying no docket label, inferred they were invisible to
+  both lanes, and added human-gate to seven of them. Four had a prior deliberate `label_removed`
+  in events; bd-06opv.12 additionally carries a literal "DO NOT re-add human-gate". The events
+  read was run once at session start for a different bead and skipped for all seven. Fix the
+  TRIGGER, not the wording: gate every human-gate label MUTATION on the events read, not only
+  the surfacing path — a title prefix is not evidence of gate status, and absence of the label
+  is as likely to be a decision as an omission.
 
 ## memo-harm-never-verified-only-its-facts
 - skills: [ac-human-session, ac-tidy]
@@ -77,3 +86,43 @@ entries: 3
   effort, while the prose-only convention was broken four times. Craig declined to flip the guard
   to enforcing pending a decision on scope. Directly supports the fleet rule
   recurring-rule-escalates-to-a-gate-not-a-restatement (Repos d2e3290d).
+
+## stock-snapshot-used-for-a-flow-claim
+- skills: [ac-human-session]
+- impact: L
+- frequency: frequent
+- recurrence: 1
+- related: [raw-count-escalated-as-if-it-were-debt, memo-harm-never-verified-only-its-facts]
+- first_seen: 2026-08-18
+- last_seen: 2026-08-18
+- stage: ac-human-session
+- status: open
+- proposed_fix: a claim about DIRECTION needs a FLOW measurement — count arrivals AND closes over one stated window. A stock snapshot of the open set, however well broken down by age, cannot support "growing", "draining" or "ratcheting". Name the source, the population and the window in the same breath as any number, or make no directional claim.
+- narrative: the session told Craig the docket was "a ratchet" whose only exit was him, and built
+  a structural argument on it — 73 open, 23% older than 30 days, oldest 114 days. Every number was
+  correct and the conclusion was still wrong: over the same window the board had closed 98 and
+  created 81. The drain existed and was larger than the inflow; it was simply never measured.
+  This is the successor failure to raw-count-escalated-as-if-it-were-debt, whose fix ("report the
+  age distribution, not a bare total") was FOLLOWED here and did not help, because an age
+  distribution is still a stock measure. Compounding it, the same sitting quoted the docket as
+  66 / 68 / 71 / 73 without ever stating which population it counted (human-gate alone = 65 vs the
+  three-label union = 71), and ran one census through `br ready`, whose non-determinism is already
+  a recorded fact — it returned 7 items, then 9, where the stable answer from
+  `.beads/issues.jsonl` was 11. Three symptoms, one root: the census step has no defined method.
+
+## proposed-a-guard-that-already-shipped
+- skills: [ac-human-session]
+- impact: M
+- frequency: occasional
+- recurrence: 0
+- related: [change-proposal-asserts-a-gap-the-text-already-closes]
+- first_seen: 2026-08-18
+- last_seen: 2026-08-18
+- stage: ac-human-session
+- status: open
+- proposed_fix: see change-proposal-asserts-a-gap-the-text-already-closes in skill-builder — grep the target for the mechanism before filing a defect that proposes it.
+- narrative: pointer entry, not re-counted (recurrence lives on the primary id in skill-builder).
+  Local manifestation: a P1 bead was filed proposing a detect-and-refuse guard for a CI workflow
+  that already carried that exact guard in the same file, and minutes later this skill proposed
+  generalising an ac-tidy rule that had already shipped. Both were structural inferences about a
+  system, presented to Craig as findings, and both cost a refutation cycle.
