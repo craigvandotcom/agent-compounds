@@ -38,6 +38,8 @@ of them the **same `RUN_ID`** and the same claim id. Two consequences bind this 
 2. **The stamp is authoritative on `$ARTIFACTS_DIR/target-bead-ids.txt`**, written once at
    Phase 0 — never on `beads-snapshot.json`. This is what stops a child stamping `refined`
    onto beads it never reviewed.
+3. **The conductor owns every `br` mutation and the ledger commit; the child authors
+   drafts only.** Under HOLD, lift only the child's own artifact files.
 
 Never work around a collision by hand-suffixing `RUN_ID` per child; the safety belongs in
 the key, not the prompt. Formula, the three scope modes and the stamp loop:

@@ -86,7 +86,11 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   ~1–1.5h/run and skips the SHA+input-hash key):
   ```bash
   # Requires a CLEAN tree (git status --porcelain empty, incl. untracked).
-  # Dirty → script exits non-zero; commit or clean first. dcg blocks a variable-built redirect target: if the log redirect below is rejected, do NOT bypass — pipe into tee instead (ac-pipeline/references/shell-guardrails.md).
+  # Dirty → script exits non-zero; commit or clean first. If dcg rejects the log
+  # redirect, pipe into tee — never bypass (ac-pipeline/references/shell-guardrails.md).
+  # Never wrap serve-prod.sh or its next-server in timeout(1) or any SIGTERM-ing
+  # wrapper: the kill surfaces as a browser "Failed to fetch", not as infra.
+  # Teardown is the Phase 6 port-kill.
   scripts/qa/serve-prod.sh 2>&1 | tee "$ARTIFACTS_DIR/server.log" >/dev/null &
   SERVER_PID=$!
   SERVER_STARTED=1
