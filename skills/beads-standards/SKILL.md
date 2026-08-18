@@ -51,20 +51,21 @@ two kinds below differ only by **title prefix** and body template, so the cockpi
 level, not the label level.
 
 **`human-gate` is INVALID without an explicit `Gate-reason:` marker in the body.** The
-label is legal only when the body states one of the two reasons:
+label is legal only when the body names what ONLY the human can supply:
 
 ```
-Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
+Gate-reason: fork — <the irreducible choice; no option is objectively better>
+Gate-reason: authorization — <what is spent or exposed>
+Gate-reason: intent — <what was meant; unrecoverable from the repo at any depth>
+Gate-reason: action — <the outward-facing act only the human may perform>
 ```
 
-or
+A `human-gate` with no marker is invalid — do not file it. Mechanical work is never gated.
 
-```
-Gate-reason: authorization — <why this needs Craig's authorization>
-```
-
-A `human-gate` label with neither marker is invalid — do not file it. Mechanical work is
-never gated by default.
+**The check runs BOTH ways.** A bead whose acceptance criteria cannot be satisfied without
+the human MUST carry the label and a marker. An unmarked one is worse than a false gate: no
+docket shows it, so every wave claims it and bounces it. "I could not decide" is not a
+gate reason — finish the analysis or name which of the four applies.
 
 **`DECISION:` — a decision card** (a fork only Craig can resolve). Description fields:
 
