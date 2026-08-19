@@ -92,10 +92,22 @@ from this skill (now `ac-triage`).
 ## Phase 1 — Mac session (~30 min)
 
 ```bash
-# 1. Install the asc CLI (see repo README for current install method)
-# 2. Auth [HUMAN STEP]: create an ASC Team API key (App Store Connect →
-#    Users & Access → Integrations), download the .p8 once, configure asc with
-#    key id / issuer id / .p8 path (per-machine — see Secrets routing above)
+# 1. Install the asc CLI:
+brew install asc          # homebrew-core formula, MIT, zero deps, bottled
+# Prefer this over the project's `curl -fsSL https://asccli.sh/install | bash`:
+# homebrew-core is reviewed and the bottle is prebuilt.
+# Formula source: github.com/rorkai/App-Store-Connect-CLI
+# 2. Auth — NOT a human step. The Team Admin key already exists and the .p8 is
+#    already on this machine; art-still has used it headlessly since 2026-06-13.
+#    A team key authorizes every app in DYNQVB8R49, so it covers BCA:
+asc auth login --name bca \
+  --key-id 4BDSRVV64D \
+  --issuer-id 7c951934-341a-4a7a-88b4-7714eafb1693 \
+  --private-key ~/.appstoreconnect/private_keys/AuthKey_4BDSRVV64D.p8 \
+  --network
+#    Stores in the system keychain by default. NEVER pass --local: that writes
+#    ./.asc/config.json into this repo, which is public. The .p8 stays outside
+#    the repo. Only creating a NEW key would be a human step.
 # 3. Cherry-pick exactly three upstream skills into BCA's .claude/skills/
 #    (not all 23 — context weight; not agent-compounds — vendor scaffolding):
 npx skills add rorkai/app-store-connect-cli-skills   # then keep only:
