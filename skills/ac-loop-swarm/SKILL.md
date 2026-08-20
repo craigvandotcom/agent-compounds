@@ -77,8 +77,8 @@ transcripts, do not work beads yourself.
 
 ## Invariants
 
-- Pick from `br ready --json -l refined`, filtered in code. Not `bv --robot-next`: it returns
-  one global pick with no exclude, so a skipped bead returns forever.
+- Pick from `br ready --json -l refined`, filtered and sorted in code — bugs first, then
+  priority, then FIFO (beads-standards § Pick-order). Not `bv --robot-next`: no exclude, label-blind.
 - Claim with `br update <id> --claim --actor "$ACTOR"`. The second claimant gets
   `VALIDATION_FAILED`, `retryable: true`; it re-picks. This refusal replaces the conductor.
 - Skip labels `human-gate`, `epic`, `device`, `unrefined` and type `decision`. Epics sit in

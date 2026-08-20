@@ -32,8 +32,11 @@ CLOSED=0
 
 1 PICK     RUST_LOG=error br ready --json -l refined
            drop: labels human-gate|device|epic|unrefined · type decision · status≠open
-           apply <FILTER> if set. Take the first (hybrid sort = P0/P1 first).
-           none left → STOP (queue dry)
+                 · title matching /device|simulator|real-device/ (device work is often unlabelled)
+           apply <FILTER> if set.
+           sort: bugs first → priority 0→4 → created_at oldest  (beads-standards § Pick-order;
+                 `br ready`'s own hybrid sort is type-blind — never take its first row as-is)
+           take the first. none left → STOP (queue dry)
 
 2 CLAIM    br update <id> --claim --actor "$ACTOR" --json
            VALIDATION_FAILED (a sibling won) → goto 1
