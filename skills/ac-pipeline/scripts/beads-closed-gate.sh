@@ -327,9 +327,19 @@ for a in "${ASSIGNEES[@]}"; do
   fi
 done
 
-BASE_REF=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null)
+# Resolve the repo's actual trunk; never assume it is named `main`. A master-trunk repo
+# has no origin/main, and a trunk-name miss makes this gate unconditionally FAIL-CLOSED —
+# no bead in that repo can ever close. Ask origin/HEAD first: it is the repo's own
+# declaration of its default branch.
+BASE_REF=""
+for _trunk in "$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" \
+              origin/main origin/master main master; do
+  [ -n "$_trunk" ] || continue
+  BASE_REF=$(git merge-base "$_trunk" HEAD 2>/dev/null) || BASE_REF=""
+  [ -n "$BASE_REF" ] && break
+done
 if [ -z "$BASE_REF" ]; then
-  echo "beads-closed-gate: could not determine merge-base with main" >&2
+  echo "beads-closed-gate: could not determine merge-base with the repo's trunk (tried origin/HEAD, origin/main, origin/master, main, master)" >&2
   exit 2
 fi
 
