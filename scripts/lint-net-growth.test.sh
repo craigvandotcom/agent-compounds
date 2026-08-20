@@ -16,6 +16,10 @@ FUNCS=$(awk '/^NNG_VIOLATIONS=\(\)/{f=1} f&&/^check$/{exit} f' "$LINT")
 [ -n "$FUNCS" ] || { echo "HARNESS FAIL: could not extract functions"; exit 1; }
 eval "$FUNCS"
 type nng_scan >/dev/null 2>&1 || { echo "HARNESS FAIL: nng_scan not defined"; exit 1; }
+# LEG 1's own base resolver must be inside the extraction window too — the trunk-direct
+# self-exemption lived in leg 1's CALL SITE, which the window could not reach, so a fix
+# to nng_base_of alone would have proved nothing about leg 1.
+type nng_leg1_base >/dev/null 2>&1 || { echo "HARNESS FAIL: nng_leg1_base not defined — leg 1's base resolver is outside the extraction window"; exit 1; }
 
 W=/tmp/nng-proof
 rm -rf /tmp/nng-proof
@@ -71,6 +75,34 @@ echo x > "$W/registry/bar/SKILL.md"
 ln -s "$W/registry/bar" .claude/skills/bar
 echo "  symlinked dir present: $(ls -l .claude/skills/bar | sed 's/.*-> //')"
 expect "symlinked skill dir -> invisible" 0
+
+# --- LEG 1 UNDER TRUNK-DIRECT -------------------------------------------------
+# expect() above resolves the base with nng_base_of (leg 2's resolver). Leg 1 has its
+# own, nng_leg1_base, and that is where the self-exemption lived: after a push
+# origin/<default> == HEAD, so merge-base is HEAD and the diff is empty by
+# construction. These two cases exercise LEG 1's resolver specifically.
+expect_leg1() { # <name> <want-violation-count>
+  local name="$1" want="$2" base got
+  NNG_VIOLATIONS=()
+  base=$(nng_leg1_base "$W/app")
+  [ -n "$base" ] || { echo "FAIL $name — leg-1 base unresolvable"; FAIL=$((FAIL+1)); return; }
+  nng_scan "$W/app" "app" "$base" '.claude/skills/*/SKILL.md' > /tmp/nng-out 2>&1
+  sed 's/^/    | /' /tmp/nng-out
+  got=${#NNG_VIOLATIONS[@]}
+  if [ "$got" = "$want" ]; then PASS=$((PASS+1)); printf 'ok   %-42s violations=%s\n' "$name" "$got"
+  else FAIL=$((FAIL+1)); printf 'FAIL %-42s violations=%s want=%s  %s\n' "$name" "$got" "$want" "${NNG_VIOLATIONS[*]:-}"; fi
+}
+
+git checkout -q -- .claude/skills/foo/SKILL.md
+echo "line 11" >> .claude/skills/foo/SKILL.md
+echo "line 12" >> .claude/skills/foo/SKILL.md
+git add .claude/skills/foo/SKILL.md; git commit -qm "grow SKILL.md"; git push -q origin master 2>/dev/null
+echo "  after push: merge-base(origin/HEAD,HEAD) == HEAD ? $([ "$(nng_base_of "$W/app")" = "$(git rev-parse HEAD)" ] && echo yes || echo no)"
+expect_leg1 "already-pushed growth is still scored" 1
+
+for i in 1 2 3; do echo "line $i"; done > .claude/skills/foo/SKILL.md
+git add .claude/skills/foo/SKILL.md; git commit -qm "shrink SKILL.md"; git push -q origin master 2>/dev/null
+expect_leg1 "already-pushed SHRINK is still a pass" 0
 
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"

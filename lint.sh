@@ -721,13 +721,35 @@ nng_base_of() {
   git --no-optional-locks -C "$nng_r" merge-base "$nng_ref" HEAD 2>/dev/null || true
 }
 
+# Leg 1's base ref. Under trunk-direct — commit to main, push immediately —
+# merge-base(origin/main, HEAD) IS HEAD, the diff is empty by construction, and the
+# ratchet scores every landed commit zero; only uncommitted work ever pays. When the
+# base collapses onto HEAD, judge HEAD's PARENT instead: under trunk-direct the unit
+# of review is the commit. One commit back, never a distant ancestor — a wider base
+# would report a file's whole historical net growth and turn the ratchet into noise.
+# Lives beside nng_scan/nng_base_of so the proof harness can extract and call it.
+# Empty = unresolvable (leg 1 then degrades to a NOTICE, as before).
+nng_leg1_base() {
+  local nng_r="$1" nng_b nng_head
+  if git --no-optional-locks -C "$nng_r" rev-parse --verify --quiet "$NNG_BASE_REF" >/dev/null 2>&1; then
+    nng_b=$(git --no-optional-locks -C "$nng_r" merge-base "$NNG_BASE_REF" HEAD 2>/dev/null || true)
+  else
+    nng_b=$(nng_base_of "$nng_r")
+  fi
+  [ -n "$nng_b" ] || return 0
+  nng_head=$(git --no-optional-locks -C "$nng_r" rev-parse HEAD 2>/dev/null || true)
+  if [ -n "$nng_head" ] && [ "$nng_b" = "$nng_head" ]; then
+    # Root commit has no parent — keep the collapsed base rather than blanking it.
+    nng_b=$(git --no-optional-locks -C "$nng_r" rev-parse --verify --quiet "HEAD^" 2>/dev/null \
+            || printf '%s' "$nng_b")
+  fi
+  printf '%s' "$nng_b"
+}
+
 check
 
 NNG_BASE_REF="${NNG_BASE_REF:-origin/main}"
-NNG_MERGE_BASE=""
-if git -C "$AC_ROOT" rev-parse --verify --quiet "$NNG_BASE_REF" >/dev/null 2>&1; then
-  NNG_MERGE_BASE=$(git -C "$AC_ROOT" merge-base "$NNG_BASE_REF" HEAD 2>/dev/null || true)
-fi
+NNG_MERGE_BASE=$(nng_leg1_base "$AC_ROOT")
 
 if [ -z "$NNG_MERGE_BASE" ]; then
   # Degrade gracefully: a shallow CI checkout (actions/checkout@v4 default
