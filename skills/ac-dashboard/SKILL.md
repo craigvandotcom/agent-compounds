@@ -83,6 +83,7 @@ draft {N} · refined {N} · approved {N} · loop-ready {N} · beadified {N}
 ready {N} · unrefined {N} · blocked {N} · in-progress {N}
 epics: {title} — {closed}/{total} children ({ready} ready)
 labels: human-gate {N} · pipeline-proposal {N} · dream-proposal {N} · findings {N} · qa-blocker {N} · curator-structural {N}
+filing hygiene: {N} open `kind:machinery` — machinery belongs in friction:, never the board (>0 = a loop filed wrong-channel)
 queue lanes: any label with >5 open human-gate beads (machine-filed batches, e.g. curator-escalation) — count them, never itemize them
   (`curator-structural` is the exception: agent-actionable, never `human-gate`, so it has no other sweeper — always count it above even at {N}=0)
 

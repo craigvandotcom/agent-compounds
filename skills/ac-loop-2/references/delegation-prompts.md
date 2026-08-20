@@ -29,6 +29,9 @@ ENVIRONMENT CONTRACT (non-negotiable):
   sweep a concurrent agent's staged work into your bead's commit, silently.
   Minimal working-tree dwell; run `br` from the bead-board repo root.
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
+- NEVER `br create`. Machinery (pipeline, skill text, lint, bead schema, CI wrappers,
+  harness, tool flags, local stack) goes in `friction:`. Product goes in your return
+  summary. The conductor is the run's only filer and applies the bar once.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
 # ac-loop-2 delegation prompts
@@ -129,10 +132,11 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > within your lane only where their territories are disjoint. Keep workers lane-sticky —
 > reuse a returning worker for the next bead in YOUR lane rather than spawning fresh.
 >
-> **Discoveries are FILED, never fixed.** Any adjacent defect, missing test, or better shape
-> a worker finds becomes an `unrefined` bead (stamped `post-merge` at creation, parented into
-> this epic) for the next cycle's spec phase. Fixing inline breaks one-bead-one-commit, which
-> is the entire basis of the converge phase's attribution.
+> **Discoveries are REPORTED, never fixed and never filed.** Any adjacent defect, missing test
+> or better shape a worker finds is routed by KIND: machinery to `friction:`, product to your
+> return summary with a `file:line` re-read at current HEAD. No child runs `br create` — the
+> conductor files, once, against `references/filing-bar.md`. Fixing inline breaks
+> one-bead-one-commit, the entire basis of the converge phase's attribution.
 >
 > **Migration and native beads are NOT yours** — return them to the conductor for the serial
 > risk queue at the phase tail, even if they are in your lane's sequence.
@@ -217,9 +221,9 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > be sampled later by reverting your fix. A test that passes with the fix reverted is hollow
 > and reopens this bead.
 >
-> Adjacent defects: FILE an `unrefined` bead (stamped `post-merge`), never fix. Hold all `br`
-> mutation verbs until told the ledger is flushed. Report ≤200 words: commit sha, files
-> touched, discovery bead ids, + the structured `friction:` block."
+> Adjacent defects: REPORT, never fix and never file — machinery to `friction:`, product to
+> your summary with a `file:line` re-read at current HEAD. You do not run `br create`.
+> Report ≤200 words: commit sha, files touched, product findings, + the `friction:` block."
 
 ## Risk-queue prompt (Phase 2 tail — serial, one at a time)
 

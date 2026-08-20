@@ -129,6 +129,16 @@ inherited machine-wide, not repeated here.
 | `unrefined` | Needs a refinement pass before agent pickup. Default at creation. |
 | *(neither)* | **Ungraded — never assume ready.** Missing-both is not "not ready" either; it's unknown. Fail-safe: treat as unrefined until graded. |
 
+**Kind — the filing axis:**
+
+| Label | Meaning |
+|---|---|
+| `kind:product` | A defect in the thing users touch. The only kind the board admits, and only at priority `0`/`1` with a verified reproduction. |
+| `kind:machinery` | A defect in the factory — pipeline, skill text, lint, bead schema, CI wrappers, harness, tool flags, local stack. Belongs in a `friction:` block, NEVER the board. On the board it is a filing defect, not a category. |
+
+Kind is set at creation by whoever files. A bead with no kind is unrouted, so an autonomous
+run may not file one.
+
 Readiness for pickup = **presence** of `refined`, never inferred from the absence of
 `unrefined`. This is what gates loop/agent pickup everywhere this labelling is adopted.
 

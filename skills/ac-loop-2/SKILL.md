@@ -307,9 +307,9 @@ INSIDE the lock — after release, a sibling's commit false-fails it. **The ONE 
 script is `references/delegation-prompts.md` § Build-worker prompt** — workers execute the
 prompt, never this spine; never fork a second copy here.
 
-**Discoveries are FILED, never fixed.** A worker that finds an adjacent defect, a missing
-test, or a better shape creates an `unrefined` bead for the NEXT cycle's spec phase and
-moves on. Fixing inline breaks the one-bead-one-commit invariant that Phase 3's bisect
+**Discoveries are REPORTED, never fixed and never filed.** A worker routes an adjacent defect
+by KIND — machinery to `friction:`, product to its return summary — and moves on. The
+conductor files. Fixing inline breaks the one-bead-one-commit invariant that Phase 3's bisect
 attribution depends on — an unattributable failure costs more than the defect did.
 
 **No test gates. No type gates. No smokes.** Not "deferred" — absent. Phase 3 owns all of it.
@@ -408,7 +408,10 @@ Bisect invocation, cluster formation, sampling rule and the probe protocol:
    still open — not closing" and proceed to exit. Proceed to step 4 only on exit 0.
 4. **Invoke `ac-batch-close`** — dispatch the **Batch-close prompt** from
    `references/delegation-prompts.md` VERBATIM. One close, one CI dispatch, one report commit.
-5. **Slack notify** (see Milestone Notifications). Then re-query eligible work (same
+5. **PRINT the filing split every cycle, zeros included** — `filing: <n> on-bar · <n> machinery
+   · <n> sub-bar` over this run's `kind:` labels. Machinery > 0 is a defect: close it
+   wrong-channel into `friction:` before close. An unmeasured bar is an unenforced one.
+6. **Slack notify** (see Milestone Notifications). Then re-query eligible work (same
    Phase-0 filters: non-`human-gate`, ready or unrefined, plus loop-ready plans with no
    beads). Any remain → re-enter Phase 0 for the next cycle (do not land).
    None remain → C1, then `ac-land`.
@@ -441,9 +444,10 @@ commit.
 
 ## Invariants that hold across all five phases
 
-- **The conductor is the beads-ledger's only git writer.** Children run their `br` verbs
-  directly — stamps and discovery filings ARE their deliverable — but never stage or commit
-  `.beads/`; it is outside every territory manifest. The conductor flushes and commits the
+- **The conductor is the beads-ledger's only git writer AND the run's only filer.** Children
+  stamp beads they were assigned, but never `br create`, and never stage or commit `.beads/`.
+  Every filed bead carries `kind:product` or `kind:machinery` — the split is a count, not a
+  judgement, and `kind:machinery` filed during a run is a defect. The conductor flushes and commits the
   ledger at each barrier (`br sync --flush-only`;
   `beads-ledger-shared-file-conductor-should-own-final-commit`). Canon:
   `ceremony-batching-pool.md` § Beads-DB mutation deferral — the prep-hold binds only
@@ -614,8 +618,5 @@ PAI job config, triage decoupling, keep-awake layers: **`references/scheduling.m
   broken the phase, not tidied it.
 - **A declared RED expectation that never gets sampled is a comment.** The mutation probe is
   what makes element 4 real; skipping it turns the contract into paperwork.
-- **Findings route by KIND, then by BAR** (`references/filing-bar.md`). Machinery — pipeline,
-  skill text, lint, bead schema, CI wrappers, harness ergonomics, tool flags, local stack —
-  goes in `friction:`, never a bead. Product reaches the board ONLY at priority `0`/`1` with a
-  verified reproduction; product at `2`-`4` goes to the session report's product-findings list,
-  never `friction:`. A gate that failed to catch product defects IS a bead, at any priority.
+- **Findings route by KIND, then by BAR** — `references/filing-bar.md` is the router and the
+  only copy. You are the run's sole filer; children report, never `br create`.
