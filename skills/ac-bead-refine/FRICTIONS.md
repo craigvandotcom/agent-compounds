@@ -16,10 +16,10 @@ entries: 24
 - skills: [ac-bead-refine, ac-loop-2]
 - impact: M
 - frequency: every-run
-- recurrence: 4
+- recurrence: 5
 - related: []
 - first_seen: 2026-07-22
-- last_seen: 2026-08-11
+- last_seen: 2026-08-20
 - stage: ac-bead-refine
 - status: open
 - proposed_fix: keep (and make explicit in the workflow) the rule that EVERY cited `file:line` anchor and every quoted artifact in a bead must be re-verified against HEAD during refine, and that a falsified premise closes or rewrites the bead rather than being smoothed over. This is not overhead — it is the highest-yield thing refine does, and it paid off on every batch of this run.

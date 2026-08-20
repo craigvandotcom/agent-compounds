@@ -1,8 +1,8 @@
 ---
 skill: ac-land
 created: 2026-07-29
-last_pass: 2026-08-17
-entries: 7
+last_pass: 2026-08-20
+entries: 8
 ---
 
 # ac-land — friction log
@@ -16,14 +16,15 @@ entries: 7
 - skills: [ac-land]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-07-29
-- last_seen: 2026-07-29
+- last_seen: 2026-08-20
 - stage: ac-loop
 - status: open
-- proposed_fix: reconcile the FORMAT-FIRST instruction with pathspec discipline — make the repo-wide `pnpm format` sweep conditional on no live sibling being present; otherwise run a targeted `prettier --write <my paths>` instead.
+- proposed_fix: reconcile the FORMAT-FIRST instruction with pathspec discipline — make the repo-wide `pnpm format` sweep conditional on no live sibling being present; otherwise run a targeted `prettier --write <my paths>` instead. EXTEND to automatic formatters: exclude the run's own evidence artifacts (`.claude/reviews/**`, carriers, retro files) from every format path — hook-driven or mandated — since a formatter that rewrites an artifact after it is written destroys the fidelity the preservation step exists to provide.
 - narrative: ac-land's own SKILL.md mandates a repo-wide `pnpm format` sweep, but on a shared trunk-direct checkout that sweep rewrites FOREIGN files sitting in a sibling's in-flight working tree. Targeted `prettier --write <my paths>` is the correct form when a sibling is live. This run cost nothing both times it came up — once because an implement child deliberately avoided the repo-wide sweep, and once because this land itself was only safe because no sibling was still live — but the doctrine conflict is real and will bite the next run that runs the sweep literally as written while a sibling is active.
+  **+1 — a NEW victim class, and the formatter is now automatic rather than mandated.** A format hook rewrote ac-land's own preserved friction carrier. The earlier occurrences are about WHOSE files the sweep touches; this one is about WHICH KIND — the carrier is evidence, not source, and reformatting it corrupts the artifact the preservation step exists to protect. It also inverts the original occurrence's safety condition: a hook fires with no regard for whether a sibling is live, so "run it only when alone" does not defend against this half at all. Filed as `ac-8zbl.6`; the fix and its evidence live on the bead and are deliberately not restated here.
 
 ## local-lint-scans-gitignored-scratch-ci-does-not
 - skills: [ac-land]
@@ -100,6 +101,19 @@ entries: 7
 - proposed_fix: state the ledger requirement conditionally — "if `TaskCreate`/`TaskUpdate` are available, declare the run ledger; otherwise track the same section list inline and record it in `progress.md`". Applies to every skill whose Phase 0 mandates the ledger AND which also specifies a fan-out path (`ac-land`, `ac-bead-refine`, and any other consumer of `ac-pipeline/references/run-ledger.md`).
 - narrative: `ac-pipeline/references/run-ledger.md`'s pattern is declared MANDATORY in Phase 0 of several skills, but no `TaskCreate`/`TaskUpdate` tools exist when a skill runs as a spawned child rather than as the top-level session. The skills state the ledger as mandatory without noting it is impossible in the fan-out path they themselves specify, so a child either reports a false completion or burns time hunting for a tool that was never in its surface. First observed in `ac-bead-refine` (RUN 20260730-215800-loop1); recurrence 2 in `ac-land` itself (RUN 20260731-000500-loop2) — this land had no such tools and tracked its eight sections inline instead. Cost is small each time but it is `every-run` for any fanned-out consumer, and it silently degrades the resume-after-compaction guarantee the ledger exists to provide (a compacted child cannot read a ledger it could never write).
   **RUN 20260803-221658-19787, +1 — a SECOND call site inside ac-land, and the count is now the point.** ac-land hit the TaskCreate gap again at a further mandate site in its own flow, tracking the sections inline as before. The entry's `proposed_fix` (state the ledger conditionally) is still right and still unshipped, but this occurrence sharpens where it must be applied: patching the Phase-0 mandate alone is insufficient because the same skill mandates the ledger at more than one point, so the conditional has to be attached to the ledger PATTERN in `ac-pipeline/references/run-ledger.md` rather than to each consumer's Phase 0. This is also the third distinct member of the family ac-loop's log names as one root — panels a subagent cannot spawn, report channels it does not hold, ledgers it cannot write (`task-ledger-tools-unreachable-from-a-fanned-out-child`) — all detectable by the same one-line spawn-time check of whether the mandated tool is in the child's declared toolset.
+
+## preserved-artifact-inventory-is-incomplete-by-prefix
+- skills: [ac-land]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [format-first-doctrine-conflicts-with-shared-checkout-pathspec, conductor-supplied-candidates-are-leads-not-findings]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-land
+- status: open
+- proposed_fix: enumerate the run's artifacts by RUN_ID, not by a hardcoded list of filename prefixes — preserve every `/tmp/*-<RUN_ID>.*` before teardown. A prefix list is a denylist wearing an allowlist's clothes: it silently omits any artifact class added after it was written. Tracked as `ac-8zbl.7`.
+- narrative: the preservation step copies a fixed set of `/tmp` filename prefixes into the repo before teardown discards the rest, and the set does not cover every artifact the run produces. Confirmed live and immediately: the reflect step for this very run went to read `/tmp/loop-decision-trace-<RUN_ID>.md` — named as a required input by the handoff — and found it already swept, while the retro carrier under the known prefix had been preserved to `.claude/reviews/` and survived. The decision trace is the highest-value artifact of the two, because it is the only record of the perspective nobody else holds (lane merges, barrier holds, sequencing calls, the conductor's own errors), and it is exactly the class that cannot be reconstructed from git afterwards. What makes this every-run rather than occasional is the direction of the failure: new artifact classes get added to the run over time and the prefix list does not move with them, so coverage decays monotonically and the loss is silent — nothing reports that a file was not preserved, and the next reader simply finds it missing months later.
 
 ## conductor-supplied-candidates-are-leads-not-findings
 - skills: [ac-land]

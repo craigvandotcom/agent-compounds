@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-2
 created: 2026-08-09
-last_pass: 2026-08-17
-entries: 15
+last_pass: 2026-08-20
+entries: 16
 ---
 
 # ac-loop-2 — friction log
@@ -169,6 +169,18 @@ entries: 15
   pair asserting the OPPOSITE of Craig's ruling; a refine without that round would have stamped it
   refined. Both elements earned their cost in measured terms this run — record that before anyone
   proposes trimming them.
+  **+1, and the payoff moved from CORRECTING beads to KILLING them.** A later run's spec phase
+  destroyed two beads before a line of code was written: one had already been fixed two months
+  earlier and had sat with a frozen body while five comments carried the real state, and one's
+  agent-deliverable half was already delivered. It also corrected a third bead's scale by
+  roughly 12x — 226 consecutive failed deploys over ~88 days, not the 19 over 39 the body
+  claimed, because the author had read a paginated `vercel ls` rather than the full list. Three
+  beads, and in every case the bead's own body was the least reliable artifact about itself.
+  This is the sharpest available argument about WHERE verification effort belongs: killing a
+  bead in spec costs one child, while discovering the same fact in build costs a dispatch, a
+  diff, a review and a close — and not discovering it means shipping a fix for a bug that no
+  longer exists. Record the direction: the value of the spec phase is not that it writes better
+  specs, it is that it declines to spend the rest of the pipeline.
 
 ## refine-all-degrades-to-priority-cut-when-set-exceeds-width
 - skills: [ac-loop-2]
@@ -363,6 +375,19 @@ entries: 15
   than as a QA-skill friction because the defect is in the loop's concurrency model, not in
   either QA skill.
 
+## coordinator-layer-drops-work-on-a-short-lane
+- skills: [ac-loop-2]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [conductor-briefs-assert-inferred-facts-as-established]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: build
+- status: open
+- proposed_fix: size the delegation layer to the lane — dispatch build workers DIRECTLY when a lane holds two or fewer beads, and spend a coordinator only where there are enough beads that sequencing is real work. A coordinator whose entire job is to order two beads adds a turn boundary without adding judgement, and a turn boundary is where in-flight children die. Corollary for recovery: re-derive lane state from `git log` rather than from the detached coordinator's report, since the report is exactly the artifact that did not survive.
+- narrative: a lane coordinator ended its turn while its build worker was still in flight, violating the delegation contract's clause 5. The first bead of the lane had already landed; the second worker died with the coordinator's turn and produced nothing. The cost was recoverable — lane state was rebuilt by reading git rather than the report, and the coordinator was resumed with verified facts and told to do the remaining small bead in-session rather than hand it off a third time — but the shape is worth naming because it is a pure structural loss. The lane had two beads and one ordering constraint, so the coordinator contributed no decision the conductor had not already made when it built the lane; every hop it added was a place work could be dropped and none was a place judgement was added. Note the interaction with the delegation contract generally: clause 5 forbids self-detaching while a child is live, but nothing sizes the layer in the first place, so the contract is defending a structure that should not have existed on a lane this short.
+
 ## conductor-briefs-assert-inferred-facts-as-established
 - skills: [ac-loop-2]
 - impact: H
@@ -387,3 +412,12 @@ entries: 15
   the very thing v2 exists to increase — which makes child-side re-verification a STRUCTURAL
   requirement of the phase model, not a quality nicety, and it should be stated that way wherever
   v2 composes a brief.
+  **NOT COUNTED — a positive confirmation, recorded so the weighting pass does not miss it.** A
+  later v2 run put a wrong absolute brand path into a worker's brief and it cost ZERO: the worker
+  sourced its territory from `br show` and never depended on the prose, so the conductor's error
+  decayed into nothing. Deliberately NOT a recurrence bump at the primary — counting a no-cost
+  occurrence would inflate the pain signal for the case where the mitigation WORKED, and invert
+  what the count means. Captured instead in memory
+  `loop-retro-delegation-brief-claims-are-hints` (recurrence 7). Read the two together before
+  anyone proposes trimming child-side re-verification as overhead: this log records what the
+  defect costs, and only that memory records what the defence saves.

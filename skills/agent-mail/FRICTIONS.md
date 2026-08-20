@@ -1,7 +1,7 @@
 ---
 skill: agent-mail
 created: 2026-08-14
-last_pass: 2026-08-17
+last_pass: 2026-08-20
 entries: 4
 ---
 
@@ -29,10 +29,10 @@ entries: 4
 - skills: [agent-mail]
 - impact: M
 - frequency: every-run
-- recurrence: 1
+- recurrence: 2
 - related: [registration-keys-on-the-absolute-path-not-the-project]
 - first_seen: 2026-08-17
-- last_seen: 2026-08-17
+- last_seen: 2026-08-20
 - stage: ac-loop
 - status: open
 - proposed_fix: allocate a roster name only for an agent that will actually hold Agent Mail tools. Tool availability is per-agent configuration, and stance children (implementer, researcher, validator and the generic executors) do not carry the MCP surface — so a name minted for one is a name that can never register, and the teardown sweep that later hunts for it finds nothing and cannot distinguish "never existed" from "leaked". Size the roster from the set of tool-holding agents, and make the teardown sweep report unminted names as EXPECTED rather than as orphans.
@@ -44,15 +44,27 @@ entries: 4
   surface to anyone reading it, and the closing sweep spends its time looking for 46 identities
   that were never created, which makes a genuine leak indistinguishable from the noise floor. The
   roster is a coordination artifact, so it should model who can coordinate, not who will run.
+  **+1 — same shape at small scale, and the teardown reported CLEAN off it.** A roster handoff
+  listed 11 identities; exactly one was ever minted. The other 10 were stance children, which
+  hold no `mcp__mcp-agent-mail__*` tools BY CONSTRUCTION, so they could not have registered
+  under any circumstances — the 1-of-11 hit rate was determined before the run started. What
+  this occurrence adds is the consequence the first one only predicted: the teardown verified
+  the full roster, found 10 names absent, and reported a clean sweep. A sweep that cannot
+  distinguish "never existed" from "leaked" returns the same result in both cases, so its green
+  carries no information about whether anything actually leaked. That makes this an instance of
+  the global rule `a-dormant-pipeline-reports-success` (a check whose "found nothing" is
+  indistinguishable from "never ran"), and it is the reason the fix must be to size the roster
+  from tool-holders rather than to make the sweep more thorough — a more thorough sweep over a
+  fictional inventory is still proving nothing.
 
 ## registration-keys-on-the-absolute-path-not-the-project
 - skills: [agent-mail]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [roster-is-populated-with-names-that-never-mint]
 - first_seen: 2026-08-17
-- last_seen: 2026-08-17
+- last_seen: 2026-08-20
 - stage: ac-batch-close
 - status: open
 - proposed_fix: register with the canonical project KEY, never a filesystem path — a registration made from a different cwd, or with an absolute path passed as the project, lands in a second project namespace that no sibling agent's inbox or roster query can see. Caller discipline alone has now failed across four separate occurrences, so the fix must move into the tool surface: have the session macro DERIVE the canonical key rather than accept whatever the caller passes, and have registration assert the key it actually used back to the caller. App-local rule and history: BCA memory `agent-mail-project-keying-gotcha`.
@@ -64,6 +76,16 @@ entries: 4
   like "nothing happened" — which is also what a correctly quiet run looks like. Worth pairing
   with the roster entry above: between them, an identity plan can be simultaneously over-populated
   with names that never mint and missing the one identity that did.
+  **+1, and the fragmentation is FLEET-WIDE, not per-session.** A single identity was found
+  split across THREE project keys at once — and one of those keys is an absolute path rooted at
+  `/home/van/...`, a filesystem layout belonging to a DIFFERENT MACHINE. That is the escalation
+  worth recording: the earlier occurrence could be read as one caller passing one bad argument
+  in one session, and this one cannot. Registrations keyed on absolute paths accumulate across
+  machines into a permanent namespace sprawl, because the key that a Linux box mints under is
+  unreachable from a Mac and vice versa, so neither side can ever see, message, or deregister
+  the other's rows. Caller discipline has now failed across five occurrences on at least two
+  machines, which retires "remind the callers" as a fix: the macro must DERIVE the canonical
+  key and refuse a path-shaped project argument outright.
 
 ## teardown-and-sweep-recipes-are-unrunnable-as-published
 - skills: [agent-mail]
