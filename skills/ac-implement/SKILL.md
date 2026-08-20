@@ -119,30 +119,32 @@ If type-check fails:
 
 ### Baseline Check (read the last full-suite run; don't re-run full per wave)
 
-Confirm you're starting from a green `main` before building on it. Read the most recent
-full-suite result instead of re-running the suite per wave.
-**Guard first** — only body-compass-app has this workflow today; if `quality-gate.yml` doesn't
-exist in this repo, skip straight to the local fallback. Key on the workflow **file path**,
-never the display-name hyphen (`Quality Gate` ≠ `quality-gate`):
+The baseline read is cheap — always do it. Read the most recent full-suite result; never
+re-run the suite per wave. Guard on the workflow **file path**, never the display-name
+hyphen (`Quality Gate` ≠ `quality-gate`); no such file → local fallback. A green is a
+baseline only if it is a green FOR THIS TREE — measure its distance from trunk. "Recent"
+is not a freshness test.
 
 ```bash
 if test -f .github/workflows/quality-gate.yml; then
-  gh run list --workflow=quality-gate.yml --branch main --event workflow_dispatch \
-    --limit 1 --json conclusion,headSha,createdAt
+  git fetch -q origin main
+  LAST=$(gh run list --workflow=quality-gate.yml --branch main --event workflow_dispatch \
+           --limit 1 --json conclusion,headSha,createdAt); echo "$LAST"
+  SHA=$(printf '%s' "$LAST" | jq -r '.[0].headSha // ""')
+  [ -n "$SHA" ] && echo "behind trunk: $(git rev-list --count "$SHA"..origin/main) commit(s)"
 else
   echo "No quality-gate.yml workflow — falling back to local baseline."
 fi
 ```
 
-- **Green (recent)** → baseline clean; proceed.
+- **Green AND 0 commits behind** → baseline clean; proceed.
 - **Red** → `main` carries a failure; handle it BEFORE building (flow below).
-- **No recent full-suite run, or no CI workflow** (standalone use, `main` advanced since, or the
-  app has no full-test CI gate) → run the full suite once locally to establish the baseline:
-  `pnpm test:all 2>&1 | tail -20`.
+- **Green but behind trunk, or no run at all** → STALE, not a baseline; get a fresh one with the `ac-prove` skill (`ensure`), which dispatches and waits.
+- **Local `pnpm test:all` is the fallback ONLY on a checkout you hold alone.** Banned on a
+  shared checkout — the run poisons its own result under concurrent edits and starves every
+  other agent. Prove via CI, or record the baseline as unestablished and proceed bead-scoped.
 
 **Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them.
-
-Behavior:
 
 - **All pass:** Note "Baseline: all tests passing" in progress.md header. Proceed.
 - **Any failures:** Capture for each failing test file:
@@ -162,8 +164,6 @@ Specifically REJECT these failure modes from being treated as "acceptable baseli
 - **Production rate-limit / egress quota errors** (`exceed_egress_quota`, 429s from external APIs) — almost always fixable via env-override to local stack, the same pattern existing tests use.
 - **Schema-drift errors after migrations** (column "X" does not exist; SQLSTATE mismatches between expected CHECK and actual NOT NULL) — fixable by updating column references / assertions to match current schema.
 - **"Known pre-existing" without a specific bead ID tracking the fix** — this is an evasion phrase. Either it has a bead, or it needs one filed now.
-
-The baseline read is cheap — always do it. Only the fallback full run (when no loop-close run is available) is expensive; skip that fallback only if it takes > 10 minutes AND the session targets fewer than 2 beads.
 
 > **Wait for long local runs IN-SHELL — never detach from your own command** (`ac-pipeline/references/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall. Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
 
