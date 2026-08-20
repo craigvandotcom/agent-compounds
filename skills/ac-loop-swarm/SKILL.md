@@ -9,8 +9,6 @@ identical workers, close out when they finish. Never pick beads, never review co
 dispatch work. Workers pull. Coordination lives in artifacts — `br` claims, Agent Mail
 reservations, `## Consumes` / `## Delivers` — not in you.
 
----
-
 ## Phase 0 — Orient (interactive)
 
 1. Branch is `main`. Note dirty files as foreign WIP; workers never stage them. Never
