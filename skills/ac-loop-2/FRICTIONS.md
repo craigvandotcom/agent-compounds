@@ -2,7 +2,7 @@
 skill: ac-loop-2
 created: 2026-08-09
 last_pass: 2026-08-20
-entries: 16
+entries: 18
 ---
 
 # ac-loop-2 — friction log
@@ -260,13 +260,13 @@ entries: 16
 - skills: [ac-loop-2]
 - impact: L
 - frequency: every-run
-- recurrence: 1
+- recurrence: 2
 - related: [harness-tool-defects-are-the-machinery-bead-volume-driver, discoveries-filed-never-fixed-has-no-trivial-harness-exception]
 - first_seen: 2026-08-17
-- last_seen: 2026-08-17
+- last_seen: 2026-08-20
 - stage: build
-- status: open (policy half SHIPPED — `references/filing-bar.md` gives the loop a kind-then-bar router and `beads-standards` gives priority an admission test; the two causes below survive that fix and are logged as their own ids)
-- proposed_fix: keep the kind-then-bar router as the single filing gate and measure it next run — machinery percentage of filed beads is the metric; if it does not collapse, the residual is the harness defect rate, not the policy.
+- status: open (policy half SHIPPED and MEASURED — it did NOT bind; the gate exists as a reference but nothing applies it at the `br create` site, and the delegation prompts actively contradict it)
+- proposed_fix: bind the bar AT the filing site, not as a citation. Two concrete edits: (1) `references/delegation-prompts.md` tells every build worker "Adjacent defects: FILE an `unrefined` bead" with no kind-then-bar routing — rewrite it to route machinery to the returned `friction:` block and sub-bar product to the return summary, so a child cannot file machinery even if it wants to; (2) the spine's Phase-4 step must print the filing split (machinery / sub-bar / on-bar) before close, because an unmeasured bar is an unenforced one.
 - narrative: 51 beads filed in one run, 16 of them about the pipeline rather than the app — a
   third of the board's intake was the factory describing itself. Four causes, in volume order,
   two of which are now fixed. FIXED: the known-action rule had no PRODUCT AXIS, so a broken tool
@@ -280,6 +280,17 @@ entries: 16
   pass found that fixing the tools would have collapsed the rate with no discipline change at
   all. Evidence: carrier `/tmp/loop-retro-20260817-122900-2583.md` § NON-PRODUCT BEAD ROOT-CAUSE
   ANALYSIS; 13 of the 16 were closed and their substance migrated into that carrier.
+- MEASUREMENT (the metric the prior entry asked for): the first run under the filing bar filed
+  29 items — 18 machinery (62%), 8 product below the priority bar (28%), 3 that actually pass
+  (10%). The prior, pre-bar run was 31% machinery. The rate did not collapse; it roughly
+  DOUBLED. So the residual is NOT the harness defect rate as predicted — the policy simply did
+  not bind on the one agent that files. Root cause is now visible and is not discipline: the
+  conductor cited `filing-bar.md` in its own § Remember and still routed machinery to the board,
+  and every child was DISPATCHED with "Adjacent defects: FILE an `unrefined` bead (stamped
+  `post-merge`), never fix" — the delegation prompt orders the exact behaviour the bar forbids.
+  A rule stated in a reference and contradicted in the prompt that is actually executed loses to
+  the prompt every time. Machinery beads from this run were closed `obsolete: wrong channel` with
+  their substance already preserved in the run carrier.
 
 ## harness-tool-defects-are-the-machinery-bead-volume-driver
 - skills: [ac-loop-2]
@@ -387,6 +398,50 @@ entries: 16
 - status: open
 - proposed_fix: size the delegation layer to the lane — dispatch build workers DIRECTLY when a lane holds two or fewer beads, and spend a coordinator only where there are enough beads that sequencing is real work. A coordinator whose entire job is to order two beads adds a turn boundary without adding judgement, and a turn boundary is where in-flight children die. Corollary for recovery: re-derive lane state from `git log` rather than from the detached coordinator's report, since the report is exactly the artifact that did not survive.
 - narrative: a lane coordinator ended its turn while its build worker was still in flight, violating the delegation contract's clause 5. The first bead of the lane had already landed; the second worker died with the coordinator's turn and produced nothing. The cost was recoverable — lane state was rebuilt by reading git rather than the report, and the coordinator was resumed with verified facts and told to do the remaining small bead in-session rather than hand it off a third time — but the shape is worth naming because it is a pure structural loss. The lane had two beads and one ordering constraint, so the coordinator contributed no decision the conductor had not already made when it built the lane; every hop it added was a place work could be dropped and none was a place judgement was added. Note the interaction with the delegation contract generally: clause 5 forbids self-detaching while a child is live, but nothing sizes the layer in the first place, so the contract is defending a structure that should not have existed on a lane this short.
+
+## the-loops-own-gates-have-false-green-mechanisms
+- skills: [ac-loop-2]
+- impact: L
+- frequency: every-run
+- recurrence: 1
+- related: [machinery-findings-route-to-the-board-as-beads, phase-3-global-pass-does-not-state-which-test-tiers-it-covers]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: converge
+- status: open
+- proposed_fix: three separate edits, one shared assertion. (a) `references/converge-phase.md` § 5 — revert only the SOURCE files from `<commit>~1` via `git show | tee` and leave tests at HEAD, restoring with a scoped `git stash push -- <paths>`; drop the `git revert --no-commit` + restore-test dance and the `git reset --hard` recovery. (b) `references/beads-closed-gate-invocation.md` — never read the gate's exit through a pipe; capture `rc=$?` on the bare call. (c) the RED-PROOF gate must assert the declared REDs are AMONG the failures, never that they are the ONLY ones. Shared: every gate in this skill must be able to distinguish "ran and found nothing" from "did not run".
+- narrative: Three independent gates in one run each had a state where NOT RUNNING is reported as
+  PASSING. (1) The § 5 mutation-probe protocol reverts the whole bead commit then restores its
+  test files — but for a bead whose test file is NEW the revert deletes the containing DIRECTORY,
+  the restore write ENOENTs, and vitest then exits 0 against no tests. A false green inside the
+  mechanism built to detect false greens; it fired on the first probe attempted. Its documented
+  recovery, `git reset --hard` (called "the ONLY restore that works"), is additionally blocked by
+  dcg. (2) The beads-closed gate's exit read through `| tail` captures tail's status: the gate
+  exited 2 FAIL-CLOSED and was reported 0. (3) An exactly-N RED-PROOF gate forbids any EXTRA test
+  that bites pre-fix, so a worker DELETED a good repair-branch test to hold the count at 3 and
+  filed the coverage gap instead — the gate pressured coverage DOWN. Same root as the
+  `skipIf`-suite-exits-0 case the migration bead had to defend against with a dedicated criterion.
+
+## delegation-prompts-contradict-the-filing-bar-and-omit-the-claim-verb
+- skills: [ac-loop-2]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [machinery-findings-route-to-the-board-as-beads]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: build
+- status: open
+- proposed_fix: in `references/delegation-prompts.md`, replace the build-worker's "Adjacent defects: FILE an `unrefined` bead" with kind-then-bar routing (machinery to the returned `friction:` block, sub-bar product to the return summary, board only for product 0/1 with a verified repro); add an explicit CLAIM verb beside `CLAIM_ASSIGNEE`; and state the `### Bead <id>` + `COMPLETED: n/N` progress schema the close gate's completeness check requires.
+- narrative: The prompt that is actually executed beat the reference that is merely cited, three
+  ways in one run. The build-worker prompt orders "FILE an `unrefined` bead" for every adjacent
+  defect, with no kind axis — which is the precise behaviour `filing-bar.md` forbids, so children
+  filed machinery obediently. Separately the prompt threads `CLAIM_ASSIGNEE=<name>` but never says
+  CLAIM, so no bead was ever assigned and the close gate's union claimed-set came back EMPTY
+  (FAIL-CLOSED). And it specifies a progress.md HEADER but not the per-bead entry schema the
+  completeness check reads, so every child file came back thin and the gate returned
+  PROGRESS-INCOMPLETE. All three are one class: a contract stated only in a reference does not
+  bind the agent that never reads it.
 
 ## conductor-briefs-assert-inferred-facts-as-established
 - skills: [ac-loop-2]
