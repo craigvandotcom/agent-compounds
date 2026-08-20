@@ -738,6 +738,8 @@ bd-9bvr2 closed `decided:ACCEPT` — do not re-open a human-gate on these criter
 
 **Implementation-contract gate (same standing):** no implementable bead gets the stamp while any of the six elements is missing or unverified (`beads-standards/reference/bead-conventions.md` § Implementation contract). Author whatever capture omitted (beadify pre-stamps territory + sequence; refine completes the rest). An unopened `file:line`, a reasoned count, a territory without `### Test-tier exposure`, or an AC an empty diff could satisfy → not refined.
 
+Element 4 is enforced MECHANICALLY, not by this paragraph: `scripts/element4-check.sh` rejects a missing `## Declared RED`, an empty one, and a bare `RED: n/a` with no reason. Never write the label with `br label add <id> refined` — the only sanctioned writer is `stamp_refined` in `scripts/stamp-refined.sh`, which runs the check first and refuses on non-zero. A refusal means author the `## Declared RED` and re-stamp.
+
 **The stamp loop is authoritative on `target-bead-ids.txt`, NOT on the snapshot (bd-baudw).**
 The snapshot is a shared-shaped file that a sibling child could once have overwritten; the
 target list is this child's own scope, written once at Phase 0 and never re-derived. Stamping
@@ -751,6 +753,14 @@ the snapshot says.
 # refine-full = normal 3-reviewer × ≥3-round; refine-light = formal light branch (ALL 4 criteria).
 REFINE_PATH="refine-full"
 # Set REFINE_PATH=refine-light only after HARD GATE + criteria 2–4 all hold (SKILL.md § Light-path).
+
+# The label write lives inside stamp_refined, which shells out to element4-check.sh first.
+# Fail-closed if the library is missing: there is no bare-`br label add` fallback.
+STAMP_LIB=$(ls -d "$PWD"/.claude/skills/ac-bead-refine/scripts/stamp-refined.sh \
+                  "$PWD"/.agents/skills/ac-bead-refine/scripts/stamp-refined.sh 2>/dev/null | head -1)
+[ -n "$STAMP_LIB" ] || { echo "FATAL: stamp-refined.sh not found — refusing to stamp" >&2; exit 2; }
+# shellcheck source=/dev/null
+. "$STAMP_LIB"
 
 [ -s "$ARTIFACTS_DIR/target-bead-ids.txt" ] || { echo "FATAL: no target list — Phase 0 did not run in THIS dir; do not stamp" >&2; exit 2; }
 
@@ -783,9 +793,9 @@ while IFS= read -r id; do
     fi
     [ "$bstatus" = "unknown" ] || RESOLVED_N=$((RESOLVED_N + 1))
     [ "$bstatus" = "open" ] || { echo "SKIP $id (status=$bstatus)"; continue; }
-    br label remove "$id" "unrefined" 2>/dev/null
-    br label add "$id" "refined" 2>/dev/null
-    br label add "$id" "$REFINE_PATH" 2>/dev/null
+    # Guarded: refuses (and writes NO label) when element 4 is unmet. A refusal on one
+    # bead must not abort the rest of the batch — it is named and the loop continues.
+    stamp_refined "$id" "$REFINE_PATH" || echo "NOT-STAMPED $id (element 4 unmet)"
 done < "$ARTIFACTS_DIR/target-bead-ids.txt"
 
 if [ "$TARGET_N" -gt 0 ] && [ "$RESOLVED_N" -eq 0 ]; then

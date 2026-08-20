@@ -99,8 +99,15 @@ br list --json --limit 1000 | jq -r '
       ($l | index("human-gate") | not) and
       ($l | index("refined") | not))
   | .id' \
-| while read -r id; do br label add "$id" "refined"; done
+| while read -r id; do
+    bash .claude/skills/ac-bead-refine/scripts/stamp-refined.sh "$id" \
+      || echo "NOT-STAMPED $id — element 4 unmet, route to /ac-bead-refine"
+  done
 ```
+
+`stamp-refined.sh` is the only sanctioned writer of `refined`; it runs `element4-check.sh`
+first and writes nothing on a refusal. A legacy bead that fails the check has not earned
+the stamp — refine it, never hand-write the label.
 
 ## Batch-producing workflows (per-run epic + in-session refine)
 
@@ -286,9 +293,15 @@ is no loop-2-only variant.
 | 1 | `## Anchors` | Every cited `file:line` was OPENED at the HEAD sha recorded on the header. Quoted text matches. An unopened citation is a fabrication. |
 | 2 | `## Baselines` | Every countable claim was RUN; paste the command and its literal output. A reasoned count is a failure. |
 | 3 | `## Territory` | Exact file list this bead may touch (paths, not globs — glob only for files the bead CREATES). **Required sub-field `### Test-tier exposure`:** which test tiers that territory can break. |
-| 4 | `## Declared RED` | `Test <name> must FAIL before the fix, with approximately: <assertion shape>`. No new test → `RED: n/a — <why>` (excluded from `hollow%`). |
+| 4 | `## Declared RED` | `Test <name> must FAIL before the fix, with approximately: <assertion shape>`. Name the **ASSERTION** — the observable that changes (an exit code, a count, a thrown message) — not merely the test title; a title alone can fire in a sibling test and still read as satisfied. Comment-only / lock-only delivery → the `RED: characterized —` form below. Genuinely no assertion → `RED: n/a — <why>` (excluded from `hollow%`). Enforced mechanically at the stamp by `ac-bead-refine/scripts/element4-check.sh`. |
 | 5 | `## Sequence + risk` | Index within its epic (`N of M`), plus zero or more of `migration` / `native` / `hot-tier` / `cold-tier`. |
 | 6 | `## Acceptance Criteria` | Each AC adversarially checked: an empty diff cannot satisfy it. |
+
+**Element 4 forms.** Three, and they are not interchangeable:
+
+- **Assertion RED** (default) — `Test <name> must FAIL before the fix, with approximately: <assertion>`. Close with the named assertion's before/after values.
+- **`RED: characterized — <rule> / <mutation>`** — for a comment-only, doc-only or lock-only delivery whose diff changes no behaviour. State the rule the delivery pins AND the mutation that must break it, so the sampler has something to mutate. Example: `RED: characterized — the CI-only-retry rationale must stay attached to the retry setting / deleting the rationale comment while leaving retry: process.env.CI ? 1 : 0 must be caught by review.` This is a claim about a rule, not an absence of one.
+- **`RED: n/a — <why>`** — genuinely no assertion and no rule to pin. Excluded from `hollow%`. A bare `RED: n/a` with no reason is rejected.
 
 **Who emits what.** `ac-beadify` stamps elements 3 and 5 (territory +
 test-tier + sequence) at creation, while the plan's file list and order

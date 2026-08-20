@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# element4-check.sh — the mechanical element-4 gate.
+#
+# Element 4 of the implementation contract (`beads-standards/reference/bead-conventions.md`
+# § Implementation contract) is the only element the converge phase mechanically consumes:
+# the mutation sampler reads the declared RED verbatim. A RED reconstructed after the fix
+# falsifies nothing. Prose enforcement does not hold, so this gate is executable.
+#
+# Usage:
+#   element4-check.sh <bead-id> [<bead-id>...]     # resolves via `br show --json`
+#   element4-check.sh --file <path> [--type <t>]   # checks a description file (fixtures/tests)
+#
+# Exit 0 — every checked bead satisfies element 4 (or is an exempt type).
+# Exit 1 — at least one bead FAILS. Each failure is named with its reason.
+# Exit 2 — usage error, or a bead id that does not resolve.
+#
+# Three assertions, and the third is the point:
+#   1. no `## Declared RED` header             -> FAIL
+#   2. `RED: n/a — <reason>` under the header  -> PASS. Blocking the sanctioned escape
+#      hatch would push authors to fabricate REDs, one order worse than omitting one.
+#   3. header present but the SECTION IS EMPTY -> FAIL. A header-presence grep passes
+#      this, and would ship a check as hollow as the gap it closes.
+set -uo pipefail
+
+EXEMPT_TYPES="epic decision investigation"
+
+usage() { sed -n '9,11p' "$0" >&2; exit 2; }
+
+fail_bead() {
+  printf 'element4-check: FAIL %s — %s\n' "$1" "$2" >&2
+  RC=1
+}
+
+# check_description <label> <issue_type> <description>
+check_description() {
+  local label="$1" itype="$2" desc="$3"
+
+  case " $EXEMPT_TYPES " in
+    *" $itype "*) printf 'element4-check: SKIP %s (issue_type=%s is exempt)\n' "$label" "$itype"; return 0 ;;
+  esac
+
+  if ! printf '%s\n' "$desc" | grep -qE '^## Declared RED[[:space:]]*$'; then
+    fail_bead "$label" "no '## Declared RED' header — element 4 of the implementation contract is missing"
+    return 1
+  fi
+
+  # The section body: everything after the header up to the next '## ' heading or EOF.
+  local body
+  body=$(printf '%s\n' "$desc" | awk '
+    /^## Declared RED[[:space:]]*$/ { inred=1; next }
+    inred && /^## / { exit }
+    inred { print }
+  ')
+
+  if [ -z "$(printf '%s' "$body" | tr -d '[:space:]')" ]; then
+    fail_bead "$label" "'## Declared RED' section is EMPTY — a header alone declares nothing"
+    return 1
+  fi
+
+  # Sanctioned n/a form: `RED: n/a` carries a reason on the same line.
+  if printf '%s\n' "$body" | grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a'; then
+    if printf '%s\n' "$body" | grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a[[:space:]]*([-—:]|--)[[:space:]]*[^[:space:]]'; then
+      printf 'element4-check: PASS %s (RED: n/a with a stated reason)\n' "$label"
+      return 0
+    fi
+    fail_bead "$label" "'RED: n/a' with no reason — the escape hatch requires 'RED: n/a — <why>'"
+    return 1
+  fi
+
+  # Advisory, never blocking: element 4's bar is that the ASSERTION is named, not merely
+  # the test title. Not mechanically decidable, so warn and leave the judgement to refine.
+  if ! printf '%s\n' "$body" | grep -qiE 'must FAIL|assert|expect|exit|violations|returns'; then
+    printf 'element4-check: WARN %s — the section names no observable (assert/expect/exit code). Element 4 asks for the ASSERTION, not just the test title.\n' "$label" >&2
+  fi
+  printf 'element4-check: PASS %s\n' "$label"
+  return 0
+}
+
+RC=0
+if [ $# -eq 0 ]; then usage; fi
+
+if [ "$1" = "--file" ]; then
+  [ $# -ge 2 ] || usage
+  FILE="$2"; shift 2
+  ITYPE="task"
+  if [ "${1:-}" = "--type" ]; then [ $# -ge 2 ] || usage; ITYPE="$2"; shift 2; fi
+  [ -f "$FILE" ] || { echo "element4-check: ERROR — no such file: $FILE" >&2; exit 2; }
+  check_description "$FILE" "$ITYPE" "$(cat "$FILE")"
+  exit "$RC"
+fi
+
+for id in "$@"; do
+  case "$id" in --*) usage ;; esac
+  raw=$(br show --json "$id" 2>/dev/null || true)
+  arr=$(printf '%s' "$raw" | jq 'if type == "array" then . else [] end' 2>/dev/null) || arr='[]'
+  [ -n "$arr" ] || arr='[]'
+  if [ "$(printf '%s' "$arr" | jq 'length')" -eq 0 ]; then
+    echo "element4-check: ERROR — bead '$id' did not resolve via 'br show --json'" >&2
+    exit 2
+  fi
+  itype=$(printf '%s' "$arr" | jq -r '.[0].issue_type // "task"')
+  desc=$(printf '%s' "$arr" | jq -r '.[0].description // ""')
+  check_description "$id" "$itype" "$desc"
+done
+exit "$RC"
