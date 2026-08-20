@@ -139,8 +139,15 @@ rg -n --glob '*.tsx' --glob '*.ts' \
   -e '#[0-9a-fA-F]{3,8}\b' -e 'rgba?\(' -e 'hsla?\(' \
   <component-dirs> | rg -v '__tests__|\.test\.'
 
-# Hardcoded Tailwind black/white text+bg (theme-blind by definition)
+# Hardcoded Tailwind black/white text+bg (theme-blind by definition).
+# The trailing \b sits before `/`, so this ALSO matches alpha forms (`bg-white/6`).
 rg -n --glob '*.tsx' -e '\b(text|bg)-(white|black)\b' <component-dirs>
+
+# Split the two shapes — they triage differently (see below). --pcre2 is REQUIRED for
+# the lookahead; without it rg exits non-zero with a parse error and prints NOTHING.
+# Empty output from this command is not a count of zero until you check the exit status.
+rg -n --glob '*.tsx' -e 'bg-(white|black)/[0-9]' <component-dirs>          # ALPHA form
+rg --pcre2 -n --glob '*.tsx' -e '\bbg-(white|black)\b(?!/)' <component-dirs>  # BARE form
 
 # Inline style colour/background (escapes the token system)
 rg -n --glob '*.tsx' -e 'style=\{\{[^}]*(color|background)' <component-dirs>
@@ -154,6 +161,36 @@ rg -n --glob '*.tsx' -e 'style=\{\{[^}]*(color|background)' <component-dirs>
   the `rgba(13,20,18)` meal-icon circle from the failure case.
 - For each hit, ask: *does this surface change between light and dark?* If yes →
   it must be a token, not a literal → finding.
+
+### ALPHA on a STRUCTURAL element is the class that keeps escaping
+
+`bg-white/6` reads as a harmless tint. On a theme-flipping surface it is not: in dark
+mode it is the element's entire visible structure, and in light mode it inverts to
+near-invisible, so the container, its header band, its row dividers and its active-chip
+state all vanish at once. The screen still *renders*, so contrast and false-clean evals
+stay green while the structure is gone.
+
+- **STRUCTURAL** = container / card, divider or border, filter or segment chip, progress
+  or slider track, table header band, row hover. On a theme-flipping surface these are a
+  **finding**, alpha or not. Correct token: **`bg-foreground/N`** (and
+  `border-foreground/N`), which inverts with the theme and preserves the same tint.
+  Worked example: `bg-white/6` → `bg-foreground/6`.
+- **OVERLAY** = a scrim, photo/video wash, or any layer over permanently-dark content
+  (a landing hero, a media surface). `bg-white/4` there is CORRECT — the surface never
+  flips. Not a finding.
+- **BRAND-LOCKED** = a third-party brand colour that is theme-invariant BY SPEC — a
+  Google (`bg-white`) or Apple (`bg-black`) sign-in button face. Exempt, and it is
+  normally BARE (no alpha), so the alpha regex misses it entirely. Classify it
+  explicitly as brand-locked rather than leaving the next auditor to guess; a bare
+  `bg-white`/`bg-black` that is NOT a third-party brand mark is a finding.
+
+**False-positive budget** — a rule that flags every alpha hit runs ~40% false positives
+on a real app (overlay-heavy landing/marketing components dominate the misses), and one
+that flags none misses ~60%. Neither is acceptable, and neither is decidable from the
+regex: the ALPHA/BARE split narrows it, but the STRUCTURAL vs OVERLAY vs BRAND-LOCKED
+call is the triage and it needs the surrounding element. Judge each hit by the element it
+paints, never by the utility alone — and report the surviving count per route, because a
+run-level codebase grep has no cell to block.
 
 ## Sensor 3 — Token symmetry — catches "the token only exists in one theme"
 

@@ -79,7 +79,10 @@ phase('Audit')    one agent per route, owning that route's sub-matrix: for EACH
                   session (force theme, set viewport, reach the data-state,
                   cold-navigate), run the contrast + false-clean evals from sensors.md
                   on the LIVE page, screenshot, then score critique-polish.md from the
-                  screenshot → structured findings (carrying which combos it covered)
+                  screenshot → structured findings (carrying which combos it covered).
+                  ALSO run Sensor 2 (hardcoded colour) over THIS ROUTE's own component
+                  files and return the triaged count as `themeBlindHits` — a run-level
+                  codebase grep has no per-cell verdict to block on.
 phase('Verify')   adversarial validator per "conformant" claim: re-navigate + re-run
                   the eval (and read the screenshot) for a SAMPLE of the agent's
                   combos — including a non-seeded data-state — try to REFUTE the pass
@@ -108,9 +111,15 @@ const _a = typeof args === 'string' ? JSON.parse(args) : args
 const CELLS = Array.isArray(_a) ? _a : _a.cells // [{route, base, slug, themes, viewports, states}]
 const FINDING = { type:'object', properties:{ route:{type:'string'},
   covered:{type:'array', items:{type:'string'}}, // e.g. "dark·390·empty" — the combos actually rendered
-  contrastFails:{type:'number'}, blockers:{type:'array'}, highs:{type:'array'},
+  contrastFails:{type:'number'},
+  // Sensor 2 hits on THIS route's own components, AFTER triage (sensors.md § Sensor 2).
+  // REQUIRED, so a route cannot silently omit it — the theme-blind-surface class was
+  // detected by the grep but had nowhere to be reported, so it never reached a verdict.
+  themeBlindHits:{type:'number'},
+  themeBlindFiles:{type:'array', items:{type:'string'}}, // file:line for each counted hit
+  blockers:{type:'array'}, highs:{type:'array'},
   score:{type:'number'}, conformant:{type:'boolean'} },
-  required:['route','covered','conformant','score'] }
+  required:['route','covered','conformant','score','themeBlindHits'] }
 const VERDICT = { type:'object', properties:{ upheld:{type:'boolean'}, why:{type:'string'} }, required:['upheld','why'] }
 
 const results = await pipeline(CELLS,
@@ -124,6 +133,10 @@ const results = await pipeline(CELLS,
      data-state, COLD-navigate to the route on a LIVE browser, confirm theme+state actually applied,
      run the contrast + false-clean evals on the live DOM, screenshot, then READ the screenshot and
      score critique-polish.md. (Static screenshots can't be eval'd — drive the browser yourself.)
+     ALSO run sensors.md Sensor 2 (hardcoded colour) over THIS ROUTE's OWN component files only, triage
+     every hit by its § Triage rules, and return the surviving count as \`themeBlindHits\` with
+     \`themeBlindFiles\` as file:line. \`themeBlindHits > 0\` FORBIDS \`conformant: true\` — a
+     theme-blind structural surface is a conformance failure, list it under blockers.
      Empty/seeded are DIFFERENT cells — a list only shows its defects with data; an errored view looks
      like an empty one (false-clean sensor catches that). Return \`covered\` listing every combo you
      actually rendered — a combo you didn't render is NOT audited. You COMPETE with agents on other
@@ -136,13 +149,23 @@ const results = await pipeline(CELLS,
          least one non-seeded data-state and both extremes of the viewport set — and re-run the
          contrast eval yourself; read the screenshots. Try to refute it (a missed contrast fail, a
          hardcoded color on a flipping surface, an errored view passed as empty, a combo claimed in
-         \`covered\` but clearly not rendered, slop). Default upheld=false if unsure.`,
+         \`covered\` but clearly not rendered, slop). Default upheld=false if unsure.
+         REFUTE UNCONDITIONALLY (upheld=false) if the audit returned \`themeBlindHits\` > 0 alongside
+         \`conformant: true\` — that combination is self-contradictory. Also re-run Sensor 2 over this
+         route's components yourself: if you find a triaged hit the audit reported as 0, upheld=false.`,
         { label: `verify:${c.slug}`, phase: 'Verify', schema: VERDICT })
         .then(v => ({ ...f, verified: v }))
     : f
 )
 // Barrier here is legitimate: dedupe needs ALL cells.
-const all = results.filter(Boolean)
+// Structural refutation: a `conformant: true` carrying Sensor 2 hits is rewritten to a
+// failure here, in code, so the verdict does not depend on an agent honouring a prompt.
+const all = results.filter(Boolean).map(f =>
+  (f.conformant && (f.themeBlindHits ?? 0) > 0)
+    ? { ...f, conformant: false,
+        blockers: [...(f.blockers ?? []),
+          `theme-blind surfaces (Sensor 2): ${(f.themeBlindFiles ?? []).join(', ') || f.themeBlindHits}`] }
+    : f)
 return { all } // synthesize the two ledgers + DoD from this in the main context
 ```
 
