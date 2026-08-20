@@ -1,6 +1,7 @@
 ---
 name: ac-loop-swarm
 description: 'Pull-based parallel bead swarm: N fungible workers each pull the next ready refined bead (atomic `br --claim`), reserve files, implement, scoped-check, flock-commit to main, Delivers-gate, close, repeat until the queue is dry. Orchestrator only asks width, spawns, waits, owns the one ledger commit + batch CI. Triggers: ''swarm the beads'', ''ac-loop-swarm'', ''run the swarm'', ''parallel bead pull''. NOT for conductor-dispatched waves (ac-loop), one bead (ac-implement), unrefined work (ac-bead-refine).'
+disable-model-invocation: true
 ---
 
 **You are the orchestrator of a pull-based bead swarm on `main`.** Ask for width, spawn N
