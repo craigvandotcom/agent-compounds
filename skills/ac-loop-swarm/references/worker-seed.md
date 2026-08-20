@@ -18,6 +18,7 @@ macro_start_session(human_key:"<REPO_HUMAN_KEY>", program:"claude-code", model:"
   task_description:"swarm worker <K>/<N> run <RUN_ID>")
   → keep registration_token; NAME = returned agent name
 export AGENT_NAME="$NAME" BR_AGENT_NAME="$NAME"   # pre-commit guard keys on this
+export AGENT_MAIL_AGENT="$NAME" AGENT_MAIL_PROJECT="<REPO_HUMAN_KEY>"   # inbox nudge hook keys on these
 ACTOR="swarm-<RUN_ID>-$NAME"
 read .claude/skills/CORE/SKILL.md                  # project context, once
 CLOSED=0
@@ -25,6 +26,10 @@ CLOSED=0
 
 ## LOOP
 ```
+0 INBOX    fetch_inbox(project_key, agent_name:$NAME, unread_only:true)
+           act on anything addressed to you (a sibling needs a path you hold → release it
+           or reply with an ETA); acknowledge_message on ack_required. Then:
+
 1 PICK     RUST_LOG=error br ready --json -l refined
            drop: labels human-gate|device|epic|unrefined · type decision · status≠open
            apply <FILTER> if set. Take the first (hybrid sort = P0/P1 first).
@@ -47,6 +52,9 @@ CLOSED=0
 4 RESERVE  file_reservation_paths(project_key, agent_name:$NAME, paths:[…], ttl_seconds:3600,
              exclusive:true, reason:"<id>", registration_token)
            conflicts non-empty → br update <id> --status open --assignee "" → goto 1
+           …unless the bead cannot be done without that path: send_message(to:[holder],
+           thread_id:<id>, subject:"[<id>] need <path>", ack_required:true, registration_token)
+           — one targeted message, never a broadcast — then unclaim and goto 1
 
 5 WORK     Implement the bead as written. Load the domain skill the bead names. Tests the
            bead specifies are part of the bead. If the bead needs a decision a human must

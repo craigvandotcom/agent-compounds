@@ -1,8 +1,8 @@
 ---
 skill: agent-mail
 created: 2026-08-14
-last_pass: 2026-08-20
-entries: 4
+last_pass: 2026-08-21
+entries: 5
 ---
 
 # agent-mail — friction log
@@ -107,3 +107,16 @@ entries: 4
   truncation of the file being read. The identity layer is where this matters most: a sweep that
   aborts leaves live registrations and held reservations behind, and the next run inherits them as
   phantom conflicts with no trace of where they came from.
+
+## edit-guard-marker-holds-env-fallback-not-minted-name
+- skills: [agent-mail, ac-loop-swarm]
+- impact: L
+- frequency: every Tier-1 session
+- recurrence: 1
+- related: [roster-is-populated-with-names-that-never-mint]
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: implement
+- status: open
+- proposed_fix: (1) `am-identity-set.sh <name>` helper a session runs right after `macro_start_session` to rewrite its marker with the minted name (MINTED=1); (2) key the marker by session AND writer so N in-session workers do not share one marker — read `agent_id` from the hook stdin payload if Claude Code supplies it, else accept that enforce is top-level-sessions-only; (3) only then flip `AM_EDIT_GUARD_MODE=advisory` → `enforce`, after an advisory observation of `/tmp/am-edit-guard.log` per the advisory-first rule.
+- narrative: Flipping the edit guard to enforce was attempted as a one-line settings change and stopped before commit. `am-identity-start.sh` writes the marker once at SessionStart from `$AGENT_NAME` (the `FoggyCreek` env fallback). `macro_start_session` mints a different name and nothing rewrites the marker. `resolve_self()` therefore returns `FoggyCreek` for every minted session; in enforce mode the guard would block a session editing the very paths it reserved under its minted name — the whole Tier-1 pipeline, not an edge case. Verified live: this session's marker read `AGENT_NAME=FoggyCreek MINTED=0` while it held reservations as JadeCave and ChartreuseBrook, and `/tmp/am-edit-guard.log` held 105 WOULD-BLOCK lines — the newest three being this session's own edits to paths it had itself reserved ("reserved by 'JadeCave'"). The advisory stream is not clean; it is one false positive per Tier-1 edit. Second blocker: the marker is per `CLAUDE_CODE_SESSION_ID`; `ac-loop-swarm` mints N identities inside one session, so even a rewritten marker names only the last writer. Cost: enforce stays off; edit-time enforcement remains advisory-only and the pre-commit guard is the sole real gate.

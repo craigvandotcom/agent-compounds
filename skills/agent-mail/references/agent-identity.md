@@ -120,11 +120,13 @@ Runtime-verified (`ac-ycr.8`): `retire_agent`/`deregister_agent` mark
 `registration_token` optional in the *schema* but **reject name-only calls at runtime** unless
 the MCP session already authenticated as that agent — tokens live with the minting session
 (call-scoped fact #1 below), so cross-session identity retirement is impossible by design.
-Identity cleanup is therefore **layer 1 (self-deregister) only**; a crashed session's identity
-persists (harmless roster noise — retired/active listing only, no write authority) until the
-upstream admin-sweep primitive requested of mcp-agent-mail lands. Reservations — the
-safety-critical half — DO sweep cross-session: `force_release_file_reservation` releases
-another agent's hold by name after validating abandonment heuristics.
+Identity cleanup is therefore **layer 1 (self-deregister)** for live sessions, plus the
+server's own hourly stale-agent sweep: an identity idle past
+`AUTO_RETIRE_STALE_AGENTS_THRESHOLD_SECONDS` (default 86400) is auto-retired. A crashed
+session's identity is roster noise for at most a day — retired/active listing only, no write
+authority. Never attempt cross-session retirement by name. Reservations — the safety-critical
+half — DO sweep cross-session: `force_release_file_reservation` releases another agent's hold
+by name after validating abandonment heuristics.
 
 ### The sweep is NOT project-key-agnostic — query the store, don't loop per name
 
