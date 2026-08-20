@@ -196,8 +196,8 @@ task/feature → delivered artifacts). Per-type detail + enforcement model: pipe
 
 **Priority is `0`-`4`, integers only** (`P0`-`P4` accepted as input, stored as int).
 0 = critical, 4 = backlog. Never a word ("high"/"low") in the field itself. Each level admits
-on a TEST — `reference/bead-conventions.md` § Priority admission. Without one everything lands
-`2` and priority ranks nothing.
+on a TEST — `reference/bead-conventions.md` § Priority admission; type admits the same way, § Type
+admission (pick-order drains `bug` first, so type schedules). Without a test everything lands `2`.
 
 ## Verification verdicts (structured comments)
 

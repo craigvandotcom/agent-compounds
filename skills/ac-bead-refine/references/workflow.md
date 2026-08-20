@@ -836,6 +836,7 @@ Verify:
       AC asserting a numeric DOM property without first establishing the property is
       meaningful on that element type; demand a bite-proof (demonstrate the check RED)
       for any AC that is the sole evidence for a bead
+- [ ] Type passes `beads-standards/reference/bead-conventions.md` § Type admission — `bug` only with an observed defect + fact-stated repro at HEAD; a missing guard/test or a repair record is `task`; a re-grade carries a comment naming the row (type schedules: Rule 0 drains `bug` first)
 - [ ] Title/label parity enforced — every `decision`-typed / `DECISION:`/`DESIGN_DECISION:`-titled reviewed bead carries `human-gate` BEFORE stamping
 - [ ] Implementation contract complete on every implementable bead — all six elements present and verified this pass (`beads-standards/reference/bead-conventions.md` § Implementation contract), including `### Test-tier exposure`
 - [ ] `unrefined` removed AND `refined` added to all reviewed beads

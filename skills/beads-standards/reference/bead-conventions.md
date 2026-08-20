@@ -454,6 +454,25 @@ write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a 
 6. **ac-tidy prunes**: stale finding-beads with no activity get closed or
    merged during pipeline housekeeping.
 
+## Type admission
+
+Each type admits on a test, not a title prefix. Type is a scheduling input: pick-order
+drains `bug` before every other type (Rule 0), so a defect typed `task` waits behind every
+bug and a chore typed `bug` jumps the queue.
+
+| Type | Admits only if |
+|---|---|
+| `bug` | Observed behaviour differs from specified or previously-working behaviour at current HEAD. Reproduction stated as fact (`file:line` re-read at HEAD, or a driven step with observed output). Cause or a failing test in hand. |
+| `investigation` | A defect is suspected but reproduction or cause is missing. Closes by spawning the `bug` or proving there is none. |
+| `task` | Work with a known deliverable and no behaviour defect: chores, refactors, tests and guards, docs, config, proofs, records of past repairs. |
+| `feature` | New user-visible capability. Normally a dot-child of an epic backed by a plan. |
+| `decision` | A fork only the human resolves. Always `human-gate` + `Gate-reason:`. |
+
+A missing guard or test is `task`, not `bug` — nothing is observed to be wrong yet. A
+policy change ("X must now scrub Y") is `task` or `feature`; code found violating the
+policy after it lands is `bug`. Refine re-grades type against this table; a change carries
+a comment naming the row.
+
 ## Priority admission
 
 Each level admits on a test, not a feeling. Without one, everything lands `2` and priority
