@@ -1,6 +1,6 @@
 ---
 name: ac-loop-swarm
-description: 'Pull-based parallel bead swarm — N fungible workers each pull the next ready refined bead (atomic `br --claim`), reserve files via Agent Mail, implement, run scoped checks, flock-commit to `main`, pass the Delivers gate, close, repeat until the queue is dry. No conductor review, no per-bead dispatch: the orchestrator asks for width, spawns, waits, then owns the single ledger commit + batch CI. Triggers: ''swarm the beads'', ''ac-loop-swarm'', ''run the swarm'', ''parallel bead pull''. NOT for conductor-dispatched waves (ac-loop), a single bead (ac-implement), or unrefined work (ac-bead-refine first). Methodology: jef-flywheel.'
+description: 'Pull-based parallel bead swarm: N fungible workers each pull the next ready refined bead (atomic `br --claim`), reserve files, implement, scoped-check, flock-commit to main, Delivers-gate, close, repeat until the queue is dry. Orchestrator only asks width, spawns, waits, owns the one ledger commit + batch CI. Triggers: ''swarm the beads'', ''ac-loop-swarm'', ''run the swarm'', ''parallel bead pull''. NOT for conductor-dispatched waves (ac-loop), one bead (ac-implement), unrefined work (ac-bead-refine).'
 ---
 
 **You are the orchestrator of a pull-based bead swarm on `main`.** Ask for width, spawn N
@@ -92,7 +92,7 @@ transcripts, do not work beads yourself.
 - No `git pull --rebase` inside a worker: it needs a clean tree and siblings always have
   WIP. One checkout is one HEAD; workers diverge only from a foreign push, reconciled once
   at close-out.
-- Commit under `flock .git/ac-swarm.lock`. This replaces `index.lock` retries.
+- Commit under `flock .git/swarm-commit.lock`. This replaces `index.lock` retries.
 - Scoped checks only. Never the full suite; never unfiltered `tsc`. A shared dirty tree
   reports siblings' half-edits as your failures. `vitest related` with
   `VITEST_AFFECTED_DISABLED=1` (the plugin seeds from whole-tree `git diff`).

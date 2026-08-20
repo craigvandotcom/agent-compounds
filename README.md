@@ -25,6 +25,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop` ships), the **t
 | **ac-pipeline** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
 | **ac-loop** | The runtime conductor — autonomous bead-shipping loop; drives orphan fixes + plan waves to merge unattended, pauses on genuine decisions via Slack |
 | **ac-loop-2** | EXPERIMENTAL successor to `ac-loop` (manual-invoke only, never scheduled) — five phases behind strict barriers: graph → spec at a frozen HEAD → gate-free parallel build on one shared tree → batched converge (bisect attribution + mutation probes) → verify/ship |
+| **ac-loop-swarm** | EXPERIMENTAL pull-based swarm (manual-invoke only) — N fungible workers each pull the next ready refined bead via atomic `br --claim`, reserve, implement, scoped-check, flock-commit to `main`, Delivers-gate, close, repeat until the queue is dry; the orchestrator only sets width and owns the one ledger commit + batch CI |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy |

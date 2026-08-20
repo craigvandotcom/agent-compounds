@@ -59,7 +59,7 @@ CLOSED=0
            A failure located in a file a sibling has reserved is not yours: sleep 60, retry
            once, then own it. Fix until green. No lint/format — husky lint-staged does it.
 
-7 COMMIT   flock -w 600 .git/ac-swarm.lock sh -c '
+7 COMMIT   flock -w 600 .git/swarm-commit.lock sh -c '
              git add -- <your reserved paths only>
              git commit -m "<type>(<scope>): <what> (<id>)"
              git push origin main || echo PUSH_REJECTED'
