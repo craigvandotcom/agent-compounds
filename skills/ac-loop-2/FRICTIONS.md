@@ -2,7 +2,7 @@
 skill: ac-loop-2
 created: 2026-08-09
 last_pass: 2026-08-20
-entries: 18
+entries: 24
 ---
 
 # ac-loop-2 — friction log
@@ -57,12 +57,12 @@ entries: 18
 - skills: [ac-loop-2]
 - impact: L
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [commit-mutex-lock-path-assumes-git-is-a-directory]
 - first_seen: 2026-08-11
-- last_seen: 2026-08-11
+- last_seen: 2026-08-20
 - stage: converge
-- status: fixed
+- status: open (regressed at the BEAD level — the tier is declared and still not run)
 - proposed_fix: LANDED — element 3 requires `### Test-tier exposure` in bead-conventions § Implementation contract; Phase 3 must enumerate covered/excluded tiers and run any declared tier the standing pass skipped (`converge-phase.md` § 1).
 - narrative: Phase 3 reported `pnpm test:all` 12366 passed / 0 failures on 0c1ca0a7. The identical
   commit then failed CI's DB Deploy validate leg TWICE with 23514 constraint violations, because
@@ -75,21 +75,50 @@ entries: 18
   and specifically a TEST-TIER scope miss rather than a spec miss (the bead's spec was complete; it
   was never asked the question). Cost: a full repair round of a 2-round cap, a fixture rewrite,
   a second CI dispatch. Beads bd-qouko (project-local hole), bd-04bfp (the contract fix, human-gate).
+  **RUN 20260820-005558-8974, +1 — the fix landed and the hole reopened one layer down.** Element 3
+  now carries `### Test-tier exposure`, and bd-uf4m5's spec USED it: it declared, in its own words,
+  "NOT RUN: the 4 supabase-integration suites". Phase 3 then did not run them either. So the
+  declaration was made, recorded, read, and treated as information rather than as an obligation —
+  which is the same conductor-side error as the original occurrence, now with better paperwork.
+  The consequence was the run's most dangerous near-miss: the unrun tier was the only thing that
+  could have contradicted bd-uf4m5's central premise, and that premise (a canonical gate-key
+  spelling settled on a census of the TEST TREE) would have retuned a validator to reject 100% of
+  live production rows. **A declared-and-skipped tier is not a smaller version of an undeclared
+  one — it is worse, because the declaration reads as diligence to the reviewer.** The fix must be
+  mechanical: Phase 3 RUNS every tier any shipped bead declared, or the phase does not close.
+  Full account: memory `loop-retro-census-must-count-the-governed-population` and BCA memory
+  `bca-red-gate-key-spelling-long-in-production`.
 
 ## frozen-head-is-not-enforceable-on-a-shared-checkout
 - skills: [ac-loop-2]
 - impact: M
 - frequency: every-run
-- recurrence: 2
-- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+- recurrence: 3
+- related: [filed-beads-carry-drifted-anchors-and-false-premises, commit-mutex-does-not-resync-or-assert-the-branch]
 - first_seen: 2026-08-11
-- last_seen: 2026-08-13
+- last_seen: 2026-08-20
 - stage: spec
 - status: open
 - proposed_fix: stop treating FREEZE_SHA as a guarantee and state its real status in the skill: it is a LABEL for a moment, not a lock. Every barrier crossing and every anchor re-check must MEASURE drift (`git diff --name-only FREEZE..HEAD`) and intersect the changed paths against each lane's territory, rather than trusting that the freeze held. Say explicitly which artifact classes survive drift (file-derived anchors) and which do not (board-derived counts). JSONL ADDITION: last-line-wins on `.beads/issues.jsonl` can destamp a `refined` record when nightly tidy (or any out-of-loop writer) rebases the same rows — on that conflict, prefer the refined side.
 - narrative: reported independently THREE times in one run by three different agents. A concurrent
   non-loop curator session moved HEAD twice during Phase 1 alone (853fcd8c to cdc22bc3 to 96c01acb).
   Nothing in ac-loop-2 can stop this — the checkout is shared with sessions that never read the
+  **RUN 20260820-005558-8974, +1 — and the worst case is not drift, it is the WRONG BRANCH.** The
+  freeze was declared and not enforced; HEAD moved twice during Phase 1 alone. Harmless only because
+  the affected child diffed and proved no cited file had changed — a refine that TRUSTED the freeze
+  and skipped the diff would have stamped stale anchors. Then the sharper version: at the Phase-1
+  barrier the checkout was on branch `m0uw-push`, not `main`, because a concurrent NON-LOOP agent was
+  pushing a cross-app migration through this checkout (BCA is the canonical migration host). Two
+  things the spine currently assumes and must not: (a) **the mutex's origin==HEAD assert compares
+  against the CURRENT branch**, so it passes while pointing at the wrong target — this guard class
+  cannot catch a branch swap and must be paired with an explicit `branch == main` assert; (b) Agent
+  Mail's roster was EMPTY (`fetch_summary` returned nothing), so the foreign agent was invisible to
+  coordination and could not be negotiated with or force-released. A conductor's picture of who else
+  is in the checkout is only as good as voluntary registration, and the reflog — not the roster — is
+  what reconstructed the truth. The conductor's correct response is recorded for reuse: do NOT touch
+  the branch, hold Phase 2 at the barrier (Phase 1 is beads-DB-only and branch-agnostic so it runs
+  on), commit the ledger PATHSPEC-SCOPED before any history rewrite, then reconcile, then re-verify
+  branch AND origin==HEAD before opening Phase 2.
   skill — so a contract written as though the freeze holds is unenforceable by construction. The
   observed split is the useful part and belongs in the skill text: file-derived anchors held across
   the drift, board-derived counts drifted WITHIN the run (the cross-repo bead fraction was measured
@@ -260,7 +289,7 @@ entries: 18
 - skills: [ac-loop-2]
 - impact: L
 - frequency: every-run
-- recurrence: 2
+- recurrence: 3
 - related: [harness-tool-defects-are-the-machinery-bead-volume-driver, discoveries-filed-never-fixed-has-no-trivial-harness-exception]
 - first_seen: 2026-08-17
 - last_seen: 2026-08-20
@@ -291,6 +320,17 @@ entries: 18
   A rule stated in a reference and contradicted in the prompt that is actually executed loses to
   the prompt every time. Machinery beads from this run were closed `obsolete: wrong channel` with
   their substance already preserved in the run carrier.
+- MEASUREMENT 2 (RUN 20260820-005558-8974, +1): **26 items filed against a threshold of 10**, and a
+  dedupe audit run afterwards found roughly **40% redundancy** in that intake. So the bar is now
+  breached on two independent axes at once — volume, and the same finding filed more than once —
+  and the second is the one no per-item gate can catch, because every duplicate is individually
+  defensible. Two additions this suggests for the Phase-4 filing split the proposed fix already
+  asks for: print the DEDUPE rate beside the machinery/sub-bar/on-bar split, and run the dedupe
+  audit BEFORE filing rather than after, since a redundancy found post-filing costs a close cycle
+  per duplicate. One positive from the same run worth copying: the test-suite topology finding (two
+  suites covering one hook in two directories) was deliberately recorded as friction rather than as
+  a 26th bead, with the reason stated inline — "machinery goes in friction, never on the board".
+  That is the bar working, in one agent, once, by explicit self-instruction.
 
 ## harness-tool-defects-are-the-machinery-bead-volume-driver
 - skills: [ac-loop-2]
@@ -401,10 +441,10 @@ entries: 18
 
 ## the-loops-own-gates-have-false-green-mechanisms
 - skills: [ac-loop-2]
-- impact: L
+- impact: H
 - frequency: every-run
-- recurrence: 1
-- related: [machinery-findings-route-to-the-board-as-beads, phase-3-global-pass-does-not-state-which-test-tiers-it-covers]
+- recurrence: 2
+- related: [machinery-findings-route-to-the-board-as-beads, phase-3-global-pass-does-not-state-which-test-tiers-it-covers, bisect-attribution-has-no-error-state]
 - first_seen: 2026-08-20
 - last_seen: 2026-08-20
 - stage: converge
@@ -421,6 +461,23 @@ entries: 18
   that bites pre-fix, so a worker DELETED a good repair-branch test to hold the count at 3 and
   filed the coverage gap instead — the gate pressured coverage DOWN. Same root as the
   `skipIf`-suite-exits-0 case the migration bead had to defend against with a dedicated criterion.
+  **RUN 20260820-005558-8974, +1 — a FOURTH gate, reported independently by FIVE lanes, and it is
+  the one Phase 3 leans on hardest.** `npx vitest run <5 files>` SILENTLY COLLAPSED to 1 file
+  (vitest-affected cache interaction) while reporting `1 passed`. Lanes L5, L7, L6, L9 and L3 each
+  hit the class without knowing the others had. Three faces of one defect: an explicitly-named file
+  list is intersected with the affected set rather than honoured; a named suite outside that set
+  resolves to `No test files found`, which is INDISTINGUISHABLE FROM A BROKEN PATH; and a NEW test
+  file is not in the dependency graph at all, so it needs `VITEST_AFFECTED_DISABLED=1` (its
+  companion, `VITEST_AFFECTED_REF=<older sha>`, forces an unaffected suite to run WITHIN affected
+  mode). **The assertion that closes all three: any consumer of a multi-file vitest summary must
+  compare the reported FILE COUNT against the files requested and fail loud on a mismatch — never
+  trust a bare pass line.** Phase 3's global pass is the highest-stakes consumer in the skill.
+  Two more false-green shapes from the same run's gate layer, both cheap to defend: `pnpm lint`
+  PASSES while `prettier --check` fails independently (formatting is outside the lint script, which
+  is how drift accumulated across ten lanes unnoticed), and `pnpm format:check` emits ANSI colour
+  codes so a naive `grep '^\[warn\]'` matches ZERO lines and reports a FALSE ALL-CLEAR — strip with
+  `sed -E 's/\x1b\[[0-9;]*m//g'` before parsing any gate output. General class:
+  `wrapper-exit-0-masks-real-outcome` in the global memory substrate.
 
 ## delegation-prompts-contradict-the-filing-bar-and-omit-the-claim-verb
 - skills: [ac-loop-2]
@@ -473,6 +530,157 @@ entries: 18
   decayed into nothing. Deliberately NOT a recurrence bump at the primary — counting a no-cost
   occurrence would inflate the pain signal for the case where the mitigation WORKED, and invert
   what the count means. Captured instead in memory
-  `loop-retro-delegation-brief-claims-are-hints` (recurrence 7). Read the two together before
+  `loop-retro-delegation-brief-claims-are-hints` (recurrence 8). Read the two together before
   anyone proposes trimming child-side re-verification as overhead: this log records what the
   defect costs, and only that memory records what the defence saves.
+  **RUN 20260820-005558-8974 — local manifestation, and it names the SOURCE the conductor composed
+  from.** A Phase-1 group brief asserted a bead was ruleset-determined; ONE production `SELECT`
+  refuted it. The brief had been written from the beads' TITLES rather than their bodies. A title is
+  the most compressed representation of a bead the system holds, so composing group context from
+  titles MANUFACTURES premises rather than summarising them — compose from `## Delivers` /
+  `## Territory`, or state no context at all. The load-bearing scope correction: the brief-claim
+  rule binds the conductor's own group-context paragraphs, not only its claims about in-flight work.
+  Same run, second carrier, recorded at the primary: a TRIAGE bead written by a verifier is a
+  HYPOTHESIS, not a finding — bd-...-ba4ga was inverted on both its claims and trusting it would
+  have relaxed a test and destroyed a real seam guard.
+
+## commit-mutex-does-not-resync-or-assert-the-branch
+- skills: [ac-loop-2]
+- impact: H
+- frequency: every-run
+- recurrence: 1
+- related: [commit-mutex-lock-path-assumes-git-is-a-directory, frozen-head-is-not-enforceable-on-a-shared-checkout]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: build
+- status: open
+- proposed_fix: three lines inside the lock, before staging — `git rev-parse --abbrev-ref HEAD` must equal `main`; `git fetch && git merge --ff-only origin/main` (or `git reset --mixed origin/main`); then stage. And replace `git add -- $PATHS` with literal paths on BOTH the add and the commit, because zsh does not word-split an unquoted variable.
+- narrative: TWO lanes reached this independently in one run, which makes it a canon defect rather
+  than a one-off. The mutex serialises add/commit/push, so no two lanes interleave — but it never
+  RESYNCS a stale local `main`, so a lane holding the lock stages against a HEAD that origin has
+  already moved past and the commit aborts with "HEAD did not advance". The second lane hit the
+  same wall through the zsh half: the canonical block's `git add -- $PATHS` is NOT word-split by
+  zsh, so the whole path list becomes ONE pathspec matching nothing and the commit aborts with the
+  same message — two different causes producing one indistinguishable symptom, which is why both
+  lanes spent diagnosis time before finding it. The third face is the dangerous one: **the mutex's
+  `origin == HEAD` assert compares against the CURRENT branch**, so on a checkout that a foreign
+  agent has left on a feature branch the assert PASSES while pointing at the wrong target. Phase 2's
+  entire design is ~30 pathspec-scoped commits landing trunk-direct on main; landing them on someone
+  else's branch attaches the whole wave to a ref a squash-merge or force-push destroys. A guard that
+  cannot distinguish "up to date with main" from "up to date with whatever branch I am on" is not
+  guarding the invariant the phase depends on.
+
+## board-truth-scan-misses-commits-that-do-not-cite-the-bead
+- skills: [ac-loop-2]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [machinery-findings-route-to-the-board-as-beads]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: phase-0
+- status: open
+- proposed_fix: make `git log -- <territory>` a MANDATORY step of lane construction, run once per lane before dispatch, with any commit touching the territory since the bead was filed surfaced to the conductor for a shipped/not-shipped ruling. Board-truth by bead-id citation is a best-effort scan and must be documented as one; territory-scoped log is the complete one.
+- narrative: THREE beads in one run (bd-nf4ie, bd-66zbk, bd-ufdyt) had been fully implemented days
+  earlier and left open, and all three share ONE cause: **the fixing commit did not cite the bead
+  id**, so the board-truth scan cannot see them. Cost ~3 beads of lane time — dispatched children
+  that arrived to find the work already done. A fourth instance in the same run makes the shape a
+  pattern rather than an anecdote: bd-dznw1's AC block asserted three files did not exist and all
+  three had shipped 3 days earlier; the lane brief DID say to run `git log -- <territory>` first,
+  and the worker did it for beads 1-5 and skipped it for bead 6. That is the argument for making it
+  a step of lane CONSTRUCTION (conductor-side, once, mechanically) rather than an instruction in a
+  worker brief (per-worker, per-bead, skippable). The scan's blind spot is structural: citation is a
+  courtesy the committing agent may or may not extend, and every uncited fix is invisible forever.
+
+## risk-class-native-self-declared-contradicts-the-spine
+- skills: [ac-loop-2]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [device-only-native-beads-are-dead-dispatches-in-the-risk-queue]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: phase-2
+- status: open
+- proposed_fix: delete the instruction to self-label `native` in element 5 from the group-brief template, and state the spine's own rule in its place — risk class is derived from FILES TOUCHED, never from a self-label (`ac-pipeline/references/risk-classification.md`). A bead whose proof modality is native but whose diff is CSS/TSX is class A; only a diff that compiles native code or replays a migration is class B.
+- narrative: the conductor's group briefs told children to "flag `native` in element 5 — it routes
+  to the serial risk queue". A child refuted it by reading the canon: `risk-classification.md` is
+  titled "files-touched, NEVER self-label" and cites earlier loop-retro evidence for exactly this.
+  The conductor had, in effect, re-invented a rule the spine already forbids, and the consequence
+  was concrete: element 5 declared `native` "for the PROOF only" on beads whose code is pure
+  CSS/TSX, and the lane planner's resulting B set was 27 beads. Taking it literally would have
+  SERIALISED THE ENTIRE PHASE. Overruling it to 10 restored parallelism on the correct principle —
+  a migration poisons the shared local stack and a native build must compile, but a device-proved
+  CSS change endangers neither. The generalisable half: a proof MODALITY is not a risk class, and
+  conflating them lets any bead that merely wants a device screenshot serialise the whole run.
+
+## bisect-attribution-has-no-error-state
+- skills: [ac-loop-2]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [the-loops-own-gates-have-false-green-mechanisms]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: converge
+- status: open
+- proposed_fix: two assertions in `references/converge-phase.md` § attribution. (1) After a bisect verdict, run `git log --diff-filter=A -- <test-file>`; if the culprit commit is the file's ADD commit, the verdict is an artifact, not a regression — and the cluster brief must state which of the two it is asserting. (2) Any known-artifact EXCLUSION in a verification brief carries the full repo-relative path and asserts it resolves to exactly one file; basename-only exclusions are banned.
+- narrative: `git bisect run` cannot distinguish "this file went red" from "this file first
+  existed" — a test file is failing at its own ADD commit and passing before it, which is precisely
+  the predicate bisect searches for. `use-form-submission.test.ts` was flagged as a regression at
+  d228f65e, its own introducing commit; it is 9/9 green standalone, paired, and in the full suite.
+  The run's real regression count was 6, not 7, so one repair worker was nearly dispatched against
+  nothing. The mirror defect, from the conductor's own final-verification brief in the same run:
+  a failure was excluded BY BASENAME, **two files in the tree share that basename**, and a real
+  regression was nearly waved through as the known artifact. Both failures share the signature that
+  makes this phase's mechanism dangerous — the answer arrives with full confidence and there is no
+  error state to read. Sibling memory: `re-run-in-isolation-before-spending-a-bisect` (flakes) and
+  `verify-red-tests-against-history-before-preexisting-claim` (baselines).
+
+## conductor-hand-builds-what-the-spine-should-compute
+- skills: [ac-loop-2]
+- impact: H
+- frequency: every-run
+- recurrence: 1
+- related: [conductor-briefs-assert-inferred-facts-as-established, coordinator-layer-drops-work-on-a-short-lane]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: phase-2
+- status: open
+- proposed_fix: compute, do not summarise. (1) A lane manifest is the UNION of its member beads' `## Territory` blocks INCLUDING their test paths, taken verbatim — and for repair%, the union of `git grep`-derived CONSUMERS of every symbol a bead changes. (2) The per-lane artifact path is a FORMULA in the prompt (`.claude/reports/ac-loop2-<RUN_ID>-<LANE>/progress.md`), not a rule elsewhere in the spine. (3) Before dispatch, check every dispatched bead's ACs against the brief's own bans and resolve the conflict conductor-side.
+- narrative: four conductor defects in one run, all caught by children, all the same shape — an
+  artifact the conductor wrote by hand where the spine could have computed it. (1) The L3 lane
+  manifest OMITTED every test path bd-ctb4c's own Territory named; the lane followed the BEAD and
+  flagged rather than silently widening, which is the correct response but only because the child
+  chose it. (2) The lane briefs said "your ledger is your progress.md" without a per-lane PATH, and
+  root `progress.md` was ALREADY CLAIMED by another lane in the shared checkout — the invariant
+  "children never share a progress file" existed in the spine and not in the prompt, so L11 had to
+  invent its own path. (3) The L12 brief banned starting the local Supabase stack while bd-am450's
+  AC6 makes a real-DB probe MANDATORY; the lane reconciled it sensibly at apply time, but that
+  reconciliation is the conductor's job before dispatch. (4) The final-verification brief's
+  basename exclusion (logged at `bisect-attribution-has-no-error-state`). The repair% of this run
+  points at the same root from the metrics side: 6/37 = 16.2%, above the ≤10% guidance, and every
+  one of the six was a CONTRACT-BOUNDARY failure rather than a coding failure — **4 of 6 were "a
+  second file asserted the thing I changed and nobody looked."** A hand-summarised territory is
+  exactly how a second file goes unlooked-at.
+
+## phase-0-lane-construction-assumes-an-already-refined-board
+- skills: [ac-loop-2]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [refine-all-degrades-to-priority-cut-when-set-exceeds-width]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: phase-0
+- status: open
+- proposed_fix: state the two-stage construction explicitly in the spine — Phase 0 emits refine GROUPS (locality only, per `references/refine-drain.md` § Grouping); territory-disjoint LANES are built at the PHASE-1 BARRIER from the manifests Phase 1 produced. Then scope the "no computable manifest, no lane" rule to already-refined beads, so it cannot swallow the unrefined majority.
+- narrative: Phase 0 § "Build the lanes" computes each epic's territory manifest from its member
+  beads' `## Delivers`. On a board that is 69 of 94 UNREFINED those manifests DO NOT EXIST — element
+  3 is an OUTPUT of Phase 1, not an input to Phase 0. Read literally, the rule "an epic with no
+  computable manifest does not get a lane" sends the entire unrefined majority to the human docket,
+  which contradicts the refine-drain invariant stated one section later ("width bounds concurrency,
+  never coverage"). The conductor deviated from the literal text and was right to; the cost was a
+  reasoning detour rather than a wasted child, but the deviation is undocumented and the next
+  conductor pays it again. Two rules in one skill that cannot both be followed is a spine defect,
+  not a judgement call.

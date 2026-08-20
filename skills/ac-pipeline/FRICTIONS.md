@@ -1,8 +1,8 @@
 ---
 skill: ac-pipeline
 created: 2026-08-03
-last_pass: 2026-08-04
-entries: 4
+last_pass: 2026-08-20
+entries: 5
 ---
 
 # ac-pipeline — friction log
@@ -25,6 +25,7 @@ entries: 4
 - proposed_fix: see primary — resolve-then-paste literal paths, or route artifact writes through the Write tool. Sharpened by RUN 20260803-221658-19787: the substitute must be `tee`, not a "safer-looking" redirect. Once a command's destination is anything other than a pasted literal, the rule fires; a literal path held in a variable is still a variable.
 - narrative: POINTER ENTRY, not a copy — see `dcg-blocks-the-skills-own-canonical-artifact-redirects` in `skills/ac-loop/FRICTIONS.md`, which is the PRIMARY and the only place occurrences are counted (per friction-capture.md § Routing: cross-cutting frictions are recorded once, with pointers in the secondary skills). Recorded here because RUN 20260803-113231-34132 established that ac-pipeline owns shared substrate inside the blast radius, not merely a downstream skill affected by it: `references/board-scan.md`'s Scan D/E blocks are guard-blocked verbatim, and the artifact-write shapes handed to every child through the delegation preamble are the same construct. A fix applied only to the individual phase skills leaves the shared substrate emitting the blocked shape to every child of every run.
   **RUN 20260803-221658-19787 (agent-compounds, 27 beads / 5 batches), +4 counted at the primary — the run that maps the rule's real boundary.** Four occurrences, and their value is that together they falsify the two folk-workarounds children keep re-inventing. (1) A `wc -l` reading from a variable-held path was blocked — the input side of a redirect is matched, not just the output side, so "I am only reading" is not an escape. (2) An error-stream redirect nested INSIDE a command substitution was blocked, confirming the rule matches anywhere on the line rather than at the top level, so wrapping the construct deeper does not hide it. (3) A `br list` write was blocked even though the destination path was a LITERAL that merely happened to be held in a variable — the guard cannot see that the variable's value is constant, so "make the path literal" only works if the literal is pasted at the call site; the child's successful substitute was `tee`, and `tee` should be named as THE sanctioned shape rather than left for each child to rediscover. (4) A write to a PID-suffixed scratch file was blocked for the same reason a RUN_ID-suffixed one is — process-unique names are dynamic by construction, so the standard "just use a unique temp file" advice collides head-on with this rule. Cost was ~4 blocked calls plus rediscovery time spread across four children. The pipeline-owned consequence: the delegation preamble and board-scan hand children shapes (1)-(4) directly, so every child pays this tax before it does any work, and the `tee` substitute is nowhere in the shared substrate.
+  **RUN 20260820-005558-8974, +6 counted at the primary — six NEW shapes, and this entry's own capture was itself blocked while being written, which is the strongest possible evidence for the fix shape it already recommends.** (i) The redirect-truncate rule fires on a fat-arrow, on a self-closing JSX tag, and on an angle-bracket placeholder **INSIDE A QUOTED HEREDOC BODY** — so the standard "put the payload in a heredoc" advice does not clear it; the working shape is heredoc-to-a-LITERAL-file via the Write/Edit tool, then `cat`. (ii) A python `open(var, 'w')` is blocked; a pasted literal path in `open()` clears it. (iii) A `while read` loop containing an error-stream redirect is blocked as a dynamic redirect path — the lane's correct response was to change approach to explicit literal per-line calls after a separate pre-check pass, with no bypass attempted. (iv) A `br comments add` call carrying escaped quotes plus a discard redirect is blocked because the escaping makes the target unprovable; the sanctioned shape is `tee` the body to a file, pass it by command substitution, and drop the redirect entirely. (v) A truncating write to a variable-built artifacts path is blocked even when the skill's OWN init step supplied that line, and ac-bead-refine's warning about it sits on a DIFFERENT LINE from the init write, so it fired anyway — **a warning that is not adjacent to the line that emits the blocked shape does not prevent the block.** (vi) A compound python-plus-`br`-plus-redirect one-liner is blocked where splitting it into separate calls clears it. The pipeline-owned consequence is unchanged and now sharper: the substitutes must be stated as POSITIVE canonical shapes ON the line that emits them (`tee -a`, Write tool with a pasted literal path, one call per verb), never as a caveat elsewhere in the file — and the documentation must NAME constructs rather than show them, since showing them blocks the write.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
 - skills: [ac-pipeline]
@@ -64,3 +65,31 @@ entries: 4
 - status: open
 - proposed_fix: state in `references/delegation-contract.md` that a dispatch is scoped from the WHOLE bead — spec AND comment history — and that any instruction to FILE something (a decision bead, a follow-up, a gate) must be checked against the bead's comment tail first, since that is where prior sessions record decisions, retractions and already-shipped verdicts. Cheap mechanical form: `br show <id>` including comments, and grep the tail for DECISION/SHIPPED/RETRACTED before composing an order to create anything.
 - narrative: the conductor ordered an implement child to file a B2 atomicity DECISION bead. That decision had been recorded ON THE SAME BEAD five days earlier ("ATOMICITY DECISION: TWO-STEP, WITH A NAMED RACE WINDOW"). The child refused and was right; had it complied, a settled question would have been re-escalated to a human gate. Root cause is structural rather than careless: conductor triage surfaces the TITLE and DESCRIPTION, and a long refined bead's spec section reads as complete, so the comment tail — which is exactly where later sessions put corrections — is the part a compressing conductor never opens. Same shape as the board-truth defect this run's other findings cover (a session that finds work already shipped writes it into COMMENTS, where the next conductor's triage cannot see it), which is why the two fixes are complements: amend the TITLE when the truth changes, and read the COMMENTS when scoping.
+
+## check-exit-status-before-believing-a-zero
+- skills: [ac-pipeline, ac-loop-2, ac-bead-refine]
+- impact: H
+- frequency: every-run
+- recurrence: 1
+- related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-loop-2
+- status: open
+- proposed_fix: add one clause to `references/shell-guardrails.md` and cite it from the delegation preamble — **a scan whose exit status was not checked reports UNKNOWN, never zero.** Three concrete sub-rules under it: check the status of any search you are about to treat as evidence; positive-control the sensor against a known hit before trusting an empty result; and never pass a path list, a long body, or a bead body through a bare shell variable under zsh — use an array or paste literals.
+- narrative: FOUR distinct incidents across FOUR different agents in one run, all the same shape —
+  a sensor returned zero and the zero was manufactured. (1) `rg` over an argument list containing
+  one nonexistent directory ABORTS the whole invocation, so a multi-directory scan reported nothing
+  found. (2) zsh does NOT word-split an unquoted `$DIRS`, so the scan searched a single concatenated
+  nonexistent path; the same defect in `git add -- $PATHS` aborted a lane's commit with "HEAD did
+  not advance". (3) A `*.tsx`-only glob missed `lib/*.ts`, where 6 real hits lived — a narrow glob
+  is a wrong answer, not a partial one. (4) `printf '%s' "$long_bead_body" | grep` silently dropped
+  content for 2 of 9 beads, reporting a six-element structural check as FAILING on intact beads.
+  A fifth from the same run generalises past scans: `br comments <ID> add <text>`, the transposed
+  argument form, exits 0-ish with only a "Hint: run br list" — **a failed write that looks like a
+  successful one.** This is ac-pipeline's to own rather than any phase skill's, because the
+  guardrails doc is the shared substrate every child reads and none of these are discoverable from
+  the tools' own output. Canonical statement in the global memory substrate:
+  `wrapper-exit-0-masks-real-outcome` (the mirror section, "check exit status before believing a
+  zero"); sibling detector rule: `jq-index-returns-a-false-zero` — any check whose all-clear value
+  equals its broken value needs a positive control.

@@ -30,7 +30,7 @@ entries: 17
 - skills: [ac-loop, ac-implement, ac-pipeline]
 - impact: H
 - frequency: every-run
-- recurrence: 5
+- recurrence: 6
 - related: [standing-sanctions-not-threaded-into-delegation-prompt, dispatch-scoped-from-spec-not-comment-history]
 - first_seen: 2026-07-22
 - last_seen: 2026-08-17
@@ -170,7 +170,7 @@ entries: 17
 - skills: [ac-loop, ac-bead-refine, ac-review, ac-qa-browser, ac-implement, ac-pipeline, agent-mail, ac-land, ac-loop-2]
 - impact: M
 - frequency: every-run
-- recurrence: 41
+- recurrence: 47
 - related: [phase-skills-mandate-panels-a-subagent-cannot-spawn, dcg-guard-blocks-the-skills-own-setup-snippet]
 - first_seen: 2026-07-22
 - last_seen: 2026-08-17

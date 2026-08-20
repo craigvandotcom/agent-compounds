@@ -1,8 +1,8 @@
 ---
 skill: beads-standards
 created: 2026-07-22
-last_pass: 2026-08-11
-entries: 9
+last_pass: 2026-08-20
+entries: 10
 ---
 
 # beads-standards — friction log
@@ -110,10 +110,10 @@ entries: 9
 - skills: [beads-standards]
 - impact: S
 - frequency: frequent
-- recurrence: 2
-- related: [br-non-tty-flake-in-compound-one-liners]
+- recurrence: 3
+- related: [br-non-tty-flake-in-compound-one-liners, ready-filter-admits-epics-and-gate-reason-beads]
 - first_seen: 2026-08-04
-- last_seen: 2026-08-11
+- last_seen: 2026-08-20
 - stage: ac-loop
 - status: open
 - proposed_fix: document the shapes in the br cheatsheet: `br list --json` returns an OBJECT (`{issues:[…], total, limit, offset, has_more}`) and needs an explicit `--limit 0`; `br ready --json` and `br show --json` return BARE ARRAYS. Give the defensive filter form (`(.issues // .)`) so one jq expression survives both. Confirm against the live tool before writing (per `verify-doctrine-claims-against-live-tools`).
@@ -130,19 +130,42 @@ entries: 9
   matched a plan filename slug against descriptions only and missed beads titled from the plan's own
   heading. Both failures are silent: no warning, exit 0, an empty-looking board. Add `--all` to the
   cheatsheet line that already carries `--limit 0` — they are the same defect twice.
+  **RUN 20260820-005558-8974 (BCA), +1 — the truncation half, now measured across FOUR independent
+  lanes on a 3077-issue board.** An EXPLICIT `--limit 1000` truncates just as silently as the
+  default and still exits 0: a count from a capped query is not a measurement. It corrupted
+  bd-ivm4d's original filing and specK's first sweep, and a fifth agent reported the same class as
+  "`br list --json` SAMPLES the board (1000 of 3073) and EXITS 0". The correct form is
+  `--limit 0 --all` — a NUMBER in `--limit` is the bug, not a smaller number. Two hardening notes
+  the cheatsheet line should carry: (1) an explicit large limit reads as diligence and is worse
+  than the default, because the author has visibly thought about the cap and still capped;
+  (2) `br ready --json` emits a BARE ARRAY where `br list --json` emits `{issues:[…]}`, which cost
+  one silent wrong "none are ready" reading in this same run — the defensive `(.issues // .)` form
+  in the proposed fix is what makes one filter survive both.
 
 ## br-d-body-is-shell-expanded
 - skills: [beads-standards]
-- impact: S
+- impact: L
 - frequency: frequent
-- recurrence: 2
+- recurrence: 3
 - related: [br-json-shapes-differ-across-subcommands, dcg-false-positives-on-angle-bracket-inside-quoted-prose]
 - first_seen: 2026-08-04
-- last_seen: 2026-08-04
+- last_seen: 2026-08-20
 - stage: ac-loop
 - status: open
-- proposed_fix: state the positive form in the br cheatsheet — **a bead body longer than one line goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d`. Cover the reason in one clause (a double-quoted `-d` argument is shell text: backticks run command substitution and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it.
+- proposed_fix: state the positive form in the br cheatsheet — **any `br` body text goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d` or as a quoted argument. Cover the reason in one clause (the argument is shell text: backticks EXECUTE, and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it. Raise the severity language: this is command injection through a comment body, not a quoting nuisance.
 - narrative: hit TWICE in one run by two different agents (RUN 20260804-202200-loop: the conductor at Phase 0, then a review child at bead-filing) and solved independently both times. A `br create -d "…"` body containing backticks and an angle-bracket placeholder triggered command substitution plus a redirect parse error; the failure message names shell syntax, so neither agent's first hypothesis was about the bead at all. `-f` avoids the whole class, including the dcg prose-payload false positives that the same inline shape triggers — two independent reasons for one rule, which is a good sign it belongs in doctrine rather than in each agent's scar tissue. Two uncoordinated rediscoveries in a single run with zero registry coverage is the same documentation-gap shape as `br-non-tty-flake-in-compound-one-liners` above.
+  **RUN 20260820-005558-8974, +1 — the impact is not cosmetic and the surface is not just `create`.**
+  Reported THREE times in one run against `br comments add <id> "…"`: backticks inside the
+  double-quoted body are EXECUTED by zsh, not merely eaten. Once it silently deleted a word
+  mid-sentence (a backticked term vanished from a stamped comment). Once, with real cost, it fired
+  **TWO unintended `pnpm test` RUNS on the shared Mac while six lanes were live** — arbitrary
+  execution triggered by prose an agent wrote about its own work, on a host where the side effect
+  contended with every concurrent lane. Raise impact S→L accordingly. Safe shape, unchanged:
+  a QUOTED heredoc to a file, then `-f <file>` (or `"$(cat file)"`).
+  Two adjacent argument-order hazards belong on the same cheatsheet line, because both make a FAILED
+  write look like a successful one: `br comment` is not a verb (it is `br comments add`), and
+  `br comments <ID> add <text>` — the transposed form — exits 0-ish with only a "Hint: run br list".
+  See `wrapper-exit-0-masks-real-outcome` in the global memory substrate for the general class.
 
 ## board-truth-belongs-in-the-title-not-a-comment
 - skills: [beads-standards, ac-loop, ac-bead-refine]
@@ -192,3 +215,33 @@ entries: 9
   (`br-lint-wants-success-criteria-where-doctrine-says-delivers`): an agent chasing a heading-name
   mismatch while also writing to the wrong FIELD can conclude the linter is simply wrong and start
   ignoring it, which is the real cost.
+
+## ready-filter-admits-epics-and-gate-reason-beads
+- skills: [beads-standards, ac-loop-2]
+- impact: M
+- frequency: frequent
+- recurrence: 1
+- related: [br-json-shapes-differ-across-subcommands, board-truth-belongs-in-the-title-not-a-comment]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-loop-2
+- status: open
+- proposed_fix: define loop-eligibility in the standard as a THREE-clause filter, not one — `br ready` MINUS `type=epic` MINUS any bead whose description carries a `## Gate-reason` section — and state that a body-declared gate without the `human-gate` LABEL is a malformed bead the standard requires fixing, since only the label is machine-readable.
+- narrative: `br ready` is treated across the pipeline as "the loop-eligible set", and it is not.
+  Two classes leaked into a 94-bead input set in one run and consumed lane slots before the
+  conductor caught them at lane construction. (1) bd-06opv.12 and bd-l1p5n both declare themselves
+  human-gated IN THEIR BODIES — `## Gate-reason: fork`, "THE DECISION (this is why the bead is
+  human-gated)" — but carried no `human-gate` label, so `br ready` returned them as work. The bead
+  said the right thing to a human reader and nothing at all to the filter. (2) bd-vbmre and
+  bd-dlqc1 are epic roll-ups with no ACs, no `## Delivers` and no `## Territory`; they are not
+  implementable by construction and should never have entered the set. Both classes are silent —
+  the beads look ready, the filter exits 0, and the cost only appears when an agent opens the bead
+  and finds nothing to do. Related hazard observed in the same run and worth one sentence in the
+  same doctrine line: `human-gate` correctness is not the only field the machine reads. A conductor
+  repaired three reason-less gate beads, writing `Gate-reason` into the DESCRIPTION for two and
+  into a COMMENT for the third; docket-health's predicate reads `.description` only, so the third
+  stayed reason-less and kept alarming. Same root as
+  `board-truth-belongs-in-the-title-not-a-comment` — a correct finding delivered through a channel
+  with no reader — and the generalisable half is: when fixing N instances of a defect, verify the
+  FIX SHAPE is identical across all N, because two verbs that both "add text to a bead" are not
+  interchangeable to a machine.

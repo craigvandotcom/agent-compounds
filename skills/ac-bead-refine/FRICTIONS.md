@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-14
-entries: 24
+last_pass: 2026-08-20
+entries: 26
 ---
 
 # ac-bead-refine — friction log
@@ -96,14 +96,15 @@ entries: 24
 - skills: [ac-bead-refine]
 - impact: M
 - frequency: occasional
-- recurrence: 1
-- related: [heavy-review-does-not-mean-converged]
+- recurrence: 2
+- related: [heavy-review-does-not-mean-converged, final-round-audits-the-input-not-the-draft]
 - first_seen: 2026-07-29
-- last_seen: 2026-07-29
+- last_seen: 2026-08-20
 - stage: ac-loop
 - status: open
 - proposed_fix: explicitly scope the final refine round to hunt for contradictions INTRODUCED BY earlier rounds' own patches, not just fresh issues in the original draft.
 - narrative: round-4 findings turned out to be self-contradictions that earlier rounds' own patches had introduced into the bead — not defects in the original filing. Patch-accumulation contradiction is the characteristic failure mode of a converging refine: each round's fix is locally correct but can silently break an earlier round's fix. Caught before shipping this run, but only because a round existed whose explicit job was to look for exactly this.
+  **RUN 20260820-005558-8974, +1 — measured, and with a second mechanism.** One refine child found that **5 of its 13 premise failures were its OWN**, introduced while correcting others' — so on this sample the correcting rounds generated nearly 40% of the defects the final round had to catch. The new mechanism beside contradiction is **twin drift**: two sections of one bead stated opposing things because a multi-round edit touched one and not its twin. Both are cured by the same addition and neither is caught by hunting fresh issues: **a per-bead SELF-CONSISTENCY sweep in the final round** — read the stamped body end to end against itself, with the specific instruction to find pairs of sections that must agree and check that they do. Note the severity asymmetry that makes this worth a dedicated round: a wrong RETRACTION is worse than the original error, because it tells the implementer to stop looking, so a correcting round's own output is the highest-consequence text in the bead and the least audited.
 
 ## heavy-review-does-not-mean-converged
 - skills: [ac-bead-refine]
@@ -175,12 +176,12 @@ entries: 24
 
 ## ac-check-command-never-executed-during-refine
 - skills: [ac-bead-refine]
-- impact: M
-- frequency: occasional
-- recurrence: 2
-- related: [acceptance-criteria-that-cannot-fail, filed-beads-carry-drifted-anchors-and-false-premises]
+- impact: H
+- frequency: frequent
+- recurrence: 3
+- related: [acceptance-criteria-that-cannot-fail, filed-beads-carry-drifted-anchors-and-false-premises, declared-red-not-reconciled-against-territory-or-existing-tests]
 - first_seen: 2026-07-31
-- last_seen: 2026-08-03
+- last_seen: 2026-08-20
 - stage: ac-loop
 - status: open (regressed — the 2026-08-01 fix did not hold)
 - fix: `references/workflow.md` § Method now reads "Name AND EXECUTE the check for every AC" and requires the command to run against HEAD each round; § Remove `unrefined`, Stamp `refined` makes it a BLOCKING pre-stamp gate, so an unexecuted AC command cannot reach `refined`. An AC that genuinely cannot run here must be labelled unrunnable rather than left looking executable.
@@ -188,6 +189,7 @@ entries: 24
 - narrative: two acceptance criteria encoded commands that were wrong at HEAD: one referenced a non-existent capacitor build target, the other a `grep -c` line-count assertion that every 404 in the app fails. Refinement verified the ACs' intent but never executed their check-commands, so both drifted commands passed refine unnoticed. Cost ~5 minutes each to disprove once actually run.
   **RUN 20260803-113231-34132, +1 — recurred TWO DAYS after the fix landed, in two independent children.** Child D: every one of 9 ACs drafted from reading rather than execution carried a defect (~15 min). Child F: 2 vacuous ACs and 2 wrong baselines, each corrected only by running the command, costing 2 extra rounds. So the § Method wording and the pre-stamp gate recorded above are NOT self-enforcing — a child can satisfy them by intending to and still draft-then-verify rather than execute-at-draft. This is why the lesson escalated out of this log: it is now the run's T2 decision bead **ac-ewgr.7** (mandate execute-at-draft for ACs *and* for preamble paste-sites in `ac-pipeline/references/delegation-contract.md`) — the scope widened beyond refine's own ACs, so the fix does not belong to this skill alone. Do not re-derive it here; track it there.
   **RUN 20260803-221658-19787 — CONFIRMATION: the mandate landed and worked on its first binding use.** ac-ewgr.7's execute-at-draft rule bound every refine child of this run, and the evidence is that it caught defects nothing else in the pipeline would have: a live P1 (a zsh pathspec collapse) that existed in the tree and in no bead, three of one child's own ACs, six of another's, and the run's largest premise failures — including failures in the FILER's output, not just the refiner's. That last part is the load-bearing generalisation: the mandate was argued from refine's own drafting errors, but it bites hardest on INHERITED claims, so its value scales with how much of a bead someone else wrote. Two boundary conditions this run also establishes, logged in full at `acceptance-criteria-that-cannot-fail`: executing an AC does not make it discriminating (three ACs ran clean and were already GREEN before any work existed), and an AC that greps for text the fix's own comment will contain satisfies the mandate while proving nothing. Execute-at-draft is therefore necessary and not sufficient — the missing half is recording the draft-time RESULT and rejecting any AC that starts green. Kept open on that basis rather than closed as fixed.
+  **RUN 20260820-005558-8974, +1 — THE RUN'S SINGLE MOST RECURRENT LESSON, and it names the second missing half: what you EXECUTE and what you WRITE are different artifacts.** An AC was authored by ECHOING the command rather than pasting the one actually run; the two diverged by a lost `[" ]` terminator, which turned a genuinely-verified red check into one that **exits 0 on the broken tree**. Execute-at-draft was satisfied. The bead still shipped a check that cannot fail. It was caught only because an adversarial round re-executed every bite-proof **extracted from the FINAL BEAD TEXT**, not from shell history — which is the mandate this entry now needs: *re-extract and re-run every AC command from the stamped body before the stamp, as a separate step from drafting it.* Two more instances in the same run make the same point from the other direction, and both would have scored "present and specific" to a grep: a fabricated test count (AC said 14, the suite has 12) and a vacuous grep returning no hits today, so it passes on an empty diff. Three ACs, one sentence: **presence-checking an AC is not verification; only RUNNING it is** — and running the one you *wrote*, not the one you *meant*. Two authoring gotchas that produced always-passing checks in this run belong on the same line: `grep -c "(^|-)(organic|"` silently returns 0 read as a regex (use `grep -cF`), and any AC-embedded grep whose pattern looks like a regex must be `-F` or it ships a check that always passes. Finally, the same bar binds CORRECTIONS: a "correction" asserted as verified fact was itself wrong this run, and a WRONG RETRACTION IS WORSE THAN THE ORIGINAL ERROR because it tells the implementer to stop looking.
 
 ## br-update-has-no-description-file-flag
 - skills: [ac-bead-refine]
@@ -372,3 +374,51 @@ entries: 24
   no Task tool, stamped `degraded-solo` rather than faking a panel. Independence lost
   as the primary already predicts. Not a new root — do not mint
   `no-task-tool-degraded-solo`.
+
+## declared-red-not-reconciled-against-territory-or-existing-tests
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: frequent
+- recurrence: 1
+- related: [acceptance-criteria-that-cannot-fail, ac-check-command-never-executed-during-refine, element-4-must-name-the-firing-assertion]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: add three mechanical pre-stamp checks on element 4. (1) RED-vs-Territory — every file the Declared RED instructs an edit to must appear in the bead's own `## Territory`; Territory wins on conflict. (2) RED-vs-existing — grep the target suite's full `it(` title list before authoring a RED; a bead spun out of a closed investigation inherits that investigation's tests. (3) RED-vs-extractor — if the assertion is extracted from source, state whether the extractor takes the FIRST match or ALL matches, and require ALL where the pattern can occur more than once.
+- narrative: four independent Declared-RED defects in one run, each of which would have produced a
+  HOLLOW PASS rather than a visible failure. (a) TWICE a declared RED was authored that already
+  existed as a PASSING test committed under the bead's own closed origin bead — the RED was green
+  the moment it was written. (b) bd-9uszd's RED prose instructed an edit to a file ABSENT from the
+  bead's own Territory block; Territory won at implement time and the work became a discovery bead.
+  (c) bd-l0mya's RED was under-specified against a source with THREE
+  `@media (hover:none) and (pointer:coarse)` blocks — a first-match extractor returns section 5,
+  which never mentions focus, so the check passes on a broken tree; the lane had to walk all three.
+  (d) bd-ghgl0's RED was fabricated outright: a `getComputedStyle` assertion placed in a happy-dom
+  tier that loads no CSS, replaced during refine with an executed source-scan RED. A fifth, adjacent
+  shape from the same run: a CSS-SUPPRESSION bead's RED must assert the RESTORING rule WINS, not
+  merely that the suppressing selector is gone — bd-l0mya's RED and AC1 would both have gone green
+  on a fix that still left phones with no focus ring, because deleting the `:focus-visible`
+  selectors does not defeat a sibling `:focus !important` rule at equal specificity. The common
+  root across all five is that element 4 was written from the bead's own narrative rather than
+  reconciled against the two artifacts that constrain it — the bead's Territory and the suite's
+  existing tests — which is exactly the check that is mechanical and currently absent.
+
+## stamp-loop-stamps-deliberately-withheld-beads
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [deferral-contract-does-not-say-who-commits]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: give the canonical stamp loop an explicit WITHHELD-id gate — the loop iterates the target list MINUS the ids the child declared held back, and the child must emit that held-back list as a named output rather than as prose in its return.
+- narrative: the skill's canonical stamp loop stamps every OPEN id in the target list. Four children
+  in one run held a bead back deliberately (unbounded territory, no AC an empty diff cannot satisfy,
+  a needed human architecture decision) and the loop as written would have stamped those beads
+  `refined` anyway. The defect is silent in the worst possible direction: the held-back bead is
+  precisely the one whose spec cannot support implementation, and stamping it makes it loop-eligible
+  — so the failure converts a correct judgement into a dispatched child working an unrefinable bead.
+  Held-back status currently survives only in the child's prose return, which nothing machine-reads.
