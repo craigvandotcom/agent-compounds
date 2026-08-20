@@ -63,6 +63,31 @@ export FIXTURE_DIR BR_ARGLOG
 cat >"$MOCK_BIN/br" <<'EOF'
 #!/usr/bin/env bash
 [ -n "${BR_ARGLOG:-}" ] && printf '%s\n' "$*" >>"$BR_ARGLOG"
+# `br show --json <ids...>` (bd-f83hn): resolves ids REGARDLESS of assignee, from
+# $FIXTURE_DIR/beads.json (a JSON array of all board beads). Mirrors the real br:
+# a JSON ARRAY on success, an error OBJECT when nothing resolves — the gate's
+# `type == "array"` guard depends on that distinction.
+if [ "$1" = "show" ]; then
+  shift
+  ids=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --json) shift ;;
+      --format) shift 2 ;;
+      *) ids+=("$1"); shift ;;
+    esac
+  done
+  fx="${FIXTURE_DIR:-}/beads.json"
+  if [ -f "$fx" ] && [ "${#ids[@]}" -gt 0 ]; then
+    want=$(printf '%s\n' "${ids[@]}" | jq -R . | jq -s .)
+    out=$(jq --argjson want "$want" '[ .[] | select(.id as $i | $want | index($i)) ]' "$fx")
+    if [ "$(printf '%s' "$out" | jq 'length')" -gt 0 ]; then
+      printf '%s\n' "$out"; exit 0
+    fi
+  fi
+  echo '{"error":{"code":"ISSUE_NOT_FOUND","message":"Issue not found"}}'
+  exit 0
+fi
 if [ "$1" = "list" ]; then
   shift
   assignee=""
@@ -84,6 +109,9 @@ chmod +x "$MOCK_BIN/br"
 
 # write_fixture <assignee> <json-array-of-issues>
 write_fixture() { printf '%s' "$2" >"$FIXTURE_DIR/$1.json"; }
+# write_beads <json-array-of-issues> — the BOARD, resolvable by `br show --json`
+# irrespective of assignee (bd-f83hn). clear_fixtures wipes this too.
+write_beads() { printf '%s' "$1" >"$FIXTURE_DIR/beads.json"; }
 clear_fixtures() { rm -f "$FIXTURE_DIR"/*.json; }
 
 # run_gate <args...> — AGENT_NAME env comes from $GATE_AGENT (default empty).
@@ -605,6 +633,64 @@ if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "PROGRESS-INCOMPLETE" && echo "$OUT
   pass "Case MK3: beadify-kind file cannot mask an incomplete implement file -> exit 1 naming bd-mk2"
 else
   fail "Case MK3: expected exit 1 naming bd-mk2, got $RC. Output: $OUT"
+fi
+
+# ============================================================================
+# Cases BS1-BS4: --beads as a SCOPING MODE for claim-free runs (bd-f83hn).
+# ac-loop-2 partitions by territory and never claims a bead at selection, so
+# every identity returns zero beads. Before this fix the gate FAILED CLOSED on
+# "the union claimed-set is EMPTY" and could not render a verdict at all — and,
+# worse, its OPEN-bead check was silently VACUOUS in that state (OPEN was derived
+# from an empty FULL_CLAIMED). These four cases pin the corrected contract.
+# ============================================================================
+
+# --- Case BS1: zero claims + resolving --beads, all CLOSED -> exit 0 ---------
+# THE ac-loop-2 SHAPE. ConductorBS holds no claims at all (no fixture written);
+# the wave is supplied by id. Before the fix this exited 2 with "the union
+# claimed-set is EMPTY".
+clear_fixtures
+write_beads '[{"id":"bd-w1","status":"closed","labels":["infra"]},{"id":"bd-w2","status":"closed","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorBS" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-w1,bd-w2 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && ! echo "$OUT" | grep -q "claimed-set is EMPTY"; then
+  pass "Case BS1: zero claims + resolving --beads (all closed) -> exit 0, no FAIL-CLOSED"
+else
+  fail "Case BS1: expected exit 0 without FAIL-CLOSED, got $RC. Output: $OUT"
+fi
+
+# --- Case BS2: an OPEN in-wave bead held by NO assignee still BLOCKS ---------
+# The whole point of the bead: with OPEN derived from FULL_CLAIMED alone this
+# check was vacuous for a claim-free run and would have returned 0 forever.
+clear_fixtures
+write_beads '[{"id":"bd-w1","status":"closed","labels":["infra"]},{"id":"bd-w2","status":"open","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorBS" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-w1,bd-w2 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "bd-w2"; then
+  pass "Case BS2: open in-wave bead with NO assignee still blocks -> exit 1 naming bd-w2"
+else
+  fail "Case BS2: expected exit 1 naming bd-w2, got $RC. Output: $OUT"
+fi
+
+# --- Case BS3: --beads does NOT narrow the identity-wide OPEN check ----------
+# The regression guard named in the bead's HAZARD section. ConductorBS3 claims an
+# OPEN bead (bd-other) that is OUTSIDE the declared wave; the wave itself is all
+# closed. Repointing the claimed set at BEADS_SCOPE would let bd-other through.
+clear_fixtures
+write_fixture "ConductorBS3" '[{"id":"bd-other","status":"open","labels":["infra"]}]'
+write_beads '[{"id":"bd-w1","status":"closed","labels":["infra"]}]'
+OUT=$(GATE_AGENT="ConductorBS3" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-w1 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "bd-other"; then
+  pass "Case BS3: open OUT-OF-WAVE bead claimed by the identity still blocks -> exit 1 naming bd-other"
+else
+  fail "Case BS3: expected exit 1 naming bd-other, got $RC. Output: $OUT"
+fi
+
+# --- Case BS4: --beads is NOT a second spelling of --allow-empty ------------
+# Zero claims AND zero ids resolve -> still FAIL-CLOSED, exit 2.
+clear_fixtures
+OUT=$(GATE_AGENT="ConductorBS4" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-nope1,bd-nope2 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "claimed-set is EMPTY"; then
+  pass "Case BS4: unresolvable --beads + zero claims -> still FAIL-CLOSED exit 2 (not an --allow-empty alias)"
+else
+  fail "Case BS4: expected exit 2 with FAIL-CLOSED, got $RC. Output: $OUT"
 fi
 
 # ============================================================================

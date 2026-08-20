@@ -12,6 +12,21 @@
 # no merge-base range computation, no wave-label lookup — the assignee IS the
 # scope.
 #
+# TWO SCOPING MODES (bd-f83hn). Claim-at-selection is NOT universal: ac-loop-2
+# partitions work by TERRITORY, dispatching lane coordinators against a manifest,
+# and never claims a bead under an identity at selection time. Under that model
+# every identity returns zero beads, so an assignee-only gate could neither see
+# the batch nor render a verdict — it FAILED CLOSED on every run, teaching the
+# conductor to route around its own pre-close gate. So the gate understands both:
+#   * ASSIGNEE scope (default) — the identities passed as positional args.
+#   * EXPLICIT BATCH scope (`--beads <ids>`) — the ids are resolved directly via
+#     `br show`, whatever their assignee (or lack of one).
+# The two are UNIONED, never substituted: the open-bead check runs over
+# claimed ∪ resolved-`--beads`, so an open bead blocks whether it was reached by
+# identity or by explicit id. `--beads` therefore only ever WIDENS what the gate
+# can see; it can neither hide a claimed open bead nor stand in for
+# `--allow-empty` (an unresolvable `--beads` list still fails closed).
+#
 # UNION OF IDENTITIES (bd-w504y): a single batch may be claimed under MORE
 # THAN ONE Agent Mail identity. ac-loop claims the batch under its own name
 # (e.g. BlueLake), but a delegated ac-implement session self-registers a
@@ -356,21 +371,53 @@ for a in "${ASSIGNEES[@]}"; do
     <(printf '%s' "$FULL_CLAIMED") <(printf '%s' "$part")) || exit 2
 done
 
-# FAIL-CLOSED: an empty union claimed-set means the gate can't see any batch
-# under the identities it was handed — refuse to green-light unless overridden.
+# EXPLICIT BATCH SCOPE (bd-f83hn): resolve every `--beads` id DIRECTLY, ignoring
+# assignee. `br show --json <ids...>` returns a JSON array; on an unresolvable id
+# it emits an error OBJECT instead, so the `type=="array"` guard turns any
+# resolution failure into an empty set rather than a crash — an unresolvable
+# --beads list must NOT become a way to spell --allow-empty.
+SCOPED_BEADS="[]"
+if [ -n "$BEADS_SCOPE" ]; then
+  # shellcheck disable=SC2086 — deliberate word-split: BEADS_SCOPE is a space-separated id list.
+  _scoped_raw=$(br show --json $BEADS_SCOPE 2>/dev/null || true)
+  SCOPED_BEADS=$(printf '%s' "$_scoped_raw" | jq 'if type == "array" then . else [] end' 2>/dev/null) \
+    || SCOPED_BEADS="[]"
+  [ -n "$SCOPED_BEADS" ] || SCOPED_BEADS="[]"
+fi
+SCOPED_COUNT=$(printf '%s' "$SCOPED_BEADS" | jq 'length') || exit 2
+
+# FAIL-CLOSED: the gate can't see any batch AT ALL — no identity claimed anything
+# and no --beads id resolved — refuse to green-light unless overridden. Note the
+# `--beads` leg is what makes the gate usable under ac-loop-2 (territory
+# partitioning, zero claims); it does NOT relax the check, because a --beads list
+# that resolves to nothing still leaves SCOPED_COUNT at 0 and still exits 2.
 CLAIMED_COUNT=$(printf '%s' "$FULL_CLAIMED" | jq 'length') || exit 2
-if [ "$CLAIMED_COUNT" -eq 0 ] && [ "$ALLOW_EMPTY" -ne 1 ]; then
+if [ "$CLAIMED_COUNT" -eq 0 ] && [ "$SCOPED_COUNT" -eq 0 ] && [ "$ALLOW_EMPTY" -ne 1 ]; then
   echo "beads-closed-gate: FAIL-CLOSED — the union claimed-set is EMPTY for assignee(s): ${ASSIGNEES[*]}" >&2
   echo "  A batch was expected to be claimed under one of these identities, but br returned zero beads." >&2
   echo "  This usually means the wrong/incomplete assignee set was passed (a delegated ac-implement identity is missing)." >&2
+  if [ -n "$BEADS_SCOPE" ]; then
+    echo "  --beads was passed but NONE of its ids resolved via 'br show --json' — check the ids and the .beads db." >&2
+  else
+    echo "  A claim-free run (e.g. ac-loop-2, which partitions by territory) must pass its wave via --beads <ids>." >&2
+  fi
   echo "  Refusing to report 'safe to close'. Pass EVERY claiming identity, or --allow-empty if the board is genuinely empty." >&2
   exit 2
 fi
 
-OPEN=$(echo "$FULL_CLAIMED" | jq \
+# OPEN is computed over the UNION of the claimed set and the resolved --beads set
+# (bd-f83hn). Computing it from FULL_CLAIMED alone made this check VACUOUS for any
+# claim-free run: FULL_CLAIMED was [], so OPEN was [] and the gate's core safety
+# assertion never fired. The union WIDENS the check in both directions — a
+# genuinely-open bead claimed by an identity still blocks even when it is OUTSIDE
+# the --beads wave, and an open in-wave bead held by NO assignee now blocks too.
+FULL_SCOPE=$(jq -s 'add | unique_by(.id)' \
+  <(printf '%s' "$FULL_CLAIMED") <(printf '%s' "$SCOPED_BEADS")) || exit 2
+
+OPEN=$(echo "$FULL_SCOPE" | jq \
   '[.[] | select(.status != "closed") | select((.labels // []) | index("post-merge") | not) | select(.issue_type != "epic")]') || exit 2
 
-IN_SCOPE_IDS=$(echo "$FULL_CLAIMED" | jq -r '.[].id' | sort -u)
+IN_SCOPE_IDS=$(echo "$FULL_SCOPE" | jq -r '.[].id' | sort -u)
 warn_bead_bleed "$IN_SCOPE_IDS"
 
 # Completeness scope (ac-0i1): an explicit --beads batch scope wins over the
@@ -378,8 +425,11 @@ warn_bead_bleed "$IN_SCOPE_IDS"
 # (and its N>1 coverage conditional) scopes to EXACTLY those ids — prior-batch
 # beads under the same identity are neither demanded nor counted. Without --beads,
 # it falls back to IN_SCOPE_IDS (byte-identical pre-ac-0i1 behavior). The
-# identity-wide warn_bead_bleed (above) and OPEN-bead check (below) are UNAFFECTED
-# — a genuinely-open bead from any batch still blocks regardless of --beads.
+# identity-wide warn_bead_bleed and OPEN-bead check (both above) are NOT NARROWED
+# by --beads — a genuinely-open bead from any batch still blocks regardless of
+# --beads. Since bd-f83hn they are WIDENED by it: both now run over
+# claimed ∪ resolved-`--beads`, so an open bead that no identity claims still
+# blocks. Only this completeness scope is narrowed by --beads.
 if [ -n "$BEADS_SCOPE" ]; then
   COMPLETENESS_IDS=$(printf '%s\n' $BEADS_SCOPE | sort -u)
 else
