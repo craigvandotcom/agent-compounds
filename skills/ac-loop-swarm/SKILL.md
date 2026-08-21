@@ -71,7 +71,8 @@ transcripts, do not work beads yourself.
    authoritative test signal for the run; workers ran scoped checks only.
 5. **Report** to `.claude/reports/ac-loop-swarm-<RUN_ID>/report.md` and the human: closed ·
    blocked · gated · premise-failed · orphaned · unpushed-reconciled · CI run URL ·
-   per-worker counts. Release your reservations, `deregister_agent`.
+   per-worker counts. Route each worker's `discoveries` through `ac-bead-capture` and its
+   `friction` to this skill's FRICTIONS.md. Release reservations, `deregister_agent`.
 
 ---
 
@@ -84,19 +85,21 @@ transcripts, do not work beads yourself.
 - Skip labels `human-gate`, `epic`, `device`, `unrefined` and type `decision`. Epics sit in
   `br ready` typed `task`/`feature`. `device` beads share one simulator.
 - Premise-check `## Consumes` before claiming; Delivers-gate before closing. A closed bead's
-  `close_reason` is the next bead's premise proof. Canon: beads-standards
-  § Delivers/Consumes.
-- Workers never stage `.beads/issues.jsonl`. One committer per scope: beads-standards
-  § One committer.
+  `close_reason` is the next bead's premise proof. Canon: beads-standards § Delivers/Consumes.
+- Workers never stage `.beads/issues.jsonl`. One committer per scope: beads-standards § One committer.
 - No `git pull --rebase` inside a worker: it needs a clean tree and siblings always have
   WIP. One checkout is one HEAD; workers diverge only from a foreign push, reconciled once
   at close-out.
-- Commit under `flock .git/swarm-commit.lock`. This replaces `index.lock` retries.
+- Commit under `flock "$(git rev-parse --git-common-dir)/swarm-commit.lock"`, asserting
+  `main` inside the lock. Never `.git/<name>.lock`: `.git` is a FILE in every neoMeta app,
+  so that path never opens and the mutex silently does nothing. Replaces `index.lock` retries.
 - Scoped checks only. Never the full suite; never unfiltered `tsc`. A shared dirty tree
   reports siblings' half-edits as your failures. `vitest related` with
-  `VITEST_AFFECTED_DISABLED=1` (the plugin seeds from whole-tree `git diff`).
-- A failure in a file a sibling has reserved is not yours: wait 60s, retry once, then own
-  it.
+  `VITEST_AFFECTED_DISABLED=1` (the plugin seeds from whole-tree `git diff`); assert the
+  reported result-file count, and strip ANSI before grepping `tsc` output — both collapse
+  to a false green.
+- A failure in a file a sibling has reserved is not yours: wait 60s, retry once, then own it.
+- Workers report adjacent discoveries; they never fix or file them mid-run.
 - No build slots. Spawned workers hold no token for them; the push-assert is the guarantee.
 - No blocking question. A decision becomes a `human-gate` bead.
 
