@@ -477,3 +477,30 @@ entries: 28
   human, must have its central claim independently re-derived from the artifact before the bead
   is refined at all** — anchor freshness is not the question, claim TRUTH is. A verifier's output
   is a hypothesis with a bead ID; the ID is what makes it read as settled.
+
+## territory-is-hand-listed-so-it-misses-symbol-consumers
+- skills: [ac-bead-refine]
+- impact: H
+- frequency: per-run
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-20
+- last_seen: 2026-08-21
+- stage: refine
+- status: open
+- proposed_fix: Compute element 3 (Territory) as the git-grep UNION of the symbols the bead
+  changes, instead of hand-listing files. For each symbol the bead's `## Delivers` names,
+  grep the repo for its consumers and add every hit to the manifest — including test files,
+  and including SECOND test suites for the same subject in different directories. Keep the
+  hand list as a starting point, not as the answer. The cost of the grep is seconds; the cost
+  of a miss is a full Phase-3 repair loop (re-dispatch plus re-verify).
+- narrative: Element 3 is hand-listed by the refining agent, so it captures the files the
+  author thought of and misses second-order consumers of the symbols the bead actually
+  changes. RUN 20260820-005558-8974 measured repair% at 6/37 = 16.2% against <=10% guidance —
+  the run's single worst metric. The conductor's own Phase-3 analysis found every one of the
+  six repairs was a CONTRACT-BOUNDARY failure rather than a coding failure, and FOUR of the
+  six reduce to one sentence: "a second file asserted the thing I changed and nobody looked."
+  Those four were bd-chhin, bd-hof67, bd-lyh72, bd-uf4m5. Corroborating instance from the same
+  run: the hook `use-form-submission` has TWO test suites in different directories, so a
+  manifest naming one of them reads as complete while leaving the other to fail downstream.
+  A hand-listed manifest is a memory test; a grep is a measurement. Source bead: bd-xo7c9.

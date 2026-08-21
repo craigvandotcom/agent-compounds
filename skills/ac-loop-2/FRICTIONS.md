@@ -730,3 +730,36 @@ entries: 25
   the unevidenced 2026-07-04 instance did. Cheap and absolute: a throwaway worktree at the
   pre-range commit with node_modules symlinked answers it in minutes. Fleet memory:
   `verify-red-tests-against-history-before-preexisting-claim` (BCA, recurrence 2).
+
+## prod-writes-carry-no-bead-attribution
+- skills: [ac-loop-2, ac-loop-swarm]
+- impact: H
+- frequency: occasional
+- recurrence: 3
+- related: [baseline-precedes-range]
+- first_seen: 2026-08-19
+- last_seen: 2026-08-21
+- stage: prodwrite
+- status: open
+- proposed_fix: Require every production write to NAME the bead authorising it, enforced at
+  the CLI/psql layer rather than at the bead layer. A write naming no bead is refused. The
+  cheaper half, if the full wrapper is too much surface: record bead-id plus invoking session
+  on every prod write into an audit ledger and alarm on writes with no bead — detection
+  rather than prevention, but it makes the class visible at all, which it currently is not.
+  Note this is NOT solved by gating beads: the claim-time gate guards the CLAIM path, and an
+  unattributed write never enters it.
+- narrative: Three prod-write process failures in three days, and the third proves the first
+  two fixes cannot reach it. (1) bd-muiki, an irreversible DDL on `auth.users`, executed while
+  its own authorising gate bd-g70h5 was still OPEN with zero comments. (2)
+  bd-reconcile-sourcing-prod-apply-pfw52 / bd-authorize-reconciler-prod-apply-meik4, the same
+  shape, which is why the gate edge for it was hand-wired afterwards. (3) 2026-08-21, during
+  an ac-human-session sitting: a `supabase db push` applied TWO migrations to production with
+  no attribution to any claimed bead and no deliberate command from the session that observed
+  it — that session's command at the moment was `br comments add`, which cannot push
+  migrations. Ruled out by inspection: git hooks (none non-sample), Claude settings hooks (no
+  db push reference), beads hooks. Most probable cause, recorded as HYPOTHESIS and never
+  confirmed: one of several concurrent background Claude sessions ran the push and its stdout
+  interleaved into the observing session's capture; no supabase process was still running when
+  the check was made. The outcome was harmless and in fact authorised moments earlier, which
+  is exactly why it is worth logging — the PROCESS failed silently while the OUTCOME looked
+  fine, so nothing would have caught it. Source bead: bd-2eoow.

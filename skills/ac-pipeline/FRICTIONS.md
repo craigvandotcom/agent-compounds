@@ -95,3 +95,70 @@ entries: 5
   equals its broken value needs a positive control.
   **+1 — a path list containing `[id]` or `(protected)` silently loses its arguments under zsh
   unless each path is quoted; glob metacharacters in a path are a live case of the same rule.**
+
+## gate-reason-field-contract-is-unspecified
+- skills: [ac-pipeline, ac-tidy]
+- impact: M
+- frequency: nightly
+- recurrence: 2
+- related: [wrapper-exit-0-masks-real-outcome]
+- first_seen: 2026-08-19
+- last_seen: 2026-08-21
+- stage: docket-health
+- status: open
+- proposed_fix: Pick ONE authoritative field and make spec and code agree. Recommended: the
+  DESCRIPTION is authoritative (a human must be able to find the reason without paging
+  comments), `ac-tidy/SKILL.md:235` is corrected to say description-only, and a SECOND lint
+  flags any bead whose COMMENTS contain `Gate-reason` while its description does not — the
+  near-miss case, which is the one that currently fails silently. Widening the predicate to
+  read comments is the tempting cheap fix and is wrong: a superseded reason in an old comment
+  would silence the alarm permanently, trading a noisy alarm for a deaf one. Also sweep the
+  other readers/writers of `Gate-reason` before changing anything — they exist in `ac-triage`,
+  `ac-tidy`, `ac-review`, `beads-standards` and `human-gate-template.md`; only
+  `board-scan.md:117` was ever checked as a machine PREDICATE.
+- narrative: THE SPEC AND THE IMPLEMENTATION DISAGREE ABOUT WHICH FIELD CARRIES THE MARKER, so
+  nobody writing a `Gate-reason` can be correct against both. `ac-tidy/SKILL.md:235` instructs
+  the reader to flag beads whose "description + comments" lack the line;
+  `ac-pipeline/references/board-scan.md:117` reads `(i.get('description') or '')` — description
+  only. Live instance: `bd-next-segment-cache-upstream-report-ptejc` had its Gate-reason
+  classified in full by the ac-loop-2 conductor of RUN 20260820-005558-8974, under a proper
+  `## Gate-reason: action —` heading, INTO A COMMENT. It alarms every night regardless. Two
+  siblings stamped in the same pass put theirs in the description and dropped out correctly.
+  The convention is being applied inconsistently by conductors and humans alike, which says it
+  is under-specified rather than that anyone was careless. Second, related defect from the same
+  bead pair: the population is a MOVING TARGET and the original filing measured it with a capped
+  `br list --limit 1000` against a 3077-issue board — a finite limit TRUNCATES SILENTLY. The
+  filing said 2, a refine sweep found 4, an adversarial re-sweep 40 minutes later found 5,
+  because a sibling lane of the same run stamped a new human-gate bead with no Gate-reason
+  WHILE the bead was being refined. Always `--limit 0`, and treat any count as a snapshot of a
+  board with concurrent writers. Source beads: bd-ivm4d, bd-afqj7.
+
+## upstream-defect-reports-have-no-owner-or-cadence
+- skills: [ac-pipeline]
+- impact: L
+- frequency: occasional
+- recurrence: 2
+- related: []
+- first_seen: 2026-07-29
+- last_seen: 2026-08-21
+- stage: close-out
+- status: open
+- proposed_fix: Decide once whether reporting a third-party defect upstream is in the fleet's
+  scope at all. If yes, name the owner and a cadence (e.g. batched at each land, or a monthly
+  sweep) and give it a label so the beads do not accumulate on the human docket individually.
+  If no, say so explicitly and close such findings with the local workaround recorded — which
+  is what actually matters, since in every instance so far the workaround had already landed.
+- narrative: Two upstream reports sat on the human docket for weeks each, both P3, both with
+  local workarounds ALREADY LANDED so nothing was blocked. (1) bd-wplw0 — `br` mints
+  dot-notation children via `--parent` and an open dot-child blocks the parent's close; source
+  is not on this machine (`~/.local/bin/br` is a 10.9 MB prebuilt binary, v0.2.16) so no local
+  fix was possible; mitigation landed as agent-compounds f7593e4 (`--parent` is containment
+  only, provenance uses `-t discovered-from`). The open question worth reporting is whether
+  blocking a parent's close on a CONTAINMENT edge is intended. Also bundled: mcp-agent-mail's
+  `project_key` derivation fragments one checkout into 3+ keys. (2)
+  bd-next-segment-cache-upstream-report-ptejc — a Next.js segment-cache search-precedence
+  defect with no public issue filed. These linger because filing a public issue on someone
+  else's repo under Craig's identity is genuinely an outward-facing act an agent must not take
+  unilaterally — but nothing routes them either, so they age on the docket as permanent P3
+  noise. The friction is the MISSING ROUTE, not either defect. Source beads: bd-wplw0,
+  bd-next-segment-cache-upstream-report-ptejc.
