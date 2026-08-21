@@ -1,6 +1,6 @@
 # Worker seed — ac-loop-swarm
 
-The orchestrator substitutes `<K> <N> <RUN_ID> <CAP> <FILTER> <REPO_HUMAN_KEY>` and sends
+The orchestrator substitutes `<K> <N> <RUN_ID> <CAP> <REPO_HUMAN_KEY>` and sends
 this verbatim as the prompt of each `general-purpose` worker. Keep it short: a worker that
 needs more than this needs a better bead, not a longer prompt.
 
@@ -33,7 +33,8 @@ CLOSED=0
 1 PICK     RUST_LOG=error br ready --json -l refined
            drop: labels human-gate|device|epic|unrefined · type decision · status≠open
                  · title matching /device|simulator|real-device/ (device work is often unlabelled)
-           apply <FILTER> if set.
+           never narrow further — the pool is ORDERED, not filtered; a narrowing filter
+           starves whatever it excludes
            sort: bugs first → priority 0→4 → created_at oldest  (beads-standards § Pick-order;
                  `br ready`'s own hybrid sort is type-blind — never take its first row as-is)
            take the first. none left → STOP (queue dry)

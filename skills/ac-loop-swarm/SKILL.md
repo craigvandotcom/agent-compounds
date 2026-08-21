@@ -18,7 +18,7 @@ reservations, `## Consumes` / `## Delivers` — not in you.
    model:"<your model>", task_description:"ac-loop-swarm orchestrator <RUN_ID>")`. Keep the
    `registration_token`. `install_precommit_guard(project_key, repo_path)` once — workers do
    not install it.
-4. Count the pickable pool with the workers' filter:
+4. Count the pickable pool with the workers' exclusions:
    ```bash
    RUST_LOG=error br ready --json -l refined | python3 -c '
    import json,sys
@@ -31,9 +31,9 @@ reservations, `## Consumes` / `## Delivers` — not in you.
    Zero → report and stop. Refining beads is `ac-bead-refine`'s lane.
 5. Width prompt — plain text, timed, never `AskUserQuestion` (no timeout; a headless
    session hangs). Print:
-   `Pool: <count> pickable beads. Width (workers) [2] · Cap (beads/worker) [3] · Filter (e.g. "type=bug p<=2") [none] — reply in 120s or defaults apply.`
-   Headless runs never prompt: width 2, cap 3, no filter.
-6. Write `{RUN_ID, WIDTH, CAP, FILTER, pool, started_at}` to
+   `Pool: <count> pickable beads. Width (workers) [2] · Cap (beads/worker) [3] — reply in 120s or defaults apply.`
+   Headless runs never prompt: width 2, cap 3.
+6. Write `{RUN_ID, WIDTH, CAP, pool, started_at}` to
    `.claude/reports/ac-loop-swarm-<RUN_ID>/run.json`.
 
 ## Phase 1 — Spawn
@@ -42,7 +42,7 @@ Spawn WIDTH identical workers in one message with the `Agent` tool:
 `subagent_type: "general-purpose"` (workers need the Agent Mail MCP tools; the
 `implementer` stance is Bash-only), `model: "opus"` pinned per call (never
 `CLAUDE_CODE_SUBAGENT_MODEL`). Prompt = `references/worker-seed.md` verbatim with
-`<K> <N> <RUN_ID> <CAP> <FILTER> <REPO_HUMAN_KEY>` substituted. Workers are fungible;
+`<K> <N> <RUN_ID> <CAP> <REPO_HUMAN_KEY>` substituted. Workers are fungible;
 `K` only staggers the first pick.
 
 Then wait for the completion notifications. Do not poll `br`, do not read worker
@@ -105,8 +105,9 @@ transcripts, do not work beads yourself.
 
 ## First-run defaults
 
-`WIDTH=2 CAP=3 FILTER="type=bug p<=2"`. Observe one run, then width 3. Practical ceiling
-for one orchestrator context: 4–8 workers.
+`WIDTH=2 CAP=3`. Observe one run, then width 3. Practical ceiling for one orchestrator
+context: 4–8 workers. The run ORDERS the pool, never narrows it: a narrowing filter starves
+whatever it excludes, and the pick-order already sequences bugs first.
 
 ## Accepted limits
 
