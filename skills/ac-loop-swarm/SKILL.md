@@ -78,8 +78,7 @@ transcripts, do not work beads yourself.
 
 ## Invariants
 
-- Pick from `br ready --json -l refined`, filtered and sorted in code — bugs first, then
-  priority, then FIFO (beads-standards § Pick-order). Not `bv --robot-next`: no exclude, label-blind.
+- Pick from `br ready --json -l refined`, excluded and sorted in code — bugs first, then priority, then FIFO (beads-standards § Pick-order). Not `bv --robot-next`: no exclude, label-blind.
 - Claim with `br update <id> --claim --actor "$ACTOR"`. The second claimant gets
   `VALIDATION_FAILED`, `retryable: true`; it re-picks. This refusal replaces the conductor.
 - Skip labels `human-gate`, `epic`, `device`, `unrefined` and type `decision`. Epics sit in
@@ -106,8 +105,8 @@ transcripts, do not work beads yourself.
 ## First-run defaults
 
 `WIDTH=2 CAP=3`. Observe one run, then width 3. Practical ceiling for one orchestrator
-context: 4–8 workers. The run ORDERS the pool, never narrows it: a narrowing filter starves
-whatever it excludes, and the pick-order already sequences bugs first.
+context: 4–8 workers. A run ORDERS the pool, never narrows it — narrowing starves whatever
+it excludes, and the pick-order already sequences bugs first.
 
 ## Accepted limits
 
