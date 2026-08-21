@@ -1,8 +1,8 @@
 ---
 skill: ac-land
 created: 2026-07-29
-last_pass: 2026-08-20
-entries: 8
+last_pass: 2026-08-21
+entries: 11
 ---
 
 # ac-land — friction log
@@ -116,14 +116,89 @@ entries: 8
 - narrative: the preservation step copies a fixed set of `/tmp` filename prefixes into the repo before teardown discards the rest, and the set does not cover every artifact the run produces. Confirmed live and immediately: the reflect step for this very run went to read `/tmp/loop-decision-trace-<RUN_ID>.md` — named as a required input by the handoff — and found it already swept, while the retro carrier under the known prefix had been preserved to `.claude/reviews/` and survived. The decision trace is the highest-value artifact of the two, because it is the only record of the perspective nobody else holds (lane merges, barrier holds, sequencing calls, the conductor's own errors), and it is exactly the class that cannot be reconstructed from git afterwards. What makes this every-run rather than occasional is the direction of the failure: new artifact classes get added to the run over time and the prefix list does not move with them, so coverage decays monotonically and the loss is silent — nothing reports that a file was not preserved, and the next reader simply finds it missing months later.
 
 ## conductor-supplied-candidates-are-leads-not-findings
-- skills: [ac-land]
+- skills: [ac-land, ac-bead-refine]
 - impact: M
-- frequency: rare
-- recurrence: 1
-- related: []
+- frequency: occasional
+- recurrence: 2
+- related: [verifier-bead-is-hypothesis]
 - first_seen: 2026-08-10
-- last_seen: 2026-08-10
+- last_seen: 2026-08-20
 - stage: ac-land
 - status: open
 - proposed_fix: state in the retrospective prompt that conductor-supplied candidates are leads to falsify, not findings to write up, and add "what run-level incident got treated as unavoidable that shouldn't have been?" to the analyst's question set.
 - narrative: this land was handed 5 candidate system-upgrade classes; 3 of them (`beads-closed-gate --assignee` syntax, a dcg-blocked echo shape at "the anchor step", a ubs-on-SQL waiver) had ZERO matching evidence — one was already fully documented, one had no matching text anywhere in the `ac-*` skills, and one was already being handled correctly. Meanwhile the highest-value finding of the whole retrospective (/tmp artifact durability, now `ac-28nm`) was NOT on the list at all — it surfaced only by asking "what run-level incident got treated as unavoidable that shouldn't have been?" of source material that already contained a recovered-from-disaster narrative. Cost was minor (~25 min of verification, correctly spent falsifying the 3 dead leads), but the shape is worth naming: a conductor-supplied candidate list carries the conductor's own compression and blind spots, and the retrospective's job is to falsify each one against the live substrate, not transcribe it — the analyst's OWN probing question found the real signal the list missed entirely. evidence: RUN 20260808-221219-47229 ac-land close-out, 2026-08-10.
+
+  **RUN 20260820-005558-8974, +1 — the same root one stage upstream, at refine, and with teeth.**
+  A triage bead authored by a VERIFIER agent had INVERTED both of its claims; refining and
+  implementing it on its own terms would have destroyed a real seam guard. This generalises the
+  entry past ac-land's retrospective step: it is not that a *conductor's* list is compressed, it is
+  that **any agent-authored artifact carrying an ID reads as settled to the next agent** — a bead
+  number, a report filename and a review finding all confer the appearance of adjudication on what
+  is still a hypothesis. The counter-measure is the same at both stages and costs one step: before
+  acting on an agent-authored claim, re-derive the central claim from the artifact it cites. Local
+  entry in the consuming skill: `verifier-bead-is-hypothesis` in `skills/ac-bead-refine/FRICTIONS.md`.
+
+## no-blind-format-sweep-at-close
+- skills: [ac-land]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [format-first-doctrine-conflicts-with-shared-checkout-pathspec, preserved-artifact-inventory-is-incomplete-by-prefix]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-land
+- status: open
+- proposed_fix: delete the repo-wide format sweep from the close ritual. Format only paths this land itself authored, and do it BEFORE the last gate rather than after it. Separately, prettier-ignore every prompt directory and byte-parity-locked twin at the repo level, so no future sweep — hook-driven or mandated — can reach a file whose bytes are its specification.
+- narrative: a `[no-bead]` prettier sweep run by this skill at close RE-NESTED markdown list items
+  inside an LLM classifier prompt source and changed the instruction hierarchy the model reads.
+  It landed AFTER the convergence gate had certified the tree green, so no gate in the entire run
+  was positioned to see it, and `[no-bead]` meant no acceptance criteria were checked either.
+  Caught only because that one prompt pair happens to carry a byte-parity test for unrelated
+  reasons; the production prompt set has no such guard, filed as bd-yyubd. Distinct root from the
+  sibling entry `format-first-doctrine-conflicts-with-shared-checkout-pathspec`, which is about
+  WHOSE files the sweep touches — this one is about the sweep being a SEMANTIC EDIT on files
+  where whitespace is content. The generalisable half is the timing: every commit after the final
+  gate is unverified by construction, and close is the busiest post-gate window in a run, so the
+  close ritual should contain nothing that can change product bytes at all. Fleet rule:
+  `neometa/memory/auto/formatting-is-content-when-the-file-is-a-prompt`.
+
+## bsd-find-will-not-traverse-the-tmp-symlink
+- skills: [ac-land]
+- impact: M
+- frequency: every-run
+- recurrence: 1
+- related: [preserved-artifact-inventory-is-incomplete-by-prefix, zsh-nullglob-aborts-the-teardown-selector]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-land
+- status: open
+- proposed_fix: never start a find at `/tmp` on macOS. Use the real path `/private/tmp`, or pass `-L` to follow the symlink. Then assert the sweep is alive before trusting its result — run it once against a file the land itself just wrote, and treat a zero from an unproven sweep as UNKNOWN, not as clean.
+- narrative: the teardown and artifact sweeps enumerate `/tmp`. On macOS `/tmp` is a symlink to
+  `/private/tmp`, and BSD find does not traverse a symlinked start path unless told to, so the
+  sweep returns nothing and reports a clean teardown over a directory it never entered. The
+  defect is the land ceremony committing the exact class of error the land exists to catch: a
+  check whose "found nothing" is indistinguishable from "never looked", in the one phase whose
+  omissions produce no artifact anyone reads. It also compounds the sibling entry — a
+  preservation step that misses artifact classes by prefix, followed by a sweep that cannot see
+  the directory at all, means neither half of the run's evidence handling is verified. Family
+  hub: `infrastructure/memory/auto/silent-scope-narrowing-is-a-false-zero`.
+
+## roster-from-registrations
+- skills: [ac-land]
+- impact: M
+- frequency: every-run
+- recurrence: see primary
+- related: [preserved-artifact-inventory-is-incomplete-by-prefix]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-land
+- status: open
+- proposed_fix: see primary.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is `roster-is-populated-with-names-that-never-mint`
+  in `skills/agent-mail/FRICTIONS.md`, where occurrences are counted. LOCAL MANIFESTATION at the
+  land end of the pipeline: teardown built its identity roster from the run's ASSIGNMENT list
+  (~40 suffixed names) when only THREE were ever minted, because stance children hold no Agent
+  Mail tools and cannot register. The first land of this run spent its teardown resolving 38
+  identities that never existed. The land-side rule that follows: build the teardown roster by
+  QUERYING registrations, never by reading the run's delegation plan — the plan describes who ran,
+  the registry describes who can leak, and only the second is what teardown is for.

@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-20
-entries: 26
+last_pass: 2026-08-21
+entries: 28
 ---
 
 # ac-bead-refine — friction log
@@ -422,3 +422,53 @@ entries: 26
   precisely the one whose spec cannot support implementation, and stamping it makes it loop-eligible
   — so the failure converts a correct judgement into a dispatched child working an unrefinable bead.
   Held-back status currently survives only in the child's prose return, which nothing machine-reads.
+
+## census-counts-governed-population
+- skills: [ac-bead-refine]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises, acceptance-criteria-that-cannot-fail, element-4-must-name-the-firing-assertion]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: add a refine lens for any bead that settles a CANONICAL FORM — a key spelling, an enum value, a slug convention, a wire shape. The lens asks one question: which population will the resulting rule be applied to, and was THAT population the one counted? For anything a validator, migration or normaliser touches, the governed population is production rows, so the bead must carry a read-only production count, not a repository count. A census whose scope is unstated is not evidence and the bead does not stamp.
+- narrative: bd-uf4m5 settled a canonical gate-key spelling as the SHORT form on a stated
+  "129-vs-0 census". The census counted the TEST TREE. A read-only production census over all
+  1005 canonical_ingredients rows found the exact inverse: 311/311 rows with a red_gate_triggers
+  column carry the LONG form, and all 10040 SHORT instances are an inert never-firing skeleton.
+  Had a repair followed the refined bead and retuned the validator to SHORT, it would have begun
+  rejecting 100% of live production data. The refine round produced a correctly-formed,
+  evidence-carrying, internally-consistent bead — every existing lens passed it — because no
+  lens asks what the count was a count OF. A test tree is authored, so it counts whatever the
+  last author wrote; production is accumulated, so it counts what the system has actually been
+  doing, and for legacy data those two answers routinely invert. This is the sharpest known case
+  of an evidenced bead being more dangerous than an unevidenced one: the number closed the
+  question. Compounded by the run's declared-and-skipped integration tier — the only tier that
+  could have contradicted the premise was declared in the bead's own Test-tier exposure and then
+  not run (see `phase-3-global-pass-does-not-state-which-test-tiers-it-covers` in ac-loop-2).
+  Fleet rule: `loop-retro-census-must-count-the-governed-population`; app fact:
+  `bca-red-gate-key-spelling-long-in-production`.
+
+## verifier-bead-is-hypothesis
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: occasional
+- recurrence: see primary
+- related: [filed-beads-carry-drifted-anchors-and-false-premises, census-counts-governed-population]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: see primary.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is `conductor-supplied-candidates-are-leads-not-findings`
+  in `skills/ac-land/FRICTIONS.md`, where occurrences are counted. Same root: an upstream agent's
+  OUTPUT is being read as an established finding rather than as a lead to falsify. LOCAL
+  MANIFESTATION: a triage bead authored by a verifier agent had INVERTED both of its claims;
+  refining it on its own terms and implementing it would have destroyed a real seam guard. The
+  refine-side rule that follows is narrow and mechanical, and it is not the same as the anchor
+  re-verification rule this file already carries: **a bead whose author was an agent, not a
+  human, must have its central claim independently re-derived from the artifact before the bead
+  is refined at all** — anchor freshness is not the question, claim TRUTH is. A verifier's output
+  is a hypothesis with a bead ID; the ID is what makes it read as settled.

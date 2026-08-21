@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-2
 created: 2026-08-09
-last_pass: 2026-08-20
-entries: 24
+last_pass: 2026-08-21
+entries: 25
 ---
 
 # ac-loop-2 — friction log
@@ -21,13 +21,13 @@ entries: 24
 - skills: [ac-loop-2]
 - impact: L
 - frequency: every-run
-- recurrence: 2
-- related: [harness-tool-defects-are-the-machinery-bead-volume-driver]
+- recurrence: 3
+- related: [harness-tool-defects-are-the-machinery-bead-volume-driver, commit-mutex-does-not-resync-or-assert-the-branch]
 - first_seen: 2026-08-11
-- last_seen: 2026-08-17
+- last_seen: 2026-08-20
 - stage: build
 - status: open
-- proposed_fix: derive the lock path with `git rev-parse --git-common-dir` (NOT `--git-dir`, which is per-worktree and re-opens the collision under linked worktrees), add a liveness assertion logging seconds-to-acquire, fail LOUD on "cannot create" (ENOTDIR/EACCES) instead of folding it into the "held by someone else" retry path, and cut the retry bound to safely under the Bash tool's 600s cap.
+- proposed_fix: derive the lock path with `git rev-parse --absolute-git-dir` — NOT `--git-dir` (per-worktree, re-opens the collision under linked worktrees) and NOT `--git-common-dir` (returns a RELATIVE path, so the lock resolves against each worker's own cwd). Add a liveness assertion logging seconds-to-acquire, fail LOUD on "cannot create" (ENOTDIR/EACCES) instead of folding it into the "held by someone else" retry path, and cut the retry bound to safely under the Bash tool's 600s cap.
 - narrative: THE RUN'S HEADLINE DEFECT. Phase 2's only mandated safety mechanism was INERT for the
   entire run and nobody could tell. The briefed lock path is `$PROJECT_ROOT/.git/ac-loop2-commit.lock`,
   but `.git` in body-compass-app is a 64-byte git-submodule POINTER FILE, so `mkdir` returns
@@ -52,6 +52,19 @@ entries: 24
   here — the recipe cannot be executed as briefed, and a lane's cheapest response to that is a
   private fork — so the fix must be a LITERAL-path, copy-paste-runnable snippet in
   `references/`, verified against dcg before it is briefed, never a shape a child must adapt.
+  **+1 (RUN 20260820-005558-8974) — the CORRECTED form was also wrong, and this is the third
+  spelling of one flag.** The previous occurrence's fix (`--git-common-dir`) was propagated to
+  ~20 workers by the conductor and is ALSO defective: `--git-common-dir` returns a **relative**
+  path, so every worker resolved the lock against its own cwd and a cross-repo worker silently
+  contended for the wrong repo's lock — a mutex that appears to be held and shared while
+  actually partitioning workers into private locks. Only `--absolute-git-dir` is correct. Two
+  properties make this worth its own note rather than a footnote on the fix: (a) the bad form
+  appears in NO skill file — it was conductor improvisation pasted into a delegation brief, so
+  a doctrine grep would not have found it and a doctrine edit will not prevent the next one;
+  (b) all three spellings of the flag succeed and print a path, so the difference between them
+  is invisible at every call site. The counter-measure is the same as the parent entry's: the
+  mutex must be a copy-paste-runnable literal snippet in `references/` that no conductor ever
+  re-derives, and any brief that inlines a git-plumbing invocation is a defect in itself.
 
 ## phase-3-global-pass-does-not-state-which-test-tiers-it-covers
 - skills: [ac-loop-2]
@@ -161,7 +174,7 @@ entries: 24
 - recurrence: 0
 - related: []
 - first_seen: 2026-08-11
-- last_seen: 2026-08-11
+- last_seen: 2026-08-20
 - stage: build
 - status: open
 - proposed_fix: see the primary entry.
@@ -175,6 +188,9 @@ entries: 24
   `ac-loop-2/references/delegation-prompts.md` must tell every prompt that writes bead body text to
   write the prose to a literal temp file and pass the file, and to keep bracket-style placeholders
   out of prose entirely.
+  LOCAL MANIFESTATION +1 (RUN 20260820-005558-8974, primary now recurrence 7): the published
+  heredoc workaround is itself blocked on the same prose, so the v2 prompts must route
+  agent-authored prose through the Write tool rather than any shell form.
 
 ## filed-beads-carry-drifted-anchors-and-false-premises
 - skills: [ac-loop-2]
@@ -684,3 +700,29 @@ entries: 24
   reasoning detour rather than a wasted child, but the deviation is undocumented and the next
   conductor pays it again. Two rules in one skill that cannot both be followed is a spine defect,
   not a judgement call.
+
+## baseline-precedes-range
+- skills: [ac-loop-2]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [bisect-attribution-has-no-error-state, the-loops-own-gates-have-false-green-mechanisms, conductor-briefs-assert-inferred-facts-as-established]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-20
+- stage: converge
+- status: open
+- proposed_fix: Phase 3 must COMPUTE the baseline SHA once, at phase open, as the commit immediately preceding the wave's first commit, and publish it in every converge brief as a literal. Every "pre-existing" claim must then cite that SHA, and the phase asserts `git merge-base --is-ancestor BASELINE FIRST_COMMIT_OF_RANGE` before accepting the claim. A claim that names no SHA, or names a SHA inside the range, is rejected unread — no re-litigation, no benefit of the doubt.
+- narrative: THE RUN'S MOST EXPENSIVE FALSE CLAIM, and the shape is that evidence made it worse.
+  bd-8v1l2 reported 7 red tests as "pre-existing, PROVEN by a side-by-side run" against two
+  commits it described as pristine HEAD. Both were INSIDE the wave. A throwaway worktree at the
+  wave's true predecessor was 845 passed / 0 failed, so all 7 reds were the run's own. The
+  conductor had already repeated the claim upward to Craig before the worktree corrected it, so
+  the false classification left the machine. What makes this a spine defect rather than one
+  bead's mistake: Phase 3 asks children to classify failures as ours-or-theirs but never supplies
+  the only datum that can answer the question, so every child improvises a baseline from whatever
+  commit is nearest to hand — and on a shared trunk-direct checkout with ~30 commits landing per
+  phase, "nearest to hand" is almost always inside the range. An asserted pre-existing invites
+  challenge; a PROVEN one closes the question, which is why the evidenced version cost more than
+  the unevidenced 2026-07-04 instance did. Cheap and absolute: a throwaway worktree at the
+  pre-range commit with node_modules symlinked answers it in minutes. Fleet memory:
+  `verify-red-tests-against-history-before-preexisting-claim` (BCA, recurrence 2).

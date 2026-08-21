@@ -26,11 +26,11 @@ entries: 5
 - narrative: RUN 20260814-213141-15553. A child took an exclusive reserve, then reserved again under a second name. The pre-commit guard then rejected commits from both identities — the first is no longer the exclusive holder of record once the second reserve lands, and the second cannot prove it holds the first lease. Cost minor. Distinct from the existing same-identity missing-env facts (`agent-mail-reservations-and-the-commit-shell`, `precommit-guard-needs-agent-name-in-shell`): those fail because AGENT_NAME is absent in the commit shell; this fails because the lease and the committer are two different minted names. Sibling: `references/session-procedure.md` § Export.
 
 ## roster-is-populated-with-names-that-never-mint
-- skills: [agent-mail]
+- skills: [agent-mail, ac-land]
 - impact: M
 - frequency: every-run
-- recurrence: 2
-- related: [registration-keys-on-the-absolute-path-not-the-project]
+- recurrence: 3
+- related: [registration-keys-on-the-absolute-path-not-the-project, roster-from-registrations]
 - first_seen: 2026-08-17
 - last_seen: 2026-08-20
 - stage: ac-loop
@@ -56,6 +56,14 @@ entries: 5
   indistinguishable from "never ran"), and it is the reason the fix must be to size the roster
   from tool-holders rather than to make the sweep more thorough — a more thorough sweep over a
   fictional inventory is still proving nothing.
+  **+1 (RUN 20260820-005558-8974, 3 of ~40) — and the fix is now stated as a source, not a size.**
+  Three names minted against roughly forty handed out. The two prior occurrences argued for
+  *sizing* the roster from tool-holders; this one shows sizing is the wrong verb, because the
+  set is not knowable at plan time — a conductor cannot always tell which children will carry the
+  MCP surface. **The roster must be BUILT BY QUERYING REGISTRATIONS at teardown, not authored in
+  advance from the delegation graph at all.** The plan describes who ran; only the registry
+  describes who can leak, and teardown is exclusively interested in the second. Land-side pointer:
+  `roster-from-registrations` in `skills/ac-land/FRICTIONS.md`.
 
 ## registration-keys-on-the-absolute-path-not-the-project
 - skills: [agent-mail]

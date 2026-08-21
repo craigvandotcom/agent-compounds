@@ -276,10 +276,10 @@ entries: 17
 - skills: [ac-loop, ac-loop-2, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
 - impact: M
 - frequency: frequent
-- recurrence: 6
+- recurrence: 7
 - related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-11
+- last_seen: 2026-08-20
 - stage: ac-land
 - status: open
 - proposed_fix: when a bead description contains markdown that could tokenise as shell metacharacters (a `>` blockquote is the common one), do not inline it in `br create -d "..."` — write the memo to a literal `/tmp/<dir>/memo.md` with the Write tool and pass `-d "$(cat /tmp/<dir>/memo.md)"`. Worth stating once in beads-standards' decision-bead template, since decision memos are exactly the beads long enough to contain blockquotes.
@@ -329,6 +329,15 @@ entries: 17
   **never interpolate prose into a double-quoted shell argument — write it to a literal temp file
   and pass the file.** Sharper still, and cheaper than remembering: keep placeholders out of prose
   entirely (write `ID`, `FILE`, `SLUG` bare) so the construct never reaches the tokeniser.
+  **RUN 20260820-005558-8974, +1 (recurrence 7) — the escape hatch is inside the blast radius.**
+  The documented workaround is "write the prose to a heredoc/temp file instead of a quoted
+  argument". A heredoc body containing the same angle-bracket prose is ALSO blocked, so the
+  published remedy fails on precisely the text that needed it, and each blocked agent
+  re-discovers the double-escape by hand. That closes the question of whether a caller-side
+  habit can fix this: it cannot — a rule with no unblocked expression is not a workaround. The
+  remaining lever is the Write tool (never tokenised by the guard) as the standing channel for
+  ANY agent-authored prose bound for a CLI argument. State it that way in the delegation
+  prompts: prose goes through Write, never through the shell, in either quoting form.
 
 ## divergence-check-while-a-child-is-live-proves-nothing
 - skills: [ac-loop]
