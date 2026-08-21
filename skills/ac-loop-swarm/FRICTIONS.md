@@ -1,0 +1,162 @@
+---
+skill: ac-loop-swarm
+created: 2026-08-21
+last_pass: 2026-08-21
+entries: 3
+---
+
+# ac-loop-swarm — friction log
+
+<!-- Sensor log, not a work-surface. Never loaded with SKILL.md. On capture: read the
+     entries below and judge same-vs-new before minting an id (see
+     skill-builder/references/friction-capture.md § Deduplication) — do not append a
+     duplicate root friction under a new id. -->
+
+<!-- Neither ac-loop's nor ac-loop-2's friction log is this skill's history: the swarm's
+     pull-based, no-conductor model changes which frictions are even possible. Start empty;
+     do not import entries from v1 or v2. Cross-cutting frictions that recur here AND in a
+     sibling loop skill stay counted at their primary, cross-referenced via `related:` and
+     a local pointer entry. -->
+
+## ubs-no-arg-fallback-scans-cwd-instead-of-erroring
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [check-exit-status-before-believing-a-zero]
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: fail loud when argv was non-empty but nothing parsed; never fall back to cwd in that case.
+- narrative: given no parseable args, `ubs` does not error — it falls back to scanning the
+  current working directory, and then aborts on directory size. The caller's mistake is
+  therefore converted into a different, misleading failure: the output describes a
+  too-large-directory problem, with no indication anywhere that the supplied paths never
+  arrived. A caller reading that message reasonably concludes the gate is unusable on this
+  repo rather than that its own argument list evaporated, so the real defect is invisible at
+  the only place it is reported. The arg-MANGLING half — a path list containing `[id]` or
+  `(protected)` loses its arguments unless each path is explicitly quoted — is a separate
+  root and belongs to the related id, not to this one; this entry is only about the fallback
+  that hides the loss.
+
+## vitest-4-removed-reporter-basic-fails-as-module-load-error
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- recurrence: 1
+- related: [check-exit-status-before-believing-a-zero]
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: name a reporter that exists in the pinned vitest major, and treat a runner module-load stack as a harness error, not a test failure.
+- narrative: `--reporter=basic` no longer exists in vitest 4. The removal is not reported as
+  an unknown-reporter error — it surfaces as an opaque ERR_LOAD_URL / RunnerError stack, which
+  reads as the test run itself exploding rather than as a bad flag. This is the false-RED,
+  misattributed-failure direction, and it is distinct from the false-GREEN vitest entries
+  elsewhere in this sensor: nothing is silently passing here, but the failure names the wrong
+  culprit, so the cheap response is to go hunting in the code under test. Two rules close it —
+  a reporter name must be checked against the pinned major before it is written into any
+  command, and a stack that originates in the runner's module loader is a harness defect that
+  must never be counted as a test result.
+
+## vitest-related-fans-out-on-hub-modules
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- recurrence: 1
+- related: [affected-graph-silently-subsets-explicit-test-selection, verification-outlives-the-bash-timeout-cap]
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: detect hub-module fanout before running; when the related set exceeds a threshold, run a named tier with a raised timeout instead of pretending the check is scoped.
+- narrative: `vitest related` is treated as the cheap scoped check — the thing you run because
+  a full tier is too expensive. On a widely-imported module that assumption inverts: one hub
+  util fanned out to 209 files and roughly 2700 tests, and the command exceeded the 120s
+  timeout without producing a verdict. For a hub module `related` costs as much as a tier run
+  while still being presented, in every command that spells it, as the narrow option. The
+  fanout is measurable before the run, so the choice between scoped-check and named-tier must
+  be made on the size of the related set rather than on the shape of the command.
+
+## dcg-false-positives-on-angle-bracket-inside-quoted-prose
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- recurrence: 0
+- related: []
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `skills/ac-loop/FRICTIONS.md`,
+  where all occurrences are counted. Recorded here because the swarm model inherits the hazard
+  unchanged and its own prose-bearing CLI calls emit it. LOCAL MANIFESTATION: a `br comments add`
+  call was rejected because the comment TEXT quoted a script's `mv` lines — the destructive-operation
+  matcher reads the payload as a command — and, separately, a heredoc containing JSX was rejected
+  because its angle brackets tokenise as redirects. The standing remedy is already logged at the
+  primary and needs no re-derivation here: route agent-authored prose through the Write tool, never
+  through the shell, in either quoting form.
+
+## the-loops-own-gates-have-false-green-mechanisms
+- skills: [ac-loop-swarm]
+- impact: H
+- frequency: every-run
+- recurrence: 0
+- related: []
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `skills/ac-loop-2/FRICTIONS.md`,
+  where occurrences are counted. Recorded here because a pull-based swarm has no conductor to
+  re-read a gate's output, so every false green lands directly in a worker's own close decision.
+  LOCAL MANIFESTATION — TWO faces: (a) vitest 4.1.10 marks files it never reached under bail
+  cancellation as `passed` with zero assertionResults, which is indistinguishable from
+  `describe.skip`, so a count assertion alone cannot catch a killed run; (b) a down local Supabase
+  stack turns every supabase-integration `skipIf` into a green no-op, so a bead whose binding
+  acceptance criterion lives in that tier looks satisfiable when it is not. Both share the primary's
+  root: a gate that cannot distinguish "ran and found nothing" from "did not run".
+
+## declared-red-not-reconciled-against-territory-or-existing-tests
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- recurrence: 0
+- related: []
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in
+  `skills/ac-bead-refine/FRICTIONS.md`, where occurrences are counted. Recorded here because the
+  swarm dispatches from bead text with no conductor pass between refine and build, so an internal
+  contradiction in a bead reaches a worker intact. LOCAL MANIFESTATION: a bead's `## Territory`
+  listed files in the production write set that the bead's own acceptance criteria forbade by
+  directory, leaving the worker to choose which half of its own spec to obey. This widens the entry
+  from RED-vs-Territory to **AC-vs-Territory** — the same mechanical reconciliation, run against the
+  acceptance criteria as well as the declared RED.
+
+## unrunnable-ac-test-command-must-name-the-repo-runner
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- recurrence: 0
+- related: []
+- first_seen: 2026-08-21
+- last_seen: 2026-08-21
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: see the primary entry.
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in
+  `skills/ac-bead-refine/FRICTIONS.md`, where occurrences are counted. Recorded here because the
+  swarm runs many workers against ONE shared checkout, which is an execution environment the
+  refine-time runnability check does not currently model. LOCAL MANIFESTATION: a bead named a
+  full-suite run as its acceptance gate, which is forbidden on a shared swarm checkout — and that
+  same gate was independently broken by another bead closed in the same run. This widens the rule
+  from "name a runnable command" to "name a command runnable in the run's execution environment":
+  a command can be unrunnable by prohibition, not only by runner-wrapper narrowing.

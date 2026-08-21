@@ -273,13 +273,13 @@ entries: 17
   Counted here; pointer entries in `agent-mail` and `ac-land`.
 
 ## dcg-false-positives-on-angle-bracket-inside-quoted-prose
-- skills: [ac-loop, ac-loop-2, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
+- skills: [ac-loop, ac-loop-2, ac-loop-swarm, ac-land, ac-bead-capture, ac-pipeline, beads-standards]
 - impact: M
 - frequency: frequent
-- recurrence: 7
+- recurrence: 8
 - related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
 - first_seen: 2026-07-22
-- last_seen: 2026-08-20
+- last_seen: 2026-08-21
 - stage: ac-land
 - status: open
 - proposed_fix: when a bead description contains markdown that could tokenise as shell metacharacters (a `>` blockquote is the common one), do not inline it in `br create -d "..."` — write the memo to a literal `/tmp/<dir>/memo.md` with the Write tool and pass `-d "$(cat /tmp/<dir>/memo.md)"`. Worth stating once in beads-standards' decision-bead template, since decision memos are exactly the beads long enough to contain blockquotes.
@@ -338,6 +338,8 @@ entries: 17
   remaining lever is the Write tool (never tokenised by the guard) as the standing channel for
   ANY agent-authored prose bound for a CLI argument. State it that way in the delegation
   prompts: prose goes through Write, never through the shell, in either quoting form.
+  **+1 — the destructive-operation matcher also fires on a `mv` command quoted inside a
+  bead-comment payload.**
 
 ## divergence-check-while-a-child-is-live-proves-nothing
 - skills: [ac-loop]

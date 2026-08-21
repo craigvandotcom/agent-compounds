@@ -297,17 +297,20 @@ entries: 28
 - narrative: R20 refined 5 code beads (`rxngh.5/.6/.12/.13/.14`) through a full 3-reviewer panel with 0 premise deaths — and the panel still missed three criticals that ONE attempted write-the-patch dry-run caught: (i) `.12`'s AC was hollow — the real write site is `loadSlugSetOnce().then()`, not the site the AC named; (ii) `.6` cited `signup/route.ts`, which is DEAD CODE — the live door is `signup-form-client`; (iii) a Suspense boundary in `signup/page.tsx` is REQUIRED for static export and no reviewer noticed. All three are exactly the "can this actually fail / does it point at the live code" class this skill's existing `acceptance-criteria-that-cannot-fail` entry already tracks, but reached by a different lens: a prose review panel reasons ABOUT the fix, a dry-run patch attempt IS the fix and surfaces what the prose review can't see (a wrong write site, a dead-code target, a missing structural requirement) as soon as someone tries to actually make the change. Reconstructed from the run carrier — R20's own artifact dir did not survive the /tmp sweep (see the sibling ac-loop entry on artifact durability), so this narrative is a reconstruction, not a fresh read of the original artifact. evidence: ledger commits `118465a6` (R20 banked), `9d69c7f8` (batch35 closed); RUN 20260808-221219-47229, 2026-08-10. This was DEMOTED from a T2 improvement bead by ac-land's per-land cap of 1 (the T2 slot went to `ac-28nm`, /tmp artifact durability) — its recurrence should accrue here for `dream`'s ranking.
 
 ## unrunnable-ac-test-command-must-name-the-repo-runner
-- skills: [ac-bead-refine]
+- skills: [ac-bead-refine, ac-loop-swarm]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- recurrence: 2
 - related: [ac-check-command-never-executed-during-refine, affected-graph-silently-subsets-explicit-test-selection]
 - first_seen: 2026-08-10
-- last_seen: 2026-08-10
+- last_seen: 2026-08-21
 - stage: ac-bead-refine
 - status: open
 - proposed_fix: an AC that names a test command must name a RUNNABLE one — `pnpm vitest run <path>` finds nothing repo-wide when `vitest-affected` narrows the include set, so ACs must specify `test:one` (or the repo's documented single-file runner), never a hand-composed vitest invocation. Second half, same root: transcribing a command at draft time BREAKS it — extract the command from the bead text verbatim and run THAT literal string, never a retyped variant.
 - narrative: R19 (4 bug beads refine-full, commit `025df721`, RUN 20260808-221219-47229) hit both halves. This is a DIFFERENT root from `ac-implement`'s `affected-graph-silently-subsets-explicit-test-selection` (~line 51 there) — that entry is about `vitest-affected` under-selecting sibling mock files at IMPLEMENT time (a tool under-selection problem); this one is about an AC prescribing a test command that cannot resolve to any test AT ALL under the repo's runner wrapper (an authoring-time unrunnable-command problem), caught during REFINE before any implement child wastes a cycle on it. Judged same-family-but-distinct per friction-capture.md's dedup rule — a pointer to the ac-implement entry is recorded here for cross-reference, not a merge, since the two failure mechanisms and the stage they bite at are different.
+  **+1 — a command can be unrunnable by ENVIRONMENT PROHIBITION, not only by runner-wrapper
+  narrowing: an AC named a full-suite run, which is forbidden on a shared multi-worker checkout.
+  Name a command runnable in the run's execution environment, not merely a command that resolves.**
 
 ## gate-liveness-ruling-must-read-the-targets-comment-tail
 - skills: [ac-bead-refine]
@@ -376,13 +379,13 @@ entries: 28
   `no-task-tool-degraded-solo`.
 
 ## declared-red-not-reconciled-against-territory-or-existing-tests
-- skills: [ac-bead-refine]
+- skills: [ac-bead-refine, ac-loop-swarm]
 - impact: M
 - frequency: frequent
-- recurrence: 1
+- recurrence: 2
 - related: [acceptance-criteria-that-cannot-fail, ac-check-command-never-executed-during-refine, element-4-must-name-the-firing-assertion]
 - first_seen: 2026-08-20
-- last_seen: 2026-08-20
+- last_seen: 2026-08-21
 - stage: ac-bead-refine
 - status: open
 - proposed_fix: add three mechanical pre-stamp checks on element 4. (1) RED-vs-Territory — every file the Declared RED instructs an edit to must appear in the bead's own `## Territory`; Territory wins on conflict. (2) RED-vs-existing — grep the target suite's full `it(` title list before authoring a RED; a bead spun out of a closed investigation inherits that investigation's tests. (3) RED-vs-extractor — if the assertion is extracted from source, state whether the extractor takes the FIRST match or ALL matches, and require ALL where the pattern can occur more than once.
@@ -403,6 +406,8 @@ entries: 28
   root across all five is that element 4 was written from the bead's own narrative rather than
   reconciled against the two artifacts that constrain it — the bead's Territory and the suite's
   existing tests — which is exactly the check that is mechanical and currently absent.
+  **+1 — the reconciliation is AC-vs-Territory, not only RED-vs-Territory: acceptance criteria
+  forbade by directory what the same bead's Territory listed in its production write set.**
 
 ## stamp-loop-stamps-deliberately-withheld-beads
 - skills: [ac-bead-refine]

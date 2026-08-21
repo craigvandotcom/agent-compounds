@@ -456,13 +456,13 @@ entries: 25
 - narrative: a lane coordinator ended its turn while its build worker was still in flight, violating the delegation contract's clause 5. The first bead of the lane had already landed; the second worker died with the coordinator's turn and produced nothing. The cost was recoverable — lane state was rebuilt by reading git rather than the report, and the coordinator was resumed with verified facts and told to do the remaining small bead in-session rather than hand it off a third time — but the shape is worth naming because it is a pure structural loss. The lane had two beads and one ordering constraint, so the coordinator contributed no decision the conductor had not already made when it built the lane; every hop it added was a place work could be dropped and none was a place judgement was added. Note the interaction with the delegation contract generally: clause 5 forbids self-detaching while a child is live, but nothing sizes the layer in the first place, so the contract is defending a structure that should not have existed on a lane this short.
 
 ## the-loops-own-gates-have-false-green-mechanisms
-- skills: [ac-loop-2]
+- skills: [ac-loop-2, ac-loop-swarm]
 - impact: H
 - frequency: every-run
-- recurrence: 2
+- recurrence: 4
 - related: [machinery-findings-route-to-the-board-as-beads, phase-3-global-pass-does-not-state-which-test-tiers-it-covers, bisect-attribution-has-no-error-state]
 - first_seen: 2026-08-20
-- last_seen: 2026-08-20
+- last_seen: 2026-08-21
 - stage: converge
 - status: open
 - proposed_fix: three separate edits, one shared assertion. (a) `references/converge-phase.md` § 5 — revert only the SOURCE files from `<commit>~1` via `git show | tee` and leave tests at HEAD, restoring with a scoped `git stash push -- <paths>`; drop the `git revert --no-commit` + restore-test dance and the `git reset --hard` recovery. (b) `references/beads-closed-gate-invocation.md` — never read the gate's exit through a pipe; capture `rc=$?` on the bare call. (c) the RED-PROOF gate must assert the declared REDs are AMONG the failures, never that they are the ONLY ones. Shared: every gate in this skill must be able to distinguish "ran and found nothing" from "did not run".
@@ -494,6 +494,10 @@ entries: 25
   codes so a naive `grep '^\[warn\]'` matches ZERO lines and reports a FALSE ALL-CLEAR — strip with
   `sed -E 's/\x1b\[[0-9;]*m//g'` before parsing any gate output. General class:
   `wrapper-exit-0-masks-real-outcome` in the global memory substrate.
+  **+2 — two more gate faces, both from the pull-based swarm model.** Files vitest never reached
+  under bail cancellation are reported `passed` with zero assertions, indistinguishable from
+  `describe.skip`; and a down local Supabase stack turns an entire integration tier into a green
+  no-op through its `skipIf` guards.
 
 ## delegation-prompts-contradict-the-filing-bar-and-omit-the-claim-verb
 - skills: [ac-loop-2]

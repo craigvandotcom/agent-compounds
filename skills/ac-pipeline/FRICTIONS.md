@@ -67,13 +67,13 @@ entries: 5
 - narrative: the conductor ordered an implement child to file a B2 atomicity DECISION bead. That decision had been recorded ON THE SAME BEAD five days earlier ("ATOMICITY DECISION: TWO-STEP, WITH A NAMED RACE WINDOW"). The child refused and was right; had it complied, a settled question would have been re-escalated to a human gate. Root cause is structural rather than careless: conductor triage surfaces the TITLE and DESCRIPTION, and a long refined bead's spec section reads as complete, so the comment tail — which is exactly where later sessions put corrections — is the part a compressing conductor never opens. Same shape as the board-truth defect this run's other findings cover (a session that finds work already shipped writes it into COMMENTS, where the next conductor's triage cannot see it), which is why the two fixes are complements: amend the TITLE when the truth changes, and read the COMMENTS when scoping.
 
 ## check-exit-status-before-believing-a-zero
-- skills: [ac-pipeline, ac-loop-2, ac-bead-refine]
+- skills: [ac-pipeline, ac-loop-2, ac-loop-swarm, ac-bead-refine]
 - impact: H
 - frequency: every-run
-- recurrence: 1
+- recurrence: 2
 - related: [dcg-blocks-the-skills-own-canonical-artifact-redirects]
 - first_seen: 2026-08-20
-- last_seen: 2026-08-20
+- last_seen: 2026-08-21
 - stage: ac-loop-2
 - status: open
 - proposed_fix: add one clause to `references/shell-guardrails.md` and cite it from the delegation preamble — **a scan whose exit status was not checked reports UNKNOWN, never zero.** Three concrete sub-rules under it: check the status of any search you are about to treat as evidence; positive-control the sensor against a known hit before trusting an empty result; and never pass a path list, a long body, or a bead body through a bare shell variable under zsh — use an array or paste literals.
@@ -93,3 +93,5 @@ entries: 5
   `wrapper-exit-0-masks-real-outcome` (the mirror section, "check exit status before believing a
   zero"); sibling detector rule: `jq-index-returns-a-false-zero` — any check whose all-clear value
   equals its broken value needs a positive control.
+  **+1 — a path list containing `[id]` or `(protected)` silently loses its arguments under zsh
+  unless each path is quoted; glob metacharacters in a path are a live case of the same rule.**
