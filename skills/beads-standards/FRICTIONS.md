@@ -245,3 +245,33 @@ entries: 10
   with no reader — and the generalisable half is: when fixing N instances of a defect, verify the
   FIX SHAPE is identical across all N, because two verbs that both "add text to a bead" are not
   interchangeable to a machine.
+
+## br-writes-default-to-the-human-identity
+- skills: [beads-standards, ac-loop, ac-loop-2, ac-bead-refine]
+- impact: H
+- frequency: frequent
+- recurrence: 1
+- related: [board-truth-belongs-in-the-title-not-a-comment, ready-filter-admits-epics-and-gate-reason-beads]
+- first_seen: 2026-08-20
+- last_seen: 2026-08-21
+- stage: any br write
+- status: open
+- proposed_fix: state in the standard that every `br` write carries an actor, and that the app's `.claude/settings.json` `env` block sets `BEADS_ACTOR` next to the existing `AGENT_NAME` as the never-the-human fallback; agents holding a minted Tier-1 identity pass `--actor` per call to override it. Add `BEADS_ACTOR` to the `rule-agent-mail-identity-setup` env contract so new apps inherit it. Applied to body-compass-app 2026-08-21; the other apps still need it.
+- narrative: `br` resolves authorship as `--actor`/`--author`, then `$BEADS_ACTOR`, then the
+  git/OS user. No skill anywhere instructs agents to pass any of the three (grepped the whole
+  registry: zero hits for `--actor`), and `br --help` does not document `BEADS_ACTOR` at all, so
+  the silent default is the human. Every agent that writes a comment or a close reason without
+  an actor signs it `craigvanheerden`. The cost is not cosmetic and has already been paid once:
+  on bd-g30lp, Craig discharged a fork himself on 2026-08-18 ("the fork is now resolved ...
+  Dropping human-gate and releasing it to the loop"). Two days later an ac-loop-2 conductor
+  posted a "CONDUCTOR RULING" that re-stamped `human-gate`, and because that comment rendered as
+  `[craigvanheerden]` it read as Craig contradicting himself rather than as an agent overriding
+  him. A 2026-08-21 refine run had to reconstruct the comment trail to establish which of the two
+  was actually the human before it could restore his decision. The generalisable half: an
+  identity field that silently falls back to the most authoritative principal in the system is
+  worse than one that fails loudly, because every consumer downstream reasons about authority
+  from it. `BEADS_ACTOR` was probe-verified working on 2026-08-21 (a comment written with it set
+  rendered under that name, not the git user) — the mechanism exists, nothing was telling anyone
+  to use it. Note for whoever promotes this: `br comments` has NO delete subcommand, so a
+  mis-attributed comment cannot be removed, only annotated — which makes the fallback a
+  write-once hazard, not a correctable one.
