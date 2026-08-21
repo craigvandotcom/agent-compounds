@@ -27,7 +27,7 @@ advances the batch mark. Fired once per batch, not per commit.
 - `gh` CLI authenticated
 - Agent Mail MCP tools available (`acquire_build_slot`/`renew_build_slot`/`release_build_slot`) —
   see Build Slot below
-- Implementation commits already landed directly on `main` (from `ac-implement`, trunk-direct — no wave branch to check out)
+- Implementation commits already landed directly on `main` (from `ac-implement` or `ac-loop-swarm`, trunk-direct — no wave branch to check out). The anchor is origin-agnostic: it reads `.claude/reviews/batch/`, which no commit producer touches.
 - A `quality-gate.yml` workflow with `workflow_dispatch` inputs `reason` + `batch_anchor`.
   If the workflow doesn't exist yet, the Act 1 DISPATCH is skipped — the gate is not waived:
   Act 1 must then assert a local-equivalent gate or report `Tier 1 CI: NOT GATED`, never green.
