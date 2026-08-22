@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-21
-entries: 3
+last_pass: 2026-08-22
+entries: 12
 ---
 
 # ac-loop-swarm — friction log
@@ -22,10 +22,11 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: M
 - frequency: occasional
-- recurrence: 1
+- perceptibility: misleading
+- recurrence: 2
 - related: [check-exit-status-before-believing-a-zero]
 - first_seen: 2026-08-21
-- last_seen: 2026-08-21
+- last_seen: 2026-08-22
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: fail loud when argv was non-empty but nothing parsed; never fall back to cwd in that case.
@@ -44,6 +45,7 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: S
 - frequency: occasional
+- perceptibility: misleading
 - recurrence: 1
 - related: [check-exit-status-before-believing-a-zero]
 - first_seen: 2026-08-21
@@ -65,6 +67,7 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: M
 - frequency: occasional
+- perceptibility: loud
 - recurrence: 1
 - related: [affected-graph-silently-subsets-explicit-test-selection, verification-outlives-the-bash-timeout-cap]
 - first_seen: 2026-08-21
@@ -84,6 +87,7 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: M
 - frequency: frequent
+- perceptibility: loud
 - recurrence: 0
 - related: []
 - first_seen: 2026-08-21
@@ -104,6 +108,7 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: H
 - frequency: every-run
+- perceptibility: silent
 - recurrence: 0
 - related: []
 - first_seen: 2026-08-21
@@ -125,6 +130,7 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: M
 - frequency: frequent
+- perceptibility: misleading
 - recurrence: 0
 - related: []
 - first_seen: 2026-08-21
@@ -145,6 +151,7 @@ entries: 3
 - skills: [ac-loop-swarm]
 - impact: M
 - frequency: occasional
+- perceptibility: misleading
 - recurrence: 0
 - related: []
 - first_seen: 2026-08-21
@@ -160,3 +167,108 @@ entries: 3
   same gate was independently broken by another bead closed in the same run. This widens the rule
   from "name a runnable command" to "name a command runnable in the run's execution environment":
   a command can be unrunnable by prohibition, not only by runner-wrapper narrowing.
+
+## agent-identity-env-lost-between-tool-calls
+- skills: [ac-loop-swarm]
+- impact: L
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [br-writes-default-to-human-identity]
+- first_seen: 2026-08-22
+- last_seen: 2026-08-22
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: export AGENT_NAME and BR_AGENT_NAME inside every subshell that commits or writes a bead; never pipe a commit through `tail`.
+- narrative: shell state does not survive between tool calls, so an identity exported once in a
+  seed's setup block is absent by the time any later step commits. Two consequences, and only
+  the first is visible. The pre-commit reservation guard does refuse — it writes
+  `AGENT_NAME environment variable is required` to stderr and exits 1 — but the commit recipe
+  pipes through `tail`, and the refusal falls outside the window, so the caller sees staged
+  files, no commit, and no reason. `br` has no such refusal: with the identity unset it writes
+  as the human, silently, so every claim comment a run produces is attributed to the fallback
+  name. The audit trail the pull-based model depends on to prove who holds a bead is therefore
+  wrong on every entry, and nothing anywhere reports it. Truncating a guard's own output is the
+  wider hazard: a check that announces into a discarded stream is a check that is off.
+
+## swarm-doctrine-prescribed-a-guard-blocked-command
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-22
+- last_seen: 2026-08-22
+- stage: ac-loop-swarm
+- status: resolved
+- proposed_fix: point the step at the runbook that already documents the working recovery; delete the forbidden command.
+- narrative: the close-out reconcile step named `git stash push -u` as its escape from a dirty
+  tree. `neometa.stashguard` forbids that in a shared checkout, and forbids the scoped
+  `git stash push -- <paths>` form the guard's own hint recommends, so both exits the step knew
+  about were walls. Doctrine that names an impossible command is worse than doctrine that names
+  nothing: it spends the reader's confidence before it spends their time, and the reader assumes
+  the environment is broken rather than the instruction. The working sequence already existed in
+  a runbook the step never referenced. Fixing this was a subtraction — the wrong lines out, a
+  pointer in.
+
+## harness-reports-worker-dead-on-transient-api-error
+- skills: [ac-loop-swarm]
+- impact: L
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-22
+- last_seen: 2026-08-22
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: classify liveness from `br coordination status` before sweeping; a task notification is a hint, not a death certificate.
+- narrative: a transient upstream 5xx surfaced to the orchestrator as a terminal worker failure
+  while the worker was alive and still holding a claim. Acting on that report, the close-out
+  swept: it reopened the held bead, released the worker's reservations and deregistered its
+  identity. The worker then continued for hours with no identity and no ability to reserve a
+  file — the sweep did not stop it, it disarmed it. `br coordination status` already knew the
+  truth throughout, returning `fresh` and `observe` against explicit stale and abandoned
+  thresholds. The general rule is cheaper than any patch: prefer live state over reported state,
+  and let the system that tracks a fact answer questions about it.
+
+## mcp-tool-arg-names-drift-from-calling-doctrine
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-22
+- last_seen: 2026-08-22
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: name arguments as the tool schema defines them; on a validation error read the schema rather than re-guessing.
+- narrative: three calls the workflow spells out do not match the tools they invoke. The guard
+  installer is written with `repo_path` and takes `code_repo_path`. The message send is written
+  with `registration_token` and takes `sender_token`. The orphan sweep is told to force-release a
+  reservation, but that tool refuses any holder with recent activity — which is guaranteed at the
+  exact moment a sweep runs — while the plain release tool has no such check and works. Each
+  costs only a retry, so each is individually cheap; together they mean the written procedure
+  cannot be executed as written, and a reader cannot tell which remaining lines to trust.
+
+## concurrent-beads-dbs-mint-colliding-comment-ids
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-22
+- last_seen: 2026-08-22
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: on a ledger union, renumber the incoming side's comment ids above the max; keep the copy already published.
+- narrative: comment ids are allocated by per-database autoincrement. When two databases write
+  the same shared ledger — a run's own db and a scheduled job's isolated worktree — both mint the
+  same next ids, and merging their exports produces one file carrying an id twice. `comments.id`
+  is a primary key, so that file cannot be rebuilt into a database at all: a fresh clone fails on
+  the constraint and ends with no usable db. A union merge of two ledgers therefore has a
+  renumbering step whether or not anyone wrote one down. The husky guard does catch it and names
+  every colliding pair, which is why this is a sensor reading rather than a promotion candidate.
