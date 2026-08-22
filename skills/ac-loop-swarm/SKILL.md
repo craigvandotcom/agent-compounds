@@ -55,10 +55,10 @@ transcripts, do not work beads yourself.
    `br update <id> --status open --assignee "" --json` + comment
    `"Orphaned by dead worker <actor> run <RUN_ID>"`. `force_release_file_reservation` for
    each worker that returned no report.
-2. **Reconcile git.** If `git log origin/main..HEAD` is non-empty: stash only if the tree is
-   dirty (`git stash push -u -m "ac-loop-swarm <RUN_ID> WIP"`), `git pull --rebase origin main
-   && git push`, pop if stashed. A rebase conflict is a human gate: abort, file a
-   `human-gate` bead (`Gate-reason: action`), report.
+2. **Reconcile git.** If `git log origin/main..HEAD` is non-empty: commit the ledger (step 3),
+   then `git rebase origin/main && git push`. Never stash — `neometa.stashguard` blocks the
+   plain and the scoped form alike. Foreign WIP blocking the rebase, or a conflict →
+   `_docs/runbooks/beads-ledger-recovery.md`; exhausted → `human-gate` bead (`Gate-reason: action`).
 3. **Ledger — the one commit.** Workers close beads in the shared `beads.db` only.
    ```bash
    RUST_LOG=error br sync --flush-only
