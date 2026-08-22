@@ -78,7 +78,9 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
    --description "<context: what/why/where, user's words preserved>"` — set
    `--priority` only if the user signaled urgency; default is fine. Body carries
    the typed headers from conventions §Body template (`## Steps to Reproduce`
-   for bugs, `## Acceptance Criteria`, …) — emit them at creation. For a
+   for bugs, `## Acceptance Criteria`, …) — emit them at creation. Grep any
+   file, symbol, commit or bead-id before naming it in a binding header;
+   unverified detail is advisory (conventions §Binding vs advisory). For a
    `human-gate`/DECISION shape, add `--parent <spawning-epic-id>` (step 2). An
    optional `origin:` hint may be added to the description for any ad-hoc capture —
    a lightweight provenance breadcrumb (`origin: <slack thread / conversation /
@@ -101,6 +103,7 @@ scheduling.` Nothing more; the user is mid-thought.
 | Interrogating the user (3+ questions) | One round max; `unrefined` exists for a reason |
 | Decomposing the idea into an epic + children | That's ac-beadify, on an approved plan — capture files ONE bead |
 | Filing a hunch as `bug` | `bug` = confirmed; suspicion = `investigation` |
+| Naming a file, symbol or blocker you have not opened | Grep first; unverified detail is advisory, never binding |
 | Skipping dedupe | `br search` first — enrich beats duplicate |
 | Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + private pointer |
 | Forgetting the `.beads/` commit | The jsonl is the sync surface — uncommitted = invisible cross-machine |

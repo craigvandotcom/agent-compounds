@@ -273,9 +273,16 @@ Rules:
 4. **`- none` is explicit, never omitted.** A missing `## Consumes` means "not
    yet contracted" — refine treats the bead as unready.
 
-Emit at creation (ac-beadify holds the cross-bead data flow; batch workflows
-per their conventions); quick-capture (`ac-bead-capture`) is exempt — refine
-authors the contract there, as it does for whatever capture omits.
+Emit at creation. `ac-beadify` holds the cross-bead data flow.
+
+Every producer that writes a Consumes line verifies it first: `br dep list` the
+edge, read the blocker's own `## Delivers`, then name the artifact. Binds batch
+workflows, conductor follow-ups and refine splits alike.
+
+Quick-capture (`ac-bead-capture`) is exempt from AUTHORING the contract — refine
+writes it there, as it does for whatever capture omits. No producer is exempt
+from the truth of a claim it does write. Omitting a section is sanctioned;
+naming an artifact you have not opened is a defect.
 
 ## Implementation contract (six elements)
 
@@ -341,8 +348,13 @@ imagined state. The rule that removes the class:
 — **may only reference two things: what exists in the tree NOW
 (grep-verified), or what an upstream blocker's `## Delivers` explicitly
 promises.** A binding claim resting on anything else — the bead's own
-dependents, unwired components, unpromised future state — is a
-refine-blocking defect.
+dependents, unwired components, unpromised future state — is a defect the
+moment it is written, owned by whoever writes it: capture, beadify, a
+conductor follow-up, or a refine split.
+
+Grep-verify a binding claim as you type it. Refine is the last net, not the
+first: refine authors binding sections too — split children, contracts written
+for quick-capture beads — and no later stage re-checks those.
 
 **Everything else is advisory.** Suggested implementation, imagined wiring,
 file-by-file how-to goes under `## Approach (advisory)` (or in comments).
