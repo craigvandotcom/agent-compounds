@@ -223,7 +223,10 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
   br comments add <id> "DECISION (<human>): <choice> — <why>"
   # ...carry out consequences...
   br close <id> --reason "<what was decided/done>"
+  br sync --flush-only && git add .beads/issues.jsonl \
+    && git commit -m "chore(beads): human ruling on <id> [no-bead]" && git push
   ```
+  **Commit the ledger on the same tap that records the ruling** — an uncommitted ledger is not a durable decision, and a later job reading `origin/main` will overwrite it (`beads-standards` § Working cadence). Push failure is not a stall: the local commit is durable, report it and carry on.
   Report: `✓ closed bd-<id> — unblocked bd-<x>, bd-<y>`.
   **Upstream is the real fix:** decision beads should *arrive* pre-staged (bead-conventions §Decision beads). Frame-on-demand is the catch-net, not the norm — if a filer keeps shipping bare decisions, fix the filer, not just the symptom here.
 - **🔴 Curator lane, ELEVATED — auto-advance INTO the sitting, don't merely render it:** once the lane crosses the serving policy (`>=20` queued or oldest >21 days), `Run the curator sitting — {N} queued` is a first-class item in this auto-advance order, taken in position right after the lane's own itemized P0/P1s — not a footnote left on the board. One tap: `AskUserQuestion(question: "Curator lane: {N} queued (oldest {age}). Run the supervised sitting?", options: ["Run it now (Recommended)", "Work the top {n} only", "Skip"])`. On tap → drive `bd-8yhvb`'s supervised batch flow, then resume auto-advance with `{N} remaining` recomputed. A rendered tap the loop never reaches is the exact failure this line exists to prevent.
@@ -245,6 +248,8 @@ cheapest, highest-signal capture channel in the session — don't close the gate
 ---
 
 ## Phase 6: Hand-off
+
+**Sweep the ledger before anything else** — every ruling already committed itself in Phase 5, so this catches only rulings taken outside that block. `git status --porcelain .beads/issues.jsonl` must come back empty; if it does not, run the Phase 5 commit line before handing off.
 
 When the human taps **Done** and docket items remain: leftover stays `human-gate` by default. Report `{N} remaining`. Offer:
 

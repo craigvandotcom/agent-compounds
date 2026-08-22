@@ -91,8 +91,20 @@ Read the board per `ac-pipeline/references/board-scan.md` (already excludes `_sh
 For every OPEN `human-gate` bead still on the docket (Scan A's set — exclude deferred and future `defer_until`):
 
 1. Re-read live state (`br show <id>`). Confirm the two-reasons test still holds and the work is still blocked on a human.
-2. Stamp a comment `verified: <YYYY-MM-DD>` on the bead so the docket is not a stale snapshot.
-3. Do **not** remove `human-gate`, close, or rewrite the gate body. De-gating is a human/session act, not nightly housekeeping.
+2. **Skip any id whose LIVE-checkout ledger record disagrees with this worktree's.** This worktree sits at `origin/main`; an unpushed ruling in the live checkout is invisible here, and stamping it writes a stale-open record — with a fresh `updated_at` — back over a real close. Never reconcile the disagreement here: a newer `updated_at` is not newer semantics.
+
+   ```bash
+   rec() { python3 -c 'import json,sys
+   for l in open(sys.argv[1]):
+       r=json.loads(l)
+       if r.get("id")==sys.argv[2]: print(r.get("status"), r.get("closed_at")); break' "$1" "$2"; }
+   [ "$(rec "$BCA/.beads/issues.jsonl" "$id")" = "$(rec .beads/issues.jsonl "$id")" ] \
+     || { echo "skip $id — live checkout disagrees"; continue; }
+   ```
+
+   List the skipped ids in step 7's notification.
+3. Stamp a comment `verified: <YYYY-MM-DD>` on the bead so the docket is not a stale snapshot.
+4. Do **not** remove `human-gate`, close, or rewrite the gate body. De-gating is a human/session act, not nightly housekeeping.
 
 This pass verifies surviving gates. It does not de-gate.
 
