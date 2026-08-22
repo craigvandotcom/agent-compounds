@@ -40,6 +40,7 @@ promotion/demotion becomes data-driven instead of vibes-driven.
 | `skills` | list of skill names this friction touches — a friction can span >1 skill; it is counted **once per id** regardless of how many skills list it |
 | `impact` | size estimate: `S` \| `M` \| `L` |
 | `frequency` | est. how often it bites: `rare` \| `occasional` \| `frequent` \| `every-run` |
+| `perceptibility` | could an agent see it and route around it? `silent` (no error, wrong outcome) \| `misleading` (doctrine or output asserts the opposite of the truth) \| `loud` (errored; agent recovered). Tag at capture, not at review |
 | `recurrence` | count of times this exact friction has been re-observed — the promotion-weight multiplier |
 | `related` | list of related friction ids — the on-insert graph, a byproduct of the dedup judgment |
 | `first_seen` / `last_seen` | dates |
@@ -55,6 +56,7 @@ promotion/demotion becomes data-driven instead of vibes-driven.
 - skills: [ac-loop]
 - impact: M
 - frequency: occasional
+- perceptibility: silent
 - recurrence: 3
 - related: []
 - first_seen: 2026-06-10
@@ -89,6 +91,7 @@ entries: <n>
 - skills: [<name>]
 - impact: M
 - frequency: occasional
+- perceptibility: silent
 - recurrence: 1
 - related: []
 - first_seen: <YYYY-MM-DD>
@@ -106,6 +109,11 @@ recurrence)` per `id` across every `FRICTIONS.md` that lists it (once per id, pe
 and a cluster over the bar becomes a `skill-improvement` bead carrying the cluster's
 pre-drafted `proposed_fix` as a starting point. This file only supplies the log; the weighting
 engine, thresholds, and bead-authoring flow belong to W4.5 — don't build them here.
+
+`perceptibility` gates that weight before it is computed: promote only `silent` and
+`misleading`. A `loud` entry is a sensor reading, never a candidate, whatever it scores — an
+agent that sees a failure routes around it, so the rule is paid every run and buys nothing.
+Prefer deleting a `misleading` line to adding a true one.
 
 ## Deduplication
 
