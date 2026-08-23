@@ -13,7 +13,7 @@ Agent Mail reservations and the beads' `## Consumes` / `## Delivers` sections.
 
 ## ONCE
 ```
-sleep $(( <K> * 15 ))                        # stagger first picks
+wait <K>*15s before the first pick           # stagger; foreground sleep is blocked
 macro_start_session(human_key:"<REPO_HUMAN_KEY>", program:"claude-code", model:"<your model>",
   task_description:"swarm worker <K>/<N> run <RUN_ID>")
   → keep registration_token; NAME = returned agent name
@@ -41,7 +41,9 @@ CLOSED=0
 
 2 CLAIM    br update <id> --claim --actor "$ACTOR" --json
            VALIDATION_FAILED (a sibling won) → goto 1
-           br comments add <id> "WORKER: $NAME run <RUN_ID> claimed"
+           claim exited 0 → br comments add <id> -f <file> "WORKER: $NAME run <RUN_ID> claimed"
+           Gate the comment on the claim's exit status: a lost race must not comment.
+           Prose goes through a file, never inline — the destructive-op matcher rejects it.
            re-read with `br comments <id>` — the add can no-op at exit 0, and this is
            your only claim-time audit trail
 
@@ -61,7 +63,7 @@ CLOSED=0
              exclusive:true, reason:"<id>", registration_token)
            conflicts non-empty → br update <id> --status open --assignee "" → goto 1
            …unless the bead cannot be done without that path: send_message(to:[holder],
-           thread_id:<id>, subject:"[<id>] need <path>", ack_required:true, registration_token)
+           thread_id:<id>, subject:"[<id>] need <path>", ack_required:true, sender_token)
            — one targeted message, never a broadcast — then unclaim and goto 1
 
 5 WORK     Implement the bead as written. Load the domain skill the bead names. Tests the
@@ -77,18 +79,25 @@ CLOSED=0
            — a silent collapse to fewer files still prints "N passed" and is a false green
            pnpm type-check 2>&1 | sed -E 's/\x1b\[[0-9;]*m//g' \
              | grep -F -f <(printf '%s\n' <your files>)     # strip ANSI first, own paths only
-           ubs <your files>
-           A failure located in a file a sibling has reserved is not yours: sleep 60, retry
+           ubs "<file>" "<file>" …    # ONE call, every path quoted
+           Read ubs's DETAIL lines: its summary counts categories checked, not findings, and
+           it silently covers no .sh/.css/.md while still printing a scanned count.
+           A failure located in a file a sibling has reserved is not yours: wait 60s, retry
            once, then own it. Fix until green. No lint/format — husky lint-staged does it.
 
-7 COMMIT   flock -w 600 "$(git rev-parse --git-common-dir)/swarm-commit.lock" sh -c '
+7 COMMIT   Write the message to a file first, then:
+           flock -w 600 "$(git rev-parse --git-common-dir)/swarm-commit.lock" sh -c '
              [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || exit 9   # foreign branch swap
              git add -- <your reserved paths only>
-             git commit -m "<type>(<scope>): <what> (<id>)"
+             git commit -F <msgfile>
              git push origin main || echo PUSH_REJECTED'
+           `-F <msgfile>`, never inline `-m`: an apostrophe in the body closes the wrapper's
+           quote, truncating the commit and skipping the push at exit 0.
            NEVER `.git/<name>.lock` — `.git` is a FILE in every neoMeta app (submodule), so
            that path never opens and the mutex silently does nothing.
            exit 9 → the checkout is on a foreign branch: STOP, report, touch nothing.
+           The pre-push build compiles the WORKING TREE, so a sibling's half-edit reddens your
+           push: retry once before believing it.
            PUSH_REJECTED → not fatal. Commit is safe in local main. Note it in your report;
            the orchestrator reconciles. NEVER pull, rebase, stash or reset here.
            NEVER git add .beads/issues.jsonl — the orchestrator owns the ledger.

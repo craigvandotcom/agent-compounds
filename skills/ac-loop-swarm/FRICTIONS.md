@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-22
-entries: 12
+last_pass: 2026-08-23
+entries: 16
 ---
 
 # ac-loop-swarm — friction log
@@ -88,14 +88,22 @@ entries: 12
 - impact: M
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 0
+- recurrence: 1
 - related: []
 - first_seen: 2026-08-21
-- last_seen: 2026-08-21
+- last_seen: 2026-08-23
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: see the primary entry.
-- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `skills/ac-loop/FRICTIONS.md`,
+- narrative: WIDENED 2026-08-23 — all five workers and the orchestrator hit this, and a SECOND dcg
+  rule joins the same family: `core.filesystem:redirect-truncate-dynamic-path` blocks any `>`
+  redirect whose target is shell-expanded (`> "$VAR/file"`), which is how an agent naturally writes
+  a scratch file. Blocked this run: a TS block using `toBeGreaterThanOrEqual`, a comment containing
+  `Record<string, …>`, a git rev using `^{commit}`, a python heredoc whose DATA contained
+  redirects, and `git show HEAD:$f > "$f"` baseline loops. The remedy generalises to both rules and
+  is the same one: author the text with the Write tool and give bash only literal paths — never
+  route agent-authored prose or a computed path through the shell. POINTER ENTRY, not a copy — the
+  PRIMARY is this same id in `skills/ac-loop/FRICTIONS.md`,
   where all occurrences are counted. Recorded here because the swarm model inherits the hazard
   unchanged and its own prose-bearing CLI calls emit it. LOCAL MANIFESTATION: a `br comments add`
   call was rejected because the comment TEXT quoted a script's `mv` lines — the destructive-operation
@@ -173,13 +181,22 @@ entries: 12
 - impact: L
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 1
+- recurrence: 2
 - related: [br-writes-default-to-human-identity]
 - first_seen: 2026-08-22
-- last_seen: 2026-08-22
+- last_seen: 2026-08-23
 - stage: ac-loop-swarm
 - status: open
-- proposed_fix: export AGENT_NAME and BR_AGENT_NAME inside every subshell that commits or writes a bead; never pipe a commit through `tail`.
+- proposed_fix: exporting in the same command is NOT sufficient — `br` must be given the identity by flag or config, not by inherited environment; never pipe a commit through `tail`.
+- narrative: SECOND INSTANCE 2026-08-23 — the proposed fix below was applied and did not hold. A
+  worker exported `AGENT_NAME` and `BR_AGENT_NAME` in the SAME command as the `br` call and `br`
+  still wrote the comment as `FoggyCreek`. Every claim comment this run carries the fallback
+  identity, with the real worker name surviving only inside the comment TEXT because the seed
+  happens to spell it there. That is luck, not design. The entry is therefore widened: the root is
+  not merely that shell state is lost between tool calls, it is that `br`'s identity resolution
+  does not reliably read the exported environment even when it is present, so no export discipline
+  can close it. The audit trail the pull-based model depends on to prove who holds a bead is wrong
+  on every entry, and nothing anywhere reports it.
 - narrative: shell state does not survive between tool calls, so an identity exported once in a
   seed's setup block is absent by the time any later step commits. Two consequences, and only
   the first is visible. The pre-commit reservation guard does refuse — it writes
@@ -196,14 +213,22 @@ entries: 12
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-08-22
-- last_seen: 2026-08-22
+- last_seen: 2026-08-23
 - stage: ac-loop-swarm
-- status: resolved
-- proposed_fix: point the step at the runbook that already documents the working recovery; delete the forbidden command.
-- narrative: the close-out reconcile step named `git stash push -u` as its escape from a dirty
+- status: open
+- proposed_fix: point the step at the runbook that already documents the working recovery; delete the forbidden command. Same rule for the stagger: the seed must not prescribe a call the harness refuses.
+- narrative: SECOND INSTANCE 2026-08-23 — the worker seed's ONCE block opens with a foreground
+  `sleep` to stagger first picks, and this harness blocks foreground sleep outright. Every worker
+  spawned hit it on its first action and had to invent its own wait (a date-deadline until-loop,
+  or a background shell). The root is unchanged from the first instance below: doctrine naming a
+  command the environment refuses. It is worth re-counting because the first instance was closed
+  by fixing ONE named command, which did not generalise — the skill still contains other
+  prescribed calls never checked against the harness that runs them, and the first thing a worker
+  does is the worst place to put one. FIRST INSTANCE — the close-out reconcile step named
+  `git stash push -u` as its escape from a dirty
   tree. `neometa.stashguard` forbids that in a shared checkout, and forbids the scoped
   `git stash push -- <paths>` form the guard's own hint recommends, so both exits the step knew
   about were walls. Doctrine that names an impossible command is worse than doctrine that names
@@ -272,3 +297,90 @@ entries: 12
   the constraint and ends with no usable db. A union merge of two ledgers therefore has a
   renumbering step whether or not anyone wrote one down. The husky guard does catch it and names
   every colliding pair, which is why this is a sensor reading rather than a promotion candidate.
+
+## commit-message-apostrophe-truncates-the-commit-inside-the-sh-c-wrapper
+- skills: [ac-loop-swarm]
+- impact: H
+- frequency: frequent
+- perceptibility: silent
+- recurrence: 1
+- related: [agent-identity-env-lost-between-tool-calls]
+- first_seen: 2026-08-23
+- last_seen: 2026-08-23
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: write the message to a file and use `git commit -F <file>`; never an inline `-m` inside a single-quoted `sh -c` wrapper.
+- narrative: the commit step is a `sh -c '…'` wrapper so that the whole add/commit/push sequence
+  runs under one flock. The message is passed inline with `-m`. Any apostrophe in the body — and
+  this board's prose is full of them, `Craig's`, a bead id's possessive — closes the outer single
+  quote. What lands is a commit TRUNCATED at that apostrophe, and the `git push` that followed it
+  on the same line never runs at all, while the wrapper still exits 0. Three failures compose into
+  one silent one: the message is corrupted, the push is skipped, and the status code says success,
+  so the worker proceeds to close its bead believing the work shipped. The quoting hazard is
+  ordinary; what makes this high-impact is that the flock wrapper puts the push INSIDE the same
+  fragile quoting context as the prose, so a text defect silently becomes a delivery defect.
+
+## ubs-summary-counter-and-language-coverage-both-misreport
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
+- first_seen: 2026-08-23
+- last_seen: 2026-08-23
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: report findings not categories in the summary line, and exit non-zero — or print an explicit NOT-CHECKED verdict — when no scanner matched the supplied files.
+- narrative: the step-6 gate calls `ubs` and reads its summary. That summary lies in both
+  directions. Upward: it printed `Critical: 17` on a file whose own detail lines all read OK,
+  because the counter tallies security CATEGORIES CHECKED rather than findings — taken at face
+  value it blocks a clean commit, and the only way to recover the real signal is to read every
+  detail line or diff criticals against the `git show HEAD:` copy. Downward: it has no shell, CSS
+  or markdown scanner, so on a `.sh` or `.css` file it reports a files-scanned count while
+  checking nothing; on mixed path lists it silently scanned 3 of 4 and 4 of 5 files. A gate whose
+  headline number means neither "findings" nor "files actually checked" cannot be read quickly by
+  anyone, which is the only way a per-bead gate ever gets read.
+
+## prepush-build-checks-the-working-tree-not-the-pushed-commit
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-23
+- last_seen: 2026-08-23
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: build the pushed commit from a detached or stashless archive of it, not the live working tree; failing that, retry once before reporting a rejection.
+- narrative: the husky pre-push hook runs a Next.js build against the WORKING TREE. On a shared
+  swarm checkout the working tree is never any one worker's: it carries every sibling's in-flight,
+  uncommitted edits. So a worker pushing a correct, self-contained commit is rejected by a build
+  failure located entirely in code it does not own and did not touch. Three workers hit this and
+  all three cleared on a plain retry, because the offending sibling had committed in the interval —
+  which is the tell that the check is timing-dependent rather than truth-dependent. The cost is not
+  the retry, it is the diagnosis: each rejection reads as "your commit broke the build" and buys a
+  full `pnpm build` to disprove. A gate that attributes siblings' half-edits to whoever pushes next
+  cannot be used to decide whether a push is safe.
+
+## br-dep-add-argument-order-inverts-the-natural-reading
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-23
+- last_seen: 2026-08-23
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: assert the edge direction with `br dep cycles` plus a read-back after every `br dep add`; state the argument order at the call site in any skill that spells the command.
+- narrative: `br dep add` reads `<issue> depends on <depends-on>`, so the BLOCKED bead is the
+  first argument. Every natural-language framing a worker starts from — "the gate blocks this
+  bead", "this bead is blocked by the gate" — puts them the other way round. The edge is created
+  successfully either way, so nothing reports the error: a backwards dependency is a well-formed
+  edge that silently inverts the board's execution order, making blocked work look ready and ready
+  work look blocked. One worker created three backwards edges and a dependency CYCLE before
+  `br dep cycles` surfaced it. The command is used exactly when a worker is filing a gate it
+  cannot resolve, which is the moment it has least context to notice the inversion.
