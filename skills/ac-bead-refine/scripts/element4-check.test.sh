@@ -152,6 +152,78 @@ else
   fail "Case 8: expected a full stamp, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
+# ============================================================================
+# Cases 9-10: stamp-refined.sh under ZSH — the fleet's default shell.
+# zsh populates no BASH_SOURCE. A bash-only self-read resolves against $PWD, which
+# refuses every bead when sourced and exits 0 writing nothing when executed.
+# Both cases run both polarities: the fixed script AND a mutant forced onto the
+# bash-only branch, which must fail. A case that only ever passes is not evidence.
+# ============================================================================
+if ! command -v zsh >/dev/null 2>&1; then
+  fail "Cases 9-10: zsh not installed — the zsh contract is UNPROVEN on this host"
+else
+  FIXED="$WORK/fixed"; MUTANT="$WORK/mutant"; mkdir -p "$FIXED" "$MUTANT"
+  cp "$STAMP" "$FIXED/stamp-refined.sh"; cp "$CHECK" "$FIXED/element4-check.sh"
+  cp "$CHECK" "$MUTANT/element4-check.sh"
+  # The mutation: force the ZSH_VERSION sentinel false so both self-reads fall back to
+  # the bash-only branch — exactly the pre-fix script.
+  sed 's/\[ -n "${ZSH_VERSION:-}" \]/false/g' "$STAMP" >"$MUTANT/stamp-refined.sh"
+
+  # The mutation must actually bite, or the negative controls below are vacuous.
+  if [ "$(grep -c '^if false; then' "$MUTANT/stamp-refined.sh")" -eq 2 ]; then
+    pass "Case 9a: the negative-control mutation applied (both zsh branches disabled)"
+  else
+    fail "Case 9a: mutation did not apply — the ZSH_VERSION sentinel moved; Cases 9b-10b are vacuous"
+  fi
+
+  # --- Case 9: SOURCED under zsh from a foreign cwd resolves its OWN sibling ---
+  ask_sourced() {  # $1 = dir holding the script; echoes the resolved ELEMENT4_CHECK
+    zsh -f -c "cd /; unset ELEMENT4_CHECK; . '$1/stamp-refined.sh'; printf '%s' \"\$ELEMENT4_CHECK\""
+  }
+  GOT=$(ask_sourced "$FIXED")
+  if [ "$GOT" = "$FIXED/element4-check.sh" ]; then
+    pass "Case 9b: zsh-sourced from a foreign cwd resolves ELEMENT4_CHECK to its own sibling"
+  else
+    fail "Case 9b: expected '$FIXED/element4-check.sh', got '$GOT'"
+  fi
+
+  GOT=$(ask_sourced "$MUTANT")
+  if [ "$GOT" != "$MUTANT/element4-check.sh" ]; then
+    pass "Case 9c: NEGATIVE CONTROL — the bash-only read misresolves under zsh (got '$GOT')"
+  else
+    fail "Case 9c: negative control did not go RED — the mutant resolved correctly"
+  fi
+
+  # --- Case 10: EXECUTED under zsh refuses loudly instead of exiting 0 silently ---
+  : >"$BR_LOG"
+  OUT=$(cd / && PATH="$MOCK:$PATH" zsh -f "$FIXED/stamp-refined.sh" bd-bad 2>&1); RC=$?
+  if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q "REFUSED bd-bad" \
+     && ! grep -q 'label add bd-bad refined' "$BR_LOG"; then
+    pass "Case 10a: 'zsh <script> bd-bad' REFUSES like bash does, writing no label"
+  else
+    fail "Case 10a: expected a loud refusal, got rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+  fi
+
+  : >"$BR_LOG"
+  OUT=$(cd / && PATH="$MOCK:$PATH" zsh -f "$MUTANT/stamp-refined.sh" bd-bad 2>&1); RC=$?
+  if [ "$RC" -eq 0 ] && [ -z "$OUT" ]; then
+    pass "Case 10b: NEGATIVE CONTROL — the bash-only guard exits 0 silently under zsh"
+  else
+    fail "Case 10b: negative control did not go RED — mutant rc=$RC, output: $OUT"
+  fi
+
+  # --- Case 10c: sourcing must still NOT run the argument loop, under either shell ---
+  : >"$BR_LOG"
+  for SH in bash zsh; do
+    OUT=$($SH -f -c "cd /; PATH='$MOCK:\$PATH'; . '$FIXED/stamp-refined.sh' bd-bad" 2>&1 || true)
+    if echo "$OUT" | grep -q "REFUSED bd-bad"; then
+      fail "Case 10c ($SH): sourcing ran the argument loop — the direct-invocation guard is inverted"
+    else
+      pass "Case 10c ($SH): sourcing defines the function without consuming its arguments"
+    fi
+  done
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All element4-check fixture tests passed."
