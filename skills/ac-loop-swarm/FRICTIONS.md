@@ -353,7 +353,13 @@ entries: 16
 - last_seen: 2026-08-23
 - stage: ac-loop-swarm
 - status: open
-- proposed_fix: build the pushed commit from a detached or stashless archive of it, not the live working tree; failing that, retry once before reporting a rejection.
+- proposed_fix: build the pushed commit from a detached or stashless archive of it, not the live working tree; failing that, retry once before reporting a rejection. The build is also globally exclusive, so serialise pushes rather than racing them.
+- narrative_addendum: the hook is additionally MUTUALLY EXCLUSIVE across agents — `next build`
+  refuses to start while another build holds the lock, and reports it as a plain hook failure
+  (`husky - pre-push script failed`). At width 4 every push therefore contends on one global
+  build lock, and a worker whose push is refused because a SIBLING is mid-build reads an error
+  naming neither the sibling nor the lock. Combined with the working-tree defect above, the
+  pre-push gate fails for two unrelated concurrency reasons that present identically.
 - narrative: the husky pre-push hook runs a Next.js build against the WORKING TREE. On a shared
   swarm checkout the working tree is never any one worker's: it carries every sibling's in-flight,
   uncommitted edits. So a worker pushing a correct, self-contained commit is rejected by a build
