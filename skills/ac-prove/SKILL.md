@@ -51,15 +51,16 @@ REF="${ref:-$(git rev-parse HEAD)}"
 node scripts/ci/publish-checkpoint-gate.mjs --release-sha "$REF"
 ```
 
-- **Exit 0** means the last checkpoint in `_ci-evidence/vitest-affected-divergence-log.jsonl`
-  is an ancestor of `$REF` with only evidence commits in between (see Canonical Receipt Contract
-  below) — but that alone is **not** enough to short-circuit dispatch. Exit 0 short-circuits
-  dispatch **only when** the referenced runId in that trusted line is confirmed
-  `conclusion=success` (Step 3, Green Gate). **A tip-valid receipt sitting on top of a RED run
-  does NOT short-circuit** — the gate script only checks ancestry/path-scoping, not the run's
-  actual conclusion; that confirmation is `ac-prove`'s job, not the script's.
-- **Exit 1** (stale, or no valid checkpoint at all) → proceed to Step 2 in `ensure`/
-  `ensure --fix-forward`; in `probe` mode, this **is** the final answer — return FAIL, no dispatch.
+- **Exit 0** means two gates passed: the checkpoint in
+  `_ci-evidence/vitest-affected-divergence-log.jsonl` is an ancestor of `$REF` with only
+  evidence commits between, and a green `e2e.yml` run on an ancestor of `$REF` is inside the
+  24h budget. Exit 0 short-circuits dispatch **only when** the referenced runId in that
+  trusted line is confirmed `conclusion=success` (Step 3, Green Gate). **A tip-valid receipt
+  on top of a RED run does NOT short-circuit.**
+- **Exit 1** (stale checkpoint, stale or absent e2e signal, or no valid checkpoint) → Step 2
+  in `ensure`/`ensure --fix-forward`; in `probe` mode this **is** the final answer — FAIL, no
+  dispatch. Act on the remedy the refusal names: when it names `workflow_dispatch e2e.yml`,
+  dispatch that workflow against `$REF` — a full-suite re-run produces no e2e signal.
 
 `probe` mode stops here, always. It never dispatches, never fixes, never ships.
 
