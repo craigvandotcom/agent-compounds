@@ -645,13 +645,66 @@ AskUserQuestion(
 
 **Apply any user-approved findings using `br` commands.**
 
-### Title/Label Parity Gate (decision beads MUST carry `human-gate`) — run BEFORE stamping
+### Title/Label Parity Gate (a human-gated bead MUST carry `human-gate` AND a `Gate-reason:` marker) — run BEFORE stamping
 
-**Critical parity assertion, checked over the whole reviewed snapshot before any `refined` stamp.** Any bead titled `DECISION:` / `DESIGN_DECISION:` (case-insensitive prefix) OR typed `decision` that lacks the `human-gate` label is a Critical finding — the label is what every label-keyed gate reads (`issue_type=decision` alone gates nothing; memory `decision-beads-need-human-gate-label-at-filing`, `beads-standards` § human-gate). Fix it (add the label) BEFORE that bead can be stamped `refined` — a decision bead must never reach `refined` without its gate label. This is the backstop for producers (ac-review / ac-hygiene Exhaust Rule) that hand-roll a `br create` and drop the label; it has recurred 14+ times, caught only by reactive manual relabeling in refine passes — this gate makes the fix automatic.
+**Critical parity assertion, checked over the whole reviewed snapshot before any `refined` stamp.**
+
+Canon (`beads-standards` § Human-gate template, "The check runs BOTH ways") is broader than
+type and title: *a bead whose acceptance criteria cannot be satisfied without the human MUST
+carry the label and a marker.* No type restriction, no title restriction. And a `human-gate`
+label is INVALID without an explicit `Gate-reason:` marker naming one of
+`fork` / `authorization` / `intent` / `action`.
+
+So this gate has THREE limbs, and the label and the marker are checked against each other in
+BOTH directions (bd-iuga3):
+
+| Limb | Condition | Action |
+|------|-----------|--------|
+| **A** | typed `decision` OR titled `DECISION:`/`DESIGN_DECISION:`, and missing `human-gate` | **FIX** — add the label |
+| **B** | body declares `Gate-reason:` on ANY type, and missing `human-gate` | **REPORT** on stderr — never auto-fixed |
+| **C** | carries `human-gate`, and body declares NO `Gate-reason:` | **REPORT** on stderr — never auto-fixed |
+
+Limb A is the original gate: the label is what every label-keyed gate reads (`issue_type=decision`
+alone gates nothing; memory `decision-beads-need-human-gate-label-at-filing`). It has recurred
+14+ times.
+
+**Limb B is why the gate is not type-keyed any more.** A `task`- or `feature`-typed bead whose
+ACs need Craig reached `refined` with no `human-gate` and was relabelled BY HAND by a round-2
+reviewer — the gate never looked, because it only ever inspected `.issue_type` and `.title`.
+`human-gate` is the SOLE marker `ac-human-session` and `ac-loop` compute their leverage/on-you
+lanes from, so a bead that is agent-ready by label but decision-blocked in fact gets claimed by
+an autonomous wave and either stalls or is answered by an agent guessing Craig's ruling.
+
+Limb B keys on the DECLARED `Gate-reason:` marker, not on prose sniffing. That is deliberate:
+a selector that greps for decision-ish words over-flags, and every over-flag writes a
+`human-gate` label onto a bead that does not want one, on a shared multi-writer
+`.beads/issues.jsonl` contended by N concurrent refine children.
+
+**Limb B REPORTS rather than auto-labels, and that was decided on a MEASUREMENT, not a
+preference (bd-iuga3).** Run against the live BCA board it returned 4 ids, and inspection
+showed the marker being present does NOT imply a live gate:
+
+- `bd-g30lp` — marker reads `Gate-reason: fork — … **DISCHARGED`. The gate was satisfied and
+  the label correctly REMOVED; only the prose record remains. Auto-labelling would re-gate
+  finished work.
+- `bd-paywall-drawer-trial-device-proof-udwdy`, `bd-l6khg.11`, `bd-jcgak` — markers
+  transcribed verbatim from a docket sweep, each recording an ALREADY-MADE human decision
+  that was explicitly not re-adjudicated. Historical records, not open gates.
+
+So a `Gate-reason:` line is evidence of a gate having EXISTED, not of one being OPEN, and
+nothing in the body distinguishes the two mechanically. Until beads carry a discharged-state
+field a machine can read, this limb surfaces candidates for a human to judge and stops there.
+That is the same discipline this gate's own risk note demands: report until the
+false-positive rate is measured — it now has been, and it is too high to auto-label.
+
+**Limb C REPORTS and never mutates.** The missing markers are pre-existing ledger data and
+authoring one needs per-bead judgement (which of the four taxonomy values applies), so the gate
+surfaces them and stops. Remediation is bd-e3vo0's job, not this gate's. Findings go to
+**stderr** — the limb has no `br` call to observe, and a `br` call added purely to make the
+finding visible would mutate the board in order to report on it.
 
 ```bash
-# Add human-gate to any decision-typed OR DECISION:/DESIGN_DECISION:-titled reviewed bead
-# missing it. Read rows from the Phase-0 beads-snapshot.json ONLY — never
+# Read rows from the Phase-0 beads-snapshot.json ONLY — never
 # `br show "$id" --json | jq` per id (multi-line descriptions break jq; bd-lsnc0).
 # Scope is still the target list (bd-baudw): this mutates beads, so it obeys the same
 # "never touch an id outside target-bead-ids.txt" rule as the stamp loop below.
@@ -660,6 +713,11 @@ AskUserQuestion(
 # 30 of 34 open beads were dropped as "jq: Invalid string: control characters" — silent under
 # bash, corrupting under zsh (the fleet's default). If a per-row loop is ever needed again,
 # it is `printf '%s'`, never `echo`.
+#
+# NEVER read the marker with `br show "$id" | grep -q 'Gate-reason'` (bd-iuga3). `br show`
+# renders Dependencies, Dependents and Comments as well as the body, so a marker mentioned by a
+# NEIGHBOURING bead scores as a hit — measured: the loose form found 4 violations where the
+# correct form found 5. Read `.description` and anchor on the colon, as the selectors below do.
 #
 # FAIL-CLOSED (bd-br-json-control-chars-21ljf). This gate used to pipe jq straight into a
 # `while read` and never looked at jq's exit status, so ANY parse failure delivered zero ids
@@ -675,23 +733,52 @@ if [ "$jq_exit" -ne 0 ] || ! printf '%s' "${SNAP_N:-}" | grep -qE '^[0-9]+$' || 
     exit 2
 fi
 
-# 2. The gate itself — still SINGLE-PASS, but jq's status is captured before any loop runs.
-PARITY_IDS=$(jq -r '.issues[]
-       | select(.status == "open")
-       | select((.issue_type == "decision")
-                or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):")))
-       | select((.labels | index("human-gate")) | not)
-       | .id' "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+# 2. Limb A — decision by type or title, missing the label. SINGLE-PASS; jq's status is
+#    captured before any loop runs.
+# PARITY-SELECTOR-TYPE-TITLE
+PARITY_A_JQ='.issues[] | select(.status == "open") | select((.issue_type == "decision") or (.title | ascii_upcase | test("^(DECISION|DESIGN_DECISION):"))) | select((.labels | index("human-gate")) | not) | .id'
+PARITY_IDS=$(jq -r "$PARITY_A_JQ" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
 if [ "$jq_exit" -ne 0 ]; then
     printf 'FATAL: parity gate query failed (jq exit=%s) — ABORTING Phase 5; nothing stamped.\n' "$jq_exit" >&2
     exit 2
 fi
 
+# 3. Limb B — a DECLARED Gate-reason on any type, missing the label. REPORT ONLY: a marker
+#    can be discharged or historically transcribed, and neither is an open gate (measured).
+# PARITY-SELECTOR-MARKER-UNLABELLED
+PARITY_B_JQ='.issues[] | select(.status == "open") | select((.description // "") | test("(^|\\s)Gate-reason:")) | select((.labels | index("human-gate")) | not) | .id'
+MARKER_UNLABELLED=$(jq -r "$PARITY_B_JQ" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+if [ "$jq_exit" -ne 0 ]; then
+    printf 'FATAL: parity gate marker query failed (jq exit=%s) — ABORTING Phase 5; nothing stamped.\n' "$jq_exit" >&2
+    exit 2
+fi
+
+# Limb A is the only limb that MUTATES. Type/title is an exact, non-discharged signal.
 printf '%s\n' "$PARITY_IDS" | while IFS= read -r id; do
     [ -n "$id" ] || continue
     grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue   # not mine — never touch it
     echo "PARITY FIX: $id is a decision bead missing human-gate — adding label"
     br label add "$id" "human-gate" 2>/dev/null
+done
+
+# Limb B findings — REPORT on stderr, never labelled. See the measurement above.
+printf '%s\n' "$MARKER_UNLABELLED" | while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    printf 'PARITY FINDING: %s declares a Gate-reason: marker but carries no human-gate label — confirm whether that gate is OPEN (label it) or DISCHARGED/historical (leave it)\n' "$id" >&2
+done
+
+# 4. Limb C — the label without the marker: an INVALID gate. REPORT ONLY, on stderr.
+#    Never auto-fixed: choosing among fork/authorization/intent/action is a judgement call.
+# PARITY-SELECTOR-LABEL-NO-MARKER
+PARITY_C_JQ='.issues[] | select(.status == "open") | select(.labels | index("human-gate")) | select(((.description // "") | test("(^|\\s)Gate-reason:")) | not) | .id'
+MARKER_MISSING=$(jq -r "$PARITY_C_JQ" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+if [ "$jq_exit" -ne 0 ]; then
+    printf 'FATAL: parity gate marker-missing query failed (jq exit=%s) — ABORTING Phase 5; nothing stamped.\n' "$jq_exit" >&2
+    exit 2
+fi
+printf '%s\n' "$MARKER_MISSING" | while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    printf 'PARITY FINDING: %s carries human-gate with no Gate-reason: marker — invalid gate, needs one of fork/authorization/intent/action (remediation: bd-e3vo0)\n' "$id" >&2
 done
 ```
 

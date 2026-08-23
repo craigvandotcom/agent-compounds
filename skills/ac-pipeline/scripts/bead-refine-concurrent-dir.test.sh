@@ -32,6 +32,9 @@
 #   9b parity gate on a VALID snapshot                -> proceeds AND acts        [bd-br-json…]
 #   9c stamp loop resolving 0/N targets               -> ABORTS, zero label calls [bd-br-json…]
 #   9d NEGATIVE CONTROL: pre-fix parity gate          -> exits 0 on the same input [bd-br-json…]
+#   9e parity gate limb B: Gate-reason: on a task       -> REPORTED on stderr, not labelled [bd-iuga3]
+#   9f NEGATIVE CONTROL: pre-fix type/title-only gate   -> finds 9e's bead NOWHERE     [bd-iuga3]
+#   9g parity gate limb C: human-gate with no marker    -> REPORTED as an invalid gate [bd-iuga3]
 #
 # WHY `bash -c ... &` AND NOT `( ... ) &`: bash's `$$` stays fixed to the TOP-LEVEL
 # shell's PID inside `( )` subshells, so a subshell harness would measure its own process
@@ -229,26 +232,52 @@ run_stamp_loop() { # $1 = br call log   $2 = artifacts dir (default: $PROBE_DIR)
   '
 }
 
-# The Phase 5 Title/Label Parity Gate, retyped from workflow.md § Title/Label Parity Gate.
-# Fail-closed: a preflight proves the snapshot parses and is non-empty, and the select query
+# The Phase 5 Title/Label Parity Gate. The jq SELECTORS ARE NOT RETYPED HERE (bd-iuga3):
+# they are EXTRACTED from workflow.md at run time, the way rule-0-provenance.test.sh extracts
+# its assertions. A retyped copy silently desyncs when the gate is edited, and the test then
+# asserts the OLD gate — which is exactly how the type/title-only selector survived unnoticed.
+# Each selector sits on the first non-comment line after a unique marker; we take the text
+# between the first and last single quote on that line.
+extract_parity_selector() {
+  local mark="$1"
+  awk -v m="$mark" '
+    $0 ~ m { grab=1; next }
+    grab && $0 ~ /^[[:space:]]*$/ { next }
+    grab && $0 ~ /^[[:space:]]*#/ { next }
+    grab { print; exit }
+  ' "$WORKFLOW" | sed "s/^[^']*'//; s/'$//"
+}
+
+PARITY_A_JQ="$(extract_parity_selector 'PARITY-SELECTOR-TYPE-TITLE')"
+PARITY_B_JQ="$(extract_parity_selector 'PARITY-SELECTOR-MARKER-UNLABELLED')"
+PARITY_C_JQ="$(extract_parity_selector 'PARITY-SELECTOR-LABEL-NO-MARKER')"
+
+# Fail-closed: a preflight proves the snapshot parses and is non-empty, and every select query
 # checks jq'"'"'s status BEFORE any loop runs. Pre-fix this piped jq straight into `while read`,
 # so a parse error yielded zero iterations and the gate reported clean — silent and OPEN.
+# Limb A FIXES (labels); limbs B and C REPORT on stderr and never mutate the board.
 run_parity_gate() { # $1 = br call log   $2 = artifacts dir
-  ARTIFACTS_DIR="$2" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" bash -c '
+  ARTIFACTS_DIR="$2" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" \
+  PARITY_A_JQ="$PARITY_A_JQ" PARITY_B_JQ="$PARITY_B_JQ" PARITY_C_JQ="$PARITY_C_JQ" bash -c '
     set -uo pipefail
     SNAP_N=$(jq -r ".issues | length" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
     if [ "$jq_exit" -ne 0 ] || ! printf "%s" "${SNAP_N:-}" | grep -qE "^[0-9]+$" || [ "$SNAP_N" -eq 0 ]; then
         printf "  (parity) FATAL: cannot read beads-snapshot.json (jq exit=%s, issues=%s) — ABORTING\n" "$jq_exit" "${SNAP_N:-<none>}" >&2
         exit 2
     fi
-    PARITY_IDS=$(jq -r ".issues[]
-           | select(.status == \"open\")
-           | select((.issue_type == \"decision\")
-                    or (.title | ascii_upcase | test(\"^(DECISION|DESIGN_DECISION):\")))
-           | select((.labels | index(\"human-gate\")) | not)
-           | .id" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+    PARITY_IDS=$(jq -r "$PARITY_A_JQ" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
     if [ "$jq_exit" -ne 0 ]; then
         printf "  (parity) FATAL: query failed (jq exit=%s) — ABORTING\n" "$jq_exit" >&2
+        exit 2
+    fi
+    MARKER_UNLABELLED=$(jq -r "$PARITY_B_JQ" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+    if [ "$jq_exit" -ne 0 ]; then
+        printf "  (parity) FATAL: marker query failed (jq exit=%s) — ABORTING\n" "$jq_exit" >&2
+        exit 2
+    fi
+    MARKER_MISSING=$(jq -r "$PARITY_C_JQ" "$ARTIFACTS_DIR/beads-snapshot.json"); jq_exit=$?
+    if [ "$jq_exit" -ne 0 ]; then
+        printf "  (parity) FATAL: marker-missing query failed (jq exit=%s) — ABORTING\n" "$jq_exit" >&2
         exit 2
     fi
     printf "%s\n" "$PARITY_IDS" | while IFS= read -r id; do
@@ -257,19 +286,25 @@ run_parity_gate() { # $1 = br call log   $2 = artifacts dir
         echo "  (parity) PARITY FIX: $id is a decision bead missing human-gate — adding label"
         br label add "$id" "human-gate" 2>/dev/null
     done
+    printf "%s\n" "$MARKER_UNLABELLED" | while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        printf "  (parity) PARITY FINDING: %s declares Gate-reason: but carries no human-gate label\n" "$id" >&2
+    done
+    printf "%s\n" "$MARKER_MISSING" | while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        printf "  (parity) PARITY FINDING: %s carries human-gate with no Gate-reason: marker\n" "$id" >&2
+    done
   '
 }
 
 # NEGATIVE CONTROL body: the pre-fix parity gate, jq piped straight into the loop with no
 # status check. On malformed input this exits 0 having examined nothing — the bug itself.
+# Uses the SAME extracted limb-A selector, so this control isolates the missing status check
+# rather than accidentally testing a stale hand-copy of the query.
 run_parity_gate_prefix() { # $1 = br call log   $2 = artifacts dir
-  ARTIFACTS_DIR="$2" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" bash -c '
-    jq -r ".issues[]
-           | select(.status == \"open\")
-           | select((.issue_type == \"decision\")
-                    or (.title | ascii_upcase | test(\"^(DECISION|DESIGN_DECISION):\")))
-           | select((.labels | index(\"human-gate\")) | not)
-           | .id" "$ARTIFACTS_DIR/beads-snapshot.json" 2>/dev/null \
+  ARTIFACTS_DIR="$2" PATH="$PROBE_DIR/bin:$PATH" BR_CALL_LOG="$1" \
+  PARITY_A_JQ="$PARITY_A_JQ" bash -c '
+    jq -r "$PARITY_A_JQ" "$ARTIFACTS_DIR/beads-snapshot.json" 2>/dev/null \
       | while IFS= read -r id; do
         grep -qxF "$id" "$ARTIFACTS_DIR/target-bead-ids.txt" || continue
         br label add "$id" "human-gate" 2>/dev/null
@@ -344,6 +379,10 @@ echo "=== Case 9: Phase 5 gates FAIL CLOSED on unreadable / unresolvable input (
 # clean without checking a single bead, and the stamp loop printed N x SKIP and moved on.
 if ! command -v jq >/dev/null 2>&1; then
   skip "Case 9: jq not installed — cannot exercise the fail-closed gates"
+elif [ -z "$PARITY_A_JQ" ] || [ -z "$PARITY_B_JQ" ] || [ -z "$PARITY_C_JQ" ]; then
+  # Extraction is the point of AC3: if a marker was renamed in workflow.md this must be a
+  # LOUD failure, not a silent skip - a gate nobody can extract is a gate nobody runs.
+  fail "Case 9: could not extract all three parity selectors from workflow.md (A=${#PARITY_A_JQ} B=${#PARITY_B_JQ} C=${#PARITY_C_JQ} chars) - marker comments renamed or removed"
 else
   FC_DIR="$TMP_ROOT/failclosed"
   mkdir -p "$FC_DIR/bin"
@@ -391,6 +430,65 @@ JSON
     fi
   else
     fail "Case 9b: the gate aborted on VALID input ($(command tr '\n' ' ' < "$FC_DIR/9b.err")) — over-blocking"
+  fi
+
+  # --- 9e RED (bd-iuga3): LIMB B - a TASK-typed bead whose body declares `Gate-reason:` and
+  #     which carries no `human-gate`. The pre-fix gate inspected only .issue_type and .title,
+  #     so it selected NOTHING here; that is the gap this bead closes. Findings go to stderr
+  #     (the limb has no br call to observe - asserting on the call log would require the
+  #     check to mutate the board in order to report on itself).
+  tee "$FC_DIR/beads-snapshot.json" >/dev/null <<'JSON'
+{"issues":[
+ {"id":"bd-dec01","status":"open","title":"ordinary task","issue_type":"task","labels":["unrefined"],"description":"Some body.\n\nGate-reason: authorization - Craig must approve the prod write.\n"},
+ {"id":"bd-dec02","status":"open","title":"another task","issue_type":"task","labels":["unrefined","human-gate"],"description":"Body with a marker.\n\nGate-reason: fork - pick a or b.\n"}
+]}
+JSON
+  printf '' | tee "$FC_LOG" >/dev/null
+  if run_parity_gate "$FC_LOG" "$FC_DIR" >/dev/null 2>"$FC_DIR/9e.err"; then
+    if grep -q 'bd-dec01 declares Gate-reason: but carries no human-gate label' "$FC_DIR/9e.err"; then
+      # And it must NOT auto-label: a marker can be discharged or historically transcribed.
+      if [ "$(grep -c 'label add bd-dec01' "$FC_LOG" || true)" -eq 0 ]; then
+        pass "Case 9e: limb B REPORTS a task-typed bead declaring Gate-reason without human-gate, and does not label it"
+      else
+        fail "Case 9e: limb B auto-labelled bd-dec01 - it must report only (discharged/historical markers are false positives)"
+      fi
+    else
+      fail "Case 9e: limb B did not flag bd-dec01 - the gate still ignores human-gated ACs on non-decision types"
+    fi
+  else
+    fail "Case 9e: the gate aborted on VALID input ($(command tr '\n' ' ' < "$FC_DIR/9e.err")) - over-blocking"
+  fi
+
+  # --- 9f NEGATIVE CONTROL for 9e: the pre-fix (type/title-only) gate on the SAME fixture must
+  #     produce NO finding and NO label. Without this, 9e could pass for an unrelated reason.
+  printf '' | tee "$FC_DIR/prefix9f.log" >/dev/null
+  run_parity_gate_prefix "$FC_DIR/prefix9f.log" "$FC_DIR" >/dev/null 2>"$FC_DIR/9f.err" || true
+  if [ "$(grep -c 'bd-dec01' "$FC_DIR/prefix9f.log" || true)" -eq 0 ] \
+     && [ "$(grep -c 'bd-dec01' "$FC_DIR/9f.err" || true)" -eq 0 ]; then
+    pass "Case 9f: the pre-fix type/title-only gate finds bd-dec01 NOWHERE - 9e is measuring the new limb"
+  else
+    fail "Case 9f: the negative control also saw bd-dec01 - 9e may be passing for the wrong reason"
+  fi
+
+  # --- 9g RED (bd-iuga3): LIMB C - `human-gate` present with NO `Gate-reason:` marker is an
+  #     INVALID gate per beads-standards. Report only: choosing among
+  #     fork/authorization/intent/action is a judgement call, so the gate never authors one.
+  tee "$FC_DIR/beads-snapshot.json" >/dev/null <<'JSON'
+{"issues":[
+ {"id":"bd-dec01","status":"open","title":"labelled but unmarked","issue_type":"bug","labels":["human-gate"],"description":"A body with no marker at all.\n"},
+ {"id":"bd-dec02","status":"open","title":"properly marked","issue_type":"task","labels":["human-gate"],"description":"Body.\n\nGate-reason: intent - Craig must state the intent.\n"}
+]}
+JSON
+  printf '' | tee "$FC_LOG" >/dev/null
+  if run_parity_gate "$FC_LOG" "$FC_DIR" >/dev/null 2>"$FC_DIR/9g.err"; then
+    if grep -q 'bd-dec01 carries human-gate with no Gate-reason: marker' "$FC_DIR/9g.err" \
+       && ! grep -q 'bd-dec02 carries human-gate with no Gate-reason: marker' "$FC_DIR/9g.err"; then
+      pass "Case 9g: limb C reports the label-without-marker bead and spares the properly marked one"
+    else
+      fail "Case 9g: limb C mis-reported - expected bd-dec01 flagged and bd-dec02 clean ($(command tr '\n' ' ' < "$FC_DIR/9g.err"))"
+    fi
+  else
+    fail "Case 9g: the gate aborted on VALID input ($(command tr '\n' ' ' < "$FC_DIR/9g.err")) - over-blocking"
   fi
 
   # --- 9c: stamp loop with a non-empty target list that resolves NOTHING. Reproduced the way
