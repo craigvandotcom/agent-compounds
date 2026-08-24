@@ -2,7 +2,7 @@
 skill: ac-loop-swarm
 created: 2026-08-21
 last_pass: 2026-08-24
-entries: 18
+entries: 22
 ---
 
 # ac-loop-swarm — friction log
@@ -68,14 +68,14 @@ entries: 18
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: [affected-graph-silently-subsets-explicit-test-selection, verification-outlives-the-bash-timeout-cap]
 - first_seen: 2026-08-21
-- last_seen: 2026-08-21
+- last_seen: 2026-08-24
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: detect hub-module fanout before running; when the related set exceeds a threshold, run a named tier with a raised timeout instead of pretending the check is scoped.
-- narrative: `vitest related` is treated as the cheap scoped check — the thing you run because
+- narrative: SECOND INSTANCE 20260824-231514-17151 — MaroonFalcon: `vitest related` on a two-line `pnpm-workspace.yaml` packaging change expanded to 127 files / 1461 tests. Same root: a hub (workspace config) inverts the cheap-check assumption. FIRST INSTANCE — `vitest related` is treated as the cheap scoped check — the thing you run because
   a full tier is too expensive. On a widely-imported module that assumption inverts: one hub
   util fanned out to 209 files and roughly 2700 tests, and the command exceeded the 120s
   timeout without producing a verdict. For a hub module `related` costs as much as a tier run
@@ -439,3 +439,59 @@ entries: 18
   the entire pool: three workers, zero beads closed. `br ready` asserting pickable work that
   `--claim` will refuse is the misleading face; the silent half is that a leftover implement-lane
   assignee starves a pull swarm with no live holder to negotiate with.
+
+## ubs-heuristic-false-positives-on-non-security-code
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- perceptibility: misleading
+- recurrence: 1
+- related: [ubs-summary-counter-and-language-coverage-both-misreport]
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: suppress or recategorise CACurrentMediaTime, `== null`, and identifier-self-equality as non-findings outside token/secret paths; a step-6 RED must be a DETAIL-line finding on the reserved file, not a heuristic on a clock or an email lookup.
+- narrative: RUN 20260824-231514-17151 — three workers spent step 6 on ubs false-REDs that were not the bead. TealWaterfall: `CACurrentMediaTime()` flagged as non-cryptographic randomness for security tokens (it is the session tMs clock in ARSessionManager), plus a pre-existing `== null` in cross-runtime-parity.test.ts. MaroonFalcon: `email === email` flagged CRITICAL timing-safe-compare, forcing a rewrite of an email lookup. Distinct from the summary-counter lie: here the DETAIL lines themselves assert a security finding on non-security code, so reading past the summary still blocks the commit.
+
+## capacitor-stillness-types-live-in-gitignored-dist
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: either commit a types stub, or make the worker seed name `pnpm --filter @neometa/capacitor-stillness build` as a prerequisite before type-check on plugin API changes.
+- narrative: RUN 20260824-231514-17151 PurpleFinch — `@neometa/capacitor-stillness` types come from gitignored `dist/`. Adding `addListener('storage-full')` does not type-check until `pnpm --filter @neometa/capacitor-stillness build`. A scoped type-check RED on a reserved definitions.ts change is therefore a missing-artifact problem, not a type error in the source the worker just wrote.
+
+## playwright-reuseexistingserver-binds-foreign-localhost-3000
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: fail the e2e harness when the process on :3000 is not this app (probe /sign-up or a known route); never reuse a foreign server on a shared machine.
+- narrative: RUN 20260824-231514-17151 MaroonFalcon — localhost:3000 during the run was a foreign 404 server, not this app's /sign-up. Playwright `reuseExistingServer` is therefore unsafe on the shared machine: the suite binds a stranger and the failures name the app under test.
+
+## playwright-install-chromium-prunes-shared-webkit-cache
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: install browsers without deleting unused runtimes from a shared cache, or pin the install to a per-repo cache path.
+- narrative: RUN 20260824-231514-17151 MaroonFalcon — `pnpm exec playwright install chromium` also deleted unused webkit from the shared cache. A swarm worker installing one browser mutates siblings' and later sessions' browser availability.
