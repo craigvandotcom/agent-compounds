@@ -31,22 +31,17 @@ then commit to an interpretation. Still fuzzy after that → file it anyway as
 `investigation` + `unrefined` with the raw words preserved verbatim in the
 description; refinement is ac-bead-refine's job, not capture's.
 
-**Reverse shape-check (the mirror of ac-backlog's routing):** `ac-backlog` routes
-small+clear items straight to a bead; this phase does the opposite check — if what's
-being captured is actually **big or fuzzy** (multi-concern, spans more than one
-surface, no single deliverable a bead can express — a feature, a redesign, anything
-needing design thinking), it doesn't belong here as one bead. Route it to
-`ac-backlog` instead of force-fitting it into a bead or an epic-shaped description:
+**Route before you file — not every capture is a bead.** Decide KIND first, then shape:
 
-| Shape | Goes to | Why |
+| What it is | Goes to | Why |
 |-------|---------|-----|
-| Small + clear — one deliverable, one surface | **a bead** (stay in this skill) | Already an execution unit |
-| Big or fuzzy — multi-concern, no single deliverable, needs design thinking | **`ac-backlog`** | Needs to be thought through in a plan first, not force-fit into one bead |
+| A defect or want a **user** can reach — one deliverable, one surface | **a bead** (stay in this skill) | Already an execution unit |
+| A defect in the **factory** — pipeline · skill text · lint · bead schema · CI wrapper · harness · tool flag · local stack | the owning skill's **`FRICTIONS.md`** (`beads-standards` § label table) | On the board it is a filing defect, not a category |
+| A durable **fact, rule, decision or recipe** | the memory substrate (**`context-engineering`**) | Knowledge, not work |
+| **Big or fuzzy** — multi-concern, no single deliverable, needs design thinking | **`ac-backlog`** | Needs a plan first, not a force-fit bead |
 
-Route by shape, not by source — a fuzzy multi-concern capture is a fuzzy multi-concern
-capture whether the user typed it fast or slow. Say so and hand off: "This spans more
-than one bead's worth of work — routing to `ac-backlog` instead of filing it here."
-STOP — not a bead capture.
+Route by what it IS, not by who raised it or how fast they typed. Any row but the first:
+say which home and why, hand off, STOP — not a bead capture.
 
 ## Phase 2 — Route (which db?)
 
@@ -74,7 +69,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
 3. **Labels:** `unrefined` — capture never stamps `refined`, exclusively
    `/ac-bead-refine`'s output on convergence, no exceptions; a decision fork
    gets `human-gate` instead. Provenance labels only where true.
-4. **Create:** `br create "<imperative title>" -t <type> --labels "<labels>"
+4. **Create:** `br create "<imperative title>" -t <type> --labels "origin:ac-bead-capture,<labels>"
    --description "<context: what/why/where, user's words preserved>"` — set
    `--priority` only if the user signaled urgency; default is fine. Body carries
    the typed headers from conventions §Body template (`## Steps to Reproduce`
