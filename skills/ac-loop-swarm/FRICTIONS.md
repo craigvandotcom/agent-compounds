@@ -181,13 +181,14 @@ entries: 18
 - impact: L
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 3
+- recurrence: 4
 - related: [br-writes-default-to-human-identity]
 - first_seen: 2026-08-22
 - last_seen: 2026-08-24
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: exporting in the same command is NOT sufficient — `br` must be given the identity by flag or config, not by inherited environment; never pipe a commit through `tail`.
+- narrative: FOURTH INSTANCE 2026-08-24 RUN 20260824-212117-23585 — orchestrator PurpleDune exported AGENT_NAME and BR_AGENT_NAME in the SAME command as `br comments add bd-21ej -f <file>`; comment still landed as FoggyCreek. Same close-out path as instance 3.
 - narrative: THIRD INSTANCE 2026-08-24 — orchestrator exported AGENT_NAME=WildCat BR_AGENT_NAME=WildCat in the SAME command as `br comments add bd-21ej -f <file>` and the comment still landed as FoggyCreek. Same root, close-out path this time rather than a worker claim comment.
 - narrative: SECOND INSTANCE 2026-08-23 — the proposed fix below was applied and did not hold. A
   worker exported `AGENT_NAME` and `BR_AGENT_NAME` in the SAME command as the `br` call and `br`
@@ -419,15 +420,16 @@ entries: 18
 ## br-ready-serves-stale-assigned-open-beads
 - skills: [ac-loop-swarm]
 - impact: H
-- frequency: occasional
+- frequency: every-run
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [harness-reports-worker-dead-on-transient-api-error]
 - first_seen: 2026-08-24
 - last_seen: 2026-08-24
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: exclude assignee-set issues from the Phase-0 pickable count and from worker pick; widen the orphan sweep to assigned-open beads whose assignee is not a live actor in `br coordination status`, not only in_progress swarm-RUN_ID claims.
+- narrative: SECOND INSTANCE 20260824-212117-23585 — ~19h later, same bead, same assignee, same three-worker no-op. Phase 0 again counted 1 pickable (bd-21ej). RoseBeaver / JadeMoose / WildBear all `--claim` VALIDATION_FAILED against LavenderCastle. Orphan sweep again saw 0 in_progress claims and did not unstick. WildBear's extra face: after VALIDATION_FAILED the seed says goto 1, and `br ready` still returns the assigned row first, so the worker re-picks the same unclaimable bead until it invents an "assigned means taken" filter the seed forbids as narrowing. The morning run's comment on bd-21ej did not change ready-vs-claimable. Until Phase 0 / pick / orphan-sweep exclude stale assignees, every swarm on this pool will close zero beads.
 - narrative: Phase 0 counted 1 pickable refined bead (bd-21ej) and spawned width 3. Every worker
   then lost `--claim` with VALIDATION_FAILED because the bead was OPEN (not in_progress) and
   still assigned to LavenderCastle — an ac-loop-2 implement lane from RUN 20260820-001030-26139,
