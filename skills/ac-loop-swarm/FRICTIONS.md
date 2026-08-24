@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-23
-entries: 16
+last_pass: 2026-08-24
+entries: 17
 ---
 
 # ac-loop-swarm — friction log
@@ -181,13 +181,14 @@ entries: 16
 - impact: L
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 2
+- recurrence: 3
 - related: [br-writes-default-to-human-identity]
 - first_seen: 2026-08-22
-- last_seen: 2026-08-23
+- last_seen: 2026-08-24
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: exporting in the same command is NOT sufficient — `br` must be given the identity by flag or config, not by inherited environment; never pipe a commit through `tail`.
+- narrative: THIRD INSTANCE 2026-08-24 — orchestrator exported AGENT_NAME=WildCat BR_AGENT_NAME=WildCat in the SAME command as `br comments add bd-21ej -f <file>` and the comment still landed as FoggyCreek. Same root, close-out path this time rather than a worker claim comment.
 - narrative: SECOND INSTANCE 2026-08-23 — the proposed fix below was applied and did not hold. A
   worker exported `AGENT_NAME` and `BR_AGENT_NAME` in the SAME command as the `br` call and `br`
   still wrote the comment as `FoggyCreek`. Every claim comment this run carries the fallback
@@ -390,3 +391,25 @@ entries: 16
   work look blocked. One worker created three backwards edges and a dependency CYCLE before
   `br dep cycles` surfaced it. The command is used exactly when a worker is filing a gate it
   cannot resolve, which is the moment it has least context to notice the inversion.
+
+## br-ready-serves-stale-assigned-open-beads
+- skills: [ac-loop-swarm]
+- impact: H
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: [harness-reports-worker-dead-on-transient-api-error]
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: exclude assignee-set issues from the Phase-0 pickable count and from worker pick; widen the orphan sweep to assigned-open beads whose assignee is not a live actor in `br coordination status`, not only in_progress swarm-RUN_ID claims.
+- narrative: Phase 0 counted 1 pickable refined bead (bd-21ej) and spawned width 3. Every worker
+  then lost `--claim` with VALIDATION_FAILED because the bead was OPEN (not in_progress) and
+  still assigned to LavenderCastle — an ac-loop-2 implement lane from RUN 20260820-001030-26139,
+  four days dead, never flipped to in_progress. The orphan sweep looks only at in_progress
+  claims held by `swarm-<RUN_ID>-*` actors, so it did not unstick this. Workers treated the
+  queue as dry. The ready set and the claimable set diverged by one row, and that one row was
+  the entire pool: three workers, zero beads closed. `br ready` asserting pickable work that
+  `--claim` will refuse is the misleading face; the silent half is that a leftover implement-lane
+  assignee starves a pull swarm with no live holder to negotiate with.
