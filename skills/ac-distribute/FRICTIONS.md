@@ -1,8 +1,8 @@
 ---
 skill: ac-distribute
 created: 2026-08-21
-last_pass: 2026-08-21
-entries: 1
+last_pass: 2026-08-24
+entries: 3
 ---
 
 # ac-distribute — friction log
@@ -40,3 +40,49 @@ entries: 1
   ios-release.yml`, and THAT LANE IS RETIRED — an AC naming a retired lane is unsatisfiable
   as written and will send the next reader hunting for a workflow that no longer exists.
   Source bead: bd-yb6mp.
+
+## ship-lane-consumes-local-generated-state-without-asserting-it-matches-the-manifest
+- skills: [ac-distribute, capacitor]
+- impact: H
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [fastlane-release-lane-never-proven-end-to-end]
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: distribute
+- status: open
+- proposed_fix: assert in the ship lane that `CapApp-SPM/Package.swift` and `Package.resolved` stay clean across `cap sync`, and clear `.next/dev` before the type-check. Both are preconditions, not diagnostics.
+- narrative: the lane builds from whatever the workstation happens to hold, and never checks
+  that against the committed source of truth. TWO FACES, opposite perceptibility, same root.
+  SILENT: `node_modules` held a purchases SDK two minor versions behind the lockfile because
+  nobody re-installed after a dependabot bump. `cap sync` regenerates the SPM manifests FROM
+  `node_modules`, so every local build silently rewrote the native pins backwards and produced
+  an archive that did not match the branch it claimed to be. A native smoke run PASSED against
+  that archive before anyone noticed. LOUD: a leftover dev-server types cache, included via
+  `tsconfig`, failed the capacitor build with sixty module-not-found errors pointing at healthy
+  source files, because the build moves those pages aside for static export. The lesson is the
+  pairing: the same missing precondition yields a wrong binary that certifies clean, or a
+  correct tree that fails incomprehensibly, and only luck decides which. CI never sees either —
+  it installs frozen and checks out clean — so the entire class is invisible until a human
+  ships from a workstation, which is the least-supervised moment in the pipeline.
+
+## distribution-doc-drifts-and-nothing-reconciles-it
+- skills: [ac-distribute]
+- impact: S
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: distribute
+- status: open
+- proposed_fix: reconcile the app-facts doc against the lane it describes on each release; a claim about what the lane CANNOT do is the one to re-probe, not to trust.
+- narrative: the app-facts doc the skill routes to first told a reader two false things. It
+  claimed agent shells cannot codesign — the signing probe passed cleanly twice in the same
+  session, `Authority=Apple Distribution`, keychain set no-timeout. And its version table sat
+  twelve builds behind what had shipped. The version staleness is cosmetic; the capability
+  claim is not, because a doc that says a lane needs a human at the keyboard will stop an agent
+  that could have run it, and the failure mode is silent deferral rather than a visible error.
+  A negative capability claim ages worst of all: nothing exercises it, so nothing disproves it.
