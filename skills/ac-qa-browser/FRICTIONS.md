@@ -1,8 +1,8 @@
 ---
 skill: ac-qa-browser
 created: 2026-07-22
-last_pass: 2026-07-29
-entries: 5
+last_pass: 2026-08-24
+entries: 6
 ---
 
 # ac-qa-browser — friction log
@@ -76,3 +76,30 @@ entries: 5
 - status: open
 - proposed_fix: inject SITE_ORIGIN (e.g. http://localhost:$PORT) in scripts/qa/serve-prod.sh so the mandated local-prod target can walk password-reset; treat a fail-closed 500 when SITE_ORIGIN is unset as env-gap / qa-infra, not a product qa-blocker.
 - narrative: exhaustive browser QA on the prescribed local-prod serve (`scripts/qa/serve-prod.sh` / `next start`) failed auth journey assert 4 — POST /api/auth/reset-password returned 500 and the UI showed a connection error instead of the anti-enumeration success copy. Product fail-closed is intentional (bd-iahbm) when SITE_ORIGIN is unset in production; the gap is that the official QA serve never injects it (absent from .env.local, only in .env.example). Auth is in every smoke+ depth, so the mandated target cannot walk password-reset until the serve supplies SITE_ORIGIN. Filed bd-wqzv7 (not a product regression). evidence: RUN 20260815-001616-13976, class=env-gap.
+
+## fixtures-that-hide-from-the-harness-sweep-become-state-it-cannot-reason-about
+- skills: [ac-qa-browser]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: qa-browser
+- status: open
+- proposed_fix: a fixture is owned by the run that needs it — seeded at run start, torn down at run end. Never pinned outside the sweep window to survive; and never on an account other runs share.
+- narrative: TWO defects, one root: the seed script buys determinism by opting its fixture OUT
+  of the harness's own lifecycle. It hard-codes a fixture timestamp with the comment that a
+  fixed date "outside any QA run window protects it from the run-window sweep". That works, and
+  the cost is that the harness can no longer reason about the fixture at all — it is state the
+  sweep is blind to by construction, so it drifts silently and no run owns it.
+  The same shape, wider: the fixtures live on ONE shared QA account, which makes any bead
+  depending on them structurally unclosable by a concurrent lane. Reseeding destroys a sibling
+  run's in-flight state, so the work cycles through workers indefinitely — it looks
+  parallelisable and is actually serial, and nothing in the bead or the skill says so. Whoever
+  picks it up pays full read cost before discovering it must be routed to a serialised lane.
+  A third symptom, worth recording because it misleads separately: the bead's exit criterion
+  was already satisfied by a `last_pass` stamp landed in the same run, so it could close on an
+  empty diff while the actual defect stayed untouched. A bead whose exit is a QA stamp rather
+  than the fixture's own correctness will close as soon as anyone reruns QA.

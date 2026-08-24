@@ -134,10 +134,9 @@ inherited machine-wide, not repeated here.
 | Label | Meaning |
 |---|---|
 | `kind:product` | A defect in the thing users touch. The only kind the board admits, and only at priority `0`/`1` with a verified reproduction. |
-| `kind:machinery` | A defect in the factory — pipeline, skill text, lint, bead schema, CI wrappers, harness, tool flags, local stack. Belongs in a `friction:` block, NEVER the board. On the board it is a filing defect, not a category. |
+| `kind:machinery` | A DEFECT in the factory — pipeline, skill text, lint, bead schema, CI wrappers, harness, tool flags, local stack. Belongs in a `friction:` block, NEVER the board. On the board it is a filing defect, not a category. A factory **action** carrying a real trigger or dependency edge is not this: a friction log holds no trigger, so it stays a bead. |
 
-Kind is set at creation by whoever files. A bead with no kind is unrouted, so an autonomous
-run may not file one.
+Kind is set at creation by whoever files. A bead with no kind is unrouted, so an autonomous run may not file one. **Every `br create` in the fleet satisfies one capture contract — `reference/bead-create-contract.md`.** It names the required axes (`origin:<skill>` for the creating workflow; a readiness label on every non-epic bead) and the two enforcers that hold them: `hooks/bead-capture-guard.py` at creation, `lint.sh` Check 19 on the templates the registry ships. Skills carry their own template, never their own copy of the rules — point at the contract with a `§` anchor. Origin values and the `skill:`/`discovered-from:` boundaries: `reference/origin-provenance.md`.
 
 Readiness for pickup = **presence** of `refined`, never inferred from the absence of
 `unrefined`. This is what gates loop/agent pickup everywhere this labelling is adopted.
@@ -257,6 +256,7 @@ checklist). The frozen set:
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
 - the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-bead-refine` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
 - `human-ratified` — fast-track provenance stamped only by `ac-human-session` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
+- `origin:<skill>` — the creator/provenance axis, enforced forward-only by `hooks/bead-capture-guard.py`
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
 
@@ -377,7 +377,7 @@ Scoping: `--label <x>` (subgraph), `--as-of HEAD~30` (point-in-time),
 br ready                  # ready to work (no blockers)
 br list --status=open     # all open
 br show <id>              # full detail with dependencies
-br create --title="..." --type=task --priority=2
+br create --title="..." --type=task --priority=2 --labels=origin:<skill>,unrefined   # origin: is MANDATORY — see canon above
 br update <id> --status=in_progress
 br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above
 br close <id1> <id2>      # close several
