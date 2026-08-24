@@ -2,7 +2,7 @@
 skill: ac-loop-swarm
 created: 2026-08-21
 last_pass: 2026-08-24
-entries: 17
+entries: 18
 ---
 
 # ac-loop-swarm — friction log
@@ -298,6 +298,30 @@ entries: 17
   the constraint and ends with no usable db. A union merge of two ledgers therefore has a
   renumbering step whether or not anyone wrote one down. The husky guard does catch it and names
   every colliding pair, which is why this is a sensor reading rather than a promotion candidate.
+
+## guards-name-each-others-forbidden-commands-as-the-remedy
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [swarm-doctrine-prescribed-a-guard-blocked-command]
+- first_seen: 2026-08-24
+- last_seen: 2026-08-24
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: a guard's remedy text must be checked against the other guards installed in the same repo; where two guards mutually exclude, the runbook route is the only exit and the guard should name it.
+- narrative: close-out needed to restore one file to HEAD before a fast-forward. `dcg`'s
+  `core.git:checkout-discard` refuses `git checkout -- <path>` and its refusal text prescribes
+  `git stash` — which `neometa.stashguard` forbids outright in this checkout, in both the plain
+  and the scoped form. Two guards, each naming the other's forbidden command as the safe
+  alternative, so following either message walks into the other wall. This is distinct from the
+  related entry, where DOCTRINE named a blocked command: here the blocked command is prescribed
+  by a GUARD, at the moment of refusal, which is exactly when a caller is most likely to trust it.
+  The working exit existed and neither guard mentioned it — the ledger-recovery runbook's
+  `git show HEAD:<literal path> > <literal path>`, which is not a checkout and not a stash. A
+  guard that cannot name a legal remedy in its own repo should point at the runbook rather than
+  invent one.
 
 ## commit-message-apostrophe-truncates-the-commit-inside-the-sh-c-wrapper
 - skills: [ac-loop-swarm]
