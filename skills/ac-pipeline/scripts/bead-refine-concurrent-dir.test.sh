@@ -5,7 +5,7 @@
 # That test proves two *conductors* on DIFFERENT RUN_IDs don't collide. This one proves
 # the harder case that actually bit us: two `ac-bead-refine` CHILDREN fanned out by ONE
 # ac-loop conductor, which hands every child the **same RUN_ID** and the **same claim id**
-# by design (RUN_ID identifies the run, not the child — ac-loop/SKILL.md Phase 0 mints
+# by design (RUN_ID identifies the run, not the child — ac-pipeline/references/run-id.md; Phase 0 mints
 # exactly one). Under the old `ARTIFACTS_DIR=/tmp/bead-refine-${RUN_ID}` formula both
 # children resolved to ONE directory, overwrote each other's beads-snapshot.json in the
 # same clock second, and the Phase 5 stamp loop — which read that file as its authority —
@@ -68,7 +68,7 @@ skip() { echo "  SKIP: $1"; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORKFLOW="$SKILLS_DIR/ac-bead-refine/references/workflow.md"
-AC_LOOP="$SKILLS_DIR/ac-loop/SKILL.md"
+AC_LOOP="$SKILLS_DIR/../_archive/skills/ac-loop/SKILL.md"   # ac-loop retired; archived source keeps Case 7 running, never silently skipping
 
 # The child's derivation, byte-identical to workflow.md § Phase 0 "Configuration".
 # Case 6 asserts these two lines still exist verbatim in the doc, so the test cannot
@@ -545,7 +545,7 @@ fi
 echo
 echo "=== Case 7: ac-loop's rendered refine delegation — bare RUN_ID + explicit TARGET_BEAD_IDS ==="
 if [ ! -f "$AC_LOOP" ]; then
-  skip "Case 7: ac-loop/SKILL.md not reachable from $SKILLS_DIR"
+  skip "Case 7: archived ac-loop/SKILL.md not reachable from $SKILLS_DIR"
 else
   ok=1
   # The safety must live in the child's key, NOT in a hand-suffixed RUN_ID in the prompt.

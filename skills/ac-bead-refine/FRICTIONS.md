@@ -371,7 +371,7 @@ entries: 28
 - status: open
 - proposed_fix: see the primary entry.
 - narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in
-  `skills/ac-loop/FRICTIONS.md`, where occurrences are counted (recurrence 32 as of
+  `_archive/skills/ac-loop/FRICTIONS.md`, where occurrences are counted (recurrence 32 as of
   RUN 20260814-213141-15553). Recorded here because land tagged this run's instance
   skill-scoped to ac-bead-refine. LOCAL MANIFESTATION: sequential 3-round refine with
   no Task tool, stamped `degraded-solo` rather than faking a panel. Independence lost

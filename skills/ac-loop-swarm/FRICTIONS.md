@@ -103,7 +103,7 @@ entries: 22
   redirects, and `git show HEAD:$f > "$f"` baseline loops. The remedy generalises to both rules and
   is the same one: author the text with the Write tool and give bash only literal paths — never
   route agent-authored prose or a computed path through the shell. POINTER ENTRY, not a copy — the
-  PRIMARY is this same id in `skills/ac-loop/FRICTIONS.md`,
+  PRIMARY is this same id in `_archive/skills/ac-loop/FRICTIONS.md`,
   where all occurrences are counted. Recorded here because the swarm model inherits the hazard
   unchanged and its own prose-bearing CLI calls emit it. LOCAL MANIFESTATION: a `br comments add`
   call was rejected because the comment TEXT quoted a script's `mv` lines — the destructive-operation
@@ -124,7 +124,7 @@ entries: 22
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: see the primary entry.
-- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `skills/ac-loop-2/FRICTIONS.md`,
+- narrative: POINTER ENTRY, not a copy — the PRIMARY is this same id in `_archive/skills/ac-loop-2/FRICTIONS.md`,
   where occurrences are counted. Recorded here because a pull-based swarm has no conductor to
   re-read a gate's output, so every false green lands directly in a worker's own close decision.
   LOCAL MANIFESTATION — TWO faces: (a) vitest 4.1.10 marks files it never reached under bail

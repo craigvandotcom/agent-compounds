@@ -107,7 +107,7 @@ entries: 5
 - status: open
 - proposed_fix: see the primary entries.
 - narrative: POINTER ENTRY, not a copy — the guard half is counted at
-  `dcg-blocks-the-skills-own-canonical-artifact-redirects` in `skills/ac-loop/FRICTIONS.md`, the
+  `dcg-blocks-the-skills-own-canonical-artifact-redirects` in `_archive/skills/ac-loop/FRICTIONS.md`, the
   shell half at `zsh-nullglob-aborts-the-teardown-selector` in `skills/ac-land/FRICTIONS.md`.
   LOCAL MANIFESTATION: the roster sweep recipe published in `references/agent-identity.md` cannot
   be run as written on the fleet — its selectors abort on a zsh no-match instead of returning an

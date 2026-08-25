@@ -70,7 +70,7 @@ ENVIRONMENT CONTRACT (non-negotiable):
 
 This skill is **fanned out**: `ac-loop` at `PARALLEL_WIDTH>1` spawns several
 `ac-bead-refine` children on disjoint bead subsets, and by design hands every one of them
-the **same `RUN_ID`** (RUN_ID identifies the loop *run*, not the child — `ac-loop/SKILL.md`
+the **same `RUN_ID`** (RUN_ID identifies the loop *run*, not the child — `ac-pipeline/references/run-id.md`
 Phase 0 mints exactly one). It also hands them the same claim/batch id when there is one.
 So **neither `RUN_ID` nor the claim id can separate siblings** — keying the dir on either
 collapses N children onto one directory, where they clobber each other's
@@ -193,7 +193,7 @@ Pick **exactly one** of the three scope modes below, in this precedence order.
 #### Mode A — targeted (`TARGET_BEAD_IDS` set) — highest precedence
 
 `ac-loop` fans refine children out over **disjoint subsets of unrelated beads** (orphan/bug
-captures with no epic and no `parent-child` edge — `ac-loop/SKILL.md` § phase-pipelining
+captures with no epic and no `parent-child` edge — `ac-loop-swarm/SKILL.md` § Invariants
 hookpoints (b)/(c)). Neither of the other two modes can express that subset, which is
 exactly why a fanned-out child used to fall back to the whole board and then stamp beads
 belonging to a sibling. When the delegation prompt supplies `TARGET_BEAD_IDS`

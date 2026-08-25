@@ -333,7 +333,7 @@ SQL / RLS / RPC / GRANT surface **MUST** name `supabase-integration`.
 gets a one-line justification.
 
 Worked example (the checkable shape, not a second schema):
-`ac-loop-2/references/implementation-contract.md`.
+`reference/implementation-contract.md`.
 
 ## Binding vs advisory (the present-tree rule)
 

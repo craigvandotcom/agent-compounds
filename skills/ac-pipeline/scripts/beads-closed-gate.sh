@@ -235,7 +235,7 @@ check_progress_completeness() {
   #    Keyed on FILE EXISTENCE, not on "was --progress passed", because the arg-resolution
   #    block ALWAYS appends $ARTIFACTS_DIR/progress.md when ARTIFACTS_DIR is set — explicit
   #    opt-in and silent default are indistinguishable here. This keeps
-  #    ac-loop/references/beads-closed-gate-invocation.md's "omitting --progress skips the
+  #    _archive/skills/ac-loop/references/beads-closed-gate-invocation.md's "omitting --progress skips the
   #    check entirely" true. Rejected: hard-fail on valid_files==0 unconditionally (breaks
   #    the file-missing case and contradicts that doc); keep-as-warning (no teeth).
   if [ "$valid_files" -eq 0 ]; then

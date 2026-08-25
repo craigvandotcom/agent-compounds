@@ -43,7 +43,7 @@
 #
 # MECHANISM UNDER TEST (mirrors ac-loop Phase 1/2's own words, not a paraphrase):
 # "mark ALL refined ready beads for this plan `in_progress` + assignee (AGENT_NAME)
-# in ONE `br update` call" (ac-loop/SKILL.md). This harness fires that EXACT
+# in ONE `br update` call" (beads-standards § Pick-order; ac-loop-swarm claims atomically). This harness fires that EXACT
 # invocation shape from two scripted "conductors" at once, on a FULLY overlapping
 # id set (every bead contested at once — the worst case; a partial-overlap
 # scenario, closer to ac-loop's real "two conductors picked different but

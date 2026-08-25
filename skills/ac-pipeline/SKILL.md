@@ -388,7 +388,7 @@ The doctrine is the target; these stage edits bring reality into line:
 
 ## Pointers
 
-- Runtime conductor: `ac-loop/SKILL.md`
+- Runtime conductor: `ac-loop-swarm/SKILL.md`
 - Stage skills: `ac-align` · `ac-plan-init` · `ac-beadify` · `ac-bead-refine` · `ac-implement` · `ac-merge` · `ac-land` · `ac-distribute`
 - Shared method: `ac-pipeline/references/verification-gate.md` (selection) · `ac-pipeline/references/qa-shared.md` (QA how) · session teardown: `agent-mail/references/session-procedure.md` § Release
 - Context/memory doctrine (sibling): `context-engineering`

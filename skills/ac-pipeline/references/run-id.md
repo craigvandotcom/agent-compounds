@@ -126,7 +126,7 @@ still-live code path with a real branch to key on, not a stale reference.
   no cross-session disambiguation needed. `RUN_ID` is still minted at ac-loop's own Phase 0 and
   threaded through, purely for the loop-exit scoping job (below).
 - **In ac-loop, parallel children on one batch (width >1):** ac-loop does **NOT** supply a
-  distinct `RUN_ID` per child — `ac-loop/SKILL.md` Phase 0 mints exactly ONE `RUN_ID` per run
+  distinct `RUN_ID` per child — `ac-loop-swarm/SKILL.md` Phase 0 mints exactly ONE `RUN_ID` per run
   and threads it verbatim into every child, by design (it identifies the run, not the child).
   Disambiguation is therefore the **child's** job, via the fan-out corollary above; a stage
   that assumes RUN_ID separates its siblings is assuming something ac-loop never promised
