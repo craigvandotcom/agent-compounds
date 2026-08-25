@@ -146,10 +146,10 @@ entries: 10
 - skills: [beads-standards]
 - impact: L
 - frequency: frequent
-- recurrence: 3
+- recurrence: 4
 - related: [br-json-shapes-differ-across-subcommands, dcg-false-positives-on-angle-bracket-inside-quoted-prose]
 - first_seen: 2026-08-04
-- last_seen: 2026-08-20
+- last_seen: 2026-08-25
 - stage: ac-loop
 - status: open
 - proposed_fix: state the positive form in the br cheatsheet — **any `br` body text goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d` or as a quoted argument. Cover the reason in one clause (the argument is shell text: backticks EXECUTE, and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it. Raise the severity language: this is command injection through a comment body, not a quoting nuisance.
@@ -166,6 +166,12 @@ entries: 10
   write look like a successful one: `br comment` is not a verb (it is `br comments add`), and
   `br comments <ID> add <text>` — the transposed form — exits 0-ish with only a "Hint: run br list".
   See `wrapper-exit-0-masks-real-outcome` in the global memory substrate for the general class.
+  **+1 — the class is not br-specific; `git commit -m` has it too.** A commit body containing
+  backticked identifiers had two words EXECUTED and silently deleted, landing a message reading
+  "the hook reset  AND restarted its 12s timer" — a sentence missing its subject. Recovery is
+  `git commit --amend -F <file>`. Widen the cheatsheet line: ANY prose an agent writes about
+  code — bead body, commit message, PR body — goes to a file first and is passed by path,
+  because agent prose is the text most likely to contain backticked identifiers.
 
 ## board-truth-belongs-in-the-title-not-a-comment
 - skills: [beads-standards, ac-loop, ac-bead-refine]
