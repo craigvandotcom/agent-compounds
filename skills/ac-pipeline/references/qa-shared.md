@@ -266,13 +266,13 @@ br create "fix(<area>): <finding title>" -t bug \
   -d "QA finding (<date>, <device|browser> QA): <repro + evidence + journey ref>
       ## Test Scope (real test file/describe anchors — grep them first — plus the
       QA modality + journey checkpoint this finding came from)" \
-  --labels qa-finding,unrefined
-# User-facing break or trapped state? Add the blocker label:  --labels qa-finding,qa-blocker,unrefined
+  --labels "origin:<ac-qa-device|ac-qa-browser>,qa-finding,unrefined"
+# User-facing break or trapped state? Add the blocker label:  --labels "origin:<ac-qa-device|ac-qa-browser>,qa-finding,qa-blocker,unrefined"
 
 # SUSPECTED finding (cause unknown, weak repro) → an investigation bead:
 br create "investigate: <symptom>" -t investigation \
   -d "QA finding (<date>, <device|browser> QA): <observed + repro attempt>" \
-  --labels qa-finding,unrefined
+  --labels "origin:<ac-qa-device|ac-qa-browser>,qa-finding,unrefined"
 ```
 
 > **Always include `unrefined`** — a raw `br create` bead skips the refine gate unless it carries the `unrefined` label; without it the bead is treated as already-refined and gets implemented on a raw QA note. `unrefined` routes it through `ac-bead-refine` first.

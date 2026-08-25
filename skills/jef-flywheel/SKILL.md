@@ -70,7 +70,7 @@ For multi-device work (MacBook + VM + Phone): `workflows/multi-device.md`
 
 | Tool           | Purpose                                     | Key Command                                             | Full Docs                 |
 | -------------- | ------------------------------------------- | ------------------------------------------------------- | ------------------------- |
-| **br**         | Task management (create/update/close beads) | `br create --title "Task" --label backend`              | `tools/tool-reference.md` |
+| **br**         | Task management (create/update/close beads) | `br create --title "Task" --labels origin:manual,unrefined,backend` | `tools/tool-reference.md` |
 | **bv**         | Prioritization and analytics                | `bv --robot-next` (never bare `bv`!)                    | `tools/tool-reference.md` |
 | **ntm**        | Agent swarm orchestration                   | `ntm spawn proj --cc=3 --cod=1`                         | `tools/tool-reference.md` |
 | **Agent Mail** | Agent coordination (MCP)                    | `send_message`, `fetch_inbox`, `file_reservation_paths` | `tools/tool-reference.md` |

@@ -46,7 +46,7 @@ Instead **emit** the scored `pool → active` promotion slate:
   populated `bead:` slot is the idempotency marker).
 Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
 
-- **Atomic emit:** `br create "<title>" -t decision --labels "human-gate,pipeline-proposal"
+- **Atomic emit:** `br create "<title>" -t decision --labels "origin:ac-align,human-gate,pipeline-proposal"
   -p <prio> --description "<full memo>"`, capture the id, write it into the proposal's `bead:`
   slot. Write the file only AFTER `br create` succeeds.
 - **Proposal file:** `_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`; frontmatter

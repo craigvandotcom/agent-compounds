@@ -228,7 +228,7 @@ br list --json --limit 1000 | jq -r '
 
 **Action:** `br label add <id> "unrefined"` (fail-safe — unknown readiness is treated as not-ready). List every flagged bead in the report.
 
-Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`."
+Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`." **Tier-3 addendum (report-only, forward-only from the `origin:<skill>` cutover):** flag OPEN beads with no `origin:<skill>` label — condition, jq filter, and report format live in `references/origin-provenance-lint.md` (never auto-labelled here; that repair is `ac-bead-refine`'s stamp-time backstop).
 
 ### Human-gate reason lint (bd-l6o90 deliverable 3)
 

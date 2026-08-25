@@ -295,10 +295,10 @@ gate itself lives in `ac-loop`.
 
 ```bash
 # Create epics (parent beads)
-br create "Epic: User Authentication" --priority P0 --labels "auth" --description "..."
+br create "Epic: User Authentication" --priority P0 --labels "origin:ac-beadify,auth" --description "..."
 
 # Create child tasks under epics — ALWAYS unrefined at creation (refine stamps readiness)
-br create "Create user schema" --priority P0 --labels "auth,backend,unrefined" --parent <epic-id> --description "..."
+br create "Create user schema" --priority P0 --labels "origin:ac-beadify,auth,backend,unrefined" --parent <epic-id> --description "..."
 
 # Deps + comments: standard br forms — beads-standards § br cheatsheet
 ```

@@ -137,7 +137,7 @@ on a failed or partial fetch.
 **Configured-but-failing ≠ not-configured.** A source that CORE/triage.md marks live but
 that errors at fetch (auth 401, network, schema change) is an **escalation**, not a skip:
 mark it `✗ FAILING (<error>)` in the Phase-4 report and file ONE ops bead
-(`br create -t task --labels triage,ops`) so it surfaces in `ac-human-session`.
+(`br create -t task --labels origin:ac-triage,unrefined,triage,ops`) so it surfaces in `ac-human-session`.
 Add `human-gate` ONLY if the body states `Gate-reason: authorization —`.
 Dedupe first, update the existing open ops bead if one already tracks this failure.
 Silent-skip is reserved for sources that were never wired.
@@ -173,7 +173,7 @@ the conventions in `beads-standards/reference/bead-conventions.md` (the authorit
 workflow; raw `br create` per those conventions is the deliberate pattern here):
 
 ```
-br create -t bug --labels triage,<source>,unrefined  \
+br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
   --title "<crash culprit / error signature> (<freq>× / <users> users)" \
   --description "<source link · first-seen release · suspected wave · top stack frames
                  ## Steps to Reproduce (repro hints / crash path)
@@ -260,7 +260,7 @@ One-line intent, synthesized from {N} reports.
 ### Phase 3c — group + refine (before the report)
 
 **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
-epic (`br create -t epic "Triage <date> — findings"`, children linked via parent-child
+epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
 deps) so the batch is refined together in-session and shipped by the loop as one cohesive
 unit. 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) aren't beads —
 they don't count toward this threshold and aren't epic children.

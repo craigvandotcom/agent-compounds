@@ -15,7 +15,7 @@ the card, nothing requires opening a chat log or a plan doc to reconstruct.
 ## Creation
 
 ```bash
-br create -t decision --labels human-gate \
+br create -t decision --labels origin:<skill>,human-gate \
   --parent <spawning-epic-id> \
   --title "DECISION: <the fork, in one line>" \
   -d "$(cat <<'EOF'
@@ -74,7 +74,7 @@ in a batch sweep. An un-wired human-gate bead is invisible to:
 ## Worked example
 
 ```bash
-br create -t decision --labels human-gate \
+br create -t decision --labels origin:<skill>,human-gate \
   --parent <move-free-reminders-epic-id> \
   --title "DECISION: push notification provider for Move Free" \
   -d "$(cat <<'EOF'
@@ -108,7 +108,7 @@ checklist body instead of options. No options block: an action card is a *do-thi
 a *choose-between*.
 
 ```bash
-br create -t task --labels human-gate \
+br create -t task --labels origin:<skill>,human-gate \
   --title "ACTION: <the action, one line>" \
   -d "$(cat <<'EOF'
 Gate-reason: authorization — <why this needs Craig's authorization>
@@ -143,7 +143,7 @@ plan" judgement belongs in the human session, not buried in a backlog nobody can
 ### Worked example (modelled on BCA bd-l6khg.13)
 
 ```bash
-br create -t task --labels human-gate \
+br create -t task --labels origin:<skill>,human-gate \
   --title "ACTION: configure the ASC intro-offer for Body Compass" \
   -d "$(cat <<'EOF'
 Gate-reason: authorization — ASC console toggle only Craig can perform

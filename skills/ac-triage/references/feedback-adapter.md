@@ -128,7 +128,7 @@ not invoked here):
 ```bash
 br create \
   -t bug \
-  --labels triage,feedback,unrefined \
+  --labels origin:ac-triage,triage,feedback,unrefined \
   --title "<category>: <first 80 chars of message>" \
   --description "$(cat <<'EOF'
 Source: public.feedback_reports / id=<id>
@@ -145,7 +145,7 @@ EOF
 ```
 
 - Use `-t bug` for `category='bug'`; `-t investigation` for `category='other'`.
-- `category='feature'` → `-t decision --labels triage,feedback,human-gate,unrefined` — the
+- `category='feature'` → `-t decision --labels origin:ac-triage,triage,feedback,human-gate,unrefined` — the
   `human-gate` label is MANDATORY on the same command (`beads-standards` § Bead taxonomy:
   the label, not the type, is the sole gate; without it the decision is silently workable
   and closable by agents).
@@ -207,7 +207,7 @@ consuming app (body-compass-app). Reference this spec when authoring the tests.
 `screenshot_path` populated (or non-bug), `created_at > watermark`.
 
 **Expected behavior:**
-- `br create` called exactly once with `-t bug --labels triage,feedback`.
+- `br create` called exactly once with `-t bug --labels origin:ac-triage,triage,feedback`.
 - `UPDATE public.feedback_reports SET linked_bead = '<bead-id>', status = 'triaged' WHERE id = '<row-id>'` executed.
 - Run report shows `claimed: 1`.
 

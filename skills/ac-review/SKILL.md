@@ -531,7 +531,7 @@ reconstructed, emit **`VERDICT: NEEDS_DECISION`** and say the panel was unconfir
 - **`reviewers_missing` non-empty → partial failure.** A missing dimension is the silent-PASS
   trap — never auto-fix-and-approve around it. **Retry once:** re-spawn the missing reviewer(s)
   (Phase 2, same `{ROUND}`) and re-run consensus. **If still missing:**
-  - *Autonomous (`ac-loop`) run:* this is a **blocker** — `br create -t bug --labels qa-blocker,unrefined`
+  - *Autonomous (`ac-loop`) run:* this is a **blocker** — `br create -t bug --labels origin:ac-review,qa-blocker,unrefined`
     for the un-reviewed dimension, and emit **`VERDICT: NEEDS_DECISION`** (never `APPROVED`).
     The loop must not merge a wave a review dimension never saw.
   - *Interactive run:* surface the gap and let the user decide whether to proceed.
@@ -840,9 +840,9 @@ Log each with rationale: why this is a clear technical improvement, not a design
 
 **Exhaust rule (see `skills/beads-standards/reference/bead-conventions.md`): nothing actionable leaves
 this phase as prose.** Route by type before (or instead of) asking — confirmed defect,
-out of this wave's scope → `br create -t bug --labels review-finding,unrefined`;
+out of this wave's scope → `br create -t bug --labels origin:ac-review,review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
---labels review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
+--labels origin:ac-review,review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
 below). **Filing discipline — anchor-dedupe · never-roll-up: the canon,
 `beads-standards/reference/bead-conventions.md` § Anti-inflation rules**. Review-specific bindings: the
 anchor is the finding's primary `file:line`; Low findings stay in the report; Medium+ epics
@@ -863,7 +863,7 @@ validator runs — grep each before citing it — plus the QA modality for user-
 > 1. **Epic parent (§3 routing):** parent = **the epic whose beads were in the batch under
 >    review**. If the batch **spanned epics**, route per-finding by **file/scope** (the epic
 >    owning the file the finding lands in). If no batch epic applies, **fall back to a
->    per-run review epic** (`br create -t epic "ac-review <date> — findings"`, created once
+>    per-run review epic** (`br create -t epic "ac-review <date> — findings" -l origin:ac-review`, created once
 >    per run, reused for the rest). Wire it: `br dep add -t parent-child <finding-id> <epic-id>` — the `-t` is **MANDATORY** (`br dep add` defaults to `-t blocks`, and a `blocks` edge with an epic endpoint is an I2 violation that makes the finding read as BLOCKED in `br ready`).
 > 2. **`post-merge` at creation:** `br label add <finding-id> post-merge` — the finding was
 >    filed before its parent batch merged, so the literal label keeps `beads-closed-gate.sh`
@@ -876,8 +876,8 @@ validator runs — grep each before citing it — plus the QA modality for user-
 **Default (including all autonomous/headless runs): apply the Exhaust Rule.** Create a `decision` bead for each remaining item — do NOT ask:
 
 ```bash
-br create -t decision --labels "review-finding" \
-  -t "DESIGN_DECISION: <title>" \
+br create -t decision --labels "origin:ac-review,human-gate,review-finding" \
+  --title "DESIGN_DECISION: <title>" \
   --description "Context: <finding>\nGate-reason: fork — <why this is a genuine fork>\nOptions: <A vs B>\nRecommendation: <agent pick>"
 # Add human-gate ONLY when the body states Gate-reason: fork — or Gate-reason: authorization —
 # Block any downstream wave beads on it:

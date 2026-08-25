@@ -153,7 +153,7 @@ just how it's SHAPED?** (full boundary: `skill-builder/references/maintenance-le
   explicit approval before writing. **Headless:** file a decision bead —
 Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
 
-  `br create -t decision -p 3 -l human-gate,skill-improvement,skill:<name>` with the memo
+  `br create -t decision -p 3 -l origin:reflect,human-gate,skill-improvement,skill:<name>` with the memo
   (target · evidence · diff · recommendation), **dedupe-first** against open `skill-improvement`
   beads per `ac-pipeline/references/disposition.md` § Save-for-later. Never post to Slack, never silently drop —
   the bead is how the merge request survives an unattended session.

@@ -374,7 +374,7 @@ review is Act 2, which runs after this act). Same classification `ac-merge` uses
 - **Auto-fix:** obvious CI failures (lint/type/format), clear single-fix issues.
 - **Conductor decides:** high-severity items with clear fixes, easy improvements.
 - **Present to user:** architectural/debatable items (Exhaust Rule applies if headless —
-  `br create -t investigation --labels ci-finding,unrefined` rather than blocking silently
+  `br create -t investigation --labels origin:ac-batch-close,ci-finding,unrefined` rather than blocking silently
   (debatable = cause not source-traced = investigation, never bug — ac-gzb); stamp the
   perishable state `observed: <ISO date> · <run id>` per bead-conventions § Body template —
   CI is the catch stage; the eventual close cites the regression test per bead-conventions

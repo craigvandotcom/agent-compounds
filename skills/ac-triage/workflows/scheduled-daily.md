@@ -109,7 +109,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 ### 2. Group + refine (per-run epic + in-session `ac-bead-refine`)
 
 - **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
-  epic (`br create -t epic "Triage <date> — findings"`, children linked via parent-child
+  epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
   deps). 0–1 beads → no epic.
 - **In-session refine, before the report:** if this run created ≥1 bead, run
   `ac-bead-refine` NOW — scoped to the epic if one exists, to the single bead otherwise.

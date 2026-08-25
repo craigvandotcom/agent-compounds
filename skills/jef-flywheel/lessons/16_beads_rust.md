@@ -25,7 +25,7 @@ beads_rust (`br`) is a local-first issue tracker designed for AI agents. Issues 
 ### Create an Issue
 
 ```bash
-br create --title "Add user authentication" --priority 1 --label backend
+br create --title "Add user authentication" --priority 1 --labels origin:manual,unrefined,backend
 ```
 
 ### List Open Issues
@@ -123,7 +123,7 @@ bv --robot-insights
 
 | Command                        | What it does                |
 | ------------------------------ | --------------------------- |
-| `br create --title "..." -p N` | Create issue with priority  |
+| `br create --title "..." -p N --labels origin:manual,unrefined` | Create issue with priority  |
 | `br list --status open`        | List open issues            |
 | `br ready --json`              | Find unblocked tasks        |
 | `br show <id>`                 | View issue details          |

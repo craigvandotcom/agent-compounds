@@ -109,7 +109,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
   # Dedup first: br list --json | grep -i "<keyword>"  — skip if an open match already exists.
   # -t = kind of work (task/bug/investigation; -t bug only for a shipped product defect).
   # unrefined routes the raw bead through ac-bead-refine instead of treating it as already-refined.
-  br create "Follow-up: <description>" -t <type> --priority P1 --labels followup,unrefined --description "Discovered during bead-work session. Context: ..."
+  br create "Follow-up: <description>" -t <type> --priority P1 --labels origin:ac-land,followup,unrefined --description "Discovered during bead-work session. Context: ..."
   ```
 
 Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
@@ -247,8 +247,8 @@ MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
 
 | Tier | disposition.md route | What ac-land does here | Extra gate |
 |---|---|---|---|
-| **T1 bug/defect** | AUTO (rides a bead→CI gate; auto isn't final — §2) | `br create -t bug --labels unrefined` immediately — dedupe-first per 1a's rule above (same file, § File Remaining Work) | none — **never rate-limited** (matches the Rule-0 bug lane); the T2 cap does NOT apply to bugs |
-| **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
+| **T1 bug/defect** | AUTO (rides a bead→CI gate; auto isn't final — §2) | `br create -t bug --labels origin:ac-land,unrefined` immediately — dedupe-first per 1a's rule above (same file, § File Remaining Work) | none — **never rate-limited** (matches the Rule-0 bug lane); the T2 cap does NOT apply to bugs |
+| **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l origin:ac-land,human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
 | **T3 everything else** | AUTO additive-knowledge (§2), else DISREGARD (§1) | tag for the Step 0 reflect call → keyed observation (bd-jv33f.5), or drop if zero evidence | reversible memory observation only |
 
 **Deletion mandate — supersession ranks equally with addition.** When a T1/T2/T3 item
@@ -334,7 +334,7 @@ first** (same target file + gist as an open `skill-improvement` bead → comment
 instead), then skip ahead to Commit Compound Changes:
 
 ```bash
-br create -t decision -p 3 "Proposal: <title> (<target file>)" -l human-gate,skill-improvement \
+br create -t decision -p 3 "Proposal: <title> (<target file>)" -l origin:ac-land,human-gate,skill-improvement \
   -d "## Decision memo
 **Target:** <file path>
 **Evidence (this session):** <what happened + concrete cost>

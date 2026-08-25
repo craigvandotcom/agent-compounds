@@ -1163,6 +1163,23 @@ else
   fail "Check 18: skill-edit-guard.py missing or not executable — cannot probe behaviour"
 fi
 
+# bead-capture-guard is a HARD gate (it blocks, it does not advise), so a regression here
+# is worse than a dead advisory: a false-positive blocks legitimate `br create` calls in
+# unattended loops. It ships its own 25-case suite covering both directions — fires on an
+# unlabelled create, stays silent on a `br create` quoted inside a description/heredoc —
+# so drive that rather than duplicating probes which would drift from it.
+BOG="$AC_ROOT/hooks/bead-capture-guard.test.py"
+check
+if [ -x "$AC_ROOT/hooks/bead-capture-guard.py" ] && [ -r "$BOG" ]; then
+  if python3 "$BOG" >/dev/null 2>&1; then
+    echo "  bead-capture-guard: provenance-gate behaviour suite passes"
+  else
+    fail "Check 18: bead-capture-guard behaviour suite FAILED — run python3 hooks/bead-capture-guard.test.py"
+  fi
+else
+  fail "Check 18: bead-capture-guard.py or its .test.py is missing — the bead provenance gate cannot be verified"
+fi
+
 # Wiring lives in the harness settings, not this repo, so a missing/renamed matcher is
 # reported rather than failed — but it is ALWAYS printed: an unwired guard is exactly as
 # dead as a non-executable one, and silence here would hide that.
@@ -1184,6 +1201,31 @@ print(','.join(m) if m else 'NONE')
   esac
 else
   echo "  NOTICE: $SETTINGS unreadable — wiring not verified on this machine"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 19 — bead template conformance (what the registry SHIPS)
+# ---------------------------------------------------------------------------
+echo "--- Check 19: bead template conformance ---"
+
+# Check 18 proves the runtime guard fires on what an agent TYPES. This proves the templates
+# the registry ships are themselves conformant — the two are not the same failure. A stale
+# template is worse than a mistyped command: it is copied, so it reproduces the defect on
+# every future run, and the agent copying it has no reason to doubt it.
+#
+# The script imports the guard, so the contract has exactly one implementation. Editing one
+# to satisfy the other defeats the point — fix the template.
+BTL="$AC_ROOT/scripts/bead-template-lint.py"
+check
+if [ -r "$BTL" ]; then
+  if btl_out=$(python3 "$BTL" 2>&1); then
+    echo "  all bead templates carry origin: + readiness"
+  else
+    printf '%s\n' "$btl_out"
+    fail "Check 19: non-conforming bead template(s) — see above"
+  fi
+else
+  fail "Check 19: scripts/bead-template-lint.py missing — template conformance unverified"
 fi
 
 # ---------------------------------------------------------------------------

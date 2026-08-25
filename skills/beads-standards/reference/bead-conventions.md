@@ -63,6 +63,7 @@ children are done.
 
 | Label | Meaning |
 | ----- | ------- |
+| `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `beads-standards/reference/bead-create-contract.md`, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
 | `qa-blocker` | REPO-WIDE gate — Hard-stops ac-batch-close and ac-merge for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
@@ -114,7 +115,7 @@ the stamp — refine it, never hand-write the label.
 Any skill that files **multiple beads in one run** (`ac-hygiene`, `ac-triage`, future ones)
 follows the same batching contract — this is the shared authority both cite:
 
-1. **2+ beads → one per-run epic.** `br create -t epic "<Skill> <date> — <noun>"` (e.g.
+1. **2+ beads → one per-run epic.** `br create -t epic "<Skill> <date> — <noun>" --labels origin:<skill>` (e.g.
    "Hygiene 2026-07-07 — deferred findings", "Triage 2026-07-07 — findings"), children
    linked via `--parent` (`parent-child` dep). 0–1 beads → no epic (don't inflate).
 2. **≥1 bead → in-session `ac-bead-refine` at run end.** Scoped to the epic if one exists

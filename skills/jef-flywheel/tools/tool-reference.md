@@ -9,8 +9,8 @@ Bead IDs use `bd-` prefix (e.g., `bd-1234`).
 ```bash
 # Create
 br init                                          # Initialize beads in project
-br create --title "Task title" --priority 1 --label backend  # Create new bead
-br create --title "Subtask" --parent <id>        # Create child bead
+br create --title "Task title" --priority 1 --labels origin:manual,unrefined,backend  # Create new bead
+br create --title "Subtask" --parent <id> --labels origin:manual,unrefined  # Create child bead
 
 # Dependencies
 br update bd-1234 --blocks bd-1235               # bd-1234 blocks bd-1235

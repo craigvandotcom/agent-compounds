@@ -380,6 +380,8 @@ Read ALL beads ({paste ARTIFACTS_DIR/beads-full-dump.txt or inline}) and put you
 
 **Require `discovered-from:` on finding beads (`beads-standards/reference/bead-conventions.md` § provenance).** A finding bead — anything carrying `review-finding` (from `ac-review`'s Exhaust Rule), or a `bug`/`investigation`/`task` filed by `ac-triage`/QA/a conductor as a follow-up — must carry a `discovered-from: <originating-bead-id>` field naming what surfaced it. This is a refine check the stamp gate enforces (it did NOT exist in the rubric before). An **honest `discovered-from: unknown`** passes — the point is a deliberate, recorded answer, not a fabricated lineage; withhold `refined` only when the field is absent entirely on a finding-shaped bead, and propose `unknown` if the origin genuinely can't be reconstructed.
 
+**`origin:<skill>` — same discipline, every bead, different remedy.** `discovered-from:` scopes to finding-shaped beads and blocks the stamp when absent; `origin:<skill>` applies to EVERY bead reaching refine (creation-time guard: `hooks/bead-capture-guard.py`) — and a missing one is a REPAIR, not a block. The refiner adds it directly: infer the creating skill from context (title, description, comment trail) where the route is obvious, else stamp `origin:unknown` — the same honest-unknown discipline as `discovered-from:`, self-applied rather than proposed — and continue. Never withhold `refined` for a missing `origin:`.
+
 **Enforce the present-tree rule (`beads-standards/reference/bead-conventions.md` §Binding vs advisory).** Trace every claim in the BINDING sections (ACs, Delivers/Consumes, Test Scope, Anchors, Baselines, Territory, Declared RED, Sequence + risk, repro steps) to one of exactly two anchors: something that exists in the tree NOW (grep it), or something an upstream blocker's `## Delivers` explicitly promises. A binding claim resting on anything else — the bead's own dependents, components present-but-unwired, unpromised future state — is Critical (this is the bd-fsx / l73.11 class at its root). Where you find speculative how-to sitting in a binding section, the fix is usually demotion: move it under `## Approach (advisory)`, don't delete it. Do NOT flag advisory sections for staleness — they are allowed to rot; only the binding surface is load-bearing.
 
 **Verify the implementation contract (`beads-standards/reference/bead-conventions.md` § Implementation contract).** Every implementable bead (`task`/`feature`/`bug`) carries all six elements. Missing or fabricated (unopened anchor, reasoned count, unbounded territory, missing test-tier, vague RED, empty-diff AC) is Critical — propose the content, don't just flag; refine authors whatever capture omitted. Re-open every cited anchor this round — a symbol/string locator by default, never a bare `file:line` as the sole citation (a line number may ride along as a hint). A territory touching `supabase/migrations/**`, `lib/db/**`, or any SQL/RLS/RPC/GRANT surface that does not name `supabase-integration` under `### Test-tier exposure` is a finding. Epics/decisions/investigations are exempt.
@@ -548,10 +550,10 @@ br label add <id> "new-label"
 # dropped (bead-conventions §Bead I/O contract); re-point downstream beads'
 # Consumes lines at the new child IDs that now own those artifacts.
 # Dedup first: br list --json | grep -i "<keyword>". Set -t (task/bug/investigation).
-# Split children inherit the epic's domain <origin-label>; author must set it.
+# Split children inherit the epic's domain <epic-domain-label>; author must set it.
 # unrefined routes each child back through refinement rather than treating it as refined.
-br create "Split: first half" -t <type> --parent <epic-id> --priority P0 --labels <origin-label>,unrefined --description "..."
-br create "Split: second half" -t <type> --parent <epic-id> --priority P0 --labels <origin-label>,unrefined --description "..."
+br create "Split: first half" -t <type> --parent <epic-id> --priority P0 --labels origin:ac-bead-refine,<epic-domain-label>,unrefined --description "..."
+br create "Split: second half" -t <type> --parent <epic-id> --priority P0 --labels origin:ac-bead-refine,<epic-domain-label>,unrefined --description "..."
 br dep add <second-half-id> <first-half-id>
 br close <original-id>
 ```

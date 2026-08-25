@@ -335,7 +335,7 @@ equivalent manual command, if you ever file one interactively:
 
 ```bash
 cd <target_repo_path> && br create "dream: <slug>" -t decision \
-  --labels "human-gate,dream-proposal" \
+  --labels "origin:dream,human-gate,dream-proposal" \
   --description "Memo: <abs path to NN-<slug>.md>. <one-line What>. Judge: <score>/10."
 ```
 
@@ -369,7 +369,7 @@ PY
 EXISTS=$(br list --json --limit 1000 | jq -r '.issues[]?.title' | grep -c "CYCLE-DAILY go/no-go" || true)
 if [ "$SPAN" -ge 28 ] && [ "$EXISTS" -eq 0 ]; then
   cd ~/Repos && br create "dream: CYCLE-DAILY go/no-go (transcript-mining v2)" -t decision \
-    --labels "human-gate,dream-proposal" \
+    --labels "origin:dream,human-gate,dream-proposal" \
     --description "Median substantive-unreflected sessions/wk: <N> (gap-history since <date>). Examples: <2-3 session ids + one-liners>. Decide: ship v2-a transcript mining vs keep the reflect-gap backstop. Checklist: verify transcript durability (cass archive + weekly gdrive; bump to nightly if inadequate)."
 fi
 ```

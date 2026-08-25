@@ -85,7 +85,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
 
    ```bash
    br create "ac-prove nightly: <structural failure key>" -t bug \
-     --labels "ac-prove-nightly" -p 2 \
+     --labels "origin:ac-prove,unrefined,ac-prove-nightly" -p 2 \
      --description "Nightly ensure-depth ac-prove run went red at <SHA/runId/URL>. <failing job/step + first failure>. Filed by the scheduled ac-prove heartbeat — fix-forward is never invoked from this path, so this needs a human/loop pickup."
    ```
 
