@@ -519,7 +519,7 @@ fi
 # tier-first, then oldest-within-tier ordering (age dimension). Discriminating
 # phrase — bare "oldest|age|created_at" substring-false-matches tri-AGE/st-AGE-d.
 check
-if ! grep -qE "oldest-first|oldest-within|oldest-bead-first" "$AC_ROOT/skills/ac-human-session/SKILL.md" 2>/dev/null; then
+if ! grep -qE "oldest-first|oldest-within|oldest-bead-first|P0.{0,3}P4 then oldest" "$AC_ROOT/skills/ac-human-session/SKILL.md" 2>/dev/null; then
   fail "D10: skills/ac-human-session/SKILL.md missing the tier-first/oldest-within-tier age-ordering note (Phase 4 render)"
 fi
 
