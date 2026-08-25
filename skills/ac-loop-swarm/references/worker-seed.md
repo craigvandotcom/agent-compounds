@@ -84,8 +84,11 @@ CLOSED=0
 6 CHECK    VITEST_AFFECTED_DISABLED=1 npx vitest related <your files> --run --passWithNoTests --bail 1
            assert the run reported a result file for every test file it should have matched
            — a silent collapse to fewer files still prints "N passed" and is a false green
-           `### Test-tier exposure` names the tiers this bead can break — run each, and ASSERT
-           IT RAN: a supabase-integration tier with the stack down no-ops every skipIf to green
+           `### Test-tier exposure` names the tiers this bead can break. `standing-vitest` IS
+           the run above. NEVER run `supabase-integration` or `e2e` here: one local stack and
+           one :3000 serve every worker, so a db reset or a port bind wrecks siblings — batch
+           CI gates those. Report every tier you did not run in exit JSON `unverified_tiers`;
+           silence closes the bead on a green that never covered its binding AC.
            pnpm type-check 2>&1 | sed -E 's/\x1b\[[0-9;]*m//g' \
              | grep -F -f <(printf '%s\n' <your files>)     # strip ANSI first, own paths only
            ubs "<file>" "<file>" …    # ONE call, every path quoted
@@ -147,6 +150,7 @@ deregister_agent(project_key, agent_name:$NAME, registration_token)
 Return exactly:
 ```json
 {"worker":"<K>","name":"$NAME","closed":[…ids],"blocked":[…ids],"gated":[…ids],
- "premise_failed":[…ids],"unpushed_commits":N,"stop_reason":"queue-dry|cap|context|error",
+ "premise_failed":[…ids],"unverified_tiers":[…"bead-id:tier"],"unpushed_commits":N,
+ "stop_reason":"queue-dry|cap|context|error",
  "discoveries":["<adjacent defect, unfiled>"],"friction":["<tool/harness defect that cost you time>"]}
 ```

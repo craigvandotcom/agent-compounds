@@ -80,7 +80,7 @@ transcripts, do not work beads yourself.
 4. **Batch CI.** Invoke `ac-batch-close` in a fresh sub-session. Clean-HEAD CI is the only
    authoritative test signal for the run; workers ran scoped checks only.
 5. **Report** to `.claude/reports/ac-loop-swarm-<RUN_ID>/report.md` and the human: closed ·
-   blocked · gated · premise-failed · orphaned · unpushed-reconciled · CI run URL ·
+   blocked · gated · premise-failed · unverified-tiers · orphaned · unpushed-reconciled · CI run URL ·
    per-worker counts. Route each worker's `discoveries` through `ac-bead-capture` and its
    `friction` to this skill's FRICTIONS.md. Release reservations, `deregister_agent`.
 
