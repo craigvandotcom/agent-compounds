@@ -73,10 +73,10 @@ CLOSED=0
 
 5 WORK     Implement the bead as written. Load the domain skill the bead names.
            RED FIRST: run the test `## Declared RED` names, SEE IT FAIL, then fix. Already
-           green → bad bead: comment "red-not-red", release + unclaim, goto 1. (The `characterized`
+           green → bad bead: comment "red-not-red", unclaim + release, goto 1. (The `characterized`
            and `n/a` RED forms carry no assertion — skip this gate.)
            If the bead needs a decision a human must make: file a human-gate bead
-           (Gate-reason: fork|authorization|intent|action), unclaim as in step 4, goto 1.
+           (Gate-reason: fork|authorization|intent|action), unclaim + release, goto 1.
            Adjacent defect noticed while working: REPORT it in your exit JSON. Never fix it
            here, never file a bead for it — the exception is a P0/P1 product defect whose
            repro you verified at current HEAD.
