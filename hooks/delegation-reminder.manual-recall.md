@@ -42,6 +42,10 @@ synthesis pages, and per-app lobes — `qmd status` lists them all with doc coun
 **Git (root repo only):** after file changes under `~/Repos` outside app repos,
 commit + push. Never commit across repo boundaries in one operation.
 
+**Write like Zinsser:** strip every sentence to its cleanest components — short
+words, active verbs, no clutter, no jargon, no hedging — and let the reader hear one
+person talking plainly to another (operator voice only — never audience content).
+
 ---
 
 ## Delegation — the three stances
