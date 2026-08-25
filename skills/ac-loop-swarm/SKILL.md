@@ -9,6 +9,16 @@ identical workers, close out when they finish. Never pick beads, never review co
 dispatch work. Workers pull. Coordination lives in artifacts — `br` claims, Agent Mail
 reservations, `## Consumes` / `## Delivers` — not in you.
 
+## I/O Contract
+
+|                  |                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| **Input**        | `refined` beads from `/ac-bead-refine`, carrying the six-element implementation contract. Excluded at pick: labels `human-gate`/`device`/`epic`/`unrefined`, type `decision`, status not `open` |
+| **Output**       | Implementation commits on `main` (trunk-direct, one per bead), beads closed in `br`, one ledger commit |
+| **Artifacts**    | `.claude/reports/ac-loop-swarm-<RUN_ID>/` — `run.json`, `report.md`; per-worker exit JSON |
+| **Verification** | Per-bead scoped checks only (declared tiers + type-check + `ubs`); the authoritative signal is `ac-batch-close` CI on clean HEAD |
+| **Next**         | `/ac-batch-close` (Phase 2 invokes it), then `/ac-land`                                    |
+
 ## Phase 0 — Orient (interactive)
 
 1. Branch is `main`. Note dirty files as foreign WIP; workers never stage them. Never

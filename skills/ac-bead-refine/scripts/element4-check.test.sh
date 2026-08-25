@@ -224,6 +224,79 @@ else
   done
 fi
 
+# --- RED-vs-Territory (friction: declared-red-not-reconciled-against-territory...) -----
+# Both polarities: a check that always FAILS would satisfy Case 11 alone.
+
+TERR_BODY='## Anchors
+- `lib/x.ts` :: unique string `foo`
+
+## Baselines
+    $ grep -c foo lib/x.ts
+    1
+
+## Territory
+- lib/x.ts
+- features/a/a.test.ts
+
+## Acceptance Criteria
+- [ ] foo is bar.
+'
+
+# --- Case 11: RED names a TEST file absent from Territory -> REJECTED (bd-9uszd shape) --
+write_fx red-terr-bad.md "$TERR_BODY
+## Declared RED
+Test in \`features/b/b.test.ts\` must FAIL before the fix, with approximately: assert
+\`violations\` equals 1.
+"
+OUT=$(bash "$CHECK" --file "$WORK/red-terr-bad.md" 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "features/b/b.test.ts"; then
+  pass "Case 11: RED naming a test file OUTSIDE ## Territory is REJECTED (exit 1)"
+else
+  fail "Case 11: expected exit 1 naming the out-of-territory test file, got $RC. Output: $OUT"
+fi
+
+# --- Case 12: RED names a test file that IS in Territory -> ACCEPTED -------------------
+write_fx red-terr-ok.md "$TERR_BODY
+## Declared RED
+Test in \`features/a/a.test.ts\` must FAIL before the fix, with approximately: assert
+\`violations\` equals 1.
+"
+OUT=$(bash "$CHECK" --file "$WORK/red-terr-ok.md" 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case 12: RED naming a test file INSIDE ## Territory is ACCEPTED (exit 0)"
+else
+  fail "Case 12: expected exit 0, got $RC. Output: $OUT"
+fi
+
+# --- Case 13: RED cites a NON-test source file outside Territory -> WARN, not FAIL -----
+# A RED legitimately asserts ABOUT a file it never edits. Narrow the FAIL or it over-rejects.
+write_fx red-terr-src.md "$TERR_BODY
+## Declared RED
+Test in \`features/a/a.test.ts\` must FAIL, asserting the exit code of \`scripts/ci/gate.mjs\`
+is 1; today it returns 0.
+"
+OUT=$(bash "$CHECK" --file "$WORK/red-terr-src.md" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "WARN.*scripts/ci/gate.mjs"; then
+  pass "Case 13: RED citing a non-test file outside Territory WARNS but is ACCEPTED (exit 0)"
+else
+  fail "Case 13: expected exit 0 with a WARN naming the source file, got $RC. Output: $OUT"
+fi
+
+# --- Case 14: legacy bead with NO ## Territory section -> never bounced ----------------
+write_fx red-terr-legacy.md "## Acceptance Criteria
+- [ ] foo is bar.
+
+## Declared RED
+Test in \`features/b/b.test.ts\` must FAIL before the fix, with approximately: assert
+\`violations\` equals 1.
+"
+OUT=$(bash "$CHECK" --file "$WORK/red-terr-legacy.md" 2>&1); RC=$?
+if [ "$RC" -eq 0 ]; then
+  pass "Case 14: bead with no ## Territory (legacy) is ACCEPTED, not bounced (exit 0)"
+else
+  fail "Case 14: expected exit 0 for a legacy bead, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All element4-check fixture tests passed."

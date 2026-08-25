@@ -247,7 +247,7 @@ Use `--description` for the core spec and `br comments add` for supplementary co
 ### Label All Beads as Unrefined
 
 <!-- mirror of beads-standards/reference/bead-conventions.md §Lifecycle labels — edit there first -->
-**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-implement` (and the loop's prep step) that these beads have not yet been through `/ac-bead-refine`.
+**Every bead created by beadify gets the `unrefined` label.** This signals to `/ac-loop-swarm` (and the loop's prep step) that these beads have not yet been through `/ac-bead-refine`.
 
 ```bash
 br label add <id> "unrefined"
@@ -393,7 +393,7 @@ options:
   - label: "Refine beads"
     description: "Run /ac-bead-refine — recommended, ensures beads are self-contained and agent-ready"
   - label: "Skip refinement"
-    description: "Go straight to /ac-implement — only if you've already refined manually"
+    description: "Go straight to /ac-loop-swarm — only if you've already refined manually"
   - label: "Review visually first"
     description: "Open bv TUI to inspect before refining"
 ```
@@ -408,4 +408,4 @@ options:
 
 ---
 
-_Beadify: plan -> beads with parallel validation. Next: `/ac-bead-refine` (do not skip). For implementation: `/ac-implement`._
+_Beadify: plan -> beads with parallel validation. Next: `/ac-bead-refine` (do not skip). For implementation: `/ac-loop-swarm`._

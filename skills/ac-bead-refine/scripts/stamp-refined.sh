@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # stamp-refined.sh — the only sanctioned way to write the `refined` label.
 #
-# `refined` is the label `ac-implement` and `ac-loop` select on. Writing it with a bare
+# `refined` is the label `ac-loop-swarm` (and `ac-implement`) select on. Writing it with a bare
 # `br label add <id> refined` skips the implementation contract. This wrapper cannot be
 # skimmed past: the label write lives INSIDE the function and the function shells out to
 # element4-check.sh first, unconditionally. Bypassing it takes deleting code.

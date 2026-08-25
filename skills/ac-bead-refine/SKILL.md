@@ -9,22 +9,23 @@ description: 'Use to REFINE existing beads to convergence — 3 parallel reviewe
 
 ## When to Use
 
-- After beads exist and need to earn the `refined` stamp, before `/ac-implement`. Beads
+- After beads exist and need to earn the `refined` stamp, before `/ac-loop-swarm`. Beads
   arrive from any source — `/ac-beadify` (plan decomposition), `ac-hygiene` (deferred
   findings epic), `ac-triage` (finding-beads epic), `ac-review`'s Exhaust Rule, or a
   conductor's own follow-up beads. Not optional — this is where beads earn the stamp,
   regardless of who created them.
 - **NOT** when no beads exist yet and you need PLAN decomposition → `/ac-beadify` (creating
   the epic/task structure from a plan is its job, not this skill's).
-- **NOT** when beads are already refined and ready → `/ac-implement`.
+- **NOT** when beads are already refined and ready → `/ac-loop-swarm` (or `/ac-implement` for a single bead).
 
 ## I/O Contract
 
 |            |                                                              |
 | ---------- | ------------------------------------------------------------ |
 | **Input**  | Open beads in `br` (from `/ac-beadify` or any other source). **Scope, in precedence order:** `TARGET_BEAD_IDS` (explicit id list) › `EPIC_ID` (epic + `parent-child` children) › whole board |
-| **Output** | Refined beads ready for `/ac-implement` (`unrefined` removed, `refined` added) — **only** the beads in this run's target list. Every implementable bead carries the six-element implementation contract (`beads-standards/reference/bead-conventions.md` § Implementation contract) — that is part of the stamp, not a loop-2 extra. |
-| **Next**   | `/ac-implement`                                              |
+| **Output** | Refined beads ready for `/ac-loop-swarm` (`unrefined` removed, `refined` added) — **only** the beads in this run's target list. Every implementable bead carries the six-element implementation contract (`beads-standards/reference/bead-conventions.md` § Implementation contract) — that is part of the stamp, not a loop-2 extra. |
+| **Next**   | `/ac-loop-swarm` — the default consumer. `/ac-implement` for a single bead. |
+| **Verification** | `element4-check.sh` exit 0 on every stamped bead · all six contract elements present · `refined` written ONLY via `stamp_refined` (`scripts/stamp-refined.sh`) |
 
 ## Fan-out safety (bd-baudw) — read before running concurrently
 

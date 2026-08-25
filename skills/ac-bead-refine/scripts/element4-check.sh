@@ -67,6 +67,32 @@ check_description() {
     return 1
   fi
 
+  # RED-vs-Territory (bd friction: declared-red-not-reconciled-against-territory-or-existing-tests).
+  # A RED that names a TEST file absent from the bead's own Territory is internally
+  # contradictory: Territory wins at implement time, so the RED can never be satisfied
+  # (bd-9uszd became a discovery bead this way). Test-shaped paths FAIL; other paths only
+  # WARN, because a RED legitimately cites a source file it asserts ABOUT but never edits.
+  # No `## Territory` section at all = legacy bead: skip, never fail on missing paperwork.
+  local terr
+  terr=$(printf '%s\n' "$desc" | awk '
+    /^## Territory[[:space:]]*$/ { interr=1; next }
+    interr && /^## / { exit }
+    interr { print }
+  ')
+  if [ -n "$(printf '%s' "$terr" | tr -d '[:space:]')" ]; then
+    local path
+    for path in $(printf '%s\n' "$body" | grep -oE '[A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+\.[A-Za-z0-9]+' | sort -u); do
+      printf '%s\n' "$terr" | grep -qF "$path" && continue
+      case "$path" in
+        *.test.*|*.spec.*|tests/*|*/tests/*|__tests__/*|*/__tests__/*)
+          fail_bead "$label" "Declared RED names test file '$path', absent from this bead's ## Territory — Territory wins at implement time, so this RED cannot be satisfied"
+          return 1 ;;
+        *)
+          printf 'element4-check: WARN %s — Declared RED names '"'"'%s'"'"', absent from ## Territory. Fine if the bead only asserts ABOUT it; a defect if it must be edited.\n' "$label" "$path" >&2 ;;
+      esac
+    done
+  fi
+
   # Advisory, never blocking: element 4's bar is that the ASSERTION is named, not merely
   # the test title. Not mechanically decidable, so warn and leave the judgement to refine.
   if ! printf '%s\n' "$body" | grep -qiE 'must FAIL|assert|expect|exit|violations|returns'; then
