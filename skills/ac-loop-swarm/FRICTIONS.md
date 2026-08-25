@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-24
-entries: 22
+last_pass: 2026-08-25
+entries: 24
 ---
 
 # ac-loop-swarm — friction log
@@ -481,6 +481,34 @@ entries: 22
 - status: open
 - proposed_fix: fail the e2e harness when the process on :3000 is not this app (probe /sign-up or a known route); never reuse a foreign server on a shared machine.
 - narrative: RUN 20260824-231514-17151 MaroonFalcon — localhost:3000 during the run was a foreign 404 server, not this app's /sign-up. Playwright `reuseExistingServer` is therefore unsafe on the shared machine: the suite binds a stranger and the failures name the app under test.
+
+## seed-device-title-filter-starves-native-parity-beads
+- skills: [ac-loop-swarm]
+- impact: H
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-25
+- last_seen: 2026-08-25
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: drop titles matching /simulator|real-device/ only, or require the `device` label; do not grep the word `device` in titles of native XCTest / plugin beads.
+- narrative: RUN 20260825-221507-7733 BrownHollow — the seed drops any ready title matching `/device|simulator|real-device/`. The only pickable bead was ipy.3, titled "web parity on device". That is XCTest work, not a physical-device sitting. Following the seed would have starved the entire pool. The worker overrode the filter and closed it. Unlabelled device sittings still need a filter; this one is too broad.
+
+## vitest-related-no-op-on-plugin-swift
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [unrunnable-ac-test-command-must-name-the-repo-runner]
+- first_seen: 2026-08-25
+- last_seen: 2026-08-25
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: when Territory is Swift under plugins/stillness, skip vitest related and require the Package XCTest command from CORE/native-testing.md; a passWithNoTests green on zero files is a false green.
+- narrative: RUN 20260825-221507-7733 BrownHollow — step 6 `vitest related` on Swift plugin paths is a no-op because `plugins/**` is excluded. The run can print passed-with-no-tests while the real tier is XCTest. The worker noticed and ran XCTest; a worker that trusted vitest related would have closed a native bead on an empty JS suite.
 
 ## playwright-install-chromium-prunes-shared-webkit-cache
 - skills: [ac-loop-swarm]
