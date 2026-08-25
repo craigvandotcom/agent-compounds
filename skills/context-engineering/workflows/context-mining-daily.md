@@ -29,6 +29,15 @@ substantive-but-unreflected sessions deterministically:
 ```bash
 /usr/bin/python3 infrastructure/dream-cycle/reflect_gap.py --hours 24
 ```
+After the mining agents return, mark what you mined so tomorrow's run does not pay for it
+again — the ledger exists (`infrastructure/dream-cycle/mined-sessions.json`) but only fills
+if you call it:
+```bash
+/usr/bin/python3 infrastructure/dream-cycle/reflect_gap.py --hours 24 --record
+```
+A session re-flags only if it gained new turns since (the ledger keys on `last_ts`), so this
+is safe. Use `--remine` to deliberately re-list an already-mined session.
+
 Each `GAP` line is a session that did work but captured nothing. **Mine those transcripts**
 (read the `.jsonl` paths printed) for lessons — do NOT try to "re-run reflect" on them, the
 live context is gone; the transcript is all that remains. Fold any lessons found into the
