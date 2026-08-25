@@ -8,6 +8,8 @@ description: 'Sequential bead implementation — conductor reviews, engineer sub
 
 Multiple sessions can safely share a wave — file reservations via Agent Mail prevent conflicts.
 
+**Headless/delegated runs never `AskUserQuestion`** — apply the Exhaust Rule: resolve everything you can, leave the irreducible as an open `human-gate` bead, keep working. Every `AskUserQuestion` below is interactive-only.
+
 ---
 
 ## I/O Contract
@@ -144,7 +146,7 @@ fi
   shared checkout — the run poisons its own result under concurrent edits and starves every
   other agent. Prove via CI, or record the baseline as unestablished and proceed bead-scoped.
 
-**Pre-existing failures are NOT acceptable baseline.** They are technical debt that the user gets to decide how to handle BEFORE the session starts. Do not silently absorb them.
+**A red baseline is FIXED, not filed.** Pre-existing failures are not acceptable baseline, and "capture it as a bead and move on" is the evasion this section exists to stop. The default is: fix it now, as the session's first commit.
 
 - **All pass:** Note "Baseline: all tests passing" in progress.md header. Proceed.
 - **Any failures:** Capture for each failing test file:
@@ -153,17 +155,29 @@ fi
   - 1-line root-cause hypothesis if obvious
   - Whether the file overlaps the session's target bead scope
 
-  Then surface to the user via `AskUserQuestion` — Ask: "Baseline test run shows N failures across M files: <one-line summary per file>. How to handle?" — options: "File P1 follow-up bead now and proceed" (captures debt, doesn't block session (recommended for >5 failures or substantive schema-drift)) / "Fix first as a pre-bead commit" (pause session, fix, re-baseline (recommended for ≤2 quick wins like env-override toggles)) / "Proceed without filing — I have an existing bead tracking these" (explicit acknowledgment; user MUST cite the bead ID) / "Stop and let me investigate" (abort session).
+**Fix rubric** — Phase 1b's conductor-direct rubric, applied to a red test. Fix it yourself when ALL FOUR hold:
 
-  Record the user's decision (and any cited bead ID) in progress.md header. Do NOT proceed silently.
+1. **It is yours.** The file is not another session's uncommitted WIP (`git status --short`) and holds no foreign Agent Mail reservation. Not yours → note it in progress.md; do not touch it and do not file it. It belongs to that session.
+2. **The category is not `production-state`.** A test red because the PRODUCT changed may be correctly reporting a regression — "fixing" it deletes the alarm. `production-state` never auto-fixes.
+3. **The fix stays in the test / fixture / env layer**, never the code under test. Known recipes: egress-quota + 429s → env-override to the local stack, the same pattern existing tests use; schema-drift after a migration → update column references and assertions to match current schema.
+4. **The affected set is green afterwards** — `pnpm test`, not just the one file. Grep-checkable ≠ behaviourally safe (Phase 1b clause 3).
 
-- **Failures include files this session will touch:** Always fix as the first commit before starting beads, OR pick a different bead set. Do not start work where your changes will land on top of broken tests in the same files.
+All four hold → fix it, commit it first (`fix(test): <what>`), re-baseline, proceed. Do NOT ask and do NOT file a bead: **the fix IS the record.**
 
-Specifically REJECT these failure modes from being treated as "acceptable baseline" without a fix plan:
+**Escalation — ONLY when the rubric fails.** ANCHOR-DEDUPE first: `br list --status open --limit 0 --json`, grep the failing test path. An open bead carrying that anchor gets `br comments add` recording the recurrence — **never a second bead** (`beads-standards/reference/bead-conventions.md` § Anti-inflation). Otherwise file exactly one:
 
-- **Production rate-limit / egress quota errors** (`exceed_egress_quota`, 429s from external APIs) — almost always fixable via env-override to local stack, the same pattern existing tests use.
-- **Schema-drift errors after migrations** (column "X" does not exist; SQLSTATE mismatches between expected CHECK and actual NOT NULL) — fixable by updating column references / assertions to match current schema.
-- **"Known pre-existing" without a specific bead ID tracking the fix** — this is an evasion phrase. Either it has a bead, or it needs one filed now.
+```bash
+# clause 2 failed (production-state — the product may actually be broken):
+br create -t bug  "<test path>: <observed vs expected>" -p <per § Priority admission> -l origin:ac-implement,unrefined
+# clause 3 or 4 failed (fix is unbounded, or reaches the code under test):
+br create -t task "<test path>: <one-line symptom>"     -p 2 -l origin:ac-implement,unrefined
+```
+
+`-t task` per § Type admission — a red test with no observed user-facing defect is not a bug. **`origin:` + a readiness label are MANDATORY:** `hooks/bead-capture-guard.py` exit-2s a `br create` without them, wedging an unattended run. Interactive runs MAY ask instead (`AskUserQuestion`: fix / file / abort); headless runs never ask — file and proceed (Exhaust Rule).
+
+- **Failures include files this session will touch:** resolve before starting beads whether the rubric passed or not — fix them, or pick a different bead set. Never land changes on top of broken tests in the same files.
+
+Record the outcome — fixed / filed + bead ID / not-yours — in progress.md header. Do NOT proceed silently.
 
 > **Wait for long local runs IN-SHELL — never detach from your own command** (`ac-pipeline/references/delegation-contract.md` § clause 5, self-detachment). The expensive fallback `pnpm test:all` here — and the wave quality gate's `pnpm test` at session end — are long-running LOCAL commands. Do NOT `run_in_background` them, arm a `Monitor`, and end your turn "waiting for completion": that is the self-detachment stall. Run them in the foreground with a generous Bash timeout, or a foreground `pgrep`/poll until-loop — the turn does not end until the command returns and you have read its result.
 
@@ -362,7 +376,7 @@ If the guard is true (skip):
 mcp__mcp-agent-mail__file_reservation_paths(
   project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
-  paths: ["<files listed in bead spec>"],
+  paths: ["<the bead's ## Territory list (element 3), verbatim>"],
   ttl_seconds: 7200,
   exclusive: true
 )
@@ -376,16 +390,16 @@ On `FILE_RESERVATION_CONFLICT`:
 
 On success: reservation is held. The pre-commit guard (installed in Phase 0) will enforce it at commit time as a second layer.
 
-**Guard: verify environment prerequisites.** Bead specs sometimes assume infrastructure that isn't available in the current session (Mac/Xcode for iOS native, local Supabase for integration tests, Android emulator for ADB-driven tests).
+**Guard: environment prerequisites — READ the declared contract, don't re-derive it.** A refined bead states what it needs in `## Sequence + risk` (element 5) and `### Test-tier exposure` (element 3):
 
-After `br show <id>` + `br comments <id>` but BEFORE claiming, scan the spec's Files / Steps / Acceptance Criteria for these signals:
-
-| Signal in bead spec | Required env |
+| Declared | Required env |
 |---|---|
-| `*.swift`, `*.metal`, `xcodebuild`, `npx cap open ios`, "Mac-only", "TestFlight" | macOS + Xcode |
-| `supabase migration up --local`, `pnpm test:integration`, `supabase_db_*` container, `supabase status` | Local Supabase stack |
-| `*.kt`, `gradle`, `adb`, "emulator" | Android SDK + emulator |
+| risk `native` | macOS + Xcode (iOS) / Android SDK + emulator — per the file types in `## Territory` |
+| risk `migration`, or tier `supabase-integration` | local Supabase stack |
+| tier `e2e` | Playwright / device / browser runner |
 | `cross-repo` label / `Repo: <name>` | that repo is reachable (symlink or checkout); **commit there** (`git -C "$(realpath <file>)" rev-parse --show-toplevel`). Do not skip the bead — the board that holds the id is this session (b0fff17). |
+
+**Legacy beads only** (no `## Sequence + risk`): scan Files / Steps / ACs for `*.swift`/`*.metal`/`xcodebuild`/"TestFlight" → macOS+Xcode; `supabase migration up --local`/`pnpm test:integration` → local stack; `*.kt`/`gradle`/`adb` → Android.
 
 If the bead requires absent infrastructure:
 1. Do NOT claim it
@@ -401,15 +415,16 @@ If the bead requires absent infrastructure:
 
 A bead with no `## Consumes` header at all predates the contract (legacy) — log it and proceed; do not bounce legacy beads for missing paperwork.
 
-**Guard: premise-check embedded factual claims.** Beyond artifact-existence, grep the
-bead's spec for any stated data value or factual claim the fix logic depends on (a DB
-row's field value, "column already exists", a parent/child, a currently-failing external state
-— CI red, prod 500, a failing-probe) and re-verify it against LIVE ground truth — DB query,
-schema, git tree, matching live check — before claim. Specs go stale: a falsified premise is
-a revert or a close, not a fix. If the live check shows the cited failure is gone, follow
-the Consumes-failure protocol above. Do not implement the original framing. Close only when
-no remaining work is named; else leave de-stamped. Trigger on title/body signals or an
-`observed:` stamp — not a new label, not the Phase 0 baseline.
+**Guard: re-run `## Baselines`.** Element 2 records every countable claim as the COMMAND
+that produced it plus its literal output. Re-run each command and diff against the recorded
+output — that IS the premise check; do not re-derive it by grep. A drifted count, a vanished
+row, or a now-green "CI red" claim is a falsified premise. Legacy beads with no
+`## Baselines`: grep the spec for stated data values and `observed:` stamps, and re-verify
+each against live ground truth.
+
+A falsified premise is a revert or a close, not a fix. Follow the Consumes-failure protocol
+above (comment + de-stamp). Do not implement the original framing. Close only when no
+remaining work is named; else leave de-stamped.
 
 **Once a refined, conflict-free, env-supported, premise-verified bead is confirmed**, run the claim command from the output — do not use `br start` (it doesn't exist).
 
@@ -428,7 +443,9 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 ### Phase 1b: Identify Skills + Spawn Engineer Sub-Agent
 
-**Reality-check the spec's existence claims (conductor's job, ~30s).** For every file, type, test target, or "X already exists / has N tests" claim in the bead spec, run a quick grep/ls verification BEFORE spawning the engineer, and paste any corrections into the engineer prompt. Do this for every bead, not just ones the native-testing skill flags.
+**Anchor-drift check (conductor's job, ~30s) — BINDING sections only.** `## Anchors` (element 1) cites each `file:line` at the HEAD sha it was opened at. Diff that sha to now — `git diff <anchor-sha>..HEAD -- <territory paths>`; an empty diff means the anchors still hold — and paste any drift into the engineer prompt. Legacy beads with no `## Anchors`: grep/ls-verify the binding claims by hand.
+
+**`## Approach (advisory)` is never checked and never a bounce reason** — advisory staleness is not a defect (`beads-standards/reference/bead-conventions.md` § Binding vs advisory). The engineer re-derives the how against the real tree and may discard it. Binding = ACs · Delivers · Consumes · Test Scope · Anchors · Baselines · Territory · Declared RED · Sequence + risk (+ Steps to Reproduce on bugs).
 
 **The affected-graph can silently subset an explicit test selection (conductor's job to pre-empt).** `vitest --affected` derives the suite set from the import graph, so a test asserting against a shared interface that does NOT import the changed file is silently dropped — and the run still exits 0. When the bead touches a shared interface (a type, schema, mock, fixture, API contract): (1) **name the affected suites in the engineer prompt** — the conductor knows what changed, the child sees only its own diff; (2) find the mock/assertion owners with `grep -rl "<changed symbol>" --include='*.test.*' .` — any hit outside the changed file's own suite is in scope; (3) `VITEST_AFFECTED_DISABLED=1` is pre-authorized for this case — the child does not need to ask.
 
@@ -452,13 +469,13 @@ If any of the three fails (or is uncertain), fall through to the engineer-spawn 
 
 For code/test-shaped beads that do **not** qualify for conductor-direct, give the engineer the bead's full spec (self-contained — no plan reference needed):
 
-Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — paste the bead's full `br show <id>` + `br comments <id>` into its `### Bead Spec` section, and add the relevant domain skill paths (from `AGENTS.md > Available Skills`) after the AGENTS.md line. The prompt carries the TDD flow, the no-stash rule, the scope contract, cross-bead shared-invariant rules, the four-location test-sweep guidance, and the mandatory result-file `### Output` contract.
+Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — paste the bead's full `br show <id>` + `br comments <id>` into its `### Bead Spec` section, pass the bead's `## Territory` list VERBATIM as "Files you may touch" (element 3 is the scope contract — do not re-derive it), and add the relevant domain skill paths (from `AGENTS.md > Available Skills`) after the AGENTS.md line. The prompt carries the TDD flow, the no-stash rule, the scope contract, cross-bead shared-invariant rules, the four-location test-sweep guidance, and the mandatory result-file `### Output` contract.
 
 ### Phase 1c: Review Quality (Conductor's Core Job)
 
 **YOU are the quality gate.** Read the engineer's result file and verify:
 
-1. **Run bead-relevant tests** (not full suite — just what this bead touches). Run tests AFTER the engineer's edits land in the tree but BEFORE committing:
+1. **Run the tiers the bead declared** (`### Test-tier exposure`, element 3 — never the full suite): `standing-vitest` → `pnpm test`; `supabase-integration` → the local-stack suite as well (`pnpm test:integration:local` or the repo equivalent); `e2e` → the named journey spec; `none` → no executable suite applies, the AC's own grep/diff is the gate. Run AFTER the engineer's edits land in the tree but BEFORE committing:
 
    ```bash
    pnpm test    # vitest-affected (~30s) — per-bead canonical
@@ -477,11 +494,7 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
 
 2. **Pre-existing test regression check** — For each file the engineer modified, use the Grep tool (pattern: `<module-path>`, glob: `*.test.*`, paths: `__tests__/` and `features/`) to find existing tests. Run any found. This catches regressions the engineer missed (e.g., container tests broken by new imports). **When the diff widens a shared type or changes which client/method a route calls, this grep must reach the mock OWNERS too** (hand-rolled `requireAuth`/supabase mocks), you must run that named set with **`VITEST_AFFECTED_DISABLED=1`** — `pnpm test <named-files>` INTERSECTS your explicit list with the git-diff set and silently runs a subset *while reporting green* — and the conductor must **pre-authorize the mock-owning suites in the engineer's scope contract**, or the child correctly refuses to edit the very files it must update.
 
-   > **Red-test classification requires EVIDENCE — never accept "pre-existing" or "concurrent-session" at face value**. When an engineer's result file (or your own triage) classifies a failing test as pre-existing debt or another session's WIP rather than a regression THIS bead caused, that classification is only valid with one of two concrete proofs, recorded in the bead's progress/result notes:
-   > - **History proof:** the same test was already red BEFORE this bead's diff — cite the Phase 0 Baseline Check result (the loop-close/`quality-gate.yml` run, or the local baseline) showing that test failing, or re-run it pinned to the pre-wave SHA with `VITEST_AFFECTED_REF=<pre-wave-SHA> pnpm test`. Do NOT use `git stash` or spawn a `git worktree` to get this (both banned under trunk-direct — Phase 0), OR
-   > - **Symbol proof:** the failing assertions reference only symbols/files that this wave's diff does not touch (`git diff --stat` shows the test's subject-under-test is untouched by any commit in this session).
-   >
-   > Absent either proof, treat the red test as YOURS and fix it before closing.
+   > **A red test here is YOURS unless Phase 0 already accounted for it.** Phase 0 leaves the baseline green or explicitly recorded, so "pre-existing debt" is no longer a classification you may assert — it is one you must CITE. Two exemptions, both already written in progress.md: (a) **known debt** — Phase 0 filed a bead for this exact test; cite that bead ID; (b) **concurrent-session WIP** — the failing assertions reference only symbols/files this wave's diff does not touch (`git diff --stat`) AND the file carries a foreign Agent Mail reservation. Absent both, it is yours: fix it before closing. (`git stash` and `git worktree` stay banned under trunk-direct — Phase 0.)
 
 3. **Lint + type-check** — catch errors early:
 
@@ -492,11 +505,12 @@ Spawn the engineer using the prompt in **`references/engineer-prompt.md`** — p
 
    (Full build deferred to session-end quality gate — too slow per-bead.)
 
-4. **Test coverage verification** — confirm the engineer actually wrote new tests:
-   - Read the engineer's result file for "Test files created/modified"
-   - If the bead adds new functionality (modules, handlers, utilities, etc.) there MUST be new test files or new test cases
-   - If the engineer's report lists zero new tests for new code, **re-spawn the engineer** with explicit instructions to add test coverage
-   - Pure refactors or config changes may not need new tests — use judgment
+4. **`## Declared RED` verification** — element 4 names the ASSERTION that had to fail before the fix. Check it mechanically, not by judgment:
+   - **Assertion RED** (default): confirm that named assertion actually went red→green, and record its before/after values — they go in the close reason.
+   - **`RED: characterized — <rule> / <mutation>`**: confirm the delivery pins the named rule, and that the named mutation would break it.
+   - **`RED: n/a — <why>`**: nothing to check; verify the stated reason still holds.
+   - If the result file cannot evidence the declared RED, **re-spawn the engineer** with exactly that as the instruction. A green suite that never went red proves nothing.
+   - Legacy beads with no `## Declared RED`: fall back to judgment — new functionality MUST bring new tests; pure refactors or config may not.
 
 5. **Acceptance criteria check** — does the implementation match the bead's spec? Tests passing is necessary but not sufficient. If the spec says "move" a file, verify the original is deleted and all imports updated — leaving the original creates dead code.
 
@@ -545,10 +559,12 @@ git push
 **Delivers gate (I/O contract, `beads-standards/reference/bead-conventions.md` §Bead I/O contract):** before closing, verify each `## Delivers` item exists in the committed result — same grep/ls-level check as the Phase 1a premise guard, against what you just committed. A promised artifact that doesn't exist means the bead is NOT done: back to Phase 1c review, don't close around it. Then record the delivered artifacts in the close reason — downstream beads' premise checks read this:
 
 ```bash
-br close <id> --reason "Implemented and tested. Delivered: <artifact paths, comma-separated>"
+# Outcome verb LEADS — closed set: shipped|fixed|wontfix|duplicate|obsolete. An
+# unstructured reason cannot be clustered (`beads-standards` § Status & priority canon).
+br close <id> --reason "shipped: <what landed>. Delivered: <artifact paths, comma-separated>"
 ```
 
-(Legacy beads with no `## Delivers` header: close with the plain reason as before.)
+(Legacy beads with no `## Delivers` header: still lead with the verb; just omit the `Delivered:` list.)
 
 **Per-type close evidence** (`beads-standards/reference/bead-conventions.md` § Per-type close artifacts): after
 the outcome verb, cite the evidence the bead's TYPE closes with — a `bug` names its regression

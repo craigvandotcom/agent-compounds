@@ -68,7 +68,9 @@ Dispatch-time: append this clause VERBATIM to every prompt below.
 > `--assignee <AGENT_NAME>`, NOT your own session name, so the BEADS-CLOSED-GATE sees
 > them. TARGET_BEADS=N. `RUN_ID=<RUN_ID>` (scopes the bead-work dir — `ac-pipeline/references/run-id.md`).
 > Skip the bead-count setup question — answer is pre-supplied. For baseline test failures:
-> file a P1 bead and proceed (do not ask). Report when complete as a compact structured
+> apply Phase 0's FIX RUBRIC — fix and commit when all four clauses hold. Only if the rubric
+> fails, anchor-dedupe and file exactly ONE bead (typed per the rubric; never P1 by default),
+> then proceed. Do not ask. Report when complete as a compact structured
 > summary (≤400 words, cap unchanged: beads shipped/closed with IDs, gate outcomes,
 > anything blocked, every Agent Mail identity you claimed beads under, AND a structured
 > `friction:` block — one item per stage that hit friction, keys `stage` / `cost` /
