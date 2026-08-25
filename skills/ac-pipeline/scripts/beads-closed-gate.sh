@@ -235,9 +235,9 @@ check_progress_completeness() {
   #    Keyed on FILE EXISTENCE, not on "was --progress passed", because the arg-resolution
   #    block ALWAYS appends $ARTIFACTS_DIR/progress.md when ARTIFACTS_DIR is set — explicit
   #    opt-in and silent default are indistinguishable here. This keeps
-  #    _archive/skills/ac-loop/references/beads-closed-gate-invocation.md's "omitting --progress skips the
-  #    check entirely" true. Rejected: hard-fail on valid_files==0 unconditionally (breaks
-  #    the file-missing case and contradicts that doc); keep-as-warning (no teeth).
+  #    the invocation rule true: omitting --progress skips the check entirely. Rejected:
+  #    hard-fail on valid_files==0 unconditionally (breaks the file-missing case and
+  #    contradicts that rule); keep-as-warning (no teeth).
   if [ "$valid_files" -eq 0 ]; then
     if [ "$existing_files" -gt 0 ]; then
       echo "beads-closed-gate: PROGRESS-NO-HEADER — $existing_files progress file(s) exist but none carries a 'TARGET_BEADS=' header, so the completeness check would be a silent no-op. Add 'TARGET_BEADS=<count>' to the progress.md header (ac-loop's CLAIM-AT-SELECTION step writes it)." >&2

@@ -68,7 +68,6 @@ skip() { echo "  SKIP: $1"; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORKFLOW="$SKILLS_DIR/ac-bead-refine/references/workflow.md"
-AC_LOOP="$SKILLS_DIR/../_archive/skills/ac-loop/SKILL.md"   # ac-loop retired; archived source keeps Case 7 running, never silently skipping
 
 # The child's derivation, byte-identical to workflow.md § Phase 0 "Configuration".
 # Case 6 asserts these two lines still exist verbatim in the doc, so the test cannot
@@ -540,28 +539,6 @@ else
   grep -qF 'RESOLVED_N' "$WORKFLOW" || { fail "Case 6: workflow.md stamp loop lost its resolved-count guard — an all-unknown run is silent again"; ok=0; }
   grep -qF 'SNAP_N' "$WORKFLOW" || { fail "Case 6: workflow.md parity gate lost its non-empty-snapshot preflight"; ok=0; }
   [ "$ok" -eq 1 ] && pass "Case 6: workflow.md still documents exactly the formulas + scope channel this test exercises"
-fi
-
-echo
-echo "=== Case 7: ac-loop's rendered refine delegation — bare RUN_ID + explicit TARGET_BEAD_IDS ==="
-if [ ! -f "$AC_LOOP" ]; then
-  skip "Case 7: archived ac-loop/SKILL.md not reachable from $SKILLS_DIR"
-else
-  ok=1
-  # The safety must live in the child's key, NOT in a hand-suffixed RUN_ID in the prompt.
-  if grep -nE 'RUN_ID=[^ `"]*-(refine|child)[A-Z0-9]' "$AC_LOOP" >/dev/null; then
-    fail "Case 7: ac-loop renders a per-child-suffixed RUN_ID — the bd-baudw workaround is back"
-    ok=0
-  fi
-  grep -qF 'TARGET_BEAD_IDS' "$AC_LOOP" || { fail "Case 7: no refine delegation passes TARGET_BEAD_IDS"; ok=0; }
-  grep -qF 'RUN_ID=<RUN_ID>' "$AC_LOOP" || { fail "Case 7: no bare RUN_ID=<RUN_ID> in the delegation prompts"; ok=0; }
-  # And with that bare shared RUN_ID, two children must STILL land in distinct dirs.
-  run_two_children "$SHARED_RUN_ID" "ChildOne" "ChildTwo" ""
-  if [ "$KID_A" = "$KID_B" ]; then
-    fail "Case 7: under the bare rendered RUN_ID the two children collided ($KID_A)"
-    ok=0
-  fi
-  [ "$ok" -eq 1 ] && pass "Case 7: prompt passes RUN_ID bare + TARGET_BEAD_IDS; children still distinct ($KID_A != $KID_B)"
 fi
 
 echo
