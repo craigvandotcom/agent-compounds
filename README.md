@@ -85,6 +85,7 @@ the **dev loop** (human intent → plans → waves → `ac-loop-swarm` ships), t
 | Skill | What it does |
 |-------|-------------|
 | **context-engineering** | Canonical save-routing taxonomy and L0–L4 loading model — where durable knowledge goes and what loads when |
+| **memory-pipeline** | How the compounding system RUNS — the three lanes (L3 memory, skill frictions, wiki synthesis), their executors, cadence, drains, and health surface (operations; the taxonomy stays in context-engineering) |
 | **reflect** | Capture session learnings into the memory substrate — facts, decisions, recipes, domain-routed and git-tracked |
 | **dream** | The org's self-improvement engine — synthesize cross-session patterns, lint the substrate, emit PR-style proposals |
 | **wiki** | Write and garden wiki synthesis pages — concept/entity/topic/contradiction pages that integrate atomic facts and decisions into one cited narrative (a derived view, not fact capture) |
