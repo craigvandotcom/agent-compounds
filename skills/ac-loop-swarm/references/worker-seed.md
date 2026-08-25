@@ -41,7 +41,8 @@ CLOSED=0
 
 2 CLAIM    br update <id> --claim --actor "$ACTOR" --json
            VALIDATION_FAILED (a sibling won) → goto 1
-           claim exited 0 → br comments add <id> -f <file> "WORKER: $NAME run <RUN_ID> claimed"
+           claim exited 0 → br comments add <id> -f <file> "CLAIM: $NAME run <RUN_ID>"
+           `CLAIM:`, never `WORKER:` — that prefix is the close-time identity grep (step 8).
            Gate the comment on the claim's exit status: a lost race must not comment.
            Prose goes through a file, never inline — the destructive-op matcher rejects it.
            re-read with `br comments <id>` — the add can no-op at exit 0, and this is
@@ -54,10 +55,14 @@ CLOSED=0
                   br update <id> --status open --assignee "" --remove-label refined --add-label unrefined
                   goto 1
            Re-verify any factual claim the fix depends on (a DB value, "column exists",
-           "CI is red") against live truth. Falsified → same as premise failure.
-           Anchors drift on a shared trunk: relocate by the bead's QUOTED text, never by
-           its line number. Quoted text gone → unclaim, comment "spec-stale", goto 1.
-           List the files you will touch.
+           "CI is red") against live truth — `## Baselines` names the command; re-run it.
+           Falsified → same as premise failure.
+           Anchors drift on a shared trunk: relocate by the bead's QUOTED text, never its line
+           number, BINDING sections only — `## Approach (advisory)` may be stale and is never
+           a bounce. Binding text gone → unclaim, comment "spec-stale", goto 1.
+           `## Territory` IS your file list, verbatim — reconcile it against the ACs and
+           `## Declared RED`; a Territory contradicting its own ACs is a spec defect, not a
+           choice → unclaim, comment "spec-contradiction", goto 1.
 
 4 RESERVE  file_reservation_paths(project_key, agent_name:$NAME, paths:[…], ttl_seconds:3600,
              exclusive:true, reason:"<id>", registration_token)
@@ -66,10 +71,12 @@ CLOSED=0
            thread_id:<id>, subject:"[<id>] need <path>", ack_required:true, sender_token)
            — one targeted message, never a broadcast — then unclaim and goto 1
 
-5 WORK     Implement the bead as written. Load the domain skill the bead names. Tests the
-           bead specifies are part of the bead. If the bead needs a decision a human must
-           make: file a human-gate bead (Gate-reason: fork|authorization|intent|action),
-           unclaim as in step 4, goto 1.
+5 WORK     Implement the bead as written. Load the domain skill the bead names.
+           RED FIRST: run the test `## Declared RED` names, SEE IT FAIL, then fix. Already
+           green → bad bead: comment "red-not-red", release + unclaim, goto 1. (The `characterized`
+           and `n/a` RED forms carry no assertion — skip this gate.)
+           If the bead needs a decision a human must make: file a human-gate bead
+           (Gate-reason: fork|authorization|intent|action), unclaim as in step 4, goto 1.
            Adjacent defect noticed while working: REPORT it in your exit JSON. Never fix it
            here, never file a bead for it — the exception is a P0/P1 product defect whose
            repro you verified at current HEAD.
@@ -77,6 +84,8 @@ CLOSED=0
 6 CHECK    VITEST_AFFECTED_DISABLED=1 npx vitest related <your files> --run --passWithNoTests --bail 1
            assert the run reported a result file for every test file it should have matched
            — a silent collapse to fewer files still prints "N passed" and is a false green
+           `### Test-tier exposure` names the tiers this bead can break — run each, and ASSERT
+           IT RAN: a supabase-integration tier with the stack down no-ops every skipIf to green
            pnpm type-check 2>&1 | sed -E 's/\x1b\[[0-9;]*m//g' \
              | grep -F -f <(printf '%s\n' <your files>)     # strip ANSI first, own paths only
            ubs "<file>" "<file>" …    # ONE call, every path quoted
@@ -104,7 +113,10 @@ CLOSED=0
 
 8 CLOSE    DELIVERS GATE — grep/ls every `## Delivers` item in the committed result.
              missing → goto 5. Do not close around it.
-           br close <id> --reason "Delivered: <paths/artifacts>" --json      # DB only
+           br close <id> --reason "shipped: <what landed>. Delivered: <paths>" --json  # DB only
+             verb LEADS: shipped|fixed|wontfix|duplicate|obsolete (bug → fixed:) — an
+             unverbed reason cannot be clustered
+           br comments add <id> -f <file> "WORKER: model=<your model> session=$NAME skill@version=<agent-compounds SHA> duration=<claim→close>"
            CLOSED += 1
 
 9 RELEASE  release_file_reservations(project_key, agent_name:$NAME, paths:[…], registration_token)
