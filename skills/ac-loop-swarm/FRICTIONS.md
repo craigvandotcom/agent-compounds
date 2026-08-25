@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-25
-entries: 24
+last_pass: 2026-08-26
+entries: 34
 ---
 
 # ac-loop-swarm — friction log
@@ -351,10 +351,10 @@ entries: 24
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
 - first_seen: 2026-08-23
-- last_seen: 2026-08-23
+- last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: report findings not categories in the summary line, and exit non-zero — or print an explicit NOT-CHECKED verdict — when no scanner matched the supplied files.
@@ -367,6 +367,11 @@ entries: 24
   checking nothing; on mixed path lists it silently scanned 3 of 4 and 4 of 5 files. A gate whose
   headline number means neither "findings" nor "files actually checked" cannot be read quickly by
   anyone, which is the only way a per-bead gate ever gets read.
+  RUN 20260826-002220-22130 CyanLantern reproduced both directions in one run: `3 critical` and
+  `18 critical` on the same scope both resolved to pre-existing `!= null` idioms plus one false
+  positive on a local variable named `token`, and `.mdx` turned out to have no scanner at all —
+  it reports `nothing was checked - this is NOT a pass`. Add `.mdx` to the uncovered-language
+  list alongside shell, CSS and markdown.
 
 ## prepush-build-checks-the-working-tree-not-the-pushed-commit
 - skills: [ac-loop-swarm]
@@ -523,3 +528,143 @@ entries: 24
 - status: open
 - proposed_fix: install browsers without deleting unused runtimes from a shared cache, or pin the install to a per-repo cache path.
 - narrative: RUN 20260824-231514-17151 MaroonFalcon — `pnpm exec playwright install chromium` also deleted unused webkit from the shared cache. A swarm worker installing one browser mutates siblings' and later sessions' browser availability.
+
+## vitest-related-blind-to-source-scanning-tests
+- skills: [ac-loop-swarm]
+- impact: L
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [the-loops-own-gates-have-false-green-mechanisms, vitest-related-no-op-on-plugin-swift, vitest-related-fans-out-on-hub-modules]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: step 6 must additionally run the alwaysRunTests set (the raw-line-scan guards) whenever the Territory touches source at all; `vitest related` cannot reach them by construction.
+- narrative: RUN 20260826-002220-22130 OrangeGlacier — `vitest related` builds its set from the IMPORT GRAPH, so a guard test that reads files as raw text (`__tests__/unit/no-transition-all.test.ts`) never appears: it imports nothing. The worker's commit added a CODE COMMENT containing a literal that guard forbids. Step 6 was green; the real suite would have gone red. A sibling (CyanLantern) found main already red from the same class and fixed it in d034f024. This is the sharpest form of the false-green family: the gate is not merely shallow, it is structurally incapable of seeing a whole tier of test.
+
+## claim-and-comment-batched-in-one-call-comments-on-a-lost-race
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 2
+- related: [br-ready-serves-stale-assigned-open-beads]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: the seed already says "gate the comment on the claim's exit status" — make it mechanical, e.g. `br update <id> --claim ... && br comments add ...`, and say so in the seed rather than as prose the worker must remember.
+- narrative: RUN 20260826-002220-22130 — TWO of three workers (CyanLantern, worker 3) posted a `CLAIM:` comment on a bead whose claim had just lost the race, because they ran claim and comment in one unconditional shell call. Both had to post a retraction. Compounding it: `br update --claim` prints a TRUNCATED JSON body on a lost race, so the `VALIDATION_FAILED` marker is easy to miss when tailing output. Two independent workers hitting it in one run makes this a seed defect, not worker sloppiness.
+
+## bead-body-goes-stale-against-its-own-newer-comments
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- perceptibility: silent
+- recurrence: 1
+- related: [br-ready-serves-stale-assigned-open-beads]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: move `br comments <id>` BEFORE the premise/scope work in step 3 and make the comment TAIL binding — a bead's newest truth lives in its comments, not its STATUS block.
+- narrative: RUN 20260826-002220-22130 CyanLantern — duplicated a sibling's in-flight work twice: bd-4dosp's AC2 (a sibling had answered it three minutes earlier) and bd-fc1du/bd-motion AC2 (already shipped, bead never closed). Root cause is two-part: `br ready` re-lists a bead the instant it is released, and the bead's own STATUS block goes stale relative to its newer comments. The seed already tells workers to read comments, but AFTER scoping, which is too late to prevent the duplicate.
+
+## shared-tree-half-edits-redden-checks-beyond-the-60s-retry
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [prepush-build-checks-the-working-tree-not-the-pushed-commit]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: the wait-60s-retry-once rule is not enough; the only reliable resolution is the sibling's COMMIT landing. Either wait on the commit (poll `git log`) or treat a failure confined to unreserved files as not-yours and proceed.
+- narrative: RUN 20260826-002220-22130 CyanLantern — a sibling's mid-edit tree turned the worker's `vitest related` red on `blog-page-metadata`, files the worker never touched (1 failure, then 3 sixty seconds later), then green once the sibling committed. The seed's "wait 60s, retry once, then own it" would have had this worker OWN a failure that was never theirs. Also hit OrangeGlacier from the other side: the pre-push build compiles the working tree, so a sibling's half-edit reddens your push.
+
+## ledger-recovery-runbook-prescribes-a-br-subcommand-that-does-not-exist
+- skills: [ac-loop-swarm]
+- impact: L
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [swarm-doctrine-prescribed-a-guard-blocked-command, guards-name-each-others-forbidden-commands-as-the-remedy]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: update `_docs/runbooks/beads-ledger-recovery.md` to use `br sync --import-only` (and note `br sync --merge --force` = newer-timestamp-wins); `br import` is not a subcommand in the installed br.
+- narrative: RUN 20260826-002220-22130 StormyRidge (orchestrator) — close-out needed Recovery A because origin/main had a nightly ac-tidy ledger commit the swarm DB never imported. Every command the runbook prescribes for the union is `br import <file>`, which exits `unrecognized subcommand 'import'`. The documented recovery for the highest-stakes data operation in the pipeline cannot be executed as written. The orchestrator had to hand-build the union in Python and load it with `br sync --import-only`. The runbook is otherwise correct — the arithmetic check it prescribes (Created/Updated/Skipped) validated the union exactly (Created 0, Updated 40, Skipped 3178, matching the incoming commit's 40-row diff).
+
+## full-ledger-re-export-invalidates-every-gitleaks-line-fingerprint
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: prefer fingerprints that are not line-keyed for `.beads/issues.jsonl`, or accept that any forced full re-export requires re-deriving the whole `.beads/issues.jsonl:generic-api-key:<line>` block in one pass (`gitleaks protect --staged --report-format json`).
+- narrative: RUN 20260826-002220-22130 StormyRidge — `br sync --flush-only --force` rewrote all 3218 rows, shifting every line number. All four staged findings were already-known false positives (bead labels, RED-gate identifier constants, and one two-word DB-filter phrase in a worker close-comment) but every existing line-keyed allowlist entry now pointed at the wrong line. The `.gitleaksignore` header already warns "line numbers shift as .beads/issues.jsonl grows"; a forced re-export makes that shift total rather than incremental.
+
+## prepush-gate-exceeds-tool-timeout-success-reads-as-failure
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [prepush-build-checks-the-working-tree-not-the-pushed-commit]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: seed step 7 should name an explicit long timeout for the push, and tell the worker to confirm via `git log origin/main` rather than the tool's exit report.
+- narrative: RUN 20260826-002220-22130 OrangeGlacier — the pre-push hook runs a full Next build plus the journey e2e (~2 min, measured 42s for e2e alone at close-out), which exceeds the default Bash timeout. The push SUCCEEDS but the tool reports a timeout, so it reads as a failure. A worker that believes the report will retry a push that already landed, or wrongly record PUSH_REJECTED.
+
+## agent-mail-outage-leaks-reservations-until-ttl
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: rare
+- perceptibility: loud
+- recurrence: 1
+- related: [agent-identity-env-lost-between-tool-calls]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: on an Agent Mail connection error at step 9, retry on the next loop iteration rather than proceeding; the orchestrator's close-out force-release already covers the terminal case.
+- narrative: RUN 20260826-002220-22130 OrangeGlacier — Agent Mail was unreachable for roughly five minutes mid-run ("Unable to connect"). Reservations could only be released on a later retry and would otherwise have leaked until TTL, blocking siblings from paths nobody was editing.
+
+## br-create-rejects-file-body-together-with-a-title
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [br-dep-add-argument-order-inverts-the-natural-reading]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: document the form in the seed — `br create "<title>" -d "$(cat <file>)"`; `-f` is comments-only.
+- narrative: RUN 20260826-002220-22130 CyanLantern — the seed tells workers to pass prose through a file to dodge the destructive-op matcher, but `br create` rejects `-f` and a title in the same invocation, so a file-based body must go through `-d "$(cat file)"`. The rule and the tool disagree, discovered only at the point of filing a bead.
+
+## dcg-blocks-redirect-to-a-variable-expanded-scratch-path
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [dcg-false-positives-on-angle-bracket-inside-quoted-prose, swarm-doctrine-prescribed-a-guard-blocked-command]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: write scratch files to the fully-literal job-dir path; do not use `$CLAUDE_JOB_DIR` or any variable on the left of `>`.
+- narrative: RUN 20260826-002220-22130 StormyRidge — the harness supplies the scratch directory AS a variable (`$CLAUDE_JOB_DIR/tmp`) and instructs agents to use it, but `core.filesystem:redirect-truncate-dynamic-path` blocks any redirect whose target is variable-expanded, because dcg cannot resolve it before O_TRUNC. Two calls were rejected before switching to literal paths. The harness instruction and the guard are in direct tension.
