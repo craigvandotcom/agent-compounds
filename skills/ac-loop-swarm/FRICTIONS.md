@@ -2,7 +2,7 @@
 skill: ac-loop-swarm
 created: 2026-08-21
 last_pass: 2026-08-26
-entries: 34
+entries: 35
 ---
 
 # ac-loop-swarm — friction log
@@ -68,10 +68,10 @@ entries: 34
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: [affected-graph-silently-subsets-explicit-test-selection, verification-outlives-the-bash-timeout-cap]
 - first_seen: 2026-08-21
-- last_seen: 2026-08-24
+- last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: detect hub-module fanout before running; when the related set exceeds a threshold, run a named tier with a raised timeout instead of pretending the check is scoped.
@@ -181,13 +181,14 @@ entries: 34
 - impact: L
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 4
+- recurrence: 6
 - related: [br-writes-default-to-human-identity]
 - first_seen: 2026-08-22
-- last_seen: 2026-08-24
+- last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: exporting in the same command is NOT sufficient — `br` must be given the identity by flag or config, not by inherited environment; never pipe a commit through `tail`.
+- narrative: FIFTH INSTANCE 20260826-164408-17004 — VioletMeadow CLAIM/WORKER comments on artstill-app-1j4f and CobaltBeacon CLAIM/WORKER comments on artstill-app-noot both landed as FoggyCreek; the comment TEXT named the worker. Same root, worker claim-time path this time.
 - narrative: FOURTH INSTANCE 2026-08-24 RUN 20260824-212117-23585 — orchestrator PurpleDune exported AGENT_NAME and BR_AGENT_NAME in the SAME command as `br comments add bd-21ej -f <file>`; comment still landed as FoggyCreek. Same close-out path as instance 3.
 - narrative: THIRD INSTANCE 2026-08-24 — orchestrator exported AGENT_NAME=WildCat BR_AGENT_NAME=WildCat in the SAME command as `br comments add bd-21ej -f <file>` and the comment still landed as FoggyCreek. Same root, close-out path this time rather than a worker claim comment.
 - narrative: SECOND INSTANCE 2026-08-23 — the proposed fix below was applied and did not hold. A
@@ -351,7 +352,7 @@ entries: 34
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 2
+- recurrence: 3
 - related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
 - first_seen: 2026-08-23
 - last_seen: 2026-08-26
@@ -450,13 +451,14 @@ entries: 34
 - impact: M
 - frequency: frequent
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [ubs-summary-counter-and-language-coverage-both-misreport]
 - first_seen: 2026-08-24
-- last_seen: 2026-08-24
+- last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
-- proposed_fix: suppress or recategorise CACurrentMediaTime, `== null`, and identifier-self-equality as non-findings outside token/secret paths; a step-6 RED must be a DETAIL-line finding on the reserved file, not a heuristic on a clock or an email lookup.
+- proposed_fix: suppress or recategorise CACurrentMediaTime, `== null`, `!= null`, and identifier-self-equality as non-findings outside token/secret paths; a step-6 RED must be a DETAIL-line finding on the reserved file, not a heuristic on a clock or an email lookup.
+- narrative: SECOND INSTANCE 20260826-164408-17004 — VioletMeadow: `if (userId !== null) markColdStartReady()` flagged CRITICAL timing-unsafe secret comparison. CobaltBeacon: DebugHud `!= null` nullish checks flagged CRITICAL loose-equality. Both pre-existing, neither a real defect.
 - narrative: RUN 20260824-231514-17151 — three workers spent step 6 on ubs false-REDs that were not the bead. TealWaterfall: `CACurrentMediaTime()` flagged as non-cryptographic randomness for security tokens (it is the session tMs clock in ARSessionManager), plus a pre-existing `== null` in cross-runtime-parity.test.ts. MaroonFalcon: `email === email` flagged CRITICAL timing-safe-compare, forcing a rewrite of an email lookup. Distinct from the summary-counter lie: here the DETAIL lines themselves assert a security finding on non-security code, so reading past the summary still blocks the commit.
 
 ## capacitor-stillness-types-live-in-gitignored-dist
@@ -464,13 +466,14 @@ entries: 34
 - impact: M
 - frequency: occasional
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-08-24
-- last_seen: 2026-08-24
+- last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: either commit a types stub, or make the worker seed name `pnpm --filter @neometa/capacitor-stillness build` as a prerequisite before type-check on plugin API changes.
+- narrative: SECOND INSTANCE 20260826-164408-17004 CobaltBeacon — new `appendSessionDump` / harness methods on definitions.ts missed tsc until `pnpm --filter @neometa/capacitor-stillness build`. Same gitignored dist/.
 - narrative: RUN 20260824-231514-17151 PurpleFinch — `@neometa/capacitor-stillness` types come from gitignored `dist/`. Adding `addListener('storage-full')` does not type-check until `pnpm --filter @neometa/capacitor-stillness build`. A scoped type-check RED on a reserved definitions.ts change is therefore a missing-artifact problem, not a type error in the source the worker just wrote.
 
 ## playwright-reuseexistingserver-binds-foreign-localhost-3000
@@ -548,7 +551,7 @@ entries: 34
 - impact: S
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: [br-ready-serves-stale-assigned-open-beads]
 - first_seen: 2026-08-26
 - last_seen: 2026-08-26
@@ -618,7 +621,7 @@ entries: 34
 - impact: S
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: [prepush-build-checks-the-working-tree-not-the-pushed-commit]
 - first_seen: 2026-08-26
 - last_seen: 2026-08-26
@@ -660,7 +663,7 @@ entries: 34
 - impact: S
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: [dcg-false-positives-on-angle-bracket-inside-quoted-prose, swarm-doctrine-prescribed-a-guard-blocked-command]
 - first_seen: 2026-08-26
 - last_seen: 2026-08-26
@@ -668,3 +671,101 @@ entries: 34
 - status: open
 - proposed_fix: write scratch files to the fully-literal job-dir path; do not use `$CLAUDE_JOB_DIR` or any variable on the left of `>`.
 - narrative: RUN 20260826-002220-22130 StormyRidge — the harness supplies the scratch directory AS a variable (`$CLAUDE_JOB_DIR/tmp`) and instructs agents to use it, but `core.filesystem:redirect-truncate-dynamic-path` blocks any redirect whose target is variable-expanded, because dcg cannot resolve it before O_TRUNC. Two calls were rejected before switching to literal paths. The harness instruction and the guard are in direct tension.
+
+## no-board-marker-for-agent-runnable-but-host-resource-bound
+- skills: [ac-loop-swarm, beads-standards]
+- impact: L
+- frequency: frequent
+- perceptibility: quiet
+- recurrence: 1
+- related: [br-ready-serves-stale-assigned-open-beads, seed-device-title-filter-starves-native-parity-beads]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: add a `local-stack` (or `host-bound`) label plus a seed PICK exclusion, so these beads leave the swarm pool without being mislabelled `human-gate` — they need no human ruling, only an exclusive host resource. Escalated as bd-human-gate-local-stack-marker-ahbub.
+- narrative: RUN 20260826-150009-78761 SunnyStream + StormyHeron — four beads (bd-i4281, bd-cbpxm, bd-8x01r, bd-dlaqv, plus bd-20oz1 needing :3000) burned 7+ claim/scope/release cycles across the run. They read clean, refined and unblocked in `br ready`, and are genuinely agent-workable, but need the local Supabase stack or the shared dev server, which swarm workers are barred from. The class is only diagnosable AFTER a full claim. bd-dlaqv's own body already records three prior burned swarm claims; this run's was the fourth. `### Test-tier exposure` correctly names the tier but cannot make it runnable.
+
+## br-close-reason-silently-fails-on-long-non-ascii-text
+- skills: [ac-loop-swarm, beads-standards]
+- impact: M
+- frequency: occasional
+- perceptibility: quiet
+- recurrence: 1
+- related: [commit-message-apostrophe-truncates-the-commit-inside-the-sh-c-wrapper]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: keep `--reason` ASCII-only and short; if a bare error object comes back with no message, suspect the text before suspecting the DB.
+- narrative: RUN 20260826-150009-78761 SunnyStream — `br close --reason` returned a bare error object with no message, twice, on reasons containing em dashes and parentheses. ASCII-only text of similar length worked. Cost two blind retries before the cause was bisected. The failure is indistinguishable from a DB error at the call site.
+
+## gh-debug-tracing-on-by-default-corrupts-json-output
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: prefix every `gh ... --json` call with `GH_DEBUG=` to clear the inherited value.
+- narrative: RUN 20260826-150009-78761 StormyHeron — `gh` inherited GH_DEBUG-style tracing in the worker shell, so every `--json` call emitted request logs onto stdout and broke jq parsing until the variable was explicitly cleared per call.
+
+## br-create-label-flag-and-dep-list-direction-both-mislead
+- skills: [ac-loop-swarm, beads-standards]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [br-create-rejects-file-body-together-with-a-title, br-dep-add-argument-order-inverts-the-natural-reading]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: document `--labels=a,b,c` (not `--label`); and note that checking whether a SUCCESSOR was wired needs a different query — `br dep list <id>` answers the opposite question.
+- narrative: RUN 20260826-150009-78761 StormyHeron — `br create` rejects the documented `--label` flag, wanting `--labels=a,b,c`. Separately, `br dep list <id>` lists only the bead's own dependencies, never its dependents, so it cannot verify that a successor bead was wired — the natural reading of the command name is backwards.
+
+## br-claim-success-is-not-a-durable-lock
+- skills: [ac-loop-swarm, beads-standards]
+- impact: M
+- frequency: occasional
+- perceptibility: quiet
+- recurrence: 1
+- related: [br-ready-serves-stale-assigned-open-beads, claim-and-comment-batched-in-one-call-comments-on-a-lost-race]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: re-assert the claim before the Delivers gate; treat a cleared assignee mid-work as a lost race rather than a DB glitch.
+- narrative: RUN 20260826-150009-78761 SunnyStream — bd-13uyk's assignee was cleared while the worker held a claim that had exited 0, by a sibling working the same bead concurrently. `br update --claim` succeeding at pick time does not hold the bead for the duration of the work; the whole coordination model assumes it does.
+
+## pnpm-dev-swallows-the-port-flag-as-a-positional
+- skills: [ac-loop-swarm, capacitor]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [playwright-reuseexistingserver-binds-foreign-localhost-3000]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: use `npx next dev -p PORT`; never `pnpm dev -- -p PORT`.
+- narrative: RUN 20260826-150009-78761 SunnyStream — `pnpm dev -- -p PORT` passes `-p` through as a positional argument and next interprets it as a project DIRECTORY, so the server binds the default port anyway. On a shared checkout that silently collides with whatever already holds :3000.
+
+## lint-staged-leaves-index-worktree-mismatch
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: after a pathspec commit that lint-staged formatted, re-add the matching worktree bytes if `git status` shows MM; do not treat MM as a sibling's WIP.
+- narrative: RUN 20260826-164408-17004 CobaltBeacon — lint-staged prettier-rewrote `features/settings/SettingsForm.tsx` during a successful commit, leaving the file MM (index vs worktree snapshot). A later `git add` of the matching worktree cleared it. On a shared checkout MM after your own commit looks like foreign WIP and can block the next pathspec or the orchestrator rebase.
