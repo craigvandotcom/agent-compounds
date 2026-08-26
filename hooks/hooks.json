@@ -4,7 +4,7 @@
     {
       "id": "session-start-context",
       "event": "SessionStart",
-      "command": "cat {HOOKS}/session-start.md",
+      "command": "cat {HOOKS}/session-start.md {HOOKS}/machine-global-shim.md",
       "harnesses": ["claude", "codex", "droid"],
       "scope": ["org"]
     },

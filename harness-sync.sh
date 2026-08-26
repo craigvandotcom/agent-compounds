@@ -379,14 +379,15 @@ render_context_grok() {
   [ "$EN_GROK" = "true" ] || return 0
   [ -d "$GROK_HOME" ] || return 0
   echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
-  local ss dr digest content
+  local ss dr shim digest content
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
   dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
+  shim="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
   if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
-  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
+  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/machine-global-shim.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
 
 # Machine-global rules (Repos fleet)
 
@@ -395,6 +396,10 @@ hook stdout, so this file carries the same canon statically. It applies when
 working anywhere under ~/Repos.
 
 $ss
+
+---
+
+$shim
 
 ---
 
@@ -423,14 +428,15 @@ render_context_opencode() {
   [ "$EN_OPENCODE" = "true" ] || return 0
   [ -d "$OPENCODE_HOME" ] || { echo "  WARN: opencode home $OPENCODE_HOME missing — skipping (opencode not installed?)"; return 0; }
   echo "  -- opencode global rules ($OPENCODE_HOME/AGENTS.md, generated)"
-  local ss dr digest content
+  local ss dr shim digest content
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
   dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
+  shim="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
   if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
-  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
+  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/machine-global-shim.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
 
 # Machine-global rules (Repos fleet)
 
@@ -441,6 +447,10 @@ canon statically. It applies when working anywhere under ~/Repos. Project-level 
 natively from .claude/skills.
 
 $ss
+
+---
+
+$shim
 
 ---
 
