@@ -769,3 +769,87 @@ entries: 35
 - status: open
 - proposed_fix: after a pathspec commit that lint-staged formatted, re-add the matching worktree bytes if `git status` shows MM; do not treat MM as a sibling's WIP.
 - narrative: RUN 20260826-164408-17004 CobaltBeacon — lint-staged prettier-rewrote `features/settings/SettingsForm.tsx` during a successful commit, leaving the file MM (index vs worktree snapshot). A later `git add` of the matching worktree cleared it. On a shared checkout MM after your own commit looks like foreign WIP and can block the next pathspec or the orchestrator rebase.
+
+## baseline-verifies-a-non-binding-dimension-of-its-own-constraint
+- skills: [ac-bead-refine, ac-loop-swarm, beads-standards]
+- impact: L
+- frequency: occasional
+- perceptibility: quiet
+- recurrence: 1
+- related: [refined-spec-staleness-query-ground-truth-first, bead-body-goes-stale-against-its-own-newer-comments]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: a Baseline that guards a fixture must re-derive EVERY guard the fixture must pass, named by the guard's own constant, not one convenient measurable. Prefer asserting the premise inside the test over measuring it in a Baseline -- an in-test assertion cannot go stale silently.
+- narrative: RUN 20260826-150009-78761 bd-dlaqv -- the bead's mandated test fixture was a ten-word ingredient name. `isPlausibleIngredientName` rejects anything over INGREDIENT_NAME_MAX_WORDS=8, so the request 400s at the first guard and the code under test is never reached. The bead's Baseline dutifully re-measured the fixture's CHARACTER count (69) and never its WORD count. The word-count guard had landed at 02:12; the bead's own refine ran at 11:25 the same day, AFTER it, and still missed it -- because the Baseline it re-ran was measuring a real but non-binding dimension. A green Baseline therefore certified a fixture that could not work. Four swarm claims had already bounced off this bead for unrelated reasons, so nobody reached the fixture to find out.
+
+## ubs-reports-phantom-eval-criticals
+- skills: [ac-loop-swarm, debug]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [ubs-summary-counter-and-language-coverage-both-misreport, ubs-heuristic-false-positives-on-non-security-code]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: diff ubs output against the HEAD version of the same file before believing a finding; report the DELTA, never the absolute count. A standing false critical masks a real one.
+- narrative: RUN 20260826-150009-78761 bd-dlaqv -- ubs reports 2 CRITICAL "eval() usage" findings on __tests__/supabase-integration/bd-jx4fa-sourcing-contradiction-repro.test.ts, and `grep -n 'eval('` finds no occurrence in the file at any revision. The criticals ride along at HEAD, so the file's ubs output is permanently noisy and a genuine critical landing there later would not stand out. The implementer only established the finding was pre-existing by scanning the HEAD version in place to get a true delta.
+
+## ubs-does-not-recognise-the-mts-extension
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [ubs-summary-counter-and-language-coverage-both-misreport]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: treat a "no supported languages detected" result on a .mts/.cts file as UNAVAILABLE, not as a pass; ubs lists js as supported but does not map these extensions onto it.
+- narrative: RUN 20260826-150009-78761 orchestrator -- `ubs vitest.config.mts` printed "no supported languages detected" and "UBS did not run any scanner: nothing was checked (this is NOT a pass)", despite js being in its supported list. The .mts extension is not mapped. Same class as the .yml/.sh/.sql gaps but sharper, because the language IS supported and only the extension is unrecognised, so the gap reads as a language limitation rather than an extension oversight.
+
+## prod-build-csp-blocks-the-local-stack-with-no-documented-path
+- skills: [ac-qa-browser, ac-loop-swarm]
+- impact: L
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [playwright-reuseexistingserver-binds-foreign-localhost-3000]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-qa-browser
+- status: open
+- proposed_fix: ship a `scripts/qa/` proxy script and point serve-prod.sh at it; filed as bd-rbb5s. Until then, front-proxy on :4000 routing /auth/v1 /rest/v1 /realtime/v1 /storage/v1 /functions/v1 /graphql/v1 to :54321 and the rest to :3000, with the build's Supabase URL set to the proxy so `connect-src 'self'` covers it.
+- narrative: RUN 20260826-150009-78761 bd-20oz1 -- `next.config.mjs:184-187` widens connect-src to `http://127.0.0.1:*` only when NODE_ENV is development, correctly pinned by `__tests__/security/csp-dev-local-stack.test.ts` so the shipping CSP carries no loopback allowance. serve-prod.sh serves a PRODUCTION build, so its CSP blocks the local stack and the app dies with "Failed to fetch" at login. ac-qa-browser forbids the dev server, so lowering NODE_ENV is not available. Two individually-correct requirements that are jointly unsatisfiable without a proxy, and the proxy is nowhere in the repo.
+
+## dirty-allowlist-prefix-goes-stale-while-a-sibling-edits
+- skills: [ac-loop-swarm, ac-qa-browser]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [shared-tree-half-edits-redden-checks-beyond-the-60s-retry, serve-prod-refuses-a-dirty-tree]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: scope SERVE_PROD_IGNORE_DIRTY by what is OUTSIDE the Next build graph (e.g. all of `__tests__/`), not by the exact paths dirty at the moment of scoping. A narrower prefix is not safer -- it just fails later, mid-build.
+- narrative: RUN 20260826-150009-78761 bd-20oz1 -- the conductor scoped SERVE_PROD_IGNORE_DIRTY to `features/camera/ __tests__/components/`, matching the foreign WIP present at that instant. A sibling implementer then edited `__tests__/unit/expand-compound-on-food-admin.test.ts` mid-run, which the narrower prefix did not cover, and the dirty gate hard-failed the serve. The allowlist had to be widened to `__tests__/` to proceed. On a shared trunk any path-exact allowlist is stale the moment a sibling starts work.
+
+## local-seed-cannot-produce-a-buildable-or-loggable-app
+- skills: [ac-qa-browser, ac-loop-swarm]
+- impact: M
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [prod-build-csp-blocks-the-local-stack-with-no-documented-path]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-qa-browser
+- status: open
+- proposed_fix: make the seed scripts produce at least one build-eligible canonical_ingredient and set the onboarding/subscription columns; folded into bd-rbb5s.
+- narrative: RUN 20260826-150009-78761 bd-20oz1 -- two separate seed gaps blocked a local prod build before any screenshot could be taken. (1) `getAllFoodPageSlugs` returning zero slugs fails the build BY DESIGN (`lib/db/food-pages.ts:323`), and a freshly seeded DB has no eligible canonical_ingredients, so a local row needed a plain_summary plus sign-off before the build would complete. (2) `scripts/seed-insights-test-data.ts` cannot write `public.users` under RLS, so completedOnboarding and subscription_status had to be set by hand in SQL before any authenticated screen would render. Each is one line to describe and many minutes to rediscover.
