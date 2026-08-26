@@ -99,10 +99,21 @@ CLOSED=0
 
 7 COMMIT   Write the message to a file first, then:
            flock -w 600 "$(git rev-parse --git-common-dir)/swarm-commit.lock" sh -c '
+             set -e                                                      # a rejected commit MUST NOT reach the push
+             export AGENT_NAME="'"$NAME"'" BR_AGENT_NAME="'"$NAME"'"     # the guard compares this to the reservation holder
              [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || exit 9   # foreign branch swap
              git add -- <your reserved paths only>
              git commit -F <msgfile> -- <your reserved paths only>
              git push origin main || echo PUSH_REJECTED'
+           `set -e` is load-bearing, not tidiness. Without it a guard-rejected commit falls
+           through to the push, which reports "Everything up-to-date" and exits 0 — you
+           believe you shipped and nothing landed. Verify with `git log --oneline -1`
+           regardless; never trust a bare 0 from this wrapper.
+           Export AGENT_NAME INSIDE the wrapper. `.claude/settings.json` sets a STATIC
+           fallback (`AGENT_NAME=FoggyCreek`) that every shell inherits, so the guard's own
+           "AGENT_NAME is required" check never fires — it silently compares your
+           reservation's holder against the fallback, finds a mismatch, and rejects your
+           commit citing YOUR OWN reservation as a foreign conflict.
            Pathspec on the COMMIT, not just the `add` — `flock` serialises your siblings, not
            the other sessions sharing this checkout, so an unscoped commit still publishes
            whatever else is sitting in the shared index (`commit-discipline.md` § H7d).

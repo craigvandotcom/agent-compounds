@@ -177,39 +177,18 @@ entries: 35
   a command can be unrunnable by prohibition, not only by runner-wrapper narrowing.
 
 ## agent-identity-env-lost-between-tool-calls
-- skills: [ac-loop-swarm]
+- skills: [ac-loop-swarm, agent-mail]
 - impact: L
-- frequency: every-run
-- perceptibility: silent
-- recurrence: 6
-- related: [br-writes-default-to-human-identity]
-- first_seen: 2026-08-22
+- frequency: frequent
+- perceptibility: quiet
+- recurrence: 5
+- related: [commit-message-apostrophe-truncates-the-commit-inside-the-sh-c-wrapper, agent-mail-reservation-must-be-keyed-to-the-committing-identity]
+- first_seen: 2026-07-30
 - last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
-- proposed_fix: exporting in the same command is NOT sufficient — `br` must be given the identity by flag or config, not by inherited environment; never pipe a commit through `tail`.
-- narrative: FIFTH INSTANCE 20260826-164408-17004 — VioletMeadow CLAIM/WORKER comments on artstill-app-1j4f and CobaltBeacon CLAIM/WORKER comments on artstill-app-noot both landed as FoggyCreek; the comment TEXT named the worker. Same root, worker claim-time path this time.
-- narrative: FOURTH INSTANCE 2026-08-24 RUN 20260824-212117-23585 — orchestrator PurpleDune exported AGENT_NAME and BR_AGENT_NAME in the SAME command as `br comments add bd-21ej -f <file>`; comment still landed as FoggyCreek. Same close-out path as instance 3.
-- narrative: THIRD INSTANCE 2026-08-24 — orchestrator exported AGENT_NAME=WildCat BR_AGENT_NAME=WildCat in the SAME command as `br comments add bd-21ej -f <file>` and the comment still landed as FoggyCreek. Same root, close-out path this time rather than a worker claim comment.
-- narrative: SECOND INSTANCE 2026-08-23 — the proposed fix below was applied and did not hold. A
-  worker exported `AGENT_NAME` and `BR_AGENT_NAME` in the SAME command as the `br` call and `br`
-  still wrote the comment as `FoggyCreek`. Every claim comment this run carries the fallback
-  identity, with the real worker name surviving only inside the comment TEXT because the seed
-  happens to spell it there. That is luck, not design. The entry is therefore widened: the root is
-  not merely that shell state is lost between tool calls, it is that `br`'s identity resolution
-  does not reliably read the exported environment even when it is present, so no export discipline
-  can close it. The audit trail the pull-based model depends on to prove who holds a bead is wrong
-  on every entry, and nothing anywhere reports it.
-- narrative: shell state does not survive between tool calls, so an identity exported once in a
-  seed's setup block is absent by the time any later step commits. Two consequences, and only
-  the first is visible. The pre-commit reservation guard does refuse — it writes
-  `AGENT_NAME environment variable is required` to stderr and exits 1 — but the commit recipe
-  pipes through `tail`, and the refusal falls outside the window, so the caller sees staged
-  files, no commit, and no reason. `br` has no such refusal: with the identity unset it writes
-  as the human, silently, so every claim comment a run produces is attributed to the fallback
-  name. The audit trail the pull-based model depends on to prove who holds a bead is therefore
-  wrong on every entry, and nothing anywhere reports it. Truncating a guard's own output is the
-  wider hazard: a check that announces into a discarded stream is a check that is off.
+- proposed_fix: (1) `set -e` in the flock wrapper so a rejected commit cannot reach the push -- DONE 2026-08-26. (2) the guard must resolve identity from the LIVE session, not an env var that can be a stale constant; tracked as a bead. (3) exporting inline on every git call is a workaround, not a fix -- it is enforced only by discipline and its violation is silent, so do not rely on it as the mechanism.
+- narrative: THE SLUG IS A MISNOMER, kept only because other entries reference it. The env is NOT lost. `.claude/settings.json` sets a STATIC fallback `AGENT_NAME=FoggyCreek` that every shell inherits, so the value is always present and always wrong for a worker with a minted identity. The guard (`.husky/_/hooks.d/pre-commit/50-agent-mail.py`) reads it at line 39; its own "AGENT_NAME is required" check at line 40 therefore NEVER fires. At line 152 it compares `holder == AGENT_NAME` -- StormyHeron vs FoggyCreek -- concludes the worker's OWN reservation is a foreign conflict, and rejects the commit. A static fallback silently shadowing a session identity is worse than absence: absence had a loud path, and the fallback routes around it. Compounding it, the flock wrapper was `sh -c` with no `set -e`, so the rejected commit fell through to a push that reported "Everything up-to-date" and exited 0 -- the worker believed it had shipped. Hit two of three swarm workers plus the orchestrator in RUN 20260826-150009-78761, each losing a full ~4-minute pre-push cycle to invisible failure.
 
 ## swarm-doctrine-prescribed-a-guard-blocked-command
 - skills: [ac-loop-swarm]
