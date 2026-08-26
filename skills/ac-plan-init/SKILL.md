@@ -126,12 +126,13 @@ working_since: YYYY-MM-DD
 
 **If the plan ADOPTS existing open beads** (rather than creating new ones at beadify), claim
 them NOW: `br update <id> --status in_progress` on each, plus a comment on their epic
-recording the plan claim. An active ac-loop treats every un-gated open bead as committed
+recording the plan claim. An active loop session treats every un-gated open bead as committed
 work and will ship a divergent fix mid-planning — `br ready` excludes `in_progress`, making
 the claim the only race-proof gate (a concurrent loop once closed 3 adopted beads with
 divergent implementations while the plan was being drafted). Un-gating a
-decision bead makes it instantly loop-eligible: claim it in the same action. Beadify later
-flips claimed beads back to open-with-wave-marker as it adopts each.
+decision bead makes it instantly loop-eligible: claim it in the same action. Beadify's
+adopted-beads step (ac-beadify § Adopt claimed beads) later flips each claimed bead back to
+open — body reconciled to the plan, wired under the plan's epic, relabeled `unrefined`.
 
 ### Signal Active Work (Agent Mail)
 

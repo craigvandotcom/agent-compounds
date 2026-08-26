@@ -981,8 +981,8 @@ AskUserQuestion(
     header: "Loop-ready?",
     multiSelect: false,
     options: [
-      { label: "Loop-ready — run plan-clean first (Recommended)", description: "Run /ac-plan-clean correctness check, then mark loop-ready so ac-loop picks it up" },
-      { label: "Loop-ready — skip clean", description: "Mark loop-ready now — ac-loop will beadify and ship it autonomously" },
+      { label: "Loop-ready — run plan-clean first (Recommended)", description: "Run /ac-plan-clean correctness check next — it stamps loop-ready at its finalize" },
+      { label: "Loop-ready — skip clean", description: "Mark loop-ready now — the sign-off /ac-beadify's status gate accepts; run /ac-beadify on it when ready (nothing auto-consumes loop-ready plans)" },
       { label: "Enhance further", description: "Run /ac-plan-lab (alien mode) — paradigm-breaking alternative perspectives before deciding" },
       { label: "Done for now", description: "Plan saved — mark loop-ready later when you're ready" }
     ]
@@ -990,10 +990,12 @@ AskUserQuestion(
 )
 ```
 
-**If user chose either loop-ready option:** update the plan frontmatter and commit:
+**If user chose "Loop-ready — skip clean":** update the plan frontmatter and commit. (With
+"run plan-clean first", leave status `refined` — `/ac-plan-clean` stamps loop-ready at its
+finalize; stamping before the clean would sign off an unchecked document.)
 
 ```bash
-# Update status to loop-ready (signals ac-loop to pick this plan up)
+# Update status to loop-ready (the sign-off /ac-beadify's status gate accepts)
 # Edit the plan file's YAML frontmatter: status: loop-ready
 git add "$PLAN_FILE"
 git commit -m "docs(plan): mark loop-ready

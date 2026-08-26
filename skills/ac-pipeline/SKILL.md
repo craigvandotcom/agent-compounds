@@ -1,7 +1,7 @@
 ---
 name: ac-pipeline
 disable-model-invocation: true
-description: 'The engineering-pipeline domain skill — TWO lanes: (1) ARCHITECTURE: the canonical design of how work goes from idea to shipped (stage order, each stage''s contract, cross-cutting invariants, standards for changing the pipeline) — read/maintain when DESIGNING or EVOLVING the pipeline; (2) OPERATING CONTRACTS: the owner-hosted runtime canons every ceremony consults (references/: commit-discipline, delegation-contract, run-ledger, run-id, verification-gate, qa-shared, board-scan, risk/consensus/disposition, degraded-mode, shell-guardrails; scripts/: beads-closed-gate, validate-qa-run). Triggers: "pipeline architecture", "change/add a pipeline stage", "pipeline standards", "pipeline contracts", "ac-pipeline". NOT for RUNNING anything it documents: the pipeline (ac-loop), one stage (that stage''s own skill), or a gate/script this skill merely hosts (the calling ceremony fires it).'
+description: 'The engineering-pipeline domain skill — TWO lanes: (1) ARCHITECTURE: the canonical design of how work goes from idea to shipped (stage order, each stage''s contract, cross-cutting invariants, standards for changing the pipeline) — read/maintain when DESIGNING or EVOLVING the pipeline; (2) OPERATING CONTRACTS: the owner-hosted runtime canons every ceremony consults (references/: commit-discipline, delegation-contract, run-ledger, run-id, verification-gate, qa-shared, board-scan, risk/consensus/disposition, degraded-mode, shell-guardrails; scripts/: beads-closed-gate, validate-qa-run). Triggers: "pipeline architecture", "change/add a pipeline stage", "pipeline standards", "pipeline contracts", "ac-pipeline". NOT for RUNNING anything it documents: the pipeline (the runtime conductor, ac-loop-swarm), one stage (that stage''s own skill), or a gate/script this skill merely hosts (the calling ceremony fires it).'
 ---
 
 # ac-pipeline — the engineering-pipeline domain (architecture + operating contracts)
@@ -96,10 +96,12 @@ Sophistication is balancing opposites. Each tension has a named mechanism that r
 
 ## Two conductors, one chain
 
-- **`ac-loop` = the machine.** The single runtime conductor. Selects work (orphans → plan
-  waves), runs the back-of-funnel chain, handles ARIA / Slack / scheduling / stop-conditions.
-  Works both headless (scheduled) and interactive (terminal). Consults this doctrine for
-  order + gates.
+- **The runtime conductor = the machine.** Today `ac-loop-swarm`: pulls ready `refined`
+  beads and drives them to closed on main (trunk-direct). Its predecessor `ac-loop`
+  (retired → `_archive/skills/ac-loop/`) also selected work at plan altitude (orphans →
+  plan waves) — that selection layer has NO live successor: `loop-ready` plans do not get
+  picked up automatically; beadify them by direct `/ac-beadify` invocation. The conductor
+  consults this doctrine for order + gates.
 - **`ac-pipeline` = the blueprint.** This file. Design, audit, evolve the pipeline.
 - **`ac-tidy` / `ac-align` = the scheduled propose-half.** Both gain a headless mode (nightly
   tidy, weekly align REVIEW) that *emits proposals* (dream-style `human-gate` beads) on a
@@ -119,7 +121,7 @@ the wrong thing costs a wave.
 ## The canonical chain
 
 ```
-   (human-gated, invoke directly)            (conducted by ac-loop)
+   (human-gated, invoke directly)      (conducted by the runtime conductor)
 ac-align → ac-plan-init → ac-beadify ┃ implement → verify → review → merge → land
 ```
 
@@ -148,12 +150,12 @@ the human-gated apply; the chain above shows the apply half, which stays human-g
 
 Axiom 4's outer loop (product compounds) decomposes operationally into **three concurrent
 loops at different cadences and altitudes**. All three converge on beads (axiom 1) and are
-consumed by the same single conductor (`ac-loop`) — they differ in *what puts work on the
-board* and *how often*.
+consumed by the same single conductor (the runtime conductor — today `ac-loop-swarm`) —
+they differ in *what puts work on the board* and *how often*.
 
 | Loop | Altitude | Cadence | Puts work on the board via | Skills |
 |---|---|---|---|---|
-| **1 · Dev loop** | Build what we decided to build | Continuous (per human session / loop run) | human intent: strategy → plans → waves | `ac-align → ac-plan-* → ac-beadify` ┃ `ac-loop` conducts implement → verify → review → merge → land |
+| **1 · Dev loop** | Build what we decided to build | Continuous (per human session / loop run) | human intent: strategy → plans → waves | `ac-align → ac-plan-* → ac-beadify` ┃ the runtime conductor drives implement → verify → review → merge → land |
 | **2 · Triage loop** | Fix what reality reports | Scheduled daily (≥30 min before any loop run) | production signal: Sentry, TestFlight/ASC feedback, feedback reports (Supabase logs, PostHog, store reviews — planned) → defect beads / backlog candidates | `ac-triage` (inbound counterpart of `ac-distribute`) |
 | **3 · Audit loop** | Harden what we built | Periodic, human-triggered today (target: recurring — cadence TBD) | proactive senior-engineer sweeps: severity-scored findings → beads (epic → child beads, per the `ac-hygiene` pattern) | `audit` (security · performance · tests · qa · ui) + `ac-hygiene` (reuse/simplification) |
 
@@ -346,8 +348,9 @@ Concurrent pipeline ceremonies share one app checkout (no worktrees between cere
 
 - **Edit the spec first.** Change the chain *here*, then bring the stage skills into
   conformance — never the reverse.
-- **One runtime conductor.** `ac-loop`. Don't grow a second. If a stage's order changes, it
-  changes here once; the conductor reads it.
+- **One runtime conductor.** Today `ac-loop-swarm` (`ac-loop` retired → `_archive/skills/`).
+  Don't grow a second. If a stage's order changes, it changes here once; the conductor
+  reads it.
 - **Stay thin / map not territory.** This doc names stages and gates; it never restates a
   stage's internal logic. Selection logic lives in `ac-pipeline/references/verification-gate.md`; QA method
   in `ac-pipeline/references/qa-shared.md`; session teardown in `ac-land` Phase 4 (a shared

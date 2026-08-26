@@ -259,15 +259,38 @@ This label is removed by `/ac-bead-refine` when convergence is reached.
 
 Every epic ac-beadify creates also gets a `plan-<slug>` label, where `<slug>` derives from
 the plan filename (kebab-case, **no slashes** — `br` rejects them). This is the **join
-key** the loop's plan-completion gate reads to know which epics belong to one plan — this
-bead is the producer that DEFINES the label format; the gate that consumes it lives in
-`ac-loop`.
+key** that ties epics to one plan — this bead is the producer that DEFINES the label
+format. Live consumer today: beadify's own existence-probe (idempotency/dedup,
+`references/existence-probe.md`). The plan-completion gate that also read it lived in the
+retired conductor (`_archive/skills/ac-loop/`) — keep stamping; the label is the canonical
+plan↔epic join for any future gate.
 
 ```bash
 # slug from the plan filename, e.g. 2026-07-12-bead-io-contract.md -> 2026-07-12-bead-io-contract
 PLAN_SLUG=$(basename "$PLAN_FILE" .md)
 br label add <epic-id> "plan-${PLAN_SLUG}"
 ```
+
+### Adopt claimed beads the plan carries
+
+If the plan ADOPTS existing beads (claimed `in_progress` at plan time — ac-plan-init
+§ Mark Active Work), this step is the consumer side of that claim. For each adopted bead:
+
+1. **Reconcile the body to the plan's version** — the plan may have redesigned the bead;
+   update its ACs / `## Delivers` / `## Consumes` to match the plan before releasing it.
+2. **Wire it into the plan's structure** — parent it under (or `br dep add` it to) the
+   matching epic so it carries the plan's dependency shape.
+3. **Release the planning claim and route it through refine:**
+
+```bash
+br update <id> --status open
+br label add <id> "unrefined"
+br comments add <id> "Adopted by plan ${PLAN_SLUG} (epic <epic-id>) — body reconciled at beadify"
+```
+
+Order matters: wire BEFORE releasing, so the bead is never simultaneously unclaimed and
+unwired (an open, unwired bead is instantly eligible for a concurrent session to ship
+divergently — the race the plan-time claim exists to prevent).
 
 ### Fork-check — wire open human-gate beads that gate the new beads
 
@@ -287,9 +310,10 @@ half, wiring at decision-creation, is `beads-standards`' existing mandatory-wiri
 3. Re-run cycle detection (`br dep add` does NO cycle prevention — `beads-standards`
    § br gotchas): `br dep cycles` must return clean.
 
-Manual beadify outside the loop stays a human-judgment override: this step surfaces the
-forks and wires the obvious edges, but adds **no gate CHECK** here — the plan-completion
-gate itself lives in `ac-loop`.
+Manual beadify stays a human-judgment override: this step surfaces the forks and wires the
+obvious edges, but adds **no gate CHECK** here — the plan-completion gate lived in the
+retired conductor (`_archive/skills/ac-loop/`); today nothing re-checks after beadify, so
+the wiring done here is the enforcement.
 
 ### Create Commands Reference
 
