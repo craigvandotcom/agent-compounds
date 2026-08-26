@@ -1,8 +1,8 @@
 ---
 skill: ac-bead-refine
 created: 2026-07-22
-last_pass: 2026-08-21
-entries: 28
+last_pass: 2026-08-26
+entries: 29
 ---
 
 # ac-bead-refine — friction log
@@ -504,3 +504,37 @@ entries: 28
   run: the hook `use-form-submission` has TWO test suites in different directories, so a
   manifest naming one of them reads as complete while leaving the other to fail downstream.
   A hand-listed manifest is a memory test; a grep is a measurement. Source bead: bd-xo7c9.
+
+## refine-mints-beads-that-launder-unproven-premises
+- skills: [ac-bead-refine]
+- impact: H
+- frequency: occasional
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+
+- trigger: during a refine run the conductor spun bd-jxj42 out of bd-q7h0e to carry a
+  "discharged" diagnosis forward, and Craig pushed back — "I don't know why you're creating
+  new beads during the bead."
+- cost: bd-jxj42 was filed with FIVE inherited claims and all five were false: wrong mechanism
+  (named a guard the code path never reaches), "already discharged — do not re-derive" (the
+  parent had explicitly written "plausible... unproven"), a regression window that predated the
+  code by five weeks, two bisect commits touching neither relevant file, and an unverified row
+  count. Repairing it took 3 rounds and 6 reviewers — more than the original diagnosis cost.
+  Two further errors were found inside the conductor's own corrections, including a wrong file
+  citation from a loose grep + `head -1`.
+- root: two compounding gaps. (1) The skill had bead-CREATION mechanics (the split block) but no
+  rule on WHEN NOT to create, so reviewers proposed new beads reflexively. (2) Nothing governed
+  the EPISTEMIC status of what a child inherits — the act of filing launders a parent's
+  hypothesis into settled fact, and the child then reads as agent-ready. A bead minted mid-run
+  also never enters target-bead-ids.txt, so it skips the run's own rounds while the run reports
+  success.
+- proposed_fix: APPLIED 2026-08-26. workflow.md gains a "CREATING A BEAD DURING REFINE" ladder
+  (fold in › record + surface › file; default DON'T) with a PREMISE INHERITANCE rule — carry the
+  parent's hedge verbatim, and an inherited claim may sit in a binding section only if
+  re-verified against HEAD this run; the title counts as a binding claim. Dedup strengthened from
+  one grep to a full multi-noun sweep. Both round and final reports now name beads the run
+  created as unreviewed artifacts ("none" is the good answer). SKILL.md carries a pointer row.
+- narrative: this is the bead-scale twin of [[refine-lenses-sharpen-specs-not-premises]] — lenses
+  optimise the answer inside a frame and never audit the frame. What actually caught it was
+  prompting reviewers to FALSIFY rather than review; that framing is what the new rule
+  institutionalises.

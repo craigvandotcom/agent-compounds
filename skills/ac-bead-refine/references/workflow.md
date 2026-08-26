@@ -545,11 +545,40 @@ br label add <id> "new-label"
 # this repo while open, not a per-bead "blocked" marker. For a single bead, use a
 # `blocks` dependency — never this label.
 
+# ------------------------------------------------------------------------------
+# CREATING A BEAD DURING REFINE - default is DON'T
+# ------------------------------------------------------------------------------
+# Refine outputs refined beads. A bead minted mid-run is absent from
+# target-bead-ids.txt, so it never enters the rounds and never earns a stamp: the run
+# emits an unreviewed artifact. Mint only on the last rung.
+#
+#   1. FOLD IN. Belongs to a bead already in scope -> add a Delivers line or an AC there.
+#   2. RECORD + SURFACE. Outside this bead's territory -> add a
+#      "## RELATED - NOT THIS BEAD'S TERRITORY" section and name it in the run report.
+#      The human decides. Recording is not dropping.
+#   3. FILE. Only when rungs 1 and 2 would LOSE the work - a split child, or a successor
+#      carrying a discharged finding forward.
+#
+# PREMISE INHERITANCE. Filing launders a parent's hypothesis into settled fact.
+#   * Carry the parent's hedge verbatim. Never assert "discharged" for a claim the parent
+#     did not discharge.
+#   * An inherited claim may occupy a binding section (ACs, Delivers, Consumes, Territory,
+#     Declared RED, repro steps, bisect candidates, counts) only when re-verified against
+#     HEAD this run. Otherwise demote to `## Approach (advisory)` or label UNVERIFIED.
+#   * The title is a binding claim.
+#
+# DEDUP before filing. Sweep every salient noun in the proposed title, not one keyword;
+# grep bodies too. A duplicate filed by refine is refine's own defect.
+#
+# Anything filed: label `unrefined` + `origin:ac-bead-refine`, wire its provenance edge,
+# and name it in the run report as an unreviewed artifact. Never stamp a bead this run
+# created.
+
 # Split a bead that's too large
 # Split rule: partition the original's ## Delivers across the children — nothing
 # dropped (bead-conventions §Bead I/O contract); re-point downstream beads'
 # Consumes lines at the new child IDs that now own those artifacts.
-# Dedup first: br list --json | grep -i "<keyword>". Set -t (task/bug/investigation).
+# Dedup first — the full sweep above, not one keyword. Set -t (task/bug/investigation).
 # Split children inherit the epic's domain <epic-domain-label>; author must set it.
 # unrefined routes each child back through refinement rather than treating it as refined.
 br create "Split: first half" -t <type> --parent <epic-id> --priority P0 --labels origin:ac-bead-refine,<epic-domain-label>,unrefined --description "..."
@@ -568,7 +597,10 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 - **Findings:** {count} total ({Critical} Critical, {High} High, {Medium} Medium)
 - **Changes applied:** {count} ({list bead IDs + brief change description})
 - **Dependencies added/removed:** {count}
-- **Structural changes:** {splits, new beads, merges — or "none"}
+- **Structural changes:** {splits, merges — or "none"}
+- **Beads created this run (unreviewed):** {ids + why rungs 1 and 2 would have lost the
+  work - or "none"}. Absent from `target-bead-ids.txt`, unstamped; each needs its own
+  refine pass. "none" is the expected answer.
 - **Consensus areas:** {where agents agreed}
 - **Trajectory:** {assessment} -> {continue|finalize}
 ```
@@ -972,6 +1004,8 @@ Found: {total} across {CURRENT_ROUND} rounds
 - Ready to implement: {count} (`br ready --json`)
 - Total beads: {count}
 - Blocked: {count}
+- **Created by this run, left `unrefined`: {count}** - list ids. A non-zero count is a
+  cost to justify.
 
 ### Next Steps
 
