@@ -2,7 +2,7 @@
 skill: ac-bead-refine
 created: 2026-07-22
 last_pass: 2026-08-26
-entries: 29
+entries: 33
 ---
 
 # ac-bead-refine — friction log
@@ -538,3 +538,55 @@ entries: 29
   optimise the answer inside a frame and never audit the frame. What actually caught it was
   prompting reviewers to FALSIFY rather than review; that framing is what the new rule
   institutionalises.
+
+## cross-ac-self-contradiction-when-bead-defines-rule-and-declares-violation
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: rare
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: add a cross-AC consistency check to the reviewer prompts — after per-element verification, ask "can every AC and the bead's own validation claim be true SIMULTANEOUSLY at the state this bead ships?"; a bead that both defines a pass/fail rule and honestly declares a currently-failing state needs an explicit pending/exemption bucket or its ACs contradict its own success claim.
+- narrative: RUN 20260826-230057-6915, ac-on0y.4 — AC2 said "blocking + fail-open = lint failure" while AC4 required trauma_guard (blocking, truthfully fail-open) to carry a "conforming declaration" and Test Scope promised "lint green after landing". Unsatisfiable by construction; passed every anchor/baseline/element check in two rounds; caught round 3 by all three reviewers at once. Fix was a self-expiring PENDING-DECISION escape keyed to an open decision bead.
+
+## freshness-field-acs-need-a-verified-write-path-and-write-cadence
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: rare
+- recurrence: 2
+- related: []
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: for every AC that READS a timestamp/freshness/last-visited field, refine must verify (1) a write path exists — grep for an assignment/stamp site, not just the schema definition — and (2) the write fires on the CADENCE the AC's distinction needs — re-read the cited write-site's surrounding prose, not just grep the term.
+- narrative: RUN 20260826-230057-6915, ac-on0y.3 — the staleness AC keyed on FRICTIONS.md last_pass, a field defined in the schema that NO mechanism writes (caught round 4 by cold-starting the mechanism). The round-4 fix then piggybacked the stamp on dream's status-flip, which fires only at REVIEW apply — interactive, "rarely runs", promoted-entries-only — which would leave visited-but-unpromoted ledgers stale forever (caught round 5 by reading the flip site's prose). Two distinct verification layers: existence, then cadence.
+
+## ci-executed-checks-need-tool-and-trigger-tracing-to-the-exact-job
+- skills: [ac-bead-refine]
+- impact: M
+- frequency: rare
+- recurrence: 2
+- related: []
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: when a bead adds logic to a script that CI executes, refine verifies (1) every tool the logic shells out to exists IN THE JOB that runs the script (GH Actions jobs are isolated VMs — a sibling bead provisioning the tool in its own job proves nothing), and (2) the workflow's trigger paths include the inputs whose changes the logic must react to (a check that never re-runs on the mutation it gates is a gate that cannot fire).
+- narrative: RUN 20260826-230057-6915, ac-on0y.4 twice — the PENDING-DECISION resolver first specified `br show` (a locally-installed Mach-O absent from ubuntu-latest; fixed by parsing committed .beads/issues.jsonl with preinstalled jq), and then its self-expiry had no trigger (registry-lint.yml paths filters exclude .beads/**, so closing the cited decision bead never re-ran the check). Both invisible to anchor/baseline verification; found by reading the workflow YAML's trigger block and tracing job boundaries.
+
+## baseline-pasted-from-truncated-read-records-false-verified-claim
+- skills: [ac-bead-refine]
+- impact: S
+- frequency: rare
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-bead-refine
+- status: open
+- proposed_fix: a Baselines line quoting file content must come from a FULL read of the relevant block (or the whole file), never a head-limited peek; and every round that touches a bead re-diffs its pasted Baselines against live output — not against the prior finding's prose.
+- narrative: RUN 20260826-230057-6915, ac-on0y.4 — the conductor's `sed -n 1,15p` peek at registry-lint.yml cut the pull_request paths list mid-block, and the 2-item misreading was transcribed into the bead as an executed, verified baseline. Survived one full round; caught in round 5 only because a reviewer re-derived the baseline independently via git log --follow. Same class the epic itself targets: a verified-looking claim that verified nothing.
