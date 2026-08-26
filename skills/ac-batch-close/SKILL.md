@@ -15,7 +15,7 @@ advances the batch mark. Fired once per batch, not per commit.
 
 |                  |                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------ |
-| **Input**        | `main`, with implementation commits already pushed directly since the last batch anchor (no branch, no PR) |
+| **Input**        | `main`, with implementation commits already pushed directly since the last batch anchor (no branch, no PR); optionally the callers' aggregated `unverified_tiers` |
 | **Output**       | Tier 1 CI confirmed for the batch, batch report committed, batch mark advanced, in-scope `triage,feedback` beads marked `fixed_pending_release` |
 | **Not in scope** | Version bump/tag, deploy verification, the 6-dim review panel (all `ac-publish`) |
 | **Artifacts**    | Batch-close summary in `.claude/reviews/batch/`, scratch in `$ARTIFACTS_DIR`                |
@@ -365,6 +365,23 @@ done
 echo "$MATCH" >> "$ARTIFACTS_DIR/dispatch-run.json"
 ```
 
+### Step-level execution assertion — a run conclusion is a JOB verdict, not a step verdict
+
+`quality-gate.yml` is one consolidated job of ~30 steps; a step lacking `if: ${{ !cancelled() }}`
+is silently skipped once an earlier step fails, so `.conclusion=="success"` above can be true
+while a whole declared tier never ran. Enumerate skipped steps and gate every tier the workers
+declared in `unverified_tiers` (the aggregated union `ac-loop-swarm` passes in — no longer just
+printed to a human):
+
+```bash
+gh run view "$RUN_DB_ID" --json jobs \
+  | jq -r '.jobs[].steps[] | select(.conclusion=="skipped") | "SKIPPED: \(.name)"'
+```
+
+Any `unverified_tiers` entry whose step is not in the executed set → `NOT GATED (<tier>)` in the
+Report below, regardless of the run's own conclusion. Never absorb a declared-unverified tier
+into "CI green" because the run happened to succeed.
+
 ### Triage on failure (same core-work rule as ac-merge)
 
 **THIS IS YOUR CORE WORK. Do not delegate triage.** Source of findings here is the dispatch
@@ -564,7 +581,8 @@ Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
 
 ### Tier 1 CI
 {run URL} — {green | fixed after N rounds}, or `NOT GATED (<reason>)` when neither Act 1
-branch (i) nor (ii) held. "green" asserts a gate that EXECUTED — never a skipped one.
+branch (i) nor (ii) held. "green" asserts a gate that EXECUTED — never a skipped one, at run
+OR step level. List any `NOT GATED (<tier>)` from the step-level assertion above.
 
 ### Feedback write-back
 {N} rows marked fixed_pending_release ({M} warnings)

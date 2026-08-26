@@ -187,8 +187,13 @@ before `db push`. **Tier the discipline by blast radius — don't gate everythin
 
 | Migration class | Gate |
 | --- | --- |
-| RLS / privilege / `GRANT` · destructive (`DROP`, type changes) · data backfill | **REQUIRED** — local-validate must pass before `db push` |
+| RLS / privilege / `GRANT` · destructive (`DROP`, type changes) · data backfill · **any function/procedure signature change** (adding/removing/reordering parameters, including DEFAULTed ones) | **REQUIRED** — local-validate must pass before `db push`. The migration's own self-classification (e.g. "purely additive") never waives this row. |
 | Additive + reversible (nullable column, new index, new table no one reads yet) | **Optional** — direct-to-prod-with-PITR is acceptable; forcing ceremony here is process for its own sake |
+
+A signature change discharges its REQUIRED row only with a rollback receipt (apply inside
+`BEGIN; … ROLLBACK;` against a real database, paste the result) — a "verified" comment naming no
+command is recall, not a receipt. `CREATE OR REPLACE FUNCTION` trap + the exact command:
+per-app in `CORE/supabase.md`.
 
 **Apply-timing (WHEN to push — `rule-migrations-expand-contract`):** EXPAND (additive) is pushed
 **before/at the merge** of the code that depends on it (web deploys at merge against live prod

@@ -101,8 +101,11 @@ CLOSED=0
            flock -w 600 "$(git rev-parse --git-common-dir)/swarm-commit.lock" sh -c '
              [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || exit 9   # foreign branch swap
              git add -- <your reserved paths only>
-             git commit -F <msgfile>
+             git commit -F <msgfile> -- <your reserved paths only>
              git push origin main || echo PUSH_REJECTED'
+           Pathspec on the COMMIT, not just the `add` — `flock` serialises your siblings, not
+           the other sessions sharing this checkout, so an unscoped commit still publishes
+           whatever else is sitting in the shared index (`commit-discipline.md` § H7d).
            `-F <msgfile>`, never inline `-m`: an apostrophe in the body closes the wrapper's
            quote, truncating the commit and skipping the push at exit 0.
            NEVER `.git/<name>.lock` — `.git` is a FILE in every neoMeta app (submodule), so

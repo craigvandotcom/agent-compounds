@@ -45,6 +45,13 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
    `Monitor`-armed-then-exit turn end ("await the completion event") needing
    coordinator pokes; a foreground until-loop with generous Bash timeouts was
    the fix both times.
+6. **A reservation is keyed to the name that will COMMIT.** The pre-commit guard resolves
+   the committer from `AGENT_NAME`, so a reservation you (the conductor) hold under your own
+   name blocks a child committing under its own handed name — a self-block that reads like a
+   foreign-agent conflict. If the child will commit, reserve with
+   `file_reservation_paths(agent_name: "<child's AGENT_NAME>")` — the name you minted and
+   pasted into its preamble, never your own. Canon on which sessions reserve under which name:
+   `agent-mail/references/agent-identity.md` § Tier 1.
 
 **Applies to:** any `ac-*` skill that spawns background agents and continues —
 notably `ac-review` (parallel reviewers) and `ac-merge` (waiting on PR

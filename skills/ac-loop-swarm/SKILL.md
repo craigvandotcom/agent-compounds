@@ -65,20 +65,39 @@ transcripts, do not work beads yourself.
    `br update <id> --status open --assignee "" --json` + comment
    `"Orphaned by dead worker <actor> run <RUN_ID>"`. `force_release_file_reservation` for
    each worker that returned no report.
-2. **Reconcile git.** If `git log origin/main..HEAD` is non-empty: commit the ledger (step 3),
-   then `git rebase origin/main && git push`. Never stash — `neometa.stashguard` blocks the
-   plain and the scoped form alike. Foreign WIP blocking the rebase, or a conflict →
-   `_docs/runbooks/beads-ledger-recovery.md`; exhausted → `human-gate` bead (`Gate-reason: action`).
-3. **Ledger — the one commit.** Workers close beads in the shared `beads.db` only.
+2. **Reconcile git — import origin's ledger BEFORE flushing.** `git fetch origin main`. If
+   `origin/main` carries commits HEAD lacks, the DB must absorb origin's ledger first — flushing
+   from a DB that never imported it silently reverts every row origin's commits touched, and the
+   superset guard cannot catch this because it baselines on local HEAD, which is stale by
+   construction here.
+   ```bash
+   git show origin/main:.beads/issues.jsonl > .beads/issues.jsonl
+   RUST_LOG=error br sync --import-only
+   ```
+   Verify by arithmetic (`Created`/`Updated`/`Skipped`), not by eye —
+   `_docs/runbooks/beads-ledger-recovery.md`. THEN land the code commits:
+   `git rebase origin/main && git push`. Never stash — `neometa.stashguard` blocks the plain and
+   the scoped form alike. Foreign WIP blocking the rebase, or a conflict →
+   `_docs/runbooks/beads-ledger-recovery.md`; exhausted → `human-gate` bead
+   (`Gate-reason: action`). If a graft is unavoidable for the code commits, graft code files
+   only — never `.beads/issues.jsonl` (see step 3).
+3. **Ledger — the one commit, always a normal `git commit`.** Workers close beads in the shared
+   `beads.db` only.
    ```bash
    RUST_LOG=error br sync --flush-only
    git add -- .beads/issues.jsonl
    git commit -m "chore(beads): ac-loop-swarm RUN <RUN_ID> ledger [no-bead]"
    git push
    ```
-   A husky beads guard firing here is a stop: report, never bypass.
-4. **Batch CI.** Invoke `ac-batch-close` in a fresh sub-session. Clean-HEAD CI is the only
-   authoritative test signal for the run; workers ran scoped checks only.
+   A husky beads guard firing here is a stop: report, never bypass. **Never land the ledger via
+   `commit-tree`/graft** — that path is plumbing and runs none of the five pre-commit guards
+   (gitleaks, ledger-superset, comment-ids, gate-label, identity-artifacts), so a grafted ledger
+   is an unguarded ledger.
+4. **Batch CI.** Invoke `ac-batch-close` in a fresh sub-session, passing the run's aggregated
+   `unverified_tiers` (union across all workers' exit JSON). Clean-HEAD CI is the only
+   authoritative test signal for the run; workers ran scoped checks only. Any declared tier whose
+   steps did not actually execute comes back `NOT GATED (<tier>)`, never absorbed into "CI green"
+   (`ac-batch-close/SKILL.md` § Act 1).
 5. **Report** to `.claude/reports/ac-loop-swarm-<RUN_ID>/report.md` and the human: closed ·
    blocked · gated · premise-failed · unverified-tiers · orphaned · unpushed-reconciled · CI run URL ·
    per-worker counts. Route each worker's `discoveries` through `ac-bead-capture` and its

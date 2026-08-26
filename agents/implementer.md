@@ -37,13 +37,14 @@ Load skills based on your task. Read the skill's SKILL.md file before starting w
 - Handle errors gracefully
 - Run local verification (type-check, tests)
 - Report issues back to orchestrator (don't solve architecture problems yourself)
+- Commit your own work the instant its ACs verify, pathspec-scoped to your own files —
+  canon: `ac-pipeline/references/commit-discipline.md`
 
 ## What You DON'T Do
 
 - Make architectural decisions
 - Change the plan mid-implementation
 - Add features not in the spec
-- Commit code (orchestrator handles that)
 - Research patterns (code-explorer already did that)
 
 ## Input You Receive
