@@ -1,7 +1,7 @@
 
 Consensus + auto-apply cascade per `ac-pipeline/references/review-consensus.md` (cite, never fork).
 
-**You are the conductor.** Three Sonnet reviewers check plan correctness independently. You track consensus across rounds and apply fixes. This is a hygiene pass — targeted edits, not a rewrite.
+**You are the conductor.** Four Sonnet reviewers check plan correctness independently. You track consensus across rounds and apply fixes. This is a hygiene pass — targeted edits, not a rewrite.
 
 Run this as the final step before implementation. The plan's strategy and architecture are already settled; you're checking that the document is accurate, consistent, and clean.
 
@@ -20,11 +20,30 @@ Run this as the final step before implementation. The plan's strategy and archit
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
+CURRENT_BRANCH=$(git branch --show-current)
+```
+
+**Plans always commit to main.** If on a wave branch, switch to main before doing any git work:
+
+```bash
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "On branch $CURRENT_BRANCH — switching to main (plans are docs, never branch work)"
+  git checkout main
+  git pull --rebase --autostash
+fi
 ```
 
 ### Identify Plan File
 
 `PLAN_FILE`: Check argument, then `_plans/*.md`, then `PLAN.md` in project root. If none found, STOP: "No plan found. Provide a path or run /ac-plan-init first."
+
+### Entry Status Gate
+
+Read the plan's frontmatter `status`. Expected: `approved` or `refined` (or `loop-ready` for a
+re-clean) — the same set `/ac-beadify`'s own status gate accepts. If `draft`, missing, or
+`in_progress` with a `working_skill` marker (another skill is mid-flight on this plan), STOP
+and confirm with the user before proceeding — cleaning an unapproved or actively-worked plan
+wastes the pass.
 
 ### Skill Routing
 
@@ -83,7 +102,7 @@ Update the plan file's frontmatter to signal this skill is running:
 ```yaml
 ---
 status: in_progress
-working_skill: plan-clean
+working_skill: ac-plan-clean
 working_since: YYYY-MM-DD
 ---
 ```
@@ -167,7 +186,7 @@ sections only — keep it ~5 fixed + rounds.
 
 <!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
 
-**Conductor: paste the block below VERBATIM at the head of EACH of the three `Task(...)`
+**Conductor: paste the block below VERBATIM at the head of EACH of the four `Task(...)`
 prompts in this file, above its `First: read AGENTS.md` line, substituting the child's
 minted `AGENT_NAME`.** It is the child-side environment contract and a pointer to it is
 explicitly insufficient (canon § Child-spawn preamble) — a preamble that stays in this
@@ -198,9 +217,9 @@ ENVIRONMENT CONTRACT (non-negotiable):
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
-### Phase 1: Spawn 3 Reviewers (parallel)
+### Phase 1: Spawn 4 Reviewers (parallel)
 
-**All 3 agents in a single message for parallel execution.** Each writes findings to `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`.
+**All 4 agents in a single message for parallel execution.** Each writes findings to `$ARTIFACTS_DIR/round-{CURRENT_ROUND}-{role}.md`.
 
 **Agent 1: Verifier (Sonnet)**
 
@@ -208,7 +227,7 @@ ENVIRONMENT CONTRACT (non-negotiable):
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 First: read AGENTS.md for project context and conventions.
 
-You are verifying plan ACCURACY against the actual codebase. You compete with 2 other reviewers — only evidence-backed findings count.
+You are verifying plan ACCURACY against the actual codebase. You compete with 3 other reviewers — only evidence-backed findings count.
 
 ## Plan
 
@@ -225,6 +244,10 @@ Cross-reference the plan's claims against reality. Extract file paths, function 
 - External library APIs assumed incorrectly (wrong method names, wrong parameters)
 - Version-specific features assumed but not available in installed version
 - Internal plan references that point to wrong sections
+- Work already shipped: `git log --oneline --since=<plan date>` — a plan that sat for days may
+  describe changes that have since landed; flag sections whose work is already done
+- Design-reference paths cited in the plan (`docs/design-refs/…` per
+  `ac-pipeline/references/design-refs.md`) that don't exist on disk
 
 Use your judgment — if something seems inaccurate, verify it.
 
@@ -250,7 +273,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 First: read AGENTS.md for project context and conventions.
 
-You are auditing plan STRUCTURE and LOGIC. You compete with 2 other reviewers — only evidence-backed findings count.
+You are auditing plan STRUCTURE and LOGIC. You compete with 3 other reviewers — only evidence-backed findings count.
 
 ## Plan
 
@@ -296,7 +319,7 @@ If nothing found, say so — don't invent issues.
 Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
 First: read AGENTS.md for project context and conventions.
 
-You are checking plan HYGIENE and CLARITY. You compete with 2 other reviewers — only evidence-backed findings count.
+You are checking plan HYGIENE and CLARITY. You compete with 3 other reviewers — only evidence-backed findings count.
 
 ## Plan
 
@@ -334,17 +357,74 @@ If nothing found, say so — don't invent issues.
 """)
 ```
 
-**Wait for all 3 agents to complete. Read their output files.**
+**Agent 4: Bead-fit (Sonnet)**
+
+```
+Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
+First: read AGENTS.md for project context and conventions.
+
+You are checking BEADIFY-READINESS — whether this plan converts cleanly into well-formed beads at /ac-beadify. You compete with 3 other reviewers — only evidence-backed findings count.
+
+Load the bead canon before judging: the `beads-standards` skill — its SKILL.md (human-gate template, labels, priorities) and its reference/bead-conventions.md (§ Bead I/O contract, sizing, epic rules). Do not invent conventions.
+
+## Plan
+
+{Read and include PLAN_FILE content}
+
+## Your Method
+
+Read the plan as the beadify conductor would: can each implementation step become a self-contained bead an agent can execute WITHOUT the original plan in hand? Where the plan references live beads, verify against the board — read-only (`br show <id> --json`, `bv --robot-*` flags only; never bare `bv`).
+
+## Examples of What to Look For (not exhaustive)
+
+- Oversized steps: one step touching >5 files or mixing >2 concerns (or backend+frontend) with no
+  natural split point — one bead = one agent session
+- Untraceable data flow: a phase's outputs not nameable as concrete artifacts
+  (file | endpoint | migration | schema | doc | decision | config) — beadify derives each bead's
+  `## Delivers` / `## Consumes` contract from this; prose like "update the settings flow" gives it
+  nothing to bound Territory with
+- Cross-phase ordering justified only strategically: ordering between phase groups with no consumed
+  artifact behind it (epics never block epics — a beadify trap)
+- Un-gated human forks: "needs a decision" / "ask Craig" notes not shaped for the human-gate
+  template (Gate-reason: fork | authorization | intent | action, with the DECISION/ACTION card
+  fields) — an unmarked note won't convert into a valid human-gate bead
+- Unfalsifiable "Done when": success criteria that can't convert to acceptance criteria with a
+  nameable check (a real file/describe anchor for Test Scope)
+- Adopted beads unclaimed: plan references existing bead IDs — verify each exists and is claimed
+  (`status: in_progress` + a claim comment on its epic); an unclaimed adopted bead is exposed to a
+  concurrent loop shipping a divergent fix
+- Duplication with the live board: the plan re-plans work an open bead already covers (should adopt,
+  not recreate)
+- Priority inflation: P0/P1 assigned to steps that don't meet the admission tests
+  (P0 = production broken NOW; P1 = no workaround)
+
+## Output
+
+Write findings to {ARTIFACTS_DIR}/round-{CURRENT_ROUND}-beadfit.md
+
+For each finding:
+## Finding N: Title
+**Section:** Which plan section
+**Issue:** What blocks or degrades clean bead conversion
+**Evidence:** Quote the plan text; for board checks, the bead ID + its actual state
+**Fix:** The specific plan edit needed
+
+Limit: top 7 findings. Under 400 words. Only report bead-conversion issues — don't flag accuracy, logic, or style.
+If nothing found, say so — don't invent issues.
+""")
+```
+
+**Wait for all 4 agents to complete. Read their output files.**
 
 ### Phase 2: Synthesize with Consensus Tracking
 
 **THIS IS YOUR CORE WORK. Do not delegate synthesis.**
 
-Read findings from all 3 agents. For each finding, determine its consensus status:
+Read findings from all 4 agents. For each finding, determine its consensus status:
 
 #### Step 1: Classify Each Finding
 
-For every finding across all 3 agents:
+For every finding across all 4 agents:
 
 1. **Same-round consensus:** 2+ agents flagged the same issue (same section, same underlying problem) in this round → **auto-apply**
 2. **Cross-round consensus:** Check the consensus registry — was this same issue flagged by any agent in a previous round? If yes → **auto-apply**
@@ -378,7 +458,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 ```markdown
 ### Round {CURRENT_ROUND}
 
-- **Findings:** {count} total (Verifier: {n}, Auditor: {n}, Editor: {n})
+- **Findings:** {count} total (Verifier: {n}, Auditor: {n}, Editor: {n}, Bead-fit: {n})
 - **Auto-applied (same-round consensus):** {count}
 - **Auto-applied (cross-round consensus):** {count}
 - **Deferred to registry:** {count}
@@ -459,15 +539,19 @@ Apply any user-approved findings using the Edit tool.
 
 ### Update Plan Frontmatter
 
-Update the YAML frontmatter to reflect the plan is clean and loop-ready:
+Update the YAML frontmatter to reflect the plan is clean and signed off:
 
 ```yaml
 ---
 status: loop-ready
+plan_clean_rounds: {CURRENT_ROUND}
+cleaned_at: YYYY-MM-DD
 ---
 ```
 
-Preserve all other existing frontmatter fields (`refinement_rounds`, `refinement_tier`, `source_backlog`, etc.).
+Preserve all other existing frontmatter fields (`refinement_rounds`, `refinement_tier`, `source_backlog`, etc.) and remove the `working_skill` / `working_since` markers set at Phase 0.
+
+`loop-ready` is the hand-off signal `/ac-beadify`'s status gate accepts (`approved` / `loop-ready` / `refined`) — it marks the plan as signed off and convertible; beadify still has to be run on it.
 
 ### Safety Check and Commit
 
@@ -479,10 +563,10 @@ git status --short
 
 ```bash
 git add "$PLAN_FILE"
-git commit -m "docs(plan): plan-team correctness check - {CURRENT_ROUND} rounds
+git commit -m "docs(plan): plan-clean correctness check - {CURRENT_ROUND} rounds
 
 Plan: {PLAN_FILE}
-Rounds: {CURRENT_ROUND} (3x Sonnet per round)
+Rounds: {CURRENT_ROUND} (4x Sonnet per round)
 Consensus applied: {total auto-applied count}
 User-approved: {user-approved count}
 Deferred (no consensus): {remaining count}
@@ -535,10 +619,10 @@ mcp__mcp-agent-mail__send_message(
 
 ### Convergence
 
-Round  Verifier  Auditor  Editor  Total  Applied  Deferred
-  1      {n}       {n}     {n}     {n}     {n}       {n}
-  2      {n}       {n}     {n}     {n}     {n}       {n}
-  3      {n}       {n}     {n}     {n}     {n}       {n}
+Round  Verifier  Auditor  Editor  Bead-fit  Total  Applied  Deferred
+  1      {n}       {n}     {n}      {n}      {n}     {n}       {n}
+  2      {n}       {n}     {n}      {n}      {n}     {n}       {n}
+  3      {n}       {n}     {n}      {n}      {n}     {n}       {n}
 
 R1  {▓▓░░░████}  {total}
 R2  {░████}      {total}  {-N%}
@@ -558,11 +642,12 @@ Found: {total} across {CURRENT_ROUND} rounds
 
 ### What Was Checked
 
-- **Accuracy:** File paths, code references, external dependencies verified against codebase
+- **Accuracy:** File paths, code references, external dependencies verified against codebase; drift vs work already shipped
 - **Structure:** Logical flow, phase dependencies, internal consistency
 - **Hygiene:** Iteration artifacts, verbosity, terminology consistency, formatting
+- **Bead-fit:** Step granularity, artifact-traceable data flow (Delivers/Consumes), human-gate shaping, adopted-bead claims, board duplication
 
-**Plan committed. Ready for implementation.**
+**Plan committed and stamped loop-ready. Ready for /ac-beadify.**
 ```
 
 **Present next step choice with `AskUserQuestion`:**
@@ -570,13 +655,12 @@ Found: {total} across {CURRENT_ROUND} rounds
 ```
 AskUserQuestion(
   questions: [{
-    question: "Plan correctness check complete ({CURRENT_ROUND} rounds). Plan is now marked loop-ready — ac-loop will pick it up on the next run. Anything else?",
+    question: "Plan correctness check complete ({CURRENT_ROUND} rounds). Plan is stamped loop-ready — the sign-off /ac-beadify's status gate accepts. What's next?",
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Nothing — let the loop handle it (Recommended)", description: "ac-loop will beadify and ship this plan autonomously on its next run" },
-      { label: "Beadify now", description: "Run /ac-beadify immediately — don't wait for the loop" },
-      { label: "Done for now", description: "Plan saved as loop-ready — loop will pick it up" }
+      { label: "Beadify now (Recommended)", description: "Run /ac-beadify immediately — convert the clean plan to beads" },
+      { label: "Done for now", description: "Plan saved as loop-ready — run /ac-beadify on it later (note: a loop-ready plan sitting for days goes stale; the Verifier's shipped-work check will matter on pickup)" }
     ]
   }]
 )
@@ -592,10 +676,12 @@ AskUserQuestion(
 - **Honor the round floor — it is ABSOLUTE** — never finalize before MIN_ROUNDS=3, not even on two consecutive zero-finding rounds (the dry-panel exit is only reachable at round ≥3); ceiling MAX_ROUNDS=5. Cross-round consensus needs the later rounds to exist
 - **Conductor triage before user** — remaining items get a final review: auto-implement clear technical improvements, only defer genuine design decisions (user-visible or development-transformative) and scope escalations to the user
 - **Design decision gate every round** — choices that noticeably affect user experience or profoundly change development are deferred regardless of consensus
-- **Sonnets are cost-effective** — accuracy/structure/hygiene checks don't need Opus-level reasoning
+- **Bead-fit is the fourth lens** — plan-clean is the last gate before `/ac-beadify`; a plan that passes accuracy/structure/hygiene but converts into oversized, untraceable, or un-gated beads is not clean. Canon lives in `beads-standards` (+ its reference/bead-conventions.md) — cite it, never restate it
+- **loop-ready is a sign-off, not an autopilot** — it satisfies beadify's status gate; someone still runs `/ac-beadify` on the plan
+- **Sonnets are cost-effective** — accuracy/structure/hygiene/bead-fit checks don't need Opus-level reasoning
 - **Findings files survive compaction** — always read from `$ARTIFACTS_DIR`, not memory
 - **Consensus registry is compaction recovery** — parse it to know the deferred pool state
 
 ---
 
-_Plan team: verify accuracy, audit structure, polish hygiene. Consensus-gated corrections across 1-3 rounds._
+_Plan team: verify accuracy, audit structure, polish hygiene, prove bead-fit. Consensus-gated corrections across 3-5 rounds._

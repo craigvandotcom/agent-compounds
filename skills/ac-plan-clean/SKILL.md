@@ -1,11 +1,11 @@
 ---
 name: ac-plan-clean
-description: 'Use to verify an EXISTING plan draft''s correctness, structure, and internal consistency — a 3-reviewer hygiene pass that applies targeted fixes, not a rewrite. Run as the final polish before beadifying. Triggers: ''clean the plan'', ''check the plan'', ''correctness pass on the plan'', ''plan clean''. Requires an existing plan file; to create a plan use ac-plan-init; to hunt substantive gaps or ask what the plan is missing, use ac-plan-lab.'
+description: 'Use to verify an EXISTING plan draft''s correctness, structure, internal consistency, and beadify-readiness — a 4-reviewer hygiene pass that applies targeted fixes, not a rewrite. Run as the final polish before beadifying. Triggers: ''clean the plan'', ''check the plan'', ''correctness pass on the plan'', ''plan clean''. Requires an existing plan file; to create a plan use ac-plan-init; to hunt substantive gaps or ask what the plan is missing, use ac-plan-lab.'
 ---
 
 # Plan Clean
 
-**Purpose:** Final correctness/hygiene pass on an approved plan — three Sonnet reviewers check accuracy, consistency, and completeness independently; the conductor tracks consensus and applies targeted fixes in place.
+**Purpose:** Final correctness/hygiene pass on an approved plan — four Sonnet reviewers check accuracy, structure, hygiene, and bead-fit (will it convert cleanly at `/ac-beadify`?) independently; the conductor tracks consensus and applies targeted fixes in place.
 
 ## When to Use
 
@@ -17,9 +17,9 @@ description: 'Use to verify an EXISTING plan draft''s correctness, structure, an
 
 |            |                                                              |
 | ---------- | ------------------------------------------------------------ |
-| **Input**  | Approved plan file (`_plans/*.md` or user-specified)         |
-| **Output** | Same plan file, corrected in-place and committed             |
-| **Next**   | `/ac-beadify`                                                |
+| **Input**  | Approved plan file (`_plans/*.md` or user-specified), frontmatter `status: approved`/`refined` (or `loop-ready` for a re-clean) |
+| **Output** | Same plan file, corrected in-place, stamped `status: loop-ready` + `plan_clean_rounds`, committed |
+| **Next**   | `/ac-beadify` (its status gate accepts `approved`/`loop-ready`/`refined`)     |
 
 ## Procedure
 
