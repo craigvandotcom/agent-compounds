@@ -59,6 +59,12 @@ done
 # ---------------------------------------------------------------------------
 echo "--- Check 2: /ac-* cross-reference resolution ---"
 
+# SCOPE: this pattern is `/ac-[a-z]...` and structurally CANNOT match `/ac2-anything`.
+# The ac2 family's cross-references are resolved by Check 23 (scripts/ac2-budget-check.sh),
+# which also distinguishes a dangling INVOCATION (fails) from a PATH citation of a
+# Phase-2/3 skill this epic has not built yet (reported). Do not widen the regex here
+# without deleting that leg — one engine per pattern.
+
 # Collect all /ac-* tokens from SKILL.md + references/*.md + workflows/*.md
 # Uses /ac-[a-z][a-z-]*[a-z] (must start and end with a letter) to avoid
 # picking up glob shorthand suffixes (e.g. /ac-plan-refine-* stops correctly
@@ -1368,6 +1374,32 @@ if [ -r "$ALI" ]; then
   fi
 else
   fail "Check 22: scripts/ac2-ledger-integrity.sh missing — ac2 ledger integrity NOT-GATED"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 23 — ac2 family + loaded-path caps, shape, declarations, references (ac-kdxa)
+# ---------------------------------------------------------------------------
+echo "--- Check 23: ac2 budget + anti-drift ---"
+
+# The plan's biggest named ac2 risk is cultural — the files staying small — and every
+# previous "keep it small" rule here was prose, and every one of them lost. This is that
+# rule as a check: family <=800 SKILL.md lines, <=1,200 over the LOADED path with the
+# mandatory-load set DERIVED from the pointers (a hardcoded list is the measured evasion
+# with an extra step), pointed-at canon reported but never capped, the constitution's
+# no-subdirs shape, assurance declarations for ac2 scripts (Check 21 is hooks.json-scoped
+# and cannot see them), and ac2 cross-reference resolution — Check 2's `/ac-[a-z]` pattern
+# structurally cannot match `/ac2-anything`, so the whole family was invisible to it.
+ABC="$AC_ROOT/scripts/ac2-budget-check.sh"
+check
+if [ -r "$ABC" ]; then
+  if abc_out=$(bash "$ABC" "$AC_ROOT" 2>&1); then
+    printf '%s\n' "$abc_out" | sed 's/^/  /'
+  else
+    printf '%s\n' "$abc_out"
+    fail "Check 23: ac2 budget/anti-drift violation(s) — see above"
+  fi
+else
+  fail "Check 23: scripts/ac2-budget-check.sh missing — ac2 caps NOT-GATED"
 fi
 
 # ---------------------------------------------------------------------------
