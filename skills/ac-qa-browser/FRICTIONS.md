@@ -103,3 +103,17 @@ entries: 6
   was already satisfied by a `last_pass` stamp landed in the same run, so it could close on an
   empty diff while the actual defect stayed untouched. A bead whose exit is a QA stamp rather
   than the fixture's own correctness will close as soon as anyone reruns QA.
+
+## e2e-role-selector-collides-after-a-ui-rename
+- skills: [ac-qa-browser, testing]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-qa-browser
+- status: open
+- proposed_fix: prefer a test id or an exact-match name over a substring role query; a rename that ADDS a matching control breaks a previously-unique selector without touching the spec.
+- narrative: The deferred-capture spec's `getByRole('button', name: 'Food')` stopped resolving uniquely once a second control matching that name appeared. The spec was never edited; the page was. A role+name query is only as stable as the SET of controls that can match it, so its correctness depends on code it does not reference -- the same blind-channel shape as a fixture whose binding guard lives in another file.

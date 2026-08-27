@@ -86,3 +86,17 @@ entries: 3
   claim is not, because a doc that says a lane needs a human at the keyboard will stop an agent
   that could have run it, and the failure mode is silent deferral rather than a visible error.
   A negative capability claim ages worst of all: nothing exercises it, so nothing disproves it.
+
+## the-documented-reliable-ship-path-has-no-quality-gate
+- skills: [ac-distribute, ac-publish]
+- impact: L
+- frequency: frequent
+- perceptibility: quiet
+- recurrence: 1
+- related: [a-gate-must-fail-when-it-verified-nothing]
+- first_seen: 2026-08-26
+- last_seen: 2026-08-26
+- stage: ac-distribute
+- status: open
+- proposed_fix: make `scripts/ship-testflight.sh` refuse to upload unless the target commit carries a passing required check-run set, reusing `scripts/ci/testflight-gate-check.sh`. Give it a loud, named override for the deliberate hotfix case. Reconcile the two contradictory comments in ios-release.yml.
+- narrative: `scripts/ship-testflight.sh` has ZERO quality-gate patterns -- `grep -cE "Quality Gate|check-run|check_runs|gh api"` returns 0. Its only gate is a SIGNING preflight inside the fastlane release lane, which checks credentials, not code health. Meanwhile `.github/workflows/ios-release.yml` contradicts itself in two lines: `:32` calls `pnpm ship:testflight` "the reliable ship path", `:74` says "This is the ONLY TestFlight path". Both cannot be true, and `:74` is what makes the gap invisible -- a reader auditing release safety reads it, concludes the gated workflow is the only way out, and stops looking. Per the workflow's own header, builds 33-34 shipped through the ungated script. bd-r0434 hardened the LESS-USED lane; fixing only that leaves the actually-used path open while making the safety story read as resolved -- the worst combination.
