@@ -47,6 +47,38 @@ stamp_refined() {
     return "$rc"
   fi
 
+  # ac2-ORIGIN BEADS ADDITIONALLY REQUIRE A FIXPOINT RECEIPT (ac-gv70).
+  # The producer is skills/_tools/polish-fixpoint.sh, which writes
+  #   POLISH-FIXPOINT: mode=<m> rounds=<n> sha256=<digest> at=<ts> engine=polish-fixpoint.sh
+  # as a bead comment at fixpoint. The gate lives HERE because this is the sole sanctioned
+  # writer of `refined` — in ac2-polish's procedure it would be a check every other caller
+  # could route around. Selector is the LABEL token `origin:ac2-*`, never the description's
+  # shape: shape cannot tell an ac2 bead from a legacy one that merely lacks a Declared RED,
+  # and mis-scoping would silently start refusing live ac-* beads.
+  local meta ac2 receipt rounds
+  meta=$(br show --json "$id" 2>/dev/null || true)
+  if [ -z "$meta" ]; then
+    echo "stamp_refined: REFUSED $id — could not re-read the bead to check its origin; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  ac2=$(printf '%s' "$meta" | jq -r '[.[0].labels // [] | .[] | select(startswith("origin:ac2-"))] | length' 2>/dev/null || echo 0)
+  if [ "${ac2:-0}" -gt 0 ]; then
+    # A header alone declares nothing (the rule element4-check applies to `## Declared RED`):
+    # a receipt without a round count and a digest is treated as ABSENT.
+    receipt=$(printf '%s' "$meta" \
+      | jq -r '[.[0].comments // [] | .[] | .text // ""] | join("\n")' 2>/dev/null \
+      | grep -E '^POLISH-FIXPOINT:[[:space:]].*rounds=[0-9]+.*sha256=[0-9a-f]{8,}' | tail -1)
+    if [ -z "$receipt" ]; then
+      echo "stamp_refined: REFUSED $id — ac2-origin bead with no conforming fixpoint receipt (expected a 'POLISH-FIXPOINT: … rounds=<n> sha256=<digest>' comment from skills/_tools/polish-fixpoint.sh). No label written." >&2
+      return 1
+    fi
+    rounds=$(printf '%s' "$receipt" | sed -E 's/.*rounds=([0-9]+).*/\1/')
+    if [ "${rounds:-0}" -lt 2 ]; then
+      echo "stamp_refined: REFUSED $id — fixpoint receipt records rounds=$rounds; a clean FIRST round proves nothing, so a fixpoint needs a clean round >= 2. No label written." >&2
+      return 1
+    fi
+  fi
+
   br label remove "$id" "unrefined" 2>/dev/null
   br label add "$id" "refined" 2>/dev/null
   br label add "$id" "$path_label" 2>/dev/null
