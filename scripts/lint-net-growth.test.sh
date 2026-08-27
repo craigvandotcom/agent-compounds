@@ -5,8 +5,9 @@
 # without a target — and exercising it against a live app repo would mean dirtying
 # someone else's checkout. This extracts the LIVE nng_scan + nng_base_of out of
 # lint.sh and runs them against a throwaway repo in /tmp: default branch `master`
-# (so origin/HEAD resolution is proven, not assumed), unstamped growth, the
-# wrong-token near-miss, the exact token, a shrink, and a symlinked skill dir.
+# (so origin/HEAD resolution is proven, not assumed), growth, the wrong-token
+# near-miss, the removed `net-growth-ok` token (which must NOT exempt — ec5fa64),
+# a shrink, and a symlinked skill dir.
 #
 # Runs under bash AND zsh. Exit 0 = all cases pass.
 
@@ -55,14 +56,19 @@ expect "clean target (no delta)" 0
 
 echo "line 11" >> .claude/skills/foo/SKILL.md
 echo "line 12" >> .claude/skills/foo/SKILL.md
-expect "unstamped +2 growth -> FAILS" 1
+expect "+2 growth -> FAILS" 1
 
 # the wrong-token near-miss (bd-curate-...xu5tz's AC): must still fail
 echo "<!-- evidence: i thought about it -->" >> .claude/skills/foo/SKILL.md
 expect "wrong token 'evidence:' -> still FAILS" 1
 
+# ec5fa64 removed the `net-growth-ok` escape hatch outright — "growth is bought with
+# deletion, not prose". NO comment token exempts growth any more. This case pins the
+# ABSENCE of the escape, so reintroducing one cannot pass unnoticed. (Until 2026-08-27
+# this case still asserted the removed hatch worked, and stayed red undetected because
+# no workflow ran this harness — the defect ac-on0y.1 exists to end.)
 echo "<!-- net-growth-ok: proven exception -->" >> .claude/skills/foo/SKILL.md
-expect "EXACT token stamp -> PASSES" 0
+expect "former 'net-growth-ok' stamp -> STILL FAILS (escape removed, ec5fa64)" 1
 
 git checkout -q -- .claude/skills/foo/SKILL.md
 for i in 1 2 3; do echo "line $i"; done > .claude/skills/foo/SKILL.md

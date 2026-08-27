@@ -6,6 +6,7 @@ on:
     paths:
       - "skills/**"
       - "hooks/**"
+      - "scripts/**"
       - "lint.sh"
       - ".github/workflows/**"
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - "skills/**"
       - "hooks/**"
+      - "scripts/**"
       - "lint.sh"
       - ".github/workflows/**"
 
@@ -25,3 +27,22 @@ jobs:
         with:
           python-version: "3.12"
       - run: bash lint.sh
+
+  # Executes every committed proof-test harness (ac-on0y.1). Before this job existed,
+  # 15 harnesses were green-capable and NOT ONE ever ran — two of them had been silently
+  # red for an unknown period. A proof test that never runs is documentation.
+  #
+  # Its OWN job with its OWN checkout on purpose: ac-q1mu edits the registry-lint job's
+  # checkout step, so keeping these separate narrows the overlap to the file, not the
+  # job body. fetch-depth: 0 because lint-net-growth.test.sh resolves origin/HEAD and a
+  # depth-1 checkout collapses origin/main onto HEAD (the ac-q1mu lesson).
+  harnesses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: bash scripts/run-all-harnesses.sh

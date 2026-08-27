@@ -679,7 +679,9 @@ fi
 echo "--- Check 14: no-net-growth (SKILL.md — registry + deploy-target-local) ---"
 
 # The per-file judge, used by BOTH legs. Appends "<label>/<path> (+net)" to
-# NNG_VIOLATIONS for every net-positive file whose own diff lacks the stamp.
+# NNG_VIOLATIONS for EVERY net-positive file. There is no stamp and no exemption
+# token: ec5fa64 removed the `net-growth-ok` escape hatch — growth is bought with
+# deletion, not prose. (Proof: scripts/lint-net-growth.test.sh pins its absence.)
 # Args: <repo root> <label> <merge base> <pathspec>
 # `--no-optional-locks` throughout: leg 2 reads OTHER live app checkouts, and a
 # lint run must never touch another repo's index (a sibling agent may be mid-edit).
@@ -1226,6 +1228,29 @@ if [ -r "$BTL" ]; then
   fi
 else
   fail "Check 19: scripts/bead-template-lint.py missing — template conformance unverified"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 20 — every proof-test harness is SCHEDULED (ac-on0y.1)
+# ---------------------------------------------------------------------------
+echo "--- Check 20: proof-test harness scheduling ---"
+
+# Check 18 proves a guard CAN fire. This proves a proof test IS RUN. When this check was
+# written, 15 harnesses existed and no workflow executed a single one — and two of them
+# had been red at HEAD for an unknown period, invisible for exactly that reason. The
+# logic lives in its own script so it can carry a RED/GREEN harness of its own (which is
+# itself scheduled by the runner this check audits).
+HSC="$AC_ROOT/scripts/harness-scheduling-check.sh"
+check
+if [ -r "$HSC" ]; then
+  if hsc_out=$(bash "$HSC" "$AC_ROOT" 2>&1); then
+    printf '%s\n' "$hsc_out" | sed 's/^/  /'
+  else
+    printf '%s\n' "$hsc_out"
+    fail "Check 20: unscheduled proof-test harness(es) — see above"
+  fi
+else
+  fail "Check 20: scripts/harness-scheduling-check.sh missing — harness scheduling unverified"
 fi
 
 # ---------------------------------------------------------------------------
