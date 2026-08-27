@@ -39,6 +39,10 @@
 #     (b) on re-invocation, once a bead has written its OWN
 #         harness and BEFORE any fix                             -> scope: probe+harness
 #     (b') at claim for a bead whose harness does not exist yet   -> scope: probe
+#     (c) a PROSE/CONFIG bead: no harness anywhere in its ACs and
+#         the probe asserts on its own `## Delivers` subject      -> scope: subject-scoped
+#         (the hash covers the probe COMMAND alone — see the long
+#          note at the fingerprint below; it is not a loosening)
 #
 #   The "before any fix" half is STRUCTURAL, not a convention: a fingerprint is only ever
 #   written while the named probe is RED. After the fix the probe is GREEN and this script
@@ -90,6 +94,17 @@ sha256_of_stdin() {
   elif command -v sha256sum >/dev/null 2>&1; then sha256sum | awk '{print $1}'
   else return 1
   fi
+}
+
+# is_test_shaped <path> — is this file an ASSERTION (a harness) rather than a SUBJECT?
+# Kept byte-identical to close-gate.sh's copy: the two scripts must agree on what counts as a
+# test, or the scope one writes is not the scope the other reads.
+is_test_shaped() {
+  case "$1" in
+    *.test.sh|*.test.py|*.test.ts|*.test.js|*.test.tsx|*.spec.ts|*.spec.js|*.spec.tsx) return 0 ;;
+    *_test.go|*_test.py|*_test.rb|*Test.java|*Tests.swift)                             return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # section <name> — print the body lines under `## <name>` up to the next `## ` header.
@@ -359,10 +374,67 @@ for tok in $(printf '%s' "$RED_PROBE" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\
   [ -f "$tok" ] || continue
   case " $HARNESS_FILES " in *" $tok "*) ;; *) HARNESS_FILES="$HARNESS_FILES $tok" ;; esac
 done
-SCOPE="probe"
-[ -n "${HARNESS_FILES// /}" ] && SCOPE="probe+harness"
+# THE THIRD SCOPE — `subject-scoped`. NOT A LOOSENING (ac-hnsc).
+#
+# For a CODE bead the assertion and the subject are DIFFERENT files: the probe runs a harness,
+# the fix edits the implementation, and hashing the harness bytes is exactly right. For a
+# PROSE or CONFIG bead the probe names the very file the bead edits — `grep -q '<token>'
+# <doc>` — so folding those bytes into the assertion fingerprint conflates the ASSERTION with
+# the SUBJECT. Every successful fix then moves the fingerprint BY CONSTRUCTION, and close-gate
+# could never observe the "unchanged test" half of its own claim: the hash lock was
+# structurally unsatisfiable for the entire prose class, which is not strictness, it is a
+# category error that happened to be invisible while only code beads flew.
+#
+# The repair does not weaken the temporal argument, it fixes its subject. The ASSERTION — the
+# probe command — stays hash-locked, byte for byte. Only the SUBJECT is allowed to move, which
+# is the entire point of a prose bead. close-gate then reaches its LEG 5 COVERAGE path, where
+# the recorded exit-code pair (RED != 0 -> GREEN 0) carries the temporal claim; that branch
+# already existed and was simply unreachable.
+#
+# TWO CONDITIONS, both required, both narrow on purpose:
+#   (a) NO probe of this bead names a test-shaped file that EXISTS on the tree. A bead with a
+#       harness is a code bead and keeps the harness lock. Checked over EVERY probe, not just
+#       the RED one, so a bead cannot shed the lock by having its RED land on a grep while a
+#       real harness sits in another AC.
+#   (b) every file the RED probe names is in this bead's own `## Delivers`. The probe must
+#       assert on what this bead ships, not on some unrelated file it happens to read.
+#
+# KNOWN LIMIT, stated rather than papered over: this restores the gate's STATED claim. It does
+# NOT make `grep -q 'token' file` a strong probe — it proves the diff flipped the probe, not
+# that the diff did the work. Probe strength is a compile-time problem, not this gate's.
+DELIVERS_PATHS=$(section "Delivers" \
+  | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' | sort -u)
 
-FINGERPRINT=$( { printf '%s\n' "$RED_PROBE"; for h in $HARNESS_FILES; do cat "$h"; done; } | sha256_of_stdin )
+BEAD_HAS_HARNESS=0
+while IFS= read -r pr; do
+  [ -n "$pr" ] || continue
+  for tok in $(printf '%s' "$pr" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' || true); do
+    if is_test_shaped "$tok" && [ -f "$tok" ]; then BEAD_HAS_HARNESS=1; break 2; fi
+  done
+done <<EOF
+$PROBES
+EOF
+
+SUBJECT_SCOPED=0
+if [ -n "${HARNESS_FILES// /}" ] && [ "$BEAD_HAS_HARNESS" -eq 0 ]; then
+  SUBJECT_SCOPED=1
+  for f in $HARNESS_FILES; do
+    printf '%s\n' "$DELIVERS_PATHS" | grep -qxF "$f" || { SUBJECT_SCOPED=0; break; }
+  done
+fi
+
+SCOPE="probe"
+if [ -n "${HARNESS_FILES// /}" ]; then
+  if [ "$SUBJECT_SCOPED" -eq 1 ]; then SCOPE="subject-scoped"; else SCOPE="probe+harness"; fi
+fi
+
+# subject-scoped hashes the probe COMMAND ALONE. The subject files are recorded on their own
+# receipt line so the receipt still NAMES what the probe asserts on, without pretending those
+# bytes were locked — `red-fingerprint-inputs` keeps meaning "what went into the hash".
+HASH_FILES="$HARNESS_FILES"
+[ "$SCOPE" = "subject-scoped" ] && HASH_FILES=""
+
+FINGERPRINT=$( { printf '%s\n' "$RED_PROBE"; for h in $HASH_FILES; do cat "$h"; done; } | sha256_of_stdin )
 if [ -z "$FINGERPRINT" ]; then
   echo "NOT-GATED: no sha256 tool (shasum/sha256sum) — the RED assertion fingerprint could" >&2
   echo "NOT-GATED: not be computed, and close-gate cannot hash-lock against a field that is absent." >&2
@@ -372,6 +444,10 @@ fi
 FLIGHT_DIR="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac2-flight}"
 mkdir -p "$FLIGHT_DIR" 2>/dev/null || { echo "NOT-GATED: cannot create receipt dir '$FLIGHT_DIR'" >&2; exit 2; }
 RECEIPT_FILE="$FLIGHT_DIR/${BEAD}.flight-receipt"
+
+INPUTS_TEXT="${HARNESS_FILES:- (probe command only — harness not yet written)}"
+[ "$SCOPE" = "subject-scoped" ] \
+  && INPUTS_TEXT=" (probe command only — every file the probe names is this bead's own Delivers subject)"
 
 RECEIPT=$(cat <<EOF
 FLIGHT-RECEIPT v1
@@ -384,9 +460,13 @@ red-exit: $RED_EXIT
 red-green-siblings: $GREEN_COUNT of $PROBE_COUNT probe(s) already green
 red-fingerprint: sha256:$FINGERPRINT
 red-fingerprint-scope: $SCOPE
-red-fingerprint-inputs:${HARNESS_FILES:- (probe command only — harness not yet written)}
+red-fingerprint-inputs:$INPUTS_TEXT
 EOF
 )
+if [ "$SCOPE" = "subject-scoped" ]; then
+  RECEIPT="$RECEIPT
+red-fingerprint-subjects:$HARNESS_FILES"
+fi
 
 printf '%s\n\n' "$RECEIPT" >>"$RECEIPT_FILE" 2>/dev/null \
   || { echo "NOT-GATED: cannot append the flight receipt to '$RECEIPT_FILE'" >&2; exit 2; }
@@ -397,6 +477,11 @@ if [ "$SCOPE" = "probe" ]; then
   echo "flight-check: scope is 'probe' — this bead's harness does not exist yet. RE-RUN this"
   echo "flight-check: script once the harness is written and BEFORE any fix, so close-gate"
   echo "flight-check: hash-locks against the real assertions."
+fi
+if [ "$SCOPE" = "subject-scoped" ]; then
+  echo "flight-check: scope is 'subject-scoped' — this bead runs no harness and its probe"
+  echo "flight-check: asserts on its own Delivers subject, so the hash covers the probe"
+  echo "flight-check: COMMAND alone. The assertion is locked; only the subject may move."
 fi
 echo "flight-check: post it to the bead so it outlives this checkout:"
 echo "flight-check:   br comments add $BEAD -f $RECEIPT_FILE"

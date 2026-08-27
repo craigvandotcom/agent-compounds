@@ -126,6 +126,28 @@ write_silent_harness() {
   chmod +x "$1/harness.test.sh"
 }
 
+# A PROSE fixture: no harness anywhere in its ACs, and its single probe asserts on the very
+# file it ships. This is the shape whose close was structurally impossible before ac-hnsc.
+mkcase_prose() {
+  local root="$WORKDIR/$1"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/.flight" "$root/.br"
+  cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  printf 'a doc with no token yet\n' >"$root/doc.md"
+  cat >"$root/body.md" <<'BODY'
+## Acceptance Criteria
+- the doc carries the TOKEN.
+  Probe: `grep -q TOKEN doc.md` — tier: none
+
+## Delivers
+- doc: doc.md
+
+## Consumes
+- none
+BODY
+  echo "$root"
+}
+
 board() { # <root> <status> <assignee>
   jq -n --arg id "$BEAD" --arg st "$2" --arg as "$3" --rawfile d "$1/body.md" \
     '{id:$id,title:"fixture",issue_type:"task",status:$st,assignee:$as,labels:[],description:$d}' \
@@ -234,6 +256,58 @@ else fail "AC2d: the correct own-harness flow was refused: rc=$GATE_RC out=$out"
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
   pass "AC2d: and the close actually landed on the board"
 else fail "AC2d: exit 0 but the bead is $(jq -r .status "$R/.br/$BEAD.json")"; fi
+
+# --- 2e: THE PROSE PATH — scope subject-scoped (ac-hnsc) ---------------------------------------
+# Before ac-hnsc the receipt folded the SUBJECT into the assertion fingerprint, so a prose bead
+# moved its own fingerprint by doing the work and HASH-LOCK went NOT-CHECKED before COVERAGE
+# was ever reached. The claim it makes now: the ASSERTION is locked, only the SUBJECT moves.
+PROSE_REASON="shipped: doc.md now carries TOKEN. Delivered: doc.md"
+R="$(mkcase_prose prose-close)"; board "$R" in_progress worker
+fly "$R"                                    # RED banked over the probe COMMAND alone
+if grep -q 'red-fingerprint-scope: subject-scoped' "$R/.flight/$BEAD.flight-receipt"; then
+  pass "AC2e: a prose bead banks a subject-scoped RED"
+else fail "AC2e: expected subject-scoped, got: $(grep red-fingerprint-scope "$R/.flight/$BEAD.flight-receipt")"; fi
+
+printf 'TOKEN\n' >>"$R/doc.md"                # the fix IS an edit to the probe's own subject
+out="$(gate "$R" --reason "$PROSE_REASON" --actor worker)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ]; then
+  pass "AC2e: a prose bead closes end-to-end — editing the subject no longer breaks the lock"
+else fail "AC2e: the prose close was refused: rc=$GATE_RC out=$out"; fi
+if ! printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  pass "AC2e: no leg reports NOT-CHECKED on the prose path"
+else fail "AC2e: a leg went NOT-CHECKED: $out"; fi
+if printf '%s' "$out" | grep -q 'temporal exit-code pair'; then
+  pass "AC2e: HASH-LOCK falls through to COVERAGE, where the temporal exit-code pair is the assertion"
+else fail "AC2e: COVERAGE did not use the temporal pair: $out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC2e: and the prose close landed on the board"
+else fail "AC2e: exit 0 but the bead is $(jq -r .status "$R/.br/$BEAD.json")"; fi
+
+# 2e' THE GUARD: subject-scoped is not an escape hatch. A bead that grows a real harness after
+# the RED was banked no longer matches the scope its receipt claims, and is refused.
+R="$(mkcase_prose prose-harness-guard)"; board "$R" in_progress worker
+fly "$R"
+cat >>"$R/body.md" <<'EXTRA'
+
+## Extra
+- and the harness passes.
+  Probe: `test -x harness.test.sh && bash harness.test.sh` — tier: none
+EXTRA
+write_harness "$R"; printf 'TOKEN\nFIXED\n' >>"$R/doc.md"
+printf 'subject v1\nFIXED\n' >"$R/subject.txt"
+board "$R" in_progress worker
+out="$(gate "$R" --reason "$PROSE_REASON" --actor worker)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'HASH-LOCK'; then
+  pass "AC2e': a subject-scoped receipt on a bead that now runs a harness is REFUSED, naming HASH-LOCK"
+else fail "AC2e' guard: rc=$GATE_RC out=$out"; fi
+
+# 2e'' The anti-pattern remedy is GONE: the gate must never tell a prose bead to grow a shell
+# harness whose only job is to re-run a grep — that is the vacuous-AC shape this pipeline kills.
+if ! grep -q 'Name a test-shaped harness' "$GATE"; then
+  pass "AC2e'': the gate no longer prescribes a vacuous harness as the prose remedy"
+else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 
 # ============================================================================================
 # AC 3 — coverage is asserted, not assumed

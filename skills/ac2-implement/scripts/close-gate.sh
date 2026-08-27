@@ -40,6 +40,11 @@
 #   the hash leg would refuse every close in this very epic, all of whose code beads deliver
 #   their own harness.
 #
+# THE PROSE SCOPE (`subject-scoped`, ac-hnsc): a prose or config bead's probe names the file
+#   the bead itself edits, so the receipt hash-locks the probe COMMAND alone and the SUBJECT is
+#   free to move — otherwise this leg is unsatisfiable for every prose bead by construction.
+#   The full argument, and the guard that keeps a harness-bearing bead out of it, sits at LEG 3.
+#
 # Usage:
 #   close-gate.sh <bead-id> --reason "<close reason>" [--actor <name>]
 #                 [--scan <file> …] [--vitest-json <report>]
@@ -171,6 +176,38 @@ if [ "$RED_SCOPE" = "probe+harness" ]; then
     LOCK_FILES="$LOCK_FILES $f"
   done
   [ -n "${LOCK_FILES// /}" ] || not_checked "HASH-LOCK" "scope says probe+harness but the receipt lists no inputs"
+elif [ "$RED_SCOPE" = "subject-scoped" ]; then
+  # THE PROSE PATH — and NOT A LOOSENING (ac-hnsc).
+  #
+  # A prose or config bead's probe names the very file the bead edits, so flight-check hashed
+  # the probe COMMAND ALONE. The unchanged-test guarantee survives where it carries meaning:
+  # the ASSERTION is locked byte for byte, and LEG 2 has already proved that same assertion is
+  # still a live AC of this bead. Only the SUBJECT is allowed to move — which is the entire
+  # point of a prose bead. Locking the subject too was a category error: it made this leg
+  # UNSATISFIABLE for the whole prose class, because any successful fix moved the fingerprint
+  # by construction and the "test unchanged" half could never be observed.
+  #
+  # LOCK_FILES stays EMPTY on purpose: the recomputation below then covers the command only,
+  # this leg passes, and control reaches LEG 5 COVERAGE — where the recorded exit-code pair
+  # (RED -> GREEN) is the assertion. That branch already existed; it was simply unreachable.
+  #
+  # THE GUARD that stops this being an escape hatch: a bead with a real harness is a code bead
+  # and keeps the harness lock. If ANY probe of this bead names a test-shaped file that exists
+  # on the tree, the scope contradicts the bead and is refused right here.
+  #
+  # KNOWN LIMIT, not oversold: this restores the gate's stated claim. It does not make
+  # `grep -q 'token' file` a strong probe — it proves the diff flipped the probe, not that the
+  # diff did the work.
+  while IFS= read -r pr; do
+    [ -n "$pr" ] || continue
+    for tok in $(printf '%s' "$pr" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' || true); do
+      if is_test_shaped "$tok" && [ -f "$tok" ]; then
+        refuse "HASH-LOCK" "the receipt declares scope 'subject-scoped', but this bead's probes name the test-shaped harness '$tok', which exists on the tree — a bead with a harness locks the harness. Re-run flight-check.sh BEFORE the fix"
+      fi
+    done
+  done <<EOF
+$PROBES
+EOF
 elif [ "$RED_SCOPE" = "probe" ]; then
   # The carve-out. At claim this bead's own harness did not exist, so the RED was
   # fingerprinted over the probe command alone. That is legitimate ONLY while the harness
@@ -197,7 +234,7 @@ if [ "$NOW_FP" != "$RED_FP" ]; then
   # The receipt mixed the SUBJECT of the bead into the assertion fingerprint, so a change is
   # unattributable: it may be the fix (legitimate) or the test (fatal), and nothing here can
   # tell them apart. Refusing would be wrong; passing would be a lie. Say so and FAIL.
-  not_checked "HASH-LOCK" "the fingerprint moved ($RED_FP -> $NOW_FP) but its inputs ($LOCK_FILES) are not all test-shaped, so the change cannot be attributed to test-vs-fix. Name a test-shaped harness in the AC probe (the guarded 'test -x <harness> && bash <harness>' form) and re-run flight-check before the fix"
+  not_checked "HASH-LOCK" "the fingerprint moved ($RED_FP -> $NOW_FP) but its inputs ($LOCK_FILES) are not all test-shaped, so the change cannot be attributed to test-vs-fix. If the probe asserts on this bead's own Delivers subject, re-run flight-check.sh BEFORE the fix so the receipt records the subject-scoped scope; otherwise the probe mixes a harness with files this bead does not ship, and the AC needs narrowing"
 fi
 echo "close-gate[$BEAD] HASH-LOCK ok — $RED_FP (scope: $RED_SCOPE)"
 

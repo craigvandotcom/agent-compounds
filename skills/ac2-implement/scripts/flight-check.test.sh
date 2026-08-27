@@ -312,6 +312,85 @@ done
   || bad "flight-check.sh declares no$DECL_MISSING"
 
 # ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 7 — the subject-scoped scope for a PROSE bead (ac-hnsc)"
+# ---------------------------------------------------------------------------------------
+# A prose bead's probe names the file the bead itself edits. Folding those bytes into the
+# assertion fingerprint made close-gate's hash lock unsatisfiable by construction, so the
+# writer emits a DISTINCT scope and hashes the probe COMMAND alone.
+rm -f "$RECEIPT"
+printf 'a doc that does not carry the word yet\n' >"$WORK/root/prose-subject.md"
+cat >"$WORK/bodies/prose.md" <<'BODY'
+## Acceptance Criteria
+- the doc carries the token.
+  Probe: `grep -q TOKEN ./prose-subject.md` — tier: none
+
+## Delivers
+- doc: ./prose-subject.md
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/prose.md"
+[ "$RUN_RC" -eq 0 ] && ok "a prose bead clears flight-check" || bad "prose: expected exit 0, got $RUN_RC: $RUN_OUT"
+grep -q '^red-fingerprint-scope: subject-scoped$' "$RECEIPT" \
+  && ok "a probe naming only this bead's own Delivers subject banks scope 'subject-scoped'" \
+  || bad "expected scope 'subject-scoped', got: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
+grep -q '^red-fingerprint-inputs: (probe command only' "$RECEIPT" \
+  && ok "the subject-scoped receipt records that ONLY the probe command was hashed" \
+  || bad "subject-scoped receipt misreports its fingerprint inputs"
+grep -q '^red-fingerprint-subjects:.*prose-subject.md' "$RECEIPT" \
+  && ok "the receipt still NAMES the subject it asserts on, on its own line" \
+  || bad "subject-scoped receipt does not name the subject"
+
+# THE LOAD-BEARING ONE: editing the SUBJECT must not move the fingerprint, or the lock stays
+# unsatisfiable for every prose bead exactly as before.
+FP_SUBJ=$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)
+printf 'another paragraph, still no token\n' >>"$WORK/root/prose-subject.md"
+run "$WORK/bodies/prose.md"
+[ "$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)" = "$FP_SUBJ" ] \
+  && ok "the subject-scoped fingerprint is over the ASSERTION, so editing the subject leaves it fixed" \
+  || bad "the subject's bytes are still folded into the fingerprint"
+
+# GUARD (a): a bead with a real harness in ANY of its ACs is a code bead and keeps the harness
+# lock, even when the probe that happened to be RED is a grep on its own subject.
+cat >"$WORK/bodies/prose-with-harness.md" <<'BODY'
+## Acceptance Criteria
+- the doc carries the token.
+  Probe: `grep -q TOKEN ./prose-subject.md` — tier: none
+- the harness passes.
+  Probe: `test -x ./existing-harness.test.sh && bash ./existing-harness.test.sh` — tier: none
+
+## Delivers
+- doc: ./prose-subject.md
+- harness: ./existing-harness.test.sh
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/prose-with-harness.md"
+grep -q '^red-fingerprint-scope: probe+harness$' "$RECEIPT" \
+  && ok "a bead that runs a harness anywhere in its ACs stays probe+harness — no escape hatch" \
+  || bad "a harness-bearing bead was downgraded to: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
+
+# GUARD (b): the probe must assert on what this bead SHIPS. A file the bead does not deliver
+# is not its subject, so the scope stays probe+harness and the bytes stay in the hash.
+cat >"$WORK/bodies/prose-foreign.md" <<'BODY'
+## Acceptance Criteria
+- some other file grows a token this bead never claimed to ship.
+  Probe: `grep -q TOKEN ./present-artifact.md` — tier: none
+
+## Delivers
+- doc: ./prose-subject.md
+
+## Consumes
+- none
+BODY
+run "$WORK/bodies/prose-foreign.md"
+grep -q '^red-fingerprint-scope: probe+harness$' "$RECEIPT" \
+  && ok "a probe naming a file OUTSIDE this bead's Delivers is not subject-scoped" \
+  || bad "a foreign file was treated as this bead's subject: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
+
+# ---------------------------------------------------------------------------------------
 echo ""
 echo "flight-check.test: $PASS passed, $FAIL failed"
 if [ "$PASS" -eq 0 ]; then
