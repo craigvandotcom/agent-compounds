@@ -2,7 +2,7 @@
 skill: ac2-pipeline
 created: 2026-08-27
 last_pass: 2026-08-27
-entries: 6
+entries: 9
 ---
 
 # ac2-pipeline — friction log
@@ -130,3 +130,75 @@ entries: 6
 - narrative: defects found in tools we do not own were written down and then belonged to
   nobody. ac2 has no control for this yet — declared untreated rather than papered over
   with a control that does not exist.
+
+## refine-corrections-land-in-the-beads-and-never-reach-the-plan
+- skills: [ac2-pipeline, ac2-polish, ac2-beadify]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 2
+- related: [heavy-review-does-not-mean-converged]
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac2-polish
+- status: open
+- receipt: skills/ac2-pipeline/dogfood-receipts.md (dogfood #1, round 2, findings 1 and 2)
+- control: untreated
+- proposed_fix: name the artifact a refine correction must be swept back into, and check it.
+- narrative: caught TWICE in one run. (1) refine rounds 3-4 found that Phase 1's stated order
+  turns lint red — the constitution cannot be written before the Check-14 enabler — and fixed
+  it by splitting ac-g2v4 out into the BEAD graph, while the plan text still reads "the
+  constitution, written first". (2) the plan's frontmatter records the ac-on0y precursors as
+  closed and assumption 1 as PROBED-and-HOLDS, while its body still carries them as live
+  assumptions whose detection rules ("if .2 slips, Phase 2 waits") can no longer fire. Both
+  are the same hole: a correction applied to one artifact and never swept to its sibling —
+  the class round 4 already found WITHIN the bead set, recurring across the plan/bead seam.
+  Untreated: tenet 7 retires the plan, which makes divergence harmless AT retirement but not
+  while the plan is still the authority ac2-beadify compiles from.
+
+## cutover-slate-archives-a-gate-the-new-pipeline-still-depends-on
+- skills: [ac2-pipeline]
+- impact: L
+- frequency: rare
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac2-polish
+- status: open
+- receipt: skills/ac2-pipeline/dogfood-receipts.md (dogfood #1, round 2, finding 3)
+- control: untreated
+- proposed_fix: before the slate commit, enumerate every executable a surviving skill still
+  calls and assert it is not inside the archive set.
+- narrative: Phase 4 moves "every absorbed ac-* skill" to _archive/skills/, and ac-bead-refine
+  is named in ac2-polish's Absorbs column — but stamp-refined.sh, which the plan itself
+  designates the SOLE SANCTIONED WRITER of `refined`, lives in skills/ac-bead-refine/scripts/,
+  and ac2's own batch-boundary eligibility filter still requires `refined`. The slate
+  enumerates other cutover relocations and omits this one; the plan's script-home rule would
+  put it in skills/_tools/. Archiving a skill silently archives the executables inside it,
+  and nothing in the cutover checks what still calls them.
+
+## an-empty-artifact-diff-is-not-an-empty-finding-set
+- skills: [ac2-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: [refine-corrections-land-in-the-beads-and-never-reach-the-plan]
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac2-polish
+- status: open
+- receipt: skills/ac2-pipeline/dogfood-receipts.md (dogfood #1, the NO STAMP WAS TAKEN section)
+- control: untreated
+- proposed_fix: make polish-fixpoint.sh take the round's finding COUNT as a required input and
+  refuse to stamp a diff-empty round that reported findings.
+- narrative: found by the engine's own first dogfood run. polish-fixpoint.sh proves a fixpoint
+  from the ARTIFACT digest alone, which is sound only while every finding is dispositioned INTO
+  the artifact. Dogfood #1 broke that assumption honestly: three real findings were routed to
+  this ledger rather than to a plan about to be retired, leaving the digest byte-identical
+  across both rounds — so the engine would have reported STAMPED over three unfixed defects.
+  The run refused the stamp by hand, which is precisely the manual discipline a gate is
+  supposed to replace. Caught at the first opportunity a gate had to be wrong, which is the
+  cheapest place to catch it.
