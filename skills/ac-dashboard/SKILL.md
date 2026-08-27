@@ -19,8 +19,7 @@ description: 'Read-only pipeline dashboard — render the FULL board (backlog ·
 
 - `br` installed — verify with `which br`
 - `_plans/` and `_backlog/` (optional — absent sections render as `—`)
-- `CORE/journeys/*.md` (optional — absent renders as `—`); staleness verdicts need
-  `skills/_tools/journey-stamp-check.sh`
+- `CORE/journeys/*.md` (optional — absent renders as `—`); staleness verdicts need `skills/_tools/journey-stamp-check.sh`
 
 ---
 
@@ -56,10 +55,9 @@ done
 skills/_tools/journey-stamp-check.sh   # staleness verdict (SHA-ancestry + surface-touch diff)
 ```
 
-Per journey doc: no frontmatter or `criticality: peripheral` → out of scope (skip). Any
-other `criticality` (`review-critical`/`commerce`/`core`, i.e. `≥ core`) with no
-`last_pass` block → **missing**. With `last_pass` present → the stamp-check script's
-verdict decides **stale** vs current. Cheap read, org-wide sweep same as WIP above.
+Per journey doc: no frontmatter or `criticality: peripheral` → out of scope (skip). Any other `criticality` (`review-critical`/`commerce`/`core`, i.e. `≥ core`) with no `last_pass` block → **missing**; with `last_pass` present → the stamp-check script's verdict decides **stale** vs current. Cheap read, org-wide sweep same as WIP above.
+
+**Friction-sensor read (`skills/*/FRICTIONS.md`):** `python3 skills/skill-builder/scripts/friction-rollup.py --view trends` — the same shared parse ac-tidy and dream run; derived at render time, no new storage, and this skill never passes `--stamp`.
 
 ## Phase 2 — render
 
@@ -101,6 +99,9 @@ CI:    {last 3 runs: name → conclusion}
 {N} missing stamp · {N} stale
   • {journey} [{criticality} · {app}] — {missing | stale: sha not ancestor of HEAD | surface touched since <sha>}
 
+### 🩺 Friction Sensors ({stale}/{ledgers} stale · {promotable} over the promotion bar)
+  • {skill} — {stale_reason} · {open_entries} open · {n} unseen since last scan
+
 ### ⚠ Observed flags (not fixed — routed below)
 - {board-scan anomalies: missing plan frontmatter, legacy v*/ folders, open-but-looks-done beads, stale wave branch with closed beads}
 ```
@@ -108,9 +109,8 @@ CI:    {last 3 runs: name → conclusion}
 **Rendering rules:**
 
 - **Counts first, detail second** — the two header lines are the whole dashboard in a glance; everything below is drill-down.
-- Itemize only *open/active* things; cap any list at ~10 lines with `… +{N} more`.
+- Itemize only *open/active* things; cap any list at ~10 lines with `… +{N} more`. Flags are **observed, never acted on** — each gets a route in the footer, nothing more.
 - The `🤖/🧑` split line is the loop boundary made visible — it answers "is the factory running and what does it need from me" without opening `ac-human-session`.
-- Flags are **observed, never acted on** — each gets a route in the footer, nothing more.
 
 ## Phase 3 — routing footer (the only "actions")
 

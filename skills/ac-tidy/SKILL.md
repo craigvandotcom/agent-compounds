@@ -277,13 +277,13 @@ Report: "human-gate missing Gate-reason: {id} — propose reclassification (Tier
 
 > **All Phase-3 proposals exclude `in_progress`/claimed beads and re-validate at apply time (proposal→apply TOCTOU guard).** A bead claimed since the scan may have moved; before any proposal is applied (via `ac-human-session`'s re-invocation of the INTERACTIVE flow), re-check `br show <id>` and skip anything now `in_progress`, claimed, or already reconciled. Never propose an adoption/rewire/close over a bead another session holds.
 
-### Stale Backlog
-- Backlog items with `status: planned` but linked plan has been archived/deleted
-- Report: "Stale backlog: {filename} says 'planned' but plan is gone"
+### Stale Backlog + "In Progress" Items
+- `status: planned` but the linked plan was archived/deleted → Report: "Stale backlog: {filename} says 'planned' but plan is gone"
+- `status: in_progress` with no recent git activity in related files (>30 days) → report as informational, don't auto-change
 
-### Stale "In Progress" Items
-- Backlog with `status: in_progress` but no recent git activity in related files (>30 days)
-- Report as informational, don't auto-change
+### Stale Friction Sensors (`skills/*/FRICTIONS.md` — the sensor logs, not the beads)
+- `python3 skills/skill-builder/scripts/friction-rollup.py --view trends` — the shared parse; the staleness threshold, its rationale and the sweep obligation live in the script (ac-tidy adds no parser of its own, and never writes a ledger).
+- Flag, never fail, every `trends.skills[].stale`: `never-visited` = a dead sensor that still reads live · `last scan N days ago` = an overdue sweep. A ledger with no new entries is HEALTHY; an unvisited one is debt. Report: "Stale friction sensor: {skill} ({stale_reason}) — {open_entries} open, {n} unseen since last scan"
 
 ---
 

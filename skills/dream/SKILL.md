@@ -133,30 +133,28 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   Phase 2, so both get it.
 - **Cluster → skill-improvement (the friction-log promotion engine, W4.5):** several
   lessons orbiting one skill's friction → candidate edit to that skill. Alongside ad-hoc
-  lesson clusters, this now also runs a **deterministic weighting pass over the friction
-  sensor logs**: scan every per-skill `skills/*/FRICTIONS.md` (schema:
-  `skill-builder/references/friction-capture.md` — read it for the fields, not restated
-  here) and, for each `id` (counted **once per id**, per the schema — a cross-cutting id
-  is logged once in its primary skill; `see <id> in <primary>` pointer entries elsewhere
-  don't re-count it), compute:
+  lesson clusters, run the **deterministic weighting pass over the friction sensor logs**
+  — one shared computation, never re-derived here (ac-tidy and ac-dashboard read the same
+  parse; a second copy of the formula is how two consumers come to disagree):
 
-  `weight(id) = impact_num × frequency_num × recurrence`
+  ```bash
+  python3 skills/skill-builder/scripts/friction-rollup.py --view dream --stamp
+  ```
 
-  ordinal mapping (tunable, not load-bearing): `impact` S=1 / M=2 / L=3 ·
-  `frequency` rare=1 / occasional=2 / frequent=3 / every-run=4. **THRESHOLD:
-  `weight >= 12`** (tunable — e.g. M-impact (2) × frequent (3) × recurrence-2 = 12 clears
-  it; a single S-impact/rare/recurrence-1 entry at weight 1 does not). Before comparing to
-  the bar, group ids by the `related` field into clusters so one cluster yields one
-  candidate, not N near-duplicates. **The `related` graph is a free byproduct, already
-  built (W4.6):** every capture judges same-vs-new against existing entries
-  (`friction-capture.md` § Deduplication), and whichever ids it compared against land in
-  `related` regardless of verdict — this weighting pass and ac-hygiene's cluster-walk lens
-  (`skills/ac-hygiene/SKILL.md` § Friction Cluster-Walk Lens) both just *walk* that graph,
-  neither builds it. An over-bar id or cluster becomes a `skill-improvement`
-  candidate carrying the cluster's pre-drafted `proposed_fix`(es) as the starting point —
-  same Phase 4 judge → Phase 5 emit path as every other candidate (this is a second sensor
-  feeding the same funnel, not a new mechanism, exactly like the loop-retro rows above). On
-  REVIEW apply, the landed edit's commit also flips each contributing entry's
+  `--stamp` is CYCLE-only and load-bearing: it writes `last_pass: <today>` into every
+  ledger this scan parsed, which is the ONLY thing that distinguishes "this skill produced
+  no new friction" from "nobody has looked at this sensor since June". Stamp at SCAN time,
+  never at REVIEW apply — REVIEW rarely runs and touches only contributing entries, so a
+  visited-but-nothing-promoted ledger would read stale forever.
+
+  The script owns the weight, the ordinals, the promotion bar, the `perceptibility` gate,
+  the once-per-id rule and the `related`-graph clustering (all sourced from
+  `skill-builder/references/friction-capture.md` and documented in the script header —
+  read them there). It only WALKS the `related` graph, as does ac-hygiene's cluster-walk
+  lens; every capture builds it (W4.6, `friction-capture.md` § Deduplication). Take
+  `clusters[].promotable` — one cluster is one `skill-improvement` candidate carrying its
+  `proposed_fix`(es), through the SAME Phase 4 judge → Phase 5 emit path as every other
+  candidate. On REVIEW apply, the landed edit's commit also flips each contributing entry's
   `status: open` → `status: promoted` in its FRICTIONS.md — the flip is the receipt that
   the friction was acted on, not merely logged (see REVIEW Step 3).
 - **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
