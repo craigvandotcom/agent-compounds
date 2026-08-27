@@ -1347,6 +1347,30 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 22 — ac2 family ledger: control <-> friction referential integrity (ac-cfn4)
+# ---------------------------------------------------------------------------
+echo "--- Check 22: ac2 ledger integrity ---"
+
+# Check 21 proves a mechanism declares its failure semantics; this proves the ac2 family's
+# controls and its friction ledger still point at each other — every entry cites a receipt
+# and the control that treats it (or is explicitly untreated), every control names the
+# failure it prevents, and a friction re-observed AFTER its control landed is surfaced as a
+# FAILED CONTROL rather than accruing silently. Fails CLOSED: a missing or empty ledger
+# exits non-zero carrying NOT-GATED, because an absent sensor is not a clean one.
+ALI="$AC_ROOT/scripts/ac2-ledger-integrity.sh"
+check
+if [ -r "$ALI" ]; then
+  if ali_out=$(bash "$ALI" "$AC_ROOT" 2>&1); then
+    printf '%s\n' "$ali_out" | sed 's/^/  /'
+  else
+    printf '%s\n' "$ali_out"
+    fail "Check 22: ac2 ledger/control integrity violation(s) — see above"
+  fi
+else
+  fail "Check 22: scripts/ac2-ledger-integrity.sh missing — ac2 ledger integrity NOT-GATED"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

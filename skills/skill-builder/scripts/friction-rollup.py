@@ -353,7 +353,21 @@ def main(argv=None) -> int:
     ap.add_argument("--stamp", action="store_true",
                     help="dream CYCLE only: write last_pass into every parsed ledger")
     ap.add_argument("--today", default=None, help="ISO date override (tests)")
+    ap.add_argument("--ledger", default=None,
+                    help="parse ONE ledger and emit its raw entries (no cross-ledger "
+                         "dedup). The single-ledger consumers — e.g. the ac2 "
+                         "control<->friction integrity check — read this instead of "
+                         "growing a second parser over the same files.")
     args = ap.parse_args(argv)
+
+    if args.ledger:
+        led = parse_ledger(os.path.abspath(args.ledger),
+                           os.path.abspath(args.root or os.curdir))
+        for raw in led["entries"]:
+            raw["score"] = score(raw["fields"], args.threshold)
+        json.dump({"ledger": led}, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
 
     root = os.path.abspath(args.root)
     today = (datetime.date.fromisoformat(args.today) if args.today
