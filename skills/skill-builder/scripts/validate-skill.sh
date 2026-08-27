@@ -80,6 +80,18 @@ if [ "$1" = "--registry" ]; then
     # ac-deploy-target's .claude/settings.json (~2x the ~15k default). If an app
     # lacks that setting, its real budget is ~15k — deploy the setting, don't
     # shrink here. Raise both together, deliberately.
+    #
+    # ac2 CUTOVER — the archive-before-use ordering ruling (Craig, 2026-08-27, bead
+    # ac-g2v4). The ac2 pipeline family must be WRITTEN before the twelve legacy ac-*
+    # skills it absorbs can be archived, so both families sit on disk for the length of
+    # the build. Measured with this script across that lifecycle: 29,637 before the
+    # build, 33,214 at the overlap peak (over BUDGET_FAIL), 28,243 post-archival with
+    # 1,757 chars free — archiving the absorbed skills frees ~4,971 and ac2 needs
+    # ~3,577, so the END STATE fits and no per-skill ceiling is required. The overlap
+    # breach is therefore EXPECTED, and it EXPIRES the moment the absorbed ac-* skills
+    # move to _archive/skills/. The rule is an ORDERING one: build ac2, archive the
+    # legacy skills, and only then route work to ac2 — a breach that is still standing
+    # after the archival step is a real breach and must be dieted, not tolerated.
     BUDGET_FAIL=30000
     BUDGET_WARN=24000
     TOTAL=0; MANUAL=0; COUNT=0; OVER_1024=0
@@ -188,6 +200,13 @@ if [ "$1" = "--registry" ]; then
     if [ "$TOTAL" -gt "$BUDGET_FAIL" ]; then
         echo -e "${RED}❌ FAIL: $TOTAL chars exceeds the ~$BUDGET_FAIL listing budget — least-invoked skills lose descriptions (degraded triggering) in consuming sessions.${NC}"
         echo "  Fix: trigger-only descriptions; flip zero-inbound entry points; or raise skillListingBudgetFraction (and this threshold) deliberately."
+        # Machine-greppable, colour-free marker. This script exits 1 for a budget breach,
+        # an over-1024 description and an invocation-graph violation alike, so a caller
+        # reading only the exit status cannot tell them apart — and lint.sh's Check 13
+        # collapsed all three into one line, behind which a NEW budget breach could land
+        # invisibly while an unrelated graph violation already held the check red. lint.sh
+        # greps for this token to give the budget its own failure line. Keep it verbatim.
+        echo "registry-description-budget: BREACH $TOTAL > $BUDGET_FAIL chars"
         exit 1
     elif [ "$TOTAL" -gt "$BUDGET_WARN" ]; then
         echo -e "${YELLOW}⚠️  WARNING: $TOTAL chars — within budget but close to the ~$BUDGET_FAIL threshold.${NC}"

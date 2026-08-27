@@ -639,10 +639,22 @@ done
 #  budget, per-skill 1024-char cap, and the hard rule that no skill flagged
 #  disable-model-invocation is invoked from another skill's body. The graph is
 #  recomputed from the files on every run — never maintained by memory.)
+#
+#  The BUDGET leg gets its OWN failure line (bead ac-g2v4). validate-skill.sh exits 1
+#  for a budget breach, an over-1024 description and an invocation-graph violation
+#  alike, and one generic line cannot tell them apart — so while ANY of the three holds
+#  Check 13 red, a newly-introduced budget breach lands silently behind it. The ac2
+#  cutover makes that concrete: the overlap breach is tolerated by ruling and expires at
+#  archival (see validate-skill.sh's archive-before-use note), which only stays safe if a
+#  POST-archival breach is still visible as a breach. Grep for the marker, name it
+#  separately, and let the generic line follow.
 # ---------------------------------------------------------------------------
 echo "--- Check 13: skill registry (budget + invocation graph) ---"
 check
 if ! bash "$AC_ROOT/skills/skill-builder/scripts/validate-skill.sh" --registry "$AC_ROOT/skills" > /tmp/ac-lint-registry.out 2>&1; then
+  if grep -q '^registry-description-budget: BREACH' /tmp/ac-lint-registry.out; then
+    fail "Check 13 budget: $(grep -m1 '^registry-description-budget: BREACH' /tmp/ac-lint-registry.out) — the always-loaded skill-listing budget is over. Diet descriptions or archive absorbed skills; raising skillListingBudgetFraction is a deliberate, separate decision."
+  fi
   fail "Check 13: skill-registry validation (budget / >1024 desc / invocation-graph) — details: /tmp/ac-lint-registry.out"
 fi
 
@@ -682,13 +694,63 @@ echo "--- Check 14: no-net-growth (SKILL.md — registry + deploy-target-local) 
 # NNG_VIOLATIONS for EVERY net-positive file. There is no stamp and no exemption
 # token: ec5fa64 removed the `net-growth-ok` escape hatch — growth is bought with
 # deletion, not prose. (Proof: scripts/lint-net-growth.test.sh pins its absence.)
+# The ONE structural exception — a NEW ac2-family SKILL.md, which pays the ac2
+# family cap instead of the per-file delta — is defined directly below; it is a
+# path+creation rule the tool decides, never something a file can claim in prose.
 # Args: <repo root> <label> <merge base> <pathspec>
 # `--no-optional-locks` throughout: leg 2 reads OTHER live app checkouts, and a
 # lint run must never touch another repo's index (a sibling agent may be mid-edit).
 NNG_VIOLATIONS=()
+
+# --- ac2 family: CREATION defers to the family cap (bead ac-g2v4) ------------
+# The per-file ratchet is structurally uncreatable-through: a brand-new file has
+# `del = 0`, so `nng_net = add - del` is ALWAYS positive and EVERY creation is a
+# violation. That is correct for the legacy registry (a new skill there is pure
+# addition to an already-loaded corpus) but it made the ac2 family — seven skills
+# that must be WRITTEN before the twelve they absorb can be archived — impossible
+# to land at all. A new `skills/ac2-*/SKILL.md` therefore answers to the ac2 family
+# TOTAL instead of to its own per-file delta. The cap is the payment; the exemption
+# is a DEFERRAL to it, never an amnesty:
+#   - creation within the family cap  -> PASS
+#   - creation over the family cap    -> violation (the cap is what is enforced)
+#   - GROWTH of an existing ac2 file  -> violation under the normal ratchet
+#   - anything not ac2                -> untouched, exactly as at HEAD
+AC2_FAMILY_CAP="${AC2_FAMILY_CAP:-800}"
+
+# ac2-family membership, by path. `*/ac2-*/SKILL.md` requires a real directory
+# boundary before `ac2-`, so `skills/xac2-y/SKILL.md` is NOT a member.
+nng_is_ac2_skill() {
+  case "$1" in
+    */ac2-*/SKILL.md|ac2-*/SKILL.md) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Total lines across the ac2 family in the WORKING TREE (the state this change
+# lands in — the same basis Check 15's ceilings use). The family dir is derived
+# from the changed file's own path rather than hardcoded, so both legs work: leg 1
+# sees `skills/ac2-*/SKILL.md`, a deploy target `.claude/skills/ac2-*/SKILL.md`.
+# Args: <repo root> <repo-relative ac2 SKILL.md path>
+nng_ac2_family_total() {
+  local nng_r="$1" nng_p="$2" nng_dir nng_f nng_total=0 nng_n
+  nng_dir="${nng_p%/*}"      # .../skills/ac2-foo
+  nng_dir="${nng_dir%/*}"    # .../skills
+  while IFS= read -r nng_f; do
+    [ -n "$nng_f" ] || continue
+    nng_n=$(wc -l < "$nng_f" 2>/dev/null || printf '0')
+    nng_total=$(( nng_total + nng_n ))
+  done < <(/usr/bin/find "$nng_r/$nng_dir" -maxdepth 2 -path '*/ac2-*/SKILL.md' -type f 2>/dev/null || true)
+  printf '%s' "$nng_total"
+}
+
 nng_scan() {
   local nng_repo="$1" nng_label="$2" nng_base="$3" nng_spec="$4"
-  local nng_add nng_del nng_path nng_net nng_seen=0
+  local nng_add nng_del nng_path nng_net nng_seen=0 nng_added nng_fam
+  # The CREATION set. `git diff --numstat` prints "N 0" for a brand-new file AND for
+  # a pure-addition edit to an existing one — indistinguishable — so numstat alone
+  # cannot tell creation from growth. `--diff-filter=A` can, and is the only thing
+  # standing between "ac2 skills are creatable" and "ac2 SKILL.md growth is free".
+  nng_added=$(git --no-optional-locks -C "$nng_repo" diff --name-only --diff-filter=A "$nng_base" -- "$nng_spec" 2>/dev/null || true)
   while IFS=$'\t' read -r nng_add nng_del nng_path; do
     [ -n "$nng_add" ] || continue
     [ "$nng_add" = "-" ] && continue   # binary numstat marker; SKILL.md is never binary
@@ -696,6 +758,15 @@ nng_scan() {
     nng_net=$(( nng_add - nng_del ))
     if [ "$nng_net" -le 0 ]; then
       echo "no-net-growth: $nng_label/$nng_path net $nng_net line(s) vs $nng_base — PASS (neutral or shrinking)"
+      continue
+    fi
+    if nng_is_ac2_skill "$nng_path" && printf '%s\n' "$nng_added" | grep -Fxq -- "$nng_path"; then
+      nng_fam=$(nng_ac2_family_total "$nng_repo" "$nng_path")
+      if [ "$nng_fam" -le "$AC2_FAMILY_CAP" ]; then
+        echo "no-net-growth: $nng_label/$nng_path is a NEW ac2-family SKILL.md — per-file ratchet deferred to the ac2 family cap (family total $nng_fam <= $AC2_FAMILY_CAP) — PASS (ac2-creation)"
+        continue
+      fi
+      NNG_VIOLATIONS+=("$nng_label/$nng_path (ac2-family-cap: family total $nng_fam > $AC2_FAMILY_CAP)")
       continue
     fi
     NNG_VIOLATIONS+=("$nng_label/$nng_path (+$nng_net)")
@@ -799,7 +870,7 @@ done
 
 # One verdict over BOTH legs.
 if [ "${#NNG_VIOLATIONS[@]}" -gt 0 ]; then
-  fail "no-net-growth: net-positive SKILL.md file(s): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — core is loaded every invocation, so it holds or shrinks. Move the content to references/, or delete an equivalent amount from THIS file. A written justification is not a payment, and a shrink in another file does NOT offset it."
+  fail "no-net-growth: net-positive SKILL.md file(s): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — core is loaded every invocation, so it holds or shrinks. Move the content to references/, or delete an equivalent amount from THIS file. A written justification is not a payment, and a shrink in another file does NOT offset it. (An 'ac2-family-cap' entry is a CREATION over the ${AC2_FAMILY_CAP}-line ac2 family total — diet the family, do not raise the cap.)"
 fi
 
 # ---------------------------------------------------------------------------
