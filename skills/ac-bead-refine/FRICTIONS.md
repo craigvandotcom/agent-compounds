@@ -248,14 +248,30 @@ entries: 33
 - skills: [ac-bead-refine]
 - impact: M
 - frequency: every-run
-- recurrence: 2
+- recurrence: 3
 - related: [bash-isms-in-pasted-snippets-diverge-silently-under-zsh]
 - first_seen: 2026-08-03
-- last_seen: 2026-08-03
+- last_seen: 2026-08-27
 - stage: ac-bead-refine
-- status: resolved (ac-e5a3, shipped 2026-08-03)
+- status: open — REOPENED 2026-08-27; the ac-e5a3 fix was site-scoped, not root-scoped
 - proposed_fix: shipped — `workflow.md`'s `tr` invocations now call the binary explicitly rather than the bare name, so the fleet's interactive alias cannot shadow them (ac-e5a3: 8 invocations across 7 lines in 4 files).
 - narrative: bare `tr` is aliased to tmux in the fleet's interactive zsh, so four `workflow.md` sites silently produced EMPTY STRINGS instead of the transformed values they computed. The values were CHILD_ID components, which meant the bd-baudw sibling-collision safety (distinct per-child artifact dirs) was degraded run-wide without any child seeing an error: two children hit it directly (~6 min, 3 retries, 4 orphaned /tmp dirs across siblings; one had to re-derive `paste -sd' '` as a substitute), and the rest inherited weakened isolation. Logged as resolved rather than omitted because the shape is the one this ledger exists to catch — a silently-empty result from a shadowed command name — and because the fix shipped the same day it was observed, which is the evidence trail a future promotion pass needs to see WORKED.
+  REOPENED — RUN 20260827-221232-66808 GentleCave (ac-loop-swarm) hit `wc -l | tr -d ' '`
+  failing with "open terminal failed: not a terminal", 24 days after this entry was marked
+  resolved. The worker read that as a failed control; it is worse and more useful than that.
+  ac-e5a3 did exactly what it claimed — it patched 8 named invocations across 7 lines in 4
+  files — but the root cause is a fleet-wide interactive-zsh alias shadowing a POSIX binary,
+  which is unbounded in scope. Patching the call sites known on 2026-08-03 cannot bind a call
+  site written on 2026-08-27 in a different skill by a different agent. So `resolved` here
+  asserted something the fix never established: it recorded SITE coverage and was read as ROOT
+  coverage, and the ledger offered no way to tell those apart. The promotion pass would have
+  counted this as a control that WORKED. Two things follow, and the second is the real one:
+  (1) the fix must move to the root — unalias/`command tr` at the harness boundary, or a lint
+  check that rejects bare `tr` in agent-authored shell, so new sites are covered by
+  construction; (2) `status: resolved` needs to distinguish root-fixed from sites-patched,
+  because a site-scoped fix silently degrades into a false all-clear the moment anyone writes
+  new code — which is the precise shape this ledger exists to catch, now demonstrated on the
+  ledger's own bookkeeping.
 
 ## final-round-audits-the-input-not-the-draft
 - skills: [ac-bead-refine]

@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-26
-entries: 35
+last_pass: 2026-08-27
+entries: 50
 ---
 
 # ac-loop-swarm — friction log
@@ -331,10 +331,10 @@ entries: 35
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 3
+- recurrence: 4
 - related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
 - first_seen: 2026-08-23
-- last_seen: 2026-08-26
+- last_seen: 2026-08-27
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: report findings not categories in the summary line, and exit non-zero — or print an explicit NOT-CHECKED verdict — when no scanner matched the supplied files.
@@ -352,6 +352,14 @@ entries: 35
   positive on a local variable named `token`, and `.mdx` turned out to have no scanner at all —
   it reports `nothing was checked - this is NOT a pass`. Add `.mdx` to the uncovered-language
   list alongside shell, CSS and markdown.
+  RUN 20260827-221232-66808 GentleCave escalates this from misreporting to NOT-GATED: in THIS
+  repo shell and markdown ARE the dominant languages, so the mandated step-6 gate covered
+  nothing at all on 6 of 8 beads — only two Python files were ever scanned. The downward
+  half is not an edge case here, it is the normal case, and the loop's own doctrine calls
+  `ubs` its quality gate. A gate that no-ops on the majority of a repo's files while the
+  worker records it as passed is the decoration failure this ledger exists to catch. The
+  proposed_fix's second clause (explicit NOT-CHECKED verdict, non-zero exit when no scanner
+  matched) is the load-bearing half and is still unshipped after four observations.
 
 ## prepush-build-checks-the-working-tree-not-the-pushed-commit
 - skills: [ac-loop-swarm]
@@ -832,3 +840,69 @@ entries: 35
 - status: open
 - proposed_fix: make the seed scripts produce at least one build-eligible canonical_ingredient and set the onboarding/subscription columns; folded into bd-rbb5s.
 - narrative: RUN 20260826-150009-78761 bd-20oz1 -- two separate seed gaps blocked a local prod build before any screenshot could be taken. (1) `getAllFoodPageSlugs` returning zero slugs fails the build BY DESIGN (`lib/db/food-pages.ts:323`), and a freshly seeded DB has no eligible canonical_ingredients, so a local row needed a plain_summary plus sign-off before the build would complete. (2) `scripts/seed-insights-test-data.ts` cannot write `public.users` under RLS, so completedOnboarding and subscription_status had to be set by hand in SQL before any authenticated screen would render. Each is one line to describe and many minutes to rediscover.
+
+## seed-epic-exclusion-keys-on-label-not-issue-type
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [seed-device-title-filter-starves-native-parity-beads]
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: drop on `issue_type == "epic"` as well as the `epic` LABEL, in both the seed's step-1 filter and the orchestrator's Phase-0 pool count. They are two spellings of the same exclusion and only one is implemented.
+- narrative: RUN 20260827-221232-66808 pre-flight — the seed's step-1 drop list is expressed
+  entirely in LABELS (`human-gate|device|epic|unrefined`) plus `type decision`. `ac-kqpw` sat in
+  the ready pool typed `issue_type: epic`, carrying `refined` but NO `epic` label, with all seven
+  of its children already closed. Nothing in the filter would have dropped it, so a worker would
+  have claimed a finished epic and tried to implement it. The skill's own Invariants note that
+  "epics sit in `br ready` typed task/feature" — that observation is what made the exclusion
+  label-based, and it is now simply wrong for at least one bead. The failure is silent by
+  construction: the pool count and the worker's pick both look completely normal, and the only
+  reason it was caught is that the orchestrator read the four-row pool by eye before spawning.
+  At a wider width, or a pool too long to eyeball, it costs wasted worker context at best and a
+  spurious re-close of a delivered epic at worst.
+
+## br-ready-has-no-pick-order-flag-so-every-caller-reimplements-it
+- skills: [ac-loop-swarm, ac-loop, beads-standards]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [br-ready-serves-stale-assigned-open-beads]
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: give `br ready` a `--sort bug-priority-fifo` (or make the documented pick-order the default) so the canon lives in the tool, not in prose every caller re-implements.
+- narrative: RUN 20260827-221232-66808 GentleCave — `br ready --json -l refined` returns a
+  hybrid-sorted pool that is type-blind, which the seed itself warns about ("never take its first
+  row as-is"). But there is no flag that produces the canonical order, so every worker on every
+  pick re-implements bugs-first → priority → created_at in jq or python. The doctrine is stated in
+  beads-standards § Pick-order and executed nowhere: it lives only as prose that N independent
+  workers must each transcribe correctly, forever. That is a rule with no enforcement loop, and
+  its failure mode is quiet — a subtly wrong re-implementation still returns a plausible bead, so
+  a starved priority class would never announce itself.
+
+## reservation-guard-is-advisory-only-for-code-paths
+- skills: [ac-loop-swarm]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [agent-identity-env-lost-between-tool-calls, br-claim-success-is-not-a-durable-lock]
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: either enforce exclusivity for code-repo paths or have the seed say plainly that reservations are a courtesy signal to siblings and that `flock` plus the `br` claim are the only real mutexes. Do not present an advisory call as a gate.
+- narrative: RUN 20260827-221232-66808 GentleCave — `file_reservation_paths` returned
+  "3 of 3 reserved paths are code-repo paths; server-side exclusivity is advisory only". The seed
+  spends a round trip per bead on step 4 and treats a non-empty `conflicts` list as a reason to
+  unclaim and re-pick, which reads as a mutex. On this checkout it enforces nothing: two workers
+  reserving the same path would both be granted. This run was safe because the beads happened to
+  touch disjoint files and `flock` serialised the commits — not because any reservation held. An
+  advisory call that doctrine describes as a gate is the same class of defect as the `ubs` entry
+  above: the ceremony is performed, the assurance is assumed, and no loop closes.
