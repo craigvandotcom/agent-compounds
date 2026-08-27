@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Minimal pointer digest of the memory substrate (hooks-scopes-grok plan, Phase 5.1).
 
+ASSURANCE-ROLE: utility
+CALLER: harness-sync.sh (two `python3 "$AC_ROOT/hooks/build_memory_digest.py"` call sites,
+verified 2026-08-27) — deliberately UNWIRED in hooks/hooks.json. It is not a hook; it lives
+here because its output feeds the generated global rules file. Declared so orphan detection
+(lint Check 21) can tell a real utility from a dead executable.
+
+
 Emits one markdown line per high-value memory (name + description hook) so a harness
 with no hook-injection channel (Grok) starts every session knowing what the substrate
 holds and pulls detail via qmd. Called by harness-sync's render_context_grok; output

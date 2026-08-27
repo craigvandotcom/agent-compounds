@@ -1254,6 +1254,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 21 — assurance-triad declarations + orphan detection (ac-on0y.4)
+# ---------------------------------------------------------------------------
+echo "--- Check 21: assurance declarations ---"
+
+# Check 18 proves a guard CAN fire; Check 20 proves a proof test IS RUN; this proves a
+# mechanism SAYS WHAT IT DOES WHEN IT BREAKS. Written because hooks/ held a blocking
+# guard that had been fail-open against a store that does not exist, and an executable
+# with no wiring at all — neither detectable while "wired" was the only claim anyone made.
+ADC="$AC_ROOT/scripts/assurance-declarations-check.sh"
+check
+if [ -r "$ADC" ]; then
+  if adc_out=$(bash "$ADC" "$AC_ROOT" 2>&1); then
+    printf '%s\n' "$adc_out" | sed 's/^/  /'
+  else
+    printf '%s\n' "$adc_out"
+    fail "Check 21: undeclared or wrongly-declared mechanism(s) — see above"
+  fi
+else
+  fail "Check 21: scripts/assurance-declarations-check.sh missing — declarations unverified"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

@@ -131,6 +131,17 @@ For discipline-enforcing skills:
 - Test under "maximum pressure" conditions
 - Close every loophole discovered in testing
 
+### New mechanisms declare their assurance AT BIRTH
+
+Any guard, hook, gate, or check you author must ship its four-field declaration in the
+same commit — `PROBE` (how you would show it is alive) · `SCHEDULE` (what triggers it) ·
+`MODE: blocking|advisory` · `ON-FAILURE: open|closed` — plus the NOT-GATED refusal shape
+for anything that can decline to verify. Fail-open is legal only for `advisory`.
+
+Canon (one owner-hosted home, do not restate it here):
+**`ac-pipeline/references/assurance-declarations.md`**. Enforced by `lint.sh` Check 21.
+No new mechanism ships as prose: "wired" and "working" are different claims.
+
 ### What Qualifies as a Skill
 
 **IS a skill:**

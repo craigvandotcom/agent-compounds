@@ -9,6 +9,10 @@ on:
       - "scripts/**"
       - "lint.sh"
       - ".github/workflows/**"
+      # .beads/** is the EXPIRY TRIGGER for Check 21's PENDING-DECISION escapes: closing a
+      # cited decision bead must re-run the check, or an expired escape rots silently until
+      # some unrelated push happens to notice (ac-on0y.4).
+      - ".beads/**"
   pull_request:
     branches: [main]
     paths:
@@ -17,6 +21,10 @@ on:
       - "scripts/**"
       - "lint.sh"
       - ".github/workflows/**"
+      # .beads/** is the EXPIRY TRIGGER for Check 21's PENDING-DECISION escapes: closing a
+      # cited decision bead must re-run the check, or an expired escape rots silently until
+      # some unrelated push happens to notice (ac-on0y.4).
+      - ".beads/**"
 
 jobs:
   registry-lint:

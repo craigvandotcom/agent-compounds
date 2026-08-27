@@ -3,6 +3,7 @@
   "wiring": [
     {
       "id": "session-start-context",
+      "assurance": {"PROBE": "test -s hooks/session-start.md && test -s hooks/machine-global-shim.md (the two payloads the cat emits)", "SCHEDULE": "SessionStart - every session (claude/codex/droid)", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "SessionStart",
       "command": "cat {HOOKS}/session-start.md {HOOKS}/machine-global-shim.md",
       "harnesses": ["claude", "codex", "droid"],
@@ -10,6 +11,7 @@
     },
     {
       "id": "memory-recall",
+      "assurance": {"PROBE": "memory-retrieval.py emits a non-empty <memory-recall> block for a seeded prompt", "SCHEDULE": "UserPromptSubmit - every prompt (HOT LANE)", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "UserPromptSubmit",
       "command": "python3 {HOME}/Repos/.claude/hooks/memory-retrieval.py",
       "harnesses": ["claude", "codex", "droid"],
@@ -18,6 +20,7 @@
     },
     {
       "id": "pre-prompt-reminder",
+      "assurance": {"PROBE": "test -s hooks/delegation-reminder.md (the payload the cat emits)", "SCHEDULE": "UserPromptSubmit - every prompt", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "UserPromptSubmit",
       "command": "cat {HOOKS}/delegation-reminder.md",
       "harnesses": ["claude", "codex", "droid"],
@@ -26,6 +29,7 @@
     },
     {
       "id": "trauma-guard",
+      "assurance": {"PROBE": "feed a known trauma pattern on stdin, expect the deny dialect - CANNOT PASS TODAY: ~/.cass-memory/traumas.jsonl does not exist, load_traumas() fails open, guard matches nothing", "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)", "MODE": "blocking", "ON-FAILURE": "open", "PENDING-DECISION": "ac-on0y.5"},
       "event": "PreToolUse",
       "matcher": "Bash",
       "command": "{HOOKS}/trauma_guard.py",
@@ -36,6 +40,7 @@
     },
     {
       "id": "skill-edit-guard",
+      "assurance": {"PROBE": "lint.sh Check 18 - fires on BOTH entry points (Bash and Edit/Write) and is silent on both negatives", "SCHEDULE": "PreToolUse(Bash|Edit|Write) per matching call; the probe runs in the registry-lint CI job", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "PreToolUse",
       "matcher": "Bash|Edit|Write",
       "command": "{HOOKS}/skill-edit-guard.py",
@@ -47,6 +52,7 @@
     },
     {
       "id": "bead-capture-guard",
+      "assurance": {"PROBE": "hooks/bead-capture-guard.test.py (38 cases), driven by lint.sh Check 18 and executed by scripts/run-all-harnesses.sh in CI", "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)", "MODE": "blocking", "ON-FAILURE": "open", "BACKSTOP": "skills/ac-bead-refine/scripts/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (Craig 2026-08-23): a guard must not wedge an unattended 3am ac-loop."},
       "event": "PreToolUse",
       "matcher": "Bash",
       "command": "{HOOKS}/bead-capture-guard.py",
@@ -57,6 +63,7 @@
     },
     {
       "id": "activity-logger",
+      "assurance": {"PROBE": "a tool call appends a row to the activity DB tool_calls table (activity-report consumes it)", "SCHEDULE": "PostToolUse - every tool call (org/machine)", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "PostToolUse",
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
       "harnesses": ["claude", "codex", "droid", "grok"],
@@ -64,6 +71,7 @@
     },
     {
       "id": "activity-logger-subagent",
+      "assurance": {"PROBE": "a subagent completion appends a row to the activity DB subagent_completions table", "SCHEDULE": "SubagentStop - every subagent completion (org/machine)", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "SubagentStop",
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
       "harnesses": ["claude", "codex", "droid", "grok"],
@@ -71,6 +79,7 @@
     },
     {
       "id": "activity-logger-memory-reads",
+      "assurance": {"PROBE": "a qmd get in an APP session appends a row to memory_reads (the table dream-cycle/decay_lint.py consumes)", "SCHEDULE": "PostToolUse(mcp__qmd__get|mcp__qmd__multi_get|Bash) - app scope only", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "PostToolUse",
       "matcher": "mcp__qmd__get|mcp__qmd__multi_get|Bash",
       "command": "python3 {HOME}/Repos/infrastructure/tools/src/lib/activity_logger.py",
@@ -80,6 +89,7 @@
     },
     {
       "id": "app-local-reminders",
+      "assurance": {"PROBE": "with an app-local .claude/hooks/delegation-reminder.md present its content reaches the prompt; silent no-op when absent (the trailing exit 0)", "SCHEDULE": "UserPromptSubmit - every prompt (app scope, claude only)", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "UserPromptSubmit",
       "command": "for f in \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/delegation-reminder.md \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/workflow-reminder.md; do [ -f \"$f\" ] && cat \"$f\"; done; exit 0",
       "harnesses": ["claude"],

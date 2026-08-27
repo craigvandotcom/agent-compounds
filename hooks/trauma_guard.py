@@ -3,14 +3,22 @@
 Dynamic Trauma Guard for Project Hot Stove.
 Reads from ~/.cass-memory/traumas.jsonl and .cass/traumas.jsonl to enforce safety.
 
-STATUS (verified 2026-07-19, brain-gap-plan Phase 0 item 1, org-bah): this hook is
-live-wired as a PreToolUse Bash hook in every harness (claude/codex/droid/grok — see
-hooks.json + settings.json), but ~/.cass-memory/traumas.jsonl does not exist on this
-machine and no project .cass/traumas.jsonl has ever been populated either (both repos
-that have a .cass/ dir contain only playbook.yaml, no traumas.jsonl). load_traumas()
-fails open on a missing file, so this guard currently matches nothing and silently
-no-ops on every Bash call. Left wired (not deleted) pending a decision on whether to
-seed a traumas store or retire the hook — see org-bah investigation notes.
+STATUS (verified 2026-07-19, re-verified 2026-08-27): this hook is live-wired as a
+PreToolUse Bash hook in every harness (claude/codex/droid/grok — see hooks.json +
+settings.json), but ~/.cass-memory/traumas.jsonl does not exist on this machine and no
+project .cass/traumas.jsonl has ever been populated either (both repos that have a .cass/
+dir contain only playbook.yaml, no traumas.jsonl). load_traumas() fails open on a missing
+file, so this guard currently matches nothing and silently no-ops on every Bash call.
+
+CITATION CORRECTED (ac-on0y.4, 2026-08-27): this docstring previously cited `org-bah` as
+its trail. That is WRONG — org-bah is the CLOSED cm-playbook-removal decision and contains
+zero trauma_guard content (read in full, cross-repo). Background only:
+infrastructure/plans/2026-07-17-brain-gap-plan.md Phase 0 item 1, which explicitly DEFERS
+this question rather than answering it.
+
+Left wired (not deleted) pending the seed-vs-retire ruling — that fork is bead ac-on0y.5,
+and its hooks.json declaration carries MODE: blocking / ON-FAILURE: open with
+PENDING-DECISION: ac-on0y.5. Lint Check 21 expires that escape the moment ac-on0y.5 closes.
 """
 import json
 import sys
