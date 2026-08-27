@@ -168,9 +168,8 @@ Silent-skip is reserved for sources that were never wired.
 ### Phase 3a — route DEFECTS to beads
 
 For each confirmed, deduped **defect**, create a typed bead directly via `br create`, per
-the conventions in `beads-standards/reference/bead-conventions.md` (the authority for bead shape —
-`ac-bead-capture` is the human quick-capture skill and is not invoked by this batch
-workflow; raw `br create` per those conventions is the deliberate pattern here):
+`beads-standards/reference/bead-conventions.md` (the authority for bead shape; raw `br create`
+is the deliberate pattern here — `ac-bead-capture` is the human quick-capture skill).
 
 ```
 br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
@@ -180,30 +179,37 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
                  ## Acceptance Criteria (crash signature gone in next release's source)
                  ## Test Scope (real test file/describe anchors — grep them first)>"
 # body headers per beads-standards/reference/bead-conventions.md §Body template — emit at creation
-
 ```
 
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
-- **Readiness gate (the ac-loop seam):** `refined` is applied EXCLUSIVELY by
-  `/ac-bead-refine` on convergence — triage never stamps it, however strong the evidence.
-  Every finding-bead ships `--labels triage,<source>,unrefined` and routes through
-  `ac-bead-refine` before `ac-implement` can pick it up. The Phase-3a bar (source
-  permalink, first-seen release, suspected wave/commit, stack frames/repro, AND a
-  verification path) is no longer a stamping decision — it's guidance for how completely
-  to evidence the bead at creation time. A refined-by-construction bead still queues for
-  refinement, but with everything already in hand it converges in one fast pass instead of
-  needing investigative rounds. `-t investigation` beads are ALWAYS `unrefined` — they are
-  questions, not specs. Findings still always ship `unrefined` at creation — the run-end
-  `ac-bead-refine` invocation below (Phase 3c) is what earns the stamp, in-session, while
-  the evidence above is still in the conductor's context.
-- **`## Test Scope` at creation, with grep-verified anchors** (same bar as `ac-hygiene`;
-  `beads-standards/reference/bead-conventions.md` §Body template): name the real file(s)/describe block(s) a
-  validator would run — grep each one before citing it, never invent a describe you haven't
-  seen — plus the QA modality for user-facing surfaces (`browser:`/`device:` + journey). A
-  finding bead with no test plan is how an engineer ends up authoring tests that cannot fail;
-  refine's Test Scope gate will otherwise have to author it cold, without the crash evidence
-  you have in hand right now.
+- **Readiness gate (the ac-loop seam):** every finding ships `unrefined`, however strong the
+  evidence; `refined` is applied EXCLUSIVELY by `/ac-bead-refine` on convergence (Phase 3c,
+  in-session, while the evidence is still in context). `-t investigation` beads are ALWAYS
+  `unrefined` — they are questions, not specs. The Phase-3a bar (permalink, first-seen
+  release, suspected wave/commit, stack frames/repro, verification path) is not a stamping
+  decision: it is how completely to evidence the bead now, so refinement converges in one
+  pass instead of needing investigative rounds.
+- **`## Test Scope` at creation, with grep-verified anchors** (same bar as `ac-hygiene`):
+  name the real file(s)/describe block(s) a validator would run — grep each before citing it,
+  never invent a describe you have not seen — plus the QA modality for user-facing surfaces
+  (`browser:`/`device:` + journey). A finding bead with no test plan is how an engineer ends
+  up authoring tests that cannot fail, and refine would have to author it cold.
+- **ac2-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
+  escape as `catch-stage:<stage>` — the stage that SHOULD have caught it (plan · beadify ·
+  flight · implement · close · review) — plus `discovered-from: <bead>` naming the work that
+  shipped it. Without both it is a bug report; with them it is evidence about which gate
+  leaks. Of 27 catch-stage-labelled findings on the factory's own board exactly ONE came from
+  outside its own gates and none from production: a pipeline graded only on receipts its own
+  gates emit cannot learn that it was wrong, and this leg is the only place that number moves.
+- **Product findings to the board; process observations to the ac2 family ledger.** The same
+  signal yields both, and conflating them is how a board fills with beads about ourselves
+  (measured 39%). A defect in the shipped thing → a bead, here. An observation about how the
+  pipeline itself behaved → `FRICTIONS.md`, never a bead, never both.
+- **Escapes feed the batch telemetry rollup.** Report every ac2-lane finding at the next batch
+  boundary with its catch-stage: EXTERNAL escapes, not the findings our own review caught, are
+  the metric the lean-pipeline thesis is judged on. A rollup carrying only internally-caught
+  findings is a self-graded exam.
 - Always include the **source permalink** (Sentry issue URL / ASC feedback id) and the
   **suspected wave/commit** so the implementer starts with a lead, not a cold trail.
 - Apply the anti-inflation rules: dedupe first, nits stay out, one bead per fingerprint.
@@ -321,19 +327,12 @@ per-app severity bar, the dedupe-fingerprint convention, and any source-specific
 
 ## Remember
 
-- **Fetch + cluster here; classify/route/dedupe via `ac-bead-capture`.** Don't reimplement
-  the bead side.
 - **Route by shape, not source** — defects → beads (3a); feature/experience themes →
   backlog candidates (3b). The same rule `ac-backlog` uses for human-captured ideas.
-- **Dedupe against existing beads AND candidates BEFORE creating** — recurrence updates
-  (bump count / append evidence), never duplicates.
 - **One bead per fingerprint**, with a source link + suspected wave. No cold trails.
 - **Sentry first** — symbolicated stacks beat sparse beta-crash APIs.
 - **A source not configured is skipped; a source configured-but-FAILING is an escalation**
   — file/update the ops bead, never silently skip a wired source, never advance its watermark.
-- **Respect the ac-loop seam** — findings ALWAYS ship `unrefined` at creation; only
-  `/ac-bead-refine`'s run-end, in-session invocation (Phase 3c) ever applies `refined`.
-  Strong evidence just makes that pass converge fast, it never skips it.
 - **Finding-beads get an epic per run** (2+ beads) — refined in-session before the report
   whenever this run created **≥1 bead** (epic-scoped or single-bead-scoped), shipped by the
   loop as one cohesive unit.
