@@ -20,6 +20,14 @@
 #      hatch would push authors to fabricate REDs, one order worse than omitting one.
 #   3. header present but the SECTION IS EMPTY -> FAIL. A header-presence grep passes
 #      this, and would ship a check as hollow as the gap it closes.
+#
+# TWO ACCEPTED SHAPES, and which one applies is an EXPLICIT RULE, never grep order:
+#   - `## Declared RED` present -> the six-element ac-* contract above decides, alone.
+#   - `## Declared RED` absent  -> the ac2 schema (ac2-beadify/references/bead-schema.md),
+#     where element 4's ASSERTION is carried by the ACs: EVERY top-level bullet of
+#     `## Acceptance Criteria` must name an executable probe as ``Probe: `<command>` ``.
+#     A bulletless AC section FAILS (vacuously "every bullet has a probe"), and PARTIAL
+#     coverage FAILS — otherwise the widening degrades into "has an AC section".
 set -uo pipefail
 
 EXEMPT_TYPES="epic decision investigation"
@@ -31,6 +39,50 @@ fail_bead() {
   RC=1
 }
 
+# check_ac2_probes <label> <description>
+# The ac2 shape: no `## Declared RED`, element 4 carried by probe-carrying ACs.
+# Header match is `br lint`-compatible — case-insensitive, trailing text allowed.
+check_ac2_probes() {
+  local label="$1" desc="$2"
+
+  if ! printf '%s\n' "$desc" | grep -qiE '^## Acceptance[[:space:]]+Criteria'; then
+    fail_bead "$label" "no '## Declared RED' header and no '## Acceptance Criteria' section — element 4 of the implementation contract is missing"
+    return 1
+  fi
+
+  # Section body: everything after the AC header up to the next '## ' heading or EOF.
+  local ac_body
+  ac_body=$(printf '%s\n' "$desc" | awk '
+    { low = tolower($0) }
+    inac && low ~ /^## / { exit }
+    inac { print; next }
+    low ~ /^## acceptance[ \t]+criteria/ { inac = 1 }
+  ')
+
+  # One AC = one TOP-LEVEL bullet; indented lines are its continuation, which is where
+  # the schema puts the probe. Any line of the block may carry it.
+  local counts bullets probed
+  counts=$(printf '%s\n' "$ac_body" | awk '
+    /^[-*][ \t]+/ { if (cur && hasprobe) probed++; bullets++; cur = 1; hasprobe = 0 }
+    cur && /Probe:[ \t]*`[^`]+`/ { hasprobe = 1 }
+    END { if (cur && hasprobe) probed++; print bullets + 0, probed + 0 }
+  ')
+  bullets=${counts% *}; probed=${counts#* }
+
+  if [ "$bullets" -eq 0 ]; then
+    fail_bead "$label" "'## Acceptance Criteria' has no AC bullets — 'every AC names a probe' is vacuously true of zero ACs, so this declares nothing"
+    return 1
+  fi
+
+  if [ "$probed" -lt "$bullets" ]; then
+    fail_bead "$label" "no '## Declared RED' header, and $((bullets - probed)) of $bullets '## Acceptance Criteria' bullets name no executable probe (expected \`Probe: \`<command>\`\` on the AC) — element 4 of the implementation contract is missing"
+    return 1
+  fi
+
+  printf 'element4-check: PASS %s (element 4 via probe-carrying ## Acceptance Criteria — %d/%d ACs name a probe)\n' "$label" "$probed" "$bullets"
+  return 0
+}
+
 # check_description <label> <issue_type> <description>
 check_description() {
   local label="$1" itype="$2" desc="$3"
@@ -39,9 +91,11 @@ check_description() {
     *" $itype "*) printf 'element4-check: SKIP %s (issue_type=%s is exempt)\n' "$label" "$itype"; return 0 ;;
   esac
 
+  # Shape selection is a rule, not a race: a `## Declared RED` header, when present,
+  # decides — even if the description ALSO carries probe-carrying ACs.
   if ! printf '%s\n' "$desc" | grep -qE '^## Declared RED[[:space:]]*$'; then
-    fail_bead "$label" "no '## Declared RED' header — element 4 of the implementation contract is missing"
-    return 1
+    check_ac2_probes "$label" "$desc"
+    return $?
   fi
 
   # The section body: everything after the header up to the next '## ' heading or EOF.
@@ -60,7 +114,7 @@ check_description() {
   # Sanctioned n/a form: `RED: n/a` carries a reason on the same line.
   if printf '%s\n' "$body" | grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a'; then
     if printf '%s\n' "$body" | grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a[[:space:]]*([-—:]|--)[[:space:]]*[^[:space:]]'; then
-      printf 'element4-check: PASS %s (RED: n/a with a stated reason)\n' "$label"
+      printf 'element4-check: PASS %s (element 4 via ## Declared RED — n/a with a stated reason)\n' "$label"
       return 0
     fi
     fail_bead "$label" "'RED: n/a' with no reason — the escape hatch requires 'RED: n/a — <why>'"
@@ -98,7 +152,7 @@ check_description() {
   if ! printf '%s\n' "$body" | grep -qiE 'must FAIL|assert|expect|exit|violations|returns'; then
     printf 'element4-check: WARN %s — the section names no observable (assert/expect/exit code). Element 4 asks for the ASSERTION, not just the test title.\n' "$label" >&2
   fi
-  printf 'element4-check: PASS %s\n' "$label"
+  printf 'element4-check: PASS %s (element 4 via ## Declared RED)\n' "$label"
   return 0
 }
 

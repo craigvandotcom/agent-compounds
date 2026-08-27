@@ -297,6 +297,158 @@ else
   fail "Case 14: expected exit 0 for a legacy bead, got $RC. Output: $OUT"
 fi
 
+# ============================================================================
+# Cases 15-21: the ac2 schema (four sections, no `## Declared RED`). Element 4's
+# ASSERTION is carried by the ACs, each naming its executable probe. The widening
+# must accept that shape WITHOUT becoming a blanket exemption for "has ACs" —
+# hence the vacuous, probe-less and partial-coverage refusals below.
+# Which shape accepted a description is an EXPLICIT rule, asserted in Case 20:
+# a `## Declared RED` header, when present, decides — never grep order.
+# ============================================================================
+
+AC2_BODY='## Intent
+The gate is reachable from any shell, so "the probe ran" is a habit, not a property.
+Boundary: no change to `br` itself. Line numbers are banned in this section.
+
+## Acceptance Criteria
+- The gate ships as an executable script the worker loop can invoke.
+  Probe: `test -x skills/ac2-implement/scripts/close-gate.sh` — tier: none
+- A close with no probe receipt is refused, and the refusal names the missing receipt.
+  Probe: `grep -q '"'"'refusing: no probe receipt'"'"' skills/ac2-implement/scripts/close-gate.sh` — tier: none
+
+## Delivers
+- gate: skills/ac2-implement/scripts/close-gate.sh
+
+## Consumes
+- none
+'
+
+# --- Case 15: ac2 schema, every AC probe-carrying, NO Declared RED -> ACCEPTED --------
+write_fx ac2-good.md "$AC2_BODY"
+OUT=$(bash "$CHECK" --file "$WORK/ac2-good.md" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "via probe-carrying"; then
+  pass "Case 15: ac2-schema description with probe-carrying ACs is ACCEPTED (exit 0)"
+else
+  fail "Case 15: expected exit 0 naming the probe-carrying branch, got $RC. Output: $OUT"
+fi
+
+# --- Case 16: the example bead SHIPPED in bead-schema.md passes the gate ---------------
+# The contract this widening accepts is a real file, not a fixture invented here: if the
+# shipped example stops passing, the schema and its gate have diverged.
+SCHEMA="$DIR/../../ac2-beadify/references/bead-schema.md"
+if [ ! -f "$SCHEMA" ]; then
+  fail "Case 16: $SCHEMA is missing — the ac2 schema this widening accepts does not exist"
+else
+  sed -n '/ac2-example-bead:start/,/ac2-example-bead:end/p' "$SCHEMA" >"$WORK/schema-example.md"
+  OUT=$(bash "$CHECK" --file "$WORK/schema-example.md" 2>&1); RC=$?
+  if [ "$RC" -eq 0 ]; then
+    pass "Case 16: the example bead shipped in bead-schema.md is ACCEPTED (exit 0)"
+  else
+    fail "Case 16: the shipped example bead was REJECTED, got $RC. Output: $OUT"
+  fi
+fi
+
+# --- Case 17: ac2 shape whose ACs name NO probe -> REJECTED ---------------------------
+# The widening must not become a blanket exemption for "has an AC section".
+write_fx ac2-noprobe.md '## Intent
+Why this matters.
+
+## Acceptance Criteria
+- The gate refuses a close with no receipt.
+- The refusal is loud.
+
+## Delivers
+- gate: skills/ac2-implement/scripts/close-gate.sh
+
+## Consumes
+- none
+'
+OUT=$(bash "$CHECK" --file "$WORK/ac2-noprobe.md" 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "no executable probe"; then
+  pass "Case 17: ac2-shape ACs naming no executable probe are REJECTED (exit 1)"
+else
+  fail "Case 17: expected exit 1 naming the missing probes, got $RC. Output: $OUT"
+fi
+
+# --- Case 18: AC section present but BULLETLESS -> REJECTED, not vacuously accepted ----
+# "every bullet names a probe" is trivially true of zero bullets. This is the false-green
+# the widening itself introduces; no other case covers it.
+write_fx ac2-vacuous.md '## Intent
+Why this matters.
+
+## Acceptance Criteria
+The gate should refuse closes that have no receipt, and generally behave well.
+
+## Delivers
+- gate: skills/ac2-implement/scripts/close-gate.sh
+
+## Consumes
+- none
+'
+OUT=$(bash "$CHECK" --file "$WORK/ac2-vacuous.md" 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "no AC bullets"; then
+  pass "Case 18: a bulletless '## Acceptance Criteria' section is REJECTED (exit 1)"
+else
+  fail "Case 18: expected exit 1 naming the empty AC list, got $RC. Output: $OUT"
+fi
+
+# --- Case 19: PARTIAL coverage (1 of 5 ACs carries a probe) -> REJECTED ---------------
+write_fx ac2-partial.md '## Intent
+Why this matters.
+
+## Acceptance Criteria
+- The gate ships as an executable script.
+  Probe: `test -x skills/ac2-implement/scripts/close-gate.sh` — tier: none
+- A close with no receipt is refused.
+- The refusal names the missing receipt.
+- The gate is wired into the close step.
+- The harness runs in CI.
+
+## Delivers
+- gate: skills/ac2-implement/scripts/close-gate.sh
+
+## Consumes
+- none
+'
+OUT=$(bash "$CHECK" --file "$WORK/ac2-partial.md" 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "4 of 5"; then
+  pass "Case 19: PARTIAL probe coverage (1 of 5 ACs) is REJECTED (exit 1)"
+else
+  fail "Case 19: expected exit 1 counting the probe-less ACs, got $RC. Output: $OUT"
+fi
+
+# --- Case 20: BOTH shapes present -> accepted, and the RED branch is the one that did --
+# The rule is explicit: a '## Declared RED' header decides. Assert WHICH branch accepted.
+write_fx ac2-both.md "$AC2_BODY
+## Declared RED
+Test \`close-gate refuses a receiptless close\` must FAIL before the fix, with
+approximately: assert exit 1; today it returns 0.
+"
+OUT=$(bash "$CHECK" --file "$WORK/ac2-both.md" 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "via ## Declared RED" \
+   && ! echo "$OUT" | grep -q "via probe-carrying"; then
+  pass "Case 20: with BOTH shapes present, '## Declared RED' is the branch that accepts"
+else
+  fail "Case 20: expected exit 0 via the Declared RED branch only, got $RC. Output: $OUT"
+fi
+
+# --- Case 21: NEITHER shape -> still REJECTED (the pre-widening contract holds) --------
+write_fx ac2-neither.md '## Intent
+Why this matters.
+
+## Delivers
+- gate: skills/ac2-implement/scripts/close-gate.sh
+
+## Consumes
+- none
+'
+OUT=$(bash "$CHECK" --file "$WORK/ac2-neither.md" 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "no '## Declared RED' header"; then
+  pass "Case 21: neither Declared RED nor an AC section is still REJECTED (exit 1)"
+else
+  fail "Case 21: expected exit 1, got $RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All element4-check fixture tests passed."
