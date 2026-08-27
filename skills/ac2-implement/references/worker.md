@@ -150,9 +150,16 @@ count:
       .beads/issues.jsonl | sort
 
 Then: trigger the batch CI run on the committed tree, hand off to `ac2-review` (different model
-from the worker), and roll up the telemetry. Discovered PRODUCT work goes to the board with
-`discovered-from: <bead>`; process observations go to the family ledger, never to a bead about
-ourselves.
+from the worker), and roll up the telemetry.
+
+**When the batch is shippable — review verdicts resolved, no open FIX — hand off to
+`ac2-publish`.** It owns the ship gate and refuses `NOT-GATED` unless the run's REQUIRED JOBS
+ACTUALLY EXECUTED, so a green run hiding a skipped job never ships. A batch that is not shipping
+declines that hand-off out loud; publish is never skipped by silence, because a ship gate nobody
+calls is the same as no ship gate.
+
+Discovered PRODUCT work goes to the board with `discovered-from: <bead>`; process observations
+go to the family ledger, never to a bead about ourselves.
 
 ## After a compaction
 
