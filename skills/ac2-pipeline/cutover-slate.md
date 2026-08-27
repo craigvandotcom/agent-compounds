@@ -51,9 +51,16 @@ Derived from the plan's "Absorbs / replaces (at Phase-4 cutover)" column:
 | 10 | `ac-merge` | `ac2-publish` |
 | 11 | `ac-publish` | `ac2-publish` |
 
-**That is ELEVEN. `lint.sh` (the ac2 net-growth exception comment) states the seven ac2 skills
-were written "before the twelve they absorb can be archived."** The twelfth is not determinable
-from the tree — see Open Question A. It is left unnamed here deliberately.
+**That is ELEVEN, and ELEVEN IS FINAL — human ruling (Craig, 2026-08-28).** `lint.sh`'s ac2
+net-growth exception comment says "the twelve they absorb"; that count is STALE and is corrected
+to eleven as part of the cutover prep. There is no twelfth skill.
+
+The ruling is not a shrug at a discrepancy — it is the only reading consistent with how ac2 was
+actually written. `ac-review` and `ac-pipeline` were the sole candidates for a twelfth, and ac2
+depends on BOTH: eight ac2 files cite `ac-pipeline/references/`, `ac2-implement`'s close-gate
+calls `ac-pipeline`'s `close-evidence-check.sh` as its evidence core, `ac2-review` cites
+`ac-review/scripts/consensus.py`, and `ac2-review`'s own frontmatter directs humans to
+`ac-review` for the manual panel. Both SURVIVE. Open Question A is CLOSED.
 
 Not in the archive set, from the same column: everything else under `skills/ac-*` — `ac-align`,
 `ac-backlog`, `ac-bead-capture`, `ac-dashboard`, `ac-distribute`, `ac-human-session`,
@@ -245,7 +252,28 @@ commits, this section is void and must be rewritten before scheduling.
 
 ---
 
-## 9. Open questions — unresolved, marked, NOT guessed
+## 9. Open questions — ALL THREE ANSWERED (Craig, 2026-08-28)
+
+> **Q-A — CLOSED. The archive set is ELEVEN; there is no twelfth.** `lint.sh`'s "twelve" is
+> stale and gets corrected in cutover prep. `ac-review` and `ac-pipeline` SURVIVE, which
+> resolves every §3b pointer marked "gated on Open Question A" — they all keep resolving.
+>
+> **Q-B — CLOSED. `ac-batch-close`, `ac-merge` and `ac-publish` archive WHOLE.** The archive
+> set does not shrink. Consequence: `ac2-publish:84` → `ac-publish/SKILL.md § Phase 4` WILL
+> dangle, so § Phase 4's web-promote mechanics must be LIFTED INTO `ac2-publish` before the
+> archive move. That is the only §3b item Q-A did not dissolve.
+>
+> **Q-C — CLOSED by routing, not by answering.** The deferred registry-lint reform items are
+> filed as their own bead so they survive this plan file's retirement. They do not block the
+> cutover; they were only ever at risk of being LOST with the plan.
+>
+> **Correction to §3b's 510 figure, measured 2026-08-28:** 510 counted bare skill-NAME mentions
+> in prose. The gate is dangling PATH-shaped refs from SURVIVING files, which is **78** — of
+> which 26 are historical `.claude/reviews/batch/` records, 7 are this slate correctly naming
+> what it archives, and several sit inside archive-set skills that move together. The real
+> operational workload is ~20 refs across ~5 files, dominated by `lint.sh` (12).
+
+### The original questions, as posed
 
 **Q-A — what is the twelfth archived skill?** The plan's absorb column names eleven; `lint.sh`
 says twelve. By elimination the twelfth is `ac-review` or `ac-pipeline`, and both have live
