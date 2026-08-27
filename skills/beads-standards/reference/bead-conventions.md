@@ -285,6 +285,26 @@ writes it there, as it does for whatever capture omits. No producer is exempt
 from the truth of a claim it does write. Omitting a section is sanctioned;
 naming an artifact you have not opened is a defect.
 
+## TRANSITIONAL: two bead contracts share this board (Phases 0–3)
+
+**Read this before applying the six-element contract below.** During the ac2 build the board
+carries beads of two families, and the contract you must satisfy is decided by the bead's
+`origin:` label — not by what this document says in general:
+
+- **`origin:ac2-*` beads follow the ac2 four-section schema.** Its definition lives in
+  `skills/ac2-beadify/references/bead-schema.md` and is NOT restated here. Read it there.
+- **The six-element contract below, `## Test Scope`, and the body-template sections bind
+  `origin:ac-*` beads ONLY.** Applying them to an ac2 bead demands sections that schema
+  deliberately deleted, and the widened `element4-check.sh` no longer enforces them.
+- **`refined` semantics are SHARED by both families**: one label, one meaning, and one sole
+  sanctioned writer (`ac-bead-refine/scripts/stamp-refined.sh`), which additionally requires
+  a fixpoint receipt before stamping an ac2-origin bead.
+
+**RETIREMENT (named so this cannot quietly become permanent):** this section dies at the
+Phase-4 rewrite of `beads-standards`, when `bead-schema.md` folds in as THE machine-wide
+contract and the six-element sections retire. It is the cheapest thing that stops an agent
+applying the wrong contract during the overlap window — never a parallel canon.
+
 ## Implementation contract (six elements)
 
 What a `refined` implementable bead (`task` / `feature` / `bug`) must carry
