@@ -394,17 +394,32 @@ framed on demand (it cannot be a one-tap choice without staged options).
 rests on, so closed beads cluster cleanly for future metrics:
 
 - **`bug`** → cite the **regression test** that now guards the fix (path + describe block).
+  A prose/doc/config bug with no test file cites its **recorded grep/diff probe** instead
+  (before-state → after-state — the same temporal shape). A NON-FIX close
+  (`obsolete:` / `duplicate:` / `wontfix`) needs neither: there is no fix to guard.
 - **`investigation`** → cite the **findings + the fix beads it spawned** (the
   `discovered-from` trail below).
 - **`task` / `feature`** → cite the **delivered artifact(s)** — the `## Delivers` refs
   (file / route / migration / doc).
 
 Thin rules — no new template machinery, no per-type description headers, no lint schema
-change. Enforcement is **convention-level**: `br lint` checks DESCRIPTION template
-sections only (§ Body template — the `br lint` contract), NOT `close_reason` content, so
-these rules live in the closing skills (`ac-implement`, `ac-batch-close`, `ac-review`) +
-the refine/close review, not in a new `br lint` rule. Presence-checked, not truth-checked
-— kept deliberately light until/unless `br` gains close-content linting.
+change. Enforcement is **MECHANICAL at close time** (ac-on0y.2):
+`ac-pipeline/scripts/close-evidence-check.sh` refuses a close whose `close_reason` lacks
+the shape its type declares, wired at the single live `br close` call site (`ac-implement`'s
+close step) and seam-proofed — its harness greps that call site and goes RED if the
+invocation is silently reverted. `br lint` is unchanged: it checks DESCRIPTION template
+sections only (§ Body template), never `close_reason`.
+
+Still **presence-checked, not truth-checked** — semantic verification remains review's job.
+Exit 2 = NOT-CHECKED and is never a pass. `epic` and `human-gate` beads are exempt (their
+closure semantics differ). Historical closes are NEVER swept: the check runs at close time,
+on the bead being closed. A bypass requires BOTH `--force` and `EVIDENCE-BYPASS: <why>` in
+the reason, so the escape lands on the bead where a reader will meet it.
+
+Calibrated before enforcement over all 204 closed beads (2026-08-27): pass 77 · exempt 52 ·
+refuse 28 · not-checked 47. The dry run is what widened the `bug` rule above — 5 refusals
+were non-fix closes and 13 were doc bugs carrying real grep evidence, neither of which a
+test-path-only rule could have recognised.
 
 ## Lineage
 

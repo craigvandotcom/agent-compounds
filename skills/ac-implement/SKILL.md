@@ -561,16 +561,16 @@ git push
 ```bash
 # Outcome verb LEADS — closed set: shipped|fixed|wontfix|duplicate|obsolete. An
 # unstructured reason cannot be clustered (`beads-standards` § Status & priority canon).
-br close <id> --reason "shipped: <what landed>. Delivered: <artifact paths, comma-separated>"
+REASON="shipped: <what landed>. Delivered: <artifact paths, comma-separated>"
+bash ac-pipeline/scripts/close-evidence-check.sh <id> "$REASON" || exit 1  # 2 = NOT-CHECKED
+br close <id> --reason "$REASON"
 ```
 
 (Legacy beads with no `## Delivers` header: still lead with the verb; just omit the `Delivered:` list.)
 
-**Per-type close evidence** (`beads-standards/reference/bead-conventions.md` § Per-type close artifacts): after
-the outcome verb, cite the evidence the bead's TYPE closes with — a `bug` names its regression
-test, an `investigation` its findings + spawned fix beads (the `discovered-from` trail), a
-`task`/`feature` its delivered-artifact refs (the `Delivered:` list above already satisfies
-task/feature). Convention-enforced, not lint-checked.
+**Per-type close evidence is MECHANICAL** (canon: `bead-conventions.md` § Per-type close artifacts):
+the check REFUSES a reason lacking its TYPE's declared shape (bug → regression test or recorded
+grep/diff probe; task/feature → an own-`## Delivers` artifact; investigation → spawned bead/answer).
 
 **Worker-identity stamp (per bead, at close).** The bead's assignee is the CONDUCTOR (loop)
 identity — the actual implementer is a per-child session + model, otherwise unrecoverable. So
