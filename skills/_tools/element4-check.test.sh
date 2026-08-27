@@ -3,10 +3,11 @@
 #
 # Both polarities, always: a check that always FAILS satisfies a one-sided test, and a
 # header-presence grep satisfies a test that never feeds it an empty section.
-# Run directly:  bash skills/ac-bead-refine/scripts/element4-check.test.sh
+# Run directly:  bash skills/_tools/element4-check.test.sh
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$DIR/../.." && pwd)"
 CHECK="$DIR/element4-check.sh"
 STAMP="$DIR/stamp-refined.sh"
 
@@ -335,7 +336,7 @@ fi
 # --- Case 16: the example bead SHIPPED in bead-schema.md passes the gate ---------------
 # The contract this widening accepts is a real file, not a fixture invented here: if the
 # shipped example stops passing, the schema and its gate have diverged.
-SCHEMA="$DIR/../../ac2-beadify/references/bead-schema.md"
+SCHEMA="$ROOT/skills/ac2-beadify/references/bead-schema.md"
 if [ ! -f "$SCHEMA" ]; then
   fail "Case 16: $SCHEMA is missing — the ac2 schema this widening accepts does not exist"
 else

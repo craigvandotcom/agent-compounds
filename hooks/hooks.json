@@ -52,7 +52,7 @@
     },
     {
       "id": "bead-capture-guard",
-      "assurance": {"PROBE": "hooks/bead-capture-guard.test.py (38 cases), driven by lint.sh Check 18 and executed by scripts/run-all-harnesses.sh in CI", "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)", "MODE": "blocking", "ON-FAILURE": "open", "BACKSTOP": "skills/ac-bead-refine/scripts/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (Craig 2026-08-23): a guard must not wedge an unattended 3am ac-loop."},
+      "assurance": {"PROBE": "hooks/bead-capture-guard.test.py (38 cases), driven by lint.sh Check 18 and executed by scripts/run-all-harnesses.sh in CI", "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)", "MODE": "blocking", "ON-FAILURE": "open", "BACKSTOP": "skills/_tools/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (Craig 2026-08-23): a guard must not wedge an unattended 3am ac-loop."},
       "event": "PreToolUse",
       "matcher": "Bash",
       "command": "{HOOKS}/bead-capture-guard.py",

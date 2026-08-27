@@ -859,13 +859,13 @@ bd-9bvr2 closed `decided:ACCEPT` — do not re-open a human-gate on these criter
 
 **Implementation-contract gate (same standing):** no implementable bead gets the stamp while any of the six elements is missing or unverified (`beads-standards/reference/bead-conventions.md` § Implementation contract). Author whatever capture omitted (beadify pre-stamps territory + sequence; refine completes the rest). An unopened `file:line`, a reasoned count, a territory without `### Test-tier exposure`, or an AC an empty diff could satisfy → not refined.
 
-Element 4 is enforced MECHANICALLY, not by this paragraph: `scripts/element4-check.sh` rejects a missing `## Declared RED`, an empty one, a bare `RED: n/a` with no reason, and a RED naming a TEST file absent from the bead's own `## Territory` (Territory wins at implement time, so such a RED can never be satisfied — bd-9uszd).
+Element 4 is enforced MECHANICALLY, not by this paragraph: `skills/_tools/element4-check.sh` rejects a missing `## Declared RED`, an empty one, a bare `RED: n/a` with no reason, and a RED naming a TEST file absent from the bead's own `## Territory` (Territory wins at implement time, so such a RED can never be satisfied — bd-9uszd).
 
 Two further RED defects are NOT script-decidable and are yours to check by hand — both produce a HOLLOW PASS, not a visible failure:
 
 - **RED-vs-existing:** grep the target suite's full `it(`/`test(` title list BEFORE authoring the RED. A bead spun out of a closed investigation inherits that investigation's tests — twice, a declared RED was already a PASSING test the moment it was written.
 - **RED-vs-extractor:** if the assertion is extracted from source, state whether the extractor takes the FIRST match or ALL matches, and require ALL wherever the pattern can occur more than once. A first-match extractor returns the wrong block and the check passes on a broken tree (bd-l0mya: three `@media (hover:none)` blocks).
- Never write the label with `br label add <id> refined` — the only sanctioned writer is `stamp_refined` in `scripts/stamp-refined.sh`, which runs the check first and refuses on non-zero. A refusal means author the `## Declared RED` and re-stamp.
+ Never write the label with `br label add <id> refined` — the only sanctioned writer is `stamp_refined` in `skills/_tools/stamp-refined.sh`, which runs the check first and refuses on non-zero. A refusal means author the `## Declared RED` and re-stamp.
 
 **The stamp loop is authoritative on `target-bead-ids.txt`, NOT on the snapshot (bd-baudw).**
 The snapshot is a shared-shaped file that a sibling child could once have overwritten; the
@@ -883,8 +883,8 @@ REFINE_PATH="refine-full"
 
 # The label write lives inside stamp_refined, which shells out to element4-check.sh first.
 # Fail-closed if the library is missing: there is no bare-`br label add` fallback.
-STAMP_LIB=$(ls -d "$PWD"/.claude/skills/ac-bead-refine/scripts/stamp-refined.sh \
-                  "$PWD"/.agents/skills/ac-bead-refine/scripts/stamp-refined.sh 2>/dev/null | head -1)
+STAMP_LIB=$(ls -d "$PWD"/.claude/skills/_tools/stamp-refined.sh \
+                  "$PWD"/.agents/skills/_tools/stamp-refined.sh 2>/dev/null | head -1)
 [ -n "$STAMP_LIB" ] || { echo "FATAL: stamp-refined.sh not found — refusing to stamp" >&2; exit 2; }
 # shellcheck source=/dev/null
 . "$STAMP_LIB"

@@ -135,7 +135,7 @@ if [ "$MODE" = plan ]; then
   rm -f "$TMP"
 else
   # Bead-side receipt. The `refined` write is gated on THIS comment from inside
-  # stamp-refined.sh (ac-gv70) — a check a caller can route around is not a gate, so the
+  # skills/_tools/stamp-refined.sh (ac-gv70) — a check a caller can route around is not a gate, so the
   # gating lives in the writer, not here. This script only produces the receipt it reads.
   command -v br >/dev/null 2>&1 || die2 "br not on PATH — cannot write the bead receipt"
   br comments add "$TARGET" -f "$STATE/receipt.txt" >/dev/null

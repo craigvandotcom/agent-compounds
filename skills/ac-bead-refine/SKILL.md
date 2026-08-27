@@ -25,7 +25,7 @@ description: 'Use to REFINE existing beads to convergence — 3 parallel reviewe
 | **Input**  | Open beads in `br` (from `/ac-beadify` or any other source). **Scope, in precedence order:** `TARGET_BEAD_IDS` (explicit id list) › `EPIC_ID` (epic + `parent-child` children) › whole board |
 | **Output** | Refined beads ready for `/ac-loop-swarm` (`unrefined` removed, `refined` added) — **only** the beads in this run's target list. Every implementable bead carries the six-element implementation contract (`beads-standards/reference/bead-conventions.md` § Implementation contract) — that is part of the stamp, not a loop-2 extra. |
 | **Next**   | `/ac-loop-swarm` — the default consumer. `/ac-implement` for a single bead. |
-| **Verification** | `element4-check.sh` exit 0 on every stamped bead · all six contract elements present · `refined` written ONLY via `stamp_refined` (`scripts/stamp-refined.sh`) |
+| **Verification** | `element4-check.sh` exit 0 on every stamped bead · all six contract elements present · `refined` written ONLY via `stamp_refined` (`skills/_tools/stamp-refined.sh`) |
 
 ## Fan-out safety (bd-baudw) — read before running concurrently
 

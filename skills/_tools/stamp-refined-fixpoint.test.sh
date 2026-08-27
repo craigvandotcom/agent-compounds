@@ -11,12 +11,12 @@
 # fixture string stays green when either side of the seam drifts, which is the untested seam
 # rather than coverage — Case 7 mutates the producer's token to prove the coupling.
 #
-# Run directly:  bash skills/ac-bead-refine/scripts/stamp-refined-fixpoint.test.sh
+# Run directly:  bash skills/_tools/stamp-refined-fixpoint.test.sh
 # Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.sh).
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$DIR/../../.." && pwd)"
+ROOT="$(cd "$DIR/../.." && pwd)"
 STAMP="$DIR/stamp-refined.sh"
 FIXPOINT="$ROOT/skills/_tools/polish-fixpoint.sh"
 

@@ -28,7 +28,7 @@ outside the thing being measured.
 - **plan** → the script stamps the plan's frontmatter. Plan-side SOLE WRITER; do not hand-edit
   `polish_rounds`, `polish_fixpoint_sha256` or `polish_stamped_at`.
 - **bead** → the script writes the `POLISH-FIXPOINT:` receipt comment, and the `refined` write
-  is gated on that receipt from INSIDE `stamp-refined.sh` (ac-gv70). A check a caller can
+  is gated on that receipt from INSIDE `skills/_tools/stamp-refined.sh` (ac-gv70). A check a caller can
   route around is not a gate, so the gate lives in the writer — not in this skill's prose.
 
 ## The round procedure — ONE procedure, both modes

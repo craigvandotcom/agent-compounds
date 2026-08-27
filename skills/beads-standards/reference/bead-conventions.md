@@ -101,7 +101,7 @@ br list --json --limit 1000 | jq -r '
       ($l | index("refined") | not))
   | .id' \
 | while read -r id; do
-    bash .claude/skills/ac-bead-refine/scripts/stamp-refined.sh "$id" \
+    bash .claude/skills/_tools/stamp-refined.sh "$id" \
       || echo "NOT-STAMPED $id — element 4 unmet, route to /ac-bead-refine"
   done
 ```
@@ -297,7 +297,7 @@ carries beads of two families, and the contract you must satisfy is decided by t
   `origin:ac-*` beads ONLY.** Applying them to an ac2 bead demands sections that schema
   deliberately deleted, and the widened `element4-check.sh` no longer enforces them.
 - **`refined` semantics are SHARED by both families**: one label, one meaning, and one sole
-  sanctioned writer (`ac-bead-refine/scripts/stamp-refined.sh`), which additionally requires
+  sanctioned writer (`skills/_tools/stamp-refined.sh`), which additionally requires
   a fixpoint receipt before stamping an ac2-origin bead.
 
 **RETIREMENT (named so this cannot quietly become permanent):** this section dies at the
@@ -321,7 +321,7 @@ is no loop-2-only variant.
 | 1 | `## Anchors` | Every cited `file:line` was OPENED at the HEAD sha recorded on the header. Quoted text matches. An unopened citation is a fabrication. |
 | 2 | `## Baselines` | Every countable claim was RUN; paste the command and its literal output. A reasoned count is a failure. |
 | 3 | `## Territory` | Exact file list this bead may touch (paths, not globs — glob only for files the bead CREATES). **Required sub-field `### Test-tier exposure`:** which test tiers that territory can break. |
-| 4 | `## Declared RED` | `Test <name> must FAIL before the fix, with approximately: <assertion shape>`. Name the **ASSERTION** — the observable that changes (an exit code, a count, a thrown message) — not merely the test title; a title alone can fire in a sibling test and still read as satisfied. Comment-only / lock-only delivery → the `RED: characterized —` form below. Genuinely no assertion → `RED: n/a — <why>` (excluded from `hollow%`). Enforced mechanically at the stamp by `ac-bead-refine/scripts/element4-check.sh`. |
+| 4 | `## Declared RED` | `Test <name> must FAIL before the fix, with approximately: <assertion shape>`. Name the **ASSERTION** — the observable that changes (an exit code, a count, a thrown message) — not merely the test title; a title alone can fire in a sibling test and still read as satisfied. Comment-only / lock-only delivery → the `RED: characterized —` form below. Genuinely no assertion → `RED: n/a — <why>` (excluded from `hollow%`). Enforced mechanically at the stamp by `skills/_tools/element4-check.sh`. |
 | 5 | `## Sequence + risk` | Index within its epic (`N of M`), plus zero or more of `migration` / `native` / `hot-tier` / `cold-tier`. |
 | 6 | `## Acceptance Criteria` | Each AC adversarially checked: an empty diff cannot satisfy it. |
 
