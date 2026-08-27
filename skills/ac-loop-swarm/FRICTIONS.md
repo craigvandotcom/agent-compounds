@@ -2,7 +2,7 @@
 skill: ac-loop-swarm
 created: 2026-08-21
 last_pass: 2026-08-28
-entries: 54
+entries: 57
 ---
 
 # ac-loop-swarm — friction log
@@ -331,7 +331,7 @@ entries: 54
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 5
+- recurrence: 6
 - related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
 - first_seen: 2026-08-23
 - last_seen: 2026-08-28
@@ -993,3 +993,66 @@ entries: 54
   the text just supplied. `--json` offers no terse form. In an agent loop the output is context,
   and context is the scarce resource: the tax is levied precisely on the behaviour the pipeline
   wants most, which is filing a THOROUGH bead rather than a thin one.
+
+## close-evidence-check requires the LITERAL delivers path, and says so nowhere upstream
+- skills: [ac-loop-swarm, ac-pipeline]
+- impact: S
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [delivers-without-path-defeats-evidence-check]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: state the requirement where the close reason is AUTHORED (the worker seed's step 8), not only in the refusal that fires after it is written. A rule discoverable only by breaking it is a rule taught by rejection.
+- narrative: RUN 20260828-011905-10869 GoldCove — `close-evidence-check.sh` REFUSED (exit 1) a
+  close reason that described the work correctly (`shipped: cutover slate written`) because the
+  reason did not literally CONTAIN the Delivers path. The refusal message itself is clear and the
+  worker recovered in one cycle. The defect is upstream: nothing in the seed's step 8, in
+  beads-standards, or in the bead template says the reason must contain the literal path, so
+  every worker learns it by being rejected once.
+  Distinct from `delivers-without-path-defeats-evidence-check`: there the BEAD carries no path
+  and the check is structurally unable to verify; here the bead carries one and the REASON
+  omitted it. Same tool, opposite side.
+
+## the-worker-seed-names-a-context-file-that-does-not-exist-in-this-repo
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: every-run
+- perceptibility: loud
+- recurrence: 1
+- related: [unrunnable-ac-test-command-must-name-the-repo-runner, swarm-doctrine-prescribed-a-guard-blocked-command]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: the seed must resolve the CORE path per repo, or say "your harness's agent home" rather than hardcoding `.claude/`. The harness-agnostic rule already exists in the skill canon and this line violates it.
+- narrative: RUN 20260828-011905-10869 — BOTH workers wasted a Read on
+  `.claude/skills/CORE/SKILL.md`, which does not exist in agent-compounds: this repo IS the
+  registry and its skills live at `skills/`. The line is in the seed's ONCE block, so it fires
+  on every worker of every run, and it has presumably been firing unnoticed since the seed was
+  written — a failed Read is cheap enough that nobody reported it until a worker itemised its
+  friction honestly.
+  ORCHESTRATOR'S OWN DEFECT, recorded as such: the seed was pasted forward across three runs
+  without checking that the path it names resolves in the repo it names it for. It is the same
+  unexecuted-claim shape this ledger keeps catching in probes, committed here in a file path.
+
+## br-comments-add-returns-no-id-so-every-add-needs-a-verifying-read
+- skills: [ac-loop-swarm, beads-standards]
+- impact: S
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [br-create-echoes-the-entire-bead-body-on-success, concurrent-beads-dbs-mint-colliding-comment-ids]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: print the new comment id (or `--json` it) so the add is self-verifying in one call.
+- narrative: RUN 20260828-011905-10869 RosePond — `br comments add` prints only
+  "Comment added", with no id and no way to distinguish a real write from a no-op at exit 0.
+  The seed therefore instructs a follow-up `br comments <id>` read purely to confirm the write
+  landed, so the claim-time audit trail costs two calls where one should do. The verifying read
+  is not ceremony — a silent no-op at exit 0 is a documented behaviour of this command — which
+  is precisely why the tool should close the loop itself instead of exporting it to every caller.
