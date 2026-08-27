@@ -2,7 +2,7 @@
 skill: ac2-pipeline
 created: 2026-08-27
 last_pass: 2026-08-27
-entries: 9
+entries: 10
 ---
 
 # ac2-pipeline — friction log
@@ -202,3 +202,28 @@ entries: 9
   The run refused the stamp by hand, which is precisely the manual discipline a gate is
   supposed to replace. Caught at the first opportunity a gate had to be wrong, which is the
   cheapest place to catch it.
+
+## freshly-authored-acs-are-green-at-authoring-and-the-author-cannot-see-it
+- skills: [ac2-beadify, ac2-polish]
+- impact: L
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [heavy-review-does-not-mean-converged]
+- first_seen: 2026-08-27
+- last_seen: 2026-08-27
+- stage: ac2-beadify
+- status: open
+- receipt: bead ac-7f8s, dogfood #2 compile receipt (rounds 1-5: 10, 5, 3, 1, 0 findings)
+- control: untreated
+- proposed_fix: have ac2-beadify EXECUTE each authored probe at compile time and refuse any
+  that exits 0 before the work exists — the same shape as the no-probe-no-bead refusal.
+- narrative: dogfood #2 compiled 8 beads whose ACs all named runnable probes, so the
+  no-probe-no-bead refusal passed them. Five rounds of fresh readers then found 19 real
+  defects, and the dominant class was ACs ALREADY GREEN AT AUTHORING — probes that exit 0
+  today and therefore assert nothing (one bead carried four in a row). The author could not
+  see it: a probe you just wrote looks right, and running it is a different act from writing
+  it. Two of the 19 were defects introduced by the author's OWN fix in the previous round and
+  caught only by the next fresh reader, which is the bound earning its keep rather than
+  ceremony. ac2-beadify checks that a probe EXISTS and is RUNNABLE; nothing checks that it is
+  RED at authoring, which is the cheap mechanical half of what five reader rounds paid for.
