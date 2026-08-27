@@ -1,8 +1,8 @@
 ---
 skill: ac-loop-swarm
 created: 2026-08-21
-last_pass: 2026-08-27
-entries: 50
+last_pass: 2026-08-28
+entries: 54
 ---
 
 # ac-loop-swarm — friction log
@@ -117,10 +117,10 @@ entries: 50
 - impact: H
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 0
+- recurrence: 1
 - related: []
 - first_seen: 2026-08-21
-- last_seen: 2026-08-21
+- last_seen: 2026-08-28
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: see the primary entry.
@@ -331,10 +331,10 @@ entries: 50
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 4
+- recurrence: 5
 - related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
 - first_seen: 2026-08-23
-- last_seen: 2026-08-27
+- last_seen: 2026-08-28
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: report findings not categories in the summary line, and exit non-zero — or print an explicit NOT-CHECKED verdict — when no scanner matched the supplied files.
@@ -650,10 +650,10 @@ entries: 50
 - impact: S
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: [dcg-false-positives-on-angle-bracket-inside-quoted-prose, swarm-doctrine-prescribed-a-guard-blocked-command]
 - first_seen: 2026-08-26
-- last_seen: 2026-08-26
+- last_seen: 2026-08-28
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: write scratch files to the fully-literal job-dir path; do not use `$CLAUDE_JOB_DIR` or any variable on the left of `>`.
@@ -891,10 +891,10 @@ entries: 50
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [agent-identity-env-lost-between-tool-calls, br-claim-success-is-not-a-durable-lock]
 - first_seen: 2026-08-27
-- last_seen: 2026-08-27
+- last_seen: 2026-08-28
 - stage: ac-loop-swarm
 - status: open
 - proposed_fix: either enforce exclusivity for code-repo paths or have the seed say plainly that reservations are a courtesy signal to siblings and that `flock` plus the `br` claim are the only real mutexes. Do not present an advisory call as a gate.
@@ -906,3 +906,90 @@ entries: 50
   touch disjoint files and `flock` serialised the commits — not because any reservation held. An
   advisory call that doctrine describes as a gate is the same class of defect as the `ubs` entry
   above: the ceremony is performed, the assurance is assumed, and no loop closes.
+
+## a-refusing-gate-can-be-composed-away-by-a-compound-shell-line
+- skills: [ac-loop-swarm, ac-implement, ac2-implement]
+- impact: H
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [the-loops-own-gates-have-false-green-mechanisms, check-exit-status-before-believing-a-zero, commit-message-apostrophe-truncates-the-commit-inside-the-sh-c-wrapper]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: make the refusal structural rather than advisory — the check writes a sentinel `br close` consults, or `br close` runs the check itself. A guard whose refusal only advises the next line is a log entry, not a gate. Filed as ac-close-evidence-check-bypassable-by-chaining-kexj.
+- narrative: RUN 20260828-000851-51620 CloudyIsland — ac-k25c.7 was CLOSED while BOTH of its
+  gates refused: `close-evidence-check.sh` returned NOT-CHECKED (exit 2) and `close-gate.sh`
+  refused with HASH-LOCK. The loop spec prescribes `close-evidence-check.sh … || stop`, but the
+  check and the `br close` were issued as ONE COMPOUND SHELL LINE, and a compound line silently
+  defeats the `||`. The refusing gate ran, refused, and the write happened anyway.
+  This is the SAME ROOT as the `set -e` scar that `swarm-commit.sh` now encodes: a guard whose
+  refusal does not structurally prevent the next step is decoration. Two independent
+  manifestations in two different places makes it a pattern, not a slip — and both were found
+  only because a worker self-reported, never by a sensor.
+  The close was substantively fine (all four ACs independently verified GREEN at close-out),
+  which is the dangerous part: the outcome was good, so nothing external would ever have
+  flagged it. Assurance that depends on the worker volunteering its own breach is not assurance.
+
+## dcg-blocks-throwaway-scratch-repo-experiments
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [dcg-blocks-redirect-to-a-variable-expanded-scratch-path, swarm-doctrine-prescribed-a-guard-blocked-command]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: scope the whole-tree-add and rm-rf rules to the PROJECT tree, so a repo created under `mktemp -d` is out of their jurisdiction. The rules exist to protect this checkout; a throwaway repo is not it.
+- narrative: RUN 20260828-000851-51620 CloudyIsland — verifying git's
+  `commit --amend -- <pathspec>` semantics before relying on them required a scratch repo. Inside
+  a fresh `mktemp -d`, `git add .` tripped `neometa.stashguard:whole-tree-add` and
+  `rm -rf "$T"` tripped `core.filesystem:rm-rf-general`. Each cost a retry cycle.
+  Worth logging precisely because the worker was doing the RIGHT thing — executing a command's
+  semantics rather than assuming them, which is this project's standing remedy for the
+  unexecuted-claim defect class. The guard taxes the good behaviour: the cheapest safe way to
+  verify a destructive-ish command is a throwaway repo, and that is exactly what is blocked.
+
+## check-23-cross-family-citation-trap-is-invisible-until-lint
+- skills: [ac-loop-swarm, ac2-pipeline]
+- impact: M
+- frequency: frequent
+- perceptibility: misleading
+- recurrence: 2
+- related: [unrunnable-ac-test-command-must-name-the-repo-runner]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: fix the checker (ac-check23-leg2-cross-family-citation-gy75); until then, say so in ac2-pipeline's constitution so the cost is one read rather than one lint round per skill.
+- narrative: RUN 20260828-000851-51620 — BOTH workers hit this independently, on ac-k25c.5 and
+  ac-k25c.6, each burning a lint round rediscovering it. lint Check 23 Leg 2 resolves any
+  `references/<file>.md` token in an ac2 SKILL.md against the ac2 family ONLY, so citing another
+  family's reference by full path fails as dangling. Nothing in ac2-pipeline, skill-builder or
+  the bead text warns of it; it is invisible until lint runs.
+  Cost was held to one round only because CloudyIsland mailed SunnyGate the diagnosis unprompted
+  — a human-shaped rescue, not a mechanism. Without that message it is a second full lint cycle
+  per ac2 skill, for every skill still to be written. The workaround both reached for (cite the
+  bare directory plus a § marker) makes the artifact LESS precise than it should be, so the
+  check is actively degrading what it guards.
+
+## br-create-echoes-the-entire-bead-body-on-success
+- skills: [ac-loop-swarm, beads-standards]
+- impact: S
+- frequency: every-run
+- perceptibility: loud
+- recurrence: 1
+- related: [br-close-reason-silently-fails-on-long-non-ascii-text]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: honour `--silent` (or add a terse mode) that prints the id alone; a create should not cost the caller its own payload back.
+- narrative: RUN 20260828-000851-51620 CloudyIsland — `br create` returns the full bead JSON on
+  one line, description included, so filing one well-specified bug echoes roughly 4k tokens of
+  the text just supplied. `--json` offers no terse form. In an agent loop the output is context,
+  and context is the scarce resource: the tax is levied precisely on the behaviour the pipeline
+  wants most, which is filing a THOROUGH bead rather than a thin one.
