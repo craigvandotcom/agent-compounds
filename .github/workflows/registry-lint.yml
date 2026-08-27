@@ -45,4 +45,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # element4-check.test.sh proves stamp-refined.sh's contract under BOTH shells,
+      # because the agents that call it run zsh. ubuntu-latest ships no zsh, and the
+      # harness correctly REFUSES to pass on a host where it cannot prove that half
+      # (found on this job's first real run). AC4 offers provision-or-loud-skip; we
+      # provision, because skipping would quietly halve what the harness certifies.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh
       - run: bash scripts/run-all-harnesses.sh
