@@ -72,20 +72,15 @@ Save to `infrastructure/health/reports/dream-queue-<date>.json`:
 auto-applied (count + slugs), approved→applied (legacy count), filed-as-beads (count + repo:bead-id),
 open-dream-beads (count), stale warnings, Sunday input readiness.
 
-### 7. File the GATED proposals as decision beads (the decision surface)
-```bash
-python3 infrastructure/dream-cycle/file-beads.py
-git -C ~/Repos push 2>&1 | tail -2   # MANDATORY — the script commits but does NOT push
-```
-`file-beads.py` re-runs the classifier and files **only `gated` + `pending` + unfiled**
-proposals as `-t decision` + `human-gate,dream-proposal` beads in each proposal's **target
-repo** — the full memo inline for private repos, pointer-only for agent-compounds (its
-`issues.jsonl` is public). It writes the bead id back into the proposal's `bead:` frontmatter
-(the dedup marker — a second run never double-files) and commits each touched repo's `.beads/`
-plus the root frontmatter changes (boundaries respected; it does NOT push — hence the explicit
-push above for root). Auto-tier items are never filed. **Gated decisions are now worked via
-`ac-human-session` (the decision docket), not a Slack tap** — Slack is only the Step-8 nudge.
-(If zero fileable, it says so and exits — the Step 8 digest still fires.)
+### 7. Gated proposals stay in the queue — BEAD FILING DISABLED (2026-08-27)
+
+Do **NOT** run `file-beads.py`. Under the no-self-beads doctrine (ac2 plan § Pipeline
+self-observation: the board carries product work only; process observations and pipeline
+proposals are read by the human tuning session), gated + pending proposals remain as
+proposal FILES in the queue with an empty `bead:` slot — the tuning session reads the
+queue directly and disposes of them there. Auto-tier (memory-scoped) applies as before.
+Failure prevented: dream-proposal decision beads were the board's largest self-bead
+channel (13 open at the 2026-08-27 census, 38 filed lifetime).
 
 ### 8. Notify Slack — MANDATORY, DO THIS LAST, DO NOT SKIP
 Actually run the CLI (don't describe it). One digest **nudge** card (Slack is no longer the

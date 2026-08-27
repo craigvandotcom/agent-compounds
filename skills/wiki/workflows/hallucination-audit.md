@@ -47,10 +47,12 @@ adversarial spot-check that complements dream's exhaustive-but-shallower weekly 
      citation resolves to a page unrelated to the claim) — this is the hallucination-
      laundering signal. **Becomes a proposal bead**, per
      `[[rule-proposals-become-beads]]` — never an auto-edit, and never silently dropped
-     from the report. File via the same mechanism as any dream/wiki proposal: `br
-     create` in the repo the wiki page lives in (today, root — `neometa/wiki/` is
-     inside the root repo), type `decision`, labels `human-gate,dream-proposal`,
-     description naming the page/line/claim and why it's untraceable.
+     from the report. File via `br create` in the repo the wiki page lives in (today,
+     root — `neometa/wiki/` is inside the root repo), type `decision`, labels
+     `human-gate,wiki-audit` (NOT `dream-proposal` — that queue's bead lane was retired
+     2026-08-27; wiki-integrity items are knowledge defects for the human docket, not
+     pipeline self-beads), description naming the page/line/claim and why it's
+     untraceable.
 4. **Tighten the rules, don't just fix the instance.** If ≥1 of the 5 comes back
    untraceable, that is a signal about the *process*, not just that one page — ask
    whether the wiki skill's citation discipline (SKILL.md's THE CITATION RULE, the

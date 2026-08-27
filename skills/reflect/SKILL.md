@@ -154,9 +154,9 @@ just how it's SHAPED?** (full boundary: `skill-builder/references/maintenance-le
 Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
 
   `br create -t decision -p 3 -l origin:reflect,human-gate,skill-improvement,skill:<name>` with the memo
-  (target · evidence · diff · recommendation), **dedupe-first** against open `skill-improvement`
-  beads per `ac-pipeline/references/disposition.md` § Save-for-later. Never post to Slack, never silently drop —
-  the bead is how the merge request survives an unattended session.
+  (target · evidence · diff · recommendation), **dedupe-first** per `ac-pipeline/references/disposition.md`
+  § Save-for-later — the bead is how the merge request survives unattended. **`ac2-*` skills: EXCLUDED
+  from both routes** — observations → `ac2-pipeline/FRICTIONS.md`; changes only via the tuning session.
 
 When unsure which tier, treat it as **behavior** (escalate to the gated bead) — the shape lane is
 for changes a script can prove touched no enforcement.

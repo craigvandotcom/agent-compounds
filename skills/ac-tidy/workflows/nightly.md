@@ -123,20 +123,15 @@ This pass verifies surviving gates. It does not de-gate.
   An item that fails the gate falls through to a Tier-3 proposal (§ 4 below).
   Never touch `human-gate`/`qa-blocker`.
 
-### 4. Emit Tier-3 proposals atomically
+### 4. Emit Tier-3 proposals as FILES only — BEAD FILING DISABLED (2026-08-27)
 
 For each remaining cluster (consolidation, dedup, finding-bead prune, or a Tier-2 item that
-failed the gate / toggle-off):
-
-```bash
-br create "<title>" -t decision --labels "origin:ac-tidy,unrefined,pipeline-proposal" -p <prio> \
-  --description "<full self-contained memo>"
-# Add human-gate to --labels ONLY when the memo states
-# `Gate-reason: fork — …` or `Gate-reason: authorization — …` (bd-zmqh2 / bd-l6o90).
-```
-
-Capture the returned id and write it into the proposal file's `bead:` slot. **Write the
-proposal file only AFTER `br create` succeeds** (no orphan proposals with empty slots).
+failed the gate / toggle-off): write the full self-contained memo as a proposal FILE with an
+empty `bead:` slot. Do **NOT** `br create` — under the no-self-beads doctrine (ac2 plan
+§ Pipeline self-observation) pipeline proposals never become beads; the human tuning
+session reads the proposal queue and disposes of them there. Failure prevented:
+`pipeline-proposal` decision beads inflating the board with the factory's opinions about
+itself (part of the 39%-self-beads census, 2026-08-27).
 
 **Proposal file:** `_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md` (create the dated dir).
 Frontmatter: `status: pending` · `bead: <id>` · `source: ac-tidy` · `summary: <one line>`.
