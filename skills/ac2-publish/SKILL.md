@@ -77,7 +77,7 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
 
 ## Ship, in this order
 
-1. **Mint the version once.** One bump per publish. Never re-bump downstream.
+1. **Mint the version once.** One bump per publish, never re-bumped downstream; propagation to the native build surfaces is `references/version-bump.md`, the sole owner of that counter.
 2. **Tag the PROVEN SHA explicitly, never `HEAD`.** `ac-prove` pushes evidence commits, so by
    the time this step runs `HEAD` has moved past the commit that was proven and reviewed.
 3. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
