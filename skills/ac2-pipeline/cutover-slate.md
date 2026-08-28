@@ -111,9 +111,17 @@ commit, before or with the `ac-bead-refine` move:
   (called by `stamp-refined.sh`; moving one without the other breaks the caller)
 - their `*.test.sh` harnesses move with them (`element4-check.test.sh`,
   `stamp-refined-fixpoint.test.sh`) and stay wired into `scripts/run-all-harnesses.sh`
-- re-point the four caller sites in the same commit: `ac2-polish/SKILL.md`,
-  `skills/_tools/polish-fixpoint.sh`, `beads-standards/reference/bead-conventions.md`,
-  `hooks/hooks.json`
+- re-point the caller sites in the same commit. **THIS LIST WAS WRONG — it named FOUR and there
+  were SIX.** Corrected 2026-08-28 after the move actually ran:
+  `ac2-polish/SKILL.md` · `skills/_tools/polish-fixpoint.sh` ·
+  `beads-standards/reference/bead-conventions.md` · `hooks/hooks.json` ·
+  **`ac-bead-refine/references/workflow.md:886`** · **`ac-bead-refine/SKILL.md:28`**
+  The fifth is the dangerous one and it is NOT prose: it is the live `STAMP_LIB=$(ls -d …)`
+  resolution behind `FATAL: stamp-refined.sh not found — refusing to stamp`. Unpatched, EVERY
+  refine stamp would have aborted the moment the move landed.
+  **DO NOT reuse an enumerated caller list from this slate as authoritative.** Re-derive it by
+  grep at cutover time. A hand-written list of callers is exactly the unexecuted claim this
+  project keeps catching: it was right when written and wrong when used.
 
 `skills/_tools/` is the plan's declared home for shared executables (`_shared/` retired), which
 is why it is the destination rather than an ac2 skill's `scripts/` — and `ac2-pipeline` may

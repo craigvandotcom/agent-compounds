@@ -2,7 +2,7 @@
 skill: ac-loop-swarm
 created: 2026-08-21
 last_pass: 2026-08-28
-entries: 57
+entries: 60
 ---
 
 # ac-loop-swarm — friction log
@@ -331,7 +331,7 @@ entries: 57
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 6
+- recurrence: 7
 - related: [ubs-no-arg-fallback-scans-cwd-instead-of-erroring, the-loops-own-gates-have-false-green-mechanisms]
 - first_seen: 2026-08-23
 - last_seen: 2026-08-28
@@ -650,7 +650,7 @@ entries: 57
 - impact: S
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 3
+- recurrence: 4
 - related: [dcg-false-positives-on-angle-bracket-inside-quoted-prose, swarm-doctrine-prescribed-a-guard-blocked-command]
 - first_seen: 2026-08-26
 - last_seen: 2026-08-28
@@ -1056,3 +1056,71 @@ entries: 57
   landed, so the claim-time audit trail costs two calls where one should do. The verifying read
   is not ceremony — a silent no-op at exit 0 is a documented behaviour of this command — which
   is precisely why the tool should close the loop itself instead of exporting it to every caller.
+
+## a-shared-checkout-green-can-come-entirely-from-a-siblings-uncommitted-edit
+- skills: [ac-loop-swarm, ac2-implement]
+- impact: H
+- frequency: frequent
+- perceptibility: silent
+- recurrence: 1
+- related: [the-loops-own-gates-have-false-green-mechanisms, shared-tree-half-edits-redden-checks-beyond-the-60s-retry, a-refusing-gate-can-be-composed-away-by-a-compound-shell-line]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: every close-time verification must measure HEAD, not the worktree — via `git show HEAD:<file>` or a throwaway `git worktree` at HEAD (never `git stash`, which the guard blocks). A worktree-measured green is not evidence about any commit.
+- narrative: RUN 20260828-015023-71435 TopazCove — `bash lint.sh` returned the clean 7-name
+  baseline while committed HEAD was still RED. The green was produced ENTIRELY by a sibling's
+  UNCOMMITTED edit sitting in the shared tree. The bead would have closed on a green that
+  existed in no commit and would have evaporated the moment that work was inspected on its own.
+  Caught only because the worker independently re-checked `git show HEAD:` — a habit, not a
+  mechanism. It held the bead open until the sibling's commit landed, then closed honestly.
+  This is the sharpest form of the shared-checkout hazard on this ledger. The existing entries
+  describe a sibling's half-edit turning a check RED: loud, irritating, self-correcting. This is
+  the INVERSE and it is SILENT — a sibling's half-edit turning a check GREEN. Every verification
+  command in a shared-checkout swarm measures the tree, and the tree is not what ships. The
+  doctrine already says the authoritative signal is batch CI on clean HEAD precisely because of
+  this; the gap is that the PER-BEAD close gate still runs on the worktree and is trusted.
+
+## the-slates-hand-written-caller-list-was-short-by-two
+- skills: [ac-loop-swarm, ac2-pipeline]
+- impact: H
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [verify-doctrine-claims-against-live-tools]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac2-pipeline
+- status: open
+- proposed_fix: never hand-enumerate callers in a durable document — name the GREP that derives them. A list is a snapshot; an executed cutover needs a query.
+- narrative: RUN 20260828-015023-71435 TopazCove — the cutover slate's section 3a enumerated
+  FOUR caller sites for `stamp-refined.sh`. There were SIX. The fifth,
+  `ac-bead-refine/references/workflow.md:886`, is not prose: it is the live
+  `STAMP_LIB=$(ls -d ...)` resolution guarded by "FATAL: stamp-refined.sh not found — refusing
+  to stamp". Had the move run against the list as written, EVERY refine stamp would have
+  aborted — the precise failure section 3a exists to prevent, committed inside section 3a.
+  The list was correct when written and wrong when used, which is the whole hazard: a slate is
+  read at EXECUTION time, and the tree moves in between. This project already logged
+  `verify-doctrine-claims-against-live-tools` for the identical shape in skill text. Same
+  defect, new surface: an enumeration is a claim, and a claim needs a loop.
+
+## lint-check-count-fell-when-enforcers-retired
+- skills: [ac-loop-swarm]
+- impact: S
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: [baseline-verifies-a-non-binding-dimension-of-its-own-constraint]
+- first_seen: 2026-08-28
+- last_seen: 2026-08-28
+- stage: ac-loop-swarm
+- status: open
+- proposed_fix: none in the tool — this entry exists so the NEXT reader does not misread a legitimate drop as a regression. Compare failing check NAMES, never the total, in either direction.
+- narrative: RUN 20260828-015023-71435 — `lint.sh` went from 438 checks to 433 when five retired
+  enforcers took their `check` counter calls with them. The drop is CORRECT: those enforcers
+  guarded contracts no surviving skill carries, and re-pointing them at ac2 successors would have
+  manufactured a permanent red.
+  Logged because every swarm brief in this project carries "never pin an absolute lint count",
+  and this is the first run where the count FELL rather than rose. A reader holding 438 as
+  "the number" sees a five-check regression that did not happen.
