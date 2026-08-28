@@ -33,6 +33,9 @@ the code itself states (a type, a documented invariant, a test's premise).
 - Does the scope have tests AT ALL? A scope with no test file passes "tests green"
   vacuously and can reach fixpoint asserting nothing. Name the test file that should
   exist; its absence is a finding.
+- Is every BRANCH in scope covered? Run the repo's coverage command over the scope and
+  report the per-file numbers against its configured thresholds. An uncovered branch is
+  an untested behaviour: name it, at file:line.
 - Does it build and typecheck? Run the build. A green suite over a tree that does not compile
   proves nothing.
 - Does `ubs <changed-files>` exit 0 AND report `Files scanned` equal to the count you passed?
