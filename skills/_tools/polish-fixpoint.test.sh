@@ -90,6 +90,50 @@ done
 mk_plan final "$W/p5.md"
 expect "bound reached, still dirty -> bound-exhausted" 1 "REFUSED bound-exhausted" -- --state "$S5" --artifact "$W/p5.md" --round 3 --pre "$PRE" --max-rounds 3
 
+# --- 5b. CYCLING: a state the artifact already held can never converge --------
+# a -> b -> a. Round 3 returns to round 1's digest: readers are reverting each other.
+S5B="$W/s5b"; mk_plan a "$W/p5b.md"; PRE=$(sha "$W/p5b.md")
+mk_plan b "$W/p5b.md"
+"$SCRIPT" --state "$S5B" --artifact "$W/p5b.md" --round 1 --pre "$PRE" --max-rounds 0 >/dev/null 2>&1 || true
+PRE=$(sha "$W/p5b.md")
+mk_plan c "$W/p5b.md"
+"$SCRIPT" --state "$S5B" --artifact "$W/p5b.md" --round 2 --pre "$PRE" --max-rounds 0 >/dev/null 2>&1 || true
+PRE=$(sha "$W/p5b.md")
+mk_plan b "$W/p5b.md"
+expect "artifact returns to an older state -> ENDED cycling" 1 "ENDED cycling" -- --state "$S5B" --artifact "$W/p5b.md" --round 3 --pre "$PRE" --max-rounds 0
+if [ -f "$S5B/receipt.txt" ]; then
+  FAIL=$((FAIL+1)); echo "FAIL cycling wrote a receipt"
+else
+  PASS=$((PASS+1)); echo "ok   no receipt written when the loop is cycling"; fi
+
+# --- 5c. --max-rounds 0 disables the runaway guard; convergence decides --------
+S5C="$W/s5c"; mk_plan a "$W/p5c.md"; PRE=$(sha "$W/p5c.md")
+r=1
+while [ "$r" -le 11 ]; do
+  mk_plan "u$r" "$W/p5c.md"
+  "$SCRIPT" --state "$S5C" --artifact "$W/p5c.md" --round "$r" --pre "$PRE" --max-rounds 0 >/dev/null 2>&1 || true
+  PRE=$(sha "$W/p5c.md")
+  r=$((r+1))
+done
+mk_plan u12 "$W/p5c.md"
+expect "round 12 with --max-rounds 0 -> CONTINUE, not exhausted" 1 "CONTINUE round=12" -- --state "$S5C" --artifact "$W/p5c.md" --round 12 --pre "$PRE" --max-rounds 0
+
+# --- 5d. a converging run stamps at round 10 with no quota to trip -------------
+mk_plan u12 "$W/p5c.md"
+expect "clean round 13 after 12 dirty rounds -> STAMPED" 0 "STAMPED" -- --state "$S5C" --artifact "$W/p5c.md" --round 13 --pre "$(sha "$W/p5c.md")" --max-rounds 0 --dry-run
+
+# --- 5e. code mode: third mode, same engine, bead-side receipt ----------------
+expect "code mode without --target -> NOT-GATED" 2 "NOT-GATED" -- --mode code --state "$W/s5e" --artifact "$W/p0.md" --round 1 --pre "$(sha "$W/p0.md")"
+expect "unknown mode -> NOT-GATED"              2 "NOT-GATED" -- --mode sideways --target x --state "$W/s5e" --artifact "$W/p0.md" --round 1 --pre "$(sha "$W/p0.md")"
+S5E="$W/s5e"; mk_plan a "$W/p5e.md"; PRE=$(sha "$W/p5e.md")
+mk_plan b "$W/p5e.md"
+"$SCRIPT" --mode code --target ac-fixture --state "$S5E" --artifact "$W/p5e.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "code mode, clean round 2 -> STAMPED"    0 "STAMPED mode=code round=2" -- --mode code --target ac-fixture --state "$S5E" --artifact "$W/p5e.md" --round 2 --pre "$(sha "$W/p5e.md")" --dry-run
+if grep -q "mode=code" "$S5E/receipt.txt" 2>/dev/null; then
+  PASS=$((PASS+1)); echo "ok   code receipt records mode=code"
+else
+  FAIL=$((FAIL+1)); echo "FAIL code receipt missing mode=code"; fi
+
 # --- 6. FROZEN INPUT: an out-of-band amendment ends the loop -------------------
 S6="$W/s6"; mk_plan a "$W/p6.md"; PRE=$(sha "$W/p6.md")
 mk_plan b "$W/p6.md"

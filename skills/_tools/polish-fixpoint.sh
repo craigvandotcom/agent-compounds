@@ -20,7 +20,7 @@
 #
 # Usage:
 #   polish-fixpoint.sh --state <dir> --artifact <path> --round <n> --pre <sha256>
-#                      [--mode plan|bead] [--target <bead-id>] [--max-rounds 5] [--dry-run]
+#                      [--mode plan|bead|code] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
 #
 #   --pre  the artifact digest the SKILL observed BEFORE this round's reader ran. It is how
 #          an out-of-band amendment is detected: if it does not match what the previous
@@ -37,7 +37,7 @@ set -euo pipefail
 
 die2() { printf 'polish-fixpoint: NOT-GATED %s\n' "$*" >&2; exit 2; }
 
-MODE=plan TARGET="" ARTIFACT="" STATE="" ROUND="" PRE="" MAX=5 DRYRUN=0
+MODE=plan TARGET="" ARTIFACT="" STATE="" ROUND="" PRE="" MAX=25 DRYRUN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --mode)       MODE="${2:-}"; shift 2 ;;
@@ -57,11 +57,11 @@ done
 [ -n "$ARTIFACT" ] || die2 "--artifact is required"
 [ -f "$ARTIFACT" ] || die2 "artifact does not exist: $ARTIFACT"
 [ -n "$PRE" ]      || die2 "--pre is required (the digest observed before this round's reader)"
-case "$MODE" in plan|bead) ;; *) die2 "--mode must be plan or bead (got '$MODE')" ;; esac
+case "$MODE" in plan|bead|code) ;; *) die2 "--mode must be plan, bead or code (got '$MODE')" ;; esac
 case "$ROUND" in ''|*[!0-9]*) die2 "--round must be a positive integer (got '$ROUND')" ;; esac
-case "$MAX"   in ''|*[!0-9]*) die2 "--max-rounds must be a positive integer (got '$MAX')" ;; esac
+case "$MAX"   in ''|*[!0-9]*) die2 "--max-rounds must be a non-negative integer, 0 to disable the runaway guard (got '$MAX')" ;; esac
 [ "$ROUND" -ge 1 ] || die2 "--round must be >= 1"
-[ "$MODE" = plan ] || [ -n "$TARGET" ] || die2 "--mode bead requires --target <bead-id>"
+[ "$MODE" = plan ] || [ -n "$TARGET" ] || die2 "--mode $MODE requires --target <bead-id>"
 
 digest() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
@@ -99,8 +99,26 @@ if [ "$ROUND" -eq 1 ]; then
 fi
 
 if [ "$POST" != "$PREV" ]; then
-  if [ "$ROUND" -ge "$MAX" ]; then
-    printf 'polish-fixpoint: REFUSED bound-exhausted rounds=%s max=%s — no clean round. Findings go to the human and NOTHING is stamped. Routine exhaustion indicts the CHECKLIST, not the artifact.\n' \
+  # CYCLING. Matching a round older than the previous one means the artifact has returned to
+  # a state it already held: readers are reverting each other and no further round converges.
+  # A round count cannot tell this from slow progress. The digests can.
+  CYCLE=""
+  R=1
+  while [ "$R" -le $((ROUND - 2)) ]; do
+    if [ -f "$STATE/round-$R.sha" ] && [ "$POST" = "$(cat "$STATE/round-$R.sha")" ]; then
+      CYCLE="$R"; break
+    fi
+    R=$((R + 1))
+  done
+  if [ -n "$CYCLE" ]; then
+    printf 'polish-fixpoint: ENDED cycling round=%s matches round=%s — the artifact returned to a state it already held. More rounds cannot converge. Findings go to the human and NOTHING is stamped. Cycling indicts the CHECKLIST, not the artifact.\n' \
+      "$ROUND" "$CYCLE"
+    exit 1
+  fi
+  # RUNAWAY GUARD, not a quality bar. Convergence is decided by the fixpoint and cycling
+  # tests, never by a round count. 0 disables the guard.
+  if [ "$MAX" -ne 0 ] && [ "$ROUND" -ge "$MAX" ]; then
+    printf 'polish-fixpoint: REFUSED bound-exhausted rounds=%s max=%s — no clean round within the runaway guard. Findings go to the human and NOTHING is stamped. Raise --max-rounds for a genuinely large set; routine exhaustion indicts the CHECKLIST.\n' \
       "$ROUND" "$MAX"
     exit 1
   fi
@@ -134,7 +152,8 @@ if [ "$MODE" = plan ]; then
   cat "$TMP" > "$ARTIFACT"
   rm -f "$TMP"
 else
-  # Bead-side receipt. The `refined` write is gated on THIS comment from inside
+  # Bead-side receipt. `code` shares this writer: a code scope owns no record of its own, so
+  # its receipt lands on the bead that owns the scope. The `refined` write is gated on THIS comment from inside
   # skills/_tools/stamp-refined.sh (ac-gv70) — a check a caller can route around is not a gate, so the
   # gating lives in the writer, not here. This script only produces the receipt it reads.
   command -v br >/dev/null 2>&1 || die2 "br not on PATH — cannot write the bead receipt"
