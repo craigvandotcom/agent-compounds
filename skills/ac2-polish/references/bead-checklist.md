@@ -8,6 +8,9 @@ Grade against the schema — `ac2-beadify/references/bead-schema.md` — and cit
 bead taxonomy, status/priority, close reasons, labels and test-tier slugs are `beads-standards`
 (`reference/bead-conventions.md`); commit and run discipline are `ac-pipeline/references/`.
 
+**SEVERITY GATE for a bead set — correctness · contradiction · unimplementability.** These are
+the only reportable classes. Style, preference and wording are not findings.
+
 Every question is answered YES **with the evidence that settles it**, or it is a finding.
 "Probably", "looks fine" and "the author presumably checked" are findings.
 
@@ -21,7 +24,14 @@ Every question is answered YES **with the evidence that settles it**, or it is a
 
 ## 2. probe-presence
 
-- Does EVERY AC name an executable probe in the schema's form, with a tier?
+- Settle WHICH SHAPE APPLIES before grading a single AC. `skills/_tools/element4-check.sh`
+  decides it: `## Declared RED` present -> the ac-* six-element contract decides ALONE and
+  per-AC probes are not required; absent -> the ac2 schema applies.
+- Under the ac2 shape: does EVERY AC name an executable probe in the schema's form, with a tier?
+- Under the ac-* shape: does every AC name an observable of ANY kind — a command, an exit, a
+  named assertion? An AC with no observable at all is a finding; an informally worded one is not.
+- Grading a bead against the other shape's rule manufactures findings it cannot act on. A
+  finding against a bead `element4-check.sh` PASSes is a finding against this file.
 - Extract them mechanically. Does each command run — `sh -c` reaches completion, no syntax
   error, no *command not found* for its leading word? A probe you did not execute is a
   probe nobody ran.
@@ -81,5 +91,9 @@ Every question is answered YES **with the evidence that settles it**, or it is a
 
 - Does any bead carry content that decays before it is claimed — line numbers, a pasted
   count, a "currently X" claim, a tree state? Move it to the probe or delete it.
+- Where a count SURVIVES because the bead argues it must, re-derive it with the bead's own
+  stated method and report the number you got. Never grade a stated number by eye.
+- State the population you counted over — open vs all, which labels, description-only vs
+  description + comments. That choice moves the answer more often than the arithmetic does.
 - Does the bead restate canon that already exists in `beads-standards` or
   `ac-pipeline/references/`? Replace it with the pointer.

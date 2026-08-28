@@ -9,6 +9,9 @@ Cite, don't restate: bead taxonomy and the refined contract are `beads-standards
 `ac-pipeline/references/`. A polished plan that produces no beads is a dead end — plan mode
 ends by handing off to `ac2-beadify`.
 
+**SEVERITY GATE for a plan — correctness · contradiction · unimplementability.** These are the
+only reportable classes. Style, preference and wording are not findings.
+
 Every question is answered YES **with the evidence that settles it**, or it is a finding.
 
 ## 1. completeness
