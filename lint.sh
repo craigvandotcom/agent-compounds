@@ -454,22 +454,17 @@ if [ "$D2_COUNT" -lt 2 ]; then
   fail "D2: skills/ac-pipeline/SKILL.md expected 'Land after merge' + 'Conductor dedup' ticked, found $D2_COUNT"
 fi
 
-# D3: zero _backlog/{version} occurrences in ac-plan-init/SKILL.md
-check
-if grep -q '_backlog/{version}' "$AC_ROOT/skills/ac-plan-init/SKILL.md" 2>/dev/null; then
-  fail "D3: skills/ac-plan-init/SKILL.md still contains '_backlog/{version}'"
-fi
-
-# D4: ac-beadify plan-status gate — allowed-status set (approved/loop-ready/refined)
-# AND a STOP semantic for anything else.
-check
-BEADIFY_MD="$AC_ROOT/skills/ac-beadify/SKILL.md"
-if ! { grep -q '`approved`' "$BEADIFY_MD" 2>/dev/null \
-    && grep -q '`loop-ready`' "$BEADIFY_MD" 2>/dev/null \
-    && grep -q '`refined`' "$BEADIFY_MD" 2>/dev/null \
-    && grep -qi 'STOP condition' "$BEADIFY_MD" 2>/dev/null; }; then
-  fail "D4: skills/ac-beadify/SKILL.md missing the approved/loop-ready/refined status gate or its STOP semantic"
-fi
+# D3 RETIRED (a: retires with its subject) — asserted no `_backlog/{version}` survived in
+# ac-plan-init, which is in the Phase-4 archive set. The concept exists nowhere in the ac2
+# successors (grep: zero hits), so there is nothing to re-point at. A check reaching into
+# _archive/ is a check that stopped checking.
+#
+# D4 RETIRED (a: retires with its subject) — asserted the plan-status gate
+# (approved/loop-ready/refined + a STOP semantic) in ac-beadify, also in the archive set.
+# Deliberately NOT re-pointed at ac2-beadify: that skill carries none of those four tokens
+# (grep: 0 for approved/loop-ready, 0 for `STOP condition`). Re-pointing would have
+# manufactured a permanent red against a contract ac2 never adopted, which is worse than
+# no check. If ac2 later adopts a status gate, this check should be rewritten for it.
 
 # D5: ac-plan-lab (merged genius+alien plan skill, 2026-07-20) carries the write-back
 # section (Write Back header, or the genius_reviewed/transcended frontmatter flags).
@@ -481,32 +476,27 @@ for d5_skill in ac-plan-lab; do
   fi
 done
 
-# D6: zero stale "pre-merge gate" claims ABOUT LAND in ac-implement + ac-merge.
-# "pre-merge gate" legitimately appears describing review as the sole gate — filter
-# those out (lines with "NOT a pre-merge gate" or "sole pre-merge gate" nearby) and
-# only fail on a leftover line that mentions land AND pre-merge gate unqualified.
-check
-D6_BAD=$(grep -hn "pre-merge gate" "$AC_ROOT/skills/ac-implement/SKILL.md" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null \
-  | grep -i "land" \
-  | grep -vi "NOT a pre-merge gate\|sole pre-merge gate\|review is the pre-merge gate\|runs AFTER" || true)
-if [ -n "$D6_BAD" ]; then
-  fail "D6: stale 'land is a pre-merge gate' claim found: $D6_BAD"
-fi
+# D6 RETIRED (a: retires with its subjects) — scanned ac-implement + ac-merge for a stale
+# "land is a pre-merge gate" claim. BOTH files are in the Phase-4 archive set, and the
+# phrase "pre-merge gate" appears nowhere in ac2-implement or ac2-publish (grep: zero
+# hits), so the drift this guarded cannot recur in the successors.
+#
+# D7 RETIRED (a: retires with its subject) — asserted no "Version bump scans commits"
+# claim survived in ac-merge, in the archive set. The string never migrated into any ac2
+# skill (grep: only the cutover slate's own record of this check mentions it).
 
-# D7: zero "Version bump scans commits" in ac-merge/SKILL.md
+# D8 leg 1 RE-POINTED (b: the FILE survives, so the check does too). version-bump.md is
+# NOT archived — it moves to the surviving ac2-publish, which absorbs ac-merge. The
+# sole-owner statement is the substance and it must keep being enforced at its new home.
 check
-if grep -q "Version bump scans commits" "$AC_ROOT/skills/ac-merge/SKILL.md" 2>/dev/null; then
-  fail "D7: skills/ac-merge/SKILL.md still contains stale 'Version bump scans commits' claim"
+if ! grep -qi "sole.*owner" "$AC_ROOT/skills/ac2-publish/references/version-bump.md" 2>/dev/null; then
+  fail "D8: skills/ac2-publish/references/version-bump.md missing the sole-owner statement"
 fi
-
-# D8: version-bump.md contains the sole-owner statement AND ac-distribute defers to it.
-check
-if ! grep -qi "sole.*owner" "$AC_ROOT/skills/ac-merge/references/version-bump.md" 2>/dev/null; then
-  fail "D8: skills/ac-merge/references/version-bump.md missing the sole-owner statement"
-fi
+# D8 leg 2 KEPT UNCHANGED — ac-distribute survives the cutover. Only the fail text is
+# updated to name the new owner; the assertion itself is untouched.
 check
 if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
-  fail "D8: skills/ac-distribute/SKILL.md missing defer-to-ac-merge language"
+  fail "D8: skills/ac-distribute/SKILL.md missing defer-to-version-bump-owner language"
 fi
 
 # D9 retired (trunk-direct migration, epic bd-u2lo1, bd-u2lo1.3): the allocator
@@ -571,12 +561,11 @@ check
 if grep -qF "1c. UI Validation Suite" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; then
   fail "G7a: skills/ac-land/SKILL.md still contains the retired '1c. UI Validation Suite' block"
 fi
-# G7b: ac-implement's UI-validation deferral names BOTH new owners (batch-close smoke + qa-browser crawl).
-check
-if ! { grep -qF "ac-batch-close" "$AC_ROOT/skills/ac-implement/SKILL.md" 2>/dev/null \
-    && grep -qF "ac-qa-browser" "$AC_ROOT/skills/ac-implement/SKILL.md" 2>/dev/null; }; then
-  fail "G7b: skills/ac-implement/SKILL.md UI-validation deferral must name both owners (ac-batch-close + ac-qa-browser)"
-fi
+# G7b RETIRED (a: retires with its subject) — asserted ac-implement's UI-validation
+# deferral named both owners. ac-implement AND one of the two named owners (ac-batch-close)
+# are both in the Phase-4 archive set, and ac2-implement carries no UI-validation deferral
+# at all (grep: zero hits for the deferral or either owner). Re-pointing would assert a
+# contract the successor does not have. G7a above is untouched — ac-land survives.
 # G7c: ac-pipeline QA-placement checkbox marked DONE.
 check
 if ! grep -qF "[x] **QA placement**" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
@@ -713,7 +702,7 @@ NNG_VIOLATIONS=()
 # `del = 0`, so `nng_net = add - del` is ALWAYS positive and EVERY creation is a
 # violation. That is correct for the legacy registry (a new skill there is pure
 # addition to an already-loaded corpus) but it made the ac2 family — seven skills
-# that must be WRITTEN before the twelve they absorb can be archived — impossible
+# that must be WRITTEN before the eleven they absorb can be archived — impossible
 # to land at all. A new `skills/ac2-*/SKILL.md` therefore answers to the ac2 family
 # TOTAL instead of to its own per-file delta. The cap is the payment; the exemption
 # is a DEFERRAL to it, never an amnesty:
