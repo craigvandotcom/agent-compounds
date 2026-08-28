@@ -31,6 +31,13 @@ this a run reaches "fixpoint" on a tree that does not compile.
 `ubs` exit 0 counts only when `Files scanned` equals the number of files passed — it silently
 drops file types it does not cover, and a shortfall is NOT-GATED, not a pass.
 
+## The scope must be UNCLAIMED
+
+A file an open bead owns is not this loop's to touch. Fixing it makes that bead
+already-green and destroys the Declared RED it will be implemented against. Check every
+in-scope path against open beads BEFORE round 1, and match on the directory as well as
+the full path — a bead that cites a directory claims the files under it.
+
 ## Own the scope for the whole run
 
 Reserve the scope's paths before round 1 and hold them to the verdict. The frozen-input guard

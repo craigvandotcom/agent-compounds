@@ -30,6 +30,9 @@ the code itself states (a type, a documented invariant, a test's premise).
 
 - Do the tests pass? Run the suite. A red tree is the only finding that matters this round;
   report it and stop reading.
+- Does the scope have tests AT ALL? A scope with no test file passes "tests green"
+  vacuously and can reach fixpoint asserting nothing. Name the test file that should
+  exist; its absence is a finding.
 - Does it build and typecheck? Run the build. A green suite over a tree that does not compile
   proves nothing.
 - Does `ubs <changed-files>` exit 0 AND report `Files scanned` equal to the count you passed?
