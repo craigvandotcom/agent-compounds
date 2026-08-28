@@ -80,8 +80,8 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
 1. **Mint the version once.** One bump per publish. Never re-bump downstream.
 2. **Tag the PROVEN SHA explicitly, never `HEAD`.** `ac-prove` pushes evidence commits, so by
    the time this step runs `HEAD` has moved past the commit that was proven and reviewed.
-3. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that
-   ships. Mechanics: `skills/ac-publish/SKILL.md` § Phase 4.
+3. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
+   an alias move over its staged build, never `vercel deploy --prod`. Mechanics: `references/web-promote.md`.
 4. **Native and mobile — CI-built artifacts ONLY.** The binary that ships is the one CI produced
    from the proven SHA. A locally-built artifact carries a local toolchain, local env and an
    unproven tree; it is a different artifact from the one the gate measured, and shipping it
