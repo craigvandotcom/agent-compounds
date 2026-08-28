@@ -85,6 +85,11 @@ BUILD_TARGET=capacitor pnpm build && npx cap sync
   does nothing to an already-built bundle — an already-archived TestFlight/App-Store binary
   won't pick up a later flag. (PostHog: 3 vars, ships with autocapture off — browsing/login
   produces zero events; only explicit `track()` calls register.)
+- **Non-prefixed env vars are two-valued.** Only `NEXT_PUBLIC_*` reaches the browser
+  bundle: a bare `process.env` read in a module a client component imports resolves to the
+  **default** in the browser and the **env value** on the server, with no warning. Never
+  read a non-`NEXT_PUBLIC_` env var in code reachable from `'use client'`; a shared config
+  module is such code.
 - **`NEXT_PUBLIC_*` keys trip gitleaks' generic-api-key rule** (false positive on publishable
   client keys, e.g. a PostHog `phc_…` project key). Allowlist via a `.gitleaksignore`
   `file:rule:line` fingerprint, not by loosening the rule — re-confirm the fingerprint after
