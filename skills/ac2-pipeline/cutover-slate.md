@@ -1,8 +1,17 @@
 # Phase-4 cutover slate — the enumerated moment
 
-**Status: NOT SCHEDULED. This document is not an execution.** It is the item-by-item list a
-human reads before deciding to run the Phase-4 hard cutover. Nothing here has been performed;
-no skill has been moved, archived, deleted or rewritten by the bead that wrote this file.
+**Status: EXECUTED 2026-08-28.** Human ruling: Craig authorised the cutover; it ran as one
+atomic commit anchored by tag `pre-ac2-cutover`. Eleven skills are in `_archive/skills/`,
+their enforcers retired, their references re-pointed, and the deploy targets re-synced.
+
+The text below is preserved AS WRITTEN — the pre-execution draft, including the places where
+it was WRONG (see section 3a, whose caller list was short by two). A slate that is edited to
+match what happened stops being evidence about what was known beforehand. Corrections are
+marked inline; nothing is silently rewritten.
+
+Post-execution result, measured: registry description budget **27,955 / 30,000 — GREEN**,
+down from 32,228 BREACH. Section 4 predicted exactly this and named it the test of whether
+the archive set was large enough. It was.
 
 The cutover is ONE atomic slate commit, human-gated, no operational coexistence. Refining the
 contents below (dropping items, adding items, resolving the open questions) is the scheduler's

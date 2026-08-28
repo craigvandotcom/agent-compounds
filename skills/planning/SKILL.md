@@ -114,10 +114,8 @@ The live `ac-plan-*` chain applies three upgrades on top of the scope-oscillatio
 
 | Command        | Uses This Skill For                      |
 | -------------- | ---------------------------------------- |
-| `/ac-plan-init`     | Initial plan creation using templates    |
-| `/ac-plan-refine-internal` | Iterative multi-agent refinement to convergence |
-| `/ac-plan-refine-external` | High-stakes refinement across external models |
-| `/ac-plan-clean` | Final correctness/hygiene pass on a plan |
+| `/ac2-plan`   | Idea to ONE plan file with a falsifiable success criterion |
+| `/ac2-polish` | Refinement to fixpoint — the correctness, multi-agent and hygiene passes are one bounded round procedure, not four commands |
 
 ---
 

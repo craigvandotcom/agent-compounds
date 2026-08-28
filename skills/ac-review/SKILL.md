@@ -1,6 +1,6 @@
 ---
 name: ac-review
-description: 'MANUAL, human-triggered code review over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. NOT a pipeline stage: it is not a pre-merge gate, not a pre-close gate, and no skill may recommend or auto-invoke it — ac-implement closes straight to ac-batch-close/ac-merge, ac-publish gates on the QA proof, and standing code quality is ac-hygiene''s lane on its own cadence.'
+description: 'MANUAL, human-triggered code review over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. NOT a pipeline stage: it is not a pre-merge gate, not a pre-close gate, and no skill may recommend or auto-invoke it — ac-implement closes straight to ac-batch-close/ac2-publish, ac-publish gates on the QA proof, and standing code quality is ac-hygiene''s lane on its own cadence.'
 ---
 
 
@@ -615,7 +615,7 @@ cluster:
    shared epic or plan node they were split from (walk `## Consumes` / dependency edges and the
    `discovered-from` / epic parent up to the first node they all descend from).
 2. Escalate the fix to that parent: emit **`VERDICT: NEEDS_DECISION`** with a note routing the
-   LCA node back to `/ac-bead-refine` (re-decompose the parent) rather than queuing N per-bead
+   LCA node back to `/ac2-polish` (re-decompose the parent) rather than queuing N per-bead
    AUTO_FIX items. Repair the decomposition **once**, then regenerate the affected subgraph.
 3. Do **not** hand-patch the correlated symptoms here — per-bead patches around a shared-parent
    defect leave the decomposition wrong and the bug re-emerges on the next bead off that parent.
@@ -1004,7 +1004,7 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Close the wave (Recommended)", description: "Trunk-direct (default): run /ac-batch-close — CI verify, feedback triage, bead close. Legacy PR branch only: run /ac-merge" },
+      { label: "Close the wave (Recommended)", description: "Trunk-direct (default): run /ac2-publish — CI verify, feedback triage, bead close. Legacy PR branch only: run /ac2-publish" },
       { label: "Another review pass", description: "Run /ac-review again — fresh eyes on the updated code" },
       { label: "Manual review", description: "Done with automated review — you'll review manually" },
       { label: "Done for now", description: "Review saved — pick up later" }

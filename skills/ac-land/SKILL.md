@@ -41,7 +41,7 @@ echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 
 **You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
 
-Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac-implement` first."
+Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac2-implement` first."
 
 **Also read the loop-retro friction carrier** — `/tmp/loop-retro-<RUN_ID>.md` (resolve `<RUN_ID>`
 from the `RUN_ID` passed in; the ac-loop conductor writes it before Exit-Land, one `## <stage>`
@@ -472,8 +472,8 @@ AskUserQuestion(
     header: "Next step",
     multiSelect: false,
     options: [
-      { label: "Start next wave", description: "Run /ac-plan-init or /ac-implement — {M} beads remaining, pick up the next wave" },
-      { label: "Refine remaining beads", description: "Run /ac-bead-refine — revise remaining beads before implementing the next wave" },
+      { label: "Start next wave", description: "Run /ac2-plan or /ac2-implement — {M} beads remaining, pick up the next wave" },
+      { label: "Refine remaining beads", description: "Run /ac2-polish — revise remaining beads before implementing the next wave" },
       { label: "Done for now", description: "Session over — nothing more to do until the next wave is picked up" }
     ]
   }]

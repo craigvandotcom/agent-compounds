@@ -67,7 +67,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
    template alone would leave zero-ceremony capture as a bypass). A standalone fork
    with no spawning epic records its origin in the memo `context:` instead.
 3. **Labels:** `unrefined` — capture never stamps `refined`, exclusively
-   `/ac-bead-refine`'s output on convergence, no exceptions; a decision fork
+   `/ac2-polish`'s output on convergence, no exceptions; a decision fork
    gets `human-gate` instead. Provenance labels only where true.
 4. **Create:** `br create "<imperative title>" -t <type> --labels "origin:ac-bead-capture,<labels>"
    --description "<context: what/why/where, user's words preserved>"` — set
@@ -88,7 +88,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
 
 ## Phase 4 — Confirm (one line)
 
-`<id> filed in <repo> as <type>[ +labels] — refine with /ac-bead-refine when
+`<id> filed in <repo> as <type>[ +labels] — refine with /ac2-polish when
 scheduling.` Nothing more; the user is mid-thought.
 
 ## Common Mistakes
@@ -102,5 +102,5 @@ scheduling.` Nothing more; the user is mid-thought.
 | Skipping dedupe | `br search` first — enrich beats duplicate |
 | Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + private pointer |
 | Forgetting the `.beads/` commit | The jsonl is the sync surface — uncommitted = invisible cross-machine |
-| Stamping `refined` at capture | Never — exclusively `/ac-bead-refine`, no exceptions |
+| Stamping `refined` at capture | Never — exclusively `/ac2-polish`, no exceptions |
 

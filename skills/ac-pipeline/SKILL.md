@@ -100,7 +100,7 @@ Sophistication is balancing opposites. Each tension has a named mechanism that r
   beads and drives them to closed on main (trunk-direct). Its predecessor `ac-loop`
   (retired → `_archive/skills/ac-loop/`) also selected work at plan altitude (orphans →
   plan waves) — that selection layer has NO live successor: `loop-ready` plans do not get
-  picked up automatically; beadify them by direct `/ac-beadify` invocation. The conductor
+  picked up automatically; beadify them by direct `/ac2-beadify` invocation. The conductor
   consults this doctrine for order + gates.
 - **`ac-pipeline` = the blueprint.** This file. Design, audit, evolve the pipeline.
 - **`ac-tidy` / `ac-align` = the scheduled propose-half.** Both gain a headless mode (nightly

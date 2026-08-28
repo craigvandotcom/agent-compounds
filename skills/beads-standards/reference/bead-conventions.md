@@ -80,7 +80,7 @@ The refined/unrefined/human-gate doctrine — presence-of-`refined` readiness, f
 unknown — is machine-wide floor:
 `beads-standards` § Agent bead template. This section carries only the pipeline wiring:
 
-- **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-bead-refine`
+- **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac2-polish`
   on convergence — no other skill, and no conductor, however strong the evidence.
   `unrefined` is the default at creation (`ac-bead-capture`, `ac-beadify`).
 - **Gap repair:** `ac-tidy`'s nightly lint auto-adds `unrefined` to beads missing all
@@ -102,7 +102,7 @@ br list --json --limit 1000 | jq -r '
   | .id' \
 | while read -r id; do
     bash .claude/skills/_tools/stamp-refined.sh "$id" \
-      || echo "NOT-STAMPED $id — element 4 unmet, route to /ac-bead-refine"
+      || echo "NOT-STAMPED $id — element 4 unmet, route to /ac2-polish"
   done
 ```
 

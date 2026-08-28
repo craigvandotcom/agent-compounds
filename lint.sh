@@ -79,7 +79,13 @@ ALL_AC_GLOB_PREFIXES=""
 for skill_dir in "$AC_ROOT/skills"/*/; do
   for f in "$skill_dir/SKILL.md" "$skill_dir/references/"*.md "$skill_dir/workflows/"*.md; do
     [ -f "$f" ] || continue
-    tokens=$(grep -oE '/ac-[a-z][a-z-]*[a-z]' "$f" 2>/dev/null || true)
+    # Strip `_archive/skills/<name>` PATH segments before extracting invocation tokens.
+    # Without this, a correctly-written pointer at an archived skill — which the Phase-4
+    # cutover slate's section 5 disposition REQUIRES — reads as an invocation of a skill
+    # that does not exist. That false positive was the standing `/ac-loop` failure in the
+    # pre-cutover baseline; archiving eleven skills would have multiplied it.
+    tokens=$(sed 's#_archive/skills/ac-[a-z][a-z-]*[a-z]##g' "$f" 2>/dev/null \
+             | grep -oE '/ac-[a-z][a-z-]*[a-z]' 2>/dev/null || true)
     if [ -n "$tokens" ]; then
       ALL_AC_TOKENS="${ALL_AC_TOKENS}
 ${tokens}"
@@ -901,12 +907,16 @@ fi
 CONDUCTOR_CEILING=1110
 STANDARD_CEILING=730
 
+# Phase-4 cutover 2026-08-28: the roster follows the archive set's "Absorbed by" column.
+# ac-implement -> ac2-implement · ac-batch-close + ac-merge -> ac2-publish · ac-loop was
+# archived long before this cutover and its stale entry was a standing Check 15 failure.
+# ac-review and ac-land survive unchanged; ac-review is still the tier max (1063 lines),
+# so CONDUCTOR_CEILING is untouched.
 CONDUCTOR_SKILLS=(
-  "ac-loop"
-  "ac-implement"
+  "ac2-implement"
+  "ac2-review"
+  "ac2-publish"
   "ac-review"
-  "ac-batch-close"
-  "ac-merge"
   "ac-land"
 )
 

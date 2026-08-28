@@ -211,7 +211,7 @@ Report each inference.
 
 ### 2f: Lifecycle Label Gap Lint
 
-> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac-bead-refine` convergence, no other skill (`skills/beads-standards/reference/bead-conventions.md`).
+> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac2-polish` convergence, no other skill (`skills/beads-standards/reference/bead-conventions.md`).
 
 **Condition:** an open, non-epic bead carries none of `unrefined` / `refined` / `human-gate` — a lifecycle-label gap, i.e. unknown readiness state.
 

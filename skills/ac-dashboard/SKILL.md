@@ -117,7 +117,7 @@ CI:    {last 3 runs: name → conclusion}
 Close with pointers, not prompts — no `AskUserQuestion`, ever:
 
 ```
-Act: gates/decisions → /ac-human-session · reconcile/archive → /ac-tidy · re-prioritize → /ac-align · ship the ready work → /ac-loop
+Act: gates/decisions → /ac-human-session · reconcile/archive → /ac-tidy · re-prioritize → /ac-align · ship the ready work → /ac2-implement
 ```
 
 ---
@@ -132,4 +132,4 @@ Act: gates/decisions → /ac-human-session · reconcile/archive → /ac-tidy · 
 
 ---
 
-_The factory window. To act on what you see: `/ac-human-session` (human gates) · `/ac-tidy` (housekeeping) · `/ac-align` (strategy) · `/ac-loop` (ship)._
+_The factory window. To act on what you see: `/ac-human-session` (human gates) · `/ac-tidy` (housekeeping) · `/ac-align` (strategy) · `/ac2-implement` (ship)._

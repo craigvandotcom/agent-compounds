@@ -38,7 +38,6 @@ ROOT="${AC_HARNESS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 # SELF-EXPIRING: if a quarantined harness PASSES, this runner FAILS. A quarantine that
 # outlives its defect is a lie about what is covered, and nobody remembers to remove it.
 QUARANTINE=(
-  "skills/ac-pipeline/scripts/cross-repo-gate.test.sh|ac-1227|env-prerequisite table + 2nd br-ready jq site deleted from ac-implement by 760b638; restore-vs-rehome ruling pending"
 )
 
 # ---------------------------------------------------------------------------

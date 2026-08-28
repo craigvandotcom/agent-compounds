@@ -15,9 +15,9 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
-conductor is **`ac-loop-swarm`**; the design lives in **`ac-pipeline`**. Three operational
+conductor is **`ac2-implement`**; the design lives in **`ac2-pipeline`**. Three operational
 loops feed one execution path (see `ac-pipeline` § *The three operational loops*):
-the **dev loop** (human intent → plans → waves → `ac-loop-swarm` ships), the **triage loop**
+the **dev loop** (human intent → plans → waves → `ac2-implement` ships), the **triage loop**
 (`ac-triage`, scheduled — production signal → defect beads), and the **audit loop**
 (`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
 | Skill | What it does |
@@ -30,24 +30,15 @@ the **dev loop** (human intent → plans → waves → `ac-loop-swarm` ships), t
 | **ac2-implement** | Work the ac2 bead queue (under construction) — the self-contained worker prompt at N=1: explicit eligibility filter, `flight-check.sh` at claim, RED first, `swarm-commit.sh` at commit, `close-gate.sh` at close, batch boundary derived from the committed ledger; the coordinator stays a deferred Calibration |
 | **ac2-review** | Independent post-batch review for ac2 (under construction) — reviewers run a different model from the workers (the L2 core that survives tier convergence), read-only on the shared tree with a disposable-worktree carve-out for destructive sabotage probes, depth by risk; verdicts admit DEFER-with-reason, fixture-shape validity is a named dimension, every finding carries a catch-stage label and Lows stay in the report |
 | **ac2-publish** | The ac2 ship gate (under construction) — `ac-prove` obtains the proof and this gate asserts its REQUIRED JOBS ACTUALLY EXECUTED, refusing `NOT-GATED` on a job that was absent, skipped or cancelled; then version once, tag the returned proven SHA (never `HEAD`), promote-not-rebuild on web, CI-built artifacts only on native, hand off to `ac-distribute`; external escapes get a catch-stage label on arrival |
-| **ac-loop-swarm** | The runtime conductor — pull-based swarm (manual-invoke only) — N fungible workers each pull the next ready refined bead via atomic `br --claim`, reserve, implement, scoped-check, flock-commit to `main`, Delivers-gate, close, repeat until the queue is dry; the orchestrator only sets width and owns the one ledger commit + batch CI |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy |
-| **ac-plan-init** | Create a first-draft implementation plan |
-| **ac-plan-clean** / **ac-plan-refine-internal** / **ac-plan-refine-external** | Verify / deepen a plan (correctness pass · multi-agent · multi-model) |
 | **ac-plan-lab** | Deep analysis of a plan — genius (forensic review) + alien (paradigm-breaking) modes |
 | **ac-bead-capture** | Capture a raw idea/bug/decision on the go as one properly typed, routed bead |
-| **ac-beadify** | Convert a refined plan into a beads task structure (create) |
-| **ac-bead-refine** | Refine beads to convergence — self-contained, agent-ready |
 | **[beads-standards](./skills/beads-standards/)** | Machine-wide bead canon (not pipeline-scoped) — agent vs human bead templates, `human-gate` label taxonomy + synonym merge map, refined/unrefined semantics, status/priority/close_reason conventions, dependency-wiring requirements |
 | **[agent-mail](./skills/agent-mail/)** | Multi-agent coordination domain — session identity (two-tier contract), file reservations, release/deregister exit, build slots; owner of the session-procedure + agent-identity canons |
-| **ac-implement** | Sequential bead implementation — conductor + engineer sub-agents |
 | **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
-| **ac-merge** | Merge a branch to main via PR (surviving PR path: dependabot, human feature branches) — CI triage, version bump |
-| **ac-batch-close** | Trunk-direct batch closing ceremony — Tier 1 CI dispatch, review gate, version bump + tag, deploy checks, review-mark advance |
 | **ac-land** | Session closure — retrospective learning + system compounding |
-| **ac-publish** | Manual, human-triggered release gate — post-loop "ship to production": SHA-pinned full-CI read + full QA + migration safety, composes `ac-merge` + `ac-distribute` |
 | **ac-prove** | The shared tip-valid full-suite proof primitive — freshness probe / dispatch-if-stale / ensure --fix-forward; every ship path calls it instead of re-implementing its own CI-trust logic |
 | **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
 | **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
@@ -146,7 +137,7 @@ Portable agent definitions, symlinked into `.claude/agents/`.
 ./deploy.sh ../my-project --all --dry-run
 ```
 
-`deploy.sh` computes relative symlinks automatically and **refuses to overwrite a real file** already at the target — so it never clobbers a project's customized skill. Each skill lands as `.claude/skills/<name>/` and is invoked as `/<name>` (e.g. `/ac-plan-init`, `/jef-prompts`).
+`deploy.sh` computes relative symlinks automatically and **refuses to overwrite a real file** already at the target — so it never clobbers a project's customized skill. Each skill lands as `.claude/skills/<name>/` and is invoked as `/<name>` (e.g. `/ac2-plan`, `/jef-prompts`).
 
 Then create the project's context file:
 

@@ -32,7 +32,7 @@ entries: 10
 - last_seen: 2026-08-20
 - stage: ac-bead-refine
 - status: open
-- receipt: skills/ac-bead-refine/FRICTIONS.md (source ledger, recurrence 5)
+- receipt: _archive/skills/ac-bead-refine/FRICTIONS.md (source ledger, recurrence 5; archived at the Phase-4 cutover 2026-08-28)
 - control: I1
 - control_landed: 2026-08-27
 - proposed_fix: stop storing tree-state in the bead; verify at claim instead.
@@ -51,7 +51,7 @@ entries: 10
 - last_seen: 2026-08-04
 - stage: ac-bead-refine
 - status: open
-- receipt: skills/ac-bead-refine/FRICTIONS.md (source ledger, recurrence 3)
+- receipt: _archive/skills/ac-bead-refine/FRICTIONS.md (source ledger, recurrence 3; archived at the Phase-4 cutover 2026-08-28)
 - control: I4
 - control_landed: 2026-08-27
 - proposed_fix: run a checklist to fixpoint instead of counting reviewer rounds.
@@ -87,7 +87,7 @@ entries: 10
 - last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
-- receipt: skills/ac-loop-swarm/FRICTIONS.md (source ledger, recurrence 5)
+- receipt: _archive/skills/ac-loop-swarm/FRICTIONS.md (source ledger, recurrence 5; archived at the Phase-4 cutover 2026-08-28)
 - control: C-deferred-coordinator
 - control_landed: 2026-08-27
 - proposed_fix: one live-session identity signs both the reservation and the commit; never
@@ -173,7 +173,8 @@ entries: 10
   calls and assert it is not inside the archive set.
 - narrative: Phase 4 moves "every absorbed ac-* skill" to _archive/skills/, and ac-bead-refine
   is named in ac2-polish's Absorbs column — but stamp-refined.sh, which the plan itself
-  designates the SOLE SANCTIONED WRITER of `refined`, lives in skills/ac-bead-refine/scripts/,
+  designates the SOLE SANCTIONED WRITER of `refined`, moved to skills/_tools/ in cutover prep
+  (its origin skills/ac2-polish/ archived 2026-08-28),
   and ac2's own batch-boundary eligibility filter still requires `refined`. The slate
   enumerates other cutover relocations and omits this one; the plan's script-home rule would
   put it in skills/_tools/. Archiving a skill silently archives the executables inside it,

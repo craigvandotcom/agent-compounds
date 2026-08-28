@@ -110,7 +110,9 @@ artifact. The engine needs the round's finding COUNT as an input, not just the d
    and the highest-impact of the three. Phase 4 moves every absorbed ac-* skill to
    `_archive/skills/`; ac-bead-refine is in ac2-polish's Absorbs column; and
    `stamp-refined.sh` — which the plan itself designates the sole sanctioned writer of
-   `refined` — lives in `skills/ac-bead-refine/scripts/`, while ac2's batch-boundary filter
+   `refined` — lived in `skills/ac-bead-refine/scripts/` when this receipt was written; it moved
+   to `skills/_tools/` in cutover prep and `ac-bead-refine` archived at the Phase-4 cutover
+   (2026-08-28) — while ac2's batch-boundary filter
    still requires `refined`. No phase relocates it. Verified: the file is at that path and
    the Phase-4 slate enumerates other relocations but not this one.
    → landed: `skills/ac2-pipeline/FRICTIONS.md`

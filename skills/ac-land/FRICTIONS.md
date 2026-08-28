@@ -136,7 +136,7 @@ entries: 11
   number, a report filename and a review finding all confer the appearance of adjudication on what
   is still a hypothesis. The counter-measure is the same at both stages and costs one step: before
   acting on an agent-authored claim, re-derive the central claim from the artifact it cites. Local
-  entry in the consuming skill: `verifier-bead-is-hypothesis` in `skills/ac-bead-refine/FRICTIONS.md`.
+  entry in the consuming skill: `verifier-bead-is-hypothesis` in `_archive/skills/ac-bead-refine/FRICTIONS.md` (archived at the Phase-4 cutover 2026-08-28).
 
 ## no-blind-format-sweep-at-close
 - skills: [ac-land]

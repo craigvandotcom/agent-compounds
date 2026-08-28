@@ -231,7 +231,7 @@ Set `horizon: next` in frontmatter if absent. Leave everything else in the pool.
 ### Missing Execution ({N} gaps)
 | Strategy Demand | Missing Item | Suggested Action |
 |----------------|--------------|-----------------|
-| {demand} | nothing in pipeline | Add to _backlog or /ac-plan-init |
+| {demand} | nothing in pipeline | Add to _backlog or /ac2-plan |
 
 ### Missequenced Items ({N} items)
 | Item | Current Position | Should Be | Reason |
@@ -284,4 +284,4 @@ Apply approved changes. Do NOT modify files without explicit user confirmation.
 
 ---
 
-_Align the pipeline and own pool → active. For capture: `/ac-backlog`. For planning: `/ac-plan-init`. For implementation: `/ac-implement`._
+_Align the pipeline and own pool → active. For capture: `/ac-backlog`. For planning: `/ac2-plan`. For implementation: `/ac2-implement`._

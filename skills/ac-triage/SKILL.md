@@ -184,7 +184,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
 - **Readiness gate (the ac-loop seam):** every finding ships `unrefined`, however strong the
-  evidence; `refined` is applied EXCLUSIVELY by `/ac-bead-refine` on convergence (Phase 3c,
+  evidence; `refined` is applied EXCLUSIVELY by `/ac2-polish` on convergence (Phase 3c,
   in-session, while the evidence is still in context). `-t investigation` beads are ALWAYS
   `unrefined` — they are questions, not specs. The Phase-3a bar (permalink, first-seen
   release, suspected wave/commit, stack frames/repro, verification path) is not a stamping

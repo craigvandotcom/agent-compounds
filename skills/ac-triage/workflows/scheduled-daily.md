@@ -102,7 +102,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 - Cluster, severity-filter, dedupe against open beads AND open pool candidates.
 - Route by shape: defects → beads, ALWAYS `unrefined` (**the Phase-3a readiness bar** —
   permalink + suspected commit + repro + verification path — is evidencing guidance, not a
-  stamping decision; only `/ac-bead-refine` ever applies `refined`, and a
+  stamping decision; only `/ac2-polish` ever applies `refined`, and a
   refined-by-construction bead just converges there fast); themes → `_backlog/pool/`
   candidates with `status: candidate`.
 
