@@ -113,6 +113,9 @@ grep -r "supabase\.\(from\|rpc\)" app/ lib/ --include="*.ts"
 
 **Expected Output:** No hardcoded secrets found, all secrets in environment variables, `.env` not in git history
 
+Scope this to secrets. Env vars are the fix for a secret, not for a hardcoded
+value in general — non-secret constants stay in code (QA-028, QA-050).
+
 **Deliverable:** Report of any secrets found with remediation steps
 
 ---

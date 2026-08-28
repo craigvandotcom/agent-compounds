@@ -748,11 +748,13 @@ import type { ItemEntry } from './types';
 2. Look for hardcoded strings (URLs, messages, keys)
 3. Check for repeated literal values
 4. Verify constants defined for business rules (limits, thresholds)
-5. Check environment-specific values in config
 
 **Expected Output:** No magic numbers; all values named or documented
 
-**Deliverable:** Extract magic values to named constants
+**Deliverable:** Extract magic values to named constants in code.
+
+Do not promote a value to an environment variable here. Naming a value and
+making it deployment-configurable are separate findings. Env vars are QA-050.
 
 **Example Fix:**
 
@@ -763,7 +765,38 @@ if (file.size > 5242880) { ... }
 // Good: Named constant
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 if (file.size > MAX_FILE_SIZE_BYTES) { ... }
+
+// Also bad: no caller configures this. Two copies of one number, free to drift.
+const MAX_FILE_SIZE_BYTES = getEnvNumber('MAX_FILE_SIZE', 5 * 1024 * 1024);
 ```
+
+---
+
+### [QA-050] Verify Environment Variables Earn Their Existence
+
+**Description:** Find env vars holding values that never vary by environment
+**Severity:** MEDIUM
+**Auto-fixable:** NO — changing an env var changes deployment surface
+**Parallel Group:** QA-Readability
+
+An env var must be a secret, or must hold a value that genuinely differs
+between local, preview and production. Everything else is a constant.
+
+**Verification:**
+
+1. List the keys the code reads: `grep -rn "process\.env\." app/ lib/ --include="*.ts"`
+2. For each non-secret key, find a real override: `vercel env ls`, `.github/`,
+   `vercel.json`, CI config.
+3. A key set only in `.env.example` or `.env.local`, at the code default, has no
+   override. Demote it.
+4. Read an "optional — uses default if not set" annotation as evidence of disuse.
+5. Flag every non-`NEXT_PUBLIC_` `process.env` read in a module reachable from
+   `'use client'`. Next.js inlines only `NEXT_PUBLIC_*` into the browser bundle,
+   so the browser reads the default while the server reads the env value.
+
+**Expected Output:** Every env var is a secret or is set per environment
+
+**Deliverable:** Report the env vars to demote. Demotion itself is a human call.
 
 ---
 
@@ -1536,11 +1569,12 @@ After completing audit items, generate this summary:
 - Remove dead code and unused imports
 - Fix formatting issues
 - Remove console.log statements
-- Extract magic numbers to constants
+- Extract magic numbers to constants in code (never to env vars)
 - Convert .then() to async/await
 
 **NO - Needs decision:**
 
+- Promoting a value to, or demoting it from, an env var
 - Architectural refactoring
 - Component decomposition strategy
 - Feature boundary decisions
