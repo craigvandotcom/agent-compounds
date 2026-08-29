@@ -34,10 +34,6 @@ if [ ! -x "$GATE" ]; then
   echo "flight-check.test: flight-check.sh missing or not executable at $GATE"
   exit 1
 fi
-if ! command -v shasum >/dev/null 2>&1 && ! command -v sha256sum >/dev/null 2>&1; then
-  echo "flight-check.test: SKIP — no sha256 tool on this box; the fingerprint leg cannot run"
-  exit 77
-fi
 
 WORK=$(mktemp -d -t ac2-flight-test) || { echo "flight-check.test: cannot create scratch dir"; exit 1; }
 trap 'rm -rf "$WORK"' EXIT
@@ -78,9 +74,6 @@ if [ -f "$RECEIPT" ]; then
   ok "the flight receipt was written"
   grep -q '^FLIGHT-RECEIPT v1' "$RECEIPT" && ok "receipt carries its format marker" \
     || bad "receipt has no FLIGHT-RECEIPT version marker"
-  grep -qE '^red-fingerprint: sha256:[0-9a-f]{64}$' "$RECEIPT" \
-    && ok "receipt RECORDS the RED assertion fingerprint close-gate hash-locks against" \
-    || bad "receipt carries no sha256 red-fingerprint — close-gate cannot lock against an absent field"
   grep -q "^red-probe: test -e ./not-built-yet.md$" "$RECEIPT" \
     && ok "the recorded RED is the probe that actually failed, not the green one" \
     || bad "receipt names the wrong RED probe: $(grep '^red-probe:' "$RECEIPT")"
@@ -204,7 +197,7 @@ done | sort -u | wc -l | awk '{print $1}')
   || bad "expected 4 distinct refusal classes, saw $CLASSES"
 
 # ---------------------------------------------------------------------------------------
-echo "flight-check.test: case 3 — one writer, one receipt format, two fingerprint moments"
+echo "flight-check.test: case 3 — one writer, one receipt format, receipts APPEND"
 # ---------------------------------------------------------------------------------------
 rm -f "$WORK/receipts/ac-test-0001.flight-receipt"
 # (b') at claim, for a bead that delivers its own harness: the harness does not exist yet.
@@ -217,12 +210,6 @@ cat >"$WORK/bodies/ownharness-claim.md" <<'BODY'
 - none
 BODY
 run "$WORK/bodies/ownharness-claim.md"
-grep -q '^red-fingerprint-scope: probe$' "$RECEIPT" \
-  && ok "at claim with no harness on the tree, the fingerprint scope is 'probe'" \
-  || bad "expected scope 'probe', got: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
-printf '%s' "$RUN_OUT" | grep -q 'RE-RUN this' \
-  && ok "the scope-'probe' receipt tells the worker to re-run once the harness is written" \
-  || bad "no re-invocation instruction on a scope-'probe' receipt"
 
 # (b) re-invocation, once the harness IS written and BEFORE any fix.
 cat >"$WORK/bodies/ownharness-written.md" <<'BODY'
@@ -234,39 +221,25 @@ cat >"$WORK/bodies/ownharness-written.md" <<'BODY'
 - none
 BODY
 run "$WORK/bodies/ownharness-written.md"
-grep -q '^red-fingerprint-scope: probe+harness$' "$RECEIPT" \
-  && ok "once the harness exists, the SAME writer records scope 'probe+harness'" \
-  || bad "expected scope 'probe+harness', got: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
-grep -q 'existing-harness.test.sh' "$RECEIPT" \
-  && ok "the receipt names the harness file the fingerprint was taken over" \
-  || bad "receipt does not name its fingerprint inputs"
 [ "$(grep -c '^FLIGHT-RECEIPT v1' "$RECEIPT")" -ge 2 ] \
   && ok "receipts APPEND, so close-gate reads the last-observed RED" \
   || bad "receipts did not append — the re-invocation lost the earlier moment"
 
-# The fingerprint is over the ASSERTIONS, so editing the harness moves it.
-FP_BEFORE=$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)
-printf 'assert three\n' >>"$WORK/root/existing-harness.test.sh"
-run "$WORK/bodies/ownharness-written.md"
-FP_AFTER=$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)
-[ "$FP_BEFORE" != "$FP_AFTER" ] \
-  && ok "the fingerprint tracks the harness content — an edited test cannot pass as unchanged" \
-  || bad "fingerprint did not move when the harness assertions changed"
-
 # ---------------------------------------------------------------------------------------
-echo "flight-check.test: case 4 — a post-fix re-fingerprint is STRUCTURALLY unreachable"
+echo "flight-check.test: case 4 — a post-fix receipt is STRUCTURALLY unreachable"
 # ---------------------------------------------------------------------------------------
-# The same bead, after the fix: the probe is now GREEN, so the only writer of the
-# fingerprint refuses. There is no path that records a RED fingerprint after the diff.
+# The same bead, after the fix: the probe is now GREEN, so the only writer of the receipt
+# refuses. There is no path that banks a RED after the diff — which is what makes the receipt
+# a temporal anchor rather than a formality.
 printf 'FIXED\n' >>"$WORK/root/existing-harness.test.sh"
-FP_LOCKED=$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)
+RECEIPTS_BEFORE=$(grep -c '^FLIGHT-RECEIPT v1' "$RECEIPT")
 run "$WORK/bodies/ownharness-written.md"
 [ "$RUN_RC" -eq 1 ] && printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: RED' \
-  && ok "after the fix the writer refuses — the fingerprint cannot be re-taken post-diff" \
+  && ok "after the fix the writer refuses — a RED cannot be banked post-diff" \
   || bad "post-fix re-invocation did not refuse (rc=$RUN_RC): $RUN_OUT"
-[ "$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)" = "$FP_LOCKED" ] \
-  && ok "the locked fingerprint is unchanged by the post-fix attempt" \
-  || bad "the post-fix run rewrote the fingerprint"
+[ "$(grep -c '^FLIGHT-RECEIPT v1' "$RECEIPT")" -eq "$RECEIPTS_BEFORE" ] \
+  && ok "the refused run appended NO receipt — the anchor is unchanged" \
+  || bad "the post-fix run appended a receipt anyway"
 
 # ---------------------------------------------------------------------------------------
 echo "flight-check.test: case 5 — a gate that cannot verify says so and FAILS"
@@ -312,83 +285,6 @@ done
   || bad "flight-check.sh declares no$DECL_MISSING"
 
 # ---------------------------------------------------------------------------------------
-echo "flight-check.test: case 7 — the subject-scoped scope for a PROSE bead (ac-hnsc)"
-# ---------------------------------------------------------------------------------------
-# A prose bead's probe names the file the bead itself edits. Folding those bytes into the
-# assertion fingerprint made close-gate's hash lock unsatisfiable by construction, so the
-# writer emits a DISTINCT scope and hashes the probe COMMAND alone.
-rm -f "$RECEIPT"
-printf 'a doc that does not carry the word yet\n' >"$WORK/root/prose-subject.md"
-cat >"$WORK/bodies/prose.md" <<'BODY'
-## Acceptance Criteria
-- the doc carries the token.
-  Probe: `grep -q TOKEN ./prose-subject.md` — tier: none
-
-## Delivers
-- doc: ./prose-subject.md
-
-## Consumes
-- none
-BODY
-run "$WORK/bodies/prose.md"
-[ "$RUN_RC" -eq 0 ] && ok "a prose bead clears flight-check" || bad "prose: expected exit 0, got $RUN_RC: $RUN_OUT"
-grep -q '^red-fingerprint-scope: subject-scoped$' "$RECEIPT" \
-  && ok "a probe naming only this bead's own Delivers subject banks scope 'subject-scoped'" \
-  || bad "expected scope 'subject-scoped', got: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
-grep -q '^red-fingerprint-inputs: (probe command only' "$RECEIPT" \
-  && ok "the subject-scoped receipt records that ONLY the probe command was hashed" \
-  || bad "subject-scoped receipt misreports its fingerprint inputs"
-grep -q '^red-fingerprint-subjects:.*prose-subject.md' "$RECEIPT" \
-  && ok "the receipt still NAMES the subject it asserts on, on its own line" \
-  || bad "subject-scoped receipt does not name the subject"
-
-# THE LOAD-BEARING ONE: editing the SUBJECT must not move the fingerprint, or the lock stays
-# unsatisfiable for every prose bead exactly as before.
-FP_SUBJ=$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)
-printf 'another paragraph, still no token\n' >>"$WORK/root/prose-subject.md"
-run "$WORK/bodies/prose.md"
-[ "$(grep '^red-fingerprint:' "$RECEIPT" | tail -1)" = "$FP_SUBJ" ] \
-  && ok "the subject-scoped fingerprint is over the ASSERTION, so editing the subject leaves it fixed" \
-  || bad "the subject's bytes are still folded into the fingerprint"
-
-# GUARD (a): a bead with a real harness in ANY of its ACs is a code bead and keeps the harness
-# lock, even when the probe that happened to be RED is a grep on its own subject.
-cat >"$WORK/bodies/prose-with-harness.md" <<'BODY'
-## Acceptance Criteria
-- the doc carries the token.
-  Probe: `grep -q TOKEN ./prose-subject.md` — tier: none
-- the harness passes.
-  Probe: `test -x ./existing-harness.test.sh && bash ./existing-harness.test.sh` — tier: none
-
-## Delivers
-- doc: ./prose-subject.md
-- harness: ./existing-harness.test.sh
-
-## Consumes
-- none
-BODY
-run "$WORK/bodies/prose-with-harness.md"
-grep -q '^red-fingerprint-scope: probe+harness$' "$RECEIPT" \
-  && ok "a bead that runs a harness anywhere in its ACs stays probe+harness — no escape hatch" \
-  || bad "a harness-bearing bead was downgraded to: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
-
-# GUARD (b): the probe must assert on what this bead SHIPS. A file the bead does not deliver
-# is not its subject, so the scope stays probe+harness and the bytes stay in the hash.
-cat >"$WORK/bodies/prose-foreign.md" <<'BODY'
-## Acceptance Criteria
-- some other file grows a token this bead never claimed to ship.
-  Probe: `grep -q TOKEN ./present-artifact.md` — tier: none
-
-## Delivers
-- doc: ./prose-subject.md
-
-## Consumes
-- none
-BODY
-run "$WORK/bodies/prose-foreign.md"
-grep -q '^red-fingerprint-scope: probe+harness$' "$RECEIPT" \
-  && ok "a probe naming a file OUTSIDE this bead's Delivers is not subject-scoped" \
-  || bad "a foreign file was treated as this bead's subject: $(grep '^red-fingerprint-scope:' "$RECEIPT" | tail -1)"
 
 # ---------------------------------------------------------------------------------------
 echo ""

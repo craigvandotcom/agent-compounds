@@ -238,6 +238,50 @@ $A_BODY")"
   done
 }
 
+# gen_opencode_agents <src-agents-dir> <dest-dir>
+# opencode reads NEITHER .claude/agents nor any Claude-compat agent path — verified
+# 2026-08-28: `opencode agent list` showed only its built-ins, and
+# `opencode debug agent researcher` returned "not found". So the three stances have to
+# be GENERATED, the same posture as Codex TOMLs and Droid droids.
+#
+# Deliberately the three stances ONLY (researcher/implementer/validator, the canonical
+# delegation model). The other agent defs lean on Claude-side tools/MCP that opencode
+# does not carry; generating them would advertise subagents that cannot do their job —
+# the phantom-registry failure mode already on record.
+#
+# `model:` is deliberately OMITTED. Our stances pin `model: sonnet`, an Anthropic class
+# name that means nothing here; omitting it inherits opencode.jsonc's default, so the
+# fallback lane's model choice stays in ONE place instead of being frozen into every
+# generated file.
+#
+# `tools:` is deprecated upstream in favour of `permission:`, so write-capability is
+# DERIVED from the source tools line (Write or Edit present yields edit=allow, else
+# edit=deny) rather than hardcoded per agent name: add a stance and it maps itself.
+gen_opencode_agents() { # <src-agents-dir> <dest-dir>
+  local src="$1" dest="$2" f name relsrc tools edit_perm
+  [ -d "$src" ] || { echo "  WARN: agent source missing: $src"; return 0; }
+  for name in researcher implementer validator; do
+    f="$src/$name.md"
+    [ -f "$f" ] || { echo "  WARN: stance $name.md missing in $src (skipped)"; continue; }
+    parse_agent "$f"
+    relsrc="${f/#$REPOS_ROOT\//}"
+    tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
+    if printf '%s' "$tools" | grep -qE 'Write|Edit'; then edit_perm="allow"; else edit_perm="deny"; fi
+    write_generated "$dest/$name.md" "$(printf '%s' \
+"---
+description: $A_DESC
+mode: subagent
+permission:
+  edit: $edit_perm
+  bash: allow
+  task: deny
+---
+<!-- $STAMP — do not hand-edit (source: $relsrc) -->
+
+$A_BODY")"
+  done
+}
+
 # --- hooks + MCP projections (root-level, Phase 2/3) -------------------------------
 # write_file_if_changed <dest> <content> — for wholesale-projection files (wiring
 # dialects declared regenerable by doctrine; unlike write_generated, no stamp gate)
@@ -306,9 +350,7 @@ render_hooks_root() {
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi hooks skipped by design (TS-extension surface only)"
   fi
-  if [ "$EN_OPENCODE" = "true" ]; then
-    echo "  NOTE: opencode hooks skipped by design v1 (JS/TS plugin surface, not the shell-command dialect)"
-  fi
+  render_hooks_opencode
   render_hooks_grok
   render_context_grok
   render_context_opencode
@@ -417,6 +459,210 @@ $digest"
   write_generated "$GROK_HOME/AGENTS.md" "$content"
 }
 
+# render_hooks_opencode — opencode has NO shell-command hook dialect; its only
+# extension surface is a JS/TS plugin. Rather than fork the hook logic, we generate a
+# thin wrapper plugin that shells out to the SAME scripts every other harness runs, so
+# hooks/hooks.json stays the single canon (verified 2026-08-28: a plugin receives Bun's
+# `$` and node:child_process, and a probe plugin blocked a bash call and injected a
+# prompt part end-to-end).
+#
+# Two generated files, deliberately split:
+#   <home>/ac-hooks.wiring.json   the DATA (regenerated from hooks.json every sync)
+#   <home>/plugins/ac-hooks.js    the STATIC dispatcher (reads the wiring at load)
+# The wiring lives OUTSIDE plugins/ because opencode treats every file in that dir as a
+# plugin module. Splitting also keeps the JS free of generated interpolation.
+#
+# Event mapping (machine scope only — opencode has no org/app hook layer):
+#   UserPromptSubmit  chat.message         stdout injected as an extra text part
+#   PreToolUse        tool.execute.before  a throw denies the call
+#   PostToolUse       tool.execute.after   fire-and-forget, never awaited
+# SessionStart and SubagentStop have no opencode equivalent: SessionStart is already
+# carried statically by the generated AGENTS.md, and SubagentStop is simply dropped.
+render_hooks_opencode() {
+  [ "$EN_OPENCODE" = "true" ] || return 0
+  [ -d "$OPENCODE_HOME" ] || { echo "  WARN: opencode home $OPENCODE_HOME missing — skipping (opencode not installed?)"; return 0; }
+  [ -f "$HOOKS_MANIFEST" ] || { echo "  WARN: $HOOKS_MANIFEST missing — opencode hooks skipped"; return 0; }
+  echo "  -- opencode hooks (plugins/ac-hooks.js + ac-hooks.wiring.json, generated)"
+
+  local wiring content
+  wiring="$(jq --arg h opencode --arg s machine --arg hooks "$HOOKS_PATH_LIT" '
+    def subst: (if type == "object" then .[$h] else . end)
+      | gsub("\\{HOOKS\\}"; $hooks)
+      | gsub("\\{HOME\\}"; "$HOME");
+    { _doc: "generated-by: harness-sync from agent-compounds/hooks/hooks.json — do not hand-edit",
+      wiring: [ .wiring[]
+        | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))
+        | { id, event, matcher: (.matcher // null), command: (.command | subst),
+            timeout: (.timeout // 10) } ] }' "$HOOKS_MANIFEST")"
+  write_file_if_changed "$OPENCODE_HOME/ac-hooks.wiring.json" "$wiring"
+
+  content="$(cat <<'ACJS'
+// generated-by: harness-sync — do not hand-edit
+// Source of truth: agent-compounds/hooks/hooks.json (wiring) + harness-sync.sh
+// (this dispatcher). Regenerate with ./harness-sync.sh --root.
+//
+// Wraps the canonical hook scripts for opencode, which has no shell-command hook
+// dialect. Fail-open everywhere: a hook that errors, times out, or cannot spawn must
+// never wedge a session — the same posture the other harnesses run.
+
+import { spawn } from "node:child_process"
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+
+let WIRING = []
+try {
+  WIRING = JSON.parse(readFileSync(join(HERE, "..", "ac-hooks.wiring.json"), "utf8")).wiring || []
+} catch (e) {
+  WIRING = []
+}
+
+// opencode tool ids are lowercase; our matchers and hook scripts speak Claude names.
+const TOOL_ALIAS = {
+  bash: "Bash", edit: "Edit", write: "Write", read: "Read", grep: "Grep",
+  glob: "Glob", list: "Glob", webfetch: "WebFetch", websearch: "WebSearch",
+  task: "Task", todowrite: "TodoWrite", skill: "Skill",
+}
+
+const forEvent = (ev) => WIRING.filter((w) => w.event === ev)
+
+function matches(entry, toolName) {
+  if (!entry.matcher) return true
+  try {
+    return new RegExp("^(?:" + entry.matcher + ")$").test(toolName)
+  } catch (e) {
+    return false
+  }
+}
+
+// Run one hook command with the Claude-shaped JSON payload on stdin.
+function run(command, payload, timeoutMs) {
+  return new Promise((resolve) => {
+    let settled = false
+    const done = (r) => {
+      if (!settled) {
+        settled = true
+        resolve(r)
+      }
+    }
+    let child
+    try {
+      child = spawn("bash", ["-c", command], { stdio: ["pipe", "pipe", "pipe"] })
+    } catch (e) {
+      return done({ code: 0, stdout: "", stderr: "" })
+    }
+    let out = ""
+    let err = ""
+    const timer = setTimeout(() => {
+      try { child.kill("SIGKILL") } catch (e) {}
+      done({ code: 0, stdout: "", stderr: "" })
+    }, timeoutMs)
+    child.stdout.on("data", (d) => { out += d.toString() })
+    child.stderr.on("data", (d) => { err += d.toString() })
+    child.on("error", () => { clearTimeout(timer); done({ code: 0, stdout: "", stderr: "" }) })
+    child.on("close", (code) => { clearTimeout(timer); done({ code: code == null ? 0 : code, stdout: out, stderr: err }) })
+    try {
+      child.stdin.write(payload)
+      child.stdin.end()
+    } catch (e) {}
+  })
+}
+
+// Our guards do NOT agree on how they signal a block, so honour both dialects:
+//   exit 2 + stderr                     bead-capture-guard, skill-edit-guard
+//   exit 0 + stdout hookSpecificOutput  trauma_guard (Claude dialect)
+// Honouring only one of these silently fails open on the others.
+function denialReason(r) {
+  if (r.code === 2) return (r.stderr || "blocked by hook").trim()
+  const t = (r.stdout || "").trim()
+  if (t.startsWith("{")) {
+    try {
+      const j = JSON.parse(t)
+      const h = j.hookSpecificOutput
+      if (h && h.permissionDecision === "deny") return h.permissionDecisionReason || "blocked by hook"
+      if (j.decision === "deny") return j.reason || "blocked by hook"
+    } catch (e) {}
+  }
+  return null
+}
+
+export const server = async ({ directory }) => {
+  const cwd = directory || process.cwd()
+
+  return {
+    // UserPromptSubmit: memory-recall + the delegation reminder. Their stdout is
+    // appended as an extra text part, which is how the other harnesses inject context.
+    "chat.message": async (input, output) => {
+      const entries = forEvent("UserPromptSubmit")
+      if (!entries.length) return
+      const parts = output.parts || []
+      const prompt = parts.filter((p) => p.type === "text").map((p) => p.text || "").join("\n")
+      const payload = JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        prompt,
+        session_id: input.sessionID || "",
+        cwd,
+      })
+      const chunks = []
+      for (const e of entries) {
+        const r = await run(e.command, payload, (e.timeout || 10) * 1000)
+        if (r.stdout && r.stdout.trim()) chunks.push(r.stdout.trim())
+      }
+      if (!chunks.length) return
+      const base = parts[0] || {}
+      parts.push({
+        ...base,
+        id: (base.id || "ac") + "-achooks",
+        type: "text",
+        text: chunks.join("\n\n"),
+      })
+    },
+
+    // PreToolUse: trauma-guard, bead-capture-guard, skill-edit-guard. A throw is
+    // opencode's deny, and the message reaches the model (verified 2026-08-28).
+    "tool.execute.before": async (input, output) => {
+      const entries = forEvent("PreToolUse")
+      if (!entries.length) return
+      const name = TOOL_ALIAS[input.tool] || input.tool
+      const payload = JSON.stringify({
+        hook_event_name: "PreToolUse",
+        tool_name: name,
+        tool_input: output.args || {},
+        session_id: input.sessionID || "",
+        cwd,
+      })
+      for (const e of entries) {
+        if (!matches(e, name)) continue
+        const reason = denialReason(await run(e.command, payload, (e.timeout || 10) * 1000))
+        if (reason) throw new Error(reason)
+      }
+    },
+
+    // PostToolUse: the activity logger. Advisory — deliberately not awaited, so a slow
+    // logger never delays a tool result.
+    "tool.execute.after": async (input, output) => {
+      const name = TOOL_ALIAS[input.tool] || input.tool
+      const entries = forEvent("PostToolUse").filter((e) => matches(e, name))
+      if (!entries.length) return
+      const payload = JSON.stringify({
+        hook_event_name: "PostToolUse",
+        tool_name: name,
+        tool_input: input.args || {},
+        tool_response: { output: (output && output.output) || "" },
+        session_id: input.sessionID || "",
+        cwd,
+      })
+      for (const e of entries) run(e.command, payload, (e.timeout || 10) * 1000)
+    },
+  }
+}
+ACJS
+)"
+  write_file_if_changed "$OPENCODE_HOME/plugins/ac-hooks.js" "$content"
+}
+
 # render_context_opencode — opencode's machine-global rules floor as a generated
 # ~/.config/opencode/AGENTS.md (opencode loads a home-dir AGENTS.md in every session,
 # plus project AGENTS.md up the cwd tree natively). Like grok, opencode's hook surface
@@ -428,33 +674,30 @@ render_context_opencode() {
   [ "$EN_OPENCODE" = "true" ] || return 0
   [ -d "$OPENCODE_HOME" ] || { echo "  WARN: opencode home $OPENCODE_HOME missing — skipping (opencode not installed?)"; return 0; }
   echo "  -- opencode global rules ($OPENCODE_HOME/AGENTS.md, generated)"
-  local ss dr shim digest content
+  local ss shim digest content
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
-  dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
   shim="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
   if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
-  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/machine-global-shim.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
+  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/machine-global-shim.md, hooks/build_memory_digest.py) -->
 
 # Machine-global rules (Repos fleet)
 
-Other harnesses receive this context via per-prompt hook injection; opencode runs a
-JS/TS plugin surface instead of the shell-command hooks, so this file carries the same
-canon statically. It applies when working anywhere under ~/Repos. Project-level AGENTS.md
-(the doctrine L0) loads natively from the cwd tree alongside this floor, and skills load
-natively from .claude/skills.
+This is the machine-global floor, loaded in every opencode session. It applies when
+working anywhere under ~/Repos. Project-level AGENTS.md (the doctrine L0) loads natively
+from the cwd tree alongside it, and skills load natively from .claude/skills.
+
+The per-prompt lane (memory recall + the delegation reminder) is NOT carried here: since
+2026-08-28 it arrives per prompt via the generated ac-hooks plugin, the same canon the
+other harnesses receive through hook stdout. Only session-start context is static.
 
 $ss
 
 ---
 
 $shim
-
----
-
-$dr
 
 ---
 
@@ -614,6 +857,15 @@ sync_root() {
       fi
     else
       echo "  WARN: droid home $DROID_HOME missing — skipping (droid not installed?)"
+    fi
+  fi
+
+  if [ "$EN_OPENCODE" = "true" ]; then
+    if [ -d "$OPENCODE_HOME" ]; then
+      echo "  -- opencode agents ($OPENCODE_HOME/agents, generated: the 3 stances)"
+      gen_opencode_agents "$base/.claude/agents" "$OPENCODE_HOME/agents"
+    else
+      echo "  WARN: opencode home $OPENCODE_HOME missing — agents skipped (opencode not installed?)"
     fi
   fi
 

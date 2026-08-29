@@ -62,12 +62,17 @@ Convention with no mechanical enforcer, claimed as nothing more: every ac2 commi
 - **Batch-boundary reads.** (L1) Derive from the committed `.beads/issues.jsonl`, never `br ready` alone
   (measured non-deterministic AND stabilizing on a wrong count). *retires when:* `br ready` returns a stable
   count across repeated calls on a fixed tree.
-- **DEFERRED COORDINATOR.** (L1) ac2 ships at N=1: the invoking session runs the worker prompt and owns batch
-  boundary, CI + review trigger, the ledger and the telemetry rollup. The throughput layer — spawn/replace,
-  liveness, Agent Mail reservations, roster — is BUILT ONLY when telemetry shows a measured throughput ceiling
-  (a batch whose wall time is worker-count-bound, not gate-bound), never on anticipation. Its spec, when built,
-  MUST carry: register + introduce at spawn; reserve before touching territory, renew on long beads, release at
-  close and VERIFY by re-listing; roster from Agent Mail registrations, not the spawn plan; mail at bead
+- **COORDINATOR.** (L1) BUILT — human ruling, Craig 2026-08-29. ac2 runs as a SWARM by
+  default (width 3, uncapped, until the qualifying beads are exhausted); width and cap are the
+  human's call, not a telemetry threshold. The invoking session is always the coordinator and
+  never a worker, at every width — one procedure, no mode branch. **The ruling OVERRIDES this
+  Calibration's original trigger, and the trigger was not met:** the measured runs were dependency-bound (a serial chain that idled a second worker),
+  never worker-count-bound. Recorded as an override rather than quietly deleted, so the next reader sees a
+  decision and not a measurement. The coordinator owns the batch boundary, the CI and review
+  trigger, the ledger and the telemetry rollup; a worker owns nothing but the bead in its hand.
+  The throughput layer — spawn/replace, liveness, Agent Mail
+  reservations, roster — MUST carry: register + introduce at spawn; reserve before touching
+  territory, renew on long beads, release at close and VERIFY by re-listing; roster from Agent Mail registrations, not the spawn plan; mail at bead
   boundaries; live-session identity for reservation-holder comparison, never the static `AGENT_NAME` env (a
   static fallback shadowing session identity rejected the worker's OWN reservation, rec 5); liveness from `br
   coordination status`, never harness notifications, with non-disarming sweeps (a transient 5xx read as death
@@ -75,6 +80,10 @@ Convention with no mechanical enforcer, claimed as nothing more: every ac2 commi
   holder, guaranteed at sweep time); Agent Mail outage = retry next iteration plus a named terminal
   force-release owner (leak-to-TTL measured); and the SLB two-person rule (second-agent approval, signed
   receipt) for unattended destructive ops, which the human gate covers more strongly today. Canon:
-  `skills/agent-mail/`. *retires when:* the coordinator is built, or two tuning sessions measure no ceiling.
+  `skills/agent-mail/`. **Reservations are ADVISORY for code paths** — the server grants a path it simultaneously
+  reports as conflicting, so `flock` and the `br` claim are the only real exclusion; reserve to signal siblings,
+  never to believe you hold a lock. *retires when:* two tuning sessions measure width 3 returning no throughput
+  over width 1, at which point the default width drops to 1 — the procedure is unchanged,
+  because there is only one.
 - **Task-size floor.** (L1) A trivial single-file change with no dependency structure bypasses ac2 entirely — never
   ceremony for nits. *retires when:* the ledger shows bypassed nits arriving back as defects.

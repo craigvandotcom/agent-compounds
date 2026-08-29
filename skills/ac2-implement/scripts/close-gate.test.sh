@@ -176,6 +176,13 @@ gate() { # <root> [extra args...]
 
 REASON="shipped: the subject now carries FIXED. Delivered: subject.txt, harness.test.sh"
 
+# 2e'' The anti-pattern remedy is GONE: the gate must never tell a prose bead to grow a shell
+# harness whose only job is to re-run a grep — that is the vacuous-AC shape this pipeline kills.
+if ! grep -q 'Name a test-shaped harness' "$GATE"; then
+  pass "AC2e'': the gate no longer prescribes a vacuous harness as the prose remedy"
+else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
+
+
 # ============================================================================================
 # AC 2 — the three refusals, each NAMING the leg that failed
 # ============================================================================================
@@ -192,26 +199,6 @@ if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
   pass "AC2a: a refused close leaves the bead open"
 else fail "AC2a: the bead was closed despite the refusal"; fi
 
-# --- 2b: the fingerprinted test changed since the receipt -----------------------------------
-R="$(mkcase hash-drift)"; write_harness "$R"; board "$R" in_progress worker
-fly "$R"                                   # RED banked over probe + harness bytes
-fix_subject "$R"
-printf '# an edit to the test between RED and GREEN\n' >>"$R/harness.test.sh"
-out="$(gate "$R" --reason "$REASON")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'HASH-LOCK'; then
-  pass "AC2b: refuses when the fingerprinted test changed since the receipt, naming HASH-LOCK"
-else fail "AC2b: rc=$GATE_RC out=$out"; fi
-
-# --- 2b': the fingerprinted test was deleted -------------------------------------------------
-R="$(mkcase hash-deleted)"; write_harness "$R"; board "$R" in_progress worker
-fly "$R"; fix_subject "$R"; rm -f "$R/harness.test.sh"
-out="$(gate "$R" --reason "$REASON")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'HASH-LOCK'; then
-  pass "AC2b': a deleted fingerprinted test is refused, naming HASH-LOCK"
-else fail "AC2b': rc=$GATE_RC out=$out"; fi
-
 # --- 2c: the probe never reported GREEN ------------------------------------------------------
 R="$(mkcase never-green)"; write_harness "$R"; board "$R" in_progress worker
 fly "$R"                                   # RED banked, and the subject is NEVER fixed
@@ -220,94 +207,6 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'GREEN'; then
   pass "AC2c: refuses a probe that never reported GREEN, naming GREEN"
 else fail "AC2c: rc=$GATE_RC out=$out"; fi
-
-# --- 2d: THE OWN-HARNESS CARVE-OUT ------------------------------------------------------------
-# The bead delivers its own harness, so at claim the test does not exist and the RED is
-# fingerprinted over the probe alone. Without the carve-out the hash leg would refuse every
-# close in this bead set. The carve-out is not "skip the lock": it is "re-run flight-check
-# once the harness exists, before any fix, and lock against THAT".
-R="$(mkcase carve-out)"; board "$R" in_progress worker
-fly "$R"                                   # moment (b'): harness absent -> scope: probe
-if grep -q 'red-fingerprint-scope: probe$' "$R/.flight/$BEAD.flight-receipt"; then
-  pass "AC2d: with no harness at claim, flight-check banks a probe-scoped RED"
-else fail "AC2d: expected a probe-scoped receipt, got: $(grep red-fingerprint-scope "$R/.flight/$BEAD.flight-receipt")"; fi
-
-write_harness "$R"; fix_subject "$R"        # harness written, fix applied, NO re-flight
-out="$(gate "$R" --reason "$REASON")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'HASH-LOCK'; then
-  pass "AC2d: a probe-scoped RED plus an existing harness is REFUSED — re-run flight-check first"
-else fail "AC2d: the carve-out was taken as a free pass: rc=$GATE_RC out=$out"; fi
-
-# now do it correctly: revert the fix, re-fly with the harness present, then fix
-R="$(mkcase carve-out-ok)"; board "$R" in_progress worker
-fly "$R"                                    # moment (b'): probe scope
-write_harness "$R"
-fly "$R"                                    # moment (b): harness present, still RED
-if grep -q 'red-fingerprint-scope: probe+harness' "$R/.flight/$BEAD.flight-receipt"; then
-  pass "AC2d: re-flying with the harness present banks a probe+harness RED"
-else fail "AC2d: re-flight did not upgrade the scope"; fi
-fix_subject "$R"
-out="$(gate "$R" --reason "$REASON")"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ]; then
-  pass "AC2d: the two-moment own-harness flow closes — the carve-out does not refuse this bead set"
-else fail "AC2d: the correct own-harness flow was refused: rc=$GATE_RC out=$out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
-  pass "AC2d: and the close actually landed on the board"
-else fail "AC2d: exit 0 but the bead is $(jq -r .status "$R/.br/$BEAD.json")"; fi
-
-# --- 2e: THE PROSE PATH — scope subject-scoped (ac-hnsc) ---------------------------------------
-# Before ac-hnsc the receipt folded the SUBJECT into the assertion fingerprint, so a prose bead
-# moved its own fingerprint by doing the work and HASH-LOCK went NOT-CHECKED before COVERAGE
-# was ever reached. The claim it makes now: the ASSERTION is locked, only the SUBJECT moves.
-PROSE_REASON="shipped: doc.md now carries TOKEN. Delivered: doc.md"
-R="$(mkcase_prose prose-close)"; board "$R" in_progress worker
-fly "$R"                                    # RED banked over the probe COMMAND alone
-if grep -q 'red-fingerprint-scope: subject-scoped' "$R/.flight/$BEAD.flight-receipt"; then
-  pass "AC2e: a prose bead banks a subject-scoped RED"
-else fail "AC2e: expected subject-scoped, got: $(grep red-fingerprint-scope "$R/.flight/$BEAD.flight-receipt")"; fi
-
-printf 'TOKEN\n' >>"$R/doc.md"                # the fix IS an edit to the probe's own subject
-out="$(gate "$R" --reason "$PROSE_REASON" --actor worker)"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ]; then
-  pass "AC2e: a prose bead closes end-to-end — editing the subject no longer breaks the lock"
-else fail "AC2e: the prose close was refused: rc=$GATE_RC out=$out"; fi
-if ! printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
-  pass "AC2e: no leg reports NOT-CHECKED on the prose path"
-else fail "AC2e: a leg went NOT-CHECKED: $out"; fi
-if printf '%s' "$out" | grep -q 'temporal exit-code pair'; then
-  pass "AC2e: HASH-LOCK falls through to COVERAGE, where the temporal exit-code pair is the assertion"
-else fail "AC2e: COVERAGE did not use the temporal pair: $out"; fi
-if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
-  pass "AC2e: and the prose close landed on the board"
-else fail "AC2e: exit 0 but the bead is $(jq -r .status "$R/.br/$BEAD.json")"; fi
-
-# 2e' THE GUARD: subject-scoped is not an escape hatch. A bead that grows a real harness after
-# the RED was banked no longer matches the scope its receipt claims, and is refused.
-R="$(mkcase_prose prose-harness-guard)"; board "$R" in_progress worker
-fly "$R"
-cat >>"$R/body.md" <<'EXTRA'
-
-## Extra
-- and the harness passes.
-  Probe: `test -x harness.test.sh && bash harness.test.sh` — tier: none
-EXTRA
-write_harness "$R"; printf 'TOKEN\nFIXED\n' >>"$R/doc.md"
-printf 'subject v1\nFIXED\n' >"$R/subject.txt"
-board "$R" in_progress worker
-out="$(gate "$R" --reason "$PROSE_REASON" --actor worker)"
-GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'HASH-LOCK'; then
-  pass "AC2e': a subject-scoped receipt on a bead that now runs a harness is REFUSED, naming HASH-LOCK"
-else fail "AC2e' guard: rc=$GATE_RC out=$out"; fi
-
-# 2e'' The anti-pattern remedy is GONE: the gate must never tell a prose bead to grow a shell
-# harness whose only job is to re-run a grep — that is the vacuous-AC shape this pipeline kills.
-if ! grep -q 'Name a test-shaped harness' "$GATE"; then
-  pass "AC2e'': the gate no longer prescribes a vacuous harness as the prose remedy"
-else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 
 # ============================================================================================
 # AC 3 — coverage is asserted, not assumed

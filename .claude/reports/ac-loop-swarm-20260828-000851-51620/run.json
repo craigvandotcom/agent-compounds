@@ -1,0 +1,16 @@
+{
+  "RUN_ID": "20260828-000851-51620",
+  "WIDTH": 2,
+  "CAP": 999,
+  "cap_note": "human ruled 'until all beads exhausted' — CAP high so the only stop is queue-dry or context",
+  "pool_at_spawn": 2,
+  "pool_ids": ["ac-k25c.1", "ac-k25c.2"],
+  "note": "pool GROWS during the run: ac-k25c is a serial chain .1+.2 -> .3 -> .4 -> .5+.6 -> .7, unlocking as each closes. ac-k25c.8 is human-gate (Phase-4 cutover) and stays excluded.",
+  "orchestrator": "pending",
+  "started_at": "2026-08-28T00:08:51Z",
+  "preflight": {
+    "tree": "clean, 0 ahead / 0 behind origin/main",
+    "epic_type_blind_spot": "none this run",
+    "probe_baseline": "47/47 AC probes across ac-k25c verified RED before spawn (0 already-green)"
+  }
+}

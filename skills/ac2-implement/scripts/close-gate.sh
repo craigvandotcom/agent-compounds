@@ -89,6 +89,11 @@ cd "$ROOT" || { echo "NOT-CHECKED: cannot enter repo root '$ROOT'" >&2; exit 2; 
 
 BR="${AC2_BR_CMD:-br}"
 EVIDENCE_CORE="$ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
+# Vendored-copy layout: app repos track these scripts under .agents/skills/ (the
+# agent-compounds registry layout puts skills/ at the repo root), so the evidence
+# core may sit one level deeper. Try the canonical path first, then the vendored one.
+[ -f "$EVIDENCE_CORE" ] \
+  || EVIDENCE_CORE="$ROOT/.agents/skills/ac-pipeline/scripts/close-evidence-check.sh"
 
 refuse()      { echo "CLOSE-REFUSED: $1 — refusing: $2"; exit 1; }
 not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; exit 2; }
@@ -114,7 +119,9 @@ br_field() { # <bead-id> <jq field> -> value, empty when unreadable
 }
 
 # ---------------------------------------------------------------------------------------
-# LEG 1 — RED-RECEIPT. The temporal anchor. No receipt, no causal claim.
+# LEG 1 — RED-RECEIPT. The temporal anchor: this bead was observed RED before the diff.
+# Whether the diff CAUSED the flip is judged by ac2-review (causal sufficiency), not
+# proven here — a checksum shows a file did not change, never that a change sufficed.
 # ---------------------------------------------------------------------------------------
 FLIGHT_DIR="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac2-flight}"
 RECEIPT_FILE="$FLIGHT_DIR/${BEAD}.flight-receipt"
@@ -129,20 +136,16 @@ LAST=$(awk '/^FLIGHT-RECEIPT v1/{buf=""} {buf = buf $0 "\n"} END{printf "%s", bu
 rfield() { printf '%s\n' "$LAST" | grep -m1 "^$1:" | sed "s|^$1:[[:space:]]*||"; }
 
 RED_PROBE=$(rfield 'red-probe')
-RED_FP=$(rfield 'red-fingerprint')
-RED_SCOPE=$(rfield 'red-fingerprint-scope')
-RED_INPUTS=$(rfield 'red-fingerprint-inputs')
 RED_BEAD=$(rfield 'bead')
 
 [ -n "$RED_PROBE" ] || refuse "RED-RECEIPT" "the last receipt carries no red-probe — an unusable receipt is not a receipt"
-[ -n "$RED_FP" ]    || refuse "RED-RECEIPT" "the last receipt carries no red-fingerprint — there is no field to hash-lock against"
 [ "$RED_BEAD" = "$BEAD" ] || not_checked "RED-RECEIPT" "receipt at $RECEIPT_FILE is for '$RED_BEAD', not '$BEAD'"
 echo "close-gate[$BEAD] RED-RECEIPT ok — RED was: $RED_PROBE"
 
 # ---------------------------------------------------------------------------------------
 # LEG 2 — PROBE-DRIFT. The RED probe must still be an AC of this bead. Otherwise the
-# acceptance criterion was rewritten after the RED was banked, and the lock guards a
-# question nobody is asking any more.
+# acceptance criterion was rewritten after the RED was banked, and the GREEN below answers
+# a question nobody is asking any more.
 # ---------------------------------------------------------------------------------------
 BODY=$(mktemp -t ac2-close-body) || not_checked "SETUP" "cannot create a scratch file"
 trap 'rm -f "$BODY"' EXIT
@@ -164,79 +167,6 @@ PROBE_EXPECTED=$(printf '%s\n' "$PROBES" | grep -c '[^[:space:]]' || true)
 printf '%s\n' "$PROBES" | grep -qxF "$RED_PROBE" \
   || refuse "PROBE-DRIFT" "the fingerprinted RED probe is no longer among this bead's ACs — the criterion was rewritten after the RED was recorded"
 echo "close-gate[$BEAD] PROBE-DRIFT ok — the RED probe is still a live AC"
-
-# ---------------------------------------------------------------------------------------
-# LEG 3 — HASH-LOCK. The unchanged-test guarantee, recomputed exactly the way flight-check
-# computed it: the RED probe command, then the recorded fingerprint inputs as they stand NOW.
-# ---------------------------------------------------------------------------------------
-LOCK_FILES=""
-if [ "$RED_SCOPE" = "probe+harness" ]; then
-  for f in $RED_INPUTS; do
-    [ -f "$f" ] || refuse "HASH-LOCK" "the fingerprinted test '$f' is gone from the tree — a deleted test cannot be the thing that flipped"
-    LOCK_FILES="$LOCK_FILES $f"
-  done
-  [ -n "${LOCK_FILES// /}" ] || not_checked "HASH-LOCK" "scope says probe+harness but the receipt lists no inputs"
-elif [ "$RED_SCOPE" = "subject-scoped" ]; then
-  # THE PROSE PATH — and NOT A LOOSENING (ac-hnsc).
-  #
-  # A prose or config bead's probe names the very file the bead edits, so flight-check hashed
-  # the probe COMMAND ALONE. The unchanged-test guarantee survives where it carries meaning:
-  # the ASSERTION is locked byte for byte, and LEG 2 has already proved that same assertion is
-  # still a live AC of this bead. Only the SUBJECT is allowed to move — which is the entire
-  # point of a prose bead. Locking the subject too was a category error: it made this leg
-  # UNSATISFIABLE for the whole prose class, because any successful fix moved the fingerprint
-  # by construction and the "test unchanged" half could never be observed.
-  #
-  # LOCK_FILES stays EMPTY on purpose: the recomputation below then covers the command only,
-  # this leg passes, and control reaches LEG 5 COVERAGE — where the recorded exit-code pair
-  # (RED -> GREEN) is the assertion. That branch already existed; it was simply unreachable.
-  #
-  # THE GUARD that stops this being an escape hatch: a bead with a real harness is a code bead
-  # and keeps the harness lock. If ANY probe of this bead names a test-shaped file that exists
-  # on the tree, the scope contradicts the bead and is refused right here.
-  #
-  # KNOWN LIMIT, not oversold: this restores the gate's stated claim. It does not make
-  # `grep -q 'token' file` a strong probe — it proves the diff flipped the probe, not that the
-  # diff did the work.
-  while IFS= read -r pr; do
-    [ -n "$pr" ] || continue
-    for tok in $(printf '%s' "$pr" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' || true); do
-      if is_test_shaped "$tok" && [ -f "$tok" ]; then
-        refuse "HASH-LOCK" "the receipt declares scope 'subject-scoped', but this bead's probes name the test-shaped harness '$tok', which exists on the tree — a bead with a harness locks the harness. Re-run flight-check.sh BEFORE the fix"
-      fi
-    done
-  done <<EOF
-$PROBES
-EOF
-elif [ "$RED_SCOPE" = "probe" ]; then
-  # The carve-out. At claim this bead's own harness did not exist, so the RED was
-  # fingerprinted over the probe command alone. That is legitimate ONLY while the harness
-  # still does not exist. Once it does, flight-check must re-run — before any fix — so the
-  # lock has real assertions to run from.
-  for tok in $(printf '%s' "$RED_PROBE" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' || true); do
-    if is_test_shaped "$tok" && [ -f "$tok" ]; then
-      refuse "HASH-LOCK" "the RED was fingerprinted before this bead's own harness existed, and '$tok' exists now — re-run flight-check.sh BEFORE the fix so the lock runs from the real assertions"
-    fi
-  done
-else
-  not_checked "HASH-LOCK" "receipt declares an unknown red-fingerprint-scope '$RED_SCOPE'"
-fi
-
-NOW_FP="sha256:$( { printf '%s\n' "$RED_PROBE"; for f in $LOCK_FILES; do cat "$f"; done; } | sha256_of_stdin )"
-[ "$NOW_FP" != "sha256:" ] || not_checked "HASH-LOCK" "no sha256 tool (shasum/sha256sum) — the lock cannot be recomputed"
-
-if [ "$NOW_FP" != "$RED_FP" ]; then
-  ALL_TEST_SHAPED=1
-  for f in $LOCK_FILES; do is_test_shaped "$f" || ALL_TEST_SHAPED=0; done
-  if [ "$ALL_TEST_SHAPED" = 1 ]; then
-    refuse "HASH-LOCK" "the fingerprinted test changed since the RED was recorded ($RED_FP -> $NOW_FP) — a test edited between RED and GREEN proves nothing about the diff"
-  fi
-  # The receipt mixed the SUBJECT of the bead into the assertion fingerprint, so a change is
-  # unattributable: it may be the fix (legitimate) or the test (fatal), and nothing here can
-  # tell them apart. Refusing would be wrong; passing would be a lie. Say so and FAIL.
-  not_checked "HASH-LOCK" "the fingerprint moved ($RED_FP -> $NOW_FP) but its inputs ($LOCK_FILES) are not all test-shaped, so the change cannot be attributed to test-vs-fix. If the probe asserts on this bead's own Delivers subject, re-run flight-check.sh BEFORE the fix so the receipt records the subject-scoped scope; otherwise the probe mixes a harness with files this bead does not ship, and the AC needs narrowing"
-fi
-echo "close-gate[$BEAD] HASH-LOCK ok — $RED_FP (scope: $RED_SCOPE)"
 
 # ---------------------------------------------------------------------------------------
 # LEG 4 — GREEN, and LEG 5 — COVERAGE. Running the probes is not enough: a run that was

@@ -88,7 +88,7 @@ entries: 10
 - stage: ac-loop-swarm
 - status: open
 - receipt: _archive/skills/ac-loop-swarm/FRICTIONS.md (source ledger, recurrence 5; archived at the Phase-4 cutover 2026-08-28)
-- control: C-deferred-coordinator
+- control: C-coordinator
 - control_landed: 2026-08-27
 - proposed_fix: one live-session identity signs both the reservation and the commit; never
   the static env fallback.

@@ -1,0 +1,13 @@
+{
+  "RUN_ID": "20260827-221232-66808",
+  "WIDTH": 2,
+  "CAP": 999,
+  "cap_note": "human ruled 'no cap' — CAP set high so the only stop is queue-dry or context",
+  "pool": 4,
+  "pool_ids": ["ac-39kx", "ac-g2v4", "ac-on0y.3", "ac-s6fe"],
+  "orchestrator": "RedBay",
+  "started_at": "2026-08-27T20:12:32Z",
+  "preflight": {
+    "ac-kqpw": "typed epic, all 7 children closed, sat in ready pool with no `epic` LABEL so the worker's label-based skip would have missed it; added the label. Its close is a separate human ruling."
+  }
+}

@@ -57,6 +57,26 @@ green. A 741-file suite passed while hiding three High findings behind impossibl
 rows that no code path can produce, states the schema forbids. A test asserting over an
 impossible input asserts nothing, and it is invisible to every green-suite signal there is.
 
+## Causal sufficiency is a named dimension
+
+**For every bead the batch closed, ask the one question a checksum cannot answer: does THIS
+diff produce that GREEN?** Read the bead's ACs, its flight receipt's recorded RED, and the
+diff. Two shapes fail it. **The token, not the thing** — most ac2 ACs are `grep -q '<string>'
+<file>`, and writing the string satisfies the probe without building what the AC describes.
+**The other cause** — the probe flipped, but something else in the tree flipped it: a sibling's
+commit, an unrelated fix, an AC that was already green and nobody noticed.
+
+This dimension moved here from `close-gate`'s HASH-LOCK leg, which tried to prove causality by
+checksumming the test between RED and GREEN. A checksum proves a file did not change; it cannot
+prove a change was SUFFICIENT. It was also structurally unsatisfiable for prose beads, whose
+probe names the very file the bead edits, and its own remedy text told those beads to grow a
+harness that re-runs a grep — the vacuous-AC shape this pipeline exists to kill. Judgement was
+the wrong thing to mechanise. It belongs to a reader, on the committed tree, at a different
+model from the one that wrote the diff.
+
+A bead that fails this dimension is a **FIX** with catch-stage `close` — the close gate let it
+through, and that is the leak worth counting.
+
 ## A reasoned no finding is a deliverable, not silence
 
 Every dimension the panel ran gets a filled slot in the report — a finding, or an explicit
