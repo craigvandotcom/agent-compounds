@@ -62,6 +62,26 @@
       "_doc": "Hard gate (Craig 2026-08-23): blocks `br create` / `br q` carrying no `origin:<skill>` label, so every bead records the workflow that created it. Supersedes the OPTIONAL `origin:` hint from plan 2026-07-16-1729-epic-bead-quality-invariants.md §3, whose §9 'convention, not a hard gate' ruling measured out at ~50% of 3818 beads with no provenance (1232 of them unrecoverable, so no backfill is possible — enforcement is forward-only from this date). Tokenizes with shlex, NOT regex over the raw string: a `br create` quoted inside a --description or a heredoc body must never false-block, and only the actual -l/--labels VALUE is inspected. Fails OPEN on unparseable shell — a guard must not wedge an unattended 3am ac-loop; the ac-bead-refine stamp-gate is the backstop for anything that slips past (including non-Claude harnesses). `origin:unknown` is legal and honest (mirroring the existing `discovered-from: unknown` precedent), so the gate can never deadlock an agent that genuinely cannot attribute a bead. `machine` scope is required to actually reach Grok (render_hooks_grok reads scope=machine only); explicit timeout because Grok defaults to 5s and fails open. Tests: hooks/bead-capture-guard.test.py, driven by lint.sh Check 18 (both directions — fires on an unlabelled create, silent on a `br create` quoted inside a description/heredoc, blocks an unsubstituted qa-shared twin placeholder)."
     },
     {
+      "id": "dcg",
+      "assurance": {"PROBE": "feed a known destructive command (e.g. `git push --force`) on stdin, expect a block decision - the binary fails open on its own error", "SCHEDULE": "PreToolUse(Bash) - every Bash call (machine)", "MODE": "blocking", "ON-FAILURE": "open"},
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "{HOME}/.local/bin/dcg",
+      "harnesses": ["opencode"],
+      "scope": ["machine"],
+      "_doc": "Destructive Command Guard (~/.local/bin/dcg, v0.6.7+): third-party blocking binary, deny via tool.execute.before throw. opencode + machine only for now: Claude already registers it machine-locally in ~/.claude/settings.json (which harness-sync does NOT manage - the sync renders claude at org scope only), and org scope would not reach opencode sessions at all. {HOME} renders to $HOME; the opencode wrapper spawns via bash -c so $HOME expands. Mirrors the Claude registration exactly (matcher Bash, no timeout - wiring defaults to 10s)."
+    },
+    {
+      "id": "am-edit-guard",
+      "assurance": {"PROBE": "edit an Agent-Mail-governed path with no active file reservation, expect an advisory warning on stderr; silent when reserved or unmanaged", "SCHEDULE": "PreToolUse(Edit|Write|MultiEdit) - every edit call (machine)", "MODE": "advisory", "ON-FAILURE": "open"},
+      "event": "PreToolUse",
+      "matcher": "Edit|Write|MultiEdit",
+      "command": "AM_EDIT_GUARD_MODE=advisory /usr/bin/python3 {HOME}/Repos/infrastructure/hooks/am-edit-guard.py",
+      "harnesses": ["opencode"],
+      "scope": ["machine"],
+      "_doc": "Advisory reminder when editing Agent-Mail-governed paths without an active file reservation (infrastructure/hooks/am-edit-guard.py). opencode + machine only for now: Claude already registers it machine-locally in ~/.claude/settings.json (unmanaged by the sync - claude renders at org scope only). AM_EDIT_GUARD_MODE=advisory via env prefix survives the bash -c spawn. MultiEdit has no opencode tool id (no alias in the wrapper), so the matcher clause is inert there but kept for exact parity with the Claude registration."
+    },
+    {
       "id": "activity-logger",
       "assurance": {"PROBE": "a tool call appends a row to the activity DB tool_calls table (activity-report consumes it)", "SCHEDULE": "PostToolUse - every tool call (org/machine)", "MODE": "advisory", "ON-FAILURE": "open"},
       "event": "PostToolUse",
