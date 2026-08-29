@@ -78,9 +78,16 @@ Why this matters, with no line numbers.
 LEGACY_DESC='## Declared RED
 Test `x` must FAIL before the fix; assert exit 1.
 '
+LEGACY_PROBED_DESC='## Declared RED
+Test `x` must FAIL before the fix; assert exit 1.
+
+## Acceptance Criteria
+- The fix lands.
+  Probe: `grep -q "the fix" src/x.ts` — tier: none
+'
 
 write_board() {
-  jq -n --arg ac2 "$AC2_DESC" --arg leg "$LEGACY_DESC" '[
+  jq -n --arg ac2 "$AC2_DESC" --arg leg "$LEGACY_DESC" --arg legp "$LEGACY_PROBED_DESC" '[
     {id:"bd-ac2-noreceipt", issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2, comments:[]},
     {id:"bd-ac2-receipt",   issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2, comments:[]},
     {id:"bd-ac2-malformed", issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2,
@@ -88,7 +95,8 @@ write_board() {
     {id:"bd-ac2-round1",    issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2,
      comments:[{text:"POLISH-FIXPOINT: mode=bead rounds=1 sha256=deadbeefdeadbeef at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh"}]},
     {id:"bd-ac2-direct",    issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2, comments:[]},
-    {id:"bd-legacy",        issue_type:"task", labels:["origin:ac-beadify"],  description:$leg, comments:[]}
+    {id:"bd-legacy",        issue_type:"task", labels:["origin:ac-beadify"],  description:$leg, comments:[]},
+    {id:"bd-legacy-probed", issue_type:"task", labels:["origin:ac-beadify"],  description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board
@@ -126,13 +134,23 @@ else
   fail "Case 2b: expected exit 0 and one label write, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
-# --- Case 3: an ac-*-origin bead is NOT subject to the requirement ---------------------
+# --- Case 3: a probe-LESS description is refused on EITHER origin (2026-08-29 floor) -----
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-legacy 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-legacy)" -eq 1 ]; then
-  pass "Case 3: a legacy ac-*-origin bead still stamps with no receipt (additive, not a regression)"
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-legacy)" -eq 0 ] \
+   && echo "$OUT" | grep -qi "probe"; then
+  pass "Case 3: a probe-less legacy bead is REFUSED — a Declared RED alone no longer stamps"
 else
-  fail "Case 3: expected the legacy path untouched, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+  fail "Case 3: expected probe-refusal with no label write, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 3b: a PROBED legacy bead still stamps with no receipt (additive, not regression) -
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-legacy-probed 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-legacy-probed)" -eq 1 ]; then
+  pass "Case 3b: a probed ac-*-origin bead still stamps with no receipt (the receipt gate stays ac2-only)"
+else
+  fail "Case 3b: expected the probed legacy path to stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 # --- Case 4: a receipt header with no rounds/sha is ABSENT, not satisfied --------------

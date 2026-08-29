@@ -33,7 +33,11 @@ or `unrefined` — those belong to `stamp-refined.sh` alone.
 
 The receipt this loop writes is a PRECONDITION of `refined`, not a grant of it.
 `skills/_tools/stamp-refined.sh` is the sole sanctioned writer: it runs `element4-check.sh`,
-and for an `origin:ac2-*` bead additionally requires a conforming receipt at rounds >= 2.
+REFUSES any description carrying no executable `Probe:` line — a `## Declared RED` alone is
+the legacy shape's observable and stays legal on the body, but the stamp needs the probe,
+because one `refined` must be consumable by both pipelines — and for an `origin:ac2-*` bead
+additionally requires a conforming receipt at rounds >= 2. Pre-floor stamps are restamped
+on sight, never grandfathered.
 
 Stamp `refined` only on beads that are implementable work. A `decision`-type bead is a human
 fork and element 4 exempts it — a receipt records that it was polished; it does not make it

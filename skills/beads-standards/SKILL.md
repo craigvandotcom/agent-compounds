@@ -125,7 +125,7 @@ inherited machine-wide, not repeated here.
 
 | Label | Meaning |
 |---|---|
-| `refined` | Implementation-ready. Stamped **exclusively** by a refine pass (`ac-bead-refine` where that skill is deployed) on convergence — no conductor or capture step ever applies it directly. |
+| `refined` | Implementation-ready **and probe-bearing**: every AC names an executable probe — a `Probe:` line a gate can run — in addition to whatever contract shape the body carries (`## Declared RED` for the ac-* pipeline). One label, consumable by BOTH pipelines: a Declared RED without probes is legacy-dialect work, not a qualified stamp (measured 2026-08-29: 18 of 22 `refined` beads in one ready pool were probe-less — every ac2 claim died NOT-GATED at flight-check). Stamped **exclusively** by a refine pass (`ac-bead-refine` where that skill is deployed) on convergence via `skills/_tools/stamp-refined.sh`, which refuses probe-less descriptions — no conductor or capture step ever applies it directly. |
 | `unrefined` | Needs a refinement pass before agent pickup. Default at creation. |
 | *(neither)* | **Ungraded — never assume ready.** Missing-both is not "not ready" either; it's unknown. Fail-safe: treat as unrefined until graded. |
 
@@ -140,6 +140,12 @@ Kind is set at creation by whoever files. A bead with no kind is unrouted, so an
 
 Readiness for pickup = **presence** of `refined`, never inferred from the absence of
 `unrefined`. This is what gates loop/agent pickup everywhere this labelling is adopted.
+
+**Holds are labels or edges, never body prose.** A "do not implement" that lives only in the
+body is invisible to every eligibility filter — the bead still reads claimable and burns a
+claim before its first read. Carry a hold as `human-gate` (human fork), an open `blocks`
+edge (waiting on work), or `deferred` (waiting on time); the body may explain the hold, never
+carry it alone. (Measured: bd-1538r, 2026-08-29 — self-held in prose, claimed anyway.)
 
 **`cross-repo` — work whose bytes live in a different git repo than the board that
 holds the ticket.** Mandatory body line: `Repo: <name>` (the owning checkout —
@@ -260,7 +266,10 @@ checklist). The frozen set:
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
 
-- *(none yet — first freeze ratified 2026-07-16, bead ac-aa7)*
+- 2026-08-29 — `refined` definition tightened (not renamed, no sweep needed): it now means
+  probe-bearing, and `skills/_tools/stamp-refined.sh` refuses probe-less descriptions.
+  Zero-probe stamps from before the floor are labeling defects — restamp on sight, never
+  grandfather. (Measured: 18/22 ready-pool beads probe-less, ac2-implement run 2026-08-29.)
 
 ## Worker-identity stamp (structured comment)
 

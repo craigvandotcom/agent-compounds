@@ -13,8 +13,10 @@
 #
 # Both forms work under bash and zsh, sourced or executed, from any cwd.
 #
-# Per-bead exit: 0 stamped · 1 refused (element 4 unmet — nothing written) · 2 check unusable.
-# A refusal is not an error to route around: author the `## Declared RED`, then re-stamp.
+# Per-bead exit: 0 stamped · 1 refused (element 4 unmet, or description carries no executable
+# `Probe:` line — nothing written) · 2 check unusable.
+# A refusal is not an error to route around: author the `## Declared RED` and the probes,
+# then re-stamp.
 
 # Self-location. zsh does not populate BASH_SOURCE; bash does not set $0 to the file
 # when sourced. Read each shell's own answer in its own branch.
@@ -62,6 +64,23 @@ stamp_refined() {
     return 2
   fi
   ac2=$(printf '%s' "$meta" | jq -r '[.[0].labels // [] | .[] | select(startswith("origin:ac2-"))] | length' 2>/dev/null || echo 0)
+
+  # PROBE-PRESENCE LEG (2026-08-29): `refined` must certify something a worker can execute.
+  # One label serves two pipelines: the ac-* consumer reads `## Declared RED` (still legal,
+  # still validated by element4-check above), the ac2 consumer reads per-AC `Probe:` lines.
+  # A description with NEITHER dialect's executable observable makes the stamp a routing
+  # hint, not a fact — measured 2026-08-29: 18 of 22 `refined` beads in one ready pool
+  # carried a Declared RED and zero probes, and every ac2 claim died NOT-GATED. The floor
+  # here is PRESENCE (>= 1 probe); per-AC completeness stays the checklist's judgment
+  # (ac2-polish references/bead-checklist.md § 2), because counting ACs mechanically would
+  # re-implement the checklist badly.
+  local probes
+  probes=$(printf '%s' "$meta" | jq -r '.[0].description // ""' | grep -c 'Probe:')
+  if [ "${probes:-0}" -eq 0 ]; then
+    echo "stamp_refined: REFUSED $id — description carries no executable 'Probe:' line; a refined bead must be probe-bearing (beads-standards: refined). Author the probes, then re-stamp. No label written." >&2
+    return 1
+  fi
+
   if [ "${ac2:-0}" -gt 0 ]; then
     # A header alone declares nothing (the rule element4-check applies to `## Declared RED`):
     # a receipt without a round count and a digest is treated as ABSENT.
