@@ -4,8 +4,9 @@ The contract `ac2-beadify` compiles TO and refuses against (**no probe, no bead*
 shape `ac2-polish` grades with `bead-checklist.md`. Four sections, all durable: an ac2 bead
 stores no tree-state that decays between authoring and claim.
 
-Canon is cited, never restated here — taxonomy, status/priority, close reasons, labels and
-the test-tier slugs live in `beads-standards` (`reference/bead-conventions.md`); run and
+Canon is cited, never restated here — taxonomy, status/priority, close reasons and
+labels live in `beads-standards` (`reference/bead-conventions.md`); the test-tier
+slugs are the table below; run and
 commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-ledger.md`).
 
 ## Header fields
@@ -53,8 +54,8 @@ grep -o 'Probe: `[^`]*`' <bead-file> | sed 's/^Probe: `//; s/`$//'
 - **Probing an artifact the bead has yet to create**, use the guarded form
   `test -x <path> && bash <path>` — the leading word exists today, the probe is honestly
   red until the artifact lands, and it becomes the real suite run the moment it does.
-- **Tier** is one slug from the `beads-standards` *Test-tier exposure* table
-  (`standing-vitest` · `supabase-integration` · `e2e` · `none`).
+- **Tier** is one slug from the *Test-tier slugs* table
+  (below): `standing-vitest` · `supabase-integration` · `e2e` · `none`.
 - Prose fragments (`wc -l`, "diff the file", "grep for it") are NOT probes and `ac2-beadify`
   refuses the bead.
 
@@ -63,6 +64,19 @@ across seven rounds — five fail-open, two guaranteed false-fail, and the seven
 repair of the sixth. Every one had been authored without being run. Executing them
 mechanically at round 7 recovered 2 runnable commands out of 14 beads. A probe a machine
 cannot run is a probe nobody ran.
+
+## Test-tier slugs
+
+| Slug | Meaning |
+|------|---------|
+| `standing-vitest` | The repo's default unit/component gate (`pnpm test` / `pnpm test:all`) |
+| `supabase-integration` | Local-stack DB suite (`pnpm test:integration:local` or the repo equivalent) |
+| `e2e` | Playwright / device / browser journey suite |
+| `none` | Docs, config, or prose — no executable suite applies |
+
+An AC touching `supabase/migrations/**`, `lib/db/**`, or any SQL / RLS / RPC / GRANT
+surface **MUST** name `supabase-integration`. `none` is valid only when no executable
+suite can break. Each slug gets a one-line justification.
 
 ## Deleted relative to the six-element contract
 

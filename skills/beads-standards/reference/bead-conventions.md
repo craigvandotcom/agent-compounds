@@ -1,37 +1,18 @@
-# Bead Conventions — the pipeline-internal contract layer (owner-hosted: beads-standards/reference/)
+# Bead conventions — machine-wide canon (owner-hosted: beads-standards/reference/)
 
-**Scope:** this file carries ONLY what the `ac-*`
-pipeline stages enforce — I/O contract, routing, claim semantics, lifecycle wiring,
-per-type close artifacts, anti-inflation. The **machine-wide floor** (taxonomy,
-templates, status/priority + close-reason grammar, label hygiene, where beads live,
-`bv`/`br` operations) is `skills/beads-standards/SKILL.md` — read both inside an
-`ac-*` skill; never restate the floor here.
+**Scope:** the detail layer `skills/beads-standards/SKILL.md` points into — machine-wide
+canon for every repo with a `.beads/` directory: types, labels, lifecycle wiring, routing,
+pick-order, claim semantics, body template, decision beads, per-type close artifacts,
+admission tests, anti-inflation. One pipeline exists (ac2), and it has one bead contract:
+the ac2 four-section schema (`skills/ac2-beadify/references/bead-schema.md`).
 
-Shared by the pipeline skills (ac-qa-device, ac-qa-browser, ac-review, ac-hygiene,
-ac-merge, ac-implement, ac-human-session, ac-tidy). One principle drives all of
-it:
+Shared by the skills that file and work beads — ac2-beadify, ac2-implement, ac2-polish,
+ac-bead-capture, ac-review, ac-hygiene, ac-qa-device, ac-qa-browser, ac-triage, ac-tidy,
+ac-human-session — and any workflow that files beads. One principle drives all of it:
 
-> **No pipeline stage may produce prose exhaust.** Anything actionable that a
-> stage doesn't act on right now leaves as a typed bead — not a report
+> **No workflow may produce prose exhaust.** Anything actionable that a
+> workflow doesn't act on right now leaves as a typed bead — not a report
 > paragraph, not a dangling AskUserQuestion, not a markdown TODO.
-
-## ToC
-- Types = kind of work
-- Labels = gating & provenance (orthogonal to type)
-- Lifecycle labels — pipeline wiring (doctrine lives in beads-standards)
-- Batch-producing workflows (per-run epic + in-session refine)
-- Bead routing (creation → parent) — convention, not a gate
-- Pick-order (which ready bead the loop picks next)
-- Claim semantics — post-merge exhaust (one definition)
-- Body template (the br lint contract)
-- Bead I/O contract (## Delivers / ## Consumes)
-- Implementation contract (six elements)
-- Binding vs advisory (the present-tree rule)
-- Per-type close artifacts
-- Lineage
-- Where beads live
-- Operating br/bv (bulk-write foreground rule, CLI gotchas)
-- Anti-inflation rules (beads are scheduled work, not a notebook)
 
 ## Types = kind of work
 
@@ -86,29 +67,6 @@ unknown — is machine-wide floor:
 - **Gap repair:** `ac-tidy`'s nightly lint auto-adds `unrefined` to beads missing all
   three lifecycle labels — it never auto-adds `refined`, which is earned, never inferred.
 - `ac-implement` gates on presence of `refined`, not on the lack of `unrefined`.
-
-**One-time board migration (legacy boards, run once per repo):** boards built
-under the old convention have open beads that are implementation-ready but
-only signal it by *lacking* `unrefined`. Backfill the explicit `refined` stamp:
-
-```bash
-br list --json --limit 1000 | jq -r '
-  .issues[]
-  | select(.status == "open")
-  | select((.labels // []) as $l |
-      ($l | index("unrefined") | not) and
-      ($l | index("human-gate") | not) and
-      ($l | index("refined") | not))
-  | .id' \
-| while read -r id; do
-    bash .claude/skills/_tools/stamp-refined.sh "$id" \
-      || echo "NOT-STAMPED $id — element 4 unmet, route to /ac2-polish"
-  done
-```
-
-`stamp-refined.sh` is the only sanctioned writer of `refined`; it runs `element4-check.sh`
-first and writes nothing on a refusal. A legacy bead that fails the check has not earned
-the stamp — refine it, never hand-write the label.
 
 ## Batch-producing workflows (per-run epic + in-session refine)
 
@@ -212,7 +170,7 @@ creation's job):
 | `bug` | `## Steps to Reproduce` + `## Acceptance Criteria` |
 | `task` / `feature` | `## Acceptance Criteria` |
 | `investigation` | the open question + `## Acceptance Criteria` (exit criteria: what answers it) |
-| `decision` | the pre-staged memo (context · options · recommendation — see below) |
+| `decision` | the pre-staged memo (context · options · recommendation — see § Decision beads below) |
 | `epic` | `## Delivers` |
 
 Plus, for every implementable bead (finding-sourced ones especially):
@@ -233,127 +191,10 @@ Plus, for every implementable bead (finding-sourced ones especially):
   and is **advisory, never binding** — a binding AC may not rest on it.
 - **Falsifiable ACs** — a criterion that both branches of a choice satisfy
   gates nothing; pick the branch or split the criterion.
-- **`## Delivers` + `## Consumes`** — the bead I/O contract (next section).
-
-## Bead I/O contract (`## Delivers` / `## Consumes`)
-
-Dep edges carry ordering ("B before A") but not payload ("A needs X from B") —
-the handoff otherwise lives in agents' heads and gets re-derived per session.
-These two headers write it down, making three things mechanical: pre-dispatch
-premise checks (ac-implement), close-time output verification (ac-implement),
-and split-coverage checks (ac-bead-refine). Skill-enforced, like Test Scope —
-not a `br lint` template section. (Source: ATG, arXiv 2607.01942.)
-
-```markdown
-## Delivers
-- file: features/settings/api.ts — PUT /api/settings handler
-- migration: 20260712_user_settings.sql — bca.user_settings table
-
-## Consumes
-- ac-abc12 → bca.user_settings table
-```
-
-`<kind>` ∈ `file | endpoint | migration | schema | doc | decision | config`.
-Consumes lines are `<blocker-bead-id> → <artifact it delivers>`, or the single
-literal `- none`.
-
-Rules:
-
-1. **Every implementable bead** (`task`/`feature`/`bug`) carries both headers.
-   `epic` carries `## Delivers` only — the promise its children must cover.
-   `decision`/`investigation`: `## Delivers` is one line — the recorded
-   decision / the answer (their closure semantics, made explicit).
-2. **Every Consumes line must correspond to an existing dep edge.** The dep
-   graph stays the single authority for ordering; Consumes names the payload
-   on an edge, never substitutes for `br dep add`. A Consumes line with no
-   matching edge fails refine; an edge with no Consumes line is fine — some
-   deps are pure sequencing.
-3. **Artifacts are concrete and greppable** — a path, table, route, symbol.
-   "The auth work" is not an artifact. Same discipline as Test Scope anchors:
-   grep first, never name what you haven't seen.
-4. **`- none` is explicit, never omitted.** A missing `## Consumes` means "not
-   yet contracted" — refine treats the bead as unready.
-
-Emit at creation. `ac-beadify` holds the cross-bead data flow.
-
-Every producer that writes a Consumes line verifies it first: `br dep list` the
-edge, read the blocker's own `## Delivers`, then name the artifact. Binds batch
-workflows, conductor follow-ups and refine splits alike.
-
-Quick-capture (`ac-bead-capture`) is exempt from AUTHORING the contract — refine
-writes it there, as it does for whatever capture omits. No producer is exempt
-from the truth of a claim it does write. Omitting a section is sanctioned;
-naming an artifact you have not opened is a defect.
-
-## TRANSITIONAL: two bead contracts share this board (Phases 0–3)
-
-**Read this before applying the six-element contract below.** During the ac2 build the board
-carries beads of two families, and the contract you must satisfy is decided by the bead's
-`origin:` label — not by what this document says in general:
-
-- **`origin:ac2-*` beads follow the ac2 four-section schema.** Its definition lives in
-  `skills/ac2-beadify/references/bead-schema.md` and is NOT restated here. Read it there.
-- **The six-element contract below, `## Test Scope`, and the body-template sections bind
-  `origin:ac-*` beads ONLY.** Applying them to an ac2 bead demands sections that schema
-  deliberately deleted, and the widened `element4-check.sh` no longer enforces them.
-- **`refined` semantics are SHARED by both families**: one label, one meaning, and one sole
-  sanctioned writer (`skills/_tools/stamp-refined.sh`), which additionally requires
-  a fixpoint receipt before stamping an ac2-origin bead.
-
-**RETIREMENT (named so this cannot quietly become permanent):** this section dies at the
-Phase-4 rewrite of `beads-standards`, when `bead-schema.md` folds in as THE machine-wide
-contract and the six-element sections retire. It is the cheapest thing that stops an agent
-applying the wrong contract during the overlap window — never a parallel canon.
-
-## Implementation contract (six elements)
-
-What a `refined` implementable bead (`task` / `feature` / `bug`) must carry
-so a worker can execute it without asking. Skill-enforced at the `refined`
-stamp (`ac-bead-refine`) — not a `br lint` template. Epics, decisions, and
-investigations are exempt.
-
-`ac-loop-2` Phase 2 has no gates *because* these are true. `ac-loop` v1,
-`ac-implement`, and a human running refine consume the same schema — there
-is no loop-2-only variant.
-
-| # | Header | Bar |
-|---|--------|-----|
-| 1 | `## Anchors` | Every cited `file:line` was OPENED at the HEAD sha recorded on the header. Quoted text matches. An unopened citation is a fabrication. |
-| 2 | `## Baselines` | Every countable claim was RUN; paste the command and its literal output. A reasoned count is a failure. |
-| 3 | `## Territory` | Exact file list this bead may touch (paths, not globs — glob only for files the bead CREATES). **Required sub-field `### Test-tier exposure`:** which test tiers that territory can break. |
-| 4 | `## Declared RED` | `Test <name> must FAIL before the fix, with approximately: <assertion shape>`. Name the **ASSERTION** — the observable that changes (an exit code, a count, a thrown message) — not merely the test title; a title alone can fire in a sibling test and still read as satisfied. Comment-only / lock-only delivery → the `RED: characterized —` form below. Genuinely no assertion → `RED: n/a — <why>` (excluded from `hollow%`). Enforced mechanically at the stamp by `skills/_tools/element4-check.sh`. |
-| 5 | `## Sequence + risk` | Index within its epic (`N of M`), plus zero or more of `migration` / `native` / `hot-tier` / `cold-tier`. |
-| 6 | `## Acceptance Criteria` | Each AC adversarially checked: an empty diff cannot satisfy it. |
-
-**Element 4 forms.** Three, and they are not interchangeable:
-
-- **Assertion RED** (default) — `Test <name> must FAIL before the fix, with approximately: <assertion>`. Close with the named assertion's before/after values.
-- **`RED: characterized — <rule> / <mutation>`** — for a comment-only, doc-only or lock-only delivery whose diff changes no behaviour. State the rule the delivery pins AND the mutation that must break it, so the sampler has something to mutate. Example: `RED: characterized — the CI-only-retry rationale must stay attached to the retry setting / deleting the rationale comment while leaving retry: process.env.CI ? 1 : 0 must be caught by review.` This is a claim about a rule, not an absence of one.
-- **`RED: n/a — <why>`** — genuinely no assertion and no rule to pin. Excluded from `hollow%`. A bare `RED: n/a` with no reason is rejected.
-
-**Who emits what.** `ac-beadify` stamps elements 3 and 5 (territory +
-test-tier + sequence) at creation, while the plan's file list and order
-are in context. `ac-bead-refine` verifies all six, authors whatever
-capture omitted, and **withholds `refined`** if any element is missing
-or a cited anchor was not re-opened this pass. A bead whose territory
-cannot be bounded is not ready — split it.
-
-**Test-tier exposure (element 3 sub-field).** One or more of:
-
-| Slug | Meaning |
-|------|---------|
-| `standing-vitest` | The repo's default unit/component gate (`pnpm test` / `pnpm test:all`) |
-| `supabase-integration` | Local-stack DB suite (`pnpm test:integration:local` or the repo equivalent) |
-| `e2e` | Playwright / device / browser journey suite |
-| `none` | Docs, config, or prose — no executable suite applies |
-
-A territory touching `supabase/migrations/**`, `lib/db/**`, or any
-SQL / RLS / RPC / GRANT surface **MUST** name `supabase-integration`.
-`none` is valid only when no executable suite can break. Each slug
-gets a one-line justification.
-
-Worked example (the checkable shape, not a second schema):
-`reference/implementation-contract.md`.
+- **`## Delivers` + `## Consumes`** — the artifact handoff, owned by the ac2 bead
+  schema (`skills/ac2-beadify/references/bead-schema.md`): `## Delivers` names the
+  promised artifacts; `## Consumes` is one `<blocker-id> → <artifact>` per line or
+  the literal `none`, and every Consumes line pairs with a dependency edge.
 
 ## Binding vs advisory (the present-tree rule)
 
@@ -363,18 +204,16 @@ components never wired into the runtime; l73.11: headline ACs owned by the
 bead's own dependents) is the same event: a load-bearing claim pointing at
 imagined state. The rule that removes the class:
 
-**Binding sections** — `## Acceptance Criteria`, `## Delivers`, `## Consumes`,
-`## Test Scope`, `## Anchors`, `## Baselines`, `## Territory`,
-`## Declared RED`, `## Sequence + risk` (+ `## Steps to Reproduce` on bugs)
-— **may only reference two things: what exists in the tree NOW
-(grep-verified), or what an upstream blocker's `## Delivers` explicitly
-promises.** A binding claim resting on anything else — the bead's own
-dependents, unwired components, unpromised future state — is a defect the
-moment it is written, owned by whoever writes it: capture, beadify, a
-conductor follow-up, or a refine split.
+**A binding claim — any load-bearing statement a later stage executes or verifies
+against (acceptance criteria, delivered artifacts, declared tests) — may only
+reference two things: what exists in the tree NOW (grep-verified), or what an
+upstream blocker's `## Delivers` explicitly promises.** A binding claim resting on
+anything else — the bead's own dependents, unwired components, unpromised future
+state — is a defect the moment it is written, owned by whoever writes it: capture,
+beadify, a conductor follow-up, or a refine split.
 
 Grep-verify a binding claim as you type it. Refine is the last net, not the
-first: refine authors binding sections too — split children, contracts written
+first: refine authors binding claims too — split children, contracts written
 for quick-capture beads — and no later stage re-checks those.
 
 **Everything else is advisory.** Suggested implementation, imagined wiring,
@@ -383,6 +222,8 @@ Engineers re-derive the how against the real tree and may discard it;
 **advisory staleness is not a defect** and reviewers don't flag it. Detail
 that helps a cold-start belongs there — self-containment means a complete
 contract plus useful pointers, not prophecy dressed as fact.
+
+## Decision beads (the human-gate contract)
 
 The contract that keeps autonomous sweeps safe:
 
@@ -446,19 +287,6 @@ test-path-only rule could have recognised.
 Fix beads spawned by an investigation/decision carry a typed dep:
 `br dep add <fix-id> <origin-id> -t discovered-from`. Then close the origin.
 `br dep tree` shows the full trail.
-
-## Where beads live
-
-Machine-wide floor — `beads-standards` § Where beads live (per-repo `.beads/`, prefixes
-`ac`/`org`/`bd`, beads-live-with-the-work, the public-repo content rule). Not restated here.
-
-<!-- diet: "Bulk `br` write-loops — run FOREGROUND, not backgrounded" -> ../SKILL.md § br gotchas (ac-gcj.1) -->
-<!-- diet: "br CLI gotchas (shared tool — learned once, applies everywhere)" -> ../SKILL.md § br gotchas (ac-gcj.1) -->
-## Operating `br`/`bv` (bulk-write foreground rule, CLI gotchas)
-
-Machine-wide tool learnings — `beads-standards` § Operating the tools (bulk `br`
-write-loops run FOREGROUND; JSON shape differences; never chain `br close` to a commit;
-0-open-children epics are usually done). Not restated here.
 
 ## Anti-inflation rules (beads are scheduled work, not a notebook)
 

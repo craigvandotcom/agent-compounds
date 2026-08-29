@@ -1,10 +1,10 @@
-# The implementation contract — loop-2 consumption
+# The implementation contract — loop-2 consumption (LEGACY)
 
-Schema (headers, bars, who emits what, test-tier slugs):
-`beads-standards/reference/bead-conventions.md` § Implementation contract.
-`ac-beadify` stamps elements 3+5; `ac-bead-refine` verifies all six and
-withholds `refined` if any is missing. This file is only how **this loop
-consumes** that schema.
+> **The six-element contract this file documented is RETIRED — archived with the
+> legacy ac-* pipeline. The live bead contract is the ac2 four-section schema
+> (`skills/ac2-beadify/references/bead-schema.md`).** This file remains as the
+> legacy loop's consumption record, and its Declared-RED worked example stays the
+> shape `element4-check.sh` still validates on legacy-shaped beads.
 
 ## Freeze SHA
 

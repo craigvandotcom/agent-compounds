@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # element4-check.sh — the mechanical element-4 gate.
 #
-# Element 4 of the implementation contract (`beads-standards/reference/bead-conventions.md`
-# § Implementation contract) is the only element the converge phase mechanically consumes:
-# the mutation sampler reads the declared RED verbatim. A RED reconstructed after the fix
-# falsifies nothing. Prose enforcement does not hold, so this gate is executable.
+# The six-element implementation contract this gate consumed (`beads-standards/reference/bead-conventions.md`
+# § Implementation contract) is RETIRED — archived with the legacy ac-* pipeline; the live
+# contract is the ac2 schema (`skills/ac2-beadify/references/bead-schema.md`). Remaining live role:
+# stamp-refined.sh runs this gate before writing `refined`; legacy boards still carry Declared-RED beads.
 #
 # Usage:
 #   element4-check.sh <bead-id> [<bead-id>...]     # resolves via `br show --json`
@@ -22,7 +22,7 @@
 #      this, and would ship a check as hollow as the gap it closes.
 #
 # TWO ACCEPTED SHAPES, and which one applies is an EXPLICIT RULE, never grep order:
-#   - `## Declared RED` present -> the six-element ac-* contract above decides, alone.
+#   - `## Declared RED` present -> the legacy Declared-RED shape decides, alone.
 #   - `## Declared RED` absent  -> the ac2 schema (ac2-beadify/references/bead-schema.md),
 #     where element 4's ASSERTION is carried by the ACs: EVERY top-level bullet of
 #     `## Acceptance Criteria` must name an executable probe as ``Probe: `<command>` ``.

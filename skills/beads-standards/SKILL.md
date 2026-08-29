@@ -1,6 +1,6 @@
 ---
 name: beads-standards
-description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own I/O-contract + batch-epic supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac-*` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-bead-refine, to capture one use ac-bead-capture, to generate a wave use ac-beadify.'
+description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-bead-refine, to capture one use ac-bead-capture, to generate a wave use ac-beadify.'
 ---
 
 # Beads Standards
@@ -17,10 +17,10 @@ any future personal-task db. Adoption is **per-project and currently uneven**
 not a violation to chase down retroactively. This skill defines what a **new** bead
 must do; § Backfill below is the one-time catch-up list for what's already behind.
 
-Pipeline-internal extensions for the agent-compounds `ac-*` production line (bead I/O
-contract `## Delivers`/`## Consumes`, batch-epic + in-session refine, binding-vs-advisory)
+Pipeline-side extensions for the agent-compounds `ac2` production line (batch-epic +
+in-session refine, bead routing, claim semantics, binding-vs-advisory)
 live in `skills/beads-standards/reference/bead-conventions.md` — this skill is the wider floor every
-project stands on; that file is the deeper layer `ac-*` skills also need.
+project stands on; that file is the detail layer `ac2` skills also need.
 
 ## Bead taxonomy — agent bead vs human bead
 

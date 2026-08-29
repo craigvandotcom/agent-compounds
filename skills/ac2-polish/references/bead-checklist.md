@@ -5,8 +5,9 @@ per-epic not per-bead) belongs to `ac2-polish/SKILL.md`. This file is only the q
 **Routine bound-exhaustion indicts THIS FILE, not the beads.**
 
 Grade against the schema — `ac2-beadify/references/bead-schema.md` — and cite, don't restate:
-bead taxonomy, status/priority, close reasons, labels and test-tier slugs are `beads-standards`
-(`reference/bead-conventions.md`); commit and run discipline are `ac-pipeline/references/`.
+bead taxonomy, status/priority, close reasons and labels are `beads-standards`
+(`reference/bead-conventions.md`); the test-tier slugs are the schema's own
+(`bead-schema.md` § Test-tier slugs); commit and run discipline are `ac-pipeline/references/`.
 
 **SEVERITY GATE for a bead set — correctness · contradiction · unimplementability.** These are
 the only reportable classes. Style, preference and wording are not findings.
@@ -25,7 +26,7 @@ Every question is answered YES **with the evidence that settles it**, or it is a
 ## 2. probe-presence
 
 - Settle WHICH SHAPE APPLIES before grading a single AC. `skills/_tools/element4-check.sh`
-  decides it: `## Declared RED` present -> the ac-* six-element contract decides ALONE and
+  decides it: `## Declared RED` present -> the legacy Declared-RED shape decides ALONE and
   per-AC probes are not required; absent -> the ac2 schema applies.
 - Under the ac2 shape: does EVERY AC name an executable probe in the schema's form, with a tier?
 - Under the ac-* shape: does every AC name an observable of ANY kind — a command, an exit, a

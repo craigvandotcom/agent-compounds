@@ -45,7 +45,7 @@ say which home and why, hand off, STOP — not a bead capture.
 
 ## Phase 2 — Route (which db?)
 
-Beads live with the work (see conventions §Where beads live). Infer from the
+Beads live with the work (see `beads-standards` § Where beads live). Infer from the
 subject first, current repo second: app feature/bug → that app's db · skill/
 pipeline/registry → agent-compounds (`ac` prefix) · org/infra/memory → root
 repo (`org` prefix). No `.beads/` where it belongs → say so and file in the
