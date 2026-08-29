@@ -1,13 +1,13 @@
 ---
 name: ac-human-session
-description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' here means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), NOT the full board including loop-side work (use ac-dashboard), and NOT doing the work itself (use ac-implement / ac-loop).'
+description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' here means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), NOT the full board including loop-side work (use ac-dashboard), and NOT doing the work itself (use ac2-implement).'
 ---
 
-**You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. `ac-loop` runs unattended, **you drive the human**.
+**You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. The ac2-implement swarm runs unattended, **you drive the human**.
 
 ## The loop boundary (what you NEVER surface)
 
-You surface **only work at a human gate.** The instant work becomes autonomous-handleable it belongs to `ac-loop`, not to you — surfacing it is noise and duplication. Never show:
+You surface **only work at a human gate.** The instant work becomes autonomous-handleable it belongs to the ac2-implement swarm, not to you — surfacing it is noise and duplication. Never show:
 
 - ❌ **ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`** — the loop implements them
 - ❌ **in-progress beads / waves** — the loop is running them
@@ -34,7 +34,7 @@ is added.
 lightweight completeness check (≥1 AC an empty diff cannot satisfy + greppable
 `## Delivers` + implementable type `task`/`feature`/`bug`), stamp that label.
 Do NOT apply `refined` / `refine-full` / `refine-light` (exclusive stamper of
-those remains `ac-bead-refine`). `ac-bead-refine` never stamps `human-ratified`.
+those remains `ac2-polish`). `ac2-polish` never stamps `human-ratified`.
 
 ## Prerequisites
 

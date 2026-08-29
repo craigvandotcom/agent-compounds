@@ -228,7 +228,7 @@ br list --json --limit 1000 | jq -r '
 
 **Action:** `br label add <id> "unrefined"` (fail-safe — unknown readiness is treated as not-ready). List every flagged bead in the report.
 
-Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`." **Tier-3 addendum (report-only, forward-only from the `origin:<skill>` cutover):** flag OPEN beads with no `origin:<skill>` label — condition, jq filter, and report format live in `references/origin-provenance-lint.md` (never auto-labelled here; that repair is `ac-bead-refine`'s stamp-time backstop).
+Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`." **Tier-3 addendum (report-only, forward-only from the `origin:<skill>` cutover):** flag OPEN beads with no `origin:<skill>` label — condition, jq filter, and report format live in `references/origin-provenance-lint.md` (never auto-labelled here; that repair is `skills/_tools/stamp-refined.sh`'s stamp-time backstop).
 
 ### Human-gate reason lint (bd-l6o90 deliverable 3)
 
@@ -360,7 +360,7 @@ Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only 
 ```bash
 # You performed every move/update yourself — commit EXACTLY those paths.
 # Never `git add -A <dir>`: _plans/ and _backlog/ carry other sessions' in-flight
-# WIP (ac-plan-init writes _plans/ concurrently) — a dir-wildcard sweeps it (H7d).
+# WIP (ac2-plan writes _plans/ concurrently) — a dir-wildcard sweeps it (H7d).
 git add -- <exact files this run moved/updated>
 git commit -m "$(cat <<'EOF'
 chore: backlog-tidy — archive completed items, reconcile pipeline state

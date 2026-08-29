@@ -159,8 +159,8 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   the friction was acted on, not merely logged (see REVIEW Step 3).
 - **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
   broken-intermediate commits, bad bead-sequencing, or work-breakdowns that needed
-  re-partitioning → target `ac-beadify` / `ac-bead-refine` (bead-level) or the `planning` /
-  `ac-plan-*` skills (plan-level). These own how work is split, so baking the fix here compounds
+  re-partitioning → target `ac2-beadify` / `ac2-polish` (bead-level) or the `planning` /
+  `ac2-plan` skills (plan-level). These own how work is split, so baking the fix here compounds
   far more than a memory fact (parallel-execution doctrine §7).
 - **Cross-domain echo:** an app-local lesson that is really a neometa- or global-domain
   truth → candidate re-homed/generalized lesson.

@@ -106,15 +106,13 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   refined-by-construction bead just converges there fast); themes → `_backlog/pool/`
   candidates with `status: candidate`.
 
-### 2. Group + refine (per-run epic + in-session `ac-bead-refine`)
+### 2. Group + file (per-run epic; defects filed unrefined)
 
 - **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
   epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
   deps). 0–1 beads → no epic.
-- **In-session refine, before the report:** if this run created ≥1 bead, run
-  `ac-bead-refine` NOW — scoped to the epic if one exists, to the single bead otherwise.
-  0 beads → skip. Triage never stamps `refined` itself — that comes from this
-  `ac-bead-refine` invocation's own convergence (SKILL.md Phase 3c).
+- Refinement is not this job's work — it happens through `ac2-polish` (bead mode), the
+  only sanctioned path to the `refined` label via `skills/_tools/stamp-refined.sh`.
 
 ### 3. Report + persist (even on a zero-findings run)
 

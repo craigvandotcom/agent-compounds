@@ -14,8 +14,8 @@ rows would surface every night forever and train the reader to ignore the report
 A missing origin on a bead this new means the creation guard was bypassed (non-Claude
 harness, unparseable shell) or a template is stale — a pipeline defect worth surfacing,
 never papered over with an auto-stamped `origin:unknown`. **Never auto-label** — that
-repair belongs to `ac-bead-refine`'s stamp-time backstop
-(`ac-bead-refine/references/workflow.md` § Method), not this lint.
+repair belongs to the origin check inside `skills/_tools/stamp-refined.sh` (the sole
+sanctioned writer of `refined`), not this lint.
 
 ```bash
 br list --json --limit 1000 | jq -r '

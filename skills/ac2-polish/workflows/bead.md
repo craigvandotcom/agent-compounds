@@ -44,5 +44,5 @@ ready to implement. Leave those, and anything held, for the human.
 
 ## Hand-off
 
-Report `rounds-to-fixpoint` with the verdict token, then hand the refined set to `ac-implement`
+Report `rounds-to-fixpoint` with the verdict token, then hand the refined set to `ac2-implement`
 or name what still blocks it.

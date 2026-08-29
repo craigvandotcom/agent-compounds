@@ -1,6 +1,6 @@
 ---
 name: planning
-description: 'The scope-oscillation planning methodology (Jeffrey Emanuel) — divergent-convergent refinement lenses. Reference/methodology only, NOT a direct entry point: to create a plan use ac-plan-init; to refine use ac-plan-refine-internal (routine) or ac-plan-refine-external (high-stakes); for a final correctness pass use ac-plan-clean. Load when you want the underlying lenses, a pipeline stage cites this as its method, or you are planning outside the pipeline.'
+description: 'The scope-oscillation planning methodology (Jeffrey Emanuel) — divergent-convergent refinement lenses. Reference/methodology only, NOT a direct entry point: to create a plan use ac2-plan; to refine or correctness-check one use ac2-polish (plan mode). Load when you want the underlying lenses, a pipeline stage cites this as its method, or you are planning outside the pipeline.'
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -16,17 +16,17 @@ Strategic planning for features and fixes using Jeffrey Emanuel's iterative
 refinement methodology (scope oscillation).
 
 > **This is the methodology layer, not the entry point.** The live pipeline owns
-> the *doing*: `ac-plan-init` creates plans, `ac-plan-refine-internal` /
-> `ac-plan-refine-external` refine them, `ac-plan-clean` does the correctness
-> pass. This skill is the underlying *method* those stages draw on — load it for
-> the scope-oscillation lenses, or when planning outside the pipeline. It is not
-> auto-invoked for "plan this feature" (that routes to `ac-plan-init`).
+> the *doing*: `ac2-plan` creates plans, `ac2-polish` (plan mode) refines them
+> and does the correctness pass. This skill is the underlying *method* those
+> stages draw on — load it for the scope-oscillation lenses, or when planning
+> outside the pipeline. It is not auto-invoked for "plan this feature" (that
+> routes to `ac2-plan`).
 
 ## When to Load This Skill
 
 - You want the scope-oscillation lenses themselves (the *how* behind the pipeline)
-- Structured planning outside the `ac-plan-*` pipeline
-- A pipeline stage (`ac-plan-init` / `ac-plan-refine-*`) cites this as its method
+- Structured planning outside the ac2 pipeline
+- A pipeline stage (`ac2-plan` / `ac2-polish`) cites this as its method
 
 ## Core Principle
 
@@ -102,11 +102,11 @@ For simpler plans, compress to:
 
 ## Pipeline integration (modern additions)
 
-The live `ac-plan-*` chain applies three upgrades on top of the scope-oscillation core — each *preserves* the lens cycle, none replaces it:
+The live ac2 pipeline applies three upgrades on top of the scope-oscillation core — each *preserves* the lens cycle, none replaces it:
 
-1. **Clarify before Round 1** (`ac-plan-init`) — a short interview surfaces ambiguity and records an `## Assumptions` log *before* exploration, so the rounds refine a grounded draft rather than a wrong one (a wrong starting assumption compounds through every round).
+1. **Clarify before Round 1** (`ac2-plan`) — a short interview surfaces ambiguity and records an `## Assumptions` log *before* exploration, so the rounds refine a grounded draft rather than a wrong one (a wrong starting assumption compounds through every round).
 2. **Per-task acceptance criteria** — each plan step/phase carries a **Done when:** verifiable check, so the implementer self-verifies instead of asserting "looks done".
-3. **Explicit convergence verdict** (`ac-plan-refine-internal`) — each round is scored major/minor/cosmetic; refinement stops when two consecutive rounds are minor-or-cosmetic with no open Critical/High, instead of always running to MAX_ROUNDS. Operationalizes the "steady-state detection" this methodology has always described.
+3. **Explicit convergence verdict** (`ac2-polish`) — each round is scored major/minor/cosmetic; refinement stops when two consecutive rounds are minor-or-cosmetic with no open Critical/High, instead of always running to MAX_ROUNDS. Operationalizes the "steady-state detection" this methodology has always described.
 
 ---
 

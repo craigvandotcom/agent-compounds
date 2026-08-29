@@ -1,6 +1,6 @@
 ---
 name: ac-triage
-description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled. NOT for triaging the bead board itself — that is bv (read-only) or ac-bead-refine.
+description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled. NOT for triaging the bead board itself — that is bv (read-only) or ac2-polish (bead mode).
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -82,8 +82,7 @@ source that IS wired and fails to fetch escalates (see Phase 1).
 
 **One task per phase below — headless runs still keep the ledger (proof-of-life for the
 run itself, not just its report).** Create these upfront; `TaskUpdate` each to
-`in_progress` when its phase starts and `completed` when it ends. `ac-bead-refine`,
-invoked mid-run in Phase 3c, keeps its own ledger — don't duplicate its rounds here.
+`in_progress` when its phase starts and `completed` when it ends.
 
 Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
@@ -95,7 +94,7 @@ TaskCreate("Fetch — pull new signal from enabled sources in parallel")
 TaskCreate("Cluster + dedupe — fingerprint raw events into findings")
 TaskCreate("Route defects → beads")
 TaskCreate("Route themes → backlog pool")
-TaskCreate("Group + refine — epic + ac-bead-refine in-session")
+TaskCreate("Group + file — defects filed unrefined for ac2-polish")
 TaskCreate("Report — write + Slack the run summary")
 ```
 
@@ -184,8 +183,8 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
 - **Readiness gate (the ac-loop seam):** every finding ships `unrefined`, however strong the
-  evidence; `refined` is applied EXCLUSIVELY by `/ac2-polish` on convergence (Phase 3c,
-  in-session, while the evidence is still in context). `-t investigation` beads are ALWAYS
+  evidence; `refined` is applied EXCLUSIVELY by `/ac2-polish` on convergence.
+  `-t investigation` beads are ALWAYS
   `unrefined` — they are questions, not specs. The Phase-3a bar (permalink, first-seen
   release, suspected wave/commit, stack frames/repro, verification path) is not a stamping
   decision: it is how completely to evidence the bead now, so refinement converges in one
@@ -263,25 +262,19 @@ One-line intent, synthesized from {N} reports.
 **TaskUpdate("Route themes → backlog pool", completed)**
 **TaskUpdate("Group + refine", in_progress)**
 
-### Phase 3c — group + refine (before the report)
+### Phase 3c — group + file (before the report)
 
 **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
 epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
-deps) so the batch is refined together in-session and shipped by the loop as one cohesive
+deps) so the batch ships to refinement and the loop as one cohesive
 unit. 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) aren't beads —
 they don't count toward this threshold and aren't epic children.
 
-**In-session refine, before the report — not "later":** if this run created ≥1 bead, run
-**`ac-bead-refine`** NOW — scoped to the epic if one exists, to the single bead otherwise.
-The conductor still holds every cluster, source permalink, and repro rationale in context
-right now; a deferred refine session has to re-derive all of it from cold. Headless runs
-included — refinement is agent-satisfiable (genuine forks already went `human-gate` in
-Phase 3a/3b). 0 beads → skip (nothing to converge). Triage never stamps `refined` itself —
-that label comes from **this `ac-bead-refine` invocation**, on its own convergence, exactly
-like any other bead; triage's role is to run it in-session while the evidence is hot, not
-to earn the stamp on its behalf.
+Beads ship `unrefined` — there is no in-session refine step. Refinement happens through
+`ac2-polish` (bead mode), the only sanctioned path to the `refined` label via
+`skills/_tools/stamp-refined.sh`; triage never stamps `refined` itself.
 
-**TaskUpdate("Group + refine", completed)**
+**TaskUpdate("Group + file", completed)**
 **TaskUpdate("Report", in_progress)**
 
 ### Phase 4 — report

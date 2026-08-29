@@ -65,8 +65,8 @@ Operating summary (details + edge cases live in context-engineering):
   `skill-improvement`, not just a fact.
 - **Decomposition signal:** a broken-intermediate commit, a bad bead-sequence, or a
   work-breakdown that had to be re-partitioned mid-implementation → this is a
-  `skill-improvement` for the decomposition skills (`ac-beadify` / `ac-bead-refine`, or the
-  `planning` / `ac-plan-*` skills), **not** a one-off fact. These are the highest-leverage
+  `skill-improvement` for the decomposition skills (`ac2-beadify` / `ac2-polish`, or the
+  `planning` / `ac2-plan` skills), **not** a one-off fact. These are the highest-leverage
   upgrade targets — route the lesson INTO the skill, not into a memory note.
 - **Approve-then-diff signal:** if a human edited or corrected a gated deliverable (plan,
   skill-improvement, proposal) before they approve it, diff the draft against what was

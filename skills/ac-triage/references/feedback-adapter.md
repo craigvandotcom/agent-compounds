@@ -150,7 +150,7 @@ EOF
   the label, not the type, is the sole gate; without it the decision is silently workable
   and closable by agents).
 - The `triage,feedback,unrefined` labels are constant (`unrefined` routes every
-  feedback bead through `ac-bead-refine` before any implementation pickup).
+  feedback bead through `ac2-polish` (bead mode) before any implementation pickup).
 - Capture the new bead id returned by `br create` (e.g. `bd-xxxx`).
 
 ### Step 5 — Write-back (loop-guard claim)

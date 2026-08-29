@@ -44,8 +44,8 @@ echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
 Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac2-implement` first."
 
 **Also read the loop-retro friction carrier** — `/tmp/loop-retro-<RUN_ID>.md` (resolve `<RUN_ID>`
-from the `RUN_ID` passed in; the ac-loop conductor writes it before Exit-Land, one `## <stage>`
-section per stage that hit friction — see ac-loop § "Friction aggregation"). Hold the parsed
+from the `RUN_ID` passed in; the ac2-implement coordinator writes it before Exit-Land, one `## <stage>`
+section per stage that hit friction — see ac2-implement § "Friction aggregation"). Hold the parsed
 per-stage friction items **with their `stage`/`cost`/`lesson`/`class` typing intact** — they feed
 `reflect` directly in Phase 3 Step 0 — standalone land; loop-driven runs return them to the
 conductor instead (§ Ordering) — (do NOT route them through the Phase 2 prose analyst, which
@@ -108,7 +108,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
   ```bash
   # Dedup first: br list --json | grep -i "<keyword>"  — skip if an open match already exists.
   # -t = kind of work (task/bug/investigation; -t bug only for a shipped product defect).
-  # unrefined routes the raw bead through ac-bead-refine instead of treating it as already-refined.
+  # unrefined routes the raw bead through ac2-polish (bead mode) instead of treating it as already-refined.
   br create "Follow-up: <description>" -t <type> --priority P1 --labels origin:ac-land,followup,unrefined --description "Discovered during bead-work session. Context: ..."
   ```
 
@@ -267,7 +267,7 @@ lesson*. Skill-scoped friction's destination is `skills/<skill>/FRICTIONS.md`, n
 only the classification tag ac-land hands across. Apply
 `skill-builder/references/friction-capture.md` § Routing's ambiguity defaults **verbatim**:
 
-- Uncertain, loop-mechanics-flavored → default sink is `ac-loop`'s `FRICTIONS.md`.
+- Uncertain, loop-mechanics-flavored → default sink is `ac2-pipeline`'s `FRICTIONS.md`.
 - Uncertain, general → `memory/auto/` (unchanged from today).
 - Genuinely cross-cutting → primary skill's `FRICTIONS.md`, `see <id> in <primary>` pointer
   entry in each secondary skill's file (never a full copy).
@@ -459,11 +459,11 @@ Output for the user and next session:
 ```
 
 **Present next session choice with `AskUserQuestion`** — interactive sessions only. When driven
-headless by `ac-loop`'s Exit-Land prompt ("never `AskUserQuestion`"), skip this ask entirely and
+headless by the ac2-implement coordinator's Exit-Land prompt ("never `AskUserQuestion`"), skip this ask entirely and
 just emit the summary — the loop, not a human, decides what runs next (same carve-out as
-`ac-merge` / `ac-batch-close`):
+`ac-merge` / `ac2-publish`):
 
-Note: `ac-land` runs **LAST** — after the merge. Merging is the work; landing brings it to rest (clean + wiser). When driven by `ac-loop`, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to merge for it. The only next steps are starting the next wave or stopping.
+Note: `ac-land` runs **LAST** — after the merge. Merging is the work; landing brings it to rest (clean + wiser). When driven by the ac2-implement swarm, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to merge for it. The only next steps are starting the next wave or stopping.
 
 ```
 AskUserQuestion(
@@ -500,7 +500,7 @@ fi
 
 Remove session artifacts (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
 
-**Concurrency-safe, two-tier teardown.** Scheduled ac-loop runs can overlap in time, and one run's mixed-kind children each hold their own dir, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
+**Concurrency-safe, two-tier teardown.** Scheduled ac2-implement swarm runs can overlap in time, and one run's mixed-kind children each hold their own dir, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
 
 - **Tier 1 — universal content-aware age-gate (LOAD-BEARING).** A dir is stale ONLY if nothing inside it — nor the dir itself — was modified within `STALE_MIN` minutes: `find "$d" -mmin -$STALE_MIN -print -quit` returning non-empty means something is fresh ⇒ LIVE ⇒ keep; empty output ⇒ demonstrably abandoned ⇒ delete. Do NOT gate on the parent dir's own mtime: in-place rewrites of files like `progress.md` do NOT bump the containing dir's mtime, so a dir-mtime gate would reap a live long-running run. Each loop is keyed to its exact `/tmp/<prefix>-*/` glob (or the literal `/tmp/bead-work`) — nothing can reach unrelated `/tmp` content.
 - **Tier 2 — RUN_ID exact-match (optimization; the 7 embedding prefixes ONLY).** Immediately delete THIS run's own dirs so it cleans up after itself without waiting out the age gate. The `[ -n "$RUN_ID" ]` guard on every line is MANDATORY: with `RUN_ID` unset or empty, the unguarded glob degenerates right back to the original unscoped bug. `work-review-*`, `batch-close-*`, external `plan-refine-*`, and bare `/tmp/bead-work` get NO tier-2 line — a RUN_ID glob never matches them, and a silent no-op masquerading as cleanup is worse than no line — they rely on the age gate alone.
@@ -625,10 +625,10 @@ child that cannot find that section still owes teardown; do not skip it.
    the untracked gitdir hooks directory, is invisible to the tree, and must be LEFT IN PLACE.
    Do NOT gate on "did THIS session install it" — neither tool carries session or agent
    identity, so that condition is trivially true and gates nothing.
-   Do NOT call it unconditionally either: the guard is repo-scoped, two concurrent `ac-loop` runs
+   Do NOT call it unconditionally either: the guard is repo-scoped, two concurrent ac2-implement swarm runs
    can share this checkout (§ Concurrency-safe, two-tier teardown), and idempotence is not
    concurrency-safety — an unconditional uninstall strips a live sibling session's protection.
-   Fail safe toward leaving it: `ac-implement` re-installs it idempotently every session, so
+   Fail safe toward leaving it: `ac2-implement` re-installs it idempotently every session, so
    leaving it costs nothing while removing it wrongly does. When the condition holds, call
    `uninstall_precommit_guard(code_repo_path)` — repo path ONLY, no `project_key` (unlike its `install_precommit_guard` sibling). A `removed:false` result simply means
    nothing was installed — a clean no-op that needs no error handling and no "is a guard present?"
