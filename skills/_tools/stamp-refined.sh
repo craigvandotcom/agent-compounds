@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # stamp-refined.sh — the only sanctioned way to write the `refined` label.
 #
-# `refined` is the label `ac-loop-swarm` (and `ac-implement`) select on. Writing it with a bare
+# `refined` is the label the ac2 worker loop (`ac2-implement`) selects on. Writing it with a bare
 # `br label add <id> refined` skips the implementation contract. This wrapper cannot be
 # skimmed past: the label write lives INSIDE the function and the function shells out to
 # element4-check.sh first, unconditionally. Bypassing it takes deleting code.
@@ -66,10 +66,9 @@ stamp_refined() {
   ac2=$(printf '%s' "$meta" | jq -r '[.[0].labels // [] | .[] | select(startswith("origin:ac2-"))] | length' 2>/dev/null || echo 0)
 
   # PROBE-PRESENCE LEG (2026-08-29): `refined` must certify something a worker can execute.
-  # One label serves two pipelines: the ac-* consumer reads `## Declared RED` (still legal,
-  # still validated by element4-check above), the ac2 consumer reads per-AC `Probe:` lines.
-  # A description with NEITHER dialect's executable observable makes the stamp a routing
-  # hint, not a fact — measured 2026-08-29: 18 of 22 `refined` beads in one ready pool
+  # The ac2 worker's flight-check gate executes `Probe:` lines; a description with none
+  # makes the stamp a routing hint, not a fact — measured 2026-08-29: 18 of 22
+  # `refined` beads in one ready pool
   # carried a Declared RED and zero probes, and every ac2 claim died NOT-GATED. The floor
   # here is PRESENCE (>= 1 probe); per-AC completeness stays the checklist's judgment
   # (ac2-polish references/bead-checklist.md § 2), because counting ACs mechanically would

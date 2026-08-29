@@ -125,7 +125,7 @@ inherited machine-wide, not repeated here.
 
 | Label | Meaning |
 |---|---|
-| `refined` | Implementation-ready **and probe-bearing**: every AC names an executable probe — a `Probe:` line a gate can run — in addition to whatever contract shape the body carries (`## Declared RED` for the ac-* pipeline). One label, consumable by BOTH pipelines: a Declared RED without probes is legacy-dialect work, not a qualified stamp (measured 2026-08-29: 18 of 22 `refined` beads in one ready pool were probe-less — every ac2 claim died NOT-GATED at flight-check). Stamped **exclusively** by a refine pass (`ac-bead-refine` where that skill is deployed) on convergence via `skills/_tools/stamp-refined.sh`, which refuses probe-less descriptions — no conductor or capture step ever applies it directly. |
+| `refined` | Implementation-ready **and probe-bearing**: every AC names an executable probe — a `Probe:` line a gate can run. Stamped **exclusively** by `skills/_tools/stamp-refined.sh` at refine convergence, which refuses probe-less descriptions — no conductor or capture step ever applies it directly. (Measured 2026-08-29: 18 of 22 `refined` beads in one ready pool were probe-less — every ac2 claim died NOT-GATED at flight-check.) |
 | `unrefined` | Needs a refinement pass before agent pickup. Default at creation. |
 | *(neither)* | **Ungraded — never assume ready.** Missing-both is not "not ready" either; it's unknown. Fail-safe: treat as unrefined until graded. |
 

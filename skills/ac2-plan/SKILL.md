@@ -1,6 +1,6 @@
 ---
 name: ac2-plan
-description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliverables, assumptions, risk + sequence, out-of-scope, and a success criterion that can come out FALSE. Explorers optional, chosen by size. Triggers: "ac2 plan", "write an ac2 plan", "plan this for ac2". Hands off to ac2-polish. For the legacy planning chain use ac-plan-init and the ac-plan-* skills.'
+description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliverables, assumptions, risk + sequence, out-of-scope, and a success criterion that can come out FALSE. Explorers optional, chosen by size. Triggers: "ac2 plan", "write an ac2 plan", "plan this for ac2". Hands off to ac2-polish.'
 ---
 
 # ac2-plan — idea in, one plan file out

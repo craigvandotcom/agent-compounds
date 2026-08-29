@@ -1,6 +1,6 @@
 ---
 name: ac2-polish
-description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, three modes, selected by argument. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint". For the legacy ac-plan-clean / ac-plan-refine-* / ac-bead-refine ceremony use those skills.'
+description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, three modes, selected by argument. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint".'
 ---
 
 # ac2-polish — one fixpoint engine, three modes
