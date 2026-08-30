@@ -211,7 +211,7 @@ Report each inference.
 
 ### 2f: Lifecycle Label Gap Lint
 
-> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac2-polish` convergence, no other skill (`skills/beads-standards/reference/bead-conventions.md`).
+> **NIGHTLY (Tier 1):** auto-applies in both modes — adding the fail-safe `unrefined` label is non-destructive; report every bead flagged. **Never auto-adds `refined`** — that stamp is exclusively earned via `/ac-polish` convergence, no other skill (`skills/beads-standards/reference/bead-conventions.md`).
 
 **Condition:** an open, non-epic bead carries none of `unrefined` / `refined` / `human-gate` — a lifecycle-label gap, i.e. unknown readiness state.
 
@@ -360,7 +360,7 @@ Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only 
 ```bash
 # You performed every move/update yourself — commit EXACTLY those paths.
 # Never `git add -A <dir>`: _plans/ and _backlog/ carry other sessions' in-flight
-# WIP (ac2-plan writes _plans/ concurrently) — a dir-wildcard sweeps it (H7d).
+# WIP (ac-plan writes _plans/ concurrently) — a dir-wildcard sweeps it (H7d).
 git add -- <exact files this run moved/updated>
 git commit -m "$(cat <<'EOF'
 chore: backlog-tidy — archive completed items, reconcile pipeline state

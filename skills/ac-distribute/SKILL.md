@@ -133,7 +133,7 @@ Pass selection defers to `ac-pipeline/references/verification-gate.md` — one s
 
 1. **Verify the build number was already bumped at merge — do not re-bump here.**
    `CURRENT_PROJECT_VERSION` (iOS) / `versionCode` (Android) MUST increment every upload —
-   ASC/Play reject duplicates. **`ac2-publish` (`skills/ac2-publish/references/version-bump.md`)
+   ASC/Play reject duplicates. **`ac-publish` (`skills/ac-publish/references/version-bump.md`)
    is the SOLE owner of this counter**, bumping it once per wave in lockstep with
    `MARKETING_VERSION` before the merge commit. This step is a check, not a mutation:
    confirm the commit being shipped already carries the bumped `CURRENT_PROJECT_VERSION`
@@ -303,7 +303,7 @@ Each consuming app carries a `CORE/distribution.md` (same per-app pattern as
 `journeys/native.md`): bundle id, ASC app id + team id, signing setup, TestFlight group,
 demo account, the exact ship command, screenshot specs, and **pointers** to secrets (key id,
 issuer id, where the `.p8` lives) — never the secrets themselves. Build-number ownership is
-NOT per-app configurable — it's `ac2-publish` (`skills/ac2-publish/references/version-bump.md`)
+NOT per-app configurable — it's `ac-publish` (`skills/ac-publish/references/version-bump.md`)
 for every app; only document a same-version upload-retry exception here if the app uses one.
 
 ## Remember
@@ -315,8 +315,8 @@ for every app; only document a same-version upload-retry exception here if the a
 - **A direct ship dispatch never bypasses proof.** Both workflows call `ac-prove` first —
   `ensure --fix-forward` at `ci` depth for TestFlight, mandatory `+qa` for App Store — and
   build/submit off `ac-prove`'s RETURNED SHA, never the stale input ref.
-- **Build number is the footgun** — increment every upload; owned by `ac2-publish`
-  (`skills/ac2-publish/references/version-bump.md`), never re-bumped here.
+- **Build number is the footgun** — increment every upload; owned by `ac-publish`
+  (`skills/ac-publish/references/version-bump.md`), never re-bumped here.
 - **Only the build mile is Mac-bound** — submit/monitor/triage all run headless.
 
 ---

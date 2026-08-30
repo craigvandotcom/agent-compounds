@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-A brainstorm command should precede `/ac2-plan` when you're **uncertain about the approach** or want to **explore possibilities** before committing to a plan. Key insight: Jeffrey Emanuel doesn't have a separate ideation phase—he weaves it throughout development. But for pre-planning uncertainty, a structured brainstorm phase can reduce planning iterations.
+A brainstorm command should precede `/ac-plan` when you're **uncertain about the approach** or want to **explore possibilities** before committing to a plan. Key insight: Jeffrey Emanuel doesn't have a separate ideation phase—he weaves it throughout development. But for pre-planning uncertainty, a structured brainstorm phase can reduce planning iterations.
 
 **Recommended approach:** Combine Jeffrey's "100→10 Filter" with multi-model competitive brainstorming, structured around proven frameworks (Six Hats, SCAMPER).
 
@@ -230,7 +230,7 @@ The "7-word technique"—forcing concise problem statements improves output qual
 
 ### When to Use
 
-- **Before `/ac2-plan`** when uncertain about approach
+- **Before `/ac-plan`** when uncertain about approach
 - **Problem is ambiguous** and needs clarification
 - **Multiple valid solutions** and need to explore
 - **Innovation needed** beyond obvious approach
@@ -244,7 +244,7 @@ The "7-word technique"—forcing concise problem statements improves output qual
 2. **100→10 Generation** → Claude generates 100+ ideas, picks top 10
 3. **Evaluation** → Score each idea on 5 criteria (0-1000)
 4. **Synthesis** → Recommend top 3 with rationale
-5. **Output** → Markdown brief feeding into `/ac2-plan`
+5. **Output** → Markdown brief feeding into `/ac-plan`
 
 #### Option B: Six Hats Sequential (Thorough)
 
@@ -293,7 +293,7 @@ Phase 3: OUTPUT
 
 → User reviews brief
 → Selects direction (or requests another round)
-→ Proceeds to /ac2-plan with clarity
+→ Proceeds to /ac-plan with clarity
 ```
 
 ### Output Format
@@ -336,7 +336,7 @@ Phase 3: OUTPUT
 
 ## Next Steps
 
-→ `/ac2-plan` using [recommended approach]
+→ `/ac-plan` using [recommended approach]
 ```
 
 ---
@@ -345,7 +345,7 @@ Phase 3: OUTPUT
 
 ### Integration Points
 
-- Feeds into `/ac2-plan` (output becomes plan input)
+- Feeds into `/ac-plan` (output becomes plan input)
 - Could use existing code-explorer agents for context
 - Leverages existing planning skill templates
 

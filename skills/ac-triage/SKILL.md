@@ -1,6 +1,6 @@
 ---
 name: ac-triage
-description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled. NOT for triaging the bead board itself — that is bv (read-only) or ac2-polish (bead mode).
+description: Use to pull operational + user signal BACK IN from external systems — crashes, errors, logs, beta feedback, externally-filed issues — cluster it, and route real findings by shape — defects to beads, recurring feature/experience themes to the backlog pool (as candidates the human approves). Fetches from Sentry, App Store Connect (TestFlight feedback), Supabase logs, GitHub Issues, PostHog, store reviews. The inbound counterpart to ac-distribute. Triggers on "triage crashes", "check sentry", "any new errors", "pull feedback", "triage github issues", "what's breaking in prod", "triage production signal", "review crash reports". Headless — runs anywhere, scheduled. NOT for triaging the bead board itself — that is bv (read-only) or ac-polish (bead mode).
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -94,7 +94,7 @@ TaskCreate("Fetch — pull new signal from enabled sources in parallel")
 TaskCreate("Cluster + dedupe — fingerprint raw events into findings")
 TaskCreate("Route defects → beads")
 TaskCreate("Route themes → backlog pool")
-TaskCreate("Group + file — defects filed unrefined for ac2-polish")
+TaskCreate("Group + file — defects filed unrefined for ac-polish")
 TaskCreate("Report — write + Slack the run summary")
 ```
 
@@ -183,7 +183,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
 - **Readiness gate (the ac-loop seam):** every finding ships `unrefined`, however strong the
-  evidence; `refined` is applied EXCLUSIVELY by `/ac2-polish` on convergence.
+  evidence; `refined` is applied EXCLUSIVELY by `/ac-polish` on convergence.
   `-t investigation` beads are ALWAYS
   `unrefined` — they are questions, not specs. The Phase-3a bar (permalink, first-seen
   release, suspected wave/commit, stack frames/repro, verification path) is not a stamping
@@ -194,7 +194,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
   never invent a describe you have not seen — plus the QA modality for user-facing surfaces
   (`browser:`/`device:` + journey). A finding bead with no test plan is how an engineer ends
   up authoring tests that cannot fail, and refine would have to author it cold.
-- **ac2-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
+- **ac-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
   escape as `catch-stage:<stage>` — the stage that SHOULD have caught it (plan · beadify ·
   flight · implement · close · review) — plus `discovered-from: <bead>` naming the work that
   shipped it. Without both it is a bug report; with them it is evidence about which gate
@@ -205,7 +205,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
   signal yields both, and conflating them is how a board fills with beads about ourselves
   (measured 39%). A defect in the shipped thing → a bead, here. An observation about how the
   pipeline itself behaved → `FRICTIONS.md`, never a bead, never both.
-- **Escapes feed the batch telemetry rollup.** Report every ac2-lane finding at the next batch
+- **Escapes feed the batch telemetry rollup.** Report every ac-lane finding at the next batch
   boundary with its catch-stage: EXTERNAL escapes, not the findings our own review caught, are
   the metric the lean-pipeline thesis is judged on. A rollup carrying only internally-caught
   findings is a self-graded exam.
@@ -271,7 +271,7 @@ unit. 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) are
 they don't count toward this threshold and aren't epic children.
 
 Beads ship `unrefined` — there is no in-session refine step. Refinement happens through
-`ac2-polish` (bead mode), the only sanctioned path to the `refined` label via
+`ac-polish` (bead mode), the only sanctioned path to the `refined` label via
 `skills/_tools/stamp-refined.sh`; triage never stamps `refined` itself.
 
 **TaskUpdate("Group + file", completed)**

@@ -17,9 +17,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE="$SCRIPT_DIR/close-evidence-check.sh"
 AC_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 # Phase-4 cutover (2026-08-28): ac-implement is archived. The gate's live call site is
-# now ac2-implement/scripts/close-gate.sh, which sets EVIDENCE_CORE and invokes it in
+# now ac-implement/scripts/close-gate.sh, which sets EVIDENCE_CORE and invokes it in
 # LEG 7. The seam-proof follows the wiring rather than retiring with the old skill.
-IMPLEMENT="$AC_ROOT/skills/ac2-implement/scripts/close-gate.sh"
+IMPLEMENT="$AC_ROOT/skills/ac-implement/scripts/close-gate.sh"
 CASES=0
 FAILURES=0
 
@@ -138,9 +138,9 @@ run_gate 0 "--report-only exits 0 even when it would refuse" -- --report-only bd
 echo "--- seam-proof: the single live call site must still invoke the gate ---"
 # A gate whose wiring is silently reverted fails NOTHING. This case is the sensor for that.
 if grep -q 'close-evidence-check\.sh' "$IMPLEMENT"; then
-  expect 1 "ac2-implement/scripts/close-gate.sh invokes close-evidence-check.sh"
+  expect 1 "ac-implement/scripts/close-gate.sh invokes close-evidence-check.sh"
 else
-  expect 0 "ac2-implement/scripts/close-gate.sh invokes close-evidence-check.sh (MISSING — the gate is orphaned)"
+  expect 0 "ac-implement/scripts/close-gate.sh invokes close-evidence-check.sh (MISSING — the gate is orphaned)"
 fi
 
 # ...and the same assertion must go RED on a copy with the invocation removed, or it is

@@ -266,10 +266,16 @@ checklist). The frozen set:
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
 
+- 2026-08-29 — `origin:ac2-*` label series renamed to `origin:ac-*` equivalents
+  (origin:ac2-implement→origin:ac-implement, origin:ac2-review→origin:ac-review,
+  origin:ac2-beadify→origin:ac-beadify, origin:ac2-polish→origin:ac-polish,
+  origin:ac2-plan→origin:ac-plan, origin:ac2-publish→origin:ac-publish) as part of the
+  ac2→ac skill rename. The ledger sweep runs in the app repo at the same cutover.
+  Historical bead comments keep the old tokens — comments are history, not labels.
 - 2026-08-29 — `refined` definition tightened (not renamed, no sweep needed): it now means
   probe-bearing, and `skills/_tools/stamp-refined.sh` refuses probe-less descriptions.
   Zero-probe stamps from before the floor are labeling defects — restamp on sight, never
-  grandfather. (Measured: 18/22 ready-pool beads probe-less, ac2-implement run 2026-08-29.)
+  grandfather. (Measured: 18/22 ready-pool beads probe-less, ac-implement run 2026-08-29.)
 
 ## Worker-identity stamp (structured comment)
 

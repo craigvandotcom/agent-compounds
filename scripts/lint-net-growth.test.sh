@@ -110,41 +110,41 @@ for i in 1 2 3; do echo "line $i"; done > .claude/skills/foo/SKILL.md
 git add .claude/skills/foo/SKILL.md; git commit -qm "shrink SKILL.md"; git push -q origin master 2>/dev/null
 expect_leg1 "already-pushed SHRINK is still a pass" 0
 
-# --- ac2 FAMILY: creation defers to the family cap, growth does not (ac-g2v4) ---
+# --- LEAN ac FAMILY: creation defers to the family cap, growth does not (ac-g2v4) ---
 # A brand-new SKILL.md always has `del = 0`, so `nng_net = add - del` is always
-# positive and a creation was ALWAYS a violation — which made the ac2 family
-# uncreatable. Creation now answers to the ac2 family TOTAL instead. Creation is
+# positive and a creation was ALWAYS a violation — which made the ac family
+# uncreatable. Creation now answers to the ac family TOTAL instead. Creation is
 # distinguished from a pure-addition EDIT with `--diff-filter=A`: both print `N 0`
 # on numstat, so numstat alone cannot tell them apart.
 git checkout -q -- .claude/skills/foo/SKILL.md 2>/dev/null || true
-mkdir -p .claude/skills/ac2-probe
-seq 1 80 | sed 's/^/line /' > .claude/skills/ac2-probe/SKILL.md
-git add -A; git commit -qm "create ac2-probe"; git push -q origin master 2>/dev/null
-echo "  ac2 family total: $(cat .claude/skills/ac2-*/SKILL.md | wc -l | tr -d ' ') lines (cap ${AC2_FAMILY_CAP:-800})"
-expect_leg1 "NEW ac2 SKILL.md within family cap -> PASSES" 0
+mkdir -p .claude/skills/ac-plan
+seq 1 80 | sed 's/^/line /' > .claude/skills/ac-plan/SKILL.md
+git add -A; git commit -qm "create ac-plan"; git push -q origin master 2>/dev/null
+echo "  ac family total: $(cat .claude/skills/ac-*/SKILL.md | wc -l | tr -d ' ') lines (cap ${AC_FAMILY_CAP:-800})"
+expect_leg1 "NEW ac SKILL.md within family cap -> PASSES" 0
 
-# A new NON-ac2 skill is untouched by the rule: creation is still net growth there.
+# A new non-lean-family skill is untouched by the rule: creation is still net growth there.
 mkdir -p .claude/skills/ac-other
 seq 1 40 | sed 's/^/line /' > .claude/skills/ac-other/SKILL.md
 git add -A; git commit -qm "create ac-other"; git push -q origin master 2>/dev/null
-expect_leg1 "NEW non-ac2 SKILL.md -> STILL FAILS (rule is ac2-only)" 1
+expect_leg1 "NEW non-ac SKILL.md -> STILL FAILS (rule is lean-family-only)" 1
 
 # The rule exempts CREATION, not GROWTH. Advance the base past BOTH creations first
 # — leg 1 judges HEAD's parent, so a creation one commit back is still inside the diff
 # range and would be classified as creation, testing nothing.
 echo advance > advance.txt
 git add -A; git commit -qm "advance base"; git push -q origin master 2>/dev/null
-echo "line 81" >> .claude/skills/ac2-probe/SKILL.md
-expect_leg1 "net-positive EDIT to EXISTING ac2 SKILL.md -> STILL FAILS" 1
-git checkout -q -- .claude/skills/ac2-probe/SKILL.md
+echo "line 81" >> .claude/skills/ac-plan/SKILL.md
+expect_leg1 "net-positive EDIT to EXISTING ac SKILL.md -> STILL FAILS" 1
+git checkout -q -- .claude/skills/ac-plan/SKILL.md
 
 # Creation over the family cap is still a violation — the cap is the payment, and
 # the exemption is a deferral to it, not an amnesty.
-mkdir -p .claude/skills/ac2-bulk
-seq 1 800 | sed 's/^/line /' > .claude/skills/ac2-bulk/SKILL.md
-git add -A; git commit -qm "create ac2-bulk"; git push -q origin master 2>/dev/null
-echo "  ac2 family total: $(cat .claude/skills/ac2-*/SKILL.md | wc -l | tr -d ' ') lines (cap ${AC2_FAMILY_CAP:-800})"
-expect_leg1 "NEW ac2 SKILL.md BREACHING family cap -> FAILS" 1
+mkdir -p .claude/skills/ac-polish
+seq 1 800 | sed 's/^/line /' > .claude/skills/ac-polish/SKILL.md
+git add -A; git commit -qm "create ac-polish"; git push -q origin master 2>/dev/null
+echo "  ac family total: $(cat .claude/skills/ac-*/SKILL.md | wc -l | tr -d ' ') lines (cap ${AC_FAMILY_CAP:-800})"
+expect_leg1 "NEW ac SKILL.md BREACHING family cap -> FAILS" 1
 
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"

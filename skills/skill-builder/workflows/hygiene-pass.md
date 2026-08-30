@@ -28,8 +28,8 @@ Skill signal splits into two tiers (full boundary: `references/maintenance-ledge
 - **Behavior / enforcement** (a new gate, a changed branch, a contract fix) — this workflow does **NOT**
   apply. Route it to a `skill:<name>` `skill-improvement` bead (reflect's human-gated channel). If a
   cartography item turns out to change what the skill *does*, kick it to a bead and move on.
-- **`ac2-*` skills are OUT OF SCOPE for this workflow entirely** — no auto-apply of any tier:
-  observations route to `ac2-pipeline/FRICTIONS.md` and changes land only via the human tuning
+- **`ac-*` skills are OUT OF SCOPE for this workflow entirely** — no auto-apply of any tier:
+  observations route to `ac-pipeline/FRICTIONS.md` and changes land only via the human tuning
   session (ac2 constitution; the family's budget lint is its enforcement).
 
 The line is always **behavior vs shape.** When unsure which tier, treat it as behavior (escalate).

@@ -59,11 +59,10 @@ done
 # ---------------------------------------------------------------------------
 echo "--- Check 2: /ac-* cross-reference resolution ---"
 
-# SCOPE: this pattern is `/ac-[a-z]...` and structurally CANNOT match `/ac2-anything`.
-# The ac2 family's cross-references are resolved by Check 23 (scripts/ac2-budget-check.sh),
-# which also distinguishes a dangling INVOCATION (fails) from a PATH citation of a
-# Phase-2/3 skill this epic has not built yet (reported). Do not widen the regex here
-# without deleting that leg — one engine per pattern.
+# SCOPE: this pattern is `/ac-[a-z]...`. Since the pipeline rename it matches the WHOLE
+# pipeline family — the former blind spot (invocations of the old prefixed family,
+# invisible here and resolved by Check 23 instead) no longer exists. Do not widen the
+# regex without re-reading that history — one engine per pattern.
 
 # Collect all /ac-* tokens from SKILL.md + references/*.md + workflows/*.md
 # Uses /ac-[a-z][a-z-]*[a-z] (must start and end with a letter) to avoid
@@ -450,27 +449,22 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Check 10: pipeline conformance (D-series) ---"
 
-# D2: ac-pipeline conformance checklist keeps both doctrine-landing items ticked.
-# Anchored on the durable item names, not a dated sweep annotation (provenance rule:
-# skill-builder/references/structure-standard.md) — content match, not line numbers.
-check
-D2_COUNT=$(grep -cE '^- \[x\] \*\*(Land after merge|Conductor dedup)\*\*' "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null)
-D2_COUNT=${D2_COUNT:-0}
-if [ "$D2_COUNT" -lt 2 ]; then
-  fail "D2: skills/ac-pipeline/SKILL.md expected 'Land after merge' + 'Conductor dedup' ticked, found $D2_COUNT"
-fi
+# D2 RETIRED (a: retires with its subject) — asserted the ac-pipeline conformance
+# checklist kept 'Land after merge' + 'Conductor dedup' ticked. That conformance-status
+# section retired with the legacy architecture lane at the pipeline rename (the skill is now
+# the constitution + operating contracts); git history preserves both the section and this
+# check. Nothing in the successor carries those markers.
 
 # D3 RETIRED (a: retires with its subject) — asserted no `_backlog/{version}` survived in
-# ac-plan-init, which is in the Phase-4 archive set. The concept exists nowhere in the ac2
-# successors (grep: zero hits), so there is nothing to re-point at. A check reaching into
+# ac-plan-init, which is in the Phase-4 archive set. The concept exists nowhere in the lean successors# successors (grep: zero hits), so there is nothing to re-point at. A check reaching into
 # _archive/ is a check that stopped checking.
 #
 # D4 RETIRED (a: retires with its subject) — asserted the plan-status gate
 # (approved/loop-ready/refined + a STOP semantic) in ac-beadify, also in the archive set.
-# Deliberately NOT re-pointed at ac2-beadify: that skill carries none of those four tokens
+# Deliberately NOT re-pointed at ac-beadify: that skill carries none of those four tokens
 # (grep: 0 for approved/loop-ready, 0 for `STOP condition`). Re-pointing would have
-# manufactured a permanent red against a contract ac2 never adopted, which is worse than
-# no check. If ac2 later adopts a status gate, this check should be rewritten for it.
+# manufactured a permanent red against a contract the lean pipeline never adopted, which is worse than
+# no check. If the pipeline later adopts a status gate, this check should be rewritten for it.
 
 # D5: ac-plan-lab (merged genius+alien plan skill, 2026-07-20) carries the write-back
 # section (Write Back header, or the genius_reviewed/transcended frontmatter flags).
@@ -484,19 +478,18 @@ done
 
 # D6 RETIRED (a: retires with its subjects) — scanned ac-implement + ac-merge for a stale
 # "land is a pre-merge gate" claim. BOTH files are in the Phase-4 archive set, and the
-# phrase "pre-merge gate" appears nowhere in ac2-implement or ac2-publish (grep: zero
+# phrase "pre-merge gate" appears nowhere in ac-implement or ac-publish (grep: zero
 # hits), so the drift this guarded cannot recur in the successors.
 #
 # D7 RETIRED (a: retires with its subject) — asserted no "Version bump scans commits"
-# claim survived in ac-merge, in the archive set. The string never migrated into any ac2
-# skill (grep: only the cutover slate's own record of this check mentions it).
+# claim survived in ac-merge, in the archive set. The string never migrated into any lean# skill (grep: only the cutover slate's own record of this check mentions it).
 
 # D8 leg 1 RE-POINTED (b: the FILE survives, so the check does too). version-bump.md is
-# NOT archived — it moves to the surviving ac2-publish, which absorbs ac-merge. The
+# NOT archived — it moves to the surviving ac-publish, which absorbs ac-merge. The
 # sole-owner statement is the substance and it must keep being enforced at its new home.
 check
-if ! grep -qi "sole.*owner" "$AC_ROOT/skills/ac2-publish/references/version-bump.md" 2>/dev/null; then
-  fail "D8: skills/ac2-publish/references/version-bump.md missing the sole-owner statement"
+if ! grep -qi "sole.*owner" "$AC_ROOT/skills/ac-publish/references/version-bump.md" 2>/dev/null; then
+  fail "D8: skills/ac-publish/references/version-bump.md missing the sole-owner statement"
 fi
 # D8 leg 2 KEPT UNCHANGED — ac-distribute survives the cutover. Only the fail text is
 # updated to name the new owner; the assertion itself is untouched.
@@ -569,19 +562,13 @@ if grep -qF "1c. UI Validation Suite" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/
 fi
 # G7b RETIRED (a: retires with its subject) — asserted ac-implement's UI-validation
 # deferral named both owners. ac-implement AND one of the two named owners (ac-batch-close)
-# are both in the Phase-4 archive set, and ac2-implement carries no UI-validation deferral
+# are both in the Phase-4 archive set, and ac-implement carries no UI-validation deferral
 # at all (grep: zero hits for the deferral or either owner). Re-pointing would assert a
 # contract the successor does not have. G7a above is untouched — ac-land survives.
-# G7c: ac-pipeline QA-placement checkbox marked DONE.
-check
-if ! grep -qF "[x] **QA placement**" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
-  fail "G7c: skills/ac-pipeline/SKILL.md QA-placement checkbox not marked DONE ([x])"
-fi
-# G7d (doctrine-honesty): the 1b test:all land-refocus sub-item stays LIVE — NOT marked done/retired.
-check
-if ! grep -qF "STILL-LIVE" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
-  fail "G7d: skills/ac-pipeline/SKILL.md 1b test:all must remain a live/pending land-refocus item (not marked done/retired)"
-fi
+# G7c + G7d RETIRED (a: retires with their subject) — asserted the ac-pipeline
+# conformance-status section's QA-placement checkbox and the STILL-LIVE marker on its 1b
+# test:all sub-item. The whole conformance-status section retired with the legacy
+# architecture lane at the pipeline rename; git history preserves it.
 
 # ---------------------------------------------------------------------------
 # Check 12 — deployed-app conformance (C-series)
@@ -644,8 +631,8 @@ done
 #  The BUDGET leg gets its OWN failure line (bead ac-g2v4). validate-skill.sh exits 1
 #  for a budget breach, an over-1024 description and an invocation-graph violation
 #  alike, and one generic line cannot tell them apart — so while ANY of the three holds
-#  Check 13 red, a newly-introduced budget breach lands silently behind it. The ac2
-#  cutover makes that concrete: the overlap breach is tolerated by ruling and expires at
+#  Check 13 red, a newly-introduced budget breach lands silently behind it. The cutover
+#  made that concrete: the overlap breach is tolerated by ruling and expires at
 #  archival (see validate-skill.sh's archive-before-use note), which only stays safe if a
 #  POST-archival breach is still visible as a breach. Grep for the marker, name it
 #  separately, and let the generic line follow.
@@ -695,52 +682,61 @@ echo "--- Check 14: no-net-growth (SKILL.md — registry + deploy-target-local) 
 # NNG_VIOLATIONS for EVERY net-positive file. There is no stamp and no exemption
 # token: ec5fa64 removed the `net-growth-ok` escape hatch — growth is bought with
 # deletion, not prose. (Proof: scripts/lint-net-growth.test.sh pins its absence.)
-# The ONE structural exception — a NEW ac2-family SKILL.md, which pays the ac2
-# family cap instead of the per-file delta — is defined directly below; it is a
+# The ONE structural exception — a NEW lean-family SKILL.md, which pays the family
+# cap instead of the per-file delta — is defined directly below; it is a
 # path+creation rule the tool decides, never something a file can claim in prose.
 # Args: <repo root> <label> <merge base> <pathspec>
 # `--no-optional-locks` throughout: leg 2 reads OTHER live app checkouts, and a
 # lint run must never touch another repo's index (a sibling agent may be mid-edit).
 NNG_VIOLATIONS=()
 
-# --- ac2 family: CREATION defers to the family cap (bead ac-g2v4) ------------
+# --- lean family: CREATION defers to the family cap (bead ac-g2v4) ------------
 # The per-file ratchet is structurally uncreatable-through: a brand-new file has
 # `del = 0`, so `nng_net = add - del` is ALWAYS positive and EVERY creation is a
 # violation. That is correct for the legacy registry (a new skill there is pure
-# addition to an already-loaded corpus) but it made the ac2 family — seven skills
-# that must be WRITTEN before the eleven they absorb can be archived — impossible
-# to land at all. A new `skills/ac2-*/SKILL.md` therefore answers to the ac2 family
+# addition to an already-loaded corpus) but it made the lean family — the skills
+# that had to be WRITTEN before the ones they absorbed could be archived — impossible
+# to land at all. A NEW family-member SKILL.md therefore answers to the family
 # TOTAL instead of to its own per-file delta. The cap is the payment; the exemption
 # is a DEFERRAL to it, never an amnesty:
 #   - creation within the family cap  -> PASS
 #   - creation over the family cap    -> violation (the cap is what is enforced)
-#   - GROWTH of an existing ac2 file  -> violation under the normal ratchet
-#   - anything not ac2                -> untouched, exactly as at HEAD
-AC2_FAMILY_CAP="${AC2_FAMILY_CAP:-800}"
+#   - GROWTH of an existing family file -> violation under the normal ratchet
+#   - anything not in the family      -> untouched, exactly as at HEAD
+AC_FAMILY_CAP="${AC_FAMILY_CAP:-800}"
 
-# ac2-family membership, by path. `*/ac2-*/SKILL.md` requires a real directory
-# boundary before `ac2-`, so `skills/xac2-y/SKILL.md` is NOT a member.
-nng_is_ac2_skill() {
+# Family membership, by NAME — an explicit list, never a glob: post-rename the
+# family members are ac-* named, and a `skills/ac-*/SKILL.md` sweep would wrongly
+# swallow every fat retained skill (ac-hygiene, ac-dashboard, ... and ac-review
+# itself, which hosts the merged post-batch mode atop a manual panel that is fat
+# by design — its diet is this ratchet plus Check 15's conductor ceiling, not the
+# family cap). The boundary before the member name is structural: the case keys on
+# the full `skills/<member>/SKILL.md` path, so `skills/xac-plan/SKILL.md` is NOT a member.
+nng_is_lean_skill() {
   case "$1" in
-    */ac2-*/SKILL.md|ac2-*/SKILL.md) return 0 ;;
+    */skills/ac-plan/SKILL.md|*/skills/ac-polish/SKILL.md|*/skills/ac-beadify/SKILL.md|\
+    */skills/ac-implement/SKILL.md|*/skills/ac-publish/SKILL.md|*/skills/ac-pipeline/SKILL.md|\
+    skills/ac-plan/SKILL.md|skills/ac-polish/SKILL.md|skills/ac-beadify/SKILL.md|\
+    skills/ac-implement/SKILL.md|skills/ac-publish/SKILL.md|skills/ac-pipeline/SKILL.md) return 0 ;;
     *) return 1 ;;
   esac
 }
 
-# Total lines across the ac2 family in the WORKING TREE (the state this change
+# Total lines across the lean family in the WORKING TREE (the state this change
 # lands in — the same basis Check 15's ceilings use). The family dir is derived
 # from the changed file's own path rather than hardcoded, so both legs work: leg 1
-# sees `skills/ac2-*/SKILL.md`, a deploy target `.claude/skills/ac2-*/SKILL.md`.
-# Args: <repo root> <repo-relative ac2 SKILL.md path>
-nng_ac2_family_total() {
-  local nng_r="$1" nng_p="$2" nng_dir nng_f nng_total=0 nng_n
-  nng_dir="${nng_p%/*}"      # .../skills/ac2-foo
+# sees `skills/<member>/SKILL.md`, a deploy target `.claude/skills/<member>/SKILL.md`.
+# Args: <repo root> <repo-relative family SKILL.md path>
+nng_lean_family_total() {
+  local nng_r="$1" nng_p="$2" nng_dir nng_f nng_total=0 nng_n nng_name
+  nng_dir="${nng_p%/*}"      # .../skills/<member>
   nng_dir="${nng_dir%/*}"    # .../skills
-  while IFS= read -r nng_f; do
-    [ -n "$nng_f" ] || continue
+  for nng_name in ac-plan ac-polish ac-beadify ac-implement ac-publish ac-pipeline; do
+    nng_f="$nng_r/$nng_dir/$nng_name/SKILL.md"
+    [ -f "$nng_f" ] || continue
     nng_n=$(wc -l < "$nng_f" 2>/dev/null || printf '0')
     nng_total=$(( nng_total + nng_n ))
-  done < <(/usr/bin/find "$nng_r/$nng_dir" -maxdepth 2 -path '*/ac2-*/SKILL.md' -type f 2>/dev/null || true)
+  done
   printf '%s' "$nng_total"
 }
 
@@ -750,7 +746,7 @@ nng_scan() {
   # The CREATION set. `git diff --numstat` prints "N 0" for a brand-new file AND for
   # a pure-addition edit to an existing one — indistinguishable — so numstat alone
   # cannot tell creation from growth. `--diff-filter=A` can, and is the only thing
-  # standing between "ac2 skills are creatable" and "ac2 SKILL.md growth is free".
+  # standing between "lean skills are creatable" and "family SKILL.md growth is free".
   nng_added=$(git --no-optional-locks -C "$nng_repo" diff --name-only --diff-filter=A "$nng_base" -- "$nng_spec" 2>/dev/null || true)
   while IFS=$'\t' read -r nng_add nng_del nng_path; do
     [ -n "$nng_add" ] || continue
@@ -761,13 +757,13 @@ nng_scan() {
       echo "no-net-growth: $nng_label/$nng_path net $nng_net line(s) vs $nng_base — PASS (neutral or shrinking)"
       continue
     fi
-    if nng_is_ac2_skill "$nng_path" && printf '%s\n' "$nng_added" | grep -Fxq -- "$nng_path"; then
-      nng_fam=$(nng_ac2_family_total "$nng_repo" "$nng_path")
-      if [ "$nng_fam" -le "$AC2_FAMILY_CAP" ]; then
-        echo "no-net-growth: $nng_label/$nng_path is a NEW ac2-family SKILL.md — per-file ratchet deferred to the ac2 family cap (family total $nng_fam <= $AC2_FAMILY_CAP) — PASS (ac2-creation)"
+    if nng_is_lean_skill "$nng_path" && printf '%s\n' "$nng_added" | grep -Fxq -- "$nng_path"; then
+      nng_fam=$(nng_lean_family_total "$nng_repo" "$nng_path")
+      if [ "$nng_fam" -le "$AC_FAMILY_CAP" ]; then
+        echo "no-net-growth: $nng_label/$nng_path is a NEW lean-family SKILL.md — per-file ratchet deferred to the family cap (family total $nng_fam <= $AC_FAMILY_CAP) — PASS (ac-creation)"
         continue
       fi
-      NNG_VIOLATIONS+=("$nng_label/$nng_path (ac2-family-cap: family total $nng_fam > $AC2_FAMILY_CAP)")
+      NNG_VIOLATIONS+=("$nng_label/$nng_path (ac-family-cap: family total $nng_fam > $AC_FAMILY_CAP)")
       continue
     fi
     NNG_VIOLATIONS+=("$nng_label/$nng_path (+$nng_net)")
@@ -871,7 +867,7 @@ done
 
 # One verdict over BOTH legs.
 if [ "${#NNG_VIOLATIONS[@]}" -gt 0 ]; then
-  fail "no-net-growth: net-positive SKILL.md file(s): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — core is loaded every invocation, so it holds or shrinks. Move the content to references/, or delete an equivalent amount from THIS file. A written justification is not a payment, and a shrink in another file does NOT offset it. (An 'ac2-family-cap' entry is a CREATION over the ${AC2_FAMILY_CAP}-line ac2 family total — diet the family, do not raise the cap.)"
+  fail "no-net-growth: net-positive SKILL.md file(s): $(IFS=', '; echo "${NNG_VIOLATIONS[*]}") — core is loaded every invocation, so it holds or shrinks. Move the content to references/, or delete an equivalent amount from THIS file. A written justification is not a payment, and a shrink in another file does NOT offset it. (An 'ac-family-cap' entry is a CREATION over the ${AC_FAMILY_CAP}-line family total — diet the family, do not raise the cap.)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -907,16 +903,14 @@ fi
 CONDUCTOR_CEILING=1110
 STANDARD_CEILING=730
 
-# Phase-4 cutover 2026-08-28: the roster follows the archive set's "Absorbed by" column.
-# ac-implement -> ac2-implement · ac-batch-close + ac-merge -> ac2-publish · ac-loop was
-# archived long before this cutover and its stale entry was a standing Check 15 failure.
-# ac-review and ac-land survive unchanged; ac-review is still the tier max (1063 lines),
-# so CONDUCTOR_CEILING is untouched.
+# Phase-4 cutover 2026-08-28: the roster follows the archive set's "Absorbed by" column;
+# updated at the pipeline rename: the former prefixed review skill merged INTO ac-review
+# as its post-batch mode, so the roster carries ac-review once.
+# ac-review is still the tier max (1063 lines), so CONDUCTOR_CEILING is untouched.
 CONDUCTOR_SKILLS=(
-  "ac2-implement"
-  "ac2-review"
-  "ac2-publish"
+  "ac-implement"
   "ac-review"
+  "ac-publish"
   "ac-land"
 )
 
@@ -1352,53 +1346,54 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Check 22 — ac2 family ledger: control <-> friction referential integrity (ac-cfn4)
+# Check 22 — lean-family ledger: control <-> friction referential integrity (ac-cfn4)
 # ---------------------------------------------------------------------------
-echo "--- Check 22: ac2 ledger integrity ---"
+echo "--- Check 22: family ledger integrity ---"
 
-# Check 21 proves a mechanism declares its failure semantics; this proves the ac2 family's
+# Check 21 proves a mechanism declares its failure semantics; this proves the lean family's
 # controls and its friction ledger still point at each other — every entry cites a receipt
 # and the control that treats it (or is explicitly untreated), every control names the
 # failure it prevents, and a friction re-observed AFTER its control landed is surfaced as a
 # FAILED CONTROL rather than accruing silently. Fails CLOSED: a missing or empty ledger
 # exits non-zero carrying NOT-GATED, because an absent sensor is not a clean one.
-ALI="$AC_ROOT/scripts/ac2-ledger-integrity.sh"
+ALI="$AC_ROOT/scripts/ac-ledger-integrity.sh"
 check
 if [ -r "$ALI" ]; then
   if ali_out=$(bash "$ALI" "$AC_ROOT" 2>&1); then
     printf '%s\n' "$ali_out" | sed 's/^/  /'
   else
     printf '%s\n' "$ali_out"
-    fail "Check 22: ac2 ledger/control integrity violation(s) — see above"
+    fail "Check 22: family ledger/control integrity violation(s) — see above"
   fi
 else
-  fail "Check 22: scripts/ac2-ledger-integrity.sh missing — ac2 ledger integrity NOT-GATED"
+  fail "Check 22: scripts/ac-ledger-integrity.sh missing — family ledger integrity NOT-GATED"
 fi
 
 # ---------------------------------------------------------------------------
-# Check 23 — ac2 family + loaded-path caps, shape, declarations, references (ac-kdxa)
+# Check 23 — lean-family + loaded-path caps, shape, declarations, references (ac-kdxa)
 # ---------------------------------------------------------------------------
-echo "--- Check 23: ac2 budget + anti-drift ---"
+echo "--- Check 23: family budget + anti-drift ---"
 
-# The plan's biggest named ac2 risk is cultural — the files staying small — and every
+# The plan's biggest named risk is cultural — the files staying small — and every
 # previous "keep it small" rule here was prose, and every one of them lost. This is that
 # rule as a check: family <=800 SKILL.md lines, <=1,200 over the LOADED path with the
 # mandatory-load set DERIVED from the pointers (a hardcoded list is the measured evasion
-# with an extra step), pointed-at canon reported but never capped, the constitution's
-# no-subdirs shape, assurance declarations for ac2 scripts (Check 21 is hooks.json-scoped
-# and cannot see them), and ac2 cross-reference resolution — Check 2's `/ac-[a-z]` pattern
-# structurally cannot match `/ac2-anything`, so the whole family was invisible to it.
-ABC="$AC_ROOT/scripts/ac2-budget-check.sh"
+# with an extra step), pointed-at canon reported but never capped, and assurance
+# declarations for family scripts (Check 21 is hooks.json-scoped and cannot see them).
+# The former cross-reference leg retired at the rename: its premise was that the
+# old prefixed family was invisible to Check 2's `/ac-[a-z]` pattern, and the rename erased
+# that blind spot — Check 2 now sees every invocation the family makes.
+ABC="$AC_ROOT/scripts/ac-budget-check.sh"
 check
 if [ -r "$ABC" ]; then
   if abc_out=$(bash "$ABC" "$AC_ROOT" 2>&1); then
     printf '%s\n' "$abc_out" | sed 's/^/  /'
   else
     printf '%s\n' "$abc_out"
-    fail "Check 23: ac2 budget/anti-drift violation(s) — see above"
+    fail "Check 23: family budget/anti-drift violation(s) — see above"
   fi
 else
-  fail "Check 23: scripts/ac2-budget-check.sh missing — ac2 caps NOT-GATED"
+  fail "Check 23: scripts/ac-budget-check.sh missing — family caps NOT-GATED"
 fi
 
 # ---------------------------------------------------------------------------

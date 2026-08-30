@@ -26,7 +26,7 @@ Creative exploration for uncertain problems using Jeffrey Emanuel's 100→10 Fil
 > "Don't over-ideate upfront—but when you're stuck, diverge wide before converging."
 > — Adapted from Jeffrey Emanuel
 
-Use this skill **before** `/ac2-plan` when you:
+Use this skill **before** `/ac-plan` when you:
 
 - Don't know what approach to take
 - Have competing visions
@@ -95,7 +95,7 @@ Four phases with fresh agent context per phase:
 - Recommended approach + rationale
 - 2 alternatives with tradeoffs
 - Key decisions needing user input
-- Ready for `/ac2-plan`
+- Ready for `/ac-plan`
 
 **Output:** `.claude/plans/research/YYYY-MM-DD-HHMM-brainstorm-[topic].md`
 
@@ -165,7 +165,7 @@ Four phases with fresh agent context per phase:
 
 ## Next Steps
 
-→ `/ac2-plan` using [recommended approach]
+→ `/ac-plan` using [recommended approach]
 ```
 
 ---
@@ -187,14 +187,14 @@ Located in `prompts/`:
 ## Integration Points
 
 - **Input:** User describes challenge/uncertainty
-- **Output:** Brainstorm brief feeding into `/ac2-plan`
+- **Output:** Brainstorm brief feeding into `/ac-plan`
 - **Uses:** Existing code-explorer agents for context
 
 ---
 
 ## When NOT to Use
 
-- Clear, well-defined tasks (just use `/ac2-plan`)
+- Clear, well-defined tasks (just use `/ac-plan`)
 - Bug fixes with obvious cause
 - Simple improvements (<3 files)
 - Tasks with explicit requirements

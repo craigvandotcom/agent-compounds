@@ -1,6 +1,6 @@
 ---
 name: ac-bead-capture
-description: 'Use to CAPTURE a raw idea, bug, observation, or decision fork from the user as a properly typed bead — on the go, minimal ceremony. Triggers: ''bead this'', ''file this as a bead'', ''new bead'', ''log a bug'', ''track this item'', ''remember to do X''. The agent classifies, routes to the right repo''s db, and dedupes; for parking an idea in the grouped backlog pool use ac-backlog, for decomposing a whole plan use ac2-beadify, for refining existing beads use ac2-polish (bead mode).'
+description: 'Use to CAPTURE a raw idea, bug, observation, or decision fork from the user as a properly typed bead — on the go, minimal ceremony. Triggers: ''bead this'', ''file this as a bead'', ''new bead'', ''log a bug'', ''track this item'', ''remember to do X''. The agent classifies, routes to the right repo''s db, and dedupes; for parking an idea in the grouped backlog pool use ac-backlog, for decomposing a whole plan use ac-beadify, for refining existing beads use ac-polish (bead mode).'
 ---
 
 # Capture → Bead
@@ -29,7 +29,7 @@ Capture beats interrogation. Ask only if you cannot determine **what done looks
 like** OR **which repo it belongs to** — one `AskUserQuestion`, max 2 questions,
 then commit to an interpretation. Still fuzzy after that → file it anyway as
 `investigation` + `unrefined` with the raw words preserved verbatim in the
-description; refinement is ac2-polish's job (bead mode), not capture's.
+description; refinement is ac-polish's job (bead mode), not capture's.
 
 **Route before you file — not every capture is a bead.** Decide KIND first, then shape:
 
@@ -67,7 +67,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
    template alone would leave zero-ceremony capture as a bypass). A standalone fork
    with no spawning epic records its origin in the memo `context:` instead.
 3. **Labels:** `unrefined` — capture never stamps `refined`, exclusively
-   `/ac2-polish`'s output on convergence, no exceptions; a decision fork
+   `/ac-polish`'s output on convergence, no exceptions; a decision fork
    gets `human-gate` instead. Provenance labels only where true.
 4. **Create:** `br create "<imperative title>" -t <type> --labels "origin:ac-bead-capture,<labels>"
    --description "<context: what/why/where, user's words preserved>"` — set
@@ -88,7 +88,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
 
 ## Phase 4 — Confirm (one line)
 
-`<id> filed in <repo> as <type>[ +labels] — refine with /ac2-polish when
+`<id> filed in <repo> as <type>[ +labels] — refine with /ac-polish when
 scheduling.` Nothing more; the user is mid-thought.
 
 ## Common Mistakes
@@ -96,11 +96,11 @@ scheduling.` Nothing more; the user is mid-thought.
 | Mistake | Fix |
 |---|---|
 | Interrogating the user (3+ questions) | One round max; `unrefined` exists for a reason |
-| Decomposing the idea into an epic + children | That's ac2-beadify, on an approved plan — capture files ONE bead |
+| Decomposing the idea into an epic + children | That's ac-beadify, on an approved plan — capture files ONE bead |
 | Filing a hunch as `bug` | `bug` = confirmed; suspicion = `investigation` |
 | Naming a file, symbol or blocker you have not opened | Grep first; unverified detail is advisory, never binding |
 | Skipping dedupe | `br search` first — enrich beats duplicate |
 | Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + private pointer |
 | Forgetting the `.beads/` commit | The jsonl is the sync surface — uncommitted = invisible cross-machine |
-| Stamping `refined` at capture | Never — exclusively `/ac2-polish`, no exceptions |
+| Stamping `refined` at capture | Never — exclusively `/ac-polish`, no exceptions |
 

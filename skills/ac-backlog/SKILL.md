@@ -233,7 +233,7 @@ If a related plan or bead was noted: "Related: plan `{name}` / bead `{id}` cover
 
 ## Principles
 
-1. **Speed over perfection** — capture now, think it through in `/ac2-plan`.
+1. **Speed over perfection** — capture now, think it through in `/ac-plan`.
 2. **Cohesion over volume** — group only into same-wave themes; never batch unrelated work (maintenance excepted).
 3. **Route by shape** — small + clear goes straight to a bead, not the backlog.
 4. **No version at capture** — write to `pool/`; `/ac-align` sequences it against live strategy when it's time to plan.
@@ -243,4 +243,4 @@ If a related plan or bead was noted: "Related: plan `{name}` / bead `{id}` cover
 
 ---
 
-_Fast capture into the pool. For planning: `/ac2-plan`. For sequencing against strategy: `/ac-align`. For the human command center: `/ac-human-session`._
+_Fast capture into the pool. For planning: `/ac-plan`. For sequencing against strategy: `/ac-align`. For the human command center: `/ac-human-session`._

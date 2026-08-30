@@ -65,8 +65,8 @@ Operating summary (details + edge cases live in context-engineering):
   `skill-improvement`, not just a fact.
 - **Decomposition signal:** a broken-intermediate commit, a bad bead-sequence, or a
   work-breakdown that had to be re-partitioned mid-implementation → this is a
-  `skill-improvement` for the decomposition skills (`ac2-beadify` / `ac2-polish`, or the
-  `planning` / `ac2-plan` skills), **not** a one-off fact. These are the highest-leverage
+  `skill-improvement` for the decomposition skills (`ac-beadify` / `ac-polish`, or the
+  `planning` / `ac-plan` skills), **not** a one-off fact. These are the highest-leverage
   upgrade targets — route the lesson INTO the skill, not into a memory note.
 - **Approve-then-diff signal:** if a human edited or corrected a gated deliverable (plan,
   skill-improvement, proposal) before they approve it, diff the draft against what was
@@ -155,8 +155,8 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
 
   `br create -t decision -p 3 -l origin:reflect,human-gate,skill-improvement,skill:<name>` with the memo
   (target · evidence · diff · recommendation), **dedupe-first** per `ac-pipeline/references/disposition.md`
-  § Save-for-later — the bead is how the merge request survives unattended. **`ac2-*` skills: EXCLUDED
-  from both routes** — observations → `ac2-pipeline/FRICTIONS.md`; changes only via the tuning session.
+  § Save-for-later — the bead is how the merge request survives unattended. **`ac-*` skills: EXCLUDED
+  from both routes** — observations → `ac-pipeline/FRICTIONS.md`; changes only via the tuning session.
 
 When unsure which tier, treat it as **behavior** (escalate to the gated bead) — the shape lane is
 for changes a script can prove touched no enforcement.

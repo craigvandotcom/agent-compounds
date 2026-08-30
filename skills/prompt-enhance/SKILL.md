@@ -304,7 +304,7 @@ git push
 
 `AskUserQuestion`, question: "Prompts enhanced. What's next?", header: "Next step", single-select:
 - **Review enhanced prompts (Recommended)** — Read through the modified skill/command files to verify quality
-- **Run a workflow** — Test the enhanced prompts by running a skill like /ac-hygiene or /ac2-polish
+- **Run a workflow** — Test the enhanced prompts by running a skill like /ac-hygiene or /ac-polish
 - **Done** — Enhancements complete
 
 ---

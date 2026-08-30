@@ -1,6 +1,6 @@
 ---
 name: jef-flywheel
-description: Use when learning or applying the agentic build methodology end-to-end — beads (br/bv) and agent-swarm (ntm) setup, coordinating multi-agent work, AGENTS.md conventions. The conceptual/setup layer, not the per-stage pipeline skills. Triggers on flywheel, agent swarm, ntm, br/bv setup, agent coordination, multi-agent development. To convert a plan into beads use ac2-beadify; to run a stage use the ac2-* skills; for live coordination (identity, file reservations) use agent-mail; for bead canon use beads-standards.
+description: Use when learning or applying the agentic build methodology end-to-end — beads (br/bv) and agent-swarm (ntm) setup, coordinating multi-agent work, AGENTS.md conventions. The conceptual/setup layer, not the per-stage pipeline skills. Triggers on flywheel, agent swarm, ntm, br/bv setup, agent coordination, multi-agent development. To convert a plan into beads use ac-beadify; to run a stage use the ac-* skills; for live coordination (identity, file reservations) use agent-mail; for bead canon use beads-standards.
 ---
 
 Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.

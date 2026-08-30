@@ -71,4 +71,4 @@ Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only 
 - When evaluating project plans, feature roadmaps, or strategic initiatives
 - When something "feels right" but hasn't been stress-tested, or when timeline/resource constraints feel aggressive
 - When conventional planning feels complete but insufficient, or the real leverage lives outside the current frame
-- **Ordering:** runs AFTER `/ac2-polish` / `/ac2-polish` (plan is already settled and hygienic) and BEFORE `/ac2-beadify` (beads are cut from the pressure-tested version) — a review gate in the planning chain, not a detour. When running both modes, Genius precedes Alien.
+- **Ordering:** runs AFTER `/ac-polish` / `/ac-polish` (plan is already settled and hygienic) and BEFORE `/ac-beadify` (beads are cut from the pressure-tested version) — a review gate in the planning chain, not a detour. When running both modes, Genius precedes Alien.

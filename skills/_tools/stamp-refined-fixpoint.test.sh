@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# stamp-refined-fixpoint.test.sh — the ac2 fixpoint-receipt gate inside stamp-refined.sh.
+# stamp-refined-fixpoint.test.sh — the lean fixpoint-receipt gate inside stamp-refined.sh.
 #
 # `refined` is what the worker loop selects on, and stamp-refined.sh is its only sanctioned
-# writer. For an ac2-origin bead the stamp is legal only against a fixpoint receipt — so the
-# gate lives in the WRITER, not in ac2-polish's procedure: a check a caller can route around
+# writer. For an ac-origin bead the stamp is legal only against a fixpoint receipt — so the
+# gate lives in the WRITER, not in ac-polish's procedure: a check a caller can route around
 # is not a gate.
 #
 # THE SEAM IS EXECUTED, NOT COPIED: the accept case RUNS skills/_tools/polish-fixpoint.sh to
@@ -60,17 +60,17 @@ exit 0
 EOF
 chmod +x "$MOCK/br"
 
-# An ac2-schema description: four sections, every AC naming an executable probe. element4-check
+# An ac-schema description: four sections, every AC naming an executable probe. element4-check
 # accepts this shape (ac-4y92), so anything refused below is refused by the RECEIPT gate.
-AC2_DESC='## Intent
+SCHEMA_DESC='## Intent
 Why this matters, with no line numbers.
 
 ## Acceptance Criteria
 - The gate ships as an executable script.
-  Probe: `test -x skills/ac2-implement/scripts/close-gate.sh` — tier: none
+  Probe: `test -x skills/ac-implement/scripts/close-gate.sh` — tier: none
 
 ## Delivers
-- gate: skills/ac2-implement/scripts/close-gate.sh
+- gate: skills/ac-implement/scripts/close-gate.sh
 
 ## Consumes
 - none
@@ -87,28 +87,29 @@ Test `x` must FAIL before the fix; assert exit 1.
 '
 
 write_board() {
-  jq -n --arg ac2 "$AC2_DESC" --arg leg "$LEGACY_DESC" --arg legp "$LEGACY_PROBED_DESC" '[
-    {id:"bd-ac2-noreceipt", issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2, comments:[]},
-    {id:"bd-ac2-receipt",   issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2, comments:[]},
-    {id:"bd-ac2-malformed", issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2,
+  jq -n --arg schema_desc "$SCHEMA_DESC" --arg leg "$LEGACY_DESC" --arg legp "$LEGACY_PROBED_DESC" '[
+    {id:"bd-ac-noreceipt", issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc, comments:[]},
+    {id:"bd-ac-receipt",   issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc, comments:[]},
+    {id:"bd-ac-malformed", issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc,
      comments:[{text:"POLISH-FIXPOINT:"}]},
-    {id:"bd-ac2-round1",    issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2,
+    {id:"bd-ac-round1",    issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc,
      comments:[{text:"POLISH-FIXPOINT: mode=bead rounds=1 sha256=deadbeefdeadbeef at=2026-08-27T00:00:00Z engine=polish-fixpoint.sh"}]},
-    {id:"bd-ac2-direct",    issue_type:"task", labels:["origin:ac2-beadify"], description:$ac2, comments:[]},
+    {id:"bd-ac-direct",    issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc, comments:[]},
     {id:"bd-legacy",        issue_type:"task", labels:["origin:ac-beadify"],  description:$leg, comments:[]},
-    {id:"bd-legacy-probed", issue_type:"task", labels:["origin:ac-beadify"],  description:$legp, comments:[]}
+    {id:"bd-legacy-probed", issue_type:"task", labels:["origin:ac-beadify"],  description:$legp, comments:[]},
+    {id:"bd-external-probed", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board
 
 stamped_count() { grep -c "label add $1 refined" "$BR_LOG"; }
 
-# --- Case 1: ac2-origin bead with NO receipt -> REFUSED, and no label is written -------
+# --- Case 1: ac-origin bead with NO receipt -> REFUSED, and no label is written -------
 : >"$BR_LOG"
-OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac2-noreceipt 2>&1); RC=$?
-if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac2-noreceipt)" -eq 0 ] \
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac-noreceipt 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac-noreceipt)" -eq 0 ] \
    && echo "$OUT" | grep -qi "fixpoint"; then
-  pass "Case 1: an ac2-origin bead with no fixpoint receipt is REFUSED, no label written"
+  pass "Case 1: an ac-origin bead with no fixpoint receipt is REFUSED, no label written"
 else
   fail "Case 1: expected refusal with no label write, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
@@ -118,17 +119,17 @@ fi
 STATE="$WORK/state"; ART="$WORK/artifact.md"
 printf 'round zero\n' >"$ART"
 PRE0=$(shasum -a 256 "$ART" | awk '{print $1}')
-PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac2-receipt --artifact "$ART" \
+PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac-receipt --artifact "$ART" \
   --state "$STATE" --round 1 --pre "deadbeef" >/dev/null 2>&1   # round 1: CONTINUE, records the sha
-FP_OUT=$(PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac2-receipt --artifact "$ART" \
+FP_OUT=$(PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac-receipt --artifact "$ART" \
   --state "$STATE" --round 2 --pre "$PRE0" 2>&1); FP_RC=$?
 if [ "$FP_RC" -eq 0 ] && grep -q "POLISH-FIXPOINT:" "$STATE/receipt.txt"; then
   pass "Case 2a: polish-fixpoint.sh reached a fixpoint and wrote a real receipt"
 else
   fail "Case 2a: producer did not stamp, rc=$FP_RC. Output: $FP_OUT"
 fi
-OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac2-receipt 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-ac2-receipt)" -eq 1 ]; then
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac-receipt 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-ac-receipt)" -eq 1 ]; then
   pass "Case 2b: with the PRODUCER'S OWN receipt on the bead, the stamp is written once"
 else
   fail "Case 2b: expected exit 0 and one label write, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
@@ -144,19 +145,31 @@ else
   fail "Case 3: expected probe-refusal with no label write, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
-# --- Case 3b: a PROBED legacy bead still stamps with no receipt (additive, not regression) -
+# --- Case 3b: a PROBED family bead with no receipt is REFUSED (one pipeline: every ------
+# --- family origin owes the receipt; the old ac2-only scoping is gone with the rename) --
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-legacy-probed 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-legacy-probed)" -eq 1 ]; then
-  pass "Case 3b: a probed ac-*-origin bead still stamps with no receipt (the receipt gate stays ac2-only)"
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-legacy-probed)" -eq 0 ] \
+   && echo "$OUT" | grep -qi "fixpoint"; then
+  pass "Case 3b: a probed family-origin bead with no receipt is REFUSED — the receipt gate covers every family origin"
 else
-  fail "Case 3b: expected the probed legacy path to stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+  fail "Case 3b: expected receipt refusal, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 3c: a probed bead from OUTSIDE the family stamps with no receipt --------------
+# --- (the receipt gate is scoped to family origins, not the whole board) ----------------
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-external-probed 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-probed)" -eq 1 ]; then
+  pass "Case 3c: a probed non-family-origin bead still stamps with no receipt (the receipt gate stays family-scoped)"
+else
+  fail "Case 3c: expected the non-family probed bead to stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 # --- Case 4: a receipt header with no rounds/sha is ABSENT, not satisfied --------------
 : >"$BR_LOG"
-OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac2-malformed 2>&1); RC=$?
-if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac2-malformed)" -eq 0 ]; then
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac-malformed 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac-malformed)" -eq 0 ]; then
   pass "Case 4: a receipt header carrying no measurement is treated as ABSENT"
 else
   fail "Case 4: expected refusal, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
@@ -164,8 +177,8 @@ fi
 
 # --- Case 5: rounds=1 is not a fixpoint — a clean first round proves nothing -----------
 : >"$BR_LOG"
-OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac2-round1 2>&1); RC=$?
-if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac2-round1)" -eq 0 ]; then
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac-round1 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac-round1)" -eq 0 ]; then
   pass "Case 5: a rounds=1 receipt is REFUSED (a fixpoint needs a clean round >= 2)"
 else
   fail "Case 5: expected refusal, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
@@ -174,8 +187,8 @@ fi
 # --- Case 6: the refusal comes from the SCRIPT, with no caller involved ----------------
 # Sourced-and-called, the other entry point: the gate must not live in a wrapper.
 : >"$BR_LOG"
-OUT=$(PATH="$MOCK:$PATH" bash -c ". '$STAMP'; stamp_refined bd-ac2-direct" 2>&1); RC=$?
-if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac2-direct)" -eq 0 ]; then
+OUT=$(PATH="$MOCK:$PATH" bash -c ". '$STAMP'; stamp_refined bd-ac-direct" 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac-direct)" -eq 0 ]; then
   pass "Case 6: the sourced function refuses too — the gate is in the writer, not a caller"
 else
   fail "Case 6: expected refusal from the function itself, rc=$RC. Output: $OUT"
@@ -186,10 +199,10 @@ fi
 : >"$BR_LOG"
 DRIFTED=$(sed 's/^POLISH-FIXPOINT:/POLISH-FIXPOINT-V2:/' "$STATE/receipt.txt")
 tmp=$(mktemp)
-jq --arg t "$DRIFTED" '[ .[] | if .id == "bd-ac2-noreceipt" then .comments = [{text:$t}] else . end ]' \
+jq --arg t "$DRIFTED" '[ .[] | if .id == "bd-ac-noreceipt" then .comments = [{text:$t}] else . end ]' \
    "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
-OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac2-noreceipt 2>&1); RC=$?
-if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac2-noreceipt)" -eq 0 ]; then
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac-noreceipt 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac-noreceipt)" -eq 0 ]; then
   pass "Case 7: NEGATIVE CONTROL — a drifted receipt token no longer satisfies the gate"
 else
   fail "Case 7: a drifted receipt was accepted — the matcher is not coupled to the producer"

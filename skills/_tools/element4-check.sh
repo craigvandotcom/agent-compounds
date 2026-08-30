@@ -3,7 +3,7 @@
 #
 # The six-element implementation contract this gate consumed (`beads-standards/reference/bead-conventions.md`
 # § Implementation contract) is RETIRED — archived with the legacy ac-* pipeline; the live
-# contract is the ac2 schema (`skills/ac2-beadify/references/bead-schema.md`). Remaining live role:
+# contract is the lean bead schema (`skills/ac-beadify/references/bead-schema.md`). Remaining live role:
 # stamp-refined.sh runs this gate before writing `refined`; legacy boards still carry Declared-RED beads.
 #
 # Usage:
@@ -23,7 +23,7 @@
 #
 # TWO ACCEPTED SHAPES, and which one applies is an EXPLICIT RULE, never grep order:
 #   - `## Declared RED` present -> the legacy Declared-RED shape decides, alone.
-#   - `## Declared RED` absent  -> the ac2 schema (ac2-beadify/references/bead-schema.md),
+#   - `## Declared RED` absent  -> the lean schema (ac-beadify/references/bead-schema.md),
 #     where element 4's ASSERTION is carried by the ACs: EVERY top-level bullet of
 #     `## Acceptance Criteria` must name an executable probe as ``Probe: `<command>` ``.
 #     A bulletless AC section FAILS (vacuously "every bullet has a probe"), and PARTIAL
@@ -39,10 +39,10 @@ fail_bead() {
   RC=1
 }
 
-# check_ac2_probes <label> <description>
-# The ac2 shape: no `## Declared RED`, element 4 carried by probe-carrying ACs.
+# check_schema_probes <label> <description>
+# The lean shape: no `## Declared RED`, element 4 carried by probe-carrying ACs.
 # Header match is `br lint`-compatible — case-insensitive, trailing text allowed.
-check_ac2_probes() {
+check_schema_probes() {
   local label="$1" desc="$2"
 
   if ! printf '%s\n' "$desc" | grep -qiE '^## Acceptance[[:space:]]+Criteria'; then
@@ -94,7 +94,7 @@ check_description() {
   # Shape selection is a rule, not a race: a `## Declared RED` header, when present,
   # decides — even if the description ALSO carries probe-carrying ACs.
   if ! printf '%s\n' "$desc" | grep -qE '^## Declared RED[[:space:]]*$'; then
-    check_ac2_probes "$label" "$desc"
+    check_schema_probes "$label" "$desc"
     return $?
   fi
 

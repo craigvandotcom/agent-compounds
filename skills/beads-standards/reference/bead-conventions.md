@@ -4,9 +4,9 @@
 canon for every repo with a `.beads/` directory: types, labels, lifecycle wiring, routing,
 pick-order, claim semantics, body template, decision beads, per-type close artifacts,
 admission tests, anti-inflation. One pipeline exists (ac2), and it has one bead contract:
-the ac2 four-section schema (`skills/ac2-beadify/references/bead-schema.md`).
+the ac2 four-section schema (`skills/ac-beadify/references/bead-schema.md`).
 
-Shared by the skills that file and work beads — ac2-beadify, ac2-implement, ac2-polish,
+Shared by the skills that file and work beads — ac-beadify, ac-implement, ac-polish,
 ac-bead-capture, ac-review, ac-hygiene, ac-qa-device, ac-qa-browser, ac-triage, ac-tidy,
 ac-human-session — and any workflow that files beads. One principle drives all of it:
 
@@ -61,7 +61,7 @@ The refined/unrefined/human-gate doctrine — presence-of-`refined` readiness, f
 unknown — is machine-wide floor:
 `beads-standards` § Agent bead template. This section carries only the pipeline wiring:
 
-- **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac2-polish`
+- **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-polish`
   on convergence — no other skill, and no conductor, however strong the evidence.
   `unrefined` is the default at creation (`ac-bead-capture`, `ac-beadify`).
 - **Gap repair:** `ac-tidy`'s nightly lint auto-adds `unrefined` to beads missing all
@@ -192,7 +192,7 @@ Plus, for every implementable bead (finding-sourced ones especially):
 - **Falsifiable ACs** — a criterion that both branches of a choice satisfy
   gates nothing; pick the branch or split the criterion.
 - **`## Delivers` + `## Consumes`** — the artifact handoff, owned by the ac2 bead
-  schema (`skills/ac2-beadify/references/bead-schema.md`): `## Delivers` names the
+  schema (`skills/ac-beadify/references/bead-schema.md`): `## Delivers` names the
   promised artifacts; `## Consumes` is one `<blocker-id> → <artifact>` per line or
   the literal `none`, and every Consumes line pairs with a dependency edge.
 

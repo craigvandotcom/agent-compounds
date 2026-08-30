@@ -73,7 +73,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 Hygiene **conforms to trunk-direct**: there is no hygiene branch and no worktree. Auto-applied
 fixes commit straight to `main` as pathspec commits under the **full H7 discipline** the
-`ac2-implement` Phase 0 spells out — the implementing-conductor concurrency rules apply to
+`ac-implement` Phase 0 spells out — the implementing-conductor concurrency rules apply to
 hygiene whenever it is actively *fixing code* (hygiene is exempt from H7 **only** while purely
 reading/filing beads, never while editing). The 5-lens panel below IS this run's pre-push
 review, so there is **no separate review step** (branch policy: `ac-pipeline` § Branch policy).
@@ -237,8 +237,8 @@ If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline 
 TaskCreate("Coverage audit — surface inventory vs journey registry; file journey-gap beads")
 TaskCreate("Triage deferred findings + file bead epic (Exhaust Rule)")
 TaskCreate("Exhaustive quality gate — format → type-check → lint → full suite")
-TaskCreate("Close ceremony — delegate to ac2-publish")
-TaskCreate("Refine the epic's beads in-session — ac2-polish (bead mode)")
+TaskCreate("Close ceremony — delegate to ac-publish")
+TaskCreate("Refine the epic's beads in-session — ac-polish (bead mode)")
 TaskCreate("Report — hygiene summary + Slack (headless)")
 TaskCreate("Cleanup / teardown — artifacts")
 
@@ -249,7 +249,7 @@ TaskCreate("Round {N} — 5-lens panel → synthesize → auto-apply → gate �
 
 With a 3-round run that's 11 tasks; a 5-round run, 13. **TaskUpdate("Initialize", in_progress)**
 now, and mark it `completed` at the end of Phase 0. Sub-skills invoked by the Ship and Refine
-tasks (`ac2-publish`, `ac2-polish`) run their OWN ledgers — do not duplicate their steps here;
+tasks (`ac-publish`, `ac-polish`) run their OWN ledgers — do not duplicate their steps here;
 this ledger tracks the hygiene run's top-level sections only.
 
 ---
@@ -335,7 +335,7 @@ git rev-parse HEAD && git ls-remote origin main   # confirm the SHAs match after
 > **Pathspec commits, never `git add -A`.** Use the `git commit -- <files>` form limited to the
 > exact paths YOU changed (tracked from the implementer reports). Under trunk-direct another
 > session's uncommitted WIP shares this checkout — a wildcard add sweeps that foreign work into
-> your hygiene commit and misattributes it (`ac2-implement` Phase 0 H7d). New (untracked)
+> your hygiene commit and misattributes it (`ac-implement` Phase 0 H7d). New (untracked)
 > files need `git add <file>` first, then the pathspec commit of exactly that path.
 
 > **Commit WITHOUT `--no-verify`; push WITH it.** The pre-commit hook runs `lint-staged`
@@ -483,20 +483,20 @@ fix before proceeding. Commit any Phase-5 fixes (user-approved + AUTO_IMPLEMENT 
 directly to `main` (pathspec, push immediately; **no `--no-verify` on the commit**, `--no-verify`
 on the push only — same rule as Phase 3).
 
-**Note:** the close ceremony below (`ac2-publish`) dispatches Tier 1 CI on the final SHA —
+**Note:** the close ceremony below (`ac-publish`) dispatches Tier 1 CI on the final SHA —
 so this Phase-5 local run is a pre-handoff sanity check, not the last word. Keep it: catching a
 red gate here, before handing off, is cheaper than catching it inside the CI dispatch.
 
-### Close Ceremony (delegate to ac2-publish)
+### Close Ceremony (delegate to ac-publish)
 
 There is **no branch to ship** — every fix is already committed and pushed to `main` (Phase 3).
 The close ceremony is therefore batch-close style, not a merge:
 
 **No commits landed (findings only)?** Skip to Report — nothing to close, no version bump.
 
-**Otherwise: invoke `ac2-publish`.** Do not build a third bespoke close mechanism and do not
+**Otherwise: invoke `ac-publish`.** Do not build a third bespoke close mechanism and do not
 route through `ac-merge` (that path is for the branches that survive the migration — dependabot,
-human PRs). `ac2-publish` owns the trunk-direct close: version bump → Tier 1 CI dispatch +
+human PRs). `ac-publish` owns the trunk-direct close: version bump → Tier 1 CI dispatch +
 fix-forward → tag → deploy verification. Delegation prompt:
 
 > "Run ac-batch-close for this hygiene run's commits on `main`. Version bump = patch (existing
@@ -507,23 +507,23 @@ fix-forward → tag → deploy verification. Delegation prompt:
 > that single commit, bd-kudrb), so do NOT re-run `ac-review` on this same diff; uncertain CI feedback →
 > decision beads (Exhaust Rule); no 'what's next?' after."
 
-**Hand `ac2-publish` the "Also carried (not hygiene fixes)" disclosure.** With no PR diff to
+**Hand `ac-publish` the "Also carried (not hygiene fixes)" disclosure.** With no PR diff to
 eyeball, foreign work that rode along is easy to miss — diff `main` since this run's first
 hygiene commit (`git log --oneline <first-hygiene-sha>..HEAD`) and name any non-hygiene commit
 (an `.env`/secret edit, a migration, another session's fix) as Also-carried content for the
 batch-close report — do not silently drop it just because this run didn't author it.
 
-- **Hygiene bumps `patch`** via `ac2-publish` (unchanged policy — `ac2-publish` is the
+- **Hygiene bumps `patch`** via `ac-publish` (unchanged policy — `ac-publish` is the
   trunk-direct bump owner, default patch unless explicitly frozen/skipped).
 - **No CI on this repo:** `ac-batch-close`'s concern — it falls back to a local
   quality-gate-then-tag path when there's no `quality-gate.yml` dispatch to run.
-- CI fails → `ac2-publish` fixes forward on `main` and re-dispatches as part of its own
+- CI fails → `ac-publish` fixes forward on `main` and re-dispatches as part of its own
   triage loop; if unfixable this session it files a `qa-blocker`-style bead and reports it —
   never tag red.
 
 ### Refine the Run's Beads (in-session, after the close ceremony)
 
-If this run created **≥1 bead**, run **`ac2-polish` (bead mode)** NOW — scoped to the epic if one
+If this run created **≥1 bead**, run **`ac-polish` (bead mode)** NOW — scoped to the epic if one
 exists (2+ beads), to the single bead otherwise — before the report, not "later": the
 conductor still holds every finding, verdict, and triage rationale in context; a deferred
 refine session re-derives it from cold, or can't. Run-specific notes for the reviewer prompts:
@@ -540,7 +540,7 @@ refine session re-derives it from cold, or can't. Run-specific notes for the rev
 Headless runs included — refinement is agent-satisfiable (genuine design forks already went
 through this run's decision gates or carry `human-gate`). 0 beads → skip (nothing to
 converge). Hygiene never stamps `refined` itself — that label comes from **this
-`ac2-polish` run**, on its own convergence, exactly like any other bead; hygiene's
+`ac-polish` run**, on its own convergence, exactly like any other bead; hygiene's
 role is to run it in-session while context is hot, not to earn the stamp on its behalf. On
 convergence the `unrefined` labels come off and `refined` goes on, leaving the epic
 implement-ready for the loop.
@@ -646,7 +646,7 @@ this run is reviewing is CI-green.
 - **Auto-apply Critical/High + same-round consensus + cross-round consensus — defer the rest**
 - **Round floor = MIN_ROUNDS=3, ABSOLUTE** — never finalize before round 3 (see Phase 4); ceiling MAX_ROUNDS=5
 - **Lens-diverse consensus is rarer and stronger** — don't lower the bar; the registry + Phase 5 triage absorb the singles
-- **Fixes commit directly to `main`** (trunk-direct — no hygiene branch, no worktree) under full H7 discipline while editing; commit=push, pathspec-limited to your own files; the close ceremony is `ac2-publish`'s, never `ac-merge`'s
+- **Fixes commit directly to `main`** (trunk-direct — no hygiene branch, no worktree) under full H7 discipline while editing; commit=push, pathspec-limited to your own files; the close ceremony is `ac-publish`'s, never `ac-merge`'s
 - **Conductor triage before user** — auto-implement clear technical improvements; defer only genuine design decisions and scope escalations
 - **Design decision gate every round** — UX-affecting or approach-transforming choices defer regardless of severity or consensus
 - **Incremental in the loop, exhaustive at the boundary** — affected-only per round, full suite exactly once at Phase 5; format FIRST + auto-fix in both gates, commit WITHOUT `--no-verify` (§Format-first gate)

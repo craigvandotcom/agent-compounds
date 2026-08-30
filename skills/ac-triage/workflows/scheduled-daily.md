@@ -102,7 +102,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 - Cluster, severity-filter, dedupe against open beads AND open pool candidates.
 - Route by shape: defects → beads, ALWAYS `unrefined` (**the Phase-3a readiness bar** —
   permalink + suspected commit + repro + verification path — is evidencing guidance, not a
-  stamping decision; only `/ac2-polish` ever applies `refined`, and a
+  stamping decision; only `/ac-polish` ever applies `refined`, and a
   refined-by-construction bead just converges there fast); themes → `_backlog/pool/`
   candidates with `status: candidate`.
 
@@ -111,7 +111,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 - **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
   epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
   deps). 0–1 beads → no epic.
-- Refinement is not this job's work — it happens through `ac2-polish` (bead mode), the
+- Refinement is not this job's work — it happens through `ac-polish` (bead mode), the
   only sanctioned path to the `refined` label via `skills/_tools/stamp-refined.sh`.
 
 ### 3. Report + persist (even on a zero-findings run)

@@ -56,7 +56,7 @@ safety net for the retrospective's own blind spot, not a licence to leave the st
 ## Workflow & Skill Files
 
 Read the command files that ran during this session so you can identify workflow friction:
-- `skills/ac2-implement/references/worker.md` — the implementation workflow
+- `skills/ac-implement/references/worker.md` — the implementation workflow
 - `.claude/skills/ac-land/SKILL.md` — this landing workflow
 
 Scan the full skill inventory (AGENTS.md > Available Skills) against the beads implemented. Look for:

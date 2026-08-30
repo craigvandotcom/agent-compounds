@@ -1,13 +1,13 @@
 ---
 name: ac-human-session
-description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' here means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), NOT the full board including loop-side work (use ac-dashboard), and NOT doing the work itself (use ac2-implement).'
+description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' here means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), NOT the full board including loop-side work (use ac-dashboard), and NOT doing the work itself (use ac-implement).'
 ---
 
-**You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. The ac2-implement swarm runs unattended, **you drive the human**.
+**You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. The ac-implement swarm runs unattended, **you drive the human**.
 
 ## The loop boundary (what you NEVER surface)
 
-You surface **only work at a human gate.** The instant work becomes autonomous-handleable it belongs to the ac2-implement swarm, not to you — surfacing it is noise and duplication. Never show:
+You surface **only work at a human gate.** The instant work becomes autonomous-handleable it belongs to the ac-implement swarm, not to you — surfacing it is noise and duplication. Never show:
 
 - ❌ **ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`** — the loop implements them
 - ❌ **in-progress beads / waves** — the loop is running them
@@ -34,7 +34,7 @@ is added.
 lightweight completeness check (≥1 AC an empty diff cannot satisfy + greppable
 `## Delivers` + implementable type `task`/`feature`/`bug`), stamp that label.
 Do NOT apply `refined` / `refine-full` / `refine-light` (exclusive stamper of
-those remains `ac2-polish`). `ac2-polish` never stamps `human-ratified`.
+those remains `ac-polish`). `ac-polish` never stamps `human-ratified`.
 
 ## Prerequisites
 
@@ -90,7 +90,7 @@ Freshen (`/ac-tidy`, `/ac-align`) is a *write*, so it's offered as an **option i
     - **SERVING POLICY — when a lane is too big to serve row-by-row, ELEVATE it to a tap.** This threshold is **ADDITIVE to the `>5` collapse rule above, never a replacement for it** — the two answer different questions: **`>5` decides whether the lane COLLAPSES** to one line, **`>=20` open members OR an oldest member older than 21 days decides whether that one line is ELEVATED to a first-class tap** (rendered in Phase 4, above 🟢). A 30-bead lane is both collapsed *and* elevated; a 7-bead lane is collapsed and plain. Never let one threshold rewrite the other. Over the line, render the elevated tap (`Run the curator sitting — {N} queued`) and nudge **`bd-8yhvb`** — the supervised batch-sitting bead that owns working a curator lane down — by name, so the human taps into the supervised flow instead of grinding rows one at a time.
   - **Group the docket by title prefix (`DECISION:` vs `ACTION:`):** the two human-gate template kinds (`beads-standards` § Human-gate template) are *presented grouped by prefix*, not interleaved — `DECISION:` forks in one cluster (each a one-tap choice), `ACTION:` do-in-the-world tasks in another (each a checklist to run, often carrying a `best-done-when` ridealong hint). Batching pure-action items lets a sit-down session knock them out together (e.g. all ASC/console chores at the next version submission) instead of context-switching between deciding and doing. Same treatment in cockpit doctrine (the `/fleet.json` docket render).
 - **🟡 Plans awaiting sign-off** = board plans with `status: draft | refined` and **NOT** `loop-ready`. Most-invested first. (Drop every `loop-ready` plan — the loop owns it.)
-- **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac2-plan`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
+- **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
 - **Loop awareness (count only)** = ready beads that lack a docket label + `loop-ready` plans + in-progress waves → a single header line, never itemized (tells the human the factory is running).
 
 ### Extend the docket org-wide
@@ -232,8 +232,8 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 - **🔴 Curator lane, ELEVATED — auto-advance INTO the sitting, don't merely render it:** once the lane crosses the serving policy (`>=20` queued or oldest >21 days), `Run the curator sitting — {N} queued` is a first-class item in this auto-advance order, taken in position right after the lane's own itemized P0/P1s — not a footnote left on the board. One tap: `AskUserQuestion(question: "Curator lane: {N} queued (oldest {age}). Run the supervised sitting?", options: ["Run it now (Recommended)", "Work the top {n} only", "Skip"])`. On tap → drive `bd-8yhvb`'s supervised batch flow, then resume auto-advance with `{N} remaining` recomputed. A rendered tap the loop never reaches is the exact failure this line exists to prevent.
 - **🔴 PRs — batch the trivial:** dependabot/grouped bumps → ONE prompt ("Merge the N green dependabot PRs?"), not N. Substantive PRs → one each.
 - **🔴 CI / prod:** summarize the failure in a line, then `AskUserQuestion`: "Investigate now / File a bead / Skip."
-- **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac2-polish {path}`.
-- **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac2-plan`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
+- **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-polish {path}`.
+- **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac-plan`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
 
 **Approve-then-diff capture:** when a decision or plan approval follows the human editing
 or correcting the deliverable first (a reframed memo, a re-scoped plan) — diff what was
@@ -257,7 +257,7 @@ When the human taps **Done** and docket items remain: leftover stays `human-gate
 AskUserQuestion(question: "{N} remaining on the docket.", header: "Hand-off", options: [
   { label: "Leave on docket (Recommended)", description: "Next sitting sees the same list, shorter" },
   { label: "Mark some loop-eligible", description: "You name them; I strip human-gate — never auto-strip" },
-  { label: "Start /ac2-implement", description: "Ship whatever is already loop-side" } ])
+  { label: "Start /ac-implement", description: "Ship whatever is already loop-side" } ])
 ```
 
 If the docket is empty, point at what now flows autonomously:
@@ -266,7 +266,7 @@ If the docket is empty, point at what now flows autonomously:
 ✅ Gates cleared. The loop will pick up {ready_beads} beads + {loop_ready_plans} loop-ready plans on its next run.
 ```
 
-and offer Start /ac2-implement vs leave-for-schedule.
+and offer Start /ac-implement vs leave-for-schedule.
 
 ---
 
@@ -283,4 +283,4 @@ and offer Start /ac2-implement vs leave-for-schedule.
 
 ---
 
-_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac2-implement`. To just SEE the whole board (read-only, loop side included): `/ac-dashboard`._
+_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-implement`. To just SEE the whole board (read-only, loop side included): `/ac-dashboard`._

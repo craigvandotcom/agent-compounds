@@ -1,6 +1,6 @@
 ---
 name: ac-review
-description: 'MANUAL, human-triggered code review over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. NOT a pipeline stage: it is not a pre-merge gate, not a pre-close gate, and no skill may recommend or auto-invoke it — ac-implement closes straight to ac-batch-close/ac2-publish, ac-publish gates on the QA proof, and standing code quality is ac-hygiene''s lane on its own cadence.'
+description: 'Code review, TWO modes. (1) MANUAL, human-triggered panel over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. (2) POST-BATCH mode, invoked BY the batch boundary — reviewers on a DIFFERENT model from the workers, read-only with a disposable-worktree carve-out, ACCEPT/FIX/DEFER verdicts, fixture-shape + causal-sufficiency dimensions; contract: references/post-batch-mode.md. Trigger: ''review the batch''. The manual panel is not a pre-merge or pre-close gate and nothing auto-invokes it; ac-implement closes straight to ac-batch-close/ac-publish, and standing code quality is ac-hygiene''s lane on its own cadence.'
 ---
 
 
@@ -9,6 +9,24 @@ description: 'MANUAL, human-triggered code review over a scope YOU name — a pa
 **This is not a pipeline stage.** Nothing recommends it and nothing auto-invokes it; it runs when asked for by name. Bead-level TDD and `ac-hygiene` carry standing quality.
 
 For codebase-wide health checks, use `/ac-hygiene` instead.
+
+---
+
+## Two modes
+
+**Mode 1 — the manual panel (Phases 0–8 below):** Craig names a scope; everything in this file
+runs as written.
+
+**Mode 2 — post-batch review:** invoked BY the batch boundary ("review the batch") over a
+finished batch + its bead ids. Same panel machinery and consensus script; four added
+constraints: reviewers run a DIFFERENT model from the workers; reviewers are READ-ONLY on the
+shared tree (sole carve-out: sabotage probes in a disposable worktree); every finding carries
+ACCEPT / FIX / DEFER; fixture-shape validity and causal sufficiency are named dimensions, and
+every closed bead gets the one question a checksum cannot answer — does THIS diff produce that
+GREEN? Findings write verdict + catch-stage labels (plan · beadify · flight · implement ·
+close · review) even when fixed in-batch; Medium+ become beads, Lows stay in the report; a
+reasoned "checked, no finding" is a deliverable. Full contract:
+`references/post-batch-mode.md`.
 
 ---
 
@@ -392,14 +410,7 @@ Four checks, each a placement rule made adversarial:
    exceeds its minted ceiling (post-mint, per `promotion-ladder.md`) is a finding even
    with a stamp present.
 
-**CHECKLIST:**
-
-- Added skill text carrying the edit's story — a date, a director, a pass/wave narrative, or a bead-ID no other file greps as a rule-name
-- Added SKILL.md core content with no evidence stamp and no offsetting demotion
-- Evidence stamp present but citing a run/probe/sign-off that can't be verified as real
-- Re-added content matching a prior `git log -S` cut (deprecated/historical/superseded block)
-- Net SKILL.md line growth with no evidence-or-demotion justification
-- Conductor-core skill growth exceeding its minted ceiling, or missing sign-off pre-mint
+<!-- diet: CHECKLIST restated the METHOD checks 0-3 immediately above (same-file twins); the METHOD is the binding statement -->
 
 **SLUGS:** `provenance-leak`, `missing-promotion-evidence`, `false-evidence-stamp`,
 `reintroduced-historical-block`, `unjustified-net-growth`, `conductor-ceiling-breach`
@@ -615,7 +626,7 @@ cluster:
    shared epic or plan node they were split from (walk `## Consumes` / dependency edges and the
    `discovered-from` / epic parent up to the first node they all descend from).
 2. Escalate the fix to that parent: emit **`VERDICT: NEEDS_DECISION`** with a note routing the
-   LCA node back to `/ac2-polish` (re-decompose the parent) rather than queuing N per-bead
+   LCA node back to `/ac-polish` (re-decompose the parent) rather than queuing N per-bead
    AUTO_FIX items. Repair the decomposition **once**, then regenerate the affected subgraph.
 3. Do **not** hand-patch the correlated symptoms here — per-bead patches around a shared-parent
    defect leave the decomposition wrong and the bug re-emerges on the next bead off that parent.
@@ -995,23 +1006,10 @@ Found: {total} across {count} rounds
 
 **If called from `ac-loop` (autonomous run):** Skip — exit after the summary. The loop reads `VERDICT:` from the output. On `main` (trunk-direct), `APPROVED` gates `ac-batch-close` proceeding — VERDICT semantics are unchanged, only the downstream consumer is: the loop no longer chains through `ac-merge`'s PR-merge step. On a legacy branch, `APPROVED` still chains to `ac-merge`. Either way, `NEEDS_DECISION` stops instead of proceeding.
 
-**If called interactively (human present):**
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Review complete ({N} fixed, {M} decisions resolved). What's next?",
-    header: "Next step",
-    multiSelect: false,
-    options: [
-      { label: "Close the wave (Recommended)", description: "Trunk-direct (default): run /ac2-publish — CI verify, feedback triage, bead close. Legacy PR branch only: run /ac2-publish" },
-      { label: "Another review pass", description: "Run /ac-review again — fresh eyes on the updated code" },
-      { label: "Manual review", description: "Done with automated review — you'll review manually" },
-      { label: "Done for now", description: "Review saved — pick up later" }
-    ]
-  }]
-)
-```
+**If called interactively (human present):** offer one `AskUserQuestion` — "Close the wave
+(Recommended)" (trunk-direct: run /ac-publish — CI verify, feedback triage, bead close; a
+legacy PR branch instead chains to ac-merge) · "Another review pass" (run /ac-review again) ·
+"Manual review" · "Done for now".
 
 ### Cleanup
 

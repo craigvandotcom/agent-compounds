@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# polish-fixpoint.sh — the ac2 polish stamp gate. ONE engine, two modes (plan · bead).
+# polish-fixpoint.sh — the lean polish stamp gate. ONE engine, two modes (plan · bead).
 #
-# It MEASURES and it GATES. It drives nothing and it delegates to no model: the ac2-polish
+# It MEASURES and it GATES. It drives nothing and it delegates to no model: the ac-polish
 # SKILL runs a stateless reader per round, applies that round's findings, then calls this
 # script to record the round and decide whether a stamp is earned. Keeping the measurement
 # out of the thing being measured is the whole point — a loop that grades itself will
@@ -13,7 +13,7 @@
 #
 # ASSURANCE (ac-pipeline/references/assurance-declarations.md § The four fields):
 #   PROBE:      skills/_tools/polish-fixpoint.test.sh — RED/GREEN over every verdict below
-#   SCHEDULE:   once per polish round, from ac2-polish's round step; and on every CI run
+#   SCHEDULE:   once per polish round, from ac-polish's round step; and on every CI run
 #               via scripts/run-all-harnesses.sh (registry-lint `harnesses` job)
 #   MODE:       blocking
 #   ON-FAILURE: closed   (no receipt, no stamp — the refusal is the feature)
