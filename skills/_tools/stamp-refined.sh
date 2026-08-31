@@ -41,11 +41,28 @@ stamp_refined() {
     return 2
   fi
 
+  # DOWNGRADE LEG (2026-08-31): a refusal used to only decline to ADD the label, so a stale
+  # `refined` stamp written under an older, looser contract survived every later pass —
+  # measured in the 2026-08-31 ac-implement run, where pre-floor stamps carried zero probes
+  # into the worker pool and each one burned claim cycles at flight-check. "Restamped on
+  # sight, never grandfathered" is bidirectional: on a CONTENT refusal, if the bead
+  # currently holds `refined`, strip it. Only a content verdict downgrades — a cannot-check
+  # result (element4 rc 2, unreadable bead) mutates nothing.
+  _downgrade() {
+    local id="$1" why="$2" held
+    held=$(br show --json "$id" 2>/dev/null | jq -r '[ .[0].labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null || echo 0)
+    [ "${held:-0}" -gt 0 ] || return 0
+    br label remove "$id" "refined" 2>/dev/null
+    br label add "$id" "unrefined" 2>/dev/null
+    echo "stamp_refined: DOWNGRADED $id — stripped a stale 'refined' stamp ($why); it returns to the refine lane." >&2
+  }
+
   local out rc
   out=$(bash "$ELEMENT4_CHECK" "$id" 2>&1); rc=$?
   if [ "$rc" -ne 0 ]; then
     printf '%s\n' "$out" >&2
     echo "stamp_refined: REFUSED $id — element 4 unmet; no label written." >&2
+    [ "$rc" -eq 1 ] && _downgrade "$id" "element 4 unmet"
     return "$rc"
   fi
 
@@ -85,6 +102,7 @@ stamp_refined() {
   probes=$(printf '%s' "$meta" | jq -r '.[0].description // ""' | grep -c 'Probe:')
   if [ "${probes:-0}" -eq 0 ]; then
     echo "stamp_refined: REFUSED $id — description carries no executable 'Probe:' line; a refined bead must be probe-bearing (beads-standards: refined). Author the probes, then re-stamp. No label written." >&2
+    _downgrade "$id" "no executable Probe: line"
     return 1
   fi
 
@@ -96,11 +114,13 @@ stamp_refined() {
       | grep -E '^POLISH-FIXPOINT:[[:space:]].*rounds=[0-9]+.*sha256=[0-9a-f]{8,}' | tail -1)
     if [ -z "$receipt" ]; then
       echo "stamp_refined: REFUSED $id — family-origin bead with no conforming fixpoint receipt (expected a 'POLISH-FIXPOINT: … rounds=<n> sha256=<digest>' comment from skills/_tools/polish-fixpoint.sh). No label written." >&2
+      _downgrade "$id" "no conforming fixpoint receipt"
       return 1
     fi
     rounds=$(printf '%s' "$receipt" | sed -E 's/.*rounds=([0-9]+).*/\1/')
     if [ "${rounds:-0}" -lt 2 ]; then
       echo "stamp_refined: REFUSED $id — fixpoint receipt records rounds=$rounds; a clean FIRST round proves nothing, so a fixpoint needs a clean round >= 2. No label written." >&2
+      _downgrade "$id" "fixpoint receipt below rounds=2"
       return 1
     fi
   fi

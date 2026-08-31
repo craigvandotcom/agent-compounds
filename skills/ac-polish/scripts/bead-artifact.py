@@ -7,8 +7,12 @@ and to land it again.
 Both halves FAIL CLOSED. A setup error is NOT-GATED, never a silent no-op; a partial write
 is reported and exits non-zero.
 
-Lifecycle labels (`refined` / `unrefined`) are NEVER written here. `skills/_tools/stamp-refined.sh`
+Lifecycle labels (`refined` / `unrefined`) are NEVER written here directly. `skills/_tools/stamp-refined.sh`
 owns that pair. An artifact holds the label snapshot taken at export and must not restore it.
+What writeback --apply DOES do is run the RESTAMP SWEEP after landing the bodies: every
+implementable bead in the artifact is re-gated through `stamp-refined.sh` (the sole writer),
+so a conforming stamp is refreshed under today's contract and a stale one is stripped by the
+gate's own downgrade leg. "Restamped on sight, never grandfathered" is a mechanism, not prose.
 
 The dry run walks the same branches as the write and withholds only the `br` call. A dry run
 that skips a branch cannot gate it.
@@ -29,6 +33,12 @@ import subprocess
 import sys
 
 LIFECYCLE_LABELS = {"refined", "unrefined"}
+
+# The sole sanctioned writer of the `refined`/`unrefined` pair (owner-hosted at
+# skills/_tools/). Resolved off THIS file's location so the sweep works from any repo
+# whose skills are the registry or a symlinked copy of it. Deliberately NOT
+# env-overridable: an environment-controlled path reaching subprocess is taint.
+STAMP_REFINED = str(__import__("pathlib").Path(__file__).resolve().parents[2] / "_tools" / "stamp-refined.sh")
 
 DELIM = re.compile(r"<!-- BEAD:([^ ]+) -->\n(.*?)\n<!-- /BEAD:\1 -->", re.S)
 
@@ -133,6 +143,46 @@ def artifact_labels(meta_line):
     return {x.strip() for x in m.group(1).split(",") if x.strip()}
 
 
+def restamp_sweep(bead_ids):
+    """Re-gate every implementable bead through stamp-refined.sh (the sole writer).
+
+    Decisions and epics are skipped: element 4 exempts them and a receipt records polish,
+    not implement-readiness. Outcomes: STAMPED (conforming), DOWNGRADED (stale stamp
+    stripped by the gate's own downgrade leg), or a routed-around refusal (rc 2). The
+    sweep never fails the writeback: a downgrade is the gate working, not an error.
+    """
+    targets = []
+    for bead_id in bead_ids:
+        live, err = show(bead_id)
+        if live is None:
+            print(f"bead-artifact: RESTAMP SKIP {bead_id} — could not re-read: {err}")
+            continue
+        if live.get("issue_type") in ("epic", "decision"):
+            continue
+        targets.append(bead_id)
+    if not targets:
+        print("bead-artifact: RESTAMP SWEEP — no implementable beads to re-gate.")
+        return
+    print(f"bead-artifact: RESTAMP SWEEP — re-gating {len(targets)} implementable "
+          f"bead(s) through stamp-refined.sh:")
+    stamped = downgraded = refused = 0
+    for bead_id in targets:
+        r = subprocess.run(["bash", STAMP_REFINED, bead_id], capture_output=True, text=True)
+        out = (r.stdout or "") + (r.stderr or "")
+        if "STAMPED" in out:
+            stamped += 1
+            print(f"  STAMPED    {bead_id}")
+        elif "DOWNGRADED" in out:
+            downgraded += 1
+            print(f"  DOWNGRADED {bead_id} — stale stamp stripped; returns to the refine lane")
+        else:
+            refused += 1
+            first = next((ln for ln in out.splitlines() if ln.strip()), "(no output)")
+            print(f"  REFUSED    {bead_id} — {first.strip()[:160]}")
+    print(f"bead-artifact: RESTAMP RESULT — {stamped} stamped, {downgraded} downgraded, "
+          f"{refused} refused.")
+
+
 def cmd_writeback(args):
     require_board()
     beads = parse(args.artifact)
@@ -179,9 +229,23 @@ def cmd_writeback(args):
         die(1, f"REFUSED — {len(failed)} of {len(beads)} beads failed. "
                "The board is PARTIALLY written; re-run after fixing the cause.")
 
-    verb = "DRY RUN over" if dry else "WRITEBACK COMPLETE —"
-    tail = " — pass --apply to write." if dry else ", 0 failures."
-    print(f"\nbead-artifact: {verb} {len(beads)} beads{tail}")
+    if dry:
+        sweepable = 0
+        for bead_id, _, _ in beads:
+            live, err = show(bead_id)
+            if live is not None and live.get("issue_type") not in ("epic", "decision"):
+                sweepable += 1
+        print(f"bead-artifact: DRY  RESTAMP SWEEP would re-gate {sweepable} implementable "
+              f"bead(s) through stamp-refined.sh after --apply.")
+        verb = "DRY RUN over"
+        tail = " — pass --apply to write."
+        count = len(beads)
+    else:
+        restamp_sweep([bead_id for bead_id, _, _ in beads])
+        verb = "WRITEBACK COMPLETE —"
+        tail = ", 0 failures."
+        count = len(beads)
+    print(f"\nbead-artifact: {verb} {count} beads{tail}")
     return 0
 
 

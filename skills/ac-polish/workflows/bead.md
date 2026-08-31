@@ -35,8 +35,13 @@ The receipt this loop writes is a PRECONDITION of `refined`, not a grant of it.
 `skills/_tools/stamp-refined.sh` is the sole sanctioned writer: it runs `element4-check.sh`,
 REFUSES any description carrying no executable `Probe:` line — a stamp that certifies nothing
 a gate can execute is a labeling defect — and for an `origin:ac-*` bead additionally
-requires a conforming receipt at rounds >= 2. Pre-floor stamps are restamped on sight,
-never grandfathered.
+requires a conforming receipt at rounds >= 2.
+
+The restamp is a MECHANISM, not a remembering exercise: `bead-artifact.py writeback --apply`
+ends with a RESTAMP SWEEP that re-gates every implementable bead in the artifact through
+`stamp-refined.sh`. A conforming bead is restamped under the current contract; a stale one
+(a pre-floor stamp, a missing receipt) is stripped by the gate's downgrade leg and returns
+to the refine lane. A cannot-check result mutates nothing. Never grandfathered, mechanically.
 
 Stamp `refined` only on beads that are implementable work. A `decision`-type bead is a human
 fork and element 4 exempts it — a receipt records that it was polished; it does not make it

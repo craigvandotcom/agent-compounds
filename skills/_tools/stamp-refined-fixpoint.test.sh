@@ -97,12 +97,17 @@ write_board() {
     {id:"bd-ac-direct",    issue_type:"task", labels:["origin:ac-beadify"], description:$schema_desc, comments:[]},
     {id:"bd-legacy",        issue_type:"task", labels:["origin:ac-beadify"],  description:$leg, comments:[]},
     {id:"bd-legacy-probed", issue_type:"task", labels:["origin:ac-beadify"],  description:$legp, comments:[]},
-    {id:"bd-external-probed", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]}
+    {id:"bd-external-probed", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
+    {id:"bd-legacy-stale",  issue_type:"task", labels:["refined","refine-full"], description:$leg, comments:[]},
+    {id:"bd-ac-stale-receipt", issue_type:"task", labels:["origin:ac-beadify","refined"], description:$schema_desc, comments:[]},
+    {id:"bd-external-already", issue_type:"task", labels:["refined","refine-full"], description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board
 
 stamped_count() { grep -c "label add $1 refined" "$BR_LOG"; }
+stripped_count() { grep -c "label remove $1 refined" "$BR_LOG"; }
+unrefined_count() { grep -c "label add $1 unrefined" "$BR_LOG"; }
 
 # --- Case 1: ac-origin bead with NO receipt -> REFUSED, and no label is written -------
 : >"$BR_LOG"
@@ -206,6 +211,53 @@ if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-ac-noreceipt)" -eq 0 ]; then
   pass "Case 7: NEGATIVE CONTROL — a drifted receipt token no longer satisfies the gate"
 else
   fail "Case 7: a drifted receipt was accepted — the matcher is not coupled to the producer"
+fi
+
+# --- Case 8: DOWNGRADE — a bead still HOLDING `refined` that no longer qualifies -------
+# The 2026-08-31 measured failure: pre-floor stamps survived every later pass because a
+# refusal only declined to ADD the label — it never REMOVED the stale one. "Restamped on
+# sight, never grandfathered" must be bidirectional: refusal + currently holds = strip.
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-legacy-stale 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-legacy-stale)" -eq 0 ] \
+   && [ "$(stripped_count bd-legacy-stale)" -eq 1 ] \
+   && [ "$(unrefined_count bd-legacy-stale)" -eq 1 ] \
+   && echo "$OUT" | grep -qi "DOWNGRADED"; then
+  pass "Case 8: a stale refined stamp is STRIPPED (refined removed, unrefined added) on refusal"
+else
+  fail "Case 8: expected refusal + downgrade, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 9: an UNUSABLE gate mutates NOTHING — never strip on cannot-check -----------
+# (the executed wrapper collapses element4's rc 2 to exit 1; the assertion that matters
+# is the LABEL LOG, not the rc class)
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-absent-from-board 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ -z "$(grep -E 'label (add|remove) bd-absent-from-board' "$BR_LOG")" ]; then
+  pass "Case 9: a cannot-check refusal writes no label change — stripping only on a content verdict"
+else
+  fail "Case 9: expected non-zero rc with zero label ops, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 10: a family bead HOLDING refined with no receipt is also downgraded ---------
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-ac-stale-receipt 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stripped_count bd-ac-stale-receipt)" -eq 1 ] \
+   && [ "$(unrefined_count bd-ac-stale-receipt)" -eq 1 ]; then
+  pass "Case 10: a pre-receipt family stamp is downgraded too (never grandfathered applies to the receipt gate)"
+else
+  fail "Case 10: expected refusal + downgrade, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 11: RE-STAMP is idempotent — a conforming bead already holding refined -------
+# --- stays stamped (label add once) and is never stripped ------------------------------
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-external-already 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-already)" -eq 1 ] \
+   && [ "$(stripped_count bd-external-already)" -eq 0 ]; then
+  pass "Case 11: a conforming bead already holding refined re-stamps cleanly, never stripped"
+else
+  fail "Case 11: expected rc 0, one stamp, zero strips, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 echo

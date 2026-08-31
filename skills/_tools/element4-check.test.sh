@@ -127,8 +127,10 @@ EOF
 chmod +x "$MOCK/br"
 
 RED_OK='## Declared RED\nTest `x` must FAIL before the fix; assert exit 1.\n'
-jq -n --arg red "$(printf "$RED_OK")" '[
+RED_PROBED='## Declared RED\nTest `x` must FAIL before the fix; assert exit 1.\n\n## Acceptance Criteria\n- The fix lands.\n  Probe: `grep -q "the fix" src/x.ts` — tier: none\n'
+jq -n --arg red "$(printf "$RED_OK")" --arg redp "$(printf "$RED_PROBED")" '[
   {id:"bd-good", issue_type:"bug", description:$red},
+  {id:"bd-good-probed", issue_type:"bug", description:$redp},
   {id:"bd-bad",  issue_type:"bug", description:"## Anchors\nnone\n"}
 ]' >"$FIXTURE_BEADS"
 
@@ -142,15 +144,26 @@ else
   fail "Case 7: expected refusal with no label write, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
-# --- Case 8: stamp_refined STAMPS a bead that satisfies element 4 ------------
+# --- Case 8: a Declared RED WITHOUT a probe is refused — the 2026-08-29 floor --------
+# (updated from "full stamp": since ac53c1c a refined bead must be probe-bearing, and a
+# prose Declared RED alone is exactly the legacy dialect that stamped zero-probe beads)
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" REFINE_PATH=refine-full bash "$STAMP" bd-good 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && grep -q 'label add bd-good refined' "$BR_LOG" \
-   && grep -q 'label remove bd-good unrefined' "$BR_LOG" \
-   && grep -q 'label add bd-good refine-full' "$BR_LOG"; then
-  pass "Case 8: stamp_refined STAMPS bd-good (remove unrefined + add refined + path label)"
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -qi "probe" \
+   && ! grep -q 'label add bd-good refined' "$BR_LOG"; then
+  pass "Case 8: a Declared RED with no Probe: line is REFUSED (probe floor) — no label written"
 else
-  fail "Case 8: expected a full stamp, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
+  fail "Case 8: expected probe-floor refusal with no label write, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 8b: a probed Declared-RED bead stamps (element 4 via legacy shape + floor) --
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" REFINE_PATH=refine-full bash "$STAMP" bd-good-probed 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && grep -q 'label add bd-good-probed refined' "$BR_LOG" \
+   && grep -q 'label add bd-good-probed refine-full' "$BR_LOG"; then
+  pass "Case 8b: a probed Declared-RED bead STAMPS (remove unrefined + add refined + path label)"
+else
+  fail "Case 8b: expected a full stamp, got $RC. Output: $OUT / log: $(cat "$BR_LOG")"
 fi
 
 # ============================================================================
