@@ -30,14 +30,16 @@
 #   ./harness-sync.sh <app-dir>           # one app target
 #   ./harness-sync.sh --all               # --root + every app in ac-deploy-targets.list
 #   Options: -n/--dry-run · --check (dry-run; exit 1 if anything would change) · --no-prune
+#            --verify-antigravity (sensor: did Antigravity actually LOAD what we wrote?)
 
 set -euo pipefail
 
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --verify-antigravity) VERIFY_AGY=1; shift ;;
     --root)      DO_ROOT=1; shift ;;
     --all)       DO_ALL=1; DO_ROOT=1; shift ;;
     -n|--dry-run) DRY=1; shift ;;
@@ -47,7 +49,7 @@ while [ $# -gt 0 ]; do
     *)           TARGETS+=("$1"); shift ;;
   esac
 done
-[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || { echo "error: need --root, --all, or a target dir" >&2; exit 2; }
+[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || { echo "error: need --root, --all, a target dir, or --verify-antigravity" >&2; exit 2; }
 
 CHANGES=0
 note_change() { CHANGES=$((CHANGES + 1)); }
@@ -85,6 +87,10 @@ DROID_FARM_SKILLS="$REPOS_ROOT/$(cfg '.harnesses.droid.tracked_farm_skills')"
 DROID_FARM_DROIDS="$REPOS_ROOT/$(cfg '.harnesses.droid.tracked_farm_droids')"
 PI_HOME_ENV="$(cfg '.harnesses.pi.home_env')"
 PI_HOME="${!PI_HOME_ENV:-$(expand_tilde "$(cfg '.harnesses.pi.home_default')")}"
+EN_AGY="$(cfg '.harnesses.antigravity.enabled // false')"
+AGY_HOME="$(expand_tilde "$(cfg '.harnesses.antigravity.home // "~/.gemini/antigravity"')")"
+AGY_CONFIG_DIR="$(expand_tilde "$(cfg '.harnesses.antigravity.config_dir // "~/.gemini/config"')")"
+AGY_SKILLS_DIR="$(cfg '.harnesses.antigravity.skills_mirror_dir // ".agents/skills"')"
 
 # --- helpers --------------------------------------------------------------------
 relpath() { python3 -c 'import os,sys; print(os.path.relpath(sys.argv[2], sys.argv[1]))' "$1" "$2"; }
@@ -352,6 +358,7 @@ render_hooks_root() {
   fi
   render_hooks_opencode
   render_hooks_grok
+  render_hooks_antigravity
   render_context_grok
   render_context_opencode
   render_context_claude_global
@@ -417,11 +424,12 @@ render_hooks_grok() {
 # canonical payloads the other harnesses receive via hook stdout injection, plus
 # the memory-digest static floor (minimal pointer index; detail is pulled via the
 # qmd MCP server). Digest failure degrades to a warning line, never breaks sync.
-render_context_grok() {
-  [ "$EN_GROK" = "true" ] || return 0
-  [ -d "$GROK_HOME" ] || return 0
-  echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
-  local ss dr shim digest content
+# build_machine_global_rules <why-static> — the shared static-context payload for any
+# harness with no working context-injection hook (grok discards hook stdout; antigravity
+# has no session-start/pre-prompt event at all). Same canon the hook-fed harnesses get.
+# Sets BMGR_CONTENT. Digest failure degrades to a warning line, never breaks sync.
+build_machine_global_rules() {
+  local why="$1" ss dr shim digest
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
   dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
   shim="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
@@ -429,13 +437,11 @@ render_context_grok() {
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
-  content="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/machine-global-shim.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
+  BMGR_CONTENT="<!-- $STAMP — do not hand-edit (sources: hooks/session-start.md, hooks/machine-global-shim.md, hooks/delegation-reminder.manual-recall.md, hooks/build_memory_digest.py) -->
 
 # Machine-global rules (Repos fleet)
 
-Other harnesses receive this context via per-prompt hook injection; Grok discards
-hook stdout, so this file carries the same canon statically. It applies when
-working anywhere under ~/Repos.
+$why
 
 $ss
 
@@ -456,7 +462,120 @@ substrate: pull full detail with the qmd MCP tools (or \`qmd search\`/\`qmd quer
 before acting on anything listed here.
 
 $digest"
-  write_generated "$GROK_HOME/AGENTS.md" "$content"
+}
+
+render_context_grok() {
+  [ "$EN_GROK" = "true" ] || return 0
+  [ -d "$GROK_HOME" ] || return 0
+  echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
+  build_machine_global_rules "Other harnesses receive this context via per-prompt hook injection; Grok discards
+hook stdout, so this file carries the same canon statically. It applies when
+working anywhere under ~/Repos."
+  write_generated "$GROK_HOME/AGENTS.md" "$BMGR_CONTENT"
+}
+
+# --- antigravity (Google Antigravity) -----------------------------------------------
+# Customization model reverse-engineered from the app's language_server binary — see the
+# long _doc in harnesses.json. Two roots: WORKSPACE '.agents' (already carries the skills
+# mirror for codex+pi, so skills are free) and GLOBAL <home> (= ~/.gemini/antigravity).
+
+# render_context_antigravity — global rules. Antigravity reads AGENTS.md in each
+# customization root; no session-start or pre-prompt hook event exists, so context has
+# to travel statically, exactly as it does for grok.
+render_context_antigravity() {
+  [ "$EN_AGY" = "true" ] || return 0
+  [ -d "$AGY_HOME" ] || { echo "  WARN: antigravity home $AGY_HOME missing — skipping (antigravity not installed?)"; return 0; }
+  echo "  -- antigravity global rules ($AGY_HOME/AGENTS.md, generated)"
+  build_machine_global_rules "Antigravity exposes no session-start or pre-prompt hook event, so
+this file carries statically the canon that hook-fed harnesses receive per prompt.
+It applies when working anywhere under ~/Repos."
+  write_generated "$AGY_HOME/AGENTS.md" "$BMGR_CONTENT"
+}
+
+# ensure_agy_workspace_rules <target-base> — the WORKSPACE customization root is
+# '.agents', so Antigravity looks for '.agents/AGENTS.md', not the repo-root AGENTS.md
+# that Codex/Droid/Pi read. Symlink rather than copy: one canon, zero drift.
+ensure_agy_workspace_rules() {
+  [ "$EN_AGY" = "true" ] || return 0
+  local base="$1"
+  [ -f "$base/AGENTS.md" ] || { echo "  NOTE: $base/AGENTS.md absent — antigravity workspace rules skipped"; return 0; }
+  link "$base/AGENTS.md" "$base/$(dirname "$AGY_SKILLS_DIR")/AGENTS.md" "$base"
+}
+
+# render_hooks_antigravity — <home>/hooks.json carries NAMED handlers only
+# (jsonhook.JSONHookSpec = {command, matcher, if, prompts}; matcher is a regex over the
+# tool name; ~ expands via jsonhook.expandHome).
+#
+# UNVERIFIED BY CONSTRUCTION: writing this file does NOT wire the hooks up. Binding a
+# named handler to an event happens in the agent/customization config
+# (pre_tool_hook_names / post_tool_hook_names / stop_hook_names / *_invocation_hook_names)
+# whose on-disk format we have not located, and enable_json_hooks may gate the surface
+# entirely. So this renders the handlers and says plainly that they are inert until
+# `--verify-antigravity` sees Antigravity's own load line. A claim without a loop is
+# decoration — this one is labelled, not asserted.
+render_hooks_antigravity() {
+  [ "$EN_AGY" = "true" ] || return 0
+  [ -f "$HOOKS_MANIFEST" ] || return 0
+  [ -d "$AGY_HOME" ] || return 0
+  echo "  -- antigravity hooks ($AGY_HOME/hooks.json, named handlers — UNVERIFIED, see --verify-antigravity)"
+  local obj content
+  # machine scope, same as grok; reshape claude-style event arrays into named handlers
+  obj="$(build_hooks_obj antigravity machine)"
+  content="$(printf '%s' "$obj" | jq '
+    def slug: gsub("[^A-Za-z0-9]+"; "-") | ascii_downcase | sub("^-";"") | sub("-$";"");
+    { hooks: (
+        reduce (to_entries[] | .key as $ev | .value[] | {ev:$ev, m:(.matcher // ""), h:.hooks[]}) as $e ({};
+          . + { (($e.ev + "-" + (($e.h.command | split("/") | last | split(" ") | last) // "hook")) | slug):
+                ( {command: $e.h.command}
+                  + (if $e.m != "" then {matcher: $e.m} else {} end) ) }) ) }')"
+  write_file_if_changed "$AGY_HOME/hooks.json" "$content"
+}
+
+# gen_antigravity_agents — Antigravity HAS a subagent surface (custom_agent_spec /
+# agent_script, plus the built-in `owl` orchestrator), but no on-disk format for it was
+# located in the binary. Skipped LOUDLY, never silently (the Pi precedent).
+gen_antigravity_agents() {
+  [ "$EN_AGY" = "true" ] || return 0
+  [ -d "$AGY_HOME" ] || return 0
+  echo "  NOTE: antigravity subagents skipped — custom_agent_spec/agent_script exist but no on-disk format located (see harnesses.json _doc)"
+}
+
+# verify_antigravity — the FEEDBACK LOOP for everything above. Antigravity logs its own
+# "Loaded hooks.json from <path>: N named hooks, M total handlers" line, so that log is
+# the sensor: it reports what the app ACTUALLY read, not what we wrote. Also checks the
+# CLI shim on PATH, which the Jun-2026 app update left dangling.
+verify_antigravity() {
+  local rc=0 logdir="$HOME/Library/Application Support/Antigravity/logs" hit
+  echo "== antigravity verification"
+  echo "-- what we wrote"
+  for f in "$AGY_HOME/AGENTS.md" "$AGY_HOME/hooks.json" "$AGY_CONFIG_DIR/mcp_config.json"; do
+    if [ -f "$f" ]; then echo "  present  ${f/#$HOME/~}"; else echo "  MISSING  ${f/#$HOME/~}"; rc=1; fi
+  done
+  if [ -d "$AGY_HOME/skills" ]; then
+    echo "  present  ~/.gemini/antigravity/skills ($(/usr/bin/find "$AGY_HOME/skills" -maxdepth 1 -type l | wc -l | tr -d ' ') skills)"
+  else echo "  MISSING  ~/.gemini/antigravity/skills"; rc=1; fi
+
+  echo "-- what antigravity actually loaded (its own logs)"
+  if [ -d "$logdir" ]; then
+    # `|| true`: no match is the normal not-yet-launched case, not a script failure
+    hit="$(grep -rhoE 'Loaded hooks\.json from [^:]+: [0-9]+ named hooks, [0-9]+ total handlers' "$logdir" 2>/dev/null | tail -3 || true)"
+    if [ -n "$hit" ]; then printf '  %s\n' "$hit"
+    else
+      echo "  NO LOAD LINE FOUND — hooks.json has not been read by Antigravity."
+      echo "  This is expected until Antigravity is launched at least once after a sync."
+      echo "  Launch Antigravity, then re-run: harness-sync.sh --verify-antigravity"
+      rc=1
+    fi
+  else
+    echo "  no log dir at ${logdir/#$HOME/~} — launch Antigravity once, then re-run"; rc=1
+  fi
+
+  echo "-- CLI shim on PATH"
+  local shim="$HOME/.antigravity/antigravity/bin/antigravity"
+  if [ -e "$shim" ]; then echo "  OK       $shim resolves"
+  elif [ -L "$shim" ]; then echo "  DANGLING $shim -> $(readlink "$shim")"; rc=1
+  else echo "  absent   $shim"; rc=1; fi
+  return $rc
 }
 
 # render_hooks_opencode — opencode has NO shell-command hook dialect; its only
@@ -741,6 +860,17 @@ render_mcp_root() {
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi MCP skipped by design (no MCP support in harness)"
   fi
+  if [ "$EN_AGY" = "true" ]; then
+    # <home>/mcp_config.json is Antigravity's OWN symlink into config_dir — render the
+    # canon at the symlink's target and leave the link itself alone.
+    if [ -d "$AGY_CONFIG_DIR" ]; then
+      echo "  -- antigravity MCP ($AGY_CONFIG_DIR/mcp_config.json, from .mcp.json)"
+      content="$(jq '{mcpServers: .mcpServers}' "$src")"
+      write_file_if_changed "$AGY_CONFIG_DIR/mcp_config.json" "$content"
+    else
+      echo "  WARN: antigravity config dir $AGY_CONFIG_DIR missing — MCP skipped"
+    fi
+  fi
 }
 
 # ensure_home_link <link> <target-abs> — machine-local absolute symlink (setup.sh pattern)
@@ -814,10 +944,11 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     render_hooks_app "$base"
   fi
 
-  if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ]; then
-    echo "  -- codex+pi skills ($CODEX_SKILLS_DIR)"
+  if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ] || [ "$EN_AGY" = "true" ]; then
+    echo "  -- codex+pi+antigravity skills ($CODEX_SKILLS_DIR)"
     mirror_skills "$base/.claude/skills" "$base/$CODEX_SKILLS_DIR" "$base"
   fi
+  ensure_agy_workspace_rules "$base"
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex agents ($CODEX_AGENTS_DIR, generated)"
     gen_codex_agents "$base/.claude/agents" "$base/$CODEX_AGENTS_DIR"
@@ -833,10 +964,11 @@ sync_root() {
   local base="$REPOS_ROOT"
   echo "== root: $base"
 
-  if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ]; then
-    echo "  -- codex+pi skills (.agents/skills mirror of .claude/skills)"
+  if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ] || [ "$EN_AGY" = "true" ]; then
+    echo "  -- codex+pi+antigravity skills (.agents/skills mirror of .claude/skills)"
     mirror_skills "$base/.claude/skills" "$base/$CODEX_SKILLS_DIR" "$base"
   fi
+  ensure_agy_workspace_rules "$base"
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex agents (.codex/agents, generated)"
     gen_codex_agents "$base/.claude/agents" "$base/$CODEX_AGENTS_DIR"
@@ -879,11 +1011,26 @@ sync_root() {
     fi
   fi
 
+  if [ "$EN_AGY" = "true" ]; then
+    if [ -d "$AGY_HOME" ]; then
+      echo "  -- antigravity global skills ($AGY_HOME/skills, auto-discovered by the global root)"
+      mirror_skills "$base/.claude/skills" "$AGY_HOME/skills" "$base"
+      gen_antigravity_agents
+    else
+      echo "  WARN: antigravity home $AGY_HOME missing — skipping (antigravity not installed?)"
+    fi
+    render_context_antigravity
+  fi
+
   render_hooks_root
   render_mcp_root
 }
 
 # --- run ---------------------------------------------------------------------------
+if [ "$VERIFY_AGY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ]; then
+  verify_antigravity; exit $?
+fi
+
 [ "$DO_ROOT" = 1 ] && sync_root
 
 if [ "$DO_ALL" = 1 ]; then
