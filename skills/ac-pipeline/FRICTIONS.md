@@ -268,7 +268,13 @@ entries: 12
 ## FRICTION: refined beads reach the worker pool with zero Probe lines and burn claim cycles
 - domain: ac2-implement
 - severity: medium
-- control: untreated
+- control: treated — stamp-refined.sh downgrade leg + bead-artifact.py restamp sweep (9c9d5c5, 2026-08-31):
+  a stale `refined` stamp is now STRIPPED on content refusal, and every polish writeback
+  re-gates the epic's implementable beads through the sole writer. Root cause was deeper than
+  the proposed_fix: the beads were stamped under the legacy dialect (f9fc04e9, 08-28) the day
+  BEFORE the probe floor existed (ac53c1c, 08-29), and re-polish passed them via element4's
+  prose-Declared-RED shape while never re-stamping. One-time sweep 2026-08-31: bd-f4ljn,
+  bd-n6f38, bd-12ef4 (BCA) and ac-gcj.11 (this board) downgraded to `unrefined`.
 - proposed_fix: make ac2-beadify/ac-bead-refine refuse to stamp `refined` on a bead whose
   description lacks at least one `Probe: \`...\`` line (the schema flight-check enforces at
   claim), or make the flight-check NOT-GATED reply carry a machine-routable class so the
