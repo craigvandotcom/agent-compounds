@@ -82,10 +82,21 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
    the time this step runs `HEAD` has moved past the commit that was proven and reviewed.
 3. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
    an alias move over its staged build, never `vercel deploy --prod`. Mechanics: `references/web-promote.md`.
-4. **Native and mobile — CI-built artifacts ONLY.** The binary that ships is the one CI produced
-   from the proven SHA. A locally-built artifact carries a local toolchain, local env and an
-   unproven tree; it is a different artifact from the one the gate measured, and shipping it
-   voids every leg above. Hand the upload to `ac-distribute` (check-only on the bump).
+4. **Native and mobile — the binary must be PROVABLY the proven SHA.** The property that
+   matters is PROVENANCE, not which machine compiled it: built from the **proven SHA**, from a
+   **clean tree**, with the **required check-runs green on that SHA**. CI is the DEFAULT because
+   it establishes all three structurally. A local build is a **declared exception**, legal only
+   when it passes the SAME gate both lanes run (`scripts/ci/testflight-gate-check.sh`), whose
+   bypass must be loud, named and logged — never a silent default.
+   Hand the upload to `ac-distribute` (check-only on the bump).
+
+   > This step used to read "CI-built artifacts ONLY". That was unenforceable in a consuming app
+   > whose CI signing lane is intermittently broken, so in practice it was ignored — and an
+   > ignored rule is worse than no rule. Worse, it pushed every risky ship onto the local lane,
+   > which at the time had NO gate at all (body-compass, measured 2026-08-31: `ios-release.yml`
+   > gated on check-runs, `ship-testflight.sh` had zero). The absolute wording protected nothing
+   > and hid that. State the property you actually need, make both lanes able to satisfy it, and
+   > the contradiction disappears.
 5. **Verify identity, not version strings.** Confirm what production actually serves is the
    proven SHA. Two deployments can mint the same version.
 
