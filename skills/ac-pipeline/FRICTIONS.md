@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-08-30
-entries: 10
+entries: 12
 ---
 
 # ac-pipeline — friction log
@@ -234,3 +234,47 @@ entries: 10
   caught only by the next fresh reader, which is the bound earning its keep rather than
   ceremony. ac2-beadify checks that a probe EXISTS and is RUNNABLE; nothing checks that it is
   RED at authoring, which is the cheap mechanical half of what five reader rounds paid for.
+
+## FRICTION: derive ROOT from the git toplevel, never from BASH_SOURCE level-counting
+- domain: ac2-implement
+- severity: high
+- control: untreated
+- proposed_fix: set ROOT via `git rev-parse --show-toplevel` from the invoking cwd; fall back to
+  `pwd -P` only when git fails. Apply to close-gate.sh and flight-check.sh alike.
+- narrative: do not count `../..` levels off BASH_SOURCE. A skill reached through a symlink
+  (`<repo>/.claude/skills/<name> -> <registry>/skills/<name>`) resolves `dirname/../../..` to a
+  directory INSIDE the repo's `.claude`, not the repo root. Every file-reading probe then fails
+  on the wrong cwd, and the gate reports the worker's diff as the cause. Invoke with an explicit
+  `--root` until the script is fixed. coordinator.sh shares the class AND hardcodes
+  `$ROOT/skills/ac-implement/scripts/swarm-commit.sh` (line ~116) — a registry-relative path
+  that does not exist in app repos where the registry is symlinked under `.claude/skills/` —
+  so the ledger flush succeeds and the commit leg then refuses LEDGER-WRITE. Fix both together:
+  derive ROOT from `git rev-parse --show-toplevel` and resolve sibling scripts off the script's
+  own BASH_SOURCE directory, never off ROOT.
+
+## FRICTION: flight-check CONSUMES leg reads a CLOSED blocker as "not on the board"
+- domain: ac2-implement
+- severity: medium
+- control: untreated
+- proposed_fix: the CONSUMES resolution should treat `status=closed` as the SATISFIED state
+  (a consumed premise is fulfilled by its blocker closing, not voided by it); re-derive the
+  check off `br show <id>` exit status, not board membership.
+- narrative: bd-ufg84 `## Consumes` names bd-pt46x; bd-pt46x closed the same session
+  (verified `br show bd-pt46x` → status closed, present in issues.jsonl), yet flight-check
+  emitted `PREMISE-FAILED: CONSUMES — blocker 'bd-pt46x' is not on the board` and the worker
+  lost the bead to the routing. A satisfied consume is indistinguishable from a dangling one,
+  so the gate converts the pipeline's own success (a blocker landing) into a refusal.
+
+## FRICTION: refined beads reach the worker pool with zero Probe lines and burn claim cycles
+- domain: ac2-implement
+- severity: medium
+- control: untreated
+- proposed_fix: make ac2-beadify/ac-bead-refine refuse to stamp `refined` on a bead whose
+  description lacks at least one `Probe: \`...\`` line (the schema flight-check enforces at
+  claim), or make the flight-check NOT-GATED reply carry a machine-routable class so the
+  coordinator can send those beads back to refine automatically.
+- narrative: measured in the 2026-08-30 run — three of the first four ready refined beads
+  (bd-f4ljn, bd-n6f38, bd-12ef4) named no `Probe:` lines at all; each had to be claimed,
+  flight-checked (exit 2 NOT-GATED), commented, unclaimed, and burned before the worker could
+  reach an actionable bead. The refusal is correct (a bead with no probe cannot earn a RED)
+  but the failure surfaces one stage too late and three stages too expensively.
