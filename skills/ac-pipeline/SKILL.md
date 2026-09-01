@@ -39,13 +39,10 @@ by the ceremonies that need them and carried outside the core's bound. The famil
 7. **Plan hard, then retire the plan — beads and this file are its only survivors.** (L3) Prevents: a
    second doctrine home drifting out of sync with the first.
 8. **Every control names the failure it prevents AND its layer, or it is deleted.** (L3) L1 controls carry what
-   retires them. Prevents: doctrine growing with no stopping rule (the old ac-pipeline doctrine: 413 lines
-   + ~2.5k of canon — retired at the 2026-08-30 merge).
+   retires them. Prevents: doctrine growing with no stopping rule.
 9. **A `refined` stamp is only as valid as the content it was stamped on; a content refusal strips it.** (L2)
-   `stamp-refined.sh` is the sole writer AND the sole stripper: a bead whose ACs no longer clear the probe
-   floor is downgraded to `unrefined` mechanically, never left looking ready. Prevents: beads stamped under
-   a prior dialect reaching the worker pool with zero runnable probes and burning claim cycles (measured
-   2026-08-30: three of the first four ready beads; swept 2026-08-31 across two boards).
+   `stamp-refined.sh` is the sole writer AND the sole stripper: ACs that no longer clear the probe floor are
+   downgraded to `unrefined` mechanically. Prevents: stale-stamped beads reaching the pool with zero runnable probes.
 
 Convention with no mechanical enforcer, claimed as nothing more: every pipeline commit names its failure.
 
@@ -78,9 +75,8 @@ Convention with no mechanical enforcer, claimed as nothing more: every pipeline 
   default (width 3, uncapped, until the qualifying beads are exhausted); width and cap are the
   human's call, not a telemetry threshold. The invoking session is always the coordinator and
   never a worker, at every width — one procedure, no mode branch. **The ruling OVERRIDES this
-  Calibration's original trigger, and the trigger was not met:** the measured runs were dependency-bound (a serial chain that idled a second worker),
-  never worker-count-bound. Recorded as an override rather than quietly deleted, so the next reader sees a
-  decision and not a measurement. The coordinator owns the batch boundary, the CI and review
+  Calibration's original trigger, which was not met** (the measured runs were dependency-bound,
+  never worker-count-bound). The coordinator owns the batch boundary, the CI and review
   trigger, the ledger and the telemetry rollup; a worker owns nothing but the bead in its hand.
   The throughput layer — spawn/replace, liveness, Agent Mail
   reservations, roster — MUST carry: register + introduce at spawn; reserve before touching
@@ -105,9 +101,7 @@ Convention with no mechanical enforcer, claimed as nothing more: every pipeline 
 `FRICTIONS.md` beside this file is the pipeline family's friction ledger — process observations
 exhaust there, never to the board (Invariant 6). lint Check 22
 (`scripts/ac-ledger-integrity.sh`) enforces the control <-> friction contract both directions.
-The legacy ac-pipeline friction log retired with the old architecture lane at the 2026-08-30
-merge; git history preserves it, and its cross-cutting entries' primaries live in
-`_archive/skills/ac-loop/FRICTIONS.md`.
+Cross-cutting entries' primaries live in `_archive/skills/ac-loop/FRICTIONS.md`.
 
 ## Operating contracts and gates (owner-hosted here)
 
@@ -123,7 +117,8 @@ tiers) · `review-consensus` (consensus + conductor triage) · `ceremony-batchin
 (pool RMW + drain) · `disposition` (findings three-way rule + save-for-later) ·
 `degraded-mode` (capability-starved runs) · `shell-guardrails` (dcg-safe write/delete
 shapes) · `anti-patterns` (named failure modes) · `design-refs` (target-visual capture +
-AC-path gate) · `assurance-declarations` (PROBE/SCHEDULE/MODE/ON-FAILURE contract).
+AC-path gate) · `assurance-declarations` (PROBE/SCHEDULE/MODE/ON-FAILURE contract) ·
+`schedule` (cross-cadence table — the single home for when each headless job runs).
 
 `scripts/` hosts the deterministic gates, each with its own test file:
 `beads-closed-gate.sh` · `board-truth.sh` · `validate-qa-run.sh` · `close-evidence-check.sh` ·

@@ -35,8 +35,8 @@ check() {
 echo "--- Check 1: dead patterns ---"
 
 DEAD_PATTERNS=(
-  "run /ac-plan first"
-  "Run /ac-plan "
+  # `run /ac-plan first` / `Run /ac-plan ` were dead while the planner was ac-plan-init. After
+  # the ac2->ac rename, ac-plan IS the planner and those strings are correct. Retired 2026-09-02.
   "persona-catalog"
   "craigs-setup"
   "browser-qa-agent"
@@ -78,19 +78,22 @@ ALL_AC_GLOB_PREFIXES=""
 for skill_dir in "$AC_ROOT/skills"/*/; do
   for f in "$skill_dir/SKILL.md" "$skill_dir/references/"*.md "$skill_dir/workflows/"*.md; do
     [ -f "$f" ] || continue
-    # Strip `_archive/skills/<name>` PATH segments before extracting invocation tokens.
-    # Without this, a correctly-written pointer at an archived skill — which the Phase-4
-    # cutover slate's section 5 disposition REQUIRES — reads as an invocation of a skill
-    # that does not exist. That false positive was the standing `/ac-loop` failure in the
-    # pre-cutover baseline; archiving eleven skills would have multiplied it.
-    tokens=$(sed 's#_archive/skills/ac-[a-z][a-z-]*[a-z]##g' "$f" 2>/dev/null \
-             | grep -oE '/ac-[a-z][a-z-]*[a-z]' 2>/dev/null || true)
+    # An INVOCATION is `/ac-<name>` at line start or after a non-path character (space,
+    # quote, backtick, bracket). Preceded by a letter, digit, dot or slash it is a PATH
+    # SEGMENT — `/tmp/ac-claim.txt`, `scripts/ac-budget-check.sh`, `_archive/skills/ac-loop/`
+    # — and naming a file is not invoking a skill. The earlier fix stripped one known prefix;
+    # that enumerated a false positive instead of stating the rule, and six more appeared.
+    # ...and it is TERMINAL: never followed by `/` or `:`. `/ac-example-bead:start` is a sed
+    # address, `<git-common-dir>/ac-flight/` is a directory. Match one trailing char and strip it.
+    tokens=$(grep -oE '(^|[^A-Za-z0-9_./-])/ac-[a-z][a-z-]*[a-z]([^A-Za-z0-9_/:-]|$)' "$f" 2>/dev/null \
+             | sed -E 's|^[^/]||; s|[^a-z]$||' || true)
     if [ -n "$tokens" ]; then
       ALL_AC_TOKENS="${ALL_AC_TOKENS}
 ${tokens}"
     fi
     # collect tokens that appear as glob prefixes: /ac-<name>-*
-    globs=$(grep -oE '/ac-[a-z][a-z-]*[a-z]-\*' "$f" 2>/dev/null | sed 's/-\*$//' || true)
+    globs=$(grep -oE '(^|[^A-Za-z0-9_./-])/ac-[a-z][a-z-]*[a-z]-\*' "$f" 2>/dev/null \
+             | sed -E 's|^[^/]||; s/-\*$//' || true)
     if [ -n "$globs" ]; then
       ALL_AC_GLOB_PREFIXES="${ALL_AC_GLOB_PREFIXES}
 ${globs}"
@@ -523,10 +526,12 @@ fi
 # ---------------------------------------------------------------------------
 echo "--- Check 11: pipeline conformance (G-series) ---"
 
-# G1: cross-cadence schedule table present in ac-pipeline
+# G1: cross-cadence schedule table present. It lived in ac-pipeline/SKILL.md until the
+# ac2->ac rename overwrote that file with the constitution; rehomed 2026-09-02 as the
+# owner-hosted operating contract references/schedule.md, which is where this now looks.
 check
-if ! grep -qE "23:00|Cross-cadence" "$AC_ROOT/skills/ac-pipeline/SKILL.md" 2>/dev/null; then
-  fail "G1: skills/ac-pipeline/SKILL.md missing the cross-cadence schedule table"
+if ! grep -qE "23:00|Cross-cadence" "$AC_ROOT/skills/ac-pipeline/references/schedule.md" 2>/dev/null; then
+  fail "G1: skills/ac-pipeline/references/schedule.md missing the cross-cadence schedule table"
 fi
 
 # G2: reverse shape-check present in ac-bead-capture (routing-to-backlog language)

@@ -46,8 +46,8 @@ STATE=<run-scoped dir>   MAX=25 (0=off)
 for ROUND in 1..:
   PRE = sha256(ARTIFACT)                      # observed BEFORE the reader runs
   spawn a FRESH, STATELESS reader for this round:
-      input  = ARTIFACT + CHECKLIST
-      output = findings, severity-gated by the CHECKLIST
+      prompt = references/reader-prompt.md, VERBATIM, with <N> <ARTIFACT> <CHECKLIST> filled
+      output = EDITS (severity-gated) + a mandatory DECLINED list
       it carries NO memory of any earlier round
   apply this round's findings to ARTIFACT
   VALIDATE — the mode's validity gate. Red means the round is NOT recorded: revert or fix.
@@ -66,9 +66,9 @@ for ROUND in 1..:
 **FRESH CONTEXT EVERY ROUND.** The reader is stateless and spawned per round. A reader that
 has already read the artifact is not a second opinion.
 
-**SEVERITY GATE.** The CHECKLIST names its three classes and they are the only reportable
-findings. Not style, not preference, not wording. A round that reports style is a round that
-did not read for defects.
+**SEVERITY GATE + mandatory DECLINED list.** The CHECKLIST names the three reportable classes —
+not style, preference or wording. Everything seen and NOT changed goes in a DECLINED list, so a
+clean pass is distinguishable from a reader that looked at nothing. **Zero edits is success.**
 
 **FIXPOINT = ZERO CHANGES AT ROUND >= 2.** A clean round 1 is equally consistent with a clean
 artifact and a reader that read nothing, so it never stamps.

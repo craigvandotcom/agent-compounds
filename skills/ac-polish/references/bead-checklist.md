@@ -12,7 +12,9 @@ bead taxonomy, status/priority, close reasons and labels are `beads-standards`
 **SEVERITY GATE for a bead set — correctness · contradiction · unimplementability.** These are
 the only reportable classes. Style, preference and wording are not findings.
 
-Every question is answered YES **with the evidence that settles it**, or it is a finding.
+A question you cannot answer YES with evidence is a **DECLINED** item, not a finding — unless
+the gap is itself a correctness, contradiction or unimplementability defect. Declining honestly
+is the reader doing its job; reaching for a finding to justify the round is not.
 "Probably", "looks fine" and "the author presumably checked" are findings.
 
 ## 1. sizing

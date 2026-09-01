@@ -15,21 +15,19 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
-conductor is **`ac2-implement`**; the design lives in **`ac2-pipeline`**. Three operational
+conductor is **`ac-implement`**; the design lives in **`ac-pipeline`**. Three operational
 loops feed one execution path (see `ac-pipeline` § *The three operational loops*):
-the **dev loop** (human intent → plans → waves → `ac2-implement` ships), the **triage loop**
+the **dev loop** (human intent → plans → waves → `ac-implement` ships), the **triage loop**
 (`ac-triage`, scheduled — production signal → defect beads), and the **audit loop**
 (`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
 | Skill | What it does |
 |-------|-------------|
 | **ac-pipeline** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
-| **ac2-pipeline** | The ac2 lean-pipeline constitution (under construction) — Invariants (true at any model capability) + Calibrations (capability/tooling facts, each naming the telemetry that retires it); every control L-tagged L1/L2/L3, hard-bounded at 80 lines with no `references/` or `scripts/` dir and net-zero tuning |
-| **ac2-beadify** | Compile an approved ac2 plan into lean beads (under construction) — the four-section ac2 schema, a Consumes↔edge-wired dependency graph, and plan retirement; refuses any bead whose ACs name no executable probe (**no probe, no bead**) |
-| **ac2-polish** | One fixpoint engine, two checklists (under construction) — a stateless severity-gated reader per round, bounded at 5, stamped by `skills/_tools/polish-fixpoint.sh` only against a measured empty diff at round ≥ 2; plan mode and per-epic bead mode share one round procedure |
-| **ac2-plan** | Idea → ONE ac2 plan file (under construction) — problem, approach, artifact-named deliverables, assumptions with detection rules, risk + sequence, out-of-scope, and a success criterion the skill refuses unless it can come out false; explorers optional, chosen by size |
-| **ac2-implement** | Work the ac2 bead queue (under construction) — the self-contained worker prompt at N=1: explicit eligibility filter, `flight-check.sh` at claim, RED first, `swarm-commit.sh` at commit, `close-gate.sh` at close, batch boundary derived from the committed ledger; the coordinator stays a deferred Calibration |
-| **ac2-review** | Independent post-batch review for ac2 (under construction) — reviewers run a different model from the workers (the L2 core that survives tier convergence), read-only on the shared tree with a disposable-worktree carve-out for destructive sabotage probes, depth by risk; verdicts admit DEFER-with-reason, fixture-shape validity is a named dimension, every finding carries a catch-stage label and Lows stay in the report |
-| **ac2-publish** | The ac2 ship gate (under construction) — `ac-prove` obtains the proof and this gate asserts its REQUIRED JOBS ACTUALLY EXECUTED, refusing `NOT-GATED` on a job that was absent, skipped or cancelled; then version once, tag the returned proven SHA (never `HEAD`), promote-not-rebuild on web, CI-built artifacts only on native, hand off to `ac-distribute`; external escapes get a catch-stage label on arrival |
+| **ac-beadify** | Compile an approved plan into lean beads — the four-section schema (Intent / Acceptance Criteria / Delivers / Consumes), a Consumes↔edge-wired dependency graph, plan retirement; refuses any bead whose ACs name no executable probe (**no probe, no bead**) |
+| **ac-polish** | One fixpoint engine, three modes (plan · bead · code) — a stateless severity-gated reader per round, sent `references/reader-prompt.md` verbatim, reporting edits + a mandatory DECLINED list; stamped by `skills/_tools/polish-fixpoint.sh` only against a measured empty diff at round ≥ 2; runs until it converges |
+| **ac-plan** | Idea → ONE plan file — problem, approach, artifact-named deliverables, assumptions with detection rules, risk + sequence, out-of-scope, and a success criterion the skill refuses unless it can come out false |
+| **ac-implement** | Work an epic's bead queue as a SWARM (default width 3, uncapped, until the qualifying beads are exhausted) — the invoking session coordinates, spawned workers run `references/worker.md`: `flight-check.sh` at claim, RED first, `swarm-commit.sh` at commit, `close-gate.sh` at close; `coordinator.sh` owns the close-out (stale-ledger refusal, orphan sweep, one ledger commit) |
+| **ac-publish** | The ship gate — `ac-prove` obtains the proof and this gate asserts its REQUIRED JOBS ACTUALLY EXECUTED, refusing `NOT-GATED` on a job that was absent, skipped or cancelled; then version once, tag the proven SHA (never `HEAD`), promote-not-rebuild on web, CI-built artifacts only on native, hand off to `ac-distribute` |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy |
@@ -137,7 +135,7 @@ Portable agent definitions, symlinked into `.claude/agents/`.
 ./deploy.sh ../my-project --all --dry-run
 ```
 
-`deploy.sh` computes relative symlinks automatically and **refuses to overwrite a real file** already at the target — so it never clobbers a project's customized skill. Each skill lands as `.claude/skills/<name>/` and is invoked as `/<name>` (e.g. `/ac2-plan`, `/jef-prompts`).
+`deploy.sh` computes relative symlinks automatically and **refuses to overwrite a real file** already at the target — so it never clobbers a project's customized skill. Each skill lands as `.claude/skills/<name>/` and is invoked as `/<name>` (e.g. `/ac-plan`, `/jef-prompts`).
 
 Then create the project's context file:
 
