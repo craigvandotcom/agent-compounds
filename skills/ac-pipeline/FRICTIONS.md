@@ -265,22 +265,33 @@ entries: 12
   lost the bead to the routing. A satisfied consume is indistinguishable from a dangling one,
   so the gate converts the pipeline's own success (a blocker landing) into a refusal.
 
-## FRICTION: refined beads reach the worker pool with zero Probe lines and burn claim cycles
-- domain: ac2-implement
-- severity: medium
-- control: treated — stamp-refined.sh downgrade leg + bead-artifact.py restamp sweep (9c9d5c5, 2026-08-31):
-  a stale `refined` stamp is now STRIPPED on content refusal, and every polish writeback
-  re-gates the epic's implementable beads through the sole writer. Root cause was deeper than
-  the proposed_fix: the beads were stamped under the legacy dialect (f9fc04e9, 08-28) the day
-  BEFORE the probe floor existed (ac53c1c, 08-29), and re-polish passed them via element4's
-  prose-Declared-RED shape while never re-stamping. One-time sweep 2026-08-31: bd-f4ljn,
-  bd-n6f38, bd-12ef4 (BCA) and ac-gcj.11 (this board) downgraded to `unrefined`.
-- proposed_fix: make ac2-beadify/ac-bead-refine refuse to stamp `refined` on a bead whose
-  description lacks at least one `Probe: \`...\`` line (the schema flight-check enforces at
-  claim), or make the flight-check NOT-GATED reply carry a machine-routable class so the
-  coordinator can send those beads back to refine automatically.
-- narrative: measured in the 2026-08-30 run — three of the first four ready refined beads
-  (bd-f4ljn, bd-n6f38, bd-12ef4) named no `Probe:` lines at all; each had to be claimed,
-  flight-checked (exit 2 NOT-GATED), commented, unclaimed, and burned before the worker could
-  reach an actionable bead. The refusal is correct (a bead with no probe cannot earn a RED)
-  but the failure surfaces one stage too late and three stages too expensively.
+## refined-beads-reach-the-worker-pool-with-zero-probe-lines-and-burn-claim-cycles
+- skills: [ac-implement, ac-polish, ac-beadify]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [freshly-authored-acs-are-green-at-authoring-and-the-author-cannot-see-it]
+- first_seen: 2026-08-30
+- last_seen: 2026-08-30
+- stage: ac-implement
+- status: open
+- receipt: RUN 2026-08-30 worker log — bd-f4ljn, bd-n6f38, bd-12ef4 each claimed, flight-checked (exit 2 NOT-GATED), commented, unclaimed and burned before an actionable bead was reached
+- control: I9
+- control_landed: 2026-08-31
+- proposed_fix: refuse to stamp `refined` on a bead whose description carries no `Probe:` line (the floor flight-check enforces at claim), and strip a stale stamp on content refusal rather than leaving it to look ready — shipped as stamp-refined.sh's downgrade leg (9c9d5c5).
+- narrative: three of the first four ready `refined` beads named no `Probe:` lines at all. The
+  refusal downstream was correct — a bead with no probe cannot earn a RED — but it surfaced one
+  stage too late and three stages too expensively: claim, flight-check, comment, unclaim, burn,
+  per bead. Root cause was deeper than the proposed fix: the beads were stamped under the legacy
+  dialect (f9fc04e9, 08-28) the day BEFORE the probe floor existed (ac53c1c, 08-29), and
+  re-polish passed them via element4's prose-Declared-RED shape while never re-stamping. A
+  stamp was being trusted long after the content it certified had stopped meeting the bar.
+  TREATED 2026-08-31 (9c9d5c5): stamp-refined.sh now STRIPS a stale `refined` on content
+  refusal, and every polish writeback re-gates the epic's implementable beads through the sole
+  writer. One-time sweep the same day: bd-f4ljn, bd-n6f38, bd-12ef4 (BCA) and ac-gcj.11 (this
+  board) downgraded to `unrefined`. This entry was first written in a foreign dialect
+  (`## FRICTION:` heading, `domain:`/`severity:` fields, a paragraph in `control:`) that the
+  ledger parser could not read, and its unparseable control was attributed to the entry
+  above it — rewritten to the canonical schema 2026-09-02. Whatever appended the original
+  will do so again; it has not been found.

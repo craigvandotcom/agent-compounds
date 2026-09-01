@@ -41,6 +41,11 @@ by the ceremonies that need them and carried outside the core's bound. The famil
 8. **Every control names the failure it prevents AND its layer, or it is deleted.** (L3) L1 controls carry what
    retires them. Prevents: doctrine growing with no stopping rule (the old ac-pipeline doctrine: 413 lines
    + ~2.5k of canon — retired at the 2026-08-30 merge).
+9. **A `refined` stamp is only as valid as the content it was stamped on; a content refusal strips it.** (L2)
+   `stamp-refined.sh` is the sole writer AND the sole stripper: a bead whose ACs no longer clear the probe
+   floor is downgraded to `unrefined` mechanically, never left looking ready. Prevents: beads stamped under
+   a prior dialect reaching the worker pool with zero runnable probes and burning claim cycles (measured
+   2026-08-30: three of the first four ready beads; swept 2026-08-31 across two boards).
 
 Convention with no mechanical enforcer, claimed as nothing more: every pipeline commit names its failure.
 

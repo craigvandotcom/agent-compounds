@@ -21,6 +21,16 @@ Every mechanism declares these AT BIRTH. In `hooks/hooks.json` they live in the 
 | `MODE` | `blocking` \| `advisory` | event/matcher shape cannot distinguish them — advisory `skill-edit-guard` and blocking `bead-capture-guard` are BOTH `PreToolUse` |
 | `ON-FAILURE` | `open` \| `closed` | fail-open is a design choice; undeclared, it is discovered during an incident |
 
+**Which way to fail is decided by REVERSIBILITY, not by convenience** (ruling, Craig 2026-09-02,
+made on `dcg`). A guard whose guarded failure is RECOVERABLE — a missed bead capture, a skipped
+telemetry line — may fail `open`: wedging an unattended run costs more than the miss. A guard
+whose guarded failure is IRREVERSIBLE — a destructive command, a force-push, a ledger overwrite —
+fails `closed`: a broken safety interlock stops the line, because the moment the guard has crashed
+is the moment the environment is least trustworthy. "A guard must not wedge a 3am run" was ruled
+for the first kind and does not transfer to the second. Fail-`closed` needs no escape clause;
+fail-`open` on a blocking guard needs `BACKSTOP:` or `PENDING-DECISION:`, and "the human will
+notice" is neither.
+
 **Fail-open is legal only for `MODE: advisory`.** A blocking mechanism declaring
 `ON-FAILURE: open` needs exactly one of two escapes, each with its own sensor:
 

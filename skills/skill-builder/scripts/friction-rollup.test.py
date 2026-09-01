@@ -10,6 +10,7 @@ Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.py).
 """
 
 import datetime
+import glob
 import json
 import os
 import subprocess
@@ -215,10 +216,14 @@ def main():
     live_root = os.path.abspath(os.path.join(DIR, "..", "..", ".."))
     res = subprocess.run([sys.executable, SCRIPT, "--root", live_root, "--view", "trends"],
                          capture_output=True, text=True, timeout=120)
+    # DERIVED, never pinned: the threshold used to be `>= 15`, and the Phase-4 cutover archived
+    # seven ledgers, so a working parser reading 14 real files failed a stale number. The claim
+    # is "every ledger on disk parses" — so count the disk and demand equality.
+    on_disk = len(glob.glob(os.path.join(live_root, "skills", "*", "FRICTIONS.md")))
     try:
         live = json.loads(res.stdout)
-        check(res.returncode == 0 and live["ledgers"] >= 15,
-              "Case 14: the live registry's ledgers parse (%s found)" % live.get("ledgers"),
+        check(res.returncode == 0 and on_disk > 0 and live["ledgers"] == on_disk,
+              "Case 14: the live registry's ledgers parse (%s found, %s on disk)" % (live.get("ledgers"), on_disk),
               res.stderr)
     except json.JSONDecodeError:
         bad("Case 14: live registry run did not emit JSON — %s" % res.stderr[:400])

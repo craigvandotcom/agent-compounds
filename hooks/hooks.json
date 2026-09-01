@@ -63,7 +63,7 @@
     },
     {
       "id": "dcg",
-      "assurance": {"PROBE": "feed a known destructive command (e.g. `git push --force`) on stdin, expect a block decision - the binary fails open on its own error", "SCHEDULE": "PreToolUse(Bash) - every Bash call (machine)", "MODE": "blocking", "ON-FAILURE": "open"},
+      "assurance": {"PROBE": "feed a known destructive command (e.g. `git push --force`) on stdin, expect a block decision - the binary fails open on its own error", "SCHEDULE": "PreToolUse(Bash) - every Bash call (machine)", "MODE": "blocking", "ON-FAILURE": "open", "PENDING-DECISION": "ac-dcg-fails-closed-u7hj", "RULING": "fail-CLOSED, Craig 2026-09-02 — open here is HONEST until the wrapper lands in both wirings; see the decision bead. Principle: reversibility decides, recorded in ac-pipeline/references/assurance-declarations.md"},
       "event": "PreToolUse",
       "matcher": "Bash",
       "command": "{HOME}/.local/bin/dcg",

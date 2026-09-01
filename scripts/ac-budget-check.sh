@@ -26,9 +26,15 @@
 #                  constitution, total. (Per-file <=120 is constitution GUIDANCE,
 #                  deliberately not a lint tier: the family cap binds first,
 #                  7 x 120 = 840 > 800.)
-#   2. loaded path <=1,200 lines including every mandatory-load reference, derived from
-#                  the pointers. A pointer that resolves to nothing FAILS; a references
-#                  file no SKILL.md points at FAILS as uncounted — fat cannot hide either
+#   2. three numbers, derived from the pointers AND each SKILL.md's own mode table:
+#                  SPINE (every SKILL.md; reported, soft-warns) · WORST PATH (spine +
+#                  unconditional refs + each skill's heaviest mode; 1,200 is a TARGET
+#                  that WARNS when passed, because it is what actually enters context
+#                  and the right size is not known) · TOTAL (everything;
+#                  reported, never capped). references/ AND workflows/ both count. A
+#                  pointer that resolves to nothing FAILS; a file no SKILL.md points at
+#                  FAILS as uncounted; a mode row naming a missing file FAILS; workflows/
+#                  with no mode table is NOT-GATED — fat cannot hide either
 #                  way. ac-pipeline's OWN references/ are owner-hosted shared substrate
 #                  consulted on demand by non-family ceremonies, not family mandatory
 #                  load, so they are outside this leg (and reported as canon by Leg 3).
@@ -56,7 +62,7 @@
 set -uo pipefail
 
 FAMILY_CAP=800
-LOADED_CAP=1200
+LOADED_TARGET=1200   # a TARGET, not a cap (human ruling 2026-08-29): steer toward it, warn past it, never refuse on it
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 [ -d "$ROOT" ] || { echo "usage: $0 [<repo root>]" >&2; exit 2; }
@@ -97,19 +103,45 @@ else
   echo "ac-budget: family $FAMILY/$FAMILY_CAP lines across $SKILL_COUNT SKILL.md"
 fi
 
-# --- Leg 2: the loaded path, DERIVED from the pointers ---------------------------------
-COUNTED=""
+# --- Leg 2: spine / worst path / total, DERIVED from the pointers and the mode tables ---
+#
+# Three numbers, one pass. The old single "loaded path" was wrong in BOTH directions and
+# they nearly cancelled: it summed every checklist as if all loaded at once (over by ~150 on
+# ac-polish, where exactly one loads per run) and it never looked at workflows/ at all
+# (under by 145, same skill). A number wrong twice that happens to look plausible is worse
+# than a number that is honestly off.
+#
+#   spine       every lean SKILL.md. Reported, with a SOFT warning above SPINE_WARN — that is
+#               the progressive-disclosure signal, not a gate.
+#   worst path  spine + every unconditional reference + each skill's HEAVIEST mode. This is
+#               what actually enters context on the heaviest run, so it carries the hard cap.
+#   total       spine + every reference + every workflow. Reported, never capped, so a
+#               relocation stays visible instead of vanishing into an uncounted directory.
+#
+# MODE MEMBERSHIP IS DERIVED, NOT DECLARED TWICE. A SKILL.md that runs in modes already
+# carries a table whose header names `mode` — it needs that table to operate. Any
+# references/ or workflows/ path in a row of that table is scoped to the mode in the row's
+# first cell; everything else a SKILL.md points at is unconditional. Add a mode, add a
+# row, the numbers follow. There is no second list to keep in step.
+SPINE_WARN=${SPINE_WARN:-700}
+
+# Pointer discovery: references/ AND workflows/, resolved family-wide for sibling citations.
+COUNTED=""        # every counted file, absolute path, deduplicated
+SCOPED=""         # "path<TAB>skill<TAB>mode" for mode-scoped files
 for f in $SKILL_MDS; do
-  skill_dir=$(dirname "$f")
-  for ref in $(grep -oE '(skills/ac-[a-z0-9-]+/)?references/[A-Za-z0-9._-]+\.md' "$f" | sort -u); do
+  skill_dir=$(dirname "$f"); sname=$(basename "$skill_dir")
+  # A references/ or workflows/ token PRECEDED BY '/' is the tail of a foreign-skill path
+  # (`skill-builder/references/x.md`) — a citation of shared canon, not a family load. It
+  # resolves nowhere in the family, so matching it produced a false "pointer nobody kept" on
+  # a file that exists (ac-check23-leg2-cross-family-citation-gy75). grep -oE has no
+  # lookbehind: require a non-path character (or line start) before the token, then strip it.
+  for ref in $(grep -oE '(^|[^/A-Za-z0-9_.-])(skills/ac-[a-z0-9-]+/)?(references|workflows)/[A-Za-z0-9._-]+\.md' "$f" \
+                | sed -E 's|^[^/A-Za-z0-9_.-]||' | sort -u); do
     case "$ref" in
       skills/*) path="$ROOT/$ref" ;;
       *)        path="$skill_dir/$ref" ;;
     esac
     if [ ! -f "$path" ]; then
-      # A relative pointer may cite a SIBLING's reference — ac-plan names ac-polish's
-      # checklist as its bar. Resolve family-wide before calling it dangling; an ambiguous
-      # basename is its own failure, because then the counted file is a coin toss.
       hits=""
       for name in $CAP_SKILLS; do
         cand="$ROOT/skills/$name/$ref"; [ -f "$cand" ] && hits="$hits $cand"
@@ -118,48 +150,106 @@ for f in $SKILL_MDS; do
       if [ $# -eq 1 ]; then
         path="$1"
       elif [ $# -gt 1 ]; then
-        abc_fail "$(basename "$skill_dir")/SKILL.md points at '$ref', which exists in more than one lean skill ($*) — an ambiguous pointer counts a file by coin toss"
+        abc_fail "$sname/SKILL.md points at '$ref', which exists in more than one lean skill ($*) — an ambiguous pointer counts a file by coin toss"
         continue
       else
-        abc_fail "$(basename "$skill_dir")/SKILL.md points at '$ref', which does not exist — a pointer to a reference nobody kept"
+        abc_fail "$sname/SKILL.md points at '$ref', which does not exist — a pointer to a reference nobody kept"
         continue
       fi
     fi
     case " $COUNTED " in *" $path "*) ;; *) COUNTED="$COUNTED $path" ;; esac
   done
+
+  # Mode table: rows under a header containing `mode`; first cell is the mode key.
+  rows=$(awk '
+    /^\|/ {
+      if (tolower($0) ~ /\|[[:space:]]*mode[[:space:]]*\|/) { inmode=1; next }
+      if (inmode && $0 ~ /^\|[[:space:]]*-+/) next
+      if (inmode) {
+        n=split($0, c, "|"); m=c[2]; gsub(/[[:space:]`]/, "", m)
+        line=$0
+        while (match(line, /(references|workflows)\/[A-Za-z0-9._-]+\.md/)) {
+          print m "\t" substr(line, RSTART, RLENGTH); line=substr(line, RSTART+RLENGTH)
+        }
+      }
+      next
+    }
+    { inmode=0 }' "$f")
+  while IFS=$'\t' read -r mode rel; do
+    [ -n "$mode" ] && [ -n "$rel" ] || continue
+    path="$skill_dir/$rel"
+    [ -f "$path" ] || { abc_fail "$sname/SKILL.md mode '$mode' names '$rel', which does not exist — a mode row pointing at nothing"; continue; }
+    SCOPED="$SCOPED
+$path	$sname	$mode"
+  done <<EOF
+$rows
+EOF
+
+  # A skill with workflows/ but no parseable mode table cannot have its worst path computed.
+  # Workflows are mode-bound by construction, so silence here would be a guess.
+  if [ -d "$skill_dir/workflows" ] && ls "$skill_dir/workflows"/*.md >/dev/null 2>&1 && [ -z "$(printf '%s' "$rows" | tr -d '[:space:]')" ]; then
+    abc_fail "NOT-GATED — $sname has workflows/ but no mode table names them; its worst path cannot be derived and is not claimed"
+  fi
 done
 
-# A references file NOBODY points at is uncounted fat, which is exactly the measured
-# evasion. Scan the six workflow skills' references/ only — ac-pipeline's own references/
-# are owner-hosted shared substrate (see Leg 2 in the header), not family mandatory load.
+# Uncounted fat: ANY references/ or workflows/ file nobody points at.
 for name in $REF_SKILLS; do
-  d="$ROOT/skills/$name/references/"
-  [ -d "$d" ] || continue
-  for r in "$d"*; do
-    [ -f "$r" ] || continue
-    case " $COUNTED " in
-      *" $r "*) ;;
-      *) abc_fail "NOT-GATED — ${r#$ROOT/} exists but no lean SKILL.md points at it, so the loaded-path cap never counted it" ;;
-    esac
+  for sub in references workflows; do
+    d="$ROOT/skills/$name/$sub/"
+    [ -d "$d" ] || continue
+    for r in "$d"*; do
+      [ -f "$r" ] || continue
+      case " $COUNTED " in
+        *" $r "*) ;;
+        *) abc_fail "NOT-GATED — ${r#$ROOT/} exists but no lean SKILL.md points at it, so no number here ever counted it" ;;
+      esac
+    done
   done
 done
 
-REF_COUNT=0
-REF_LINES=0
+# The three numbers.
+[ -n "${COUNTED// /}" ] || abc_fail "NOT-GATED — zero mandatory-load files discovered; every number below would be one it never had to earn"
+scope_of() {  # <path> -> "skill<TAB>mode" or ""
+  printf '%s\n' "$SCOPED" | awk -F'\t' -v p="$1" '$1==p {print $2"\t"$3; exit}'
+}
+UNCOND_LINES=0; TOTAL_REF_LINES=0; REF_COUNT=0
+MODE_LINES=""   # "skill<TAB>mode<TAB>lines" accumulated
 for r in $COUNTED; do
-  REF_LINES=$(( REF_LINES + $(count_lines "$r") ))
-  REF_COUNT=$(( REF_COUNT + 1 ))
+  n=$(count_lines "$r"); REF_COUNT=$(( REF_COUNT + 1 )); TOTAL_REF_LINES=$(( TOTAL_REF_LINES + n ))
+  sc=$(scope_of "$r")
+  if [ -z "$sc" ]; then
+    UNCOND_LINES=$(( UNCOND_LINES + n ))
+    echo "ac-budget: counted ${r#$ROOT/} ($n lines, unconditional)"
+  else
+    MODE_LINES="$MODE_LINES
+$sc	$n"
+    echo "ac-budget: counted ${r#$ROOT/} ($n lines, mode ${sc#*	} of ${sc%	*})"
+  fi
 done
-if [ "$REF_COUNT" -eq 0 ]; then
-  abc_fail "NOT-GATED — zero mandatory-load references discovered; the loaded-path leg would report a number it never had to earn"
-fi
-LOADED=$(( FAMILY + REF_LINES ))
-if [ "$LOADED" -gt "$LOADED_CAP" ]; then
-  abc_fail "lean loaded path $LOADED/$LOADED_CAP lines (SKILL.md $FAMILY + $REF_COUNT mandatory-load reference(s) $REF_LINES) — fat relocated into references/ still counts"
+# Per skill, the heaviest mode; summed across skills. Computed, never assumed.
+HEAVIEST_REPORT=$(printf '%s\n' "$MODE_LINES" | awk -F'\t' 'NF==3 { s[$1"\t"$2]+=$3 }
+  END { for (k in s) { split(k, a, "\t"); if (s[k] > mx[a[1]]) { mx[a[1]]=s[k]; which[a[1]]=a[2] } }
+        tot=0; for (x in mx) { tot+=mx[x]; printf "%s\t%s\t%d\n", x, which[x], mx[x] }
+        printf "TOTAL\t-\t%d\n", tot }')
+HEAVIEST_LINES=$(printf '%s\n' "$HEAVIEST_REPORT" | awk -F'\t' '$1=="TOTAL"{print $3}')
+[ -n "$HEAVIEST_LINES" ] || HEAVIEST_LINES=0
+printf '%s\n' "$HEAVIEST_REPORT" | awk -F'\t' '$1!="TOTAL" && NF==3 {printf "ac-budget: %s heaviest mode is %s (%d lines)\n", $1, $2, $3}'
+
+SPINE=$FAMILY
+WORST=$(( SPINE + UNCOND_LINES + HEAVIEST_LINES ))
+TOTAL=$(( SPINE + TOTAL_REF_LINES ))
+
+if [ "$SPINE" -gt "$SPINE_WARN" ]; then
+  echo "ac-budget: WARN spine $SPINE lines is above $SPINE_WARN — that is the always-loaded surface; consider moving mode-specific text into a mode-scoped reference (progressive disclosure), not a cap breach"
 else
-  echo "ac-budget: loaded path $LOADED/$LOADED_CAP lines (SKILL.md $FAMILY + $REF_COUNT reference(s) $REF_LINES)"
+  echo "ac-budget: spine $SPINE lines (every lean SKILL.md; warns above $SPINE_WARN)"
 fi
-for r in $COUNTED; do echo "ac-budget: counted reference ${r#$ROOT/} ($(count_lines "$r") lines)"; done
+if [ "$WORST" -gt "$LOADED_TARGET" ]; then
+  echo "ac-budget: WARN worst path $WORST is over the $LOADED_TARGET target by $(( WORST - LOADED_TARGET )) (spine $SPINE + unconditional refs $UNCOND_LINES + heaviest modes $HEAVIEST_LINES) — this is what enters context on the heaviest run; look for text that could become mode-scoped or a pointer, and note that relocating into references/ or workflows/ does not reduce it"
+else
+  echo "ac-budget: worst path $WORST/$LOADED_TARGET target (spine $SPINE + unconditional $UNCOND_LINES + heaviest modes $HEAVIEST_LINES)"
+fi
+echo "ac-budget: total inventory $TOTAL lines (spine $SPINE + $REF_COUNT reference/workflow file(s) $TOTAL_REF_LINES) — REPORTED, never capped"
 
 # --- Leg 3: pointed-at canon — REPORTED, never capped ----------------------------------
 CANON=""
@@ -188,10 +278,16 @@ echo "ac-budget: pointed-at canon $CANON_LINES lines across $CANON_FILES file(s)
 # --- Leg 4: RETIRED — see header --------------------------------------------------------
 
 # --- Leg 5: assurance-triad declarations for lean scripts ------------------------------
+# *.test.sh is EXCLUDED. A harness IS a probe; requiring one to declare its own probe is
+# circular, and scripts/harness-scheduling-check.sh already proves every harness IS RUN.
+# Keeping them in was worse than useless: each harness contains the four field NAMES inside
+# its own declaration self-check, so `grep -q` matched them and the leg passed for the wrong
+# reason on every test file it discovered.
 LEAN_SCRIPTS=""
 for name in $REF_SKILLS; do
   for s in "$ROOT/skills/$name"/scripts/*.sh; do
     [ -f "$s" ] || continue
+    case "$s" in *.test.sh) continue ;; esac
     LEAN_SCRIPTS="$LEAN_SCRIPTS $s"
   done
 done
@@ -204,8 +300,11 @@ else
   for s in $LEAN_SCRIPTS; do
     SCRIPT_COUNT=$(( SCRIPT_COUNT + 1 ))
     missing=""
+    # HEADER-SCOPED. A field mentioned anywhere in the body is prose about declarations,
+    # not a declaration: the live scripts all declare by line 24, so 40 is generous and
+    # still refuses a match buried in a function 300 lines down.
     for field in "PROBE:" "SCHEDULE:" "MODE:" "ON-FAILURE:"; do
-      grep -q "$field" "$s" || missing="$missing $field"
+      head -40 "$s" | grep -q "$field" || missing="$missing $field"
     done
     [ -z "$missing" ] || abc_fail "${s#$ROOT/} declares no$missing — a mechanism that does not say what it does when it breaks is not assured (Check 21 is hooks.json-scoped and cannot see this one)"
   done
