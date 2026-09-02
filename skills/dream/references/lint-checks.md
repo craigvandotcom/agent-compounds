@@ -179,10 +179,10 @@ update, so it earns the stricter evidence bar.
 # frontmatter completeness
 for f in <home>/*.md; do grep -L "type:" "$f"; done
 # index drift (both directions)
-diff <(grep -oE '\(([a-z0-9-]+\.md)\)' <home>/MEMORY.md | command tr -d '()' | sort) \
+diff <(grep -oE '\(([a-zA-Z0-9_-]+\.md)\)' <home>/MEMORY.md | command tr -d '()' | sort) \
      <(ls <home> | grep -v -E 'MEMORY|README' | sort)
 # dead wikilinks
-grep -ohrE '\[\[[a-z0-9-]+\]\]' <homes>... | sort -u   # then check each slug exists
+grep -ohrE '\[\[[a-zA-Z0-9_-]+\]\]' <homes>... | sort -u   # then check each slug exists
 # decay / promotion by reference (check 12 — self-arming, gated, emit-only)
 python3 ~/Repos/infrastructure/dream-cycle/decay_lint.py   # or --dry-run to preview
 ```
