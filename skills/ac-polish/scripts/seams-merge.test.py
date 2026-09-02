@@ -160,6 +160,31 @@ if rc == 0 and "dropped=1" in out and "real" in a3 and "fabricated" not in a3:
 else:
     fail("validate", out + a3)
 
+# --- 7b. declined-then-found: the finding's text takes over the decline-only row ------
+S3 = os.path.join(W, "state-df"); ART3 = os.path.join(W, "plan-df.md")
+write(ART3, f"---\nstatus: findings\n---\n\n# seams — t\n\n## Problem\n\np\n\n{MARKER}\n")
+write(os.path.join(W, "df/A.md"), report(declined="| z is fine | tested | `rg -n z lib/z.ts` |\n"))
+run("round", "--state", S3, "--artifact", ART3, "--round", "1", os.path.join(W, "df/A.md"))
+write(os.path.join(W, "df/B.md"), report(findings="| breaks today | z unguarded | `lib/z.ts:4` | lost | `rg -n z lib/z.ts` | none |\n"))
+rc, out = run("round", "--state", S3, "--artifact", ART3, "--round", "2", os.path.join(W, "df/B.md"))
+with open(ART3) as fh:
+    art3 = fh.read()
+if rc == 0 and "new=1" in out and "| breaks today | z unguarded |" in art3 and "z is fine" not in art3:
+    ok("declined-then-found: the finding's text and class replace the decline-only row, counted as new")
+else:
+    fail("declined-then-found", out + art3)
+
+# --- 7c. a small row is not a magnet: one shared file out of five is a different seam ---
+S4 = os.path.join(W, "state-mag"); ART4 = os.path.join(W, "plan-mag.md")
+write(ART4, f"---\nstatus: findings\n---\n\n# seams — t\n\n## Problem\n\np\n\n{MARKER}\n")
+ROW_WIDE = "| unasserted | field left out of every whitelist | `lib/a.ts:1` · `lib/c.ts:2` · `lib/d.ts:3` · `lib/e.ts:4` · `lib/f.ts:5` | reverts | `rg -n x lib/c.ts` | none |\n"
+write(os.path.join(W, "mag/A.md"), report(findings=ROW_A + ROW_WIDE))
+rc, out = run("round", "--state", S4, "--artifact", ART4, "--round", "1", os.path.join(W, "mag/A.md"))
+if rc == 0 and "new=2" in out and "total=2" in out:
+    ok("location key: a 2-file row and a 5-file row sharing one file stay separate candidates")
+else:
+    fail("small-row magnet", out)
+
 # --- 8. NOT-GATED paths write nothing ------------------------------------------------
 S4 = os.path.join(W, "state4"); ART4 = os.path.join(W, "plan4.md"); write(ART4, f"---\n---\n{MARKER}\n")
 write(os.path.join(W, "bad/A.md"), "just prose, no sections\n")

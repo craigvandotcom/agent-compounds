@@ -14,7 +14,7 @@ finding. This script fixes the contract, not the prose:
   * `handoff` computes the split ONCE, after the stamp: Confirmed (>=2 distinct
     uncontaminated readers, or verifier confirmations), Seen once, refuted -> archive.
 
-Rows are keyed by LOCATION: two rows match when the files they cite overlap by at least half
+Rows are keyed by LOCATION: two rows match when the files they cite overlap by at least half of the larger set
 of the smaller set. Prose is never compared. A reader that reports ARTIFACT SEEN: yes still
 adds candidates but its finds do not count toward consensus.
 
@@ -134,7 +134,7 @@ def files_of(text):
 def overlaps(a, b):
     if not a or not b:
         return False
-    need = max(1, math.ceil(min(len(a), len(b)) / 2))
+    need = max(1, math.ceil(max(len(a), len(b)) / 2))  # half the LARGER set: a two-file row must not swallow every finding that cites one of its files
     return len(a & b) >= need
 
 
@@ -250,6 +250,10 @@ def cmd_round(a):
                 hit = dict(id=i, files=sorted(files), first_round=a.round, finds=[], declines=[], verifications=[], dropped=None, **f)
                 st["candidates"][i] = hit
                 new.append(i)
+            elif not hit["finds"]:
+                # a decline-only row: this finding is its first-seen text, and it enters the artifact as new
+                hit.update(f); hit["files"] = sorted(files); hit.pop("validated", None)
+                new.append(hit["id"])
             else:
                 matched += 1
             hit["finds"].append({"reader": rep["reader"], "round": a.round, "counts": not rep["contaminated"]})
