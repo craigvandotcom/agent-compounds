@@ -14,9 +14,13 @@ finding. This script fixes the contract, not the prose:
   * `handoff` computes the split ONCE, after the stamp: Confirmed (>=2 distinct
     uncontaminated readers, or verifier confirmations), Seen once, refuted -> archive.
 
-Rows are keyed by LOCATION: two rows match when the files they cite overlap by at least half of the larger set
-of the smaller set. Prose is never compared. A reader that reports ARTIFACT SEEN: yes still
-adds candidates but its finds do not count toward consensus.
+Rows are keyed by LOCATION — `path:line`, not path. Two locations touch when they name the same
+file and their lines lie within LINE_WINDOW of each other. Two rows match when a strict majority
+of EACH row's locations touch the other row; a row with no line numbers keys by file. A
+file-level key collapses every seam inside one hot file into one row, and a hotspot is always
+one file. Prose is never compared. A reader that reports ARTIFACT SEEN: yes
+still adds candidates but its finds do not count toward consensus. Every fold keeps the folded
+row's seam text in the ledger's `finds`, so first-seen text never hides what a later reader said.
 
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py — every rule above, RED/GREEN
@@ -40,7 +44,6 @@ Exit 0 ok · 2 NOT-GATED (usage, unparseable report, missing state).
 """
 import argparse
 import json
-import math
 import os
 import re
 import subprocess
@@ -122,20 +125,50 @@ def parse_report(path):
     return out
 
 
-def files_of(text):
+LINE_WINDOW = 40  # lines: two citations this close in one file are the same place
+
+
+def locs_of(text):
+    """Set of (file, line|None) cited in text. `path:12-15` keys on 12; a bare path keys on None."""
     found = set()
     for m in PATH_RE.finditer(text):
-        p = m.group(0)
-        p = re.sub(r":\d+(-\d+)?$", "", p)
-        found.add(p.strip("`'\""))
+        p = m.group(0).strip("`'\"")
+        tail = re.match(r":(\d+)", text[m.end():])
+        found.add((p, int(tail.group(1)) if tail else None))
     return found
 
 
+def files_of(text):
+    return {f for f, _ in locs_of(text)}
+
+
+def touches(x, y):
+    if x[0] != y[0]:
+        return False
+    return x[1] is None or y[1] is None or abs(x[1] - y[1]) <= LINE_WINDOW
+
+
+def majority_touches(x, y):
+    return sum(1 for p in x if any(touches(p, q) for q in y)) >= len(x) // 2 + 1
+
+
 def overlaps(a, b):
+    """Two rows match when a strict majority of EACH row's locations touch the other row: a row
+    that shares two nearby lines with a six-line row is a neighbour, not the same seam. A row
+    with no line numbers (a decline naming only a file) keys by file — majority of the smaller
+    file set."""
     if not a or not b:
         return False
-    need = max(1, math.ceil(max(len(a), len(b)) / 2))  # half the LARGER set: a two-file row must not swallow every finding that cites one of its files
-    return len(a & b) >= need
+    if all(l is None for _, l in a) or all(l is None for _, l in b):
+        fa, fb = {f for f, _ in a}, {f for f, _ in b}
+        small, big = (fa, fb) if len(fa) <= len(fb) else (fb, fa)
+        return len(small & big) >= len(small) // 2 + 1
+    return majority_touches(a, b) and majority_touches(b, a)
+
+
+def cand_locs(c):
+    """Ledgers written before the line key carry only `files`; read them as lineless."""
+    return {tuple(x) for x in c.get("locs", [])} or {(f, None) for f in c["files"]}
 
 
 # ---------------------------------------------------------------- state
@@ -243,26 +276,28 @@ def cmd_round(a):
     for rep in reports:
         st["readers"][rep["reader"]] = {"round": a.round, "contaminated": rep["contaminated"], "resolved": rep["resolved"]}
         for f in rep["findings"]:
-            files = files_of(f["locations"])
-            hit = next((c for c in st["candidates"].values() if not c["dropped"] and overlaps(set(c["files"]), files)), None)
+            locs = locs_of(f["locations"])
+            hit = next((c for c in st["candidates"].values() if not c["dropped"] and overlaps(cand_locs(c), locs)), None)
             if hit is None:
                 i = cid(st["next_id"]); st["next_id"] += 1
-                hit = dict(id=i, files=sorted(files), first_round=a.round, finds=[], declines=[], verifications=[], dropped=None, **f)
+                hit = dict(id=i, files=sorted({p for p, _ in locs}), locs=sorted(locs, key=str), first_round=a.round,
+                           finds=[], declines=[], verifications=[], dropped=None, **f)
                 st["candidates"][i] = hit
                 new.append(i)
             elif not hit["finds"]:
                 # a decline-only row: this finding is its first-seen text, and it enters the artifact as new
-                hit.update(f); hit["files"] = sorted(files); hit.pop("validated", None)
+                hit.update(f); hit["files"] = sorted({p for p, _ in locs}); hit["locs"] = sorted(locs, key=str); hit.pop("validated", None)
                 new.append(hit["id"])
             else:
                 matched += 1
-            hit["finds"].append({"reader": rep["reader"], "round": a.round, "counts": not rep["contaminated"]})
+            hit["finds"].append({"reader": rep["reader"], "round": a.round, "counts": not rep["contaminated"], "seam": f["seam"]})
         for d in rep["declined"]:
-            files = files_of(d["candidate"] + " " + d["command"])
-            hit = next((c for c in st["candidates"].values() if not c["dropped"] and overlaps(set(c["files"]), files)), None)
+            locs = locs_of(d["candidate"] + " " + d["command"])
+            hit = next((c for c in st["candidates"].values() if not c["dropped"] and overlaps(cand_locs(c), locs)), None)
             if hit is None:
                 i = cid(st["next_id"]); st["next_id"] += 1
-                hit = dict(id=i, files=sorted(files), first_round=a.round, finds=[], declines=[], verifications=[], dropped=None,
+                hit = dict(id=i, files=sorted({p for p, _ in locs}), locs=sorted(locs, key=str), first_round=a.round,
+                           finds=[], declines=[], verifications=[], dropped=None,
                            **{"class": "", "seam": d["candidate"], "locations": "", "silent": "", "found_by": d["command"], "notices": ""})
                 st["candidates"][i] = hit
             hit["declines"].append({"reader": rep["reader"], "round": a.round, "why": d["why"], "command": d["command"], "candidate": d["candidate"]})

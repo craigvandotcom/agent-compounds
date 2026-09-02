@@ -185,6 +185,39 @@ if rc == 0 and "new=2" in out and "total=2" in out:
 else:
     fail("small-row magnet", out)
 
+# --- 7d. the key is path:line — distinct seams inside ONE hot file stay distinct ---------
+S5 = os.path.join(W, "state-line"); ART5 = os.path.join(W, "plan-line.md")
+write(ART5, f"---\nstatus: findings\n---\n\n# seams — t\n\n## Problem\n\np\n\n{MARKER}\n")
+ROW_L1 = "| breaks today | stream cleanup is a stale closure | `lib/a.ts:489` · `lib/a.ts:528` | leak | `rg -n image_urls lib/a.ts` | none |\n"
+ROW_L1B = "| breaks today | cleanup never stops a track (same seam) | `lib/a.ts:528-530` · `lib/a.ts:489` · `lib/a.ts:1335` | leak | `rg -n image_urls lib/a.ts` | none |\n"
+ROW_L2 = "| breaks today | armed after commit | `lib/a.ts:642` · `lib/b.ts:568` | dropped photo | `rg -n image_urls lib/a.ts` | none |\n"
+ROW_L3 = "| unasserted | crop skips compression | `lib/a.ts:886` | bytes | `rg -n image_urls lib/a.ts` | none |\n"
+write(os.path.join(W, "line/A.md"), report(findings=ROW_L1 + ROW_L2 + ROW_L3))
+write(os.path.join(W, "line/B.md"), report(findings=ROW_L1B, declined="| whole file is fine | tested | `rg -n x lib/a.ts` |\n"))
+rc, out = run("round", "--state", S5, "--artifact", ART5, "--round", "1", os.path.join(W, "line/A.md"), os.path.join(W, "line/B.md"))
+with open(ART5) as fh:
+    art5 = fh.read()
+if rc == 0 and "new=3" in out and "matched=1" in out and "total=3" in out and "armed after commit" in art5 and "crop skips compression" in art5:
+    ok("line key: three seams in one file are three candidates; a re-find within the window folds")
+else:
+    fail("line key", out + art5)
+import json as _json
+with open(os.path.join(S5, "ledger.json")) as fh:
+    led5 = _json.load(fh)
+c5 = led5["candidates"]["c001"]
+# a neighbour is not the same seam: two lines near the stream rows, but a six-line row of its own
+ROW_L4 = "| breaks today | lens state survives close | `lib/a.ts:425` · `lib/a.ts:430` · `lib/a.ts:500` · `lib/a.ts:525` · `lib/a.ts:628` · `lib/b.ts:909` | pinned lens | `rg -n image_urls lib/a.ts` | none |\n"
+write(os.path.join(W, "line/C.md"), report(findings=ROW_L4))
+rc, out = run("round", "--state", S5, "--artifact", ART5, "--round", "2", os.path.join(W, "line/C.md"))
+if rc == 0 and "new=1" in out and "total=4" in out:
+    ok("line key: a six-line neighbour sharing two nearby lines is a separate candidate (majority on BOTH sides)")
+else:
+    fail("neighbour fold", out)
+if any(f.get("seam", "").startswith("cleanup never stops") for f in c5["finds"]) and any(d["reader"] == "B" for d in c5["declines"]):
+    ok("line key: a fold keeps the folded seam text; a lineless decline attaches to the file's first row")
+else:
+    fail("fold text / lineless decline", _json.dumps(c5)[:400])
+
 # --- 8. NOT-GATED paths write nothing ------------------------------------------------
 S4 = os.path.join(W, "state4"); ART4 = os.path.join(W, "plan4.md"); write(ART4, f"---\n---\n{MARKER}\n")
 write(os.path.join(W, "bad/A.md"), "just prose, no sections\n")
