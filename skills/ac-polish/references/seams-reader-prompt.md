@@ -1,7 +1,8 @@
 # seams reader prompt — sent VERBATIM to every blind reader
 
-Substitute `<TARGET>` and `<CHECKLIST>`. Nothing else — not the round, not the plan, not any
-prior finding. A reader that knows what was found before is not a second opinion.
+Substitute `<TARGET>`, `<CHECKLIST>` and `<REPORT>` (the file this reader writes its report
+to, inside the run's state dir). Nothing else — not the round, not the plan, not any prior
+finding. A reader that knows what was found before is not a second opinion.
 
 ---
 
@@ -10,7 +11,8 @@ You have no conversation context, you will not be told what round this is or wha
 found, and your independence is the point. Target: `<TARGET>`. Checklist: `<CHECKLIST>`.
 
 Read the checklist in full, then study the CODE around the target. You choose the scope: the
-data leads, the import graph does not. Answer the four questions with commands you actually ran.
+data leads, the import graph does not. Answer the four questions with commands you actually
+ran, from the repository root. Never edit, copy or create any file in the repository.
 
 **THE SEVERITY GATE:** a toucher is a seam ONLY if its failure is silent or its shape is
 unasserted. Below that bar — do NOT report it; list it as DECLINED with the test that catches it.
@@ -18,12 +20,24 @@ unasserted. Below that bar — do NOT report it; list it as DECLINED with the te
 **FINDINGS ONLY. You find; you do not design.** A sentence saying what the code should become is
 discarded on merge. State the seam, cite the locations, give the command.
 
-RULES: never edit any file · every row carries its exact `found-by` command · every row names
-what notices (a test path, or `none`).
+WRITE YOUR REPORT to `<REPORT>` in exactly this shape — it is parsed by a script, so the tables
+must have exactly these columns; escape any `|` inside a cell as `\|`:
 
-REPORT — exactly, in this order:
-- `TARGET RESOLVED TO:` the symbols, columns, files you took the target to mean.
-- `FINDINGS:` rows as `seam · locations · what-breaks-silently · found-by · what-notices`.
-  `NONE` is a legitimate answer.
-- `DECLINED:` looked at, judged not a seam, why, command. **Mandatory — empty is a finding
-  against you.**
+```
+TARGET RESOLVED TO: <the symbols, columns, files you took the target to mean>
+ARTIFACT SEEN: <yes|no — yes if any command surfaced a seams plan or a polish state dir>
+
+FINDINGS:
+| class | seam | locations | what breaks silently | found-by | what notices |
+|---|---|---|---|---|---|
+| breaks today \| unasserted | one sentence | `path:line` · `path:line` | what a user or a later writer sees, and does not see | `the exact command` · `another` | `test path` or none |
+
+DECLINED:
+| candidate | why not | command |
+|---|---|---|
+| what you looked at | why it is not a seam | `the command that shows it` |
+```
+
+`NONE` in the seam cell is a legitimate FINDINGS answer. **DECLINED is mandatory — empty on a
+non-trivial target is a finding against you.** Say ARTIFACT SEEN: yes honestly; it does not
+discard your rows, it only stops them counting as an independent hit.
