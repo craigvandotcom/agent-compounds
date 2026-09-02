@@ -21,6 +21,8 @@ poisons every future run.
 | `origin:<skill>` | The creating workflow. `origin:manual` outside any skill; `origin:unknown` when genuinely unattributable — never guess. Canon: `origin-provenance.md`. | EVERY bead |
 | Readiness | One of `unrefined` / `human-gate`. `refined` is stamped exclusively by a refine pass and is never applied at creation. | Every NON-EPIC bead |
 
+| Touchers | A `## Delivers` path that EXISTS in the tree and is REFERENCED by another file owes, beneath its bullet, one line: ``touchers: `<command>` → <N> · owned by: <bead ids> \| out-of-scope: <reason>``. Command-derived, never remembered; the count must reproduce at stamp time. New files and unreferenced files owe nothing. Enforced at REFINE, not capture: `skills/_tools/stamp-refined.sh` § TOUCHERS LEG derives the trigger with `rg`, re-runs the command, and refuses `[unowned-touchers]` on a missing, malformed or stale line. Why: bead-polish measured a 16.2% repair rate from hand-listed consumer sets, and every serious 2026-08/09 defect was a caller nobody enumerated. | Every bead, at refine |
+
 Epics are exempt from readiness: they are containers, never picked up for implementation.
 This mirrors `ac-tidy` Phase 2f, which repairs the same gap nightly for beads that predate
 or bypass the gate.

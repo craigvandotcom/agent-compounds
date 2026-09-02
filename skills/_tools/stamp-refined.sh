@@ -125,6 +125,56 @@ stamp_refined() {
     fi
   fi
 
+  # TOUCHERS LEG (2026-09-03): a bead that changes a file something else references must
+  # NAME those references — command-derived, count reproduced — or say why they are out of
+  # scope. Canon: beads-standards/reference/bead-create-contract.md § Touchers. The trigger
+  # is DERIVED, never declared: each path in `## Delivers` that EXISTS in the tree and is
+  # referenced by another file (rg on its last two path segments, extension dropped) owes a
+  # `touchers:` line. New files and unreferenced files owe nothing. Why here: bead-polish
+  # measured a 16.2% repair rate from hand-listed consumer sets; the slate's caller list was
+  # short by two; this very script was once archived with four live callers. A stale count
+  # is refused too — the list being stale when used IS the defect.
+  local root desc dl art rel stem refs tline tcmd tn actual
+  root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -z "$root" ]; then
+    echo "stamp_refined: REFUSED $id — not inside a git repo, so touchers cannot be derived; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
+  desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
+  dl=$(printf '%s\n' "$desc" | awk '/^## Delivers/{on=1; next} /^## /{on=0} on')
+  while IFS= read -r art; do
+    [ -n "$art" ] || continue
+    rel="${art#./}"
+    [ -f "$root/$rel" ] || continue                     # a NEW artifact reshapes nothing
+    stem=$(printf '%s' "$rel" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }')
+    refs=$(rg -l -F "$stem" "$root" -g "!$rel" -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' \
+             -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*' 2>/dev/null | grep -c .)
+    [ "${refs:-0}" -gt 0 ] || continue                  # nothing references it
+    # Order matters: the touchers line usually names the path too (inside its own -g glob),
+    # so test for it BEFORE the bullet-match rule, or the rule swallows it.
+    tline=$(printf '%s\n' "$dl" | awk -v a="$rel" 'f && /touchers:/{print; exit} f && /^[[:space:]]*-[[:space:]]/{exit} index($0,a){f=1; next}')
+    if [ -z "$tline" ]; then
+      echo "stamp_refined: REFUSED $id — [unowned-touchers] \`$rel\` exists and is referenced by $refs file(s) (rg -l -F '$stem'), but its ## Delivers entry carries no 'touchers:' line. Add beneath the bullet: touchers: \`<command>\` → <N> · owned by: <bead ids> | out-of-scope: <reason>. No label written." >&2
+      _downgrade "$id" "unowned touchers on $rel"
+      return 1
+    fi
+    tcmd=$(printf '%s' "$tline" | sed -n 's/.*touchers:[[:space:]]*`\([^`]*\)`.*/\1/p'); tcmd=${tcmd//\\|/|}
+    tn=$(printf '%s' "$tline" | grep -oE '→[[:space:]]*[0-9]+' | head -1 | grep -oE '[0-9]+')
+    if [ -z "$tcmd" ] || [ -z "$tn" ] || ! printf '%s' "$tline" | grep -qE 'owned by:|out-of-scope:'; then
+      echo "stamp_refined: REFUSED $id — [unowned-touchers] the touchers line for \`$rel\` is malformed; expected: touchers: \`<command>\` → <N> · owned by: … | out-of-scope: …. No label written." >&2
+      _downgrade "$id" "malformed touchers line on $rel"
+      return 1
+    fi
+    actual=$( (cd "$root" && bash -c "$tcmd" 2>/dev/null) | grep -c . )
+    if [ "$actual" -ne "$tn" ]; then
+      echo "stamp_refined: REFUSED $id — [unowned-touchers] touchers for \`$rel\` declare → $tn but the command reproduces $actual now; a stale toucher list is the defect this gate exists for. Re-derive, then re-stamp. No label written." >&2
+      _downgrade "$id" "stale touchers on $rel ($tn declared, $actual now)"
+      return 1
+    fi
+  done <<EOF
+$(printf '%s\n' "$dl" | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
+EOF
+
   br label remove "$id" "unrefined" 2>/dev/null
   br label add "$id" "refined" 2>/dev/null
   br label add "$id" "$path_label" 2>/dev/null

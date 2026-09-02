@@ -26,6 +26,18 @@ fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
 
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 
+# Every case runs INSIDE a fixture repo, so the TOUCHERS LEG (2026-09-03) derives from a tree
+# the harness controls. The older fixtures' Delivers paths do not exist here, so they are new
+# artifacts and owe nothing — those cases keep their meaning unchanged. Cases 12–16 build on:
+#   lib/db/foods.ts   referenced by lib/api.ts  -> a touchers line is owed
+#   lib/lonely.ts     referenced by nothing     -> nothing owed
+FIXREPO="$WORK/repo"; mkdir -p "$FIXREPO/lib/db"
+printf 'export function updateFood() {}\n' >"$FIXREPO/lib/db/foods.ts"
+printf 'import { updateFood } from "../db/foods"\n' >"$FIXREPO/lib/api.ts"
+printf 'export const lonely = 1\n' >"$FIXREPO/lib/lonely.ts"
+(cd "$FIXREPO" && git init -q)
+cd "$FIXREPO" || { echo "HARNESS FAIL: cannot enter fixture repo"; exit 1; }
+
 # --- the mocked board: `show --json`, `comments add -f`, and a call log -----------------
 MOCK="$WORK/bin"; mkdir -p "$MOCK"
 BR_LOG="$WORK/br.log"
@@ -258,6 +270,93 @@ if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-already)" -eq 1 ] \
   pass "Case 11: a conforming bead already holding refined re-stamps cleanly, never stripped"
 else
   fail "Case 11: expected rc 0, one stamp, zero strips, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Cases 12–16: the TOUCHERS LEG (2026-09-03) — the trigger is derived from the tree ----
+# Non-family origin (no receipt owed) with a probe, so every verdict below is the touchers
+# leg's alone. The commands inside the touchers lines run in the fixture repo.
+T_NONE='## Intent
+Guard updateFood against zero-row updates.
+
+## Acceptance Criteria
+- The guard lands.
+  Probe: `grep -q count lib/db/foods.ts` — tier: none
+
+## Delivers
+- `lib/db/foods.ts` — updateFood row-count guard
+
+## Consumes
+- none
+'
+T_OK='## Intent
+Guard updateFood against zero-row updates.
+
+## Acceptance Criteria
+- The guard lands.
+  Probe: `grep -q count lib/db/foods.ts` — tier: none
+
+## Delivers
+- `lib/db/foods.ts` — updateFood row-count guard
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+
+## Consumes
+- none
+'
+T_STALE=${T_OK/→ 1 · owned by/→ 3 · owned by}
+T_MALFORMED=${T_OK/ · owned by: bd-api-caller/}
+T_LONELY=${T_NONE/lib\/db\/foods.ts\` — updateFood row-count guard/lib\/lonely.ts\` — lonely constant}
+T_NEW=${T_NONE/lib\/db\/foods.ts\` — updateFood row-count guard/lib\/new-module.ts\` — a file that does not exist yet}
+tmp=$(mktemp)
+jq --arg none "$T_NONE" --arg ok "$T_OK" --arg stale "$T_STALE" --arg mal "$T_MALFORMED" --arg lonely "$T_LONELY" --arg new "$T_NEW" '. + [
+  {id:"bd-t-none",   issue_type:"task", labels:["origin:ac-triage"], description:$none,   comments:[]},
+  {id:"bd-t-ok",     issue_type:"task", labels:["origin:ac-triage"], description:$ok,     comments:[]},
+  {id:"bd-t-stale",  issue_type:"task", labels:["origin:ac-triage","refined"], description:$stale, comments:[]},
+  {id:"bd-t-mal",    issue_type:"task", labels:["origin:ac-triage"], description:$mal,    comments:[]},
+  {id:"bd-t-lonely", issue_type:"task", labels:["origin:ac-triage"], description:$lonely, comments:[]},
+  {id:"bd-t-new",    issue_type:"task", labels:["origin:ac-triage"], description:$new,    comments:[]}
+]' "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-none 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "unowned-touchers" && echo "$OUT" | grep -q "referenced by 1 file" \
+   && [ "$(stamped_count bd-t-none)" -eq 0 ]; then
+  pass "Case 12: a referenced Delivers path with no touchers line is REFUSED [unowned-touchers], naming the derived count"
+else
+  fail "Case 12: expected rc 1 + unowned-touchers, rc=$RC. Output: $OUT"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-ok 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-t-ok)" -eq 1 ]; then
+  pass "Case 13: a touchers line whose command reproduces its count STAMPS"
+else
+  fail "Case 13: expected rc 0 + one stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-stale 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "declare → 3 but the command reproduces 1" \
+   && [ "$(stripped_count bd-t-stale)" -eq 1 ] && [ "$(stamped_count bd-t-stale)" -eq 0 ]; then
+  pass "Case 14: a STALE touchers count is refused with both numbers, and a held stamp is DOWNGRADED"
+else
+  fail "Case 14: expected rc 1 + stale refusal + downgrade, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-mal 2>&1); RC=$?
+if [ "$RC" -eq 1 ] && echo "$OUT" | grep -q "malformed"; then
+  pass "Case 15: a touchers line with no owned-by / out-of-scope is refused as malformed"
+else
+  fail "Case 15: expected rc 1 + malformed, rc=$RC. Output: $OUT"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-lonely 2>&1); RC=$?
+OUT2=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-t-new 2>&1); RC2=$?
+if [ "$RC" -eq 0 ] && [ "$RC2" -eq 0 ] && [ "$(stamped_count bd-t-lonely)" -eq 1 ] && [ "$(stamped_count bd-t-new)" -eq 1 ]; then
+  pass "Case 16: an unreferenced file and a not-yet-existing file owe no touchers line — both STAMP"
+else
+  fail "Case 16: expected both to stamp, rc=$RC/$RC2. Output: $OUT / $OUT2"
 fi
 
 echo
