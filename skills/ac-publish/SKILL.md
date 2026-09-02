@@ -12,10 +12,10 @@ description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQU
 | **Input**        | A reviewed ac2 batch on the committed tree, and the ref `R` it ends at             |
 | **Output**       | A tagged, promoted release at a PROVEN SHA — or an explicit refusal and no ship    |
 | **Artifacts**    | The tag · the release report · beads for escapes, each catch-stage-labelled        |
-| **Verification** | `ac-prove ensure --fix-forward` for the proof; the executed-jobs assertion below   |
+| **Verification** | `ac-prove ensure --fix-forward`; executed-jobs; `needs-device-gate.sh --range`      |
 
-Deliberately thin. It owns three things — the executed-jobs assertion, the ship order, and the
-escape label — and delegates everything else by pointer.
+Deliberately thin. It owns four things — the executed-jobs assertion, the needs-device
+surface gate, the ship order, and the escape label — and delegates everything else by pointer.
 
 ## The proof leg — call `ac-prove`, never re-derive it
 
@@ -68,6 +68,17 @@ over nothing. A gate whose commands nobody ran is a scar list with better format
 green is the gate-audit class — canon in `skills/ac-pipeline/references/` § assurance-declarations
 — and it is how a pipeline ships unproven code while every dashboard stays green.
 
+## Open needs-device surfaces — refuse before tagging
+
+A required-jobs-green run is not a device sitting. From the app checkout, before step 1:
+
+    bash skills/ac-publish/scripts/needs-device-gate.sh --range "$FROM..$R"
+
+Non-empty intersection with an OPEN `needs-device` bead, or an open needs-device bead
+whose `## Delivers` + AC probes yield no paths (zero-path, fail-closed): refuse and name
+the bead(s). Override is `NEEDS_DEVICE_GATE_OVERRIDE=<reason>` only — a named, logged
+needs-device override; an unset variable is not one.
+
 ## QA placement — by pointer, never copied
 
 Whether QA runs at this gate or was pulled earlier is decided by the verification-gate class
@@ -77,6 +88,7 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
 
 ## Ship, in this order
 
+0. **Refuse an open needs-device surface.** Run `needs-device-gate.sh --range` (above). Intersection or a zero-path open `needs-device` bead is a stop.
 1. **Mint the version once.** One bump per publish, never re-bumped downstream; propagation to the native build surfaces is `references/version-bump.md`, the sole owner of that counter.
 2. **Tag the PROVEN SHA explicitly, never `HEAD`.** `ac-prove` pushes evidence commits, so by
    the time this step runs `HEAD` has moved past the commit that was proven and reviewed.
