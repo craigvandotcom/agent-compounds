@@ -14,7 +14,7 @@ entrenched separately by piecemeal fixes.
 | knob | seams mode |
 | --- | --- |
 | **TARGET** | a name — a phrase, symbol, column, file. Given as the argument → no prompt. Absent → ONE prompt before anything is read or spawned (below) |
-| **ARTIFACT** | `<STATE>/plan.md` during the loop, from `references/seams-plan-template.md`. Below the marker it holds CANDIDATE ROWS ONLY — first-seen text, id order — written by `scripts/seams-merge.py`, never by hand. Hits, declines, verifications live in `<STATE>/ledger.json`; decline-only rows in `<STATE>/declined.md`. So the digest moves iff a candidate is added or dropped. `printf '*\n' > <STATE>/.ignore` first, so readers' `rg` never surfaces it. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
+| **ARTIFACT** | `<STATE>/plan.md` during the loop, from `references/seams-plan-template.md`. Below the marker it holds CANDIDATE ROWS ONLY — first-seen text, id order — written by `scripts/seams-merge.py`, never by hand. Hits, declines, verifications live in `<STATE>/ledger.json`; decline-only rows in `<STATE>/declined.md`. So the digest moves iff a candidate is added or dropped. **`<STATE>` lives OUTSIDE the repo: `~/.claude/polish/<repo-name>/seams-<slug>-<date>/`.** Dogfood 2026-09-02: 32 of 33 readers flagged themselves from a bare `ls .claude/polish/` inside the tree, and consensus fell entirely to verifiers. Nothing in the tree, nothing to surface. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
 | **CHECKLIST** | `references/seams-checklist.md` |
 | **READERS** | K blind readers per round (default 3), each sent `references/seams-reader-prompt.md` verbatim with `<TARGET>`, `<CHECKLIST>` and `<REPORT>` (= `<STATE>/reports/r<N>-<letter>.md`) filled — NOT the plan, NOT the round number, NOT prior findings. Their rows reach ARTIFACT only through MERGE |
 | **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new row's `found-by`; a row is dropped iff none of its commands reproduces. Facts are validated; judgement is not |
@@ -46,7 +46,10 @@ rows no command reproduces; and prints `new=<n>` — the discovery signal. A rea
 `ARTIFACT SEEN: yes` still adds candidates but its hits do not count toward consensus. A row
 that designs is discarded by the orchestrator before the merge. Then record the round with
 `polish-fixpoint.sh` as the SKILL.md loop says — every artifact change is a round to the
-script, or the next `--pre` fires as an out-of-band amendment.
+script, or the next `--pre` fires as an out-of-band amendment. **A `NOT-GATED` merge means
+the round did not happen:** resume the reader whose report failed to parse, re-merge, and
+only then run the gate. Running the gate over a refused merge stamped a half-merged
+artifact once (ingredients, round 2) and had to be rolled back by hand.
 
 ## Stop — the stamp means discovery converged
 
@@ -62,7 +65,10 @@ every round indict the CHECKLIST's silent-failure question, not the target.
 1. **Verify singletons.** Each row with one counting hit goes to two fresh verifiers who are
    GIVEN the row and asked to confirm or refute the fact and the silence with a command:
    `seams-merge.py verify --id <cNNN> --reader <name> --verdict confirm|refute [--command …]`.
-   Two confirmations promote; one refutation with a reproducing command archives.
+   Two confirmations promote; one refutation with a reproducing command archives. A verifier
+   reports the strongest counter-command it ran EVEN WHEN CONFIRMING — dogfood 2026-09-02
+   confirmed 42 of 44 rows, and a confirmation with no attempted refutation is a reader shown
+   the answer agreeing with it, which is the anchoring the blind design exists to avoid.
 2. **Targeted pass, if warranted.** A singleton that resolved the target to an object the
    majority did not (a handoff blob beside a column) is a NEW seams run with that object as
    TARGET — its own loop, its own stamp — not extra rounds of this one.

@@ -12,7 +12,9 @@ found, and your independence is the point. Target: `<TARGET>`. Checklist: `<CHEC
 
 Read the checklist in full, then study the CODE around the target. You choose the scope: the
 data leads, the import graph does not. Answer the four questions with commands you actually
-ran, from the repository root. Never edit, copy or create any file in the repository.
+ran, from the repository root. Never edit, copy or create any file in the repository, and never
+run a test runner, formatter or linter (`vitest`, `prettier`, `eslint`, `tsc` included) — they
+rewrite files and you are read-only; READ the tests, do not run them.
 
 **THE SEVERITY GATE:** a toucher is a seam ONLY if its failure is silent or its shape is
 unasserted. Below that bar — do NOT report it; list it as DECLINED with the test that catches it.
@@ -25,7 +27,7 @@ must have exactly these columns; escape any `|` inside a cell as `\|`:
 
 ```
 TARGET RESOLVED TO: <the symbols, columns, files you took the target to mean>
-ARTIFACT SEEN: <yes|no — yes if any command surfaced a seams plan or a polish state dir>
+ARTIFACT SEEN: <yes|no — yes ONLY if you READ the contents of a seams plan, report or ledger for THIS target; listing a directory name, or seeing another target's plan, is no>
 
 FINDINGS:
 | class | seam | locations | what breaks silently | found-by | what notices |
@@ -45,5 +47,6 @@ ONLY commands, separated by ` · `: each one is run verbatim by a script, so a n
 command showed in the `what notices` or `what breaks silently` cell instead.**
 
 `NONE` in the seam cell is a legitimate FINDINGS answer. **DECLINED is mandatory — empty on a
-non-trivial target is a finding against you.** Say ARTIFACT SEEN: yes honestly; it does not
-discard your rows, it only stops them counting as an independent hit.
+non-trivial target is a finding against you.** Say ARTIFACT SEEN: yes honestly — it does not
+discard your rows, it only stops them counting as an independent hit — but say it ONLY for
+contents you read. Seeing a directory name in an `ls` is not seeing the artifact.
