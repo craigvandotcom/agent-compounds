@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# polish-fixpoint.sh — the lean polish stamp gate. ONE engine, two modes (plan · bead).
+# polish-fixpoint.sh — the lean polish stamp gate. ONE engine, four modes (plan · bead · code · seams).
 #
 # It MEASURES and it GATES. It drives nothing and it delegates to no model: the ac-polish
 # SKILL runs a stateless reader per round, applies that round's findings, then calls this
@@ -20,7 +20,10 @@
 #
 # Usage:
 #   polish-fixpoint.sh --state <dir> --artifact <path> --round <n> --pre <sha256>
-#                      [--mode plan|bead|code] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
+#                      [--mode plan|bead|code|seams] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
+#
+#   seams  is plan-side (the artifact is a seams plan) but stamps under a `seams_` prefix, so
+#          the later `--mode plan` polish of the same file records its own fixpoint beside it.
 #
 #   --pre  the artifact digest the SKILL observed BEFORE this round's reader ran. It is how
 #          an out-of-band amendment is detected: if it does not match what the previous
@@ -57,11 +60,11 @@ done
 [ -n "$ARTIFACT" ] || die2 "--artifact is required"
 [ -f "$ARTIFACT" ] || die2 "artifact does not exist: $ARTIFACT"
 [ -n "$PRE" ]      || die2 "--pre is required (the digest observed before this round's reader)"
-case "$MODE" in plan|bead|code) ;; *) die2 "--mode must be plan, bead or code (got '$MODE')" ;; esac
+case "$MODE" in plan|bead|code|seams) ;; *) die2 "--mode must be plan, bead, code or seams (got '$MODE')" ;; esac
 case "$ROUND" in ''|*[!0-9]*) die2 "--round must be a positive integer (got '$ROUND')" ;; esac
 case "$MAX"   in ''|*[!0-9]*) die2 "--max-rounds must be a non-negative integer, 0 to disable the runaway guard (got '$MAX')" ;; esac
 [ "$ROUND" -ge 1 ] || die2 "--round must be >= 1"
-[ "$MODE" = plan ] || [ -n "$TARGET" ] || die2 "--mode $MODE requires --target <bead-id>"
+case "$MODE" in plan|seams) ;; *) [ -n "$TARGET" ] || die2 "--mode $MODE requires --target <bead-id>" ;; esac
 
 digest() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
@@ -137,17 +140,20 @@ if [ "$DRYRUN" -eq 1 ]; then
   exit 0
 fi
 
-if [ "$MODE" = plan ]; then
+if [ "$MODE" = plan ] || [ "$MODE" = seams ]; then
   # SOLE WRITER of the plan-side stamp. Frontmatter only, and idempotent: re-stamping
-  # replaces the three keys rather than appending a second, contradictory record.
+  # replaces the three keys rather than appending a second, contradictory record. The key
+  # prefix is DERIVED from the mode (plan -> polish_, seams -> seams_), never passed in: a
+  # free-form prefix would let a caller write stamp keys nobody measured.
+  PFX=polish_; [ "$MODE" = seams ] && PFX=seams_
   head -1 "$ARTIFACT" | grep -q '^---[[:space:]]*$' || die2 "plan has no YAML frontmatter to stamp: $ARTIFACT"
   TMP=$(mktemp)
-  awk -v r="$ROUND" -v s="$POST" -v t="$STAMPED_AT" '
+  awk -v r="$ROUND" -v s="$POST" -v t="$STAMPED_AT" -v p="$PFX" '
     NR==1 { print; infm=1; next }
     infm && /^---[[:space:]]*$/ {
-      print "polish_rounds: " r; print "polish_fixpoint_sha256: " s; print "polish_stamped_at: " t
+      print p "rounds: " r; print p "fixpoint_sha256: " s; print p "stamped_at: " t
       print; infm=0; next }
-    infm && /^polish_(rounds|fixpoint_sha256|stamped_at):/ { next }
+    infm && $0 ~ ("^" p "(rounds|fixpoint_sha256|stamped_at):") { next }
     { print }' "$ARTIFACT" > "$TMP"
   cat "$TMP" > "$ARTIFACT"
   rm -f "$TMP"

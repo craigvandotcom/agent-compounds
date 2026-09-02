@@ -134,6 +134,29 @@ if grep -q "mode=code" "$S5E/receipt.txt" 2>/dev/null; then
 else
   FAIL=$((FAIL+1)); echo "FAIL code receipt missing mode=code"; fi
 
+# --- 5f. seams mode: plan-side writer, seams_ prefix, coexists with the plan stamp ---
+# The same file is polished twice in its life (seams first, then plan). Each mode must
+# stamp its OWN three keys and leave the other's untouched — otherwise the second run
+# silently erases the first fixpoint. A free-form prefix flag is refused by design.
+S5F="$W/s5f"; mk_plan a "$W/p5f.md"; PRE=$(sha "$W/p5f.md")
+mk_plan b "$W/p5f.md"
+"$SCRIPT" --mode seams --state "$S5F" --artifact "$W/p5f.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "seams mode needs no --target"          0 "STAMPED mode=seams round=2" -- --mode seams --state "$S5F" --artifact "$W/p5f.md" --round 2 --pre "$(sha "$W/p5f.md")"
+if grep -q '^seams_rounds: 2' "$W/p5f.md" && grep -q '^seams_fixpoint_sha256: ' "$W/p5f.md" && ! grep -q '^polish_' "$W/p5f.md"; then
+  PASS=$((PASS+1)); echo "ok   seams stamp uses seams_ keys and writes no polish_ keys"
+else
+  FAIL=$((FAIL+1)); echo "FAIL seams stamp keys wrong: $(grep -E '^(seams|polish)_' "$W/p5f.md" | tr '\n' ' ')"; fi
+# now the SAME file goes through plan mode: seams_ keys must survive, polish_ keys appear
+S5F2="$W/s5f2"; PRE=$(sha "$W/p5f.md")
+printf 'more\n' >> "$W/p5f.md"
+"$SCRIPT" --mode plan --state "$S5F2" --artifact "$W/p5f.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "plan mode after seams mode -> STAMPED"  0 "STAMPED mode=plan round=2" -- --mode plan --state "$S5F2" --artifact "$W/p5f.md" --round 2 --pre "$(sha "$W/p5f.md")"
+if grep -q '^seams_rounds: 2' "$W/p5f.md" && grep -q '^polish_rounds: 2' "$W/p5f.md"; then
+  PASS=$((PASS+1)); echo "ok   both fixpoints coexist in the frontmatter"
+else
+  FAIL=$((FAIL+1)); echo "FAIL plan stamp clobbered the seams stamp: $(grep -E '^(seams|polish)_rounds' "$W/p5f.md" | tr '\n' ' ')"; fi
+expect "--stamp-prefix is not a flag"           2 "NOT-GATED" -- --mode seams --stamp-prefix x_ --state "$S5F" --artifact "$W/p5f.md" --round 1 --pre "$(sha "$W/p5f.md")"
+
 # --- 6. FROZEN INPUT: an out-of-band amendment ends the loop -------------------
 S6="$W/s6"; mk_plan a "$W/p6.md"; PRE=$(sha "$W/p6.md")
 mk_plan b "$W/p6.md"
