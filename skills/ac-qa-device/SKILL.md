@@ -205,8 +205,8 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
 > to an unbounded external monitor and wait. An open-ended build monitor + a broken
 > resume chain silently eats the whole run (2026-07-03: ~45 min lost, checks time-boxed
 > out, recovered only by conductor-side watchdog timers + a SendMessage poke — recipe:
-> `background-agent-resume-chains-break-silently`). Bound it: poll on a fixed cadence up
-> to N minutes (build-specific, e.g. 15), and if the build hasn't produced an installed
+> `background-agent-resume-chains-break-silently`). Bound it: poll at >=60s intervals, the sleep inside
+> one call, up to N minutes (build-specific, e.g. 15), and if the build hasn't produced an installed
 > app by the cap, **report `build-stall` and stop** — do not silently keep waiting. A
 > stalled build is a reportable outcome, not a pause.
 

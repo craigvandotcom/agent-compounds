@@ -10,8 +10,15 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
 **The contract — every time you delegate and don't block on the result inline:**
 
 1. **Never hand off to an unbounded wait.** Bound every wait with a hard cap:
-   poll on a fixed cadence up to N iterations, then act — do NOT `sleep` on an
-   open-ended "monitor" and assume it will wake you.
+   poll up to N iterations, then act — do NOT `sleep` on an open-ended "monitor" and
+   assume it will wake you. **The cadence matches the work.** A poll interval is sized
+   to how long the delegate is expected to take — a reader round or a worker bead is
+   MINUTES, so it is polled at ≥60s, never seconds. And the sleep lives INSIDE one
+   call (`until … ; do sleep 60; done` with a generous timeout), not across dozens:
+   one Bash call that waits is a wait; sixty Bash calls that each return "not yet"
+   are a hook firing sixty times, sixty context entries, and no more information.
+   (Observed: a polish coordinator polling every few seconds — unstated cadence,
+   guessed small.)
 2. **Arm a watchdog.** A deadline after which you assume failure and
    proceed/report, or a `sleep` + `SendMessage`-poke to nudge a silent delegate.
    The conductor's timer is the backstop, not the delegate's own promise.
@@ -37,14 +44,17 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
    test` / `vitest` via `run_in_background` + a `Monitor`, or a build/CI poll —
    and then **ending its turn** ("monitor armed, waiting for completion") is the
    same silent-stall pattern pointed at yourself: the turn ends, nothing resumes,
-   and the silence reads as progress. If a local command is the thing you are
-   waiting on, **wait for it in-shell**: a foreground until-loop (`pgrep`/poll on a
-   fixed cadence) with a generous Bash timeout, not a background handle you detach
-   from and hope wakes you. Evidence: `background-agent-resume-chains-break-silently.md`
-   § "Recurs on LOCAL long test runs". The same failure also appears as a
-   `Monitor`-armed-then-exit turn end ("await the completion event") needing
-   coordinator pokes; a foreground until-loop with generous Bash timeouts was
-   the fix both times.
+   and the silence reads as progress. **The defect is the missing backstop, not the
+   notification.** A harness completion notification is the PRIMARY signal — it is
+   how a finished delegate re-invokes you, and it costs nothing while you wait. The
+   bounded poll is the WATCHDOG behind it: arm ONE long-interval wait (a backgrounded
+   `until … sleep 60` loop with a ceiling, or ScheduleWakeup at 1200s+) so that a
+   lost notification still becomes a stall report instead of silence. What is
+   forbidden is arming NEITHER — a `Monitor` and a turn end with no cap and no
+   fallback is the stall pattern; a notification plus a long watchdog is the fix.
+   Evidence: `background-agent-resume-chains-break-silently.md` § "Recurs on LOCAL
+   long test runs" — both incidents were a detached wait with no backstop, and both
+   were fixed by adding one, not by polling faster.
 6. **A reservation is keyed to the name that will COMMIT.** The pre-commit guard resolves
    the committer from `AGENT_NAME`, so a reservation you (the conductor) hold under your own
    name blocks a child committing under its own handed name — a self-block that reads like a
