@@ -255,7 +255,7 @@ def write_declined_sidecar(state_dir, st, final=False):
         if c["finds"] and not c["dropped"] and not final:
             continue
         for d in c["declines"]:
-            rows.append([c["seam"] or d.get("candidate", ""), d["why"], d["command"]])
+            rows.append([d.get("candidate") or c["seam"], d["why"], d["command"]])
         if c["dropped"]:
             rows.append([c["seam"], f"dropped in round {c['dropped']['round']}: {c['dropped']['reason']}", c["found_by"]])
     name = "declined-archive.md" if final else "declined.md"
