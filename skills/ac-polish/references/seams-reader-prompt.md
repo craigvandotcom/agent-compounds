@@ -38,6 +38,12 @@ DECLINED:
 | what you looked at | why it is not a seam | `the command that shows it` |
 ```
 
+**Every FINDINGS row has exactly six cells and every DECLINED row exactly three — count the
+`|` before you finish; a row with a cell missing is discarded unread. The `found-by` cell holds
+ONLY commands, separated by ` · `: each one is run verbatim by a script, so a note like
+"(no hits)" or "→ zero results" inside it makes the command fail and drops the row. Put what a
+command showed in the `what notices` or `what breaks silently` cell instead.**
+
 `NONE` in the seam cell is a legitimate FINDINGS answer. **DECLINED is mandatory — empty on a
 non-trivial target is a finding against you.** Say ARTIFACT SEEN: yes honestly; it does not
 discard your rows, it only stops them counting as an independent hit.
