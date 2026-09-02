@@ -21,7 +21,11 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 - Is every deliverable named as an artifact — a path, a script, a receipt — rather than an
   intention?
 - Is the work partitioned with no gap between parts: does something own each seam, each
-  caller, each trigger, each write-path the plan disturbs?
+  caller, each trigger, each write-path the plan disturbs? The oracle: for every existing
+  artifact the Deliverables reshape, the plan names the toucher list AND the command that
+  derived it, and each toucher is either a deliverable or named in Out of scope. A toucher
+  `rg` finds that is in neither is class (c) — no defined mechanism updates it. Command
+  shapes: `ac-polish/references/seams-checklist.md`.
 - Does anything in the plan depend on a fact nobody verified? Name the command that
   verified it.
 

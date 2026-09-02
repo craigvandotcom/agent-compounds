@@ -45,7 +45,14 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 - Was the touched surface's consumer set **grep-derived**, or hand-listed from memory?
   Hand-listed scopes carried a measured **16.2% repair rate** from consumers nobody found.
 - Name the grep that derived it. Does every consumer it returns appear in the bead, or is
-  its absence stated as deliberate?
+  its absence stated as deliberate? Write it as the contract's line beneath the `## Delivers`
+  bullet — ``touchers: `<command>` → <N> · owned by: … | out-of-scope: …`` — because
+  `stamp-refined.sh` re-runs that command and refuses a missing or stale one
+  (beads-standards `bead-create-contract.md` § Touchers). Command shapes per question:
+  `ac-polish/references/seams-checklist.md`.
+- For the object this bead reshapes: which bead in the epic owns each lifecycle stage —
+  create · store · read · update · delete · cleanup? A stage no bead owns and the plan does
+  not name out-of-scope is a HOLE, and grep cannot find it; only this question does.
 
 ## 4. cross-AC consistency
 

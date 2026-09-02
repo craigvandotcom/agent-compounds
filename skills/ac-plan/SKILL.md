@@ -36,12 +36,12 @@ plan is graded on whether its claims are checkable, never on its length.
 ## Procedure
 
 1. **Size the work.** Below the floor → stop, do it directly. Otherwise continue.
-2. **Explorers are OPTIONAL, and size selects them.** Run them only when the surface is
-   genuinely unknown — an unfamiliar subsystem, a cross-repo seam, a failure whose cause is
-   not yet located. A small, well-understood change gets none: a mandatory research phase is
-   how a lean plan acquires a heavy front end. When run, notes land in `_plans/research/` and
-   the plan cites them; when not, say so in one line so the omission is a decision on the
-   record rather than a gap.
+2. **Explorers are OPTIONAL, and size selects them** — with ONE mechanical exception. Run
+   them only when the surface is genuinely unknown; a small, well-understood change gets none.
+   The exception: `rg` each Deliverable's name; a hit means the plan RESHAPES an existing
+   object, and that object gets one blind seams reader (`ac-polish/references/seams-reader-prompt.md`)
+   before the Approach is written — its touchers become deliverables or Out-of-scope entries,
+   its findings feed Problem. Notes land in `_plans/research/`; when none ran, say so in one line.
 3. **Write the ONE plan file.** One file, these sections, nothing ornamental:
    - **Problem** — what is wrong now, with the evidence that it is wrong.
    - **Approach** — the shape of the fix and the alternatives rejected, each with its reason.
