@@ -1,15 +1,15 @@
 ---
 name: ac-polish
-description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, three modes, selected by argument. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint".'
+description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, four modes, selected by argument; seams mode sends blind readers at a code target and writes a findings plan by consensus. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint", "ac-seams", "study the seams of", "seams plan for".'
 ---
 
-# ac-polish — one fixpoint engine, three modes
+# ac-polish — one fixpoint engine, four modes
 
 ## I/O Contract
 
 |                  |                                                                                 |
 | ---------------- | ------------------------------------------------------------------------------- |
-| **Input**        | `plan <path>` · `bead <epic-id>` · `code <scope> --target <bead-id>`              |
+| **Input**        | `plan <path>` · `bead <epic-id>` · `code <scope> --target <bead-id>` · `seams [<target>]` |
 | **Output**       | A fixpoint-stamped artifact, or findings to the human and NO stamp                |
 | **Artifacts**    | `<state>/round-N.sha` per round · `<state>/receipt.txt` · the stamp               |
 | **Verification** | `skills/_tools/polish-fixpoint.sh` (the gate) · `polish-fixpoint.test.sh` (its proof) |
@@ -24,9 +24,12 @@ differs. Do not infer a mode's bindings from this file.
 | `plan` | `workflows/plan.md` | `references/plan-checklist.md` |
 | `bead` | `workflows/bead.md` | `references/bead-checklist.md` |
 | `code` | `workflows/code.md` | `references/code-checklist.md` |
+| `seams` | `workflows/seams.md` | `references/seams-checklist.md` · `references/seams-reader-prompt.md` · `references/seams-plan-template.md` |
 
-Each workflow binds exactly five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and
-names its hand-off. Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
+Each workflow binds five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and may bind a
+sixth, READERS: how many readers a round spawns, what they are sent, and how their findings
+reach ARTIFACT (default: one reader, `reader-prompt.md` verbatim, its edits applied directly).
+It names its hand-off. Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
 
 ## Division of labour — strict, and the reason this works
 
@@ -40,16 +43,16 @@ outside the thing being measured.
 There is no second round path for any mode. Adding one ends the property this skill exists for.
 
 ```
-MODE=plan|bead|code   TARGET·ARTIFACT·CHECKLIST·VALIDATE·STAMP = from the workflow
+MODE=plan|bead|code|seams   TARGET·ARTIFACT·CHECKLIST·VALIDATE·STAMP[·READERS] = from the workflow
 STATE=<run-scoped dir>   MAX=25 (0=off)
 
 for ROUND in 1..:
   PRE = sha256(ARTIFACT)                      # observed BEFORE the reader runs
-  spawn a FRESH, STATELESS reader for this round:
+  spawn this round's FRESH, STATELESS reader(s) — READERS, or the default ONE:
       prompt = references/reader-prompt.md, VERBATIM, with <N> <ARTIFACT> <CHECKLIST> filled
       output = EDITS (severity-gated) + a mandatory DECLINED list
-      it carries NO memory of any earlier round
-  apply this round's findings to ARTIFACT
+      it carries NO memory of any earlier round; one that has read the artifact is no second opinion
+  apply this round's findings to ARTIFACT (per READERS; default: the reader's edits, directly)
   VALIDATE — the mode's validity gate. Red means the round is NOT recorded: revert or fix.
   polish-fixpoint.sh --mode $MODE --target $TARGET --artifact $ARTIFACT \
                      --state $STATE --round $ROUND --pre $PRE --max-rounds $MAX
@@ -62,9 +65,6 @@ for ROUND in 1..:
     ENDED out-of-band-amendment -> STOP: the input moved; restart on a frozen input
     NOT-GATED -> STOP: nothing was measured, so nothing is claimed
 ```
-
-**FRESH CONTEXT EVERY ROUND.** The reader is stateless and spawned per round. A reader that
-has already read the artifact is not a second opinion.
 
 **SEVERITY GATE + mandatory DECLINED list.** The CHECKLIST names the three reportable classes —
 not style, preference or wording. Everything seen and NOT changed goes in a DECLINED list, so a
