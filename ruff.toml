@@ -1,0 +1,9 @@
+# Root ruff config — the explicit rule set for every .py outside skills/expert-consensus/
+# (which carries its own [tool.ruff] in pyproject.toml). CI installs unpinned ruff, whose
+# DEFAULT rule set widens across releases; naming the rules here means a ruff upgrade cannot
+# change what the gate checks.
+target-version = "py39"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I"]

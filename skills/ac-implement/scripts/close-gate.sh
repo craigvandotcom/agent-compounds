@@ -147,7 +147,7 @@ echo "close-gate[$BEAD] RED-RECEIPT ok — RED was: $RED_PROBE"
 # acceptance criterion was rewritten after the RED was banked, and the GREEN below answers
 # a question nobody is asking any more.
 # ---------------------------------------------------------------------------------------
-BODY=$(mktemp -t ac-close-body) || not_checked "SETUP" "cannot create a scratch file"
+BODY=$(mktemp "${TMPDIR:-/tmp}/ac-close-body.XXXXXX") || not_checked "SETUP" "cannot create a scratch file"
 trap 'rm -f "$BODY"' EXIT
 
 if [ -n "$BODY_FILE" ]; then
@@ -175,7 +175,7 @@ echo "close-gate[$BEAD] PROBE-DRIFT ok — the RED probe is still a live AC"
 # ---------------------------------------------------------------------------------------
 PROBE_RUN=0
 PROBE_GREEN=0
-ASSERT_OUT=$(mktemp -t ac-close-out) || not_checked "SETUP" "cannot create a scratch file"
+ASSERT_OUT=$(mktemp "${TMPDIR:-/tmp}/ac-close-out.XXXXXX") || not_checked "SETUP" "cannot create a scratch file"
 trap 'rm -f "$BODY" "$ASSERT_OUT"' EXIT
 
 # The assertion-bearing probe is the one that RUNS A HARNESS, which is not always the probe

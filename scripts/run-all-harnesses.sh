@@ -222,10 +222,10 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     echo "### Proof-test harnesses"
     echo ""
     echo "discovered ${#HARNESSES[@]} · passed ${#PASSED[@]} · failed ${#FAILED[@]} · quarantined-red ${#QUARANTINED_RED[@]} · skipped ${#SKIPPED[@]}"
-    [ "${#SKIPPED[@]}" -gt 0 ] && { echo ""; echo "**NOT-FULLY-GATED — self-skipped:**"; printf '- %s\n' "${SKIPPED[@]}"; }
-    [ "${#FLAKE_RETRIED[@]}" -gt 0 ] && { echo ""; echo "**Flake retry used:**"; printf '- %s\n' "${FLAKE_RETRIED[@]}"; }
-    [ "${#QUARANTINED_RED[@]}" -gt 0 ] && { echo ""; echo "**Quarantined (red, not gating):**"; printf '- %s\n' "${QUARANTINED_RED[@]}"; }
-    [ "${#FAILED[@]}" -gt 0 ] && { echo ""; echo "**Failed:**"; printf '- %s\n' "${FAILED[@]}"; }
+    [ "${#SKIPPED[@]}" -gt 0 ] && { echo ""; echo "**NOT-FULLY-GATED — self-skipped:**"; printf -- '- %s\n' "${SKIPPED[@]}"; }
+    [ "${#FLAKE_RETRIED[@]}" -gt 0 ] && { echo ""; echo "**Flake retry used:**"; printf -- '- %s\n' "${FLAKE_RETRIED[@]}"; }
+    [ "${#QUARANTINED_RED[@]}" -gt 0 ] && { echo ""; echo "**Quarantined (red, not gating):**"; printf -- '- %s\n' "${QUARANTINED_RED[@]}"; }
+    [ "${#FAILED[@]}" -gt 0 ] && { echo ""; echo "**Failed:**"; printf -- '- %s\n' "${FAILED[@]}"; }
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 

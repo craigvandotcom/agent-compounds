@@ -359,6 +359,20 @@ else
   fail "Case 16: expected both to stamp, rc=$RC/$RC2. Output: $OUT / $OUT2"
 fi
 
+# Case 17 — NEGATIVE CONTROL on the tool itself: the bead that STAMPS in Case 13 must be
+# REFUSED, not stamped, when rg cannot run. A missing/broken rg reads as "zero references"
+# only if the writer forgets to look at rg's exit code — that is the silent pass this case
+# pins shut. The shim sits in its own dir so Cases 12–16 keep the real rg.
+NORG="$WORK/norg"; mkdir -p "$NORG"
+printf '#!/usr/bin/env bash\nexit 127\n' >"$NORG/rg"; chmod +x "$NORG/rg"
+: >"$BR_LOG"
+OUT=$(PATH="$NORG:$MOCK:$PATH" bash "$STAMP" bd-t-ok 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q "rg exited 127" && [ "$(stamped_count bd-t-ok)" -eq 0 ]; then
+  pass "Case 17: NEGATIVE CONTROL — when rg cannot run, a referenced Delivers path is REFUSED, never read as zero references"
+else
+  fail "Case 17: expected a refusal naming rg's exit code and no stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All stamp-refined fixpoint-receipt tests passed."

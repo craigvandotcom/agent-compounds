@@ -105,7 +105,7 @@ route_premise_failure() {
   note="Premise failure: ${FAIL_CLASS} — ${FAIL_DETAIL}
 Detected by flight-check.sh at claim, against the tree at $(git rev-parse --short HEAD 2>/dev/null || echo unknown).
 The bead is not flyable as written: re-refine it against the tree that exists."
-  msg_file=$(mktemp -t ac-flight-premise) || { echo "NOT-GATED: cannot write the premise comment" >&2; return 2; }
+  msg_file=$(mktemp "${TMPDIR:-/tmp}/ac-flight-premise.XXXXXX") || { echo "NOT-GATED: cannot write the premise comment" >&2; return 2; }
   printf '%s\n' "$note" >"$msg_file"
 
   local title new_title
@@ -140,7 +140,7 @@ The bead is not flyable as written: re-refine it against the tree that exists."
 
 # --- the bead body ----------------------------------------------------------------------
 
-BODY=$(mktemp -t ac-flight-body) || { echo "NOT-GATED: cannot create a scratch file" >&2; exit 2; }
+BODY=$(mktemp "${TMPDIR:-/tmp}/ac-flight-body.XXXXXX") || { echo "NOT-GATED: cannot create a scratch file" >&2; exit 2; }
 cleanup() { rm -f "$BODY"; }
 trap cleanup EXIT
 

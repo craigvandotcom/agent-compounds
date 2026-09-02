@@ -134,7 +134,7 @@ stamp_refined() {
   # measured a 16.2% repair rate from hand-listed consumer sets; the slate's caller list was
   # short by two; this very script was once archived with four live callers. A stale count
   # is refused too — the list being stale when used IS the defect.
-  local root desc dl art rel stem refs tline tcmd tn actual
+  local root desc dl art rel stem refs rg_rc tline tcmd tn actual
   root=$(git rev-parse --show-toplevel 2>/dev/null)
   if [ -z "$root" ]; then
     echo "stamp_refined: REFUSED $id — not inside a git repo, so touchers cannot be derived; refusing rather than guessing. No label written." >&2
@@ -147,8 +147,16 @@ stamp_refined() {
     rel="${art#./}"
     [ -f "$root/$rel" ] || continue                     # a NEW artifact reshapes nothing
     stem=$(printf '%s' "$rel" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }')
+    # rg exits 0 (matches) or 1 (none). Anything else — 127 absent, 2 bad invocation — means
+    # the count was never derived; reading that as "zero references" would stamp on a missing
+    # tool, so it is a refusal, not a zero.
     refs=$(rg -l -F "$stem" "$root" -g "!$rel" -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' \
-             -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*' 2>/dev/null | grep -c .)
+             -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*' 2>/dev/null); rg_rc=$?
+    if [ "$rg_rc" -gt 1 ]; then
+      echo "stamp_refined: REFUSED $id — [unowned-touchers] rg exited $rg_rc deriving touchers for \`$rel\` (absent or broken), so the reference count is unknown; refusing rather than reading it as zero. No label written." >&2
+      return 2
+    fi
+    refs=$(printf '%s\n' "$refs" | grep -c .)
     [ "${refs:-0}" -gt 0 ] || continue                  # nothing references it
     # Order matters: the touchers line usually names the path too (inside its own -g glob),
     # so test for it BEFORE the bullet-match rule, or the rule swallows it.

@@ -35,7 +35,7 @@ if [ ! -x "$GATE" ]; then
   exit 1
 fi
 
-WORK=$(mktemp -d -t ac-flight-test) || { echo "flight-check.test: cannot create scratch dir"; exit 1; }
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/ac-flight-test.XXXXXX") || { echo "flight-check.test: cannot create scratch dir"; exit 1; }
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/root" "$WORK/receipts" "$WORK/bodies"
 : >"$WORK/root/present-artifact.md"

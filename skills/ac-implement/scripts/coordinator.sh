@@ -107,7 +107,7 @@ if git diff --quiet -- "$LEDGER" 2>/dev/null; then
   exit 0
 fi
 
-MSG=$(mktemp -t ac-coord-msg) || ungated "cannot create a scratch file"
+MSG=$(mktemp "${TMPDIR:-/tmp}/ac-coord-msg.XXXXXX") || ungated "cannot create a scratch file"
 trap 'rm -f "$MSG"' EXIT
 printf '%s\n\n%s\n' \
   "chore(beads): ac2 swarm run $RUN ledger [no-bead]" \

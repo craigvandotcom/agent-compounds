@@ -58,5 +58,5 @@ jobs:
       # harness correctly REFUSES to pass on a host where it cannot prove that half
       # (found on this job's first real run). AC4 offers provision-or-loud-skip; we
       # provision, because skipping would quietly halve what the harness certifies.
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh ripgrep
       - run: bash scripts/run-all-harnesses.sh
