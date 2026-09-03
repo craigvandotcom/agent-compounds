@@ -1,50 +1,57 @@
-# seams-checklist — how to trace one object, and what its map is allowed to mean
+# seams-checklist — three lenses on one target, and what each map is allowed to mean
 
-The loop that runs this (K trace readers per round, merge by `stage × path`, fixpoint when a
-round adds no edge) is `ac-polish/workflows/seams.md`. This file is the lens: the stages, the
-command shapes that find them, and the rules that turn a map into seams. It is systems
-engineering's oldest move — enumerate the components and their interfaces FIRST (the N²
-chart), then judge the interfaces — done cheaply, by `rg`, at study time.
+The loop (one reader per lens per round, merge by exact key, fixpoint when a round adds no
+edge to any map) is `ac-polish/workflows/seams.md`. This file is the lens: what each map
+enumerates, the command shapes that find it, and the rules that turn a map into seams. It is
+systems engineering's oldest move — enumerate components and interfaces FIRST, judge the
+interfaces SECOND — done by `rg` at study time. The object map is the N² chart (structure);
+the flow map is the control structure (time and sensing); the boundary map is the contract.
 
-## The object, not the area
+## The target, resolved
 
-A trace has one subject: a column, a type, a component's state, a record. "Images in food
-entries" is an area; `foods.image_urls` and its writers is an object. The orchestrator resolves
-the area to the heaviest object before any reader runs (workflow § TARGET); the reader traces
-that object and nothing else. Follow the object's DATA — who writes it, moves it, stores it,
-reads it, deletes it. Do not follow the import graph. Exclude prose paths (docs, plans,
-backlog, memory, changelogs, snapshots, lockfiles, generated types).
+A trace has a subject, not an area. The orchestrator resolves the area to the heaviest OBJECT
+(touching files × layers) before any reader runs; the object's edges in time order are its
+FLOWS; the interfaces those edges cross are its BOUNDARIES. All three lenses aim at the one
+target. Follow the object's DATA, never the import graph; exclude prose paths.
 
-## The stages — each found by a command
+## object — the datum, seven stages
 
 | stage | what to find | command shape |
 |---|---|---|
-| `create` | where the object first comes to exist | `rg -n "(insert\|create\|new .*<Type>\|<symbol>\s*[:=])" --type ts -g '!**/*.test.*'` |
-| `transport` | where it moves between stores — upload, handoff blob, queue, message | `rg -n "(upload\|enqueue\|sessionStorage\|Preferences\|postMessage).*<symbol>"` |
-| `store` | the schema and every persistence write | `rg -n "<column>" supabase/ lib/db/ --type sql --type ts` |
-| `read` | every consumer of the stored shape | `rg -n "<symbol>" -g '!**/*.test.*' -g '!**/__tests__/**' app features lib` |
-| `update` | every mutation after creation | `rg -n "(update\|upsert\|patch\|set)[^;]*<symbol>"` |
+| `create` | where it first exists | `rg -n "(insert\|create\|<symbol>\s*[:=])" --type ts -g '!**/*.test.*'` |
+| `transport` | moved between stores — upload, handoff blob, queue | `rg -n "(upload\|enqueue\|sessionStorage\|Preferences).*<symbol>"` |
+| `store` | schema and persistence writes | `rg -n "<column>" supabase/ lib/db/` |
+| `read` | every consumer of the stored shape | `rg -n "<symbol>" -g '!**/*.test.*' app features lib` |
+| `update` | every mutation after creation | `rg -n "(update\|upsert\|patch)[^;]*<symbol>"` |
 | `delete` | where the record goes away | `rg -n "(delete\|remove)[^;]*<symbol>"` |
-| `cleanup` | what reclaims what delete leaves behind — blobs, caches, cron | `rg -n "<symbol>" app/api/cron scripts` |
+| `cleanup` | what reclaims what delete leaves — blobs, caches, cron | `rg -n "<symbol>" app/api/cron scripts` |
 
-Every row: `path:line` · role · upstream · downstream · contract · found-by. The contract is the
-thing that would FAIL if this edge drifted — a type, an assertion, a test path — or `none`. Say
-`none` when it is true; it is the most useful cell on the map.
+Row: `path:line` · role · upstream · downstream · contract (what FAILS on drift — a type, an
+assertion, a test path — or `none`) · found-by. Derived: **hole** (a core stage with no row) ·
+**competing writers** (≥2 paths at create/update/delete) · **unasserted edge** (contract none).
 
-## What the map means — rules, not opinions
+## flow — one process, ordered steps
 
-- **Hole** — a core stage with no row. Nobody cleans up, nobody deletes. Derived by the script.
-- **Competing writers** — two or more paths at `create`, `update` or `delete` with no shared
-  primitive they route through. Last write wins; nothing asserts the shape. Derived.
-- **Unasserted edge** — `contract = none`. Drift is silent by construction. Derived.
-- **Shape divergence** — writers and readers naming different shapes for one thing (a column
-  and its fallback). Reader diagnosis: cite both edges.
-- **Duplicated stage** — one stage implemented twice (two upload paths). The chokepoint
-  opportunity. Reader diagnosis.
-- **Dead state** — written and never read. Reader diagnosis: name the writer edges.
-- **Silent failure** — an edge whose failure no user, log or test would notice. Reader
-  diagnosis: say what a user sees, and does not see.
+Row: flow · step · `path:line` · controller (who decides it happens) · sensor (what tells the
+controller it happened) · on-failure (retry · timeout · compensate · surface · swallow · none)
+· found-by. Find steps by following the object's transport/store/read edges in the order a
+user or job triggers them: `rg -n "<step verb>" <the edge's file>` and the call it makes next.
+Derived: **step with no sensor** (the controller acts on a stale model) · **failure not
+handled** (none or swallow — the process is left half-done, silently). Reader diagnosis:
+**ordering not guaranteed** (two steps that can interleave — a delete during an upload).
 
-Reader diagnoses are ordered by how many readers reached them — a salience signal for the
-human, never a gate. The map's facts are validated by re-running `found-by`; the diagnosis is
-judgement over shared facts, which is the only kind two readers can meaningfully disagree on.
+## boundary — one interface, two sides
+
+Row: interface · side (producer/consumer, caller/callee) · `path:line` · assumes (a shape, an
+order, a presence the other side is trusted for) · asserts (the type, guard or test that
+checks it, or `none`) · found-by. Find both sides: `rg -n "<type or key>"` on each side of the
+call, the blob, the table. Derived: **assumption nothing asserts** · **half-mapped boundary**
+(one side on the map).
+
+## Across lenses — the ranking
+
+A path that carries a seam in two lenses — an unasserted edge that is also a step with no
+sensor, on a boundary with an unchecked assumption — is one seam seen from three angles. The
+script lists these first. Reader diagnoses (judgement) are ordered by how many readers reached
+them: salience for the human, never a gate. The flow map's steps and sensors are emitted as
+the `ac-qa` journey, so the plan ships with the scenario that proves its fix.

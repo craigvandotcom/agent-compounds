@@ -1,6 +1,6 @@
 ---
 name: ac-polish
-description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, four modes, selected by argument; seams mode traces one object''s lifecycle with K readers, converges on the merged map, and derives its seams into a plan. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint", "ac-seams", "study the seams of", "seams plan for".'
+description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, four modes, selected by argument; seams mode traces one object through three lenses (object · flow · boundary), converges on the merged maps, and derives its seams into a plan. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint", "ac-seams", "study the seams of", "seams plan for".'
 ---
 
 # ac-polish — one fixpoint engine, four modes

@@ -1,49 +1,56 @@
-# polish · seams mode — trace one object, converge on its map, read the seams off it
+# polish · seams mode — three lenses trace one target; the maps converge; the seams are read off
 
 The loop is in `ac-polish/SKILL.md` and is the same in every mode. This file supplies only
 what seams mode binds, and it is a MANDATORY load for a seams run.
 
-Seams mode reads CODE and writes a MAP. K readers trace the same object through the same
-stages; the union map is the artifact; the loop ends when a round adds no edge — reachable,
-because the edges of one object are finite. The seams are then derived from the map, not
-hunted. Nothing is fixed here: the map and its seams go to `ac-plan`, whose Approach is
-usually one sentence — give this object one owner at each stage the map shows it lacks.
+Seams mode reads CODE and writes MAPS. Each round one reader per lens — **object** (structure:
+the datum through its stages), **flow** (time: the object's edges as processes, with sensing),
+**boundary** (contract: the interfaces those edges cross, both sides) — traces the same target.
+The union of the three maps is the artifact; the loop ends when a round adds no edge to any of
+them, which is reachable because a target's edges are finite. The seams are derived from the
+maps, per lens and then across lenses, and go to `ac-plan` with the flow map's steps as the
+acceptance journey. Nothing is fixed here.
 
 ## Bindings
 
 | knob | seams mode |
 | --- | --- |
-| **TARGET** | an OBJECT — a column, a type, a component's state, a record — never an area. The user gives an area or nothing: **resolve it before any reader runs.** `rg` the area's nouns for candidate objects; weigh each by touching files × distinct layers (db · service · hook · component · route · cron · test), churn as tiebreaker; take the heaviest; confirm it in ONE prompt: *"Resolved to `foods.image_urls` + writers — 14 files, 5 layers. Trace this?"* No area at all → `scripts/aim.sh --since <window>` ranks files; the human picks one; resolve its object the same way |
-| **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: the MAP, one row per `stage × path`, first-seen text, stage order, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
-| **CHECKLIST** | `references/seams-checklist.md` — the stages, their command shapes, and the rules that turn a map into seams |
-| **READERS** | K trace readers per round (default 3), each sent `references/seams-reader-prompt.md` verbatim with `<OBJECT>`, `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<letter>.md`) filled. Same object, same stages, independent tracing. Their rows reach ARTIFACT only through MERGE |
+| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs.** `rg` the area's nouns for candidate objects; weigh each by touching files × distinct layers (db · service · hook · component · route · cron · test), churn as tiebreaker; take the heaviest. Then name its FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and its BOUNDARIES (the interfaces those edges cross). Confirm all three in ONE prompt: *"Object: `foods.image_urls` + writers (14 files, 5 layers). Flows: 2. Boundaries: 3. Trace?"* No area → `scripts/aim.sh --since <window>` ranks files; the human picks; resolve the same way |
+| **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: three maps, exact keys (object `stage × path` · flow `flow × path` · boundary `interface × side × path`), first-seen text, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
+| **CHECKLIST** | `references/seams-checklist.md` — the three lenses, their command shapes, and the rules that turn maps into seams |
+| **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each extends and corrects its own map |
 | **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new edge's `found-by`; an edge no command reproduces is dropped |
 | **STAMP** | `polish-fixpoint.sh --mode seams` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them |
 
-## MERGE — one command per round, after the K reports land
+## MERGE — one command per round, after the reports land
 
 ```
 scripts/seams-merge.py round --state <STATE> --artifact <STATE>/plan.md --round <N> \
     --repo <root> --validate <STATE>/reports/r<N>-*.md
 ```
 
-Edges key on `stage × path` — exact, no fuzzy matching. A named contract beats `none` and the
-disagreement is recorded. Reader diagnoses merge on the edges they cite and count readers. The
-round line prints `new_edges=` (the convergence signal) and the derived seams so far. **A
-`NOT-GATED` merge means the round did not happen** — resume the reader whose report failed to
-parse, re-merge, then run the gate. Every artifact change is a round to `polish-fixpoint.sh`.
+Each lens merges on its exact key. A named contract beats `none` in the ledger without moving
+the digest; the disagreement is recorded. Reader diagnoses merge on the paths they cite and
+count readers. The round line prints `new_edges=` (the convergence signal), edges per lens, and
+the derived and cross-lens seam counts. **A `NOT-GATED` merge means the round did not happen**
+— resume that reader, re-merge, then run the gate. Every artifact change is a round to
+`polish-fixpoint.sh`.
 
-## Stop — a round that adds no edge
+## Stop — a round that adds no edge to any map
 
-The digest is unchanged, and at round ≥ 2 the script stamps: K readers independently traced
-the object and found nothing the map lacked. Two or three rounds is normal. A run that keeps
-adding edges past five rounds has the wrong TARGET — an area, not an object — and the fix is to
-split it (each heavy downstream consumer is its own object, its own run), not to run more rounds.
+Digest unchanged at round ≥ 2 → the script stamps: three independent traces found nothing the
+maps lacked. Two or three rounds is normal (about nine readers). A run still adding edges past
+five rounds has an area for a target — split it (each heavy flow or boundary is its own run),
+never loop on.
 
 ## Hand-off
 
-`seams-merge.py handoff` writes Map · Seams derived (holes, competing writers, unasserted edges)
-· Seams from reader diagnosis, ordered by reader count · an empty Approach. The orchestrator
-writes the Problem paragraph FROM THE MAP, copies the file to `_plans/` with frontmatter naming
-rounds and verdict, and hands it to `ac-plan`, which writes the Approach and the remaining ac2
-sections and passes it to `ac-polish plan`. Do not finish by reporting success and stopping.
+`seams-merge.py handoff` writes: the three maps · **seams seen by more than one lens, first**
+(a path with an unasserted edge that is also an unsensed step on an unchecked boundary) ·
+seams derived per lens (hole · competing writers · unasserted edge · step with no sensor ·
+failure not handled · assumption nothing asserts · half-mapped boundary) · reader diagnoses by
+reader count · the **journey** (the flow map's steps and sensors, for `ac-qa`) · an empty
+Approach. The orchestrator writes the Problem paragraph FROM THE MAPS, copies the file to
+`_plans/` with frontmatter naming rounds and verdict, and hands it to `ac-plan`, which writes
+the Approach and the remaining ac2 sections and passes it to `ac-polish plan`. Do not finish
+by reporting success and stopping.

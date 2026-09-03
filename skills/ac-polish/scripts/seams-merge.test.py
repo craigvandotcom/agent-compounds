@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""seams-merge.test.py — RED/GREEN proof harness for seams-merge.py (the trace version).
+"""seams-merge.test.py — RED/GREEN proof harness for seams-merge.py (three lenses, one artifact).
 
 ASSURANCE-ROLE: test-harness
 CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.py glob) and any local run.
 
-Rules asserted: edges key on (stage, path) exactly · a round that adds no edge leaves the
-digest unchanged (the stamp condition) · first-seen text kept, readers accumulated · a named
-contract beats `none` and the disagreement is recorded · holes / competing writers / unasserted
-edges are DERIVED · reader diagnoses merge on cited edges and count readers · --validate drops
-an edge no command reproduces · unknown stage / bad shape / no marker -> NOT-GATED, nothing
-written · consecutive rounds enforced · no spawn, assurance block present. Exit 0 = all pass.
+Rules asserted: each lens keys exactly (object stage×path · flow flow×path · boundary
+interface×side×path) · one artifact holds three maps and its digest moves only on an edge ·
+first-seen text, readers accumulated, a named contract beats none without moving the digest ·
+per-lens derivation (hole, competing writers, unasserted edge; step with no sensor, failure
+not handled; assumption nothing asserts, half-mapped boundary) · cross-lens seams by shared
+path rank first · journey emitted from the flow map · reader diagnoses merge on cited paths
+and count readers · --validate drops an edge no command reproduces · LENS missing / unknown
+stage / wrong shape / no marker -> NOT-GATED, nothing written · rounds consecutive · no spawn,
+assurance block present. Exit 0 = all pass.
 """
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -28,7 +32,7 @@ def ok(n):
 
 
 def fail(n, d=""):
-    global FAIL; FAIL += 1; print(f"FAIL {n}\n     {d[:500]}")
+    global FAIL; FAIL += 1; print(f"FAIL {n}\n     {d[:600]}")
 
 
 def run(*args):
@@ -45,142 +49,154 @@ def write(p, s):
     open(p, "w").write(s)
 
 
-MH = "| stage | path:line | role | upstream | downstream | contract | found-by |\n|---|---|---|---|---|---|---|\n"
+OH = "| stage | path:line | role | upstream | downstream | contract | found-by |\n|---|---|---|---|---|---|---|\n"
+FH = "| flow | step | path:line | controller | sensor | on-failure | found-by |\n|---|---|---|---|---|---|---|\n"
+BH = "| interface | side | path:line | assumes | asserts | found-by |\n|---|---|---|---|---|---|\n"
 DH = "| pattern | edges | what breaks silently | found-by |\n|---|---|---|---|\n"
 
 
-def report(map_rows="", diag_rows="", resolved="foods.image_urls"):
-    return f"TARGET RESOLVED TO: {resolved}\n\nMAP:\n{MH}{map_rows}\nDIAGNOSIS:\n{DH}{diag_rows}\n"
+def rep(lens, hdr, rows="", diag=""):
+    return f"LENS: {lens}\nTARGET RESOLVED TO: foods.image_urls\n\nMAP:\n{hdr}{rows}\nDIAGNOSIS:\n{DH}{diag}\n"
 
 
-W = tempfile.mkdtemp(prefix="seams-trace-")
+W = tempfile.mkdtemp(prefix="seams-3lens-")
 REPO = os.path.join(W, "repo"); os.makedirs(os.path.join(REPO, "lib"))
 write(os.path.join(REPO, "lib/a.ts"), "export const image_urls = 1\n")
 ART = os.path.join(W, "plan.md"); write(ART, f"---\nstatus: findings\n---\n\n## Problem\n\np\n\n{MARKER}\n")
 S = os.path.join(W, "state")
 
-CREATE = "| create | `lib/db/foods.ts:139` | addFood inserts the row | camera blob | dashboard | `lib/db/__tests__/foods.test.ts` | `rg -n addFood lib/db/foods.ts` |\n"
-CREATE2 = "| create | `lib/db/foods.ts:141` | insert (same file, other line, other words) | form | page | none | `rg -n addFood lib/db/foods.ts` |\n"
-STORE = "| store | `supabase/migrations/006.sql:3` | image_urls TEXT[] | addFood | readers | none | `rg -n image_urls supabase` |\n"
-READ = "| read | `lib/db/foods.ts:41` | fallback to photo_url | store | EntryCard | none | `rg -n photo_url lib/db/foods.ts` |\n"
-UPD1 = "| update | `lib/services/image-upload.ts:218` | queued merge | camera | store | `__tests__/unit/image-upload-concurrent.test.ts` | `rg -n enqueueUpload lib/services` |\n"
-UPD2 = "| update | `lib/services/image-auto-save.ts:34` | blind update, no queue | gallery delete | store | none | `rg -n foodsRepo.update lib/services/image-auto-save.ts` |\n"
-DEL = "| delete | `lib/db/foods.ts:456` | deleteFood, row only | page | — | `__tests__/features/foods/food-delete.test.tsx` | `rg -n deleteFood lib/db/foods.ts` |\n"
-DIAG_A = "| shape divergence | `lib/db/foods.ts:41` · `lib/services/image-upload.ts:218` | two shapes for one column | `rg -n 'photo_url\\|image_urls' lib` |\n"
-DIAG_A2 = "| shape divergence | `lib/services/image-upload.ts:218` · `lib/db/foods.ts:41` | same thing, other order | `rg -n image_urls lib` |\n"
+O1 = ("| create | `lib/db/foods.ts:139` | addFood inserts | camera | dashboard | `lib/db/__tests__/foods.test.ts` | `rg -n addFood lib/db/foods.ts` |\n"
+      "| store | `supabase/migrations/006.sql:3` | image_urls TEXT[] | addFood | readers | none | `rg -n image_urls supabase` |\n"
+      "| read | `lib/db/foods.ts:41` | photo_url fallback | store | EntryCard | none | `rg -n photo_url lib/db/foods.ts` |\n"
+      "| update | `lib/services/image-upload.ts:218` | queued merge | camera | store | `__tests__/unit/image-upload-concurrent.test.ts` | `rg -n enqueueUpload lib/services` |\n"
+      "| update | `lib/services/image-auto-save.ts:34` | blind update | gallery delete | store | none | `rg -n foodsRepo.update lib/services/image-auto-save.ts` |\n"
+      "| delete | `lib/db/foods.ts:456` | deleteFood row only | page | — | `__tests__/features/foods/food-delete.test.tsx` | `rg -n deleteFood lib/db/foods.ts` |\n")
+F1 = ("| camera capture → save | capture | `app/foods/camera/camera-page-client.tsx:290` | user | none | none | `rg -n handleCapture app/foods/camera` |\n"
+      "| camera capture → save | upload | `lib/services/image-upload.ts:191` | camera page | `uploadComplete` flag | compensating delete | `rg -n uploadAndPersistImages lib/services` |\n"
+      "| camera capture → save | save | `lib/services/image-auto-save.ts:34` | form | none | swallow | `rg -n autoSaveImageUrls lib/services` |\n")
+B1 = ("| camera→form handoff blob | producer | `app/foods/camera/camera-page-client.tsx:294` | form reads uploadedUrls | none | `rg -n PendingImagesData app` |\n"
+      "| camera→form handoff blob | consumer | `features/foods/hooks/use-image-management.ts:80` | blob has uploadedUrls | runtime guard | `rg -n PendingImagesData features` |\n"
+      "| supabase foods row | consumer | `lib/db/foods.ts:41` | image_urls is string[] | none | `rg -n image_urls lib/db/foods.ts` |\n")
+DA = "| shape divergence | `lib/db/foods.ts:41` · `lib/services/image-upload.ts:218` | two shapes for one column | `rg -n photo_url lib` |\n"
 
-# --- 1. round 1: two readers, same edge in different words -> one edge; diagnoses merge ----
-write(f"{W}/r1/A.md", report(CREATE + STORE + READ + UPD1 + UPD2, DIAG_A))
-write(f"{W}/r1/B.md", report(CREATE2 + STORE + DEL, DIAG_A2))
-rc, out = run("round", "--state", S, "--artifact", ART, "--round", "1", f"{W}/r1/A.md", f"{W}/r1/B.md")
-if rc == 0 and "new_edges=6" in out and "seen_again=2" in out and "edges=6" in out:
-    ok("round 1: 8 rows from 2 readers -> 6 edges keyed on stage × path (create and store seen twice)")
+# --- 1. round 1: three lenses, one artifact ------------------------------------------------
+write(f"{W}/r1/o.md", rep("object", OH, O1, DA)); write(f"{W}/r1/f.md", rep("flow", FH, F1)); write(f"{W}/r1/b.md", rep("boundary", BH, B1))
+rc, out = run("round", "--state", S, "--artifact", ART, "--round", "1", f"{W}/r1/o.md", f"{W}/r1/f.md", f"{W}/r1/b.md")
+if rc == 0 and "lenses=boundary,flow,object" in out and "new_edges=12" in out and "edges=object:6,flow:3,boundary:3" in out:
+    ok("round 1: three lens reports -> 12 edges in one artifact, counted per lens")
 else:
-    fail("round 1 merge", out)
+    fail("round 1", out)
 art = open(ART).read()
-if "addFood inserts the row" in art and "other words" not in art and art.count("\n| ") == 7:
-    ok("artifact holds FIRST-SEEN text, one row per edge, header + 6 rows")
+if "### object map — 6 edges" in art and "### flow map — 3 edges" in art and "### boundary map — 3 edges" in art:
+    ok("artifact holds the three maps under one marker")
 else:
-    fail("artifact text", art)
-if "holes=cleanup" in out and "competing=update" in out and "unasserted=3" in out:
-    ok("round output derives holes (cleanup), competing writers (update), unasserted edges (3)")
+    fail("artifact maps", art)
+if "derived_seams=" in out and "cross_lens=3" in out:
+    ok("round output reports derived seams and cross-lens seams (auto-save, foods.ts, camera page each seen by two lenses)")
 else:
-    fail("derived diagnosis", out)
+    fail("derived/cross count", out)
 d1 = sha(ART)
 
-# --- 2. round 2: same edges re-found, a contract named where round 1 said none -> digest unchanged
-write(f"{W}/r2/C.md", report(STORE.replace("| none |", "| `supabase/__tests__/schema.test.ts` |") + READ, ""))
-rc, out = run("round", "--state", S, "--artifact", ART, "--round", "2", f"{W}/r2/C.md")
-if rc == 0 and "new_edges=0" in out and sha(ART) == d1:
-    ok("clean round: re-found edges leave the digest UNCHANGED (the stamp condition)")
+# --- 2. round 2: same edges, one contract named where round 1 said none -> digest unchanged --
+write(f"{W}/r2/o.md", rep("object", OH, O1.replace("| image_urls TEXT[] | addFood | readers | none |", "| image_urls TEXT[] | addFood | readers | `supabase/__tests__/schema.test.ts` |")))
+write(f"{W}/r2/f.md", rep("flow", FH, F1)); write(f"{W}/r2/b.md", rep("boundary", BH, B1))
+rc, out = run("round", "--state", S, "--artifact", ART, "--round", "2", f"{W}/r2/o.md", f"{W}/r2/f.md", f"{W}/r2/b.md")
+if rc == 0 and "new_edges=0" in out and "seen_again=12" in out and sha(ART) == d1:
+    ok("clean round across all three lenses leaves the digest UNCHANGED (the stamp condition)")
 else:
-    fail("clean round digest", f"{out} same={sha(ART) == d1}")
-import json
+    fail("clean round", f"{out} same={sha(ART) == d1}")
 led = json.load(open(f"{S}/ledger.json"))
-e = led["edges"]["store × supabase/migrations/006.sql"]
-if e["contract_disagreement"] and "schema.test" in e["contract"] and sorted(e["readers"]) == ["A", "B", "C"]:
-    ok("a named contract beats `none`, the disagreement is recorded, readers accumulate")
+e = led["edges"]["object"]["store × supabase/migrations/006.sql"]
+if e["contract_disagreement"] and "schema.test" in e["contract"] and e["contract_first"] == "none" and sorted(e["readers"]) == ["o"]:
+    ok("a named contract beats none in the ledger, first-seen kept in the artifact, disagreement recorded")
 else:
-    fail("contract merge", json.dumps(e)[:300])
-if led["diag"] and len(next(iter(led["diag"].values()))["readers"]) == 2:
-    ok("reader diagnoses citing the same edges merge and count 2 readers")
+    fail("contract merge", json.dumps(e)[:400])
+if led["edges"]["flow"]["camera capture → save × lib/services/image-auto-save.ts"]["readers"] == ["f"] \
+   and "camera→form handoff blob × producer × app/foods/camera/camera-page-client.tsx" in led["edges"]["boundary"]:
+    ok("flow keys on flow × path; boundary keys on interface × side × path")
 else:
-    fail("diag merge", json.dumps(led["diag"])[:300])
+    fail("lens keys", json.dumps(list(led["edges"]["flow"]) + list(led["edges"]["boundary"]))[:400])
 
-# --- 3. round 3 adds the missing cleanup edge -> digest moves, hole closes ------------------
-CLEAN = "| cleanup | `app/api/cron/gc-storage-objects/route.ts:179` | GC sweeps unreferenced blobs | store | bucket | `app/api/cron/gc-storage-objects/__tests__/route.test.ts` | `rg -n image_urls app/api/cron` |\n"
-write(f"{W}/r3/D.md", report(CLEAN, ""))
-rc, out = run("round", "--state", S, "--artifact", ART, "--round", "3", f"{W}/r3/D.md")
-if rc == 0 and "new_edges=1" in out and "holes=-" in out and sha(ART) != d1:
-    ok("a new edge moves the digest and closes the hole")
+# --- 3. round 3: a reader adds the cleanup edge -> digest moves, hole closes ------------------
+write(f"{W}/r3/o.md", rep("object", OH, "| cleanup | `app/api/cron/gc-storage-objects/route.ts:179` | GC sweeps blobs | store | bucket | `app/api/cron/gc-storage-objects/__tests__/route.test.ts` | `rg -n image_urls app/api/cron` |\n", DA))
+rc, out = run("round", "--state", S, "--artifact", ART, "--round", "3", f"{W}/r3/o.md")
+if rc == 0 and "new_edges=1" in out and sha(ART) != d1:
+    ok("a new edge in one lens moves the digest")
 else:
     fail("new edge", out)
-
-# --- 4. rounds must be consecutive ---------------------------------------------------------
-rc, out = run("round", "--state", S, "--artifact", ART, "--round", "9", f"{W}/r3/D.md")
-if rc == 2 and "NOT-GATED" in out:
-    ok("non-consecutive round -> NOT-GATED")
+led = json.load(open(f"{S}/ledger.json"))
+if len(next(iter(led["diag"].values()))["readers"]) == 1 and len(led["diag"]) == 1:
+    ok("the same diagnosis from the same reader twice is one entry; cited-path key is order-independent")
 else:
-    fail("sequencing", out)
+    fail("diag key", json.dumps(led["diag"])[:400])
 
-# --- 5. handoff: map + derived seams + reader diagnoses, ordered by reader count ------------
+# --- 4. handoff: cross-lens first, per-lens derived, journey ----------------------------------
 rc, out = run("handoff", "--state", S, "--artifact", ART)
 final = open(ART).read()
-if rc == 0 and "holes=0" in out and "competing=1" in out and "reader_diagnoses=1" in out:
-    ok("handoff: derived seams computed once, over the final map")
+if rc == 0 and "cross_lens=3" in out and "derived=" in out:
+    ok("handoff ran with cross-lens seams and derived seams")
 else:
     fail("handoff", out)
-if "## Map" in final and "## Seams — derived" in final and "competing writers" in final and "unasserted edge" in final \
-   and "## Seams — reader diagnosis" in final and "| 2 |" in final and "## Approach" in final and "Contract disagreements" in final:
-    ok("handoff sections: Map · derived seams · reader diagnoses (reader count) · disagreements · Approach")
+want = ["## Seams — seen by more than one lens (3) — fix these first", "`lib/services/image-auto-save.ts`",
+        "## Seams — derived per lens", "| object | competing writers |", "| object | unasserted edge |",
+        "| flow | step with no sensor |", "| flow | failure not handled |", "| boundary | assumption nothing asserts |",
+        "| boundary | half-mapped boundary |", "## Journey — from the flow map", "capture (sensor: NONE) → upload (sensor: `uploadComplete` flag) → save (sensor: NONE)",
+        "## Seams — reader diagnosis", "## Approach", "Contract disagreements"]
+missing = [w for w in want if w not in final]
+if not missing:
+    ok("handoff sections: cross-lens · per-lens derived (all six patterns) · journey · reader diagnosis · disagreements · Approach")
 else:
-    fail("handoff sections", final)
+    fail("handoff sections", "missing: " + " || ".join(missing))
+if "stage `cleanup` has no row" not in final and "supabase foods row` — only the consumer side" in final:
+    ok("hole closed by round 3; half-mapped boundary named with its lone side")
+else:
+    fail("derived detail", final[-1500:])
 
-# --- 6. --validate drops an edge whose command does not reproduce ----------------------------
+# --- 5. --validate drops an edge whose command does not reproduce ----------------------------
 S2, ART2 = f"{W}/s2", f"{W}/plan2.md"; write(ART2, f"---\n---\n\n{MARKER}\n")
-REAL = "| read | `lib/a.ts:1` | reads it | — | — | none | `rg -n image_urls lib/a.ts` |\n"
-FAKE = "| update | `lib/a.ts:9` | fabricated | — | — | none | `rg -n nothing_here lib/a.ts` |\n"
-write(f"{W}/v/A.md", report(REAL + FAKE, ""))
-rc, out = run("round", "--state", S2, "--artifact", ART2, "--round", "1", "--repo", REPO, "--validate", f"{W}/v/A.md")
+write(f"{W}/v/o.md", rep("object", OH, "| read | `lib/a.ts:1` | reads it | — | — | none | `rg -n image_urls lib/a.ts` |\n| update | `lib/a.ts:9` | fabricated | — | — | none | `rg -n nothing_here lib/a.ts` |\n"))
+rc, out = run("round", "--state", S2, "--artifact", ART2, "--round", "1", "--repo", REPO, "--validate", f"{W}/v/o.md")
 a2 = open(ART2).read()
 if rc == 0 and "dropped=1" in out and "reads it" in a2 and "fabricated" not in a2:
     ok("--validate: an edge no command reproduces is dropped; the real one stays")
 else:
     fail("validate", out + a2)
 
-# --- 7. NOT-GATED paths write nothing ----------------------------------------------------------
+# --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
-write(f"{W}/bad/stage.md", report("| upload | `lib/a.ts:1` | x | — | — | none | `true` |\n", ""))
+write(f"{W}/bad/nolens.md", f"TARGET RESOLVED TO: x\n\nMAP:\n{OH}| read | `lib/a.ts:1` | x | — | — | none | `true` |\n")
+rc, out = run("round", "--state", S3, "--artifact", ART3, "--round", "1", f"{W}/bad/nolens.md")
+if rc == 2 and "LENS" in out and not os.path.exists(f"{S3}/ledger.json"):
+    ok("a report with no LENS line -> NOT-GATED, nothing written")
+else:
+    fail("no lens", out)
+write(f"{W}/bad/stage.md", rep("object", OH, "| upload | `lib/a.ts:1` | x | — | — | none | `true` |\n"))
 rc, out = run("round", "--state", S3, "--artifact", ART3, "--round", "1", f"{W}/bad/stage.md")
-if rc == 2 and "unknown stage 'upload'" in out and not os.path.exists(f"{S3}/ledger.json"):
-    ok("unknown stage -> NOT-GATED, names the stage list, writes nothing")
+if rc == 2 and "unknown stage 'upload'" in out:
+    ok("unknown object stage -> NOT-GATED with the stage list")
 else:
     fail("unknown stage", out)
-write(f"{W}/bad/cells.md", report("| read | `lib/a.ts:1` | only | four |\n", ""))
+write(f"{W}/bad/cells.md", rep("flow", FH, "| f | s | `lib/a.ts:1` | only five |\n"))
 rc, out = run("round", "--state", S3, "--artifact", ART3, "--round", "1", f"{W}/bad/cells.md")
 if rc == 2 and "expected 7" in out:
-    ok("wrong cell count -> NOT-GATED with the count")
+    ok("wrong cell count for the lens -> NOT-GATED with the count")
 else:
-    fail("cell count", out)
-write(f"{W}/bad/prose.md", "no tables here\n")
-rc, out = run("round", "--state", S3, "--artifact", ART3, "--round", "1", f"{W}/bad/prose.md")
-if rc == 2 and "no MAP" in out:
-    ok("a report with no MAP section -> NOT-GATED")
-else:
-    fail("no map", out)
+    fail("cells", out)
 write(f"{W}/plan4.md", "no marker\n")
-rc, out = run("round", "--state", S3, "--artifact", f"{W}/plan4.md", "--round", "1", f"{W}/r1/A.md")
+rc, out = run("round", "--state", S3, "--artifact", f"{W}/plan4.md", "--round", "1", f"{W}/r1/o.md")
 if rc == 2 and "marker" in out:
     ok("artifact without the marker -> NOT-GATED")
 else:
     fail("marker", out)
-rc, out = run()
-if rc == 2:
-    ok("no subcommand -> NOT-GATED")
+rc, out = run("round", "--state", S, "--artifact", ART, "--round", "9", f"{W}/r1/o.md")
+if rc == 2 and "consecutive" in out:
+    ok("non-consecutive round -> NOT-GATED")
 else:
-    fail("no subcommand", out)
+    fail("sequencing", out)
+rc, out = run()
+ok("no subcommand -> NOT-GATED") if rc == 2 else fail("no subcommand", out)
 
-# --- 8. spawns nothing; assurance declared ----------------------------------------------------
+# --- 7. spawns nothing; assurance declared ----------------------------------------------------
 src = open(SCRIPT).read()
 ok("seams-merge spawns nothing") if not any(t in src for t in ("subagent", "claude ", "codex ")) else fail("spawn")
 missing = [f for f in ("PROBE:", "SCHEDULE:", "MODE:", "ON-FAILURE:") if f not in src]
