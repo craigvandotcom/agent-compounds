@@ -118,3 +118,24 @@ entries: 5
   __tests__/unit/compound-expansion-gate.test.ts in the working tree (a vitest or prettier
   invocation). No semantic change; the orchestrator stashed it each time.
 
+
+## seams-merge-replaced-mid-run
+- skills: [ac-polish]
+- impact: M
+- frequency: rare
+- perceptibility: silent
+- recurrence: 1
+- related: [seams-fixpoint-never-stamps-on-accumulator]
+- first_seen: 2026-09-03
+- last_seen: 2026-09-03
+- stage: manual
+- status: open
+- proposed_fix: version the ledger schema (top-level `schema:` field) and refuse at load
+  a state this implementation did not write. An in-progress run finishes on the
+  implementation that started it — frozen input applies to the tool as much as the artifact.
+- narrative: a seams run started on the candidates-based merge (round output `new=N
+  matched=N contaminated=...`); mid-run the skill was rewritten in place to the lens-based
+  design. The new cmd_round cannot read the old ledger; the run's verifier consensus was
+  finalized by direct artifact surgery. The workflow also cites `seams-merge.py verify
+  --id --reader --verdict`, which no implementation has ever shipped — verifier verdicts
+  had to be recorded by hand into the plan.
