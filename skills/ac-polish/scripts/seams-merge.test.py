@@ -151,6 +151,17 @@ if "stage `cleanup` has no row" not in final and "supabase foods row` — only t
     ok("hole closed by round 3; half-mapped boundary named with its lone side")
 else:
     fail("derived detail", final[-1500:])
+fm = final.split("\n---", 1)[0]
+if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 holes=0 edges=13 readers=3 rounds=3" in fm \
+   and fm.count("seams_load:") == 1 and "seams_load" in out:
+    ok("handoff writes the north-star counts into the frontmatter (seams_load), once, and prints them")
+else:
+    fail("seams_load", fm + "\n" + out)
+rc, out = run("handoff", "--state", S, "--artifact", ART)
+if open(ART).read().split("\n---", 1)[0].count("seams_load:") == 1:
+    ok("re-running handoff replaces seams_load rather than appending a second line")
+else:
+    fail("seams_load idempotent", open(ART).read()[:400])
 
 # --- 5. --validate drops an edge whose command does not reproduce ----------------------------
 S2, ART2 = f"{W}/s2", f"{W}/plan2.md"; write(ART2, f"---\n---\n\n{MARKER}\n")

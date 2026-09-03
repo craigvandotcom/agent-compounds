@@ -14,7 +14,10 @@ aim_window: <1w | 4w | 1y | all | none>
 
 <What the object is and what its life looks like, in one paragraph, written by the
 orchestrator at hand-off FROM THE MAPS: which stages exist and which are missing, how many
-writers, which steps nobody senses, which assumptions nothing asserts. Never written by a reader.>
+writers, which steps nobody senses, which assumptions nothing asserts. Never written by a reader.
+End with the north star as this object's success criterion: the four `seams_load` counts the
+hand-off wrote above — competing writers → one owner per mutating stage · unasserted edges → 0
+· unsensed steps → 0 · unchecked assumptions → 0 — re-derived after the fix, by a trace.>
 
 <!-- seams-merge: everything below this line is generated -->
 

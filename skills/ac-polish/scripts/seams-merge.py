@@ -380,8 +380,24 @@ def cmd_handoff(a):
             + f"\n\n## Journey — from the flow map, for ac-qa\n\n{journey(st)}"
             + "\n\n## Approach\n\n_Empty by design. `ac-plan` writes it with the human — usually: give this object one owner at each stage the map shows it lacks, and a sensor at each step the flow shows is blind._")
     write_below_marker(a.artifact, body)
+    # THE NORTH STAR, as four numbers in the frontmatter: the plan's success criterion is these
+    # re-derived after the fix, not a slogan. competing-writers counts mutating stages with >=2
+    # paths; the other three count edges. Replaced on re-run, never appended.
+    load = (f"competing-writers={sum(1 for l, p, *_ in derived if p == 'competing writers')} "
+            f"unasserted-edges={sum(1 for l, p, *_ in derived if p == 'unasserted edge')} "
+            f"unsensed-steps={sum(1 for l, p, *_ in derived if p == 'step with no sensor')} "
+            f"unchecked-assumptions={sum(1 for l, p, *_ in derived if p == 'assumption nothing asserts')} "
+            f"holes={sum(1 for l, p, *_ in derived if p == 'hole')} edges={sum(counts.values())} readers={len(st['readers'])} rounds={st['rounds']}")
+    text = open(a.artifact, encoding="utf-8").read()
+    if text.startswith("---\n"):
+        head, rest = text[4:].split("\n---", 1)
+        lines = [l for l in head.split("\n") if not l.startswith("seams_load:")]
+        lines.append(f"seams_load: {load}")
+        with open(a.artifact, "w", encoding="utf-8") as f:
+            f.write("---\n" + "\n".join(lines) + "\n---" + rest)
     print(f"seams-merge: handoff edges=object:{counts['object']},flow:{counts['flow']},boundary:{counts['boundary']} "
           f"derived={len(per_lens)} cross_lens={len(cross)} reader_diagnoses={len(rd_rows)} rounds={st['rounds']} readers={len(st['readers'])}")
+    print(f"seams-merge: seams_load {load}")
     return 0
 
 

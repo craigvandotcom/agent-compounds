@@ -48,6 +48,24 @@ checks it, or `none`) · found-by. Find both sides: `rg -n "<type or key>"` on e
 call, the blob, the table. Derived: **assumption nothing asserts** · **half-mapped boundary**
 (one side on the map).
 
+## Guide words — how a reader generates "what breaks silently" without guessing
+
+HAZOP's move, per edge: what if **none** · **more** · **less** · **late** · **early** · **reversed**
+· **other than**? Each is a concrete failure hypothesis; the map says whether anything would
+notice it. "Other than" on `update` is the two-shape column; "reversed" between `delete` and
+`cleanup` is storage deleted before the row; "less" on `transport` is the partial upload that
+shifts every later URL. Exhaustive by construction, and the same seven words every round.
+
+## The north star — what a seams plan is FOR
+
+The system must be unable to fail silently on this object: every dependency is either OWNED
+(one place decides the shape) or SENSED (something goes red when it drifts). Per target, the
+Approach is done when: competing writers → one owner per mutating stage · unasserted edges → 0
+· unsensed steps → 0 · unchecked boundary assumptions → 0. `seams-merge.py handoff` writes
+these four counts into the plan's frontmatter (`seams_load:`), so the plan's success criterion
+is the same four numbers after the fix, not a slogan. Ashby: the regulator must have as much
+variety as the disturbance. An assertion that cannot go red does not count.
+
 ## Across lenses — the ranking
 
 A path that carries a seam in two lenses — an unasserted edge that is also a step with no

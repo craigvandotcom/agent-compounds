@@ -32,7 +32,11 @@ shape, an ordering, a presence) and what ASSERTS it (a type, a guard, a test) or
 both sides; a boundary with one side is a finding in itself.
 
 Then, FROM THE MAPS ONLY, write what they show — two shapes for one thing, a stage done twice,
-state written and never read, a step nobody would notice failing. Cite paths. Do not design.
+state written and never read, a step nobody would notice failing. Generate the failure
+hypotheses mechanically, HAZOP-style: for each edge on your map ask what if **none** (it never
+happens) · **more** (twice, or too many) · **less** (partial) · **late** · **early** · **reversed**
+(out of order with its neighbour) · **other than** (the wrong shape or the wrong record) — and
+report the ones where the map shows nothing would notice. Cite paths. Do not design.
 
 WRITE YOUR REPORT to `<REPORT>` in exactly this shape — parsed by a script. Cell counts are
 exact (object 7 · flow 7 · boundary 6 · diagnosis 4); escape `|` inside a cell as `\|`;
