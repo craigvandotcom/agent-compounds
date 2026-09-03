@@ -66,10 +66,15 @@ For each candidate, check if already known:
 qmd search "<pattern>"
 ```
 
-### 6. Classify & Stage
+### 6. Classify & Apply
 For genuinely new lessons:
 - Classify: {fact, rule, decision, skill-improvement, recipe} × {neoMeta, personal, global, app-local}
-- Write to `infrastructure/context-mining/daily/<YYYY-MM-DD>/`
+- Write the note into its live memory home and add its `MEMORY.md` index line in the same
+  step: `global`/`personal` → `infrastructure/memory/auto/` · `neoMeta` →
+  `neometa/memory/auto/` · `app-local` → `<app>/memory/auto/`, committed inside that repo.
+- Never write a lesson to `infrastructure/context-mining/daily/<YYYY-MM-DD>/`. Nothing reads
+  it — retrieval queries the memory + wiki lobes, so a note left there never injects
+  (memory `context-mining-staging-dir-is-write-only`). That dir holds `INDEX.md` only.
 - Include evidence and outcome grounding
 
 ### 7. Tier-0 daily hygiene (mechanical, lossless — emit for the 02:00 auto-apply)
@@ -122,11 +127,25 @@ Only root-memory homes (`infrastructure/memory/auto/`) auto-apply; for an app-lo
 drift, surface it in the report for the human instead (repo-boundary + altitude rules).
 If no home has drift, skip — emit nothing.
 
+Second Tier-0 check: **staged-lesson orphans** — a staged note with no live twin never reached
+a home. Sweep the last 7 days only:
+```bash
+find infrastructure/context-mining/daily -mtime -7 -name '*.md' ! -name 'INDEX.md'
+```
+A hit whose basename exists in any `memory/auto/` (or its `_archive/`) is a leftover copy —
+delete it. Otherwise promote it: route by `domain:` per step 6, add the `MEMORY.md` index
+line, delete the staged copy, record it in today's `INDEX.md`. Reporting an orphan without
+promoting it keeps it.
+
+Older orphans are a backlog, not daily hygiene: bulk promotion is lossy (no dedup against
+today's substrate) and would swamp retrieval. Count them, report the count, promote none.
+
 ### 8. Generate Report
 Save extraction summary to `infrastructure/health/reports/context-<date>.json`:
 - Candidates found / Lessons extracted / Duplicates skipped
 - Reflect-gaps: sessions scanned, gaps found, gaps mined
-- Tier-0 hygiene: index-prune proposals emitted (homes + dangling slug counts)
+- Tier-0 hygiene: index-prune proposals emitted (homes + dangling slug counts); staged
+  orphans promoted, and the older backlog count carried for the human
 
 ### 9. Notify Slack — MANDATORY, DO THIS LAST, DO NOT SKIP
 Actually run the CLI (don't describe it). `--status`: `healthy` normally; `degraded` if

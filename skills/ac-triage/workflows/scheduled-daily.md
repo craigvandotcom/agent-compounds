@@ -85,6 +85,22 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   findings every single day. Keep all `br` ops in `$TRIAGE_WT`; step 4 commits the flushed
   `.beads/issues.jsonl` from there alongside the state changes, so beads + report land in one push.
 
+- **Rehydrate gitignored env + deps in the worktree — before running any
+  `scripts/triage/*.ts|.mjs`.** A fresh worktree has no `.env.local`, no
+  `ios/App/fastlane/.env`, and no `node_modules`; the scripts fail `tsx not found` without
+  this. Copy both env files from `$APP_ROOT` into `$TRIAGE_WT`, then reuse deps instead of a
+  full install where safe:
+
+  ```bash
+  cp "$APP_ROOT/.env.local" "$TRIAGE_WT/.env.local" 2>/dev/null
+  cp "$APP_ROOT/ios/App/fastlane/.env" "$TRIAGE_WT/ios/App/fastlane/.env" 2>/dev/null
+  if diff -q "$APP_ROOT/pnpm-lock.yaml" "$TRIAGE_WT/pnpm-lock.yaml" >/dev/null 2>&1; then
+    ln -s "$APP_ROOT/node_modules" "$TRIAGE_WT/node_modules"
+  else
+    (cd "$TRIAGE_WT" && pnpm install)
+  fi
+  ```
+
 - **Do not probe Slack.** `slack-send` has no `--dry-run`; it exits 2. Send the real report at
   step 5 and read its exit code. Use the absolute path — this job runs `cwd`'d into the app.
   If the channel does not resolve, retry once against `pi`.

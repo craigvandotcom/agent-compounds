@@ -16,7 +16,7 @@ In **NIGHTLY** mode:
 
 - **Tier 1 — auto-apply** (non-destructive reconciliation): Phase 2d (`captured → planned`) + Phase 2e (fix/infer plan frontmatter) + adding missing `plans:` fields + stripping a stale `unrefined` label from any CLOSED bead — **including one labelled `human-gate`/`qa-blocker`**, which the guardrail below explicitly scopes to OPEN beads (a closed bead is past refinement by definition — pure label reconciliation; `br label remove <id> unrefined`, verify via the issues.jsonl, not `br show`) + Phase 2f (stamping fail-safe `unrefined` onto any OPEN bead with a lifecycle-label gap — never `refined`, that stamp is only earned). Always runs.
 - **Tier 2 — auto-apply provably-done archive** (Phases 2b/2c): ONLY when the Tier-2 toggle is ON *and* the positive-proof gate passes (see NIGHTLY Guardrails). Otherwise the item falls through to a Tier-3 proposal.
-- **Tier 3 — propose only** (Phases 3–4: orphans, consolidation, dedup, finding-bead prune): emit a proposal file + a `pipeline-proposal` bead. Add `human-gate` ONLY when the memo states a two-reasons-test reason (`Gate-reason: fork — …` or `Gate-reason: authorization — …`). **Never** `AskUserQuestion` — there is no human. `ac-human-session` applies approved proposals later by re-invoking this skill's INTERACTIVE flow.
+- **Tier 3 — propose only** (Phases 3–4: orphans, consolidation, dedup, finding-bead prune): emit a proposal file + a `pipeline-proposal` bead. Add `human-gate` ONLY when the memo states a canonical `Gate-reason:` — `fork` · `authorization` · `intent` · `action` (vocabulary: `beads-standards`). **Never** `AskUserQuestion` — there is no human. `ac-human-session` applies approved proposals later by re-invoking this skill's INTERACTIVE flow.
 
 INTERACTIVE mode is unchanged from the sections below — every move requires user confirmation.
 
@@ -232,7 +232,7 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`." **Ti
 
 ### Human-gate reason lint (bd-l6o90 deliverable 3)
 
-**NIGHTLY (Tier 3) / INTERACTIVE (report):** flag every OPEN `human-gate` bead whose description + comments do not contain a `Gate-reason: fork` or `Gate-reason: authorization` line. Report the id. Propose reclassification (drop `human-gate` if neither reason applies; add the missing line if one does). **Never auto-strip the label** — that is a docket write.
+**NIGHTLY (Tier 3) / INTERACTIVE (report):** flag every OPEN `human-gate` bead whose description + comments do not contain a `Gate-reason:` line naming a canonical value — `fork` · `authorization` · `intent` · `action` (vocabulary: `beads-standards`; match all four, a narrower matcher alarms forever on a legal bead). Report the id. Propose reclassification (drop `human-gate` if none applies; add the missing line if one does). **Never auto-strip the label** — that is a docket write.
 
 Report: "human-gate missing Gate-reason: {id} — propose reclassification (Tier 3)."
 
@@ -314,7 +314,7 @@ Flag for the user (never auto-close): finding beads that are (a) duplicates of e
 
 **INTERACTIVE:** present merge/prune suggestions (if any) via `AskUserQuestion`. Only suggest, never force.
 
-**NIGHTLY (Tier 3):** do NOT `AskUserQuestion` (no human present). Instead emit a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`) + one `pipeline-proposal` bead per cluster, per `workflows/nightly.md`. Add `human-gate` only when the memo states `Gate-reason: fork` or `Gate-reason: authorization`. Before emitting, **dedup**: skip any cluster already covered by an open `pipeline-proposal` bead (the populated-`bead:` slot is the idempotency marker). `ac-human-session` applies approved proposals by re-invoking this skill's INTERACTIVE flow.
+**NIGHTLY (Tier 3):** do NOT `AskUserQuestion` (no human present). Instead emit a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`) + one `pipeline-proposal` bead per cluster, per `workflows/nightly.md`. Add `human-gate` only when the memo states a canonical `Gate-reason:` — `fork` · `authorization` · `intent` · `action` (vocabulary: `beads-standards`). Before emitting, **dedup**: skip any cluster already covered by an open `pipeline-proposal` bead (the populated-`bead:` slot is the idempotency marker). `ac-human-session` applies approved proposals by re-invoking this skill's INTERACTIVE flow.
 
 **TaskUpdate("Flag orphans + suggest consolidation", completed)**
 **TaskUpdate("Report", in_progress)**
