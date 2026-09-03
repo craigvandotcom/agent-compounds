@@ -1,46 +1,41 @@
 #!/usr/bin/env python3
-"""seams-merge.py — the MERGE step of `ac-polish seams`, as a script.
+"""seams-merge.py — the MERGE step of `ac-polish seams`: union the readers' MAPS, derive the seams.
 
-The dogfood run (BCA, 2026-09-02, 9 rounds) hand-wrote a merge script per round, hit a dcg
-block and an anchor bug doing it, and could never stamp because the artifact accumulated
-declines, hit counts and promotions — three things that move the digest without a new
-finding. This script fixes the contract, not the prose:
+THE MAP IS THE ARTIFACT. Every reader traces the SAME object through the same stages and
+returns a map — rows keyed by (stage, path). Two readers naming the same file at the same stage
+are the same row: exact match, no fuzzy location logic. The union map is the artifact; its
+digest moves iff an edge is added or dropped, so polish-fixpoint.sh stamps exactly when a round
+of readers adds no edge — reachable, because the edges of one object are finite.
 
-  * The LOOP ARTIFACT holds CANDIDATE ROWS ONLY, in first-seen text, in id order. Its digest
-    changes iff a candidate is added or dropped — so polish-fixpoint.sh stamps exactly when
-    discovery converges: a round of K blind readers that adds nothing.
-  * Hits, declines, verifications and contamination live in <state>/ledger.json.
-  * Decline-only candidates live in <state>/declined.md, never in the artifact.
-  * `handoff` computes the split ONCE, after the stamp: Confirmed (>=2 distinct
-    uncontaminated readers, or verifier confirmations), Seen once, refuted -> archive.
+The seams are READ OFF the map, not hunted:
+  hole                a core stage with no row
+  competing writers   >=2 distinct paths at a mutating stage
+  unasserted edge     contract == none
+plus the readers' own diagnosis rows (shape divergence, dead state, duplication, what breaks
+silently), merged by the edges they cite and counted by reader — a salience order, not a gate.
 
-Rows are keyed by LOCATION — `path:line`, not path. Two locations touch when they name the same
-file and their lines lie within LINE_WINDOW of each other. Two rows match when a strict majority
-of EACH row's locations touch the other row; a row with no line numbers keys by file. A
-file-level key collapses every seam inside one hot file into one row, and a hotspot is always
-one file. Prose is never compared. A reader that reports ARTIFACT SEEN: yes
-still adds candidates but its finds do not count toward consensus. Every fold keeps the folded
-row's seam text in the ledger's `finds`, so first-seen text never hides what a later reader said.
+History: the hunt version (five dogfoods, 2026-09-02/03) never converged on a big object —
+readers chose their own scope, findings had no bottom, and every fix after that (verifiers,
+contamination rules, line-window keys, estimators) was machinery to manage an unbounded
+search. The trace has a bottom. Delete > construct.
 
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
-  PROBE:      skills/ac-polish/scripts/seams-merge.test.py — every rule above, RED/GREEN
+  PROBE:      skills/ac-polish/scripts/seams-merge.test.py — RED/GREEN over every rule above
   SCHEDULE:   once per seams round (workflows/seams.md § MERGE) and once at hand-off; and on
               every CI run via scripts/run-all-harnesses.sh
   MODE:       blocking — the artifact is written only by this script during a seams run
-  ON-FAILURE: closed — a report that does not parse, or a state that does not load, exits 2
-              NOT-GATED and writes nothing
+  ON-FAILURE: closed — a report that does not parse exits 2 NOT-GATED and writes nothing
 
 Usage:
   seams-merge.py round   --state DIR --artifact PLAN --round N [--repo DIR] [--validate] REPORT...
-  seams-merge.py verify  --state DIR --id ID --reader NAME --verdict confirm|refute [--command CMD]
   seams-merge.py handoff --state DIR --artifact PLAN
 
-Reader REPORT files (one per blind reader; the file's stem is the reader id) carry:
+Reader REPORT (one per reader; the file stem is the reader id):
   TARGET RESOLVED TO: ...
-  ARTIFACT SEEN: yes|no
-  FINDINGS:  a markdown table  | class | seam | locations | what breaks silently | found-by | what notices |
-  DECLINED:  a markdown table  | candidate | why not | command |
-Exit 0 ok · 2 NOT-GATED (usage, unparseable report, missing state).
+  MAP:        | stage | path:line | role | upstream | downstream | contract | found-by |
+  DIAGNOSIS:  | pattern | edges | what breaks silently | found-by |
+Stages: create · transport · store · read · update · delete · cleanup (transport is optional).
+Exit 0 ok · 2 NOT-GATED.
 """
 import argparse
 import json
@@ -50,9 +45,11 @@ import subprocess
 import sys
 
 MARKER = "<!-- seams-merge: everything below this line is generated -->"
-FIND_COLS = 6
-DECL_COLS = 3
-PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}|[A-Za-z0-9_\-]+\.(?:tsx?|jsx?|py|sh|sql|md|json)\b")
+STAGES = ["create", "transport", "store", "read", "update", "delete", "cleanup"]
+CORE = {"create", "store", "read", "update", "delete", "cleanup"}
+MUTATING = {"create", "update", "delete"}
+MAP_COLS, DIAG_COLS = 7, 4
+PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}")
 
 
 def die2(msg):
@@ -73,102 +70,60 @@ def is_separator(cells):
     return all(re.fullmatch(r":?-{2,}:?", c) for c in cells)
 
 
+def norm_path(cell):
+    m = PATH_RE.search(cell)
+    return m.group(0).strip("`'\"") if m else None
+
+
 def parse_report(path):
-    """Returns dict(reader, resolved, contaminated, findings[], declined[])."""
     try:
         text = open(path, encoding="utf-8").read()
     except OSError as e:
         die2(f"cannot read report {path}: {e}")
-    reader = os.path.splitext(os.path.basename(path))[0]
-    out = {"reader": reader, "resolved": "", "contaminated": False, "findings": [], "declined": []}
-    section = None
-    header_seen = False
+    out = {"reader": os.path.splitext(os.path.basename(path))[0], "resolved": "", "map": [], "diag": []}
+    section, header_seen = None, False
     for raw in text.splitlines():
         s = raw.strip().strip("*").strip()
         low = s.lower()
         if low.startswith("target resolved to:"):
-            out["resolved"] = s.split(":", 1)[1].strip()
-            continue
-        if low.startswith("artifact seen:"):
-            out["contaminated"] = "yes" in low.split(":", 1)[1]
-            continue
-        if low.startswith("findings:"):
-            section, header_seen = "findings", False
-            continue
-        if low.startswith("declined:"):
-            section, header_seen = "declined", False
-            continue
+            out["resolved"] = s.split(":", 1)[1].strip(); continue
+        if low.startswith("map:"):
+            section, header_seen = "map", False; continue
+        if low.startswith("diagnosis:"):
+            section, header_seen = "diag", False; continue
         cells = split_row(raw)
-        if cells is None or section is None:
+        if cells is None or section is None or is_separator(cells):
             continue
-        if is_separator(cells):
-            continue
-        want = FIND_COLS if section == "findings" else DECL_COLS
+        want = MAP_COLS if section == "map" else DIAG_COLS
         if not header_seen:
-            header_seen = True  # the column header row
+            header_seen = True
             if len(cells) != want:
                 die2(f"{path}: {section.upper()} table has {len(cells)} columns, expected {want}")
             continue
         if len(cells) != want:
             die2(f"{path}: {section.upper()} row has {len(cells)} cells, expected {want}: {raw[:80]}")
-        if section == "findings":
-            cls, seam, loc, silent, found_by, notices = cells
-            if seam.strip().upper() == "NONE":
-                continue
-            out["findings"].append({"class": cls, "seam": seam, "locations": loc,
-                                    "silent": silent, "found_by": found_by, "notices": notices})
+        if section == "map":
+            stage, loc, role, up, down, contract, found_by = cells
+            stage = stage.strip("`* ").lower()
+            if stage not in STAGES:
+                die2(f"{path}: unknown stage '{stage}' — stages are {' · '.join(STAGES)}")
+            p = norm_path(loc)
+            if not p:
+                die2(f"{path}: MAP row at stage {stage} names no path: {loc[:60]}")
+            out["map"].append({"stage": stage, "path": p, "loc": loc, "role": role, "upstream": up,
+                               "downstream": down, "contract": contract, "found_by": found_by})
         else:
-            cand, why, cmd = cells
-            out["declined"].append({"candidate": cand, "why": why, "command": cmd})
+            pattern, edges, silent, found_by = cells
+            if pattern.strip().upper() == "NONE":
+                continue
+            out["diag"].append({"pattern": pattern, "edges": edges, "silent": silent, "found_by": found_by})
     if section is None:
-        die2(f"{path}: no FINDINGS: or DECLINED: section — not a reader report")
+        die2(f"{path}: no MAP: section — not a trace report")
     return out
 
 
-LINE_WINDOW = 40  # lines: two citations this close in one file are the same place
-
-
-def locs_of(text):
-    """Set of (file, line|None) cited in text. `path:12-15` keys on 12; a bare path keys on None."""
-    found = set()
-    for m in PATH_RE.finditer(text):
-        p = m.group(0).strip("`'\"")
-        tail = re.match(r":(\d+)", text[m.end():])
-        found.add((p, int(tail.group(1)) if tail else None))
-    return found
-
-
-def files_of(text):
-    return {f for f, _ in locs_of(text)}
-
-
-def touches(x, y):
-    if x[0] != y[0]:
-        return False
-    return x[1] is None or y[1] is None or abs(x[1] - y[1]) <= LINE_WINDOW
-
-
-def majority_touches(x, y):
-    return sum(1 for p in x if any(touches(p, q) for q in y)) >= len(x) // 2 + 1
-
-
-def overlaps(a, b):
-    """Two rows match when a strict majority of EACH row's locations touch the other row: a row
-    that shares two nearby lines with a six-line row is a neighbour, not the same seam. A row
-    with no line numbers (a decline naming only a file) keys by file — majority of the smaller
-    file set."""
-    if not a or not b:
-        return False
-    if all(l is None for _, l in a) or all(l is None for _, l in b):
-        fa, fb = {f for f, _ in a}, {f for f, _ in b}
-        small, big = (fa, fb) if len(fa) <= len(fb) else (fb, fa)
-        return len(small & big) >= len(small) // 2 + 1
-    return majority_touches(a, b) and majority_touches(b, a)
-
-
-def cand_locs(c):
-    """Ledgers written before the line key carry only `files`; read them as lineless."""
-    return {tuple(x) for x in c.get("locs", [])} or {(f, None) for f in c["files"]}
+def is_none(contract):
+    return contract.strip().strip("`").lower() in ("none", "", "-", "—")
 
 
 # ---------------------------------------------------------------- state
@@ -177,7 +132,7 @@ def load_state(state_dir, must_exist):
     if not os.path.exists(p):
         if must_exist:
             die2(f"no ledger at {p} — run `round` first")
-        return {"next_id": 1, "rounds": 0, "readers": {}, "candidates": {}}
+        return {"rounds": 0, "readers": {}, "edges": {}, "diag": {}}
     try:
         return json.load(open(p, encoding="utf-8"))
     except (OSError, ValueError) as e:
@@ -192,25 +147,23 @@ def save_state(state_dir, st):
     os.replace(tmp, os.path.join(state_dir, "ledger.json"))
 
 
-def cid(n):
-    return f"c{n:03d}"
+def ekey(stage, path):
+    return f"{stage} × {path}"
 
 
 # ---------------------------------------------------------------- validate
 def run_found_by(found_by, repo):
-    """A found-by cell may carry several commands joined by ' · '. A command FAILS iff it exits
-    non-zero AND prints nothing (rg/grep with no match). The row is dropped iff EVERY command
-    fails — a negative check ("zero hits") beside a positive one must not sink the row."""
+    """Several commands may be joined by ' · '. A command fails iff it exits non-zero AND prints
+    nothing. The row is dropped iff EVERY command fails."""
     cmds = [c.strip().strip("`").strip() for c in re.split(r"\s·\s", found_by) if c.strip()]
     results = []
     for c in cmds:
         c = c.replace("\\|", "|")
         try:
             r = subprocess.run(["bash", "-c", c], cwd=repo, capture_output=True, text=True, timeout=60)
-            ok = r.returncode == 0 or bool(r.stdout.strip())
-            results.append({"command": c, "exit": r.returncode, "lines": len(r.stdout.splitlines()), "ok": ok})
+            results.append({"command": c, "exit": r.returncode, "ok": r.returncode == 0 or bool(r.stdout.strip())})
         except subprocess.TimeoutExpired:
-            results.append({"command": c, "exit": None, "lines": 0, "ok": False})
+            results.append({"command": c, "exit": None, "ok": False})
     return results, (bool(results) and not any(x["ok"] for x in results))
 
 
@@ -222,13 +175,8 @@ def write_below_marker(artifact, body):
         die2(f"artifact unreadable: {e}")
     if MARKER not in text:
         die2(f"artifact has no marker line `{MARKER}` — create it from references/seams-plan-template.md")
-    head = text.split(MARKER, 1)[0]
     with open(artifact, "w", encoding="utf-8") as f:
-        f.write(head + MARKER + "\n\n" + body.rstrip() + "\n")
-
-
-def row_cells(c):
-    return [c["class"], c["seam"], c["locations"], c["silent"], c["found_by"], c["notices"]]
+        f.write(text.split(MARKER, 1)[0] + MARKER + "\n\n" + body.rstrip() + "\n")
 
 
 def table(header, rows):
@@ -237,31 +185,42 @@ def table(header, rows):
     return "\n".join(out)
 
 
-def live_candidates(st):
-    return [c for _, c in sorted(st["candidates"].items()) if not c["dropped"] and c["finds"]]
+def live_edges(st):
+    return [e for e in st["edges"].values() if not e["dropped"]]
+
+
+def ordered(edges):
+    return sorted(edges, key=lambda e: (STAGES.index(e["stage"]), e["path"]))
+
+
+def map_rows(edges, best_contract=False):
+    """The LOOP artifact shows the first-seen contract so a contract upgrade never moves the
+    digest (only an edge does); hand-off shows the best contract the ledger holds."""
+    return [[e["stage"], e["loc"], e["role"], e["upstream"], e["downstream"],
+             e["contract"] if best_contract else e.get("contract_first", e["contract"]), e["found_by"]]
+            for e in ordered(edges)]
+
+
+MAP_HDR = ["stage", "path:line", "role", "upstream", "downstream", "contract", "found-by"]
 
 
 def write_loop_artifact(artifact, st):
-    live = live_candidates(st)
-    body = (f"## Candidates — {len(live)} rows · in first-seen text · discovery converges when a round adds none\n\n"
-            + table(["id", "class", "seam", "locations", "what breaks silently", "found-by", "what notices"],
-                    [[c["id"]] + row_cells(c) for c in live]))
+    edges = live_edges(st)
+    body = (f"## Map — {len(edges)} edges · first-seen text · the loop converges when a round adds no edge\n\n"
+            + table(MAP_HDR, map_rows(edges)))
     write_below_marker(artifact, body)
 
 
-def write_declined_sidecar(state_dir, st, final=False):
-    rows = []
-    for _, c in sorted(st["candidates"].items()):
-        if c["finds"] and not c["dropped"] and not final:
-            continue
-        for d in c["declines"]:
-            rows.append([d.get("candidate") or c["seam"], d["why"], d["command"]])
-        if c["dropped"]:
-            rows.append([c["seam"], f"dropped in round {c['dropped']['round']}: {c['dropped']['reason']}", c["found_by"]])
-    name = "declined-archive.md" if final else "declined.md"
-    with open(os.path.join(state_dir, name), "w", encoding="utf-8") as f:
-        f.write(("# Declined — archived at hand-off\n\n" if final else "# Declined — sidecar, outside the digest\n\n")
-                + table(["candidate", "why not", "command"], rows) + "\n")
+# ---------------------------------------------------------------- diagnosis, derived
+def derive(edges):
+    by_stage = {}
+    for e in edges:
+        by_stage.setdefault(e["stage"], []).append(e)
+    holes = [s for s in STAGES if s in CORE and not by_stage.get(s)]
+    competing = {s: sorted({e["path"] for e in by_stage.get(s, [])}) for s in MUTATING
+                 if len({e["path"] for e in by_stage.get(s, [])}) >= 2}
+    unasserted = [e for e in ordered(edges) if is_none(e["contract"])]
+    return holes, competing, unasserted
 
 
 # ---------------------------------------------------------------- commands
@@ -272,122 +231,105 @@ def cmd_round(a):
     if a.round != st["rounds"] + 1:
         die2(f"--round {a.round} but ledger has {st['rounds']} rounds recorded — rounds are consecutive")
     reports = [parse_report(p) for p in a.reports]
-    new, matched = [], 0
+    new, seen_again, dropped = [], 0, []
     for rep in reports:
-        st["readers"][rep["reader"]] = {"round": a.round, "contaminated": rep["contaminated"], "resolved": rep["resolved"]}
-        for f in rep["findings"]:
-            locs = locs_of(f["locations"])
-            hit = next((c for c in st["candidates"].values() if not c["dropped"] and overlaps(cand_locs(c), locs)), None)
-            if hit is None:
-                i = cid(st["next_id"]); st["next_id"] += 1
-                hit = dict(id=i, files=sorted({p for p, _ in locs}), locs=sorted(locs, key=str), first_round=a.round,
-                           finds=[], declines=[], verifications=[], dropped=None, **f)
-                st["candidates"][i] = hit
-                new.append(i)
-            elif not hit["finds"]:
-                # a decline-only row: this finding is its first-seen text, and it enters the artifact as new
-                hit.update(f); hit["files"] = sorted({p for p, _ in locs}); hit["locs"] = sorted(locs, key=str); hit.pop("validated", None)
-                new.append(hit["id"])
+        st["readers"][rep["reader"]] = {"round": a.round, "resolved": rep["resolved"]}
+        for row in rep["map"]:
+            k = ekey(row["stage"], row["path"])
+            e = st["edges"].get(k)
+            if e is None or e["dropped"]:
+                e = dict(key=k, first_round=a.round, readers=[], dropped=None, contract_disagreement=False,
+                         contract_first=row["contract"], **row)
+                st["edges"][k] = e
+                new.append(k)
             else:
-                matched += 1
-            hit["finds"].append({"reader": rep["reader"], "round": a.round, "counts": not rep["contaminated"], "seam": f["seam"]})
-        for d in rep["declined"]:
-            locs = locs_of(d["candidate"] + " " + d["command"])
-            hit = next((c for c in st["candidates"].values() if not c["dropped"] and overlaps(cand_locs(c), locs)), None)
-            if hit is None:
-                i = cid(st["next_id"]); st["next_id"] += 1
-                hit = dict(id=i, files=sorted({p for p, _ in locs}), locs=sorted(locs, key=str), first_round=a.round,
-                           finds=[], declines=[], verifications=[], dropped=None,
-                           **{"class": "", "seam": d["candidate"], "locations": "", "silent": "", "found_by": d["command"], "notices": ""})
-                st["candidates"][i] = hit
-            hit["declines"].append({"reader": rep["reader"], "round": a.round, "why": d["why"], "command": d["command"], "candidate": d["candidate"]})
-    dropped = []
+                seen_again += 1
+                # a more specific contract wins over `none`; a disagreement is recorded, never hidden
+                if is_none(e["contract"]) and not is_none(row["contract"]):
+                    e["contract"] = row["contract"]; e["contract_disagreement"] = True
+                elif not is_none(e["contract"]) and is_none(row["contract"]):
+                    e["contract_disagreement"] = True
+            if rep["reader"] not in e["readers"]:
+                e["readers"].append(rep["reader"])
+        for d in rep["diag"]:
+            # Key on the cited PATHS only — resolving against edges known at that moment made the
+            # key depend on reader order, so two readers citing the same files never merged.
+            cited = sorted({p.strip("`'\"") for p in PATH_RE.findall(d["edges"])})
+            k = d["pattern"].strip().lower() + " @ " + ",".join(cited)
+            x = st["diag"].get(k)
+            if x is None:
+                x = dict(key=k, first_round=a.round, readers=[], cited=cited, **d)
+                st["diag"][k] = x
+            if rep["reader"] not in x["readers"]:
+                x["readers"].append(rep["reader"])
     if a.validate:
         repo = a.repo or os.getcwd()
-        for c in live_candidates(st):
-            if c["id"] not in new and a.round > 1 and c.get("validated"):
-                continue  # a row proves itself once; re-running every round is spend without signal
-            results, fail = run_found_by(c["found_by"], repo)
-            c["validated"] = {"round": a.round, "results": results}
+        for k in new:
+            e = st["edges"][k]
+            results, fail = run_found_by(e["found_by"], repo)
+            e["validated"] = {"round": a.round, "results": results}
             if fail:
-                c["dropped"] = {"round": a.round, "reason": "no found-by command reproduced"}
-                dropped.append(c["id"])
+                e["dropped"] = {"round": a.round, "reason": "no found-by command reproduced"}
+                dropped.append(k)
     st["rounds"] = a.round
     save_state(a.state, st)
     write_loop_artifact(a.artifact, st)
-    write_declined_sidecar(a.state, st)
-    contaminated = [r["reader"] for r in reports if r["contaminated"]]
-    live = live_candidates(st)
-    print(f"seams-merge: round={a.round} readers={len(reports)} new={len(new) - len([i for i in new if i in dropped])} "
-          f"matched={matched} dropped={len(dropped)} total={len(live)} contaminated={','.join(contaminated) or '-'}")
-    for i in new:
-        c = st["candidates"][i]
-        if c["finds"] and not c["dropped"]:
-            print(f"  + {i} [{c['class']}] {c['seam'][:90]}")
-    for i in dropped:
-        print(f"  - {i} dropped: no found-by reproduced")
-    return 0
-
-
-def cmd_verify(a):
-    st = load_state(a.state, must_exist=True)
-    c = st["candidates"].get(a.id)
-    if c is None or c["dropped"]:
-        die2(f"no live candidate {a.id}")
-    c["verifications"].append({"reader": a.reader, "verdict": a.verdict, "command": a.command or ""})
-    save_state(a.state, st)
-    print(f"seams-merge: verify {a.id} {a.verdict} by {a.reader}")
+    edges = live_edges(st)
+    holes, competing, unasserted = derive(edges)
+    print(f"seams-merge: round={a.round} readers={len(reports)} new_edges={len(new) - len(dropped)} "
+          f"seen_again={seen_again} dropped={len(dropped)} edges={len(edges)} "
+          f"holes={','.join(holes) or '-'} competing={','.join(competing) or '-'} unasserted={len(unasserted)}")
+    for k in new:
+        if k not in dropped:
+            print(f"  + {k}")
+    for k in dropped:
+        print(f"  - {k} dropped: no found-by reproduced")
     return 0
 
 
 def cmd_handoff(a):
     st = load_state(a.state, must_exist=True)
-    confirmed, seen_once, refuted = [], [], []
-    for c in live_candidates(st):
-        distinct = {f["reader"] for f in c["finds"] if f["counts"]}
-        confirms = {v["reader"] for v in c["verifications"] if v["verdict"] == "confirm"}
-        refutes = [v for v in c["verifications"] if v["verdict"] == "refute" and v["command"]]
-        if refutes:
-            refuted.append((c, refutes[0])); continue
-        hits = len(distinct | confirms)
-        flag = " · contested" if c["declines"] else ""
-        row = [f"**{c['class']}**{flag}" if c["class"] else flag.strip(" ·"), c["seam"], c["locations"], c["silent"], c["found_by"], c["notices"]]
-        (confirmed if hits >= 2 else seen_once).append(row)
-    hdr = ["class", "seam", "locations", "what breaks silently", "found-by", "what notices"]
-    body = (f"## Confirmed — two or more independent readers ({len(confirmed)})\n\n" + table(hdr, confirmed)
-            + f"\n\n## Seen once — one reader; a true fact lacking a second opinion ({len(seen_once)})\n\n"
-            + "_The human promotes or drops these at approval._\n\n" + table(hdr, seen_once)
-            + "\n\n## Declined — only the rows that constrain the Approach\n\n"
-            + f"_Every other declined row is archived at `{os.path.join(a.state, 'declined-archive.md')}`._\n\n"
-            + table(["candidate", "why not", "command"], [])
-            + "\n\n## Approach\n\n_Empty by design. `ac-plan` writes it with the human — one decision for the whole object._")
+    edges = live_edges(st)
+    holes, competing, unasserted = derive(edges)
+    derived = []
+    for s in holes:
+        derived.append(["hole", f"stage `{s}` has no row", "nobody does this to the object; whatever should happen at this stage does not"])
+    for s, paths in competing.items():
+        derived.append(["competing writers", f"`{s}`: " + " · ".join(f"`{p}`" for p in paths), "no shared owner — last write wins with nothing asserting the shape"])
+    for e in unasserted:
+        derived.append(["unasserted edge", f"`{e['stage']}` · `{e['loc']}`", "drift on this edge is silent — no type, assertion or test names it"])
+    reader_rows = sorted(st["diag"].values(), key=lambda x: (-len(x["readers"]), x["first_round"], x["key"]))
+    rr = [[x["pattern"], x["edges"], x["silent"], x["found_by"], str(len(x["readers"]))] for x in reader_rows]
+    disagreements = [e for e in edges if e.get("contract_disagreement")]
+    body = (f"## Map — {len(edges)} edges across {len({e['stage'] for e in edges})} stages · {len(st['readers'])} readers · {st['rounds']} rounds\n\n"
+            + table(MAP_HDR, map_rows(edges, best_contract=True))
+            + f"\n\n## Seams — derived from the map ({len(derived)})\n\n"
+            + table(["pattern", "where", "what breaks silently"], derived)
+            + f"\n\n## Seams — reader diagnosis ({len(rr)}), ordered by how many readers saw it\n\n"
+            + table(["pattern", "edges", "what breaks silently", "found-by", "readers"], rr)
+            + ("\n\n_Contract disagreements (one reader said none, another named one): "
+               + " · ".join(f"`{e['key']}`" for e in disagreements) + "_" if disagreements else "")
+            + "\n\n## Approach\n\n_Empty by design. `ac-plan` writes it with the human — usually: give this object one owner at each stage the map shows it lacks._")
     write_below_marker(a.artifact, body)
-    for c, r in refuted:
-        c["declines"].append({"reader": r["reader"], "round": st["rounds"], "why": "refuted by verifier", "command": r["command"], "candidate": c["seam"]})
-        c["dropped"] = {"round": st["rounds"], "reason": f"refuted by {r['reader']}"}
-    write_declined_sidecar(a.state, st, final=True)
-    save_state(a.state, st)
-    print(f"seams-merge: handoff confirmed={len(confirmed)} seen_once={len(seen_once)} refuted={len(refuted)} "
-          f"rounds={st['rounds']} readers={len(st['readers'])} contaminated={sum(1 for r in st['readers'].values() if r['contaminated'])}")
+    print(f"seams-merge: handoff edges={len(edges)} holes={len(holes)} competing={len(competing)} unasserted={len(unasserted)} "
+          f"reader_diagnoses={len(rr)} rounds={st['rounds']} readers={len(st['readers'])}")
     return 0
 
 
 def main(argv):
-    p = argparse.ArgumentParser(prog="seams-merge.py", add_help=True)
+    p = argparse.ArgumentParser(prog="seams-merge.py")
     sub = p.add_subparsers(dest="cmd")
     r = sub.add_parser("round"); r.add_argument("--state", required=True); r.add_argument("--artifact", required=True)
     r.add_argument("--round", type=int, required=True); r.add_argument("--repo"); r.add_argument("--validate", action="store_true")
     r.add_argument("reports", nargs="*", metavar="REPORT")
-    v = sub.add_parser("verify"); v.add_argument("--state", required=True); v.add_argument("--id", required=True)
-    v.add_argument("--reader", required=True); v.add_argument("--verdict", choices=["confirm", "refute"], required=True); v.add_argument("--command")
     h = sub.add_parser("handoff"); h.add_argument("--state", required=True); h.add_argument("--artifact", required=True)
     try:
         a = p.parse_args(argv)
     except SystemExit:
         die2("bad arguments (see --help)")
     if a.cmd is None:
-        die2("a subcommand is required: round | verify | handoff")
-    return {"round": cmd_round, "verify": cmd_verify, "handoff": cmd_handoff}[a.cmd](a)
+        die2("a subcommand is required: round | handoff")
+    return {"round": cmd_round, "handoff": cmd_handoff}[a.cmd](a)
 
 
 if __name__ == "__main__":

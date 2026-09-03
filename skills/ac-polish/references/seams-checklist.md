@@ -1,51 +1,50 @@
-# seams-checklist — the question set a blind reader runs over a target's code
+# seams-checklist — how to trace one object, and what its map is allowed to mean
 
-The loop that runs this (K blind readers per round, VALIDATE by re-running commands, consensus
-at two independent hits, fixpoint on the plan's digest) is `ac-polish/workflows/seams.md`.
-This file is only the questions. **New singletons every round indict THIS FILE, not the target.**
+The loop that runs this (K trace readers per round, merge by `stage × path`, fixpoint when a
+round adds no edge) is `ac-polish/workflows/seams.md`. This file is the lens: the stages, the
+command shapes that find them, and the rules that turn a map into seams. It is systems
+engineering's oldest move — enumerate the components and their interfaces FIRST (the N²
+chart), then judge the interfaces — done cheaply, by `rg`, at study time.
 
-**You are blind by design.** You see the target and this file — not the plan, not the round,
-not what anyone else found. A seam two blind readers reach separately is evidence; a seam one
-reader confirms because it was shown it is not.
+## The object, not the area
 
-**SEVERITY GATE — a toucher is a seam ONLY if its failure is silent or its shape is unasserted.**
-A call site that fails loudly under an existing test is not a finding; it is DECLINED, with the
-test path.
+A trace has one subject: a column, a type, a component's state, a record. "Images in food
+entries" is an area; `foods.image_urls` and its writers is an object. The orchestrator resolves
+the area to the heaviest object before any reader runs (workflow § TARGET); the reader traces
+that object and nothing else. Follow the object's DATA — who writes it, moves it, stores it,
+reads it, deletes it. Do not follow the import graph. Exclude prose paths (docs, plans,
+backlog, memory, changelogs, snapshots, lockfiles, generated types).
 
-## Scope — you decide; the data leads
+## The stages — each found by a command
 
-Follow the target's DATA: who writes it, stores it, reads it, deletes it. Do not follow the
-import graph — that is the whole app. Exclude prose paths: docs, plans, backlog, memory,
-changelogs, snapshots, lockfiles, generated types. There is no declared scope; your `found-by`
-commands are the scope you chose, and they are what a second reader re-runs.
+| stage | what to find | command shape |
+|---|---|---|
+| `create` | where the object first comes to exist | `rg -n "(insert\|create\|new .*<Type>\|<symbol>\s*[:=])" --type ts -g '!**/*.test.*'` |
+| `transport` | where it moves between stores — upload, handoff blob, queue, message | `rg -n "(upload\|enqueue\|sessionStorage\|Preferences\|postMessage).*<symbol>"` |
+| `store` | the schema and every persistence write | `rg -n "<column>" supabase/ lib/db/ --type sql --type ts` |
+| `read` | every consumer of the stored shape | `rg -n "<symbol>" -g '!**/*.test.*' -g '!**/__tests__/**' app features lib` |
+| `update` | every mutation after creation | `rg -n "(update\|upsert\|patch\|set)[^;]*<symbol>"` |
+| `delete` | where the record goes away | `rg -n "(delete\|remove)[^;]*<symbol>"` |
+| `cleanup` | what reclaims what delete leaves behind — blobs, caches, cron | `rg -n "<symbol>" app/api/cron scripts` |
 
-## The four questions — each answered by a command you ran
+Every row: `path:line` · role · upstream · downstream · contract · found-by. The contract is the
+thing that would FAIL if this edge drifted — a type, an assertion, a test path — or `none`. Say
+`none` when it is true; it is the most useful cell on the map.
 
-1. **Shape.** Do every writer and every reader agree on the object's shape? Two shapes for one
-   thing (a column and its fallback, a type and its `any`) is connascence of meaning.
-   `rg -n '<symbol>' -g '!**/*.test.*' -g '!**/__tests__/**'` per shape — compare the sets.
-2. **Lifecycle.** Stages: create · store · read · update · delete · cleanup. Name the code at
-   each stage. **An empty stage is a HOLE row** — the finding is the absence.
-   `rg -n '<symbol>'` grouped by path; assign every hit a stage.
-3. **Touchers.** Who else writes here, and do they know about each other? Two writers with no
-   shared contract is a seam even when both are correct today — but ONLY if you can name what
-   would drift and show nothing asserts it. "Consistent today, unasserted" with no named
-   drift is DECLINED.
-   `rg -n '(insert|update|upsert|delete|save|write)[^;]*<symbol>|<symbol>[[:space:]]*[:=]'`
-4. **Silent failure.** If this edge breaks, what notices? A test path that would fail, or `none`.
-   `rg -l '<symbol>' -g '**/*.test.*' -g '**/__tests__/**'` — and what each one asserts.
+## What the map means — rules, not opinions
 
-## The findings row — every cell, or no row
+- **Hole** — a core stage with no row. Nobody cleans up, nobody deletes. Derived by the script.
+- **Competing writers** — two or more paths at `create`, `update` or `delete` with no shared
+  primitive they route through. Last write wins; nothing asserts the shape. Derived.
+- **Unasserted edge** — `contract = none`. Drift is silent by construction. Derived.
+- **Shape divergence** — writers and readers naming different shapes for one thing (a column
+  and its fallback). Reader diagnosis: cite both edges.
+- **Duplicated stage** — one stage implemented twice (two upload paths). The chokepoint
+  opportunity. Reader diagnosis.
+- **Dead state** — written and never read. Reader diagnosis: name the writer edges.
+- **Silent failure** — an edge whose failure no user, log or test would notice. Reader
+  diagnosis: say what a user sees, and does not see.
 
-A table row, parsed by `scripts/seams-merge.py` (the reader prompt shows the exact shape):
-`| class | seam | locations (path:line …) | what breaks silently | found-by (the exact command) | what notices (test path \| none) |`
-
-- `class` is `breaks today` (a reachable silent failure) or `unasserted` (agrees by coincidence,
-  nothing catches drift). The plan's Approach treats them differently: fixes versus contracts.
-- No `found-by` → not a row. A remembered list is how the slate's caller count came up short.
-- No design. "Should unify to…" is `ac-plan`'s sentence, not yours. State the seam, cite code.
-
-## DECLINED — mandatory
-
-Everything you looked at and judged NOT a seam, with why and the command. An empty DECLINED on
-a non-trivial target is a finding against the reader.
+Reader diagnoses are ordered by how many readers reached them — a salience signal for the
+human, never a gate. The map's facts are validated by re-running `found-by`; the diagnosis is
+judgement over shared facts, which is the only kind two readers can meaningfully disagree on.

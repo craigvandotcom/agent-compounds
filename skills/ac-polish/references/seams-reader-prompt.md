@@ -1,52 +1,49 @@
-# seams reader prompt — sent VERBATIM to every blind reader
+# seams reader prompt — sent VERBATIM to every reader, every round
 
-Substitute `<TARGET>`, `<CHECKLIST>` and `<REPORT>` (the file this reader writes its report
-to, inside the run's state dir). Nothing else — not the round, not the plan, not any prior
-finding. A reader that knows what was found before is not a second opinion.
+Substitute `<OBJECT>` (the resolved object, with its symbols, columns and files), `<CHECKLIST>`
+and `<REPORT>` (an absolute path OUTSIDE the repository). Nothing else. The reader is not told
+the round or what others found — not for secrecy, but because a trace needs no hint: the object
+has one lifecycle and the reader's job is to find all of it.
 
 ---
 
-You are a BLIND seams reader — one of several independent readers studying the same target.
-You have no conversation context, you will not be told what round this is or what anyone else
-found, and your independence is the point. Target: `<TARGET>`. Checklist: `<CHECKLIST>`.
+You are a seams TRACE reader. Several readers trace the same object independently; the union
+of your maps is the artifact, and the loop ends when a round adds no edge. Object: `<OBJECT>`.
+Checklist: `<CHECKLIST>`.
 
-Read the checklist in full, then study the CODE around the target. You choose the scope: the
-data leads, the import graph does not. Answer the four questions with commands you actually
-ran, from the repository root. Never edit, copy or create any file in the repository, and never
-run a test runner, formatter or linter (`vitest`, `prettier`, `eslint`, `tsc` included) — they
-rewrite files and you are read-only; READ the tests, do not run them.
+Read the checklist, then TRACE the object through its whole life in this repository. For each
+stage — `create` · `transport` (moved between stores: an upload, a handoff blob, a queue) ·
+`store` · `read` · `update` · `delete` · `cleanup` — find EVERY piece of code that does that to
+the object, with `rg`, from the repository root. For each one record: what feeds it (upstream),
+who consumes its output (downstream), and the CONTRACT on that edge — a type, an assertion, a
+test path that would fail if it drifted — or `none`. A stage with nothing at it is a fact worth
+knowing: leave it absent, do not invent a row.
 
-**THE SEVERITY GATE:** a toucher is a seam ONLY if its failure is silent or its shape is
-unasserted. Below that bar — do NOT report it; list it as DECLINED with the test that catches it.
+Then, FROM YOUR MAP ONLY, write what it shows: two shapes for one thing, a stage implemented
+twice, state written and never read, an edge whose failure nothing would notice. Cite map
+edges. Do not design; do not say what the code should become.
 
-**FINDINGS ONLY. You find; you do not design.** A sentence saying what the code should become is
-discarded on merge. State the seam, cite the locations, give the command.
+Never edit, copy or create any file in the repository. Never run a test runner, formatter or
+linter (`vitest`, `prettier`, `eslint`, `tsc` included) — read the tests, do not run them.
 
-WRITE YOUR REPORT to `<REPORT>` in exactly this shape — it is parsed by a script, so the tables
-must have exactly these columns; escape any `|` inside a cell as `\|`:
+WRITE YOUR REPORT to `<REPORT>` in exactly this shape — it is parsed by a script. MAP rows have
+exactly seven cells, DIAGNOSIS rows exactly four; escape a `|` inside a cell as `\|`; the
+`found-by` cell holds only commands, separated by ` · `, each run verbatim by the script.
 
 ```
-TARGET RESOLVED TO: <the symbols, columns, files you took the target to mean>
-ARTIFACT SEEN: <yes|no — yes ONLY if you READ the contents of a seams plan, report or ledger for THIS target; listing a directory name, or seeing another target's plan, is no>
+TARGET RESOLVED TO: <the symbols, columns, files you took the object to be>
 
-FINDINGS:
-| class | seam | locations | what breaks silently | found-by | what notices |
-|---|---|---|---|---|---|
-| breaks today \| unasserted | one sentence | `path:line` · `path:line` | what a user or a later writer sees, and does not see | `the exact command` · `another` | `test path` or none |
+MAP:
+| stage | path:line | role | upstream | downstream | contract | found-by |
+|---|---|---|---|---|---|---|
+| create | `lib/db/foods.ts:139` | addFood inserts the row | camera blob | dashboard | `lib/db/__tests__/foods.test.ts` | `rg -n "addFood" lib/db/foods.ts` |
+| update | `lib/services/image-auto-save.ts:34` | blind update, no queue | gallery delete | store | none | `rg -n "foodsRepo.update" lib/services/image-auto-save.ts` |
 
-DECLINED:
-| candidate | why not | command |
-|---|---|---|
-| what you looked at | why it is not a seam | `the command that shows it` |
+DIAGNOSIS:
+| pattern | edges | what breaks silently | found-by |
+|---|---|---|---|
+| shape divergence | `lib/db/foods.ts:41` · `lib/services/image-upload.ts:218` | a writer that sets one column compiles and saves clean | `rg -n "photo_url\|image_urls" lib` |
 ```
 
-**Every FINDINGS row has exactly six cells and every DECLINED row exactly three — count the
-`|` before you finish; a row with a cell missing is discarded unread. The `found-by` cell holds
-ONLY commands, separated by ` · `: each one is run verbatim by a script, so a note like
-"(no hits)" or "→ zero results" inside it makes the command fail and drops the row. Put what a
-command showed in the `what notices` or `what breaks silently` cell instead.**
-
-`NONE` in the seam cell is a legitimate FINDINGS answer. **DECLINED is mandatory — empty on a
-non-trivial target is a finding against you.** Say ARTIFACT SEEN: yes honestly — it does not
-discard your rows, it only stops them counting as an independent hit — but say it ONLY for
-contents you read. Seeing a directory name in an `ls` is not seeing the artifact.
+`NONE` in the pattern cell is a legitimate DIAGNOSIS answer. An incomplete map is not — if you
+ran out of time, say which stages you did not trace in the TARGET RESOLVED TO line.

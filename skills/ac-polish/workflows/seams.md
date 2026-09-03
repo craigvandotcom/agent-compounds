@@ -1,37 +1,24 @@
-# polish · seams mode
+# polish · seams mode — trace one object, converge on its map, read the seams off it
 
 The loop is in `ac-polish/SKILL.md` and is the same in every mode. This file supplies only
 what seams mode binds, and it is a MANDATORY load for a seams run.
 
-Seams mode differs in what the reader READS and WRITES: it reads the CODE around a target and
-writes FINDINGS into a plan. It fixes nothing. The plan goes to `ac-plan` for its approach,
-then through the normal chain — plan discovery from code, the second source of plans beside
-human intent. The seams on one object are ONE design problem: decided together in a plan, or
-entrenched separately by piecemeal fixes.
+Seams mode reads CODE and writes a MAP. K readers trace the same object through the same
+stages; the union map is the artifact; the loop ends when a round adds no edge — reachable,
+because the edges of one object are finite. The seams are then derived from the map, not
+hunted. Nothing is fixed here: the map and its seams go to `ac-plan`, whose Approach is
+usually one sentence — give this object one owner at each stage the map shows it lacks.
 
 ## Bindings
 
 | knob | seams mode |
 | --- | --- |
-| **TARGET** | a name — a phrase, symbol, column, file. Given as the argument → no prompt. Absent → ONE prompt before anything is read or spawned (below) |
-| **ARTIFACT** | `<STATE>/plan.md` during the loop, from `references/seams-plan-template.md`. Below the marker it holds CANDIDATE ROWS ONLY — first-seen text, id order — written by `scripts/seams-merge.py`, never by hand. Hits, declines, verifications live in `<STATE>/ledger.json`; decline-only rows in `<STATE>/declined.md`. So the digest moves iff a candidate is added or dropped. **`<STATE>` lives OUTSIDE the repo: `~/.claude/polish/<repo-name>/seams-<slug>-<date>/`.** Dogfood 2026-09-02: 32 of 33 readers flagged themselves from a bare `ls .claude/polish/` inside the tree, and consensus fell entirely to verifiers. Nothing in the tree, nothing to surface. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
-| **CHECKLIST** | `references/seams-checklist.md` |
-| **READERS** | K blind readers per round (default 3), each sent `references/seams-reader-prompt.md` verbatim with `<TARGET>`, `<CHECKLIST>` and `<REPORT>` (= `<STATE>/reports/r<N>-<letter>.md`) filled — NOT the plan, NOT the round number, NOT prior findings. Their rows reach ARTIFACT only through MERGE |
-| **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new row's `found-by`; a row is dropped iff none of its commands reproduces. Facts are validated; judgement is not |
-| **STAMP** | `polish-fixpoint.sh --mode seams` — keys under the `seams_` prefix, so the later `--mode plan` polish of the same file keeps its own stamp beside this one |
-
-## The start prompt — only when no target is given
-
-```
-AskUserQuestion: "What should ac-seams study?"
-  Aim — last week      what we just made worse     scripts/aim.sh --since 1w
-  Aim — last 4 weeks   the recent drift            scripts/aim.sh --since 4w
-  Aim — all time       where the debt lives        scripts/aim.sh --since 1y  (`all` behind it)
-  Other → a typed target
-```
-
-Aim ranks candidates with the command beside each row; the human picks ONE — the second and
-last prompt. Aim runs once per session: re-aiming inside a loop is a moving target.
+| **TARGET** | an OBJECT — a column, a type, a component's state, a record — never an area. The user gives an area or nothing: **resolve it before any reader runs.** `rg` the area's nouns for candidate objects; weigh each by touching files × distinct layers (db · service · hook · component · route · cron · test), churn as tiebreaker; take the heaviest; confirm it in ONE prompt: *"Resolved to `foods.image_urls` + writers — 14 files, 5 layers. Trace this?"* No area at all → `scripts/aim.sh --since <window>` ranks files; the human picks one; resolve its object the same way |
+| **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: the MAP, one row per `stage × path`, first-seen text, stage order, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
+| **CHECKLIST** | `references/seams-checklist.md` — the stages, their command shapes, and the rules that turn a map into seams |
+| **READERS** | K trace readers per round (default 3), each sent `references/seams-reader-prompt.md` verbatim with `<OBJECT>`, `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<letter>.md`) filled. Same object, same stages, independent tracing. Their rows reach ARTIFACT only through MERGE |
+| **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new edge's `found-by`; an edge no command reproduces is dropped |
+| **STAMP** | `polish-fixpoint.sh --mode seams` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them |
 
 ## MERGE — one command per round, after the K reports land
 
@@ -40,49 +27,23 @@ scripts/seams-merge.py round --state <STATE> --artifact <STATE>/plan.md --round 
     --repo <root> --validate <STATE>/reports/r<N>-*.md
 ```
 
-It keys rows by LOCATION (files cited, overlap ≥ half the smaller set), never prose; records
-each reader's hits; keeps the first-seen text; sends decline-only rows to the sidecar; drops
-rows no command reproduces; and prints `new=<n>` — the discovery signal. A reader that reports
-`ARTIFACT SEEN: yes` still adds candidates but its hits do not count toward consensus. A row
-that designs is discarded by the orchestrator before the merge. Then record the round with
-`polish-fixpoint.sh` as the SKILL.md loop says — every artifact change is a round to the
-script, or the next `--pre` fires as an out-of-band amendment. **A `NOT-GATED` merge means
-the round did not happen:** resume the reader whose report failed to parse, re-merge, and
-only then run the gate. Running the gate over a refused merge stamped a half-merged
-artifact once (ingredients, round 2) and had to be rolled back by hand.
+Edges key on `stage × path` — exact, no fuzzy matching. A named contract beats `none` and the
+disagreement is recorded. Reader diagnoses merge on the edges they cite and count readers. The
+round line prints `new_edges=` (the convergence signal) and the derived seams so far. **A
+`NOT-GATED` merge means the round did not happen** — resume the reader whose report failed to
+parse, re-merge, then run the gate. Every artifact change is a round to `polish-fixpoint.sh`.
 
-## Stop — the stamp means discovery converged
+## Stop — a round that adds no edge
 
-A round whose K blind readers add no candidate leaves the digest unchanged; at round ≥ 2 the
-script stamps. That is the measurement: three independent readers found nothing new. Blind
-readers discover well and reach consensus badly (dogfood 2026-09-02: rounds 1–3 found 11,
-rounds 4–9 found 2), so consensus is NOT more blind rounds — it is the post-stamp work below.
-Bound-exhausted or cycling hands off unstamped, exactly as in every other mode. New singletons
-every round indict the CHECKLIST's silent-failure question, not the target.
+The digest is unchanged, and at round ≥ 2 the script stamps: K readers independently traced
+the object and found nothing the map lacked. Two or three rounds is normal. A run that keeps
+adding edges past five rounds has the wrong TARGET — an area, not an object — and the fix is to
+split it (each heavy downstream consumer is its own object, its own run), not to run more rounds.
 
-## After the stamp — consensus, then hand-off
+## Hand-off
 
-1. **Verify singletons.** Each row with one counting hit goes to two fresh verifiers who are
-   GIVEN the row and asked to confirm or refute the fact and the silence with a command:
-   `seams-merge.py verify --id <cNNN> --reader <name> --verdict confirm|refute [--command …]`.
-   Two confirmations promote; one refutation with a reproducing command archives. A verifier
-   reports the strongest counter-command it ran EVEN WHEN CONFIRMING — dogfood 2026-09-02
-   confirmed 42 of 44 rows, and a confirmation with no attempted refutation is a reader shown
-   the answer agreeing with it, which is the anchoring the blind design exists to avoid.
-2. **Targeted pass, if warranted.** A singleton that resolved the target to an object the
-   majority did not (a handoff blob beside a column) is a NEW seams run with that object as
-   TARGET — its own loop, its own stamp — not extra rounds of this one.
-3. **`seams-merge.py handoff`** writes Confirmed (≥2 distinct counting readers, or verifier
-   confirmations) · Seen once · an empty Declined table · an empty Approach, and archives every
-   declined row to `<STATE>/declined-archive.md`. The orchestrator then asks the human to
-   promote or drop each Seen-once row, rewrites the Problem paragraph to cluster the Confirmed
-   rows into the few questions the Approach must answer once, moves only the Declined rows
-   that CONSTRAIN the Approach (a designed backstop, a tested invariant, a reachability limit)
-   into the plan, and copies the artifact to `_plans/` with frontmatter naming rounds and verdict.
-
-## Hand-off — a converged findings plan with no approach is a dead end
-
-END every seams run, stamped or not, by invoking `ac-plan` with the findings file as its
-problem statement, or by queueing that hand-off explicitly with the human. `ac-plan` writes
-the Approach and every remaining ac2 section into the same file, then hands it to
-`ac-polish plan`. Do not finish by reporting success and stopping.
+`seams-merge.py handoff` writes Map · Seams derived (holes, competing writers, unasserted edges)
+· Seams from reader diagnosis, ordered by reader count · an empty Approach. The orchestrator
+writes the Problem paragraph FROM THE MAP, copies the file to `_plans/` with frontmatter naming
+rounds and verdict, and hands it to `ac-plan`, which writes the Approach and the remaining ac2
+sections and passes it to `ac-polish plan`. Do not finish by reporting success and stopping.
