@@ -15,12 +15,26 @@ acceptance journey. Nothing is fixed here.
 
 | knob | seams mode |
 | --- | --- |
-| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs.** `rg` the area's nouns for candidate objects; weigh each by touching files × distinct layers (db · service · hook · component · route · cron · test), churn as tiebreaker; take the heaviest. Then name its FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and its BOUNDARIES (the interfaces those edges cross). Confirm all three in ONE prompt: *"Object: `foods.image_urls` + writers (14 files, 5 layers). Flows: 2. Boundaries: 3. Trace?"* No area → `scripts/aim.sh --since <window>` ranks files; the human picks; resolve the same way |
+| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs, with the script, not by hand.** Area → `scripts/aim.sh objects --area '<regex>'` ranks the objects named by or touched from matching files (touchers × layers × writers ÷ tests); take the top row. Nothing → the start prompt below. Then name the object's FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and BOUNDARIES (the interfaces those edges cross). Confirm all three in ONE prompt: *"Object: `foods.image_urls` (14 touchers, 5 layers, 3 writers, 1 test). Flows: 2. Boundaries: 3. Trace?"* |
 | **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: three maps, exact keys (object `stage × path` · flow `flow × path` · boundary `interface × side × path`), first-seen text, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
 | **CHECKLIST** | `references/seams-checklist.md` — the three lenses, their command shapes, and the rules that turn maps into seams |
 | **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each extends and corrects its own map |
 | **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new edge's `found-by`; an edge no command reproduces is dropped |
 | **STAMP** | `polish-fixpoint.sh --mode seams` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them |
+
+## The start prompt — only when no target is given
+
+```
+AskUserQuestion: "What should ac-seams trace?"
+  Where the debt lives      scripts/aim.sh objects                → ranked objects, pick one
+  What we just churned      scripts/aim.sh churn --since 1w       → hot files; then objects --area <file>
+  Recent drift              scripts/aim.sh churn --since 4w       → same bridge
+  Other → an area or object by name                               → objects --area '<regex>'
+```
+
+`objects` outputs objects; `churn` outputs files — the `--area` bridge turns a file into the
+objects it touches. The human picks ONE row; that is the second and last prompt. Aim runs once
+per session; re-aiming inside a loop is a moving target.
 
 ## MERGE — one command per round, after the reports land
 
