@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-02
-entries: 4
+entries: 5
 ---
 
 # ac-polish — friction log
@@ -60,7 +60,7 @@ entries: 4
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [seams-fixpoint-never-stamps-on-accumulator]
 - first_seen: 2026-09-02
 - last_seen: 2026-09-02
@@ -74,6 +74,10 @@ entries: 4
   beside plan.md in the state dir; the .ignore file stops rg but not the reader noticing
   the file when it writes its report. Every hit is therefore non-counting, no row can reach
   Confirmed through blind consensus, and the whole post-stamp burden moves to verifiers.
+  Recurred on "keyboard text input" (2026-09-02): 11 of 12 readers across 4 rounds flagged
+  themselves from a bare `ls .claude/polish/` alone (none opened plan.md); the one reader
+  that skipped the listing was the only counting hit, and all 10 rows reached Confirmed
+  only via 20/20 verifier confirmations.
 
 ## seams-merge-location-key-swallowed-distinct-seams
 - skills: [ac-polish]
@@ -96,4 +100,21 @@ entries: 4
   had no row of its own. The polish gate also STAMPED once against an artifact the merge had
   refused (NOT-GATED on a 5-cell row) because the orchestrator ran the gate anyway; the
   stamp was rolled back and both rounds replayed from the immutable reports.
+
+## seams-reader-tooling-reformats-repo-test-file
+- skills: [ac-polish]
+- impact: L
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 2
+- related: [seams-report-path-contaminates-every-reader]
+- first_seen: 2026-09-02
+- last_seen: 2026-09-02
+- stage: manual
+- status: open
+- proposed_fix: tell readers in seams-reader-prompt.md not to run test runners or formatters,
+  or have the orchestrator diff the tree after each round and revert formatting-only noise.
+- narrative: twice in one seams run a reader left a formatting-only reflow of
+  __tests__/unit/compound-expansion-gate.test.ts in the working tree (a vitest or prettier
+  invocation). No semantic change; the orchestrator stashed it each time.
 
