@@ -410,7 +410,6 @@ Four checks, each a placement rule made adversarial:
    exceeds its minted ceiling (post-mint, per `promotion-ladder.md`) is a finding even
    with a stamp present.
 
-<!-- diet: CHECKLIST restated the METHOD checks 0-3 immediately above (same-file twins); the METHOD is the binding statement -->
 
 **SLUGS:** `provenance-leak`, `missing-promotion-evidence`, `false-evidence-stamp`,
 `reintroduced-historical-block`, `unjustified-net-growth`, `conductor-ceiling-breach`
@@ -689,6 +688,7 @@ branch review, **not** the green-main boundary (the exhaustive full-suite run is
 {CMD_LINT}      # always (cheap)
 {CMD_TYPECHECK} # always (cheap)
 bash skills/ac-implement/scripts/diff-closure.sh --base {BASE}   # always (cheap): callers OUTSIDE the batch of every export it changed or file it deleted; REFUSED = a seam the batch moved without owning — blocking, the caller list is the finding
+bash skills/ac-polish/scripts/aim.sh churn --base {BASE} --min-commits 1 --min-cochange 2   # always (cheap, ADVISORY): file pairs this batch changed together with no import between them — coupling that lived in the coordinator's head; each pair is an observation for Phase 8, never a refusal
 ```
 
 Then, by diff class (from the classifier):

@@ -27,9 +27,13 @@ decides it happens), what SENSES it (what tells the controller it happened — a
 response, a test), and what happens ON FAILURE (retry · timeout · compensate · surface ·
 swallow · `none`). The flows are the object's edges in time order; name them consistently.
 
-**boundary** — for one interface, both sides: what each side ASSUMES about the other (a
-shape, an ordering, a presence) and what ASSERTS it (a type, a guard, a test) or `none`. Map
-both sides; a boundary with one side is a finding in itself.
+**boundary** — for one interface, both sides: who PRODUCES what crosses it — `internal`
+(another module), `user` (a form field, request body, search param), `external` (a webhook, a
+third-party response), `tenant` (another user's row) — what each side ASSUMES about the other
+(a shape, an ordering, a presence) and what ASSERTS it (a type, a guard, a schema, an auth
+check, a test) or `none`. Producer is a classification you read from the code (`req.json()`,
+`searchParams`, `fetch('https://…')`), not a judgement. Map both sides; a boundary with one
+side is a finding in itself.
 
 Then, FROM THE MAPS ONLY, write what they show — two shapes for one thing, a stage done twice,
 state written and never read, a step nobody would notice failing. Generate the failure
@@ -39,7 +43,7 @@ happens) · **more** (twice, or too many) · **less** (partial) · **late** · *
 report the ones where the map shows nothing would notice. Cite paths. Do not design.
 
 WRITE YOUR REPORT to `<REPORT>` in exactly this shape — parsed by a script. Cell counts are
-exact (object 7 · flow 7 · boundary 6 · diagnosis 4); escape `|` inside a cell as `\|`;
+exact (object 7 · flow 7 · boundary 7 · diagnosis 4); escape `|` inside a cell as `\|`;
 `found-by` holds only commands, separated by ` · `, each run verbatim.
 
 ```
@@ -49,7 +53,7 @@ TARGET RESOLVED TO: <what you took the subject to be; which stages/steps/sides y
 MAP:
 | stage | path:line | role | upstream | downstream | contract | found-by |            ← object
 | flow | step | path:line | controller | sensor | on-failure | found-by |             ← flow
-| interface | side | path:line | assumes | asserts | found-by |                        ← boundary
+| interface | side | path:line | producer | assumes | asserts | found-by |             ← boundary
 |---|...
 
 DIAGNOSIS:

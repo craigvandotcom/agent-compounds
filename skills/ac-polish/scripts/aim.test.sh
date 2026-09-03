@@ -76,6 +76,13 @@ out=$("$SCRIPT" churn --since all --min-commits 10 --min-cochange 6 -C "$R" 2>&1
 printf '%s\n' "$out" | grep -q 'no pair reached --min-cochange 6' && ok "churn: no qualifying pair -> says so, prints no fake row" || fail "empty coupling" "$out"
 out=$("$SCRIPT" churn --since 1w --min-commits 10 -C "$R" 2>&1)
 printf '%s\n' "$out" | grep -q '^# aim churn — window: 1w · commits: 23' && ok "churn: header reports window + commit count" || fail "header" "$(printf '%s\n' "$out" | head -1)"
+# --base <ref>: the batch as its own sample. HEAD~16..HEAD = ab×4, ac×3, doc×9 (docs excluded)
+out=$("$SCRIPT" churn --base HEAD~16 --min-commits 1 --min-cochange 2 -C "$R" 2>&1); rc=$?
+[ "$rc" = 0 ] && printf '%s\n' "$out" | grep -q '^# aim churn — range: HEAD~16..HEAD · commits: 16' && ok "churn --base: header reports the range + commit count" || fail "base header" "$(printf '%s\n' "$out" | head -1)"
+printf '%s\n' "$out" | grep -q '^| `a.txt` | `b.txt` | 4 | 1.00 |' && ok "churn --base: a/b co-changed 4× inside the range (init excluded), ratio 4/4" || fail "base pair" "$(printf '%s\n' "$out" | grep '^| `')"
+printf '%s\n' "$out" | grep '^| `a.txt` | `b.txt`' | grep -q 'HEAD~16..HEAD' && ok "churn --base: found-by uses the range, not a window" || fail "base found-by" "$out"
+out=$("$SCRIPT" churn --base nope -C "$R" 2>&1); rc=$?
+[ "$rc" = 2 ] && printf '%s' "$out" | grep -q "not a commit" && ok "churn --base with a bad ref -> NOT-GATED" || fail "bad base" "$out"
 
 # ==================================================================== objects
 O="$W/objrepo"; mkdir -p "$O/lib/supabase" "$O/lib/db" "$O/lib/services" "$O/lib/types" "$O/features/foods" "$O/__tests__" "$O/supabase/migrations"

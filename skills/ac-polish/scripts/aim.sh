@@ -29,8 +29,10 @@
 #               table plus a coupling refusal; an empty inventory says so. Nothing it prints is
 #               a stamp.
 #
-# Usage: aim.sh churn   [--since 1w|4w|1y|all] [--top 15] [--min-cochange 3] [--min-commits 30]
-#                       [--exclude <substr,...>] [-C <repo>]
+# Usage: aim.sh churn   [--since 1w|4w|1y|all | --base <ref>] [--top 15] [--min-cochange 3]
+#                       [--min-commits 30] [--exclude <substr,...>] [-C <repo>]
+#                       (--base <ref> = this batch, <ref>..HEAD; pair it with --min-commits 1
+#                        --min-cochange 2 — a batch is its own sample. ac-review Phase 5 does.)
 #        aim.sh objects [--area <regex>] [--top 20] [--min-touchers 3] [--exclude <substr,...>] [-C <repo>]
 # Output: markdown tables, every row with the command that reproduces its number.
 set -euo pipefail
@@ -40,11 +42,12 @@ die2() { printf 'aim: NOT-GATED %s\n' "$*" >&2; exit 2; }
 MODE="${1:-}"; [ $# -gt 0 ] && shift
 case "$MODE" in churn|objects) ;; -h|--help|"") sed -n '/^# Usage/,/^set -euo/p' "$0" | sed '$d' >&2; exit 2 ;; *) die2 "mode must be churn or objects (got '$MODE')" ;; esac
 
-SINCE=1y TOP="" MINCO=3 MINCOMMITS=30 MINTOUCH=3 AREA="" REPO="." MAXFILES=30
+SINCE=1y BASEREF="" TOP="" MINCO=3 MINCOMMITS=30 MINTOUCH=3 AREA="" REPO="." MAXFILES=30
 EXCLUDE='node_modules/,_plans/,_backlog/,_docs/,docs/,memory/,_archive/,__snapshots__/,CHANGELOG,.lock,.snap,.generated.'
 while [ $# -gt 0 ]; do
   case "$1" in
     --since)        SINCE="${2:-}"; shift 2 ;;
+    --base)         BASEREF="${2:-}"; shift 2 ;;
     --top)          TOP="${2:-}"; shift 2 ;;
     --min-cochange) MINCO="${2:-}"; shift 2 ;;
     --min-commits)  MINCOMMITS="${2:-}"; shift 2 ;;
@@ -65,19 +68,28 @@ EXRE=$(printf '%s' "$EXCLUDE" | sed 's/[.[\*^$|]/\\&/g; s/,/|/g')
 
 # ============================================================ churn
 if [ "$MODE" = churn ]; then
-  case "$SINCE" in
-    1w) GS="1 week ago" ;; 4w) GS="4 weeks ago" ;; 1y) GS="1 year ago" ;; all) GS="" ;;
-    *) die2 "--since must be 1w, 4w, 1y or all (got '$SINCE')" ;;
-  esac
-  if [ -n "$GS" ]; then
-    RAW=$(git -C "$REPO" log --no-merges --format='H %H' --name-only --since="$GS"); SINCEARG="--since=\"$GS\" "
+  # A RANGE (--base <ref>: this batch) or a WINDOW (--since): the batch is its own sample, so
+  # callers pass --min-commits 1 --min-cochange 2 with --base; the windows keep the defaults.
+  if [ -n "$BASEREF" ]; then
+    git -C "$REPO" rev-parse --verify -q "$BASEREF^{commit}" >/dev/null || die2 "--base is not a commit: $BASEREF"
+    RAW=$(git -C "$REPO" log --no-merges --format='H %H' --name-only "$BASEREF..HEAD"); SINCEARG="$BASEREF..HEAD "
+    LABEL="range: $BASEREF..HEAD"
   else
-    RAW=$(git -C "$REPO" log --no-merges --format='H %H' --name-only); SINCEARG=""
+    case "$SINCE" in
+      1w) GS="1 week ago" ;; 4w) GS="4 weeks ago" ;; 1y) GS="1 year ago" ;; all) GS="" ;;
+      *) die2 "--since must be 1w, 4w, 1y or all (got '$SINCE')" ;;
+    esac
+    if [ -n "$GS" ]; then
+      RAW=$(git -C "$REPO" log --no-merges --format='H %H' --name-only --since="$GS"); SINCEARG="--since=\"$GS\" "
+    else
+      RAW=$(git -C "$REPO" log --no-merges --format='H %H' --name-only); SINCEARG=""
+    fi
+    LABEL="window: $SINCE"
   fi
   FILTERED=$(printf '%s\n' "$RAW" | awk -v ex="$EXRE" '/^H /{print; next} NF==0{next} ex != "" && $0 ~ ex {next} {print}')
   NCOMMITS=$(printf '%s\n' "$FILTERED" | grep -c '^H ' || true)
 
-  printf '# aim churn — window: %s · commits: %s · excluded: %s\n\n' "$SINCE" "$NCOMMITS" "$EXCLUDE"
+  printf '# aim churn — %s · commits: %s · excluded: %s\n\n' "$LABEL" "$NCOMMITS" "$EXCLUDE"
   printf '## Hotspots — commits in window × lines now\n\n'
   printf '| # | file | commits | lines | score | found-by |\n|---|---|---|---|---|---|\n'
   printf '%s\n' "$FILTERED" | awk '!/^H /{c[$0]++} END{for (f in c) print c[f] "\t" f}' \

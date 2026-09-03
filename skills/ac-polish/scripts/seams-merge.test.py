@@ -51,7 +51,7 @@ def write(p, s):
 
 OH = "| stage | path:line | role | upstream | downstream | contract | found-by |\n|---|---|---|---|---|---|---|\n"
 FH = "| flow | step | path:line | controller | sensor | on-failure | found-by |\n|---|---|---|---|---|---|---|\n"
-BH = "| interface | side | path:line | assumes | asserts | found-by |\n|---|---|---|---|---|---|\n"
+BH = "| interface | side | path:line | producer | assumes | asserts | found-by |\n|---|---|---|---|---|---|---|\n"
 DH = "| pattern | edges | what breaks silently | found-by |\n|---|---|---|---|\n"
 
 
@@ -74,20 +74,21 @@ O1 = ("| create | `lib/db/foods.ts:139` | addFood inserts | camera | dashboard |
 F1 = ("| camera capture → save | capture | `app/foods/camera/camera-page-client.tsx:290` | user | none | none | `rg -n handleCapture app/foods/camera` |\n"
       "| camera capture → save | upload | `lib/services/image-upload.ts:191` | camera page | `uploadComplete` flag | compensating delete | `rg -n uploadAndPersistImages lib/services` |\n"
       "| camera capture → save | save | `lib/services/image-auto-save.ts:34` | form | none | swallow | `rg -n autoSaveImageUrls lib/services` |\n")
-B1 = ("| camera→form handoff blob | producer | `app/foods/camera/camera-page-client.tsx:294` | form reads uploadedUrls | none | `rg -n PendingImagesData app` |\n"
-      "| camera→form handoff blob | consumer | `features/foods/hooks/use-image-management.ts:80` | blob has uploadedUrls | runtime guard | `rg -n PendingImagesData features` |\n"
-      "| supabase foods row | consumer | `lib/db/foods.ts:41` | image_urls is string[] | none | `rg -n image_urls lib/db/foods.ts` |\n")
+B1 = ("| camera→form handoff blob | producer | `app/foods/camera/camera-page-client.tsx:294` | internal | form reads uploadedUrls | none | `rg -n PendingImagesData app` |\n"
+      "| camera→form handoff blob | consumer | `features/foods/hooks/use-image-management.ts:80` | internal | blob has uploadedUrls | runtime guard | `rg -n PendingImagesData features` |\n"
+      "| supabase foods row | consumer | `lib/db/foods.ts:41` | internal | image_urls is string[] | none | `rg -n image_urls lib/db/foods.ts` |\n"
+      "| upload route | consumer | `app/api/upload/route.ts:12` | user | — | none | `rg -n 'req.json' app/api/upload/route.ts` |\n")
 DA = "| shape divergence | `lib/db/foods.ts:41` · `lib/services/image-upload.ts:218` | two shapes for one column | `rg -n photo_url lib` |\n"
 
 # --- 1. round 1: three lenses, one artifact ------------------------------------------------
 write(f"{W}/r1/o.md", rep("object", OH, O1, DA)); write(f"{W}/r1/f.md", rep("flow", FH, F1)); write(f"{W}/r1/b.md", rep("boundary", BH, B1))
 rc, out = run("round", "--state", S, "--artifact", ART, "--round", "1", f"{W}/r1/o.md", f"{W}/r1/f.md", f"{W}/r1/b.md")
-if rc == 0 and "lenses=boundary,flow,object" in out and "new_edges=12" in out and "edges=object:6,flow:3,boundary:3" in out:
-    ok("round 1: three lens reports -> 12 edges in one artifact, counted per lens")
+if rc == 0 and "lenses=boundary,flow,object" in out and "new_edges=13" in out and "edges=object:6,flow:3,boundary:4" in out:
+    ok("round 1: three lens reports -> 13 edges in one artifact, counted per lens")
 else:
     fail("round 1", out)
 art = open(ART).read()
-if "### object map — 6 edges" in art and "### flow map — 3 edges" in art and "### boundary map — 3 edges" in art:
+if "### object map — 6 edges" in art and "### flow map — 3 edges" in art and "### boundary map — 4 edges" in art:
     ok("artifact holds the three maps under one marker")
 else:
     fail("artifact maps", art)
@@ -101,7 +102,7 @@ d1 = sha(ART)
 write(f"{W}/r2/o.md", rep("object", OH, O1.replace("| image_urls TEXT[] | addFood | readers | none |", "| image_urls TEXT[] | addFood | readers | `supabase/__tests__/schema.test.ts` |")))
 write(f"{W}/r2/f.md", rep("flow", FH, F1)); write(f"{W}/r2/b.md", rep("boundary", BH, B1))
 rc, out = run("round", "--state", S, "--artifact", ART, "--round", "2", f"{W}/r2/o.md", f"{W}/r2/f.md", f"{W}/r2/b.md")
-if rc == 0 and "new_edges=0" in out and "seen_again=12" in out and sha(ART) == d1:
+if rc == 0 and "new_edges=0" in out and "seen_again=13" in out and sha(ART) == d1:
     ok("clean round across all three lenses leaves the digest UNCHANGED (the stamp condition)")
 else:
     fail("clean round", f"{out} same={sha(ART) == d1}")
@@ -140,7 +141,8 @@ else:
 want = ["## Seams — seen by more than one lens (3) — fix these first", "`lib/services/image-auto-save.ts`",
         "## Seams — derived per lens", "| object | competing writers |", "| object | unasserted edge |",
         "| flow | step with no sensor |", "| flow | failure not handled |", "| boundary | assumption nothing asserts |",
-        "| boundary | half-mapped boundary |", "## Journey — from the flow map", "capture (sensor: NONE) → upload (sensor: `uploadComplete` flag) → save (sensor: NONE)",
+        "| boundary | half-mapped boundary |", "| boundary | untrusted input nothing validates | `upload route` · consumer · producer user",
+        "## Journey — from the flow map", "capture (sensor: NONE) → upload (sensor: `uploadComplete` flag) → save (sensor: NONE)",
         "## Seams — reader diagnosis", "## Approach", "Contract disagreements"]
 missing = [w for w in want if w not in final]
 if not missing:
@@ -152,7 +154,7 @@ if "stage `cleanup` has no row" not in final and "supabase foods row` — only t
 else:
     fail("derived detail", final[-1500:])
 fm = final.split("\n---", 1)[0]
-if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 holes=0 edges=13 readers=3 rounds=3" in fm \
+if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 untrusted-inputs=1 holes=0 edges=14 readers=3 rounds=3" in fm \
    and fm.count("seams_load:") == 1 and "seams_load" in out:
     ok("handoff writes the north-star counts into the frontmatter (seams_load), once, and prints them")
 else:

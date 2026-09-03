@@ -33,7 +33,8 @@ Reader REPORT (one per reader; the file stem is the reader id):
   TARGET RESOLVED TO: ...
   MAP:        object   | stage | path:line | role | upstream | downstream | contract | found-by |
               flow     | flow | step | path:line | controller | sensor | on-failure | found-by |
-              boundary | interface | side | path:line | assumes | asserts | found-by |
+              boundary | interface | side | path:line | producer | assumes | asserts | found-by |
+              (producer: internal | user | external | tenant — classification, not a threat model)
   DIAGNOSIS:  | pattern | edges | what breaks silently | found-by |
 Exit 0 ok · 2 NOT-GATED.
 """
@@ -51,7 +52,7 @@ MUTATING = {"create", "update", "delete"}
 LENSES = {
     "object":   {"cols": ["stage", "path:line", "role", "upstream", "downstream", "contract", "found-by"], "path_col": 1},
     "flow":     {"cols": ["flow", "step", "path:line", "controller", "sensor", "on-failure", "found-by"], "path_col": 2},
-    "boundary": {"cols": ["interface", "side", "path:line", "assumes", "asserts", "found-by"], "path_col": 2},
+    "boundary": {"cols": ["interface", "side", "path:line", "producer", "assumes", "asserts", "found-by"], "path_col": 2},
 }
 DIAG_COLS = 4
 PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}")
@@ -267,6 +268,10 @@ def derive(st):
         sides.setdefault(slug(e["interface"]), set()).add(slug(e["side"]))
         if not none_ish(e["assumes"]) and none_ish(e["asserts"]):
             out.append(("boundary", "assumption nothing asserts", f"`{e['interface']}` · {e['side']} · `{e['path:line']}`", f"assumes {e['assumes']} — a change on the other side compiles and ships clean", {e["path"]}))
+        # producer: internal | user | external | tenant — classification from the code, not a threat
+        # model. Anything not internal with nothing asserting is the single highest-value security seam.
+        if slug(e.get("producer", "")) not in ("internal", "") and not none_ish(e.get("producer", "")) and none_ish(e["asserts"]):
+            out.append(("boundary", "untrusted input nothing validates", f"`{e['interface']}` · {e['side']} · producer {e['producer']} · `{e['path:line']}`", "input from outside the trust boundary reaches this code with no schema, guard or auth check", {e["path"]}))
     for i, ss in sides.items():
         if len(ss) < 2:
             out.append(("boundary", "half-mapped boundary", f"`{i}` — only the {next(iter(ss))} side is on the map", "the other side of this interface was not traced; its assumptions are unknown", set()))
@@ -387,6 +392,7 @@ def cmd_handoff(a):
             f"unasserted-edges={sum(1 for l, p, *_ in derived if p == 'unasserted edge')} "
             f"unsensed-steps={sum(1 for l, p, *_ in derived if p == 'step with no sensor')} "
             f"unchecked-assumptions={sum(1 for l, p, *_ in derived if p == 'assumption nothing asserts')} "
+            f"untrusted-inputs={sum(1 for l, p, *_ in derived if p == 'untrusted input nothing validates')} "
             f"holes={sum(1 for l, p, *_ in derived if p == 'hole')} edges={sum(counts.values())} readers={len(st['readers'])} rounds={st['rounds']}")
     text = open(a.artifact, encoding="utf-8").read()
     if text.startswith("---\n"):

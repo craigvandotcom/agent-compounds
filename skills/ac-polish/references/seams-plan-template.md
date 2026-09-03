@@ -17,7 +17,8 @@ orchestrator at hand-off FROM THE MAPS: which stages exist and which are missing
 writers, which steps nobody senses, which assumptions nothing asserts. Never written by a reader.
 End with the north star as this object's success criterion: the four `seams_load` counts the
 hand-off wrote above — competing writers → one owner per mutating stage · unasserted edges → 0
-· unsensed steps → 0 · unchecked assumptions → 0 — re-derived after the fix, by a trace.>
+· unsensed steps → 0 · unchecked assumptions → 0 · untrusted inputs → 0 — re-derived after the
+fix, by a trace.>
 
 <!-- seams-merge: everything below this line is generated -->
 

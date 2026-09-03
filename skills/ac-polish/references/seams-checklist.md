@@ -42,11 +42,14 @@ handled** (none or swallow — the process is left half-done, silently). Reader 
 
 ## boundary — one interface, two sides
 
-Row: interface · side (producer/consumer, caller/callee) · `path:line` · assumes (a shape, an
-order, a presence the other side is trusted for) · asserts (the type, guard or test that
-checks it, or `none`) · found-by. Find both sides: `rg -n "<type or key>"` on each side of the
-call, the blob, the table. Derived: **assumption nothing asserts** · **half-mapped boundary**
-(one side on the map).
+Row: interface · side (producer/consumer, caller/callee) · `path:line` · producer (`internal`
+· `user` · `external` · `tenant` — who originates what crosses; read from `req.json()`,
+`searchParams`, `fetch('https://…')`, RLS) · assumes (a shape, an order, a presence the other
+side is trusted for) · asserts (the type, guard, schema, auth check or test that checks it,
+or `none`) · found-by. Find both sides: `rg -n "<type or key>"` on each side of the call, the
+blob, the table. Derived: **assumption nothing asserts** · **untrusted input nothing
+validates** (producer not internal, asserts none — the one security seam that needs no
+threat model) · **half-mapped boundary** (one side on the map).
 
 ## Guide words — how a reader generates "what breaks silently" without guessing
 
@@ -61,9 +64,9 @@ shifts every later URL. Exhaustive by construction, and the same seven words eve
 The system must be unable to fail silently on this object: every dependency is either OWNED
 (one place decides the shape) or SENSED (something goes red when it drifts). Per target, the
 Approach is done when: competing writers → one owner per mutating stage · unasserted edges → 0
-· unsensed steps → 0 · unchecked boundary assumptions → 0. `seams-merge.py handoff` writes
-these four counts into the plan's frontmatter (`seams_load:`), so the plan's success criterion
-is the same four numbers after the fix, not a slogan. Ashby: the regulator must have as much
+· unsensed steps → 0 · unchecked boundary assumptions → 0 · untrusted inputs nothing validates
+→ 0. `seams-merge.py handoff` writes these counts into the plan's frontmatter (`seams_load:`),
+so the plan's success criterion is the same numbers after the fix, not a slogan. Ashby: the regulator must have as much
 variety as the disturbance. An assertion that cannot go red does not count.
 
 ## Across lenses — the ranking

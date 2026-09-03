@@ -62,7 +62,8 @@ never loop on.
 `seams-merge.py handoff` writes: the three maps · **seams seen by more than one lens, first**
 (a path with an unasserted edge that is also an unsensed step on an unchecked boundary) ·
 seams derived per lens (hole · competing writers · unasserted edge · step with no sensor ·
-failure not handled · assumption nothing asserts · half-mapped boundary) · reader diagnoses by
+failure not handled · assumption nothing asserts · untrusted input nothing validates ·
+half-mapped boundary) · reader diagnoses by
 reader count · the **journey** (the flow map's steps and sensors, for `ac-qa`) · an empty
 Approach. The orchestrator writes the Problem paragraph FROM THE MAPS, copies the file to
 `_plans/` with frontmatter naming rounds and verdict, and hands it to `ac-plan`, which writes
