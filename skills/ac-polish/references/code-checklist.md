@@ -24,7 +24,10 @@ the code itself states (a type, a documented invariant, a test's premise).
 - Did every edit land inside the declared scope? `git diff --name-only <base>` returns nothing
   outside it. An edit outside scope is a finding regardless of merit.
 - Is the scope self-contained — does anything outside it read a symbol this round changed?
-  Name the grep that derived the caller set.
+  The oracle is `bash skills/ac-implement/scripts/diff-closure.sh --bead <target>`: `REFUSED
+  [unowned-callers]` names a caller outside the scope that no touchers line declared. The
+  reader cannot fix it (out of scope by rule), so it must not half-fix it: REVERT the edit that
+  moved the symbol and report the caller list as a seams candidate.
 
 ## 2. the tree is green
 

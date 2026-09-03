@@ -688,6 +688,7 @@ branch review, **not** the green-main boundary (the exhaustive full-suite run is
 {CMD_FORMAT}    # always (cheap)
 {CMD_LINT}      # always (cheap)
 {CMD_TYPECHECK} # always (cheap)
+bash skills/ac-implement/scripts/diff-closure.sh --base {BASE}   # always (cheap): callers OUTSIDE the batch of every export it changed or file it deleted; REFUSED = a seam the batch moved without owning — blocking, the caller list is the finding
 ```
 
 Then, by diff class (from the classifier):
@@ -1055,7 +1056,5 @@ Routing is at the top (feature branch → here; codebase-wide → `/ac-hygiene`)
 ---
 
 ## Remember
-
-<!-- diet: restated bullets deleted — live body twins verified; the Remember-only rule survives below -->
 
 - **One human touchpoint** — remaining no-consensus + NEEDS_DECISION items are presented ONCE in Phase 7, never per-round

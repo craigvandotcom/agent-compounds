@@ -103,6 +103,17 @@ reason (fork · authorization · intent · action), unclaim, go to §1. Never as
 
 ## 5 — SELF-REVIEW, and what it is not
 
+**First, the reverse closure — before you read your own diff:**
+
+    bash skills/ac-implement/scripts/diff-closure.sh --bead <id>
+
+It greps the callers, outside your diff, of every export you changed or file you deleted, and
+compares them to the bead's `touchers:` line. `REFUSED [unowned-callers]` names a caller the
+bead never declared: that is a spec defect of the same class as a probe reading outside your
+Territory — the declaration was wrong or your change grew. Do not update the caller quietly:
+comment the bead with the named files, unclaim, go to §1. `PASS` means the plan knew its
+callers. Test files outside the diff are reported, never refused — they break loudly.
+
 Re-read your diff against the bead's ACs with fresh eyes: every AC, does the change actually
 do what it describes, or only what its probe measures? Then run the project's gates — for this
 registry:
