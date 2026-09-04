@@ -119,7 +119,10 @@ printf '%s\n\n%s\n' \
   "chore(beads): ac2 swarm run $RUN ledger [no-bead]" \
   "Flushed once by the coordinator after every worker returned. LEDGER-STALE and ORPHANS both held." >"$MSG"
 
-bash "$ROOT/skills/ac-implement/scripts/swarm-commit.sh" \
+# swarm-commit.sh lives beside THIS script, never under "$ROOT/skills/": in consumer
+# repos these scripts are reached via the .agents/skills/ symlink, so a $ROOT-relative
+# path does not exist (measured: BCA swarm 2026-09-04, LEDGER-WRITE via missing file).
+bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/swarm-commit.sh" \
   --identity "coordinator-$RUN" --message-file "$MSG" --path "$LEDGER" \
   || refuse "LEDGER-WRITE" "swarm-commit.sh refused the ledger commit; read its refusal — the ledger is flushed to disk but UNCOMMITTED"
 

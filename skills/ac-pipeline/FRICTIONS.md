@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-08-30
-entries: 12
+entries: 14
 ---
 
 # ac-pipeline — friction log
@@ -295,3 +295,31 @@ entries: 12
   ledger parser could not read, and its unparseable control was attributed to the entry
   above it — rewritten to the canonical schema 2026-09-02. Whatever appended the original
   will do so again; it has not been found.
+
+## swarm-burned-list-does-not-span-siblings
+- skills: [ac2-implement]
+- impact: M
+- frequency: every-run
+- perceptibility: noisy
+- recurrence: 1
+- related: [refined-beads-reach-the-worker-pool-with-zero-probe-lines-and-burn-claim-cycles]
+- first_seen: 2026-09-04
+- last_seen: 2026-09-04
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm RUN 2026-09-04-022111-36576 — bd-decision-no-drafts-huc5z, bd-l6khg.15.5
+  and bd-epic-ing-ownership-k2mpd.4 were each claimed-and-refused TWICE by different actors in
+  one run (comments 7496/7526 et seq.), each refusal posting a duplicate comment on the bead
+- proposed_fix: carry the burn state in the BOARD, not the worker's local $BURNED var — a
+  `burn:<run-id>` comment already exists per refusal, so the PICK query could exclude ids
+  carrying a same-run burn comment; alternately stamp-refined strips `refined` when a
+  spec-contradiction comment lands, since that is exactly a stale-stamp case
+- narrative: the worker loop's BURNED list lives inside one worker's pass, so at width>1 each
+  sibling independently re-derives the same refusal for the same bead — claim, flight-check,
+  comment, unclaim — multiplying the cost the burn rule was written to cap. Three of seven
+  eligible beads burned twice in one run before the pool reported dry. The refusals were all
+  correct (spec-contradiction probe id, missing ship verdict, unowned-callers touchers); the
+  waste is in re-derivation, not in the routing. Distinct from the zero-probe-line class: these
+  beads HAD probes; their premises were false or their declarations wrong, and no worker could
+  see a sibling had already ruled the bead unworkable.
