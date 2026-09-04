@@ -63,8 +63,26 @@ def die2(msg):
     sys.exit(2)
 
 
+NONE_WORDS = {"none", "", "-", "—", "n/a", "no", "nothing", "unasserted", "untested", "unchecked", "unvalidated"}
+UNHANDLED_WORDS = {"none", "swallow", "swallowed", "ignored", "ignore", "no", "nothing", "logged-only", "log-only"}
+
+
+def first_word(cell):
+    """The verdict word of a cell. Readers write `none on write — plain setItem inside try/catch`
+    and `swallow — outer .catch logs only`: the fact is the first word, the rest is evidence.
+    The images dogfood (2026-09-03) had 15 unasserted edges, 5 unsensed steps, 16 swallowed
+    failures and 25 unchecked boundaries that an exact-match `none` counted as zero."""
+    c = re.sub(r"^[`*\s]+", "", cell.strip()).lower()
+    return re.split(r"[\s—–:(,;/]+", c)[0] if c else ""
+
+
 def none_ish(cell):
-    return cell.strip().strip("`* ").lower() in ("none", "", "-", "—", "n/a")
+    return first_word(cell) in NONE_WORDS
+
+
+def unhandled(cell):
+    w = first_word(cell)
+    return w in UNHANDLED_WORDS or w.startswith("swallow")
 
 
 def slug(cell):
@@ -223,7 +241,7 @@ def rows_of(lens, edges, best=False):
     cols = LENSES[lens]["cols"]
     out = []
     for e in ordered(lens, edges):
-        r = [e[c] for c in cols]
+        r = [e.get(c, "") for c in cols]   # a ledger written before a column existed still reads
         if lens == "object" and not best:
             r[5] = e.get("contract_first", e["contract"])
         out.append(r)
@@ -260,12 +278,15 @@ def derive(st):
     for e in ordered("flow", live(st, "flow")):
         if none_ish(e["sensor"]):
             out.append(("flow", "step with no sensor", f"`{e['flow']}` · {e['step']} · `{e['path:line']}`", "the controller cannot tell whether this step happened", {e["path"]}))
-        if none_ish(e["on-failure"]) or slug(e["on-failure"]) in ("swallow", "swallowed", "ignored"):
+        if unhandled(e["on-failure"]):
             out.append(("flow", "failure not handled", f"`{e['flow']}` · {e['step']} · `{e['path:line']}`", "a failure here leaves the process half-done with no compensation and no signal", {e["path"]}))
     bnd = live(st, "boundary")
     sides = {}
     for e in bnd:
-        sides.setdefault(slug(e["interface"]), set()).add(slug(e["side"]))
+        # side vocabulary: `both sides: gc byte-equality` counts as both; `consumer (evictor)` is a
+        # consumer. Free text after the first word is evidence, not a new side.
+        sw = first_word(e["side"])
+        sides.setdefault(slug(e["interface"]), set()).update({"a", "b"} if sw.startswith("both") else {sw})
         if not none_ish(e["assumes"]) and none_ish(e["asserts"]):
             out.append(("boundary", "assumption nothing asserts", f"`{e['interface']}` · {e['side']} · `{e['path:line']}`", f"assumes {e['assumes']} — a change on the other side compiles and ships clean", {e["path"]}))
         # producer: internal | user | external | tenant — classification from the code, not a threat
@@ -328,12 +349,19 @@ def cmd_round(a):
             if rep["reader"] not in e["readers"]:
                 e["readers"].append(rep["reader"])
         for d in rep["diag"]:
+            # Key on the cited PATHS only. Pattern text is free prose and never repeats across
+            # readers (images dogfood: 60 diagnoses, 2 merged), so a key that includes it makes
+            # the reader count — the salience signal — meaningless. Two readers pointing at the
+            # same files are saying the same thing; the first pattern text stands, later ones
+            # are kept beside it.
             cited = sorted({p.strip("`'\"") for p in PATH_RE.findall(d["edges"])})
-            k = slug(d["pattern"]) + " @ " + ",".join(cited)
+            k = ",".join(cited) if cited else slug(d["pattern"])
             x = st["diag"].get(k)
             if x is None:
-                x = dict(d, key=k, lens=lens, first_round=a.round, readers=[], cited=cited)
+                x = dict(d, key=k, lens=lens, first_round=a.round, readers=[], cited=cited, also=[])
                 st["diag"][k] = x
+            elif slug(d["pattern"]) != slug(x["pattern"]) and slug(d["pattern"]) not in x.get("also", []):
+                x.setdefault("also", []).append(slug(d["pattern"]))
             if rep["reader"] not in x["readers"]:
                 x["readers"].append(rep["reader"])
     if a.validate:
@@ -368,7 +396,23 @@ def cmd_handoff(a):
     cross = cross_lens(derived)
     cross_rows = [[f"`{p}`", " · ".join(f"{l}: {', '.join(sorted(set(ps)))}" for l, ps in sorted(ls.items())), str(len(ls))] for p, ls in cross]
     per_lens = [[lens, pattern, where, silent] for lens, pattern, where, silent, _ in derived]
-    rd = sorted(st["diag"].values(), key=lambda x: (-len(x["readers"]), x["first_round"], x["key"]))
+    # Regroup by cited paths at hand-off as well, so a ledger keyed under the old pattern+paths
+    # rule (images dogfood: 60 rows, 2 merged) gets the same reader counts as a new one.
+    grouped = {}
+    for x in st["diag"].values():
+        gk = ",".join(x.get("cited") or []) or x["key"]
+        g = grouped.get(gk)
+        if g is None:
+            grouped[gk] = dict(x, readers=list(x["readers"]))
+        else:
+            g["readers"] = sorted(set(g["readers"]) | set(x["readers"]))
+            g["first_round"] = min(g["first_round"], x["first_round"])
+    # Order by the MAPS, not by reader count: readers are told to extend, not repeat, so two
+    # readers rarely restate a diagnosis (images dogfood: 3 of 54). A diagnosis that cites a
+    # file the lenses already flag from several angles is the one to read first.
+    lens_hits = {p: len(ls) for p, ls in cross}
+    rd = sorted(grouped.values(), key=lambda x: (-max([lens_hits.get(p, 0) for p in x.get("cited") or []] or [0]),
+                                                  -len(x["readers"]), x["first_round"], x["key"]))
     rd_rows = [[x["lens"], x["pattern"], x["edges"], x["silent"], x["found-by"] if "found-by" in x else x["found_by"], str(len(x["readers"]))] for x in rd]
     disagreements = [e for e in live(st, "object") if e.get("contract_disagreement")]
     counts = {l: len(live(st, l)) for l in LENSES}
@@ -378,7 +422,7 @@ def cmd_handoff(a):
             + table(["path", "what each lens sees", "lenses"], cross_rows)
             + f"\n\n## Seams — derived per lens ({len(per_lens)})\n\n"
             + table(["lens", "pattern", "where", "what breaks silently"], per_lens)
-            + f"\n\n## Seams — reader diagnosis ({len(rd_rows)}), ordered by how many readers saw it\n\n"
+            + f"\n\n## Seams — reader diagnosis ({len(rd_rows)}), ordered by how many lenses flag the files it cites\n\n"
             + table(["lens", "pattern", "edges", "what breaks silently", "found-by", "readers"], rd_rows)
             + ("\n\n_Contract disagreements (one reader said none, another named one): "
                + " · ".join(f"`{e['key']}`" for e in disagreements) + "_" if disagreements else "")
