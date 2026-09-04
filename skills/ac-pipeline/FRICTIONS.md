@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-08-30
-entries: 14
+entries: 17
 ---
 
 # ac-pipeline — friction log
@@ -255,6 +255,8 @@ entries: 14
 ## FRICTION: flight-check CONSUMES leg reads a CLOSED blocker as "not on the board"
 - domain: ac2-implement
 - severity: medium
+- recurrence: 3
+- last_seen: 2026-09-04
 - control: untreated
 - proposed_fix: the CONSUMES resolution should treat `status=closed` as the SATISFIED state
   (a consumed premise is fulfilled by its blocker closing, not voided by it); re-derive the
@@ -264,6 +266,76 @@ entries: 14
   emitted `PREMISE-FAILED: CONSUMES — blocker 'bd-pt46x' is not on the board` and the worker
   lost the bead to the routing. A satisfied consume is indistinguishable from a dangling one,
   so the gate converts the pipeline's own success (a blocker landing) into a refusal.
+
+## swarm-commit-stages-whole-files-and-folds-sibling-hunks
+- skills: [ac2-implement]
+- impact: H
+- frequency: every-wave
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-04
+- last_seen: 2026-09-04
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA camera wave 2026-09-04 — 7814cdab (bead .3) whole-file-staged the shared
+  multi-camera-capture.tsx carrying .4 and .6 sibling hunks; HEAD did not compile standalone
+  until two remediation commits (10573802, fix-forward 063abedd)
+- proposed_fix: swarm-commit stages hunks scoped to the claiming worker (git diff on the bead's
+  claim window), or at minimum refuses when a --path file carries hunks whose content matches no
+  reservation held by the committing identity
+- narrative: two workers held claims on different beads whose Territory shared one file. The
+  first to commit staged the whole file; the second's in-flight hunks entered trunk under the
+  first's message, the commit did not compile standalone (the lane's build check measures the
+  working tree, not the commit), and both workers lost commit-message attribution. Content was
+  honest; attribution and atomicity were not.
+
+## close-gate-scanner-leg-has-no-prose-instrument
+- skills: [ac2-implement]
+- impact: L
+- frequency: per-doc-bead
+- perceptibility: noisy
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-04
+- last_seen: 2026-09-04
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA bd-epic-mc-camera-8d41v.7 — every leg green, then NOT-CHECKED: SCANNER — ubs ran
+  no scanner over the .md deliverable ("nothing was checked" is explicitly NOT a pass)
+- proposed_fix: the SCANNER leg should name its instrument per file type — for prose, the AC
+  probe itself (a content grep) or a markdown linter IS the scanner; a doc-bead mode that
+  substitutes the AC-probe result for ubs would keep the leg honest instead of unsatisfiable
+- narrative: a bead whose Delivers artifact is prose can never pass the SCANNER leg: ubs has no
+  markdown scanner and returns its nothing-checked verdict, which the gate correctly refuses to
+  read as a pass. The honest close then cannot go through the gate at all — the coordinator
+  closed around it with the refusal class named, which is the outcome the gate exists to make
+  unnecessary.
+
+## worker-md-gates-name-scripts-consumer-repos-lack
+- skills: [ac2-implement]
+- impact: L
+- frequency: every-run
+- perceptibility: noisy
+- recurrence: 3
+- related: [derive-root-from-git-toplevel-never-from-bash-source-level-counting]
+- first_seen: 2026-09-04
+- last_seen: 2026-09-04
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA run 2026-09-04 — three workers reported `bash lint.sh` and
+  `bash scripts/run-all-harnesses.sh` exit 127 ("No such file or directory"); those registry
+  scripts exist only in the skills repo, not in consumer app repos
+- proposed_fix: worker.md section 5 should derive the gate commands from the consumer repo
+  (package.json quality gate or a repo-declared gates file) instead of hard-coding registry
+  paths that only resolve in the skills checkout
+- narrative: the worker loop tells every worker to run two repo-wide gates whose paths resolve
+  only where the registry is checked out. Consumer-repo workers burn a tier each discovering
+  the 127, then fall back to the package.json gate unprompted. Same root shape as the ROOT
+  resolution bug: registry-relative assumptions leaking into consumer-repo instructions.
 
 ## refined-beads-reach-the-worker-pool-with-zero-probe-lines-and-burn-claim-cycles
 - skills: [ac-implement, ac-polish, ac-beadify]
