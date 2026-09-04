@@ -50,8 +50,8 @@ leading word exists today and it is honestly RED until the artifact lands.
      does not settle a fork, the bead does not exist yet; send the fork back to the plan or
      file it as a human gate.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
-   Criteria` · `## Delivers` · `## Consumes`. Nothing else — no Scope, Proof, Notes or
-   Discussion section; that content is either Intent or it is not durable.
+   Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
+   Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
    **Line numbers are banned in Intent** — symbol and file names are welcome as hints, but a
    `file:line` anchor decays before the claim and nothing cheap tells you it has.
 4. **Apply the refusal** (§ above) to every bead before any of them is created. Refuse the

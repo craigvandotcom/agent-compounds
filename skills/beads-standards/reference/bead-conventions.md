@@ -165,36 +165,29 @@ CREATION time** — a later refine pass verifies them, it must not have to autho
 them (otherwise a refine pass spends its whole first round doing
 creation's job):
 
-| Type | Required header(s) |
-| ---- | ------------------ |
-| `bug` | `## Steps to Reproduce` + `## Acceptance Criteria` |
-| `task` / `feature` | `## Acceptance Criteria` |
-| `investigation` | the open question + `## Acceptance Criteria` (exit criteria: what answers it) |
-| `decision` | the pre-staged memo (context · options · recommendation — see § Decision beads below) |
-| `epic` | `## Delivers` |
+The body is the FOUR-SECTION schema (`skills/ac-beadify/references/bead-schema.md`): first
+section · `## Acceptance Criteria` · `## Delivers` · `## Consumes` — nothing else, no Test Scope,
+Evidence, Scope, Proof or Notes section (test scope is an AC's probe; evidence is a `found-by`
+command; both live inside the four). `br lint` v0.2.16 compiles per-type headers in and cannot
+be configured, so the schema meets it by NAMING the first section per type:
 
-Plus, for every implementable bead (finding-sourced ones especially):
+| Type | First section header | `br lint` also wants |
+| ---- | -------------------- | -------------------- |
+| `bug` | `## Steps to Reproduce` — a bug's intent IS its repro | `## Acceptance Criteria` |
+| `epic` | `## Success Criteria` — an epic's intent IS what done looks like | — |
+| `task` / `feature` | `## Intent` | `## Acceptance Criteria` |
+| `investigation` | `## Intent` (the open question) | `## Acceptance Criteria` (exit criteria) |
+| `decision` | the pre-staged memo (context · options · recommendation — § Decision beads) | — |
 
-- **`## Test Scope`** — the file(s)/describe(s) a validator runs. Name real
-  anchors: grep first, never cite a describe block you haven't seen (three
-  beads in the same refine run cited nonexistent blocks). **Declare the
-  validation modality, not just unit tests:** a bead that changes a user
-  surface names its QA pass + journey (`browser: <journey>.md §<checkpoint>`,
-  `device: …`, `ui-polish: scoped`) per `ac-pipeline/references/verification-gate.md`
-  vocabulary — the gate's diff-inference is the safety net, the bead's
-  declaration is the intent. Refine verifies the named journey exists in the
-  app's `CORE/journeys/`.
-- **Evidence** — file:line refs verified against the CURRENT default branch,
-  plus a durable pointer (PR URL, commit sha) — never a run-temp artifact path.
-  **Perishability (ac-gzb P3):** a claim about currently-failing external state
-  (CI red, job failing, page 404s) is stamped `observed: <ISO date> · <run id/URL>`
-  and is **advisory, never binding** — a binding AC may not rest on it.
-- **Falsifiable ACs** — a criterion that both branches of a choice satisfy
-  gates nothing; pick the branch or split the criterion.
-- **`## Delivers` + `## Consumes`** — the artifact handoff, owned by the ac2 bead
-  schema (`skills/ac-beadify/references/bead-schema.md`): `## Delivers` names the
-  promised artifacts; `## Consumes` is one `<blocker-id> → <artifact>` per line or
-  the literal `none`, and every Consumes line pairs with a dependency edge.
+Two rules that survive from the old body template because the four sections carry them:
+
+- **Falsifiable ACs** — a criterion that both branches of a choice satisfy gates nothing; pick
+  the branch or split the criterion. A claim about currently-failing external state (CI red,
+  a 404) is stamped `observed: <ISO date> · <run id/URL>` and is advisory, never binding.
+- **`## Delivers` + `## Consumes`** — `## Delivers` names the promised artifacts (and, for a
+  referenced path, its `touchers:` line — `bead-create-contract.md` § Touchers); `## Consumes`
+  is one `<blocker-id> → <artifact>` per line or the literal `none`, and every Consumes line
+  pairs with a dependency edge.
 
 ## Binding vs advisory (the present-tree rule)
 
