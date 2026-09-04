@@ -37,16 +37,35 @@ fi
 
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/ac-flight-test.XXXXXX") || { echo "flight-check.test: cannot create scratch dir"; exit 1; }
 trap 'rm -rf "$WORK"' EXIT
-mkdir -p "$WORK/root" "$WORK/receipts" "$WORK/bodies"
+mkdir -p "$WORK/root" "$WORK/receipts" "$WORK/bodies" "$WORK/bin"
 : >"$WORK/root/present-artifact.md"
 printf 'assert one\nassert two\n' >"$WORK/root/existing-harness.test.sh"
+
+# Hermetic br shim: every Consumes blocker resolves CLOSED, list answers prefix
+# queries — the suite must never depend on a developer's real beads DB, and the
+# CONSUMES leg must be reachable (a machine with real br on PATH must not leak
+# live board state into these cases).
+cat >"$WORK/bin/br" <<'STUB'
+#!/usr/bin/env bash
+case "${1:-}" in
+  show)
+    case "${2:-}" in
+      upstream|bd-epic-kb-seams-573x7.1|bd-epic-ing-ownership-k2mpd.1)
+        echo '[{"id":"resolved","status":"closed"}]' ;;
+      *) exit 3 ;;  # exact-id miss: not on the board under that spelling
+    esac ;;
+  list) echo '{"issues":[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}],"total":3,"has_more":false,"limit":5000,"offset":0}' ;;
+  *) echo '{}' ;;
+esac
+STUB
+chmod +x "$WORK/bin/br"
 
 # run <body-file> [extra env assignments…] -> stdout+stderr in RUN_OUT, status in RUN_RC
 RUN_OUT=""
 RUN_RC=0
 run() {
   local body="$1"; shift
-  RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts" "$@" \
+  RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts" PATH="$WORK/bin:$PATH" "$@" \
     bash "$GATE" ac-test-0001 --body-file "$body" --root "$WORK/root" 2>&1)
   RUN_RC=$?
 }
@@ -116,6 +135,46 @@ BODY
 run "$WORK/bodies/consumes-ok.md"
 [ "$RUN_RC" -eq 0 ] && ok "CONSUMES clears when the artifact is present" \
   || bad "CONSUMES(ok): expected exit 0, got $RUN_RC: $RUN_OUT"
+
+# 2a'' multi-hyphen blocker ids parse whole, and unique id prefixes resolve —
+# the extractor once truncated bd-epic-kb-seams-573x7.3 to 'bd-epic' and refused
+# the whole bd-epic-* family at claim (five beads burned, one BCA run).
+cat >"$WORK/bodies/consumes-hyphen.md" <<'BODY'
+## Acceptance Criteria
+- Something.
+  Probe: `test -e ./nope.md` — tier: none
+
+## Consumes
+- bd-epic-kb-seams-573x7.1 -> ./present-artifact.md (the landed blocker)
+BODY
+run "$WORK/bodies/consumes-hyphen.md"
+[ "$RUN_RC" -eq 0 ] && ok "CONSUMES parses multi-hyphen blocker ids whole" \
+  || bad "CONSUMES(hyphen): expected exit 0, got $RUN_RC: $RUN_OUT"
+
+cat >"$WORK/bodies/consumes-prefix.md" <<'BODY'
+## Acceptance Criteria
+- Something.
+  Probe: `test -e ./nope.md` — tier: none
+
+## Consumes
+- bd-epic-kb-seams-573x7 -> ./present-artifact.md (prefix of a closed blocker)
+BODY
+run "$WORK/bodies/consumes-prefix.md"
+[ "$RUN_RC" -eq 0 ] && ok "CONSUMES resolves a unique blocker id prefix" \
+  || bad "CONSUMES(prefix): expected exit 0, got $RUN_RC: $RUN_OUT"
+
+cat >"$WORK/bodies/consumes-ambiguous.md" <<'BODY'
+## Acceptance Criteria
+- Something.
+  Probe: `test -e ./nope.md` — tier: none
+
+## Consumes
+- bd-epic -> ./present-artifact.md (matches more than one id — must refuse)
+BODY
+run "$WORK/bodies/consumes-ambiguous.md"
+printf '%s' "$RUN_OUT" | grep -q "blocker 'bd-epic' is not on the board" \
+  && ok "CONSUMES refuses an ambiguous prefix (fail closed)" \
+  || bad "CONSUMES(ambiguous): expected refusal, got rc=$RUN_RC: $RUN_OUT"
 
 # 2b ENVIRONMENT — a declared env precondition, not mere artifact existence.
 cat >"$WORK/bodies/env.md" <<'BODY'
