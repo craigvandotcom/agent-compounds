@@ -75,7 +75,13 @@ done
 [ -n "$BEAD" ] || { echo "NOT-GATED: usage: $0 <bead-id> [--body-file <path>]" >&2; exit 2; }
 
 if [ -z "$ROOT" ]; then
-  ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." 2>/dev/null && pwd) || ROOT="$PWD"
+  # ROOT is the CONSUMER repo's root, never the script's own repo: these scripts are
+  # symlinked into consumer repos via .agents/skills/, so script-relative resolution
+  # lands inside the skills checkout (or .agents/) and every repo-relative probe
+  # dies with FileNotFoundError. Derive from the calling repo's git toplevel.
+  ROOT=$(git rev-parse --show-toplevel 2>/dev/null) \
+    || ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." 2>/dev/null && pwd) \
+    || ROOT="$PWD"
 fi
 [ -d "$ROOT" ] || { echo "NOT-GATED: repo root '$ROOT' is not a directory" >&2; exit 2; }
 cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; exit 2; }
