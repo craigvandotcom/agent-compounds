@@ -181,3 +181,44 @@ entries: 8
   finalized by direct artifact surgery. The workflow also cites `seams-merge.py verify
   --id --reader --verdict`, which no implementation has ever shipped — verifier verdicts
   had to be recorded by hand into the plan.
+
+## gate-stamps-after-not-gated-merge
+- skills: [ac-polish]
+- impact: H
+- frequency: rare
+- perceptibility: silent
+- recurrence: 1
+- related: [seams-merge-replaced-mid-run]
+- first_seen: 2026-09-04
+- last_seen: 2026-09-04
+- stage: manual
+- status: open
+- proposed_fix: `polish-fixpoint.sh --mode seams` should refuse (NOT-GATED) when
+  `<STATE>/ledger.json` records no round N — the merge is the only writer of the round and
+  its absence proves the round did not happen. Until then the orchestrator must run merge
+  and gate as two commands and branch on the merge's exit code, never on grep output.
+- narrative: round 5's `seams-merge.py round` exited 2 NOT-GATED (a reader wrote stage
+  `update (dead-end)`), so the artifact did not change; a `merge | grep && gate` chain then
+  ran the gate against the unchanged artifact, which read as a clean round ≥ 2 and STAMPED.
+  The stamp (3 frontmatter keys, round-5.sha, receipt.txt) was reverted by hand and the
+  digest verified equal to round-4.sha before the round was re-run. The gate cannot tell a
+  clean round from a round that never happened.
+
+## seams-reader-stance-cannot-write-report
+- skills: [ac-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-04
+- last_seen: 2026-09-04
+- stage: manual
+- status: open
+- proposed_fix: name the reader agent in `workflows/seams.md` READERS and make it one that can
+  write outside the repository (a `Write` tool, or Bash unrestricted for paths under
+  `~/.claude/polish/`); or have the prompt say "return the report body if you cannot write".
+- narrative: the reader prompt says WRITE YOUR REPORT to `<REPORT>`; `researcher` is the
+  read-only stance and one of fifteen readers had Bash restricted to read-only, so it returned
+  the body inline and the orchestrator transcribed it. Fourteen others wrote via Bash heredoc,
+  so the outcome depends on which restriction the stance picks up per spawn.
