@@ -181,7 +181,10 @@ if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
     [ -n "$line" ] || continue
     case "$line" in *"->"*) ;; *) continue ;; esac
     CONSUME_LINES=$(( CONSUME_LINES + 1 ))
-    blocker=$(printf '%s' "$line" | sed -n 's/^\([A-Za-z][A-Za-z0-9_]*-[A-Za-z0-9._]*\).*/\1/p')
+    # Bead ids contain internal hyphens (bd-epic-kb-seams-573x7.3): the class must
+    # include them, and a trailing separator run is trimmed (a "-/._" tail can only
+    # come from the arrow or punctuation, never from a minted id).
+    blocker=$(printf '%s' "$line" | sed -n 's/^\([A-Za-z][A-Za-z0-9._-]*\).*/\1/p' | sed 's/[-._]*$//')
     artifacts=$(printf '%s' "${line#*->}" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*/[A-Za-z0-9_.][A-Za-z0-9_./-]*' || true)
     for a in $artifacts; do
       a="${a%.}"
@@ -197,6 +200,19 @@ if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
       fi
       bstatus=$(br show "$blocker" --json </dev/null 2>/dev/null \
         | jq -r 'if type == "array" then .[0] else . end | .status // ""')
+      if [ -z "$bstatus" ]; then
+        # br show matches EXACT ids only; a Consumes line may cite a unique prefix
+        # (bd-decision-no-drafts for bd-decision-no-drafts-huc5z). Resolve exactly one.
+        full=$(br list --json --limit 5000 </dev/null 2>/dev/null \
+          | jq -r --arg b "$blocker" \
+            '[.issues[] | select(.id | startswith($b)) | .id]
+             | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end')
+        if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
+          bstatus=$(br show "$full" --json </dev/null 2>/dev/null \
+            | jq -r 'if type == "array" then .[0] else . end | .status // ""')
+          blocker="$full"
+        fi
+      fi
       if [ -z "$bstatus" ]; then
         premise_failed CONSUMES "blocker '$blocker' is not on the board — the premise cites a bead that does not exist"
         break
