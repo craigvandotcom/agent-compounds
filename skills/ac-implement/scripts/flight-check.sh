@@ -44,6 +44,12 @@
 #
 # Usage:
 #   flight-check.sh <bead-id> [--body-file <path>] [--root <repo root>] [--print-receipt]
+#                             [--check-only]
+#
+# --check-only runs all four refusals and WRITES NOTHING: no routing comment, no title
+# stamp, no unclaim, no receipt. Exit 0 = flyable, 1 = not, 2 = could not verify. It is
+# what refly.sh asks of every PREMISE-FAILED bead at swarm start: the stamp is a cached
+# verdict, and a cached verdict with no re-check outlives the bug that wrote it.
 #
 # Env:
 #   AC2_BEAD_BODY_FILE  bead body on disk instead of `br show` (offline / harness use)
@@ -60,12 +66,14 @@ BEAD=""
 BODY_FILE="${AC2_BEAD_BODY_FILE:-}"
 ROOT=""
 PRINT_RECEIPT=0
+CHECK_ONLY=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --body-file)     BODY_FILE="${2:-}"; shift 2 ;;
     --root)          ROOT="${2:-}"; shift 2 ;;
     --print-receipt) PRINT_RECEIPT=1; shift ;;
+    --check-only)    CHECK_ONLY=1; shift ;;
     -h|--help)       sed -n '2,60p' "${BASH_SOURCE[0]}"; exit 0 ;;
     -*)              echo "NOT-GATED: unknown option '$1'" >&2; exit 2 ;;
     *)               [ -z "$BEAD" ] && BEAD="$1" || { echo "NOT-GATED: unexpected argument '$1'" >&2; exit 2; }; shift ;;
@@ -356,10 +364,19 @@ EOF
 fi
 
 if [ -n "$FAIL_CLASS" ]; then
+  if [ "$CHECK_ONLY" -eq 1 ]; then
+    echo "flight-check: not flyable (check-only — nothing routed)"
+    exit 1
+  fi
   route_premise_failure
   rr=$?
   [ "$rr" -eq 2 ] && exit 2
   exit 1
+fi
+
+if [ "$CHECK_ONLY" -eq 1 ]; then
+  echo "flight-check: flyable (check-only — no receipt written)"
+  exit 0
 fi
 
 FLIGHT_DIR="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac-flight}"

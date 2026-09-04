@@ -33,7 +33,8 @@ per bead.
 **Eligibility is explicit, and it is the whole filter.** A bead is eligible when it is
 `status: open`, carries the `refined` label, is not typed `epic` or `decision`, carries none
 of `epic` / `human-gate` / `device` / `unrefined`, has its assignee unset or set to you, and
-its title is not prefixed `PREMISE-FAILED:`. Anything else is not a narrower filter — it is
+its title is not prefixed `PREMISE-FAILED:` (only the coordinator's `refly.sh` removes that
+prefix, by re-checking; never strip it by hand). Anything else is not a narrower filter — it is
 starvation, and total starvation was measured from exactly these omissions.
 
     RUST_LOG=error br ready --json -l refined \

@@ -344,6 +344,29 @@ done
   || bad "flight-check.sh declares no$DECL_MISSING"
 
 # ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 7 — --check-only answers the question and writes nothing"
+# ---------------------------------------------------------------------------------------
+# refly.sh re-asks every stamped bead through this flag; a check that routed or wrote a
+# receipt on the way would re-stamp or pre-certify — either is a write with no observer.
+CO_DIR="$WORK/receipts-check-only"; mkdir -p "$CO_DIR"
+RUN_OUT=$(env AC2_FLIGHT_DIR="$CO_DIR" PATH="$WORK/bin:$PATH" \
+  bash "$GATE" ac-test-0001 --body-file "$WORK/bodies/perish.md" --root "$WORK/root" --check-only 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 1 ] && ok "check-only: a failing premise exits 1" \
+  || bad "check-only(fail): expected exit 1, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: PERISHABLE' && ok "check-only: the refusal still names its class" \
+  || bad "check-only(fail): class not named: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -qE 'ROUTE|br comments add|br update' \
+  && bad "check-only(fail): routed a premise failure it was told not to write: $RUN_OUT" \
+  || ok "check-only: nothing is routed on failure"
+
+RUN_OUT=$(env AC2_FLIGHT_DIR="$CO_DIR" PATH="$WORK/bin:$PATH" \
+  bash "$GATE" ac-test-0001 --body-file "$WORK/bodies/clear.md" --root "$WORK/root" --check-only 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 0 ] && ok "check-only: a flyable bead exits 0" \
+  || bad "check-only(pass): expected exit 0, got $RUN_RC: $RUN_OUT"
+[ ! -e "$CO_DIR/ac-test-0001.flight-receipt" ] && ok "check-only: no receipt is written on pass" \
+  || bad "check-only(pass): a receipt was written — a re-check must not pre-certify a RED"
 
 # ---------------------------------------------------------------------------------------
 echo ""

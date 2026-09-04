@@ -46,11 +46,11 @@ queue dry exits, which is the correct end. Capped, it stops with beads still wai
 claims and the beads' own `## Consumes` / `## Delivers`, not in you. A coordinator that starts
 working is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** Assert trunk. Count the eligible pool using worker.md §1's filter
-VERBATIM — a coordinator filter that differs from the worker's reports a pool the workers
-cannot actually claim — and additionally drop `issue_type: epic`, which the label filter alone
-misses (measured: a finished epic sat pickable because it carried the type but not the label).
-Register with Agent Mail; install the pre-commit guard once — workers do not install it.
+**Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
+every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
+needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing
+filter reports a pool the workers cannot claim — plus drop `issue_type: epic`, which the label
+filter misses. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` workers whose prompt is `references/worker.md`
 VERBATIM — and, ONLY if `--cap N` was given, one appended line naming the cap. Verbatim means

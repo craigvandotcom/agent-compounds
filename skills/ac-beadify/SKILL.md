@@ -57,10 +57,10 @@ leading word exists today and it is honestly RED until the artifact lands.
 4. **Apply the refusal** (§ above) to every bead before any of them is created. Refuse the
    bead, not the batch — but do not create a partial graph around a refused node.
 5. **Wire Delivers/Consumes as the graph.** `## Delivers` names artifacts; a dependent's
-   `## Consumes` cites `<blocker-id> -> <artifact>` where that blocker's Delivers actually
-   promises that string, or the single word `none`. Then create the edges and read them back:
-   direction is `<blocked> depends-on <blocker>`, a reversed `br dep add` is SILENT, and an
-   epic reaches its children by parent-child, never `blocks`.
+   `## Consumes` cites `<blocker-id> -> <artifact>` that the blocker's Delivers promises, or
+   `none`; a `<…>` placeholder is REFUSED (it reads as a premise). Then create the edges and
+   read them back: direction is `<blocked> depends-on <blocker>`, a reversed `br dep add` is
+   SILENT, and an epic reaches its children by parent-child, never `blocks`.
    - **Consumes↔edge parity, both directions.** Every Consumes line has an edge; every edge
      has a Consumes line. Verify with `br dep cycles` plus `br show` on both ends of each
      edge — a parity gap is the measured way a "wired" graph turns out not to be.
