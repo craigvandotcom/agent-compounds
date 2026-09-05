@@ -222,3 +222,42 @@ entries: 8
   read-only stance and one of fifteen readers had Bash restricted to read-only, so it returned
   the body inline and the orchestrator transcribed it. Fourteen others wrote via Bash heredoc,
   so the outcome depends on which restriction the stance picks up per spawn.
+
+## seams-path-regex-rejects-root-files
+- skills: [ac-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [seams-reader-stance-cannot-write-report]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: let `PATH_RE` in `scripts/seams-merge.py` accept a root-level file with an
+  extension (`vercel.json`, `package.json`, `next.config.mjs`) — a cron schedule or a package
+  script is a real edge on many objects; today the only way to cite one is to point the path
+  cell at the caller file and bury the root file in the role cell.
+- narrative: a reader cited `vercel.json:4-6` (the daily sweep schedule) in a MAP row; the merge
+  exited NOT-GATED "names no path" because the regex requires a `/`. The round was resumed to
+  re-point the row at `app/api/cron/sweep-orphans/route.ts:17`. Same shape recurred for readers
+  citing `package.json` scripts.
+
+## seams-found-by-regex-parens-drop-edges
+- skills: [ac-polish]
+- impact: M
+- frequency: frequent
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: one line in `references/seams-reader-prompt.md`: "in `rg` patterns escape
+  parentheses or pass `-F`; a found-by that matches nothing drops the edge." Readers wrote
+  `rg -n "checkCompound(name)"` — a regex group — nine times in one round.
+- narrative: round 1 of the CompoundCheckResult split merged 19 edges and dropped 9 whose
+  found-by did not reproduce; all 9 used unescaped parentheses in an rg pattern. The edges were
+  real (readers re-found them in round 2 with `\(`), so the drop cost a round, not correctness.
+  The validate step worked as designed; the prompt did not warn the reader.
