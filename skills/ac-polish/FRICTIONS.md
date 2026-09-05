@@ -40,10 +40,10 @@ entries: 15
 - impact: L
 - frequency: every-run
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-09-02
-- last_seen: 2026-09-02
+- last_seen: 2026-09-05
 - stage: manual
 - status: open
 - proposed_fix: in bead mode, polish-fixpoint.sh fans the receipt comment out to every
