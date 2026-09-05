@@ -17,6 +17,19 @@ description: 'The ac2 ship gate — obtain a proof via ac-prove, assert its REQU
 Deliberately thin. It owns four things — the executed-jobs assertion, the needs-device
 surface gate, the ship order, and the escape label — and delegates everything else by pointer.
 
+## Phase 0 — mint the version, then prove
+
+Refuse an open needs-device surface (§ below), then mint the version, propagate it and COMMIT
+it — all before `ac-prove`. One bump per publish, never re-bumped downstream; propagation to
+the native build surfaces is `references/version-bump.md`, the sole owner of that counter.
+
+The ref `R` handed to the proof leg IS that bump commit, so **proven SHA = tagged SHA =
+promoted artifact.** Bumping after the proof cannot be repaired downstream: the bump is a real
+commit, `publish-checkpoint-gate.mjs` refuses a real commit between the checkpoint and the
+release SHA, and `NEXT_PUBLIC_APP_VERSION` is read from `package.json` at BUILD time — so the
+promoted artifact, its `X-Client-Version` header and its Sentry `client_version` all carry the
+previous version while the tag claims the new one.
+
 ## The proof leg — call `ac-prove`, never re-derive it
 
     ac-prove ensure --fix-forward [+qa] --ref "$R"     # returns the PROVEN SHA
@@ -70,7 +83,7 @@ green is the gate-audit class — canon in `skills/ac-pipeline/references/` § a
 
 ## Open needs-device surfaces — refuse before tagging
 
-A required-jobs-green run is not a device sitting. From the app checkout, before step 1:
+A required-jobs-green run is not a device sitting. From the app checkout, before Phase 0:
 
     bash skills/ac-publish/scripts/needs-device-gate.sh --range "$FROM..$R"
 
@@ -88,13 +101,12 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
 
 ## Ship, in this order
 
-0. **Refuse an open needs-device surface.** Run `needs-device-gate.sh --range` (above). Intersection or a zero-path open `needs-device` bead is a stop.
-1. **Mint the version once.** One bump per publish, never re-bumped downstream; propagation to the native build surfaces is `references/version-bump.md`, the sole owner of that counter.
-2. **Tag the PROVEN SHA explicitly, never `HEAD`.** `ac-prove` pushes evidence commits, so by
-   the time this step runs `HEAD` has moved past the commit that was proven and reviewed.
-3. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
+1. **Tag the PROVEN SHA explicitly, never `HEAD`.** Phase 0 and the proof leg are done, so this
+   list opens on a proven SHA that already carries its own bump. `ac-prove` pushes evidence
+   commits, so by the time this step runs `HEAD` has moved past the commit that was proven.
+2. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
    an alias move over its staged build, never `vercel deploy --prod`. Mechanics: `references/web-promote.md`.
-4. **Native and mobile — the binary must be PROVABLY the proven SHA.** The property that
+3. **Native and mobile — the binary must be PROVABLY the proven SHA.** The property that
    matters is PROVENANCE, not which machine compiled it: built from the **proven SHA**, from a
    **clean tree**, with the **required check-runs green on that SHA**. CI is the DEFAULT because
    it establishes all three structurally. A local build is a **declared exception**, legal only
@@ -109,7 +121,7 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
    > gated on check-runs, `ship-testflight.sh` had zero). The absolute wording protected nothing
    > and hid that. State the property you actually need, make both lanes able to satisfy it, and
    > the contradiction disappears.
-5. **Verify identity, not version strings.** Confirm what production actually serves is the
+4. **Verify identity, not version strings.** Confirm what production actually serves is the
    proven SHA. Two deployments can mint the same version.
 
 ## External escapes close the outer loop
