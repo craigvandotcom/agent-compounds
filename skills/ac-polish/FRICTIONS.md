@@ -1,8 +1,8 @@
 ---
 skill: ac-polish
 created: 2026-09-02
-last_pass: 2026-09-02
-entries: 8
+last_pass: 2026-09-05
+entries: 15
 ---
 
 # ac-polish — friction log
@@ -130,10 +130,10 @@ entries: 8
 - impact: L
 - frequency: occasional
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [seams-fixpoint-never-stamps-on-accumulator]
 - first_seen: 2026-09-03
-- last_seen: 2026-09-03
+- last_seen: 2026-09-05
 - stage: manual
 - status: open
 - proposed_fix: seams mode fits one component; for a domain-sized target the honest normal
@@ -142,6 +142,18 @@ entries: 8
   domain-sized target (an orchestrator + an RPC + three caches + their tests), new
   "unasserted" rows kept arriving every round (new-per-round: 3,3,2,3,1,1,1,3,3,2), so the
   gate never fired and the orchestrator had to stop by judgment at round 10.
+- recurrence_2 (2026-09-05, `canonical_ingredients.slug`, aim row 1, score 2234): new edges per
+  round 97 · 55 · 43 · 58 — non-monotonic at round 4, stopped by judgment, 253 edges, 13
+  cross-lens. The target WAS one column; the datum is a slug string copied into eight other
+  columns across six tables (`ingredient_aliases.alias_slug`, `families.slug`,
+  `personal_zones.ingredient_slug`, `compound_recipes.slug` …). The checklist's "follow the
+  DATA, never the import graph" walks readers straight through every copy. Two additions to the
+  fix: (1) a SCOPE FENCE in the reader SUBJECT — name the columns that are IN, and state that a
+  column holding a copy of the value is a boundary row (one side), never a new object to
+  traverse; (2) make the unstamped hand-off an explicit workflow verdict (`ENDED area-target`)
+  that records `seams_load` against the declared fence, so the plan's after-count is measured
+  on the same scope. The orchestrator on 2026-09-05 initially stopped WITHOUT handing off, which
+  this entry already said was wrong — the workflow text still does not say it.
 
 ## seams-reader-tooling-reformats-repo-test-file
 - skills: [ac-polish]
@@ -228,7 +240,7 @@ entries: 8
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: [seams-reader-stance-cannot-write-report]
 - first_seen: 2026-09-05
 - last_seen: 2026-09-05
@@ -261,3 +273,66 @@ entries: 8
   found-by did not reproduce; all 9 used unescaped parentheses in an rg pattern. The edges were
   real (readers re-found them in round 2 with `\(`), so the drop cost a round, not correctness.
   The validate step worked as designed; the prompt did not warn the reader.
+
+## seams-boundary-side-key-inflates-new-edges
+- skills: [ac-polish]
+- impact: M
+- frequency: frequent
+- perceptibility: misleading
+- recurrence: 1
+- related: [seams-mode-no-convergence-on-domain-sized-target]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: the boundary key is `interface × side × path` and `side` is free text, so a
+  fresh reader restating a known file with different side wording mints a "new edge". Split the
+  round line into `new_paths=` (a file no lens had) and `new_rows=` (a known file, new key), and
+  let the fixpoint read `new_paths` — or key boundary on `interface × role-word × path` where
+  role-word is the first token (producer · consumer · caller · callee · db · ts).
+- narrative: at round 3 of the `canonical_ingredients.slug` run, 18 of 78 boundary rows were
+  the same (interface, path) with different side text — `canonical-writer.ts` alone carried six
+  B1 rows. Real growth was still present (57 distinct paths), so the loop's verdict was right,
+  but a quarter of the convergence signal was wording.
+
+## seams-aim-score-predicts-non-convergence
+- skills: [ac-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: [seams-mode-no-convergence-on-domain-sized-target]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: use the `aim.sh objects` score as a pre-split trigger in workflows/seams.md
+  § TARGET — above ~1000 (or `touchers` above ~250) resolve to a NAMESPACE and pick one
+  column-plus-mint before any reader runs; `aim.sh` could print the warning itself. Better: an
+  `aim.sh` kind `namespace` that groups columns sharing a value shape and CHECK regex.
+- narrative: `foods.status` (score 712, 293 touchers) stamped in 2 rounds on 2026-09-04;
+  `canonical_ingredients.slug` (score 2234, 336 touchers, 133 writers) did not converge in 4
+  rounds and cost ~12 opus readers. The score was three times the largest thing that had ever
+  stamped, and nothing in the workflow read that as a warning.
+
+## seams-reader-placeholder-and-abbreviated-paths
+- skills: [ac-polish]
+- impact: L
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 1
+- related: [seams-path-regex-rejects-root-files]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: two lines in references/seams-reader-prompt.md — "an absent stage is NO ROW,
+  never a row whose path cell says `(absent)`" and "never abbreviate a path (`…`); the path cell
+  is parsed" — and have `seams-merge.py` name the offending cell text on NOT-GATED so the fix is
+  a one-line resume, not a re-read of the report.
+- narrative: round 1 of the `canonical_ingredients.slug` run NOT-GATED three times in a row:
+  a root file (`middleware.ts:32`), two object rows with `(absent)` as the path (the reader
+  encoded the hole finding as a row), and three rows with a migration name shortened to
+  `20260809220000_…`. Each was fixed by hand in the report outside the repo; the orchestrator
+  editing reader output is exactly the division-of-labour breach the SKILL warns about.
+
