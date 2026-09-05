@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-05
-entries: 15
+entries: 17
 ---
 
 # ac-polish — friction log
@@ -40,7 +40,7 @@ entries: 15
 - impact: L
 - frequency: every-run
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: []
 - first_seen: 2026-09-02
 - last_seen: 2026-09-05
@@ -335,4 +335,50 @@ entries: 15
   encoded the hole finding as a row), and three rows with a migration name shortened to
   `20260809220000_…`. Each was fixed by hand in the report outside the repo; the orchestrator
   editing reader output is exactly the division-of-labour breach the SKILL warns about.
+
+## element4-check-flaky-under-concurrent-readers
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: make `skills/_tools/element4-check.sh --file` safe under concurrent
+  invocation (unique temp paths, no shared scratch); add a parallel-invocation case to its
+  test. Until then the orchestrator runs VALIDATE strictly serially and confirms any RED
+  three times before trusting it.
+- narrative: with 19 readers in flight (each running element4-check itself) the orchestrator's
+  VALIDATE step over a frozen artifact returned different failing beads on successive runs
+  (bd-0qske RED then GREEN; bd-69dwp.3/.8 "no AC section" then GREEN; bd-1538r, bd-3bcad,
+  bd-2rb1w flickered). Every serial re-run of the same file was GREEN three times over. A
+  false RED refuses to record a clean round, so the loop stalls on a gate that measured
+  nothing.
+
+## severity-gate-declines-touchers-that-stamp-refined-refuses
+- skills: [ac-polish, beads-standards]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [bead-mode-receipt-lands-on-epic-stamper-reads-children]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: bead-checklist.md § 3 should state that a `## Delivers` bullet naming an
+  EXISTING, REFERENCED path with no `touchers:` line is class (c) — the `refined` stamp
+  cannot survive `stamp-refined.sh`'s touchers leg, so the bead is unimplementable as a
+  refined bead. Three readers (bd-sp6n0, bd-dtpqg, n0lug) already treated it that way and
+  added the line; six declined it as a "format gap".
+- narrative: final polish over 19 artifacts, all STAMPED at rounds 2–3. The writeback's
+  RESTAMP SWEEP then DOWNGRADED 15 previously-refined beads (bd-l6khg.15.3/.5, utg43.9,
+  bd-0qske, bd-18wpl.2/.3/.4, bd-v5-drift-glob-reinclude-bykib, bd-ufg84, bd-yko2g,
+  bd-b04ax, bd-1538r, bd-nhqyt, bd-trial-payload-device-capture-hpwi6, bd-3bcad) — every
+  one for `[unowned-touchers]`. The readers had seen the gap and declined under the severity
+  gate; the stamp gate treats the same gap as fatal. A clean fixpoint that loses a third of
+  its refined stamps at landing is the checklist and the gate disagreeing, not the beads.
 
