@@ -2,35 +2,33 @@
   "status": "done",
   "mode": "NIGHTLY",
   "machine": "Craigs-MacBook-Air",
-  "date": "2026-09-04T00:45:00Z",
-  "pushed_sha": "e47fb768a6bf3fa5df014d6b12f848ac5c5bce30",
+  "date": "2026-09-06T00:45:00Z",
+  "pushed_sha": "cabfdd256b85ba5759b7bc448068bc916a5f8a6c",
   "stranded_sha": null,
-  "base_sha": "198417ea",
-  "origin_main_at_verify": "e47fb768a6bf3fa5df014d6b12f848ac5c5bce30",
+  "base_sha": "4b5f8c1f",
+  "origin_main_at_verify": "cabfdd256b85ba5759b7bc448068bc916a5f8a6c",
   "push_verified": true,
   "counts": {
-    "surviving_gates_verified": 6,
-    "surviving_gates_missing_reason_skip": 1,
-    "tier1_applied_2f": 6,
+    "surviving_gates_verified": 3,
+    "surviving_gates_missing_reason_skip": 0,
+    "tier1_applied_2f_unrefined_added": 7,
+    "tier1_2f_stale_unrefined_stripped_closed": 32,
     "tier1_2d_backlog_to_planned": 0,
     "tier1_2e_frontmatter_added": 0,
     "tier1_2g_stale_epic_close_reconciled": 0,
-    "proposals_emitted": 4,
+    "stale_proposals_marked_moot": 2,
+    "proposals_emitted": 0,
     "archived": 0,
     "tier2_toggle": "OFF",
     "epic_edge_violations": 0,
-    "epic_close_candidates": 2,
-    "parentage_gap_orphans": 62,
-    "orphan_plans": 1,
-    "orphan_beads": 0,
-    "docket_open_human_gate": null,
-    "docket_reasonless": 1
+    "epic_close_candidates": 0,
+    "docket_open_human_gate": 3,
+    "docket_reasonless": 0
   },
   "proposals": [
+    "_plans/_proposals/2026-09-02/01-orphan-plans-no-backlog-no-beads.md",
     "_plans/_proposals/2026-09-04/01-orphan-plan-post-cleanup-backlog-handoff.md",
-    "_plans/_proposals/2026-09-04/02-parentage-gap-orphans.md",
-    "_plans/_proposals/2026-09-04/03-epic-close-candidates.md",
-    "_plans/_proposals/2026-09-04/04-human-gate-reason-lint.md"
+    "_plans/_proposals/2026-09-04/02-parentage-gap-orphans.md"
   ],
-  "notes": "Isolated worktree at /var/folders/.../ac_tidy_run-20260904-004535-34473 (detached at fresh origin/main 198417ea). br sync rehydrated the beads DB (3452 records) before any writes. Delegated the scan+reconcile+proposal-authoring pass to an implementer subagent working inside the worktree; orchestrator (this session) verified the diff (git diff on .beads/issues.jsonl matched exactly the reported br mutations, no surprises), reviewed proposal file frontmatter, then committed/pushed/verified/notified itself. Tier-1: 2f=6 (bd-3l9nd, bd-5qebu, bd-dtpqg.25, bd-egv0y, bd-lts1s, bd-onboarding-feel-options-dead-777bf.1 stamped unrefined -- open, non-epic, no lifecycle label). 2d=0, 2e=0, 2g=0 (nothing qualified). Surviving-gate verify: 6 open human-gate beads confirmed genuinely blocked and stamped 'verified: 2026-09-04' via br comment (bd-19mqz, bd-5swxi, bd-ciqgd, bd-device-sitting-v1-22mcj, bd-ey8be, bd-human-gate-cbpxm-rgffj). bd-t765d withheld (no Gate-reason line found) -- bundled into proposal 04 instead of stamped. Subagent judgment call: treated 'Gate-reason: action' as a valid reason alongside fork/authorization (citing bd-ey8be's own comment thread documenting this as a known gap between the 4-value canonical taxonomy and ac-tidy's 2-value regex) -- flagged explicitly rather than silently deviating; a strict fork/authorization-only reading would have wrongly flagged 3 of 6 valid gates as reason-less. Tier-2 OFF -- 2b/2c fell through to Tier-3 proposal 01 (orphan plan, not a beadified-plan archive candidate; repo bead schema still has no plan:/source_plan provenance field at all, a pre-existing known gap, not re-proposed). Parentage-gap orphans: 62/166 open non-epic non-human-gate beads with no epic parent -- proposal 02 suggests 3 obvious epic homes (keyboard/ingredients/curator clusters) for a subset, leaves the rest (~50, ambiguous) for human triage. Epic-close candidates: bd-2osmh and bd-vbmre both now show every parent-child child closed -- proposed in 03, not auto-closed (both have prior false-positive-close history on this board, noted in the proposal as a caution). Orphan-bead regex false-positive-checked: 7 beads citing not-yet-created _plans/research/*.md paths excluded (those are declared future deliverables per the beads' own ACs, not dangling references). Push: clean fast-forward, no race, verified local HEAD == origin/main. Slack sent to sofi, status healthy. Worktree torn down (git worktree remove --force + prune) after this file write."
+  "notes": "Isolated worktree at /tmp/ac_tidy_run-20260906-004545-57110 (detached at fresh origin/main 4b5f8c1f). br sync rehydrated the beads DB (3598 records) before any writes. Docket-health: 3 open human-gate, 0 reason-less, no ALARM. Surviving-gate verify: all 3 open human-gate beads (bd-device-sitting-v1-22mcj, bd-ey8be, bd-ciqgd) re-read, confirmed still genuinely blocked on Craig, stamped 'verified: 2026-09-06' via br comment; live-checkout vs worktree ledger agreed for all 3, none skipped. Delegated Tier-1 scan+apply (2d/2e/2f/2g) to an implementer subagent inside the worktree; orchestrator verified the resulting git diff (.beads/issues.jsonl only, 44 records) matched the reported mutations exactly. 2d=0 (11+42=53 captured backlog files scanned, all _plans/ mentions found were prerequisite/context/cross-repo, not a genuine matching plan -- subagent declined to force a match). 2e=0 (all 7 top-level _plans/*.md already have frontmatter; a broader recursive read found 80+ frontmatter-less files but all are test-reports/review-docs/refinement-logs/proposal-INDEX artifacts, not plans in the draft/refined/approved/beadified sense -- correctly not bulk-edited, flagged as a scope-definition conflict between the task prompt's literal exclusion list and board-scan's flat _plans/*.md definition for board-scan.md to reconcile later). 2f: ran the skill's literal jq (no epic-type filter, matching its own bash despite the prose saying 'non-epic') -- 7 open beads got fail-safe 'unrefined' added (bd-69dwp, bd-epic-compound-check-n0lug, bd-epic-ro-write-path-utg43, bd-toqoa, bd-dtpqg, bd-l6khg.15, bd-7uhek; 2 of the 7 are epics, a known prose/code mismatch, not a new deviation); separately, 32 CLOSED beads had stale 'unrefined' stripped (read from .beads/issues.jsonl directly per the load-bearing br-list-omits-closed gotcha), verified post-mutation that zero closed beads carry 'unrefined'. 2g=0 -- zero OPEN pipeline-proposal beads exist anywhere on the board (all 62 are closed), matcher had nothing to fire on. Orchestrator-level Phase 3 pass (not delegated): checked the 3 pending proposal files from 2026-09-02/09-04 for dedup -- 01 (orphan-plan) and 02 (parentage-gap-orphans, 62/166) still genuinely open, left as-is (no re-proposal, per dedup). 03 (epic-close-candidates: bd-2osmh, bd-vbmre) and 04 (human-gate-reason-lint: bd-t765d) -- checked live bead state, all three targets already CLOSED 2026-09-04 (shipped) via another path since the proposal was written; marked both proposal files 'status: moot' with a dated reconciliation note (analogous to 2g's stale-proposal-reconciliation spirit, applied to file-only proposals since bead-filing for pipeline-proposal has been disabled since 2026-08-27). Rigorously re-checked bd-dlqc1 (looked like 24/24 id-prefix-closed at first glance) via its own dependents list per its own embedded warning against id-prefix-only derivation -- found 1 true open dependent (bd-signal-entry-aesthetic-hybrid-o0mmk) outside the id-prefix population, so NOT an epic-close candidate; no false proposal emitted. Checked 6 open finding-beads (qa/review/hygiene) -- small, healthy count, no actionable duplicate/stale/superseded subset identified, one-line report only per the never-escalate-a-bare-count doctrine. Friction-sensor sweep (agent-compounds skills/*/FRICTIONS.md, cross-repo, report-only): 6 stale (ac-beadify, skill-builder = never-visited; ac-review 33d, ac-tidy 22d, ac-ui-polish 37d, testing 23d, all >21d threshold) -- flagged in Slack summary, no writes (lives outside BCA). Push: clean fast-forward on BCA, verified local HEAD == origin/main. Slack sent to sofi, status healthy. This last-run.json write itself used a SEPARATE isolated worktree in agent-compounds (its live checkout was dirty -- a concurrent session had staged + 1 unpushed commit -- so this file's commit avoided disturbing that in-flight work). Both worktrees (BCA + agent-compounds) torn down after their respective writes."
 }
