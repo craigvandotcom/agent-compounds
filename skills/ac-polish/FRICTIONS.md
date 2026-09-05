@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-05
-entries: 17
+entries: 18
 ---
 
 # ac-polish — friction log
@@ -381,4 +381,30 @@ entries: 17
   one for `[unowned-touchers]`. The readers had seen the gap and declined under the severity
   gate; the stamp gate treats the same gap as fatal. A clean fixpoint that loses a third of
   its refined stamps at landing is the checklist and the gate disagreeing, not the beads.
+
+## stamp-refined-reads-clause-paths-as-delivers-obligations
+- skills: [ac-polish, beads-standards]
+- impact: M
+- frequency: every-run
+- perceptibility: loud
+- recurrence: 1
+- related: [severity-gate-declines-touchers-that-stamp-refined-refuses]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: manual
+- status: open
+- proposed_fix: in stamp-refined.sh's TOUCHERS LEG, derive obligations from the `## Delivers`
+  BULLET lines only (strip existing `touchers:` lines before the grep -oE path extraction),
+  and bind each path to the touchers line directly beneath its own bullet. Document in
+  bead-create-contract.md § Touchers that the out-of-scope clause must not name a path
+  with a directory component. Add a test case to stamp-refined-fixpoint.test.sh.
+- narrative: the gate extracts every `dir/file.ext` token in the whole `## Delivers` section
+  (grep -oE ... | sort -u) and binds each to the first `touchers:` line after the token's
+  FIRST mention. Authors naturally name referrer files inside the out-of-scope clause
+  ("a comment in `__tests__/x.test.ts`", "the CI log `_ci-evidence/…jsonl`"). Each such
+  mention becomes a fresh obligation with no bullet of its own, and an early clause mention
+  can steal the binding of a later bullet's real path. Refine run 2026-09-05: two touchers
+  authors produced 16 and 7 such tokens; first landing refused 9 of 12 beads in one group
+  for exactly this; rewriting the clauses to basenames made all 12 stamp. A touchers line
+  whose only path mention is inside its own command cannot bind either.
 
