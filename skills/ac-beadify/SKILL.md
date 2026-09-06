@@ -12,7 +12,7 @@ description: 'Compile an APPROVED ac2 plan into lean beads — the four-section 
 | **Input**        | One APPROVED plan file (`ac-plan`, graded by `ac-polish` plan-checklist)     |
 | **Output**       | Beads in `br` on the ac2 schema, with every dependency edge wired both ways    |
 | **Artifacts**    | The epic bead; the plan moved to `_plans/_done/` (retirement)                  |
-| **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity |
+| **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity · `touchers.sh check` |
 
 Contract compiled TO: `references/bead-schema.md` (mandatory load). Doctrine:
 `skills/ac-pipeline/SKILL.md`. Canon by pointer, never restated: `beads-standards`.
@@ -43,8 +43,7 @@ leading word exists today and it is honestly RED until the artifact lands.
 2. **Cut the work into beads.** Sizing is from the bead-checklist, never from taste: one bead
    = one focused worker pass (Jef's wave: 5,500 plan lines → 347 beads, ~16 lines/bead).
    Two signals govern the cut, and both are cheaper here than at implement:
-   - **Split signal** — heavy in-bead cognition discovered at implement time means the bead
-     was too big. Split it now.
+   - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
    - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through
      an underdetermined bead improvising decisions the bead should have made. If the plan
      does not settle a fork, the bead does not exist yet; send the fork back to the plan or
@@ -52,8 +51,7 @@ leading word exists today and it is honestly RED until the artifact lands.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
-   **Line numbers are banned in Intent** — symbol and file names are welcome as hints, but a
-   `file:line` anchor decays before the claim and nothing cheap tells you it has.
+   **Line numbers are banned in Intent** — a `file:line` anchor decays before the claim does.
 4. **Apply the refusal** (§ above) to every bead before any of them is created. Refuse the
    bead, not the batch — but do not create a partial graph around a refused node.
 5. **Wire Delivers/Consumes as the graph.** `## Delivers` names artifacts; a dependent's
@@ -64,10 +62,12 @@ leading word exists today and it is honestly RED until the artifact lands.
    - **Consumes↔edge parity, both directions.** Every Consumes line has an edge; every edge
      has a Consumes line. Verify with `br dep cycles` plus `br show` on both ends of each
      edge — a parity gap is the measured way a "wired" graph turns out not to be.
-6. **Create the beads.** `br create` REJECTS `-f` alongside a title: bodies go
-   `-d "$(cat <file>)"`, which routes prose through the shell, so bead text must stay
-   dcg-safe — no command substitution, no unbalanced quoting. Only comments and receipts
-   take `-f <file>`.
+   - **One path per `## Delivers` bullet, and every delivered path that ALREADY EXISTS owes a
+     touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
+     write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <the sibling bead
+     that updates those referrers, per the plan's toucher list>`` — else `out-of-scope: <why>`.
+6. **Create the beads** per the schema's Header fields: `br create` REJECTS `-f` alongside a
+   title, so bodies go `-d "$(cat <file>)"` and bead text must stay dcg-safe.
 7. **Retire the plan** (§ below).
 
 ## Bootstrap seam — expires at Phase 3

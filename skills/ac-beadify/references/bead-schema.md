@@ -28,7 +28,7 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 |---|---|
 | `## Intent` | Why + rationale + context + boundary (what is explicitly OUT) + gotchas. Symbol and file names are welcome as hints; **line numbers are banned** — a `file:line` anchor decays before the claim and nothing cheap tells you it has. **The header is per type:** `bug` → `## Steps to Reproduce` (a bug's intent IS its repro), `epic` → `## Success Criteria` (an epic's intent IS what done looks like), everything else → `## Intent`. Same content, same four sections — `br lint` (v0.2.16) compiles those two per-type headers in and cannot be configured, so the schema meets it by naming, never by a fifth section. |
 | `## Acceptance Criteria` | 3–7 falsifiable behavioural ACs, EACH naming its executable probe and tier (see below). Observable outcomes only. The header phrase is load-bearing for `br lint`: its matcher is case-insensitive and tolerates trailing text, but both words must appear. |
-| `## Delivers` | The named artifacts this bead promises — the exact strings a dependent's `## Consumes` will cite. Paths, script names, receipts. |
+| `## Delivers` | The named artifacts this bead promises — the exact strings a dependent's `## Consumes` will cite. Paths, script names, receipts. **One path per bullet** (one `touchers:` line cannot own two), and a delivered path that ALREADY EXISTS in the tree owes that line beneath its bullet: trigger, shape and rationale in `beads-standards/reference/bead-create-contract.md` § Touchers — derive it with `skills/_tools/touchers.sh derive <path>`, never by hand. |
 | `## Consumes` | One `<blocker-id> -> <artifact>` per line, or the single word `none`. Every line needs a matching dependency edge and every edge a matching line (parity is graded). |
 
 Nothing else. There is no Scope, Proof, Notes or Discussion section — that content is either
@@ -128,8 +128,11 @@ from a git hook — a hook cannot see a DB-only close.
 
 ## Delivers
 - gate: skills/ac-implement/scripts/close-gate.sh
+  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 6 · owned by: ac-qn7h.2
 - harness: skills/ac-implement/scripts/close-gate.test.sh
+  touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · owned by: ac-qn7h.2
 - wiring: the close step of skills/ac-implement/SKILL.md invokes the gate
+  touchers: `rg -l -F "ac-implement/SKILL" . -g '!skills/ac-implement/SKILL.md' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 6 · out-of-scope: the referrers cite the skill by path, not the close step this bead edits
 
 ## Consumes
 - ac-qn7h -> skills/ac-pipeline/SKILL.md (the MODE / ON-FAILURE declaration this script conforms to)
