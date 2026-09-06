@@ -9,6 +9,10 @@ is reported and exits non-zero.
 
 Lifecycle labels (`refined` / `unrefined`) are NEVER written here directly. `skills/_tools/stamp-refined.sh`
 owns that pair. An artifact holds the label snapshot taken at export and must not restore it.
+Writeback also syncs the dependency graph to what the bodies declare: every `## Consumes`
+line becomes a `blocks` edge if it is missing. ADDITIVE ONLY — an edge with no line is
+reported, never removed.
+
 What writeback --apply DOES do is run the RESTAMP SWEEP after landing the bodies: every
 implementable bead in the artifact is re-gated through `stamp-refined.sh` (the sole writer),
 so a conforming stamp is refreshed under today's contract and a stale one is stripped by the
@@ -41,6 +45,12 @@ LIFECYCLE_LABELS = {"refined", "unrefined"}
 STAMP_REFINED = str(__import__("pathlib").Path(__file__).resolve().parents[2] / "_tools" / "stamp-refined.sh")
 
 DELIM = re.compile(r"<!-- BEAD:([^ ]+) -->\n(.*?)\n<!-- /BEAD:\1 -->", re.S)
+
+# `## Consumes` is one `- <blocker-id> -> <artifact>` per line or the single word `none`
+# (bead-schema.md), and every line pairs with a dependency edge. The unicode arrow is
+# accepted too because live beads carry both spellings.
+CONSUMES_SECTION = re.compile(r"^##[ \t]+Consumes[ \t]*$(.*?)(?=^##[ \t]|\Z)", re.M | re.S)
+CONSUMES_LINE = re.compile(r"^-[ \t]+(\S+)[ \t]+(?:->|→)[ \t]", re.M)
 
 
 def die(code, msg):
@@ -143,6 +153,71 @@ def artifact_labels(meta_line):
     return {x.strip() for x in m.group(1).split(",") if x.strip()}
 
 
+def parse_consumes(description):
+    """The blocker ids a description's `## Consumes` section declares, in order, deduped.
+
+    Pure: no `br`, no I/O. A lone `none`, a bullet carrying no arrow, and a wrapped
+    continuation line each declare no blocker and yield nothing — as does a description with
+    no `## Consumes` section at all. The caller therefore reads "[]" as "declares no edge",
+    which is exactly what the additive sync below needs: nothing to add, nothing to remove.
+    """
+    m = CONSUMES_SECTION.search(description or "")
+    if not m:
+        return []
+    out = []
+    for blocker in CONSUMES_LINE.findall(m.group(1)):
+        if blocker not in out:
+            out.append(blocker)
+    return out
+
+
+def missing_edges(consumes, existing):
+    """Declared blockers that have no blocking edge yet. Pure, and ONE-DIRECTIONAL.
+
+    An edge with no Consumes line is NOT a missing edge and never comes back through here:
+    writeback is additive on edges and reports the other direction instead. A polish reader
+    reads one artifact; it cannot see why an edge it did not write exists, so deleting one
+    on its say-so would destroy board state no round measured.
+    """
+    have = set(existing)
+    return [b for b in consumes if b not in have]
+
+
+def sync_edges(plan, dry, failed):
+    """Wire every `## Consumes` line to its dependency edge — `br dep add <bead> <blocker>`.
+
+    Bodies land without edges otherwise: a reader that adds a Consumes line writes a blocker
+    the board never learns about (measured 2026-09-06 on ac-wp8i.3, three declared blockers,
+    zero edges). ADDITIVE ONLY — the reverse direction is REPORTED, never removed.
+    """
+    added, would, orphans = 0, [], []
+    for bead_id, consumes, existing in plan:
+        for blocker in missing_edges(consumes, existing):
+            if dry:
+                would.append(f"{bead_id}->{blocker}")
+                continue
+            rc, _, err = br(["dep", "add", bead_id, blocker])
+            if rc != 0:
+                failed.append((bead_id, f"dep add {blocker} exited {rc}: {err.strip()[:200]}"))
+                continue
+            added += 1
+        orphans += [f"{bead_id}->{b}" for b in existing if b not in consumes]
+    tail = (f"{len(orphans)} edge(s) without a Consumes line: " + ", ".join(orphans)
+            if orphans else "0 edge(s) without a Consumes line")
+    if dry:
+        print(f"bead-artifact: DRY  EDGES would add {len(would)}: "
+              f"{', '.join(would) or '-'}; {tail}")
+    else:
+        print(f"bead-artifact: EDGES — added {added}; {tail}")
+
+
+def blocking_deps(live):
+    """The ids this bead is BLOCKED BY. `parent-child` is not a blocker and never a Consumes
+    line, so counting it would report every child's own epic as an unpaired edge."""
+    return [d.get("id") for d in (live.get("dependencies") or [])
+            if d.get("dependency_type") == "blocks"]
+
+
 def restamp_sweep(bead_ids):
     """Re-gate every implementable bead through stamp-refined.sh (the sole writer).
 
@@ -190,6 +265,7 @@ def cmd_writeback(args):
         raw = fh.read()
     dry = not args.apply
     failed = []
+    edge_plan = []
 
     for bead_id, title, desc in beads:
         live, err = show(bead_id)
@@ -197,6 +273,7 @@ def cmd_writeback(args):
             failed.append((bead_id, f"could not re-read before writing: {err}"))
             continue
         have = set(live.get("labels") or [])
+        edge_plan.append((bead_id, parse_consumes(desc), blocking_deps(live)))
 
         m = re.search(rf"<!-- BEAD:{re.escape(bead_id)} -->\n[^\n]*\n([^\n]*)", raw)
         want = artifact_labels(m.group(1)) if m else set()
@@ -222,6 +299,11 @@ def cmd_writeback(args):
             if rc != 0:
                 failed.append((bead_id, f"label add {label!r} exited {rc}"))
         print(f"bead-artifact: WROTE {bead_id:46} +labels={add or '-'}")
+
+    # Bodies are landed; the edges the bodies DECLARE are landed next, before the restamp
+    # sweep re-gates anything. A dep-add failure is a writeback failure — same count, same
+    # exit — because a Consumes line whose edge does not exist is a lie the board tells.
+    sync_edges(edge_plan, dry, failed)
 
     if failed:
         for bead_id, err in failed:

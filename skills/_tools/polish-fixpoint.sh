@@ -25,6 +25,10 @@
 #   seams  is plan-side (the artifact is a seams plan) but stamps under a `seams_` prefix, so
 #          the later `--mode plan` polish of the same file records its own fixpoint beside it.
 #
+#   In bead mode the receipt comment lands on EVERY `<!-- BEAD:id -->` in the artifact, not
+#   only on --target: the whole set is what converged, and stamp-refined.sh reads the receipt
+#   from each bead's own comments.
+#
 #   --pre  the artifact digest the SKILL observed BEFORE this round's reader ran. It is how
 #          an out-of-band amendment is detected: if it does not match what the previous
 #          round recorded, something edited the artifact from outside the loop.
@@ -163,7 +167,35 @@ else
   # skills/_tools/stamp-refined.sh (ac-gv70) — a check a caller can route around is not a gate, so the
   # gating lives in the writer, not here. This script only produces the receipt it reads.
   command -v br >/dev/null 2>&1 || die2 "br not on PATH — cannot write the bead receipt"
-  br comments add "$TARGET" -f "$STATE/receipt.txt" >/dev/null
+  if [ "$MODE" = bead ]; then
+    # FAN-OUT. Bead mode polishes an epic's WHOLE set as one artifact, so the fixpoint is
+    # earned by every bead in it — while stamp-refined.sh reads the receipt from each bead's
+    # OWN comments. A receipt that stopped at --target therefore refused every child of a
+    # stamped epic and left a human to copy it out by hand (friction
+    # `bead-mode-receipt-lands-on-epic-stamper-reads-children`, 5 recurrences). The two tools
+    # now agree on where the receipt lives, mechanically.
+    #
+    # THE RECEIPT IS THE PRODUCT: a post that fails is NOT-GATED, never a warning. A silently
+    # receipt-less child is the exact failure this fan-out exists to remove.
+    MARKERS=$(grep -o '<!-- BEAD:[^ ]* -->' "$ARTIFACT" || true)
+    IDS=$(printf '%s\n%s\n' "$TARGET" "$MARKERS" \
+          | sed -e 's/^<!-- BEAD://' -e 's/ -->$//' \
+          | awk 'NF && !seen[$0]++')
+    FANNED=0
+    while IFS= read -r BID; do
+      [ -n "$BID" ] || continue
+      if ! br comments add "$BID" -f "$STATE/receipt.txt" >/dev/null 2>&1; then
+        printf 'polish-fixpoint: NOT-GATED receipt post failed for %s\n' "$BID" >&2
+        exit 2
+      fi
+      FANNED=$((FANNED + 1))
+    done <<EOF
+$IDS
+EOF
+    printf 'polish-fixpoint: receipt fanned out to %s bead(s)\n' "$FANNED"
+  else
+    br comments add "$TARGET" -f "$STATE/receipt.txt" >/dev/null
+  fi
 fi
 
 printf 'polish-fixpoint: STAMPED mode=%s round=%s sha256=%s\n' "$MODE" "$ROUND" "${POST:0:12}"

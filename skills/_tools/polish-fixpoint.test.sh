@@ -174,6 +174,50 @@ if grep -q '^POLISH-FIXPOINT: mode=bead rounds=2 ' "$S7/receipt.txt"; then
 else
   FAIL=$((FAIL+1)); echo "FAIL bead receipt malformed"; fi
 
+# --- 7b. bead mode FANS THE RECEIPT OUT to every bead in the artifact ----------
+# The set converged, so the set is what earned the receipt — and stamp-refined.sh reads it
+# from each bead's own comments. A receipt that stops at --target refuses every child.
+# `br` is stubbed on PATH: the harness proves the posts, never touches a board.
+BIN="$W/bin"; mkdir -p "$BIN"
+cat > "$BIN/br" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\n' "$1 $2 $3" >> "$BR_LOG"
+if [ -n "${BR_FAIL:-}" ]; then echo "br: stub refusing $3" >&2; exit 1; fi
+exit 0
+STUB
+chmod +x "$BIN/br"
+OLD_PATH="$PATH"; PATH="$BIN:$PATH"; export PATH
+
+mk_set() {  # $1 = body token, $2 = path — three BEAD markers, epic + two children
+  : > "$2"
+  for id in ac-epic ac-epic.1 ac-epic.2; do
+    printf '<!-- BEAD:%s -->\n# %s — fixture\ntype: task · priority: 1 · labels: none\n\n%s\n<!-- /BEAD:%s -->\n\n' \
+      "$id" "$id" "$1" "$id" >> "$2"
+  done
+}
+
+S7B="$W/s7b"; mk_set a "$W/p7b.md"; PRE=$(sha "$W/p7b.md")
+mk_set b "$W/p7b.md"
+BR_LOG="$W/br-fanout.log"; export BR_LOG; : > "$BR_LOG"
+"$SCRIPT" --mode bead --target ac-epic --state "$S7B" --artifact "$W/p7b.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "bead mode fan-out, clean round 2 -> STAMPED" 0 "receipt fanned out to 3 bead(s)" -- --mode bead --target ac-epic --state "$S7B" --artifact "$W/p7b.md" --round 2 --pre "$(sha "$W/p7b.md")"
+posted=$(grep -c '^comments add ' "$BR_LOG")
+if [ "$posted" = 3 ] && grep -q '^comments add ac-epic$' "$BR_LOG" \
+   && grep -q '^comments add ac-epic.1$' "$BR_LOG" && grep -q '^comments add ac-epic.2$' "$BR_LOG"; then
+  PASS=$((PASS+1)); echo "ok   receipt posted to the target AND both children, once each"
+else
+  FAIL=$((FAIL+1)); echo "FAIL fan-out posts wrong: $(tr '\n' '|' < "$BR_LOG")"; fi
+
+# a failed post is NOT-GATED: a receipt-less child is the failure this fan-out removes
+S7C="$W/s7c"; mk_set a "$W/p7c.md"; PRE=$(sha "$W/p7c.md")
+mk_set b "$W/p7c.md"
+BR_LOG="$W/br-fail.log"; : > "$BR_LOG"
+"$SCRIPT" --mode bead --target ac-epic --state "$S7C" --artifact "$W/p7c.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+BR_FAIL=1; export BR_FAIL
+expect "a failed receipt post -> NOT-GATED"    2 "NOT-GATED receipt post failed for ac-epic" -- --mode bead --target ac-epic --state "$S7C" --artifact "$W/p7c.md" --round 2 --pre "$(sha "$W/p7c.md")"
+unset BR_FAIL
+PATH="$OLD_PATH"; export PATH
+
 # --- 8. the engine SPAWNS NOTHING ---------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid|amp|cursor-agent)[[:space:]]|subagent|[Tt]ask\(|--dangerously' "$SCRIPT" >/dev/null 2>&1; then
   FAIL=$((FAIL+1)); echo "FAIL the engine invokes an agent — it must measure and gate, nothing else"

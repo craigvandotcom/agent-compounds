@@ -11,7 +11,7 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | **ARTIFACT** | the epic's bead set exported to one file by `scripts/bead-artifact.py export` |
 | **CHECKLIST** | `references/bead-checklist.md` |
 | **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact |
-| **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment |
+| **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment to EVERY bead in the artifact, not only the epic — no hand fan-out |
 
 ## Run PER-EPIC, never per-bead
 
@@ -26,6 +26,8 @@ ends. A mid-run writeback changes what the next round's reader sees, and the rou
 measures churn instead of defects.
 
 Land it with `scripts/bead-artifact.py writeback --apply` AFTER the verdict, in one pass.
+Writeback also wires every `## Consumes` line to its dependency edge — additive only, never a
+removal — and reports on one `EDGES` line any edge that has no Consumes line.
 The script refuses when `br` cannot resolve a board from the CWD, and never writes `refined`
 or `unrefined` — those belong to `stamp-refined.sh` alone.
 
