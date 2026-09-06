@@ -1,8 +1,8 @@
 ---
 skill: ac-polish
 created: 2026-09-02
-last_pass: 2026-09-05
-entries: 18
+last_pass: 2026-09-06
+entries: 19
 ---
 
 # ac-polish — friction log
@@ -111,10 +111,10 @@ entries: 18
 - impact: M
 - frequency: frequent
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-09-03
-- last_seen: 2026-09-03
+- last_seen: 2026-09-06
 - stage: manual
 - status: open
 - proposed_fix: replace the strict markdown-table cell parse with a per-cell labelled block
@@ -124,6 +124,12 @@ entries: 18
   what-breaks-silently columns into one cell, or left a regex pipe unescaped in a DECLINED
   row. Each failure cost a resume-repair round-trip to the still-running subagent. The
   "count the pipes" instruction in the reader prompt is not sufficient.
+- recurrence-note (2026-09-06, art-still SessionPhase seams run): 4 NOT-GATED merges across
+  8 rounds / 24 readers — an invalid compound stage (`store/update`), a `controller` token
+  from the flow lens in an object row, and twice an unescaped `|` from an `rg` alternation
+  in a found-by cell. Every one was a formatting fault, none a finding fault; each cost a
+  reader resume plus a re-merge. Telling readers up front to split alternations into two
+  commands joined by ` · ` eliminated it for the remaining rounds.
 
 ## seams-mode-no-convergence-on-domain-sized-target
 - skills: [ac-polish]
@@ -199,10 +205,10 @@ entries: 18
 - impact: H
 - frequency: rare
 - perceptibility: silent
-- recurrence: 1
+- recurrence: 2
 - related: [seams-merge-replaced-mid-run]
 - first_seen: 2026-09-04
-- last_seen: 2026-09-04
+- last_seen: 2026-09-06
 - stage: manual
 - status: open
 - proposed_fix: `polish-fixpoint.sh --mode seams` should refuse (NOT-GATED) when
@@ -215,6 +221,13 @@ entries: 18
   The stamp (3 frontmatter keys, round-5.sha, receipt.txt) was reverted by hand and the
   digest verified equal to round-4.sha before the round was re-run. The gate cannot tell a
   clean round from a round that never happened.
+- recurrence-note (2026-09-06, art-still SessionPhase seams run): identical mechanism, this
+  time round 4 — `seams-merge.py round` exited NOT-GATED (a flow reader emitted an 8-cell MAP
+  row from an unescaped `|` in an rg alternation), the artifact did not change, and a
+  merge-then-gate chain in ONE bash invocation stamped round 4 against the unchanged
+  artifact. Reverted by hand: 3 frontmatter keys, round-4.sha and receipt.txt removed, and
+  the digest verified equal to round-3.sha before re-running. Confirms the proposed fix —
+  the ledger is the only honest witness that a round happened.
 
 ## seams-reader-stance-cannot-write-report
 - skills: [ac-polish]
@@ -363,10 +376,10 @@ entries: 18
 - impact: M
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 1
+- recurrence: 2
 - related: [bead-mode-receipt-lands-on-epic-stamper-reads-children]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-05
+- last_seen: 2026-09-06
 - stage: manual
 - status: open
 - proposed_fix: bead-checklist.md § 3 should state that a `## Delivers` bullet naming an
@@ -381,16 +394,22 @@ entries: 18
   one for `[unowned-touchers]`. The readers had seen the gap and declined under the severity
   gate; the stamp gate treats the same gap as fatal. A clean fixpoint that loses a third of
   its refined stamps at landing is the checklist and the gate disagreeing, not the beads.
+- recurrence-note (2026-09-06, art-still session-lifecycle epic): round-1 bead reader saw the
+  missing `touchers:` lines and DECLINED them as "a schema-conformance gap, not a
+  correctness/contradiction/unimplementability defect" — the exact wording the proposed fix
+  predicts. stamp-refined.sh then refused 5 of 6 beads for [unowned-touchers]. The
+  orchestrator had to end the loop, add the lines out-of-band, and restart on a frozen
+  artifact. Second independent occurrence; the checklist wording is still unchanged.
 
 ## stamp-refined-reads-clause-paths-as-delivers-obligations
 - skills: [ac-polish, beads-standards]
 - impact: M
 - frequency: every-run
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: [severity-gate-declines-touchers-that-stamp-refined-refuses]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-05
+- last_seen: 2026-09-06
 - stage: manual
 - status: open
 - proposed_fix: in stamp-refined.sh's TOUCHERS LEG, derive obligations from the `## Delivers`
@@ -407,4 +426,36 @@ entries: 18
   authors produced 16 and 7 such tokens; first landing refused 9 of 12 beads in one group
   for exactly this; rewriting the clauses to basenames made all 12 stamp. A touchers line
   whose only path mention is inside its own command cannot bind either.
+- recurrence-note (2026-09-06, art-still session-lifecycle epic): reproduced exactly —
+  out-of-scope clauses naming referrer paths created fresh obligations and stole bindings;
+  bead .3 was refused for a path that appeared only inside another bullet's clause.
+  Rewriting every clause to path-free prose ("the Capacitor plugin web stub", "a dev-route
+  sim screen") made all 6 beads stamp. Confirms the basename guidance in the proposed fix.
 
+## touchers-rg-without-path-reads-stdin-and-reproduces-zero
+- skills: [ac-polish, beads-standards]
+- impact: H
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [severity-gate-declines-touchers-that-stamp-refined-refuses, stamp-refined-reads-clause-paths-as-delivers-obligations]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: manual
+- status: open
+- proposed_fix: stamp-refined.sh should run the touchers command with stdin closed
+  (`bash -c "$tcmd" </dev/null`) so the failure mode cannot occur, and bead-create-contract.md
+  § Touchers must show the canonical command WITH an explicit search path
+  (`rg -l -F '<stem>' . -g '!<rel>' …`). A refusal that says "reproduces 0 now" should also
+  hint that a path-less rg reads stdin. Add a test case to stamp-refined-fixpoint.test.sh.
+- narrative: stamp-refined.sh executes the declared touchers command inside a
+  `while IFS= read -r art … done <<EOF` loop, so the spawned `bash -c` INHERITS the heredoc as
+  stdin. `rg` with no path argument and a non-tty stdin searches STDIN, not the tree — so a
+  correctly-derived command reproduced 0 and every bead was refused for a "stale toucher list"
+  that was not stale. The same command run by hand returned the declared count, which makes the
+  refusal actively misleading: the author verifies the count, sees it match, and cannot explain
+  the gate. Cost three debug cycles on the art-still session-lifecycle epic before a `bash -x`
+  trace showed the command was identical and only the environment differed; adding an explicit
+  `.` search path made all 6 beads stamp unchanged. Counts also DIFFER rather than merely
+  dropping to zero (4 under `</dev/null`, 0 under the heredoc, 2 correct), so a path-less
+  command can also reproduce a WRONG non-zero count and stamp a false toucher list.
