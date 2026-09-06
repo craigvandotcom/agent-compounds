@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-06
-entries: 19
+entries: 23
 ---
 
 # ac-polish — friction log
@@ -40,10 +40,10 @@ entries: 19
 - impact: L
 - frequency: every-run
 - perceptibility: loud
-- recurrence: 3
+- recurrence: 4
 - related: []
 - first_seen: 2026-09-02
-- last_seen: 2026-09-05
+- last_seen: 2026-09-06
 - stage: manual
 - status: open
 - proposed_fix: in bead mode, polish-fixpoint.sh fans the receipt comment out to every
@@ -54,6 +54,9 @@ entries: 19
   --target epic only. stamp-refined.sh reads the receipt from each family-origin bead's own
   comments, so the writeback's restamp sweep refused all 15 children of a stamped epic with
   "no conforming fixpoint receipt". The two tools disagree on where the receipt lives.
+  Re-observed 2026-09-06: worked around by a land step that posts the receipt file to every
+  non-target bead in the artifact before `writeback --apply`. Still a manual step outside the
+  script; a receipt-less child would be refused silently as before.
 
 ## seams-report-path-contaminates-every-reader
 - skills: [ac-polish]
@@ -354,10 +357,10 @@ entries: 19
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-09-05
-- last_seen: 2026-09-05
+- last_seen: 2026-09-06
 - stage: manual
 - status: open
 - proposed_fix: make `skills/_tools/element4-check.sh --file` safe under concurrent
@@ -370,13 +373,18 @@ entries: 19
   bd-2rb1w flickered). Every serial re-run of the same file was GREEN three times over. A
   false RED refuses to record a clean round, so the loop stalls on a gate that measured
   nothing.
+  Re-observed 2026-09-06 under concurrent WRITES rather than readers: five repair agents plus
+  the writeback sweep hit `br show --json` returning unparseable output, one
+  `jq: Cannot index object with number`, one `WAL file is corrupt`, and one restamp-sweep
+  entry `bead 'bd-3i3sd' did not resolve via br show --json` on a bead that existed. Every
+  case cleared on a 1-2 s retry. The root is br's SQLite under contention, not element4.
 
 ## severity-gate-declines-touchers-that-stamp-refined-refuses
 - skills: [ac-polish, beads-standards]
 - impact: M
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 2
+- recurrence: 3
 - related: [bead-mode-receipt-lands-on-epic-stamper-reads-children]
 - first_seen: 2026-09-05
 - last_seen: 2026-09-06
@@ -400,13 +408,18 @@ entries: 19
   predicts. stamp-refined.sh then refused 5 of 6 beads for [unowned-touchers]. The
   orchestrator had to end the loop, add the lines out-of-band, and restart on a frozen
   artifact. Second independent occurrence; the checklist wording is still unchanged.
+  Re-observed 2026-09-06 (BCA, 7 batches / 57 beads, all STAMPED at rounds 2-4): the restamp
+  sweep DOWNGRADED 17 previously-refined beads and REFUSED 14 more for touchers, 31 of 48
+  implementable beads. Six repair agents and ~90 minutes to re-derive counts the loop never
+  measured. Same shape as before; the reader checklist §3 names touchers, the readers decline
+  them, VALIDATE never runs stamp-refined's derivation.
 
 ## stamp-refined-reads-clause-paths-as-delivers-obligations
 - skills: [ac-polish, beads-standards]
 - impact: M
 - frequency: every-run
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: [severity-gate-declines-touchers-that-stamp-refined-refuses]
 - first_seen: 2026-09-05
 - last_seen: 2026-09-06
@@ -431,6 +444,10 @@ entries: 19
   bead .3 was refused for a path that appeared only inside another bullet's clause.
   Rewriting every clause to path-free prose ("the Capacitor plugin web stub", "a dev-route
   sim screen") made all 6 beads stamp. Confirms the basename guidance in the proposed fix.
+  Re-observed 2026-09-06: two repair agents wrote an incidental referrer path with an
+  extension inside the out-of-scope clause and were refused for an undeclared artifact; both
+  fixed it by naming the file without a slash. The gotcha now has to be pre-warned in every
+  repair prompt.
 
 ## touchers-rg-without-path-reads-stdin-and-reproduces-zero
 - skills: [ac-polish, beads-standards]
@@ -459,3 +476,93 @@ entries: 19
   `.` search path made all 6 beads stamp unchanged. Counts also DIFFER rather than merely
   dropping to zero (4 under `</dev/null`, 0 under the heredoc, 2 correct), so a path-less
   command can also reproduce a WRONG non-zero count and stamp a false toucher list.
+
+## reader-declines-missing-ac-section-as-lifecycle-stage
+- skills: [ac-polish, ac-beadify]
+- impact: H
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [severity-gate-declines-touchers-that-stamp-refined-refuses]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: manual
+- status: open
+- proposed_fix: bead-checklist.md §2 states in one line that an implementable bead (task/bug/
+  feature/epic) with no probe-bearing `## Acceptance Criteria` IS class (c) unimplementability
+  regardless of the `unrefined` label, and that the reader must run `element4-check.sh` and
+  treat its FAIL as the finding. The reader prompt's DECLINED branch cannot carry an
+  element4 FAIL.
+- narrative: bead mode over 41 unrefined beads on 2026-09-06, seven artifacts, seven fresh
+  round-1 readers. Every reader declined the beads with no `## Acceptance Criteria` (16 of
+  them) with the same reasoning: "labelled unrefined, pre-refine stage, grading against the
+  probe shape would manufacture a finding". VALIDATE was therefore red after round 1 in all
+  seven batches and the orchestrator had to run a separate schema fix pass per batch (seven
+  implementer spawns) before a single round could be recorded. The checklist says "No probe,
+  no bead" but also says a finding against a bead element4 PASSes is a finding against the
+  file; readers read the second clause as licence and never ran element4 at all (3 of 7 did
+  not invoke it). Zero of seven readers converted a raw finding into an AC.
+
+## bounce-comments-invisible-to-bead-reader
+- skills: [ac-polish, ac-implement]
+- impact: M
+- frequency: per-bounce
+- perceptibility: silent
+- recurrence: 1
+- related: [reader-declines-missing-ac-section-as-lifecycle-stage]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: manual
+- status: open
+- proposed_fix: `bead-artifact.py export` appends, under each bead body, any comment whose
+  first line starts with `spec-contradiction`, `PREMISE-FAILED` or `COHERENCE` as a fenced
+  `<!-- BOUNCE -->` block that writeback strips; the reader then grades the body against
+  the worker's stated defects.
+- narrative: bd-dtpqg.24 and bd-epic-compound-check-n0lug.2 were bounced by workers with
+  detailed spec-contradiction comments (five concrete defects on one, a traced false AC on
+  the other) and re-labelled `unrefined`. The artifact exports descriptions only, so the
+  round-1 readers saw a refined-looking body, found one or two smaller defects, and declined
+  the rest. The orchestrator had to read the comments itself and feed them to a fix pass.
+  A bounce is the highest-quality finding the pipeline produces and the polish loop cannot
+  see it.
+
+## investigation-unstampable-without-probe-line
+- skills: [ac-polish, beads-standards]
+- impact: L
+- frequency: per-investigation
+- perceptibility: misleading
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: manual
+- status: open
+- proposed_fix: decide once in beads-standards: either an investigation is exempt from the
+  `Probe:` requirement in stamp-refined.sh (as element4 already exempts it) and stamps on a
+  receipt alone, or beadify/capture must author a probe for an investigation's deliverable
+  (the finding comment exists, the follow-up bead exists). Today the two gates disagree.
+- narrative: four investigation beads (bd-g45t0, bd-lts1s, bd-omxxf, bd-7snt7) were polished
+  to fixpoint (bd-7snt7 for the second time, 8 rounds previously) and refused by
+  stamp-refined.sh with "description carries no executable 'Probe:' line". element4-check.sh
+  SKIPs the type; the stamp writer does not. They stay `unrefined` forever with receipts on
+  them, so the unrefined list carries beads no refine pass can clear.
+
+## restamp-sweep-skips-epics-so-unrefined-never-clears
+- skills: [ac-polish, ac-beadify, beads-standards]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [bead-mode-receipt-lands-on-epic-stamper-reads-children]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: planned
+- status: open
+- proposed_fix: _plans/2026-09-06-1458-epic-is-the-last-bead.md (draft) — the sweep stops
+  skipping epics, `refined` on an epic means its done-check is executable, children block
+  the epic, the worker closes it on green probes.
+- narrative: eleven open BCA epics carried `unrefined` on 2026-09-06 because the creation
+  label is never stripped from an epic: element4 exempts the type, the restamp sweep skips
+  it, and nothing else writes lifecycle labels. Calling stamp-refined.sh on the epics by hand
+  stamped nine of them with no code change; the script accepts epics, only the wrappers
+  refuse. The label was pure residue and made the unrefined list unreadable.
