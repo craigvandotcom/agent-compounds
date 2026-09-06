@@ -118,7 +118,7 @@ className = 'transition-[transform,opacity]';
 
 ```tsx
 // Prevent widows in headings
-<h1 className="text-wrap-balance">
+<h1 className="text-balance">
   Welcome to Our Platform
 </h1>
 
