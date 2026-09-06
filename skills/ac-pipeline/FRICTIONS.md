@@ -1,8 +1,8 @@
 ---
 skill: ac-pipeline
 created: 2026-08-27
-last_pass: 2026-08-30
-entries: 17
+last_pass: 2026-09-06
+entries: 28
 ---
 
 # ac-pipeline — friction log
@@ -395,3 +395,179 @@ entries: 17
   waste is in re-derivation, not in the routing. Distinct from the zero-probe-line class: these
   beads HAD probes; their premises were false or their declarations wrong, and no worker could
   see a sibling had already ruled the bead unworkable.
+
+## claim-is-not-exclusive
+- skills: [ac2-implement]
+- impact: L
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [swarm-burned-list-does-not-span-siblings, swarm-commit-stages-whole-files-and-folds-sibling-hunks]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — four actors claimed bd-toqoa.3 within seconds and none was refused (former bead bd-0tcba, closed to this ledger 2026-09-06); a sibling's flight-check then stamped PREMISE-FAILED on the finished bead
+- proposed_fix: make `br update --claim` compare-and-set on assignee (refuse when non-empty and not self), and have the PICK query treat any in_progress row as taken regardless of what the claim returned
+- narrative: worker.md says the br claim and flock are the only real exclusion. Half of that is false: the claim is a plain write, so concurrent claimants all succeed and the board shows the last writer. What prevented a collision was three siblings independently noticing uncommitted files in the shared tree and declining. That is a culture, not a control, and it failed once anyway (a false PREMISE-FAILED on finished work).
+
+## vitest-affected-inverts-file-scoped-probes-after-commit
+- skills: [ac2-implement, ac-beadify]
+- impact: L
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [freshly-authored-acs-are-green-at-authoring-and-the-author-cannot-see-it]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — every worker (22 of 22) hit `No test files found, exiting with code 1` on a `pnpm vitest run <file>` AC probe after its own commit, and closed only with VITEST_AFFECTED_DISABLED=1 (former beads bd-5525n, bd-pdnsm, closed to this ledger 2026-09-06)
+- proposed_fix: ac-beadify emits `pnpm test:one <file>` for every file-scoped probe; close-gate exports VITEST_AFFECTED_DISABLED=1 for the GREEN leg; flight-check refuses a bare `pnpm vitest run <file>` probe at refine time
+- narrative: the repo's vitest wrapper narrows the include list to files changed against `main`. On trunk-direct, a worker's commit empties that diff, so the bead's own test leaves the affected set and the probe runs zero files and exits 1. Green before the commit, red after, with no code change. Worse, the affected set is built from the shared working tree, so a sibling's uncommitted edits decide which files a probe runs — a close-gate verdict a sibling can set.
+
+## diff-closure-measures-the-shared-worktree
+- skills: [ac2-implement]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — refusals of 213, 305, 312 and 313 phantom undeclared callers on beads whose own diffs touched none of the named symbols; a column drop produced 312 matches on the bare column name (former beads bd-an2ij, bd-x59em, closed to this ledger 2026-09-06)
+- proposed_fix: scope the symbol set to the bead's own diff (`git diff HEAD -- <Delivers paths>` or a per-bead worktree), default `--base HEAD` when origin/main is unreachable or behind, and extract identifiers only from export declarations, never bare column names
+- narrative: the leg diffs the whole working tree against merge-base(origin/main, HEAD). At width>1 that is every sibling's uncommitted work, and while pushes are rejected the merge-base is dozens of commits stale. Workers got real verdicts only by replaying their diff alone in a scratch worktree. Unlike lint.sh this leg BLOCKS, so the shared tree changed routing, not just advice.
+
+## swarm-commit-lane-holds-lock-through-push
+- skills: [ac2-implement]
+- impact: L
+- frequency: every-run
+- perceptibility: loud
+- recurrence: 1
+- related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — 11 queued writers measured behind one push; 5 to 10 minutes per commit; the pre-push journeys sign into production Supabase and rate-limited (green, red, green on one unchanged commit); concurrent `next build` rejected siblings' pushes outright (former bead bd-swarm-commit-build-lock-contention-ehe70, closed to this ledger 2026-09-06)
+- proposed_fix: release the flock after the local commit and push once per batch from the coordinator, or push without the journey hook from the lane and run journeys once at the boundary
+- narrative: the lane's flock protects the index, which is right, but it stays held through `git push`, and the pre-push hook runs a full Next build plus the journey e2e. Every writer therefore serialises behind one worker's CI. Gate-wait dominated work time for the whole run, and the boundary's authoritative journey run competed with 22 in-lane ones against the same production auth.
+
+## swarm-commit-cannot-commit-a-deletion
+- skills: [ac2-implement]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 2
+- related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — `git add` on an already-staged removal exited 128 for two workers; both recovered with `git reset HEAD -- <path>` then re-adding (former bead bd-m88c4, closed to this ledger 2026-09-06)
+- proposed_fix: use `git add -A -- <path>` for named paths so removals stage, and cover a deletion case in swarm-commit.test.sh
+- narrative: a bead that deletes a file (four Phase-A seed scripts, the users.email column's dead RPCs) cannot ship through the lane as written. The workaround is safe but undocumented and each worker rediscovered it.
+
+## close-evidence-check-drops-the-br-cmd-seam
+- skills: [ac2-implement]
+- impact: S
+- frequency: rare
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-05
+- last_seen: 2026-09-05
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — close-evidence-check.sh:63 calls bare `br`, ignoring the AC2_BR_CMD seam close-gate.sh:296 explicitly passes; six legs read one board, LEG 7 another; the harness PATH-shims a mock br, which is why nothing caught it (former bead bd-edw72, closed to this ledger 2026-09-06)
+- proposed_fix: honour `${AC2_BR_CMD:-br}` in close-evidence-check.sh and add a harness case that sets the seam to a stub and asserts LEG 7 read it
+- narrative: a seam declared by the caller and dropped by the callee is an unproven seam. It bit only when a worker needed a br wrapper on PATH to close a cross-repo bead.
+
+## scanner-leg-has-no-baseline
+- skills: [ac2-implement]
+- impact: M
+- frequency: frequent
+- perceptibility: loud
+- recurrence: 3
+- related: [close-gate-scanner-leg-has-no-prose-instrument]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — three beads (utg43.3, n0lug.4, and the five ops scripts of bd-y1u0u) refused on SCANNER because ubs already exited 1 on the file at the pre-change commit with the same finding count; two of them sit blocked with work committed (former bead bd-y1u0u, closed to this ledger 2026-09-06)
+- proposed_fix: SCANNER asserts no NEW findings against the base commit (run ubs on base and head, diff the located findings), never an absolute clean scan
+- narrative: any bead editing part of a large legacy file inherits that file's whole ubs baseline and can never close. The leg measures the file, not the change.
+
+## ops-scripts-do-not-load-env-local
+- skills: [ac-triage]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 2
+- related: []
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-triage
+- status: open
+- control: untreated
+- receipt: BCA — fetch-source.sh reported COULD-NOT-CHECK on a valid SENTRY_AUTH_TOKEN because the value was present but not exported; seven real Sentry findings sat behind it; check-cron-liveness.ts exits could-not-check the same way with no dotenv load while its sibling script loads .env.local (former beads bd-xdak4, bd-tn614, closed to this ledger 2026-09-06)
+- proposed_fix: one shared env loader for scripts/triage and scripts/ci (load .env.local, then require the named keys and fail loudly naming the missing one)
+- narrative: a credential that was never at fault read as a broken credential for a day. Two scripts, two different loading conventions, same silent outcome.
+
+## db-verify-exits-on-container-restart-502
+- skills: [ac2-implement]
+- impact: S
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — `pnpm db:verify` exits 1 on a 502 while the local Supabase container restarts after a migration applies, refusing a close whose migration had just applied cleanly (former bead bd-db-verify-container-restart-502-j3ltu, closed to this ledger 2026-09-06)
+- proposed_fix: retry the verify probe with backoff for up to 30 s on 502/503 before failing
+- narrative: the probe measures container readiness, not the migration.
+
+## migration-replay-mid-suite-downgrades-functions
+- skills: [ac2-implement]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — an integration suite replayed a superseded migration mid-run and downgraded live function definitions for every later test in the same DB (former bead bd-migration-replay-downgrades-head-sxes3, closed to this ledger 2026-09-06)
+- proposed_fix: integration suites apply migrations only through the full ordered chain (db reset), never by replaying a named file
+- narrative: a suite that replays one migration file asserts against a database no production path can produce.
+
+## worker-scratch-paths-shared-across-siblings
+- skills: [ac2-implement]
+- impact: L
+- frequency: frequent
+- perceptibility: silent
+- recurrence: 2
+- related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
+- first_seen: 2026-09-05
+- last_seen: 2026-09-06
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Never beaded; recorded from the run report.
+- proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
+- narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history.
