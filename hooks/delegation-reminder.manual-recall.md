@@ -50,16 +50,22 @@ person talking plainly to another (operator voice only — never audience conten
 
 ## Delegation — the three stances
 
-Delegate non-trivial work to a subagent by stance (all defined in `.claude/agents/`):
+Delegate non-trivial work to a subagent by stance (all defined in `.claude/agents/`,
+each with a semantic `tier:` resolved per harness from `harnesses.json agent_models`):
 
-| Stance | Use for | Never for |
-|--------|---------|-----------|
-| **researcher** | read-only investigation (brain → code → web), returns cited summary | making changes |
-| **implementer** | scoped execution of an approved plan/spec | planning, verification |
-| **validator** | adversarial review/audit against rubrics & tests | fixing what it finds |
+| Stance | Tier | Use for | Never for |
+|--------|------|---------|-----------|
+| **researcher** | coordinator | read-only investigation (brain → code → web), returns cited summary | making changes |
+| **implementer** | worker | scoped execution of an approved plan/spec | planning, verification |
+| **validator** | coordinator | adversarial review/audit against rubrics & tests | fixing what it finds |
+
+**Tier economics:** implementer is the worker tier — cheap, parallelize mechanical
+work. Researcher and validator are the coordinator tier — spend them on judgment,
+not greps. The orchestrator tier is you (the harness default): hold decisions and
+returned summaries, never file contents.
 
 **Context principle:** "If I only need OUTPUT, delegate. If I need to SEE THE WORK,
-execute directly." The orchestrator holds decisions; subagents hold file contents.
+execute directly."
 
 ---
 
