@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-06
-entries: 28
+entries: 29
 ---
 
 # ac-pipeline — friction log
@@ -571,3 +571,19 @@ entries: 28
 - receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Never beaded; recorded from the run report.
 - proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
 - narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history.
+
+## review-range-derived-from-the-rebase-point-not-the-pushed-history
+- skills: [ac-review, ac2-implement]
+- impact: L
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [swarm-commit-lane-holds-lock-through-push]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-06
+- stage: ac-review
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260905-2134 — early worker pushes succeeded, later ones were rejected, and a nightly plus a dependabot commit landed on origin between them; the coordinator reviewed only the 61 rebased commits, missed the 13 pushed earlier, and two causal-sufficiency passes skipped 30 beads believing their commits were outside the range; a second review round over the early span was needed
+- proposed_fix: coordinator.sh emits the review range as every contiguous span of this run's commits between the recorded start hash and HEAD, excluding foreign commits, and the report refuses to be written without one Range line per span
+- narrative: the batch is not one span once any push succeeds mid-run. Deriving the range from the rebase point silently drops everything that reached origin before the hook broke, and causal reviewers then test pre-rebase hashes that no longer exist on trunk.
