@@ -40,23 +40,21 @@ entries: 23
 - impact: L
 - frequency: every-run
 - perceptibility: loud
-- recurrence: 4
+- recurrence: 5
 - related: []
 - first_seen: 2026-09-02
 - last_seen: 2026-09-06
 - stage: manual
-- status: open
-- proposed_fix: in bead mode, polish-fixpoint.sh fans the receipt comment out to every
-  `<!-- BEAD:id -->` in the artifact, not only to --target; add the case to
-  polish-fixpoint.test.sh. Until then the orchestrator copies `<STATE>/receipt.txt` to each
-  child with `br comments add <id> -f` before the restamp sweep.
+- status: resolved
+- proposed_fix: shipped — 2026-09-06, polish-fixpoint.sh bead mode posts the receipt to --target and to every `<!-- BEAD:id -->` in the artifact (NOT-GATED on any failed post); case added to polish-fixpoint.test.sh. Same session: bead-artifact.py writeback now wires every `## Consumes` line to its edge (additive) and reports edges without a line — the second manual land step this entry hid.
 - narrative: bead mode runs per-epic and the gate writes its POLISH-FIXPOINT receipt to the
   --target epic only. stamp-refined.sh reads the receipt from each family-origin bead's own
   comments, so the writeback's restamp sweep refused all 15 children of a stamped epic with
   "no conforming fixpoint receipt". The two tools disagree on where the receipt lives.
   Re-observed 2026-09-06: worked around by a land step that posts the receipt file to every
   non-target bead in the artifact before `writeback --apply`. Still a manual step outside the
-  script; a receipt-less child would be refused silently as before.
+  script; a receipt-less child would be refused silently as before. Re-observed 2026-09-06
+  (epic ac-wp8i, 13 children refused on first sweep; same fan-out workaround).
 
 ## seams-report-path-contaminates-every-reader
 - skills: [ac-polish]
@@ -151,7 +149,7 @@ entries: 23
   domain-sized target (an orchestrator + an RPC + three caches + their tests), new
   "unasserted" rows kept arriving every round (new-per-round: 3,3,2,3,1,1,1,3,3,2), so the
   gate never fired and the orchestrator had to stop by judgment at round 10.
-- recurrence_2 (2026-09-05, `canonical_ingredients.slug`, aim row 1, score 2234): new edges per
+- recurrence_2 (2026-09-05, `<app-table>.slug`, aim row 1, score 2234): new edges per
   round 97 · 55 · 43 · 58 — non-monotonic at round 4, stopped by judgment, 253 edges, 13
   cross-lens. The target WAS one column; the datum is a slug string copied into eight other
   columns across six tables (`ingredient_aliases.alias_slug`, `families.slug`,
@@ -306,7 +304,7 @@ entries: 23
   round line into `new_paths=` (a file no lens had) and `new_rows=` (a known file, new key), and
   let the fixpoint read `new_paths` — or key boundary on `interface × role-word × path` where
   role-word is the first token (producer · consumer · caller · callee · db · ts).
-- narrative: at round 3 of the `canonical_ingredients.slug` run, 18 of 78 boundary rows were
+- narrative: at round 3 of the `<app-table>.slug` run, 18 of 78 boundary rows were
   the same (interface, path) with different side text — `canonical-writer.ts` alone carried six
   B1 rows. Real growth was still present (57 distinct paths), so the loop's verdict was right,
   but a quarter of the convergence signal was wording.
@@ -327,7 +325,7 @@ entries: 23
   column-plus-mint before any reader runs; `aim.sh` could print the warning itself. Better: an
   `aim.sh` kind `namespace` that groups columns sharing a value shape and CHECK regex.
 - narrative: `foods.status` (score 712, 293 touchers) stamped in 2 rounds on 2026-09-04;
-  `canonical_ingredients.slug` (score 2234, 336 touchers, 133 writers) did not converge in 4
+  `<app-table>.slug` (score 2234, 336 touchers, 133 writers) did not converge in 4
   rounds and cost ~12 opus readers. The score was three times the largest thing that had ever
   stamped, and nothing in the workflow read that as a warning.
 
@@ -346,7 +344,7 @@ entries: 23
   never a row whose path cell says `(absent)`" and "never abbreviate a path (`…`); the path cell
   is parsed" — and have `seams-merge.py` name the offending cell text on NOT-GATED so the fix is
   a one-line resume, not a re-read of the report.
-- narrative: round 1 of the `canonical_ingredients.slug` run NOT-GATED three times in a row:
+- narrative: round 1 of the `<app-table>.slug` run NOT-GATED three times in a row:
   a root file (`middleware.ts:32`), two object rows with `(absent)` as the path (the reader
   encoded the hole finding as a row), and three rows with a migration name shortened to
   `20260809220000_…`. Each was fixed by hand in the report outside the repo; the orchestrator
@@ -357,16 +355,17 @@ entries: 23
 - impact: M
 - frequency: every-run
 - perceptibility: misleading
-- recurrence: 2
+- recurrence: 3
 - related: []
 - first_seen: 2026-09-05
 - last_seen: 2026-09-06
 - stage: manual
 - status: open
-- proposed_fix: make `skills/_tools/element4-check.sh --file` safe under concurrent
-  invocation (unique temp paths, no shared scratch); add a parallel-invocation case to its
-  test. Until then the orchestrator runs VALIDATE strictly serially and confirms any RED
-  three times before trusting it.
+- proposed_fix: PARTIAL, 2026-09-06 — the object-shape symptom is closed: stamp-refined.sh and
+  element4-check.sh normalise `br show --json` to an array at read (case in
+  stamp-refined-fixpoint.test.sh). Still open: empty or unparseable output under SQLite
+  contention is read as "did not resolve" (NOT-GATED) — add one 1-2 s retry on empty output in
+  both readers, with a test; the WAL-corrupt case is br's to fix.
 - narrative: with 19 readers in flight (each running element4-check itself) the orchestrator's
   VALIDATE step over a frozen artifact returned different failing beads on successive runs
   (bd-0qske RED then GREEN; bd-69dwp.3/.8 "no AC section" then GREEN; bd-1538r, bd-3bcad,
