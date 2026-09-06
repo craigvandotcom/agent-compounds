@@ -12,11 +12,9 @@ the flow map is the control structure (time and sensing); the boundary map is th
 A trace has a subject, not an area. The orchestrator resolves the area to the heaviest OBJECT
 (touching files × layers) before any reader runs; the object's edges in time order are its
 FLOWS; the interfaces those edges cross are its BOUNDARIES. All three lenses aim at the one
-target. Follow the object's DATA, never the import graph; exclude prose paths. The three
-frontmatter lines of the artifact are the FENCE the merge enforces — object rows by the file
-naming the object, flow and boundary rows by the declared name — and a copy of the value in
-another store is one boundary row, never a second object: the fence is what makes the edge
-count finite and the fixpoint reachable.
+target. Follow the object's DATA, never the import graph, and stop at the artifact's fence: a
+copy of the value in another store is one boundary row, never a second object. Exclude prose
+paths.
 
 ## object — the datum, seven stages
 

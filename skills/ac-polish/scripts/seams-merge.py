@@ -17,15 +17,11 @@ The flow map's steps and sensors are emitted at hand-off as the acceptance JOURN
 ships with the scenario that proves its fix. Reader diagnoses (judgement) merge on the paths
 they cite and are ordered by reader count — salience, never a gate.
 
-THE FENCE. The artifact's frontmatter names the target once, one line per lens — `object:`
-(table.column · symbols · files), `flows:`, `boundaries:` — as ` · `-separated terms, and every
-round is merged against it: an object row counts only if its file names a term as a whole word
-(`table.column` needs both, the rule aim.sh counts touchers by); a flow or boundary row counts
-only if its name shares a word with a declared one. The far side of a boundary is never fenced.
-Rows outside are dropped with the reason, listed under the round line, and never count as new
-edges — so a value copied into another store cannot turn a column into a domain. A fence line
-still holding a template placeholder is NOT-GATED; a frontmatter without the keys is unfenced,
-and the round line says `fence=none`.
+THE FENCE. The artifact's frontmatter lines `object:` · `flows:` · `boundaries:` bound each lens:
+an object row counts only if its file names a term as a whole word (`table.column` needs both —
+aim.sh's toucher rule); a flow or boundary row only if its name shares a word with a declared one.
+Rows outside are dropped with the reason and never count as new edges, so a value copied into
+another store cannot turn a column into a domain. A placeholder in a fence line is NOT-GATED.
 
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py — RED/GREEN over every rule above
@@ -46,8 +42,6 @@ Reader REPORT (one per reader; the file stem is the reader id):
               boundary | interface | side | path:line | producer | assumes | asserts | found-by |
               (producer: internal | user | external | tenant — classification, not a threat model)
   DIAGNOSIS:  | pattern | edges | what breaks silently | found-by |
-Round line: new_edges= (the convergence signal) · seen_again= · dropped= (no found-by reproduced)
-· fenced= (outside the frontmatter fence) · fence= (the lenses fenced, or none).
 Exit 0 ok · 2 NOT-GATED.
 """
 import argparse
@@ -70,7 +64,6 @@ DIAG_COLS = 4
 PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}")
 FENCE_KEYS = {"object": "object", "flow": "flows", "boundary": "boundaries"}
 WORD = r"[A-Za-z0-9_]"
-STOP_WORDS = {"the", "and", "for", "via", "from", "into", "then", "with"}
 
 
 def die2(msg):
@@ -225,14 +218,13 @@ def names(text, term):
 
 
 def tokens(cell):
-    return {w for w in re.findall(r"[a-z0-9_]+", cell.lower()) if len(w) >= 3 and w not in STOP_WORDS}
+    return {w for w in re.findall(r"[a-z0-9_]+", cell.lower()) if len(w) >= 3}
 
 
 def outside_fence(lens, row, fence, repo, cache):
     """None when the row is inside its lens's fence, else the reason. object: the row's file
-    names a term as a whole word (a `table.column` term needs both words; a term with `/` is a
-    path). flow · boundary: the flow or interface cell equals, or shares a word with, a declared
-    name — the far side's file is never checked."""
+    names a term as a whole word (a `table.column` term needs both). flow · boundary: the flow or
+    interface cell shares a word with a declared name — the far side's file is never checked."""
     terms = fence.get(lens)
     if terms is None:
         return None
@@ -248,16 +240,13 @@ def outside_fence(lens, row, fence, repo, cache):
         if text is None:
             return f"`{p}` is not readable under the repo"
         for t in terms:
-            if "/" in t:
-                if p == t or p.endswith("/" + t):
-                    return None
-            elif all(names(text, part) for part in t.split(".")):
+            if all(names(text, part) for part in t.split(".")):
                 return None
         return f"`{p}` names none of: " + " · ".join(terms)
     cell = row["flow"] if lens == "flow" else row["interface"]
     words = tokens(cell)
     for t in terms:
-        if slug(t) == slug(cell) or words & tokens(t):
+        if words & tokens(t):
             return None
     return f"`{cell}` shares no word with: " + " · ".join(terms)
 
@@ -538,8 +527,7 @@ def cmd_handoff(a):
             f"unsensed-steps={sum(1 for l, p, *_ in derived if p == 'step with no sensor')} "
             f"unchecked-assumptions={sum(1 for l, p, *_ in derived if p == 'assumption nothing asserts')} "
             f"untrusted-inputs={sum(1 for l, p, *_ in derived if p == 'untrusted input nothing validates')} "
-            f"holes={sum(1 for l, p, *_ in derived if p == 'hole')} edges={sum(counts.values())} readers={len(st['readers'])} rounds={st['rounds']} "
-            f"fenced={sum(1 for l in LENSES for e in st['edges'][l].values() if e['dropped'] and str(e['dropped'].get('reason', '')).startswith('outside fence'))}")
+            f"holes={sum(1 for l, p, *_ in derived if p == 'hole')} edges={sum(counts.values())} readers={len(st['readers'])} rounds={st['rounds']}")
     text = open(a.artifact, encoding="utf-8").read()
     if text.startswith("---\n"):
         head, rest = text[4:].split("\n---", 1)

@@ -14,7 +14,7 @@ and count readers · --validate drops an edge no command reproduces · the front
 an object row whose file names no term (a same-named column on another table), a flow or
 boundary row sharing no word with a declared name, is fenced with the reason and never a new
 edge; the far side of a boundary is never fenced; widening the frontmatter re-admits a row;
-a placeholder fence -> NOT-GATED; no fence keys -> fence=none; handoff counts fenced · LENS
+a placeholder fence -> NOT-GATED; no fence keys -> fence=none · LENS
 missing / unknown stage / wrong shape / no marker -> NOT-GATED, nothing written · rounds
 consecutive · no spawn, assurance block present. Exit 0 = all pass.
 """
@@ -159,7 +159,7 @@ if "stage `cleanup` has no row" not in final and "supabase foods row` — only t
 else:
     fail("derived detail", final[-1500:])
 fm = final.split("\n---", 1)[0]
-if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 untrusted-inputs=1 holes=0 edges=14 readers=3 rounds=3 fenced=0" in fm \
+if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 untrusted-inputs=1 holes=0 edges=14 readers=3 rounds=3" in fm \
    and fm.count("seams_load:") == 1 and "seams_load" in out:
     ok("handoff writes the north-star counts into the frontmatter (seams_load), once, and prints them")
 else:
@@ -222,11 +222,6 @@ if rc == 0 and "new_edges=1" in out and "fenced=3" in out and "+ [flow] alias sy
     ok("widening the frontmatter fence re-admits the row on the next round; nothing else moves")
 else:
     fail("fence widen", out)
-rc, out = run("handoff", "--state", S5, "--artifact", ART5)
-if rc == 0 and "fenced=3" in open(ART5).read().split("\n---", 1)[0]:
-    ok("handoff writes the fenced count beside the north-star counts")
-else:
-    fail("fence handoff", out)
 S6, ART6 = f"{W}/s6", f"{W}/plan6.md"
 write(ART6, f"---\nobject: <the resolved object — symbols · columns · files>\n---\n\n{MARKER}\n")
 rc, out = run("round", "--state", S6, "--artifact", ART6, "--round", "1", "--repo", REPO, f"{W}/f5/o.md")

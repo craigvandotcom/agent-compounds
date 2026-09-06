@@ -1,9 +1,9 @@
 ---
 status: findings
 target: <the area as the user gave it>
-object: <table.column · Symbol · path — every lens's anchor and the object fence: a row counts only if its file names one of these as a whole word, never the bare column name>
-flows: <flow name · flow name — the object's edges in time order and the flow fence: a row counts only if its flow shares a word with one of these>
-boundaries: <interface · interface — what the object's edges cross and the boundary fence: a row counts only if its interface shares a word with one of these; the far side's file is never fenced>
+object: <table.column · Symbol — the object fence: an object row counts only if its file names one of these as a whole word; never the bare column name>
+flows: <flow · flow — the object's edges in time order; a flow row counts only if its name shares a word with one>
+boundaries: <interface · interface — what the edges cross; a boundary row counts only if its name shares a word with one; the far side's file is never fenced>
 weight: <touching files × layers, from the resolution grep — why this object was chosen>
 aim_window: <1w | 4w | 1y | all | none>
 ---
