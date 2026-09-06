@@ -171,7 +171,8 @@ fi
 
 for id in "$@"; do
   case "$id" in --*) usage ;; esac
-  raw=$(br show --json "$id" 2>/dev/null || true)
+  # normalise: `br show --json` returns a one-element array or, under concurrent readers, a bare object
+  raw=$(br show --json "$id" 2>/dev/null | jq 'if type=="array" then . else [.] end' 2>/dev/null || true)
   arr=$(printf '%s' "$raw" | jq 'if type == "array" then . else [] end' 2>/dev/null) || arr='[]'
   [ -n "$arr" ] || arr='[]'
   if [ "$(printf '%s' "$arr" | jq 'length')" -eq 0 ]; then

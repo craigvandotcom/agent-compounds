@@ -31,6 +31,7 @@ fi
 # refuses. Fail-closed by construction.
 _STAMP_REFINED_DIR="$(cd "$(dirname "$_STAMP_REFINED_SELF")" && pwd)"
 ELEMENT4_CHECK="${ELEMENT4_CHECK:-$_STAMP_REFINED_DIR/element4-check.sh}"
+TOUCHERS_TOOL="${TOUCHERS_TOOL:-$_STAMP_REFINED_DIR/touchers.sh}"
 
 stamp_refined() {
   local id="$1" path_label="${2:-${REFINE_PATH:-refine-full}}"
@@ -48,9 +49,18 @@ stamp_refined() {
   # sight, never grandfathered" is bidirectional: on a CONTENT refusal, if the bead
   # currently holds `refined`, strip it. Only a content verdict downgrades — a cannot-check
   # result (element4 rc 2, unreadable bead) mutates nothing.
+  # SHAPE NORMALISER (2026-09-06). `br show --json` answers with a one-element ARRAY
+  # normally, but under concurrent readers it sometimes answers with the bare OBJECT.
+  # Every filter below is `.[0]`, which dies "Cannot index object with number" on that
+  # shape — and a dead filter reads as "no labels, no description", so the bead is refused
+  # for a defect the READER invented. Normalise at the single point each read enters.
+  _show_json() {
+    br show --json "$1" 2>/dev/null | jq 'if type=="array" then . else [.] end' 2>/dev/null
+  }
+
   _downgrade() {
     local id="$1" why="$2" held
-    held=$(br show --json "$id" 2>/dev/null | jq -r '[ .[0].labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null || echo 0)
+    held=$(_show_json "$id" | jq -r '[ .[0].labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null || echo 0)
     [ "${held:-0}" -gt 0 ] || return 0
     br label remove "$id" "refined" 2>/dev/null
     br label add "$id" "unrefined" 2>/dev/null
@@ -79,7 +89,7 @@ stamp_refined() {
   # (ac-hygiene, ac-triage, the manual ac-review panel's own findings) — over-catching,
   # and refusing beads this gate was never meant to gate.
   local meta family_hits receipt rounds
-  meta=$(br show --json "$id" 2>/dev/null || true)
+  meta=$(_show_json "$id" || true)
   if [ -z "$meta" ]; then
     echo "stamp_refined: REFUSED $id — could not re-read the bead to check its origin; refusing rather than guessing. No label written." >&2
     return 2
@@ -125,63 +135,43 @@ stamp_refined() {
     fi
   fi
 
-  # TOUCHERS LEG (2026-09-03): a bead that changes a file something else references must
-  # NAME those references — command-derived, count reproduced — or say why they are out of
-  # scope. Canon: beads-standards/reference/bead-create-contract.md § Touchers. The trigger
-  # is DERIVED, never declared: each path in `## Delivers` that EXISTS in the tree and is
-  # referenced by another file (rg on its last two path segments, extension dropped) owes a
-  # `touchers:` line. New files and unreferenced files owe nothing. Why here: bead-polish
-  # measured a 16.2% repair rate from hand-listed consumer sets; the slate's caller list was
-  # short by two; this very script was once archived with four live callers. A stale count
-  # is refused too — the list being stale when used IS the defect.
-  local root desc dl art rel stem refs rg_rc tline tcmd tn actual
-  root=$(git rev-parse --show-toplevel 2>/dev/null)
-  if [ -z "$root" ]; then
-    echo "stamp_refined: REFUSED $id — not inside a git repo, so touchers cannot be derived; refusing rather than guessing. No label written." >&2
+  # TOUCHERS LEG (2026-09-03; derivation extracted to skills/_tools/touchers.sh 2026-09-06):
+  # a bead that changes a file something else references must NAME those references —
+  # command-derived, count reproduced — or say why they are out of scope. Canon:
+  # beads-standards/reference/bead-create-contract.md § Touchers. The trigger is DERIVED,
+  # never declared. Why here: bead-polish measured a 16.2% repair rate from hand-listed
+  # consumer sets; the slate's caller list was short by two; this very script was once
+  # archived with four live callers. A stale count is refused too — the list being stale
+  # when used IS the defect.
+  #
+  # WHY THE LEG MOVED OUT: ac-beadify must WRITE the line the gate refuses beads for, and a
+  # second copy of the derivation would drift silently — the writer emitting exactly what
+  # the gate rejects. One home, two callers. The verdict still lands here, in the sole
+  # sanctioned writer of `refined`, where no caller can route around it.
+  local desc tdesc tout trc
+  desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
+  if [ ! -f "$TOUCHERS_TOOL" ]; then
+    echo "stamp_refined: FATAL — touchers.sh not found at '$TOUCHERS_TOOL'; refusing to stamp $id" >&2
     return 2
   fi
-  desc=$(printf '%s' "$meta" | jq -r '.[0].description // ""')
-  dl=$(printf '%s\n' "$desc" | awk '/^## Delivers/{on=1; next} /^## /{on=0} on')
-  while IFS= read -r art; do
-    [ -n "$art" ] || continue
-    rel="${art#./}"
-    [ -f "$root/$rel" ] || continue                     # a NEW artifact reshapes nothing
-    stem=$(printf '%s' "$rel" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }')
-    # rg exits 0 (matches) or 1 (none). Anything else — 127 absent, 2 bad invocation — means
-    # the count was never derived; reading that as "zero references" would stamp on a missing
-    # tool, so it is a refusal, not a zero.
-    refs=$(rg -l -F "$stem" "$root" -g "!$rel" -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' \
-             -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*' 2>/dev/null); rg_rc=$?
-    if [ "$rg_rc" -gt 1 ]; then
-      echo "stamp_refined: REFUSED $id — [unowned-touchers] rg exited $rg_rc deriving touchers for \`$rel\` (absent or broken), so the reference count is unknown; refusing rather than reading it as zero. No label written." >&2
-      return 2
-    fi
-    refs=$(printf '%s\n' "$refs" | grep -c .)
-    [ "${refs:-0}" -gt 0 ] || continue                  # nothing references it
-    # Order matters: the touchers line usually names the path too (inside its own -g glob),
-    # so test for it BEFORE the bullet-match rule, or the rule swallows it.
-    tline=$(printf '%s\n' "$dl" | awk -v a="$rel" 'f && /touchers:/{print; exit} f && /^[[:space:]]*-[[:space:]]/{exit} index($0,a){f=1; next}')
-    if [ -z "$tline" ]; then
-      echo "stamp_refined: REFUSED $id — [unowned-touchers] \`$rel\` exists and is referenced by $refs file(s) (rg -l -F '$stem'), but its ## Delivers entry carries no 'touchers:' line. Add beneath the bullet: touchers: \`<command>\` → <N> · owned by: <bead ids> | out-of-scope: <reason>. No label written." >&2
-      _downgrade "$id" "unowned touchers on $rel"
-      return 1
-    fi
-    tcmd=$(printf '%s' "$tline" | sed -n 's/.*touchers:[[:space:]]*`\([^`]*\)`.*/\1/p'); tcmd=${tcmd//\\|/|}
-    tn=$(printf '%s' "$tline" | grep -oE '→[[:space:]]*[0-9]+' | head -1 | grep -oE '[0-9]+')
-    if [ -z "$tcmd" ] || [ -z "$tn" ] || ! printf '%s' "$tline" | grep -qE 'owned by:|out-of-scope:'; then
-      echo "stamp_refined: REFUSED $id — [unowned-touchers] the touchers line for \`$rel\` is malformed; expected: touchers: \`<command>\` → <N> · owned by: … | out-of-scope: …. No label written." >&2
-      _downgrade "$id" "malformed touchers line on $rel"
-      return 1
-    fi
-    actual=$( (cd "$root" && bash -c "$tcmd" 2>/dev/null) | grep -c . )
-    if [ "$actual" -ne "$tn" ]; then
-      echo "stamp_refined: REFUSED $id — [unowned-touchers] touchers for \`$rel\` declare → $tn but the command reproduces $actual now; a stale toucher list is the defect this gate exists for. Re-derive, then re-stamp. No label written." >&2
-      _downgrade "$id" "stale touchers on $rel ($tn declared, $actual now)"
-      return 1
-    fi
-  done <<EOF
-$(printf '%s\n' "$dl" | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
-EOF
+  command -v touchers_check >/dev/null 2>&1 || . "$TOUCHERS_TOOL"
+  tdesc=$(mktemp "${TMPDIR:-/tmp}/stamp-refined-desc.XXXXXX") || {
+    echo "stamp_refined: REFUSED $id — could not write a temp description for the touchers leg; refusing rather than guessing. No label written." >&2
+    return 2
+  }
+  printf '%s\n' "$desc" >"$tdesc"
+  tout=$(touchers_check "$tdesc" "$id" 2>&1); trc=$?
+  rm -f "$tdesc"
+  if [ "$trc" -eq 1 ]; then
+    printf '%s\n' "$tout" >&2
+    echo "stamp_refined: REFUSED $id — [unowned-touchers] the touchers leg refused (above). Re-derive with 'skills/_tools/touchers.sh derive <path>', then re-stamp. No label written." >&2
+    _downgrade "$id" "unowned, malformed or stale touchers"
+    return 1
+  elif [ "$trc" -ne 0 ]; then
+    printf '%s\n' "$tout" >&2
+    echo "stamp_refined: REFUSED $id — touchers could not be derived; refusing rather than guessing. No label written." >&2
+    return 2
+  fi
 
   br label remove "$id" "unrefined" 2>/dev/null
   br label add "$id" "refined" 2>/dev/null

@@ -51,6 +51,11 @@ case "$1" in
     while [ $# -gt 0 ]; do case "$1" in --json) shift ;; *) ids+=("$1"); shift ;; esac; done
     want=$(printf '%s\n' "${ids[@]}" | jq -R . | jq -s .)
     out=$(jq --argjson want "$want" '[ .[] | select(.id as $i | $want | index($i)) ]' "$FIXTURE_BEADS")
+    # BR_SHOW_OBJECT=1 reproduces the shape the real `br` intermittently answers with under
+    # concurrent readers: the bare OBJECT instead of a one-element array (Case 18).
+    if [ "$(printf '%s' "$out" | jq 'length')" -eq 1 ] && [ "${BR_SHOW_OBJECT:-0}" = 1 ]; then
+      printf '%s\n' "$out" | jq '.[0]'; exit 0
+    fi
     [ "$(printf '%s' "$out" | jq 'length')" -gt 0 ] && { printf '%s\n' "$out"; exit 0; }
     echo '{"error":{"code":"ISSUE_NOT_FOUND"}}'; exit 1 ;;
   comments)
@@ -371,6 +376,40 @@ if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q "rg exited 127" && [ "$(stamped_coun
   pass "Case 17: NEGATIVE CONTROL — when rg cannot run, a referenced Delivers path is REFUSED, never read as zero references"
 else
   fail "Case 17: expected a refusal naming rg's exit code and no stamp, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 18: `br show --json` answering with a bare OBJECT still stamps ----------------
+# Measured flake: under concurrent readers br sometimes answers with the object rather than
+# a one-element array. Every filter in stamp-refined.sh is `.[0]`, which dies "Cannot index
+# object with number" on that shape — and a dead filter reads as "no labels, no description",
+# so the bead is refused for a defect the READER invented, not one the bead has.
+# element4-check.sh is STUBBED here on purpose: it maps a non-array to `[]` and exits 2
+# (its own NOT-GATED leg), so without the stub this case would measure that gate instead of
+# this script's meta reader. The verdict below is the normaliser's alone.
+E4STUB="$WORK/e4-pass.sh"; printf '#!/usr/bin/env bash\nexit 0\n' >"$E4STUB"; chmod +x "$E4STUB"
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_OBJECT=1 ELEMENT4_CHECK="$E4STUB" bash "$STAMP" bd-external-probed 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-external-probed)" -eq 1 ]; then
+  pass "Case 18a: an object-shaped 'br show --json' answer is normalised — the bead still stamps"
+else
+  fail "Case 18a: expected rc 0 + one stamp on the object shape, rc=$RC. Output: $OUT / log: $(cat "$BR_LOG")"
+fi
+
+# --- Case 18b: NEGATIVE CONTROL — strip the normaliser and the same input must NOT stamp -
+MUTDIR="$WORK/mutant-shape"; mkdir -p "$MUTDIR"
+sed 's/if type=="array" then . else \[.\] end/./' "$STAMP" >"$MUTDIR/stamp-refined.sh"
+if ! grep -q 'if type=="array"' "$MUTDIR/stamp-refined.sh" && grep -q "jq '\.'" "$MUTDIR/stamp-refined.sh"; then
+  pass "Case 18b-i: the negative-control mutation applied (the shape normaliser is gone)"
+else
+  fail "Case 18b-i: mutation did not apply — the normaliser moved; Case 18b-ii is vacuous"
+fi
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_OBJECT=1 ELEMENT4_CHECK="$E4STUB" TOUCHERS_TOOL="$DIR/touchers.sh" \
+      bash "$MUTDIR/stamp-refined.sh" bd-external-probed 2>&1); RC=$?
+if [ "$RC" -ne 0 ] && [ "$(stamped_count bd-external-probed)" -eq 0 ]; then
+  pass "Case 18b-ii: NEGATIVE CONTROL — without the normaliser the object shape refuses a conforming bead"
+else
+  fail "Case 18b-ii: the un-normalised reader accepted the object shape — Case 18a proves nothing, rc=$RC. Output: $OUT"
 fi
 
 echo
