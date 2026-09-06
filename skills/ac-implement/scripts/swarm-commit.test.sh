@@ -85,6 +85,41 @@ if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\
   pass "refuses a whole-tree flag, naming unscoped-pathspec"
 else fail "whole-tree flag: rc=$rc out=$out"; fi
 
+# --- 3b. bracket paths: a literal filename is not a glob -------------------------------------
+# Every Next.js dynamic-route file is a literal `[...]` name. The pattern guard used to refuse
+# all of them BY THEIR OWN NAME, so the only way through the lane was to commit the enclosing
+# DIRECTORY — a wider pathspec than the change, and precisely the sibling-sweeping the rule
+# exists to prevent. The rule as written pushed writers toward the harm it names.
+#
+# The discriminator is deliberate: read as a GLOB, `app/foods/[id]/page.tsx` matches
+# `app/foods/d/page.tsx` and NOT the bracket file; read LITERALLY it matches only the bracket
+# file. One assertion therefore separates the two readings with no ambiguity.
+R="$(new_repo bracket-path)"
+mkdir -p "$R/app/foods/[id]" "$R/app/foods/d"
+printf 'route v1\n' >"$R/app/foods/[id]/page.tsx"
+printf 'sib v1\n'   >"$R/app/foods/d/page.tsx"
+GIT_LITERAL_PATHSPECS=1 git -C "$R" add -- "app/foods/[id]/page.tsx" "app/foods/d/page.tsx"
+git -C "$R" commit -qm seed-routes
+printf 'route v2\n' >"$R/app/foods/[id]/page.tsx"
+printf 'sib v2\n'   >"$R/app/foods/d/page.tsx"
+
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "app/foods/[id]/page.tsx" --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "accepts a literal bracket path that exists as a regular file"
+else fail "bracket path refused: rc=$rc out=$out"; fi
+if [ "$(git -C "$R" show "HEAD:app/foods/[id]/page.tsx" 2>/dev/null)" = "route v2" ]; then
+  pass "the bracket file itself is what landed in the commit"
+else fail "bracket file not committed: '$(git -C "$R" show "HEAD:app/foods/[id]/page.tsx" 2>&1)'"; fi
+if [ "$(git -C "$R" show "HEAD:app/foods/d/page.tsx" 2>/dev/null)" = "sib v1" ]; then
+  pass "git ran with literal pathspecs — the glob-reading sibling was NOT swept in"
+else fail "sibling swept in by glob expansion: '$(git -C "$R" show "HEAD:app/foods/d/page.tsx" 2>&1)'"; fi
+
+# A genuine glob is still refused: brackets alone buy nothing, EXISTENCE is the whole test.
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "app/foods/[xy].tsx" --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
+  pass "a bracket pattern matching nothing on disk is still refused as unscoped-pathspec"
+else fail "nonexistent bracket pattern accepted: rc=$rc out=$out"; fi
+
 # --- 4. refusal: missing / empty message file ----------------------------------------------
 out="$(cd "$R" && "$LANE" --identity t --message-file nope.txt --path mine.txt --no-push 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-message-file\]'; then

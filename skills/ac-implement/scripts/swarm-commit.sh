@@ -101,8 +101,21 @@ for p in "${PATHS[@]}"; do
   case "$p" in
     ""|"."|"./"|".."|"/"|":/"|:/*|"-"*)
       refuse unscoped-pathspec "path '$p' is not a scoped path" ;;
-    *'*'*|*'?'*|*'['*|":!"*)
-      refuse unscoped-pathspec "path '$p' is a pattern, not a named path; patterns match a sibling's files too" ;;
+    ":!"*)
+      refuse unscoped-pathspec "path '$p' is an exclude pathspec, not a named path" ;;
+    *'*'*|*'?'*|*'['*)
+      # A pattern CHARACTER is not evidence of a pattern. Every Next.js dynamic-route file
+      # is a literal `[...]` name, and refusing those by their own name left the enclosing
+      # DIRECTORY as the only way through the lane — a WIDER pathspec than the change, which
+      # is exactly the sibling-sweeping this rule exists to prevent. The rule as written
+      # pushed writers toward the harm it names.
+      #
+      # Existence on disk as a regular file separates the two readings with no ambiguity: a
+      # genuine glob names nothing, so it still refuses right here. GIT_LITERAL_PATHSPECS
+      # (exported inside the lane) then stops git re-expanding what this check just allowed.
+      if [ ! -e "$p" ] || [ -d "$p" ]; then
+        refuse unscoped-pathspec "path '$p' is a pattern, not a named file on disk; patterns match a sibling's files too"
+      fi ;;
   esac
 done
 
@@ -138,6 +151,13 @@ fi
 # The guard compares THIS to the reservation holder, so it is exported inside the lane
 # from the explicit identity, shadowing whatever static fallback the shell inherited.
 export AGENT_NAME="$IDENTITY" BR_AGENT_NAME="$IDENTITY"
+
+# Literal pathspecs for every git call in the lane. The guard above admits a bracket path
+# only when it EXISTS on disk by that exact name; without this, git would still read
+# `app/foods/[id]/page.tsx` as a wildmatch pattern — matching `app/foods/d/page.tsx` and NOT
+# the file the writer named. The guard's reading and git's reading must be the SAME reading,
+# or the lane admits one path and commits another.
+export GIT_LITERAL_PATHSPECS=1
 
 CUR="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 [ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; exit 9; }
