@@ -2,7 +2,7 @@
 name: architecture-reviewer
 description: Architecture-focused code reviewer - patterns, SRP, complexity, modularity
 tools: Read, Grep, Glob, Write
-model: sonnet
+tier: coordinator
 memory: project
 ---
 

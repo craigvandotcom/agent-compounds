@@ -96,7 +96,7 @@ The **[jef-prompts](./skills/jef-prompts/)** skill is a curated library of high-
 
 ## Agents
 
-Portable agent definitions, symlinked into `.claude/agents/`.
+Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coordinator | worker — never a concrete model); deploy.sh generates them into `.claude/agents/` with the model stamped per harness from `harnesses.json agent_models`, so the same tier can mean fable/opus/sonnet in Claude Code and glm/deepseek via OpenCode Go.
 
 | Agent | What it does |
 |-------|-------------|

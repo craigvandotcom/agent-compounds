@@ -2,7 +2,7 @@
 name: performance-reviewer
 description: Performance-focused code reviewer - N+1 queries, re-renders, bundle size, caching
 tools: Read, Grep, Glob, Write
-model: sonnet
+tier: coordinator
 memory: project
 ---
 

@@ -2,7 +2,7 @@
 name: correctness-reviewer
 description: Correctness-focused code reviewer - logic, edge cases, error handling, state management
 tools: Read, Grep, Glob, Write
-model: opus
+tier: coordinator
 memory: project
 ---
 

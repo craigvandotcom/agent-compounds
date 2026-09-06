@@ -237,8 +237,11 @@ for skill_dir in "$AC_ROOT/skills"/*/; do
   fi
 done
 
-# agents/*.md must have name: == filename (sans .md)
-for agent_file in "$AC_ROOT/agents"/*.md; do
+# agents/*.md must have name: == filename (sans .md), a valid model tier, and no
+# concrete model: (tier is the canon — models are stamped per harness by deploy.sh /
+# harness-sync.sh generators from harnesses.*.agent_models)
+VALID_TIERS="orchestrator coordinator worker"
+for agent_file in "$AC_ROOT/agents"/*.md "$AC_ROOT/agents"/review/*.md; do
   [ -f "$agent_file" ] || continue
   agent_name=$(basename "$agent_file" .md)
 
@@ -247,6 +250,29 @@ for agent_file in "$AC_ROOT/agents"/*.md; do
   if [ "$name_val" != "$agent_name" ]; then
     fail "agents/$agent_name.md: name '$name_val' != filename '$agent_name'"
   fi
+
+  check
+  tier_val=$(grep -m1 '^tier:' "$agent_file" 2>/dev/null | sed 's/^tier:[[:space:]]*//')
+  if [ -z "$tier_val" ]; then
+    fail "agents/$agent_name.md: no 'tier:' — every registry agent must declare one"
+  elif ! printf '%s\n' $VALID_TIERS | grep -qx "$tier_val"; then
+    fail "agents/$agent_name.md: tier '$tier_val' not in {$VALID_TIERS}"
+  fi
+
+  check
+  if grep -q '^model:' "$agent_file"; then
+    fail "agents/$agent_name.md: 'model:' is forbidden in the registry — declare 'tier:' and let harnesses.json agent_models resolve it per harness"
+  fi
+done
+
+# every tier an agent uses must be resolvable in each harness's agent_models map —
+# otherwise deploy.sh / gen_opencode_agents fail loud at sync time instead of lint time
+for h in claude opencode; do
+  check
+  for t in $VALID_TIERS; do
+    v=$(jq -r ".harnesses.$h.agent_models.$t // empty" "$AC_ROOT/harnesses.json" 2>/dev/null)
+    [ -n "$v" ] || fail "harnesses.json: harnesses.$h.agent_models.$t missing (tier maps must be complete per harness)"
+  done
 done
 
 # ---------------------------------------------------------------------------

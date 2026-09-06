@@ -70,8 +70,8 @@ agent-compounds/
 │   ├── ac-*       # the compounding-engineering pipeline — 3 loops, one conductor (ac-loop): dev (align→plan→beadify→implement→verify→review→merge→land→publish), triage (ac-triage), audit (audit+ac-hygiene); doctrine = ac-pipeline
 │   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
 │   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
-├── agents/        # subagent definitions (researcher, implementer, validator — the 3 stances — plus tester, code-explorer, browser-tester, browser-agent)
-├── deploy.sh      # symlinks (never copies) skills/agents into a target's .claude/
+├── agents/        # subagent definitions (researcher, implementer, validator — the 3 stances — plus tester, code-explorer, browser-tester, browser-agent); each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model
+├── deploy.sh      # symlinks skills + generates agents (tier -> model stamped from harnesses.json agent_models) into a target's .claude/
 ├── templates/     # project-AGENTS.md (new-project L0 template) + ci-build-guards.md
 │                  #   (required-NEXT_PUBLIC_* build assert + dep-removed CI gate, copy-paste)
 └── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)
@@ -80,6 +80,9 @@ agent-compounds/
 ## Rules
 
 - **Symlink, never copy** — deploy.sh refuses to overwrite real files; canonical lives here.
+  Agents are the exception: they are GENERATED (tier → model stamped per harness from
+  `harnesses.json agent_models`), because a symlinked file cannot carry a per-harness
+  model — tier is the canon, models are projections.
 - **Skills carry domain knowledge; agents carry stance + tool permissions only**
   (constitution: `skills/context-engineering/SKILL.md`).
 - **Deploy-together dependency:** `reflect` loads `context-engineering` — always ship both.

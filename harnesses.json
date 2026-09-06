@@ -4,7 +4,12 @@
   "harnesses": {
     "claude": {
       "enabled": true,
-      "_doc": "The .claude/ layer is rendered by deploy.sh (skills+agents symlinks); harness-sync invokes it for app targets and mirrors FROM it for the other harnesses."
+      "agent_models": {
+        "orchestrator": "fable",
+        "coordinator": "opus",
+        "worker": "sonnet"
+      },
+      "_doc": "The .claude/ layer is rendered by deploy.sh (skills symlinks + GENERATED agents, stamped model: from agent_models); harness-sync invokes it for app targets and mirrors FROM it for the other harnesses. agent_models resolves the tier: field every agents/*.md carries; orchestrator is the harness-default model (user interaction), never a subagent assignment."
     },
     "codex": {
       "enabled": true,
@@ -35,7 +40,12 @@
     "opencode": {
       "enabled": true,
       "home": "~/.config/opencode",
-      "_doc": "opencode (Anomaly, ex-SST) — the vendor-independent cold-standby / harness-failover tier (distinct from claude-or = model-failover, pi = local utility). Runs OpenRouter open models (deepseek-v4-pro/-flash, parity with claude-or); OPENROUTER_API_KEY auto-detected from the ~/.zshrc env, no login. Machine scope only (no org/app layer): context -> <home>/AGENTS.md (generated session-start floor). Skills read NATIVELY from .claude/skills/*/SKILL.md AND .agents/skills — deduped by name, so the Codex mirror costs nothing (re-verified 2026-08-28 on v1.18.20: 85 skills in body-compass-app, zero duplicates). Agents are GENERATED to <home>/agents/*.md (gen_opencode_agents, the 3 stances only) — opencode reads neither .claude/agents nor any compat path. Hooks ARE wired as of 2026-08-28 (was \"skipped by design v1\"): render_hooks_opencode emits <home>/plugins/ac-hooks.js + <home>/ac-hooks.wiring.json, a wrapper that runs the SAME scripts as every other harness (UserPromptSubmit via chat.message part injection, PreToolUse via tool.execute.before throw, PostToolUse via tool.execute.after). No SessionStart or SubagentStop equivalent exists. REQUIRED one-time machine setup: <home>/opencode.jsonc (model defaults + qmd and mcp-agent-mail MCP, hand-authored — mirrors grok's config.toml). COST: opencode has NO skillListingBudgetFraction analogue — the full <available_skills> block goes into the system prompt every request (measured 42KB of a 74.5KB system prompt for 56 skills), which is why this is a fallback tier, not a peer. GOTCHA: hangs at the ~/Repos monorepo root (huge submodule tree chokes its file walk) — run inside a project subdir, which is the real coding-fallback use case anyway. Homebrew lags npm (brew 1.18.20 vs npm 1.18.25 on 2026-08-28)."
+      "agent_models": {
+        "orchestrator": "opencode-go/glm-5.3",
+        "coordinator": "opencode-go/glm-5.3-flash",
+        "worker": "opencode-go/deepseek-v4-flash"
+      },
+      "_doc": "opencode (Anomaly, ex-SST) — the vendor-independent cold-standby / harness-failover tier (distinct from claude-or = model-failover, pi = local utility). Runs OpenCode Go open models (glm-5.3 / glm-5.3-flash / deepseek-v4-flash via the opencode-go provider — Go's single curated endpoint avoids OpenRouter's per-provider cache-passthrough lottery, measured 2026-07-28: DeepSeek via OpenRouter returned zero cached tokens vs 98% native); OPENROUTER_API_KEY/Go key auto-detected, no login. Machine scope only (no org/app layer): context -> <home>/AGENTS.md (generated session-start floor). Skills read NATIVELY from .claude/skills/*/SKILL.md AND .agents/skills — deduped by name, so the Codex mirror costs nothing (re-verified 2026-08-28 on v1.18.20: 85 skills in body-compass-app, zero duplicates). Agents are GENERATED to <home>/agents/*.md (gen_opencode_agents, the 3 stances only) — opencode reads neither .claude/agents nor any compat path. Hooks ARE wired as of 2026-08-28 (was \"skipped by design v1\"): render_hooks_opencode emits <home>/plugins/ac-hooks.js + <home>/ac-hooks.wiring.json, a wrapper that runs the SAME scripts as every other harness (UserPromptSubmit via chat.message part injection, PreToolUse via tool.execute.before throw, PostToolUse via tool.execute.after). No SessionStart or SubagentStop equivalent exists. REQUIRED one-time machine setup: <home>/opencode.jsonc (model defaults + qmd and mcp-agent-mail MCP, hand-authored — mirrors grok's config.toml). COST: opencode has NO skillListingBudgetFraction analogue — the full <available_skills> block goes into the system prompt every request (measured 42KB of a 74.5KB system prompt for 56 skills), which is why this is a fallback tier, not a peer. GOTCHA: hangs at the ~/Repos monorepo root (huge submodule tree chokes its file walk) — run inside a project subdir, which is the real coding-fallback use case anyway. Homebrew lags npm (brew 1.18.20 vs npm 1.18.25 on 2026-08-28)."
     },
     "antigravity": {
       "enabled": true,

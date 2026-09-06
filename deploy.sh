@@ -1,23 +1,32 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — stamp a project's .claude/ with agent-compounds tooling via symlinks.
+# deploy.sh — stamp a project's .claude/ with agent-compounds tooling.
 #
 # ROLE (since 2026-07-04): the .claude-LAYER renderer, driven by harness-sync.sh
 # (which then mirrors .claude into the Codex/Droid/Pi homes). For full-target syncs
 # use ./harness-sync.sh --all; call deploy.sh directly only for selective one-off
 # stamps on projects outside ac-deploy-targets.list (e.g. --skills a,b on simil8).
 #
-# Symlinks (never copies) so the canonical agent-compounds version is the single
-# source of truth. Refuses to overwrite a real file/dir already present at the
-# target (so an app's customized skill is never clobbered) — it only creates or
-# refreshes symlinks that already point inside agent-compounds or are dangling.
+# Skills are SYMLINKS (never copies) so the canonical agent-compounds version is the
+# single source of truth. Agents are GENERATED (since model tiers, 2026-09): each
+# agents/*.md in the registry carries a semantic `tier:` (orchestrator|coordinator|
+# worker); deploy.sh resolves it through harnesses.json -> harnesses.claude.agent_models
+# and writes .claude/agents/*.md with a concrete `model:` stamped in — so the registry
+# never pins a model and every harness maps tiers in its own currency. Generated files
+# carry a stamp and are only ever overwritten when stamped; a real file without the
+# stamp (or a foreign symlink) is never clobbered. Old inside-AC agent symlinks are
+# replaced by the generated file (they are ours).
+#
+# Refuses to overwrite a real file/dir already present at the target (so an app's
+# customized skill is never clobbered) — it only creates or refreshes symlinks that
+# already point inside agent-compounds or are dangling.
 #
 # Usage:
 #   ./deploy.sh <target-project-dir> [options]
 #
 # Options:
 #   --skills a,b,c | all    symlink the named skills (or every skill)
-#   --agents a,b | all      symlink the named agents (or every agent)
+#   --agents a,b | all      generate the named agents (or every agent)
 #   --all                   all skills + all agents
 #   --list                  print what's available and exit
 #   --no-prune              keep orphaned symlinks (default: prune them)
@@ -42,6 +51,31 @@
 set -euo pipefail
 
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Tier->model config: same manifest deep-merge as harness-sync.sh (harnesses.json
+# committed base, harnesses.local.json machine overrides on top).
+MANIFEST="$AC_ROOT/harnesses.json"
+LOCAL="$AC_ROOT/harnesses.local.json"
+if [ -f "$LOCAL" ]; then
+  CFG="$(jq -s '.[0] * .[1]' "$MANIFEST" "$LOCAL")"
+else
+  CFG="$(cat "$MANIFEST")"
+fi
+
+# tier_model <harness> <tier> <agent-name> — resolve a tier to a concrete model id.
+# Fails loud (exit 2) on a missing map entry: silently inheriting a harness default
+# would flatten the tier gradient and look exactly like success.
+tier_model() {
+  local m
+  m="$(printf '%s' "$CFG" | jq -r ".harnesses.$1.agent_models.$2 // empty")"
+  if [ -z "$m" ]; then
+    echo "error: harnesses.$1.agent_models has no entry for tier '$2' (agent: $3) — add it to harnesses.json" >&2
+    exit 2
+  fi
+  printf '%s' "$m"
+}
+
+AGENTS_STAMP="generated-by: deploy.sh"
 
 DRY=0
 PRUNE=1
@@ -188,6 +222,69 @@ print(os.path.normpath(t))
   done < <(/usr/bin/find "$dir" -maxdepth 1 -type l)
 }
 
+# gen_claude_agent <src-md> <dest-md> — render one registry agent into the target's
+# .claude/agents/ with its tier resolved to a concrete claude model (from
+# harnesses.claude.agent_models). Overwrite policy: a real file WITHOUT our stamp is
+# never touched; a stamped file is regenerated; an inside-AC symlink (the pre-tier
+# deployment form) is REPLACED by the generated file — but never written through,
+# so the registry source is removed from the link path first.
+gen_claude_agent() {
+  local src="$1" dest="$2" fm body tier model
+  fm="$(awk '/^---[[:space:]]*$/{c++; next} c==1{print}' "$src")"
+  body="$(awk '/^---[[:space:]]*$/{c++; next} c>=2{print}' "$src")"
+  tier="$(printf '%s\n' "$fm" | awk -F': *' '$1=="tier"{print $2; exit}')"
+  if [ -z "$tier" ]; then
+    echo "error: agents/$(basename "$src"): no 'tier:' in frontmatter — every registry agent must declare one (run lint.sh)" >&2
+    exit 2
+  fi
+  model="$(tier_model claude "$tier" "agents/$(basename "$src")")"
+
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    if grep -q "$AGENTS_STAMP" "$dest" 2>/dev/null; then
+      :   # ours — regenerate below
+    else
+      echo "  SKIP (real file present, not overwriting): ${dest#$TARGET/}"
+      return
+    fi
+  fi
+  if [ -L "$dest" ]; then
+    local destdir current resolved
+    destdir="$(dirname "$dest")"
+    current="$(readlink "$dest")"
+    resolved="$(cd "$destdir" && python3 -c '
+import os, sys
+t = sys.argv[1]
+if not os.path.isabs(t):
+    t = os.path.join(os.getcwd(), t)
+print(os.path.normpath(t))
+' "$current")"
+    if ! is_inside_ac "$resolved"; then
+      echo "  SKIP (foreign symlink, not overwriting): ${dest#$TARGET/} -> $current"
+      return
+    fi
+    [ "$DRY" = 1 ] || rm -f "$dest"   # write the file, never through the link
+  fi
+
+  local content="---
+$fm
+model: $model
+---
+<!-- $AGENTS_STAMP (tier: $tier) — do not hand-edit (source: agents/$(basename "$src")) -->
+
+$body"
+  # content-diff idempotency: a converged target is not a change
+  if [ -f "$dest" ] && [ ! -L "$dest" ] && [ "$(cat "$dest")" = "$content" ]; then
+    return
+  fi
+  if [ "$DRY" = 1 ]; then
+    echo "  generate ${dest#$TARGET/} (tier: $tier -> $model)"
+  else
+    mkdir -p "$(dirname "$dest")"
+    printf '%s\n' "$content" > "$dest"
+    echo "  generated ${dest#$TARGET/} (tier: $tier -> $model)"
+  fi
+}
+
 # Fail loud if the source tree is missing — otherwise list_skills/list_agents
 # return empty and we'd silently deploy nothing (e.g. AC_ROOT misdetected).
 [ -d "$AC_ROOT/skills" ] || { echo "error: $AC_ROOT/skills not found — is AC_ROOT correct?" >&2; exit 2; }
@@ -215,7 +312,7 @@ fi
 
 # --- agents ---
 if [ -n "$AGENTS_REQ" ]; then
-  echo "Agents:"
+  echo "Agents (generated from tier:):"
   if [ "$AGENTS_REQ" = "all" ]; then
     AGENTS_REQ="$(list_agents | paste -sd, -)"
   fi
@@ -224,7 +321,7 @@ if [ -n "$AGENTS_REQ" ]; then
     a="${a#"${a%%[![:space:]]*}"}"   # trim leading whitespace
     a="${a%"${a##*[![:space:]]}"}"   # trim trailing whitespace
     if [ -f "$AC_ROOT/agents/$a.md" ]; then
-      link "$AC_ROOT/agents/$a.md" "$TARGET/.claude/agents/$a.md"
+      gen_claude_agent "$AC_ROOT/agents/$a.md" "$TARGET/.claude/agents/$a.md"
     else
       echo "  MISSING in agent-compounds: agent '$a'"
     fi

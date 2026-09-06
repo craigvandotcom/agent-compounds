@@ -10,11 +10,16 @@
 #   - A target's .claude/skills is the per-target skill SET (registry symlinks +
 #     target-local real skills). Other harnesses MIRROR that set as relative
 #     symlinks: .agents/skills (Codex + Pi), .factory/skills (Droid).
-#   - Subagents: .claude/agents/*.md is canon. Codex gets GENERATED .codex/agents/
-#     *.toml (symlinked TOMLs unsupported upstream); Droid gets GENERATED
-#     .factory/droids/*.md. Generated files carry a "generated-by: harness-sync"
-#     stamp and are only ever overwritten when stamped — hand-written files are
-#     never touched. Pi has no declarative agent surface: skipped with a warning.
+#   - Subagents: registry agents/*.md carry only a semantic `tier:`
+#     (orchestrator|coordinator|worker). deploy.sh RENDERS .claude/agents/*.md as
+#     generated files with the claude model stamped in (harnesses.claude.agent_models);
+#     the generators below read tier: from that layer and stamp each harness's OWN
+#     resolution: Codex gets GENERATED .codex/agents/*.toml (symlinked TOMLs
+#     unsupported upstream), Droid gets GENERATED .factory/droids/*.md (model:
+#     inherit — no droid tier map yet), opencode gets GENERATED stances with the
+#     opencode-go model stamped in. Generated files carry a "generated-by:" stamp
+#     and are only ever overwritten when stamped — hand-written files are never
+#     touched. Pi has no declarative agent surface: skipped with a warning.
 #
 # Invariants (inherited from deploy.sh):
 #   idempotent · never clobber a real file · never touch foreign symlinks ·
@@ -182,10 +187,24 @@ mirror_skills() {
 # --- generated agent projections -------------------------------------------------
 STAMP="generated-by: harness-sync"
 
-parse_agent() { # <file> — sets A_NAME A_DESC A_BODY
+parse_agent() { # <file> — sets A_NAME A_DESC A_TIER A_BODY
   A_NAME="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^name:/{sub(/^name:[[:space:]]*/,""); print; exit}' "$1")"
   A_DESC="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^description:/{sub(/^description:[[:space:]]*/,""); print; exit}' "$1")"
+  A_TIER="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tier:/{sub(/^tier:[[:space:]]*/,""); print; exit}' "$1")"
   A_BODY="$(awk '/^---[[:space:]]*$/{c++; next} c>=2{print}' "$1")"
+}
+
+# tier_model <harness> <tier> <agent-name> — resolve a tier to a harness model id
+# from the merged config. Fails loud (exit 2) on a missing entry: inheriting a
+# harness default silently would flatten the tier gradient and look like success.
+tier_model() {
+  local m
+  m="$(cfg ".harnesses.$1.agent_models.$2 // empty")"
+  if [ -z "$m" ]; then
+    echo "error: harnesses.$1.agent_models has no entry for tier '$2' (agent: $3) — add it to harnesses.json" >&2
+    exit 2
+  fi
+  printf '%s' "$m"
 }
 
 # write_generated <dest> <content> — stamped-only overwrite, content-diff idempotent
@@ -255,21 +274,23 @@ $A_BODY")"
 # does not carry; generating them would advertise subagents that cannot do their job —
 # the phantom-registry failure mode already on record.
 #
-# `model:` is deliberately OMITTED. Our stances pin `model: sonnet`, an Anthropic class
-# name that means nothing here; omitting it inherits opencode.jsonc's default, so the
-# fallback lane's model choice stays in ONE place instead of being frozen into every
-# generated file.
+# The agent's `tier:` (from the registry, carried through the .claude layer) is
+# RESOLVED here against harnesses.opencode.agent_models and stamped as `model:`.
+# Since the tier map landed (2026-09) the old "omit model, inherit the default"
+# posture is gone: opencode now runs a real 3-level gradient (orchestrator =
+# opencode.jsonc's "model" default; coordinator/worker stamped below).
 #
 # `tools:` is deprecated upstream in favour of `permission:`, so write-capability is
 # DERIVED from the source tools line (Write or Edit present yields edit=allow, else
 # edit=deny) rather than hardcoded per agent name: add a stance and it maps itself.
 gen_opencode_agents() { # <src-agents-dir> <dest-dir>
-  local src="$1" dest="$2" f name relsrc tools edit_perm
+  local src="$1" dest="$2" f name relsrc tools edit_perm omodel
   [ -d "$src" ] || { echo "  WARN: agent source missing: $src"; return 0; }
   for name in researcher implementer validator; do
     f="$src/$name.md"
     [ -f "$f" ] || { echo "  WARN: stance $name.md missing in $src (skipped)"; continue; }
     parse_agent "$f"
+    omodel="$(tier_model opencode "${A_TIER:-}" "$name.md")"
     relsrc="${f/#$REPOS_ROOT\//}"
     tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
     if printf '%s' "$tools" | grep -qE 'Write|Edit'; then edit_perm="allow"; else edit_perm="deny"; fi
@@ -277,12 +298,13 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
 "---
 description: $A_DESC
 mode: subagent
+model: $omodel
 permission:
   edit: $edit_perm
   bash: allow
   task: deny
 ---
-<!-- $STAMP — do not hand-edit (source: $relsrc) -->
+<!-- $STAMP — do not hand-edit (source: $relsrc, tier: $A_TIER) -->
 
 $A_BODY")"
   done
@@ -963,6 +985,15 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
 sync_root() {
   local base="$REPOS_ROOT"
   echo "== root: $base"
+
+  if [ "$EN_CLAUDE" = "true" ]; then
+    echo "  -- claude layer (deploy.sh: skills symlinks + generated agents)"
+    local dep_flags="" deploy_status
+    [ "$DRY" = 1 ] && dep_flags="-n"
+    "$AC_ROOT/deploy.sh" "$base" --all $dep_flags | sed 's/^/  [deploy.sh] /' || true
+    deploy_status="${PIPESTATUS[0]}"
+    [ "$deploy_status" -eq 0 ] || { echo "  ERROR: deploy.sh failed (exit $deploy_status) for $base" >&2; exit "$deploy_status"; }
+  fi
 
   if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ] || [ "$EN_AGY" = "true" ]; then
     echo "  -- codex+pi+antigravity skills (.agents/skills mirror of .claude/skills)"

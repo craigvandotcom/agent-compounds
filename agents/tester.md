@@ -2,7 +2,7 @@
 name: tester
 description: Test coverage and validation specialist. Verifies test quality, identifies untested paths, runs automated test suites. VALIDATES, doesn't implement features. For browser UI testing, use browser-tester agent instead.
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: sonnet
+tier: worker
 permissionMode: acceptEdits
 ---
 

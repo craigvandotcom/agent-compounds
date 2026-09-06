@@ -2,7 +2,7 @@
 name: security-reviewer
 description: Security-focused code reviewer - OWASP, injection, auth, secrets detection
 tools: Read, Grep, Glob, Write
-model: opus
+tier: coordinator
 memory: project
 ---
 
