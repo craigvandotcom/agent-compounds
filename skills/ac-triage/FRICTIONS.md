@@ -1,7 +1,7 @@
 ---
 skill: ac-triage
 created: 2026-08-24
-last_pass: 2026-08-24
+last_pass: 2026-09-06
 entries: 1
 ---
 
