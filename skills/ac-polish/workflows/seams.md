@@ -15,7 +15,7 @@ acceptance journey. Nothing is fixed here.
 
 | knob | seams mode |
 | --- | --- |
-| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs, with the script, not by hand.** Area → `scripts/aim.sh objects --area '<regex>'` ranks the objects named by or touched from matching files (touchers × layers × writers ÷ tests); take the top row. Nothing → the start prompt below. Then name the object's FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and BOUNDARIES (the interfaces those edges cross). Confirm all three in ONE prompt: *"Object: `foods.image_urls` (14 touchers, 5 layers, 3 writers, 1 test). Flows: 2. Boundaries: 3. Trace?"* |
+| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs, with the script, not by hand.** Area → `scripts/aim.sh objects --area '<regex>'` ranks the objects named by or touched from matching files (touchers × layers × writers ÷ tests); take the top row. Nothing → the start prompt below. Then name the object's FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and BOUNDARIES (the interfaces those edges cross). Write the three into the artifact frontmatter as ` · `-separated lists — they are the FENCE the merge enforces every round. Object terms are the table-qualified column plus the object's own symbols, never the bare column name: a column copied under the same name on another table is outside. Confirm all three BY NAME in ONE prompt, because the names are the fence: *"Object: `foods.image_urls` · `uploadImages` (14 touchers, 5 layers, 3 writers, 1 test). Flows: capture → upload → save → display · delete → cleanup. Boundaries: camera→form blob · upload route · foods row. Trace?"* |
 | **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: three maps, exact keys (object `stage × path` · flow `flow × path` · boundary `interface × side × path`), first-seen text, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
 | **CHECKLIST** | `references/seams-checklist.md` — the three lenses, their command shapes, and the rules that turn maps into seams |
 | **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each extends and corrects its own map |
@@ -45,10 +45,17 @@ scripts/seams-merge.py round --state <STATE> --artifact <STATE>/plan.md --round 
 
 Each lens merges on its exact key. A named contract beats `none` in the ledger without moving
 the digest; the disagreement is recorded. Reader diagnoses merge on the paths they cite and
-count readers. The round line prints `new_edges=` (the convergence signal), edges per lens, and
-the derived and cross-lens seam counts. **A `NOT-GATED` merge means the round did not happen**
-— resume that reader, re-merge, then run the gate. Every artifact change is a round to
+count readers. The round line prints `new_edges=` (the convergence signal), `fenced=` (rows
+outside the frontmatter fence, listed beneath with the reason — never new edges), edges per
+lens, and the derived and cross-lens seam counts. **A `NOT-GATED` merge means the round did
+not happen** — resume that reader, re-merge, then run the gate; a fence line still holding a
+template placeholder is one such NOT-GATED. Every artifact change is a round to
 `polish-fixpoint.sh`.
+
+A fenced row is the widen-or-split decision, taken by the orchestrator before the next round:
+an edge of THIS object under a name the fence lacks → widen the frontmatter line (the next
+round re-admits it); an edge of another object → leave it fenced, and if it keeps arriving,
+that object is its own run.
 
 ## Stop — a round that adds no edge to any map
 

@@ -1,9 +1,9 @@
 ---
 status: findings
 target: <the area as the user gave it>
-object: <the resolved object — symbols · columns · files — every lens's anchor>
-flows: <the processes named for the flow lens — the object's edges in time order>
-boundaries: <the interfaces named for the boundary lens — what the object's edges cross>
+object: <table.column · Symbol · path — every lens's anchor and the object fence: a row counts only if its file names one of these as a whole word, never the bare column name>
+flows: <flow name · flow name — the object's edges in time order and the flow fence: a row counts only if its flow shares a word with one of these>
+boundaries: <interface · interface — what the object's edges cross and the boundary fence: a row counts only if its interface shares a word with one of these; the far side's file is never fenced>
 weight: <touching files × layers, from the resolution grep — why this object was chosen>
 aim_window: <1w | 4w | 1y | all | none>
 ---
@@ -24,7 +24,8 @@ fix, by a trace.>
 
 _`scripts/seams-merge.py round` writes the three maps here each round — object (stage × path)
 · flow (flow × path) · boundary (interface × side × path) — first-seen text, exact keys, so the
-digest moves only when an edge is added or dropped in any of them. `seams-merge.py handoff`
+digest moves only when an edge is added or dropped in any of them. Rows outside the three
+fence lines above never reach the maps; the round line lists them with the reason. `seams-merge.py handoff`
 replaces them with Maps · Seams seen by more than one lens (first) · Seams derived per lens ·
 Seams from reader diagnosis (by reader count) · Journey (from the flow map, for ac-qa) ·
 Approach (empty, for `ac-plan`)._

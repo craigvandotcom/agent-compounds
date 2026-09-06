@@ -2,7 +2,8 @@
 
 Substitute `<LENS>` (object · flow · boundary), `<SUBJECT>` (for object: the resolved object
 with its symbols, columns, files; for flow: the named process; for boundary: the named
-interface and its two sides), `<MAPS>` (the current artifact — all three maps; empty in round 1),
+interface and its two sides), `<MAPS>` (the current artifact — its frontmatter names the fence;
+the three maps below it are empty in round 1),
 `<CHECKLIST>` and `<REPORT>` (an absolute path OUTSIDE the repository). Nothing else.
 
 ---
@@ -16,6 +17,14 @@ Trace with `rg`, from the repository root, following the DATA, not the import gr
 prose paths (docs, plans, backlog, memory, changelogs, snapshots, lockfiles, generated types).
 Never edit, copy or create any file in the repository. Never run a test runner, formatter or
 linter — read the tests, do not run them.
+
+The frontmatter of the maps names the object, its flows and its boundaries. That is the FENCE,
+and the merge drops every row outside it: an object row whose file does not name the object
+(its table with its column, or one of its symbols), a flow or boundary row whose name shares no
+word with a declared one. Use the declared flow and interface names. A copy of the value in
+another store is ONE boundary row on the interface that carries it — what the copy assumes,
+what asserts it — never a new object to trace. Anything real you find outside the fence goes in
+`TARGET RESOLVED TO`, not in the map.
 
 **object** — trace the datum through `create` · `transport` · `store` · `read` · `update` ·
 `delete` · `cleanup`. Every piece of code that does that to it, with upstream, downstream, and

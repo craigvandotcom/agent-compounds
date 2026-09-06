@@ -17,6 +17,16 @@ The flow map's steps and sensors are emitted at hand-off as the acceptance JOURN
 ships with the scenario that proves its fix. Reader diagnoses (judgement) merge on the paths
 they cite and are ordered by reader count — salience, never a gate.
 
+THE FENCE. The artifact's frontmatter names the target once, one line per lens — `object:`
+(table.column · symbols · files), `flows:`, `boundaries:` — as ` · `-separated terms, and every
+round is merged against it: an object row counts only if its file names a term as a whole word
+(`table.column` needs both, the rule aim.sh counts touchers by); a flow or boundary row counts
+only if its name shares a word with a declared one. The far side of a boundary is never fenced.
+Rows outside are dropped with the reason, listed under the round line, and never count as new
+edges — so a value copied into another store cannot turn a column into a domain. A fence line
+still holding a template placeholder is NOT-GATED; a frontmatter without the keys is unfenced,
+and the round line says `fence=none`.
+
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py — RED/GREEN over every rule above
   SCHEDULE:   once per seams round (workflows/seams.md § MERGE) and once at hand-off; and on
@@ -36,6 +46,8 @@ Reader REPORT (one per reader; the file stem is the reader id):
               boundary | interface | side | path:line | producer | assumes | asserts | found-by |
               (producer: internal | user | external | tenant — classification, not a threat model)
   DIAGNOSIS:  | pattern | edges | what breaks silently | found-by |
+Round line: new_edges= (the convergence signal) · seen_again= · dropped= (no found-by reproduced)
+· fenced= (outside the frontmatter fence) · fence= (the lenses fenced, or none).
 Exit 0 ok · 2 NOT-GATED.
 """
 import argparse
@@ -56,6 +68,9 @@ LENSES = {
 }
 DIAG_COLS = 4
 PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}")
+FENCE_KEYS = {"object": "object", "flow": "flows", "boundary": "boundaries"}
+WORD = r"[A-Za-z0-9_]"
+STOP_WORDS = {"the", "and", "for", "via", "from", "into", "then", "with"}
 
 
 def die2(msg):
@@ -170,6 +185,81 @@ def parse_report(path):
     if section is None:
         die2(f"{path}: no MAP: section — not a trace report")
     return out
+
+
+# ---------------------------------------------------------------- fence
+def frontmatter(artifact):
+    try:
+        with open(artifact, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        die2(f"artifact unreadable: {e}")
+    if not text.startswith("---\n") or "\n---" not in text[4:]:
+        return {}
+    out = {}
+    for line in text[4:].split("\n---", 1)[0].split("\n"):
+        if ":" in line and not line.startswith((" ", "\t")):
+            k, v = line.split(":", 1)
+            out[k.strip()] = v.strip()
+    return out
+
+
+def parse_fence(fm):
+    """One ` · `-separated term list per lens, from the artifact's frontmatter. An absent key
+    leaves that lens unfenced; an empty value or a template placeholder is NOT-GATED."""
+    fence = {}
+    for lens, key in FENCE_KEYS.items():
+        if key not in fm:
+            continue
+        v = fm[key]
+        terms = [t.strip().strip("`") for t in re.split(r"\s·\s", v) if t.strip()]
+        if not terms or re.search(r"<[^>]*>", v):
+            die2(f"fence `{key}:` in the artifact frontmatter is empty or a placeholder — resolve the target "
+                 "(workflows/seams.md § TARGET) before round 1")
+        fence[lens] = terms
+    return fence
+
+
+def names(text, term):
+    return re.search(rf"(?<!{WORD}){re.escape(term)}(?!{WORD})", text) is not None
+
+
+def tokens(cell):
+    return {w for w in re.findall(r"[a-z0-9_]+", cell.lower()) if len(w) >= 3 and w not in STOP_WORDS}
+
+
+def outside_fence(lens, row, fence, repo, cache):
+    """None when the row is inside its lens's fence, else the reason. object: the row's file
+    names a term as a whole word (a `table.column` term needs both words; a term with `/` is a
+    path). flow · boundary: the flow or interface cell equals, or shares a word with, a declared
+    name — the far side's file is never checked."""
+    terms = fence.get(lens)
+    if terms is None:
+        return None
+    if lens == "object":
+        p = row["path"]
+        if p not in cache:
+            try:
+                with open(os.path.join(repo, p), encoding="utf-8", errors="replace") as f:
+                    cache[p] = f.read()
+            except OSError:
+                cache[p] = None
+        text = cache[p]
+        if text is None:
+            return f"`{p}` is not readable under the repo"
+        for t in terms:
+            if "/" in t:
+                if p == t or p.endswith("/" + t):
+                    return None
+            elif all(names(text, part) for part in t.split(".")):
+                return None
+        return f"`{p}` names none of: " + " · ".join(terms)
+    cell = row["flow"] if lens == "flow" else row["interface"]
+    words = tokens(cell)
+    for t in terms:
+        if slug(t) == slug(cell) or words & tokens(t):
+            return None
+    return f"`{cell}` shares no word with: " + " · ".join(terms)
 
 
 # ---------------------------------------------------------------- state
@@ -326,12 +416,21 @@ def cmd_round(a):
     if a.round != st["rounds"] + 1:
         die2(f"--round {a.round} but ledger has {st['rounds']} rounds recorded — rounds are consecutive")
     reports = [parse_report(p) for p in a.reports]
-    new, seen_again, dropped = [], 0, []
+    fence = parse_fence(frontmatter(a.artifact))
+    repo = a.repo or os.getcwd()
+    new, seen_again, dropped, fenced, cache = [], 0, [], [], {}
     for rep in reports:
         lens = rep["lens"]
         st["readers"][rep["reader"]] = {"round": a.round, "lens": lens, "resolved": rep["resolved"]}
         for seq, row in enumerate(rep["map"]):
             k = row["key"]
+            why = outside_fence(lens, row, fence, repo, cache)
+            if why:
+                st["edges"][lens][k] = dict(row, first_round=a.round, seq=seq, readers=[rep["reader"]],
+                                            dropped={"round": a.round, "reason": f"outside fence: {why}"},
+                                            contract_disagreement=False)
+                fenced.append((lens, k, why))
+                continue
             e = st["edges"][lens].get(k)
             if e is None or e["dropped"]:
                 e = dict(row, first_round=a.round, seq=seq, readers=[], dropped=None, contract_disagreement=False)
@@ -365,7 +464,6 @@ def cmd_round(a):
             if rep["reader"] not in x["readers"]:
                 x["readers"].append(rep["reader"])
     if a.validate:
-        repo = a.repo or os.getcwd()
         for lens, k in new:
             e = st["edges"][lens][k]
             results, fail = run_found_by(e["found-by"], repo)
@@ -379,7 +477,8 @@ def cmd_round(a):
     counts = {l: len(live(st, l)) for l in LENSES}
     derived = derive(st)
     print(f"seams-merge: round={a.round} readers={len(reports)} lenses={','.join(sorted({r['lens'] for r in reports}))} "
-          f"new_edges={len(new) - len(dropped)} seen_again={seen_again} dropped={len(dropped)} "
+          f"new_edges={len(new) - len(dropped)} seen_again={seen_again} dropped={len(dropped)} fenced={len(fenced)} "
+          f"fence={','.join(l for l in LENSES if l in fence) or 'none'} "
           f"edges=object:{counts['object']},flow:{counts['flow']},boundary:{counts['boundary']} "
           f"derived_seams={len(derived)} cross_lens={len(cross_lens(derived))}")
     for lens, k in new:
@@ -387,6 +486,8 @@ def cmd_round(a):
             print(f"  + [{lens}] {k}")
     for lens, k in dropped:
         print(f"  - [{lens}] {k} dropped: no found-by reproduced")
+    for lens, k, why in fenced:
+        print(f"  ~ [{lens}] {k} fenced: {why}")
     return 0
 
 
@@ -437,7 +538,8 @@ def cmd_handoff(a):
             f"unsensed-steps={sum(1 for l, p, *_ in derived if p == 'step with no sensor')} "
             f"unchecked-assumptions={sum(1 for l, p, *_ in derived if p == 'assumption nothing asserts')} "
             f"untrusted-inputs={sum(1 for l, p, *_ in derived if p == 'untrusted input nothing validates')} "
-            f"holes={sum(1 for l, p, *_ in derived if p == 'hole')} edges={sum(counts.values())} readers={len(st['readers'])} rounds={st['rounds']}")
+            f"holes={sum(1 for l, p, *_ in derived if p == 'hole')} edges={sum(counts.values())} readers={len(st['readers'])} rounds={st['rounds']} "
+            f"fenced={sum(1 for l in LENSES for e in st['edges'][l].values() if e['dropped'] and str(e['dropped'].get('reason', '')).startswith('outside fence'))}")
     text = open(a.artifact, encoding="utf-8").read()
     if text.startswith("---\n"):
         head, rest = text[4:].split("\n---", 1)

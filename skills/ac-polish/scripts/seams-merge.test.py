@@ -10,9 +10,13 @@ first-seen text, readers accumulated, a named contract beats none without moving
 per-lens derivation (hole, competing writers, unasserted edge; step with no sensor, failure
 not handled; assumption nothing asserts, half-mapped boundary) · cross-lens seams by shared
 path rank first · journey emitted from the flow map · reader diagnoses merge on cited paths
-and count readers · --validate drops an edge no command reproduces · LENS missing / unknown
-stage / wrong shape / no marker -> NOT-GATED, nothing written · rounds consecutive · no spawn,
-assurance block present. Exit 0 = all pass.
+and count readers · --validate drops an edge no command reproduces · the frontmatter fence:
+an object row whose file names no term (a same-named column on another table), a flow or
+boundary row sharing no word with a declared name, is fenced with the reason and never a new
+edge; the far side of a boundary is never fenced; widening the frontmatter re-admits a row;
+a placeholder fence -> NOT-GATED; no fence keys -> fence=none; handoff counts fenced · LENS
+missing / unknown stage / wrong shape / no marker -> NOT-GATED, nothing written · rounds
+consecutive · no spawn, assurance block present. Exit 0 = all pass.
 """
 import hashlib
 import json
@@ -83,8 +87,9 @@ DA = "| shape divergence | `lib/db/foods.ts:41` · `lib/services/image-upload.ts
 # --- 1. round 1: three lenses, one artifact ------------------------------------------------
 write(f"{W}/r1/o.md", rep("object", OH, O1, DA)); write(f"{W}/r1/f.md", rep("flow", FH, F1)); write(f"{W}/r1/b.md", rep("boundary", BH, B1))
 rc, out = run("round", "--state", S, "--artifact", ART, "--round", "1", f"{W}/r1/o.md", f"{W}/r1/f.md", f"{W}/r1/b.md")
-if rc == 0 and "lenses=boundary,flow,object" in out and "new_edges=13" in out and "edges=object:6,flow:3,boundary:4" in out:
-    ok("round 1: three lens reports -> 13 edges in one artifact, counted per lens")
+if rc == 0 and "lenses=boundary,flow,object" in out and "new_edges=13" in out and "edges=object:6,flow:3,boundary:4" in out \
+   and "fence=none" in out:
+    ok("round 1: three lens reports -> 13 edges in one artifact, counted per lens; no fence keys -> fence=none")
 else:
     fail("round 1", out)
 art = open(ART).read()
@@ -154,7 +159,7 @@ if "stage `cleanup` has no row" not in final and "supabase foods row` — only t
 else:
     fail("derived detail", final[-1500:])
 fm = final.split("\n---", 1)[0]
-if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 untrusted-inputs=1 holes=0 edges=14 readers=3 rounds=3" in fm \
+if "seams_load: competing-writers=1 unasserted-edges=2 unsensed-steps=2 unchecked-assumptions=2 untrusted-inputs=1 holes=0 edges=14 readers=3 rounds=3 fenced=0" in fm \
    and fm.count("seams_load:") == 1 and "seams_load" in out:
     ok("handoff writes the north-star counts into the frontmatter (seams_load), once, and prints them")
 else:
@@ -174,6 +179,61 @@ if rc == 0 and "dropped=1" in out and "reads it" in a2 and "fabricated" not in a
     ok("--validate: an edge no command reproduces is dropped; the real one stays")
 else:
     fail("validate", out + a2)
+
+# --- 5b. the fence: frontmatter object/flows/boundaries bound every lens ----------------------
+write(os.path.join(REPO, "lib/foods.ts"), "export const foods = { image_urls: [] }\n")
+write(os.path.join(REPO, "lib/families.ts"), "export const families = { image_urls: [] }\n")
+write(os.path.join(REPO, "lib/upload.ts"), "export function uploadImages() {}\n")
+FENCE = "object: foods.image_urls · uploadImages\nflows: capture → upload → save → display · delete → cleanup\nboundaries: upload route · foods row\n"
+S5, ART5 = f"{W}/s5", f"{W}/plan5.md"; write(ART5, f"---\nstatus: findings\n{FENCE}---\n\n{MARKER}\n")
+write(f"{W}/f5/o.md", rep("object", OH,
+    "| read | `lib/foods.ts:1` | reads it | — | — | none | `true` |\n"
+    "| read | `lib/families.ts:1` | same-named column, other table | — | — | none | `true` |\n"
+    "| transport | `lib/upload.ts:1` | named symbol | — | — | none | `true` |\n"
+    "| create | `lib/missing.ts:1` | file not in repo | — | — | none | `true` |\n"))
+write(f"{W}/f5/f.md", rep("flow", FH,
+    "| camera capture → save | capture | `lib/foods.ts:1` | user | none | none | `true` |\n"
+    "| alias sync → reindex | sync | `lib/families.ts:1` | cron | none | none | `true` |\n"))
+write(f"{W}/f5/b.md", rep("boundary", BH,
+    "| upload route | consumer | `lib/upload.ts:1` | user | — | none | `true` |\n"
+    "| foods row | consumer | `lib/families.ts:1` | internal | image_urls is string[] | none | `true` |\n"
+    "| alias table | producer | `lib/families.ts:1` | internal | — | none | `true` |\n"))
+rc, out = run("round", "--state", S5, "--artifact", ART5, "--round", "1", "--repo", REPO, f"{W}/f5/o.md", f"{W}/f5/f.md", f"{W}/f5/b.md")
+a5 = open(ART5).read()
+if rc == 0 and "new_edges=5" in out and "fenced=4" in out and "fence=object,flow,boundary" in out \
+   and "names none of: foods.image_urls · uploadImages" in out and "not readable" in out \
+   and "shares no word with: capture" in out and "shares no word with: upload route" in out:
+    ok("fence: same-named column on another table, missing file, undeclared flow and interface are fenced with reasons; 5 rows stay")
+else:
+    fail("fence round", out)
+if "same-named column" not in a5 and "alias sync" not in a5 and "alias table" not in a5 \
+   and "named symbol" in a5 and "| foods row | consumer | `lib/families.ts:1` |" in a5:
+    ok("fenced rows are not on the maps; a symbol term admits its file; the far side of a declared boundary is never fenced")
+else:
+    fail("fence artifact", a5)
+led5 = json.load(open(f"{S5}/ledger.json"))
+if led5["edges"]["object"]["read × lib/families.ts"]["dropped"]["reason"].startswith("outside fence"):
+    ok("a fenced row is recorded in the ledger as dropped with the fence reason")
+else:
+    fail("fence ledger", json.dumps(led5["edges"]["object"])[:400])
+write(ART5, open(ART5).read().replace("flows: capture → upload → save → display · delete → cleanup", "flows: capture → upload → save → display · delete → cleanup · alias sync"))
+rc, out = run("round", "--state", S5, "--artifact", ART5, "--round", "2", "--repo", REPO, f"{W}/f5/o.md", f"{W}/f5/f.md", f"{W}/f5/b.md")
+if rc == 0 and "new_edges=1" in out and "fenced=3" in out and "+ [flow] alias sync → reindex × lib/families.ts" in out and "seen_again=5" in out:
+    ok("widening the frontmatter fence re-admits the row on the next round; nothing else moves")
+else:
+    fail("fence widen", out)
+rc, out = run("handoff", "--state", S5, "--artifact", ART5)
+if rc == 0 and "fenced=3" in open(ART5).read().split("\n---", 1)[0]:
+    ok("handoff writes the fenced count beside the north-star counts")
+else:
+    fail("fence handoff", out)
+S6, ART6 = f"{W}/s6", f"{W}/plan6.md"
+write(ART6, f"---\nobject: <the resolved object — symbols · columns · files>\n---\n\n{MARKER}\n")
+rc, out = run("round", "--state", S6, "--artifact", ART6, "--round", "1", "--repo", REPO, f"{W}/f5/o.md")
+if rc == 2 and "placeholder" in out and not os.path.exists(f"{S6}/ledger.json"):
+    ok("a fence line still holding the template placeholder -> NOT-GATED, nothing written")
+else:
+    fail("fence placeholder", out)
 
 # --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
