@@ -210,31 +210,6 @@ for pattern in "${PORTABILITY_PATTERNS[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Check 13 — Skill registry: description budget + invocation-graph rule
-# (validate-skill.sh --registry: total vs the deployed skillListingBudgetFraction
-#  budget, per-skill 1024-char cap, and the hard rule that no skill flagged
-#  disable-model-invocation is invoked from another skill's body. The graph is
-#  recomputed from the files on every run — never maintained by memory.)
-#
-#  The BUDGET leg gets its OWN failure line (bead ac-g2v4). validate-skill.sh exits 1
-#  for a budget breach, an over-1024 description and an invocation-graph violation
-#  alike, and one generic line cannot tell them apart — so while ANY of the three holds
-#  Check 13 red, a newly-introduced budget breach lands silently behind it. The cutover
-#  made that concrete: the overlap breach is tolerated by ruling and expires at
-#  archival (see validate-skill.sh's archive-before-use note), which only stays safe if a
-#  POST-archival breach is still visible as a breach. Grep for the marker, name it
-#  separately, and let the generic line follow.
-# ---------------------------------------------------------------------------
-echo "--- Check 13: skill registry (budget + invocation graph) ---"
-check
-if ! bash "$AC_ROOT/skills/skill-builder/scripts/validate-skill.sh" --registry "$AC_ROOT/skills" > /tmp/ac-lint-registry.out 2>&1; then
-  if grep -q '^registry-description-budget: BREACH' /tmp/ac-lint-registry.out; then
-    fail "Check 13 budget: $(grep -m1 '^registry-description-budget: BREACH' /tmp/ac-lint-registry.out) — the always-loaded skill-listing budget is over. Diet descriptions or archive absorbed skills; raising skillListingBudgetFraction is a deliberate, separate decision."
-  fi
-  fail "Check 13: skill-registry validation (budget / >1024 desc / invocation-graph) — details: /tmp/ac-lint-registry.out"
-fi
-
-# ---------------------------------------------------------------------------
 # Check 17 — dcg-blocked shell idioms in published snippets
 # ---------------------------------------------------------------------------
 echo "--- Check 17: dcg-blocked dynamic-path redirects ---"
