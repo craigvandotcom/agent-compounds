@@ -67,7 +67,7 @@ they're missing — the invariant is enforced, not conventional. To add/remove a
 ```
 agent-compounds/
 ├── skills/        # the registry — each dir = one skill (SKILL.md + references/ + workflows/)
-│   ├── ac-*       # the compounding-engineering pipeline — 3 loops, one conductor (ac-loop): dev (align→plan→beadify→implement→verify→review→merge→land→publish), triage (ac-triage), audit (audit+ac-hygiene); doctrine = ac-pipeline
+│   ├── ac-*       # the compounding-engineering pipeline — 3 loops, one conductor (ac-implement): dev, triage (ac-triage), audit (audit+ac-hygiene); stage order + contracts: skills/ac-pipeline/references/stage-table.md; doctrine = ac-pipeline
 │   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
 │   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
 ├── agents/        # subagent definitions (researcher, implementer, validator — the 3 stances — plus tester, code-explorer, browser-tester, browser-agent); each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model

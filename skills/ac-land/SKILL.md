@@ -5,7 +5,7 @@ description: "The closing ritual — runs LAST, after merge. To land = leave it 
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this LAST, after merge — invoked at loop-exit (post-merge, on `main`, wave branch gone) or manually once a wave has shipped. See Phase 0 below for how it resolves session context in that post-merge state.
+Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit (on `main`, wave branch gone) or manually once a wave has shipped. See Phase 0 below for how it resolves session context in that post-merge state.
 
 ---
 

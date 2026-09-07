@@ -15,11 +15,12 @@ Symlinked into a project as `.claude/skills/<name>/`.
 | **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
-conductor is **`ac-implement`**; the design lives in **`ac-pipeline`**. Three operational
-loops feed one execution path (see `ac-pipeline` § *The three operational loops*):
-the **dev loop** (human intent → plans → waves → `ac-implement` ships), the **triage loop**
-(`ac-triage`, scheduled — production signal → defect beads), and the **audit loop**
-(`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
+conductor is **`ac-implement`**; the design lives in **`ac-pipeline`**. Three loops feed one
+execution path: the **dev loop** (human intent → plans → waves → `ac-implement`
+ships), the **triage loop** (`ac-triage`, scheduled — production signal → defect beads), and
+the **audit loop** (`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
+The canonical stage order — stage · owner · trigger · human gate · artifact — lives in
+`skills/ac-pipeline/references/stage-table.md`; nothing here restates it.
 | Skill | What it does |
 |-------|-------------|
 | **ac-pipeline** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
