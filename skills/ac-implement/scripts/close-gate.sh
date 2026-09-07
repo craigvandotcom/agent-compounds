@@ -119,6 +119,20 @@ is_test_shaped() {
   esac
 }
 
+# A probe whose stdout is SUPPRESSED BY CONSTRUCTION can never carry assertion lines:
+# a silent test (-q) or a redirect into /dev/null produces nothing to count, so selecting
+# it as the assertion-bearing probe bails COVERAGE on a bead whose harness asserts fine
+# (measured: ac-close-gate-coverage-silent-probe-ja8l, instances 4 and 5). Deliberately
+# static — it reads the probe's CONSTRUCTION, never its run: a harness that ran but
+# emitted nothing stays NOT-CHECKED, because a run that asserted nothing reads identical
+# to one that passed.
+is_output_silent() {
+  case "$1" in
+    *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 br_field() { # <bead-id> <jq field> -> value, empty when unreadable
   "$BR" show "$1" --json </dev/null 2>/dev/null \
     | jq -r "if type == \"array\" then .[0] else . end | .$2 // \"\"" 2>/dev/null
@@ -186,12 +200,16 @@ trap 'rm -f "$BODY" "$ASSERT_OUT"' EXIT
 
 # The assertion-bearing probe is the one that RUNS A HARNESS, which is not always the probe
 # that happened to be RED first: `test -x <script>` is a legitimate RED and emits no
-# assertions by construction. Pick the first probe naming a test-shaped file that exists;
-# when the bead has none (a prose or config bead), the temporal exit-code pair recorded in
-# the receipt is the assertion, and that pair is checked below instead.
+# assertions by construction. Two filters, both required: the probe must NAME a test-shaped
+# file that exists, AND its stdout must be able to carry assertion lines (a -q test or a
+# >/dev/null redirect asserts nothing into any stream we can read — measured as instances
+# 4 and 5 of ac-close-gate-coverage-silent-probe-ja8l). When every probe is output-silent
+# (or none names a harness), the temporal exit-code pair recorded in the receipt is the
+# assertion, and that pair is checked below instead.
 ASSERT_PROBE=""
 while IFS= read -r pr; do
   [ -n "$pr" ] || continue
+  is_output_silent "$pr" && continue
   for tok in $(printf '%s' "$pr" | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' || true); do
     if is_test_shaped "$tok" && [ -f "$tok" ]; then ASSERT_PROBE="$pr"; break 2; fi
   done
@@ -239,7 +257,12 @@ if [ -n "$VITEST_JSON" ]; then
   ASSERTIONS=$(jq '[.testResults[]?.assertionResults[]?] | length' "$VITEST_JSON" 2>/dev/null || echo 0)
   ASSERT_SOURCE="assertionResults in $VITEST_JSON"
 elif [ -n "$ASSERT_PROBE" ]; then
-  ASSERTIONS=$(grep -cE '^[[:space:]]*(ok|not ok|FAIL|PASS|✓|✗)([[:space:]]|$)' "$ASSERT_OUT" 2>/dev/null || true)
+  # Assertion line formats live harnesses in this registry actually emit: TAP `ok N …`,
+  # `FAIL …`, vitest-style `✓/✗`, and the `  PASS: <label>` label-colon form
+  # (ac-close-gate-coverage-silent-probe-ja8l instance 5 — consensus.test.sh's PASS lines
+  # missed the old space-or-EOL follower). The token must still be FOLLOWED by something —
+  # a bare "PASS" inside prose is not an assertion line.
+  ASSERTIONS=$(grep -cE '^[[:space:]]*(ok|not ok|FAIL|PASS|✓|✗)([[:space:]:]|$)' "$ASSERT_OUT" 2>/dev/null || true)
   if [ "${ASSERTIONS:-0}" -eq 0 ]; then
     # A summary line is a fallback, never the primary: it counts what the runner chose to
     # report, and this leg exists precisely because that number can be produced by a run

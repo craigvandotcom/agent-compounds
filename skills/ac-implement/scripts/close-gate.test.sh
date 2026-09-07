@@ -265,6 +265,91 @@ if grep -q 'assertionResults' "$GATE"; then
   pass "AC3: the gate names the assertionResults field it reads"
 else fail "AC3: the gate never mentions assertionResults"; fi
 
+# --- 3d (ac-close-gate-coverage-silent-probe-ja8l, instance 4): one AC names a test-shaped
+# file through a SILENT grep probe (-q), and a real harness probe also exists. The
+# assertion-bearing probe must be the one whose stdout can carry assertion lines — never a
+# grep that merely names a test-shaped file, whose stdout is empty by construction.
+R="$(mkcase coverage-silent-grep)"
+write_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness names the assertion format.
+  Probe: `grep -q 'ok' harness.test.sh` — tier: none
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3d: a silent grep naming a test-shaped file is never the assertion probe — the output-carrying harness probe is"
+else fail "AC3d: rc=$GATE_RC out=$out"; fi
+
+# --- 3e (ac-close-gate-coverage-silent-probe-ja8l, instance 5): a REAL harness probe whose
+# assertion lines are the registry-live `  PASS: <label>` format — not TAP ok/N — and whose
+# summary carries no "N passed" count. The gate must recognize the formats live harnesses
+# in this registry actually emit.
+write_registry_format_harness() {
+  cat >"$1/harness.test.sh" <<'H'
+#!/usr/bin/env bash
+rc=0
+if grep -q FIXED subject.txt; then echo "  PASS: AC1: subject carries FIXED"; else echo "  FAIL: AC1: subject lacks FIXED"; rc=1; fi
+echo "All fixture tests passed."
+exit $rc
+H
+  chmod +x "$1/harness.test.sh"
+}
+R="$(mkcase coverage-pass-format)"
+write_registry_format_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3e: '  PASS: <label>' assertion lines are recognized as assertion results"
+else fail "AC3e: rc=$GATE_RC out=$out"; fi
+
+# --- 3f (the Delivers carve-out, guarded): when EVERY probe's stdout is suppressed by
+# construction, the temporal exit-code pair recorded in the receipt is the assertion —
+# the same case the prose path already handled. This must never have to grow a harness.
+R="$(mkcase coverage-all-silent)"
+board "$R" in_progress worker
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the subject carries the token.
+  Probe: `grep -q FIXED subject.txt` — tier: none
+
+## Delivers
+- artifact: subject.txt
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "shipped: the subject now carries FIXED. Delivered: subject.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'temporal exit-code pair'; then
+  pass "AC3f: every-probe-output-silent closes on the receipt's temporal pair — no harness demanded"
+else fail "AC3f: rc=$GATE_RC out=$out"; fi
+
 # ============================================================================================
 # AC 4 — the scanner leg
 # ============================================================================================
@@ -398,4 +483,7 @@ else fail "AC7: assurance declaration missing:$miss"; fi
 
 echo "---"
 echo "close-gate.test.sh: $CASES case(s), $FAILURES failure(s)"
+# ac-close-gate-coverage-silent-probe-ja8l's RED probe greps this output for 'passed' — it
+# must therefore appear ONLY when the run is all-green, never as part of a failure count.
+[ "$FAILURES" -eq 0 ] && echo "close-gate.test.sh: all $CASES case(s) passed"
 [ "$FAILURES" -eq 0 ]
