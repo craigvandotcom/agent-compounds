@@ -1,0 +1,2 @@
+Quality Gate (format · lint · types · build · tests · prompt-drift)
+Supabase integration tests (real Postgres · workflow_dispatch only)

@@ -43,21 +43,23 @@ tagging your original ref after one ships a commit nothing proved.
 
 ## The one thing this gate adds: required jobs must have EXECUTED
 
-A run's conclusion is a fact about the RUN. It is not a fact about any job inside it, and the
-two diverge — measured live on `craigvandotcom/body-compass-app` run `33103521929`, whose
-run-level `conclusion` is `failure` while one of its two jobs concluded `success`. The
-dangerous direction is the mirror image: a required job that was skipped by an `if:`, or never
-scheduled at all, leaves a green run with nothing behind it. A conclusion observed live on that
-same run's steps is literally `skipped`.
+A run's conclusion is a fact about the RUN, not about any job inside it, and the two diverge —
+measured live on `craigvandotcom/body-compass-app` run `33103521929`: run-level `failure`, one
+job `success`. The dangerous direction is the mirror image: a required job skipped by an `if:`,
+or never scheduled at all, leaves a green run with nothing behind it (a conclusion observed on
+that run's steps is literally `skipped`).
 
 **So assert per-job, by name, against the run you dispatched:**
 
 ```bash
-# The app's CI contract: one required job name PER LINE — never a space-separated list.
-# Real job names contain spaces ("Playwright e2e (24 specs) · route module-load smoke"),
-# and word-splitting one silently asserts over fragments that match nothing.
-REQUIRED=$(printf '%s\n' "<job>" "<job>")
-[ -n "$REQUIRED" ] || { echo "NOT-GATED: no required-job list — nothing was asserted"; exit 2; }
+# The app's CI contract: one required job name PER LINE — real names contain spaces and '·',
+# and a word-split list silently asserts over fragments that match nothing. The list is
+# COMMITTED DATA in the registry repo (.github/required-jobs.txt), resolved through this
+# skill's own symlinked home; deriving it from the workflow at assert time is circular —
+# a job silently deleted would vanish from a derived list too. Then read:
+CONTRACT="$(dirname "$(readlink -f .claude/skills/ac-publish/SKILL.md)")/../../.github/required-jobs.txt"
+REQUIRED=$(cat "$CONTRACT" 2>/dev/null)
+[ -n "$REQUIRED" ] || { echo "NOT-GATED: no required-job contract at $CONTRACT — nothing was asserted"; exit 2; }
 
 GREEN=$(gh run view "$RUN_ID" --json jobs \
           --jq '.jobs[] | select(.status=="completed" and .conclusion=="success") | .name')
@@ -73,13 +75,13 @@ MISSING=$(comm -23 <(printf '%s\n' "$REQUIRED" | sort) <(printf '%s\n' "$GREEN" 
 - **`REQUIRED` empty or unreadable** — the assertion would range over an empty set, which is the
   exact green-over-nothing this leg exists to stop. Refuse `NOT-GATED` rather than assert nothing.
 
-Executed against a live run before this shipped, all three ways: a green pass, a required job
-that concluded `failure` refused by name, and an empty `REQUIRED` refused rather than asserting
-over nothing. A gate whose commands nobody ran is a scar list with better formatting.
+Executed against a live run before shipping, all three ways: a green pass, a required job that
+concluded `failure` refused by name, and an empty `REQUIRED` refused. A gate whose commands
+nobody ran is a scar list with better formatting.
 
 `NOT-GATED` is never a pass and never a FAIL-and-continue: it is a stop. A dormant job reporting
-green is the gate-audit class — canon in `skills/ac-pipeline/references/` § assurance-declarations
-— and it is how a pipeline ships unproven code while every dashboard stays green.
+green is the gate-audit class (canon: `skills/ac-pipeline/references/` § assurance-declarations)
+— how a pipeline ships unproven code while every dashboard stays green.
 
 ## Open needs-device surfaces — refuse before tagging
 
@@ -114,13 +116,11 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
    bypass must be loud, named and logged — never a silent default.
    Hand the upload to `ac-distribute` (check-only on the bump).
 
-   > This step used to read "CI-built artifacts ONLY". That was unenforceable in a consuming app
-   > whose CI signing lane is intermittently broken, so in practice it was ignored — and an
-   > ignored rule is worse than no rule. Worse, it pushed every risky ship onto the local lane,
-   > which at the time had NO gate at all (body-compass, measured 2026-08-31: `ios-release.yml`
-   > gated on check-runs, `ship-testflight.sh` had zero). The absolute wording protected nothing
-   > and hid that. State the property you actually need, make both lanes able to satisfy it, and
-   > the contradiction disappears.
+   > This step once read "CI-built artifacts ONLY" — unenforceable in a consuming app whose CI
+   > signing lane is intermittently broken, so it was ignored (an ignored rule is worse than
+   > none), and it pushed every risky ship onto the local lane while that lane had NO gate at
+   > all (body-compass, 2026-08-31: `ios-release.yml` gated on check-runs, `ship-testflight.sh`
+   > had zero). State the property you actually need; make both lanes able to satisfy it.
 4. **Verify identity, not version strings.** Confirm what production actually serves is the
    proven SHA. Two deployments can mint the same version.
 
