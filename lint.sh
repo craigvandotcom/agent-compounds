@@ -669,31 +669,6 @@ elif [ "$dcg_hits" -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Check 19 — bead template conformance (what the registry SHIPS)
-# ---------------------------------------------------------------------------
-echo "--- Check 19: bead template conformance ---"
-
-# Check 18 proves the runtime guard fires on what an agent TYPES. This proves the templates
-# the registry ships are themselves conformant — the two are not the same failure. A stale
-# template is worse than a mistyped command: it is copied, so it reproduces the defect on
-# every future run, and the agent copying it has no reason to doubt it.
-#
-# The script imports the guard, so the contract has exactly one implementation. Editing one
-# to satisfy the other defeats the point — fix the template.
-BTL="$AC_ROOT/scripts/bead-template-lint.py"
-check
-if [ -r "$BTL" ]; then
-  if btl_out=$(python3 "$BTL" 2>&1); then
-    echo "  all bead templates carry origin: + readiness"
-  else
-    printf '%s\n' "$btl_out"
-    fail "Check 19: non-conforming bead template(s) — see above"
-  fi
-else
-  fail "Check 19: scripts/bead-template-lint.py missing — template conformance unverified"
-fi
-
-# ---------------------------------------------------------------------------
 # Check 22 — lean-family ledger: control <-> friction referential integrity (ac-cfn4)
 # ---------------------------------------------------------------------------
 echo "--- Check 22: family ledger integrity ---"

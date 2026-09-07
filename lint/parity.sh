@@ -291,6 +291,21 @@ elif [ "$CHECK_ID" = 18 ]; then
   compare_sets "doctored hooks (dead bead-capture-guard)" "$old" "$new" "$LSTRIP" "$NSTRIP"
   rm -rf "$W"
   finish
+elif [ "$CHECK_ID" = 19 ]; then
+  NEW="$ROOT/lint/checks/19-bead-template-conformance.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  LSTRIP='s/^FAIL: Check 19: //'; NSTRIP='s/^FAIL 19-bead-template-conformance: //'
+  old="$(run_legacy 19)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry templates (live)" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  # doctored tree: no scripts/ — both judges must fail on the missing judge,
+  # never read a missing lint script as a clean sweep
+  W="$(mktemp -d)"
+  old="$(run_legacy 19 "$W")"
+  new="$(python3 "$NEW" "$W" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "missing-script fixture" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  rm -rf "$W"
+  finish
 else
   echo "NOT-CHECKED: no parity recipe for check '$CHECK_ID'" >&2
   exit 2

@@ -19,8 +19,11 @@ Sets:
              executes them and the workflow that schedules it — Check 20's
              audit surface.
   HOOKS      hooks/hooks.json, the hooks/ executables it wires, and the bead
-             board its PENDING-DECISION escapes resolve against — Check 21's
-             audit surface.
+              board its PENDING-DECISION escapes resolve against — Check 21's
+              audit surface.
+  TEMPLATES  the templates/ the registry ships plus scripts/
+              bead-template-lint.py, the one judge over them — Check 19's
+              audit surface.
   CHECKS     the lint v2 check files themselves (lint/checks, harnesses excluded).
   CACHES     directory names that are build/interpreter caches — excluded from
              every walk.
@@ -66,6 +69,7 @@ _ledger = set()
 _archive = set()
 _harnesses = set()
 _hooks = set()
+_templates = set()
 for p in sorted(_paths):
     base = p.rsplit("/", 1)[-1]
     if base in LEDGER_NAMES:
@@ -80,6 +84,8 @@ for p in sorted(_paths):
         _harnesses.add(p)
     if p.startswith("hooks/") or p == ".beads/issues.jsonl":
         _hooks.add(p)
+    if p.startswith("templates/") or p == "scripts/bead-template-lint.py":
+        _templates.add(p)
     if base == "SKILL.md" or _in_dir(p, "references") or _in_dir(p, "reference") or _in_dir(p, "workflows"):
         _live.add(p)
 
@@ -88,6 +94,7 @@ LEDGER = frozenset(_ledger)
 ARCHIVE = frozenset(_archive)
 HARNESSES = frozenset(_harnesses)
 HOOKS = frozenset(_hooks)
+TEMPLATES = frozenset(_templates)
 CORPUS = frozenset({CORPUS_PATH}) if os.path.isfile(os.path.join(ROOT, CORPUS_PATH)) else frozenset()
 
 CHECKS_DIR = os.path.join(ROOT, "lint", "checks")
