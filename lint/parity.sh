@@ -431,6 +431,22 @@ elif [ "$CHECK_ID" = 1 ]; then
   compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
   finish
 
+elif [ "$CHECK_ID" = 2 ]; then
+  # --- recipe for Check 2 (/ac-* cross-references, ac-1p7j.12) ------------------
+  # Regex-extraction block: registry tree, then the committed static fixture.
+  NEW="$ROOT/lint/checks/2-ac-cross-references.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  LSTRIP='s/^FAIL: //'; NSTRIP="s/^FAIL $(basename "$NEW" .py): //"
+
+  old="$(run_legacy 2)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+
+  old="$(run_legacy 2 "$ROOT/lint/fixtures/2-ac-cross-references")" || exit 2
+  new="$(python3 "$NEW" "$ROOT/lint/fixtures/2-ac-cross-references" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  finish
+
 elif [ "$CHECK_ID" = 13 ]; then
   # --- recipe for Check 13 (ac-1p7j.13) ----------------------------------------
   # Delegating block (validate-skill.sh --registry): registry tree, then a
