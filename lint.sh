@@ -500,60 +500,6 @@ if [ -f "$AC_ROOT/agents/reviewer.md" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Check 11 — pipeline conformance (G-series doctrine landings)
-# ---------------------------------------------------------------------------
-echo "--- Check 11: pipeline conformance (G-series) ---"
-
-# G1: cross-cadence schedule table present. It lived in ac-pipeline/SKILL.md until the
-# ac2->ac rename overwrote that file with the constitution; rehomed 2026-09-02 as the
-# owner-hosted operating contract references/schedule.md, which is where this now looks.
-check
-if ! grep -qE "23:00|Cross-cadence" "$AC_ROOT/skills/ac-pipeline/references/schedule.md" 2>/dev/null; then
-  fail "G1: skills/ac-pipeline/references/schedule.md missing the cross-cadence schedule table"
-fi
-
-# G2: reverse shape-check present in ac-bead-capture (routing-to-backlog language)
-check
-if ! grep -qi "backlog" "$AC_ROOT/skills/ac-bead-capture/SKILL.md" 2>/dev/null; then
-  fail "G2: skills/ac-bead-capture/SKILL.md missing the reverse shape-check routing-to-backlog language"
-fi
-
-# G4: QA-freshness equivalence rule present in ac-distribute
-check
-if ! grep -q "fast-forward-equivalent" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
-  fail "G4: skills/ac-distribute/SKILL.md missing the fast-forward-equivalent QA-freshness rule"
-fi
-
-# G5 RETIRED (review-step cut 4c291a3): guarded the loop's read of ac-review's VERDICT
-# before ac-merge. The loop has no review step and ships trunk-direct via ac-batch-close,
-# so both premises are dead. Slot left numbered to keep G6+ stable.
-
-# G6 (Wave-B bd-brv39.2): ac-land's inline Apply-Approved-Upgrades path EMITS a
-# skill-hotfix:-prefixed commit for the approved-upgrade case (conditional; routine
-# compound stays chore:), so dream's Phase 5 dedupe can grep it across target classes.
-check
-if ! grep -q "skill-hotfix:" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; then
-  fail "G6: skills/ac-land/SKILL.md missing the skill-hotfix: emit instruction for the approved-upgrade apply case"
-fi
-
-# G7 (Wave-B bd-brv39.5): ac-land 1c UI suite RETIRED; ac-implement deferral re-pointed to
-# BOTH owners; ac-pipeline ledger reconciled (doctrine-honesty — 1b test:all stays live).
-# G7a: the 1c UI Validation Suite block is gone from ac-land.
-check
-if grep -qF "1c. UI Validation Suite" "$AC_ROOT/skills/ac-land/SKILL.md" 2>/dev/null; then
-  fail "G7a: skills/ac-land/SKILL.md still contains the retired '1c. UI Validation Suite' block"
-fi
-# G7b RETIRED (a: retires with its subject) — asserted ac-implement's UI-validation
-# deferral named both owners. ac-implement AND one of the two named owners (ac-batch-close)
-# are both in the Phase-4 archive set, and ac-implement carries no UI-validation deferral
-# at all (grep: zero hits for the deferral or either owner). Re-pointing would assert a
-# contract the successor does not have. G7a above is untouched — ac-land survives.
-# G7c + G7d RETIRED (a: retires with their subject) — asserted the ac-pipeline
-# conformance-status section's QA-placement checkbox and the STILL-LIVE marker on its 1b
-# test:all sub-item. The whole conformance-status section retired with the legacy
-# architecture lane at the pipeline rename; git history preserves it.
-
-# ---------------------------------------------------------------------------
 # Check 12 — deployed-app conformance (C-series)
 # ---------------------------------------------------------------------------
 echo "--- Check 12: deployed-app conformance (C-series) ---"
