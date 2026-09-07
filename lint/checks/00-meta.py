@@ -111,8 +111,19 @@ def fixture_goes_red(path, header):
     fx = os.path.join(scope.ROOT, str(header["fixture"]))
     rel = os.path.relpath(path, scope.ROOT)
     if os.path.isfile(os.path.join(fx, "run.sh")):
+        # run.sh fixtures build STATE — some run git init/clone/commit (14-no-net-growth).
+        # They must never see the CALLER's git env: an inherited GIT_DIR resolved the
+        # fixture's git calls into the real repo gitdir and wrote junk commits to local
+        # main (run 20260907-exhaust). GIT_DIR / GIT_WORK_TREE / GIT_INDEX_FILE are unset
+        # by construction: a clean dict REPLACES the environment, the same discipline the
+        # static-tree leg below applies to the check itself.
+        env = {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": os.environ.get("HOME", os.path.expanduser("~")),
+            "LANG": os.environ.get("LANG", "C.UTF-8"),
+        }
         proc = subprocess.run(["bash", os.path.join(fx, "run.sh")],
-                              capture_output=True, text=True, timeout=120)
+                              capture_output=True, text=True, timeout=120, env=env)
         # run.sh's contract is INVERTED from the raw check exit: it exits 0 when the
         # check went RED as required (the RED is demonstrated), 1 when the check
         # passed its RED case, anything else when the fixture could not build.
