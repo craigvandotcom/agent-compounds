@@ -53,11 +53,13 @@ The YAML `description` determines skill discovery. Must include:
 - When to use it (trigger terms users would mention)
 - Max 1024 characters, strongest trigger first (truncation happens at the tail)
 
-Descriptions are paid in EVERY session of every consuming app, and the total across all
-visible skills must fit the listing budget (default ~15k chars; this registry deploys
-`skillListingBudgetFraction: 0.02` ≈ 30k to its apps) — over budget, least-invoked
-skills lose their descriptions first and natural-language triggering degrades. Check
-with `validate-skill.sh --registry`; budget mechanics in
+Descriptions are paid in EVERY session of every consuming app. The registry-wide
+aggregate is the binding constraint, not the per-skill 1024 cap: BUDGET_FAIL=30000 in
+`validate-skill.sh` (tracks the deployed `skillListingBudgetFraction: 0.02`) — over
+budget, least-invoked skills lose their descriptions first and triggering degrades.
+Policy is pay-by-tightening: every description addition is paid for by tightening
+elsewhere; raising the threshold is a human decision. Check with
+`validate-skill.sh --registry` (27,460/30000 at landing); budget mechanics in
 `references/token-economics.md`.
 
 **The invocation-graph rule decides `disable-model-invocation` — never memory or budget
@@ -68,21 +70,17 @@ cheap direction); flipping is an optimization ratified later. The graph is compu
 from the files by `validate-skill.sh --registry` every run — a flipped skill with
 inbound references is a hard FAIL.
 
-**CRITICAL: Descriptions must focus on WHEN (triggering conditions), NOT HOW (workflow summary).**
-
-When descriptions summarize workflow, agents follow the summary instead of reading full content. This bypasses the skill's detailed guidance.
+**CRITICAL: Descriptions must focus on WHEN (triggering conditions), NOT HOW (workflow summary)** — a workflow-summary description makes the agent follow the summary and never read the full content.
 
 **Bad (workflow summary):**
 ```yaml
 description: Helps write tests first, then implement features, then refactor code for quality.
 ```
-Agent reads this and thinks "I know the workflow" - never reads the full skill content.
 
 **Good (triggering conditions):**
 ```yaml
 description: Use when implementing new features, fixing bugs, or adding functionality. Applies when writing code that needs reliability. Triggers on "add feature", "fix bug", "implement X".
 ```
-Agent recognizes the scenario matches and loads the full skill for detailed guidance.
 
 ### 4. Spine + References Structure
 
@@ -367,7 +365,7 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 - Size limits (warns >400 and >500 lines — see enforcement-heavy exception above)
 - Trigger phrase presence
 - Workflow summary anti-patterns
-- `--registry <skills-dir>`: sums all descriptions against the ~15k-char listing budget
+- `--registry <skills-dir>`: sums all model-invocable descriptions against the listing budget (default ~15k; this registry deploys BUDGET_FAIL=30000)
 
 ---
 
