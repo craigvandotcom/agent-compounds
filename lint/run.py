@@ -110,11 +110,14 @@ def main():
 
     all_checks = discover()
     if args.check:
+        def _norm(w: str) -> str:
+            return w.lstrip("0") or "0"
         ids_full = {check_id(c) for c in all_checks}
-        ids_prefix = {i.split("-", 1)[0] for i in ids_full}
-        selected = [c for c in all_checks if check_id(c) in set(args.check)
-                    or check_id(c).split("-", 1)[0] in set(args.check)]
-        unknown = [w for w in args.check if w not in ids_full and w not in ids_prefix]
+        ids_prefix = {_norm(i.split("-", 1)[0]) for i in ids_full}
+        selected = [c for c in all_checks if _norm(check_id(c)) in {_norm(w) for w in args.check}
+                    or _norm(check_id(c).split("-", 1)[0]) in {_norm(w) for w in args.check}]
+        unknown = [w for w in args.check
+                   if _norm(w) not in {_norm(i) for i in ids_full} and _norm(w) not in ids_prefix]
         if unknown:
             print(f"NOT-GATED: unknown --check id(s): {unknown} — nothing ran", file=sys.stderr)
             return 2
