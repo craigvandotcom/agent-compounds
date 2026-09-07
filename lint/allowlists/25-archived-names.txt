@@ -1,0 +1,49 @@
+# 25-archived-names allowlist — dated, SHRINK-ONLY (ac-1p7j.4).
+#
+# Every entry is a LIVE_TEXT file carrying a retired skill name, seeded
+# 2026-09-07 with the carriers standing at the check's landing. Entries may
+# only be REMOVED: a sweep that cleans a file must delete its entry, and an
+# added entry fails the check (growth is refused against the committed base).
+# Standing exclusions and archived-v1 survivor names are declared in
+# lint/checks/25-archived-names.py, never here.
+skills/ac-bead-capture/SKILL.md
+skills/ac-distribute/SKILL.md
+skills/ac-human-session/SKILL.md
+skills/ac-hygiene/SKILL.md
+skills/ac-hygiene/references/report-template.md
+skills/ac-land/SKILL.md
+skills/ac-pipeline/SKILL.md
+skills/ac-pipeline/references/board-scan.md
+skills/ac-pipeline/references/ceremony-batching-pool.md
+skills/ac-pipeline/references/commit-discipline.md
+skills/ac-pipeline/references/degraded-mode.md
+skills/ac-pipeline/references/delegation-contract.md
+skills/ac-pipeline/references/design-refs.md
+skills/ac-pipeline/references/qa-shared.md
+skills/ac-pipeline/references/risk-classification.md
+skills/ac-pipeline/references/run-id.md
+skills/ac-pipeline/references/run-ledger.md
+skills/ac-pipeline/references/schedule.md
+skills/ac-pipeline/references/shell-guardrails.md
+skills/ac-pipeline/references/stage-table.md
+skills/ac-pipeline/references/verification-gate.md
+skills/ac-qa-device/SKILL.md
+skills/ac-review/SKILL.md
+skills/ac-review/references/report-template.md
+skills/ac-review/references/reviewer-prompt-template.md
+skills/ac-triage/SKILL.md
+skills/ac-triage/references/feedback-adapter.md
+skills/agent-mail/SKILL.md
+skills/agent-mail/references/agent-identity.md
+skills/beads-standards/SKILL.md
+skills/beads-standards/reference/bead-conventions.md
+skills/beads-standards/reference/human-gate-template.md
+skills/beads-standards/reference/origin-provenance.md
+skills/browser-testing/SKILL.md
+skills/capacitor/SKILL.md
+skills/context-engineering/SKILL.md
+skills/device-testing/SKILL.md
+skills/skill-builder/references/friction-capture.md
+skills/skill-builder/references/trigger-corpus.md
+skills/workflow-builder/SKILL.md
+skills/workflow-builder/references/command-patterns.md
