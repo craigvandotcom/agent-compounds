@@ -1,0 +1,6 @@
+# Check 28 allowlist — dated, shrink-only. One entry per line: `YYYY-MM-DD <path>`.
+# The date is when the dangling path was admitted. An entry whose path resolves
+# again FAILS the check — the fix landed; delete the line. Never add a line
+# without fixing the date to the admission day.
+2026-09-07 ac-bead-refine/references/workflow.md
+2026-09-07 ac-merge/references/feedback-writeback-hook.md
