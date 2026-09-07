@@ -860,6 +860,12 @@ if [ -z "$NNG_MERGE_BASE" ]; then
   # availability; this check adds diff-awareness on top when it can resolve
   # a base, never blocks the whole lint leg when it can't.
   echo "NOTICE: Check 14 leg 1 skipped — base ref '$NNG_BASE_REF' unresolvable (shallow checkout, standalone clone, or no fetch of it) — no-net-growth not enforced for the registry this run."
+elif [ "$NNG_MERGE_BASE" = "$(git --no-optional-locks -C "$AC_ROOT" rev-parse HEAD 2>/dev/null)" ]; then
+  # Regression guard (ac-q1mu): a base that still equals HEAD after
+  # nng_leg1_base's HEAD^ fallback means the diff is empty by construction
+  # and the leg compares HEAD against itself — the silent self-pass class.
+  # Fail loudly instead of printing a meaningless PASS.
+  fail "Check 14 leg 1: no-net-growth base collapsed onto HEAD ($(git --no-optional-locks -C "$AC_ROOT" rev-parse HEAD 2>/dev/null | cut -c1-12)) — the ratchet would compare HEAD against itself; check checkout depth (HEAD^ must resolve)"
 else
   nng_scan "$AC_ROOT" "agent-compounds" "$NNG_MERGE_BASE" 'skills/*/SKILL.md'
 fi

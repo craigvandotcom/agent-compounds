@@ -31,6 +31,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # fetch-depth: 2 so HEAD^ resolves (ac-q1mu). At the default depth 1,
+        # origin/main collapses onto HEAD and lint.sh's Check 14 leg 1 compares
+        # HEAD against itself — a silent self-pass on every CI run. lint.sh
+        # FAILS LOUDLY if the base still collapses, so a regression here
+        # cannot hide.
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
