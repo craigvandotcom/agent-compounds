@@ -72,15 +72,15 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
 4. **Create:** `br create "<imperative title>" -t <type> --labels "origin:ac-bead-capture,<labels>"
    --description "<context: what/why/where, user's words preserved>"` — set
    `--priority` only if the user signaled urgency; default is fine. Body carries
-   the typed headers from conventions §Body template (`## Steps to Reproduce`
-   for bugs, `## Acceptance Criteria`, …) — emit them at creation. Grep any
+   the typed headers from conventions §Body template (`## Steps to Reproduce`,
+   `## Acceptance Criteria`, …) — emit them at creation. An implementable bead
+   (`bug`/`task`/`feature`) is BORN PROBE-BEARING (create contract § Probe): its
+   `## Acceptance Criteria` carries a ``Probe: `<command>` — tier:`` bullet; no
+   probe → file `investigation`. Grep any
    file, symbol, commit or bead-id before naming it in a binding header;
    unverified detail is advisory (conventions §Binding vs advisory). For a
-   `human-gate`/DECISION shape, add `--parent <spawning-epic-id>` (step 2). An
-   optional `origin:` hint may be added to the description for any ad-hoc capture —
-   a lightweight provenance breadcrumb (`origin: <slack thread / conversation /
-   bead-id>`), never required. A plain non-human-gate capture stays zero-ceremony:
-   no epic selection, no origin required.
+   `human-gate`/DECISION shape, add `--parent <spawning-epic-id>` (step 2). An optional
+   `origin:` breadcrumb may ride in the description; a plain capture stays zero-ceremony.
 5. **Public-db rule:** agent-compounds beads publish — neutral title,
    pointer-only for anything sensitive (conventions §Public-repo rule).
 6. **Commit** `.beads/` in the target repo (own repo, own commit; discipline:

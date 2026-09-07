@@ -126,18 +126,18 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
 
 ## External escapes close the outer loop
 
-A finding that arrives from OUTSIDE — production, a user, store review, a late QA pass — is the
-only signal that can tell this factory it was wrong. Everything else is the factory grading
-itself.
+A finding that arrives from OUTSIDE — production, a user, store review, a late QA pass — is
+the only signal that can tell this factory it was wrong; everything else grades itself.
 
-**Label it with its catch-stage ON ARRIVAL**, from the closed set in
-`skills/beads-standards/SKILL.md`: `prod-finding` (Sentry normalizes into this) · `qa-finding` ·
-`ci-finding`. On arrival, because a stage inferred weeks later is a guess, and because the label
-is what says which gate leaked. **Write the label even when the fix lands immediately** — the
-fix may be in-batch, the label never is (ac-pipeline Invariant 6).
+**Label it with its catch-stage ON ARRIVAL** from the closed set in `skills/beads-standards/SKILL.md`
+(`prod-finding`, Sentry-normalized · `qa-finding` · `ci-finding`) — the label says which gate leaked;
+**write it even when the fix lands immediately** — the fix may be in-batch, the label never is.
+
+**File the escape as a bead, born probe-bearing** (create contract § Probe): an implementable
+type carries `## Acceptance Criteria` with a ``Probe: `<command>` — tier: <slug>`` bullet; the
+guard refuses a probe-less create, so a filer that cannot name one files `investigation`.
 
 ## Out of scope
 
-CI trust logic (`ac-prove` owns it, exclusively) · the store upload itself (`ac-distribute`) ·
-QA selection (the class table) · inbound triage — escapes are LABELLED here, and worked
-elsewhere.
+CI trust logic (`ac-prove`, exclusively) · the store upload itself (`ac-distribute`) · QA
+selection (the class table) · inbound triage — escapes are LABELLED here, worked elsewhere.

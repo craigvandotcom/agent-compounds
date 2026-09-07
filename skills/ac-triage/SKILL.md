@@ -176,6 +176,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
   --description "<source link · first-seen release · suspected wave · top stack frames
                  ## Steps to Reproduce (repro hints / crash path)
                  ## Acceptance Criteria (crash signature gone in next release's source)
+                 - Probe: `<command>` — tier: <slug>   (REQUIRED at creation — no probe → -t investigation)
                  ## Test Scope (real test file/describe anchors — grep them first)>"
 # body headers per beads-standards/reference/bead-conventions.md §Body template — emit at creation
 ```
@@ -192,8 +193,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 - **`## Test Scope` at creation, with grep-verified anchors** (same bar as `ac-hygiene`):
   name the real file(s)/describe block(s) a validator would run — grep each before citing it,
   never invent a describe you have not seen — plus the QA modality for user-facing surfaces
-  (`browser:`/`device:` + journey). A finding bead with no test plan is how an engineer ends
-  up authoring tests that cannot fail, and refine would have to author it cold.
+  (`browser:`/`device:` + journey). A finding with no test plan is a test an engineer authors cold.
 - **ac-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
   escape as `catch-stage:<stage>` — the stage that SHOULD have caught it (plan · beadify ·
   flight · implement · close · review) — plus `discovered-from: <bead>` naming the work that

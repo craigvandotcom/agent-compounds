@@ -8,6 +8,8 @@ module, so the two enforcers cannot drift — they share one implementation of t
 Enforced here:
   - `origin:<skill>` on every bead — which workflow created it.
   - a readiness label on every NON-EPIC bead — `unrefined` / `human-gate`.
+  - a `Probe:` line on every IMPLEMENTABLE bead (`bug` / `task` / `feature`) — born
+    probe-bearing; `epic` / `decision` / `investigation` are exempt.
 
 WHY THIS IS A HARD GATE, not an advisory (Craig, 2026-08-23):
 `origin:` already existed as an OPTIONAL hint — plan 2026-07-16-1729-epic-bead-quality-
@@ -27,7 +29,7 @@ a real command-position `br create` is inspected, and only the actual `-l/--labe
 is searched for `origin:` — never the description.
 
 FAIL-OPEN on any parse failure. A guard that cannot understand a command must not wedge an
-unattended ac-loop run at 3am; a missed stamp is caught by the ac-bead-refine backstop.
+unattended ac-loop run at 3am; a missed stamp is caught by ac-tidy's nightly repair pass.
 """
 
 import json
@@ -49,6 +51,13 @@ READINESS = ("unrefined", "refined", "human-gate")
 # them. This mirrors ac-tidy Phase 2f, which repairs the same gap nightly for "open non-epic"
 # beads — the gate and the repair must agree on the exemption or they fight each other.
 READINESS_EXEMPT_TYPES = {"epic"}
+
+# The probe axis (born probe-bearing, ac-v5vi): an implementable bead is created with at
+# least one runnable acceptance probe. Containers, forks and unconfirmed leads own no probe
+# yet — a filer that cannot name one files `investigation`, the type that says so.
+IMPLEMENTABLE_TYPES = {"bug", "task", "feature"}
+PROBE_EXEMPT_TYPES = {"epic", "decision", "investigation"}
+PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")
 
 READINESS_MESSAGE = """\
 BLOCKED: `br {sub}` (type `{typ}`) without a readiness label.
@@ -82,6 +91,22 @@ rather than guessing or inventing a source.
 Canon: beads-standards/reference/origin-provenance.md. Rationale: the
 optional-hint version of this rule left half the board with no provenance,
 so it is now gated rather than advised.\
+"""
+
+PROBE_MESSAGE = """\
+BLOCKED: `br {sub}` (type `{typ}`) without a `Probe:` line in the body.
+
+An implementable bead (bug / task / feature) is born probe-bearing: `## Acceptance
+Criteria` carries at least one bullet of the shape
+
+    - Probe: `grep -q '<string>' <file>` — tier: none
+
+so pickup has something runnable to verify against. `epic`, `decision` and
+`investigation` are exempt — containers, forks and unconfirmed leads own no
+probe yet. A filer that cannot name a probe files the bead as `investigation`
+— the type that says so — never as a probe-less task.
+
+Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
 """
 
 
@@ -182,6 +207,27 @@ def has_origin(cmd):
     return False
 
 
+def description(cmd):
+    """The -d/--description/--body VALUE, or None when absent."""
+    return flag_value(cmd, {"-d", "--description", "--body"}, ("--description=", "--body="))
+
+
+def has_probe(cmd):
+    """True when the body carries a `Probe: `<command>`` ... tier: line.
+
+    An absent description BLOCKS (a probe-less create is exactly what this axis exists
+    to refuse). An unsubstituted template placeholder skips, the same doctrine as
+    `bead_type`: it could stand for anything, ac-tidy repairs nightly, and lint Check 19
+    catches stale templates statically.
+    """
+    d = description(cmd)
+    if d is None:
+        return False
+    if d.startswith("<") or d.startswith("$"):
+        return True
+    return bool(PROBE.search(d))
+
+
 def main():
     raw = sys.stdin.read()
     data = json.loads(raw) if raw.strip() else {}
@@ -211,6 +257,9 @@ def main():
         typ = bead_type(cmd)
         if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
             print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
+            sys.exit(2)
+        if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
+            print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
             sys.exit(2)
 
     allow()
