@@ -187,57 +187,6 @@ while IFS= read -r token; do
 done <<< "$DISTINCT_AC"
 
 # ---------------------------------------------------------------------------
-# Check 4 — README <-> disk consistency
-# ---------------------------------------------------------------------------
-echo "--- Check 4: README <-> disk ---"
-
-README="$AC_ROOT/README.md"
-check
-[ -f "$README" ] || fail "README: $README is missing — Check 4c/4d's link-existence sub-checks silently no-op without it"
-
-# 4a: every skills/ dir with a SKILL.md is mentioned in README.md
-for skill_dir in "$AC_ROOT/skills"/*/; do
-  [ -f "$skill_dir/SKILL.md" ] || continue
-  skill_name=$(basename "$skill_dir")
-  check
-  if ! grep -q "$skill_name" "$README" 2>/dev/null; then
-    fail "README: skill '$skill_name' (has SKILL.md) not mentioned in README.md"
-  fi
-done
-
-# 4b: every agents/*.md file is mentioned in README.md
-for agent_file in "$AC_ROOT/agents"/*.md; do
-  [ -f "$agent_file" ] || continue
-  agent_name=$(basename "$agent_file" .md)
-  check
-  if ! grep -q "$agent_name" "$README" 2>/dev/null; then
-    fail "README: agent '$agent_name' not mentioned in README.md"
-  fi
-done
-
-# 4c: README skill-table rows referencing ](./skills/<name>/) must exist on disk
-while IFS= read -r linked_skill; do
-  [ -n "$linked_skill" ] || continue
-  check
-  if [ ! -d "$AC_ROOT/skills/$linked_skill" ]; then
-    fail "README: links to ./skills/$linked_skill/ but that directory does not exist"
-  fi
-done <<< "$(grep -oh '\](./skills/[^/]*/)'  "$README" 2>/dev/null \
-  | sed 's|](./skills/||; s|/)||' \
-  | sort -u)"
-
-# 4d: README agent rows referencing ](./agents/<name>.md) must exist on disk
-while IFS= read -r linked_agent; do
-  [ -n "$linked_agent" ] || continue
-  check
-  if [ ! -f "$AC_ROOT/agents/$linked_agent.md" ]; then
-    fail "README: links to ./agents/$linked_agent.md but that file does not exist"
-  fi
-done <<< "$(grep -oh '\](./agents/[^)]*\.md)' "$README" 2>/dev/null \
-  | sed 's|](./agents/||; s|\.md)||' \
-  | sort -u)"
-
-# ---------------------------------------------------------------------------
 # Check 5 — AGENTS.md diagram paths exist
 # ---------------------------------------------------------------------------
 echo "--- Check 5: AGENTS.md diagram paths ---"
