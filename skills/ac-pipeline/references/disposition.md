@@ -45,6 +45,7 @@ It surfaces on the `ac-human-session` docket and cannot be lost.
 - **Interactive:** you MAY ask live (deciding on the spot beats a round-trip); anything
   unanswered or deferred still becomes a bead before the session ends.
 - **Dedupe before filing.** Retrospectives repeat across runs. Check open beads first:
-  `br list --status=open --json | jq '[.[] | select(.labels | index("skill-improvement"))]'`
+  `br list --status=open --json | jq '[.issues[] | select(.labels | index("skill-improvement"))]'`
+  (`br list --json` returns an object keyed `.issues`; only `br ready --json` is a bare array.)
   — same target file + same gist → `br comments add` on the existing bead (note the
   recurrence; recurrence is signal), do NOT create a duplicate.
