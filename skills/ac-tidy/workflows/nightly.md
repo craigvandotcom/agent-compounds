@@ -160,11 +160,23 @@ guard blocks its own commits without it (`precommit-guard-needs-agent-name-in-sh
 its exit in a backgrounded shell. `HEAD:main` pushes the detached commit onto the shared branch;
 all commits still land inside the BCA repo's `origin/main`, never a live-checkout branch.
 
-### 6. Verify the push landed
+### 6. Verify the push landed — durably (a receipt sha must outlive the worktree)
 
-`git rev-parse origin/main` must equal local `HEAD`. On non-ff/rejection (a concurrent-pusher
-race) → Slack `degraded` with the stranded SHA, and do **not** auto-archive on a rejected push.
-Never leave work silently stranded.
+A sha recorded from inside the worktree is worthless if nothing can resolve it after teardown:
+`last-run.json` has recorded `push_verified: true` against shas that resolve nowhere afterward
+(ac-o7ln). The worktree dies at step 8; the refs and object store of the repo that owns it do
+not. So verify from the LIVE checkout (`$BCA`), never from `$TIDY_WT`:
+
+```bash
+BCA_SHA=$(git rev-parse HEAD)   # cwd is still $TIDY_WT; capture before teardown
+git -C "$BCA" cat-file -e "$BCA_SHA^{commit}" \
+  && [ "$(git -C "$BCA" rev-parse origin/main)" = "$BCA_SHA" ]
+```
+
+On non-ff/rejection (a concurrent-pusher race) → Slack `degraded` with the stranded SHA,
+record `bca_pushed_sha: null` + `stranded_sha` in last-run.json, and do **not** auto-archive on
+a rejected push. Never leave work silently stranded. `push_verified` is written only after this
+verification passes — never from the in-worktree `git rev-parse` alone.
 
 ### 7. Notify — MANDATORY, do this last
 
@@ -178,6 +190,30 @@ Confirm exit 0; a Slack failure IS a finding — retry once. Finalize `last-run.
 path — `"$BCA/.claude/skills/ac-tidy/workflows/last-run.json"` (the live-checkout symlink, which
 resolves; never the worktree's broken one) — with `{status: done, counts, mode, machine}`. A
 mutated board with no notification is the failure mode to avoid.
+
+**The receipt is a committed artifact, not a local write — and its `pushed_sha` must resolve in
+the repo the probe audits it from (agent-compounds).** The BCA board push and this receipt live
+in two repos with unrelated histories: a BCA sha can never resolve inside agent-compounds, which
+is exactly the defect ac-o7ln recorded (`push_verified: true` against an object later audits
+cannot find). So record BOTH, each against its own repo:
+
+```bash
+AC_REPO="$HOME/Repos/neometa/software/agent-compounds"
+# commit + push the receipt itself to agent-compounds main (isolated worktree off fresh
+# origin/main when the live checkout is dirty — same carve-out as step 0)
+RECEIPT_BASE=$(git -C "$AC_REPO" rev-parse origin/main)   # state the receipt lands on
+# ... commit + push the receipt ...
+git -C "$AC_REPO" cat-file -e "$RECEIPT_BASE^{commit}" \
+  && git -C "$AC_REPO" merge-base --is-ancestor "$RECEIPT_BASE" origin/main
+```
+
+- `pushed_sha` = `$RECEIPT_BASE` — the agent-compounds commit the receipt's own push landed on,
+  written ONLY after the `cat-file -e` + `merge-base --is-ancestor` check above passed from the
+  live checkout. This is the field a later audit re-verifies with
+  `git cat-file -e "$(jq -r .pushed_sha skills/ac-tidy/workflows/last-run.json)"` from this repo.
+- `bca_pushed_sha` = `$BCA_SHA` from step 6 — the board-reconcile push, verified per step 6.
+- Either verification fails → `push_verified: false`, the failing sha in `stranded_sha`, Slack
+  `degraded`. A receipt that cannot verify its own shas is a degraded report, not a healthy one.
 
 ### 8. Teardown — MANDATORY on every exit path (success OR abort)
 
