@@ -65,11 +65,16 @@ fi
 # tier_model <harness> <tier> <agent-name> — resolve a tier to a concrete model id.
 # Fails loud (exit 2) on a missing map entry: silently inheriting a harness default
 # would flatten the tier gradient and look exactly like success.
+# tier_model <harness> <tier> <agent-name> — resolve an agent to a concrete model id:
+# the agent's own override key first (agent_models.validator style — a quality gate
+# must never run on the same weights that built what it gates), then its tier, then
+# fail loud (exit 2) on a missing map entry: silently inheriting a harness default
+# would flatten the tier gradient and look exactly like success.
 tier_model() {
   local m
-  m="$(printf '%s' "$CFG" | jq -r ".harnesses.$1.agent_models.$2 // empty")"
+  m="$(printf '%s' "$CFG" | jq -r ".harnesses.$1.agent_models.\"$3\" // .harnesses.$1.agent_models.$2 // empty")"
   if [ -z "$m" ]; then
-    echo "error: harnesses.$1.agent_models has no entry for tier '$2' (agent: $3) — add it to harnesses.json" >&2
+    echo "error: harnesses.$1.agent_models has no entry for agent '$3' (tier '$2') — add it to harnesses.json" >&2
     exit 2
   fi
   printf '%s' "$m"
@@ -237,7 +242,7 @@ gen_claude_agent() {
     echo "error: agents/$(basename "$src"): no 'tier:' in frontmatter — every registry agent must declare one (run lint.sh)" >&2
     exit 2
   fi
-  model="$(tier_model claude "$tier" "agents/$(basename "$src")")"
+  model="$(tier_model claude "$tier" "$(basename "$src" .md)")"
 
   if [ -e "$dest" ] && [ ! -L "$dest" ]; then
     if grep -q "$AGENTS_STAMP" "$dest" 2>/dev/null; then

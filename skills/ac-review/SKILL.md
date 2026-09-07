@@ -1,6 +1,6 @@
 ---
 name: ac-review
-description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range Craig names (`ac-review <range>`). Reviewers run a DIFFERENT model from the workers, are READ-ONLY on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; Medium+ become beads. ac-batch-close and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
+description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range Craig names (`ac-review <range>`). Reviewers run the validator stance — a different stance from the implement workers, read-only on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; Medium+ become beads. ac-batch-close and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
 ---
 
 # ac-review — the post-batch review
@@ -13,9 +13,9 @@ findings; fixing belongs to the implement lane (§ Findings).
 
 ## Who reviews
 
-- **A DIFFERENT model from the workers.** (L2 — survives tier convergence) The same weights
-  re-reading their own diff are not independent eyes: they share the blind spot that produced
-  the diff. Convergence retires the cost argument, never this rule.
+- **A different stance from the workers — the validator, tier-resolved per harness.**
+  (L2 — survives tier convergence) The same weights re-reading their own diff are not
+  independent eyes: they share the diff's blind spot; convergence never retires this rule.
 - **READ-ONLY on the shared tree.** No write or mutation tooling, no "just fixing it while
   I'm here" — a reviewer that can edit is a second author, not a second pair of eyes (this
   caused an H-impact incident). Sole carve-out: destructive sabotage probes run in a

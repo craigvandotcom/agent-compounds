@@ -194,14 +194,16 @@ parse_agent() { # <file> — sets A_NAME A_DESC A_TIER A_BODY
   A_BODY="$(awk '/^---[[:space:]]*$/{c++; next} c>=2{print}' "$1")"
 }
 
-# tier_model <harness> <tier> <agent-name> — resolve a tier to a harness model id
-# from the merged config. Fails loud (exit 2) on a missing entry: inheriting a
-# harness default silently would flatten the tier gradient and look like success.
+# tier_model <harness> <tier> <agent-name> — resolve an agent to a harness model id
+# from the merged config: the agent's own override key first (agent_models.validator
+# style — a quality gate must never run on the same weights that built what it gates),
+# then its tier, then fail loud (exit 2): inheriting a harness default silently would
+# flatten the gradient and look like success.
 tier_model() {
   local m
-  m="$(cfg ".harnesses.$1.agent_models.$2 // empty")"
+  m="$(cfg ".harnesses.$1.agent_models.\"$3\" // .harnesses.$1.agent_models.$2 // empty")"
   if [ -z "$m" ]; then
-    echo "error: harnesses.$1.agent_models has no entry for tier '$2' (agent: $3) — add it to harnesses.json" >&2
+    echo "error: harnesses.$1.agent_models has no entry for agent '$3' (tier '$2') — add it to harnesses.json" >&2
     exit 2
   fi
   printf '%s' "$m"
@@ -317,7 +319,7 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
     f="$src/$name.md"
     [ -f "$f" ] || { echo "  WARN: stance $name.md missing in $src (skipped)"; continue; }
     parse_agent "$f"
-    omodel="$(tier_model opencode "${A_TIER:-}" "$name.md")"
+    omodel="$(tier_model opencode "${A_TIER:-}" "$name")"
     relsrc="${f/#$REPOS_ROOT\//}"
     tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
     if printf '%s' "$tools" | grep -qE 'Write|Edit'; then edit_perm="allow"; else edit_perm="deny"; fi
