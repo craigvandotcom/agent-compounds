@@ -1,0 +1,28 @@
+{
+  "_doc": "factory.json — the consumer manifest schema (ac-1p7j.11). The ONE place an app declares the bindings registry skills read as literals today. Copy this file into the app repo as factory.json, fill every '<SET: ...>' value, and registry skills read keys, never literals. validate() in lint/lib/manifest.py checks a filled instance against this template's keys (missing and unknown keys both fail; keys starting with '_' are reserved comments). Filling any app is OUT of scope here (WS4).",
+  "design_spec": "<SET: path to the app's design spec the UI skills read>",
+  "journeys_dir": "<SET: path to the Playwright journeys dir the QA skills read>",
+  "routes_manifest": "<SET: path to the authenticated routes manifest>",
+  "routes_public_manifest": "<SET: path to the public routes manifest>",
+  "ui_audit": "<SET: path to the UI audit/visual-craft entry doc>",
+  "serve_prod": "<SET: command that serves the production build locally for device QA>",
+  "ci_gate_script": "<SET: command the publish gate runs to assert required CI jobs executed>",
+  "store": {
+    "_doc": "store ids the distribution skill reads (never literals in skill text)",
+    "app_store_id": "<SET: App Store app id>",
+    "team_id": "<SET: Apple developer team id>"
+  },
+  "triage": {
+    "_doc": "triage sensor bindings (Sentry/Supabase) the triage skill reads",
+    "sentry_project": "<SET: Sentry project slug>",
+    "supabase_schema": "<SET: this app's Supabase schema name>"
+  },
+  "human": {
+    "_doc": "the human operator the factory serves",
+    "name": "<SET: the human's name>"
+  },
+  "memory": {
+    "_doc": "memory substrate roots the substrate trio reads",
+    "root": "<SET: path to the app's memory root>"
+  }
+}

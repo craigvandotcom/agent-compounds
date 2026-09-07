@@ -35,6 +35,15 @@
 
 > Key conventions: `<e.g. feature-based dirs under features/<name>/, colocated tests>`
 
+## App manifest
+
+`factory.json` (schema: agent-compounds `templates/factory.json`, validated by
+`lint/lib/manifest.py validate()`) is the ONE place this app declares the
+bindings registry skills read — design spec, journeys, routes, QA serve, CI
+gate, store ids, triage sensors, human, memory roots. Copy the template to the
+repo root as `factory.json` and fill every `<SET: ...>` value; registry skills
+read keys, never literals.
+
 ## Rules
 
 - **Durable knowledge routes via context-engineering** — decisions go to
