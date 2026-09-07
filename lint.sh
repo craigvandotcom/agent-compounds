@@ -1484,6 +1484,26 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 25 — is_test_shaped single-definition sensor (ac-b62c)
+# ---------------------------------------------------------------------------
+echo "--- Check 25: is_test_shaped drift sensor ---"
+check
+# flight-check WRITES the verification scope that close-gate READS. is_test_shaped is the
+# contract both sides of that handshake interpret; if a second definition appears, the scope
+# one records is not the scope the other interprets and the temporal proof silently rests on
+# two different contracts. Exactly ONE definition site — close-gate.sh — enforced here, so a
+# re-duplication fails instead of drifting.
+ITS_SITES=$(grep -rl 'is_test_shaped()' skills/ac-implement/scripts/ 2>/dev/null || true)
+ITS_N=$(printf '%s' "$ITS_SITES" | grep -c . || true)
+if [ "$ITS_N" -eq 1 ] && printf '%s\n' "$ITS_SITES" | grep -q 'close-gate.sh'; then
+  echo "  ok: is_test_shaped() defined once, in close-gate.sh"
+else
+  fail "Check 25: is_test_shaped() has $ITS_N definition site(s) ($(printf '%s' "$ITS_SITES" | tr '\n' ' ')) — the contract must live in exactly one place, close-gate.sh (ac-b62c drift sensor)"
+fi
+grep -q 'is_test_shaped' skills/ac-implement/scripts/flight-check.sh \
+  && fail "Check 25: flight-check.sh mentions is_test_shaped — it must carry no copy that could drift from close-gate.sh's definition (ac-b62c)"
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
