@@ -465,3 +465,203 @@ if ! bash "$AC_ROOT/skills/skill-builder/scripts/validate-skill.sh" --registry "
   fi
   fail "Check 13: skill-registry validation (budget / >1024 desc / invocation-graph) — details: /tmp/ac-lint-registry.out"
 fi
+
+# ---------------------------------------------------------------------------
+# Check 17 — dcg-blocked shell idioms in published snippets
+# ---------------------------------------------------------------------------
+echo "--- Check 17: dcg-blocked dynamic-path redirects ---"
+
+# dcg's `core.filesystem:redirect-truncate-dynamic-path` refuses a TRUNCATING redirect whose
+# target is shell-expanded — it cannot prove the path before the file is opened O_TRUNC. A
+# published snippet prescribing that shape is UNRUNNABLE on this fleet.
+#
+# Why this check exists (bd-scjgv): bd-5ndzm was closed as Fixed on 2026-07-30 having scoped
+# six skills and mechanically fixed exactly ONE. Nothing re-detected the rest, so the class
+# read as "fixed" on the board while three separate published snippets still shipped it and
+# kept costing conductors live time in Phase 0. The DETECTOR is the deliverable — without it
+# the next snippet reintroduces the class and no one learns until someone loses a run.
+#
+# The discriminator is literal-vs-variable TARGET, not compound-vs-simple command (probed
+# against dcg 0.6.7). NOT matched, because all three are allowed:
+#   >> "$VAR/path"      appends never truncate
+#   >/dev/null          fully-literal target
+#   tee "$VAR/path"     tee is not a redirect
+# Escape hatch: put `dcg-allow` in a comment on the same line to document the antipattern
+# deliberately (shell-guardrails.md does exactly that).
+# The `/` is anchored directly after the variable name ON PURPOSE. An earlier form used
+# `[^"[:space:]]*/` and matched NOTHING under macOS grep's leftmost-longest semantics (no
+# backtracking) — a detector that silently matches nothing is worse than no detector, so
+# this pattern is proved red-then-green against fixtures before being trusted.
+DCG_BAD_RE='(^|[[:space:]]|[0-9]|&)>[[:space:]]*"?\$\{?[A-Za-z_][A-Za-z0-9_:%+-]*/'
+
+# SCOPE: markdown PRESCRIPTIONS only, deliberately not `*.sh`. dcg intercepts commands an
+# agent submits to its Bash tool; a shell script executed as a FILE (`bash foo.sh`) is never
+# inspected, so the same shape inside a committed script is not broken and flagging it would
+# be a false positive that erodes trust in the check. The risk this guards is a snippet an
+# agent COPIES OUT of a skill and runs inline.
+dcg_hits=0
+dcg_scanned=0
+while IFS= read -r f; do
+  # Only lines INSIDE ```bash / ```sh fences are prescriptions. Prose naming the antipattern
+  # (shell-guardrails.md, and the rationale comments in board-scan.md) must not trip it.
+  body=$(awk '/^[[:space:]]*```(bash|sh)[[:space:]]*$/{inb=1;next}
+              /^[[:space:]]*```/{inb=0;next}
+              inb{print FILENAME":"FNR":"$0}' "$f" 2>/dev/null)
+  dcg_scanned=$(( dcg_scanned + 1 ))
+  [ -n "$body" ] || continue
+  hits=$(printf '%s\n' "$body" | grep -E -- "$DCG_BAD_RE" | grep -v 'dcg-allow' || true)
+  [ -n "$hits" ] || continue
+  while IFS= read -r h; do
+    [ -n "$h" ] || continue
+    fail "Check 17: dcg-blocked truncating redirect to a variable path — ${h#$AC_ROOT/}"
+    dcg_hits=$(( dcg_hits + 1 ))
+  done <<< "$hits"
+done < <(find "$AC_ROOT/skills" -type f -name '*.md' 2>/dev/null | sort)
+
+check
+if [ "$dcg_scanned" -eq 0 ]; then
+  # Zero files scanned accounts for nothing — a broken find reads identical to a clean sweep.
+  fail "Check 17: zero files scanned under skills/ — the sweep is vacuous"
+elif [ "$dcg_hits" -eq 0 ]; then
+  echo "  dcg redirect shapes: 0 violations across ${dcg_scanned} skill files"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 22 — lean-family ledger: control <-> friction referential integrity (ac-cfn4)
+# ---------------------------------------------------------------------------
+echo "--- Check 22: family ledger integrity ---"
+
+# Check 21 proves a mechanism declares its failure semantics; this proves the lean family's
+# controls and its friction ledger still point at each other — every entry cites a receipt
+# and the control that treats it (or is explicitly untreated), every control names the
+# failure it prevents, and a friction re-observed AFTER its control landed is surfaced as a
+# FAILED CONTROL rather than accruing silently. Fails CLOSED: a missing or empty ledger
+# exits non-zero carrying NOT-GATED, because an absent sensor is not a clean one.
+ALI="$AC_ROOT/scripts/ac-ledger-integrity.sh"
+check
+if [ -r "$ALI" ]; then
+  if ali_out=$(bash "$ALI" "$AC_ROOT" 2>&1); then
+    printf '%s\n' "$ali_out" | sed 's/^/  /'
+  else
+    printf '%s\n' "$ali_out"
+    fail "Check 22: family ledger/control integrity violation(s) — see above"
+  fi
+else
+  fail "Check 22: scripts/ac-ledger-integrity.sh missing — family ledger integrity NOT-GATED"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 23 — lean-family + loaded-path caps, shape, declarations, references (ac-kdxa)
+# ---------------------------------------------------------------------------
+echo "--- Check 23: family budget + anti-drift ---"
+
+# The plan's biggest named risk is cultural — the files staying small — and every
+# previous "keep it small" rule here was prose, and every one of them lost. This is that
+# rule as a check: family <=800 SKILL.md lines, <=1,200 over the LOADED path with the
+# mandatory-load set DERIVED from the pointers (a hardcoded list is the measured evasion
+# with an extra step), pointed-at canon reported but never capped, and assurance
+# declarations for family scripts (Check 21 is hooks.json-scoped and cannot see them).
+# The former cross-reference leg retired at the rename: its premise was that the
+# old prefixed family was invisible to Check 2's `/ac-[a-z]` pattern, and the rename erased
+# that blind spot — Check 2 now sees every invocation the family makes.
+ABC="$AC_ROOT/scripts/ac-budget-check.sh"
+check
+if [ -r "$ABC" ]; then
+  if abc_out=$(bash "$ABC" "$AC_ROOT" 2>&1); then
+    printf '%s\n' "$abc_out" | sed 's/^/  /'
+  else
+    printf '%s\n' "$abc_out"
+    fail "Check 23: family budget/anti-drift violation(s) — see above"
+  fi
+else
+  fail "Check 23: scripts/ac-budget-check.sh missing — family caps NOT-GATED"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 24 — skill description length, for cross-harness portability
+# ---------------------------------------------------------------------------
+echo "--- Check 24: skill description length (cross-harness cap) ---"
+
+# opencode DOCUMENTS a 1-1024 character cap on a skill description and validates
+# frontmatter against it. Measured 2026-08-28 on v1.18.0: the cap is NOT enforced at
+# load (a 1100-char description loaded and reached the system prompt), so this is
+# insurance against an upstream tightening, not a live breakage. It earns its place
+# because the registry was already inside 6 characters of the limit
+# (ac-site-polish at 1018) with nothing watching, and a skill silently dropped by a
+# consumer harness is exactly the failure this repo cannot see from the inside.
+#
+# The WARN band exists so the cap is not discovered by hitting it.
+DESC_HARD=1024
+DESC_WARN=950
+check
+desc_fail=0
+for f in "$AC_ROOT"/skills/*/SKILL.md; do
+  [ -r "$f" ] || continue
+  sname="$(basename "$(dirname "$f")")"
+  # python3, not awk: descriptions carry em dashes, and awk's length() counts BYTES —
+  # which over-reports a UTF-8 description by ~2 per dash and would fail a skill that is
+  # actually inside the cap. opencode measures a JS string length, i.e. characters.
+  dlen="$(python3 -c '
+import io,sys
+lines=io.open(sys.argv[1],encoding="utf-8").read().split("\n")
+c=0
+for ln in lines:
+    if ln.strip()=="---":
+        c+=1
+        if c==2: break
+        continue
+    if c==1 and ln.startswith("description:"):
+        print(len(ln[len("description:"):].strip())); break
+' "$f")"
+  [ -n "$dlen" ] || continue
+  if [ "$dlen" -gt "$DESC_HARD" ]; then
+    echo "  $sname: description $dlen chars, over the $DESC_HARD cap"
+    desc_fail=$(( desc_fail + 1 ))
+  elif [ "$dlen" -ge "$DESC_WARN" ]; then
+    echo "  WARN $sname: description $dlen chars, within $(( DESC_HARD - dlen )) of the $DESC_HARD cap"
+  fi
+done
+if [ "$desc_fail" -gt 0 ]; then
+  fail "Check 24: $desc_fail skill description(s) over the $DESC_HARD-char cross-harness cap"
+else
+  echo "  ok: every skill description is within the $DESC_HARD-char cap"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 25 — is_test_shaped single-definition sensor (ac-b62c)
+# ---------------------------------------------------------------------------
+echo "--- Check 25: is_test_shaped drift sensor ---"
+check
+# flight-check WRITES the verification scope that close-gate READS. is_test_shaped is the
+# contract both sides of that handshake interpret; if a second definition appears, the scope
+# one records is not the scope the other interprets and the temporal proof silently rests on
+# two different contracts. Exactly ONE definition site — close-gate.sh — enforced here, so a
+# re-duplication fails instead of drifting.
+ITS_SITES=$(grep -rl 'is_test_shaped()' skills/ac-implement/scripts/ 2>/dev/null || true)
+ITS_N=$(printf '%s' "$ITS_SITES" | grep -c . || true)
+if [ "$ITS_N" -eq 1 ] && printf '%s\n' "$ITS_SITES" | grep -q 'close-gate.sh'; then
+  echo "  ok: is_test_shaped() defined once, in close-gate.sh"
+else
+  fail "Check 25: is_test_shaped() has $ITS_N definition site(s) ($(printf '%s' "$ITS_SITES" | tr '\n' ' ')) — the contract must live in exactly one place, close-gate.sh (ac-b62c drift sensor)"
+fi
+grep -q 'is_test_shaped' skills/ac-implement/scripts/flight-check.sh \
+  && fail "Check 25: flight-check.sh mentions is_test_shaped — it must carry no copy that could drift from close-gate.sh's definition (ac-b62c)"
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+echo ""
+echo "lint: ${CHECKS} checks, ${FAILURES} failures (un-ported bash blocks)"
+
+# A failing un-ported block ends the run here — a red suite is not a green run.
+if [ "$FAILURES" -gt 0 ]; then
+  exit 1
+fi
+
+# The v2 runner runs AFTER the un-ported blocks and ITS exit becomes the final
+# exit. If the runner is absent (mid-port checkout) the legacy verdict stands.
+if [ -f "$AC_ROOT/lint/run.py" ]; then
+  exec python3 "$AC_ROOT/lint/run.py" --root "$AC_ROOT"
+fi
+
+[ "$FAILURES" -eq 0 ]
