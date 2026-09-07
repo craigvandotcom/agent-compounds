@@ -18,6 +18,7 @@ TaskCreate (one per phase; 5-7 total):
 TaskUpdate each → in_progress at phase start, → completed at exit.
 Ledger tracks the RUN, never work items.
 ```
+If TaskCreate is unavailable (subagent / fan-out path — no Task tools in your context), the ledger is a FILE: keep it as `progress.md` (+ `$STATE` for captured vars) in the RUN_ID-scoped artifacts dir (`ac-pipeline/references/run-ledger.md`), same one-entry-per-section, advance-as-you-go contract. Sanctioned equivalent, not a deviation.
 
 ## Phase 0 · Initialize (<est>)
 Set up run ledger + output location (folder / wave branch / plan file). Read inputs.

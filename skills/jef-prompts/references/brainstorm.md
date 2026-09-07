@@ -17,7 +17,7 @@ description: Pre-planning exploration when uncertain about approach - diverge wi
 
 ## Phase 0: Initialize
 
-**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.**
+**MANDATORY FIRST STEP: declare the run ledger (`ac-pipeline/references/run-ledger.md` — one task per section, advance as you go) with TaskCreate BEFORE starting.** If TaskCreate is unavailable (subagent / fan-out path — no Task tools in your context), the ledger is a FILE: keep it as `progress.md` (+ `$STATE` for captured vars) in the RUN_ID-scoped artifacts dir, same one-entry-per-section, advance-as-you-go contract. Sanctioned equivalent, not a deviation — do not re-derive it.
 
 ### Branch Safety Check
 
