@@ -59,6 +59,26 @@ case "$cmd" in
     [ -f "$STATE/$id.json" ] || exit 1
     [ "${AC2_TEST_BR_CLOSE_NOOP:-0}" = "1" ] && exit 0
     jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json" ;;
+  comments)
+    # `comments add <id> -f <file>` (or inline text) — recorded so a fixture can assert
+    # that the gate WROTE the record it claims to write (the fresh-verification receipt).
+    cid=""; body=""; prev=""
+    for a in "$@"; do
+      case "$a" in
+        -f) prev=f ;;
+        --*) prev="" ;;
+        add) prev="" ;;
+        *)
+          case "$prev" in
+            f) body="$(cat "$a" 2>/dev/null)" ;;
+            *) if [ -z "$cid" ]; then cid="$a"; else body="$a"; fi ;;
+          esac
+          prev="" ;;
+      esac
+    done
+    [ -f "$STATE/$cid.json" ] || exit 1
+    printf '%s\n' "$body" >> "$STATE/comments.log"
+    exit 0 ;;
   *) exit 0 ;;
 esac
 MOCKBR
@@ -349,6 +369,53 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'temporal exit-code pair'; then
   pass "AC3f: every-probe-output-silent closes on the receipt's temporal pair — no harness demanded"
 else fail "AC3f: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
+# AC 3g/3h/3i — the fresh-verification carve-out (ac-close-gate-already-green-carveout-8r3o):
+# a bead routed out at claim for being ALREADY GREEN banks no flight receipt, so LEG 1
+# refused every future close of it, including an honest obsolete/duplicate disposition.
+# The carve-out: an obsolete:/duplicate: close with no claim-time receipt is verified
+# FRESH instead — the GREEN leg runs every AC probe at HEAD, and the verification is
+# recorded on the bead at landing. A non-obsolete close still needs its claim-time receipt.
+# ============================================================================================
+
+# --- 3g (AC1 + AC2 first half): an obsolete: close with no claim-time receipt is ACCEPTED,
+# and the fresh verification is RECORDED on the bead — a receipt nobody wrote is a claim.
+OBSOLETE_REASON="obsolete: the defect is resolved at HEAD by other work (ec5fa64); the probes pass at HEAD. Delivered: subject.txt, harness.test.sh"
+R="$(mkcase fresh-verify-accept)"
+write_harness "$R"; board "$R" in_progress worker
+fix_subject "$R"                    # green at HEAD — no fly(), so NO receipt file exists
+out="$(gate "$R" --reason "$OBSOLETE_REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'fresh'; then
+  pass "AC3g: an obsolete close with no claim-time receipt is accepted via fresh verification"
+else fail "AC3g: rc=$GATE_RC out=$out"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q 'FRESH-VERIFY' "$R/.br/comments.log"; then
+  pass "AC3g: the fresh verification is RECORDED on the bead (FRESH-VERIFY comment)"
+else fail "AC3g: no FRESH-VERIFY record landed on the bead"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC3g: the fresh-verified close landed"
+else fail "AC3g: the close did not land"; fi
+
+# --- 3h (AC2 second half): a BOGUS obsolete close — probes NOT green at HEAD — is refused.
+R="$(mkcase fresh-verify-bogus)"
+write_harness "$R"; board "$R" in_progress worker
+# subject NEVER fixed: `test -x harness.test.sh && bash harness.test.sh` exits 1 at HEAD.
+out="$(gate "$R" --reason "$OBSOLETE_REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'GREEN'; then
+  pass "AC3h: a bogus obsolete close (probes not green at HEAD) is refused, naming GREEN"
+else fail "AC3h: rc=$GATE_RC out=$out"; fi
+
+# --- 3i (do-not-weaken guard): a shipped: close with no claim-time receipt is STILL refused.
+R="$(mkcase fresh-verify-guard)"
+write_harness "$R"; board "$R" in_progress worker
+fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'RED-RECEIPT'; then
+  pass "AC3i: a non-obsolete close with no claim-time receipt is still refused — the carve-out is disposition-scoped"
+else fail "AC3i: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 4 — the scanner leg
