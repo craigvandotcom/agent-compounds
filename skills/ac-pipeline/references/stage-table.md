@@ -18,7 +18,7 @@ contradictory orders and none contained polish, prove or distribute.)
 | Distribute | `ac-distribute` | proven build in hand | store submission is human-authorized | TestFlight / App Store submission | app `CORE/distribution.md` |
 | Land | `ac-land` | loop exit — LAST, after everything above | none | run ledger + retro + memory | `reflect` |
 | Triage | `ac-triage` | scheduled, ≥30 min before any swarm | proposal only — files beads | defect beads | app `CORE/triage.md` |
-| Housekeeping | `ac-tidy` (nightly) · `ac-hygiene` (weekly panel) · `audit` (human-triggered) | cross-cadence — see `ac-pipeline/references/schedule.md` | fixes commit direct; repairs are bounded | tidy proposals · hygiene fixes · audit findings→beads | `audit` (checklists behind the panel) |
+| Housekeeping | `ac-tidy` (nightly) · `ac-hygiene` (weekly panel) · `ac-review` (human-triggered) | cross-cadence — see `ac-pipeline/references/schedule.md` | fixes commit direct; repairs are bounded | tidy proposals · hygiene fixes · audit findings→beads | `ac-review` (checklists behind the panel) |
 
 Retired names (`ac-loop`, `ac-merge`, `ac-batch-close`, `ac-bead-refine`) own no row: their
 live duties are folded into the rows above (`ac-implement` conducts; the swarm commits to
