@@ -43,7 +43,13 @@ JUDGE = "skills/skill-builder/scripts/validate-skill.sh"
 
 
 def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("root", nargs="?", default=None,
+                    help="repo root to lint (default: this checkout)")
+    args = ap.parse_args()
+    root = args.root or scope.ROOT
     script = os.path.join(root, JUDGE)
     skills = os.path.join(root, "skills")
     if not os.path.isfile(script):

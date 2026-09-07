@@ -152,7 +152,13 @@ def check_harness_tiers(root):
 
 
 def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("root", nargs="?", default=None,
+                    help="repo root to lint (default: this checkout)")
+    args = ap.parse_args()
+    root = args.root or scope.ROOT
     scanned = 0
     skills_dir = os.path.join(root, "skills")
     if os.path.isdir(skills_dir):

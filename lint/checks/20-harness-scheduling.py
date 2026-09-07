@@ -46,7 +46,13 @@ JUDGE = "scripts/harness-scheduling-check.sh"
 
 
 def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("root", nargs="?", default=None,
+                    help="repo root to lint (default: this checkout)")
+    args = ap.parse_args()
+    root = args.root or scope.ROOT
     script = os.path.join(root, JUDGE)
     if not os.path.isfile(script):
         print(f"{CHECK_ID} NOT-CHECKED: {JUDGE} not found in {root} — harness scheduling unverified", file=sys.stderr)
