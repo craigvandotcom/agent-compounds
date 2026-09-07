@@ -524,53 +524,73 @@ ensure_agy_workspace_rules() {
   link "$base/AGENTS.md" "$base/$(dirname "$AGY_SKILLS_DIR")/AGENTS.md" "$base"
 }
 
-# render_hooks_antigravity — <home>/hooks.json carries NAMED handlers only
-# (jsonhook.JSONHookSpec = {command, matcher, if, prompts}; matcher is a regex over the
-# tool name; ~ expands via jsonhook.expandHome).
-#
-# UNVERIFIED BY CONSTRUCTION: writing this file does NOT wire the hooks up. Binding a
-# named handler to an event happens in the agent/customization config
-# (pre_tool_hook_names / post_tool_hook_names / stop_hook_names / *_invocation_hook_names)
-# whose on-disk format we have not located, and enable_json_hooks may gate the surface
-# entirely. So this renders the handlers and says plainly that they are inert until
-# `--verify-antigravity` sees Antigravity's own load line. A claim without a loop is
-# decoration — this one is labelled, not asserted.
+# render_hooks_antigravity — <config_dir>/hooks.json (GLOBAL customization root) carries
+# NAMED hooks bound to EVENTS. VERIFIED 2026-09-07 (ac-antigravity-close-hook-loop-j6xw):
+# the on-disk format is Antigravity's own hooks contract — hooks.json lives in a
+# customization root (~/.gemini/config/ globally, or <workspace>/.agents/ per project);
+# each TOP-LEVEL key is a hook NAME mapping to per-EVENT arrays: PreToolUse/PostToolUse
+# are GROUPED ({matcher: <regex over tool name>, hooks: [{type: command, command, timeout}]}),
+# PreInvocation/PostInvocation/Stop are FLAT handler lists; `enabled: false` disables.
+# Source: the embedded hooks guide (language_server strings + builtin skill
+# agy-customizations/docs/hooks.md), CONFIRMED empirically: a hooks.json in this exact
+# shape at ~/.gemini/config/hooks.json produced the app's own load line
+# "loaded 1 named hooks from 1 hooks.json file(s)" (hooks_manager.go) on the next CLI
+# session. Matcher target is the AGENT's tool name (snake_case: run_command,
+# view_file, browser_*); our manifest's matchers name Claude tool names, so a
+# Claude-shaped matcher can never fire here — wired with the declared matchers and
+# flagged in the comment; payload shape (camelCase protojson) is a guard-compat
+# follow-up. The load line is the sensor: `--verify-antigravity`.
 render_hooks_antigravity() {
   [ "$EN_AGY" = "true" ] || return 0
   [ -f "$HOOKS_MANIFEST" ] || return 0
-  [ -d "$AGY_HOME" ] || return 0
-  echo "  -- antigravity hooks ($AGY_HOME/hooks.json, named handlers — UNVERIFIED, see --verify-antigravity)"
+  [ -d "$AGY_CONFIG_DIR" ] || return 0
+  echo "  -- antigravity hooks ($AGY_CONFIG_DIR/hooks.json, named hooks bound to events — VERIFIED format, see --verify-antigravity)"
   local obj content
-  # machine scope, same as grok; reshape claude-style event arrays into named handlers
+  # machine scope, same as grok; reshape claude-style event arrays into the named-hook
+  # format: one named hook per event entry, grouped matcher wrapper for *ToolUse events.
   obj="$(build_hooks_obj antigravity machine)"
   content="$(printf '%s' "$obj" | jq '
     def slug: gsub("[^A-Za-z0-9]+"; "-") | ascii_downcase | sub("^-";"") | sub("-$";"");
-    { hooks: (
-        reduce (to_entries[] | .key as $ev | .value[] | {ev:$ev, m:(.matcher // ""), h:.hooks[]}) as $e ({};
-          . + { (($e.ev + "-" + (($e.h.command | split("/") | last | split(" ") | last) // "hook")) | slug):
-                ( {command: $e.h.command}
-                  + (if $e.m != "" then {matcher: $e.m} else {} end) ) }) ) }')"
-  write_file_if_changed "$AGY_HOME/hooks.json" "$content"
+    def grouped: (. == "PreToolUse") or (. == "PostToolUse");
+    reduce (to_entries[] | .key as $ev | .value[] | {ev:$ev, m:(.matcher // ""), h:.hooks}) as $e ({};
+      . + { (("ac-" + ($e.ev | ascii_downcase) + "-" + (($e.h[0].command | split("/") | last | split(" ") | last) // "hook")) | slug):
+              { ($e.ev): (if ($e.ev | grouped)
+                          then [ {matcher: (if $e.m == "" then "*" else $e.m end), hooks: $e.h} ]
+                          else $e.h end) } }) }')"
+  write_file_if_changed "$AGY_CONFIG_DIR/hooks.json" "$content"
 }
 
-# gen_antigravity_agents — Antigravity HAS a subagent surface (custom_agent_spec /
-# agent_script, plus the built-in `owl` orchestrator), but no on-disk format for it was
-# located in the binary. Skipped LOUDLY, never silently (the Pi precedent).
+# gen_antigravity_agents — DERIVED FACT (ac-antigravity-close-hook-loop-j6xw, 2026-09-07):
+# there is NO on-disk subagent-definition format for this build. The customization system
+# documents exactly five types — Rules, Skills, Plugins, Hooks, MCP (the binary's embedded
+# guide + the builtin agy-customizations skill); `agents.json`/`agent.json` names in the
+# binary are registration/path manifests, not agent definitions; `agent.md` is a
+# RUNTIME-SAVED agent script (SaveAgentScriptCommandSpec RPC), never a discovery-mounted
+# definition; markdown agents are gated behind the enable-markdown-agents experiment and
+# "JSON agents are not allowed". So there is nothing to render: a written subagent config
+# cannot be made live because the product reads none from disk. Stated, not skipped —
+# this is an answered question, not an unverified guess.
 gen_antigravity_agents() {
   [ "$EN_AGY" = "true" ] || return 0
   [ -d "$AGY_HOME" ] || return 0
-  echo "  NOTE: antigravity subagents skipped — custom_agent_spec/agent_script exist but no on-disk format located (see harnesses.json _doc)"
+  echo "  NOTE: antigravity subagents — no on-disk definition format exists in this build (customizations = rules/skills/plugins/hooks/mcp only; agent scripts are runtime-saved; markdown agents experiment-gated). Nothing to render."
 }
 
-# verify_antigravity — the FEEDBACK LOOP for everything above. Antigravity logs its own
-# "Loaded hooks.json from <path>: N named hooks, M total handlers" line, so that log is
-# the sensor: it reports what the app ACTUALLY read, not what we wrote. Also checks the
-# CLI shim on PATH, which the Jun-2026 app update left dangling.
+# verify_antigravity — the FEEDBACK LOOP for everything above. Antigravity's hooks manager
+# logs its own "loaded N named hooks from M hooks.json file(s)" line (hooks_manager.go) at
+# session start — in the IDE's ~/Library/Logs/Antigravity/*.log and the CLI's
+# ~/.gemini/antigravity-cli/cli.log — so those logs are the sensor: they report what the
+# app ACTUALLY read, not what we wrote. The load fires at SESSION start (a conversation),
+# never at server boot — a bare app launch with no session verifies nothing. Also checks
+# the CLI shim on PATH, which the Jun-2026 app update left dangling.
 verify_antigravity() {
-  local rc=0 logdir="$HOME/Library/Application Support/Antigravity/logs" hit
+  local rc=0 hit
+  local ide_logdir="$HOME/Library/Logs/Antigravity"
+  local session_logdir="$HOME/Library/Application Support/Antigravity/logs"
+  local cli_log="$HOME/.gemini/antigravity-cli/cli.log"
   echo "== antigravity verification"
   echo "-- what we wrote"
-  for f in "$AGY_HOME/AGENTS.md" "$AGY_HOME/hooks.json" "$AGY_CONFIG_DIR/mcp_config.json"; do
+  for f in "$AGY_HOME/AGENTS.md" "$AGY_CONFIG_DIR/hooks.json" "$AGY_CONFIG_DIR/mcp_config.json"; do
     if [ -f "$f" ]; then echo "  present  ${f/#$HOME/~}"; else echo "  MISSING  ${f/#$HOME/~}"; rc=1; fi
   done
   if [ -d "$AGY_HOME/skills" ]; then
@@ -578,18 +598,20 @@ verify_antigravity() {
   else echo "  MISSING  ~/.gemini/antigravity/skills"; rc=1; fi
 
   echo "-- what antigravity actually loaded (its own logs)"
-  if [ -d "$logdir" ]; then
-    # `|| true`: no match is the normal not-yet-launched case, not a script failure
-    hit="$(grep -rhoE 'Loaded hooks\.json from [^:]+: [0-9]+ named hooks, [0-9]+ total handlers' "$logdir" 2>/dev/null | tail -3 || true)"
-    if [ -n "$hit" ]; then printf '  %s\n' "$hit"
-    else
-      echo "  NO LOAD LINE FOUND — hooks.json has not been read by Antigravity."
-      echo "  This is expected until Antigravity is launched at least once after a sync."
-      echo "  Launch Antigravity, then re-run: harness-sync.sh --verify-antigravity"
-      rc=1
-    fi
-  else
-    echo "  no log dir at ${logdir/#$HOME/~} — launch Antigravity once, then re-run"; rc=1
+  # `|| true`: no match is the normal not-yet-launched case, not a script failure
+  hit="$(grep -rhoE 'loaded [0-9]+ named hooks from [0-9]+ hooks\.json file\(s\)' \
+          "$ide_logdir" "$session_logdir" 2>/dev/null | tail -3 || true)"
+  if [ -n "$hit" ]; then printf '  %s\n' "$hit"
+  elif [ -f "$cli_log" ]; then
+    hit="$(grep -oE 'loaded [0-9]+ named hooks from [0-9]+ hooks\.json file\(s\)' "$cli_log" 2>/dev/null | tail -3 || true)"
+    if [ -n "$hit" ]; then printf '  %s\n' "$hit"; fi
+  fi
+  if [ -z "$hit" ]; then
+    echo "  NO LOAD LINE FOUND — hooks.json has not been read by an Antigravity session yet."
+    echo "  The hooks manager loads at SESSION start, never at server boot: run one CLI"
+    echo "  conversation (agy -p '...' works headless) or open a workspace in the IDE,"
+    echo "  then re-run: harness-sync.sh --verify-antigravity"
+    rc=1
   fi
 
   echo "-- CLI shim on PATH"
