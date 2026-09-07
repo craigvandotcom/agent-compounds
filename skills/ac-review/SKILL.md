@@ -1,6 +1,6 @@
 ---
 name: ac-review
-description: 'Code review, TWO modes. (1) MANUAL, human-triggered panel over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. (2) POST-BATCH mode, invoked BY the batch boundary — reviewers on a DIFFERENT model from the workers, read-only with a disposable-worktree carve-out, ACCEPT/FIX/DEFER verdicts, fixture-shape + causal-sufficiency dimensions; contract: references/post-batch-mode.md. Trigger: ''review the batch''. The manual panel is not a pre-merge or pre-close gate and nothing auto-invokes it; ac-implement closes straight to ac-publish, and standing code quality is ac-hygiene''s lane on its own cadence.'
+description: 'Code review, TWO modes. (1) MANUAL, human-triggered panel over a scope YOU name — a parallel 6-dimension panel (correctness/security/perf/architecture always + test-quality/contracts unless provably irrelevant), plus a 7th doctrine-delta lens gated on skills/ diffs, severity-based auto-fix + escalation. Invoke it ONLY when Craig asks for a review by name. Triggers: ''/ac-review'', ''review this scope'', ''run a review panel over X''. (2) POST-BATCH mode, invoked BY the batch boundary — reviewers on the coordinator tier, a different stance from the implementer workers, read-only with a disposable-worktree carve-out, ACCEPT/FIX/DEFER verdicts, fixture-shape + causal-sufficiency dimensions; contract: references/post-batch-mode.md. Trigger: ''review the batch''. The manual panel is not a pre-merge or pre-close gate and nothing auto-invokes it; ac-implement closes straight to ac-publish, and standing code quality is ac-hygiene''s lane on its own cadence.'
 ---
 
 
@@ -19,7 +19,7 @@ runs as written.
 
 **Mode 2 — post-batch review:** invoked BY the batch boundary ("review the batch") over a
 finished batch + its bead ids. Same panel machinery and consensus script; four added
-constraints: reviewers run a DIFFERENT model from the workers; reviewers are READ-ONLY on the
+constraints: reviewers run the coordinator tier, a different stance from the implementer workers; reviewers are READ-ONLY on the
 shared tree (sole carve-out: sabotage probes in a disposable worktree); every finding carries
 ACCEPT / FIX / DEFER; fixture-shape validity and causal sufficiency are named dimensions, and
 every closed bead gets the one question a checksum cannot answer — does THIS diff produce that
@@ -76,7 +76,7 @@ echo "$ARTIFACTS_DIR"   # note the RESOLVED value — every later file write use
 
 ### Register Session Identity (Tier 1)
 
-ac-review is a **Tier-1 session**: its Phase-4 auto-fix engineer edits product code and
+ac-review is a **Tier-1 session**: its Phase-4 auto-fix implementer edits product code and
 Phase 6 commits + pushes. Mint a unique identity at review start so those fixes reserve
 and commit under a real name instead of falling back to `FoggyCreek` (doctrine:
 `agent-mail/references/agent-identity.md` — Tier 1 lifecycle: mint → reserve at work grain → release →
@@ -112,7 +112,7 @@ TaskCreate(subject: "Phase 2: Parallel review", description: "Assemble panel (co
 
 TaskCreate(subject: "Phase 3: Synthesize findings", description: "Dedup, consensus detection, severity-based auto-apply rules", activeForm: "Synthesizing findings...")
 
-TaskCreate(subject: "Phase 4: Auto-fix", description: "Engineer sub-agent applies fixes, runs project tests", activeForm: "Applying auto-fixes...")
+TaskCreate(subject: "Phase 4: Auto-fix", description: "implementer subagent applies fixes, runs project tests", activeForm: "Applying auto-fixes...")
 
 TaskCreate(subject: "Phase 5: Validation gate", description: "Run all discovered project checks", activeForm: "Running validation...")
 
@@ -646,8 +646,8 @@ Skip to Phase 5.
 ### If AUTO_FIX Items Exist
 
 **Reserve the AUTO_FIX file list first (Tier 1).** The numbered change list from Phase 3
-names every file the fix engineer will touch — reserve them at the work grain BEFORE
-spawning the engineer, so a concurrent invocation sees them as held mid-fixup. Held until
+names every file the implementer will touch — reserve them at the work grain BEFORE
+spawning the implementer, so a concurrent invocation sees them as held mid-fixup. Held until
 released after the Phase 6 commit:
 
 ```
@@ -660,11 +660,11 @@ mcp__mcp-agent-mail__file_reservation_paths(
 )
 ```
 
-Spawn engineer with the AUTO_FIX list, using the prompt in **`references/engineer-fix-prompt.md`** with the Phase-4 `INTENT` ("Apply these fixes exactly as specified. Do NOT modify NEEDS_DECISION items.") and the `## Output` block kept (the result file is read back below).
+Spawn the implementer subagent with the AUTO_FIX list, using the prompt in **`references/implementer-fix-prompt.md`** with the Phase-4 `INTENT` ("Apply these fixes exactly as specified. Do NOT modify NEEDS_DECISION items.") and the `## Output` block kept (the result file is read back below).
 
 ### Verify Fixes
 
-Read the engineer's result file. Confirm:
+Read the implementer's result file. Confirm:
 1. All AUTO_FIX items applied (or documented why not)
 2. Project checks pass
 3. No unintended side effects (review diff)
@@ -699,7 +699,7 @@ Then, by diff class (from the classifier):
 **If all selected checks pass:** Continue to Phase 6.
 
 **If any fail:**
-- Fix the issue (small fixes directly, larger ones via engineer sub-agent)
+- Fix the issue (small fixes directly, larger ones via the implementer subagent)
 - Re-run the failing command
 - Only proceed after all pass OR user explicitly says "skip validation"
 
@@ -842,7 +842,7 @@ Report auto-fix results and skip to Phase 8.
 
 ### Apply AUTO_IMPLEMENT Items
 
-Spawn engineer for all `AUTO_IMPLEMENT` items using **`references/engineer-fix-prompt.md`** with the AUTO_IMPLEMENT `INTENT` ("each has been validated by the conductor as a clear technical improvement"). The `## Output` block is optional here — the conductor commits directly below.
+Spawn the implementer subagent for all `AUTO_IMPLEMENT` items using **`references/implementer-fix-prompt.md`** with the AUTO_IMPLEMENT `INTENT` ("each has been validated by the conductor as a clear technical improvement"). The `## Output` block is optional here — the conductor commits directly below.
 
 Log each with rationale: why this is a clear technical improvement, not a design choice.
 
@@ -926,7 +926,7 @@ AskUserQuestion(
 
 ### Apply User-Approved Fixes
 
-Spawn engineer for approved items using **`references/engineer-fix-prompt.md`** with the user-approved `INTENT` ("Apply these changes based on user decisions").
+Spawn the implementer subagent for approved items using **`references/implementer-fix-prompt.md`** with the user-approved `INTENT` ("Apply these changes based on user decisions").
 
 ### Commit All Fixes
 
