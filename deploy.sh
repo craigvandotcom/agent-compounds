@@ -326,6 +326,22 @@ if [ -n "$AGENTS_REQ" ]; then
       echo "  MISSING in agent-compounds: agent '$a'"
     fi
   done
+
+  # prune stamped generated agents whose registry source was deleted — the same
+  # orphan doctrine as prune_orphans, extended to the generated (non-symlink) form:
+  # a deleted registry agent must not survive as a phantom subagent in .claude/agents.
+  while IFS= read -r g; do
+    [ -n "$g" ] || continue
+    grep -q "$AGENTS_STAMP" "$g" || continue   # hand-written files are never touched
+    name="$(basename "$g" .md)"
+    [ -f "$AC_ROOT/agents/$name.md" ] && continue
+    if [ "$DRY" = 1 ]; then
+      echo "  prune (orphan agent) ${g#$TARGET/}"
+    else
+      rm "$g"
+      echo "  pruned (orphan agent) ${g#$TARGET/}"
+    fi
+  done < <(/usr/bin/find "$TARGET/.claude/agents" -name '*.md' -type f 2>/dev/null)
 fi
 
 if [ "$PRUNE" = 1 ]; then

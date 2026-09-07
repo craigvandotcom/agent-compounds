@@ -225,6 +225,30 @@ write_generated() {
   note_change
 }
 
+# prune_orphan_projections <src-agents-dir> <dest-dir> — delete STAMPED generated
+# agent projections whose source agent no longer exists. Deleting a registry agent
+# otherwise strands its projection in every harness home — a phantom subagent the
+# harness still offers (the exact failure mode 09-stray-alias-agents guards in the
+# registry, mirrored here at every projection boundary). Unstamped (hand-written)
+# files are never touched.
+prune_orphan_projections() { # <src-agents-dir> <dest-dir>
+  local src="$1" dest="$2" g name
+  [ -d "$dest" ] || return 0
+  for g in "$dest"/*; do
+    [ -e "$g" ] || continue
+    grep -q "$STAMP" "$g" 2>/dev/null || continue   # hand-written files are never touched
+    name="$(basename "$g")"; name="${name%.*}"
+    [ -f "$src/$name.md" ] && continue
+    if [ "$DRY" = 1 ]; then
+      echo "  prune (orphan projection) ${g/#$HOME/~}"
+    else
+      rm "$g"
+      echo "  pruned (orphan projection) ${g/#$HOME/~}"
+    fi
+    note_change
+  done
+}
+
 gen_codex_agents() { # <src-agents-dir> <dest-dir>
   local src="$1" dest="$2" f name relsrc
   [ -d "$src" ] || return 0
@@ -241,6 +265,7 @@ developer_instructions = \"\"\"
 $A_BODY
 \"\"\"")"
   done
+  prune_orphan_projections "$src" "$dest"
 }
 
 gen_droid_droids() { # <src-agents-dir> <dest-dir>
@@ -261,6 +286,7 @@ model: inherit
 
 $A_BODY")"
   done
+  prune_orphan_projections "$src" "$dest"
 }
 
 # gen_opencode_agents <src-agents-dir> <dest-dir>
@@ -309,6 +335,7 @@ permission:
 
 $A_BODY")"
   done
+  prune_orphan_projections "$src" "$dest"
 }
 
 # --- hooks + MCP projections (root-level, Phase 2/3) -------------------------------
