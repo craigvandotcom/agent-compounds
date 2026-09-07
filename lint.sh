@@ -5,6 +5,11 @@
 #
 # Mechanizes the 2026-06-11 audit's checkable invariants.
 #
+# Check 14 (no-net-growth) is ported to lint/checks/14-no-net-growth.py; this
+# file hosts no copy of it. ec5fa64 removed the `net-growth-ok` escape hatch —
+# growth is bought with deletion, never a prose stamp — and the port keeps it
+# removed (pinned by scripts/lint-net-growth.test.sh).
+#
 # Usage:  ./lint.sh                 full scan: every un-ported bash block, then
 #                                   the v2 runner (lint/run.py) over lint/checks/
 #         ./lint.sh --check <id>    ONLY the named v2 check (repeatable)
