@@ -20,7 +20,12 @@
 #
 # Usage:
 #   polish-fixpoint.sh --state <dir> --artifact <path> --round <n> --pre <sha256>
-#                      [--mode plan|bead|code|seams] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
+#                      [--findings <n>] [--mode plan|bead|code|seams] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
+#
+#   --findings  the round's finding count, as reported by the reader. REQUIRED at round >= 2:
+#               an empty artifact diff is not an empty finding set (findings dispositioned
+#               elsewhere — the ledger, a human — leave the digest unchanged while real
+#               defects remain). A non-zero count is refused regardless of the digest.
 #
 #   seams  is plan-side (the artifact is a seams plan) but stamps under a `seams_` prefix, so
 #          the later `--mode plan` polish of the same file records its own fixpoint beside it.
@@ -44,7 +49,7 @@ set -euo pipefail
 
 die2() { printf 'polish-fixpoint: NOT-GATED %s\n' "$*" >&2; exit 2; }
 
-MODE=plan TARGET="" ARTIFACT="" STATE="" ROUND="" PRE="" MAX=25 DRYRUN=0
+MODE=plan TARGET="" ARTIFACT="" STATE="" ROUND="" PRE="" FINDINGS="" MAX=25 DRYRUN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --mode)       MODE="${2:-}"; shift 2 ;;
@@ -53,9 +58,10 @@ while [ $# -gt 0 ]; do
     --state)      STATE="${2:-}"; shift 2 ;;
     --round)      ROUND="${2:-}"; shift 2 ;;
     --pre)        PRE="${2:-}"; shift 2 ;;
+    --findings)   FINDINGS="${2:-}"; shift 2 ;;
     --max-rounds) MAX="${2:-}"; shift 2 ;;
     --dry-run)    DRYRUN=1; shift ;;
-    -h|--help)    sed -n '20,32p' "$0"; exit 2 ;;
+    -h|--help)    sed -n '20,38p' "$0"; exit 2 ;;
     *)            die2 "unknown argument: $1" ;;
   esac
 done
@@ -68,6 +74,11 @@ case "$MODE" in plan|bead|code|seams) ;; *) die2 "--mode must be plan, bead, cod
 case "$ROUND" in ''|*[!0-9]*) die2 "--round must be a positive integer (got '$ROUND')" ;; esac
 case "$MAX"   in ''|*[!0-9]*) die2 "--max-rounds must be a non-negative integer, 0 to disable the runaway guard (got '$MAX')" ;; esac
 [ "$ROUND" -ge 1 ] || die2 "--round must be >= 1"
+case "$FINDINGS" in
+  '') : ;;
+  *[!0-9]*) die2 "--findings must be a non-negative integer (got '$FINDINGS')" ;;
+  *) [ "$FINDINGS" -ge 0 ] || die2 "--findings must be a non-negative integer (got '$FINDINGS')" ;;
+esac
 case "$MODE" in plan|seams) ;; *) [ -n "$TARGET" ] || die2 "--mode $MODE requires --target <bead-id>" ;; esac
 
 digest() {
@@ -94,6 +105,21 @@ if [ "$ROUND" -ge 2 ]; then
 fi
 
 printf '%s' "$POST" > "$STATE/round-$ROUND.sha"
+
+# THE FINDING COUNT IS THE OTHER SENSOR (ac-polish-fixpoint-digest-only-bnyx). The digest
+# answers "did the text change"; findings dispositioned elsewhere (the ledger, a human)
+# leave it unchanged while real defects remain — measured: 3 unfixed defects under a
+# byte-identical digest. At round >= 2 the count is REQUIRED (a stamp whose sensor never
+# reported is NOT-GATED, never clean) and a non-zero count refuses REGARDLESS of the
+# digest: an empty diff is not an empty finding set.
+if [ "$ROUND" -ge 2 ]; then
+  [ -n "$FINDINGS" ] || die2 "--findings is required at round >= 2 — the stamp consults the finding count; a digest alone cannot prove no findings"
+  if [ "$FINDINGS" -gt 0 ]; then
+    printf 'polish-fixpoint: REFUSED findings round=%s findings=%s — %s finding(s) remain, whatever the digest says. Apply or disposition them, then run a fresh round; NOTHING is stamped.\n' \
+      "$ROUND" "$FINDINGS" "$FINDINGS"
+    exit 1
+  fi
+fi
 
 # A clean FIRST round is not a fixpoint. Round 1 has nothing to be identical to.
 if [ "$ROUND" -eq 1 ]; then
@@ -135,7 +161,7 @@ fi
 
 # Fixpoint: round >= 2 and this round changed nothing.
 STAMPED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-RECEIPT="POLISH-FIXPOINT: mode=$MODE rounds=$ROUND sha256=$POST at=$STAMPED_AT engine=polish-fixpoint.sh"
+RECEIPT="POLISH-FIXPOINT: mode=$MODE rounds=$ROUND sha256=$POST findings=$FINDINGS at=$STAMPED_AT engine=polish-fixpoint.sh"
 printf '%s\n' "$RECEIPT" > "$STATE/receipt.txt"
 
 if [ "$DRYRUN" -eq 1 ]; then

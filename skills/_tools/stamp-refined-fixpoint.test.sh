@@ -144,7 +144,7 @@ PRE0=$(shasum -a 256 "$ART" | awk '{print $1}')
 PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac-receipt --artifact "$ART" \
   --state "$STATE" --round 1 --pre "deadbeef" >/dev/null 2>&1   # round 1: CONTINUE, records the sha
 FP_OUT=$(PATH="$MOCK:$PATH" bash "$FIXPOINT" --mode bead --target bd-ac-receipt --artifact "$ART" \
-  --state "$STATE" --round 2 --pre "$PRE0" 2>&1); FP_RC=$?
+  --state "$STATE" --round 2 --pre "$PRE0" --findings 0 2>&1); FP_RC=$?
 if [ "$FP_RC" -eq 0 ] && grep -q "POLISH-FIXPOINT:" "$STATE/receipt.txt"; then
   pass "Case 2a: polish-fixpoint.sh reached a fixpoint and wrote a real receipt"
 else

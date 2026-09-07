@@ -16,8 +16,7 @@ description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT �
 
 ## Mode selects a workflow — load it, then run the loop below
 
-The argument picks ONE workflow file. It is a mandatory load, and it is the ONLY place a mode
-differs. Do not infer a mode's bindings from this file.
+The argument picks ONE workflow file — a mandatory load, the ONLY place a mode differs; do not infer a mode's bindings from this file.
 
 | mode | workflow (mandatory) | checklist (mandatory) |
 | --- | --- | --- |
@@ -35,8 +34,7 @@ It names its hand-off. Nothing else about a mode exists. Doctrine: `skills/ac-pi
 
 **This SKILL spawns the readers. `polish-fixpoint.sh` spawns nothing.** The script measures the
 diff and gates the stamp; it never reads the artifact for meaning and never decides what a
-finding is. A loop that grades itself always finds itself clean, so the measurement is kept
-outside the thing being measured.
+finding is. A loop that grades itself always finds itself clean, so measurement stays outside.
 
 ## The round procedure — ONE procedure, ALL modes
 
@@ -44,7 +42,7 @@ There is no second round path for any mode. Adding one ends the property this sk
 
 ```
 MODE=plan|bead|code|seams   TARGET·ARTIFACT·CHECKLIST·VALIDATE·STAMP[·READERS] = from the workflow
-STATE=<run-scoped dir>   MAX=25 (0=off)
+STATE=<run-scoped dir>   MAX=25 (0=off)   FINDINGS=<count the round's reader reported>
 
 for ROUND in 1..:
   PRE = sha256(ARTIFACT)                      # observed BEFORE the reader runs
@@ -55,11 +53,13 @@ for ROUND in 1..:
   apply this round's findings to ARTIFACT (per READERS; default: the reader's edits, directly)
   VALIDATE — the mode's validity gate. Red means the round is NOT recorded: revert or fix.
   polish-fixpoint.sh --mode $MODE --target $TARGET --artifact $ARTIFACT \
-                     --state $STATE --round $ROUND --pre $PRE --max-rounds $MAX
+                     --state $STATE --round $ROUND --pre $PRE --findings $FINDINGS --max-rounds $MAX
   case the verdict token:
     STAMPED   -> done; go to the workflow's hand-off
     CONTINUE  -> next round
     REFUSED round-1-clean   -> next round (a clean first round proves nothing)
+    REFUSED findings -> STOP: findings remain — dispositioning them elsewhere leaves the
+                        digest unchanged; that is not convergence. Fresh rounds to zero, else human
     REFUSED bound-exhausted -> STOP: findings to the human, NO stamp
     ENDED cycling -> STOP: readers reverting each other; findings to the human, NO stamp
     ENDED out-of-band-amendment -> STOP: the input moved; restart on a frozen input
@@ -77,8 +77,8 @@ artifact and a reader that read nothing, so it never stamps.
 round quota. `--max-rounds` is a runaway guard only (default 25, `0` disables). No clean round
 means NO STAMP. Cycling or routine exhaustion indicts the CHECKLIST, not the artifact.
 
-**FROZEN INPUT.** An out-of-band amendment ENDS the loop; it never extends it. That is what
-the `--pre` digest detects, and it is why a polish run cannot chase a moving target.
+**FROZEN INPUT.** An out-of-band amendment ENDS the loop, never extends it — that is what the
+`--pre` digest detects: a polish run cannot chase a moving target.
 
 ## Telemetry
 

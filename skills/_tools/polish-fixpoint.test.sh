@@ -59,22 +59,40 @@ S3="$W/s3"; mk_plan a "$W/p3.md"; PRE=$(sha "$W/p3.md")
 mk_plan b "$W/p3.md"
 "$SCRIPT" --state "$S3" --artifact "$W/p3.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
 PRE2=$(sha "$W/p3.md")   # round-2 reader changed nothing
-expect "clean round 2 -> STAMPED"               0 "STAMPED mode=plan round=2" -- --state "$S3" --artifact "$W/p3.md" --round 2 --pre "$PRE2"
+expect "clean round 2 -> STAMPED"               0 "STAMPED mode=plan round=2" -- --state "$S3" --artifact "$W/p3.md" --round 2 --pre "$PRE2" --findings 0
 if grep -q '^polish_fixpoint_sha256: ' "$W/p3.md" && grep -q '^polish_rounds: 2' "$W/p3.md"; then
   PASS=$((PASS+1)); echo "ok   plan frontmatter stamped in place"
 else
   FAIL=$((FAIL+1)); echo "FAIL plan frontmatter not stamped"; fi
-if [ -f "$S3/receipt.txt" ] && grep -q '^POLISH-FIXPOINT: mode=plan rounds=2 sha256=' "$S3/receipt.txt"; then
-  PASS=$((PASS+1)); echo "ok   fixpoint receipt written"
+if [ -f "$S3/receipt.txt" ] && grep -q '^POLISH-FIXPOINT: mode=plan rounds=2 sha256=.* findings=0 ' "$S3/receipt.txt"; then
+  PASS=$((PASS+1)); echo "ok   fixpoint receipt written, finding count recorded"
 else
   FAIL=$((FAIL+1)); echo "FAIL receipt missing or malformed"; fi
+
+# --- 3b. THE FINDING COUNT (ac-polish-fixpoint-digest-only-bnyx) — the digest-only stamp
+# is unreachable: findings dispositioned elsewhere (the ledger, a human) leave the artifact
+# byte-identical while real defects remain, and the engine must refuse that, not stamp it.
+S3C="$W/s3c"; mk_plan a "$W/p3c.md"; PRE=$(sha "$W/p3c.md")
+"$SCRIPT" --state "$S3C" --artifact "$W/p3c.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "round 2, 3 findings, IDENTICAL digest -> REFUSED findings" 1 "REFUSED findings round=2 findings=3" -- --state "$S3C" --artifact "$W/p3c.md" --round 2 --pre "$(sha "$W/p3c.md")" --findings 3
+if [ -f "$S3C/receipt.txt" ]; then
+  FAIL=$((FAIL+1)); echo "FAIL findings refusal wrote a receipt"
+else
+  PASS=$((PASS+1)); echo "ok   no receipt written while findings remain"; fi
+S3D="$W/s3d"; mk_plan a "$W/p3d.md"; PRE=$(sha "$W/p3d.md")
+"$SCRIPT" --state "$S3D" --artifact "$W/p3d.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "round 2 without --findings -> NOT-GATED" 2 "NOT-GATED --findings is required at round >= 2" -- --state "$S3D" --artifact "$W/p3d.md" --round 2 --pre "$(sha "$W/p3d.md")"
+S3E="$W/s3e"; mk_plan a "$W/p3e.md"; PRE=$(sha "$W/p3e.md")
+mk_plan b "$W/p3e.md"   # round 2 changed the artifact AND reported findings: still refused
+"$SCRIPT" --state "$S3E" --artifact "$W/p3e.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "round 2, findings > 0, non-empty diff -> REFUSED findings regardless" 1 "REFUSED findings round=2 findings=1" -- --state "$S3E" --artifact "$W/p3e.md" --round 2 --pre "$(sha "$W/p3e.md")" --findings 1
 
 # --- 4. a non-empty final diff is NOT stamped (the core refusal) ---------------
 S4="$W/s4"; mk_plan a "$W/p4.md"; PRE=$(sha "$W/p4.md")
 mk_plan b "$W/p4.md"
 "$SCRIPT" --state "$S4" --artifact "$W/p4.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
 PRE2=$(sha "$W/p4.md"); mk_plan c "$W/p4.md"   # round 2 changed it again
-expect "round 2 with a non-empty diff -> CONTINUE" 1 "CONTINUE round=2" -- --state "$S4" --artifact "$W/p4.md" --round 2 --pre "$PRE2"
+expect "round 2 with a non-empty diff -> CONTINUE" 1 "CONTINUE round=2" -- --state "$S4" --artifact "$W/p4.md" --round 2 --pre "$PRE2" --findings 0 --findings 0
 if grep -q '^polish_fixpoint_sha256:' "$W/p4.md"; then
   FAIL=$((FAIL+1)); echo "FAIL stamped an artifact with a non-empty final diff"
 else
@@ -88,7 +106,7 @@ for r in 1 2; do
   PRE=$(sha "$W/p5.md")
 done
 mk_plan final "$W/p5.md"
-expect "bound reached, still dirty -> bound-exhausted" 1 "REFUSED bound-exhausted" -- --state "$S5" --artifact "$W/p5.md" --round 3 --pre "$PRE" --max-rounds 3
+expect "bound reached, still dirty -> bound-exhausted" 1 "REFUSED bound-exhausted" -- --state "$S5" --artifact "$W/p5.md" --round 3 --pre "$PRE" --max-rounds 3 --findings 0
 
 # --- 5b. CYCLING: a state the artifact already held can never converge --------
 # a -> b -> a. Round 3 returns to round 1's digest: readers are reverting each other.
@@ -97,10 +115,10 @@ mk_plan b "$W/p5b.md"
 "$SCRIPT" --state "$S5B" --artifact "$W/p5b.md" --round 1 --pre "$PRE" --max-rounds 0 >/dev/null 2>&1 || true
 PRE=$(sha "$W/p5b.md")
 mk_plan c "$W/p5b.md"
-"$SCRIPT" --state "$S5B" --artifact "$W/p5b.md" --round 2 --pre "$PRE" --max-rounds 0 >/dev/null 2>&1 || true
+"$SCRIPT" --state "$S5B" --artifact "$W/p5b.md" --round 2 --pre "$PRE" --max-rounds 0 --findings 0 >/dev/null 2>&1 || true
 PRE=$(sha "$W/p5b.md")
 mk_plan b "$W/p5b.md"
-expect "artifact returns to an older state -> ENDED cycling" 1 "ENDED cycling" -- --state "$S5B" --artifact "$W/p5b.md" --round 3 --pre "$PRE" --max-rounds 0
+expect "artifact returns to an older state -> ENDED cycling" 1 "ENDED cycling" -- --state "$S5B" --artifact "$W/p5b.md" --round 3 --pre "$PRE" --max-rounds 0 --findings 0
 if [ -f "$S5B/receipt.txt" ]; then
   FAIL=$((FAIL+1)); echo "FAIL cycling wrote a receipt"
 else
@@ -111,16 +129,16 @@ S5C="$W/s5c"; mk_plan a "$W/p5c.md"; PRE=$(sha "$W/p5c.md")
 r=1
 while [ "$r" -le 11 ]; do
   mk_plan "u$r" "$W/p5c.md"
-  "$SCRIPT" --state "$S5C" --artifact "$W/p5c.md" --round "$r" --pre "$PRE" --max-rounds 0 >/dev/null 2>&1 || true
+  "$SCRIPT" --state "$S5C" --artifact "$W/p5c.md" --round "$r" --pre "$PRE" --max-rounds 0 --findings 0 >/dev/null 2>&1 || true
   PRE=$(sha "$W/p5c.md")
   r=$((r+1))
 done
 mk_plan u12 "$W/p5c.md"
-expect "round 12 with --max-rounds 0 -> CONTINUE, not exhausted" 1 "CONTINUE round=12" -- --state "$S5C" --artifact "$W/p5c.md" --round 12 --pre "$PRE" --max-rounds 0
+expect "round 12 with --max-rounds 0 -> CONTINUE, not exhausted" 1 "CONTINUE round=12" -- --state "$S5C" --artifact "$W/p5c.md" --round 12 --pre "$PRE" --max-rounds 0 --findings 0
 
 # --- 5d. a converging run stamps at round 10 with no quota to trip -------------
 mk_plan u12 "$W/p5c.md"
-expect "clean round 13 after 12 dirty rounds -> STAMPED" 0 "STAMPED" -- --state "$S5C" --artifact "$W/p5c.md" --round 13 --pre "$(sha "$W/p5c.md")" --max-rounds 0 --dry-run
+expect "clean round 13 after 12 dirty rounds -> STAMPED" 0 "STAMPED" -- --state "$S5C" --artifact "$W/p5c.md" --round 13 --pre "$(sha "$W/p5c.md")" --max-rounds 0 --findings 0 --dry-run
 
 # --- 5e. code mode: third mode, same engine, bead-side receipt ----------------
 expect "code mode without --target -> NOT-GATED" 2 "NOT-GATED" -- --mode code --state "$W/s5e" --artifact "$W/p0.md" --round 1 --pre "$(sha "$W/p0.md")"
@@ -128,7 +146,7 @@ expect "unknown mode -> NOT-GATED"              2 "NOT-GATED" -- --mode sideways
 S5E="$W/s5e"; mk_plan a "$W/p5e.md"; PRE=$(sha "$W/p5e.md")
 mk_plan b "$W/p5e.md"
 "$SCRIPT" --mode code --target ac-fixture --state "$S5E" --artifact "$W/p5e.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
-expect "code mode, clean round 2 -> STAMPED"    0 "STAMPED mode=code round=2" -- --mode code --target ac-fixture --state "$S5E" --artifact "$W/p5e.md" --round 2 --pre "$(sha "$W/p5e.md")" --dry-run
+expect "code mode, clean round 2 -> STAMPED"    0 "STAMPED mode=code round=2" -- --mode code --target ac-fixture --state "$S5E" --artifact "$W/p5e.md" --round 2 --pre "$(sha "$W/p5e.md")" --findings 0 --dry-run
 if grep -q "mode=code" "$S5E/receipt.txt" 2>/dev/null; then
   PASS=$((PASS+1)); echo "ok   code receipt records mode=code"
 else
@@ -141,7 +159,7 @@ else
 S5F="$W/s5f"; mk_plan a "$W/p5f.md"; PRE=$(sha "$W/p5f.md")
 mk_plan b "$W/p5f.md"
 "$SCRIPT" --mode seams --state "$S5F" --artifact "$W/p5f.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
-expect "seams mode needs no --target"          0 "STAMPED mode=seams round=2" -- --mode seams --state "$S5F" --artifact "$W/p5f.md" --round 2 --pre "$(sha "$W/p5f.md")"
+expect "seams mode needs no --target"          0 "STAMPED mode=seams round=2" -- --mode seams --state "$S5F" --artifact "$W/p5f.md" --round 2 --pre "$(sha "$W/p5f.md")" --findings 0
 if grep -q '^seams_rounds: 2' "$W/p5f.md" && grep -q '^seams_fixpoint_sha256: ' "$W/p5f.md" && ! grep -q '^polish_' "$W/p5f.md"; then
   PASS=$((PASS+1)); echo "ok   seams stamp uses seams_ keys and writes no polish_ keys"
 else
@@ -150,7 +168,7 @@ else
 S5F2="$W/s5f2"; PRE=$(sha "$W/p5f.md")
 printf 'more\n' >> "$W/p5f.md"
 "$SCRIPT" --mode plan --state "$S5F2" --artifact "$W/p5f.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
-expect "plan mode after seams mode -> STAMPED"  0 "STAMPED mode=plan round=2" -- --mode plan --state "$S5F2" --artifact "$W/p5f.md" --round 2 --pre "$(sha "$W/p5f.md")"
+expect "plan mode after seams mode -> STAMPED"  0 "STAMPED mode=plan round=2" -- --mode plan --state "$S5F2" --artifact "$W/p5f.md" --round 2 --pre "$(sha "$W/p5f.md")" --findings 0
 if grep -q '^seams_rounds: 2' "$W/p5f.md" && grep -q '^polish_rounds: 2' "$W/p5f.md"; then
   PASS=$((PASS+1)); echo "ok   both fixpoints coexist in the frontmatter"
 else
@@ -168,7 +186,7 @@ expect "input moved between rounds -> ENDED"    1 "ENDED out-of-band-amendment" 
 S7="$W/s7"; mk_plan a "$W/p7.md"; PRE=$(sha "$W/p7.md")
 mk_plan b "$W/p7.md"
 "$SCRIPT" --mode bead --target ac-fixture --state "$S7" --artifact "$W/p7.md" --round 1 --pre "$PRE" --dry-run >/dev/null 2>&1 || true
-expect "bead mode, clean round 2 -> STAMPED"    0 "STAMPED mode=bead round=2" -- --mode bead --target ac-fixture --state "$S7" --artifact "$W/p7.md" --round 2 --pre "$(sha "$W/p7.md")" --dry-run
+expect "bead mode, clean round 2 -> STAMPED"    0 "STAMPED mode=bead round=2" -- --mode bead --target ac-fixture --state "$S7" --artifact "$W/p7.md" --round 2 --pre "$(sha "$W/p7.md")" --findings 0 --dry-run
 if grep -q '^POLISH-FIXPOINT: mode=bead rounds=2 ' "$S7/receipt.txt"; then
   PASS=$((PASS+1)); echo "ok   bead receipt format is the one stamp-refined.sh will gate on"
 else
@@ -200,7 +218,7 @@ S7B="$W/s7b"; mk_set a "$W/p7b.md"; PRE=$(sha "$W/p7b.md")
 mk_set b "$W/p7b.md"
 BR_LOG="$W/br-fanout.log"; export BR_LOG; : > "$BR_LOG"
 "$SCRIPT" --mode bead --target ac-epic --state "$S7B" --artifact "$W/p7b.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
-expect "bead mode fan-out, clean round 2 -> STAMPED" 0 "receipt fanned out to 3 bead(s)" -- --mode bead --target ac-epic --state "$S7B" --artifact "$W/p7b.md" --round 2 --pre "$(sha "$W/p7b.md")"
+expect "bead mode fan-out, clean round 2 -> STAMPED" 0 "receipt fanned out to 3 bead(s)" -- --mode bead --target ac-epic --state "$S7B" --artifact "$W/p7b.md" --round 2 --pre "$(sha "$W/p7b.md")" --findings 0
 posted=$(grep -c '^comments add ' "$BR_LOG")
 if [ "$posted" = 3 ] && grep -q '^comments add ac-epic$' "$BR_LOG" \
    && grep -q '^comments add ac-epic.1$' "$BR_LOG" && grep -q '^comments add ac-epic.2$' "$BR_LOG"; then
@@ -214,7 +232,7 @@ mk_set b "$W/p7c.md"
 BR_LOG="$W/br-fail.log"; : > "$BR_LOG"
 "$SCRIPT" --mode bead --target ac-epic --state "$S7C" --artifact "$W/p7c.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
 BR_FAIL=1; export BR_FAIL
-expect "a failed receipt post -> NOT-GATED"    2 "NOT-GATED receipt post failed for ac-epic" -- --mode bead --target ac-epic --state "$S7C" --artifact "$W/p7c.md" --round 2 --pre "$(sha "$W/p7c.md")"
+expect "a failed receipt post -> NOT-GATED"    2 "NOT-GATED receipt post failed for ac-epic" -- --mode bead --target ac-epic --state "$S7C" --artifact "$W/p7c.md" --round 2 --pre "$(sha "$W/p7c.md")" --findings 0
 unset BR_FAIL
 PATH="$OLD_PATH"; export PATH
 
