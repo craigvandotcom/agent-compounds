@@ -134,6 +134,7 @@ if [ "$CHECK_ID" = 14 ]; then
       diff <(printf '%s\n' "$a") <(printf '%s\n' "$b") | sed 's/^/      /'
       fails=$((fails + 1))
     fi
+
   }
 
   # --- (a) the registry working tree, leg 1's base, leg 1's spec --------------
@@ -306,6 +307,140 @@ elif [ "$CHECK_ID" = 19 ]; then
   compare_sets "missing-script fixture" "$old" "$new" "$LSTRIP" "$NSTRIP"
   rm -rf "$W"
   finish
+elif [ "$CHECK_ID" = 20 ] || [ "$CHECK_ID" = 21 ] || [ "$CHECK_ID" = 22 ] || [ "$CHECK_ID" = 23 ]; then
+  # --- recipes for the DELEGATING checks 20-23 (ac-1p7j.16) --------------------
+  # Each legacy block was a thin lint.sh wrapper around a judge script under
+  # scripts/; the port wraps the SAME judge. Parity runs the legacy block
+  # (live lint.sh, else git history) and the port over the SAME audited tree
+  # — the registry, then a built RED tree — and compares (a) the verdict,
+  # where the port's exit 2 counts as a diff because NOT-GATED is not a pass,
+  # and (b) the judge's own violation lines, with each side's wrapper header
+  # stripped — the prose around the verdict may differ, the flagged set may not.
+  case "$CHECK_ID" in
+    20) NEW="$ROOT/lint/checks/20-harness-scheduling.py" ;;
+    21) NEW="$ROOT/lint/checks/21-assurance-declarations.py" ;;
+    22) NEW="$ROOT/lint/checks/22-ledger-integrity.py" ;;
+    23) NEW="$ROOT/lint/checks/23-family-budget.py" ;;
+  esac
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  JUDGE_ID="$(basename "$NEW" .py)"
+
+  compare_delegating() { # <name> <tree>
+    local name="$1" tree="$2" old new new_rc lr nr
+    old="$(run_legacy "$CHECK_ID" "$tree")"
+    new="$(python3 "$NEW" "$tree" 2>/dev/null)"; new_rc=$?
+    # the judge's own lines (FAIL: ...) and the port's header (FAIL <id>: ...)
+    # are both part of what the port prints — capture both shapes
+    new="$(printf '%s\n' "$new" | grep -E '^FAIL[ :]' || true)"
+    lr=0; nr=0
+    printf '%s' "$old" | grep -q . && lr=1
+    [ "$new_rc" -eq 1 ] && nr=1
+    if [ "$lr" != "$nr" ] || [ "$new_rc" -eq 2 ]; then
+      echo "  FAIL  $name — verdict diff (legacy fail line(s): $(printf '%s' "$old" | grep -c . || true), port exit=$new_rc)"
+      fails=$((fails + 1))
+      return
+    fi
+    compare_sets "$name" "$old" "$new" "s/^FAIL: Check $CHECK_ID: //" "s/^FAIL $JUDGE_ID: //"
+  }
+
+  # the RED state each delegating judge must flag, built fresh per leg
+  build_red_tree() { # <W>
+    local w="$1"
+    mkdir -p "$w/scripts"
+    case "$CHECK_ID" in
+      20)
+        mkdir -p "$w/.github/workflows" "$w/lint/checks"
+        cp "$ROOT/scripts/harness-scheduling-check.sh" "$ROOT/scripts/run-all-harnesses.sh" "$w/scripts/"
+        chmod +x "$w/scripts/"*.sh
+        printf '#!/usr/bin/env bash\n# demo proof harness\nexit 0\n' > "$w/lint/checks/demo.test.sh"
+        printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' > "$w/.github/workflows/ci.yml"
+        ;;
+      21)
+        mkdir -p "$w/hooks"
+        cp "$ROOT/scripts/assurance-declarations-check.sh" "$w/scripts/"
+        chmod +x "$w/scripts/"*.sh
+        printf '{"wiring":[{"id":"demo","command":"echo hi"}]}\n' > "$w/hooks/hooks.json"
+        ;;
+      22)
+        mkdir -p "$w/skills/skill-builder/scripts" "$w/skills/ac-pipeline"
+        cp "$ROOT/skills/skill-builder/scripts/friction-rollup.py" "$w/skills/skill-builder/scripts/"
+        cp "$ROOT/skills/ac-pipeline/SKILL.md" "$w/skills/ac-pipeline/"
+        cp "$ROOT/scripts/ac-ledger-integrity.sh" "$w/scripts/"
+        chmod +x "$w/scripts/"*.sh
+        { printf -- '---\nskill: ac-pipeline\ncreated: 2026-09-07\nlast_pass: never\nentries: 1\n---\n\n# fixture ledger\n\n## fixture-friction\n'
+          printf -- '- skills: [ac-pipeline]\n- impact: M\n- frequency: every-run\n- perceptibility: silent\n- recurrence: 3\n'
+          printf -- '- first_seen: 2026-09-01\n- last_seen: 2026-09-02\n- status: open\n- receipt: nowhere (fixture)\n'
+          printf -- '- control: I99\n- control_landed: 2026-08-01\n'
+        } > "$w/skills/ac-pipeline/FRICTIONS.md"
+        ;;
+      23)
+        mkdir -p "$w/skills/ac-plan"
+        cp "$ROOT/scripts/ac-budget-check.sh" "$w/scripts/"
+        chmod +x "$w/scripts/"*.sh
+        { printf '# ac-plan\n\nUses skills/ac-plan/references/deep.md.\n'
+          for i in $(seq 1 810); do printf 'filler line %d\n' "$i"; done
+        } > "$w/skills/ac-plan/SKILL.md"
+        ;;
+    esac
+  }
+
+  compare_delegating "registry tree" "$ROOT"
+  W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
+  build_red_tree "$W/tree"
+  compare_delegating "fixture RED tree" "$W/tree"
+  finish
+
+elif [ "$CHECK_ID" = 3 ] || [ "$CHECK_ID" = 4 ] || [ "$CHECK_ID" = 5 ] || [ "$CHECK_ID" = 9 ] || [ "$CHECK_ID" = 24 ]; then
+  # --- recipes for Checks 3, 4, 5, 9 and 24 (ac-1p7j.13) -----------------------
+  # Tree-walking blocks: registry tree, then each check's committed static
+  # fixture. The strip patterns reduce both sides' wrapper headers so the
+  # comparison is on the violation text.
+  case "$CHECK_ID" in
+    3)  NEW="$ROOT/lint/checks/03-frontmatter-conformance.py";  FX="03-frontmatter-conformance";  LSTRIP='s/^FAIL: //' ;;
+    4)  NEW="$ROOT/lint/checks/04-readme-disk.py";              FX="04-readme-disk";              LSTRIP='s/^FAIL: //' ;;
+    5)  NEW="$ROOT/lint/checks/05-agents-diagram.py";           FX="05-agents-diagram";           LSTRIP='s/^FAIL: //' ;;
+    9)  NEW="$ROOT/lint/checks/09-stray-alias-agents.py";       FX="09-stray-alias-agents";       LSTRIP='s/^FAIL: //' ;;
+    24) NEW="$ROOT/lint/checks/24-description-length.py";       FX="24-description-length";       LSTRIP='s/^FAIL: Check 24: //' ;;
+  esac
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  JUDGE_ID="$(basename "$NEW" .py)"
+  NSTRIP="s/^FAIL $JUDGE_ID: //"
+
+  old="$(run_legacy "$CHECK_ID")" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+
+  old="$(run_legacy "$CHECK_ID" "$ROOT/lint/fixtures/$FX")" || exit 2
+  new="$(python3 "$NEW" "$ROOT/lint/fixtures/$FX" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  finish
+
+elif [ "$CHECK_ID" = 13 ]; then
+  # --- recipe for Check 13 (ac-1p7j.13) ----------------------------------------
+  # Delegating block (validate-skill.sh --registry): registry tree, then a
+  # built RED tree (the judge copied in beside an over-cap description).
+  NEW="$ROOT/lint/checks/13-skill-registry.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  LSTRIP='s/^FAIL: Check 13 budget: //; s/^FAIL: Check 13: //'
+  NSTRIP='s/^FAIL 13-skill-registry budget: //; s/^FAIL 13-skill-registry: //'
+
+  old="$(run_legacy 13)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+
+  W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
+  mkdir -p "$W/skills/skill-builder/scripts" "$W/skills/overlong"
+  cp "$ROOT/skills/skill-builder/scripts/validate-skill.sh" "$W/skills/skill-builder/scripts/"
+  chmod +x "$W/skills/skill-builder/scripts/"*.sh
+  { printf -- '---\nname: overlong\ndescription: "'
+    for i in $(seq 1 140); do printf 'trigger word %d ' "$i"; done
+    printf '"\n---\n\n# overlong\n'
+  } > "$W/skills/overlong/SKILL.md"
+  old="$(run_legacy 13 "$W")" || exit 2
+  new="$(python3 "$NEW" "$W" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "fixture RED tree (over-cap description)" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  finish
+
 else
   echo "NOT-CHECKED: no parity recipe for check '$CHECK_ID'" >&2
   exit 2
