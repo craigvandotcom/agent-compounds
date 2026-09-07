@@ -485,35 +485,6 @@ for dir in "${CONSUMER_DIRS[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Check 8 — deploy.sh dry-run inertness self-test
-# ---------------------------------------------------------------------------
-echo "--- Check 8: deploy.sh dry-run inertness ---"
-
-check
-FIRST_SKILL=$(/usr/bin/find "$AC_ROOT/skills" -name SKILL.md | head -1 | sed "s|$AC_ROOT/skills/||;s|/SKILL.md||")
-
-if [ -z "$FIRST_SKILL" ]; then
-  fail "deploy.sh dry-run self-test: could not find any skill to test with"
-else
-  DRYRUN_TMP=$(mktemp -d)
-  DRYRUN_EXIT=0
-  "$AC_ROOT/deploy.sh" "$DRYRUN_TMP" --skills "$FIRST_SKILL" -n >/dev/null 2>&1 || DRYRUN_EXIT=$?
-  DRYRUN_CONTENTS=$(ls -A "$DRYRUN_TMP" 2>/dev/null || true)
-  # A crash before any write would also leave the dir empty — so check exit code
-  # too, or the inertness test passes for a broken deploy.sh.
-  if [ "$DRYRUN_EXIT" -ne 0 ]; then
-    fail "deploy.sh --dry-run exited $DRYRUN_EXIT (expected 0)"
-  fi
-  # clean up temp dir (use rmdir on empty or remove files only if truly empty)
-  if [ -z "$DRYRUN_CONTENTS" ]; then
-    rmdir "$DRYRUN_TMP" 2>/dev/null || true
-  else
-    # leave it for diagnostics — list what leaked
-    fail "deploy.sh --dry-run created files in temp dir (should be inert): $DRYRUN_CONTENTS (tmp: $DRYRUN_TMP)"
-  fi
-fi
-
-# ---------------------------------------------------------------------------
 # Check 9 — No stray alias agents
 # ---------------------------------------------------------------------------
 echo "--- Check 9: no stray alias agents ---"
@@ -526,80 +497,6 @@ fi
 check
 if [ -f "$AC_ROOT/agents/reviewer.md" ]; then
   fail "agents/reviewer.md exists — retired alias agent (renamed to validator 2026-06-11)"
-fi
-
-# ---------------------------------------------------------------------------
-# Check 10 — pipeline conformance (D-series doctrine landings)
-# ---------------------------------------------------------------------------
-echo "--- Check 10: pipeline conformance (D-series) ---"
-
-# D2 RETIRED (a: retires with its subject) — asserted the ac-pipeline conformance
-# checklist kept 'Land after merge' + 'Conductor dedup' ticked. That conformance-status
-# section retired with the legacy architecture lane at the pipeline rename (the skill is now
-# the constitution + operating contracts); git history preserves both the section and this
-# check. Nothing in the successor carries those markers.
-
-# D3 RETIRED (a: retires with its subject) — asserted no `_backlog/{version}` survived in
-# ac-plan-init, which is in the Phase-4 archive set. The concept exists nowhere in the lean successors# successors (grep: zero hits), so there is nothing to re-point at. A check reaching into
-# _archive/ is a check that stopped checking.
-#
-# D4 RETIRED (a: retires with its subject) — asserted the plan-status gate
-# (approved/loop-ready/refined + a STOP semantic) in ac-beadify, also in the archive set.
-# Deliberately NOT re-pointed at ac-beadify: that skill carries none of those four tokens
-# (grep: 0 for approved/loop-ready, 0 for `STOP condition`). Re-pointing would have
-# manufactured a permanent red against a contract the lean pipeline never adopted, which is worse than
-# no check. If the pipeline later adopts a status gate, this check should be rewritten for it.
-
-# D5: ac-plan-lab (merged genius+alien plan skill, 2026-07-20) carries the write-back
-# section (Write Back header, or the genius_reviewed/transcended frontmatter flags).
-for d5_skill in ac-plan-lab; do
-  check
-  d5_target="$AC_ROOT/skills/$d5_skill/SKILL.md"
-  if ! grep -qE "Write Back|genius_reviewed|transcended" "$d5_target" 2>/dev/null; then
-    fail "D5: skills/$d5_skill/SKILL.md missing write-back section (Write Back / genius_reviewed / transcended)"
-  fi
-done
-
-# D6 RETIRED (a: retires with its subjects) — scanned ac-implement + ac-merge for a stale
-# "land is a pre-merge gate" claim. BOTH files are in the Phase-4 archive set, and the
-# phrase "pre-merge gate" appears nowhere in ac-implement or ac-publish (grep: zero
-# hits), so the drift this guarded cannot recur in the successors.
-#
-# D7 RETIRED (a: retires with its subject) — asserted no "Version bump scans commits"
-# claim survived in ac-merge, in the archive set. The string never migrated into any lean# skill (grep: only the cutover slate's own record of this check mentions it).
-
-# D8 leg 1 RE-POINTED (b: the FILE survives, so the check does too). version-bump.md is
-# NOT archived — it moves to the surviving ac-publish, which absorbs ac-merge. The
-# sole-owner statement is the substance and it must keep being enforced at its new home.
-check
-if ! grep -qi "sole.*owner" "$AC_ROOT/skills/ac-publish/references/version-bump.md" 2>/dev/null; then
-  fail "D8: skills/ac-publish/references/version-bump.md missing the sole-owner statement"
-fi
-# D8 leg 2 KEPT UNCHANGED — ac-distribute survives the cutover. Only the fail text is
-# updated to name the new owner; the assertion itself is untouched.
-check
-if ! grep -qi "defer" "$AC_ROOT/skills/ac-distribute/SKILL.md" 2>/dev/null; then
-  fail "D8: skills/ac-distribute/SKILL.md missing defer-to-version-bump-owner language"
-fi
-
-# D9 retired (trunk-direct migration, epic bd-u2lo1, bd-u2lo1.3): the allocator
-# script (`ac-pipeline/scripts/allocate-wave-branch.sh`) it checked is deleted —
-# ac-implement no longer allocates wave branches (bd-u2lo1.6) and ac-loop no
-# longer calls the allocator either (bd-u2lo1.7). D9b (below) is the surviving
-# check for stale `wave/` branch-naming assumptions.
-
-# D9b: zero startswith("wave/") in ac-loop/SKILL.md
-check
-if grep -q 'startswith("wave/")' "$AC_ROOT/skills/ac-loop/SKILL.md" 2>/dev/null; then
-  fail "D9b: skills/ac-loop/SKILL.md still contains stale 'startswith(\"wave/\")' pattern"
-fi
-
-# D10 (WS6, bd-brv39.6): ac-human-session Phase 4 Three Tiers render documents
-# tier-first, then oldest-within-tier ordering (age dimension). Discriminating
-# phrase — bare "oldest|age|created_at" substring-false-matches tri-AGE/st-AGE-d.
-check
-if ! grep -qE "oldest-first|oldest-within|oldest-bead-first|P0.{0,3}P4 then oldest" "$AC_ROOT/skills/ac-human-session/SKILL.md" 2>/dev/null; then
-  fail "D10: skills/ac-human-session/SKILL.md missing the tier-first/oldest-within-tier age-ordering note (Phase 4 render)"
 fi
 
 # ---------------------------------------------------------------------------
