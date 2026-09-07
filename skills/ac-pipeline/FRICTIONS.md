@@ -593,13 +593,13 @@ entries: 31
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 4
 - related: [refined-beads-reach-the-worker-pool-with-zero-probe-lines-and-burn-claim-cycles]
 - first_seen: 2026-09-07
 - last_seen: 2026-09-07
 - stage: ac-implement
 - status: open
-- receipt: RUN 2026-09-07 swarm-20260907-exhaust worker log — ac-gate-test-flake-53px: fix committed (1bbdfe4), all 3 probes green, 20 serial + 6 concurrent clean runs, close refused NOT-CHECKED COVERAGE (assertions=0) and the refusal is deterministic on re-run. Recurrence 2, same run: ac-polish-fixpoint-digest-only-bnyx — work landed (db7f15d), 37-case harness green, close-gate COVERAGE exit 2 because is_test_shaped() selected AC3's `grep -q ... polish-fixpoint.test.sh` probe (test-shaped TOKEN, not a harness) as the assertion probe; a grep emits no assertion lines. Verified fix cannot close; bead stays open pending the gate's probe-selection fix.
+- receipt: RUN 2026-09-07 swarm-20260907-exhaust worker log — ac-gate-test-flake-53px: fix committed (1bbdfe4), all 3 probes green, 20 serial + 6 concurrent clean runs, close refused NOT-CHECKED COVERAGE (assertions=0) and the refusal is deterministic on re-run. Recurrence 2, same run: ac-polish-fixpoint-digest-only-bnyx — work landed (db7f15d), 37-case harness green, close-gate COVERAGE exit 2 because is_test_shaped() selected AC3's `grep -q ... polish-fixpoint.test.sh` probe (test-shaped TOKEN, not a harness) as the assertion probe; a grep emits no assertion lines. Verified fix cannot close; bead stays open pending the gate's probe-selection fix. Recurrence 4, same run: ac-54t8.5 (swarm-20260907-exhaust-DarkCastle) — obsolete-close fully verified (016aeec), 3/3 probes green, RED probe flipped, diff-closure PASS; COVERAGE exit 2 because is_test_shaped() selected AC2's silent `grep -q 'net-growth-ok' scripts/lint-net-growth.test.sh` probe as the assertion probe; the harness it names asserts fine when run directly. Tracked on ac-close-gate-coverage-silent-probe-ja8l.
 - control: untreated
 - proposed_fix: the COVERAGE leg should treat "every probe output-silent" as the temporal-pair case it already handles for prose beads (a grep/redirect probe emits no ok/FAIL lines by construction), or the assertion probe selection should prefer a probe whose stdout can reach the capture — NOT-CHECKING a verified bead every time is a gate blind spot, not coverage
 - narrative: the COVERAGE leg picks the FIRST probe naming an existing test-shaped file as the
