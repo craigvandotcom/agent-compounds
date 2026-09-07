@@ -100,8 +100,29 @@ def check_header(path):
 
 
 def fixture_goes_red(path, header):
-    """Run the check against its fixture; RED means exit 1."""
+    """Run the check against its fixture; RED means exit 1.
+
+    Two fixture shapes: a static tree the check scans (`<check> <fixture-dir>`),
+    or a dir carrying run.sh — the check's own RED demonstration for RED cases
+    that are a built STATE, not a static tree (a git-history ratchet cannot be
+    committed as a tree). run.sh builds the state, invokes the real check, and
+    exits 0 only when the check went RED as required.
+    """
     fx = os.path.join(scope.ROOT, str(header["fixture"]))
+    rel = os.path.relpath(path, scope.ROOT)
+    if os.path.isfile(os.path.join(fx, "run.sh")):
+        proc = subprocess.run(["bash", os.path.join(fx, "run.sh")],
+                              capture_output=True, text=True, timeout=120)
+        # run.sh's contract is INVERTED from the raw check exit: it exits 0 when the
+        # check went RED as required (the RED is demonstrated), 1 when the check
+        # passed its RED case, anything else when the fixture could not build.
+        if proc.returncode == 0:
+            return True
+        if proc.returncode == 1:
+            fail(f"{rel}: fixture {header['fixture']} does NOT go RED — run.sh reported the check passed its RED case")
+        else:
+            fail(f"{rel}: fixture leg NOT-GATED — {header['fixture']}/run.sh exited {proc.returncode}, not a RED")
+        return False
     cmd = [sys.executable, path, fx] if path.endswith(".py") else ["bash", path, fx]
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
@@ -112,7 +133,6 @@ def fixture_goes_red(path, header):
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
     if proc.returncode == 1:
         return True
-    rel = os.path.relpath(path, scope.ROOT)
     if proc.returncode == 0:
         fail(f"{rel}: fixture {header['fixture']} does NOT go RED — the check passed against its own RED case")
     else:

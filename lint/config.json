@@ -1,0 +1,24 @@
+{
+  "_doc": "lint v2 config (ac-1p7j.2): the lists the ported checks read, moved out of the scripts so a list change is a config change, not a script edit. lean_family = the lean pipeline family whose SKILL.md core answers to the family cap instead of the per-file no-net-growth ratchet (a creation inside the family cap defers to the cap; growth of an existing member never defers). creation_exception = the full name-list the creation deferral admits, BY NAME, never a glob: the six ratified lean members plus multi-model, ac-qa and ui-elevate, the WS1/WS2 skills that cannot be created through a per-file ratchet at all (ac-1p7j.2). base_ref is Check 14 leg 1's diff base. Ceilings stay in lint.sh Check 15 until that block is ported (a later bead).",
+  "base_ref": "origin/main",
+  "lean_family_cap": 800,
+  "lean_family": [
+    "ac-plan",
+    "ac-polish",
+    "ac-beadify",
+    "ac-implement",
+    "ac-publish",
+    "ac-pipeline"
+  ],
+  "creation_exception": [
+    "ac-plan",
+    "ac-polish",
+    "ac-beadify",
+    "ac-implement",
+    "ac-publish",
+    "ac-pipeline",
+    "multi-model",
+    "ac-qa",
+    "ui-elevate"
+  ]
+}
