@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-06
-entries: 29
+entries: 27
 ---
 
 # ac-pipeline — friction log
@@ -269,8 +269,8 @@ entries: 29
 
 ## swarm-commit-stages-whole-files-and-folds-sibling-hunks
 - skills: [ac2-implement]
-- impact: H
-- frequency: every-wave
+- impact: L
+- frequency: every-run
 - perceptibility: silent
 - recurrence: 1
 - related: []
@@ -294,8 +294,8 @@ entries: 29
 ## close-gate-scanner-leg-has-no-prose-instrument
 - skills: [ac2-implement]
 - impact: L
-- frequency: per-doc-bead
-- perceptibility: noisy
+- frequency: frequent
+- perceptibility: loud
 - recurrence: 1
 - related: []
 - first_seen: 2026-09-04

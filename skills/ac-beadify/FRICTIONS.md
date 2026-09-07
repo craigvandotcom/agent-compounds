@@ -4,8 +4,8 @@ Fixes are proposed here and applied to the skill only after the pattern recurs o
 
 ## decision-card-on-queryable-fact
 - skills: [ac-beadify]
-- impact: H
-- frequency: once
+- impact: L
+- frequency: rare
 - perceptibility: loud
 - recurrence: 1
 - related: []

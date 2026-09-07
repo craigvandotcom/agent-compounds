@@ -203,7 +203,7 @@ entries: 29
 
 ## gate-stamps-after-not-gated-merge
 - skills: [ac-polish]
-- impact: H
+- impact: L
 - frequency: rare
 - perceptibility: silent
 - recurrence: 2
@@ -450,7 +450,7 @@ entries: 29
 
 ## touchers-rg-without-path-reads-stdin-and-reproduces-zero
 - skills: [ac-polish, beads-standards]
-- impact: H
+- impact: L
 - frequency: every-run
 - perceptibility: misleading
 - recurrence: 1
@@ -478,7 +478,7 @@ entries: 29
 
 ## reader-declines-missing-ac-section-as-lifecycle-stage
 - skills: [ac-polish, ac-beadify]
-- impact: H
+- impact: L
 - frequency: every-run
 - perceptibility: silent
 - recurrence: 1
@@ -505,7 +505,7 @@ entries: 29
 ## bounce-comments-invisible-to-bead-reader
 - skills: [ac-polish, ac-implement]
 - impact: M
-- frequency: per-bounce
+- frequency: frequent
 - perceptibility: silent
 - recurrence: 1
 - related: [reader-declines-missing-ac-section-as-lifecycle-stage]
@@ -528,7 +528,7 @@ entries: 29
 ## investigation-unstampable-without-probe-line
 - skills: [ac-polish, beads-standards]
 - impact: L
-- frequency: per-investigation
+- frequency: frequent
 - perceptibility: misleading
 - recurrence: 1
 - related: []

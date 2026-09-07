@@ -79,7 +79,7 @@ entries: 12
 
 ## panel-reviewer-wrote-to-shared-checkout
 - skills: [ac-review]
-- impact: H
+- impact: L
 - frequency: rare
 - recurrence: 1
 - related: [ac-7rf]
@@ -93,7 +93,7 @@ entries: 12
 
 ## reviewers-cannot-see-harness-builtin-skills
 - skills: [ac-review]
-- impact: H
+- impact: L
 - frequency: occasional
 - recurrence: 1
 - related: [contradictory-panel-consensus-needs-source-re-derivation]
@@ -108,7 +108,7 @@ entries: 12
 - skills: [ac-review]
 - impact: M
 - frequency: frequent
-- recurrence: see primary
+- recurrence: 1
 - related: [no-net-growth-ratchet-bites-documentation-only-fixes]
 - first_seen: 2026-08-04
 - last_seen: 2026-08-04
@@ -121,7 +121,7 @@ entries: 12
 - skills: [ac-review]
 - impact: S
 - frequency: frequent
-- recurrence: see primary
+- recurrence: 1
 - related: [br-non-tty-flake-in-compound-one-liners]
 - first_seen: 2026-08-04
 - last_seen: 2026-08-04
@@ -158,7 +158,7 @@ entries: 12
 
 ## fixture-shape-validity-not-covered-by-green-or-sabotage
 - skills: [ac-review]
-- impact: H
+- impact: L
 - frequency: occasional
 - recurrence: 1
 - related: [unasked-adversarial-priors-come-back-as-silence]

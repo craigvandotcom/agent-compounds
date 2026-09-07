@@ -14,7 +14,7 @@ entries: 3
 
 ## removal-list-elides-spans-and-hides-live-rules
 - skills: [skill-builder]
-- impact: H
+- impact: L
 - frequency: frequent
 - recurrence: 1
 - related: [change-proposal-asserts-a-gap-the-text-already-closes]

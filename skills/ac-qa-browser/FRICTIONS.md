@@ -2,7 +2,7 @@
 skill: ac-qa-browser
 created: 2026-07-22
 last_pass: 2026-09-06
-entries: 6
+entries: 7
 ---
 
 # ac-qa-browser — friction log

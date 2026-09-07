@@ -2,7 +2,7 @@
 skill: beads-standards
 created: 2026-07-22
 last_pass: 2026-09-06
-entries: 10
+entries: 11
 ---
 
 # beads-standards — friction log
@@ -79,7 +79,7 @@ entries: 10
 
 ## ledger-has-no-single-writer-duplicate-commit-stalls-automated-rebase
 - skills: [beads-standards, ac-loop, ac-tidy]
-- impact: H
+- impact: L
 - frequency: occasional
 - recurrence: 1
 - related: [beads-ledger-shared-file-conductor-should-own-final-commit]
@@ -175,7 +175,7 @@ entries: 10
 
 ## board-truth-belongs-in-the-title-not-a-comment
 - skills: [beads-standards, ac-loop, ac-bead-refine]
-- impact: H
+- impact: L
 - frequency: occasional
 - recurrence: 1
 - related: [dispatch-scoped-from-spec-not-comment-history]
@@ -254,7 +254,7 @@ entries: 10
 
 ## br-writes-default-to-the-human-identity
 - skills: [beads-standards, ac-loop, ac-loop-2, ac-bead-refine]
-- impact: H
+- impact: L
 - frequency: frequent
 - recurrence: 1
 - related: [board-truth-belongs-in-the-title-not-a-comment, ready-filter-admits-epics-and-gate-reason-beads]

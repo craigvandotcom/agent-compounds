@@ -2,7 +2,7 @@
 skill: ac-distribute
 created: 2026-08-21
 last_pass: 2026-09-06
-entries: 3
+entries: 4
 ---
 
 # ac-distribute — friction log
@@ -15,7 +15,7 @@ entries: 3
 ## fastlane-release-lane-never-proven-end-to-end
 - skills: [ac-distribute, ac-publish]
 - impact: M
-- frequency: per-release
+- frequency: rare
 - recurrence: 1
 - related: []
 - first_seen: 2026-08-12
@@ -43,7 +43,7 @@ entries: 3
 
 ## ship-lane-consumes-local-generated-state-without-asserting-it-matches-the-manifest
 - skills: [ac-distribute, capacitor]
-- impact: H
+- impact: L
 - frequency: occasional
 - perceptibility: silent
 - recurrence: 1
@@ -91,7 +91,7 @@ entries: 3
 - skills: [ac-distribute, ac-publish]
 - impact: L
 - frequency: frequent
-- perceptibility: quiet
+- perceptibility: silent
 - recurrence: 1
 - related: [a-gate-must-fail-when-it-verified-nothing]
 - first_seen: 2026-08-26

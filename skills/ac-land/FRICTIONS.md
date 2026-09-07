@@ -66,7 +66,7 @@ entries: 11
 - skills: [ac-land]
 - impact: M
 - frequency: occasional
-- recurrence: see primary
+- recurrence: 1
 - related: [doc-only-repo-no-loop-adaptation, format-first-doctrine-conflicts-with-shared-checkout-pathspec]
 - first_seen: 2026-08-04
 - last_seen: 2026-08-04
@@ -140,7 +140,7 @@ entries: 11
 
 ## no-blind-format-sweep-at-close
 - skills: [ac-land]
-- impact: H
+- impact: L
 - frequency: occasional
 - recurrence: 1
 - related: [format-first-doctrine-conflicts-with-shared-checkout-pathspec, preserved-artifact-inventory-is-incomplete-by-prefix]
@@ -187,7 +187,7 @@ entries: 11
 - skills: [ac-land]
 - impact: M
 - frequency: every-run
-- recurrence: see primary
+- recurrence: 1
 - related: [preserved-artifact-inventory-is-incomplete-by-prefix]
 - first_seen: 2026-08-20
 - last_seen: 2026-08-20

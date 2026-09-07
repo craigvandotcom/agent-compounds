@@ -119,7 +119,7 @@ entries: 5
 ## edit-guard-marker-holds-env-fallback-not-minted-name
 - skills: [agent-mail, ac-loop-swarm]
 - impact: L
-- frequency: every Tier-1 session
+- frequency: every-run
 - recurrence: 1
 - related: [roster-is-populated-with-names-that-never-mint]
 - first_seen: 2026-08-21

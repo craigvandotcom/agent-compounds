@@ -14,7 +14,7 @@ entries: 1
 
 ## a-pass-stamp-names-the-claim-not-the-artifact-it-measured
 - skills: [ac-qa-device, ac-distribute]
-- impact: H
+- impact: L
 - frequency: occasional
 - perceptibility: silent
 - recurrence: 1

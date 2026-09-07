@@ -17,6 +17,12 @@ This script is the single parser. Two views come out of one pass:
 ASSURANCE — MODE: advisory · ON-FAILURE: open. It never exits non-zero on ledger
 content: a malformed ledger is REPORTED as malformed, never a hard failure, because a
 crashed sensor is a silent sensor. Callers flag; they never block on it.
+The ONE exception is opt-in `--strict`: dream's weighting pass runs it so a fifth of
+the sensor corpus cannot silently vanish from the weights. Strict flips ON-FAILURE for
+two integrity classes only — entries with no scorable ordinal (impact/frequency/
+recurrence) and `entries:` frontmatter counts that disagree with the parsed entries —
+emitting an explicit NOT-SCORABLE / entry-count mismatch line to stderr and exiting 3.
+Everything else stays advisory in both modes.
 
 READ-ONLY BY DEFAULT. The one write path is the explicit `--stamp` flag, which stamps
 `last_pass: <today>` into every ledger this run parsed. It exists for exactly one caller:
@@ -26,7 +32,7 @@ No other consumer passes it, and without it this script does not touch a byte
 
 Usage:
   friction-rollup.py [--root DIR] [--view dream|trends|all] [--stale-days N]
-                     [--threshold N] [--top N] [--stamp]
+                     [--threshold N] [--top N] [--stamp] [--strict]
 
 Output: one JSON document on stdout.
 Exit 0 always, except 2 for a usage error.
@@ -178,6 +184,45 @@ def score(entry_fields: dict, threshold: int) -> dict:
             and status == "open"
         ),
     }
+
+
+def entry_count_mismatches(ledgers: list) -> list:
+    """Declared `entries:` vs parsed non-pointer entries. The frontmatter count is a
+    claim a human hand-maintains; this is the sensor that keeps it honest."""
+    out = []
+    for led in ledgers:
+        if led["declared_entries"] is None:
+            continue
+        parsed = len(led["entries"]) - len(led.get("pointers", []))
+        try:
+            declared = int(str(led["declared_entries"]).strip())
+        except ValueError:
+            out.append({"path": led["path"], "declared": led["declared_entries"],
+                        "parsed": parsed, "why": "unparseable declared count"})
+            continue
+        if declared != parsed:
+            out.append({"path": led["path"], "declared": declared, "parsed": parsed,
+                        "why": "entry-count mismatch"})
+    return out
+
+
+def strict_fail(ledgers: list, by_id: dict) -> int:
+    """--strict: the weighting pass must never silently skip a reading it cannot score.
+    Loud on stderr, exit 3. Advisory mode never calls this."""
+    unscorable = sorted(
+        (r for r in by_id.values() if r["unscorable"]),
+        key=lambda r: (r["path"], r["id"]),
+    )
+    mismatches = entry_count_mismatches(ledgers)
+    for r in unscorable:
+        sys.stderr.write("NOT-SCORABLE: %s (%s): %s\n"
+                         % (r["id"], r["path"], "; ".join(r["unscorable"])))
+    sys.stderr.write("NOT-SCORABLE: %d entry/ies lack a scorable ordinal\n"
+                     % len(unscorable))
+    for m in mismatches:
+        sys.stderr.write("entry-count mismatch: %s declares %s, parsed %d (%s)\n"
+                         % (m["path"], m["declared"], m["parsed"], m["why"]))
+    return 3 if (unscorable or mismatches) else 0
 
 
 def collect(root: str, threshold: int) -> tuple:
@@ -352,6 +397,9 @@ def main(argv=None) -> int:
     ap.add_argument("--top", type=int, default=10)
     ap.add_argument("--stamp", action="store_true",
                     help="dream CYCLE only: write last_pass into every parsed ledger")
+    ap.add_argument("--strict", action="store_true",
+                    help="weighting pass: fail loud (exit 3) on entries with no scorable "
+                         "ordinal or a declared entries: count that mismatches reality")
     ap.add_argument("--today", default=None, help="ISO date override (tests)")
     ap.add_argument("--ledger", default=None,
                     help="parse ONE ledger and emit its raw entries (no cross-ledger "
@@ -392,6 +440,11 @@ def main(argv=None) -> int:
         }
     if args.view in ("trends", "all"):
         doc["trends"] = trends(ledgers, by_id, args.stale_days, args.top, today)
+    doc["entry_count_mismatches"] = entry_count_mismatches(ledgers)
+    if args.strict:
+        rc = strict_fail(ledgers, by_id)
+        if rc:
+            return rc
     if args.stamp:
         doc["stamped"] = stamp(ledgers, root, today)
 
