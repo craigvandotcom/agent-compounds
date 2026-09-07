@@ -11,17 +11,24 @@ round 1), `<CHECKLIST>` and `<REPORT>` (an absolute path OUTSIDE the repository)
 You are a seams TRACE reader for the **<LENS>** lens. One reader per lens traces the same
 target each round; the union of the maps is the artifact, and the loop ends when a round adds
 no edge to any map. Subject: <SUBJECT>. Checklist: `<CHECKLIST>`. Current maps: <MAPS> — read
-them; your job is to EXTEND and CORRECT your lens's map, not to repeat it.
+them. Your job is a FULL SWEEP: open every file below, in the order listed, and write a row for
+every filled cell you find, whether or not the map already has it — the merge keeps first-seen
+text for a repeated key and counts the repeat as agreement, so repeating a row costs nothing
+and skipping one costs the round. The map is there to CORRECT, not to tell you what to skip.
 
 The FILES are the whole search space — every source file that names the object:
 
 <FILES>
 
-Sweep THESE files, with `rg` from the repository root, following the DATA, not the import graph.
-A row cites a line in one of these files that reads or writes a field of the object; the merge
-drops a row in any other file. A test, a type declaration, a dev harness or a teardown timer is
-evidence for a `contract` cell, never a row. Never edit, copy or create any file in the
-repository. Never run a test runner, formatter or linter — read the tests, do not run them.
+Sweep THESE files, every one, top to bottom, with `rg` from the repository root, following the
+DATA, not the import graph. Do not stop when the report feels long enough; stop when the last
+file on the list is done. A row cites a line in one of these files that reads or writes a
+field of the object; the merge drops a row in any other file. A test, a type declaration, a
+dev harness or a teardown timer is evidence for a `contract` cell, never a row. Never edit,
+copy or create any file in the repository. Never run a test runner, formatter or linter — read
+the tests, do not run them. Read only code: a plan, a doc or a kept map in the repository is
+not a source, and a row you took from one still needs the line you opened and a command that
+reproduces it.
 
 The frontmatter of the maps is the FENCE; the merge drops every row outside it. Use the declared
 flow and interface names. A copy of the value in another store is ONE boundary row on the
@@ -29,11 +36,12 @@ interface that carries it, never a new object to trace. A file outside FILES tha
 object's bytes under another name goes in `TARGET RESOLVED TO` with that name, not in the map.
 A map cell already filled keeps its first-seen text by design: a repeat is not a missing edge.
 
-**object** — fill the grid FILES × stages: for each file, does it `create` · `transport` ·
-`store` · `read` · `update` · `delete` · `cleanup` the datum? Each yes is one row — the line,
-upstream, downstream, and the CONTRACT on the edge (a type, an assertion, a test path that would
-fail on drift) or `none`. Each no is an empty cell, and stays empty — that absence is the finding.
-One row per file per stage; the merge keys on the FIRST path in the cell and ignores the rest.
+**object** — fill the grid FILES × stages: for each file, in list order, ask all seven — does
+it `create` · `transport` · `store` · `read` · `update` · `delete` · `cleanup` the datum? Each
+yes is one row — the line, upstream, downstream, and the CONTRACT on the edge (a type, an
+assertion, a test path that would fail on drift) or `none`. Each no is an empty cell, and stays
+empty — that absence is the finding. One row per file per stage; the merge keys on the FIRST
+path in the cell and ignores the rest.
 
 **flow** — trace one process as ordered steps: for each step the code, who CONTROLS it (who
 decides it happens), what SENSES it (what tells the controller it happened — a flag, a
@@ -76,7 +84,13 @@ MAP:
 DIAGNOSIS:
 | pattern | edges | what breaks silently | found-by |
 |---|---|---|---|
+
+SWEPT:
+- <file from FILES, in order> — <the stages / steps / sides you found there, or `absent`>
+- … one line per file on FILES, no file omitted
 ```
 
-Use only YOUR lens's header — a report carrying another lens's table is rejected whole. `NONE`
+`SWEPT:` is your declaration that the walk was complete: one line for every file on FILES,
+in order, `absent` where the file touches no field of the object. A report with a file missing
+from SWEPT is an unfinished sweep. Use only YOUR lens's header — a report carrying another lens's table is rejected whole. `NONE`
 in the pattern cell is a legitimate DIAGNOSIS answer.

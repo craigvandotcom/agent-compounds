@@ -312,6 +312,16 @@ if rc == 2 and "traced_at" in out and not os.path.exists(f"{W}/kept2/map.json"):
 else:
     fail("keep no sha", out)
 
+# --- 5e. a SWEPT: block after DIAGNOSIS is a declaration, not rows — the parser ignores it ----
+S10, ART10 = f"{W}/s10", f"{W}/plan10.md"; write(ART10, f"---\nstatus: findings\n{FENCE7}---\n\n{MARKER}\n")
+write(f"{W}/f10/o.md", rep("object", OH, "| read | `lib/foods.ts:1` | reads it | — | — | none | `true` |\n")
+      + "\nSWEPT:\n- lib/foods.ts — read\n- lib/upload.ts — absent\n- lib/families.ts — absent\n")
+rc, out = run("round", "--state", S10, "--artifact", ART10, "--round", "1", "--repo", REPO, f"{W}/f10/o.md")
+if rc == 0 and "new_edges=1" in out and "SWEPT" not in open(ART10).read():
+    ok("a SWEPT: declaration after DIAGNOSIS parses as prose — one edge, nothing of it on the map")
+else:
+    fail("swept block", out)
+
 # --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
 write(f"{W}/bad/nolens.md", f"TARGET RESOLVED TO: x\n\nMAP:\n{OH}| read | `lib/a.ts:1` | x | — | — | none | `true` |\n")

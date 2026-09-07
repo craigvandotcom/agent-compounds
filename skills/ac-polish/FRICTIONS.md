@@ -681,13 +681,16 @@ entries: 30
 - first_seen: 2026-09-07
 - last_seen: 2026-09-07
 - stage: manual
-- status: open
-- proposed_fix: make coverage a declared, checked quantity. Each reader ends its report with a
-  `SWEPT:` block — one line per FILES entry, the stages it found or `absent` — and the merge
-  counts a round as a sweep only when every file on `files:` is declared by every lens; a
-  partial declaration prints `swept=N/23` on the round line. Or split the grid across readers
-  within a round (files 1-8 · 9-16 · 17-23 per lens) so one round IS a full sweep. Either
-  turns "clean round" from "the reader stopped" into "the grid was walked".
+- status: partial
+- proposed_fix: make coverage a declared, checked quantity. LANDED 2026-09-07 (prompt only, by
+  decision): the reader prompt orders a full sweep — every file on FILES in list order, a row
+  for every filled cell even if the map has it, stop at the last file not when the report feels
+  long — and ends with a `SWEPT:` block, one line per file, `absent` where nothing touches the
+  object. NOT landed: the merge parsing SWEPT and gating a round on it (`swept=N/M`); revisit
+  if the MotionFrame re-trace under the new prompt still does not stamp by round 3. Rejected:
+  splitting FILES across readers — it breaks the property that three independent whole-target
+  traces agree, and capacity was never the constraint (a reader opened all 22 files and wrote
+  nine rows).
 - narrative: MotionFrame v2 under the files: fence — 5 rounds, 15 readers, 0 fenced, 0 dropped,
   0 drift — added 25 · 20 · 12 · 10 · 5 edges (72 total across 23 files) and did not stamp.
   Per-lens: object 9 · 7 · 7 · 7 · 4, flow 7 · 9 · 5 · 2 · 1, boundary 9 · 4 · 0 · 1 · 0. The
