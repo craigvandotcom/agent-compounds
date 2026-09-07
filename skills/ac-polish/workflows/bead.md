@@ -49,6 +49,15 @@ Stamp `refined` only on beads that are implementable work. A `decision`-type bea
 fork and element 4 exempts it — a receipt records that it was polished; it does not make it
 ready to implement. Leave those, and anything held, for the human.
 
+## Prod-write gate wiring — the predicate, evaluated at refine
+
+Evaluate every bead against beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or
+DELETEs user-data rows, (ii) DDL on `auth.*` or an RLS policy, (iii) irreversible-by-default.
+A bead meeting a clause gets its `blocks` edge to a human-gate decision bead wired (create the
+decision bead when none exists) and the `sensitive-prod` label as the machine-readable marker
+of that evaluation — the label is the predicate's trace, never the trigger. A bead meeting the
+predicate whose gate edge cannot be wired is HELD for the human and is never stamped `refined`.
+
 ## Hand-off
 
 Report `rounds-to-fixpoint` with the verdict token, then hand the refined set to `ac-implement`

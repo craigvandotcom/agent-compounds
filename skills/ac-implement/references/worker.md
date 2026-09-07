@@ -54,6 +54,26 @@ Take the first id that is NOT in `$BURNED`. **A bead whose claim was just refuse
 re-picked in the same pass** — without that rule the loop burns its whole budget re-claiming
 one bead it cannot have. No eligible id left → go to the batch boundary (§8).
 
+**The prod-write gate is part of eligibility, and it is claim-time.** A bead meeting
+beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or DELETEs user-data rows, (ii)
+DDL on `auth.*` or an RLS policy, (iii) irreversible-by-default (no in-file rollback recipe) —
+is un-claimable until its human-gate decision bead is closed. Refine (ac-polish bead mode)
+evaluates the predicate and stamps `sensitive-prod` as its machine-readable marker; the bare
+label is that predicate's trace, never the trigger. For every pick, before claiming:
+
+    RUST_LOG=error br show <id> --json | jq -r '.[0]
+      | select((.labels // []) | index("sensitive-prod"))
+      | ([.dependencies[]? | select(.dependency_type == "blocks"
+          and (.title | startswith("DECISION")) and .status == "closed")] | length)'
+
+    # no output  -> no sensitive-prod label: not gated, claim proceeds.
+    # 1           -> gated correctly (closed DECISION edge): claim proceeds.
+    # 0, edge to an OPEN decision bead -> GATED: leave it, take the next id; the open
+    #               decision bead is already on the docket, so the refusal surfaces there.
+    # 0, no decision edge at all -> MALFORMED (prod-write): comment the bead naming the
+    #               missing edge, take the next id. Never skip silently — no edge means no
+    #               docket sees it.
+
 Re-run this query every iteration. The pool GROWS as you close: a serial chain unlocks the
 next bead only when its blocker closes, so a cached pool reports dry while work is waiting.
 

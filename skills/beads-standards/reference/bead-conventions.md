@@ -241,6 +241,27 @@ Batching: `ac-human-session` presents all open `human-gate` beads as the
 at the dashboard: a decision arriving without a memo is flagged `⚠ no memo` and
 framed on demand (it cannot be a one-tap choice without staged options).
 
+## The prod-write gate predicate
+
+A bead is **GATED** — un-claimable until its human-gate decision bead closes —
+when it meets at least ONE of:
+
+- (i) INSERTs, UPDATEs or DELETEs user-data rows
+- (ii) performs DDL on `auth.*` or on an RLS policy
+- (iii) is irreversible-by-default (no in-file rollback recipe)
+
+The trigger is this predicate, never the bare `sensitive-prod` label: the label
+conflates irreversible auth DDL with reversible hardening, and a gate that fires
+on work the human approves on sight trains rubber-stamping. Refine evaluates the
+predicate (ac-polish bead mode) and stamps `sensitive-prod` as the
+machine-readable marker of that evaluation — the label is the predicate's trace,
+never the trigger.
+
+**MALFORMED bead**: one meeting the predicate but carrying no `blocks` edge from
+its human-gate decision bead. Malformation is a routing defect: refine wires the
+edge or holds the bead; the claim-time filter (ac-implement § 1 PICK) refuses the
+claim and names the missing edge on the bead.
+
 ## Per-type close artifacts
 
 `close_reason` leads with an outcome verb (`shipped:`/`fixed:`/… — beads-standards
