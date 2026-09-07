@@ -108,7 +108,7 @@ always redacted in agent output, regardless of which environment is under test.
 
 QA passes run as a **conductor + tester-subagent split**, never inline: the conductor
 (the pass's spawned session) holds the manifest, verdicts, and gate decision; tester
-subagents (`browser-tester` / `device-tester` agents) hold the per-journey execution
+implementer subagents hold the per-journey execution (the journey prompt is the lens)
 noise (snapshots, console output, screenshots). The conductor never drives the
 browser/simulator itself and never holds raw page state — it spot-reads flagged
 evidence files only. Rationale: exhaustive sweeps in one context suffer late-journey

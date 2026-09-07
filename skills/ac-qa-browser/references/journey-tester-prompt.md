@@ -1,4 +1,4 @@
-# Journey tester prompt (browser-tester worker)
+# Journey worker prompt (implementer; this file is the browser lens)
 
 <!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
 
@@ -34,12 +34,12 @@ ENVIRONMENT CONTRACT (non-negotiable):
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
 Dispatched by the ac-qa-browser conductor — one prompt per worker, filled from the
-manifest. Dispatch to the **`browser-tester`** agent (dedicated narrow-tool agent —
+manifest. Dispatch to the **implementer** subagent (stance, tier-resolved —
 no model re-pin). For a batched worker (2–3 route-adjacent journeys), list every
 journey file and require one verdict file PER journey.
 
 ```
-Task(subagent_type: "browser-tester", prompt: """
+Task(subagent_type: "implementer", prompt: """
 You are a journey tester for a QA pass. Run the journey(s) below against the live
 app and report a structured verdict. You observe and report — you NEVER edit code
 or journey docs.

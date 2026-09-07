@@ -71,7 +71,7 @@ perf sanity pass (`references/perf-and-limits.md`). **Flag-gated journeys need a
 
 ## Conductor flow (you never drive the simulator yourself)
 
-**You are the conductor.** Journeys are executed by **`device-tester`** subagents —
+**You are the conductor.** Journeys are executed by **implementer** subagents (the device-journey prompt is the lens) —
 **strictly one worker at a time, sequential lane only** (simulator concurrency is
 flaky and collision-prone; the win here is context isolation, not wall-clock). You
 hold the manifest, verdicts, and report; the worker holds the accessibility trees,
@@ -110,7 +110,7 @@ evidence protocol.
    this lane flips the admin "Force onboarding on next login" toggle, restore
    it before releasing the account.
 3. **Dispatch sequentially:** one worker per journey via
-   **`references/device-tester-prompt.md`** (dispatched to the `device-tester`
+   **`references/device-journey-prompt.md`** (dispatched to the implementer
    agent; no model re-pin). Bounded wait per `ac-pipeline/references/delegation-contract.md`;
    a silent worker past the cap = `stall`, re-spawn once, then record.
 4. **Collect + aggregate:** manifest ⊖ verdicts check; file beads from verdict
@@ -131,7 +131,7 @@ evidence protocol.
    down only sims your app owns, per the ownership rule below.
 
 Everything from **Core loop** down is **worker-side doctrine** — the
-device-tester agent reads it; you don't execute it.
+The implementer reads it; you don't execute it.
 
 ## Toolchain
 
@@ -166,7 +166,7 @@ sim, a sim NAME, or an agent-device session. Isolate with three layers:
    app owns (`<APP>-QA-*`). Hijacking a shared sim mid-session breaks BOTH apps —
    the build (name race) and agent-device (wrong-device match).
 
-## Core loop (worker-side — device-tester agents execute this)
+## Core loop (worker-side — implementer agents execute this)
 
 ```bash
 # 0. Build + install — done by the CONDUCTOR before you were spawned; verify the

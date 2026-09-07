@@ -33,10 +33,10 @@ ENVIRONMENT CONTRACT (non-negotiable):
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
-Spawn one `browser-tester` per matched journey (all in one message, parallel). Substitute the resolved `<ARTIFACTS_DIR>` from Phase 0.
+Spawn one implementer per matched journey (the browser journey prompt is the lens) (all in one message, parallel). Substitute the resolved `<ARTIFACTS_DIR>` from Phase 0.
 
 ````
-Task(subagent_type: "browser-tester", prompt: """
+Task(subagent_type: "implementer", prompt: """
 You are a browser tester. Your job: run a UI journey happy path and report results. You test and report — never edit code.
 
 ## Your Task

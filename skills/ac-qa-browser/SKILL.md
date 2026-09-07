@@ -20,7 +20,7 @@ description: Use when QA-ing the WEB app build in a browser — full journey val
 # Browser / Web-Shell QA Skill
 
 **You are the conductor. You never drive the browser yourself.** Journeys are
-executed by `browser-tester` subagents (the workers) — one journey per worker, each
+executed by implementer subagents (the workers; the journey prompt is the lens) — one journey per worker, each
 in its own named `agent-browser` session, reporting a structured verdict file. You
 hold the manifest, the verdicts, the gate decision, and the report; workers hold the
 DOM snapshots, console noise, and screenshots. The full evidence protocol (manifest
@@ -53,7 +53,7 @@ native-shell concerns (safe-area, splash, plugins, OAuth sheets) to `ac-qa-devic
 
 | Layer                       | Tool                                         | Coverage                                                                    | Cost              |
 | --------------------------- | -------------------------------------------- | --------------------------------------------------------------------------- | ----------------- |
-| 1. **Browser (this skill)** | browser-tester workers driving agent-browser | Exhaustive: every route, button, state, edge case + the web-shell checklist | Cheap, fast       |
+| 1. **Browser (this skill)** | implementer workers driving agent-browser | Exhaustive: every route, button, state, edge case + the web-shell checklist | Cheap, fast       |
 | 2. Native shell             | `ac-qa-device` (agent-device + simctl)       | Real native taps + native-shell checklist                                   | Slower per action |
 
 **Decision rule:** logic / layout / state / routing / console / responsive → here.
@@ -163,8 +163,8 @@ without applying the session (0-for-4 across the 2026-07-12 shakedown; also
 
 Build each worker's prompt from **`references/journey-tester-prompt.md`** (fill
 `{JOURNEY_FILE}`, `{BASE_URL}`, `{SESSION_NAME}`, `{DEPTH}`, `{ARTIFACTS_DIR}`,
-`{AUTH_PROFILE}`). Dispatch to the **`browser-tester`** agent — a dedicated
-narrow-tool agent; do not re-pin its model.
+`{AUTH_PROFILE}`). Dispatch to the **implementer** subagent (stance, tier-resolved; the journey prompt is the lens) —
+do not re-pin its model.
 
 - **Parallel lane:** spawn up to 3 workers in a single message (one Task call per
   worker). As each returns, dispatch the next until the lane drains.

@@ -51,7 +51,7 @@ Four phases with fresh agent context per phase:
 ### Phase 1: DISCOVER (Diverge)
 
 **Purpose:** Gather context + generate raw ideas
-**Agents:** 3 parallel code-explorer (Haiku)
+**Agents:** 3 parallel researcher subagents (tier-resolved per harness)
 
 - Agent A: Codebase patterns, constraints, prior art
 - Agent B: Problem space exploration (what problem really?)
@@ -188,7 +188,7 @@ Located in `prompts/`:
 
 - **Input:** User describes challenge/uncertainty
 - **Output:** Brainstorm brief feeding into `/ac-plan`
-- **Uses:** Existing code-explorer agents for context
+- **Uses:** researcher subagents for context
 
 ---
 

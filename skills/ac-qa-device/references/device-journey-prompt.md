@@ -1,4 +1,4 @@
-# Device tester prompt (device-tester worker)
+# Device journey prompt (implementer; this file is the device lens)
 
 <!-- mirror: ac-pipeline/references/delegation-contract.md § Child-spawn preamble -- edit there first -->
 
@@ -35,10 +35,10 @@ ENVIRONMENT CONTRACT (non-negotiable):
 
 Dispatched by the ac-qa-device conductor — one prompt per worker, one worker at a
 time (sequential lane only; simulator concurrency is collision-prone). Dispatch to
-the **`device-tester`** agent (dedicated narrow-tool agent — no model re-pin).
+the **implementer** subagent (stance, tier-resolved — no model re-pin).
 
 ```
-Task(subagent_type: "device-tester", prompt: """
+Task(subagent_type: "implementer", prompt: """
 You are a journey tester for a native QA pass. Drive the journey below in the iOS
 Simulator and report a structured verdict. You observe and report — you NEVER edit
 code or journey docs, and you NEVER build, boot, rename, or shut down simulators

@@ -278,7 +278,7 @@ The "7-word technique"—forcing concise problem statements improves output qual
 
 Phase 1: DISCOVER (Diverge)
 - Extract problem statement
-- Gather codebase context (code-explorer agent)
+- Gather codebase context (researcher subagent)
 - Generate 50+ raw ideas using SCAMPER + Six Hats prompts
 
 Phase 2: DEFINE (Converge)
@@ -346,7 +346,7 @@ Phase 3: OUTPUT
 ### Integration Points
 
 - Feeds into `/ac-plan` (output becomes plan input)
-- Could use existing code-explorer agents for context
+- Could use researcher subagents for context
 - Leverages existing planning skill templates
 
 ### Model Selection

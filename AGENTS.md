@@ -70,7 +70,7 @@ agent-compounds/
 │   ├── ac-*       # the compounding-engineering pipeline — 3 loops, one conductor (ac-implement): dev, triage (ac-triage), audit (audit+ac-hygiene); stage order + contracts: skills/ac-pipeline/references/stage-table.md; doctrine = ac-pipeline
 │   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
 │   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
-├── agents/        # the 5 core stances (orchestrator, coordinator, researcher, implementer, validator — each carries a semantic `tier:`, never a concrete model) plus tester, code-explorer, browser-tester, browser-agent, device-tester; each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model
+├── agents/        # the 5 core stances (orchestrator, coordinator, researcher, implementer, validator — each carries a semantic `tier:`, never a concrete model); domain work = stance + lens prompt from the skill, never a new agent file; each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model
 ├── deploy.sh      # symlinks skills + generates agents (tier -> model stamped from harnesses.json agent_models) into a target's .claude/
 ├── templates/     # project-AGENTS.md (new-project L0 template) + ci-build-guards.md
 │                  #   (required-NEXT_PUBLIC_* build assert + dep-removed CI gate, copy-paste)

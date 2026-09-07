@@ -99,13 +99,8 @@ Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coo
 | **[researcher](./agents/researcher.md)** | Read-only gather-and-distill stance — investigates the brain, codebase, and web; never writes |
 | **[implementer](./agents/implementer.md)** | Production stance — scoped execution of approved plans/specs (code, content, config) |
 | **[validator](./agents/validator.md)** | Adversarial verification stance — audits/judges work against rubrics, finds issues, never fixes |
-| **[tester](./agents/tester.md)** | Test coverage and validation specialist — verifies test quality and runs automated suites |
-| **[code-explorer](./agents/code-explorer.md)** | Read-only codebase exploration + mapping, pattern discovery before building |
-| **[browser-tester](./agents/browser-tester.md)** | UI smoke testing via agent-browser — runs user journey story files and reports PASS/FAIL |
-| **[browser-agent](./agents/browser-agent.md)** | General-purpose headless browser automation — screenshots, scraping, forms, navigation |
-| **[device-tester](./agents/device-tester.md)** | Native UI validation agent — runs journeys in the iOS Simulator via agent-device + simctl, reports PASS/FAIL, never edits code |
 
-> **Note:** `implementer` and `validator` were formerly named `engineer` and `reviewer` — those aliases are retired. The four `review/*` dimension-reviewer agents were removed 2026-09-07: review panels spawn coordinator-subagents with dimension prompts (role lives in the prompt, tier lives on the stance), so named per-dimension agent files were spawn-orphaned weight.
+> **Consolidation rule (2026-09-07):** the fleet carries exactly these five stances — stance = who, tier = model strength, domain = a lens prompt from the skill that needs it (QA journeys, browser automation, test writing all ride implementer/validator prompts). The former `tester`, `code-explorer`, `browser-agent`, `browser-tester`, `device-tester`, and `review/*` agent files were folded: spawning a new agent file for a new domain is now the wrong move — write a lens prompt instead. `implementer` and `validator` were formerly named `engineer` and `reviewer` — those aliases are retired.
 
 ## Quick Start
 
@@ -155,7 +150,7 @@ Claude Code discovers each `SKILL.md` automatically. Use e.g. `/multi-model What
 | **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install --git https://github.com/Dicklesworthstone/beads_rust.git` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
 | **openrouter** | OpenRouter CLI for multi-model queries (used by the multi-model skill) | Install the `openrouter` CLI and ensure it's on your `PATH` |
-| **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by browser-tester sub-agent, ac-land, ac-review) | `npm install -g agent-browser` |
+| **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by implementer workers on browser journeys, ac-land, ac-review) | `npm install -g agent-browser` |
 
 ## Philosophy
 
