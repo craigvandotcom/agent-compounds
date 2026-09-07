@@ -57,3 +57,12 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 - Does the plan say what it is NOT doing, explicitly? An unbounded plan cannot be finished,
   only abandoned.
 - For each exclusion: is it deferred (and to what) or refused (and why)?
+
+## 6. decisions closed
+
+- Is every fork the plan turns on settled in a Decisions card (`settled:` or `needs-human`)?
+  A step two implementations could both satisfy is class (c) unimplementability. The
+  prescribed edit is to APPEND a `needs-human` card to the plan's Decisions section — never
+  to pick a side on the plan's behalf.
+- Is there a `needs-human` card a query settles? That is class (a) correctness — run the
+  query and record `settled: <choice> — <why>` instead.
