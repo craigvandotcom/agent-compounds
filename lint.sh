@@ -85,29 +85,6 @@ check() {
 }
 
 # ---------------------------------------------------------------------------
-# Check 6 — Portability greps (zero in skills/)
-# ---------------------------------------------------------------------------
-echo "--- Check 6: portability violations ---"
-
-PORTABILITY_PATTERNS=(
-  "canonical_ingredients"
-  "For Body Compass"
-  "127.0.0.1:54321"
-  "bd-8nse"
-  "bd-9veq"
-)
-
-for pattern in "${PORTABILITY_PATTERNS[@]}"; do
-  check
-  results=$(grep -rl --include="*.md" -- "$pattern" "$AC_ROOT/skills" 2>/dev/null || true)
-  if [ -n "$results" ]; then
-    while IFS= read -r file; do
-      fail "portability violation '$pattern' found in ${file#$AC_ROOT/}"
-    done <<< "$results"
-  fi
-done
-
-# ---------------------------------------------------------------------------
 # Check 17 — dcg-blocked shell idioms in published snippets
 # ---------------------------------------------------------------------------
 echo "--- Check 17: dcg-blocked dynamic-path redirects ---"

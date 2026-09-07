@@ -447,6 +447,22 @@ elif [ "$CHECK_ID" = 2 ]; then
   compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
   finish
 
+elif [ "$CHECK_ID" = 6 ]; then
+  # --- recipe for Check 6 (portability, ac-1p7j.12) -----------------------------
+  # Simple tree-walking block: registry tree, then the committed static fixture.
+  NEW="$ROOT/lint/checks/6-portability.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  LSTRIP='s/^FAIL: //'; NSTRIP="s/^FAIL $(basename "$NEW" .py): //"
+
+  old="$(run_legacy 6)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+
+  old="$(run_legacy 6 "$ROOT/lint/fixtures/6-portability")" || exit 2
+  new="$(python3 "$NEW" "$ROOT/lint/fixtures/6-portability" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  finish
+
 elif [ "$CHECK_ID" = 13 ]; then
   # --- recipe for Check 13 (ac-1p7j.13) ----------------------------------------
   # Delegating block (validate-skill.sh --registry): registry tree, then a
