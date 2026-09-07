@@ -854,8 +854,8 @@ Log each with rationale: why this is a clear technical improvement, not a design
 this phase as prose.** Route by type before (or instead of) asking — confirmed defect,
 out of this wave's scope → `br create -t bug --labels origin:ac-review,review-finding,unrefined`;
 plausible-but-unverified concern an agent could chase → `br create -t investigation
---labels origin:ac-review,review-finding,unrefined`; genuine taste/product/risk fork → `decision` (mechanics
-below). **Filing discipline — anchor-dedupe · never-roll-up: the canon,
+--labels origin:ac-review,review-finding,unrefined`; a fork that passes the escalation test → `decision` (mechanics
+below; the test lives at `beads-standards/reference/human-gate-template.md` § The escalation test). **Filing discipline — anchor-dedupe · never-roll-up: the canon,
 `beads-standards/reference/bead-conventions.md` § Anti-inflation rules**. Review-specific bindings: the
 anchor is the finding's primary `file:line`; Low findings stay in the report; Medium+ epics
 group via `br dep add -t parent-child <finding-id> <epic-id>`.
@@ -890,7 +890,7 @@ validator runs — grep each before citing it — plus the QA modality for user-
 ```bash
 br create -t decision --labels "origin:ac-review,human-gate,review-finding" \
   --title "DESIGN_DECISION: <title>" \
-  --description "Context: <finding>\nGate-reason: fork — <why this is a genuine fork>\nOptions: <A vs B>\nRecommendation: <agent pick>"
+  --description "Context: <finding>\nGate-reason: fork — <why the escalation test passes>\nOptions: <A vs B>\nRecommendation: <agent pick>"
 # Add human-gate ONLY when the body states Gate-reason: fork — or Gate-reason: authorization —
 # Block any downstream wave beads on it:
 br dep add <downstream-bead-id> <decision-bead-id>
@@ -900,9 +900,9 @@ br dep add <downstream-bead-id> <decision-bead-id>
 > `Gate-reason: authorization —`.** Those two reasons are the only legal add
 > (`beads-standards` § human-gate). Mechanical work is never gated by default.
 > `issue_type=decision` alone gates NOTHING — every label-keyed gate (bug-lane drain,
-> beads-closed-gate, cleaning passes) keys on the LABEL. A genuine fork still
-> needs `human-gate` plus the marker; a dropped pair leaves the bead silently
-> workable and auto-closable around the human.
+> beads-closed-gate, cleaning passes) keys on the LABEL; a fork that passes the
+> escalation test still needs `human-gate` plus the marker, and a dropped pair leaves the
+> bead silently workable/auto-closable (test canon: `human-gate-template.md` § The escalation test).
 
 Then continue to Phase 8 — the loop runs on, the decision bead surfaces via `ac-human-session` when Craig reviews the docket.
 

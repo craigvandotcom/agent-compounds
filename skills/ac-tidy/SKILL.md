@@ -232,7 +232,7 @@ Report: "Lifecycle gap: {id} had no readiness label — added `unrefined`." **Ti
 
 ### Human-gate reason lint (bd-l6o90 deliverable 3)
 
-**NIGHTLY (Tier 3) / INTERACTIVE (report):** flag every OPEN `human-gate` bead whose description + comments do not contain a `Gate-reason:` line naming a canonical value — `fork` · `authorization` · `intent` · `action` (vocabulary: `beads-standards`; match all four, a narrower matcher alarms forever on a legal bead). Report the id. Propose reclassification (drop `human-gate` if none applies; add the missing line if one does). **Never auto-strip the label** — that is a docket write.
+**NIGHTLY (Tier 3) / INTERACTIVE (report):** flag every OPEN `human-gate` bead whose description + comments do not contain a `Gate-reason:` line naming a canonical value — `fork` · `authorization` · `intent` · `action` (vocabulary: `beads-standards`; match all four, a narrower matcher alarms forever on a legal bead). A `Gate-reason: fork` card missing any of the three mandatory fields (`evidence:` · `consequence:` · `recommendation:`) is flagged the same way as a missing Gate-reason — the escalation test's card contract (`beads-standards/reference/human-gate-template.md` § The escalation test). Report the id. Propose reclassification (drop `human-gate` if none applies; add the missing line if one does). **Never auto-strip the label** — that is a docket write.
 
 Report: "human-gate missing Gate-reason: {id} — propose reclassification (Tier 3)."
 

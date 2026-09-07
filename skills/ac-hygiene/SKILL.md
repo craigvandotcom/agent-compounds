@@ -431,11 +431,10 @@ sweep on a question. Dedupe per the canon's anchor-dedupe rule
 
 > **`human-gate` is added ONLY when the body states a canonical `Gate-reason:` —
 > `fork` · `authorization` · `intent` · `action`.** Those four reasons are the only
-> legal add (`beads-standards` § human-gate owns the vocabulary). Mechanical work is
-> never gated by default.
-> `issue_type=decision` alone gates nothing — the LABEL is what every label-keyed
-> gate reads. A genuine fork still needs `human-gate` plus the marker; a dropped
-> pair leaves the bead silently workable/auto-closable around the human.
+> legal add (`beads-standards` § human-gate owns the vocabulary); mechanical work is
+> never gated by default, a fork is legal only when it passes the escalation test
+> (`reference/human-gate-template.md` § The escalation test), `issue_type=decision`
+> alone gates nothing — the LABEL is what every label-keyed gate reads, a fork that passes the test still needs `human-gate` plus the marker, and a dropped pair is silently workable/auto-closable around the human.
 > `ac-bead-refine`'s Phase 5 title/label parity check (bd-7fqgi) backstops any that slip.
 
 **Bead bodies follow the template at creation** (bead-conventions § Body

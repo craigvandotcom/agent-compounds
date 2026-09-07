@@ -27,11 +27,15 @@ noise filter.
 Bias AUTO — mechanically-determined fixes belong in the pipeline, not at a human gate
 (memory: `prefer-bug-lane-over-human-gate-for-mechanical-fixes`).
 
-**3. HUMAN — ungated behavior change, or the call isn't the agent's to make.** Route to the
+**3. HUMAN — ungated behavior change, or a call that fails the escalation test.** Route to the
 human when applying it would edit live agent policy with **no downstream gate** (SKILL.md,
 AGENTS.md / CLAUDE.md, CORE, hooks, workflow doctrine — the next scheduled run simply obeys
 it), or when the decision needs human values / authorization (genuine design forks,
-sensitive-prod actions).
+sensitive-prod actions). A fork card is filed ONLY after the escalation test passes —
+`beads-standards/reference/human-gate-template.md` § The escalation test (Real · Unsettled ·
+Not evidence-settleable · Human-owned consequence · Costlier wrong than asked) defines it;
+this site defines nothing itself. Fails the test → fold in or record
+`DECISION (agent): <choice> — <why>`.
 
 ## Save-for-later (the HUMAN mechanics)
 

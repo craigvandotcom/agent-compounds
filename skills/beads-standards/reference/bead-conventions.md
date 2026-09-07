@@ -22,7 +22,7 @@ ac-human-session — and any workflow that files beads. One principle drives all
 | `feature` | New capability | Shipped |
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
-| `decision` | A fork only the human can resolve (taste, product, money, risk) | Human decision RECORDED, consequences executed |
+| `decision` | A fork that passes the escalation test (`reference/human-gate-template.md` § The escalation test) — taste, product, money, risk | Human decision RECORDED, consequences executed |
 | `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-tidy` |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it —
@@ -356,7 +356,7 @@ bug and a chore typed `bug` jumps the queue.
 | `investigation` | A defect is suspected but reproduction or cause is missing. Closes by spawning the `bug` or proving there is none. |
 | `task` | Work with a known deliverable and no behaviour defect: chores, refactors, tests and guards, docs, config, proofs, records of past repairs. |
 | `feature` | New user-visible capability. Normally a dot-child of an epic backed by a plan. |
-| `decision` | A fork only the human resolves. Always `human-gate` + `Gate-reason:`. |
+| `decision` | A fork only the human resolves. Always `human-gate` + `Gate-reason:`. A fork is legal only when it passes the escalation test (`reference/human-gate-template.md` § The escalation test); the card carries `evidence:`, `consequence:`, `recommendation:`. |
 
 A missing guard or test is `task`, not `bug` — nothing is observed to be wrong yet. A
 policy change ("X must now scrub Y") is `task` or `feature`; code found violating the

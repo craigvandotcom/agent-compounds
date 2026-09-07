@@ -6,6 +6,8 @@ the card, nothing requires opening a chat log or a plan doc to reconstruct.
 
 ## ToC
 - Creation
+- The escalation test
+- Before filing
 - Parentage at creation (Arm 0)
 - Mandatory dependency wiring
 - Worked example
@@ -21,6 +23,10 @@ br create -t decision --labels origin:<skill>,human-gate \
   -d "$(cat <<'EOF'
 decision: <one-sentence question>
 Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
+evidence: <what the escalation test found — how each condition was checked>
+consequence: user-visible | money | irreversible | intent
+recommendation: <option, one line — a fork card with no recommendation is an
+                 unfinished analysis, not a gate>
 
 options:
   a) <option A> — <one-line tradeoff>
@@ -32,11 +38,49 @@ paragraph or two; link a plan/audit doc for anything longer>
 EOF
 )"
 ```
+```
 
 `br create -t decision` matches the type table in `beads-standards/reference/bead-conventions.md`
 (`decision` = a fork only the human can resolve — taste, product, money, risk).
 `HUMAN:` is the alternative prefix for a gate that isn't shaped as a decision fork
 (an approval, a credential handoff, a "go/no-go") — same fields, same wiring rule.
+
+## The escalation test
+
+A `Gate-reason: fork` is legal only when ALL FIVE hold, and the card records each in its
+`evidence:` field:
+
+1. **Real:** two implementations both satisfy the plan, the bead and canon as written.
+2. **Unsettled:** the plan's Decisions, the epic's comments, the constitution and the memory
+   substrate (`qmd query`) do not already choose.
+3. **Not evidence-settleable:** no query, grep, test, measurement or spike inside the bead's
+   budget tells the options apart — else it is a research gap folded into the consuming bead.
+4. **Human-owned consequence:** the options differ in what a user sees or can do, money, an
+   irreversible or outward act, or the plan's intent or scope — else the agent takes the
+   recommended option and records `DECISION (agent): <choice> — <why>`.
+5. **Costlier wrong than asked:** the wrong option costs more than one human round-trip plus
+   one bead re-run.
+
+No recommendation means the analysis is unfinished and it is not a gate. Only `fork` takes
+the test; `authorization` and `action` are declared on the plan's `Human gates:` line;
+`intent` is a premise failure and always escalates to the plan. Card fields a fork card adds,
+all mandatory: `evidence:` · `consequence: user-visible | money | irreversible | intent` ·
+`recommendation:`.
+
+## Before filing
+
+Inherited by every producer, including the worker's mid-bead exception. Run in order, stop at
+the first failing condition:
+
+- Fails 1–3 → fold in: the fork is not real, not unsettled, or evidence can settle it — no
+  gate, the consuming bead does the research.
+- Fails 4–5 → agent decides: take the recommended option and record
+  `DECISION (agent): <choice> — <why>`.
+- Passes all five → dedupe against `RUST_LOG=error br list --status open --json` by target
+  plus gist; a hit takes a `br comments add` on the existing bead (note the recurrence), not
+  a new card.
+- Then check the spawning epic's plan in `_plans/_done/` § Decisions: settled → apply and
+  cite it; unlisted → file with label `plan-gap`.
 
 ## Parentage at creation (Arm 0)
 

@@ -67,19 +67,12 @@ the human MUST carry the label and a marker. An unmarked one is worse than a fal
 docket shows it, so every wave claims it and bounces it. "I could not decide" is not a
 gate reason — finish the analysis or name which of the four applies.
 
-**`DECISION:` — a decision card** (a fork only Craig can resolve). Description fields:
-
-```
-decision: <one-sentence question — what is Craig actually choosing?>
-Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
-options:
-  a) <option> — <one-line tradeoff>
-  b) <option> — <one-line tradeoff>
-  (2-4 lettered options; each does the analysis work Craig shouldn't have to)
-context: <why this fork exists now — the minimum needed to decide in 15 seconds>
-```
-
-(`HUMAN:` remains an accepted alias prefix for a decision-shaped gate that isn't a
+**`DECISION:` — a decision card** (a fork that passes the escalation test). The card shape,
+the three mandatory fork fields (`evidence:` · `consequence:` · `recommendation:`), and the
+five-condition test (Real · Unsettled · Not evidence-settleable · Human-owned consequence ·
+Costlier wrong than asked) have ONE home: `reference/human-gate-template.md` § The escalation
+test, with `## Before filing` as the run order. Every site points there and defines nothing
+itself. (`HUMAN:` remains an accepted alias prefix for a decision-shaped gate that isn't a
 fork — an approval, credential handoff, or go/no-go — same fields, same wiring rule.)
 
 **`ACTION:` — an action card** (a do-in-the-world task only Craig can perform — a console
