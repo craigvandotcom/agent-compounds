@@ -1,6 +1,6 @@
 ---
 name: jef-prompts
-description: 'A curated library of high-leverage one-shot prompts — the Jeffrey-Emanuel jef pack plus local additions. Triggers: "/jef-prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "performance audit prompt", "refactor prompt", "find a prompt". RETRIEVES a canned prompt — NOT for scoring or improving prompts already written (prompt-enhance) or authoring skills (skill-builder).'
+description: 'A curated library of high-leverage one-shot prompts — the Jeffrey-Emanuel jef pack plus local additions. Triggers: "/jef-prompts <hint>", "give me a prompt for", "is there a prompt for", "bug hunting prompt", "planning prompt", "performance audit prompt", "refactor prompt", "find a prompt". RETRIEVES a canned prompt — NOT for scoring or improving prompts already written (skill-builder's prompt rubric) or authoring skills (skill-builder).'
 ---
 
 # Prompts Library

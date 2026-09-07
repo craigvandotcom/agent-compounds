@@ -6,6 +6,8 @@
 # added entry fails the check (growth is refused against the committed base).
 # Standing exclusions and archived-v1 survivor names are declared in
 # lint/checks/25-archived-names.py, never here.
+# Restored 2026-09-07 by AmberCompass after a half-finished sibling sweep left
+# the file at 1 malformed entry with 41 carriers still standing (commit lane refused).
 skills/ac-bead-capture/SKILL.md
 skills/ac-distribute/SKILL.md
 skills/ac-human-session/SKILL.md
@@ -45,5 +47,3 @@ skills/context-engineering/SKILL.md
 skills/device-testing/SKILL.md
 skills/skill-builder/references/friction-capture.md
 skills/skill-builder/references/trigger-corpus.md
-skills/workflow-builder/SKILL.md
-skills/workflow-builder/references/command-patterns.md

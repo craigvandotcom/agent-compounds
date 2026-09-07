@@ -71,4 +71,3 @@ skills/supabase/references/schema-primary-keys.md
 skills/supabase/references/security-privileges.md
 skills/supabase/references/security-rls-basics.md
 skills/supabase/references/security-rls-performance.md
-skills/workflow-builder/references/examples/newsletter-build.md

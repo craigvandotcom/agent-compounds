@@ -40,7 +40,6 @@
 2026-09-07 | craig | skills/ac-publish/SKILL.md
 2026-09-07 | craig | skills/ac-publish/references/web-promote.md
 2026-09-07 | craig | skills/ac-qa-browser/SKILL.md
-2026-09-07 | craig | skills/ac-registry-audit/workflows/dedup-drift-audit.js
 2026-09-07 | craig | skills/ac-review/SKILL.md
 2026-09-07 | craig | skills/ac-review/references/post-batch-mode.md
 2026-09-07 | craig | skills/ac-tidy/SKILL.md
@@ -93,7 +92,6 @@
 2026-09-07 | neometa | skills/ac-land/SKILL.md
 2026-09-07 | neometa | skills/ac-pipeline/references/verification-gate.md
 2026-09-07 | neometa | skills/ac-qa-browser/SKILL.md
-2026-09-07 | neometa | skills/ac-registry-audit/workflows/dedup-drift-audit.js
 2026-09-07 | neometa | skills/ac-review/SKILL.md
 2026-09-07 | neometa | skills/ac-tidy/workflows/nightly.md
 2026-09-07 | neometa | skills/ac-triage/SKILL.md
@@ -116,7 +114,6 @@
 2026-09-07 | neometa | skills/wiki/references/research-basis.md
 2026-09-07 | neometa | skills/wiki/workflows/distill-weekly.md
 2026-09-07 | neometa | skills/wiki/workflows/hallucination-audit.md
-2026-09-07 | neometa | skills/workflow-builder/references/examples/newsletter-build.md
 2026-09-07 | spilwpcqjncrxptqdggn | skills/ac-triage/references/feedback-adapter.md
 2026-09-07 | unsit | skills/ac-distribute/references/_DECISION-distribution-stack.md
 2026-09-07 | unsit | skills/ac-triage/references/feedback-adapter.md

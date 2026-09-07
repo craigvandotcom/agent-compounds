@@ -1,6 +1,6 @@
 ---
 name: skill-builder
-description: Use when creating, editing, refactoring, or cleaning up Claude Code skills — including dieting an oversized SKILL.md down to its enforcement spine, extracting optional content to references/, centralizing cross-skill blocks into the owning domain skill's references/, and optimizing description/token cost. Triggers on "create a skill", "build a skill", "refactor this skill", "clean up our skills", "skill hygiene", "diet this skill", "trim this skill", "make skills token efficient", "extract to references", "centralize shared skill content", "convert to a skill", "description budget". NOT for building an orchestrated /command workflow (use workflow-builder), auditing the registry for trigger collisions or duplicates (use ac-registry-audit), or scoring subagent prompts against a rubric (use prompt-enhance).
+description: Use when creating, editing, refactoring, or cleaning up skills — dieting a SKILL.md to its spine, extracting references/, centralizing shared blocks, optimizing description cost, building an orchestrated /command or scheduled workflow (run ledger, phases, quality gates), scoring subagent prompts against a rubric, auditing the skill registry for trigger collisions, duplicates, and doc-disk drift. Triggers on "create a skill", "build a skill", "refactor this skill", "clean up our skills", "skill hygiene", "diet this skill", "extract to references", "convert to a skill", "description budget", "build a workflow", "create a /command", "turn this SOP into a command", "design a pipeline command", "workflow builder", "enhance prompts", "improve subagent prompts", "score my prompts", "prompt quality review", "rate this prompt", "registry audit", "audit the skill registry", "registry hygiene", "dedup the skills", "skill collision check", "clean up agent-compounds". NOT for a canned prompt (use jef-prompts).
 ---
 
 > **Shared skill (agent-compounds).** Symlinked into projects via `deploy.sh` — this is the single source of truth; edit here, not in a consumer copy. Method-only and portable (no project facts).
@@ -9,23 +9,6 @@ description: Use when creating, editing, refactoring, or cleaning up Claude Code
 
 **Purpose:** Meta-skill for creating, editing, refining, and refactoring Claude Code skills
 **Status:** Complete
-
----
-
-## When to Use This Skill
-
-**Intent Triggers:**
-- Creating a new skill from scratch
-- Improving an existing skill's structure or description
-- Converting subagent definitions to skill format
-- Organizing skill workflows and reference files
-- Applying progressive disclosure to documentation
-
-**Example Phrases:**
-- "Create a skill for X"
-- "Help me build a skill that does Y"
-- "Convert this workflow to a skill"
-- "Improve this skill's description"
 
 ---
 
@@ -377,6 +360,8 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 | `workflows/refine-skill.md` | Improve one skill (rule-granularity polish) |
 | `workflows/hygiene-pass.md` | **Diet an oversized skill (section-granularity) OR batch-sweep a whole `skills/` dir** — CORE/EXTRACT/CUT cartography → owner-hosted centralization → orchestrator-trap gate → pointer-integrity re-validate. The callable "clean up our skills" entry point. |
 | `workflows/convert-to-skill.md` | Convert docs/subagents to skill |
+| `workflows/build-workflow.md` | **Build an orchestrated `/command` or scheduled workflow** — the 6-phase meta-process (discovery → research → refinement → design → implementation → verification), run-ledger + phase-skeleton + quality-gate standards |
+| `workflows/registry-audit.md` | **Audit the skill/agent registry** — lint's mechanical passes first, then the semantic dedup/drift audit (`workflows/dedup-drift-audit.js`), gated judgment calls |
 
 ---
 
@@ -391,6 +376,12 @@ description: Use when user mentions tasks, todos, deadlines, reminders, calendar
 | `references/skill-template.md` | Copy-paste starting template for a new SKILL.md |
 | `references/best-practices.md` | Anthropic + community patterns (description, naming, progressive disclosure) |
 | `references/testing-patterns.md` | RED-GREEN-REFACTOR testing methodology |
+| `references/prompt-rubric.md` | **The subagent-prompt rubric** — structural/quality/anti-pattern tiers + the exact enhancement templates; read when scoring or enhancing `Task(` prompts in skill/command files |
+| `references/rot-vectors.md` | **Registry rot taxonomy** — trigger collision, divergent duplicate, dangling cross-ref, doc↔disk drift; read before a registry audit |
+| `references/command-patterns.md` | Workflow pattern library with worked examples — run ledgers, gates, delegation, output conventions, anti-patterns |
+| `references/decision-framework.md` | What to ask the user vs decide yourself when building a workflow (Phase 2 of build-workflow) |
+| `templates/workflow-template.md` | Starting skeleton for a new `/command` workflow file |
+| `references/examples/newsletter-build.md` | A worked, project-specific instance of the build-workflow process |
 
 ---
 
