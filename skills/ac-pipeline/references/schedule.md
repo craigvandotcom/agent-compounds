@@ -17,7 +17,7 @@ here as an owner-hosted operating contract, with two archived skill names update
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-implement` swarm | scheduled, feeds beads ahead of shipping | `ac-triage` |
 | Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes commit direct to `main`, close via `ac-publish`; deferred → epic beads. **Sole owner of the standing review of `main`** when no batch shipped in >7 days — `ac-review` provides only the diff-range mechanism and never self-schedules it | `ac-hygiene` |
-| Audit | **Not yet scheduled** — human-triggered today; checklists serve as reference depth behind the weekly hygiene panel | findings → beads, never fixes in place | `audit` |
+| Audit | **Not yet scheduled** — human-triggered today; the checklists are reference depth behind the weekly hygiene panel (`ac-review/references/security-audit.md`, `ac-review/references/performance-audit.md`, `ac-hygiene/references/tests-audit.md`) | findings → beads, never fixes in place | `ac-review` + `ac-hygiene` |
 
 **Triage-before-swarm ordering** is the one cadence rule with a *hard dependency* on another
 job — triage must feed the board before the swarm consumes it — rather than a fixed wall-clock

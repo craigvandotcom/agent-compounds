@@ -540,9 +540,35 @@ git commit -m "batch-close: ${ANCHOR:0:8}..$(git rev-parse --short HEAD) — {N}
 git push origin main || { git pull --rebase origin main && git push origin main; }
 ```
 
-**This must be the LAST commit of the ceremony.** If a fix-forward round is still needed after
-this point, that means Act 1 (or Act 2) isn't actually done — re-run from there and redo this
-commit last, again. Nothing pushes after the batch report.
+**These are the last commits of the ceremony** — the report commit above, then the ledger
+flush below, in that order. If a fix-forward round is still needed after this point, that
+means Act 1 (or Act 2) isn't actually done — re-run from there and redo both, flush last
+again. Nothing pushes after the flush.
+
+### Export the ceremony's ledger writes (`br sync --flush-only`)
+
+Act 1 wrote VERDICT lines and epic-adjudication comments straight to the live `beads.db`
+(`br comments add`, `br update`) — and, without the flush below, those rows reach
+`.beads/issues.jsonl` only when some later unrelated ceremony happens to run one. A fresh
+clone, another machine, or a DB rebuilt from `issues.jsonl` would silently lack the VERDICT
+trail — exactly the audit evidence that must survive the session that wrote it.
+
+```bash
+br sync --flush-only
+
+# Commit ONLY the ledger. The pathspec preserves single-committer-per-scope: during this
+# ceremony batch-close is the ledger's committer for its own writes, and no other party
+# stages .beads/issues.jsonl. Skip the commit when the flush produced an empty diff (a run
+# with no comments/status writes) — an empty commit is noise, not evidence.
+if [ -n "$(git diff --name-only -- .beads/issues.jsonl)" ]; then
+  git add .beads/issues.jsonl
+  git commit -m "batch-close: flush VERDICT/adjudication ledger writes (${ANCHOR:0:8}..$(git rev-parse --short HEAD))" \
+    -- .beads/issues.jsonl
+  git push origin main || { git pull --rebase origin main && git push origin main; }
+else
+  echo "empty diff — no ledger writes to export; skipping the flush commit"
+fi
+```
 
 ### Ceremony pool ack + post-ack drain (bd-chd5p.2)
 

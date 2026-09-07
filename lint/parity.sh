@@ -212,6 +212,20 @@ elif [ "$CHECK_ID" = 8 ] || [ "$CHECK_ID" = 12 ]; then
   compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
   finish
 
+elif [ "$CHECK_ID" = 7 ]; then
+  # --- recipe for Check 7 (consumer symlink health, ac-1p7j.14) ---------------
+  # Legacy block extracted between its section markers (live lint.sh, else the
+  # last commit that carried it) and eval'd with check/fail shims. Both judges
+  # walk the REAL consumer union (the test-only LINT_CONSUMER_BASE seam unset
+  # on both sides), so a dir that exists only on this machine is scanned by
+  # both or by neither.
+  NEW="$ROOT/lint/checks/07-consumer-symlinks.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  old="$(run_legacy 7)"
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree" "$old" "$new" 's/^FAIL: //' 's/^FAIL 07-consumer-symlinks: //'
+  finish
+
 elif [ "$CHECK_ID" = 10 ] || [ "$CHECK_ID" = 11 ]; then
   case "$CHECK_ID" in
     10) NEW="$ROOT/lint/checks/10-d-series-conformance.py"; LSTRIP='s/^FAIL: //'; NSTRIP='s/^FAIL 10-d-series-conformance: //' ;;

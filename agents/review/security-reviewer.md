@@ -14,7 +14,7 @@ Read `AGENTS.md` at the project root for project context and skill routing.
 
 ## Skill Loading
 
-- **Every review:** Load `audit` (`.claude/skills/audit/SKILL.md`)
+- **Every review:** Load the security sweep (`ac-review/references/security-audit.md` — 35 items, SEC-001…SEC-035)
 - **If reviewing Capacitor/native code:** Also load `capacitor` (see `capacitor/reference/security-capsec.md` for 62+ native checks)
 
 **Check your agent memory first.** It contains this project's auth patterns (Supabase RLS, middleware), known exceptions, and past findings. Update it with new discoveries.

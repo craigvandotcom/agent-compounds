@@ -68,15 +68,11 @@ boundary nobody thought of as a boundary.
 Discipline: a finding must be exploitable-in-principle with a concrete path — name the
 actor, the entry point, and what they get. No speculative best-practice nits.
 
-**CHECKLIST:**
-
-- OWASP Top 10 vulnerabilities (injection, XSS, CSRF, SSRF)
-- Auth/authz bypass opportunities (is the check at every layer, or just the door?)
-- Hardcoded secrets or credentials
-- Data exposure risks (PII leaks, verbose errors)
-- Input validation gaps at system boundaries
-- Insecure defaults (permissive CORS, missing rate limits)
-- Dependency vulnerabilities (known CVEs in new deps)
+**CHECKLIST:** the deep sweep — 35 items (SEC-001…SEC-035: RLS, auth middleware,
+schemas, secrets, headers/CSP, AI/LLM security, rate limiting, SQL injection, session
+security, CORS, CVEs, supply chain) with commands and expected outputs — lives in
+`references/security-audit.md`. This file keeps the review behavior above; the
+reference keeps the sweep; no question appears in both.
 
 **SLUGS:** `sql-injection`, `xss`, `csrf`, `ssrf`, `authz-bypass`, `secret-exposure`,
 `pii-leak`, `unvalidated-input`, `insecure-default`, `vulnerable-dependency`
@@ -102,14 +98,12 @@ severity.
 
 **CHECKLIST:**
 
-- N+1 queries or sequential awaits (waterfalls)
-- Missing caching opportunities
-- Unnecessary re-renders or recomputations
-- Heavy imports that should be lazy/dynamic
-- Missing pagination or unbounded queries
 - Inefficient algorithms (O(n^2) where O(n) suffices — on unbounded n)
-- Bundle size impact (barrel imports, large deps)
-- Missing indexes on queried columns
+- Missing pagination or unbounded queries
+- The deep sweep — 39 items (PERF-001…PERF-039: bundle size, code splitting, images,
+  query efficiency, indexes, re-renders, fonts, third-party scripts, Core Web Vitals)
+  with commands and expected outputs — lives in `references/performance-audit.md`;
+  no question appears in both.
 
 **SLUGS:** `n+1-query`, `waterfall-await`, `missing-cache`, `rerender-storm`,
 `heavy-import`, `unbounded-query`, `missing-pagination`, `inefficient-algorithm`,

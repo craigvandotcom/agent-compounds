@@ -225,6 +225,10 @@ If nothing found, say so — don't invent issues.
 
 ## Agent 7: Test Warden (Opus)
 
+Deep sweep for this lens: `references/tests-audit.md` — 39 items (TEST-001…TEST-039:
+coverage, diamonds, naming, AAA, mocking, flakiness, CI reliability, speed) with
+commands and expected outputs.
+
 ```
 Task(subagent_type: "general-purpose", model: "opus", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
