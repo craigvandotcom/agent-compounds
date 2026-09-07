@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-07
-entries: 28
+entries: 29
 ---
 
 # ac-polish — friction log
@@ -670,3 +670,29 @@ entries: 28
   round 1 clustered at 4–10. A 23-file × 7-stage grid cannot fill at seven rows a round, so the
   loop added 25 · 20 · 12 edges with zero fenced and zero drift — the fence held, the sweep was
   rationed by a misread sentence.
+
+## seams-sweep-coverage-is-unmeasured
+- skills: [ac-polish]
+- impact: L
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [seams-reader-reads-cell-count-as-a-row-quota, seams-fence-far-side-exemption-admits-neighbouring-objects]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: manual
+- status: open
+- proposed_fix: make coverage a declared, checked quantity. Each reader ends its report with a
+  `SWEPT:` block — one line per FILES entry, the stages it found or `absent` — and the merge
+  counts a round as a sweep only when every file on `files:` is declared by every lens; a
+  partial declaration prints `swept=N/23` on the round line. Or split the grid across readers
+  within a round (files 1-8 · 9-16 · 17-23 per lens) so one round IS a full sweep. Either
+  turns "clean round" from "the reader stopped" into "the grid was walked".
+- narrative: MotionFrame v2 under the files: fence — 5 rounds, 15 readers, 0 fenced, 0 dropped,
+  0 drift — added 25 · 20 · 12 · 10 · 5 edges (72 total across 23 files) and did not stamp.
+  Per-lens: object 9 · 7 · 7 · 7 · 4, flow 7 · 9 · 5 · 2 · 1, boundary 9 · 4 · 0 · 1 · 0. The
+  boundary lens converged at round 3; object and flow kept adding real first-order edges in
+  listed files because each reader walks a slice of the grid per round, not the grid. Removing
+  the row quota (round 5) cut the object report to 4 rows, all new keys, so the quota was one
+  cause, not the cause. The fence did its whole job; the loop's remaining variable is how much
+  of the finite space one reader covers in one round, and nothing measures it.

@@ -69,7 +69,9 @@ boundary is its own run), never loop on. The `files:` line is what makes converg
 the grid is finite, so growth can only come from the fenced files, and a round that adds nothing
 means the sweep is complete (the 2026-09-06 MotionFrame run, fenced by file names alone, added
 50 · 9 · 8 · 4 · 7 edges — 13 of 80 in files that never named the object, 11 in tests and dev
-harnesses).
+harnesses; the 2026-09-07 rerun under `files:` added 25 · 20 · 12 · 10 · 5 with nothing fenced
+or dropped — the tail is reader coverage per round, see FRICTIONS
+`seams-sweep-coverage-is-unmeasured`).
 
 ## Hand-off
 
