@@ -11,14 +11,12 @@ Symlinked into a project as `.claude/skills/<name>/`.
 **Multi-model**
 | Skill | What it does |
 |-------|-------------|
-| **[openrouter](./skills/openrouter/)** | Access 400+ AI models. Discover, select, and query the right model for any task |
-| **[expert-consensus](./skills/expert-consensus/)** | Fan out one prompt to multiple AI models, synthesize into consensus |
 
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
 conductor is **`ac-implement`**; the design lives in **`ac-pipeline`**. Three loops feed one
 execution path: the **dev loop** (human intent → plans → waves → `ac-implement`
 ships), the **triage loop** (`ac-triage`, scheduled — production signal → defect beads), and
-the **audit loop** (`audit` + `ac-hygiene`, periodic — proactive hardening findings → beads).
+the **audit loop** (`ac-review` + `ac-hygiene`, periodic — proactive hardening findings → beads; the audit checklists live in their `references/`).
 The canonical stage order — stage · owner · trigger · human gate · artifact — lives in
 `skills/ac-pipeline/references/stage-table.md`; nothing here restates it.
 | Skill | What it does |
@@ -51,15 +49,11 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **supabase** | Supabase CLI, migrations, RLS, Postgres patterns |
 | **testing** | Vitest unit/component/integration test authoring |
 | **capacitor** | TypeScript dev in Capacitor (native wrap) projects |
-| **planning** | Scope-oscillation methodology reference (the lenses the `ac-plan-*` chain applies — not a direct entry point) |
 | **brainstorming** | Divergent–convergent pre-planning ideation |
 | **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
 | **ac-idea-lab** | Deep analysis of a raw idea — genius (forensic review) + alien (paradigm-breaking) modes |
-| **audit** | The audit loop's checklist framework — severity-scored security/performance/tests/qa/ui sweeps of APP code, findings → beads (for auditing this registry itself → `ac-registry-audit`) |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
-| **workflow-builder** | Build a new orchestrated multi-step `/command` workflow — 6-phase build process, run-ledger + phase-skeleton + quality-gate standards |
-| **ac-registry-audit** | Make the registry itself watertight — audit the prompt corpus for trigger collisions, divergent duplicates, dangling refs, doc↔disk drift; mechanical fixes + gated judgment calls (lint.sh → dedup/drift workflow) |
 | **browser-testing** | UI/login/flow validation via agent-browser |
 | **device-testing** | Ad-hoc native iOS-simulator driving via agent-device, with screenshot/video capture — the native twin of browser-testing |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
@@ -70,7 +64,6 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **app-store-screenshots** | Generate iOS App Store screenshots from real screens |
 | **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
 | **seo-metadata** | Add or audit SEO and social-share metadata (OG, Twitter cards, JSON-LD, sitemaps) |
-| **prompt-enhance** | Audit and improve subagent prompts in skill/command files against a research-backed rubric |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 
@@ -81,8 +74,7 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 **Substrate** — the AI-native-org memory skills (deploy together)
 | Skill | What it does |
 |-------|-------------|
-| **context-engineering** | Canonical save-routing taxonomy and L0–L4 loading model — where durable knowledge goes and what loads when |
-| **memory-pipeline** | How the compounding system RUNS — the three lanes (L3 memory, skill frictions, wiki synthesis), their executors, cadence, drains, and health surface (operations; the taxonomy stays in context-engineering) |
+| **context-engineering** | Canonical save-routing taxonomy and L0–L4 loading model — where durable knowledge goes and what loads when; how the compounding system runs (lanes, cadence, drains) is its `references/operations.md` |
 | **reflect** | Capture session learnings into the memory substrate — facts, decisions, recipes, domain-routed and git-tracked |
 | **dream** | The org's self-improvement engine — synthesize cross-session patterns, lint the substrate, emit PR-style proposals |
 | **wiki** | Write and garden wiki synthesis pages — concept/entity/topic/contradiction pages that integrate atomic facts and decisions into one cited narrative (a derived view, not fact capture) |
@@ -127,7 +119,7 @@ Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coo
 
 # Stamp a project with a chosen subset (symlinks, never copies)
 ./deploy.sh ../my-project \
-  --skills supabase,testing,planning,jef-prompts --agents engineer,reviewer
+  --skills supabase,testing,jef-prompts --agents engineer,reviewer
 
 # Or take everything
 ./deploy.sh ../my-project --all

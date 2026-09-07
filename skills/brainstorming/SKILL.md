@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Pre-planning exploration and ideation using divergent-convergent methodology. Use when exploring ideas before committing to a plan or uncertain which approach to take. Triggers on "brainstorm", "explore ideas", "what are the options", "think through approaches", "before I plan this", "/brainstorm". NOT for UI/design ideation across models (ui-brainstorm), forensic critique of an existing idea (ac-idea-lab), or polling models on one question (expert-consensus).
+description: Pre-planning exploration and ideation using divergent-convergent methodology. Use when exploring ideas before committing to a plan or uncertain which approach to take. Triggers on "brainstorm", "explore ideas", "what are the options", "think through approaches", "before I plan this", "/brainstorm". NOT for UI/design ideation across models (ui-brainstorm), forensic critique of an existing idea (ac-idea-lab), or polling models on one question (multi-model).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
@@ -203,6 +203,6 @@ Located in `prompts/`:
 
 ## Sources
 
-- Jeffrey Emanuel Ideation Methodology — Source: `skills/planning/research/brainstorm-command-research.md` (agent-compounds)
+- Jeffrey Emanuel Ideation Methodology — Source: `references/brainstorm-command-research.md`
 - Six Thinking Hats (Edward de Bono)
 - Double Diamond Design Process
