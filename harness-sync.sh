@@ -266,13 +266,14 @@ $A_BODY")"
 # gen_opencode_agents <src-agents-dir> <dest-dir>
 # opencode reads NEITHER .claude/agents nor any Claude-compat agent path — verified
 # 2026-08-28: `opencode agent list` showed only its built-ins, and
-# `opencode debug agent researcher` returned "not found". So the three stances have to
+# `opencode debug agent researcher` returned "not found". So the stances have to
 # be GENERATED, the same posture as Codex TOMLs and Droid droids.
 #
-# Deliberately the three stances ONLY (researcher/implementer/validator, the canonical
-# delegation model). The other agent defs lean on Claude-side tools/MCP that opencode
-# does not carry; generating them would advertise subagents that cannot do their job —
-# the phantom-registry failure mode already on record.
+# Deliberately the FIVE core stances ONLY (orchestrator/coordinator/researcher/
+# implementer/validator, the canonical delegation model). The other agent defs lean
+# on Claude-side tools/MCP that opencode does not carry; generating them would
+# advertise subagents that cannot do their job — the phantom-registry failure mode
+# already on record.
 #
 # The agent's `tier:` (from the registry, carried through the .claude layer) is
 # RESOLVED here against harnesses.opencode.agent_models and stamped as `model:`.
@@ -286,7 +287,7 @@ $A_BODY")"
 gen_opencode_agents() { # <src-agents-dir> <dest-dir>
   local src="$1" dest="$2" f name relsrc tools edit_perm omodel
   [ -d "$src" ] || { echo "  WARN: agent source missing: $src"; return 0; }
-  for name in researcher implementer validator; do
+  for name in orchestrator coordinator researcher implementer validator; do
     f="$src/$name.md"
     [ -f "$f" ] || { echo "  WARN: stance $name.md missing in $src (skipped)"; continue; }
     parse_agent "$f"
@@ -556,7 +557,7 @@ render_hooks_antigravity() {
       . + { (("ac-" + ($e.ev | ascii_downcase) + "-" + (($e.h[0].command | split("/") | last | split(" ") | last) // "hook")) | slug):
               { ($e.ev): (if ($e.ev | grouped)
                           then [ {matcher: (if $e.m == "" then "*" else $e.m end), hooks: $e.h} ]
-                          else $e.h end) } }) }')"
+                          else $e.h end) } })')"
   write_file_if_changed "$AGY_CONFIG_DIR/hooks.json" "$content"
 }
 

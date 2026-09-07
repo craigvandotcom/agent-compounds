@@ -94,6 +94,8 @@ Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coo
 
 | Agent | What it does |
 |-------|-------------|
+| **[orchestrator](./agents/orchestrator.md)** | Fleet-conductor stance — plans, sequences, delegates, holds decisions and batch boundaries; never implements |
+| **[coordinator](./agents/coordinator.md)** | Judgment stance — looks, understands, critiques, synthesizes; read-only analysis, no mechanical execution |
 | **[researcher](./agents/researcher.md)** | Read-only gather-and-distill stance — investigates the brain, codebase, and web; never writes |
 | **[implementer](./agents/implementer.md)** | Production stance — scoped execution of approved plans/specs (code, content, config) |
 | **[validator](./agents/validator.md)** | Adversarial verification stance — audits/judges work against rubrics, finds issues, never fixes |
@@ -103,7 +105,7 @@ Portable agent definitions. Each declares a semantic `tier:` (orchestrator | coo
 | **[browser-agent](./agents/browser-agent.md)** | General-purpose headless browser automation — screenshots, scraping, forms, navigation |
 | **[device-tester](./agents/device-tester.md)** | Native UI validation agent — runs journeys in the iOS Simulator via agent-device + simctl, reports PASS/FAIL, never edits code |
 
-> **Note:** `implementer` and `validator` were formerly named `engineer` and `reviewer` — those aliases are retired.
+> **Note:** `implementer` and `validator` were formerly named `engineer` and `reviewer` — those aliases are retired. The four `review/*` dimension-reviewer agents were removed 2026-09-07: review panels spawn coordinator-subagents with dimension prompts (role lives in the prompt, tier lives on the stance), so named per-dimension agent files were spawn-orphaned weight.
 
 ## Quick Start
 

@@ -48,13 +48,15 @@ person talking plainly to another (operator voice only — never audience conten
 
 ---
 
-## Delegation — the three stances
+## Delegation — the five stances
 
 Delegate non-trivial work to a subagent by stance (all defined in `.claude/agents/`,
 each with a semantic `tier:` resolved per harness from `harnesses.json agent_models`):
 
 | Stance | Tier | Use for | Never for |
 |--------|------|---------|-----------|
+| **orchestrator** | orchestrator | plans, sequences, delegates; holds decisions and batch boundaries | implementing itself |
+| **coordinator** | coordinator | looks, understands, critiques, synthesizes (read-only) | mechanical execution |
 | **researcher** | coordinator | read-only investigation (brain → code → web), returns cited summary | making changes |
 | **implementer** | worker | scoped execution of an approved plan/spec | planning, verification |
 | **validator** | coordinator | adversarial review/audit against rubrics & tests | fixing what it finds |
