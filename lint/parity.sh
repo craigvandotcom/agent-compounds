@@ -463,6 +463,24 @@ elif [ "$CHECK_ID" = 6 ]; then
   compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
   finish
 
+elif [ "$CHECK_ID" = 17 ]; then
+  # --- recipe for Check 17 (dcg-blocked redirects, ac-1p7j.12) ------------------
+  # Fence-scanning block: registry tree, then the committed static fixture.
+  # The fixture carries every allowed shape beside the two RED hits, so the
+  # comparison covers the discriminator, not just the detector.
+  NEW="$ROOT/lint/checks/17-dcg-blocked-redirects.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  LSTRIP='s/^FAIL: Check 17: //'; NSTRIP="s/^FAIL $(basename "$NEW" .py): //"
+
+  old="$(run_legacy 17)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+
+  old="$(run_legacy 17 "$ROOT/lint/fixtures/17-dcg-blocked-redirects")" || exit 2
+  new="$(python3 "$NEW" "$ROOT/lint/fixtures/17-dcg-blocked-redirects" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  finish
+
 elif [ "$CHECK_ID" = 13 ]; then
   # --- recipe for Check 13 (ac-1p7j.13) ----------------------------------------
   # Delegating block (validate-skill.sh --registry): registry tree, then a
