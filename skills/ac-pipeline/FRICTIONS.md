@@ -587,3 +587,26 @@ entries: 27
 - receipt: BCA swarm run 20260905-2134 — early worker pushes succeeded, later ones were rejected, and a nightly plus a dependabot commit landed on origin between them; the coordinator reviewed only the 61 rebased commits, missed the 13 pushed earlier, and two causal-sufficiency passes skipped 30 beads believing their commits were outside the range; a second review round over the early span was needed
 - proposed_fix: coordinator.sh emits the review range as every contiguous span of this run's commits between the recorded start hash and HEAD, excluding foreign commits, and the report refuses to be written without one Range line per span
 - narrative: the batch is not one span once any push succeeds mid-run. Deriving the range from the rebase point silently drops everything that reached origin before the hook broke, and causal reviewers then test pre-rebase hashes that no longer exist on trunk.
+
+## close-gate-coverage-leg-starved-by-silent-probes
+- skills: [ac-implement]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [refined-beads-reach-the-worker-pool-with-zero-probe-lines-and-burn-claim-cycles]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: ac-implement
+- status: open
+- receipt: RUN 2026-09-07 swarm-20260907-exhaust worker log — ac-gate-test-flake-53px: fix committed (1bbdfe4), all 3 probes green, 20 serial + 6 concurrent clean runs, close refused NOT-CHECKED COVERAGE (assertions=0) and the refusal is deterministic on re-run
+- control: untreated
+- proposed_fix: the COVERAGE leg should treat "every probe output-silent" as the temporal-pair case it already handles for prose beads (a grep/redirect probe emits no ok/FAIL lines by construction), or the assertion probe selection should prefer a probe whose stdout can reach the capture — NOT-CHECKING a verified bead every time is a gate blind spot, not coverage
+- narrative: the COVERAGE leg picks the FIRST probe naming an existing test-shaped file as the
+  assertion probe. For ac-gate-test-flake-53px that probe was `grep -q ...` — silent by
+  construction — and the harness-running probe redirected all output into per-run log files, so
+  no probe's stdout could ever carry an ok/FAIL line. A fix that was actually verified (summary
+  now names failing cases, proven with an injected-failure run, 26 clean harness runs) cannot
+  pass the close gate and cannot close. The refusal is loud and correct as a signal, but the
+  gate's assertion heuristic has no instrument for the silent-probe bead class — the same shape
+  the SCANNER leg hit (close-gate-scanner-leg-has-no-prose-instrument).
