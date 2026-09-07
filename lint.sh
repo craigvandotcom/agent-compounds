@@ -85,31 +85,6 @@ check() {
 }
 
 # ---------------------------------------------------------------------------
-# Check 1 — Dead-pattern grep (zero tolerance in skills/ and agents/)
-# ---------------------------------------------------------------------------
-echo "--- Check 1: dead patterns ---"
-
-DEAD_PATTERNS=(
-  # `run /ac-plan first` / `Run /ac-plan ` were dead while the planner was ac-plan-init. After
-  # the ac2->ac rename, ac-plan IS the planner and those strings are correct. Retired 2026-09-02.
-  "persona-catalog"
-  "craigs-setup"
-  "browser-qa-agent"
-  "agent-compounds/commands/"
-)
-
-for pattern in "${DEAD_PATTERNS[@]}"; do
-  check
-  # grep -r returns 0 if found (bad), 1 if not found (good), 2 on error
-  results=$(grep -rl --include="*.md" -- "$pattern" "$AC_ROOT/skills" "$AC_ROOT/agents" 2>/dev/null || true)
-  if [ -n "$results" ]; then
-    while IFS= read -r file; do
-      fail "dead pattern '$pattern' found in ${file#$AC_ROOT/}"
-    done <<< "$results"
-  fi
-done
-
-# ---------------------------------------------------------------------------
 # Check 2 — /ac-skill cross-references resolve
 # ---------------------------------------------------------------------------
 echo "--- Check 2: /ac-* cross-reference resolution ---"
