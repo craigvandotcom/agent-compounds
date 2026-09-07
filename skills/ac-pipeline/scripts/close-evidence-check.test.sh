@@ -50,6 +50,11 @@ if [ "${1:-}" = "show" ]; then
   [ -f "$fx" ] && cat "$fx"
   exit 0
 fi
+if [ "${1:-}" = "list" ]; then
+  fx="${FIXTURE_DIR:-}/list.json"
+  [ -f "$fx" ] && cat "$fx"
+  exit 0
+fi
 exit 0
 EOF
 chmod +x "$MOCK_BIN/br"
@@ -113,8 +118,17 @@ echo "--- task/feature: cross-reference this bead's own ## Delivers ---"
 run_gate 0 "task naming a declared artifact -> PASS" -- bd-task "shipped. Delivered: skills/ac-pipeline/scripts/thing.sh"
 run_gate 0 "task naming it by basename -> PASS" -- bd-task "shipped: thing.sh landed"
 run_gate 1 "task naming NO declared artifact -> REFUSE" -- bd-task "shipped: some other file"
-run_gate 2 "task whose Delivers is prose only -> NOT-CHECKED" -- bd-prose "shipped: everything"
+run_gate 2 "task whose Delivers is prose only -> UNVERIFIABLE-DELIVERS (exit 2)" -- bd-prose "shipped: everything"
 run_gate 2 "task with no Delivers section -> NOT-CHECKED" -- bd-nodel "shipped: everything"
+
+# The two structurally-unverifiable classes must NOT read as an ordinary evidence failure:
+# the prose-only verdict names itself (UNVERIFIABLE-DELIVERS) and the bead (ac-k25c.7).
+out=$(env "PATH=$MOCK_BIN:$PATH" bash "$GATE" bd-prose "shipped: everything" 2>&1)
+if printf '%s' "$out" | grep -q 'UNVERIFIABLE-DELIVERS' && printf '%s' "$out" | grep -q 'bd-prose'; then
+  expect 1 "prose-only Delivers verdict names UNVERIFIABLE-DELIVERS and the bead"
+else
+  expect 0 "prose-only Delivers verdict names UNVERIFIABLE-DELIVERS and the bead"
+fi
 
 echo "--- exemptions ---"
 run_gate 0 "epic -> EXEMPT" -- bd-epic "closing the epic"
@@ -124,6 +138,31 @@ echo "--- investigation ---"
 run_gate 0 "investigation citing a spawned bead id -> PASS" -- bd-inv "answered; spawned ac-1227"
 run_gate 0 "investigation citing a documented answer -> PASS" -- bd-inv "written up in docs/findings.md"
 run_gate 1 "investigation with neither -> REFUSE" -- bd-inv "looked into it, all good"
+
+echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
+jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \
+  > "$FIXTURE_DIR/list.json"
+out=$(env "PATH=$MOCK_BIN:$PATH" bash "$GATE" --list-unverifiable 2>&1); rc=$?
+if [ "$rc" = 0 ] \
+   && printf '%s' "$out" | grep -q 'UNVERIFIABLE-DELIVERS' \
+   && printf '%s' "$out" | grep -qF 'bd-prose' \
+   && ! printf '%s' "$out" | grep -qF 'bd-task' \
+   && ! printf '%s' "$out" | grep -qF 'bd-epic'; then
+  expect 1 "--list-unverifiable lists the prose-only bead, skips the verifiable + exempt ones"
+else
+  expect 0 "--list-unverifiable lists the prose-only bead, skips the verifiable + exempt ones (rc=$rc) out: $out"
+fi
+# A board that cannot be read is NOT-CHECKED, never an empty clean bill.
+rm -f "$FIXTURE_DIR/list.json"
+CASES=$((CASES + 1))
+out=$(env "PATH=$MOCK_BIN:$PATH" bash "$GATE" --list-unverifiable 2>&1); rc=$?
+if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  printf '  PASS  --list-unverifiable with an unreadable board -> NOT-CHECKED\n'
+else
+  printf '  FAIL  --list-unverifiable with an unreadable board -> NOT-CHECKED (rc=%s)\n' "$rc"
+  printf '%s\n' "$out" | sed 's/^/          | /'
+  FAILURES=$((FAILURES + 1))
+fi
 
 echo "--- the bypass must be BOTH the flag and the record ---"
 run_gate 1 "EVIDENCE-BYPASS without --force -> REFUSE" -- bd-task "shipped EVIDENCE-BYPASS: outage"

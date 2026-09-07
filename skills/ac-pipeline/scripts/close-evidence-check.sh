@@ -8,12 +8,19 @@
 # meant "an agent merged something", not "proven the way the bead itself declared".
 #
 # Usage:
-#   close-evidence-check.sh [--force] [--report-only] <bead-id> <intended close reason>
+#   close-evidence-check.sh [--force] [--report-only] [--list-unverifiable] <bead-id> <intended close reason>
 #
 # Exit 0  evidence present (or legitimately exempt, or bypassed, or --report-only)
 # Exit 1  REFUSED — the close reason carries no evidence of the shape this type declares
 # Exit 2  NOT-CHECKED — the gate could not verify. Never a pass: a gate that verified
 #         nothing must not read as coverage (rule: a-gate-must-fail-when-it-verified-nothing).
+#         The UNVERIFIABLE-DELIVERS verdict exits 2 too, but names itself: "the bead is
+#         structurally unverifiable" and "this close lacks evidence" are different failures
+#         (ac-k25c.7 — a gate whose refusals all look alike trains callers to ignore it).
+#
+# --list-unverifiable: audit mode. Lists every OPEN task/feature bead whose ## Delivers
+# holds no path-shaped token (or is missing) — the population whose closes this gate can
+# never verify. Exit 0 with the listing; exit 2 if the board cannot be read.
 #
 # THE BAR IS PRESENCE + CROSS-REFERENCE, never semantic truth — that stays review's job.
 #   bug           -> the reason cites a test-shaped path (the regression test)
@@ -32,15 +39,47 @@ set -uo pipefail
 
 FORCE=0
 REPORT_ONLY=0
+LIST_UNVERIFIABLE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --force)       FORCE=1; shift ;;
     --report-only) REPORT_ONLY=1; shift ;;
+    --list-unverifiable) LIST_UNVERIFIABLE=1; shift ;;
     --) shift; break ;;
     -*) echo "close-evidence-check: unknown flag '$1'" >&2; exit 2 ;;
     *) break ;;
   esac
 done
+
+# --- audit mode: the population this gate can never verify -------------------
+if [ "$LIST_UNVERIFIABLE" = 1 ]; then
+  RAW=$(br list --status open --json 2>/dev/null || true)
+  if [ -z "$RAW" ]; then
+    echo "close-evidence NOT-CHECKED: 'br list --status open --json' returned nothing — the audit verified nothing" >&2
+    exit 2
+  fi
+  COUNT=0
+  # Only task/feature closes cross-reference ## Delivers; every other type is exempt
+  # from this check by construction, so a prose-only Delivers there verifiable-closes fine.
+  # br list --json returns {issues:[...]} (an array would iterate the same way).
+  while IFS= read -r NODE; do
+    [ -n "$NODE" ] || continue
+    ID=$(printf '%s' "$NODE"   | jq -r '.id // empty')
+    ITYPE=$(printf '%s' "$NODE" | jq -r '.issue_type // empty')
+    DESC=$(printf '%s' "$NODE" | jq -r '.description // ""')
+    [ "$ITYPE" = "task" ] || [ "$ITYPE" = "feature" ] || continue
+    DEL=$(printf '%s' "$DESC" | awk '/^##[[:space:]]*Delivers/{p=1;next} p&&/^##[[:space:]]/{exit} p')
+    if [ -z "$(printf '%s' "$DEL" | tr -d '[:space:]')" ]; then
+      printf 'NO-DELIVERS\t%s\n' "$ID"; COUNT=$((COUNT + 1))
+    elif [ -z "$(printf '%s' "$DEL" \
+            | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
+            | grep -vE '^\.+$' | head -1)" ]; then
+      printf 'UNVERIFIABLE-DELIVERS\t%s\n' "$ID"; COUNT=$((COUNT + 1))
+    fi
+  done < <(printf '%s' "$RAW" | jq -c 'if type == "object" then (.issues // [])[] else .[] end')
+  printf 'close-evidence: %s open task/feature bead(s) whose closes can never pass evidence check\n' "$COUNT"
+  exit 0
+fi
 
 BEAD_ID="${1:-}"
 REASON="${2:-}"
@@ -150,7 +189,7 @@ case "$ITYPE" in
       | grep -vE '^\.+$' | LC_ALL=C sort -u)
 
     if [ -z "$ARTIFACTS" ]; then
-      verdict "NOT-CHECKED" "$ITYPE '## Delivers' names no path-shaped artifact (prose only) — nothing mechanically checkable to cross-reference" 2
+      verdict "UNVERIFIABLE-DELIVERS" "$ITYPE bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path) or bypass explicitly. Audit siblings: close-evidence-check.sh --list-unverifiable" 2
     fi
 
     while IFS= read -r art; do
