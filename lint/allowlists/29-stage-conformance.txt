@@ -1,0 +1,8 @@
+# 29-stage-conformance allowlist — dated, SHRINK-ONLY (ac-1p7j.8).
+#
+# Entry = a live ac-* skill whose hand-off prose names a route the stage table
+# does not carry, excused until WS2 rewords it. Seeded 2026-09-07 EMPTY: the
+# tree landed conforming. Entries may only be REMOVED; an added entry fails
+# the check (growth is refused against the committed base), and an entry whose
+# skill no longer violates must be removed the same change.
+ac-hygiene
