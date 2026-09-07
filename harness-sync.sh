@@ -957,6 +957,40 @@ guard_public() { # <target-base-dir> — 0 if every stamped harness path is giti
   done
 }
 
+# --- ac-lint pre-commit chain entry (bead ac-1p7j.10) ------------------------------
+# Installs hooks/pre-commit as chain entry 60-ac-lint beside the mcp-agent-mail
+# runner's 50-agent-mail.py, in each repo's RESOLVED hooks dir: every repo here is
+# a submodule (`.git` is a FILE, no `.git/hooks/`), so the dir comes from
+# `git rev-parse --git-path hooks`, which also honours a target's core.hooksPath
+# (body-compass-app's husky `_`). Never clobbers the chain runner or a real
+# pre-commit file — refuses loudly, like deploy.sh does for skills.
+install_lint_hook() { # <repo-root>
+  local repo="$1" hooks_dir chain_dir dest
+  hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
+  if [ -z "$hooks_dir" ]; then
+    echo "  WARN: no hooks dir resolvable for $repo — ac-lint hook not installed"
+    return 0
+  fi
+  chain_dir="$hooks_dir/hooks.d/pre-commit"
+  dest="$chain_dir/60-ac-lint"
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    echo "  SKIP (real file present — refusing to overwrite): $dest"
+    return 0
+  fi
+  if [ -L "$dest" ] && [ "$(readlink "$dest")" != "$AC_ROOT/hooks/pre-commit" ]; then
+    echo "  SKIP (symlink points elsewhere): $dest -> $(readlink "$dest")"
+    return 0
+  fi
+  if [ "$DRY" = 1 ]; then
+    if [ ! -e "$dest" ]; then echo "  link $dest -> $AC_ROOT/hooks/pre-commit"; note_change; fi
+    return 0
+  fi
+  mkdir -p "$chain_dir"
+  ln -sfn "$AC_ROOT/hooks/pre-commit" "$dest"
+  note_change
+  echo "  linked $dest -> $AC_ROOT/hooks/pre-commit"
+}
+
 # --- target renderers -------------------------------------------------------------
 sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude layer)
   local base="$1" mode="${2:-app}" dep_extra=""
@@ -972,6 +1006,8 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     fi
     dep_extra="--require-ignored"
   fi
+
+  install_lint_hook "$base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
     local dep_flags="$dep_extra" deploy_status
@@ -1085,6 +1121,10 @@ if [ "$VERIFY_AGY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ]; then
 fi
 
 [ "$DO_ROOT" = 1 ] && sync_root
+
+# The registry's OWN pre-commit — agent-compounds is not a line in the targets
+# list, so a targets-only install would leave every WS1/WS2 commit ungated.
+install_lint_hook "$AC_ROOT"
 
 if [ "$DO_ALL" = 1 ]; then
   [ -f "$TARGETS_LIST" ] || { echo "error: $TARGETS_LIST missing" >&2; exit 2; }

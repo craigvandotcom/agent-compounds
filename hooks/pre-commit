@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# 60-ac-lint — the registry's changed-scope lint as a pre-commit chain entry.
+# Installed by harness-sync.sh into <gitdir>/hooks.d/pre-commit/60-ac-lint,
+# beside the mcp-agent-mail runner's 50-agent-mail.py. This file is the source
+# of truth; the installed entry is a symlink here.
+#
+# A commit that turns the changed scope's lint red is refused. Exit 2
+# (NOT-GATED — an executed check scanned nothing) also refuses: a run that
+# verified nothing is never a pass.
+set -uo pipefail
+
+# Git exports GIT_DIR/GIT_WORK_TREE/etc. into hook env. They leak into every
+# subprocess lint spawns (fixture run.sh legs inherit the raw env) and redirect
+# nested git calls at THIS repo's gitdir — check 25's fixture hung 120s on the
+# shared index.lock exactly that way. Unset so plain cwd discovery applies.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE \
+      GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES 2>/dev/null || true
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
+[ -n "$ROOT" ] || exit 0
+[ -f "$ROOT/lint.sh" ] || exit 0   # not the registry checkout — no lint to run
+
+exec bash "$ROOT"/lint.sh --changed
