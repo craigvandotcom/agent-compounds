@@ -73,6 +73,36 @@ harnesses; the 2026-09-07 rerun under `files:` added 25 · 20 · 12 · 10 · 5 w
 or dropped — the tail is reader coverage per round, see FRICTIONS
 `seams-sweep-coverage-is-unmeasured`).
 
+## The kept asset — `_docs/seams/<object>/`
+
+The maps outlive the plan. The plan is consumed by `ac-plan` and archived; the maps are what
+the next engineer reads before touching the object, and what a re-trace compares against to
+prove a fix. Different lifecycles, different files. At hand-off the merge also writes:
+
+- `map.json` — the ledger: every edge, its key, first-seen text, found-by, the fence, the
+  `seams_load` counts, and `traced_at` (the repo HEAD sha the maps were traced against). This
+  is the source of truth; nothing else is edited by hand.
+- `map.html` — rendered FROM `map.json`: the N² grid (fenced files down, seven stages across,
+  filled cells linked to `path:line`, empty cells visible — the empty cells are the finding),
+  the flow map as an ordered step list with its sensors marked, the boundary map as an ICD
+  table, and the load counts. One self-contained file, no CDN; a human reads this before a
+  build. A markdown twin is optional — the html carries the tables as text already.
+
+A kept map with no re-trace scheduled is decoration (the assurance doctrine). The re-trace is
+the seams run's own success criterion: run it again after the fix, compare `seams_load`.
+
+## Stale maps announce themselves — `aim.sh status`
+
+`aim.sh status` lists every `_docs/seams/*/map.json` with three columns: the object, its
+`traced_at` sha, and **drift** = the number of commits since `traced_at` that touched any file
+on that map's `files:` line (`git log --oneline <traced_at>..HEAD -- <files>`). Drift 0 means
+the map still describes the code. Drift > 0 lists the touching commits, so the reader knows
+which files moved. A map whose drift crosses a threshold (default 5 commits, or any commit to
+a `create`-stage file) is printed under **STALE — re-trace before relying on it**. That is the
+whole mechanism: the map carries the sha it was true at, git knows what moved since, and the
+listing does the subtraction. No cron, no hook — a read-only command the orchestrator runs at
+the start of a seams or load run and the human runs whenever they open the binder.
+
 ## Hand-off
 
 `seams-merge.py handoff` writes: the three maps · **seams seen by more than one lens, first**

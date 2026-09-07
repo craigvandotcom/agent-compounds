@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-07
-entries: 29
+entries: 30
 ---
 
 # ac-polish — friction log
@@ -696,3 +696,26 @@ entries: 29
   the row quota (round 5) cut the object report to 4 rows, all new keys, so the quota was one
   cause, not the cause. The fence did its whole job; the loop's remaining variable is how much
   of the finite space one reader covers in one round, and nothing measures it.
+
+## seams-maps-die-with-the-plan-that-carried-them
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [seams-sweep-coverage-is-unmeasured]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: planned
+- status: open
+- proposed_fix: the hand-off writes `_docs/seams/<object>/map.json` (ledger + fence +
+  traced_at sha + seams_load) and renders `map.html` from it (N² grid of files × stages with
+  empty cells visible, flow steps with sensors, boundary ICD table). `aim.sh status` lists every
+  kept map with its drift since traced_at and flags STALE. Landed 2026-09-07: workflows/seams.md
+  § The kept asset, aim.sh status (+6 tests). Not yet landed: the merge's map.json/map.html
+  writers — blocked on the coverage design (a map with unmeasured coverage is not worth keeping).
+- narrative: two MotionFrame runs and one SessionPhase run produced 78 + 72 + 111 validated
+  edges, and all of them live in a `_plans/` file whose lifecycle ends when ac-plan consumes it,
+  plus a state dir under ~/.claude. The next engineer touching MotionFrame has no way to find the
+  map, and a re-trace has nothing to diff against. The maps are the ICD; the plan is one use of
+  it.

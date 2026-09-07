@@ -35,6 +35,10 @@
 #                        --min-cochange 2 — a batch is its own sample. ac-review Phase 5 does.)
 #        aim.sh objects [--area <regex>] [--top 20] [--min-touchers 3] [--exclude <substr,...>] [-C <repo>]
 #        aim.sh files --terms '<Symbol · Symbol · …>' [--exclude <substr,...>] [-C <repo>]
+#        aim.sh status [--stale-after 5] [-C <repo>]
+#            → every kept seams map under _docs/seams/*/map.json with its traced_at sha and its
+#              DRIFT: commits since traced_at that touched a file on the map's files line. Drift
+#              past --stale-after, or any commit to a create-stage file, prints under STALE.
 #            → the seams `files:` fence: every source file naming a term as a whole word, minus
 #              tests and dev harnesses (those are contract cells, never rows). A file that
 #              DECLARES a term stays in and is flagged — a TS type is a contract, but a Swift
@@ -46,9 +50,9 @@ set -euo pipefail
 die2() { printf 'aim: NOT-GATED %s\n' "$*" >&2; exit 2; }
 
 MODE="${1:-}"; [ $# -gt 0 ] && shift
-case "$MODE" in churn|objects|files) ;; -h|--help|"") sed -n '/^# Usage/,/^set -euo/p' "$0" | sed '$d' >&2; exit 2 ;; *) die2 "mode must be churn, objects or files (got '$MODE')" ;; esac
+case "$MODE" in churn|objects|files|status) ;; -h|--help|"") sed -n '/^# Usage/,/^set -euo/p' "$0" | sed '$d' >&2; exit 2 ;; *) die2 "mode must be churn, objects, files or status (got '$MODE')" ;; esac
 
-SINCE=1y BASEREF="" TOP="" MINCO=3 MINCOMMITS=30 MINTOUCH=3 AREA="" REPO="." MAXFILES=30 TERMS=""
+SINCE=1y BASEREF="" TOP="" MINCO=3 MINCOMMITS=30 MINTOUCH=3 AREA="" REPO="." MAXFILES=30 TERMS="" STALE_AFTER=5
 EXCLUDE='node_modules/,_plans/,_backlog/,_docs/,docs/,memory/,_archive/,__snapshots__/,CHANGELOG,.lock,.snap,.generated.'
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -61,17 +65,69 @@ while [ $# -gt 0 ]; do
     --area)         AREA="${2:-}"; shift 2 ;;
     --exclude)      EXCLUDE="${2:-}"; shift 2 ;;
     --terms)        TERMS="${2:-}"; shift 2 ;;
+    --stale-after)  STALE_AFTER="${2:-}"; shift 2 ;;
     -C)             REPO="${2:-}"; shift 2 ;;
     *)              die2 "unknown argument: $1" ;;
   esac
 done
 [ -n "$TOP" ] || { [ "$MODE" = churn ] && TOP=15 || TOP=20; }
-for n in "$TOP" "$MINCO" "$MINCOMMITS" "$MINTOUCH"; do
+for n in "$TOP" "$MINCO" "$MINCOMMITS" "$MINTOUCH" "$STALE_AFTER"; do
   case "$n" in ''|*[!0-9]*) die2 "numeric flag got '$n'" ;; esac
 done
 git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die2 "not a git repo: $REPO"
 ROOT=$(git -C "$REPO" rev-parse --show-toplevel)
 EXRE=$(printf '%s' "$EXCLUDE" | sed 's/[.[\*^$|]/\\&/g; s/,/|/g')
+
+# ============================================================ status
+if [ "$MODE" = status ]; then
+  MAPS=$(cd "$ROOT" && ls _docs/seams/*/map.json 2>/dev/null || true)
+  printf '# aim status — kept seams maps under %s/_docs/seams · stale after %s commits or any create-stage touch\n\n' "$ROOT" "$STALE_AFTER"
+  [ -n "$MAPS" ] || { printf 'no kept maps — a seams hand-off writes _docs/seams/<object>/map.json\n'; exit 0; }
+  printf '| object | traced_at | drift | create-stage touched | verdict | found-by |\n|---|---|---|---|---|---|\n'
+  STALE=""
+  for m in $MAPS; do
+    obj=$(basename "$(dirname "$m")")
+    read -r sha files cfiles <<EOF_PY
+$(cd "$ROOT" && python3 - "$m" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]))
+sha=d.get("traced_at","")
+files=d.get("files") or []
+create=sorted({e.get("path") for e in (d.get("edges",{}).get("object",{}) or {}).values() if e.get("path") and str(e.get("key","")).startswith("create ×") and not e.get("dropped")})
+print(sha or "-", ",".join(files) or "-", ",".join(create) or "-")
+PY
+)
+EOF_PY
+    if [ "$sha" = "-" ] || ! git -C "$ROOT" cat-file -e "$sha^{commit}" 2>/dev/null; then
+      printf '| `%s` | %s | ? | ? | UNKNOWN — no traced_at sha in the map | — |\n' "$obj" "$sha"; STALE="$STALE $obj"; continue
+    fi
+    IFS=, read -r -a FARR <<< "$files"; IFS=, read -r -a CARR <<< "$cfiles"
+    [ "$files" = "-" ] && FARR=()
+    [ "$cfiles" = "-" ] && CARR=()
+    drift=$(git -C "$ROOT" log --oneline "$sha..HEAD" -- "${FARR[@]}" 2>/dev/null | grep -c . || true)
+    ctouch=0; [ ${#CARR[@]} -gt 0 ] && ctouch=$(git -C "$ROOT" log --oneline "$sha..HEAD" -- "${CARR[@]}" 2>/dev/null | grep -c . || true)
+    verdict=current
+    if [ "$drift" -ge "$STALE_AFTER" ] || [ "$ctouch" -gt 0 ]; then verdict="STALE — re-trace before relying on it"; STALE="$STALE $obj"; fi
+    printf '| `%s` | %s | %s | %s | %s | `git log --oneline %s..HEAD -- <files line>` |\n' "$obj" "${sha:0:12}" "$drift" "$ctouch" "$verdict" "${sha:0:12}"
+  done
+  if [ -n "$STALE" ]; then
+    printf '\n## STALE — re-trace before relying on it\n\n'
+    for obj in $STALE; do
+      m="$ROOT/_docs/seams/$obj/map.json"
+      sha=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('traced_at',''))" "$m")
+      printf '### %s\n\n' "$obj"
+      if [ -n "$sha" ] && git -C "$ROOT" cat-file -e "$sha^{commit}" 2>/dev/null; then
+        files=$(python3 -c "import json,sys;print(' '.join(json.load(open(sys.argv[1])).get('files') or []))" "$m")
+        # shellcheck disable=SC2086
+        git -C "$ROOT" log --format='- %h %ad %s' --date=short "$sha..HEAD" -- $files | head -20
+      else
+        printf -- '- map carries no valid traced_at sha\n'
+      fi
+      printf '\n'
+    done
+  fi
+  exit 0
+fi
 
 # ============================================================ files
 if [ "$MODE" = files ]; then

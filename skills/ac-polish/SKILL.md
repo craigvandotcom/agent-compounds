@@ -9,7 +9,7 @@ description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT �
 
 |                  |                                                                                 |
 | ---------------- | ------------------------------------------------------------------------------- |
-| **Input**        | `plan <path>` · `bead <epic-id>` · `code <scope> --target <bead-id>` · `seams [<target>]` |
+| **Input**        | `plan <path>` · `bead <epic-id>` · `code <scope> --target <bead-id>` · `seams [<target>]` · `load <seams-map>` (draft) |
 | **Output**       | A fixpoint-stamped artifact, or findings to the human and NO stamp                |
 | **Artifacts**    | `<state>/round-N.sha` per round · `<state>/receipt.txt` · the stamp               |
 | **Verification** | `skills/_tools/polish-fixpoint.sh` (the gate) · `polish-fixpoint.test.sh` (its proof) |
@@ -24,6 +24,7 @@ The argument picks ONE workflow file — a mandatory load, the ONLY place a mode
 | `bead` | `workflows/bead.md` | `references/bead-checklist.md` |
 | `code` | `workflows/code.md` | `references/code-checklist.md` |
 | `seams` | `workflows/seams.md` | `references/seams-checklist.md` · `references/seams-reader-prompt.md` · `references/seams-plan-template.md` |
+| `load` (draft, after seams, not yet run) | `workflows/load.md` | `references/load-checklist.md` |
 
 Each workflow binds five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and may bind a
 sixth, READERS: how many readers a round spawns, what they are sent, and how their findings
@@ -82,5 +83,4 @@ means NO STAMP. Cycling or routine exhaustion indicts the CHECKLIST, not the art
 
 ## Telemetry
 
-`rounds-to-fixpoint` is a BUDGETED metric: report it into the batch rollup with the mode and
-the final verdict token. The trajectory is the signal; a single run's round count is not.
+`rounds-to-fixpoint` is a BUDGETED metric: report it into the batch rollup with the mode and the final verdict token. The trajectory is the signal; a single run's round count is not.

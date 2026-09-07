@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# aim.test.sh — RED/GREEN proof harness for aim.sh, all three modes (churn · objects · files).
+# aim.test.sh — RED/GREEN proof harness for aim.sh, all four modes (churn · objects · files · status).
 #
 # ASSURANCE-ROLE: test-harness
 # CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.sh glob) and any local run.
@@ -152,6 +152,27 @@ printf '%s\n' "$out" | grep -q '^files: features/foods/gallery.tsx · lib/db/foo
 printf '%s\n' "$out" | grep -q "^found-by: \`rg -l -w -F -e 'Food'" && ok "files: carries a reproducing found-by" || fail "files found-by" "$out"
 out=$("$SCRIPT" files --terms 'NoSuchSymbolAnywhere' -C "$O" 2>&1); rc=$?
 [ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'no source file names any term' && ok "files: no match -> NOT-GATED, not an empty fence" || fail "files empty" "$out"
+
+# ==================================================================== status
+out=$("$SCRIPT" status -C "$O" 2>&1); rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q 'no kept maps' && ok "status: no _docs/seams -> honest empty listing, exit 0" || fail "status empty" "$out"
+mkdir -p "$O/_docs/seams/Food"
+T0=$(go rev-parse HEAD)
+printf '{"traced_at":"%s","files":["lib/db/foods.ts","features/foods/gallery.tsx"],"edges":{"object":{"create × lib/db/foods.ts":{"key":"create × lib/db/foods.ts","path":"lib/db/foods.ts","dropped":null},"read × features/foods/gallery.tsx":{"key":"read × features/foods/gallery.tsx","path":"features/foods/gallery.tsx","dropped":null}}}}\n' "$T0" > "$O/_docs/seams/Food/map.json"
+go add -A >/dev/null; go commit -q -m 'keep map' >/dev/null
+out=$("$SCRIPT" status -C "$O" 2>&1)
+printf '%s\n' "$out" | grep -q "| \`Food\` | ${T0:0:12} | 0 | 0 | current |" && ok "status: a fresh map reads drift 0, current" || fail "status current" "$out"
+printf 'export function Gallery2() {}\n' >> "$O/features/foods/gallery.tsx"; go commit -qam 'touch a read file' >/dev/null
+out=$("$SCRIPT" status -C "$O" 2>&1)
+printf '%s\n' "$out" | grep -q "| \`Food\` | ${T0:0:12} | 1 | 0 | current |" && ok "status: one commit to a read-stage file -> drift 1, still current under the default threshold" || fail "status drift1" "$out"
+out=$("$SCRIPT" status --stale-after 1 -C "$O" 2>&1)
+printf '%s\n' "$out" | grep -q '| 1 | 0 | STALE' && printf '%s\n' "$out" | grep -q '^## STALE' && printf '%s\n' "$out" | grep -q 'touch a read file' && ok "status --stale-after 1: drift 1 -> STALE, and the touching commit is listed" || fail "status threshold" "$out"
+printf '// c\n' >> "$O/lib/db/foods.ts"; go commit -qam 'touch the create file' >/dev/null
+out=$("$SCRIPT" status -C "$O" 2>&1)
+printf '%s\n' "$out" | grep -q '| 2 | 1 | STALE' && ok "status: any commit to a create-stage file -> STALE regardless of threshold" || fail "status create touch" "$out"
+mkdir -p "$O/_docs/seams/Nosha"; printf '{"files":["lib/db/foods.ts"],"edges":{}}\n' > "$O/_docs/seams/Nosha/map.json"
+out=$("$SCRIPT" status -C "$O" 2>&1)
+printf '%s\n' "$out" | grep -q '| `Nosha` | - | ? | ? | UNKNOWN' && ok "status: a map without traced_at is UNKNOWN, never silently current" || fail "status nosha" "$out"
 
 # --- assurance ---------------------------------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "aim.sh invokes an agent"; else ok "aim.sh spawns nothing"; fi
