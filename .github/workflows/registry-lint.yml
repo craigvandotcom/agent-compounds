@@ -8,6 +8,7 @@ on:
       - "hooks/**"
       - "scripts/**"
       - "lint.sh"
+      - "lint/**"
       - ".github/workflows/**"
       # .beads/** is the EXPIRY TRIGGER for Check 21's PENDING-DECISION escapes: closing a
       # cited decision bead must re-run the check, or an expired escape rots silently until
@@ -20,6 +21,7 @@ on:
       - "hooks/**"
       - "scripts/**"
       - "lint.sh"
+      - "lint/**"
       - ".github/workflows/**"
       # .beads/** is the EXPIRY TRIGGER for Check 21's PENDING-DECISION escapes: closing a
       # cited decision bead must re-run the check, or an expired escape rots silently until
@@ -67,3 +69,7 @@ jobs:
       # provision, because skipping would quietly halve what the harness certifies.
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh ripgrep
       - run: bash scripts/run-all-harnesses.sh
+      # The meta-check runs in CI as its OWN step over every fixture, not only
+      # as one row inside `bash lint.sh` (ac-1p7j.1): a header contract the
+      # runner skips for --changed must still be audited on every push.
+      - run: python3 lint/checks/00-meta.py .
