@@ -240,7 +240,7 @@ Read the 3 exploration files and compile:
 ### Spawn Sonnet Agent (Fresh Context)
 
 ```markdown
-Task(sonnet, "100→10 FILTER AND SCORING
+Task(coordinator, "100→10 FILTER AND SCORING
 
 **Topic:** [TOPIC]
 **Challenge:** [CONTEXT]
@@ -320,7 +320,7 @@ Output to: [OUTPUT_DIR]/YYYY-MM-DD-HHMM-brainstorm-filtered-[topic].md
 ### Spawn Opus Agent (Extended Thinking, Fresh Context)
 
 ```markdown
-Task(opus, "CHALLENGE AND STRESS TEST
+Task(validator, "CHALLENGE AND STRESS TEST
 
 **Topic:** [TOPIC]
 **Challenge:** [CONTEXT]

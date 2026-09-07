@@ -37,7 +37,7 @@ A file reservation can only protect between *distinct* identities. So:
 | `ac-loop` conductor | claims batches at selection (`--assignee $AGENT_NAME`) — the claim-visibility anchor; holds no file reservations |
 | `ac-implement` child running as its **own full session** (holds the `mcp__mcp-agent-mail__*` tools) | the canonical contended writer — **mints its own name and reserves per bead**, commits to `main`; at `PARALLEL_WIDTH>1` several run concurrently in ONE shared checkout |
 | `ac-implement` child **spawned as a stance subagent** (researcher / implementer / validator) | **still a contended writer — it COMMITS — but it CANNOT reserve anything.** The stance agents carry zero `mcp__*` tools (`agents/*.md` `tools:` lists; reproduced in bd-2p5tl), so `macro_start_session` / `file_reservation_paths` are unavailable to it. It is **handed** an `AGENT_NAME` by its conductor (re-exported in each commit's own shell — note 2 below) purely for attribution + the pre-commit guard; **the CONDUCTOR holds the reservations on its behalf.** This is the spawn mode the pipeline uses most |
-| `ac-review` | its Phase-4 auto-fix engineer edits product code; Phase 6 commits + pushes (wiring: `ac-ycr.2`) |
+| `ac-review` | its Phase-4 auto-fix implementer edits product code; Phase 6 commits + pushes (wiring: `ac-ycr.2`) |
 | `ac-batch-close` | fix-forward edits code on red CI; minting also yields a real `registration_token` for the build slot (wiring: `ac-ycr.3`) |
 | plan-family skills (`ac-plan-init`, `ac-plan-refine-*`, `ac-plan-clean`) | already conform — mint + reserve their plan files |
 
@@ -88,7 +88,7 @@ upgrade (`PARALLEL_WIDTH>1`) obsoleted it: parallel `ac-implement` children are 
 **independent concurrent writers in one shared checkout** — inherit one loop identity and
 the reservation system cannot tell them apart (two concurrent writers under one name, which
 even the old doctrine's own corollary forbade). Below the boundary the old model
-over-provisioned nothing, but per-worker names would: engineer/reviewer/tester subagents
+over-provisioned nothing, but per-worker names would: read-only stance subagents
 **never commit and never reserve** (the session conductor is the sole writer, one bead at a
 time), so they carry **no identity at all** — with ONE exception the old model never anticipated,
 now the Tier-1 stance-subagent row: a stance child that **does** commit needs a *handed* name for

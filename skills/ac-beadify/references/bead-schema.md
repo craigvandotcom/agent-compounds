@@ -91,7 +91,7 @@ suite can break. Each slug gets a one-line justification.
 
 ## Transitional exception (bootstrap seam)
 
-Until `ac-implement` exists, ac2 beads are worked on the current path, whose engineer spawn
+Until `ac-implement` exists, ac2 beads are worked on the current path, whose implementer spawn
 pastes `## Territory` verbatim with no fallback. Phase-0/1/2 beads therefore carry a
 transitional `## Territory` list. It is dropped from Phase 3 on, and it is never graded by
 `bead-checklist.md`.

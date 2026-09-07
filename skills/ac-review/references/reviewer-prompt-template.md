@@ -40,13 +40,13 @@ placeholders from the dimension's row in `review-dimensions.md`, and substitute
 `{DIFF_RANGE}` (the resolved diff range — a point-sized string;
 reviewers run `git diff` on it themselves, the diff body is never pasted —
 `ac-pipeline/references/delegation-contract.md` § Payloads point), `{ARTIFACTS_DIR}`,
-`{ROUND}` (`1` for the review pass), `{REVIEWER_MODEL}` — a model DIFFERENT from the
-implement workers' (SKILL.md § Who reviews; the same weights re-reading their own diff are
-not independent eyes) — and `{N_OTHERS}` (panel size minus one — e.g. `5` for the full
-six-dimension panel).
+`{ROUND}` (`1` for the review pass) — reviewers spawn as the **coordinator** stance
+(tier-resolved per harness; a different stance from the implement workers, so the same
+weights re-reading their own diff are not independent eyes) — and `{N_OTHERS}` (panel
+size minus one — e.g. `5` for the full six-dimension panel).
 
 ```
-Task(subagent_type: "general-purpose", model: "{REVIEWER_MODEL}", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 {SKILL_HINT}
 

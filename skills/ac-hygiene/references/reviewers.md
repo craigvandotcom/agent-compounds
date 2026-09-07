@@ -70,7 +70,7 @@ converging on the same file is the strongest signal the conductor gets.
 ## Agent 1: Bug Hunter (Opus)
 
 ```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
 You are a bug hunter doing a "fresh eyes" review of this codebase. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
@@ -110,7 +110,7 @@ If nothing found, say so — don't invent issues.
 ## Agent 4: Adversary (Opus)
 
 ```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
 You are a security-minded reviewer reading this codebase the way someone hostile would. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
@@ -146,7 +146,7 @@ If nothing found, say so — don't invent issues.
 ## Agent 5: Failure Engineer (Opus)
 
 ```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
 You are a failure engineer asking "how does this die?" of a codebase that works today. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
@@ -186,7 +186,7 @@ If nothing found, say so — don't invent issues.
 ## Agent 6: Promise Keeper (Opus)
 
 ```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
 You are a contract reviewer verifying that this codebase does what it claims. You compete with 6 other reviewers — only evidence-backed findings with file paths count.
@@ -230,7 +230,7 @@ coverage, diamonds, naming, AAA, mocking, flakiness, CI reliability, speed) with
 commands and expected outputs.
 
 ```
-Task(subagent_type: "general-purpose", model: "opus", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 
 You are a test warden auditing whether the tests that exist are worth anything. You compete with 6 other reviewers — only evidence-backed findings with file paths count. Promise Keeper hunts MISSING tests; you audit the EXISTING ones. A bad test is worse than no test — it costs runtime and buys false confidence. Unlike the other lenses, you don't just read: you run experiments that prove a test is broken.

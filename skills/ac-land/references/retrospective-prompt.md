@@ -37,7 +37,7 @@ ENVIRONMENT CONTRACT (non-negotiable):
 Spawn after landing. Substitute the resolved `<ARTIFACTS_DIR>` from Phase 0.
 
 ```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
+Task(subagent_type: "coordinator", prompt: """
 You are a retrospective analyst reviewing a completed bead-work session.
 
 ## Session Artifacts

@@ -193,7 +193,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 - **`## Test Scope` at creation, with grep-verified anchors** (same bar as `ac-hygiene`):
   name the real file(s)/describe block(s) a validator would run — grep each before citing it,
   never invent a describe you have not seen — plus the QA modality for user-facing surfaces
-  (`browser:`/`device:` + journey). A finding with no test plan is a test an engineer authors cold.
+  (`browser:`/`device:` + journey). A finding with no test plan is a test the implementer authors cold.
 - **ac-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
   escape as `catch-stage:<stage>` — the stage that SHOULD have caught it (plan · beadify ·
   flight · implement · close · review) — plus `discovered-from: <bead>` naming the work that
