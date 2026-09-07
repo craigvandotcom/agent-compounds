@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 30
+entries: 31
 ---
 
 # ac-pipeline — friction log
@@ -679,3 +679,19 @@ entries: 30
   the newest helpers) and no verdict was forged — parity was proven against the live legacy
   block or its git-history copy in every case. The cost was wall-clock (multi-minute rebuild
   windows per check) and attribution hygiene, not correctness.
+
+## worker-env-bootstrap-git-identity-unset
+- skills: [ac-implement]
+- impact: M
+- frequency: frequent
+- perceptibility: quiet
+- recurrence: 1
+- related: [worker-scratch-paths-shared-across-siblings]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: ac-implement
+- status: open
+- receipt: RUN 20260907-exhaust ac-review final delta (F1, Important) — 43 of 54 commits in d1540be..a0cb389 are authored `t <t@t.t>`: the entire wave-3 cohort inherited a broken env where git config user.name/user.email resolve to the 00-meta fixture identity. Standing rule: git author can NEVER attribute an agent, but it must be a REAL identity, not a fixture's. Never beaded; recorded from the review.
+- control: untreated
+- proposed_fix: worker.md ONCE block (or swarm-commit.sh itself) asserts `git config user.name`/`user.email` are non-fixture (refuse `t@t.t` and any identity matching the 00-meta fixture constants) before the first commit; workers spawn with a known-good bootstrap instead of inheriting whatever the parent session carried.
+- narrative: the fixture identity leaked twice in one run — once as junk commits (reset, filed separately), then as the AUTHOR of 43 legitimate wave-3 commits. Nothing failed loudly; every commit landed and closed, which is exactly why attribution pollution is the quiet class. The lane's flock, pathspec and receipt checks all held; the env check is the one leg the lane never had.
