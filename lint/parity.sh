@@ -66,6 +66,18 @@ run_legacy() {
   ' _ "$block" 2>/dev/null | grep '^FAIL: ' || true
 }
 
+# legacy_full <N> [root] — the same execution, FULL stdout (no FAIL filter), for
+# recipes that also compare a population/accounting line.
+legacy_full() {
+  local n="$1" root="${2:-$ROOT}" block
+  block="$(extract_block "$n")" || { echo "NOT-CHECKED: no legacy Check-$n block in lint.sh or its history" >&2; return 2; }
+  AC_ROOT="$root" bash -c '
+    fail() { echo "FAIL: $*"; }
+    check() { :; }
+    eval "$1"
+  ' _ "$block" 2>/dev/null || true
+}
+
 # compare_sets <name> <legacy-fails> <new-fails> <legacy-strip> <new-strip>
 compare_sets() {
   local name="$1" a b
@@ -243,6 +255,41 @@ elif [ "$CHECK_ID" = 15 ]; then
   new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
   compare_sets "registry tree (ceilings + ratchet)" "$old" "$new" \
     's/^FAIL: Check 15: //' 's/^FAIL 15-line-ceilings: //'
+  finish
+elif [ "$CHECK_ID" = 16 ]; then
+  NEW="$ROOT/lint/checks/16-mirror-fidelity.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  old="$(run_legacy 16)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry tree (mirror fidelity, violations)" "$old" "$new" \
+    's/^FAIL: Check 16: //' 's/^FAIL 16-mirror-fidelity: //'
+  # the marker accounting is the check's population assertion — the two judges
+  # must have walked the same corpus, not merely flagged the same failures
+  old_acc="$(legacy_full 16 | grep -o 'mirror markers: .*' || true)"
+  new_acc="$(printf '%s\n' "$(python3 "$NEW" "$ROOT" 2>/dev/null)" | grep -o 'mirror markers: .*' || true)"
+  if [ "$old_acc" = "$new_acc" ] && [ -n "$old_acc" ]; then
+    echo "  ok    registry tree (mirror fidelity, accounting) — $old_acc"
+  else
+    echo "  FAIL  registry tree (mirror fidelity, accounting) — legacy: [$old_acc] ported: [$new_acc]"
+    fails=$((fails + 1))
+  fi
+  finish
+elif [ "$CHECK_ID" = 18 ]; then
+  NEW="$ROOT/lint/checks/18-guard-liveness.py"
+  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
+  LSTRIP='s/^FAIL: Check 18: //'; NSTRIP='s/^FAIL 18-guard-liveness: //'
+  old="$(run_legacy 18)" || exit 2
+  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "registry hooks (live)" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  # a doctored tree: a real hooks/ copy with bead-capture-guard chmod-x'd —
+  # both judges must fail on the same two legs (executable check + gate leg)
+  W="$(mktemp -d)"
+  cp -R "$ROOT/hooks" "$W/hooks"
+  chmod -x "$W/hooks/bead-capture-guard.py"
+  old="$(run_legacy 18 "$W")"
+  new="$(python3 "$NEW" "$W" 2>/dev/null | grep '^FAIL ' || true)"
+  compare_sets "doctored hooks (dead bead-capture-guard)" "$old" "$new" "$LSTRIP" "$NSTRIP"
+  rm -rf "$W"
   finish
 else
   echo "NOT-CHECKED: no parity recipe for check '$CHECK_ID'" >&2
