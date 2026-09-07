@@ -210,21 +210,6 @@ for pattern in "${PORTABILITY_PATTERNS[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-# Check 9 — No stray alias agents
-# ---------------------------------------------------------------------------
-echo "--- Check 9: no stray alias agents ---"
-
-check
-if [ -f "$AC_ROOT/agents/engineer.md" ]; then
-  fail "agents/engineer.md exists — retired alias agent (renamed to implementer 2026-06-11)"
-fi
-
-check
-if [ -f "$AC_ROOT/agents/reviewer.md" ]; then
-  fail "agents/reviewer.md exists — retired alias agent (renamed to validator 2026-06-11)"
-fi
-
-# ---------------------------------------------------------------------------
 # Check 13 — Skill registry: description budget + invocation-graph rule
 # (validate-skill.sh --registry: total vs the deployed skillListingBudgetFraction
 #  budget, per-skill 1024-char cap, and the hard rule that no skill flagged
