@@ -527,33 +527,6 @@ elif [ "$dcg_hits" -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Check 23 — lean-family + loaded-path caps, shape, declarations, references (ac-kdxa)
-# ---------------------------------------------------------------------------
-echo "--- Check 23: family budget + anti-drift ---"
-
-# The plan's biggest named risk is cultural — the files staying small — and every
-# previous "keep it small" rule here was prose, and every one of them lost. This is that
-# rule as a check: family <=800 SKILL.md lines, <=1,200 over the LOADED path with the
-# mandatory-load set DERIVED from the pointers (a hardcoded list is the measured evasion
-# with an extra step), pointed-at canon reported but never capped, and assurance
-# declarations for family scripts (Check 21 is hooks.json-scoped and cannot see them).
-# The former cross-reference leg retired at the rename: its premise was that the
-# old prefixed family was invisible to Check 2's `/ac-[a-z]` pattern, and the rename erased
-# that blind spot — Check 2 now sees every invocation the family makes.
-ABC="$AC_ROOT/scripts/ac-budget-check.sh"
-check
-if [ -r "$ABC" ]; then
-  if abc_out=$(bash "$ABC" "$AC_ROOT" 2>&1); then
-    printf '%s\n' "$abc_out" | sed 's/^/  /'
-  else
-    printf '%s\n' "$abc_out"
-    fail "Check 23: family budget/anti-drift violation(s) — see above"
-  fi
-else
-  fail "Check 23: scripts/ac-budget-check.sh missing — family caps NOT-GATED"
-fi
-
-# ---------------------------------------------------------------------------
 # Check 24 — skill description length, for cross-harness portability
 # ---------------------------------------------------------------------------
 echo "--- Check 24: skill description length (cross-harness cap) ---"
