@@ -17,6 +17,14 @@ The flow map's steps and sensors are emitted at hand-off as the acceptance JOURN
 ships with the scenario that proves its fix. Reader diagnoses (judgement) merge on the paths
 they cite and are ordered by reader count — salience, never a gate.
 
+THE DIGEST SURFACE. Between rounds the artifact carries the COVERAGE GRID (file × lens:
+rows | —), not the maps; the maps go to <state>/maps.md (the readers' <MAPS>) and the ledger.
+So the gate's digest moves when a lens reaches a new file or the fence widens, and does NOT
+move when a reader relabels a line in a file already covered — readers split on stage taxonomy
+and do not cite stable lines, so keys cannot be the stop condition; coverage can. Per lens, two
+consecutive clean rounds FREEZE the lens (round line `frozen=`): the orchestrator stops
+spawning its reader; a widened fence unfreezes all. Hand-off writes the full maps back.
+
 THE FENCE. The artifact's frontmatter lines `object:` · `flows:` · `boundaries:` · `files:` bound
 each lens. `files:` is the closed set the readers sweep — the source files that name an object
 term as a whole word, computed once before round 1 by `aim.sh files --terms` (which drops tests,
@@ -416,6 +424,50 @@ def journey(st):
     return "\n".join(lines) if lines else "_no flow map — no journey derived_"
 
 
+# ---------------------------------------------------------------- coverage (the digest surface)
+def coverage(st, fence):
+    """Per file × lens: does the lens have a live row in it. THIS is what the artifact carries
+    between rounds and therefore what the gate's digest measures. A new stage / flow / side in a
+    file a lens already touched is a LABEL — it lands in the maps and the ledger, and it does not
+    move the stamp. A new file for a lens, or a file added to the fence, does. Readers do not
+    cite a stable line for the same edge and split on stage taxonomy at the sub-object level
+    (MotionFrame v3: 60 · 7 · 2 · 4 · 1 edges, 0 fenced, every late add in a file already
+    mapped), so keys and lines cannot be the stop condition; file coverage can."""
+    present = {l: sorted({e["path"] for e in live(st, l)}) for l in LENSES}
+    files = sorted(set(fence.get("files") or []) | {p for ps in present.values() for p in ps})
+    return files, present
+
+
+def coverage_table(files, present, fence):
+    rows = []
+    for f in files:
+        cells = ["rows" if f in present[l] else "—" for l in LENSES]
+        rows.append([f"`{f}`" + ("" if f in (fence.get("files") or [f]) else " (not on files:)"), *cells])
+    return table(["file", *LENSES], rows)
+
+
+def freeze_update(st, present, files_line, rnd):
+    """Per lens: rounds in which its coverage set was unchanged from the round before. A lens
+    with TWO consecutive clean rounds (round >= 3) is frozen — the orchestrator stops spawning
+    its reader. A change to the files line unfreezes everything (a widened fence is new ground).
+    Returns (frozen lenses, lenses whose coverage changed this round)."""
+    cov = st.setdefault("coverage", {"by_round": {}, "files_line_by_round": {}, "frozen": []})
+    cov["by_round"][str(rnd)] = present
+    cov["files_line_by_round"][str(rnd)] = files_line
+    prev = cov["by_round"].get(str(rnd - 1))
+    changed = [l for l in LENSES if prev is None or prev.get(l) != present[l]]
+    widened = rnd > 1 and cov["files_line_by_round"].get(str(rnd - 1)) != files_line
+    frozen = []
+    if rnd >= 3 and not widened:
+        p2 = cov["by_round"].get(str(rnd - 2))
+        for l in LENSES:
+            if l not in changed and p2 is not None and prev.get(l) == p2.get(l) \
+               and cov["files_line_by_round"].get(str(rnd - 2)) == files_line:
+                frozen.append(l)
+    cov["frozen"] = frozen
+    return frozen, changed, widened
+
+
 # ---------------------------------------------------------------- commands
 def cmd_round(a):
     if not a.reports:
@@ -480,8 +532,23 @@ def cmd_round(a):
                 e["dropped"] = {"round": a.round, "reason": "no found-by command reproduced"}
                 dropped.append((lens, k))
     st["rounds"] = a.round
+    files, present = coverage(st, fence)
+    files_line = sorted(fence.get("files") or [])
+    frozen, changed, widened = freeze_update(st, present, files_line, a.round)
     save_state(a.state, st)
-    write_below_marker(a.artifact, f"## Maps — converge when a round adds no edge to any of them\n\n{map_body(st)}")
+    maps_path = a.maps or os.path.join(a.state, "maps.md")
+    with open(maps_path, "w", encoding="utf-8") as f:
+        f.write(f"## Maps — round {a.round} · the readers' input, not the digest surface\n\n{map_body(st)}\n")
+    # Nothing round-specific may appear here: this text IS the digest. Round number, frozen set
+    # and counts go on the round line and in the ledger, never in the artifact.
+    write_below_marker(a.artifact,
+        f"## Coverage — the digest surface\n\n"
+        f"_One row per file on the fence, one column per lens: `rows` when the lens has a live row in "
+        f"that file, `—` when it declared the file absent. The gate stamps when this table is unchanged "
+        f"at round ≥ 2 — every file walked by every lens and nothing new found. Stage, flow and side "
+        f"labels live in the maps (`{os.path.relpath(maps_path, os.path.dirname(a.artifact))}`) and the "
+        f"ledger, where a late relabel is a correction, not growth._\n\n"
+        + coverage_table(files, present, fence))
     counts = {l: len(live(st, l)) for l in LENSES}
     derived = derive(st)
     print(f"seams-merge: round={a.round} readers={len(reports)} lenses={','.join(sorted({r['lens'] for r in reports}))} "
@@ -489,6 +556,9 @@ def cmd_round(a):
           + (f"files={len(fence['files'])} " if fence.get("files") is not None else "") +
           f"fence={','.join(l for l in LENSES if l in fence) or 'none'} "
           f"edges=object:{counts['object']},flow:{counts['flow']},boundary:{counts['boundary']} "
+          f"coverage=" + ",".join(f"{l}:{len(present[l])}/{len(files)}" for l in LENSES) + " "
+          f"coverage_delta={','.join(changed) or 'none'} frozen={','.join(frozen) or 'none'}"
+          + (" widened=yes" if widened else "") + " "
           f"derived_seams={len(derived)} cross_lens={len(cross_lens(derived))}")
     for lens, k in new:
         if (lens, k) not in dropped:
@@ -589,6 +659,7 @@ def keep_map(a, st, load, cross_rows, disagreements):
         "cross_lens": [[c.strip("`") for c in r] for r in cross_rows],
         "contract_disagreements": [e["key"] for e in disagreements],
         "edges": st["edges"], "diag": st["diag"], "reader_log": st["readers"],
+        "coverage": st.get("coverage", {}),
     }
     os.makedirs(a.keep, exist_ok=True)
     jp = os.path.join(a.keep, "map.json")
@@ -606,6 +677,7 @@ def main(argv):
     sub = p.add_subparsers(dest="cmd")
     r = sub.add_parser("round"); r.add_argument("--state", required=True); r.add_argument("--artifact", required=True)
     r.add_argument("--round", type=int, required=True); r.add_argument("--repo"); r.add_argument("--validate", action="store_true")
+    r.add_argument("--maps", metavar="PATH", help="where the full maps go each round (default <state>/maps.md) — the readers' <MAPS>; the artifact carries only the coverage grid")
     r.add_argument("reports", nargs="*", metavar="REPORT")
     h = sub.add_parser("handoff"); h.add_argument("--state", required=True); h.add_argument("--artifact", required=True)
     h.add_argument("--keep", metavar="DIR", help="also write DIR/map.json + DIR/map.html — the kept asset (_docs/seams/<object>/)")

@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-07
-entries: 33
+entries: 32
 ---
 
 # ac-polish — friction log
@@ -685,8 +685,8 @@ entries: 33
 - proposed_fix: make coverage a declared, checked quantity. LANDED 2026-09-07 (prompt only, by
   decision) and MEASURED 2026-09-08: MotionFrame v3 — 15 readers, every one declared 23/23 files
   every round; object lens 28·0·0·3·0, first round 60 edges vs 25 (v2) and 50 (v1). The prompt
-  alone was enough; the merge does not parse SWEPT. What remained after coverage is a different
-  friction (`seams-stage-relabel-reads-as-growth`). The reader prompt orders a full sweep — every file on FILES in list order, a row
+  alone was enough; the merge does not parse SWEPT. What remained after coverage was label churn, which
+  the digest surface now excludes (coverage grid, workflows/seams.md § Stop). The reader prompt orders a full sweep — every file on FILES in list order, a row
   for every filled cell even if the map has it, stop at the last file not when the report feels
   long — and ends with a `SWEPT:` block, one line per file, `absent` where nothing touches the
   object. NOT landed: the merge parsing SWEPT and gating a round on it (`swept=N/M`); revisit
@@ -725,40 +725,6 @@ entries: 33
   plus a state dir under ~/.claude. The next engineer touching MotionFrame has no way to find the
   map, and a re-trace has nothing to diff against. The maps are the ICD; the plan is one use of
   it.
-
-## seams-stage-relabel-reads-as-growth
-- skills: [ac-polish]
-- impact: L
-- frequency: every-run
-- perceptibility: misleading
-- recurrence: 1
-- related: [seams-sweep-coverage-is-unmeasured, seams-fixpoint-never-stamps-on-accumulator]
-- first_seen: 2026-09-08
-- last_seen: 2026-09-08
-- stage: manual
-- status: resolved
-- proposed_fix: REJECTED BY MEASUREMENT — keying on `file:line` was simulated over the same
-  15 v3 reports before any code changed: 75 · 13 · 7 · 6 · 45 new keys per round, 146 distinct
-  keys vs 74, and 0 cases of two readers citing the same line under different labels. Readers
-  do not cite a stable line for the same edge (the r5 flow reader cited 42 lines not seen
-  before for edges already mapped); line churn is worse than label churn. The current key
-  (stage × file · flow × file · interface × side × file) stays. LANDED instead 2026-09-08: a
-  stage-attribution rule in the reader prompt and the checklist — the stage is what the line
-  does to THE OBJECT; a producer of one field is the create row's upstream, not a create row; a
-  consumer building another object is `read`; `store` is the object itself. Against the v3
-  data that rule removes 3 of round 4's 4 adds (two breath-extractor field producers and the
-  merge's `base` fallback filed as `create`) and round 5's add (the scripted tick refiled under
-  `capture`); the two round-3 adds (a throwing web stub as `emit`, a dead consumer) stand as
-  real. Proof is the next MotionFrame trace under the rule, not this note.
-- narrative: MotionFrame v3 (files fence + full-sweep prompt + SWEPT declared 23/23 by every
-  reader every round) added 60 · 7 · 2 · 4 · 1 edges and did not stamp within the five-round
-  bound. The additions after round 1 were new stage × file cells in files already mapped, where
-  readers split on the stage taxonomy at the sub-object level (first read as "relabels of known
-  lines" — the simulation showed they cite different lines too):
-  breath-extractor lines moved from transport to create (r4), the scripted adapter's tick filed
-  under capture as well as emit (r5), the types file filed as a bridge consumer (r4) though the
-  prompt calls it a contract cell. The object lens was at zero from round 2. Coverage is proven
-  and the loop is measuring label taste, which by construction it cannot tell from discovery.
 
 ## seams-reader-writes-all-three-lens-tables
 - skills: [ac-polish]

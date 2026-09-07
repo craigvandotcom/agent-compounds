@@ -38,8 +38,6 @@ assertion, a test path — or `none`) · found-by. Derived: **hole** (a core sta
 The stage names what the line does to THE OBJECT: `create` constructs it (literal · struct init
 · decode); a producer of one field is the create row's upstream, not a row; a consumer that
 builds another object from its fields is `read`; `store` persists the object, not a derivative.
-Sub-object producers filed as `create` were 3 of the 4 late-round object adds in the MotionFrame
-v3 trace — taxonomy drift reads as growth, and the digest cannot tell the two apart.
 
 ## flow — one process, ordered steps
 

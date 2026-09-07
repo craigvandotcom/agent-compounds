@@ -16,9 +16,9 @@ acceptance journey. Nothing is fixed here.
 | knob | seams mode |
 | --- | --- |
 | **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs, with the script, not by hand.** Area → `scripts/aim.sh objects --area '<regex>'` ranks the objects named by or touched from matching files (touchers × layers × writers ÷ tests); take the top row. Nothing → the start prompt below. Then name the object's FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and BOUNDARIES (the interfaces those edges cross). Then run `scripts/aim.sh files --terms '<the object line>'` and paste its `files:` line: the source files that name a term as a whole word, minus tests and dev harnesses — the closed set every reader sweeps. Write all four into the artifact frontmatter as ` · `-separated lists — they are the FENCE the merge enforces every round. Object terms are symbols ONLY (the table-qualified column, the type, the function, the event name), never a path and never the bare column name: a path in `object:` is NOT-GATED, and a column copied under the same name on another table is outside. Confirm BY NAME in ONE prompt, because the names are the fence: *"Object: `foods.image_urls` · `uploadImages` (14 touchers, 5 layers, 3 writers, 1 test). Files: 9 (3 contract-only excluded). Flows: capture → upload → save → display · delete → cleanup. Boundaries: camera→form blob · upload route · foods row. Trace?"* |
-| **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: three maps, exact keys (object `stage × path` · flow `flow × path` · boundary `interface × side × path`), first-seen text, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
+| **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker, between rounds: the **coverage grid** (one row per fenced file, one column per lens: `rows` or `—`) — the DIGEST SURFACE. The three maps (exact keys object `stage × path` · flow `flow × path` · boundary `interface × side × path`, first-seen text) go to `<STATE>/maps.md` each round and to the ledger `<STATE>/ledger.json`; hand-off writes them back into the plan. All written only by `scripts/seams-merge.py`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
 | **CHECKLIST** | `references/seams-checklist.md` — the three lenses, their command shapes, and the rules that turn maps into seams |
-| **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<FILES>` (the `files:` line, one path per line), `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each sweeps the same FILES and extends and corrects its own map |
+| **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<FILES>` (the `files:` line, one path per line), `<MAPS>` (`<STATE>/maps.md` — the full maps; facts, so showing them is not contamination). **Spawn only the lenses the last round line did not list under `frozen=`**: a lens with two consecutive clean coverage rounds is done, and its reader is not run again unless the fence widens (`widened=yes` clears the freeze), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each sweeps the same FILES and extends and corrects its own map |
 | **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new edge's `found-by`; an edge no command reproduces is dropped |
 | **STAMP** | `polish-fixpoint.sh --mode seams --findings 0` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them. `--findings` is 0 in seams mode BY CONSTRUCTION: a reader's findings are its rows, the merge applies every admitted row to the artifact and records the rest as fenced/dropped with a reason, so nothing remains undispositioned after the merge and the digest is the only sensor. Passing `new_edges` as the count makes a clean round unstampable (a round that adds nothing has 0 either way; a round that adds edges moves the digest) |
 
@@ -62,16 +62,21 @@ re-finds the edge with a command that runs.
 
 ## Stop — a round that adds no edge to any map
 
-Digest unchanged at round ≥ 2 → the script stamps: three independent traces swept the same
-files and found nothing the maps lacked. Two or three rounds is normal (about nine readers). A
-run still adding edges past five rounds has an area for a target — split it (each heavy flow or
-boundary is its own run), never loop on. The `files:` line is what makes convergence reachable:
-the grid is finite, so growth can only come from the fenced files, and a round that adds nothing
-means the sweep is complete (the 2026-09-06 MotionFrame run, fenced by file names alone, added
-50 · 9 · 8 · 4 · 7 edges — 13 of 80 in files that never named the object, 11 in tests and dev
-harnesses; the 2026-09-07 rerun under `files:` added 25 · 20 · 12 · 10 · 5 with nothing fenced
-or dropped — the tail is reader coverage per round, see FRICTIONS
-`seams-sweep-coverage-is-unmeasured`).
+Digest unchanged at round ≥ 2 → the script stamps. The digest is the COVERAGE GRID: every
+fenced file walked by every lens, and no lens reached a file it had not reached before. That is
+the claim the stamp makes — "the object's files are all mapped" — and it is the one readers can
+agree on. What they cannot agree on is labels: which stage a line is, which flow a step belongs
+to, whether a sub-object producer is a `create`. Those churn round to round (MotionFrame v3:
+60 · 7 · 2 · 4 · 1 edges with every late add in a file already covered; keying on `file:line`
+was simulated and is worse — readers do not cite stable lines either), so they live in the maps
+and the ledger, where a late relabel is a correction and never a stop-condition event. Per lens,
+two clean rounds freeze it and its reader is not spawned again; a widened fence unfreezes all.
+Two or three rounds is normal. A run whose COVERAGE is still moving past five rounds has an area
+for a target — split it (each heavy flow or boundary is its own run), never loop on.
+Measured 2026-09-08 by replaying the fifteen MotionFrame v3 reports under this rule: coverage
+deltas `object,flow,boundary · flow,boundary · boundary · boundary · none`, object frozen after
+round 3, flow after round 4, STAMPED at round 5 with 12 readers merged (the run under the maps
+digest ended unstamped at the five-round bound with 15).
 
 ## The kept asset — `_docs/seams/<object>/`
 

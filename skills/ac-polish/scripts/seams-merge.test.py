@@ -92,11 +92,12 @@ if rc == 0 and "lenses=boundary,flow,object" in out and "new_edges=13" in out an
     ok("round 1: three lens reports -> 13 edges in one artifact, counted per lens; no fence keys -> fence=none")
 else:
     fail("round 1", out)
-art = open(ART).read()
-if "### object map — 6 edges" in art and "### flow map — 3 edges" in art and "### boundary map — 4 edges" in art:
-    ok("artifact holds the three maps under one marker")
+art = open(ART).read(); maps = open(f"{S}/maps.md").read()
+if "### object map — 6 edges" in maps and "### flow map — 3 edges" in maps and "### boundary map — 4 edges" in maps \
+   and "## Coverage — the digest surface" in art and "### object map" not in art and "| file | object | flow | boundary |" in art:
+    ok("maps.md holds the three maps; the artifact below the marker holds only the coverage grid (the digest surface)")
 else:
-    fail("artifact maps", art)
+    fail("artifact maps", art + maps[:300])
 if "derived_seams=" in out and "cross_lens=3" in out:
     ok("round output reports derived seams and cross-lens seams (auto-save, foods.ts, camera page each seen by two lenses)")
 else:
@@ -174,7 +175,7 @@ else:
 S2, ART2 = f"{W}/s2", f"{W}/plan2.md"; write(ART2, f"---\n---\n\n{MARKER}\n")
 write(f"{W}/v/o.md", rep("object", OH, "| read | `lib/a.ts:1` | reads it | — | — | none | `rg -n image_urls lib/a.ts` |\n| update | `lib/a.ts:9` | fabricated | — | — | none | `rg -n nothing_here lib/a.ts` |\n"))
 rc, out = run("round", "--state", S2, "--artifact", ART2, "--round", "1", "--repo", REPO, "--validate", f"{W}/v/o.md")
-a2 = open(ART2).read()
+a2 = open(f"{S2}/maps.md").read()
 if rc == 0 and "dropped=1" in out and "reads it" in a2 and "fabricated" not in a2:
     ok("--validate: an edge no command reproduces is dropped; the real one stays")
 else:
@@ -199,7 +200,7 @@ write(f"{W}/f5/b.md", rep("boundary", BH,
     "| foods row | consumer | `lib/families.ts:1` | internal | image_urls is string[] | none | `true` |\n"
     "| alias table | producer | `lib/families.ts:1` | internal | — | none | `true` |\n"))
 rc, out = run("round", "--state", S5, "--artifact", ART5, "--round", "1", "--repo", REPO, f"{W}/f5/o.md", f"{W}/f5/f.md", f"{W}/f5/b.md")
-a5 = open(ART5).read()
+a5 = open(f"{S5}/maps.md").read()
 if rc == 0 and "new_edges=5" in out and "fenced=4" in out and "fence=object,flow,boundary" in out \
    and "names none of: foods.image_urls · uploadImages" in out and "not readable" in out \
    and "shares no word with: capture" in out and "shares no word with: upload route" in out:
@@ -235,7 +236,7 @@ FENCE7 = ("object: foods.image_urls · uploadImages\nflows: capture → upload �
           "boundaries: upload route · foods row\nfiles: lib/foods.ts · lib/upload.ts\n")
 S7, ART7 = f"{W}/s7", f"{W}/plan7.md"; write(ART7, f"---\nstatus: findings\n{FENCE7}---\n\n{MARKER}\n")
 rc, out = run("round", "--state", S7, "--artifact", ART7, "--round", "1", "--repo", REPO, f"{W}/f5/o.md", f"{W}/f5/f.md", f"{W}/f5/b.md")
-a7 = open(ART7).read()
+a7 = open(f"{S7}/maps.md").read()
 if rc == 0 and "files=2" in out and "new_edges=4" in out and "fenced=5" in out \
    and "~ [boundary] foods row × consumer × lib/families.ts fenced: `lib/families.ts` is not on the files: line" in out \
    and "~ [flow] alias sync → reindex × lib/families.ts fenced" in out \
@@ -317,10 +318,53 @@ S10, ART10 = f"{W}/s10", f"{W}/plan10.md"; write(ART10, f"---\nstatus: findings\
 write(f"{W}/f10/o.md", rep("object", OH, "| read | `lib/foods.ts:1` | reads it | — | — | none | `true` |\n")
       + "\nSWEPT:\n- lib/foods.ts — read\n- lib/upload.ts — absent\n- lib/families.ts — absent\n")
 rc, out = run("round", "--state", S10, "--artifact", ART10, "--round", "1", "--repo", REPO, f"{W}/f10/o.md")
-if rc == 0 and "new_edges=1" in out and "SWEPT" not in open(ART10).read():
+if rc == 0 and "new_edges=1" in out and "SWEPT" not in open(ART10).read() and "SWEPT" not in open(f"{S10}/maps.md").read():
     ok("a SWEPT: declaration after DIAGNOSIS parses as prose — one edge, nothing of it on the map")
 else:
     fail("swept block", out)
+
+
+# --- 5f. coverage is the digest surface; two clean rounds freeze a lens --------------------------
+FENCE11 = "object: foods.image_urls · uploadImages\nflows: capture → upload → save → display · delete → cleanup\nboundaries: upload route · foods row\nfiles: lib/foods.ts · lib/upload.ts · lib/families.ts\n"
+S11, ART11 = f"{W}/s11", f"{W}/plan11.md"; write(ART11, f"---\nstatus: findings\n{FENCE11}---\n\n{MARKER}\n")
+O11 = "| read | `lib/foods.ts:1` | reads it | — | — | none | `true` |\n"
+F11 = "| capture | grab | `lib/foods.ts:1` | user | none | none | `true` |\n"
+B11 = "| upload route | consumer | `lib/upload.ts:1` | user | — | none | `true` |\n"
+for rnd in (1, 2):
+    write(f"{W}/c{rnd}/o.md", rep("object", OH, O11)); write(f"{W}/c{rnd}/f.md", rep("flow", FH, F11)); write(f"{W}/c{rnd}/b.md", rep("boundary", BH, B11))
+run("round", "--state", S11, "--artifact", ART11, "--round", "1", "--repo", REPO, f"{W}/c1/o.md", f"{W}/c1/f.md", f"{W}/c1/b.md")
+c1 = sha(ART11); m1 = sha(f"{S11}/maps.md")
+# round 2: object reader relabels the same file under a second stage — a LABEL, not coverage
+write(f"{W}/c2/o.md", rep("object", OH, O11 + "| transport | `lib/foods.ts:7` | also ships it | — | — | none | `true` |\n"))
+rc, out = run("round", "--state", S11, "--artifact", ART11, "--round", "2", "--repo", REPO, f"{W}/c2/o.md", f"{W}/c2/f.md", f"{W}/c2/b.md")
+if rc == 0 and "new_edges=1" in out and "coverage_delta=none" in out and sha(ART11) == c1 and sha(f"{S11}/maps.md") != m1:
+    ok("a new stage in a file the lens already covers moves the maps and the ledger, NOT the artifact digest (coverage_delta=none)")
+else:
+    fail("coverage relabel", f"{out} art_same={sha(ART11) == c1} maps_same={sha(f'{S11}/maps.md') == m1}")
+# round 3: same again -> object clean twice -> frozen=object; flow/boundary also clean -> all frozen
+rc, out = run("round", "--state", S11, "--artifact", ART11, "--round", "3", "--repo", REPO, f"{W}/c2/o.md", f"{W}/c2/f.md", f"{W}/c2/b.md")
+if rc == 0 and "coverage_delta=none" in out and "frozen=object,flow,boundary" in out and sha(ART11) == c1:
+    ok("two consecutive clean rounds freeze a lens; the artifact digest is still round-1's (stampable at round 2)")
+else:
+    fail("freeze", out)
+# round 4: boundary reader reaches a NEW file -> coverage moves, boundary unfreezes, others stay frozen
+write(f"{W}/c4/b.md", rep("boundary", BH, B11 + "| foods row | consumer | `lib/families.ts:1` | internal | a shape | none | `true` |\n"))
+rc, out = run("round", "--state", S11, "--artifact", ART11, "--round", "4", "--repo", REPO, f"{W}/c2/o.md", f"{W}/c2/f.md", f"{W}/c4/b.md")
+if rc == 0 and "coverage_delta=boundary" in out and "frozen=object,flow" in out and sha(ART11) != c1 and "| `lib/families.ts` | — | — | rows |" in open(ART11).read():
+    ok("a lens reaching a new file moves the digest, unfreezes that lens only, and shows in the coverage grid")
+else:
+    fail("coverage new file", out + open(ART11).read()[-400:])
+# round 5: the fence widens -> everything unfreezes, widened=yes
+write(ART11, open(ART11).read().replace("files: lib/foods.ts · lib/upload.ts · lib/families.ts", "files: lib/foods.ts · lib/upload.ts · lib/families.ts · lib/a.ts"))
+rc, out = run("round", "--state", S11, "--artifact", ART11, "--round", "5", "--repo", REPO, f"{W}/c2/o.md", f"{W}/c2/f.md", f"{W}/c4/b.md")
+if rc == 0 and "widened=yes" in out and "frozen=none" in out and "| `lib/a.ts` | — | — | — |" in open(ART11).read():
+    ok("a widened files: line unfreezes every lens and the new file appears in the grid as unwalked")
+else:
+    fail("widen unfreezes", out)
+if os.path.exists(f"{S11}/maps.md") and "### object map — 2 edges" in open(f"{S11}/maps.md").read():
+    ok("maps.md carries the full maps for the readers every round")
+else:
+    fail("maps.md", "missing or short")
 
 # --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
