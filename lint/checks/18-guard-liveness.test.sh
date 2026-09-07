@@ -42,6 +42,7 @@ fi
 
 # --- 2 DOCTORED: real hooks with bead-capture-guard chmod-x'd -> exit 1 ------
 t="$work/doctored"
+mkdir -p "$t"
 cp -R "$ROOT/hooks" "$t/hooks"
 chmod -x "$t/hooks/bead-capture-guard.py"
 rc=$(run_check "$t")
