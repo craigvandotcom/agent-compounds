@@ -42,6 +42,9 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 
 ## 3. consumer-verification
 
+- A `## Delivers` bullet naming an EXISTING, REFERENCED path with no `touchers:` line is
+  class (c) — the `refined` stamp cannot survive `stamp-refined.sh`'s touchers leg, so the
+  bead is unimplementable as a refined bead. Add the line; never decline it as a format gap.
 - Was the touched surface's consumer set **grep-derived**, or hand-listed from memory?
   Hand-listed scopes carried a measured **16.2% repair rate** from consumers nobody found.
 - Name the grep that derived it. Does every consumer it returns appear in the bead, or is

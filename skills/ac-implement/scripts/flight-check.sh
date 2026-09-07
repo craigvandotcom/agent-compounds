@@ -29,6 +29,10 @@
 #   PREMISE-FAILED: RED          no RED is recorded per the bead's named probes — every one
 #                                of them is ALREADY GREEN, so there is nothing for the diff
 #                                to cause
+#   PREMISE-FAILED: STALE-STAMP  the `refined` stamp no longer passes the stamp gate; the
+#                                gate's downgrade leg has stripped it, the bead returns to
+# the refine lane, and the batch report carries the reason
+# as one `stale-stamp: <id> — <reason>` line. The bare label is never trusted past this point.
 #
 
 # THE RECEIPT: this script is its ONLY WRITER, and it writes at the moment RED is OBSERVED.
@@ -338,6 +342,43 @@ $(grep -oE 'Perishable:[[:space:]]*.*::.*' "$BODY" | sed -E 's/^Perishable:[[:sp
 EOF
 fi
 [ -z "$FAIL_CLASS" ] && echo "flight-check: PERISHABLE ok ($PERISH_CHECKED claim(s) re-asserted)"
+
+# --- Refusal 5: STALE-STAMP — the `refined` stamp re-gated where it is spent (ac-l7xt) ---
+# A stamp is only as valid as the contract it was written under, and nothing re-checks an
+# existing stamp when the gate tightens: the stale stamp rides into the worker pool and its
+# discovery costs a claim cycle plus a lost fixpoint. This is where it costs nothing — re-run
+# the stamp gate on the bead; its own downgrade leg strips a stale `refined`, and the worker
+# skips the bead with one routing decision. The bare label is never trusted past this point.
+# Not run in --check-only mode (this leg MUTATES the board) and not on a bead that does not
+# currently hold `refined` (nothing to re-gate); a gate that cannot run is NOT-GATED, never
+# a pass.
+STAMP_GATE="${STAMP_GATE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/stamp-refined.sh}"
+if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
+  if [ ! -f "$STAMP_GATE" ]; then
+    echo "NOT-GATED: stamp gate not found at '$STAMP_GATE' — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
+    exit 2
+  fi
+  if ! command -v br >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    echo "NOT-GATED: br/jq unavailable — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
+    exit 2
+  fi
+  holds_refined=$(br show "$BEAD" --json </dev/null 2>/dev/null \
+    | jq -r 'if type == "array" then .[0] else . end
+             | [ .labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null || echo 0)
+  if [ "${holds_refined:-0}" -gt 0 ]; then
+    STAMP_OUT=$(bash "$STAMP_GATE" "$BEAD" </dev/null 2>&1); STAMP_RC=$?
+    if [ "$STAMP_RC" -eq 2 ]; then
+      printf '%s\n' "$STAMP_OUT" >&2
+      echo "NOT-GATED: the stamp gate could not run (rc 2) — the refined stamp is unverified; never a pass" >&2
+      exit 2
+    elif [ "$STAMP_RC" -ne 0 ]; then
+      printf '%s\n' "$STAMP_OUT" >&2
+      STAMP_WHY=$(printf '%s\n' "$STAMP_OUT" | grep -m1 'stamp_refined: REFUSED' | sed 's/^stamp_refined: REFUSED[^—]*— //')
+      premise_failed STALE-STAMP "the \`refined\` stamp is stale under the current gate — ${STAMP_WHY:-refused}. The gate's downgrade leg has stripped it; the bead returns to the refine lane."
+    fi
+  fi
+fi
+[ -z "$FAIL_CLASS" ] && echo "flight-check: STAMP ok (refined re-gated or absent)"
 
 # --- Refusal 4: RED, and the receipt ----------------------------------------------------
 

@@ -412,6 +412,90 @@ else
   fail "Case 18b-ii: the un-normalised reader accepted the object shape — Case 18a proves nothing, rc=$RC. Output: $OUT"
 fi
 
+# --- Cases 19–21: obligations are derived from Delivers BULLETS only (ac-l7xt) ---------
+# A path named ONLY inside a touchers line's own command or clause is a disposition, not a
+# delivery — extracting it invented obligations no bullet could satisfy (measured 2026-09-05:
+# one group refused 9 of 12 beads for clause-mentioned paths). And a touchers line binds to
+# its OWN bullet only: the first line in the section must never answer for a later bullet.
+B_CLAUSE='## Intent
+Guard updateFood against zero-row updates.
+
+## Acceptance Criteria
+- The guard lands.
+  Probe: `grep -q count lib/db/foods.ts` — tier: none
+
+## Delivers
+- `lib/db/foods.ts` — updateFood row-count guard
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller | out-of-scope: lib/api.ts is the caller and ships in this bead
+
+## Consumes
+- none
+'
+# Case 20: a STALE touchers line in an EARLIER bullet must not answer for the real bullet.
+B_CLAUSE_FIRST='## Intent
+Guard updateFood against zero-row updates.
+
+## Acceptance Criteria
+- The guard lands.
+  Probe: `grep -q count lib/db/foods.ts` — tier: none
+
+## Delivers
+- scope note: the consumer set is tracked by the line beneath
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 9 · owned by: bd-scope-note | out-of-scope: lib/db/foods.ts is delivered by the bullet beneath
+- `lib/db/foods.ts` — updateFood row-count guard
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+
+## Consumes
+- none
+'
+# Case 21: a touchers line whose ONLY path mention is its own command owes nothing.
+B_OWN_CMD='## Intent
+Guard updateFood against zero-row updates.
+
+## Acceptance Criteria
+- The guard lands.
+  Probe: `grep -q count lib/db/foods.ts` — tier: none
+
+## Delivers
+- caller-inventory note
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+- `lib/db/foods.ts` — updateFood row-count guard
+  touchers: `rg -l -F "db/foods" lib -g "!lib/db/foods.ts"` → 1 · owned by: bd-api-caller
+
+## Consumes
+- none
+'
+tmp=$(mktemp)
+jq --arg clause "$B_CLAUSE" --arg first "$B_CLAUSE_FIRST" --arg own "$B_OWN_CMD" '. + [
+  {id:"bd-b-clause",  issue_type:"task", labels:["origin:ac-triage"], description:$clause, comments:[]},
+  {id:"bd-b-first",   issue_type:"task", labels:["origin:ac-triage"], description:$first,  comments:[]},
+  {id:"bd-b-own-cmd", issue_type:"task", labels:["origin:ac-triage"], description:$own,    comments:[]}
+]' "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-b-clause 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-b-clause)" -eq 1 ]; then
+  pass "Case 19: a path named ONLY inside a touchers clause owes nothing — the bead stamps"
+else
+  fail "Case 19: expected rc 0 + stamp, rc=$RC. Output: $OUT"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-b-first 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-b-first)" -eq 1 ]; then
+  pass "Case 20: a clause mention in an EARLIER bullet binds nothing — the real bullet's own line answers, and it is correct"
+else
+  fail "Case 20: expected rc 0 + stamp (the earlier stale line must not answer for the later bullet), rc=$RC. Output: $OUT"
+fi
+
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-b-own-cmd 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-b-own-cmd)" -eq 1 ]; then
+  pass "Case 21: a touchers line whose only path mention is its own command owes nothing"
+else
+  fail "Case 21: expected rc 0 + stamp, rc=$RC. Output: $OUT"
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "All stamp-refined fixpoint-receipt tests passed."

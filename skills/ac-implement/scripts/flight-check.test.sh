@@ -369,6 +369,109 @@ RUN_RC=$?
   || bad "check-only(pass): a receipt was written — a re-check must not pre-certify a RED"
 
 # ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 8 — a stale \`refined\` stamp is re-gated at claim (ac-l7xt)"
+# ---------------------------------------------------------------------------------------
+# A stamp written under an older contract survives every later pass unless something
+# re-checks it where it is spent. The fixture: a scratch repo whose bead delivers an
+# EXISTING, REFERENCED path with no touchers line — stamped `refined` under the
+# pre-touchers contract. flight-check must refuse it with stale-stamp, the stamp gate must
+# strip the label, and after the line is added flight-check must clear the bead.
+R2="$WORK/root2"; mkdir -p "$R2"
+mkdir -p "$R2/fix"
+printf 'the re-gate fixture deliverable\n' >"$R2/fix/fixture-deliverable.md"
+printf 'references fix/fixture-deliverable\n' >"$R2/fix/referrer.txt"
+git -C "$R2" init -q
+git -C "$R2" -c user.email=f@f -c user.name=f add -A
+git -C "$R2" -c user.email=f@f -c user.name=f commit -qm fixture
+
+B2="$WORK/bin2"; mkdir -p "$B2"
+cat >"$B2/br" <<'STUB'
+#!/usr/bin/env bash
+case "${1:-}" in
+  show)   shift; id=""; json=""
+          while [ $# -gt 0 ]; do case "$1" in --json) json=1 ;; *) id="$1" ;; esac; shift; done
+          [ "$id" = ac-l7xt-fix ] && cat "${AC_FIXTURE_JSON:?}" || exit 3 ;;
+  label)  printf '%s\n' "$*" >> "${AC_LABEL_LOG:?}"; exit 0 ;;
+  comments) exit 0 ;;
+  update) exit 0 ;;
+  *) exit 3 ;;
+esac
+STUB
+chmod +x "$B2/br"
+
+cat >"$WORK/fix-desc1.md" <<'BODY'
+## Intent
+Re-gate fixture: a deliverable that exists and is referenced owes a touchers line.
+
+## Acceptance Criteria
+- The deliverable is present.
+  Probe: `test -f fix/fixture-deliverable.md` — tier: none
+- The referrer is present.
+  Probe: `test -f fix/referrer.txt` — tier: none
+- The absent artifact is still absent.
+  Probe: `test -f fixture-absent.md` — tier: none
+
+## Delivers
+- `fix/fixture-deliverable.md` — the re-gate fixture deliverable
+
+## Consumes
+- none
+BODY
+cat >"$WORK/fix-desc2.md" <<'BODY'
+## Intent
+Re-gate fixture: a deliverable that exists and is referenced owes a touchers line.
+
+## Acceptance Criteria
+- The deliverable is present.
+  Probe: `test -f fix/fixture-deliverable.md` — tier: none
+- The referrer is present.
+  Probe: `test -f fix/referrer.txt` — tier: none
+- The absent artifact is still absent.
+  Probe: `test -f fixture-absent.md` — tier: none
+
+## Delivers
+- `fix/fixture-deliverable.md` — the re-gate fixture deliverable
+  touchers: `rg -l -F "fix/fixture-deliverable" .` → 1 · owned by: ac-l7xt-fix | out-of-scope: fixture
+
+## Consumes
+- none
+BODY
+mk_json() { jq -n --arg d "$(cat "$1")" \
+  '{id:"ac-l7xt-fix",issue_type:"task",labels:["refined","refine-full"],description:$d,comments:[]}'; }
+
+: >"$WORK/labels1.log"
+mk_json "$WORK/fix-desc1.md" >"$WORK/fix1.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts2" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix1.json" AC_LABEL_LOG="$WORK/labels1.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc1.md" --root "$R2" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 1 ] && ok "stale stamp: flight-check refuses with exit 1" \
+  || bad "stale stamp: expected exit 1, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP' && ok "stale stamp: the refusal names its class" \
+  || bad "stale stamp: class not named: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'unowned-touchers' && ok "stale stamp: the stamp gate's own refusal surfaced" \
+  || bad "stale stamp: stamp-gate refusal missing: $RUN_OUT"
+grep -q 'remove ac-l7xt-fix refined' "$WORK/labels1.log" && grep -q 'add ac-l7xt-fix unrefined' "$WORK/labels1.log" \
+  && ok "stale stamp: the downgrade leg stripped refined and added unrefined" \
+  || bad "stale stamp: downgrade did not run: $(cat "$WORK/labels1.log")"
+printf '%s' "$RUN_OUT" | grep -q 'ROUTE (dry-run)' && ok "stale stamp: routed as a premise failure" \
+  || bad "stale stamp: not routed: $RUN_OUT"
+
+# ...and after the touchers line is added, the same bead clears for flight.
+: >"$WORK/labels2.log"
+mk_json "$WORK/fix-desc2.md" >"$WORK/fix2.json"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts2" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix2.json" AC_LABEL_LOG="$WORK/labels2.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc2.md" --root "$R2" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 0 ] && ok "stale stamp: with the touchers line, flight-check clears the bead" \
+  || bad "stale stamp: expected exit 0, got $RUN_RC: $RUN_OUT"
+[ -e "$WORK/receipts2/ac-l7xt-fix.flight-receipt" ] && ok "stale stamp: cleared bead wrote its RED receipt" \
+  || bad "stale stamp: no receipt after clearing"
+grep -q 'add ac-l7xt-fix refined' "$WORK/labels2.log" && ok "stale stamp: the re-gate re-stamped on the way through" \
+  || bad "stale stamp: re-gate did not stamp: $(cat "$WORK/labels2.log")"
+
+# ---------------------------------------------------------------------------------------
 echo ""
 echo "flight-check.test: $PASS passed, $FAIL failed"
 if [ "$PASS" -eq 0 ]; then

@@ -10,7 +10,7 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | **TARGET** | the epic id |
 | **ARTIFACT** | the epic's bead set exported to one file by `scripts/bead-artifact.py export` |
 | **CHECKLIST** | `references/bead-checklist.md` |
-| **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact |
+| **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact PLUS the touchers leg per bead: `skills/_tools/touchers.sh check <description-file> <bead-id>` — the `--file` mode reads the artifact's description block, so a round cannot record while a Delivers path that exists and is referenced owes a `touchers:` line (the reader sees RED and must fix it) |
 | **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment to EVERY bead in the artifact, not only the epic — no hand fan-out |
 
 ## Run PER-EPIC, never per-bead
