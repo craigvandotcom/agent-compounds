@@ -1,0 +1,7 @@
+# 30-trigger-collisions allowlist — SHRINK-ONLY.
+# seeded: 2026-09-07
+# Each line carries one live trigger-phrase collision: <date> | <phrase> | <skill>,<skill>.
+# An entry may be removed once the collision is fixed (the descriptions no longer share
+# the phrase); a new entry may never be added — the check refuses entries dated after the
+# seed date and entries that no longer match a live collision.
+2026-09-07 | screenshot the app | device-testing,screenshot-refresh

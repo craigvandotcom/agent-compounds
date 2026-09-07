@@ -1,0 +1,13 @@
+{
+  "wiring": [
+    {
+      "id": "demo-guard",
+      "event": "PreToolUse",
+      "command": "python3 {HOOKS}/demo-guard.py",
+      "harnesses": ["claude"],
+      "scope": ["org"],
+      "assurance": {"PROBE": "demo emits a block", "SCHEDULE": "PreToolUse - every call", "MODE": "advisory", "ON-FAILURE": "open", "BACKSTOP": "the stamp-gate catches anything an ac-missing-backstop parse lets through"},
+      "_doc": "Rationale prose. Fails open because the ac-missing-skill stamp-gate is the backstop, and docs live at skills/nope/SKILL.md. The file reference plugins/ac-demo.js and the bead id ac-on0y.5 are NOT skill references and must stay quiet."
+    }
+  ]
+}
