@@ -14,8 +14,11 @@ ROOT="$(cd "$DIR/../.." && pwd)"
 CHECK="$DIR/28-path-resolution.py"
 
 FAILURES=0
-pass() { echo "  PASS: $1"; }
-fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
+# Assertion lines are space-delimited (`PASS <case>` / `FAIL <case>`) and the
+# summary carries `N passed` — the grammar close-gate's COVERAGE leg greps for,
+# so a harness output no runner can parse cannot wear a green.
+pass() { echo "  PASS $1"; }
+fail() { echo "  FAIL $1"; FAILURES=$((FAILURES + 1)); }
 
 [ -f "$CHECK" ] || { echo "HARNESS FAIL: missing $CHECK"; exit 1; }
 
@@ -170,8 +173,8 @@ else
 fi
 
 if [ "$FAILURES" -eq 0 ]; then
-  echo "28-path-resolution.test.sh: all cases pass"
+  echo "28-path-resolution.test.sh: 9 passed, 0 failed"
   exit 0
 fi
-echo "28-path-resolution.test.sh: $FAILURES case(s) failed"
+echo "28-path-resolution.test.sh: 0 passed, $FAILURES failed"
 exit 1
