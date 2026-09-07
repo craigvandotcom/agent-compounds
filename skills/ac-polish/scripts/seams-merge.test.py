@@ -230,6 +230,41 @@ if rc == 2 and "placeholder" in out and not os.path.exists(f"{S6}/ledger.json"):
 else:
     fail("fence placeholder", out)
 
+# --- 5c. the files: line — a closed set every lens's row must sit in ------------------------------
+FENCE7 = ("object: foods.image_urls · uploadImages\nflows: capture → upload → save → display · delete → cleanup\n"
+          "boundaries: upload route · foods row\nfiles: lib/foods.ts · lib/upload.ts\n")
+S7, ART7 = f"{W}/s7", f"{W}/plan7.md"; write(ART7, f"---\nstatus: findings\n{FENCE7}---\n\n{MARKER}\n")
+rc, out = run("round", "--state", S7, "--artifact", ART7, "--round", "1", "--repo", REPO, f"{W}/f5/o.md", f"{W}/f5/f.md", f"{W}/f5/b.md")
+a7 = open(ART7).read()
+if rc == 0 and "files=2" in out and "new_edges=4" in out and "fenced=5" in out \
+   and "~ [boundary] foods row × consumer × lib/families.ts fenced: `lib/families.ts` is not on the files: line" in out \
+   and "~ [flow] alias sync → reindex × lib/families.ts fenced" in out \
+   and "| foods row | consumer | `lib/families.ts:1` |" not in a7 and "named symbol" in a7 and "reads it" in a7:
+    ok("files: line — a boundary far side and a flow step in an unlisted file are fenced; listed files stay; no per-row file read")
+else:
+    fail("files fence", out + a7[-600:])
+write(ART7, open(ART7).read().replace("files: lib/foods.ts · lib/upload.ts", "files: lib/foods.ts · lib/upload.ts · lib/families.ts"))
+rc, out = run("round", "--state", S7, "--artifact", ART7, "--round", "2", "--repo", REPO, f"{W}/f5/o.md", f"{W}/f5/f.md", f"{W}/f5/b.md")
+if rc == 0 and "files=3" in out and "new_edges=2" in out and "+ [boundary] foods row × consumer × lib/families.ts" in out \
+   and "+ [object] read × lib/families.ts" in out and "fenced=3" in out:
+    ok("widening files: re-admits the far side and the object row on the next round; undeclared flow/interface names stay fenced")
+else:
+    fail("files widen", out)
+S8, ART8 = f"{W}/s8", f"{W}/plan8.md"
+write(ART8, f"---\nobject: foods.image_urls — uploadImages\nfiles: lib/upload.ts\n---\n\n{MARKER}\n")
+rc, out = run("round", "--state", S8, "--artifact", ART8, "--round", "1", "--repo", REPO, f"{W}/f5/o.md")
+if rc == 0 and "new_edges=1" in out and "+ [object] transport × lib/upload.ts" in out:
+    ok("a dash between object terms splits like the middle dot — the template lure no longer fuses the last symbol")
+else:
+    fail("fence dash split", out)
+S9, ART9 = f"{W}/s9", f"{W}/plan9.md"
+write(ART9, f"---\nobject: uploadImages — lib/upload.ts · lib/foods.ts\n---\n\n{MARKER}\n")
+rc, out = run("round", "--state", S9, "--artifact", ART9, "--round", "1", "--repo", REPO, f"{W}/f5/o.md")
+if rc == 2 and "holds a path" in out and not os.path.exists(f"{S9}/ledger.json"):
+    ok("an object term holding a path -> NOT-GATED before round 1, nothing written")
+else:
+    fail("fence path-in-term", out)
+
 # --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
 write(f"{W}/bad/nolens.md", f"TARGET RESOLVED TO: x\n\nMAP:\n{OH}| read | `lib/a.ts:1` | x | — | — | none | `true` |\n")

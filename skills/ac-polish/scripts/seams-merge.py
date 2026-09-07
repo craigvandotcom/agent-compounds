@@ -17,11 +17,16 @@ The flow map's steps and sensors are emitted at hand-off as the acceptance JOURN
 ships with the scenario that proves its fix. Reader diagnoses (judgement) merge on the paths
 they cite and are ordered by reader count — salience, never a gate.
 
-THE FENCE. The artifact's frontmatter lines `object:` · `flows:` · `boundaries:` bound each lens:
-an object row counts only if its file names a term as a whole word (`table.column` needs both —
-aim.sh's toucher rule); a flow or boundary row only if its name shares a word with a declared one.
-Rows outside are dropped with the reason and never count as new edges, so a value copied into
-another store cannot turn a column into a domain. A placeholder in a fence line is NOT-GATED.
+THE FENCE. The artifact's frontmatter lines `object:` · `flows:` · `boundaries:` · `files:` bound
+each lens. `files:` is the closed set the readers sweep — the source files that name an object
+term as a whole word, computed once before round 1 by `aim.sh files --terms` (which drops tests,
+dev harnesses and the declaring type file) — and EVERY lens's row must sit in it; a flow or
+boundary row must also share a word with a declared flow or interface name. Without a `files:`
+line the older rule applies: an object row counts if its file names a term (`table.column`
+needs both — aim.sh's toucher rule) and the far side of a boundary is never fenced. Rows outside
+are dropped with the reason and never count as new edges, so a value copied into another store
+cannot turn a column into a domain. A placeholder in a fence line, or an object term holding a
+path, is NOT-GATED. Widening = add a term, recompute `files:`; the next round re-admits.
 
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py — RED/GREEN over every rule above
@@ -62,7 +67,7 @@ LENSES = {
 }
 DIAG_COLS = 4
 PATH_RE = re.compile(r"[A-Za-z0-9_@\-\[\]().]+(?:/[A-Za-z0-9_@\-\[\]().]+)+\.[A-Za-z0-9]{1,6}")
-FENCE_KEYS = {"object": "object", "flow": "flows", "boundary": "boundaries"}
+FENCE_KEYS = {"object": "object", "flow": "flows", "boundary": "boundaries", "files": "files"}
 WORD = r"[A-Za-z0-9_]"
 
 
@@ -205,11 +210,14 @@ def parse_fence(fm):
         if key not in fm:
             continue
         v = fm[key]
-        terms = [t.strip().strip("`") for t in re.split(r"\s·\s", v) if t.strip()]
+        terms = [t.strip().strip("`") for t in re.split(r"\s(?:·|—)\s", v) if t.strip()]
         if not terms or re.search(r"<[^>]*>", v):
             die2(f"fence `{key}:` in the artifact frontmatter is empty or a placeholder — resolve the target "
                  "(workflows/seams.md § TARGET) before round 1")
-        fence[lens] = terms
+        if lens == "object" and any("/" in x for x in terms):
+            die2("fence `object:` holds a path — object terms are symbols only; the file list is the `files:` line "
+                 "(aim.sh files --terms)")
+        fence[lens] = set(terms) if lens == "files" else terms
     return fence
 
 
@@ -222,13 +230,20 @@ def tokens(cell):
 
 
 def outside_fence(lens, row, fence, repo, cache):
-    """None when the row is inside its lens's fence, else the reason. object: the row's file
-    names a term as a whole word (a `table.column` term needs both). flow · boundary: the flow or
-    interface cell shares a word with a declared name — the far side's file is never checked."""
+    """None when the row is inside its lens's fence, else the reason. With a `files:` line every
+    lens's row must be in that set; flow · boundary rows must also share a word with a declared
+    name. Without one: object rows must be in a file naming a term as a whole word (a
+    `table.column` term needs both), flow · boundary rows only share a word — the far side's
+    file is not checked."""
+    files = fence.get("files")
+    if files is not None and row["path"] not in files:
+        return f"`{row['path']}` is not on the files: line"
     terms = fence.get(lens)
     if terms is None:
         return None
     if lens == "object":
+        if files is not None:
+            return None
         p = row["path"]
         if p not in cache:
             try:
@@ -467,6 +482,7 @@ def cmd_round(a):
     derived = derive(st)
     print(f"seams-merge: round={a.round} readers={len(reports)} lenses={','.join(sorted({r['lens'] for r in reports}))} "
           f"new_edges={len(new) - len(dropped)} seen_again={seen_again} dropped={len(dropped)} fenced={len(fenced)} "
+          + (f"files={len(fence['files'])} " if fence.get("files") is not None else "") +
           f"fence={','.join(l for l in LENSES if l in fence) or 'none'} "
           f"edges=object:{counts['object']},flow:{counts['flow']},boundary:{counts['boundary']} "
           f"derived_seams={len(derived)} cross_lens={len(cross_lens(derived))}")

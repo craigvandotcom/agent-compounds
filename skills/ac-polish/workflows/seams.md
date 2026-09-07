@@ -15,10 +15,10 @@ acceptance journey. Nothing is fixed here.
 
 | knob | seams mode |
 | --- | --- |
-| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs, with the script, not by hand.** Area → `scripts/aim.sh objects --area '<regex>'` ranks the objects named by or touched from matching files (touchers × layers × writers ÷ tests); take the top row. Nothing → the start prompt below. Then name the object's FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and BOUNDARIES (the interfaces those edges cross). Write the three into the artifact frontmatter as ` · `-separated lists — they are the FENCE the merge enforces every round. Object terms are the table-qualified column plus the object's own symbols, never the bare column name: a column copied under the same name on another table is outside. Confirm all three BY NAME in ONE prompt, because the names are the fence: *"Object: `foods.image_urls` · `uploadImages` (14 touchers, 5 layers, 3 writers, 1 test). Flows: capture → upload → save → display · delete → cleanup. Boundaries: camera→form blob · upload route · foods row. Trace?"* |
+| **TARGET** | an OBJECT, never an area. The user gives an area or nothing: **resolve before any reader runs, with the script, not by hand.** Area → `scripts/aim.sh objects --area '<regex>'` ranks the objects named by or touched from matching files (touchers × layers × writers ÷ tests); take the top row. Nothing → the start prompt below. Then name the object's FLOWS (its edges in time order, e.g. capture → upload → save → display; delete → cleanup) and BOUNDARIES (the interfaces those edges cross). Then run `scripts/aim.sh files --terms '<the object line>'` and paste its `files:` line: the source files that name a term as a whole word, minus tests and dev harnesses — the closed set every reader sweeps. Write all four into the artifact frontmatter as ` · `-separated lists — they are the FENCE the merge enforces every round. Object terms are symbols ONLY (the table-qualified column, the type, the function, the event name), never a path and never the bare column name: a path in `object:` is NOT-GATED, and a column copied under the same name on another table is outside. Confirm BY NAME in ONE prompt, because the names are the fence: *"Object: `foods.image_urls` · `uploadImages` (14 touchers, 5 layers, 3 writers, 1 test). Files: 9 (3 contract-only excluded). Flows: capture → upload → save → display · delete → cleanup. Boundaries: camera→form blob · upload route · foods row. Trace?"* |
 | **ARTIFACT** | `<STATE>/plan.md` from `references/seams-plan-template.md`, `<STATE>` = `~/.claude/polish/<repo>/seams-<slug>-<date>/` — OUTSIDE the tree. Below the marker: three maps, exact keys (object `stage × path` · flow `flow × path` · boundary `interface × side × path`), first-seen text, written only by `scripts/seams-merge.py`. Ledger in `<STATE>/ledger.json`. Copied to `_plans/<date>-seams-<slug>.md` at hand-off |
 | **CHECKLIST** | `references/seams-checklist.md` — the three lenses, their command shapes, and the rules that turn maps into seams |
-| **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each extends and corrects its own map |
+| **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<FILES>` (the `files:` line, one path per line), `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each sweeps the same FILES and extends and corrects its own map |
 | **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new edge's `found-by`; an edge no command reproduces is dropped |
 | **STAMP** | `polish-fixpoint.sh --mode seams` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them |
 
@@ -53,16 +53,23 @@ template placeholder is one such NOT-GATED. Every artifact change is a round to
 `polish-fixpoint.sh`.
 
 A fenced row is the widen-or-split decision, taken by the orchestrator before the next round:
-an edge of THIS object under a name the fence lacks → widen the frontmatter line (the next
-round re-admits it); an edge of another object → leave it fenced, and if it keeps arriving,
-that object is its own run.
+an edge of THIS object under a name the fence lacks → add that name to `object:` and recompute
+`files:` with `aim.sh files` (the next round re-admits it; a recorded round is never re-merged);
+an edge of another object → leave it fenced, and if it keeps arriving, that object is its own
+run. Rows the round line reports as `dropped` failed `--validate`: the reader's found-by did not
+reproduce — usually a `\|` alternation or a grep flag passed to rg — and the next round's reader
+re-finds the edge with a command that runs.
 
 ## Stop — a round that adds no edge to any map
 
-Digest unchanged at round ≥ 2 → the script stamps: three independent traces found nothing the
-maps lacked. Two or three rounds is normal (about nine readers). A run still adding edges past
-five rounds has an area for a target — split it (each heavy flow or boundary is its own run),
-never loop on.
+Digest unchanged at round ≥ 2 → the script stamps: three independent traces swept the same
+files and found nothing the maps lacked. Two or three rounds is normal (about nine readers). A
+run still adding edges past five rounds has an area for a target — split it (each heavy flow or
+boundary is its own run), never loop on. The `files:` line is what makes convergence reachable:
+the grid is finite, so growth can only come from the fenced files, and a round that adds nothing
+means the sweep is complete (the 2026-09-06 MotionFrame run, fenced by file names alone, added
+50 · 9 · 8 · 4 · 7 edges — 13 of 80 in files that never named the object, 11 in tests and dev
+harnesses).
 
 ## Hand-off
 

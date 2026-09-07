@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# aim.test.sh — RED/GREEN proof harness for aim.sh, both modes.
+# aim.test.sh — RED/GREEN proof harness for aim.sh, all three modes (churn · objects · files).
 #
 # ASSURANCE-ROLE: test-harness
 # CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.sh glob) and any local run.
@@ -137,6 +137,21 @@ printf '%s\n' "$out" | grep -q 'no object reached --min-touchers 99' && ok "obje
 E="$W/empty"; mkdir -p "$E"; git -C "$E" init -q
 out=$("$SCRIPT" objects -C "$E" 2>&1); rc=$?
 [ "$rc" = 0 ] && printf '%s\n' "$out" | grep -q 'no candidates found' && ok "objects: a tree with no sources says so" || fail "empty tree" "$out"
+
+# ==================================================================== files
+out=$("$SCRIPT" files -C "$O" 2>&1); rc=$?
+[ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'needs --terms' && ok "files: no --terms -> NOT-GATED" || fail "files no terms" "$out"
+out=$("$SCRIPT" files --terms 'Food · lib/types/food.ts' -C "$O" 2>&1); rc=$?
+[ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'holds a path' && ok "files: a path in --terms -> NOT-GATED (symbols only)" || fail "files path term" "$out"
+out=$("$SCRIPT" files --terms 'Food' -C "$O" 2>&1); rc=$?
+[ "$rc" = 0 ] || fail "files exits 0" "$out"
+printf '%s\n' "$out" | grep -q '^# aim files — 3 files name the terms (1 contract-only excluded)' && ok "files: 3 source files name Food; the test file is contract-only" || fail "files header" "$(printf '%s\n' "$out" | head -1)"
+printf '%s\n' "$out" | grep -q '^- lib/types/food.ts  (declares a term' && ok "files: the declaring file stays in, flagged" || fail "files declares" "$out"
+printf '%s\n' "$out" | grep -q '^- __tests__/gallery.test.ts' && ! printf '%s\n' "$out" | grep -q 'types.generated' && ok "files: tests listed as contract-only; generated types never appear" || fail "files contract-only" "$out"
+printf '%s\n' "$out" | grep -q '^files: features/foods/gallery.tsx · lib/db/foods.ts · lib/types/food.ts$' && ok "files: paste line is the sorted list joined by the middle dot" || fail "files paste line" "$(printf '%s\n' "$out" | grep '^files:')"
+printf '%s\n' "$out" | grep -q "^found-by: \`rg -l -w -F -e 'Food'" && ok "files: carries a reproducing found-by" || fail "files found-by" "$out"
+out=$("$SCRIPT" files --terms 'NoSuchSymbolAnywhere' -C "$O" 2>&1); rc=$?
+[ "$rc" = 2 ] && printf '%s' "$out" | grep -q 'no source file names any term' && ok "files: no match -> NOT-GATED, not an empty fence" || fail "files empty" "$out"
 
 # --- assurance ---------------------------------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "aim.sh invokes an agent"; else ok "aim.sh spawns nothing"; fi

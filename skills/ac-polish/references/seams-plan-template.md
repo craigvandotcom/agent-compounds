@@ -1,10 +1,11 @@
 ---
 status: findings
 target: <the area as the user gave it>
-object: <table.column · Symbol — the object fence: an object row counts only if its file names one of these as a whole word; never the bare column name>
-flows: <flow · flow — the object's edges in time order; a flow row counts only if its name shares a word with one>
-boundaries: <interface · interface — what the edges cross; a boundary row counts only if its name shares a word with one; the far side's file is never fenced>
-weight: <touching files × layers, from the resolution grep — why this object was chosen>
+object: <table.column · Symbol · eventName: the object's own names, symbols ONLY, no paths, no dash. A `table.column` term needs both words; never the bare column name>
+files: <the output of `aim.sh files --terms '<object line>'`: every source file naming a term as a whole word, minus tests and dev harnesses. The closed set the readers sweep; a row in ANY lens counts only if its file is on this line. Widen by adding a term to `object:` and recomputing>
+flows: <flow · flow: the object's edges in time order; a flow row counts only if its name shares a word with one AND its file is on `files:`>
+boundaries: <interface · interface: what the edges cross; a boundary row counts only if its name shares a word with one AND its file is on `files:`. A far side that handles the payload without naming it is fenced with its reason: widen with the name it does use>
+weight: <touching files × layers, from the resolution grep: why this object was chosen>
 aim_window: <1w | 4w | 1y | all | none>
 ---
 

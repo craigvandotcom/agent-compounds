@@ -1,8 +1,8 @@
 ---
 skill: ac-polish
 created: 2026-09-02
-last_pass: 2026-09-06
-entries: 23
+last_pass: 2026-09-07
+entries: 27
 ---
 
 # ac-polish — friction log
@@ -565,3 +565,86 @@ entries: 23
   it, and nothing else writes lifecycle labels. Calling stamp-refined.sh on the epics by hand
   stamped nine of them with no code change; the script accepts epics, only the wrappers
   refuse. The label was pure residue and made the unrefined list unreadable.
+
+## seams-object-fence-line-lures-paths-and-fuses-the-last-term
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 2
+- related: [seams-fence-far-side-exemption-admits-neighbouring-objects]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-07
+- stage: manual
+- status: promoted
+- proposed_fix: object terms are symbols only; the parser splits on ` — ` as well as ` · ` and
+  NOT-GATEs a term holding a path; the file list moves to its own `files:` line computed by
+  `aim.sh files`. Landed 2026-09-07 (seams-merge.py parse_fence, template, workflow).
+- narrative: the template read `<table.column · Symbol — the object fence: …>` and both the
+  SessionPhase and the MotionFrame orchestrators wrote `Symbol — path · path`. The parser split
+  only on the middle dot, so the last symbol fused with the first path and never matched:
+  `motionFrame` was silently absent from the fence, three real rows in Plugin.swift and DebugHud
+  were fenced in round 1, and the fix needed a ledger reset because a recorded round cannot be
+  re-merged.
+
+## seams-fence-far-side-exemption-admits-neighbouring-objects
+- skills: [ac-polish]
+- impact: L
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 2
+- related: [seams-object-fence-line-lures-paths-and-fuses-the-last-term, seams-fixpoint-never-stamps-on-accumulator]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-07
+- stage: manual
+- status: promoted
+- proposed_fix: one fence rule for every lens — the row's file must be on the `files:` line
+  (the source files naming an object term, minus tests and dev harnesses); readers sweep that
+  finite grid instead of exploring. Landed 2026-09-07 (seams-merge.py outside_fence, aim.sh
+  files, reader prompt, checklist, workflow). Measurement: rerun MotionFrame.
+- narrative: flow and boundary rows were fenced by name only, and "persist"/"observe" are
+  sinks: the whole checkpoint lifecycle shares the word persist. The MotionFrame run grew
+  50 · 9 · 8 · 4 · 7 edges over five rounds; 13 of 80 sat in files that never named the object
+  (SessionCheckpointer, NativeLifecycleCoordinator, recovery hooks — CheckpointManifest's seams),
+  11 in tests or dev harnesses, and the tail was first-order edges earlier readers had not swept.
+  The run ended unstamped under the five-round rule; the SessionPhase run (111 edges, 8 rounds)
+  had the same shape.
+
+## seams-reader-found-by-grep-alternation-never-reproduces
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 3
+- related: []
+- first_seen: 2026-09-06
+- last_seen: 2026-09-07
+- stage: manual
+- status: promoted
+- proposed_fix: the reader prompt says one pattern per command and no pipe character; the
+  orchestrator dry-runs found-by before the merge (a 30-line script mirroring --validate).
+  Landed 2026-09-07 (reader prompt). Parser change not made: `\|` must stay the table escape.
+- narrative: readers write `grep -n "a\|b"` (GNU alternation). The parser unescapes `\|` to `|`
+  as its table-escape convention, bash runs a BSD grep with a literal pipe, nothing matches, and
+  the row is dropped as "no found-by reproduced". Round 1 of MotionFrame lost 7 flow rows this
+  way, including the whole capture stage; rounds 2 and 5 repeated it. A second variant passes
+  grep's `--include` to rg.
+
+## seams-report-shape-faults-cost-a-reader-resume-each
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: loud
+- recurrence: 1
+- related: [seams-reader-found-by-grep-alternation-never-reproduces]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: manual
+- status: open
+- proposed_fix: strip a parenthetical qualifier from the stage cell instead of NOT-GATED; a
+  pathless row is dropped with a reason, not NOT-GATED; the orchestrator runs a shape lint
+  (cells · one path per path cell · bare stage · no pipe in found-by) before every merge.
+- narrative: three of five MotionFrame rounds were NOT-GATED on shape — `store (correction…)`
+  in a stage cell, an `| update | absent |` placeholder row, and 6-cell flow rows — and two more
+  rounds had multi-path cells that the first-path key would have silently reduced. Each cost a
+  reader resume and a re-merge; the fence itself cost less than the shape faults did.

@@ -34,15 +34,21 @@
 #                       (--base <ref> = this batch, <ref>..HEAD; pair it with --min-commits 1
 #                        --min-cochange 2 — a batch is its own sample. ac-review Phase 5 does.)
 #        aim.sh objects [--area <regex>] [--top 20] [--min-touchers 3] [--exclude <substr,...>] [-C <repo>]
+#        aim.sh files --terms '<Symbol · Symbol · …>' [--exclude <substr,...>] [-C <repo>]
+#            → the seams `files:` fence: every source file naming a term as a whole word, minus
+#              tests and dev harnesses (those are contract cells, never rows). A file that
+#              DECLARES a term stays in and is flagged — a TS type is a contract, but a Swift
+#              Codable struct is the wire producer. Prints the list, the excluded contract-only
+#              files, and a ready-to-paste `files:` line.
 # Output: markdown tables, every row with the command that reproduces its number.
 set -euo pipefail
 
 die2() { printf 'aim: NOT-GATED %s\n' "$*" >&2; exit 2; }
 
 MODE="${1:-}"; [ $# -gt 0 ] && shift
-case "$MODE" in churn|objects) ;; -h|--help|"") sed -n '/^# Usage/,/^set -euo/p' "$0" | sed '$d' >&2; exit 2 ;; *) die2 "mode must be churn or objects (got '$MODE')" ;; esac
+case "$MODE" in churn|objects|files) ;; -h|--help|"") sed -n '/^# Usage/,/^set -euo/p' "$0" | sed '$d' >&2; exit 2 ;; *) die2 "mode must be churn, objects or files (got '$MODE')" ;; esac
 
-SINCE=1y BASEREF="" TOP="" MINCO=3 MINCOMMITS=30 MINTOUCH=3 AREA="" REPO="." MAXFILES=30
+SINCE=1y BASEREF="" TOP="" MINCO=3 MINCOMMITS=30 MINTOUCH=3 AREA="" REPO="." MAXFILES=30 TERMS=""
 EXCLUDE='node_modules/,_plans/,_backlog/,_docs/,docs/,memory/,_archive/,__snapshots__/,CHANGELOG,.lock,.snap,.generated.'
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -54,6 +60,7 @@ while [ $# -gt 0 ]; do
     --min-touchers) MINTOUCH="${2:-}"; shift 2 ;;
     --area)         AREA="${2:-}"; shift 2 ;;
     --exclude)      EXCLUDE="${2:-}"; shift 2 ;;
+    --terms)        TERMS="${2:-}"; shift 2 ;;
     -C)             REPO="${2:-}"; shift 2 ;;
     *)              die2 "unknown argument: $1" ;;
   esac
@@ -65,6 +72,39 @@ done
 git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die2 "not a git repo: $REPO"
 ROOT=$(git -C "$REPO" rev-parse --show-toplevel)
 EXRE=$(printf '%s' "$EXCLUDE" | sed 's/[.[\*^$|]/\\&/g; s/,/|/g')
+
+# ============================================================ files
+if [ "$MODE" = files ]; then
+  [ -n "$TERMS" ] || die2 "files needs --terms '<Symbol · Symbol>' (the object: fence line, symbols only)"
+  case "$TERMS" in *'<'*'>'*) die2 "--terms still holds a template placeholder" ;; */*) die2 "--terms holds a path — symbols only; this command produces the file list" ;; esac
+  TLIST=$(printf '%s' "$TERMS" | sed 's/ · /\n/g; s/ — /\n/g' | sed 's/^[ `]*//; s/[ `]*$//' | grep -v '^$')
+  ARGS=(); while IFS= read -r term; do [ -n "$term" ] && ARGS+=(-e "$term"); done <<< "$TLIST"
+  CONTRACT_RE='\.test\.|\.spec\.|__tests__|/tests?/|/Tests/|/dev/|__mocks__|/fixtures?/'
+  ALL=$(cd "$ROOT" && rg --no-messages -l -w -F "${ARGS[@]}" --type ts --type swift --type kotlin --type sql \
+        -g '!*.generated.*' -g '!*.lock' -g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!Pods' . 2>/dev/null \
+        | sed 's|^\./||' | grep -vE "$EXRE" | sort -u || true)
+  # the declaring file: `export type X` / `export interface X` / `struct X` / `class X` for any term
+  DECL=$(cd "$ROOT" && printf '%s\n' "$ALL" | while read -r f; do [ -n "$f" ] || continue
+           while IFS= read -r term; do
+             [ -n "$term" ] || continue
+             if grep -qE "^(export )?(type|interface|struct|class|enum) ${term}\b" "$f" 2>/dev/null; then printf '%s\n' "$f"; break; fi
+           done <<< "$TLIST"; done | sort -u)
+  FILES=$(printf '%s\n' "$ALL" | grep -vE "$CONTRACT_RE" || true)
+  OUT=$(printf '%s\n' "$ALL" | grep -E "$CONTRACT_RE" || true)
+  n=$(printf '%s\n' "$FILES" | grep -c . || true); m=$(printf '%s\n' "$OUT" | grep -c . || true)
+  FB="rg -l -w -F $(printf -- "-e '%s' " $(printf '%s\n' "$TLIST" | sed "s/'/'\\\\''/g")) --type ts --type swift --type kotlin --type sql -g '!*.generated.*'"
+  printf '# aim files — %s files name the terms (%s contract-only excluded) · excluded: %s\n\n' "$n" "$m" "$EXCLUDE"
+  printf '## files — the seams `files:` fence (rows may cite only these)\n\n'
+  [ "$n" -gt 0 ] && printf '%s\n' "$FILES" | while read -r f; do [ -n "$f" ] || continue
+    if printf '%s\n' "$DECL" | grep -qxF "$f"; then printf -- '- %s  (declares a term — its declaration is a contract cell, not a read)\n' "$f"; else printf -- '- %s\n' "$f"; fi; done
+  printf '\n## contract-only — tests · dev harnesses (evidence for contract cells, never a row)\n\n'
+  [ "$m" -gt 0 ] && printf '%s\n' "$OUT" | sed 's/^/- /' || printf '%s\n' '- (none)'
+  printf '\n## paste into the artifact frontmatter\n\n'
+  printf 'files: %s\n' "$(printf '%s\n' "$FILES" | grep . | awk 'NR>1{printf " · "}{printf "%s",$0}END{print ""}')"
+  printf '\nfound-by: `%s`\n' "$FB"
+  [ "$n" -gt 0 ] || die2 "no source file names any term — check the symbols, or widen --terms"
+  exit 0
+fi
 
 # ============================================================ churn
 if [ "$MODE" = churn ]; then

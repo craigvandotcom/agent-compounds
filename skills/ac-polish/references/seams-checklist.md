@@ -11,10 +11,14 @@ the flow map is the control structure (time and sensing); the boundary map is th
 
 A trace has a subject, not an area. The orchestrator resolves the area to the heaviest OBJECT
 (touching files × layers) before any reader runs; the object's edges in time order are its
-FLOWS; the interfaces those edges cross are its BOUNDARIES. All three lenses aim at the one
-target. Follow the object's DATA, never the import graph, and stop at the artifact's fence: a
-copy of the value in another store is one boundary row, never a second object. Exclude prose
-paths.
+FLOWS; the interfaces those edges cross are its BOUNDARIES; the source files that name the
+object are its FILES (`aim.sh files --terms`, minus tests and dev harnesses). All three lenses
+aim at the one target and sweep the one file list: the object lens fills the grid FILES ×
+stages, the flow and boundary lenses order and pair the same lines. A row in a file outside
+FILES is fenced in every lens — a file that never names the object cannot hold its first-order
+seam; whatever it does to a copy is one boundary row on the near side. The grid is finite, so a
+round that adds nothing means the sweep is complete, not that the reader tired. Follow the
+object's DATA, never the import graph. Exclude prose paths.
 
 ## object — the datum, seven stages
 
