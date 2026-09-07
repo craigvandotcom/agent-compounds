@@ -94,7 +94,8 @@ prove a fix. Different lifecycles, different files. At hand-off the merge also w
   build. A markdown twin is optional — the html carries the tables as text already.
 
 A kept map with no re-trace scheduled is decoration (the assurance doctrine). The re-trace is
-the seams run's own success criterion: run it again after the fix, compare `seams_load`.
+the seams run's INSTRUMENT: run it again after the fix, compare `seams_load`. It is not the
+plan's success criterion — `ac-plan` writes exactly one of those, and it must be falsifiable.
 
 ## Stale maps announce themselves — `aim.sh status`
 

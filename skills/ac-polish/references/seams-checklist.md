@@ -74,9 +74,11 @@ The system must be unable to fail silently on this object: every dependency is e
 (one place decides the shape) or SENSED (something goes red when it drifts). Per target, the
 Approach is done when: competing writers → one owner per mutating stage · unasserted edges → 0
 · unsensed steps → 0 · unchecked boundary assumptions → 0 · untrusted inputs nothing validates
-→ 0. `seams-merge.py handoff` writes these counts into the plan's frontmatter (`seams_load:`),
-so the plan's success criterion is the same numbers after the fix, not a slogan. Ashby: the regulator must have as much
-variety as the disturbance. An assertion that cannot go red does not count.
+→ 0. `seams-merge.py handoff` writes these counts into the plan's frontmatter (`seams_load:`)
+— the instrument a re-trace reads after the fix. `ac-plan` writes the plan's ONE success
+criterion (falsifiable, owned); it may cite these numbers but they are not it. Ashby: the
+regulator must have as much variety as the disturbance. An assertion that cannot go red does
+not count.
 
 ## Across lenses — the ranking
 
