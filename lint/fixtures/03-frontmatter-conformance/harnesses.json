@@ -1,0 +1,6 @@
+{
+  "harnesses": {
+    "claude": {"agent_models": {"orchestrator": "x", "coordinator": "y", "worker": "z"}},
+    "opencode": {"agent_models": {"orchestrator": "a", "coordinator": "b"}}
+  }
+}
