@@ -127,7 +127,12 @@ $CALIBRATIONS
 EOF
 
 # --- The ledger -> control direction ---------------------------------------------------
-while IFS=$'\t' read -r id receipt control landed last_seen untreated; do
+# Tab is IFS WHITESPACE in bash: with IFS=$'\t' consecutive tabs collapse and an empty
+# MIDDLE field shifts every later column (control reads last_seen, landed reads
+# last_seen) — the failed-control detector then compares the wrong pair, silently.
+# awk -F'\t' preserves empties; the fields are re-delimited with \x1f (US), which is
+# NOT IFS whitespace, so the read below cannot collapse them (ac-va0t).
+while IFS=$'\x1f' read -r id receipt control landed last_seen untreated; do
   [ -n "$id" ] || continue
   if [ -z "$receipt" ]; then
     ali_fail "ledger entry '$id' cites no 'receipt:' — an entry without evidence is an opinion"
@@ -161,7 +166,7 @@ $(printf '%s' "$LEDGER_JSON" | jq -r '
     (.fields.control_landed // ""),
     (.fields.last_seen // ""),
     (.fields.untreated // "")
-  ] | @tsv')
+  ] | @tsv' | awk -F'\t' -v OFS="$(printf '\037')" '{$1=$1; print}')
 EOF
 
 if [ "$RC" -eq 0 ]; then
