@@ -736,16 +736,25 @@ entries: 33
 - first_seen: 2026-09-08
 - last_seen: 2026-09-08
 - stage: manual
-- status: open
-- proposed_fix: key object and flow rows on `file:line` (the first `path:line` in the cell),
-  with stage / flow name as an ATTRIBUTE that records disagreement (as `contract` already does)
-  instead of minting a new key. Then "no new edge" means "no new line", which is the claim the
-  stamp should make, and a reader's label preference shows up as a disagreement count, not as
-  growth. Boundary rows likewise on `interface × file:line`. Migration: existing ledgers re-key
-  by the line already stored in each row.
+- status: resolved
+- proposed_fix: REJECTED BY MEASUREMENT — keying on `file:line` was simulated over the same
+  15 v3 reports before any code changed: 75 · 13 · 7 · 6 · 45 new keys per round, 146 distinct
+  keys vs 74, and 0 cases of two readers citing the same line under different labels. Readers
+  do not cite a stable line for the same edge (the r5 flow reader cited 42 lines not seen
+  before for edges already mapped); line churn is worse than label churn. The current key
+  (stage × file · flow × file · interface × side × file) stays. LANDED instead 2026-09-08: a
+  stage-attribution rule in the reader prompt and the checklist — the stage is what the line
+  does to THE OBJECT; a producer of one field is the create row's upstream, not a create row; a
+  consumer building another object is `read`; `store` is the object itself. Against the v3
+  data that rule removes 3 of round 4's 4 adds (two breath-extractor field producers and the
+  merge's `base` fallback filed as `create`) and round 5's add (the scripted tick refiled under
+  `capture`); the two round-3 adds (a throwing web stub as `emit`, a dead consumer) stand as
+  real. Proof is the next MotionFrame trace under the rule, not this note.
 - narrative: MotionFrame v3 (files fence + full-sweep prompt + SWEPT declared 23/23 by every
   reader every round) added 60 · 7 · 2 · 4 · 1 edges and did not stamp within the five-round
-  bound. Every addition after round 1 cited a line already on the map under another label:
+  bound. The additions after round 1 were new stage × file cells in files already mapped, where
+  readers split on the stage taxonomy at the sub-object level (first read as "relabels of known
+  lines" — the simulation showed they cite different lines too):
   breath-extractor lines moved from transport to create (r4), the scripted adapter's tick filed
   under capture as well as emit (r5), the types file filed as a bridge consumer (r4) though the
   prompt calls it a contract cell. The object lens was at zero from round 2. Coverage is proven

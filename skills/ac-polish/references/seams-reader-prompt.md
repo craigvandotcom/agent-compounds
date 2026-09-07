@@ -41,7 +41,14 @@ it `create` · `transport` · `store` · `read` · `update` · `delete` · `clea
 yes is one row — the line, upstream, downstream, and the CONTRACT on the edge (a type, an
 assertion, a test path that would fail on drift) or `none`. Each no is an empty cell, and stays
 empty — that absence is the finding. One row per file per stage; the merge keys on the FIRST
-path in the cell and ignores the rest.
+path in the cell and ignores the rest. The stage is what the line does TO THE OBJECT, not to
+its parts or its products: `create` is the line that constructs the object (the literal, the
+struct init, the decode) — a function that computes one field the constructor consumes is
+UPSTREAM of that create row, named in its upstream cell, never a create row of its own; a line
+that reads the object's fields to build a different object is `read` of this object (the
+other object is its downstream); `store` is the object itself written to a store, not a
+derived value; `update` is a mutation of the object after construction. When two stages seem
+to fit, the object's own verb wins over the field's.
 
 **flow** — trace one process as ordered steps: for each step the code, who CONTROLS it (who
 decides it happens), what SENSES it (what tells the controller it happened — a flag, a
