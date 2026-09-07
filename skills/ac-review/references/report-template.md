@@ -84,19 +84,21 @@ conclusion + SHA if `ac-batch-close` ran it.}
 
 ## Review
 
-| Category     | Critical | High | Medium | Auto-Fixed |
-| ------------ | -------- | ---- | ------ | ---------- |
-| Security     | X        | Y    | Z      | A          |
-| Performance  | X        | Y    | Z      | B          |
-| Architecture | X        | Y    | Z      | C          |
-| Correctness  | X        | Y    | Z      | D          |
-| **Total**    | X        | Y    | Z      | E          |
+| Category     | Critical | High | Medium | Routed |
+| ------------ | -------- | ---- | ------ | ------ |
+| Security     | X        | Y    | Z      | A      |
+| Performance  | X        | Y    | Z      | B      |
+| Architecture | X        | Y    | Z      | C      |
+| Correctness  | X        | Y    | Z      | D      |
+| **Total**    | X        | Y    | Z      | E      |
 
 **VERDICT:** {APPROVED | NEEDS_DECISION}
 
-### Auto-Fixed Issues
+### Fixed / Routed
 
-{list of issues auto-applied with finding IDs}
+{list of findings dispositioned in-batch, and each FIX finding's route — a bead id or the
+`ac-polish code` scope it was handed (ac-review's spine § Findings); reviewers never fix in
+place, so every FIX lands here with its route}
 
 ### Needs Decision
 

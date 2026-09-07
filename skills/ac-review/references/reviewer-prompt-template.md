@@ -33,18 +33,20 @@ ENVIRONMENT CONTRACT (non-negotiable):
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
-The shared prompt for all Phase-2 panel reviewers. Spawn one Task **per spawned
+The shared prompt for all panel reviewers. Spawn one Task **per spawned
 dimension** (core four always; test-quality and contracts per their SKIP rules — see
 `review-dimensions.md`), all in a **single message** (parallel). Fill the `{...}`
 placeholders from the dimension's row in `review-dimensions.md`, and substitute
-`{DIFF_RANGE}` (the resolved diff range recorded at Phase 1 — a point-sized string;
+`{DIFF_RANGE}` (the resolved diff range — a point-sized string;
 reviewers run `git diff` on it themselves, the diff body is never pasted —
 `ac-pipeline/references/delegation-contract.md` § Payloads point), `{ARTIFACTS_DIR}`,
-`{ROUND}` (`1` for the Phase-2 pass, `2` for a Phase-5.5 verification round), and
-`{N_OTHERS}` (panel size minus one — e.g. `5` for the full six-dimension panel).
+`{ROUND}` (`1` for the review pass), `{REVIEWER_MODEL}` — a model DIFFERENT from the
+implement workers' (SKILL.md § Who reviews; the same weights re-reading their own diff are
+not independent eyes) — and `{N_OTHERS}` (panel size minus one — e.g. `5` for the full
+six-dimension panel).
 
 ```
-Task(subagent_type: "general-purpose", model: "sonnet", prompt: """
+Task(subagent_type: "general-purpose", model: "{REVIEWER_MODEL}", prompt: """
 First: read AGENTS.md for project context, coding standards, and conventions.
 {SKILL_HINT}
 
@@ -111,14 +113,14 @@ Write findings as **JSON only** (no prose, no markdown around it) to
 ```
 
 Notes:
-- `{SKILL_HINT}` is optional — include only if the Phase-1 skill routing found a relevant skill for that dimension (e.g. `Read .claude/skills/<security-skill>/SKILL.md for security patterns.`). Omit the line otherwise.
+- `{SKILL_HINT}` is optional — include only if project skill routing found a relevant skill for that dimension (e.g. `Read .claude/skills/<security-skill>/SKILL.md for security patterns.`). Omit the line otherwise.
 - `{METHOD}` comes from the dimension's METHOD block in `review-dimensions.md` — it is the how-to-hunt doctrine, not more checklist items. Always include it.
 - `{ROLE}` is the lowercase dimension name used both in the prose and the output filename (`round-{ROUND}-security.json`, `round-{ROUND}-test-quality.json`, etc.).
-- After spawning, record the panel in `$ARTIFACTS_DIR/panel-round-{ROUND}.json` (SKILL.md Phase 2) so `consensus.py` validates against what was actually spawned.
+- After spawning, record the panel in `$ARTIFACTS_DIR/panel-round-{ROUND}.json` (SKILL.md § The contract) so `consensus.py` validates against what was actually spawned.
 
 ## Measurement / analytics honesty (conditional add-on)
 
-`ac-review` hardcodes 4 core reviewers (`consensus.py` and Phase 2 expect exactly 4) — this is
+`ac-review` hardcodes 4 core reviewers (`consensus.py` and the panel expect exactly 4) — this is
 **not a 5th reviewer**. When the diff **instruments analytics events** or **produces
 metrics/rates/reports a human will trust for decisions**, splice this checklist into the
 **correctness** or **architecture** reviewer's `{CHECKLIST}` for that round (per-bead TDD proves

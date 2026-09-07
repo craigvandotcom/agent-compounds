@@ -72,7 +72,7 @@ is still exactly one committer.
 
 Then, and only after it exits 0:
 
-1. **Batch CI on the committed tree, then `ac-review`** (the coordinator-tier reviewer panel — a different stance from the implementer workers).
+1. **Batch CI on the committed tree, then `ac-review`** (the post-batch reviewer panel — a DIFFERENT model from the implement workers, read-only; `skills/ac-review/SKILL.md`).
    The workers ran bead-scoped checks only; the repo-wide gates are authoritative HERE and
    nowhere else, because only here is the tree free of half-finished sibling edits.
 2. **Telemetry.** Report width, wall time, and gate-wait vs work time. The constitution drops
