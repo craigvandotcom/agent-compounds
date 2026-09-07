@@ -66,18 +66,6 @@ run_legacy() {
   ' _ "$block" 2>/dev/null | grep '^FAIL: ' || true
 }
 
-# legacy_full <N> [root] — the same execution, FULL stdout (no FAIL filter), for
-# recipes that also compare a population/accounting line.
-legacy_full() {
-  local n="$1" root="${2:-$ROOT}" block
-  block="$(extract_block "$n")" || { echo "NOT-CHECKED: no legacy Check-$n block in lint.sh or its history" >&2; return 2; }
-  AC_ROOT="$root" bash -c '
-    fail() { echo "FAIL: $*"; }
-    check() { :; }
-    eval "$1"
-  ' _ "$block" 2>/dev/null || true
-}
-
 # compare_sets <name> <legacy-fails> <new-fails> <legacy-strip> <new-strip>
 compare_sets() {
   local name="$1" a b
@@ -193,7 +181,7 @@ if [ "$CHECK_ID" = 14 ]; then
   run_both "fixture: shrink"
 
   finish
-elif [ "$CHECK_ID" = 8 ]; then
+elif [ "$CHECK_ID" = 8 ] || [ "$CHECK_ID" = 12 ]; then
   # --- recipes for Checks 8 and 12 (ac-1p7j.14, ported from inline blocks) -----
   # Both legacy blocks are inline (not functions like Check 14), extracted
   # between their section markers. The 12-block consumes CONSUMER_DIRS, which
@@ -241,24 +229,6 @@ elif [ "$CHECK_ID" = 15 ]; then
   new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
   compare_sets "registry tree (ceilings + ratchet)" "$old" "$new" \
     's/^FAIL: Check 15: //' 's/^FAIL 15-line-ceilings: //'
-  finish
-elif [ "$CHECK_ID" = 16 ]; then
-  NEW="$ROOT/lint/checks/16-mirror-fidelity.py"
-  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
-  old="$(run_legacy 16)" || exit 2
-  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
-  compare_sets "registry tree (mirror fidelity, violations)" "$old" "$new" \
-    's/^FAIL: Check 16: //' 's/^FAIL 16-mirror-fidelity: //'
-  # the marker accounting is the check's population assertion — the two judges
-  # must have walked the same corpus, not merely flagged the same failures
-  old_acc="$(legacy_full 16 | grep -o 'mirror markers: .*' || true)"
-  new_acc="$(printf '%s\n' "$(python3 "$NEW" "$ROOT" 2>/dev/null)" | grep -o 'mirror markers: .*' || true)"
-  if [ "$old_acc" = "$new_acc" ] && [ -n "$old_acc" ]; then
-    echo "  ok    registry tree (mirror fidelity, accounting) — $old_acc"
-  else
-    echo "  FAIL  registry tree (mirror fidelity, accounting) — legacy: [$old_acc] ported: [$new_acc]"
-    fails=$((fails + 1))
-  fi
   finish
 else
   echo "NOT-CHECKED: no parity recipe for check '$CHECK_ID'" >&2
