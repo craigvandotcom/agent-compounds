@@ -1,8 +1,8 @@
 ---
 skill: ac-pipeline
 created: 2026-08-27
-last_pass: 2026-09-06
-entries: 27
+last_pass: 2026-09-07
+entries: 29
 ---
 
 # ac-pipeline — friction log
@@ -513,10 +513,10 @@ entries: 27
 - impact: M
 - frequency: occasional
 - perceptibility: silent
-- recurrence: 2
-- related: []
+- recurrence: 3
+- related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-06
+- last_seen: 2026-09-07
 - stage: ac-triage
 - status: open
 - control: untreated
@@ -568,7 +568,7 @@ entries: 27
 - stage: ac-implement
 - status: open
 - control: untreated
-- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Never beaded; recorded from the run report.
+- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Recurrence 3: RUN 2026-09-07 swarm-20260907-exhaust — commit 9b1d745 (stamp-refined summary-line change) carries a SIBLING's message verbatim; both workers wrote /tmp/ac-msg2.txt. Never beaded; recorded from the run reports.
 - proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
 - narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history.
 
@@ -593,13 +593,13 @@ entries: 27
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: [refined-beads-reach-the-worker-pool-with-zero-probe-lines-and-burn-claim-cycles]
 - first_seen: 2026-09-07
 - last_seen: 2026-09-07
 - stage: ac-implement
 - status: open
-- receipt: RUN 2026-09-07 swarm-20260907-exhaust worker log — ac-gate-test-flake-53px: fix committed (1bbdfe4), all 3 probes green, 20 serial + 6 concurrent clean runs, close refused NOT-CHECKED COVERAGE (assertions=0) and the refusal is deterministic on re-run
+- receipt: RUN 2026-09-07 swarm-20260907-exhaust worker log — ac-gate-test-flake-53px: fix committed (1bbdfe4), all 3 probes green, 20 serial + 6 concurrent clean runs, close refused NOT-CHECKED COVERAGE (assertions=0) and the refusal is deterministic on re-run. Recurrence 2, same run: ac-polish-fixpoint-digest-only-bnyx — work landed (db7f15d), 37-case harness green, close-gate COVERAGE exit 2 because is_test_shaped() selected AC3's `grep -q ... polish-fixpoint.test.sh` probe (test-shaped TOKEN, not a harness) as the assertion probe; a grep emits no assertion lines. Verified fix cannot close; bead stays open pending the gate's probe-selection fix.
 - control: untreated
 - proposed_fix: the COVERAGE leg should treat "every probe output-silent" as the temporal-pair case it already handles for prose beads (a grep/redirect probe emits no ok/FAIL lines by construction), or the assertion probe selection should prefer a probe whose stdout can reach the capture — NOT-CHECKING a verified bead every time is a gate blind spot, not coverage
 - narrative: the COVERAGE leg picks the FIRST probe naming an existing test-shaped file as the
@@ -610,3 +610,34 @@ entries: 27
   pass the close gate and cannot close. The refusal is loud and correct as a signal, but the
   gate's assertion heuristic has no instrument for the silent-probe bead class — the same shape
   the SCANNER leg hit (close-gate-scanner-leg-has-no-prose-instrument).
+
+## shallow-fetch-into-shared-gitdir-severs-local-history
+- skills: [ac-implement]
+- domain: ac2-implement
+- severity: high
+- impact: M
+- frequency: rare
+- perceptibility: loud-in-retrospect
+- recurrence: 1
+- related: [Check-14-leg-1-silently-self-passes-on-shallow-checkout]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: ac-implement
+- status: open
+- receipt: RUN 2026-09-07 swarm-20260907-exhaust — commit 6da7d2d reported "582 files" by git
+  show --stat while swarm-commit.sh's own output said 2 files changed; root cause was NOT an
+  amend: .git/shallow contained exactly 6da7d2d (a concurrent shallow fetch during the run),
+  so every history query (rev-list, merge-base, diff-vs-parent, show --stat) answered against a
+  21-commit severed view. `git fetch --unshallow` restored 1259 commits and the true 2-file
+  diff. Workers acted on a falsified tree for the remainder of the run (advisory gates only;
+  close-gate evidence was territory-scoped and unaffected).
+- control: untreated
+- proposed_fix: any script that shallow-fetches (probe worktrees, lint parity checks, CI
+  emulation) must target its OWN gitdir/worktree, never the shared repo's; and the coordinator
+  batch boundary should detect a non-empty .git/shallow and refuse or unshallow loudly before
+  the ledger flush — a gate that answers history questions on a severed view writes a false stamp.
+- narrative: the swarm-commit lane was exonerated (its pathspec discipline held; the commit
+  object always carried the correct parent). The defect class is "a probe borrows the shared
+  gitdir for a history-mutating fetch": one concurrent depth-1 fetch rewrote every actor's view
+  of trunk at once. Workers correctly did not pull/rebase/reset; the flat "582 files" anomaly
+  was reported up and the coordinator diagnosed at the batch boundary —   the escalation path worked.
