@@ -27,22 +27,45 @@ under threshold (4.5:1 body, 3:1 large/bold). Pure measurement — no eyeballing
 
 ```js
 (() => {
-  const parse = c => { const m = (c||'').match(/rgba?\(([^)]+)\)/); if (!m) return null;
-    const p = m[1].split(/[\s,/]+/).map(s => parseFloat(s)).filter(n => !Number.isNaN(n));
-    return { r:p[0], g:p[1], b:p[2], a:p[3]==null?1:p[3] }; };
+  // Colour parsing is SERIALISATION-INDEPENDENT: getComputedStyle does NOT always
+  // return rgb() — Tailwind v4 palette utilities come back as lab()/oklch(), and the
+  // old rgba?-only regex silently dropped every one of them (a real AA failure sat on
+  // a wave-touched surface while ~40 cells all reported "0 failures, 0 unmeasurable").
+  // Hand the string to the browser: a canvas fillStyle assignment accepts every CSS
+  // colour form and paints it into sRGB for us.
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const ctx = cv.getContext('2d');
+  const parse = c => {
+    if (!c) return null;
+    let got = null;
+    for (const sentinel of ['#ff00ff', '#010203']) {
+      ctx.fillStyle = sentinel; ctx.fillStyle = c;
+      if (ctx.fillStyle !== sentinel) { got = ctx.fillStyle; break; }   // assignment accepted
+    }
+    if (!got) return null;                       // rejected by BOTH sentinels → unparseable
+    ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = got; ctx.fillRect(0, 0, 1, 1);
+    const d = ctx.getImageData(0, 0, 1, 1).data;
+    return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 };
+  };
+  // SELF-TEST — refuse to sweep with a blind parser. If any serialisation below
+  // fails to parse, every count this run produces is worthless; fix the parser first.
+  const blind = ['rgb(0, 187, 167)', 'rgba(0, 187, 167, 0.5)', 'lab(67.4% -49.1 -2.6)',
+    'oklch(0.71 0.13 184)', 'color(display-p3 0 0.73 0.65)'].filter(c => !parse(c));
+  if (blind.length) return JSON.stringify({ sensor1: 'SELF-TEST FAILED', unparseable: blind,
+    note: 'parser is blind to these colour forms — do not record a clean cell from this run' });
   const lin = v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
   const lum = c => 0.2126*lin(c.r) + 0.7152*lin(c.g) + 0.0722*lin(c.b);
   const ratio = (a,b) => { const L1=lum(a), L2=lum(b), hi=Math.max(L1,L2), lo=Math.min(L1,L2); return (hi+0.05)/(lo+0.05); };
   const bgOf = el => { let n = el; while (n) { const bg = parse(getComputedStyle(n).backgroundColor);
     if (bg && bg.a >= 0.95) return bg; n = n.parentElement; } return { r:255, g:255, b:255, a:1 }; };
   // Worst-case stop, never an average: a gradient that is AA on the first stop
-  // and 1.61:1 on the yellow stop must fail. getComputedStyle resolves hsl()/var()
-  // to rgb() so this regex sees the painted colours.
+  // and 1.61:1 on the yellow stop must fail. Computed gradient stops can also
+  // serialise as lab()/oklch()/color(), so match every colour function, not just rgb().
   const stopsOf = img => {
     const out = [];
-    const re = /rgba?\(([^)]+)\)/g;
+    const re = /(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]*\)/g;
     let m; while ((m = re.exec(img || ''))) {
-      const c = parse('rgb(' + m[1] + ')'); if (c) out.push(c);
+      const c = parse(m[0]); if (c) out.push(c);
     }
     return out;
   };
@@ -52,13 +75,16 @@ under threshold (4.5:1 body, 3:1 large/bold). Pure measurement — no eyeballing
     if (!hasText(el)) return;
     const s = getComputedStyle(el);
     if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity === 0) return;
-    const fg = parse(s.color); if (!fg) return;
-    const bg = bgOf(el);
     const size = parseFloat(s.fontSize), bold = (parseInt(s.fontWeight) || 400) >= 700;
     const min = (size >= 24 || (bold && size >= 18.66)) ? 3 : 4.5;
+    const bg = bgOf(el);
     const rec = (cr, extra) => ({ t: el.textContent.trim().slice(0,40), cr: Math.round(cr*100)/100, min,
       color: s.color, bg: `rgb(${Math.round(bg.r)},${Math.round(bg.g)},${Math.round(bg.b)})`,
       cls: (el.className?.toString?.() || '').slice(0,70), ...extra });
+    // An unparseable colour is a LOUD unmeasurable, never a silent skip: the sensor
+    // could not resolve paint, and unmeasurable === 0 is part of the pass.
+    const fg = parse(s.color);
+    if (!fg) { unmeas.push(rec(0, { why: 'unparseable computed colour' })); return; }
     // Alpha-0 (bg-clip-text): NEVER blend transparent color against bg — that
     // collapses to cr===1.0 and is triaged as noise. Measure the gradient.
     if (fg.a === 0) {
@@ -88,6 +114,13 @@ under threshold (4.5:1 body, 3:1 large/bold). Pure measurement — no eyeballing
   `unmeasurable` node is not a pass and not a bare `cr: 1` — it is a loud
   fail (the sensor could not resolve paint). Each `failures` item is a finding
   (≥ High): `text "Broccoli" cr 1.3 < 4.5 on rgb(255,255,255)`.
+- **Unparseable ≠ clean.** A colour the parser cannot resolve is routed to
+  `unmeasurable`, never silently skipped — a silent skip is exactly the
+  false-clean this sensor exists to kill (the lab()/oklch() incident: 11 agents
+  across ~40 cells all reported "0 failures, 0 unmeasurable" over a real AA
+  failure). The snippet self-tests its parser against `rgb()`, `rgba()`,
+  `lab()`, `oklch()` and `color(display-p3 …)` on every run and refuses to
+  sweep blind.
 - **Worst-case gradient stop, never an average.** `bg-clip-text` paints the
   `backgroundImage` gradient; computed `color` is `rgba(0,0,0,0)`. Score every
   parsed rgb() stop against the resolved background and keep the **lowest**
@@ -328,33 +361,56 @@ echoes the CSS *declaration*, not what painted. (This shipped a real regression:
 font declared via a second `@import` that the bundle dropped — every naive check passed,
 the app rendered the system font app-wide, caught only by the measurement below.)
 
-**Ground truth = glyph-width.** Render a string in the target family backed by a
-known-different fallback; if the width equals the *pure fallback*, the webfont didn't load.
-Use **two** different fallbacks (monospace AND serif) so a coincidental width match can't
-fool it. Run once per route on the LIVE DOM (font is theme-independent — no need to sweep
-themes), after `document.fonts.ready`:
+**Ground truth = glyph-width against a MEASURED baseline.** Measure a deliberately
+bogus family (`__NoSuchFontXYZ123__`) to capture the browser's true default, and compare
+the target against THAT plus a monospace axis — never against generic families assumed
+distinct: in headless Chrome `serif` IS the default (measured: bogus 1436.05 == serif
+1436.05), so the old "differs from serif" leg could never discriminate and false-negatived
+six of seven agents in one run. Derive the family from the DOM too: **`next/font/local`
+renames families** (`'General Sans'` → `generalSans`), so design.md's nominal name and the
+CSS family routinely differ. Run once per route on the LIVE DOM (font is theme-independent
+— no need to sweep themes), after `document.fonts.ready`:
 
 ```js
 (async () => {
   await document.fonts.ready;
-  // FAMILIES = the app's declared fonts from CORE/design.md typography.fontFamily
-  const FAMILIES = ['General Sans'];           // ← replace per app
+  // SPEC = the NOMINAL names from CORE/design.md typography.fontFamily.
+  // Do not trust them as the CSS family: next/font/local registers a generated
+  // identifier ('General Sans' → generalSans), so the spec name and the painted
+  // family routinely differ — a mismatch is its own finding, not a render failure.
+  const SPEC = ['General Sans'];               // ← replace per app
   const measure = (family) => { const s = document.createElement('span');
     s.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:100px ' + family;
     s.textContent = 'WwMmIl1 mgqypj 0123'; document.body.appendChild(s);
     const w = s.getBoundingClientRect().width; s.remove(); return w; };
-  const out = FAMILIES.map(f => {
-    const vsMono = Math.abs(measure(`"${f}", monospace`) - measure('monospace'));
-    const vsSerif = Math.abs(measure(`"${f}", serif`) - measure('serif'));
-    return { family: f, renders: vsMono > 1 && vsSerif > 1,    // differs from BOTH fallbacks
-             fontsCheckSays: document.fonts.check(`16px "${f}"`) };  // the lying signal, for contrast
-  });
-  return JSON.stringify({ fonts: out });
+  // TRUE-default baseline, measured not assumed: a deliberately bogus family resolves
+  // to the browser's real default, whatever that default is in this browser.
+  const baseline = measure('__NoSuchFontXYZ123__');
+  const domFamily = getComputedStyle(document.body).fontFamily;
+  const domFirst = domFamily.split(',')[0].replace(/["']/g, '').trim();
+  const probe = f => {
+    const vsDefault = Math.abs(measure(`"${f}"`) - baseline);                     // bogus-baseline axis
+    const vsMono = Math.abs(measure(`"${f}", monospace`) - measure('monospace')); // monospace axis
+    return { family: f, nominal: SPEC.includes(f), renders: vsDefault > 1 && vsMono > 1,
+      vsDefaultPx: Math.round(vsDefault*100)/100, vsMonoPx: Math.round(vsMono*100)/100,
+      fontsCheckSays: document.fonts.check(`16px "${f}"`) };  // the lying signal, for contrast
+  };
+  // Probe BOTH the DOM's real family and the spec's nominal name. If they disagree,
+  // the spec name is unprobeable at runtime — report the mismatch and score the
+  // render by the DOM name.
+  const mismatch = !SPEC.some(s => s.toLowerCase() === domFirst.toLowerCase());
+  const out = [...new Set([domFirst, ...SPEC])].map(probe);
+  return JSON.stringify({ domFamily, specDomMismatch: mismatch ? { spec: SPEC, dom: domFirst } : null,
+    fonts: out });
 })()
 ```
 
-- **Pass = `renders: true` for every declared font.** `renders:false` while `fontsCheckSays:true`
-  is the exact false-positive footprint → ≥ High (the app is not on its specified typeface).
+- **Pass = `renders: true` for the DOM's first family.** `renders:false` on the
+  DOM name while `fontsCheckSays:true` is the exact false-positive footprint →
+  ≥ High (the app is not on its specified typeface). `renders:false` on the
+  NOMINAL spec name alone is NOT an app defect — the spec name may not exist at
+  runtime; a `specDomMismatch` there is its own reportable finding
+  (`next/font/local` renames families, so the spec is not checkable as written).
 - Corroborate: `[...document.fonts].map(f=>f.family+':'+f.status)` should list the font as
   `loaded`; `performance.getEntriesByType('resource')` should show its file fetched.
 - Fix path when it fails: prefer **`next/font/local`** (self-host) over a CDN `@import`/`<link>` —
