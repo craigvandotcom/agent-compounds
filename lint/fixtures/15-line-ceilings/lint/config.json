@@ -1,0 +1,6 @@
+{
+  "base_ref": "origin/main",
+  "conductor_ceiling": 1110,
+  "standard_ceiling": 730,
+  "conductor_skills": ["ac-implement", "ac-review", "ac-publish", "ac-land"]
+}
