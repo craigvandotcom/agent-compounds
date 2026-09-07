@@ -249,7 +249,7 @@ The toolbox (probes):
 - Shuffle — run them in random order (vitest: --sequence.shuffle with a seed; or the runner's equivalent). Fails only when shuffled = proven order-dependent.
 - Sabotage — break the code a test claims to guard (empty the function body, flip a boundary, invert a condition — pick the ONE sabotage most likely to expose a hollow test), run just the covering tests, expect red. Still green = the tests assert nothing. That's proof, not opinion.
 
-Isolation discipline (absolute): the other reviewers are reading this tree RIGHT NOW. Never sabotage or modify the shared tree. All destructive probes run in a disposable worktree — `git worktree add <tmpdir> HEAD`, experiment there, `git worktree remove --force <tmpdir>` when done. To you, the shared tree is read-only.
+Isolation discipline (absolute): the other reviewers are reading this tree RIGHT NOW. Never sabotage or modify the shared tree. All destructive probes run in a disposable worktree — `git worktree add <tmpdir> HEAD`, experiment there, `git worktree remove --force <tmpdir>` when done. To you, the shared tree is read-only. Never `git stash` from a worktree — worktrees share the parent's refs, so the stash lands in the shared repo; the worktree-safe discard from a worktree is scoped `git checkout HEAD -- <path>` inside it, or `git worktree remove --force` as the only teardown.
 
 The reading veins, in rough payoff order:
 - Cannot fail — no assertions; assertions inside conditionals/catch blocks; un-awaited async assertions; trivial truths (defined-only, length-only); snapshot-only tests reflexively regenerated on every change.

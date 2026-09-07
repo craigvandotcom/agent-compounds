@@ -224,6 +224,11 @@ Isolation discipline (absolute): the conductor and other reviewers are working o
 branch RIGHT NOW. Never sabotage or modify the shared tree. All destructive probes run
 in a disposable worktree — `git worktree add <tmpdir> HEAD`, probe there,
 `git worktree remove --force <tmpdir>` when done. To you, the shared tree is read-only.
+Never `git stash` from a worktree: worktrees share the parent's refs, so the stash
+lands in the SHARED repo (measured: two inert "WIP on (no branch)" entries had to be
+dropped by hand). The worktree-safe discard from a worktree is a scoped
+`git checkout HEAD -- <path>` inside the worktree, or `git worktree remove --force`
+as the only teardown.
 
 The reading veins, in rough payoff order:
 - **Cannot fail** — no assertions; assertions inside conditionals/catch blocks;
