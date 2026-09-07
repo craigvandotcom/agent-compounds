@@ -56,7 +56,7 @@ def first_skill(root):
         ).stdout
     except (subprocess.SubprocessError, OSError):
         return ""
-    lines = [l for l in out.splitlines() if l.strip()]
+    lines = [line for line in out.splitlines() if line.strip()]
     if not lines:
         return ""
     return lines[0].removeprefix(skills_dir + "/").removesuffix("/SKILL.md")
