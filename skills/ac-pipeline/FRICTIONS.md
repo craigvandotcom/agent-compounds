@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 29
+entries: 30
 ---
 
 # ac-pipeline — friction log
@@ -641,3 +641,41 @@ entries: 29
   gitdir for a history-mutating fetch": one concurrent depth-1 fetch rewrote every actor's view
   of trunk at once. Workers correctly did not pull/rebase/reset; the flat "582 files" anomaly
   was reported up and the coordinator diagnosed at the batch boundary —   the escalation path worked.
+
+## parity-sh-co-edited-by-two-workers-in-flight
+- skills: [ac-implement]
+- domain: ac2-implement
+- severity: medium
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 3
+- related: [worker-scratch-paths-shared-across-siblings]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-07
+- stage: ac-implement
+- status: open
+- receipt: RUN 2026-09-07 swarm-20260907-exhaust — the per-port commit lane ("one commit per
+  check") makes every porting worker a live co-editor of the same three shared files
+  (lint.sh, lint/parity.sh, lint/config.json) for tens of minutes. In one wave: (1) a
+  sibling's parity.sh refactor commit landed over OlivePond's uncommitted in-flight recipe,
+  silently deleting it (re-built from scratch on the sibling's new shared helpers); (2) the
+  same sibling's lint.sh commit swept OlivePond's already-deleted Check-8 block into THEIR
+  commit, so the check-8 port (fefaae7) and its lint.sh deletion are attributed to two beads;
+  (3) a later in-flight re-add of the 20-23 recipes was spliced at a stale offset — the diff
+  replaces the `else` of check-14's compare() with the new `elif` — which corrupts
+  `parity.sh 14` if committed as-is (observed in `git diff`, not fixed: not OlivePond's file
+  to finish). File reservations are advisory for code paths (measured), and the pre-commit
+  guard rejected worker commits 2x while a sibling's UNRELATED in-flight files sat red in
+  the shared tree — the guard measures the working tree, which is never one bead's.
+- control: untreated
+- proposed_fix: (a) the coordinator should serialize the per-port lane on the shared files
+  (one porting worker at a time, or per-worker parity recipes in per-check files extracted by
+  parity.sh, removing the shared-file hot spot); (b) the guard's green run should be scoped
+  to the commit's named paths plus their consumers, not the whole working tree; (c) workers
+  should re-diff shared files IMMEDIATELY before each swarm-commit and expect mid-flight
+  clobbering as the normal case, not the exception.
+- narrative: every affected worker re-derived the correct final state (extract-and-rebuild on
+  the newest helpers) and no verdict was forged — parity was proven against the live legacy
+  block or its git-history copy in every case. The cost was wall-clock (multi-minute rebuild
+  windows per check) and attribution hygiene, not correctness.
