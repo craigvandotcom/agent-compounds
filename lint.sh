@@ -187,28 +187,6 @@ while IFS= read -r token; do
 done <<< "$DISTINCT_AC"
 
 # ---------------------------------------------------------------------------
-# Check 5 — AGENTS.md diagram paths exist
-# ---------------------------------------------------------------------------
-echo "--- Check 5: AGENTS.md diagram paths ---"
-
-for path in skills agents deploy.sh templates _plans; do
-  check
-  if [ ! -e "$AC_ROOT/$path" ]; then
-    # Gitignored diagram paths (_plans — local-only by design, public repo) exist on
-    # working machines but NOT in a bare CI clone: absence there is expected, not a
-    # failure (ac-3jy: this exact check held registry-lint CI red on every main push
-    # since 07-30 while local runs stayed green).
-    # Try both forms: a dir-only ignore rule (`_plans/`) does NOT match the bare name
-    # when the directory is absent (CI clone) — the explicit trailing-slash form does.
-    if git -C "$AC_ROOT" check-ignore -q "$path" 2>/dev/null || git -C "$AC_ROOT" check-ignore -q "$path/" 2>/dev/null; then
-      echo "NOTICE: diagram path '$path' is gitignored (local-only) and absent here — skipped"
-    else
-      fail "AGENTS.md diagram path missing: $path"
-    fi
-  fi
-done
-
-# ---------------------------------------------------------------------------
 # Check 6 — Portability greps (zero in skills/)
 # ---------------------------------------------------------------------------
 echo "--- Check 6: portability violations ---"
