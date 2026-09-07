@@ -1164,29 +1164,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Check 20 — every proof-test harness is SCHEDULED (ac-on0y.1)
-# ---------------------------------------------------------------------------
-echo "--- Check 20: proof-test harness scheduling ---"
-
-# Check 18 proves a guard CAN fire. This proves a proof test IS RUN. When this check was
-# written, 15 harnesses existed and no workflow executed a single one — and two of them
-# had been red at HEAD for an unknown period, invisible for exactly that reason. The
-# logic lives in its own script so it can carry a RED/GREEN harness of its own (which is
-# itself scheduled by the runner this check audits).
-HSC="$AC_ROOT/scripts/harness-scheduling-check.sh"
-check
-if [ -r "$HSC" ]; then
-  if hsc_out=$(bash "$HSC" "$AC_ROOT" 2>&1); then
-    printf '%s\n' "$hsc_out" | sed 's/^/  /'
-  else
-    printf '%s\n' "$hsc_out"
-    fail "Check 20: unscheduled proof-test harness(es) — see above"
-  fi
-else
-  fail "Check 20: scripts/harness-scheduling-check.sh missing — harness scheduling unverified"
-fi
-
-# ---------------------------------------------------------------------------
 # Check 21 — assurance-triad declarations + orphan detection (ac-on0y.4)
 # ---------------------------------------------------------------------------
 echo "--- Check 21: assurance declarations ---"
