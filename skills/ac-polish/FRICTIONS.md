@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-07
-entries: 27
+entries: 28
 ---
 
 # ac-polish — friction log
@@ -648,3 +648,25 @@ entries: 27
   in a stage cell, an `| update | absent |` placeholder row, and 6-cell flow rows — and two more
   rounds had multi-path cells that the first-path key would have silently reduced. Each cost a
   reader resume and a re-merge; the fence itself cost less than the shape faults did.
+
+## seams-reader-reads-cell-count-as-a-row-quota
+- skills: [ac-polish]
+- impact: L
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 2
+- related: [seams-fence-far-side-exemption-admits-neighbouring-objects]
+- first_seen: 2026-09-06
+- last_seen: 2026-09-07
+- stage: manual
+- status: promoted
+- proposed_fix: the prompt says "no row quota — one row per filled cell; 7 cells per MAP row",
+  never "(object 7 · flow 7 · boundary 7)". Landed 2026-09-07 (reader prompt). Measurement:
+  MotionFrame v2 rounds 5+ under the reworded prompt.
+- narrative: `Cell counts are exact (object 7 · flow 7 · boundary 7 · diagnosis 4)` meant cells
+  per row; readers took it as seven rows per lens. Under the files: fence every report in the
+  MotionFrame v2 run came back with exactly 7 MAP rows (9 where I split paired cells), two
+  object readers wrote all three lens tables at 7 rows each, and the old run's reports after
+  round 1 clustered at 4–10. A 23-file × 7-stage grid cannot fill at seven rows a round, so the
+  loop added 25 · 20 · 12 edges with zero fenced and zero drift — the fence held, the sweep was
+  rationed by a misread sentence.

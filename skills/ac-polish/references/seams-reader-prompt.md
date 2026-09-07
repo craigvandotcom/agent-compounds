@@ -55,11 +55,13 @@ happens) · **more** (twice, or too many) · **less** (partial) · **late** · *
 (out of order with its neighbour) · **other than** (the wrong shape or the wrong record) — and
 report the ones where the map shows nothing would notice. Cite paths. Do not design.
 
-WRITE YOUR REPORT to `<REPORT>` in exactly this shape — parsed by a script. Cell counts are
-exact (object 7 · flow 7 · boundary 7 · diagnosis 4); the stage cell is the bare stage word;
-escape `|` inside a cell as `\|`; `found-by` holds only commands, separated by ` · `, each run
-verbatim, ONE pattern per command and no pipe character (the validator re-runs each one and
-drops the row if none prints a line).
+WRITE YOUR REPORT to `<REPORT>` in exactly this shape — parsed by a script. There is NO row
+quota: write one row for every filled cell your sweep found — a full sweep of the FILES yields
+far more than a handful, and a short report means an unfinished sweep, not a clean one. Every
+MAP row has exactly 7 cells and every DIAGNOSIS row exactly 4; the stage cell is the bare stage
+word; escape `|` inside a cell as `\|`; `found-by` holds only commands, separated by ` · `, each
+run verbatim, ONE pattern per command and no pipe character (the validator re-runs each one and
+drops the row if none prints a line). ONE table, under YOUR lens's header only.
 
 ```
 LENS: object
@@ -76,4 +78,5 @@ DIAGNOSIS:
 |---|---|---|---|
 ```
 
-Use only YOUR lens's header. `NONE` in the pattern cell is a legitimate DIAGNOSIS answer.
+Use only YOUR lens's header — a report carrying another lens's table is rejected whole. `NONE`
+in the pattern cell is a legitimate DIAGNOSIS answer.
