@@ -11,6 +11,7 @@ Symlinked into a project as `.claude/skills/<name>/`.
 **Multi-model**
 | Skill | What it does |
 |-------|-------------|
+| **[multi-model](./skills/multi-model/)** | Access 400+ AI models (Claude, GPT, Gemini, Grok, DeepSeek) and get a panel synthesized into one consensus answer on OpenRouter Fusion |
 
 **Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
 conductor is **`ac-implement`**; the design lives in **`ac-pipeline`**. Three loops feed one
@@ -53,7 +54,7 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
 | **ac-idea-lab** | Deep analysis of a raw idea — genius (forensic review) + alien (paradigm-breaking) modes |
-| **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts |
+| **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts; builds orchestrated `/command` workflows (`workflows/build-workflow.md`); runs the registry audit — mechanical lint passes + semantic dedup/drift (`workflows/registry-audit.md`); scores subagent prompts against the research-backed rubric (`references/prompt-rubric.md`) |
 | **browser-testing** | UI/login/flow validation via agent-browser |
 | **device-testing** | Ad-hoc native iOS-simulator driving via agent-device, with screenshot/video capture — the native twin of browser-testing |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
@@ -140,10 +141,10 @@ mkdir -p ../my-project/_backlog ../my-project/_plans ../my-project/_strategy
 ### Skills setup
 
 ```bash
-export OPENROUTER_API_KEY=sk-or-...  # for openrouter / expert-consensus
+export OPENROUTER_API_KEY=sk-or-...  # for multi-model
 ```
 
-Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus What makes a great API?` — toggle models in `skills/expert-consensus/expert-panel.json`.
+Claude Code discovers each `SKILL.md` automatically. Use e.g. `/multi-model What makes a great API?` — direct query or panel synthesis via OpenRouter Fusion (`skills/multi-model/workflows/fusion.md`).
 
 ## Dependencies
 
@@ -151,7 +152,7 @@ Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus
 |-----------|-----------------|---------|
 | **[beads (br)](https://github.com/Dicklesworthstone/beads_rust)** | Artifact-based planning and implementation tracking — plans, beads, pipeline stages | `cargo install --git https://github.com/Dicklesworthstone/beads_rust.git` |
 | **[agent-mail (MCP)](https://github.com/Dicklesworthstone/mcp_agent_mail)** | Inter-agent messaging, file reservations, coordination for multi-agent workflows | Add as MCP server in `.claude/settings.json` |
-| **openrouter** | OpenRouter CLI for multi-model queries (used by expert-consensus and openrouter skills) | Install the `openrouter` CLI and ensure it's on your `PATH` |
+| **openrouter** | OpenRouter CLI for multi-model queries (used by the multi-model skill) | Install the `openrouter` CLI and ensure it's on your `PATH` |
 | **[agent-browser](https://www.npmjs.com/package/agent-browser)** | Headless browser automation CLI for UI testing (used by browser-tester sub-agent, ac-land, ac-review) | `npm install -g agent-browser` |
 
 ## Philosophy
@@ -159,7 +160,7 @@ Claude Code discovers each `SKILL.md` automatically. Use e.g. `/expert-consensus
 - **Compound, don't collect** — each skill should make the next one more valuable
 - **SKILL.md is the interface** — human-readable reference that doubles as AI context
 - **Standalone by default** — no frameworks, no setup wizards
-- **One config file per skill** — e.g. `skills/expert-consensus/expert-panel.json`
+- **One workflow file per skill** — e.g. `skills/multi-model/workflows/fusion.md`
 
 ## License
 
