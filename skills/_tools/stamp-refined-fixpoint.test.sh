@@ -21,7 +21,8 @@ STAMP="$DIR/stamp-refined.sh"
 FIXPOINT="$ROOT/skills/_tools/polish-fixpoint.sh"
 
 FAILURES=0
-pass() { echo "  PASS: $1"; }
+PASSES=0
+pass() { echo "  PASS: $1"; PASSES=$((PASSES + 1)); }
 fail() { echo "  FAIL: $1"; FAILURES=$((FAILURES + 1)); }
 
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
@@ -498,7 +499,7 @@ fi
 
 echo
 if [ "$FAILURES" -eq 0 ]; then
-  echo "All stamp-refined fixpoint-receipt tests passed."
+  echo "$PASSES passed, $FAILURES failed — all stamp-refined fixpoint-receipt tests passed."
   exit 0
 else
   echo "$FAILURES fixture test(s) FAILED."
