@@ -1,9 +1,4 @@
----
-name: memory-pipeline
-description: Use when asking how the compounding system RUNS rather than where a fact goes — "how does memory actually work here", "what drains the dream queue", "why didn't that memory surface", "is the substrate healthy", "which lane does this belong in", "what earns a wiki page", "the nightly eval is red", "the docket is backed up". Covers the three compounding lanes (L3 memory, skill frictions, wiki synthesis), their executors, cadence, drains, and health surface. NOT the save-routing taxonomy or what loads when (that is context-engineering).
----
-
-# memory-pipeline — how the compounding system runs
+# operations — how the compounding system runs
 
 The operational architecture of the org's memory: three lanes that each turn raw
 experience into something a future session can retrieve, and the machinery that keeps
@@ -11,15 +6,16 @@ them draining.
 
 ## The boundary (read this before adding anything here)
 
-`context-engineering` is the **constitution** — where a durable item goes (`{type} ×
-{domain}`), what loads when (L0–L4), which layer an instruction belongs in. This skill is
-the **operations manual** — who runs, on what cadence, what drains what, and how to tell
-whether it is working. Doctrine questions go there; "is it running" questions come here.
+`context-engineering/SKILL.md` is the **constitution** — where a durable item goes
+(`{type} × {domain}`), what loads when (L0–L4), which layer an instruction belongs in.
+This reference is the **operations manual** — who runs, on what cadence, what drains
+what, and how to tell whether it is working. Doctrine questions go there; "is it
+running" questions come here.
 
-Never restate the taxonomy, the L0–L4 table, or the placement ladder in this skill. Cite
-them. One source, per `context-engineering` § Common Mistakes.
+Never restate the taxonomy, the L0–L4 table, or the placement ladder in this reference.
+Cite them. One source, per `context-engineering` § Common Mistakes.
 
-| Skill | Owns | This skill defers to it for |
+| Skill | Owns | This reference defers to it for |
 |---|---|---|
 | `context-engineering` | the constitution | taxonomy · homes · L0–L4 · placement · altitude · promotion doctrine |
 | `reflect` | session-end capture | how a single session's lessons are extracted and routed |
@@ -71,7 +67,7 @@ Choosing a lane.
 ## Health surface
 
 Five commands answer "is it working". Run them before believing any narrative about the
-substrate — including this skill's.
+substrate — including this reference's.
 
 ```bash
 python3 infrastructure/scripts/health/memory-lint.py        # substrate integrity

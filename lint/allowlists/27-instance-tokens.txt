@@ -75,8 +75,8 @@
 2026-09-07 | memory/auto | skills/dream/references/auto-act-rubric.md
 2026-09-07 | memory/auto | skills/dream/references/lint-checks.md
 2026-09-07 | memory/auto | skills/dream/workflows/dream-daily.md
-2026-09-07 | memory/auto | skills/memory-pipeline/SKILL.md
-2026-09-07 | memory/auto | skills/memory-pipeline/references/lane-contracts.md
+2026-09-07 | memory/auto | skills/context-engineering/references/operations.md
+2026-09-07 | memory/auto | skills/context-engineering/references/lane-contracts.md
 2026-09-07 | memory/auto | skills/reflect/SKILL.md
 2026-09-07 | memory/auto | skills/skill-builder/references/friction-capture.md
 2026-09-07 | memory/auto | skills/skill-builder/references/promotion-ladder.md
