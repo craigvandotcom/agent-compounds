@@ -28,9 +28,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATE_SCRIPT="$SCRIPT_DIR/beads-closed-gate.sh"
 
 FAILURES=0
+# FAILED_CASES — every fail() message, replayed by the final summary block so the
+# failing case(s) stay nameable from the summary alone (ac-gate-test-flake-53px:
+# a flaky run used to print a bare count, and without the scroll-back the case
+# was lost — FAILED_NAMES died with the terminal).
+FAILED_CASES=()
 pass() { echo "  PASS: $1"; }
 fail() {
   echo "  FAIL: $1"
+  FAILED_CASES+=("FAIL: $1")
   FAILURES=$((FAILURES + 1))
 }
 
@@ -718,6 +724,7 @@ if [ "$FAILURES" -eq 0 ]; then
   echo "All beads-closed-gate.sh fixture tests passed."
   exit 0
 else
-  echo "$FAILURES fixture test(s) FAILED."
+  echo "$FAILURES fixture test(s) FAILED. Failed case(s) (FAILED_NAMES):"
+  printf '  %s\n' "${FAILED_CASES[@]}"
   exit 1
 fi
