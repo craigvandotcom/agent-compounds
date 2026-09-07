@@ -795,25 +795,35 @@ ratchet_derived() {   # $1 = tier max lines, $2 = multiplier as a percentage
 }
 RATCHET_STD_MAX=0; RATCHET_STD_OWNER="(none)"
 RATCHET_CON_MAX=0; RATCHET_CON_OWNER="(none)"
-for rskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
-  [ -f "$rskill_path" ] || continue
-  rskill_name=$(basename "$(dirname "$rskill_path")")
-  rskill_lines=$(wc -l < "$rskill_path" | tr -d ' ')
-  rskill_tier=standard
-  for cskill in "${CONDUCTOR_SKILLS[@]}"; do
-    if [ "$rskill_name" = "$cskill" ]; then rskill_tier=conductor; break; fi
-  done
+# ONE awk pass derives the whole roster (name|lines|tier|accessory) — the per-skill
+# basename/dirname/wc/tr/grep forks this loop used to pay scale with the registry's
+# growth axis (~1.1s per lint run at ~100 skills, bead ac-kdtg.3). Empty roster ->
+# derived ceiling 0 -> the ratchet assert below fails loudly; awk cannot hang on a
+# missing glob because the literal pattern reaches it as an unopenable arg.
+SKILL_ROSTER=$(awk -v conductors=" ${CONDUCTOR_SKILLS[*]} " '
+  FNR == 1 && NR > 1 { printf "%s|%d|%s|%d\n", pname, plines, ptier, pacc }
+  FNR == 1 {
+    pname = FILENAME
+    sub(/\/SKILL\.md$/, "", pname)
+    sub(/.*\//, "", pname)
+    ptier = "standard"; pacc = 0; plines = 0
+  }
+  index(conductors, " " pname " ") { ptier = "conductor" }
+  /^accessory: true/ { pacc = 1 }
+  { plines = FNR }
+  END { printf "%s|%d|%s|%d\n", pname, plines, ptier, pacc }
+' "$AC_ROOT"/skills/*/SKILL.md)
+while IFS='|' read -r rskill_name rskill_lines rskill_tier rskill_acc; do
   if [ "$rskill_tier" = conductor ]; then
     if [ "$rskill_lines" -gt "$RATCHET_CON_MAX" ]; then
       RATCHET_CON_MAX=$rskill_lines; RATCHET_CON_OWNER=$rskill_name
     fi
-  else
-    grep -q '^accessory: true' "$rskill_path" 2>/dev/null && continue
+  elif [ "$rskill_acc" != 1 ]; then
     if [ "$rskill_lines" -gt "$RATCHET_STD_MAX" ]; then
       RATCHET_STD_MAX=$rskill_lines; RATCHET_STD_OWNER=$rskill_name
     fi
   fi
-done
+done <<< "$SKILL_ROSTER"
 RATCHET_STD_DERIVED=$(ratchet_derived "$RATCHET_STD_MAX" 110)
 RATCHET_CON_DERIVED=$(ratchet_derived "$RATCHET_CON_MAX" 115)
 check
@@ -835,11 +845,15 @@ echo "conductor-tier ceiling: ${CONDUCTOR_CEILING} lines (W3.2-pilot measured ca
 check
 for cskill in "${CONDUCTOR_SKILLS[@]}"; do
   cskill_path="$AC_ROOT/skills/$cskill/SKILL.md"
-  if [ ! -f "$cskill_path" ]; then
+  # Line count comes from SKILL_ROSTER (one awk pass, no per-skill wc fork).
+  cskill_lines=""
+  while IFS='|' read -r lnm lln _ltier _lacc; do
+    if [ "$lnm" = "$cskill" ]; then cskill_lines=$lln; break; fi
+  done <<< "$SKILL_ROSTER"
+  if [ -z "$cskill_lines" ]; then
     fail "Check 15: conductor skill '$cskill' has no SKILL.md at ${cskill_path#$AC_ROOT/}"
     continue
   fi
-  cskill_lines=$(wc -l < "$cskill_path" | tr -d ' ')
   if [ "$cskill_lines" -gt "$CONDUCTOR_CEILING" ]; then
     fail "Check 15: conductor '$cskill' SKILL.md is ${cskill_lines} lines > ${CONDUCTOR_CEILING} ceiling (diet it or move content to references/)"
   else
@@ -848,30 +862,17 @@ for cskill in "${CONDUCTOR_SKILLS[@]}"; do
 done
 echo "standard-tier ceiling: ${STANDARD_CEILING} lines (largest standard skill +10%, ratchet-down only — lower as standard skills get dieted)"
 check
-for sskill_path in "$AC_ROOT"/skills/*/SKILL.md; do
-  [ -f "$sskill_path" ] || continue
-  sskill_name=$(basename "$(dirname "$sskill_path")")
-
-  is_conductor=false
-  for cskill in "${CONDUCTOR_SKILLS[@]}"; do
-    if [ "$sskill_name" = "$cskill" ]; then
-      is_conductor=true
-      break
-    fi
-  done
-  [ "$is_conductor" = true ] && continue
-
-  if grep -q '^accessory: true' "$sskill_path" 2>/dev/null; then
-    continue
-  fi
-
-  sskill_lines=$(wc -l < "$sskill_path" | tr -d ' ')
+# Same roster, no per-skill forks: tier and accessory flag were derived in the
+# single awk pass above.
+while IFS='|' read -r sskill_name sskill_lines sskill_tier sskill_acc; do
+  [ "$sskill_tier" = conductor ] && continue
+  [ "$sskill_acc" = 1 ] && continue
   if [ "$sskill_lines" -gt "$STANDARD_CEILING" ]; then
     fail "Check 15: standard skill '$sskill_name' SKILL.md is ${sskill_lines} lines > ${STANDARD_CEILING} ceiling (diet it or move content to references/)"
   else
     printf '  PASS  %-16s %5s / %s lines\n' "$sskill_name" "$sskill_lines" "$STANDARD_CEILING"
   fi
-done
+done <<< "$SKILL_ROSTER"
 
 # ---------------------------------------------------------------------------
 # Check 16 — mirror fidelity (child-spawn preamble)
