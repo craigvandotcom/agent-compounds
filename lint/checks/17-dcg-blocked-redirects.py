@@ -94,7 +94,8 @@ def main():
     for path in files:
         rel = os.path.relpath(path, root)
         try:
-            lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                lines = fh.read().splitlines()
         except OSError as exc:
             findings.append(f"unreadable file {rel}: {exc}")
             continue

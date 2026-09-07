@@ -87,7 +87,8 @@ def main():
     for path in iter_skill_files(skills_dir):
         scanned += 1
         try:
-            text = open(path, encoding="utf-8", errors="replace").read()
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                text = fh.read()
         except OSError:
             continue
         for m in TOKEN_RE.finditer(text):

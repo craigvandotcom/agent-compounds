@@ -73,7 +73,8 @@ def main():
                 path = os.path.join(dirpath, fn)
                 scanned += 1
                 try:
-                    text = open(path, encoding="utf-8", errors="replace").read()
+                    with open(path, encoding="utf-8", errors="replace") as fh:
+                        text = fh.read()
                 except OSError as exc:
                     findings.append(f"unreadable file {os.path.relpath(path, root)}: {exc}")
                     continue
