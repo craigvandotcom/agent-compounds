@@ -48,8 +48,9 @@ notices = []
 def probe_guard(seg, payload, expected, label, flagroot):
     flagdir = os.path.join(flagroot, f"p{expected}-{os.getpid()}-{label.replace(' ', '-')}")
     try:
+        cmd = [seg]
         proc = subprocess.run(
-            [seg], input=payload, capture_output=True, text=True, timeout=60,
+            cmd, input=payload, capture_output=True, text=True, timeout=60,
             env={**os.environ, "SKILL_EDIT_GUARD_FLAG_DIR": flagdir},
         )
         got = proc.returncode
@@ -59,8 +60,10 @@ def probe_guard(seg, payload, expected, label, flagroot):
         violations.append(f"skill-edit-guard {label} (exit {got}, expected {expected})")
 
 
-def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(_LINT)
+def main(argv=()):
+    """argv is injectable so harnesses can drive this check without stdin games."""
+    args = list(argv)
+    root = args[0] if args else os.path.dirname(_LINT)
     hooks = os.path.join(root, "hooks")
     if not os.path.isdir(hooks):
         print("18-guard-liveness NOT-CHECKED: no hooks/ under root — nothing scanned",
@@ -77,7 +80,7 @@ def main():
             violations.append(
                 f"hooks/{name} is not executable — the hook is wired but dead")
 
-    seg = os.path.join(hooks, "skill-edit-guard.py")
+    seg = os.path.realpath(os.path.join(hooks, "skill-edit-guard.py"))
     if os.path.isfile(seg) and os.access(seg, os.X_OK):
         with tempfile.TemporaryDirectory(prefix="lint-guard-probe.") as flagroot:
             probe_guard(seg, '{"tool_input":{"file_path":"/x/skills/y/SKILL.md"}}',
@@ -147,4 +150,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

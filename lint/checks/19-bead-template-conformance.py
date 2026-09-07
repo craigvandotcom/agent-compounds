@@ -30,14 +30,17 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 
 
-def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else _ROOT
-    btl = os.path.join(root, "scripts", "bead-template-lint.py")
+def main(argv=()):
+    """argv is injectable so harnesses can drive this check without stdin games."""
+    args = list(argv)
+    root = args[0] if args else _ROOT
+    btl = os.path.realpath(os.path.join(root, "scripts", "bead-template-lint.py"))
     if not os.path.isfile(btl):
         print("FAIL 19-bead-template-conformance: scripts/bead-template-lint.py missing — "
               "template conformance unverified")
         return 1
-    proc = subprocess.run([sys.executable, btl], capture_output=True, text=True, timeout=300)
+    runner = [sys.executable, btl]
+    proc = subprocess.run(runner, capture_output=True, text=True, timeout=300)
     if proc.returncode == 0:
         sys.stdout.write(proc.stdout)
         print("  all bead templates carry origin: + readiness")
@@ -49,4 +52,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
