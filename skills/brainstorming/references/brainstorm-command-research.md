@@ -398,7 +398,7 @@ Phase 3: OUTPUT
 
 ## Next Steps
 
-1. **Review this research** with Craig
+1. **Review this research** with the human
 2. **Select approach** (A, B, C, D, or Hybrid)
 3. **Create skill file** at `.claude/skills/brainstorming/SKILL.md`
 4. **Create command file** for `/brainstorm`

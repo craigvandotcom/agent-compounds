@@ -52,13 +52,28 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   careful?
 - What is the biggest risk, and does the plan actually spend anything on it?
 
-## 5. out-of-scope stated
+## 5. premortem (imagine this failed)
+
+- It is 6 months in the future: this plan was implemented and it completely failed. What went
+  wrong? Name 3+ concrete failure scenarios, each with what happened, the root cause, the
+  warning sign that should have been obvious, and the specific plan change that prevents it
+  (Jeffrey Emanuel's premortem pattern — the iterative-refinement method it belongs to:
+  `skills/ac-plan-lab/references/methodology.md`; the full prompt lives in the planning archive).
+- Which assumption is this plan making that could be false? For each: what breaks if it is
+  wrong, and what hedges it?
+- What are the edge cases and integration risks — degraded network, unexpected input,
+  dependency failure, load, stale or corrupted state, a rollout that goes wrong — and does the
+  plan name a rollback for the irreversible ones?
+- For each failure mode: what is the hardening measure, expressed as a proposed change to the
+  plan itself — never a resolution to be careful?
+
+## 6. out-of-scope stated
 
 - Does the plan say what it is NOT doing, explicitly? An unbounded plan cannot be finished,
   only abandoned.
 - For each exclusion: is it deferred (and to what) or refused (and why)?
 
-## 6. decisions closed
+## 7. decisions closed
 
 - Is every fork the plan turns on settled in a Decisions card (`settled:` or `needs-human`)?
   A step two implementations could both satisfy is class (c) unimplementability. The
