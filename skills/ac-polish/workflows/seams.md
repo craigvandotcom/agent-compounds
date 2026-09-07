@@ -20,7 +20,7 @@ acceptance journey. Nothing is fixed here.
 | **CHECKLIST** | `references/seams-checklist.md` — the three lenses, their command shapes, and the rules that turn maps into seams |
 | **READERS** | one per lens per round, in parallel (`--lens` selects a subset; default all three), each sent `references/seams-reader-prompt.md` verbatim with `<LENS>`, `<SUBJECT>`, `<FILES>` (the `files:` line, one path per line), `<MAPS>` (the current artifact — facts, so showing it is not contamination), `<CHECKLIST>`, `<REPORT>` (= `<STATE>/reports/r<N>-<lens>.md`) filled. Fresh each round; each sweeps the same FILES and extends and corrects its own map |
 | **VALIDATE** | `seams-merge.py round … --validate --repo <root>` re-runs every new edge's `found-by`; an edge no command reproduces is dropped |
-| **STAMP** | `polish-fixpoint.sh --mode seams` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them |
+| **STAMP** | `polish-fixpoint.sh --mode seams --findings 0` — `seams_` frontmatter keys, so a later `--mode plan` polish keeps its own stamp beside them. `--findings` is 0 in seams mode BY CONSTRUCTION: a reader's findings are its rows, the merge applies every admitted row to the artifact and records the rest as fenced/dropped with a reason, so nothing remains undispositioned after the merge and the digest is the only sensor. Passing `new_edges` as the count makes a clean round unstampable (a round that adds nothing has 0 either way; a round that adds edges moves the digest) |
 
 ## The start prompt — only when no target is given
 
