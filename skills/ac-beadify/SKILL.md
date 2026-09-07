@@ -20,21 +20,28 @@ Contract compiled TO: `references/bead-schema.md` (mandatory load). Doctrine:
 ## The refusal that defines this skill
 
 **No probe, no bead.** An AC that names no executable probe is not a smaller AC — the bead
-is REFUSED, emitted nowhere, and returned to the plan for a deliverable that can be checked.
-This is a refusal, not a warning, and never a label: softening it to a warning IS the
-vacuous-AC regression it exists to stop (measured H-impact, every-run, recurrence 5,
-previously regressed). Mechanically, for every candidate bead:
+is REFUSED, emitted nowhere, returned to the plan. This is a refusal, not a warning, never a
+label: softening it IS the vacuous-AC regression (measured H-impact, recurrence 5, previously
+regressed). Mechanically, for every candidate bead:
 
 ```sh
-# every AC must yield a probe, and every probe must be runnable as written
+# every AC must yield a probe; every probe must be runnable AND RED against current HEAD
 grep -o 'Probe: `[^`]*`' "$BEAD" | sed 's/^Probe: `//; s/`$//' \
-  | while IFS= read -r p; do sh -n -c "$p" || echo "REFUSED: unrunnable probe: $p"; done
+  | while IFS= read -r p; do
+      sh -n -c "$p" || { echo "REFUSED: unrunnable probe: $p"; continue; }
+      sh -c "$p" >/dev/null 2>&1 \
+        && echo "REFUSED: already green — this probe passes before the work exists: $p"
+    done
 ```
 
-Count the extracted probes against the AC bullets. Fewer probes than ACs = REFUSED. A prose
-fragment (`wc -l`, "diff the file", "grep for it") is not a probe. A probe naming an artifact
-this bead has yet to create uses the guarded form `test -x <path> && bash <path>` so its
-leading word exists today and it is honestly RED until the artifact lands.
+Count the extracted probes against the AC bullets; fewer = REFUSED. A prose fragment
+(`wc -l`, "diff the file") is not a probe. **Execution is part of the refusal**: compile runs
+every probe against current HEAD — one that exits 0 is already green, asserts nothing, and
+REFUSES the bead naming the offending AC (dogfood #2 measured 19; baseline in
+`ac-pipeline/FRICTIONS.md`). A probe that cannot run at compile (state-mutating, needs a
+device/credentials) is never silently skipped: it goes on an explicit NOT-EXECUTED list with
+the reason. A probe naming an artifact this bead has yet to create keeps the guarded form
+`test -x <path> && bash <path>`, honestly RED at compile.
 
 ## Procedure
 
@@ -45,9 +52,8 @@ leading word exists today and it is honestly RED until the artifact lands.
    Two signals govern the cut, and both are cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
    - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through
-     an underdetermined bead improvising decisions the bead should have made. If the plan
-     does not settle a fork, the bead does not exist yet; send the fork back to the plan or
-     file it as a human gate.
+     an underdetermined bead improvising decisions the bead should have made. A fork the plan
+     does not settle goes back to the plan, or out as a human gate.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
@@ -70,21 +76,12 @@ leading word exists today and it is honestly RED until the artifact lands.
    title, so bodies go `-d "$(cat <file>)"` and bead text must stay dcg-safe.
 7. **Retire the plan** (§ below).
 
-## Bootstrap seam — expires at Phase 3
-
-Until `ac-implement` exists, ac2 beads are worked on the CURRENT path, whose engineer spawn
-pastes `## Territory` verbatim with no fallback. So beads compiled for **Phases 0, 1 and 2
-carry a transitional `## Territory` list**. It is **dropped from Phase 3 on**, when
-ac-implement's flight-check derives the surface at claim time instead. The seam is
-transitional by construction: it is never graded by `bead-checklist.md`, and it expires — do
-not carry it forward, and do not let it grow a second consumer.
-
 ## Plan retirement — and the one case that refuses it
 
 Tenet 7: plan hard, then retire the plan — beads and the constitution are its only survivors.
 On a successful compile the plan file is **moved to `_plans/_done/`** and the epic bead gets a
-comment naming its new path. If beads still need the plan, they are not self-contained enough;
-retirement is what forces that discipline, and the plan is preserved, never deleted.
+comment naming its new path. Beads that still need the plan are not self-contained enough;
+retirement forces that discipline; the plan is preserved, never deleted.
 
 **REFUSE to retire while an open bead still needs the plan as its subject.** Before moving the
 file, look for an open bead whose subject IS this plan — a dogfood receipt, a
@@ -96,10 +93,10 @@ RUST_LOG=error br list --status open --json \
   | grep -Fq "$(basename "$PLAN_FILE")" && echo "RETIREMENT HELD: an open bead still names $PLAN_FILE"
 ```
 
-The guard lives HERE, in the skill that ships retirement, because that is the only place its
-condition can still be true. A safeguard on the far side of a dependency is decoration.
+The guard lives HERE, in the skill that ships retirement — the only place its condition can
+still be true; a far-side safeguard is decoration.
 
 ## Hand-off
 
 A compiled epic with no grading is a dead end: hand the bead set to `ac-polish`
-(bead-checklist) before any of it is claimed.
+(bead-checklist) before any claim.
