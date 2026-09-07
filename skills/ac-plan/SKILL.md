@@ -12,7 +12,7 @@ description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliver
 | **Input**        | An idea, a backlog item, or a problem statement                               |
 | **Output**       | ONE plan file, `_plans/YYYY-MM-DD-HHMM-<slug>.md`, unstamped                  |
 | **Artifacts**    | Explorer notes in `_plans/research/` — only if explorers were run             |
-| **Verification** | `ac-polish plan <path>` to fixpoint; its `references/plan-checklist.md` is the bar |
+| **Verification** | `ac-polish plan <path>` to fixpoint; `ac-polish/references/plan-checklist.md` is the bar |
 
 Doctrine: `skills/ac-pipeline/SKILL.md` — including the model-tier Calibration (planning
 runs OPUS-tier; that is a Calibration with a retirement measurement, not a fact to restate
