@@ -143,7 +143,6 @@ it excludes, and the pick-order already sequences bugs first.
   review panel for risky scopes.
 - Shared-tree check poisoning is reduced, not removed. Worktrees remove it and bring back
   per-DB ledger races.
-- `vitest related` is static-graph, shallower than `vitest-affected` (ac-j4w5).
 - One self-hosted runner serialises CI. N× implementation is not N× shipping.
 - Worker context can run out mid-bead: hence `CAP`, the claim-time comment, the orphan
   sweep.

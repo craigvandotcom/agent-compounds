@@ -81,7 +81,11 @@ CLOSED=0
            here, never file a bead for it — the exception is a P0/P1 product defect whose
            repro you verified at current HEAD.
 
-6 CHECK    VITEST_AFFECTED_DISABLED=1 npx vitest related <your files> --run --passWithNoTests --bail 1
+ 6 CHECK    VITEST_AFFECTED_SEEDS="<your files>" npx vitest run --passWithNoTests --bail 1
+            (ac-j4w5: the plugin seeds its reverse-graph BFS from YOUR files only — siblings'
+            uncommitted edits on the shared checkout are out of the decision, and the runtime
+            importDurations edges `vitest related`'s static graph misses are in. Deleted a
+            file? pass its path anyway — a missing seed counts as a deletion.)
            assert the run reported a result file for every test file it should have matched
            — a silent collapse to fewer files still prints "N passed" and is a false green
            `### Test-tier exposure` names the tiers this bead can break. `standing-vitest` IS
