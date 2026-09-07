@@ -2,7 +2,7 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-07
-entries: 30
+entries: 33
 ---
 
 # ac-polish — friction log
@@ -681,9 +681,12 @@ entries: 30
 - first_seen: 2026-09-07
 - last_seen: 2026-09-07
 - stage: manual
-- status: partial
+- status: resolved
 - proposed_fix: make coverage a declared, checked quantity. LANDED 2026-09-07 (prompt only, by
-  decision): the reader prompt orders a full sweep — every file on FILES in list order, a row
+  decision) and MEASURED 2026-09-08: MotionFrame v3 — 15 readers, every one declared 23/23 files
+  every round; object lens 28·0·0·3·0, first round 60 edges vs 25 (v2) and 50 (v1). The prompt
+  alone was enough; the merge does not parse SWEPT. What remained after coverage is a different
+  friction (`seams-stage-relabel-reads-as-growth`). The reader prompt orders a full sweep — every file on FILES in list order, a row
   for every filled cell even if the map has it, stop at the last file not when the report feels
   long — and ends with a `SWEPT:` block, one line per file, `absent` where nothing touches the
   object. NOT landed: the merge parsing SWEPT and gating a round on it (`swept=N/M`); revisit
@@ -722,3 +725,67 @@ entries: 30
   plus a state dir under ~/.claude. The next engineer touching MotionFrame has no way to find the
   map, and a re-trace has nothing to diff against. The maps are the ICD; the plan is one use of
   it.
+
+## seams-stage-relabel-reads-as-growth
+- skills: [ac-polish]
+- impact: L
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [seams-sweep-coverage-is-unmeasured, seams-fixpoint-never-stamps-on-accumulator]
+- first_seen: 2026-09-08
+- last_seen: 2026-09-08
+- stage: manual
+- status: open
+- proposed_fix: key object and flow rows on `file:line` (the first `path:line` in the cell),
+  with stage / flow name as an ATTRIBUTE that records disagreement (as `contract` already does)
+  instead of minting a new key. Then "no new edge" means "no new line", which is the claim the
+  stamp should make, and a reader's label preference shows up as a disagreement count, not as
+  growth. Boundary rows likewise on `interface × file:line`. Migration: existing ledgers re-key
+  by the line already stored in each row.
+- narrative: MotionFrame v3 (files fence + full-sweep prompt + SWEPT declared 23/23 by every
+  reader every round) added 60 · 7 · 2 · 4 · 1 edges and did not stamp within the five-round
+  bound. Every addition after round 1 cited a line already on the map under another label:
+  breath-extractor lines moved from transport to create (r4), the scripted adapter's tick filed
+  under capture as well as emit (r5), the types file filed as a bridge consumer (r4) though the
+  prompt calls it a contract cell. The object lens was at zero from round 2. Coverage is proven
+  and the loop is measuring label taste, which by construction it cannot tell from discovery.
+
+## seams-reader-writes-all-three-lens-tables
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: loud
+- recurrence: 5
+- related: [seams-report-shape-faults-cost-a-reader-resume-each]
+- first_seen: 2026-09-07
+- last_seen: 2026-09-08
+- stage: manual
+- status: open
+- proposed_fix: the parser drops any MAP table whose header is not the report's LENS (with a
+  notice on the round line) instead of NOT-GATED — the object lens's own table is still valid
+  work. The prompt sentence "a report carrying another lens's table is rejected whole" did not
+  stop it (3 of 5 v3 object readers, 2 of 5 v2).
+- narrative: object readers keep emitting flow and boundary tables under their own report,
+  presumably because the report shape shows all three headers. The parser NOT-GATEs on the first
+  foreign header; the orchestrator strips lines by hand before every merge. Five occurrences
+  across two runs; never once from a flow or boundary reader.
+
+## seams-reader-invents-flow-names-the-fence-catches
+- skills: [ac-polish]
+- impact: S
+- frequency: sometimes
+- perceptibility: loud
+- recurrence: 1
+- related: [seams-fence-far-side-exemption-admits-neighbouring-objects]
+- first_seen: 2026-09-08
+- last_seen: 2026-09-08
+- stage: manual
+- status: open
+- proposed_fix: none needed for correctness — the fence did its job (15 rows fenced with the
+  reason, 0 admitted). Worth one prompt sentence: a step that belongs to a declared flow goes
+  under that flow's name (a pause inside `emit` is an `emit` step whose controller is the pause).
+- narrative: the v3 round-4 flow reader traced the pause/resume control path across 8 files and
+  filed 15 rows under `pause` and `resume`, names absent from the flows line. All 15 were fenced.
+  The rows were real and belonged under `emit` and `apply`; the reader lost them to a naming
+  choice. First time the flow fence has caught invented names rather than drift.
