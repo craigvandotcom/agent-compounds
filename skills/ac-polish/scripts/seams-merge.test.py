@@ -265,6 +265,53 @@ if rc == 2 and "holds a path" in out and not os.path.exists(f"{S9}/ledger.json")
 else:
     fail("fence path-in-term", out)
 
+# --- 5d. the kept asset: handoff --keep writes map.json + map.html; aim.sh status reads it ----
+subprocess.run(["git", "-C", REPO, "init", "-q"], check=False)
+subprocess.run(["git", "-C", REPO, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "add", "-A"], check=False)
+subprocess.run(["git", "-C", REPO, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "fixture"], check=False)
+HEADSHA = subprocess.run(["git", "-C", REPO, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+KEEP = f"{W}/kept/foods.image_urls"
+rc, out = run("handoff", "--state", S7, "--artifact", ART7, "--keep", KEEP, "--repo", REPO)
+mj, mh = f"{KEEP}/map.json", f"{KEEP}/map.html"
+if rc == 0 and os.path.exists(mj) and os.path.exists(mh) and f"traced_at {HEADSHA[:12]}" in out:
+    ok("handoff --keep writes map.json and map.html and reports traced_at")
+else:
+    fail("keep writes", out)
+kd = json.load(open(mj)) if os.path.exists(mj) else {}
+if kd.get("traced_at") == HEADSHA and kd.get("files") == ["lib/families.ts", "lib/foods.ts", "lib/upload.ts"] \
+   and kd.get("object_terms") == ["foods.image_urls", "uploadImages"] and "object" in kd.get("edges", {}) \
+   and set(kd.get("seams_load", {})) >= {"unasserted-edges", "unsensed-steps", "unchecked-assumptions", "competing-writers"}:
+    ok("map.json carries traced_at, the four fence lines, the ledger edges and the seams_load counts")
+else:
+    fail("map.json shape", json.dumps({k: kd.get(k) for k in ("traced_at", "files", "object_terms", "seams_load")})[:400])
+h = open(mh).read() if os.path.exists(mh) else ""
+n_edges = sum(1 for e in kd.get("edges", {}).get("object", {}).values() if not e.get("dropped"))
+n_filled = h.count("class='cell filled")
+n_empty = h.count("class='cell empty'")
+if n_filled == n_edges and n_empty == len(kd.get("files", [])) * 7 - n_filled and "lib/families.ts" in h and "<script" not in h and "http" not in h.split("<h1>")[0]:
+    ok(f"map.html: one filled grid cell per object edge ({n_filled}), the rest empty ({n_empty}); self-contained, no script, no CDN")
+else:
+    fail("map.html grid", f"filled={n_filled} edges={n_edges} empty={n_empty} files={len(kd.get('files', []))}")
+AIM = os.path.join(os.path.dirname(SCRIPT), "aim.sh")
+os.makedirs(f"{REPO}/_docs/seams/foods.image_urls", exist_ok=True)
+import shutil; shutil.copy(mj, f"{REPO}/_docs/seams/foods.image_urls/map.json")
+r = subprocess.run(["bash", AIM, "status", "-C", REPO], capture_output=True, text=True)
+if r.returncode == 0 and f"| `foods.image_urls` | {HEADSHA[:12]} | 0 | 0 | current |" in r.stdout:
+    ok("aim.sh status reads the kept map.json: drift 0, current — the two scripts agree on traced_at")
+else:
+    fail("status reads kept map", r.stdout + r.stderr)
+write(f"{W}/bad.json", "{\"nope\": 1}")
+r = subprocess.run([sys.executable, os.path.join(os.path.dirname(SCRIPT), "seams-render.py"), f"{W}/bad.json"], capture_output=True, text=True)
+if r.returncode == 2 and "NOT-GATED" in r.stderr and not os.path.exists(f"{W}/map.html"):
+    ok("seams-render on a shapeless json -> NOT-GATED, writes nothing")
+else:
+    fail("render not-gated", r.stdout + r.stderr)
+rc, out = run("handoff", "--state", S7, "--artifact", ART7, "--keep", f"{W}/kept2", "--repo", f"{W}/notarepo")
+if rc == 2 and "traced_at" in out and not os.path.exists(f"{W}/kept2/map.json"):
+    ok("handoff --keep without a git HEAD -> NOT-GATED, no map without a traced_at")
+else:
+    fail("keep no sha", out)
+
 # --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
 write(f"{W}/bad/nolens.md", f"TARGET RESOLVED TO: x\n\nMAP:\n{OH}| read | `lib/a.ts:1` | x | — | — | none | `true` |\n")

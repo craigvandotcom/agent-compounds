@@ -37,7 +37,11 @@ ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four f
 
 Usage:
   seams-merge.py round   --state DIR --artifact PLAN --round N [--repo DIR] [--validate] REPORT...
-  seams-merge.py handoff --state DIR --artifact PLAN
+  seams-merge.py handoff --state DIR --artifact PLAN [--keep _docs/seams/<object> --repo DIR]
+    --keep writes the KEPT ASSET beside the plan's lifecycle: map.json (ledger + fence +
+    traced_at + seams_load — the source of truth) and map.html rendered from it by
+    seams-render.py (the N² grid with empty cells visible, flow steps with sensors, the
+    boundary table). aim.sh status reads traced_at to announce drift.
 
 Reader REPORT (one per reader; the file stem is the reader id):
   LENS: object | flow | boundary
@@ -554,7 +558,47 @@ def cmd_handoff(a):
     print(f"seams-merge: handoff edges=object:{counts['object']},flow:{counts['flow']},boundary:{counts['boundary']} "
           f"derived={len(per_lens)} cross_lens={len(cross)} reader_diagnoses={len(rd_rows)} rounds={st['rounds']} readers={len(st['readers'])}")
     print(f"seams-merge: seams_load {load}")
+    if a.keep:
+        keep_map(a, st, load, cross_rows, disagreements)
     return 0
+
+
+def keep_map(a, st, load, cross_rows, disagreements):
+    """The kept asset — `_docs/seams/<object>/map.json` (the ledger + fence + traced_at + load
+    counts; the source of truth) and `map.html` rendered from it by seams-render.py. The maps
+    outlive the plan: the next engineer reads the html before a build, and a re-trace diffs the
+    json. `traced_at` is the repo HEAD the maps were traced against — aim.sh status reads it."""
+    fm = frontmatter(a.artifact)
+    fence = parse_fence(fm)
+    repo = a.repo or os.getcwd()
+    try:
+        sha = subprocess.run(["git", "-C", repo, "rev-parse", "HEAD"], capture_output=True, text=True, timeout=30).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        sha = ""
+    if not sha:
+        die2("--keep needs the repo HEAD sha for traced_at (git rev-parse failed) — pass --repo")
+    terms = fence.get("object") or []
+    obj = re.sub(r"[^A-Za-z0-9_.-]+", "-", terms[0]).strip("-") if terms else "object"
+    d = {
+        "object": obj, "object_terms": terms, "files": sorted(fence.get("files") or []),
+        "flows": fence.get("flow") or [], "boundaries": fence.get("boundary") or [],
+        "traced_at": sha, "rounds": st["rounds"], "readers": len(st["readers"]),
+        "verdict": fm.get("seams_verdict", "") or ("stamped" if fm.get("seams_fixpoint_sha256") else "unstamped"),
+        "seams_load": dict(kv.split("=", 1) for kv in load.split()),
+        "coverage_note": fm.get("seams_coverage", ""),
+        "cross_lens": [[c.strip("`") for c in r] for r in cross_rows],
+        "contract_disagreements": [e["key"] for e in disagreements],
+        "edges": st["edges"], "diag": st["diag"], "reader_log": st["readers"],
+    }
+    os.makedirs(a.keep, exist_ok=True)
+    jp = os.path.join(a.keep, "map.json")
+    with open(jp, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=1, ensure_ascii=False, sort_keys=True)
+    render = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seams-render.py")
+    r = subprocess.run([sys.executable, render, jp, os.path.join(a.keep, "map.html")], capture_output=True, text=True)
+    if r.returncode != 0:
+        die2(f"map.json written but render failed: {(r.stderr or r.stdout).strip()[:200]}")
+    print(f"seams-merge: kept {jp} · {os.path.join(a.keep, 'map.html')} (traced_at {sha[:12]})")
 
 
 def main(argv):
@@ -564,6 +608,8 @@ def main(argv):
     r.add_argument("--round", type=int, required=True); r.add_argument("--repo"); r.add_argument("--validate", action="store_true")
     r.add_argument("reports", nargs="*", metavar="REPORT")
     h = sub.add_parser("handoff"); h.add_argument("--state", required=True); h.add_argument("--artifact", required=True)
+    h.add_argument("--keep", metavar="DIR", help="also write DIR/map.json + DIR/map.html — the kept asset (_docs/seams/<object>/)")
+    h.add_argument("--repo", help="repo root for traced_at (default: cwd)")
     try:
         a = p.parse_args(argv)
     except SystemExit:
