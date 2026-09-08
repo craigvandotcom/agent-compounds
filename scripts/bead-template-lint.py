@@ -114,7 +114,8 @@ def clip_inline_code(block):
 
 def templates(path):
     """Yield (line_no, joined_command) for each real template in a markdown file."""
-    lines = open(path, encoding="utf-8").read().split("\n")
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.read().split("\n")
     i = 0
     while i < len(lines):
         if CMD.search(lines[i]):
