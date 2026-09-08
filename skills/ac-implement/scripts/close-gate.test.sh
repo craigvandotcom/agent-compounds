@@ -207,13 +207,16 @@ else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 # AC 2 — the three refusals, each NAMING the leg that failed
 # ============================================================================================
 
-# --- 2a: no RED receipt --------------------------------------------------------------------
-R="$(mkcase no-receipt)"; write_harness "$R"; board "$R" in_progress worker
-fix_subject "$R"
+# --- 2a: no RED receipt — the all-green no-receipt close was RE-CLASSIFIED by the
+# fresh-verify extension (run 20260907-exhaust): it now passes via fresh verification
+# (fixture 3i). The refusal that remains in the no-receipt world is the not-green probe.
+R="$(mkcase no-receipt-red)"; write_harness "$R"; board "$R" in_progress worker
+# subject NEVER fixed: `test -x harness.test.sh && bash harness.test.sh` exits 1 at HEAD;
+# no fly() — NO receipt file exists.
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'RED-RECEIPT'; then
-  pass "AC2a: refuses a close with no RED receipt, naming RED-RECEIPT"
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'GREEN'; then
+  pass "AC2a: a no-receipt close with a not-green probe is refused, naming GREEN"
 else fail "AC2a: rc=$GATE_RC out=$out"; fi
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
   pass "AC2a: a refused close leaves the bead open"
@@ -371,12 +374,18 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'temporal exit-code pair
 else fail "AC3f: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
-# AC 3g/3h/3i — the fresh-verification carve-out (ac-close-gate-already-green-carveout-8r3o):
-# a bead routed out at claim for being ALREADY GREEN banks no flight receipt, so LEG 1
-# refused every future close of it, including an honest obsolete/duplicate disposition.
-# The carve-out: an obsolete:/duplicate: close with no claim-time receipt is verified
-# FRESH instead — the GREEN leg runs every AC probe at HEAD, and the verification is
-# recorded on the bead at landing. A non-obsolete close still needs its claim-time receipt.
+# AC 3g/3h/3i/3j — the fresh-verification carve-out (ac-close-gate-already-green-carveout-8r3o,
+# extended by run 20260907-exhaust): a bead with no usable claim-time receipt banks no
+# temporal anchor, so LEG 1 refused every future close of it — an honest obsolete/duplicate
+# disposition (measured: 4 beads dead on the identical refusal) AND legitimate shipped
+# closes of cross-repo work whose probes could not resolve from the claim cwd (measured:
+# ac-dream-docket-sweep-mgzw, ac-dream-emitter-born-verified-uo7n). ANY disposition now
+# closes through the fresh leg, under four conditions: (a) every AC probe exits 0 at HEAD
+# and the per-probe results are RECORDED in the FRESH-VERIFY comment at landing — never a
+# bare summary; (b) the close reason still names a Delivers artifact the evidence core
+# resolves; (c) a usable claim-time receipt still takes precedence (temporal pair
+# preferred); (d) the abuse-guard — a fresh-verify attempt on a bead with ANY not-green
+# probe is REFUSED. The guard fixtures (3j) are the spine of this extension.
 # ============================================================================================
 
 # --- 3g (AC1 + AC2 first half): an obsolete: close with no claim-time receipt is ACCEPTED,
@@ -407,15 +416,38 @@ if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'GREEN'; then
   pass "AC3h: a bogus obsolete close (probes not green at HEAD) is refused, naming GREEN"
 else fail "AC3h: rc=$GATE_RC out=$out"; fi
 
-# --- 3i (do-not-weaken guard): a shipped: close with no claim-time receipt is STILL refused.
-R="$(mkcase fresh-verify-guard)"
+# --- 3i (run 20260907-exhaust, fixture A): a shipped: close with no claim-time receipt
+# and EVERY AC probe green at HEAD is accepted via fresh verification, and the FRESH-VERIFY
+# comment records the PER-PROBE results — never a bare summary.
+R="$(mkcase fresh-verify-shipped-green)"
 write_harness "$R"; board "$R" in_progress worker
-fix_subject "$R"
+fix_subject "$R"                    # all probes green at HEAD; no fly() — NO receipt file
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'RED-RECEIPT'; then
-  pass "AC3i: a non-obsolete close with no claim-time receipt is still refused — the carve-out is disposition-scoped"
+if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC3i: a shipped close with no claim-time receipt passes fresh verification when every AC probe is green at HEAD"
 else fail "AC3i: rc=$GATE_RC out=$out"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q 'FRESH-VERIFY' "$R/.br/comments.log" \
+   && grep -q '=> exit 0' "$R/.br/comments.log" \
+   && grep -q 'test -f subject.txt' "$R/.br/comments.log" \
+   && grep -q 'harness.test.sh' "$R/.br/comments.log"; then
+  pass "AC3i: the FRESH-VERIFY record carries the PER-PROBE results (each probe named with its exit code)"
+else fail "AC3i: the FRESH-VERIFY record lacks per-probe results"; fi
+
+# --- 3j (the abuse-guard spine, fixture B): the SAME shipped close with ONE not-green
+# probe is REFUSED — a fresh-verified close demands every AC probe green; one red probe
+# is a refusal, and the refusal names GREEN.
+R="$(mkcase fresh-verify-shipped-red)"
+write_harness "$R"; board "$R" in_progress worker
+# subject NEVER fixed: `test -x harness.test.sh && bash harness.test.sh` exits 1 at HEAD.
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'GREEN'; then
+  pass "AC3j: a fresh-verify shipped close with ANY not-green probe is refused, naming GREEN"
+else fail "AC3j: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC3j: the refused fresh-verify close leaves the bead open"
+else fail "AC3j: the bead was closed despite the refusal"; fi
 
 # ============================================================================================
 # AC 4 — the scanner leg

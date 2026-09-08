@@ -154,32 +154,27 @@ rfield() { printf '%s\n' "$LAST" | grep -m1 "^$1:" | sed "s|^$1:[[:space:]]*||";
 RED_PROBE=$(rfield 'red-probe')
 RED_BEAD=$(rfield 'bead')
 
-# THE FRESH-VERIFICATION CARVE-OUT (ac-close-gate-already-green-carveout-8r3o): a bead
-# routed out at claim for being ALREADY GREEN banks no flight receipt, so LEG 1 refused
-# every future close of it — including an honest obsolete/duplicate disposition whose
-# evidence core would otherwise pass (measured: 4 beads dead on the identical verbatim
-# refusal). An obsolete:/duplicate: close with no claim-time receipt is verified FRESH
-# instead: the GREEN leg below runs EVERY AC probe at HEAD, the bead stays open on any
-# red probe, and the verification is recorded on the bead at landing. The carve-out is
-# DISPOSITION-SCOPED: a shipped:/fixed: close still needs its claim-time receipt — there
-# is no fresh way to show a diff caused a flip, only that the state it aimed at holds.
+# THE FRESH-VERIFICATION CARVE-OUT (ac-close-gate-already-green-carveout-8r3o, extended by
+# run 20260907-exhaust): a bead with no usable claim-time receipt banks no temporal anchor,
+# so LEG 1 refused every future close of it — an honest obsolete:/duplicate: disposition
+# whose evidence core would otherwise pass (measured: 4 beads dead on the identical verbatim
+# refusal), and legitimate shipped: closes of cross-repo work whose probes could not resolve
+# from the claim cwd (measured: ac-dream-docket-sweep-mgzw, ac-dream-emitter-born-verified-uo7n,
+# 2026-09-08). ANY disposition now closes through the fresh-verify leg instead, under four
+# conditions:
+#   (a) EVERY AC probe exits 0 at HEAD, and the per-probe results are recorded in the
+#       FRESH-VERIFY comment at landing — never a bare summary;
+#   (b) the close reason still names a Delivers artifact the evidence core resolves (LEG 7);
+#   (c) a usable claim-time receipt still takes precedence — the temporal pair is the
+#       preferred proof whenever it exists;
+#   (d) the abuse-guard: a fresh-verify attempt on a bead with ANY not-green probe is
+#       REFUSED. A fresh close claims only that the state the bead aimed at holds at HEAD;
+#       it never claims a diff caused a flip.
 FRESH_VERIFY=0
-if [ ! -s "$RECEIPT_FILE" ]; then
-  case "$REASON" in
-    obsolete:*|duplicate:*)
-      FRESH_VERIFY=1
-      echo "close-gate[$BEAD] RED-RECEIPT fresh-verify — no claim-time receipt; the disposition is obsolete/duplicate, so every AC probe is verified green at HEAD below and the verification is recorded on the bead at landing"
-      ;;
-    *)
-      refuse "RED-RECEIPT" "no probe receipt for $BEAD at ${RECEIPT_FILE} — flight-check.sh never recorded a RED, so nothing here can be shown to have been caused by the diff"
-      ;;
-  esac
+if [ ! -s "$RECEIPT_FILE" ] || [ -z "$RED_PROBE" ] || [ "$RED_BEAD" != "$BEAD" ]; then
+  FRESH_VERIFY=1
+  echo "close-gate[$BEAD] RED-RECEIPT fresh-verify — no usable claim-time receipt (missing, empty, or for another bead); every AC probe is verified green at HEAD below and the per-probe results are recorded on the bead at landing"
 fi
-
-[ -n "$RED_PROBE" ] || [ "$FRESH_VERIFY" = 1 ] \
-  || refuse "RED-RECEIPT" "the last receipt carries no red-probe — an unusable receipt is not a receipt"
-[ "$RED_BEAD" = "$BEAD" ] || [ "$FRESH_VERIFY" = 1 ] \
-  || not_checked "RED-RECEIPT" "receipt at $RECEIPT_FILE is for '$RED_BEAD', not '$BEAD'"
 [ "$FRESH_VERIFY" = 1 ] || echo "close-gate[$BEAD] RED-RECEIPT ok — RED was: $RED_PROBE"
 
 # ---------------------------------------------------------------------------------------
@@ -209,7 +204,12 @@ if [ "$FRESH_VERIFY" = 1 ]; then
 elif printf '%s\n' "$PROBES" | grep -qxF "$RED_PROBE"; then
   echo "close-gate[$BEAD] PROBE-DRIFT ok — the RED probe is still a live AC"
 else
-  refuse "PROBE-DRIFT" "the fingerprinted RED probe is no longer among this bead's ACs — the criterion was rewritten after the RED was recorded"
+  # The receipt exists but its fingerprinted probe is no longer among the live ACs — the
+  # criterion was rewritten after the RED was banked, so no temporal pair can be formed and
+  # the receipt cannot take precedence (condition c). Fresh verification takes over: every
+  # live AC probe must be green at HEAD, and any red probe refuses (condition d).
+  FRESH_VERIFY=1
+  echo "close-gate[$BEAD] PROBE-DRIFT drift — the fingerprinted RED probe is no longer among the live ACs; the receipt cannot anchor a temporal pair, so the fresh-verify leg runs"
 fi
 
 # ---------------------------------------------------------------------------------------
@@ -219,6 +219,7 @@ fi
 # ---------------------------------------------------------------------------------------
 PROBE_RUN=0
 PROBE_GREEN=0
+PROBE_RESULTS=()
 ASSERT_OUT=$(mktemp "${TMPDIR:-/tmp}/ac-close-out.XXXXXX") || not_checked "SETUP" "cannot create a scratch file"
 trap 'rm -f "$BODY" "$ASSERT_OUT"' EXIT
 
@@ -255,7 +256,11 @@ while IFS= read -r pr; do
   fi
   rc=$?
   PROBE_RUN=$(( PROBE_RUN + 1 ))
+  PROBE_RESULTS+=("$pr => exit $rc")
   [ "$rc" -eq 0 ] && PROBE_GREEN=$(( PROBE_GREEN + 1 ))
+  if [ "$FRESH_VERIFY" = 1 ] && [ "$rc" -ne 0 ]; then
+    refuse "GREEN" "fresh-verify: probe '$pr' exits $rc at HEAD — a fresh-verified close demands EVERY AC probe green; one red probe is a refusal"
+  fi
   if [ "$pr" = "$RED_PROBE" ] && [ "$rc" -ne 0 ]; then
     refuse "GREEN" "the RED probe still exits $rc — it never reported GREEN, so the diff caused nothing"
   fi
@@ -300,17 +305,15 @@ else
   # a moment ago. It is only an assertion because the receipt actually carries the before
   # value, so a receipt without red-exit gets no credit here.
   RED_EXIT=$(rfield 'red-exit')
-  case "$RED_EXIT" in
-    ''|0)
-      if [ "$FRESH_VERIFY" = 1 ]; then
-        # No claim-time receipt under the carve-out: the fresh verification IS the
-        # assertion — LEG 4 measured every AC probe green at HEAD, and LEG 8 records it.
-        ASSERTIONS=1; ASSERT_SOURCE="the fresh-verification itself (all $PROBE_GREEN probe(s) green at HEAD, recorded on the bead at landing)"
-      else
-        not_checked "COVERAGE" "this bead runs no harness and its receipt records no non-zero red-exit, so there is no recorded before-state to compare the GREEN against — the assertion set is empty"
-      fi ;;
-    *)    ASSERTIONS=1; ASSERT_SOURCE="the temporal exit-code pair (RED $RED_EXIT -> GREEN 0) recorded in the receipt" ;;
-  esac
+  if [ "$FRESH_VERIFY" = 1 ]; then
+    # No claim-time receipt under the carve-out: the fresh verification IS the assertion —
+    # LEG 4 measured every AC probe green at HEAD, and LEG 8 records it per-probe.
+    ASSERTIONS=1; ASSERT_SOURCE="the fresh-verification itself (all $PROBE_GREEN probe(s) green at HEAD, per-probe results recorded on the bead at landing)"
+  elif [ "$RED_EXIT" = '' ] || [ "$RED_EXIT" = 0 ]; then
+    not_checked "COVERAGE" "this bead runs no harness and its receipt records no non-zero red-exit, so there is no recorded before-state to compare the GREEN against — the assertion set is empty"
+  else
+    ASSERTIONS=1; ASSERT_SOURCE="the temporal exit-code pair (RED $RED_EXIT -> GREEN 0) recorded in the receipt"
+  fi
 fi
 [ -n "${ASSERTIONS:-}" ] || ASSERTIONS=0
 if [ "$ASSERTIONS" -eq 0 ]; then
@@ -393,8 +396,12 @@ POST_STATUS=$(br_field "$BEAD" status)
 if [ "$FRESH_VERIFY" = 1 ]; then
   FRESH_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
   FRESH_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  PER_PROBE=""
+  for r in "${PROBE_RESULTS[@]:-}"; do
+    [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
+  done
   "$BR" comments add "$BEAD" \
-    "FRESH-VERIFY: $BEAD — obsolete/duplicate close with no claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS" \
+    "FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS — per-probe:$PER_PROBE" \
     </dev/null >/dev/null 2>&1 || true
   echo "close-gate[$BEAD] fresh-verify RECORDED on the bead"
 fi
