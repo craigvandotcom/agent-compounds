@@ -76,34 +76,15 @@ itself. (`HUMAN:` remains an accepted alias prefix for a decision-shaped gate th
 fork — an approval, credential handoff, or go/no-go — same fields, same wiring rule.)
 
 **`ACTION:` — an action card** (a do-in-the-world task only Craig can perform — a console
-toggle, a store submission, a credential handoff). Not a fork, so **no options block**;
-instead:
-
-```
-Gate-reason: authorization — <why this needs Craig's authorization>
-what:            <the action, one line>
-where:           <the exact surface — console / app / URL / menu path>
-checklist:       <ordered steps to complete it>
-estimated-time:  <rough wall-clock — "2 min", "15 min">
-best-done-when:  <the ridealong hint — e.g. "on the next ASC version submission">
-```
-
-Motivating case: BCA `bd-l6khg.13` (ASC intro-offer config) — no options, pure action,
-must ride a version submission. Copy-paste blocks + worked examples for both kinds:
-`reference/human-gate-template.md`.
+toggle, a store submission, a credential handoff). Not a fork, so **no options block**; the
+copy-paste field block + worked example (BCA `bd-l6khg.13`) live in
+`reference/human-gate-template.md` § ACTION cards.
 
 **MANDATORY dependency wiring — not optional, not "if convenient":** every bead this
-decision gates gets a `blocks` edge back to the decision, at creation time:
-
-```bash
-br dep add <downstream-bead-id> <decision-bead-id>
-```
-
-This is the Exhaust Rule applied to human-gate beads. Without the edge, `br ready`
-can't exclude the gated subtree and the cockpit's leverage metric reads zero for a
-gate that's actually stalling real work (see cockpit ground truth #3 — 30/31 open
-human-gate beads had zero downstream reach before this rule existed). Full copy-paste
-template + worked example: `reference/human-gate-template.md`.
+decision gates gets a `blocks` edge back to the decision, at creation time
+(`br dep add <downstream> <decision-id>`; the Exhaust-Rule rationale + cockpit ground
+truth #3 — 30/31 open gates with zero downstream reach before this rule — live in
+`reference/human-gate-template.md` § Mandatory dependency wiring).
 
 ## Agent bead template
 
@@ -406,6 +387,25 @@ br sync --flush-only      # export DB -> JSONL
   `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
   array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
   Parsers must handle both shapes.
+- **`br list` hides CLOSED beads by default — pass `--all`.** Without it an existence
+  probe false-negatives: a conductor once concluded a plan had zero beads and dispatched
+  a beadify child, when the epic was 18/20 closed and shipped. Sound probe form:
+  `br list --all --limit 0 --json`, matched against title AND labels AND description —
+  matching descriptions only misses beads titled from the plan's own heading.
+- **A `-d`/`--description` body is shell text, not a literal.** A double-quoted body
+  containing backticks runs command substitution; an angle-bracket `<placeholder>` parses
+  as a redirect. Both fail with a shell-syntax error that names nothing about the bead.
+  Pass any multi-line body via a FILE: `br comments add <ID> -f <file>` (ID comes first),
+  and capture a `br create` body with `-d "$(cat <file>)"` — the file is not re-scanned,
+  so backticks and angle brackets stay literal.
+- **`br label add` silently no-ops on multiple labels.** Passing several bare label words
+  in one call exits 0 and applies NOTHING. Labels go one per call, one `-l` flag each —
+  verify with `br show` afterwards, since the CLI gives no signal either way.
+- **`br lint` scans the DESCRIPTION field only — never `--notes`.** A lint-required
+  section added via `--notes` leaves the finding open and reads as a flaky linter. Fold
+  every lint-required section into the `-d`/`-f` body.
+- **`bv` has no `--robot-list`.** To list or search beads use `br list --all --limit 0
+  --json`, not `bv` — `bv` is the triage surface, `br` is the ledger surface.
 - **Bulk `br` write-loops run FOREGROUND, never backgrounded.** A bulk sequential write
   sweep (dep fan-outs, batch label stamps — more than ~10–20 sequential `br` write calls)
   runs as a plain foreground Bash call, not `run_in_background: true`: a ~129-call

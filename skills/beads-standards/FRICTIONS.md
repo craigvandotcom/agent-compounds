@@ -1,7 +1,7 @@
 ---
 skill: beads-standards
 created: 2026-07-22
-last_pass: 2026-09-06
+last_pass: 2026-09-08
 entries: 11
 ---
 
@@ -115,8 +115,8 @@ entries: 11
 - first_seen: 2026-08-04
 - last_seen: 2026-08-20
 - stage: ac-loop
-- status: open
-- proposed_fix: document the shapes in the br cheatsheet: `br list --json` returns an OBJECT (`{issues:[…], total, limit, offset, has_more}`) and needs an explicit `--limit 0`; `br ready --json` and `br show --json` return BARE ARRAYS. Give the defensive filter form (`(.issues // .)`) so one jq expression survives both. Confirm against the live tool before writing (per `verify-doctrine-claims-against-live-tools`).
+- status: resolved
+- proposed_fix: LANDED 2026-09-08 (ac-rksh, § `br` gotchas): the JSON-shapes bullet ("JSON shapes differ by command") + the `br list` hides-CLOSED/`--all` bullet ("`br list` hides CLOSED beads by default — pass `--all`") now live in skills/beads-standards/SKILL.md. Document the shapes in the br cheatsheet: `br list --json` returns an OBJECT (`{issues:[…], total, limit, offset, has_more}`) and needs an explicit `--limit 0`; `br ready --json` and `br show --json` return BARE ARRAYS. Give the defensive filter form (`(.issues // .)`) so one jq expression survives both. Confirm against the live tool before writing (per `verify-doctrine-claims-against-live-tools`).
 - narrative: a jq filter written for `br ready --json` errored with "Cannot index array with string" when reused against `br list --json`, because the two subcommands of the same CLI return different top-level shapes; `br list` additionally truncates unless given `--limit 0`, so a board scan silently under-reports without it. A third shape showed up in the same run from the refine side: a bead AC specified parsing `br show --json` as an object and was unbuildable as written because it too returns a bare array. Cost is one wasted call per rediscovery, but the shape is rediscovered independently by every agent that scripts a board scan, and nothing in the registry documents it. Knowledge captured meanwhile as the neoMeta memory fact `br-cli-json-shapes-and-body-quoting`; this entry tracks the doctrine gap that keeps making it necessary.
   **RUN 20260811-113939-36193 (BCA), +1 — same root (br subcommand defaults and shapes silently
   narrow or reshape the result set), and this time it cost a dispatched child.** Two confirmations
@@ -151,8 +151,8 @@ entries: 11
 - first_seen: 2026-08-04
 - last_seen: 2026-08-25
 - stage: ac-loop
-- status: open
-- proposed_fix: state the positive form in the br cheatsheet — **any `br` body text goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d` or as a quoted argument. Cover the reason in one clause (the argument is shell text: backticks EXECUTE, and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it. Raise the severity language: this is command injection through a comment body, not a quoting nuisance.
+- status: resolved
+- proposed_fix: LANDED 2026-09-08 (ac-rksh, § `br` gotchas): the "A `-d`/`--description` body is shell text" bullet now lives in skills/beads-standards/SKILL.md, incl. the file-passing safe pattern (`-f <file>` / `-d "$(cat <file>)"`). State the positive form in the br cheatsheet — **any `br` body text goes in a FILE and is passed with `-f <file>`** (`br create -f`, `br comments add <ID> -f`), never inline in `-d` or as a quoted argument. Cover the reason in one clause (the argument is shell text: backticks EXECUTE, and `<…>` placeholders parse as redirects) so the rule is not mistaken for style advice, and note the arg order `br comments add <ID> …` while writing it. Raise the severity language: this is command injection through a comment body, not a quoting nuisance.
 - narrative: hit TWICE in one run by two different agents (RUN 20260804-202200-loop: the conductor at Phase 0, then a review child at bead-filing) and solved independently both times. A `br create -d "…"` body containing backticks and an angle-bracket placeholder triggered command substitution plus a redirect parse error; the failure message names shell syntax, so neither agent's first hypothesis was about the bead at all. `-f` avoids the whole class, including the dcg prose-payload false positives that the same inline shape triggers — two independent reasons for one rule, which is a good sign it belongs in doctrine rather than in each agent's scar tissue. Two uncoordinated rediscoveries in a single run with zero registry coverage is the same documentation-gap shape as `br-non-tty-flake-in-compound-one-liners` above.
   **RUN 20260820-005558-8974, +1 — the impact is not cosmetic and the surface is not just `create`.**
   Reported THREE times in one run against `br comments add <id> "…"`: backticks inside the
@@ -195,8 +195,8 @@ entries: 11
 - first_seen: 2026-08-11
 - last_seen: 2026-08-11
 - stage: ac-loop
-- status: open
-- proposed_fix: state the working form in the br cheatsheet — labels are applied ONE PER CALL with an explicit `-l` flag each; passing several bare label words in a single `br label add` call is accepted, exits 0, and applies NOTHING. Pair it with the standing verify step (`br show` after labelling) since the CLI gives no signal.
+- status: resolved
+- proposed_fix: LANDED 2026-09-08 (ac-rksh, § `br` gotchas): the "`br label add` silently no-ops on multiple labels" bullet now lives in skills/beads-standards/SKILL.md, incl. the one-label-per-call safe pattern + `br show` verify. State the working form in the br cheatsheet — labels are applied ONE PER CALL with an explicit `-l` flag each; passing several bare label words in a single `br label add` call is accepted, exits 0, and applies NOTHING. Pair it with the standing verify step (`br show` after labelling) since the CLI gives no signal.
 - narrative: an agent labelled several beads in what looked like the obvious batch form and the
   labels never landed. There is no error, no warning, and a zero exit status, so the loss is
   invisible until something downstream filters on a label that is not there — which in a
@@ -212,8 +212,8 @@ entries: 11
 - first_seen: 2026-08-11
 - last_seen: 2026-08-11
 - stage: ac-bead-refine
-- status: open
-- proposed_fix: state in the br cheatsheet that `br lint` reads the DESCRIPTION field only and never reads notes, so every lint-required section must be folded into the description body — and, per `br-d-body-is-shell-expanded`, that body goes through a file rather than an inline argument.
+- status: resolved
+- proposed_fix: LANDED 2026-09-08 (ac-rksh, § `br` gotchas): the "`br lint` scans the DESCRIPTION field only" bullet now lives in skills/beads-standards/SKILL.md, incl. the fold-into-description-body safe pattern. State in the br cheatsheet that `br lint` reads the DESCRIPTION field only and never reads notes, so every lint-required section must be folded into the description body — and, per `br-d-body-is-shell-expanded`, that body goes through a file rather than an inline argument.
 - narrative: an agent added a lint-required section via `--notes`, re-ran `br lint`, and watched the
   same finding persist. The natural reading is that the fix failed or the linter is flaky; the
   actual cause is that notes are outside the linter's scan surface entirely. The wasted loop is
