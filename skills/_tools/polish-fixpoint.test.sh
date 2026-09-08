@@ -175,6 +175,33 @@ else
   FAIL=$((FAIL+1)); echo "FAIL plan stamp clobbered the seams stamp: $(grep -E '^(seams|polish)_rounds' "$W/p5f.md" | tr '\n' ' ')"; fi
 expect "--stamp-prefix is not a flag"           2 "NOT-GATED" -- --mode seams --stamp-prefix x_ --state "$S5F" --artifact "$W/p5f.md" --round 1 --pre "$(sha "$W/p5f.md")"
 
+# --- 5g. load mode: fifth mode, plan-side writer, load_ prefix, coexists with the seams stamp ---
+# The same file can be polished by two modes across its life (seams first, then load). Each
+# mode must stamp its OWN three keys and leave the other's untouched — otherwise the load run
+# silently erases the seams fixpoint. load is plan-side: no --target, and a load round drops
+# no cell, so the orchestrator passes --findings 0.
+S5G="$W/s5g"; mk_plan a "$W/p5g.md"; PRE=$(sha "$W/p5g.md")
+mk_plan b "$W/p5g.md"
+"$SCRIPT" --mode seams --state "$S5G" --artifact "$W/p5g.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+"$SCRIPT" --mode seams --state "$S5G" --artifact "$W/p5g.md" --round 2 --pre "$(sha "$W/p5g.md")" --findings 0 >/dev/null 2>&1 || true
+if grep -q '^seams_rounds: 2' "$W/p5g.md"; then
+  PASS=$((PASS+1)); echo "ok   seams stamp laid down first (the load run's predecessor)"
+else
+  FAIL=$((FAIL+1)); echo "FAIL seams setup stamp missing"; fi
+S5G2="$W/s5g2"; PRE=$(sha "$W/p5g.md")
+printf 'more\n' >> "$W/p5g.md"
+"$SCRIPT" --mode load --state "$S5G2" --artifact "$W/p5g.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "load mode needs no --target"            0 "STAMPED mode=load round=2" -- --mode load --state "$S5G2" --artifact "$W/p5g.md" --round 2 --pre "$(sha "$W/p5g.md")" --findings 0
+if grep -q '^load_rounds: 2' "$W/p5g.md" && grep -q '^load_fixpoint_sha256: ' "$W/p5g.md" && grep -q '^seams_rounds: 2' "$W/p5g.md"; then
+  PASS=$((PASS+1)); echo "ok   load stamp uses load_ keys and the seams_ keys survive the load re-polish"
+else
+  FAIL=$((FAIL+1)); echo "FAIL load stamp keys wrong or clobbered seams: $(grep -E '^(load|seams)_rounds' "$W/p5g.md" | tr '\n' ' ')"; fi
+if [ -f "$S5G2/receipt.txt" ] && grep -q '^POLISH-FIXPOINT: mode=load rounds=2 ' "$S5G2/receipt.txt"; then
+  PASS=$((PASS+1)); echo "ok   load receipt records mode=load"
+else
+  FAIL=$((FAIL+1)); echo "FAIL load receipt missing or malformed"; fi
+expect "unknown mode still NOT-GATED"           2 "NOT-GATED" -- --mode sideways --target x --state "$S5G" --artifact "$W/p5g.md" --round 1 --pre "$(sha "$W/p5g.md")"
+
 # --- 6. FROZEN INPUT: an out-of-band amendment ends the loop -------------------
 S6="$W/s6"; mk_plan a "$W/p6.md"; PRE=$(sha "$W/p6.md")
 mk_plan b "$W/p6.md"

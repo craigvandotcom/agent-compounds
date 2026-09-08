@@ -24,7 +24,7 @@ The argument picks ONE workflow file — a mandatory load, the ONLY place a mode
 | `bead` | `workflows/bead.md` | `references/bead-checklist.md` |
 | `code` | `workflows/code.md` | `references/code-checklist.md` |
 | `seams` | `workflows/seams.md` | `references/seams-checklist.md` · `references/seams-reader-prompt.md` · `references/seams-plan-template.md` |
-| `load` (draft, after seams, not yet run) | `workflows/load.md` | `references/load-checklist.md` |
+| `load` (after seams; machinery built, awaiting first run) | `workflows/load.md` | `references/load-checklist.md` · `references/load-reader-prompt.md` |
 
 Each workflow binds five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and may bind a
 sixth, READERS: how many readers a round spawns, what they are sent, and how their findings

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# polish-fixpoint.sh — the lean polish stamp gate. ONE engine, four modes (plan · bead · code · seams).
+# polish-fixpoint.sh — the lean polish stamp gate. ONE engine, five modes (plan · bead · code · seams · load).
 #
 # It MEASURES and it GATES. It drives nothing and it delegates to no model: the ac-polish
 # SKILL runs a stateless reader per round, applies that round's findings, then calls this
@@ -20,15 +20,15 @@
 #
 # Usage:
 #   polish-fixpoint.sh --state <dir> --artifact <path> --round <n> --pre <sha256>
-#                      [--findings <n>] [--mode plan|bead|code|seams] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
+#                      [--findings <n>] [--mode plan|bead|code|seams|load] [--target <bead-id>] [--max-rounds 25|0] [--dry-run]
 #
 #   --findings  the round's finding count, as reported by the reader. REQUIRED at round >= 2:
 #               an empty artifact diff is not an empty finding set (findings dispositioned
 #               elsewhere — the ledger, a human — leave the digest unchanged while real
 #               defects remain). A non-zero count is refused regardless of the digest.
 #
-#   seams  is plan-side (the artifact is a seams plan) but stamps under a `seams_` prefix, so
-#          the later `--mode plan` polish of the same file records its own fixpoint beside it.
+#   seams  and load are plan-side (no --target) but each stamps under its own derived prefix
+#          (`seams_`, `load_`), so a later `--mode plan` polish records its fixpoint beside them.
 #
 #   In bead mode the receipt comment lands on EVERY `<!-- BEAD:id -->` in the artifact, not
 #   only on --target: the whole set is what converged, and stamp-refined.sh reads the receipt
@@ -70,7 +70,7 @@ done
 [ -n "$ARTIFACT" ] || die2 "--artifact is required"
 [ -f "$ARTIFACT" ] || die2 "artifact does not exist: $ARTIFACT"
 [ -n "$PRE" ]      || die2 "--pre is required (the digest observed before this round's reader)"
-case "$MODE" in plan|bead|code|seams) ;; *) die2 "--mode must be plan, bead, code or seams (got '$MODE')" ;; esac
+case "$MODE" in plan|bead|code|seams|load) ;; *) die2 "--mode must be plan, bead, code, seams or load (got '$MODE')" ;; esac
 case "$ROUND" in ''|*[!0-9]*) die2 "--round must be a positive integer (got '$ROUND')" ;; esac
 case "$MAX"   in ''|*[!0-9]*) die2 "--max-rounds must be a non-negative integer, 0 to disable the runaway guard (got '$MAX')" ;; esac
 [ "$ROUND" -ge 1 ] || die2 "--round must be >= 1"
@@ -79,7 +79,7 @@ case "$FINDINGS" in
   *[!0-9]*) die2 "--findings must be a non-negative integer (got '$FINDINGS')" ;;
   *) [ "$FINDINGS" -ge 0 ] || die2 "--findings must be a non-negative integer (got '$FINDINGS')" ;;
 esac
-case "$MODE" in plan|seams) ;; *) [ -n "$TARGET" ] || die2 "--mode $MODE requires --target <bead-id>" ;; esac
+case "$MODE" in plan|seams|load) ;; *) [ -n "$TARGET" ] || die2 "--mode $MODE requires --target <bead-id>" ;; esac
 
 digest() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
@@ -170,12 +170,16 @@ if [ "$DRYRUN" -eq 1 ]; then
   exit 0
 fi
 
-if [ "$MODE" = plan ] || [ "$MODE" = seams ]; then
+if [ "$MODE" = plan ] || [ "$MODE" = seams ] || [ "$MODE" = load ]; then
   # SOLE WRITER of the plan-side stamp. Frontmatter only, and idempotent: re-stamping
   # replaces the three keys rather than appending a second, contradictory record. The key
-  # prefix is DERIVED from the mode (plan -> polish_, seams -> seams_), never passed in: a
-  # free-form prefix would let a caller write stamp keys nobody measured.
-  PFX=polish_; [ "$MODE" = seams ] && PFX=seams_
+  # prefix is DERIVED from the mode (plan -> polish_, seams -> seams_, load -> load_), never
+  # passed in: a free-form prefix would let a caller write stamp keys nobody measured.
+  case "$MODE" in
+    plan)  PFX=polish_ ;;
+    seams) PFX=seams_ ;;
+    load)  PFX=load_ ;;
+  esac
   head -1 "$ARTIFACT" | grep -q '^---[[:space:]]*$' || die2 "plan has no YAML frontmatter to stamp: $ARTIFACT"
   TMP=$(mktemp)
   awk -v r="$ROUND" -v s="$POST" -v t="$STAMPED_AT" -v p="$PFX" '

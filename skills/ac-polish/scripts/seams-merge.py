@@ -38,10 +38,12 @@ path, is NOT-GATED. Widening = add a term, recompute `files:`; the next round re
 
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py — RED/GREEN over every rule above
-  SCHEDULE:   once per seams round (workflows/seams.md § MERGE) and once at hand-off; and on
-              every CI run via scripts/run-all-harnesses.sh
+  SCHEDULE:   once per seams round (workflows/seams.md § MERGE) and once at hand-off; once
+              per load round and at load-hand-off (workflows/load.md); and on every CI run
+              via scripts/run-all-harnesses.sh
   MODE:       blocking — the artifact is written only by this script during a seams run
-  ON-FAILURE: closed — a report that does not parse exits 2 NOT-GATED and writes nothing
+  ON-FAILURE: closed — a report that does not parse exits 2 NOT-GATED and writes nothing;
+              a stale map exits 1 STALE before anything is read
 
 Usage:
   seams-merge.py round   --state DIR --artifact PLAN --round N [--repo DIR] [--validate] REPORT...
@@ -50,6 +52,20 @@ Usage:
     traced_at + seams_load — the source of truth) and map.html rendered from it by
     seams-render.py (the N² grid with empty cells visible, flow steps with sensors, the
     boundary table). aim.sh status reads traced_at to announce drift.
+
+  seams-merge.py load         --map MAP.JSON --state DIR --round N [--repo DIR] --validate REPORT
+  seams-merge.py load-handoff --map MAP.JSON --state DIR
+    The MERGE step of `ac-polish load` (workflows/load.md): three loads — time · trust ·
+    money — on every edge of a KEPT seams map. The map is the fence: no new edges, ever.
+    `load` reads the reader report (one `| edge | time | trust | money |` table whose edge
+    column quotes the map's edge keys VERBATIM), runs the STALE GUARD first (any commit since
+    the map's traced_at touching its files ends the run — re-run seams first), then validates
+    every `measured` cell by re-running its oracle from the repo root; a nonzero exit or an
+    empty output DROPS the cell, never silently. The fixpoint keys on (edge key, load) → cell
+    content in <state>/load-ledger.json; a round that changed no cell and dropped none stamps
+    via polish-fixpoint.sh --mode load on <state>/load.md. `load-handoff` copies the
+    converged load.md beside the map and writes the counts into map.json as a `load` key
+    beside seams_load — replaced, never appended.
 
 Reader REPORT (one per reader; the file stem is the reader id):
   LENS: object | flow | boundary
@@ -672,6 +688,301 @@ def keep_map(a, st, load, cross_rows, disagreements):
     print(f"seams-merge: kept {jp} · {os.path.join(a.keep, 'map.html')} (traced_at {sha[:12]})")
 
 
+# ---------------------------------------------------------------- load (workflows/load.md)
+LOADS = ["time", "trust", "money"]
+CELL_FORMS = {"measured", "n/a", "unmeasured"}
+LOAD_HDR = ["edge", "time", "trust", "money"]
+
+
+def load_form(cell):
+    """The form word of a load cell. Like first_word, but `n/a` must survive: the slash is
+    part of the form, not a separator."""
+    c = re.sub(r"^[`*\s]+", "", cell.strip()).lower()
+    return re.split(r"[\s—–]+", c)[0] if c else ""
+
+
+def load_json_map(path):
+    """The kept seams map — the only input a load run takes. No map, no load run."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except OSError as e:
+        die2(f"cannot read map {path}: {e}")
+    except ValueError as e:
+        die2(f"map {path} is not valid JSON: {e}")
+    if not isinstance(d.get("edges"), dict) or not d.get("edges"):
+        die2(f"map {path} has no edges ledger — run seams `handoff --keep` first; load never traces, it fills")
+    return d
+
+
+def live_map_edges(d):
+    """The map's live edges, keyed by the exact string the report must quote verbatim. A key
+    under two lenses would make that quoting ambiguous — fail loud."""
+    edges = {}
+    for lens, ks in d.get("edges", {}).items():
+        for k, e in ks.items():
+            if e.get("dropped"):
+                continue
+            if k in edges:
+                die2(f"map edge key `{k}` exists under two lenses — the load report cannot quote it verbatim")
+            edges[k] = dict(e, lens=lens)
+    if not edges:
+        die2("map has no live edges — nothing for a load run to fill")
+    return edges
+
+
+def stale_guard(d, repo):
+    """A load run fills a map that seams validated at traced_at. If any commit since touched a
+    fenced file, the map no longer describes the code and every cell would be measured against
+    a ghost — re-run seams first. Never proceed on a stale map (workflows/seams.md § Stale
+    maps announce themselves)."""
+    sha = d.get("traced_at")
+    files = d.get("files") or []
+    if not sha:
+        die2("map.json has no traced_at — run seams `handoff --keep` first; load never proceeds without the sha the map was traced at")
+    if not files:
+        die2("map.json has no files fence — a load run needs the closed set to check drift against")
+    try:
+        r = subprocess.run(["git", "-C", repo, "log", "--oneline", f"{sha}..HEAD", "--", *files],
+                           capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        die2(f"drift check failed: {e}")
+    if r.returncode != 0:
+        die2(f"drift check failed for traced_at {sha[:12]}: {(r.stderr or r.stdout).strip()[:200]} — pass --repo (the repo the map was traced against)")
+    commits = [l for l in r.stdout.splitlines() if l.strip()]
+    if commits:
+        print(f"seams-merge: STALE — re-run seams first: {len(commits)} commit(s) since traced_at {sha[:12]} "
+              f"touched the map's files; a load run never proceeds on a stale map", file=sys.stderr)
+        for c in commits:
+            print(f"  {c}", file=sys.stderr)
+        sys.exit(1)
+
+
+def oracle_of(cell):
+    """The command after `oracle:` — the rest of the cell, stripped of wrapper backticks. One
+    command, run verbatim from the repo root; a reader that joins two with ` · ` wrote a
+    command that does not exist, and validation drops it like any other."""
+    cmd = cell.split("oracle:", 1)[1]
+    return cmd.strip().strip("`").strip().replace("\\|", "|")
+
+
+def run_oracle(cmd, repo):
+    """A measured cell's oracle must exit 0 AND print — a command that silently exits clean
+    proves nothing was measured. Returns (ok, detail)."""
+    try:
+        r = subprocess.run(["bash", "-c", cmd], cwd=repo, capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return False, "timed out after 60s"
+    if r.returncode != 0:
+        return False, f"exit {r.returncode}"
+    if not r.stdout.strip():
+        return False, "empty output"
+    return True, ""
+
+
+def parse_load_report(path, edges):
+    """The reader report: one markdown table, header exactly `| edge | time | trust | money |`,
+    the edge column quoting the map's edge keys VERBATIM, every cell starting with `measured`
+    (carrying `oracle:`) · `n/a` · `unmeasured`. Returns ({edge: {load: cell}}, fenced keys).
+    Partial coverage is NOT-GATED — the stamp claims every edge carries every load."""
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError as e:
+        die2(f"cannot read report {path}: {e}")
+    cells, fenced, seen = {}, [], set()
+    intable = False
+    for raw in text.splitlines():
+        row = split_row(raw)
+        if row is None:
+            intable = False
+            continue
+        if [c.lower() for c in row] == LOAD_HDR:
+            intable = True
+            continue
+        if not intable or is_separator(row):
+            continue
+        if len(row) != 4:
+            die2(f"{path}: LOAD row has {len(row)} cells, expected 4: {raw[:80]}")
+        k = row[0].strip().strip("`").strip()
+        if k not in edges:
+            fenced.append(k)
+            continue
+        if k in seen:
+            die2(f"{path}: edge `{k}` appears twice — one row per edge on the map")
+        seen.add(k)
+        cells[k] = {}
+        for ld, cell in zip(LOADS, row[1:]):
+            if not cell.strip():
+                die2(f"{path}: `{k}` has an empty {ld} cell — every edge carries every load; a cell you cannot "
+                     "back with a command is `unmeasured`")
+            w = load_form(cell)
+            if w not in CELL_FORMS:
+                die2(f"{path}: `{k}` {ld} cell must start with measured, n/a or unmeasured (got '{w}'): {cell[:80]}")
+            if w == "measured" and "oracle:" not in cell:
+                die2(f"{path}: `{k}` {ld} is measured but carries no `oracle: <command>`: {cell[:80]}")
+            cells[k][ld] = cell.strip()
+    missing = [k for k in edges if k not in cells]
+    if missing:
+        die2(f"report covers {len(cells)} of {len(edges)} edges on the map — the round did not happen. Missing: "
+             + " · ".join(f"`{k}`" for k in missing))
+    return cells, fenced
+
+
+def load_load_ledger(state_dir):
+    p = os.path.join(state_dir, "load-ledger.json")
+    if not os.path.exists(p):
+        return {"rounds": 0, "cells": {}, "deltas": {}}
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        die2(f"load ledger unreadable: {e}")
+
+
+def save_load_ledger(state_dir, led):
+    os.makedirs(state_dir, exist_ok=True)
+    p = os.path.join(state_dir, "load-ledger.json")
+    tmp = p + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(led, f, indent=1, sort_keys=True)
+    os.replace(tmp, p)
+
+
+def write_load_md(state_dir, d, cl, counts, rnd):
+    """<state>/load.md — what a human reads and what gets stamped. Regenerated whole each
+    round from the merged ledger. NOTHING round-specific in it: the round number lives in the
+    ledger, because this file's digest IS the fixpoint the gate stamps — a counter here would
+    move it every round and the stamp would be unreachable (the seams rule: the text is the
+    digest)."""
+    rows = []
+    for k in sorted(cl):
+        r = []
+        for ld in LOADS:
+            e = cl[k].get(ld)
+            cell = e["cell"] if e else "unmeasured"
+            if e and e.get("dropped"):
+                cell = f"{cell} — DROPPED round {e['round']} ({e['dropped']})"
+            r.append(re.sub(r"(?<!\\)\|", r"\\|", cell))
+        rows.append([f"`{k}`", *r])
+    fm = ("---\n"
+          f"unmeasured-time: {counts['unmeasured-time']}\n"
+          f"unmeasured-trust: {counts['unmeasured-trust']}\n"
+          f"unmeasured-money: {counts['unmeasured-money']}\n"
+          f"edges: {counts['edges']}\n"
+          f"traced-at: {d.get('traced_at', '')}\n"
+          "---\n\n"
+          f"# load — {d.get('object', 'object')}\n\n"
+          "_Every live edge on the kept seams map, each with its three loads. A `measured` cell carries the "
+          "oracle that re-ran it from the repo root; a DROPPED cell's oracle did not reproduce. `unmeasured` "
+          "is the finding: the load is real and nothing measures it. The map is the fence — an edge not on "
+          "it is a seams re-run, not a load finding._\n\n"
+          + table(["edge", *LOADS], rows))
+    with open(os.path.join(state_dir, "load.md"), "w", encoding="utf-8") as f:
+        f.write(fm.rstrip() + "\n")
+
+
+def cmd_load(a):
+    d = load_json_map(a.map)
+    repo = a.repo or os.getcwd()
+    stale_guard(d, repo)
+    edges = live_map_edges(d)
+    led = load_load_ledger(a.state)
+    if a.round != led.get("rounds", 0) + 1:
+        die2(f"--round {a.round} but the load ledger has {led.get('rounds', 0)} rounds recorded — rounds are consecutive")
+    cells, fenced = parse_load_report(a.validate, edges)
+    # --validate: every measured cell's oracle re-runs from the repo root; nonzero exit OR
+    # empty stdout drops the cell — recorded with the reason, never silently. n/a and
+    # unmeasured carry no oracle and are never dropped.
+    drops = {}
+    for k in sorted(cells):
+        for ld in LOADS:
+            if load_form(cells[k][ld]) != "measured":
+                continue
+            cmd = oracle_of(cells[k][ld])
+            ok, detail = run_oracle(cmd, repo)
+            if not ok:
+                drops[(k, ld)] = (cmd, detail)
+    # Merge. The fixpoint keys on (edge key, load) -> cell content — exactly as quoted, never
+    # on file:line or position. A changed cell or a dropped cell is the round's delta.
+    changed, cl = [], led.setdefault("cells", {})
+    for k in sorted(cells):
+        per = cl.setdefault(k, {})
+        for ld in LOADS:
+            text = cells[k][ld]
+            prev = per.get(ld)
+            if prev is not None and prev.get("cell") != text:
+                changed.append((k, ld))
+            drop = drops.get((k, ld))
+            per[ld] = {"cell": text, "round": a.round,
+                       "dropped": (f"oracle did not reproduce ({drop[1]}): {drop[0]}" if drop else None)}
+    led["rounds"] = a.round
+    led.setdefault("deltas", {})[str(a.round)] = {"changed": len(changed), "dropped": len(drops)}
+    led["map"] = os.path.abspath(a.map)
+    led["traced_at"] = d.get("traced_at", "")
+    # Counts re-derived from the merged state, never taken from the report. A dropped cell
+    # counts as neither measured nor unmeasured — it is counted in dropped=.
+    counts = {f"unmeasured-{ld}": 0 for ld in LOADS}
+    for per in cl.values():
+        for ld in LOADS:
+            e = per.get(ld)
+            if e and not e.get("dropped") and load_form(e["cell"]) == "unmeasured":
+                counts[f"unmeasured-{ld}"] += 1
+    counts["edges"] = len(edges)
+    led["counts"] = counts
+    save_load_ledger(a.state, led)
+    write_load_md(a.state, d, cl, counts, a.round)
+    print(f"seams-merge: load round={a.round} map={d.get('object', '?')} edges={len(edges)} "
+          f"changed={len(changed)} dropped={len(drops)} "
+          f"unmeasured-time={counts['unmeasured-time']} unmeasured-trust={counts['unmeasured-trust']} "
+          f"unmeasured-money={counts['unmeasured-money']}")
+    for (k, ld), (cmd, detail) in sorted(drops.items()):
+        print(f"  - [{ld}] `{k}` dropped: oracle did not reproduce ({detail}): {cmd}")
+    for k in fenced:
+        print(f"  ~ `{k}` fenced: not on the map")
+    return 0
+
+
+def cmd_load_handoff(a):
+    """Hand-off for a CONVERGED load run: the artifact beside its map, the counts in map.json.
+    A round that changed or dropped any cell is not converged — handoff refuses, the same
+    closed door the seams stamp keeps."""
+    d = load_json_map(a.map)
+    led = load_load_ledger(a.state)
+    rounds = led.get("rounds", 0)
+    last = led.get("deltas", {}).get(str(rounds))
+    if not rounds or last is None:
+        die2(f"no load run recorded in {a.state} — run `load` first; handoff is only for a run whose last round "
+             "changed no cell and dropped none")
+    if last.get("changed") or last.get("dropped"):
+        die2(f"load round {rounds} is not converged: changed={last.get('changed', 0)} dropped={last.get('dropped', 0)} — "
+             "handoff copies a stamped-ready load.md only; resume the reader, re-merge, then handoff")
+    src = os.path.join(a.state, "load.md")
+    if not os.path.exists(src):
+        die2(f"no load.md at {src} — run `load` first")
+    counts = led.get("counts") or {}
+    if not all(k in counts for k in ("unmeasured-time", "unmeasured-trust", "unmeasured-money", "edges")):
+        die2("load ledger carries no counts — run `load` first")
+    # Destination: beside the map, in the dir keep_map named — _docs/seams/<object-slug>/. The
+    # slug is keep_map's own derivation, recorded on the map it wrote.
+    dest_dir = os.path.dirname(os.path.abspath(a.map))
+    slug = d.get("object")
+    if not slug:
+        terms = d.get("object_terms") or []
+        slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", terms[0]).strip("-") if terms else "object"
+    dest = os.path.join(dest_dir, "load.md")
+    with open(src, "rb") as f:
+        data = f.read()
+    with open(dest, "wb") as f:
+        f.write(data)
+    # The counts into map.json, beside seams_load — replaced on re-run, never appended.
+    d["load"] = {k: counts[k] for k in ("unmeasured-time", "unmeasured-trust", "unmeasured-money", "edges")}
+    with open(a.map, "w", encoding="utf-8") as f:
+        json.dump(d, f, indent=1, ensure_ascii=False, sort_keys=True)
+    print(f"seams-merge: load-handoff wrote {dest} ({slug}) · map.json load "
+          f"unmeasured-time={d['load']['unmeasured-time']} unmeasured-trust={d['load']['unmeasured-trust']} "
+          f"unmeasured-money={d['load']['unmeasured-money']} edges={d['load']['edges']} rounds={rounds}")
+    return 0
+
+
 def main(argv):
     p = argparse.ArgumentParser(prog="seams-merge.py")
     sub = p.add_subparsers(dest="cmd")
@@ -682,13 +993,19 @@ def main(argv):
     h = sub.add_parser("handoff"); h.add_argument("--state", required=True); h.add_argument("--artifact", required=True)
     h.add_argument("--keep", metavar="DIR", help="also write DIR/map.json + DIR/map.html — the kept asset (_docs/seams/<object>/)")
     h.add_argument("--repo", help="repo root for traced_at (default: cwd)")
+    l = sub.add_parser("load"); l.add_argument("--map", required=True, metavar="MAP.JSON", help="the kept seams map (_docs/seams/<object>/map.json)")
+    l.add_argument("--state", required=True); l.add_argument("--round", type=int, required=True); l.add_argument("--repo")
+    l.add_argument("--validate", required=True, metavar="REPORT",
+                   help="the reader report (<STATE>/reports/r<N>-load.md); every measured cell's oracle re-runs from the repo root")
+    lh = sub.add_parser("load-handoff"); lh.add_argument("--map", required=True, metavar="MAP.JSON")
+    lh.add_argument("--state", required=True)
     try:
         a = p.parse_args(argv)
     except SystemExit:
         die2("bad arguments (see --help)")
     if a.cmd is None:
-        die2("a subcommand is required: round | handoff")
-    return {"round": cmd_round, "handoff": cmd_handoff}[a.cmd](a)
+        die2("a subcommand is required: round | handoff | load | load-handoff")
+    return {"round": cmd_round, "handoff": cmd_handoff, "load": cmd_load, "load-handoff": cmd_load_handoff}[a.cmd](a)
 
 
 if __name__ == "__main__":

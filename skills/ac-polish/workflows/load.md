@@ -1,8 +1,10 @@
-# polish · load mode — DRAFT (loop decided 2026-09-08; machinery not yet built, never run)
+# polish · load mode — DRAFT (loop decided 2026-09-08; machinery built + tested, not yet run)
 
 The loop is in `ac-polish/SKILL.md` and is the same in every mode. This file supplies only
-what load mode binds. **Status: draft.** No round has run under it; the stamp and merge
-machinery does not exist yet. Run seams first — load takes a seams map as its input.
+what load mode binds. **Status: draft — awaiting its first run on a real object.** The merge
+(`scripts/seams-merge.py load` + `load-handoff`) and the stamp (`polish-fixpoint.sh --mode
+load`) are built and probe-tested; no round has run against a real object yet. Run seams
+first — load takes a seams map as its input.
 
 Seams asks where an object can fail SILENTLY. Load asks what each mapped seam COSTS when it is
 working: **time** (performance), **trust** (security), **money** (cost). Three loads, one map.
@@ -16,7 +18,7 @@ so a load run is bounded by construction and never discovers new edges.
 | **TARGET** | a kept seams map: `_docs/seams/<object>/map.json` (or a `_plans/…-seams-…md` still carrying its maps) |
 | **ARTIFACT** | `<STATE>/load.md` — the seams map's edges, each with three load cells: `time` · `trust` · `money`, and a `sensor` per cell (what measures it) or `none` |
 | **CHECKLIST** | `references/load-checklist.md` — the three loads, their oracles, and the derived findings |
-| **READERS** | ONE reader per round — not three: the loads are independent columns with no disagreement mechanism, and a bounded fill needs no lens split. The reader is sent `references/load-checklist.md` and the seams map (`_docs/seams/<object>/map.json`), fills EVERY load column for EVERY edge on the map — no row quota, no exploration — and quotes each edge key VERBATIM from the map; the merge matches cells to edges on that exact key, never on path:line (readers do not cite stable lines — seams measured this). A cell it cannot name a command for is `unmeasured`, never a guess |
+| **READERS** | ONE reader per round — not three: the loads are independent columns with no disagreement mechanism, and a bounded fill needs no lens split. The reader is spawned with `references/load-reader-prompt.md` verbatim, `<MAP>` (`_docs/seams/<object>/map.json`), `<CHECKLIST>` (`references/load-checklist.md`) and `<REPORT>` (= `<STATE>/reports/r<N>-load.md`) filled — it fills EVERY load column for EVERY edge on the map — no row quota, no exploration — and quotes each edge key VERBATIM from the map; the merge matches cells to edges on that exact key, never on path:line (readers do not cite stable lines — seams measured this). A cell it cannot name a command for is `unmeasured`, never a guess |
 | **VALIDATE** | every cited oracle re-runs (`--validate`); a cell no command reproduces is dropped. The round's delta = dropped cells + changed cells |
 | **STAMP** | `polish-fixpoint.sh --mode load` on `<STATE>/load.md` — `load_` frontmatter keys (derived from the mode, like `seams_`); the `unmeasured-*` counts also land in the kept `map.json` beside `seams_load` |
 

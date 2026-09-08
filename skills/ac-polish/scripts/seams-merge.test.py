@@ -366,6 +366,115 @@ if os.path.exists(f"{S11}/maps.md") and "### object map — 2 edges" in open(f"{
 else:
     fail("maps.md", "missing or short")
 
+# --- 5g. load mode: three loads on every edge of the kept map -------------------------------------
+# Reuses the kept map 5d produced via handoff --keep — the exact input a load run takes. The
+# report must cover EVERY live edge × EVERY load; the fixpoint keys on (edge, load) → cell.
+LOADMAP = mj
+md = json.load(open(mj))
+LKEYS = sorted(k for lens in md["edges"] for k, e in md["edges"][lens].items() if not e.get("dropped"))
+MEASTIME = "read × lib/foods.ts"
+LH = "| edge | time | trust | money |\n|---|---|---|---|\n"
+
+
+def load_rep(mapping):
+    return "LOAD REPORT — every load column for every edge on the map\n\n" + LH + \
+           "".join(f"| {k} | {mapping[k][0]} | {mapping[k][1]} | {mapping[k][2]} |\n"
+                   for k in LKEYS if k in mapping)
+
+
+def base_cells():
+    m = {}
+    for k in LKEYS:
+        t = "measured — 12ms · oracle: rg -n image_urls lib/foods.ts" if k == MEASTIME else "unmeasured"
+        tr = "n/a — internal, typed" if k.startswith("upload route") else "unmeasured"
+        m[k] = (t, tr, "n/a — no metered call")
+    return m
+
+
+SLOAD = f"{W}/loadstate"
+write(f"{W}/l1/load.md", load_rep(base_cells()))
+rc, out = run("load", "--map", mj, "--state", SLOAD, "--round", "1", "--repo", REPO, "--validate", f"{W}/l1/load.md")
+if rc == 0 and "edges=6 changed=0 dropped=0" in out and "unmeasured-time=5 unmeasured-trust=5 unmeasured-money=0" in out:
+    ok("load round 1: 6 edges × 3 loads merged; the counts re-derived from the merged state, not the report")
+else:
+    fail("load round 1", out)
+lm = open(f"{SLOAD}/load.md").read()
+lmf = lm.split("\n---", 1)[0]
+if lmf.startswith("---\n") and "edges: 6" in lmf and "unmeasured-time: 5" in lmf and f"traced-at: {HEADSHA}" in lmf \
+   and "| edge | time | trust | money |" in lm and "| `read × lib/foods.ts` |" in lm:
+    ok("load.md: frontmatter counts + traced-at, the map's edges each with its three load cells")
+else:
+    fail("load.md", lm[:600])
+# the STALE GUARD: traced_at behind the fenced files ends the run before anything is read
+stale = dict(md); stale["traced_at"] = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"  # the empty tree
+write(f"{W}/stale/map.json", json.dumps(stale))
+rc, out = run("load", "--map", f"{W}/stale/map.json", "--state", f"{W}/stalestate", "--round", "1", "--repo", REPO,
+              "--validate", f"{W}/l1/load.md")
+if rc == 1 and "STALE — re-run seams first" in out and "fixture" in out and not os.path.exists(f"{W}/stalestate/load-ledger.json"):
+    ok("STALE guard: commits since traced_at touching the map's files end the run loudly, nothing written")
+else:
+    fail("stale guard", out)
+# (b) a report missing an edge -> NOT-GATED naming it, nothing written
+m2 = base_cells(); del m2[LKEYS[0]]
+write(f"{W}/l2/load.md", load_rep(m2))
+rc, out = run("load", "--map", mj, "--state", SLOAD, "--round", "2", "--repo", REPO, "--validate", f"{W}/l2/load.md")
+led = json.load(open(f"{SLOAD}/load-ledger.json"))
+if rc == 2 and "NOT-GATED" in out and f"`{LKEYS[0]}`" in out and led["rounds"] == 1:
+    ok("a report missing an edge -> NOT-GATED naming the missing edge; the round did not happen")
+else:
+    fail("load missing edge", out)
+# (c) a measured cell whose oracle does not reproduce -> dropped, no convergence
+m3 = base_cells()
+m3[MEASTIME] = ("measured — 12ms · oracle: rg -n zx_no_such_symbol lib", m3[MEASTIME][1], m3[MEASTIME][2])
+write(f"{W}/l3/load.md", load_rep(m3))
+rc, out = run("load", "--map", mj, "--state", SLOAD, "--round", "2", "--repo", REPO, "--validate", f"{W}/l3/load.md")
+led = json.load(open(f"{SLOAD}/load-ledger.json"))
+if rc == 0 and "changed=1 dropped=1" in out and "dropped: oracle did not reproduce" in out \
+   and led["deltas"]["2"] == {"changed": 1, "dropped": 1} and "DROPPED round 2" in open(f"{SLOAD}/load.md").read():
+    ok("a measured cell whose oracle fails is DROPPED with the reason, annotated in load.md — no convergence")
+else:
+    fail("load drop", out)
+rc, out = run("load-handoff", "--map", mj, "--state", SLOAD)
+if rc == 2 and "not converged" in out:
+    ok("load-handoff refuses a run whose last round dropped a cell — converged runs only")
+else:
+    fail("handoff refusal", out)
+# (d) the dropped cell re-filled with a runnable command; then a clean round
+m4 = base_cells()
+m4[MEASTIME] = ("measured — 12ms · oracle: rg -n image_urls lib", m4[MEASTIME][1], m4[MEASTIME][2])
+write(f"{W}/l4/load.md", load_rep(m4))
+rc, out = run("load", "--map", mj, "--state", SLOAD, "--round", "3", "--repo", REPO, "--validate", f"{W}/l4/load.md")
+if rc == 0 and "changed=1 dropped=0" in out:
+    ok("round 3: the fixed cell is a CHANGED cell — the fixpoint keys on (edge, load) → cell content")
+else:
+    fail("load fix", out)
+write(f"{W}/l5/load.md", load_rep(m4))
+rc, out = run("load", "--map", mj, "--state", SLOAD, "--round", "4", "--repo", REPO, "--validate", f"{W}/l5/load.md")
+led = json.load(open(f"{SLOAD}/load-ledger.json"))
+if rc == 0 and "changed=0 dropped=0" in out and led["deltas"]["4"] == {"changed": 0, "dropped": 0} \
+   and "DROPPED round" not in open(f"{SLOAD}/load.md").read():
+    ok("clean round 4: changed=0 dropped=0 — the stamp condition; the DROPPED annotation is gone")
+else:
+    fail("load clean", out)
+# (e) load-handoff: load.md beside the map, counts into map.json — idempotent on re-run
+rc, out = run("load-handoff", "--map", mj, "--state", SLOAD)
+dest = os.path.join(KEEP, "load.md")
+if rc == 0 and os.path.exists(dest) and open(dest).read() == open(f"{SLOAD}/load.md").read():
+    ok("load-handoff copies the stamped-ready load.md beside the kept map")
+else:
+    fail("load handoff write", out)
+md2 = json.load(open(mj))
+if md2.get("load") == {"unmeasured-time": 5, "unmeasured-trust": 5, "unmeasured-money": 0, "edges": 6}:
+    ok("map.json carries the load counts beside seams_load, re-derived from the merged state")
+else:
+    fail("map load counts", json.dumps(md2.get("load"))[:300])
+rc, out = run("load-handoff", "--map", mj, "--state", SLOAD)
+md3 = json.load(open(mj))
+if rc == 0 and md3.get("load") == md2.get("load") and sorted(md3.get("load", {})) == ["edges", "unmeasured-money", "unmeasured-time", "unmeasured-trust"]:
+    ok("re-running load-handoff replaces the load key — idempotent, never appended")
+else:
+    fail("load handoff idempotent", out + json.dumps(md3.get("load"))[:300])
+
 # --- 6. NOT-GATED paths write nothing ----------------------------------------------------------
 S3, ART3 = f"{W}/s3", f"{W}/plan3.md"; write(ART3, f"---\n---\n{MARKER}\n")
 write(f"{W}/bad/nolens.md", f"TARGET RESOLVED TO: x\n\nMAP:\n{OH}| read | `lib/a.ts:1` | x | — | — | none | `true` |\n")
