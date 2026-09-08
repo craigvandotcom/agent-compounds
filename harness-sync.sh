@@ -765,7 +765,7 @@ function run(command, payload, timeoutMs) {
 
 // Our guards do NOT agree on how they signal a block, so honour both dialects:
 //   exit 2 + stderr                     bead-capture-guard, skill-edit-guard
-//   exit 0 + stdout hookSpecificOutput  trauma_guard (Claude dialect)
+//   exit 0 + stdout hookSpecificOutput  dcg (third-party, machine scope)
 // Honouring only one of these silently fails open on the others.
 function denialReason(r) {
   if (r.code === 2) return (r.stderr || "blocked by hook").trim()
@@ -813,7 +813,7 @@ export const server = async ({ directory }) => {
       })
     },
 
-    // PreToolUse: trauma-guard, bead-capture-guard, skill-edit-guard. A throw is
+    // PreToolUse: bead-capture-guard, skill-edit-guard, dcg. A throw is
     // opencode's deny, and the message reaches the model (verified 2026-08-28).
     "tool.execute.before": async (input, output) => {
       const entries = forEvent("PreToolUse")
