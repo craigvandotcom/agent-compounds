@@ -12,10 +12,10 @@ description: 'Compile an APPROVED ac2 plan into lean beads — the four-section 
 | **Input**        | One APPROVED plan file (`ac-plan`, graded by `ac-polish` plan-checklist)     |
 | **Output**       | Beads in `br` on the ac2 schema, with every dependency edge wired both ways    |
 | **Artifacts**    | The epic bead; the plan moved to `_plans/_done/` (retirement)                  |
-| **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity · `touchers.sh check` |
+| **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity |
 
-Contract compiled TO: `references/bead-schema.md` (mandatory load). Doctrine:
-`skills/ac-pipeline/SKILL.md`. Canon by pointer, never restated: `beads-standards`.
+Contract compiled TO: `references/bead-schema.md` (mandatory load); canon by pointer:
+`skills/ac-pipeline/SKILL.md`, `beads-standards`.
 
 ## The refusal that defines this skill
 
@@ -39,8 +39,8 @@ Count the extracted probes against the AC bullets; fewer = REFUSED. A prose frag
 every probe against current HEAD — one that exits 0 is already green, asserts nothing, and
 REFUSES the bead naming the offending AC (dogfood #2 measured 19; baseline in
 `ac-pipeline/FRICTIONS.md`). A probe that cannot run at compile (state-mutating, needs a
-device/credentials) is never silently skipped: it goes on an explicit NOT-EXECUTED list with
-the reason. A probe naming an artifact this bead has yet to create keeps the guarded form
+device/credentials) goes on an explicit NOT-EXECUTED list with the reason — never a silent
+skip; a probe naming an artifact this bead has yet to create keeps the guarded form
 `test -x <path> && bash <path>`, honestly RED at compile.
 
 ## Procedure
@@ -48,12 +48,11 @@ the reason. A probe naming an artifact this bead has yet to create keeps the gua
 1. **Read the plan and the schema.** Load `references/bead-schema.md`. Confirm the plan
    carries an approval stamp; an ungraded plan is returned, not compiled.
 2. **Cut the work into beads.** Sizing is from the bead-checklist, never from taste: one bead
-   = one focused worker pass (Jef's wave: 5,500 plan lines → 347 beads, ~16 lines/bead).
-   Two signals govern the cut, and both are cheaper here than at implement:
+   = one focused worker pass. Two signals govern the cut, both cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
-   - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through
-     an underdetermined bead improvising decisions the bead should have made. A fork the plan
-     does not settle goes back to the plan, or out as a human gate.
+   - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through an
+     underdetermined bead improvising decisions the bead should have made; a fork the plan does
+     not settle goes back to the plan, or out as a human gate.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
@@ -65,38 +64,39 @@ the reason. A probe naming an artifact this bead has yet to create keeps the gua
    `none`; a `<…>` placeholder is REFUSED (it reads as a premise). Then create the edges and
    read them back: direction is `<blocked> depends-on <blocker>`, a reversed `br dep add` is
    SILENT, and an epic reaches its children by parent-child, never `blocks`.
-   - **Consumes↔edge parity, both directions.** Every Consumes line has an edge; every edge
-     has a Consumes line. Verify with `br dep cycles` plus `br show` on both ends of each
-     edge — a parity gap is the measured way a "wired" graph turns out not to be.
-   - **One path per `## Delivers` bullet, and every delivered path that ALREADY EXISTS owes a
-     touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
-     write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <the sibling bead
-     that updates those referrers, per the plan's toucher list>`` — else `out-of-scope: <why>`.
+- **Consumes↔edge parity, both directions.** Every Consumes line has an edge; every edge
+      has a Consumes line. Verify with `br dep cycles` plus `br show` on both ends.
+- **One path per `## Delivers` bullet, and every delivered path that ALREADY EXISTS owes a
+      touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
+      write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <sibling bead>``
+      — else `out-of-scope: <why>`.
 6. **Create the beads** per the schema's Header fields: `br create` REJECTS `-f` alongside a
    title, so bodies go `-d "$(cat <file>)"` and bead text must stay dcg-safe.
 7. **Retire the plan** (§ below).
 
-## Plan retirement — and the one case that refuses it
+## Plan retirement — the seams chain, and the one case that refuses it
 
 Tenet 7: plan hard, then retire the plan — beads and the constitution are its only survivors.
-On a successful compile the plan file is **moved to `_plans/_done/`** and the epic bead gets a
-comment naming its new path. Beads that still need the plan are not self-contained enough;
-retirement forces that discipline; the plan is preserved, never deleted.
+On a successful compile the plan file is **moved to `_plans/_done/`**, the epic bead gets a
+comment naming its new path; the plan is preserved, never deleted.
 
-**REFUSE to retire while an open bead still needs the plan as its subject.** Before moving the
-file, look for an open bead whose subject IS this plan — a dogfood receipt, a
-pre-registration, a bead whose Delivers or Intent names the plan path. If one exists, leave
-the file exactly where it is and say so, naming the bead that holds it:
+**A seams plan is never a single file — retire the whole chain.** A plan compiled from
+`ac-polish` seams mode carries `seams_source:` naming its seams doc; each seams doc carries
+`parent:` / `supersedes:` / `splits[]:` / `seeded_from:` edges to its siblings. Walk those
+edges and move EVERY reachable `_plans/` file to `_plans/_done/` (not just `$PLAN_FILE`) —
+stamped `status: done` + `beadified: <epic-id>`, RETIREMENT HELD guard (§ below) per file.
+
+**REFUSE to retire while an open bead still needs the plan as its subject** — a dogfood
+receipt, a bead whose Delivers or Intent names the plan path. If one exists, leave the file
+where it is and say so:
 
 ```sh
 RUST_LOG=error br list --status open --json \
   | grep -Fq "$(basename "$PLAN_FILE")" && echo "RETIREMENT HELD: an open bead still names $PLAN_FILE"
 ```
 
-The guard lives HERE, in the skill that ships retirement — the only place its condition can
-still be true; a far-side safeguard is decoration.
+The guard lives HERE — the only place its condition still holds.
 
 ## Hand-off
 
-A compiled epic with no grading is a dead end: hand the bead set to `ac-polish`
-(bead-checklist) before any claim.
+A compiled epic with no grading is a dead end: hand the bead set to `ac-polish` first.
