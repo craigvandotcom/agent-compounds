@@ -424,6 +424,9 @@ br sync --flush-only      # export DB -> JSONL
 - **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
   closed children and epics don't auto-close on last child close — check closed children
   before triaging an epic as abandoned/empty.
+- **`br` in a NON-TTY context (scripts/agents) mis-executes compound one-liners** — a call chained
+  with `&&`, or inside a `for` loop, pipe or substitution, can fail with a "not a terminal" error.
+  Give every `br` call its own standalone Bash invocation (worker.md's `--json`/`-f` pattern).
 
 ### Working cadence
 
