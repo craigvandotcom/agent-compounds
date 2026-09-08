@@ -52,7 +52,10 @@ transient / known 3rd-party / sub-threshold → drop (list in the report, don't 
 {{Sentry: issue `culprit` + top in-app frame. ASC: error signature + screen.}} Search the
 repo db for an open bead with the same fingerprint BEFORE creating — recurrence updates the
 existing bead, never a duplicate. Label `triage,<source>` + carry the source record id (loop
-guard).
+guard). **Catch-stage at filing:** every source is external real-user signal, so finding-beads
+carry `prod-finding` (a token from beads-standards' CLOSED set — never a new one), plus
+`discovered-from: <bead>` when the finding traces to a shipped bead (honest omission
+otherwise).
 
 ## Cadence
 

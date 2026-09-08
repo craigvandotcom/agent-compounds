@@ -171,7 +171,7 @@ For each confirmed, deduped **defect**, create a typed bead directly via `br cre
 is the deliberate pattern here — `ac-bead-capture` is the human quick-capture skill).
 
 ```
-br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
+br create -t bug --labels origin:ac-triage,triage,<source>,prod-finding,unrefined  \
   --title "<crash culprit / error signature> (<freq>× / <users> users)" \
   --description "<source link · first-seen release · suspected wave · top stack frames
                  ## Steps to Reproduce (repro hints / crash path)
@@ -181,6 +181,9 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 # body headers per beads-standards/reference/bead-conventions.md §Body template — emit at creation
 ```
 
+- **Catch-stage at filing, per source.** Every triage source is external real-user signal,
+  so the template's `prod-finding` token covers all of them — Sentry and beta/store
+  feedback alike (a token from beads-standards' CLOSED set; never a new one).
 - `-t bug` for confirmed defects; `-t investigation` for plausible-but-unconfirmed (e.g. a
   Supabase error spike with no clear cause).
 - **Readiness gate (the ac-loop seam):** every finding ships `unrefined`, however strong the
@@ -197,10 +200,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,unrefined  \
 - **ac-lane findings carry a `catch-stage` label and a `discovered-from` edge.** File the
   escape as `catch-stage:<stage>` — the stage that SHOULD have caught it (plan · beadify ·
   flight · implement · close · review) — plus `discovered-from: <bead>` naming the work that
-  shipped it. Without both it is a bug report; with them it is evidence about which gate
-  leaks. Of 27 catch-stage-labelled findings on the factory's own board exactly ONE came from
-  outside its own gates and none from production: a pipeline graded only on receipts its own
-  gates emit cannot learn that it was wrong, and this leg is the only place that number moves.
+  shipped it. Without both it is a bug report; with them it is evidence about which gate leaks.
 - **Product findings to the board; process observations to the ac2 family ledger.** The same
   signal yields both, and conflating them is how a board fills with beads about ourselves
   (measured 39%). A defect in the shipped thing → a bead, here. An observation about how the

@@ -37,6 +37,31 @@ CMD = re.compile(r"(^|[`\s])br (create|q)\b")
 # by then it must have been substituted. Same contract, different moment.
 TEMPLATE_ORIGIN = re.compile(r"^origin:(<[^>]+>|[A-Za-z0-9][A-Za-z0-9._-]*)$")
 
+# The catch-stage CLOSED set (beads-standards § Catch-stage vocabulary — never mint a
+# new token). A finding-bead template — one whose labels carry the `triage` marker but
+# NOT the `ops` escalation marker — must file its escape with exactly one of these, so
+# the escape-attribution corpus is built by contract, not by downstream accident.
+CATCH_STAGE = ("qa-finding", "review-finding", "hygiene-finding", "ci-finding", "prod-finding")
+
+
+def has_catch_stage(cmd):
+    return any(l in CATCH_STAGE for l in guard.all_labels(cmd))
+
+
+def is_finding_template(cmd):
+    """True for a template that files a FINDING bead — a defect-shaped bead (bug /
+    investigation) carrying the triage source marker. The ops/escalation template carries
+    `triage,ops` too but files a pipeline-ops task, not a finding, so it is excluded by
+    the `ops` token; the feature-fork template files `-t decision`, not a finding, so it
+    is excluded by type. Under-enforcing on an unsubstituted `-t <type>` placeholder is
+    correct — the same doctrine as bead_type: it could stand for anything, and the
+    runtime guard + ac-tidy cover the substitution moment."""
+    labels = guard.all_labels(cmd)
+    if "triage" not in labels or "ops" in labels:
+        return False
+    typ = guard.bead_type(cmd)
+    return typ in ("bug", "investigation")
+
 
 def template_has_origin(cmd):
     return any(TEMPLATE_ORIGIN.match(l) for l in guard.all_labels(cmd))
@@ -102,6 +127,14 @@ def templates(path):
             if re.search(r"(--labels|\s-l)\s*$", block) and j + 1 < len(lines):
                 j += 1
                 block = block + " " + lines[j].strip()
+            # a quoted argument may itself span lines (a multi-line --description
+            # with embedded ## sections). shlex cannot parse an unbalanced quote,
+            # and skipping the block would silently un-scan the template — the
+            # ac-triage Phase-3a finding template was invisible to this lint for
+            # exactly that reason. Keep joining until the quotes balance.
+            while block.count('"') % 2 == 1 and j + 1 < len(lines):
+                j += 1
+                block = block + "\n" + lines[j]
             if FLAG.search(block):
                 yield i + 1, clip_inline_code(block).strip()
             i = j
@@ -137,6 +170,9 @@ def violations():
                     and not guard.has_readiness(cmd)
                 ):
                     out.append((rel, line_no, f"type `{typ}` with no readiness label"))
+                    continue
+                if is_finding_template(cmd) and not has_catch_stage(cmd):
+                    out.append((rel, line_no, "finding template with no catch-stage label"))
     return out, scanned
 
 

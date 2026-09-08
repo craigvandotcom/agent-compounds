@@ -53,7 +53,27 @@ else
   bad "RED: expected exit 1 naming the template, got $rc"; cat "$OUT"
 fi
 
-# --- 3 LIVE: the real registry's shipped templates conform --------------------
+# --- 3 RED: a finding template without a catch-stage label -> exit 1 -------------
+# The VACUOUS guard (>= 20 scanned templates) needs a populated fixture tree, so
+# generate 20 conformant templates plus one finding template missing its catch-stage.
+t="$work/nocatch"
+mkdir -p "$t/scripts" "$t/hooks" "$t/skills/bad"
+cp "$ROOT/scripts/bead-template-lint.py" "$t/scripts/"
+cp "$ROOT/hooks/bead-capture-guard.py" "$t/hooks/"
+{
+  for n in $(seq 1 20); do
+    printf '%s\n' '`br create -t task --labels "origin:ac-hygiene,hygiene-finding,unrefined" --title "conformant template '"$n"'"`'
+  done
+  printf '%s\n' '`br create -t bug --labels "origin:ac-triage,triage,<source>,unrefined" --title "finding template with no catch-stage"`'
+} > "$t/skills/bad/SKILL.md"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "no catch-stage label" "$OUT"; then
+  ok "RED: finding template without catch-stage failed"
+else
+  bad "RED: expected exit 1 naming the missing catch-stage, got $rc"; cat "$OUT"
+fi
+
+# --- 4 LIVE: the real registry's shipped templates conform --------------------
 rc=$(run_check "$ROOT")
 if [ "$rc" = 0 ]; then
   ok "LIVE: shipped templates conform"
