@@ -127,6 +127,7 @@ partial failure, never a silent pass:
   "app": "<app>",
   "depth": "smoke|full|exhaustive",
   "session_prefix": "qa-<app>-<RUN_ID>",
+  "degraded": "no | solo (trigger=…; lenses=…; journeys=…)",
   "dispatched": [
     { "journey": "<name>", "lane": "parallel|sequential", "worker": "w1" }
   ],
@@ -136,6 +137,11 @@ partial failure, never a silent pass:
   "proves": ["bd-xxxxx"]
 }
 ```
+
+> **`degraded` is REQUIRED in both states** (`degraded-mode.md` §3): `no`, or
+> `solo (trigger=…; lenses=…; journeys=…)` when the run is degraded — an always-present
+> field makes its absence a detectable defect, and `validate-qa-run.sh` assertion 8
+> fails a manifest that omits it.
 
 > **Schema contract (bd-g4ktj):** the validator
 > (`ac-pipeline/scripts/validate-qa-run.sh`) reads **flat `dispatched[]`** —
@@ -183,8 +189,9 @@ inlined into the report.
 cannot observe the surface — see `verification-gate.md` §Step 1b. **A journey with any such
 result among its `proof.asserts` MUST NOT be `PASS`: it is `INCONCLUSIVE` — no `last_pass`
 write, and the residue gets a tracking bead.** For downstream gates INCONCLUSIVE counts as
-not-yet-verified, never as a pass (fail-safe: `ac-merge`/`ac-distribute` read PASS/FAIL only,
-so an INCONCLUSIVE journey can never make the pass-level `status:` PASS on its own strength).
+not-yet-verified, never as a pass: the pass-level rule below forces `status: NOT-GATED`
+when any journey is INCONCLUSIVE, so consumer "read PASS/FAIL only" blindness is no longer
+described as a guard that isn't one (ac-61zh.1).
 
 > Scope, so this does not swallow the two residues that already work: a step declared in
 > `proof.device_only_steps` is **known, human-reviewed** residue — keep the existing handling
@@ -244,8 +251,18 @@ sessions).
 below (`journeys_tested` from verdict statuses, `findings_filed` from filed beads,
 `evidence` from verdict paths). Downstream consumers (ac-merge, ac-distribute) are
 unchanged. Mechanical validation: `ac-pipeline/scripts/validate-qa-run.sh $ARTIFACTS_DIR`
-asserts manifest⊖verdict completeness, parallel-lane overlap, teardown, and
-(when `proves` is non-empty) a writeback record covering every certified bead.
+asserts manifest⊖verdict completeness, parallel-lane overlap, teardown, the `degraded`
+field's presence (assertion 8), and (when `proves` is non-empty) a writeback record
+covering every certified bead. When the conductor has a findings baseline for the
+surface, pass `--baseline-findings <N>` so a false-clean run fails instead of passing
+every structural assertion (ac-61zh.1).
+
+**A twin that cannot run at all emits an unverified-tier artifact, not a hand-off
+sentence (ac-61zh.1).** Device platform-gate failure (no Mac), browser serve failure
+(dirty tree, dead URL) — write `$ARTIFACTS_DIR/unverified_tiers.txt` naming what was
+not driven, then report and hand off. The artifact (not the prose) is what makes a
+non-run visible to the next stage's `unverified_tiers` consumption; a failed run that
+"reports" only in words is indistinguishable from a run that never happened.
 
 **`proves: [<bead-id>, …]`** (optional). When the pass is supposed to certify
 named beads (a re-prove), list those ids on the manifest. After each
@@ -321,6 +338,7 @@ platform: ios-simulator | android-emulator | browser-local | browser-preview | b
 target: [sim/emulator model + OS | browser + viewport]
 app_build: [how built/served — command + branch/commit]
 depth: smoke | full | exhaustive
+Degraded: no | solo (trigger=…; lenses=…; journeys=…)
 journeys_tested: [list, with PASS/FAIL/INCONCLUSIVE each]
 shell_checklist: [items checked, PASS/FAIL — native-shell-checklist.md | web-shell-checklist.md]
 appearance_matrix: [combos checked]
@@ -328,8 +346,19 @@ findings_filed: [bead ids created this run, qa-blocker flagged]
 a11y_findings: [unlabeled controls / violations discovered]
 perf_observations: [qualitative only — hangs, freezes, leaks, layout shift]
 evidence: [screenshot/video paths]
-status: PASS | FAIL
+status: PASS | FAIL | NOT-GATED
 notes: [issues, platform-impossible flows skipped and why, journey-doc drift fixed]
 ```
+
+> **`Degraded:` is REQUIRED in both states** (`degraded-mode.md` §3) — `no`, or
+> `solo (trigger=…; lenses=…; journeys=…)` for a degraded run. Same always-present
+> rationale as the manifest field above.
+
+> **Pass-level rule — INCONCLUSIVE is NOT-GATED, never PASS (ac-61zh.1).** `status:`
+> is `PASS` only when every `journeys_tested` entry is `PASS`. One INCONCLUSIVE
+> journey (any `NOT_PROVABLE_IN_<HARNESS>` assertion, bd-muutz) forces
+> `status: NOT-GATED` — a consumer reading PASS/FAIL only must not see this run as a
+> pass on the strength of the status line. A FAIL journey forces `status: FAIL`.
+> Downstream gates treat `NOT-GATED` exactly like missing evidence: not-yet-verified.
 
 > The `platform:` field is load-bearing — ship gates predicate on it.

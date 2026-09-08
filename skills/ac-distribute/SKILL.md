@@ -39,9 +39,9 @@ The fast, repeatable closed-beta push. Apps typically reduce this to **one comma
 
 Long-running and failure-prone (signing probes, processing hangs, keychain footguns) —
 open a `TaskCreate` run ledger, one task per section, so a stalled/hung step is visible
+rather than silent:
 
 If TaskCreate is unavailable (subagent / fan-out path), track the ledger inline in progress.md; this is a sanctioned equivalent, not a deviation.
-rather than silent:
 
 Ledger contract: `ac-pipeline/references/run-ledger.md` — one task per section, advance as you go; ledger = run position, never work items.
 
@@ -87,7 +87,7 @@ Pass selection defers to `ac-pipeline/references/verification-gate.md` — one s
    `journeys_tested` block is **fresh relative to the commit being shipped** — not the
    session's memory that "QA passed," and **not a `browser-*` PASS** (the browser twin
    proves the web shell, never the native ship). Mechanical gate, not vibes. No qualifying
-   artifact ⇒ run `ac-qa-device` (smoke at minimum) first.
+   artifact ⇒ run `ac-qa-device` (smoke at minimum) first. **`status: NOT-GATED` is not a pass (ac-61zh.1)** — an `INCONCLUSIVE` journey forces it (qa-shared.md § Reporting); this gate keys on `status: PASS` literally.
    **Review-critical journeys are part of this gate — mechanically, not by memory.**
    TestFlight pushes run `skills/_tools/journey-stamp-check.sh --app <this-app> --sha
    <ship-sha> --lane testflight`, which never blocks but prints `WARN` lines — a stamp

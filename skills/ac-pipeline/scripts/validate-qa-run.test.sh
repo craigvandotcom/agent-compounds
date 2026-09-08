@@ -13,8 +13,9 @@ CASES=0
 expect_exit() {
   CASES=$((CASES + 1))
   local dir="$1" want="$2" label="$3"
+  shift 3
   set +e
-  out=$(bash "$TARGET" "$dir" --skip-teardown-check 2>&1)
+  out=$(bash "$TARGET" "$dir" --skip-teardown-check "$@" 2>&1)
   got=$?
   set -e
   if [ "$got" -eq "$want" ]; then
@@ -29,7 +30,7 @@ mkfix() {
   local d="$1"
   mkdir -p "$d"
   cat > "$d/journeys-manifest.json" <<'JSON'
-{"run_id":"t","app":"bca","depth":"smoke","session_prefix":"qa-t","dispatched":[{"journey":"login","lane":"sequential","worker":"w1"}],"skipped":{},"proves":["bd-example"]}
+{"run_id":"t","app":"bca","depth":"smoke","session_prefix":"qa-t","dispatched":[{"journey":"login","lane":"sequential","worker":"w1"}],"skipped":{},"degraded":"no","proves":["bd-example"]}
 JSON
   cat > "$d/verdict-login.json" <<'JSON'
 {"journey":"login","lane":"sequential","session":"s","started_at":"2026-01-01T00:00:00Z","ended_at":"2026-01-01T00:01:00Z","status":"PASS","assertions":[],"covered":[],"console_errors":"none","findings":[]}
@@ -59,13 +60,45 @@ echo "--- pending finding still fails (bd-xx9yv, no regression) ---"
 PEND=$(mktemp -d /tmp/qa-pending-XXXXXX)
 mkdir -p "$PEND"
 cat > "$PEND/journeys-manifest.json" <<'JSON'
-{"run_id":"t","app":"bca","depth":"smoke","session_prefix":"qa-t","dispatched":[{"journey":"login","lane":"sequential","worker":"w1"}],"skipped":{}}
+{"run_id":"t","app":"bca","depth":"smoke","session_prefix":"qa-t","dispatched":[{"journey":"login","lane":"sequential","worker":"w1"}],"skipped":{},"degraded":"no"}
 JSON
 cat > "$PEND/verdict-login.json" <<'JSON'
 {"journey":"login","lane":"sequential","session":"s","started_at":"2026-01-01T00:00:00Z","ended_at":"2026-01-01T00:01:00Z","status":"FAIL","assertions":[],"covered":[],"console_errors":"none","findings":[{"title":"x","severity":"qa-finding","repro":"","bead":"pending"}]}
 JSON
 expect_exit "$PEND" 1 "pending finding still fails"
 rm -rf "$PEND"
+
+echo "--- findings parity (anti-false-clean, ac-61zh.1) ---"
+# RED: a zero-findings run against a surface with a known seeded finding must FAIL
+# when --baseline-findings names that finding — the broken-sensor class ac-qkg8 caught.
+PARITY=$(mktemp -d /tmp/qa-parity-red-XXXXXX)
+mkdir -p "$PARITY"
+cat > "$PARITY/journeys-manifest.json" <<'JSON'
+{"run_id":"t","app":"bca","depth":"smoke","session_prefix":"qa-t","dispatched":[{"journey":"login","lane":"sequential","worker":"w1"}],"skipped":{},"degraded":"no"}
+JSON
+cat > "$PARITY/verdict-login.json" <<'JSON'
+{"journey":"login","lane":"sequential","session":"s","started_at":"2026-01-01T00:00:00Z","ended_at":"2026-01-01T00:01:00Z","status":"PASS","assertions":[],"covered":[],"console_errors":"none","findings":[]}
+JSON
+expect_exit "$PARITY" 1 "zero findings < seeded baseline 1 fails parity" --baseline-findings 1
+# GREEN: same surface, the seeded finding reported -> parity holds
+cat > "$PARITY/verdict-login.json" <<'JSON'
+{"journey":"login","lane":"sequential","session":"s","started_at":"2026-01-01T00:00:00Z","ended_at":"2026-01-01T00:01:00Z","status":"FAIL","assertions":[],"covered":[],"console_errors":"none","findings":[{"title":"seeded finding","severity":"qa-finding","repro":"","bead":"bd-seeded"}]}
+JSON
+expect_exit "$PARITY" 0 "seeded finding reported satisfies parity baseline 1" --baseline-findings 1
+rm -rf "$PARITY"
+
+echo "--- Degraded field present (ac-61zh.1) ---"
+# RED: a manifest with no `degraded` key must fail (always-present field, degraded-mode.md §3)
+NODEG=$(mktemp -d /tmp/qa-nodeg-red-XXXXXX)
+mkdir -p "$NODEG"
+cat > "$NODEG/journeys-manifest.json" <<'JSON'
+{"run_id":"t","app":"bca","depth":"smoke","session_prefix":"qa-t","dispatched":[{"journey":"login","lane":"sequential","worker":"w1"}],"skipped":{}}
+JSON
+cat > "$NODEG/verdict-login.json" <<'JSON'
+{"journey":"login","lane":"sequential","session":"s","started_at":"2026-01-01T00:00:00Z","ended_at":"2026-01-01T00:01:00Z","status":"PASS","assertions":[],"covered":[],"console_errors":"none","findings":[]}
+JSON
+expect_exit "$NODEG" 1 "manifest without degraded field fails"
+rm -rf "$NODEG"
 
 echo ""
 echo "validate-qa-run.test: ${CASES} cases, ${FAILURES} failures"

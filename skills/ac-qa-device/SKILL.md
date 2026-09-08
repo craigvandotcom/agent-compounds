@@ -5,11 +5,10 @@ description: Use when QA-ing the NATIVE app build on a device/simulator — full
 
 > **The native twin.** `ac-qa-device` proves the native shell; `ac-qa-browser`
 > proves the web shell. Shared conventions — **depth levels, journey reuse,
-Capability-starved runs: `ac-pipeline/references/degraded-mode.md`.
-
 > findings=beads, the `QA_VALIDATION` report, and the conductor/worker evidence
 > protocol** — live in **`ac-pipeline/references/qa-shared.md`**; both twins reference it so they
 > stay in lockstep. This file owns the native/simulator specifics only.
+> Capability-starved runs: `ac-pipeline/references/degraded-mode.md`.
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and
@@ -38,8 +37,9 @@ commands, so the structure (layers, checklist, journey reuse) carries over.
 ## Platform Gate (read first)
 
 **Everything here requires macOS** (Xcode + simulators). Check before doing
-anything: `uname` → if not `Darwin`, **stop** — report that simulator QA needs
-a Mac session and hand off. Remote Linux→Mac driving (idb gRPC) exists but is
+anything: `uname` → if not `Darwin`, **stop** — write `$ARTIFACTS_DIR/unverified_tiers.txt`
+(shape: qa-shared.md § non-run artifact), report simulator QA needs a Mac session,
+hand off (ac-61zh.1). Remote Linux→Mac driving (idb gRPC) exists but is
 friction-prone — see `references/setup.md` appendix; don't attempt it ad hoc.
 
 ## Layered QA model — what to test where
@@ -119,15 +119,15 @@ evidence protocol.
    the manifest lists `proves: [<bead-id>, …]`, `br comments add <id> "VERDICT:
    <verb>: …"` on each id and append `{id, verdict}` to
    `$ARTIFACTS_DIR/writeback.json` BEFORE
-   `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" --skip-teardown-check`
-   (the teardown check is browser-specific; sweep agent-device sessions yourself).
+   `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" \
+   --baseline-findings "$BASELINE_FINDINGS" --skip-teardown-check` (teardown is
+   browser-specific — sweep agent-device sessions yourself); `BASELINE_FINDINGS` =
+   per-run seeded finding count (qa-shared.md § Aggregation, ac-61zh.1).
 5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain;
-   **and** apply the same orphan predicate as Orient step 1 — a live
-   `AgentDeviceRunnerUITests-Runner` on this app's sim UDID with an empty
-   registry (no recent non-keepalive request) is a leftover even when
-   `session list` is empty. `agent-device close --session bca` is insufficient
-   for this class (`SESSION_NOT_FOUND`). Reap only this app's sim UDID /
-   session `bca`; never kill art-still or any other app's runners. Then shut
+   **and** apply the SAME orphan predicate as Orient step 1 (runner live + empty
+   registry; `agent-device close --session bca` insufficient — `SESSION_NOT_FOUND`).
+   Reap only this app's sim UDID / session `bca`; never kill art-still or any
+   other app's runners. Then shut
    down only sims your app owns, per the ownership rule below.
 
 Everything from **Core loop** down is **worker-side doctrine** — the

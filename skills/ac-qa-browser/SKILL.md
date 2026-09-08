@@ -101,7 +101,7 @@ viewport set), and a console-clean assertion on every route. **Flag-gated journe
   # can verify build↔commit↔env identity.
   ```
   Deployed URL → skip the build/serve, `SERVER_STARTED` empty. Tear down the same
-  `next start` / serve-prod process (not any `pnpm dev`) at Phase-final.
+  `next start` / serve-prod process (not any `pnpm dev`) at Phase-final. **Serve failure = non-run (ac-61zh.1):** non-zero serve or dead URL → STOP, write `$ARTIFACTS_DIR/unverified_tiers.txt` (qa-shared.md § non-run artifact), hand off.
 
 ### Phase 1 — Select journeys, assign lanes, write the manifest
 
@@ -211,9 +211,9 @@ pre-pass). No verdict leaves this phase with a `pending` finding.
   `br comments add <id> "VERDICT: <verb>: …"` on each id and append `{id, verdict}`
   to `$ARTIFACTS_DIR/writeback.json`. A certified bead with no writeback record
   is a failed run, not a silent pass.
-- Mechanical self-check: `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR"` must
-  exit 0 (completeness, concurrency, teardown, proves-writeback). Must run AFTER
-  the VERDICT writeback bullet above.
+- Mechanical self-check: `ac-pipeline/scripts/validate-qa-run.sh "$ARTIFACTS_DIR" \
+  --baseline-findings "$BASELINE_FINDINGS"` must exit 0 (completeness, concurrency,
+  teardown, Degraded-present, proves-writeback, findings-parity; baseline per qa-shared.md § Aggregation). Must run AFTER the VERDICT writeback bullet above.
 
 ### Phase 6 — Teardown sweep (mandatory, both paths)
 
@@ -312,7 +312,7 @@ bead instead (same rule as `ac-qa-device`).
 - `ac-pipeline/references/qa-shared.md` — depth levels, findings=beads, `QA_VALIDATION` schema, **conductor/worker evidence protocol** (manifest/verdict schemas, lanes, session naming)
 - `ac-pipeline/references/verification-gate.md` — selection + depth, journey registry schema (`mutates:`, `last_pass`)
 - `ac-pipeline/scripts/validate-qa-run.sh` — mechanical pass validation
-- `references/journey-tester-prompt.md` — the worker prompt template (the old inline core loop lives here now)
+- `references/journey-tester-prompt.md` — the worker prompt template (the core loop)
 - `web-shell-checklist.md` — what ONLY the web shell surfaces
 - `browser-testing/SKILL.md` — low-level `agent-browser` mechanics (worker-side)
 - `ac-qa-device/SKILL.md` — the native-shell twin (Layer 2)

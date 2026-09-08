@@ -15,6 +15,8 @@
 #      (no `pending`/`none` left as prose-only capture — bd-xx9yv)
 #   7. if manifest.proves is a non-empty array: $ARTIFACTS_DIR/writeback.json
 #      covers every id (bd-qa-verdict-writeback-gap-26ww1)
+#   8. manifest carries a `degraded` field in EITHER state (no | solo (...)) —
+#      always-present field (degraded-mode.md §3)
 
 set -euo pipefail
 
@@ -138,5 +140,15 @@ if [ "$PROVES_N" -gt 0 ]; then
     fi
   fi
 fi
+
+# 8. Degraded field present in the manifest in BOTH states (degraded-mode.md §3) —
+# an always-present field makes its absence a detectable defect, and this validator is
+# the detector. `no` and `solo (...)` are both legal; empty is not.
+DEGRADED=$(jq -r '(.degraded // "")' "$MANIFEST")
+case "$DEGRADED" in
+  no|solo*) ok "Degraded: $DEGRADED" ;;
+  "") bad "Degraded: field missing from manifest — REQUIRED in both states (degraded-mode.md §3)" ;;
+  *)  bad "Degraded: unrecognized value '$DEGRADED' (expect no or solo (...))" ;;
+esac
 
 exit $FAIL
