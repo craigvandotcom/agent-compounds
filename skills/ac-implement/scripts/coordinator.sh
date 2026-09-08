@@ -28,7 +28,13 @@
 # already the repo-global lane. One committer, one lane, one place to fix.
 #
 # Usage:
-#   coordinator.sh --run <run-id> [--root <repo root>] [--actor-prefix <p>] [--dry-run]
+#   coordinator.sh --run <run-id> [--root <repo root>] [--actor-prefix <p>]
+#                  [--mirror-artifacts] [--dry-run]
+#
+# --mirror-artifacts  OPTIONAL checkpoint (ac-28nm): after a successful ledger flush, mirror
+#                     this run's /tmp-mortal scratch into <git-common-dir>/ac-flight/<run-id>/
+#                     artifacts/ so a reboot mid-run loses nothing. Non-blocking: if the
+#                     mirror script is absent it is noted, never refused.
 #
 # Exit 0  closed out — ledger flushed, verified and committed
 # Exit 1  REFUSED: <CLASS> — act on the class, do not route around it
@@ -36,13 +42,14 @@
 
 set -uo pipefail
 
-RUN=""; ROOT=""; PREFIX=""; DRY=0
+RUN=""; ROOT=""; PREFIX=""; DRY=0; MIRROR=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --run)          RUN="${2:-}"; shift 2 ;;
-    --root)         ROOT="${2:-}"; shift 2 ;;
-    --actor-prefix) PREFIX="${2:-}"; shift 2 ;;
-    --dry-run)      DRY=1; shift ;;
+    --run)             RUN="${2:-}"; shift 2 ;;
+    --root)            ROOT="${2:-}"; shift 2 ;;
+    --actor-prefix)    PREFIX="${2:-}"; shift 2 ;;
+    --mirror-artifacts) MIRROR=1; shift ;;
+    --dry-run)         DRY=1; shift ;;
     *) echo "NOT-GATED: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done
@@ -131,4 +138,19 @@ AFTER=$(git rev-parse HEAD 2>/dev/null || echo none)
   "the commit reported success but HEAD did not move — the ledger is flushed to disk and NOT committed. An unverified write is a claim, not a fact"
 
 echo "coordinator[$RUN] CLOSED OUT — ledger flushed, verified and committed at $(git rev-parse --short HEAD)"
+
+# --- optional checkpoint: mirror the run's /tmp scratch into ac-flight (ac-28nm) --------
+# A multi-day run's /tmp artifacts (run-id.md, /tmp claim/comment/worker files) die on a
+# reboot or the OS sweep. This OPTIONAL leg mirrors them repo-side so a reboot loses nothing
+# but a copy step. NON-BLOCKING: a missing mirror script is noted, never refused — the close
+# already happened; this is a durability nicety, not a gate.
+if [ "$MIRROR" = 1 ]; then
+  MIRROR_SH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/mirror-run-artifacts.sh"
+  if [ -x "$MIRROR_SH" ]; then
+    bash "$MIRROR_SH" --run "$RUN" \
+      || echo "coordinator[$RUN] mirror-run-artifacts reported a problem; run state may not be durable (non-blocking)"
+  else
+    echo "coordinator[$RUN] mirror-run-artifacts.sh not found beside coordinator.sh — run-state mirror skipped (non-blocking)"
+  fi
+fi
 exit 0

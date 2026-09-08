@@ -154,6 +154,30 @@ mkrepo r9
 [ "$( AC2_TEST_FLUSH_FAIL=1 rc_of "$W/r9" --run R )" -eq 2 ] \
   && ok "a failed flush is NOT-GATED — the disk ledger is not trusted" || bad "failed flush was not NOT-GATED"
 
+echo "coordinator.test: the optional --mirror-artifacts checkpoint (ac-28nm)"
+mkrepo r10
+( cd "$W/r10" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
+mkdir -p "$W/r10/skills/ac-implement/scripts"
+cat >"$W/r10/skills/ac-implement/scripts/mirror-run-artifacts.sh" <<'MIR'
+#!/usr/bin/env bash
+echo "MIRRORED: $*" >> .mirror.log
+exit 0
+MIR
+chmod +x "$W/r10/skills/ac-implement/scripts/mirror-run-artifacts.sh"
+AC2_TEST_LEDGER="$W/r10/.beads/issues.jsonl" run "$W/r10" --run RM --mirror-artifacts >/dev/null 2>&1
+grep -q 'MIRRORED: --run RM' "$W/r10/.mirror.log" \
+  && ok "--mirror-artifacts invokes the mirror leg after the flush" \
+  || bad "--mirror-artifacts did not invoke the mirror leg"
+
+# Non-blocking: a missing mirror script is noted and the close still exits 0.
+mkrepo r11
+( cd "$W/r11" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
+out="$(AC2_TEST_LEDGER="$W/r11/.beads/issues.jsonl" run "$W/r11" --run RN --mirror-artifacts)"
+rc=$( AC2_TEST_LEDGER="$W/r11/.beads/issues.jsonl" rc_of "$W/r11" --run RN --mirror-artifacts )
+[ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'mirror skipped' \
+  && ok "a missing mirror script is non-blocking — noted, never refused" \
+  || bad "missing mirror script was not non-blocking (rc=$rc): $out"
+
 echo "coordinator.test: the script declares its own assurance"
 miss=""
 for f in "PROBE:" "SCHEDULE:" "MODE:" "ON-FAILURE:"; do grep -q "$f" "$GATE" || miss="$miss $f"; done
