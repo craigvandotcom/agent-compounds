@@ -57,14 +57,14 @@ each with a semantic `tier:` resolved per harness from `harnesses.json agent_mod
 |--------|------|---------|-----------|
 | **orchestrator** | orchestrator | plans, sequences, delegates; holds decisions and batch boundaries | implementing itself |
 | **coordinator** | coordinator | looks, understands, critiques, synthesizes (read-only) | mechanical execution |
-| **researcher** | coordinator | read-only investigation (brain → code → web), returns cited summary | making changes |
+| **researcher** | worker | read-only investigation (brain → code → web), returns cited summary | making changes |
 | **implementer** | worker | scoped execution of an approved plan/spec | planning, verification |
 | **validator** | coordinator | adversarial review/audit against rubrics & tests | fixing what it finds |
 
-**Tier economics:** implementer is the worker tier — cheap, parallelize mechanical
-work. Researcher and validator are the coordinator tier — spend them on judgment,
-not greps. The orchestrator tier is you (the harness default): hold decisions and
-returned summaries, never file contents.
+**Tier economics:** implementer and researcher are the worker tier — cheap, parallelize
+mechanical work including investigation reads. Coordinator and validator are the judgment
+tier — critique and gates, never greps. The orchestrator tier is you (the harness default):
+hold decisions and returned summaries, never file contents.
 
 **Context principle:** "If I only need OUTPUT, delegate. If I need to SEE THE WORK,
 execute directly."
