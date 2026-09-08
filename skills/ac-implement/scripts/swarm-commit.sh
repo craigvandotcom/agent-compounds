@@ -32,6 +32,10 @@
 #   inline-message     -m/--message instead of a message FILE
 #   no-message-file    --message-file missing, unreadable or empty
 #   foreign-branch     the checkout is not on the branch this commit was written for
+#   no-claim-receipt   the subject names a bead whose claim flight-check REFUSED and no
+#                      flight receipt dated after that refusal is on record — the refusal→
+#                      rework rule lives only in worker seed text, so a worker that ignores
+#                      it ships a diff whose premise-verification loop is void
 #
 # EXIT CODES
 #   0  committed (and pushed unless --no-push)      3  refusal — a rule above fired
@@ -161,6 +165,55 @@ export GIT_LITERAL_PATHSPECS=1
 
 CUR="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 [ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; exit 9; }
+
+# ---------------------------------------------------------------------------------------
+# LEG — no-claim-receipt. A commit whose subject names bead X is refused when X has a
+# refused-claim flight receipt on record (a flight-check that exited PREMISE-FAILED at
+# claim) and no flight receipt for X dated AFTER the last refusal. The refusal→rework
+# rule lives only in worker seed text; a worker that ignores it ships a diff whose
+# premise verification (RED observed at claim, against the tree) never ran for the
+# shipped commit — the ledger stays honest (beads left open) but the batch carries
+# changes with a void premise-verification loop. Structural, repo-global, no worker
+# context: the subject is parsed from the message file, the refusal record is read
+# from the repo's own `.beads/issues.jsonl` (the bead's title is prefixed
+# `PREMISE-FAILED:` by flight-check on refusal, and the refusal moment is the latest
+# `Premise failure:` comment), and the receipts live beside this lane's lock in the
+# git common dir.
+# ---------------------------------------------------------------------------------------
+FLIGHT_DIR="${AC2_FLIGHT_DIR:-$COMMON_DIR/ac-flight}"
+BOARD="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.beads/issues.jsonl"
+[ -n "$MSGFILE" ] && [ -r "$MSGFILE" ] || refuse no-claim-receipt "the message file is unreadable — the subject cannot be checked for a refused claim"
+SUBJECT=$(sed -n '1p' "$MSGFILE" 2>/dev/null || true)
+if [ -n "$SUBJECT" ] && [ -f "$BOARD" ] && command -v jq >/dev/null 2>&1; then
+  # every ac-* token in the subject is a candidate bead id; the board decides if it IS one
+  for tok in $(printf '%s\n' "$SUBJECT" | grep -oE 'ac-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
+    row=$(jq -c --arg id "$tok" 'select(.id == $id)' "$BOARD" 2>/dev/null | head -1)
+    [ -n "$row" ] || continue
+    title=$(printf '%s' "$row" | jq -r '.title // ""')
+    case "$title" in
+      PREMISE-FAILED:*)
+        # refusal on record. The refusal moment = the latest `Premise failure:` comment
+        # (flight-check writes it at refusal); fall back to the record's own updated_at.
+        refusal_ts=$(printf '%s' "$row" | jq -r '
+            ([.comments[]? | select(.text | startswith("Premise failure:")) | .created_at] | max) // .updated_at // ""')
+        recv="$FLIGHT_DIR/$tok.flight-receipt"
+        last_at=""
+        if [ -f "$recv" ]; then
+          last_at=$(awk '/^FLIGHT-RECEIPT v1/{buf=""} {buf = buf $0 "\n"} END{printf "%s", buf}' "$recv" \
+            | grep -m1 '^at:' | sed 's/^at:[[:space:]]*//')
+        fi
+        # ISO-8601 UTC compares lexicographically once fractional seconds + Z are stripped.
+        norm_ts() { printf '%s' "$1" | sed -E 's/\.[0-9]+//; s/Z$//'; }
+        if [ -z "$refusal_ts" ] || [ -z "$last_at" ] \
+           || [ "$(norm_ts "$last_at")" \< "$(norm_ts "$refusal_ts")" ]; then
+          refuse no-claim-receipt "subject names '$tok', whose claim flight-check refused, and no flight receipt dated after the refusal is on record — re-claim the bead and bank a fresh RED, or re-refine it"
+        fi
+        ;;
+    esac
+  done
+elif [ -n "$SUBJECT" ]; then
+  echo "swarm-commit: no-claim-receipt NOT-CHECKED — no board at '$BOARD' or jq unavailable; a refused-claim subject cannot be verified (this gate reports the skip; it never implies clean)"
+fi
 
 git add -- "${PATHS[@]}" || { echo "swarm-commit: git add failed; nothing committed, nothing pushed" >&2; exit 5; }
 

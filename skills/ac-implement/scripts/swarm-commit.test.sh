@@ -279,6 +279,62 @@ done
 if [ -z "$miss" ]; then pass "4-field assurance declaration present"
 else fail "assurance declaration missing:$miss"; fi
 
+# --- 15. no-claim-receipt: a subject naming a claim-refused bead with no fresh receipt --------
+# A commit whose subject names a bead whose claim flight-check refused, with no flight receipt
+# dated after the refusal, is refused [no-claim-receipt]. The refusal record is the bead's
+# PREMISE-FAILED: title + the latest `Premise failure:` comment in .beads/issues.jsonl; the
+# receipts live in the git common dir's ac-flight/ (AC2_FLIGHT_DIR overrides for the test).
+R="$(new_repo no-claim-receipt-red)"
+COMMON="$(git -C "$R" rev-parse --git-common-dir)"
+case "$COMMON" in /*) ;; *) COMMON="$(cd "$R" && cd "$COMMON" && pwd)" ;; esac
+mkdir -p "$R/.beads" "$COMMON/ac-flight"
+# a board with one bead: claimed, flight-check refused at 2026-09-07T07:00:00Z (title prefixed),
+# never re-claimed (no receipt after the refusal).
+cat >"$R/.beads/issues.jsonl" <<'JSONL'
+{"id":"ac-refused-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
+JSONL
+printf 'feat(ac-refused-demo): ship the work anyway\n' >"$R/msg.txt"
+out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-claim-receipt\]'; then
+  pass "refuses a subject naming a claim-refused bead with no fresh receipt, naming no-claim-receipt"
+else fail "no-claim-receipt red: rc=$rc out=$out"; fi
+if [ "$(git -C "$R" rev-parse HEAD)" = "$(git -C "$R" rev-parse origin/main)" ]; then
+  pass "the refused commit never landed"
+else fail "no-claim-receipt red: the commit landed anyway"; fi
+
+# --- 16. no-claim-receipt GREEN: a receipt dated after the refusal satisfies the gate ----------
+R="$(new_repo no-claim-receipt-green)"
+COMMON="$(git -C "$R" rev-parse --git-common-dir)"
+case "$COMMON" in /*) ;; *) COMMON="$(cd "$R" && cd "$COMMON" && pwd)" ;; esac
+mkdir -p "$R/.beads" "$COMMON/ac-flight"
+cat >"$R/.beads/issues.jsonl" <<'JSONL'
+{"id":"ac-reclaimed-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
+JSONL
+# the worker re-claimed and banked a fresh RED AFTER the refusal
+cat >"$COMMON/ac-flight/ac-reclaimed-demo.flight-receipt" <<'RECEIPT'
+FLIGHT-RECEIPT v1
+bead: ac-reclaimed-demo
+at: 2026-09-08T10:00:00Z
+tree: deadbeef
+premise: PASS consumes=0 environment=1 perishable=0
+red-probe: test -f mine.txt
+red-exit: 1
+red-green-siblings: 0 of 1 probe(s) already green
+RECEIPT
+printf 'feat(ac-reclaimed-demo): re-claimed, fresh RED banked\n' >"$R/msg.txt"
+out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "accepts a subject naming a claim-refused bead when a receipt postdates the refusal"
+else fail "no-claim-receipt green: rc=$rc out=$out"; fi
+
+# --- 17. no-claim-receipt NOT-CHECKED: no board -> the gate reports the skip, never a pass ----
+R="$(new_repo no-claim-receipt-noboard)"
+printf 'feat(ac-whatever): no board here\n' >"$R/msg.txt"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'no-claim-receipt NOT-CHECKED'; then
+  pass "with no board the gate reports NOT-CHECKED and never implies clean"
+else fail "no-claim-receipt no-board: rc=$rc out=$out"; fi
+
 echo "---"
 echo "swarm-commit.test.sh: $CASES case(s), $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]
