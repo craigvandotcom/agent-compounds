@@ -60,6 +60,17 @@ DEFAULT_THRESHOLD = 12
 # it is compared to the bar — a `loud` entry is a sensor reading, never a candidate.
 PROMOTABLE_PERCEPTIBILITY = {"silent", "misleading"}
 
+# THE STALENESS FACTOR, and where the numbers come from (ac-friction-weight-staleness-
+# decay-f1wa, dream docket): the docket must lead with what is burning NOW, not with the
+# loudest thing anyone once saw. `last_seen` within FRESH_DAYS (14) is full weight;
+# between 14 and ZERO_DAYS (60) the weight decays linearly to zero — a friction not
+# re-observed in two months is no longer current signal, whatever its recurrence. A
+# missing/undated `last_seen` sits at the MISSING_FACTOR floor (0.5): the entry is
+# present, so it is neither rewarded as fresh nor erased as dead.
+FRESH_DAYS = 14
+ZERO_DAYS = 60
+MISSING_FACTOR = 0.5
+
 # THE SWEEP OBLIGATION, and the reason this number is 21.
 # `last_pass` records the date of the last COMPLETED dream CYCLE scan of that ledger —
 # not the date of its last entry. dream CYCLE is a weekly scheduled run, so a swept
@@ -147,8 +158,22 @@ def parse_ledger(path: str, root: str) -> dict:
     return out
 
 
-def score(entry_fields: dict, threshold: int) -> dict:
-    """weight(id) = impact_num x frequency_num x recurrence — dream W4.5, verbatim."""
+def staleness_factor(days: int | None) -> float:
+    """The freshness multiplier on the W4.5 weight. last_seen within FRESH_DAYS (14) = 1.0,
+    linear decay to 0 at ZERO_DAYS (60). A missing/unparseable last_seen = MISSING_FACTOR
+    (0.5): present but undated — don't reward, don't erase."""
+    if days is None:
+        return MISSING_FACTOR
+    if days <= FRESH_DAYS:
+        return 1.0
+    if days >= ZERO_DAYS:
+        return 0.0
+    return (ZERO_DAYS - days) / (ZERO_DAYS - FRESH_DAYS)
+
+
+def score(entry_fields: dict, threshold: int, today: datetime.date) -> dict:
+    """weight(id) = impact_num x frequency_num x recurrence x staleness(last_seen) —
+    dream W4.5, with the freshness factor the docket rank needs."""
     impact = entry_fields.get("impact", "").strip()
     freq = entry_fields.get("frequency", "").strip()
     perc = entry_fields.get("perceptibility", "").strip()
@@ -166,7 +191,9 @@ def score(entry_fields: dict, threshold: int) -> dict:
         unscorable.append("recurrence=%r" % raw_rec)
     weight = None
     if not unscorable:
-        weight = IMPACT_NUM[impact] * FREQUENCY_NUM[freq] * recurrence
+        base = IMPACT_NUM[impact] * FREQUENCY_NUM[freq] * recurrence
+        days = days_since(entry_fields.get("last_seen", "").strip(), today)
+        weight = base * staleness_factor(days)
     return {
         "impact": impact,
         "frequency": freq,
@@ -225,7 +252,7 @@ def strict_fail(ledgers: list, by_id: dict) -> int:
     return 3 if (unscorable or mismatches) else 0
 
 
-def collect(root: str, threshold: int) -> tuple:
+def collect(root: str, threshold: int, today: datetime.date) -> tuple:
     ledgers = [
         parse_ledger(p, root)
         for p in sorted(glob.glob(os.path.join(root, "skills", "*", "FRICTIONS.md")))
@@ -251,7 +278,7 @@ def collect(root: str, threshold: int) -> tuple:
                 "proposed_fix": fields.get("proposed_fix", ""),
                 "also_listed_in": [],
             }
-            rec.update(score(fields, threshold))
+            rec.update(score(fields, threshold, today))
             by_id[eid] = rec
     return ledgers, by_id
 
@@ -408,20 +435,21 @@ def main(argv=None) -> int:
                          "growing a second parser over the same files.")
     args = ap.parse_args(argv)
 
+    today = (datetime.date.fromisoformat(args.today) if args.today
+             else datetime.date.today())
+
     if args.ledger:
         led = parse_ledger(os.path.abspath(args.ledger),
                            os.path.abspath(args.root or os.curdir))
         for raw in led["entries"]:
-            raw["score"] = score(raw["fields"], args.threshold)
+            raw["score"] = score(raw["fields"], args.threshold, today)
         json.dump({"ledger": led}, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
 
     root = os.path.abspath(args.root)
-    today = (datetime.date.fromisoformat(args.today) if args.today
-             else datetime.date.today())
 
-    ledgers, by_id = collect(root, args.threshold)
+    ledgers, by_id = collect(root, args.threshold, today)
     doc = {
         "generated": today.isoformat(),
         "root": root,

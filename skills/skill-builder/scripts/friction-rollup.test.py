@@ -44,12 +44,15 @@ def ledger(skill, last_pass, entries, created="2026-01-01", frontmatter=True):
 
 
 def entry(eid, impact="M", frequency="frequent", perceptibility="silent", recurrence=2,
-          related="[]", status="open", first_seen="2026-08-20", narrative="it broke."):
+          related="[]", status="open", first_seen="2026-08-20", last_seen=None,
+          narrative="it broke."):
+    if last_seen is None:
+        last_seen = first_seen
     return ("## %s\n- skills: [x]\n- impact: %s\n- frequency: %s\n- perceptibility: %s\n"
             "- recurrence: %s\n- related: %s\n- first_seen: %s\n- last_seen: %s\n"
             "- stage: manual\n- status: %s\n- proposed_fix: fix %s.\n- narrative: %s\n"
             % (eid, impact, frequency, perceptibility, recurrence, related, first_seen,
-               first_seen, status, eid, narrative))
+               last_seen, status, eid, narrative))
 
 
 def build_root(tmp):
@@ -82,6 +85,17 @@ def build_root(tmp):
               recurrence=1),
         entry("see-elsewhere", narrative="see over-bar in fresh-skill"),
         entry("unscorable", impact="XL", frequency="sometimes", recurrence="lots"),
+    ]))
+    # staleness decay: a recurrence-4 friction last seen 90 days ago must rank BELOW a
+    # recurrence-1 friction seen today (the dream docket leads with what is burning now).
+    # An entry with NO last_seen keeps a 0.5 floor — present but undated is neither
+    # rewarded (1.0) nor erased (0.0).
+    write("decay-skill", ledger("decay-skill", "2026-08-24", [
+        entry("stale-rec4", recurrence=4, first_seen="2026-05-29", last_seen="2026-05-29"),
+        entry("fresh-rec1", recurrence=1, first_seen=TODAY, last_seen=TODAY),
+        entry("undated-two", recurrence=2, first_seen="2026-08-20",
+              narrative="no last_seen recorded on capture.").replace(
+                  "- last_seen: 2026-08-20\n", ""),
     ]))
     return tmp
 
@@ -198,7 +212,7 @@ def main():
     res = run(root, "--stamp")
     doc2 = json.loads(res.stdout)
     stamped = set(doc2.get("stamped", []))
-    check(len(stamped) == 4, "Case 12a: --stamp writes last_pass to all 4 well-formed ledgers",
+    check(len(stamped) == 5, "Case 12a: --stamp writes last_pass to all 5 well-formed ledgers",
           str(sorted(stamped)))
     after = snapshot(root)
     check(("last_pass: %s" % TODAY) in after["skills/never-skill/FRICTIONS.md"],
@@ -240,6 +254,20 @@ def main():
           and [c["members"] for c in d_only["dream"]["clusters"]]
               == [c["members"] for c in doc["dream"]["clusters"]],
           "Case 15: dream path and dashboard path agree on weights, bar and clusters")
+
+    # --- Case 16: the weight decays on last_seen — the docket leads with what burns now --
+    dec = {e["id"]: e for e in doc["dream"]["entries"]}
+    check(dec["fresh-rec1"]["weight"] == 6 and dec["stale-rec4"]["weight"] == 0,
+          "Case 16a: recurrence-1 seen today scores 6; recurrence-4 seen 90d ago decays to 0",
+          str({k: dec[k]["weight"] for k in ("fresh-rec1", "stale-rec4")}))
+    ranked = [e["id"] for e in doc["dream"]["entries"]]
+    check(ranked.index("fresh-rec1") < ranked.index("stale-rec4"),
+          "Case 16b: the fresh recurrence-1 ranks ABOVE the stale recurrence-4",
+          "fresh rank %d, stale rank %d" % (ranked.index("fresh-rec1"),
+                                             ranked.index("stale-rec4")))
+    check(dec["undated-two"]["weight"] == 6,
+          "Case 16c: no last_seen is a 0.5 floor (12 x 0.5 = 6), not rewarded, not erased",
+          str(dec["undated-two"]["weight"]))
 
     print()
     if FAILURES:
