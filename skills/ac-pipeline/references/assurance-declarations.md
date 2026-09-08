@@ -51,8 +51,8 @@ notice" is neither.
 An executable with no wiring entry declares why it is there, or lint fails it:
 `ASSURANCE-ROLE: utility|test-harness` plus `CALLER: <its real caller>`, or
 `ASSURANCE-ROLE: orphan` plus the `PENDING-DECISION` escape above. An undeclared
-executable reads as coverage — which is exactly how `hooks/on-file-write.sh` sat with
-zero wiring references and nobody noticed.
+executable reads as coverage — which is how `hooks/on-file-write.sh` sat with
+zero wiring references and nobody noticed until ac-on0y.6's DELETE ruling removed it.
 
 ## NOT-GATED — the refusal shape
 
