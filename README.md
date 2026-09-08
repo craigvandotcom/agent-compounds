@@ -41,8 +41,7 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
 | **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
-| **ac-human-session** | Human command center — surfaces only work at a human gate (blockers, plans to approve, hopper), conducts the sit-down |
-| **ac-dashboard** | Read-only full-board dashboard — backlog/plans/beads/WIP at a glance, both sides of the loop boundary; renders, never acts |
+| **ac-human-session** | Human command center — surfaces only work at a human gate (blockers, plans to approve, hopper), conducts the sit-down; board mode renders the full read-only board, loop side included |
 
 **Engineering** (promoted from body-compass-app, the canonical donor)
 | Skill | What it does |

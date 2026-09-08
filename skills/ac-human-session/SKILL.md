@@ -1,6 +1,6 @@
 ---
 name: ac-human-session
-description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' here means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), NOT the full board including loop-side work (use ac-dashboard), and NOT doing the work itself (use ac-implement).'
+description: 'The human command center — sit down and keep the factory moving. Surfaces only work at a human gate, on a silver platter, exit-first: clear blockers, approve plans, stock the planning hopper. Optional gated tidy/align pre-pass; hands off to the loop. Absorbs the old ac-next funnel view. Two modes: docket (default — human-gated work only) and board (full read-only board, loop side included). Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next'', ''dashboard'', ''show the board'', ''state of the pipeline'', ''pipeline status'', "what''s the factory doing", ''WIP status'', ''board overview'', ''full board''. ''Unblock'' means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), and NOT doing the work itself (use ac-implement).'
 ---
 
 **You are the human's command center.** When the human sits down to work, you lay the next *human-required* actions on a silver platter and conduct the session — clearing the gates so the autonomous loop can keep running. The ac-implement swarm runs unattended, **you drive the human**.
@@ -14,6 +14,17 @@ You surface **only work at a human gate.** The instant work becomes autonomous-h
 - ❌ **`loop-ready` plans** — the loop beadifies + implements them
 
 Ready + a docket label **is the docket**, not the loop — do not drop it. You surface what must cross a **human gate before it can flow autonomously** — and nothing else.
+
+---
+
+## Board mode (the dashboard — the loop boundary off)
+
+The docket is the default; `board` is the second mode. **Board mode renders the FULL board,
+loop side included** — read-only, no lens filter, no prompts. Render spec:
+`workflows/board.md`. Switch on the board triggers in the description (`dashboard`,
+`show the board`, `board overview`, `full board`, …). The docket filters to human gates, the
+board applies no filter; it never writes, closes, promotes, or prompts — it ends with the
+routing footer.
 
 ---
 
@@ -119,11 +130,9 @@ shared across every app in the registry, so a literal domain is wrong for all bu
 them. Read the project's live domain from its `AGENTS.md` / CORE, or from the deployed
 alias, before probing. (BCA = `https://bodycompass.app`.)
 
-A **retired** domain must not be probed at all. Until 2026-07-26 this line curled
-`www.eat.zone` — BCA's pre-rebrand domain, decommissioned long before — so every run
-reported prod as `404` while prod was in fact healthy. A 🔴 that is always red trains the
-human to ignore the 🔴 tier, which is worse than not probing. If a probe is red, confirm
-the URL is still the real prod surface before reporting it (bd-vp7fw).
+A **retired** domain must not be probed: a 🔴 that is always red trains the human to
+ignore the 🔴 tier, which is worse than not probing. If a probe is red, confirm the URL is
+still the real prod surface before reporting it (bd-vp7fw).
 
 Also flag open beads explicitly blocked on a human (notes "waiting on" / "needs manual" / "requires account" / "human decision") that aren't already `human-gate`.
 
@@ -209,15 +218,7 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
       ```
       AskUserQuestion(question: "{decision title}", options: [{option A (Recommended)}, {B}, {C}, {Defer}, {Done}])
       ```
-    - **Memo missing/thin** (a bare "CRAIG: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer:
-      ```
-      AskUserQuestion(question: "{title} has no decision memo. Handle how?", options: [
-        { label: "Frame it now (Recommended)", description: "I research the fork + draft options + a recommendation, then you tap" },
-        { label: "Decide raw",                 description: "Skip the memo — tell me the call directly" },
-        { label: "Skip",                        description: "Leave it for later" },
-        { label: "Done",                        description: "Stop — leftover stays on the docket" } ])
-      ```
-      On **Frame it** → research the fork, write a proper memo onto the bead (`br comments add <id> "MEMO: …"` or update its description, per the convention), then present its options as buttons (above). The dashboard **self-heals** bare beads into tap-ready ones.
+    - **Memo missing/thin** (a bare "CRAIG: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer: `Frame it now` (research + write the memo onto the bead, then present options as buttons) / `Decide raw` / `Skip` / `Done`. The dashboard **self-heals** bare beads into tap-ready ones.
   On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance:
   ```bash
   br comments add <id> "DECISION (<human>): <choice> — <why>"
@@ -229,17 +230,15 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
   **Commit the ledger on the same tap that records the ruling** — an uncommitted ledger is not a durable decision, and a later job reading `origin/main` will overwrite it (`beads-standards` § Working cadence). Push failure is not a stall: the local commit is durable, report it and carry on.
   Report: `✓ closed bd-<id> — unblocked bd-<x>, bd-<y>`.
   **Upstream is the real fix:** decision beads should *arrive* pre-staged (bead-conventions §Decision beads). Frame-on-demand is the catch-net, not the norm — if a filer keeps shipping bare decisions, fix the filer, not just the symptom here.
-- **🔴 Curator lane, ELEVATED — auto-advance INTO the sitting, don't merely render it:** once the lane crosses the serving policy (`>=20` queued or oldest >21 days), `Run the curator sitting — {N} queued` is a first-class item in this auto-advance order, taken in position right after the lane's own itemized P0/P1s — not a footnote left on the board. One tap: `AskUserQuestion(question: "Curator lane: {N} queued (oldest {age}). Run the supervised sitting?", options: ["Run it now (Recommended)", "Work the top {n} only", "Skip"])`. On tap → drive `bd-8yhvb`'s supervised batch flow, then resume auto-advance with `{N} remaining` recomputed. A rendered tap the loop never reaches is the exact failure this line exists to prevent.
+- **🔴 Curator lane, ELEVATED — auto-advance INTO the sitting, don't merely render it:** once the lane crosses the serving policy (`>=20` queued or oldest >21 days), it is a first-class item in this auto-advance order, right after its own itemized P0/P1s. One tap: `AskUserQuestion(question: "Curator lane: {N} queued (oldest {age}). Run the supervised sitting?", options: ["Run it now (Recommended)", "Work the top {n} only", "Skip"])`. On tap → drive `bd-8yhvb`'s supervised batch flow, then resume auto-advance. A rendered tap the loop never reaches is the exact failure this line prevents.
 - **🔴 PRs — batch the trivial:** dependabot/grouped bumps → ONE prompt ("Merge the N green dependabot PRs?"), not N. Substantive PRs → one each.
 - **🔴 CI / prod:** summarize the failure in a line, then `AskUserQuestion`: "Investigate now / File a bead / Skip."
 - **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-polish {path}`.
 - **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac-plan`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
 
-**Approve-then-diff capture:** when a decision or plan approval follows the human editing
-or correcting the deliverable first (a reframed memo, a re-scoped plan) — diff what was
-drafted against what was kept *before* closing the item. Hand that diff to `reflect` as a
-lesson candidate (routed through its normal type/domain taxonomy and gates). It's the
-cheapest, highest-signal capture channel in the session — don't close the gate and lose it.
+**Approve-then-diff capture:** when a decision or plan approval follows the human first
+editing/correcting the deliverable, diff drafted vs kept *before* closing and hand it to
+`reflect` as a lesson candidate — the cheapest high-signal capture in the session.
 
 **Auto-advance:** after each action, confirm the result + ripple + `{N} remaining`, then immediately present the next most-urgent item — never re-render the whole dashboard mid-flow, never offer a subset picker. Stop only when the human picks "Done" or every tier is empty.
 
@@ -283,4 +282,4 @@ and offer Start /ac-implement vs leave-for-schedule.
 
 ---
 
-_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-implement`. To just SEE the whole board (read-only, loop side included): `/ac-dashboard`._
+_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-implement`. To just SEE the whole board (read-only, loop side included): board mode._

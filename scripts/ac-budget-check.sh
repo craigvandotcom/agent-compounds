@@ -15,7 +15,7 @@
 #
 # FAMILY MEMBERSHIP is an EXPLICIT list, never a glob: post-rename every member is ac-*
 # named, so a `skills/ac-*/` sweep would wrongly swallow the fat retained skills
-# (ac-hygiene, ac-dashboard, ...). ac-review IS family membership — it hosts the merged
+# (ac-hygiene, ...). ac-review IS family membership — it hosts the merged
 # post-batch review mode — but its manual-panel body is fat BY DESIGN, so it sits OUTSIDE
 # the cap arithmetic below; its diet is the no-net-growth ratchet (lint Check 14) and
 # Check 15's conductor ceiling. The cap legs measure the six lean workflow skills + the

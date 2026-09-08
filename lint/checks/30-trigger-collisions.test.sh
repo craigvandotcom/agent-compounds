@@ -77,7 +77,7 @@ python3 - "$w" <<'PYEOF'
 import sys, pathlib
 w = sys.argv[1]
 # YAML single-quoted scalars with doubled-quote apostrophes — the exact shape
-# ac-dashboard/ac-human-session descriptions carry on the real tree.
+# ac-human-session's docket/board descriptions carry on the real tree.
 for skill, tail in (("aa", " and others."), ("bb", " too.")):
     d = "Asks \"what''s the factory doing\" " + tail
     body = f"---\nname: {skill}\ndescription: '{d}'\n---\n\n# {skill}\n"

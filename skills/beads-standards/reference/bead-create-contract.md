@@ -32,7 +32,7 @@ or bypass the gate.
 `kind:product` / `kind:machinery` is a DEFECT-filing axis, not a universal one — a feature,
 an epic, or a plan task is not a defect, so the axis is meaningless there. `kind:machinery`
 is additionally meant to be near-absent from the board by design. Gating it would force a
-meaningless label onto most beads. Filing-hygiene reporting for it belongs to `ac-dashboard`.
+meaningless label onto most beads. Filing-hygiene reporting for it belongs to the board mode of `ac-human-session`.
 
 ## Canonical invocation
 

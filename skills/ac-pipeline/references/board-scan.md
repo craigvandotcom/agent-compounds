@@ -1,7 +1,7 @@
 # Shared board scan (the pipeline read layer)
 
 **The single way to read pipeline state — beads + plans + backlog + the gates over them — into
-a structured "board."** `ac-align`, `ac-tidy`, `ac-human-session`, `ac-dashboard`, and `ac-loop`
+a structured "board."** `ac-align`, `ac-tidy`, `ac-human-session` (docket and board modes), and `ac-loop`
 (Phase 0 orient) all read THIS, then apply their own lens. **Share the read; never the
 judgment.** The five scans are defined ONCE here so they can't drift across the skills that
 consume them.
@@ -363,7 +363,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 | **`ac-align`** | strategy fit · `pool → active` promotion · sequencing | `_strategy/` |
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), prod health, org-wide `human-gate` sweep — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
-| **`ac-dashboard`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
+| **`ac-human-session` (board mode)** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
 | **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
