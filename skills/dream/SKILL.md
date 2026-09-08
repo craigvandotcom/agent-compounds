@@ -72,7 +72,7 @@ if any, is a future addition, not this one.)
 
 ```
 TaskCreate("Gather lessons — structured stream since last run")
-TaskCreate("Synthesize patterns — repetition, clusters, cross-domain echoes, promotions")
+TaskCreate("Synthesize patterns — repetition, clusters, cross-domain echoes, escalation")
 TaskCreate("Lint substrate — contradictions, staleness, duplicates, taxonomy, registry")
 TaskCreate("Judge candidates — validator-stance rubric, score >=7 to proposal")
 TaskCreate("Emit proposals — write the review queue, commit + push")
@@ -118,20 +118,20 @@ this run's `INDEX.md`. If the command was absent or failed, carry forward a one-
 ### Phase 2 — Synthesize (what no single session sees)
 
 Look across the gathered lessons + the existing substrate (`qmd search`/`qmd query`) for:
-- **Repetition → promotion:** the same gotcha/pattern in ≥2 lessons or ≥2 apps →
+- **Repetition → rule/recipe:** the same gotcha/pattern in ≥2 lessons or ≥2 apps →
   candidate *rule* (markdown fact `type: rule`) or *recipe* (jef-prompts entry).
-- **Loop-retro observation mining (recurrence×cost → bounded promotion):** scan the keyed
+- **Loop-retro observation mining (recurrence×cost → bounded ranking):** scan the keyed
   loop-retro corpus — `memory/auto/` rows carrying `metadata.kind: loop-retro-observation`
   (written by `reflect`'s Tier-3 primitive, bd-jv33f.5) — and compute
   `score = recurrence × cost_weight` per row (`cost_weight`: `material` = 3, `minor` = 1; the
-  constant is tunable, not load-bearing). Rank by score and promote ONLY the **top 3** that ALSO
-  clear a **`recurrence ≥ 2` floor** — a single-session one-off never promotes; it waits for a
-  second occurrence. Hold the rest (their `recurrence` keeps accruing for a later run). Promoted
+  constant is tunable, not load-bearing). Rank by score and select ONLY the **top 3** that ALSO
+  clear a **`recurrence ≥ 2` floor** — a single-session one-off never ranks; it waits for a
+  second occurrence. Hold the rest (their `recurrence` keeps accruing for a later run). Selected
   rows become candidates that flow through the SAME Phase 4 judge → Phase 5 emit path as every
   other candidate (`file-beads.py` files them as `human-gate,dream-proposal` beads, unchanged) —
   this is a ranking sub-step, NOT a second mining mechanism. Both CYCLE and CYCLE-DAILY run
   Phase 2, so both get it.
-- **Cluster → skill-improvement (the friction-log promotion engine, W4.5):** several
+- **Cluster → skill-improvement (the friction-log candidate engine, W4.5):** several
   lessons orbiting one skill's friction → candidate edit to that skill. Alongside ad-hoc
   lesson clusters, run the **deterministic weighting pass over the friction sensor logs**
   — one shared computation, never re-derived here (ac-tidy and ac-dashboard read the same
@@ -144,19 +144,16 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   `--stamp` is CYCLE-only and load-bearing: it writes `last_pass: <today>` into every
   ledger this scan parsed, which is the ONLY thing that distinguishes "this skill produced
   no new friction" from "nobody has looked at this sensor since June". Stamp at SCAN time,
-  never at REVIEW apply — REVIEW rarely runs and touches only contributing entries, so a
-  visited-but-nothing-promoted ledger would read stale forever.
+  never at REVIEW apply — REVIEW rarely runs, so a visited-but-nothing-flagged ledger would
+  read stale forever.
 
-  The script owns the weight, the ordinals, the promotion bar, the `perceptibility` gate,
+  The script owns the weight, the ordinals, the candidate bar, the `perceptibility` gate,
   the once-per-id rule and the `related`-graph clustering (all sourced from
   `skill-builder/references/friction-capture.md` and documented in the script header —
   read them there). It only WALKS the `related` graph, as does ac-hygiene's cluster-walk
-  lens; every capture builds it (W4.6, `friction-capture.md` § Deduplication). Take
-  `clusters[].promotable` — one cluster is one `skill-improvement` candidate carrying its
-  `proposed_fix`(es), through the SAME Phase 4 judge → Phase 5 emit path as every other
-  candidate. On REVIEW apply, the landed edit's commit also flips each contributing entry's
-  `status: open` → `status: promoted` in its FRICTIONS.md — the flip is the receipt that
-  the friction was acted on, not merely logged (see REVIEW Step 3).
+  lens; every capture builds it (W4.6, `friction-capture.md` § Deduplication). Take the
+  clusters the script flags as ready — each is one `skill-improvement` candidate carrying
+  its `proposed_fix`(es), through the SAME Phase 4 judge → Phase 5 emit path as every other.
 - **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
   broken-intermediate commits, bad bead-sequencing, or work-breakdowns that needed
   re-partitioning → target `ac-beadify` / `ac-polish` (bead-level) or the `ac-plan`
@@ -166,11 +163,11 @@ Look across the gathered lessons + the existing substrate (`qmd search`/`qmd que
   truth → candidate re-homed/generalized lesson.
 - **Trajectory:** lessons that together imply a missing capability → candidate new
   recipe or (rarely, Phase-3-gated) new skill — check the registry for overlap first.
-- **Promotion → escalation (the L3-outgrows-retrieval check; see context-engineering
-  PROMOTION & DEMOTION):** an L3 lesson that is **recurring + stable + broadly applicable**
+- **Escalation → a higher layer (the L3-outgrows-retrieval check; see context-engineering
+  ESCALATION & DEMOTION):** an L3 lesson that is **recurring + stable + broadly applicable**
   has outgrown retrieval → propose escalating it UP a layer — to a skill (L2) or a context
   file (L0/L1) **at the right ALTITUDE** (narrowest subtree covering its consumers). High bar
-  (promotion buys always-on cost); **MOVE not copy** (the proposal must reduce the L3 fact to
+  (escalation buys always-on cost); **MOVE not copy** (the proposal must reduce the L3 fact to
   a pointer). Also scan non-memory git edits — a fix repeated across commits, a hand-rolled
   procedure — for the same escalation. Inverse: an always-on line edited repeatedly → propose
   **demotion** to L3.
@@ -202,8 +199,8 @@ lint — don't only hunt for missing facts/rules. Flag **accretion**: content th
 have been demoted or deleted when it was superseded but is still sitting in a skill
 (`skills/*/SKILL.md`/`references/`) — a stale block whose replacement already landed
 elsewhere, a `references/` file nothing points to any more, a holding-zone entry past its
-`review-by` with no churn signal. Route each finding per the ladder's own rules, don't
-re-derive them here: `skill-builder/references/promotion-ladder.md` §What routes through
+`review-by` with no churn signal. Route each finding per the shared holding-zone ladder's own
+rules, don't re-derive them here (the skill-builder ladder reference): §What routes through
 the holding zone (duplicate → delete outright, extract → `references/` + pointer, unique →
 holding-pen first) and §Holding-zone mechanics (the `review-by`/cut-log discipline). This
 mirrors ac-hygiene's own Deletion Mandate (`ac-hygiene/SKILL.md` § Phase 2 Synthesize) —
@@ -288,6 +285,9 @@ judge: {score: N, reason: "<one line>"}
 ## Why (compounding case)
 <which future sessions get faster, citing the evidence>
 ```
+
+**Born-verified at emission (the live-premise step).** Verify each candidate's premise at
+HEAD before it files (`skills/ac-implement/scripts/flight-check.sh --check-only`); unverified-premise proposals are **NOT emitted**.
 
 **Hotfix-hatch dedupe (per-proposal, at emit — keys on this proposal's `target_repo:` +
 `target_file:`).** As each candidate proposal is emitted here — before/while writing its
@@ -463,6 +463,9 @@ Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
 **decision docket** (`/ac-human-session` surfaces the same beads org-wide; either
 entry point works, the contract is identical).
 
+**Input — the ranked docket.** REVIEW reads the **ranked-DOCKET.md** of open `dream-proposal`
+beads (oldest first), not raw files; a proposal is on it only if Phase 5 verified it live at emission.
+
 ### Create Workflow Tasks (run ledger — REVIEW mode)
 
 **One task per numbered step below — this is a separate ledger from CYCLE's** (REVIEW is
@@ -503,11 +506,8 @@ TaskCreate("Report — applied/rejected/remaining + acceptance rate")
 
 3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
    (adjust mechanically if the target drifted; if it drifted *semantically*, leave the
-   bead open with an enrichment comment instead of guessing). A friction-log-sourced
-   `skill-improvement` (Phase 2's weighting engine, W4.5) additionally flips each
-   contributing `FRICTIONS.md` entry's `status` to `promoted` **in the same commit** — the
-   proposal's What section names the entries. Respect repo boundaries — commit in the
-   target repo with message `dream: apply <slug>`, push.
+   bead open with an enrichment comment instead of guessing). Respect repo boundaries —
+   commit in the target repo with message `dream: apply <slug>`, push.
 
 **TaskUpdate("Apply approved", completed)**
 **TaskUpdate("Close out", in_progress)**
