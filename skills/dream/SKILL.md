@@ -1,544 +1,99 @@
 ---
 name: dream
-description: Run or review the dream cycle — the org's self-improvement engine. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", or when invoked by the weekly scheduled run; also for "review dream proposals", "apply/approve proposals", "what did the dream cycle find". CYCLE mode emits proposals only; REVIEW mode applies human-approved proposals. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream docket", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads the ranked docket (infrastructure/dream-cycle/proposals/DOCKET.md), rules each item with the human, and emits approved work as task beads; the mechanical sweep keeps the docket fresh. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
-# dream — synthesize · lint · judge · propose
+# dream — human judgment over the ranked docket
 
-**Purpose:** the compounding engine (Primitive #4). Periodically read everything the org
-has *captured*, find what no single session could see, and propose system improvements —
-gated behind human judgment.
+**Purpose:** the compounding engine (Primitive #4), now run as a deliberate human
+session. Not scheduled.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
-hygiene rules all come from there). Plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` Phase 2.
-**Queue:** `infrastructure/dream-cycle/proposals/` · **Run marker:** `infrastructure/dream-cycle/last-run.json`
-**Status:** v1 LIVE (weekly, structured stream only) · v2 daily raw-transcript mining
-DESIGNED (`Mode: CYCLE-DAILY` below; activates after transcript replication v2-a lands)
+hygiene rules all come from there).
+**Docket (input):** `infrastructure/dream-cycle/proposals/DOCKET.md` — maintained by
+the mechanical sweep (`infrastructure/dream-cycle/docket-sweep.py`), never by the
+session.
+**Status:** MANUAL (Craig ruling 2026-09-08). No scheduled dream. The only automated
+artifacts are the docket (mechanical sweep) and one idempotent docket-review bead.
 
 ---
 
-## Modes
+## What dream is now
 
-| Mode | Trigger | What happens |
-|---|---|---|
-| **CYCLE** | weekly scheduled run, "run the dream cycle" | Phases 1–6 below: gather → synthesize → lint → judge → emit → run marker |
-| **CYCLE-DAILY** | daily scheduler (v2; after v2-a), "mine the transcripts" | Precondition check (verify, don't clean) → raw-transcript mining funnel → reuses Phases 2/4/5; consumes the `infra-maintain` health report. See the mode section below |
-| **REVIEW** | "review dream proposals", "apply proposals" | Walk `status: pending` proposals with the user; apply approved to target repos; flip statuses; commit per-repo |
+A deliberate, human-run session with the agent present. Not scheduled, not headless.
+The docket is the input; the session is judgment, mining, and ruling. Craig reads the
+ranked docket, rules each item, and the agent captures the decisions — and mines what
+the sweep only flagged.
 
-**Auto-act tier (the gate-skip).** Not every proposal needs Craig's tap. The daily queue job
-(`.claude/skills/dream/workflows/dream-daily.md` — relocated from the archived
-`_agent-pi/workflows/dream-daily.md` in memory-wiki-upgrade Phase 2c) classifies each
-proposal **deterministically**
-(`infrastructure/dream-cycle/classify.py`) into `auto` or `gated` (everything judgment-laden).
-`auto` has two shapes: **Tier-1** (a pure new-memory-note ADD to root, judge ≥9 — append-only)
-and **Tier-0** (a `lint-fix` the script can *re-derive and apply itself* — e.g. `index-prune`;
-zero LLM trust, verification is the gate). It applies the `auto` tier unattended and files
-`gated` ones as `human-gate` decision beads in their target repos (`file-beads.py`), worked via
-`ac-human-session` (the decision docket); Slack is a digest nudge, not the decision surface. The
-autonomy axis is **reversibility × judgment, not cadence** —
-lossless/mechanical → auto; lossy (merge/summarise) or judgment-laden → gated. Policy + the
-exact predicate: `references/auto-act-rubric.md`; architecture:
-`neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`. CYCLE itself still **never
-applies** — it only emits; the auto-apply lives in the daily job (Stage-1 autonomy = deterministic hygiene only).
+Nothing in dream runs unattended. No cron invokes it. The scheduled weekly CYCLE and
+the daily review-queue job are gone — the jobs in `infrastructure/jobs/weekly.json`
+sit disabled (see The polish gate). A session starts because a human starts it.
 
-> **Apply-path routing split (dream is PRIMARY for proposals — NOT for already-approved
-> same-session work).** dream owns **proposal-originated** edits: unreviewed/accumulated
-> edit proposals it emits (CYCLE) and later applies (REVIEW). It is NOT a router for work a
-> user already approved in-session — that legitimately stays on `ac-land`'s inline
-> Apply-Approved-Upgrades path, relabeled the `skill-hotfix:` **hotfix hatch**, which
-> applies approved same-session edits across all four target classes (skill files,
-> `AGENTS.md`, `CLAUDE.md`, `MEMORY.md`). Neither path claims sole ownership of the apply
-> surface: this hatch owns approved same-session hotfixes; dream owns proposals. dream's
-> dedupe (Phase 5 Emit) therefore treats `skill-hotfix:` applies as legitimate hand-applied
-> work, never as proposal-orphans to re-propose. (Mirrored in `skills/ac-land/SKILL.md`.)
+## The automated leg — the sweep (findings only)
 
----
+The mechanical sweep (`infrastructure/dream-cycle/docket-sweep.py`) does four things,
+and nothing else:
 
-## Mode: CYCLE
+1. **Verifies premises live** — every pending proposal memo and open dream bead gets
+   a verdict against HEAD: `LIVE` / `ANSWERED` / `UNJUDGED` / `STALE-EVIDENCE`.
+2. **Ranks the survivors** — frictions, memory-hygiene, wiki, and pending-proposal
+   opportunities — into `infrastructure/dream-cycle/proposals/DOCKET.md`, weighted by
+   judge score × recurrence × staleness.
+3. **Mints the single docket-review bead** if none is open (idempotent — the session's
+   handle on the board).
+4. **Never decides anything.** Findings only.
 
-**Hard rules:** review-only (emit proposals, never edit targets) · evidence or it doesn't
-ship (every proposal cites concrete lessons/commits) · dedupe against ALL prior proposals
-(including rejected — never re-propose verbatim; dedupe ALSO covers out-of-band `skill-hotfix:`
-hatch applies — executable check in Phase 5 Emit) · this skill is itself a valid proposal
-target (the cycle may propose upgrades to `dream`/`reflect`/`context-engineering`).
+The sweep also closes answered-at-birth items, citing the deciding artifact. It never
+rules on what remains. Judgment is the session's, not the sweep's.
 
-### Create Workflow Tasks (run ledger — CYCLE mode)
+## Session workflow — three phases
 
-**One task per phase — this ledger is scheduler-run, so it's the only proof-of-life until
-the Phase-6 run-marker writes.** Create these upfront; `TaskUpdate` each to `in_progress`
-when its phase starts and `completed` when it ends. The Phase-4 judge subagent (validator
-stance) keeps its own scope — this ledger tracks CYCLE's top-level phases only. (CYCLE-DAILY,
-still DESIGNED not live, reuses Phases 2/4/5 unchanged when it activates — its own ledger,
-if any, is a future addition, not this one.)
+### Phase 1 — GATHER
 
-```
-TaskCreate("Gather lessons — structured stream since last run")
-TaskCreate("Synthesize patterns — repetition, clusters, cross-domain echoes, escalation")
-TaskCreate("Lint substrate — contradictions, staleness, duplicates, taxonomy, registry")
-TaskCreate("Judge candidates — validator-stance rubric, score >=7 to proposal")
-TaskCreate("Emit proposals — write the review queue, commit + push")
-TaskCreate("Run marker + report — last-run.json, run summary")
-```
+Read `infrastructure/dream-cycle/proposals/DOCKET.md` — the ranked survivors and the
+flagged items that re-entered. Scan fresh ledgers since the last session — friction
+logs, memory homes, wiki, pending proposals — so nothing the sweep's last pass predates
+is missed. The docket is the input; the fresh scan is the completeness check.
 
-**TaskUpdate("Gather lessons", in_progress)**
+### Phase 2 — JUDGE (with Craig)
 
-### Phase 1 — Gather (the structured stream, since last run)
+Rule each ranked item with Craig. Mine the consolidations and wiki refinements the
+sweep flagged. Capture every ruling in **EXACT phrasing — never paraphrase**: the words
+are the decision, and a paraphrase is a new decision nobody ruled on.
 
-```bash
-LAST=$(python3 -c "import json;print(json.load(open('infrastructure/dream-cycle/last-run.json'))['timestamp'])" 2>/dev/null || echo "7 days ago")
-# Root-repo lesson stream
-git -C ~/Repos log --since="$LAST" --name-only --pretty=format: -- \
-  infrastructure/memory/ neometa/memory/ neometa/alignment/decisions/ \
-  infrastructure/eval/golden/ infrastructure/retrieval-evals/ | sort -u | grep -v '^$'
-# infrastructure/retrieval-evals/ (brain-gap-plan Phase 1 item 5): persistent
-# recall@5 failures/drift in failures/*.jsonl and health/reports/retrieval-evals-*.json
-# are proposal input, same as any other lesson stream.
-# Per-app lesson stream (own repos; canonical list = infrastructure/apps.list)
-while IFS= read -r app; do
-  git -C ~/Repos/neometa/software/$app log --since="$LAST" --name-only --pretty=format: -- memory/ 2>/dev/null | sort -u | grep -v '^$' | sed "s|^|$app/|"
-done < ~/Repos/infrastructure/apps.list
-# Recipe stream
-git -C ~/Repos/neometa/software/agent-compounds log --since="$LAST" --oneline -- skills/jef-prompts/
-# Calibration rollup (observe-loop signal; tolerate absence — it lands as a parallel
-# work item, never fail this phase on it)
-python3 ~/Repos/infrastructure/telemetry/telemetry.py rollup 2>/dev/null || echo "(telemetry rollup unavailable this run — note it in INDEX.md, don't fail the phase)"
-```
+### Phase 3 — EMIT
 
-Read every new/changed lesson file (they are small). Also `br list --json 2>/dev/null`
-and recent `git log --oneline` for outcome signals to ground against. If the stream is
-empty, still run Phase 3 (lint) — hygiene work exists even in quiet weeks.
+- **Approved** items become task beads born refined at apply time — implementation-ready
+  because the human ruled in-session. Every bead carries the born-verified contract
+  below.
+- **Rejected** items are memo-marked so they do not re-enter the docket as live.
+- The session ends with a **gap analysis** — what the substrate still doesn't know.
+  The next session's GATHER starts there.
 
-Capture the rollup's calibration markdown block (acceptance rate — trailing 4 weeks,
-**gated-proposals-only** scope, denominator stated) — Phase 5 folds it verbatim into
-this run's `INDEX.md`. If the command was absent or failed, carry forward a one-line
-"telemetry rollup unavailable" note instead; don't block the cycle on it.
+## The gates stay (the born-verified contract)
 
-**TaskUpdate("Gather lessons", completed)**
-**TaskUpdate("Synthesize patterns", in_progress)**
+Every task bead born in EMIT carries:
 
-### Phase 2 — Synthesize (what no single session sees)
+- `evidence:` / `consequence:` / `recommendation:`
+- a `Probe:` line a gate can run
+- `origin:dream`
 
-Look across the gathered lessons + the existing substrate (`qmd search`/`qmd query`) for:
-- **Repetition → rule/recipe:** the same gotcha/pattern in ≥2 lessons or ≥2 apps →
-  candidate *rule* (markdown fact `type: rule`) or *recipe* (jef-prompts entry).
-- **Loop-retro observation mining (recurrence×cost → bounded ranking):** scan the keyed
-  loop-retro corpus — `memory/auto/` rows carrying `metadata.kind: loop-retro-observation`
-  (written by `reflect`'s Tier-3 primitive, bd-jv33f.5) — and compute
-  `score = recurrence × cost_weight` per row (`cost_weight`: `material` = 3, `minor` = 1; the
-  constant is tunable, not load-bearing). Rank by score and select ONLY the **top 3** that ALSO
-  clear a **`recurrence ≥ 2` floor** — a single-session one-off never ranks; it waits for a
-  second occurrence. Hold the rest (their `recurrence` keeps accruing for a later run). Selected
-  rows become candidates that flow through the SAME Phase 4 judge → Phase 5 emit path as every
-  other candidate (`file-beads.py` files them as `human-gate,dream-proposal` beads, unchanged) —
-  this is a ranking sub-step, NOT a second mining mechanism. Both CYCLE and CYCLE-DAILY run
-  Phase 2, so both get it.
-- **Cluster → skill-improvement (the friction-log candidate engine, W4.5):** several
-  lessons orbiting one skill's friction → candidate edit to that skill. Alongside ad-hoc
-  lesson clusters, run the **deterministic weighting pass over the friction sensor logs**
-  — one shared computation, never re-derived here (ac-tidy and ac-dashboard read the same
-  parse; a second copy of the formula is how two consumers come to disagree):
+Unverified premises do not file. A premise that no longer holds at HEAD is not
+emitted — it stays on the docket for the sweep's next pass. (Bead conventions:
+`../beads-standards/reference/bead-conventions.md`.)
 
-  ```bash
-  python3 skills/skill-builder/scripts/friction-rollup.py --view dream --stamp
-  ```
+## The polish gate
 
-  `--stamp` is CYCLE-only and load-bearing: it writes `last_pass: <today>` into every
-  ledger this scan parsed, which is the ONLY thing that distinguishes "this skill produced
-  no new friction" from "nobody has looked at this sensor since June". Stamp at SCAN time,
-  never at REVIEW apply — REVIEW rarely runs, so a visited-but-nothing-flagged ledger would
-  read stale forever.
+Automation does not scale back up — crons, filing, auto-tier — until the manual loop
+has run enough sessions to trust its output. The disabled jobs in
+`infrastructure/jobs/weekly.json` are the marker: while they sit disabled, dream stays
+a human session.
 
-  The script owns the weight, the ordinals, the candidate bar, the `perceptibility` gate,
-  the once-per-id rule and the `related`-graph clustering (all sourced from
-  `skill-builder/references/friction-capture.md` and documented in the script header —
-  read them there). It only WALKS the `related` graph, as does ac-hygiene's cluster-walk
-  lens; every capture builds it (W4.6, `friction-capture.md` § Deduplication). Take the
-  clusters the script flags as ready — each is one `skill-improvement` candidate carrying
-  its `proposed_fix`(es), through the SAME Phase 4 judge → Phase 5 emit path as every other.
-- **Decomposition/sequencing cluster → the pipeline decomposition skills:** lessons about
-  broken-intermediate commits, bad bead-sequencing, or work-breakdowns that needed
-  re-partitioning → target `ac-beadify` / `ac-polish` (bead-level) or the `ac-plan`
-  skill (plan-level). These own how work is split, so baking the fix here compounds
-  far more than a memory fact (parallel-execution doctrine §7).
-- **Cross-domain echo:** an app-local lesson that is really a neometa- or global-domain
-  truth → candidate re-homed/generalized lesson.
-- **Trajectory:** lessons that together imply a missing capability → candidate new
-  recipe or (rarely, Phase-3-gated) new skill — check the registry for overlap first.
-- **Escalation → a higher layer (the L3-outgrows-retrieval check; see context-engineering
-  ESCALATION & DEMOTION):** an L3 lesson that is **recurring + stable + broadly applicable**
-  has outgrown retrieval → propose escalating it UP a layer — to a skill (L2) or a context
-  file (L0/L1) **at the right ALTITUDE** (narrowest subtree covering its consumers). High bar
-  (escalation buys always-on cost); **MOVE not copy** (the proposal must reduce the L3 fact to
-  a pointer). Also scan non-memory git edits — a fix repeated across commits, a hand-rolled
-  procedure — for the same escalation. Inverse: an always-on line edited repeatedly → propose
-  **demotion** to L3.
-
-**TaskUpdate("Synthesize patterns", completed)**
-**TaskUpdate("Lint substrate", in_progress)**
-
-### Phase 3 — Lint (hygiene; see `references/lint-checks.md` for the full checklist)
-
-**Scope note (since 2026-06-26):** the **mechanical, lossless** checks (Tier-0 — e.g.
-`index-prune`) now run **daily** in the Context Mining job and auto-apply via the 02:00 queue.
-Phase 3's weekly job covers the **semantic / lossy** checks (Tier-2 — contradiction, staleness,
-near-duplicate *merges*, cross-altitude duplication), all emitted `gated`. Don't re-do the
-daily mechanical sweep here; if you notice mechanical drift the daily job missed, that's a
-finding about the daily job.
-
-Sweep the memory homes for: contradictions between notes · stale facts (evidence
-predates a known change; flag, don't guess) · near-duplicates to merge (**ouroboros
-guard applies** — a merge proposal must carry the full `git diff` of what it erases;
-see `references/lint-checks.md`) · taxonomy violations (missing `type`/`domain`/`evidence`) ·
-index drift (`MEMORY.md` lines vs actual files) · instruction-shaped memory bodies
-(poisoning risk) · dead `[[wikilinks]]` · **cross-altitude duplication** (the same rule
-restated at app *and* sub-domain/root level → propose collapsing to the narrowest
-covering level + pointers, per the ALTITUDE rule) · **wiki↔facts contradiction** (a
-`neometa/wiki/` page's claim vs the current text of the fact/decision it cites — always
-gated, per `[[rule-proposals-become-beads]]`; `references/lint-checks.md` check 11).
-**Deletion mandate (W1.3b):** removal/supersession ranks EQUALLY with additions in this
-lint — don't only hunt for missing facts/rules. Flag **accretion**: content that should
-have been demoted or deleted when it was superseded but is still sitting in a skill
-(`skills/*/SKILL.md`/`references/`) — a stale block whose replacement already landed
-elsewhere, a `references/` file nothing points to any more, a holding-zone entry past its
-`review-by` with no churn signal. Route each finding per the shared holding-zone ladder's own
-rules, don't re-derive them here (the skill-builder ladder reference): §What routes through
-the holding zone (duplicate → delete outright, extract → `references/` + pointer, unique →
-holding-pen first) and §Holding-zone mechanics (the `review-by`/cut-log discipline). This
-mirrors ac-hygiene's own Deletion Mandate (`ac-hygiene/SKILL.md` § Phase 2 Synthesize) —
-same ladder, applied here to the memory/skill substrate instead of live code.
-
-Also run the registry self-lint: `~/Repos/neometa/software/agent-compounds/lint.sh`
-(dead refs, doc/disk conformance, consumer symlink health) — any FAIL line is a
-lint candidate. Each finding becomes a candidate proposal (usually `type: lint-fix`,
-low-risk).
-
-#### Hot-lane (L0–L2) lint — stack-wide, GATED (Phase-1.6 gap closed)
-
-Beyond the substrate (L3) sweep above, Phase 3 also lints the **hot lane** — L0 entry
-files, L1 CORE, L2 skills/agents, and hook-injected files — the every-turn context whose
-rot is silent (nothing breaks; every session just reads a lie). Two passes, both feeding
-the SAME gated proposal queue:
-
-1. **Mechanical (stack-wide):** run `infrastructure/tools/bin/hot-lane-lint` (the L0–L2
-   analog of the daily registry self-lint, generalized across ALL deploy targets, not just
-   agent-compounds). It checks pointer-path resolution, projection symlink health, the
-   **regeneration test** (`harness-sync.sh --all --check`, per conformance-checklist
-   §Projections — invoked here), and budget/roster/hook/app-list drift. HARD failures
-   (broken pointer/symlink) exit non-zero; SOFT warnings (L0 >150, CORE >200, roster/hook/
-   drift) are emitted as findings. Fold its `--json` output into the run `INDEX.md`. (Use
-   `--no-regen` if the weekly slot is tight; the regen test also runs in the projection
-   health job.)
-2. **Semantic:** sweep `references/stack-lint.md` (altitude · no-learnings-in-hot-lane ·
-   skill selectability · task-overlap · stale-claims · PLACEMENT-ladder) — the judgment
-   checks the grep half can't reduce. Seed the reads with the mechanical WARNs' line
-   numbers.
-
-**Every L0–L2 finding is emitted as a GATED proposal — NEVER auto-applied**, however
-mechanical it looks (unlike the daily Tier-0 substrate sweep, which auto-applies lossless
-fixes). A hot-lane line propagates to every session, so the blast radius earns a human read
-(context-engineering PLACEMENT: "L0–L2 changes are gated, rare"). These findings flow into
-the same Phase 4 judge / Phase 5 emit path as the substrate candidates below.
-
-**TaskUpdate("Lint substrate", completed)**
-**TaskUpdate("Judge candidates", in_progress)**
-
-### Phase 4 — Judge (the quality bar)
-
-Spawn an **independent judge subagent** — the **`validator`** stance agent (its
-read-only adversarial posture is built for this; fall back to general-purpose if
-validator isn't deployed) with the prompt in `references/judge-rubric.md` over the
-candidate list. **No independent judge available (rare, headless edge) → never
-self-judge.** The candidate is automatically HUMAN-gated and its proposal frontmatter
-is marked `judge: skipped` — the gate the missing judge would have provided is
-replaced by a human one, not by the generating context judging itself. Each candidate
-that does get judged
-gets `score` (0–10) + `verdict` + one-line reason. **Only candidates scoring ≥7 become
-proposals.** Drop the rest into the run's `INDEX.md` under "Considered & cut" (one line
-each — auditability without queue noise).
-
-**TaskUpdate("Judge candidates", completed)**
-**TaskUpdate("Emit proposals", in_progress)**
-
-### Phase 5 — Emit (the review queue)
-
-Create `infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`:
-
-- `INDEX.md` — run summary: window, stream size, proposals by category, considered-&-cut,
-  and the **calibration block** captured in Phase 1 (acceptance rate — trailing 4 weeks,
-  gated-proposals-only scope, denominator stated) or the one-line "rollup unavailable"
-  note if `telemetry.py` hasn't landed on this machine yet.
-- `NN-<slug>.md` per proposal:
-
-```markdown
----
-status: pending            # auto: pending→applied · gated: pending→(bead filed)→applied|rejected
-bead: <id>                 # decision bead in target_repo's db (filed by the daily file-beads.py)
-category: rule | recipe | skill-improvement | lint-fix | re-home
-summary: <ONE plain-English line — what approving this DOES; this is the Slack card body>
-target_repo: root | agent-compounds | <app>
-target_file: <path within that repo>
-evidence: [<lesson files / commits / moments>]
-judge: {score: N, reason: "<one line>"}
----
-## What
-<the exact proposed content or diff — paste-ready>
-
-## Why (compounding case)
-<which future sessions get faster, citing the evidence>
-```
-
-**Born-verified at emission (the live-premise step).** Verify each candidate's premise at
-HEAD before it files (`skills/ac-implement/scripts/flight-check.sh --check-only`); unverified-premise proposals are **NOT emitted**.
-
-**Hotfix-hatch dedupe (per-proposal, at emit — keys on this proposal's `target_repo:` +
-`target_file:`).** As each candidate proposal is emitted here — before/while writing its
-`NN-<slug>.md` — check whether the edit it would make was ALREADY hand-applied out-of-band
-via `ac-land`'s `skill-hotfix:` hotfix hatch (a same-session approved-upgrade apply leaves no
-proposal record, so without this check dream would re-propose it). Because `target_repo:` and
-`target_file:` are only assigned right here in the frontmatter block above (they do not exist
-before Phase 5), this executable step MUST live here in Phase 5 — NOT at the CYCLE Hard-rules
-line and NOT in REVIEW mode (REVIEW only applies already-emitted proposals; the re-proposal
-this prevents happens at CYCLE generation/emit time). Run the check **inside a checkout of the
-proposal's own `target_repo`** (proposals span repos — `root | agent-compounds | <app>` — so
-scanning agent-compounds alone would miss app-repo hotfixes):
-
-```bash
-cd <target_repo_path>   # root=~/Repos · agent-compounds=~/Repos/neometa/software/agent-compounds · <app>=~/Repos/neometa/software/<app>
-git log --grep='^skill-hotfix' --format='%H %s' -- <target_file>
-```
-
-A hit means this proposal's edit was already applied via the hotfix hatch → **do NOT emit the
-proposal** (or emit it flagged `already-applied` in `INDEX.md`'s considered-&-cut). No schema
-change — `target_repo:`/`target_file:` already exist. **Legacy proposals predating those two
-fields** fall back to a repo-wide scan with no path filter (`git log --grep='^skill-hotfix'`
-inside the best-guess target repo). This complements — does not replace — the Hard-rules
-"dedupe against ALL prior proposals" line (which only covers prior *proposals*, not out-of-band
-hatch applies).
-
-Always write `summary:` — it seeds the decision bead's framing and the digest nudge. State
-the *effect* ("Adds a memory rule so future X stops re-debugging Y"), not the file path. A
-purpose-built line is the difference between a graspable docket item and an opaque one.
-
-**Each gated proposal becomes a decision bead** in its `target_repo`'s beads db (the proposal
-FILE is the memo artifact; the BEAD is the action handle — status authority lives in the bead,
-the docket is the single action surface; see `../beads-standards/reference/bead-conventions.md`). **Filing is
-deterministic and headless:** the daily queue job runs `infrastructure/dream-cycle/file-beads.py`,
-which files only `gated` + `pending` + unfiled proposals (full memo inline for private repos,
-pointer-only for the public agent-compounds db), writes the bead id back into `bead:`, and
-commits per-repo. So **CYCLE does not file beads itself** — emit the proposal files with an empty
-`bead:` slot and the daily filer picks them up (auto-tier proposals are applied, never filed).
-This closes the old "headless cycle left beads unfiled" gap — the filer is the safety net, not
-an interactive REVIEW that rarely runs. Repo → path: `root` = `~/Repos` · `agent-compounds` =
-`~/Repos/neometa/software/agent-compounds` · `<app>` = `~/Repos/neometa/software/<app>`. The
-equivalent manual command, if you ever file one interactively:
-
-```bash
-cd <target_repo_path> && br create "dream: <slug>" -t decision \
-  --labels "origin:dream,human-gate,dream-proposal" \
-  --description "Memo: <abs path to NN-<slug>.md>. <one-line What>. Judge: <score>/10."
-```
-
-Public-db caution (already handled by `file-beads.py`): agent-compounds beads publish —
-neutral titles, pointer-only descriptions (the conventions file has the rule).
-
-**CYCLE-DAILY go/no-go decision bead (data-gated, file ONCE).** The transcript-mining v2
-build (`Mode: CYCLE-DAILY`) is deliberately *not* built on a hunch — it waits for gap-trend
-data. Once `infrastructure/dream-cycle/gap-history.jsonl` **spans ≥28 days** (first→last
-date) **and no open-or-closed bead for this decision exists yet**, file a single
-**human-gate decision bead** in the **root** repo carrying the empirical number, so Craig can
-decide *ship-v2a* vs *keep-the-reflect-gap-backstop* on evidence rather than intuition. It
-carries: the **median substantive-unreflected sessions/week** (from the gap-history rollup),
-**2–3 example sessions** (session ids + one-line what-they-did, from a `reflect_gap.py --all`
-sample), and a checklist line for the **one-time transcript-durability verification** (cass
-archive + weekly gdrive coverage — the transcript-durability finding; if inadequate, bump the
-gdrive backup to nightly). File it, don't decide it — this is a gate, not an auto-build.
-Idempotency marker = the bead's stable title below (search before filing so a re-run never
-double-files):
-
-```bash
-# gate: gap-history spans >=28d AND the decision bead does not already exist
-SPAN=$(python3 - <<'PY'
-import json,datetime,pathlib
-p=pathlib.Path.home()/ "Repos/infrastructure/dream-cycle/gap-history.jsonl"
-ds=sorted(json.loads(l)["date"] for l in p.read_text().splitlines() if l.strip()) if p.exists() else []
-d=lambda s:datetime.date.fromisoformat(s)
-print((d(ds[-1])-d(ds[0])).days if len(ds)>=2 else 0)
-PY
-)
-EXISTS=$(br list --json --limit 1000 | jq -r '.issues[]?.title' | grep -c "CYCLE-DAILY go/no-go" || true)
-if [ "$SPAN" -ge 28 ] && [ "$EXISTS" -eq 0 ]; then
-  cd ~/Repos && br create "dream: CYCLE-DAILY go/no-go (transcript-mining v2)" -t decision \
-    --labels "origin:dream,human-gate,dream-proposal" \
-    --description "Median substantive-unreflected sessions/wk: <N> (gap-history since <date>). Examples: <2-3 session ids + one-liners>. Decide: ship v2-a transcript mining vs keep the reflect-gap backstop. Checklist: verify transcript durability (cass archive + weekly gdrive; bump to nightly if inadequate)."
-fi
-```
-
-Commit (root repo, these paths only) + push — the queue must be visible cross-machine:
-Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
-
-`git add infrastructure/dream-cycle && git commit -m "dream: <date> cycle — N proposals" && git push`
-(also `git add .beads` in this root commit if the CYCLE-DAILY decision bead was filed above —
-it lives in root's db; target-repo bead dbs for other proposals: commit `.beads/` in each
-target repo touched, separately — never across repo boundaries.)
-
-**TaskUpdate("Emit proposals", completed)**
-**TaskUpdate("Run marker + report", in_progress)**
-
-### Phase 6 — Run marker + report
-
-Write `infrastructure/dream-cycle/last-run.json`:
-`{"timestamp": "<ISO now>", "window_start": "<LAST>", "status": "ok"|"empty"|"error", "lessons_read": N, "candidates": N, "proposals": N, "machine": "<hostname>"}`
-(include in the Phase-5 commit). **`status` is the honest outcome, not a proxy for
-proposal count:** `ok` = every phase completed and the cycle emitted ≥1 proposal;
-`empty` = every phase completed with **zero** proposals — a quiet week is a first-class
-valid outcome, never dressed up as `ok`; `error` = a phase could not complete
-(precondition failure, judge unreachable, write/push failure, uncaught exception) — still
-write `last-run.json` with whatever counts were reached and `status: error`, and still
-emit a run report describing what broke (this is the field the nightly dead-man's-switch
-check reads for stale/failed runs — this skill only writes it honestly, it doesn't
-implement that check). Then output a compact run report. If the run produced zero
-proposals, say so plainly — a quiet week is a valid outcome, not a failure.
-
-**TaskUpdate("Run marker + report", completed)**
-
----
-
-## Mode: CYCLE-DAILY  (v2 — raw-transcript mining)
-
-**Status:** DESIGNED (roadmap Phase 2.v2); the **full** transcript-mining funnel activates
-once transcript replication (v2-a) lands. Until then the weekly **CYCLE** above is the live
-synthesis path. Full how-to: `references/transcript-mining.md` · signal types:
-`references/signal-taxonomy.md`.
-
-**LIVE today — the reflect-gap backstop (the cheap half of the coverage win).** The daily
-Context Mining job already closes the biggest hole without waiting on v2-a:
-`infrastructure/dream-cycle/reflect_gap.py` deterministically lists *substantive but
-unreflected* sessions from the day's transcripts (a session that did work — or decided
-something in pure conversation, leaving zero git signal — yet never ran `reflect`). The job
-**mines exactly those transcripts** (the transcript is the only remaining context; a finished
-session's live window is gone — mine it, never "re-run reflect"). This + the existing git-diff
-pass is the daily capture backstop; the full marker-funnel over *all* transcripts is the v2-a
-upgrade. Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
-
-An **evolution of CYCLE, not a rewrite** — Phases 2 (synthesize) / 4 (judge) / 5 (emit)
-are reused unchanged. Two changes: a cheap **precondition check** runs first, and **gather
-widens to raw transcripts + git outcomes** (every agent, every day, incl. non-pipeline
-conversations — the coverage win over the curated v1 stream).
-
-**dream does NOT do infra maintenance.** Cleaning, index refresh, and health checks belong
-to the separate **`infra-maintain`** job (the "cleaning" process — distinct from the
-"remembering" one; sleep runs both in one nightly window, in sequence). The scheduler runs
-hygiene *before* dream; dream **consumes hygiene's health report**, it does not perform the work.
-
-**Precondition (not maintenance — verify, don't clean).** Confirm inputs are fresh: indexes
-updated within the window (`qmd status`, `cass status`) and the night's `infra-maintain` health
-report exists. If a precondition fails (stale index, hygiene didn't run, replication didn't
-converge), do NOT fix it — **record it as a finding** (it's a high-priority learning signal)
-and proceed with what's available.
-
-**Mine (review-only — the funnel; never feed whole transcripts to the LLM):**
-segment delta (since `last-run.json`) → **cheap pre-filter** (grep error/negation/outcome
-markers) → **redaction filter** (scrub into the LLM input; raw canon stays pristine) →
-**LLM-extract** candidate segments via the **signal taxonomy** → **CASS dedup** →
-**Phase 4 judge** → **Phase 5 emit**. Sources span two axes — intent (transcripts + agent-mail)
-and outcome (git + **the `infra-maintain` health report** + v2.1 sockets: CI/Sentry/PM2/beads).
-A hygiene-detected problem (oomd kill, leaked secret, disk-pressure event) is mineable signal.
-
-**Sources — two axes:** intent = `~/.claude/projects/` + `~/.codex/sessions/` (the replica) +
-agent-mail · outcome = git (grounding layer) + [v2.1 sockets]. Richest lessons at the join.
-
-**Guardrails:** `gitleaks` gates **emit** (proposals are the only thing reaching a shared
-remote; transcripts replicate privately, never touch git) · mine the cycle's own **review
-outcomes**, not its deliberation (self-reference) · review-only stands — Stage 1 autonomy is
-deterministic hygiene only; judgment-laden work is always a proposal.
-
-**Trigger:** daily `pai-scheduler` job on the VM (never a raw PM2 cron — the dead-`qmd-watcher`
-lesson). **Replaces the weekly CYCLE once daily coverage is proven** — and only then is
-`/reflect` retired from `ac-land`'s forced flow (don't remove old capture before new is proven).
-
----
-
-## Mode: REVIEW
-
-Dream proposals are decision beads — REVIEW is the dream-flavored slice of the
-**decision docket** (`/ac-human-session` surfaces the same beads org-wide; either
-entry point works, the contract is identical).
-
-**Input — the ranked docket.** REVIEW reads the **ranked-DOCKET.md** of open `dream-proposal`
-beads (oldest first), not raw files; a proposal is on it only if Phase 5 verified it live at emission.
-
-### Create Workflow Tasks (run ledger — REVIEW mode)
-
-**One task per numbered step below — this is a separate ledger from CYCLE's** (REVIEW is
-its own invocation, walking the docket interactively rather than emitting to it). Create
-these upfront; `TaskUpdate` each to `in_progress` when its step starts and `completed` when
-it ends.
-
-```
-TaskCreate("List proposals — open dream-proposal beads, oldest first")
-TaskCreate("Present + collect decisions — AskUserQuestion, batches of <=4")
-TaskCreate("Apply approved — edit target_file in target_repo, commit")
-TaskCreate("Close out — record decision, close bead, flip frontmatter, push")
-TaskCreate("Report — applied/rejected/remaining + acceptance rate")
-```
-
-**TaskUpdate("List proposals", in_progress)**
-
-1. List open `dream-proposal` beads across the beads repos (root, agent-compounds,
-   apps): per repo `br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] |
-   index("dream-proposal")) | select(.status != "closed")]'` — oldest first.
-   Legacy fallback: `status: pending` proposal files with no `bead:` id (pre-docket
-   runs) — review them the same way, and file the missing bead. **Also pick up files
-   already carrying `status: approved` / `status: rejected`** — those were pre-decided by
-   Craig via the Slack triage buttons (Increment 3, `infrastructure/slack/post-proposals.py`).
-   Nothing open and nothing pre-decided → say so.
-
-**TaskUpdate("List proposals", completed)**
-**TaskUpdate("Present + collect decisions", in_progress)**
-
-2. Per proposal: read the memo file (What/Why/evidence/judge verdict), present.
-   **Pre-decided proposals (`status: approved`/`rejected` from the Slack buttons) skip the
-   question** — the human already chose: apply the approved, record the rejected, no re-ask.
-   For the rest, collect decisions via `AskUserQuestion` (multiSelect, batches of ≤4:
-   approve / reject / skip).
-
-**TaskUpdate("Present + collect decisions", completed)**
-**TaskUpdate("Apply approved", in_progress)**
-
-3. **Apply approved:** edit the `target_file` in the `target_repo` exactly as proposed
-   (adjust mechanically if the target drifted; if it drifted *semantically*, leave the
-   bead open with an enrichment comment instead of guessing). Respect repo boundaries —
-   commit in the target repo with message `dream: apply <slug>`, push.
-
-**TaskUpdate("Apply approved", completed)**
-**TaskUpdate("Close out", in_progress)**
-
-4. **Close out per bead-conventions:** record the decision
-   (`br comments add <id> "DECISION (<human>): <choice> — <why>"`), close the bead
-   (approved-and-applied or rejected alike — the comment trail is the record), set the
-   file's frontmatter `status:` to **`applied`** (terminal success — distinguishes
-   "approved" from "actually landed") or `rejected`, commit the queue (root) + each touched
-   `.beads/` (own repo), push. (Note: the daily queue job applies the `auto` tier and any
-   `status: approved` backlog automatically — REVIEW is the interactive path for `gated`.)
-
-**TaskUpdate("Close out", completed)**
-**TaskUpdate("Report", in_progress)**
-
-5. Report: applied / rejected / remaining — and note acceptance-rate (the cycle's own
-   quality metric; persistently low → propose a judge-bar fix next cycle).
-
-**TaskUpdate("Report", completed)**
-
----
-
-## Common Mistakes
+## Common mistakes
 
 | Mistake | Fix |
 |---|---|
-| Applying a change during CYCLE | Never — emit a proposal; REVIEW applies |
-| Proposal without named evidence | Cut it; "would be nice" is not a lesson |
-| Re-proposing a rejected idea verbatim | Dedupe against ALL prior proposals first |
-| Editing another repo from the root commit | Apply + commit inside the target repo |
-| Treating an empty week as failure | Lint still runs; "0 proposals" is a valid report |
-| Skipping the run marker | Always write last-run.json — silent death is the enemy |
-| Emitting a proposal file without its decision bead | The bead IS the action handle — a file alone is invisible to the docket |
-| Strategy/secrets in an agent-compounds bead | That db is PUBLIC — neutral title + pointer; memo stays private |
+| Running dream unattended | Never — a session is a human sitting with the agent |
+| Paraphrasing a ruling | Capture in the exact phrasing — a paraphrase is a new ruling |
+| Emitting a task bead without its probe | The probe is the born-verified contract; a probe-less bead is not implement-ready |
+| Filing an item whose premise already died | Verify at HEAD before emit — unverified premises do not file |
+| Letting the sweep decide | The sweep ranks and mints the bead; it never rules. Judgment is the session's |

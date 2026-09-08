@@ -67,9 +67,7 @@
 2026-09-07 | memory/auto | skills/ac-land/SKILL.md
 2026-09-07 | memory/auto | skills/ac-pipeline/references/assurance-declarations.md
 2026-09-07 | memory/auto | skills/context-engineering/SKILL.md
-2026-09-07 | memory/auto | skills/context-engineering/references/conformance-checklist.md
 2026-09-07 | memory/auto | skills/context-engineering/workflows/context-mining-daily.md
-2026-09-07 | memory/auto | skills/dream/SKILL.md
 2026-09-07 | memory/auto | skills/dream/references/auto-act-rubric.md
 2026-09-07 | memory/auto | skills/dream/references/lint-checks.md
 2026-09-07 | memory/auto | skills/dream/workflows/dream-daily.md
@@ -100,12 +98,9 @@
 2026-09-07 | neometa | skills/agent-mail/references/session-procedure.md
 2026-09-07 | neometa | skills/capacitor/SKILL.md
 2026-09-07 | neometa | skills/context-engineering/SKILL.md
-2026-09-07 | neometa | skills/context-engineering/references/conformance-checklist.md
 2026-09-07 | neometa | skills/context-engineering/workflows/context-mining-daily.md
-2026-09-07 | neometa | skills/dream/SKILL.md
 2026-09-07 | neometa | skills/dream/references/auto-act-rubric.md
 2026-09-07 | neometa | skills/dream/references/lint-checks.md
-2026-09-07 | neometa | skills/dream/references/stack-lint.md
 2026-09-07 | neometa | skills/reflect/SKILL.md
 2026-09-07 | neometa | skills/skill-builder/SKILL.md
 2026-09-07 | neometa | skills/wiki/SKILL.md
