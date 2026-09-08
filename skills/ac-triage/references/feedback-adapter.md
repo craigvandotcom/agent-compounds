@@ -16,7 +16,7 @@ Table: `public.feedback_reports` (Supabase project `spilwpcqjncrxptqdggn`, schem
 | ----------------- | --------------------------------- | ------------------------------------------------------------ |
 | `id`              | uuid PK                           | Row identity — NOT used as the dedup key (see Fingerprint)   |
 | `user_id`         | uuid NOT NULL                     | RLS anchor; part of the dedup fingerprint                    |
-| `category`        | text ('bug','feature','other')    | Drives the evidence-guard and bead type                      |
+| `category`        | text NULL                         | NULLable, and NULL on every row written since the category picker retired (BCA bd-43vz4.4) — the client has no honest category to send. The three literals only appear on rows created BEFORE that change. Drives the evidence-guard and bead type |
 | `severity`        | text NULL                         | Bug path only                                                |
 | `message`         | text                              | Part of the dedup fingerprint (normalized)                   |
 | `context`         | jsonb                             | Route, build, platform, network, device, sentry_replay_id    |
@@ -79,7 +79,7 @@ re-catches any row that slipped through without being claimed.
 
 ### Step 2 — Evidence guard (before any dedup or bead creation)
 
-For each row where `category = 'bug'`:
+For each row where `category = 'bug'` **or `category IS NULL`**:
 
 ```
 if context claims a screenshot (context->>'sentry_replay_id' is set, OR context has a
@@ -90,11 +90,25 @@ screenshot-indicating key) BUT screenshot_path IS NULL:
 
 The exact check: if `context` contains a key signaling that a screenshot was intended
 (e.g. any non-null screenshot-related key) but `screenshot_path IS NULL`, flag and skip.
-A conservative implementation: for any `bug` row, if the submitted `context` includes a
-key whose name contains "screenshot" with a non-null value, but `screenshot_path` is NULL,
-flag it. Err on the side of flagging.
+A conservative implementation: for any `bug` **or NULL** row, if the submitted `context`
+includes a key whose name contains "screenshot" with a non-null value, but
+`screenshot_path` is NULL, flag it. Err on the side of flagging.
 
-Non-bug rows (`feature`, `other`) do not require screenshots; skip the guard for them.
+**Scope (shipped in BCA bd-ghid5):** `category IS NULL` rows are IN scope — the picker is
+retired, so every new row is null, and a guard keyed only on `category = 'bug'` could never
+fire again. Only the LEGACY explicit non-bug categories are skipped: non-bug rows
+(`feature`, `other`) do not require screenshots; skip the guard for them. NULL is NOT a
+non-bug row — it is the absence of a user choice, and the screenshot affordance is
+unconditional in the sheet now, so any row may legitimately carry evidence.
+
+**The `sentry_replay_id` claim applies ONLY to legacy `category='bug'` rows.** The Sentry
+sidecar and the full context fire on EVERY submission since bd-43vz4.4, so on a new row a
+replay id only means a replay session was sampled (replaysSessionSampleRate 0.1 /
+replaysOnErrorSampleRate 0.5) and carries no screenshot intent. The anti-stall rule is
+explicit: honouring the replay id there would flag a large share of ordinary feedback —
+and because a flagged row caps the watermark (Step 6) and is never claimed, the sweep
+would freeze at the first one and stop triaging permanently. That is a worse failure than
+the dead guard it replaces.
 
 ### Step 3 — Fingerprint dedup
 
@@ -107,6 +121,10 @@ fingerprint = user_id + normalize(message) + category
 `normalize(message)` = lowercase, collapse whitespace, strip leading/trailing whitespace,
 strip punctuation. Goal: "App crashes when I tap photos" and "app crashes when I tap photos!"
 produce the same fingerprint.
+
+The fingerprint over a `NULL` category is stable (the literal `null` in the last slot,
+never a throw) and distinct from `'other'` — a null row never collides with a legacy
+`'other'` row. Worth keeping: do not "fix" it into a string category.
 
 Maintain an **in-memory fingerprint set** for the current run. On each row:
 
@@ -128,7 +146,7 @@ not invoked here):
 ```bash
 br create \
   -t bug \
-  --labels origin:ac-triage,triage,feedback,unrefined \
+  --labels origin:ac-triage,triage,feedback,prod-finding,unrefined \
   --title "<category>: <first 80 chars of message>" \
   --description "$(cat <<'EOF'
 Source: public.feedback_reports / id=<id>
@@ -145,6 +163,11 @@ EOF
 ```
 
 - Use `-t bug` for `category='bug'`; `-t investigation` for `category='other'`.
+- `category IS NULL` → `-t investigation` (unclassified). The client had no opinion —
+  bd-43vz4.4 removed the picker rather than defaulting it, so the row is literally
+  unclassified. Never `bug`: that would assert a defect the data does not support on every
+  report, poisoning the bug lane with feature requests; it also buys nothing in priority.
+  Re-typing an investigation upward in `br` is a one-liner; un-polluting the bug count is not.
 - `category='feature'` → `-t decision --labels origin:ac-triage,triage,feedback,human-gate,unrefined` — the
   `human-gate` label is MANDATORY on the same command (`beads-standards` § Bead taxonomy:
   the label, not the type, is the sole gate; without it the decision is silently workable
@@ -246,6 +269,32 @@ with a non-null value, but `screenshot_path IS NULL`.
 - Run report shows `flagged: 1` with the row id listed.
 - The row's `linked_bead` remains NULL (awaiting evidence fix, not silently dropped forever).
 
+### (e) Null-category row with screenshot context but screenshot_path IS NULL → flagged (the null twin of (d))
+
+**Setup:** A row with `category IS NULL` (every row written since the picker retired),
+`context` containing a screenshot-indicating key with a non-null value, but
+`screenshot_path IS NULL`.
+
+**Expected behavior:**
+- Evidence guard fires for the null-category row too — a guard keyed only on
+  `category = 'bug'` could never fire again.
+- `br create` is NOT called for this row.
+- Run report shows `flagged: 1` with the row id listed.
+
+### (f) Null-category row with only `sentry_replay_id` in context → NOT flagged (the anti-stall case)
+
+**Setup:** A row with `category IS NULL`, `context` carrying `sentry_replay_id` (the Sentry
+sidecar fires on every submission now), ordinary keys otherwise, `screenshot_path IS NULL`.
+
+**Expected behavior:**
+- Evidence guard does NOT fire — the `sentry_replay_id` claim is scoped to legacy
+  `category='bug'` rows only.
+- Row proceeds to dedup and bead creation (`-t investigation`).
+- This is the anti-stall guarantee: treating a replay id on a null-category row as a
+  screenshot claim would flag a large share of ordinary feedback, and because a flagged
+  row caps the watermark (Step 6) and is never claimed, the sweep would freeze at the
+  first one and stop triaging permanently.
+
 ---
 
 ## Registering this adapter in CORE/triage.md
@@ -262,7 +311,7 @@ And add a source-specifics entry:
 - **Feedback reports (source #6):** solicited in-app user feedback in `<schema>.feedback_reports`.
   Query: `SELECT ... WHERE linked_bead IS NULL AND created_at > <watermark>`.
   Fingerprint dedup on user_id + normalized(message) + category (not id-only — client retries re-INSERT).
-  Evidence guard: skip bug rows where context claims a screenshot but screenshot_path IS NULL.
+  Evidence guard: skip `bug` or NULL-category rows where context claims a screenshot (replay-id claim is legacy-`bug`-only) but screenshot_path IS NULL.
   Write-back: SET linked_bead + status='triaged' after each bead creation (loop-guard).
   Write-back for status='fixed' + fixed_in_build is the ac-merge hook (bd-vbmre.16).
 ```
