@@ -42,9 +42,15 @@ A file reservation can only protect between *distinct* identities. So:
 | plan-family skills (`ac-plan-init`, `ac-plan-refine-*`, `ac-plan-clean`) | already conform — mint + reserve their plan files |
 
 **Lifecycle (token-holding sessions only — a stance child has no `macro_start_session` to
-call):** `macro_start_session` (mint) → `file_reservation_paths` at the **work grain**
+call):** `macro_start_session` (mint) → **`am-identity-set.sh <minted-name>`** (rewrite this
+session's edit-guard marker with the minted name — the SessionStart marker still carries the
+env fallback, and in enforce mode the guard would block the session's own edits otherwise)
+→ `file_reservation_paths` at the **work grain**
 (the bead's spec file list; the review's AUTO_FIX list) → release on unit close →
-**self-deregister at session exit** (see Deregistration below).
+**self-deregister at session exit** (see Deregistration below). The marker rewrite is what
+makes the edit guard's "me" the minted writer instead of the env fallback — without it,
+`resolve_self()` returns the stale SessionStart name and enforce would block the session's
+own reserved edits (the measured 105-WOULD-BLOCK failure).
 
 **Never per-edit:** hold reservations for the whole unit of work — releasing between the
 edits of one multi-file change opens a window for another invocation to grab a file mid-task

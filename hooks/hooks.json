@@ -140,7 +140,7 @@
       "scope": [
         "machine"
       ],
-      "_doc": "Destructive Command Guard (~/.local/bin/dcg, v0.6.7+): third-party blocking binary behind hooks/dcg-fail-closed.sh (fail-closed wrapper, ac-dcg-fails-closed-u7hj) — deny via tool.execute.before throw. opencode + machine only for now: Claude already registers it machine-locally in ~/.claude/settings.json (which harness-sync does NOT manage - the sync renders claude at org scope only), and org scope would not reach opencode sessions at all. {HOME} renders to $HOME; the opencode wrapper spawns via bash -c so $HOME expands. Mirrors the Claude registration exactly (matcher Bash, no timeout - wiring defaults to 10s)."
+      "_doc": "Destructive Command Guard (~/.local/bin/dcg, v0.6.7+): third-party blocking binary behind hooks/dcg-fail-closed.sh (fail-closed wrapper; see the dcg entry's assurance.RULING) — deny via tool.execute.before throw. opencode + machine only for now: Claude already registers it machine-locally in ~/.claude/settings.json (which harness-sync does NOT manage - the sync renders claude at org scope only), and org scope would not reach opencode sessions at all. {HOME} renders to $HOME; the opencode wrapper spawns via bash -c so $HOME expands. Mirrors the Claude registration exactly (matcher Bash, no timeout - wiring defaults to 10s)."
     },
     {
       "id": "am-edit-guard",
@@ -152,7 +152,7 @@
       },
       "event": "PreToolUse",
       "matcher": "Edit|Write|MultiEdit",
-      "command": "AM_EDIT_GUARD_MODE=advisory /usr/bin/python3 {HOME}/Repos/infrastructure/hooks/am-edit-guard.py",
+      "command": "AM_EDIT_GUARD_MODE=enforce /usr/bin/python3 {HOME}/Repos/infrastructure/hooks/am-edit-guard.py",
       "harnesses": [
         "opencode"
       ],
