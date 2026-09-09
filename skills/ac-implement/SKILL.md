@@ -28,21 +28,19 @@ route on the class it names.
 
 **`ac2 implement <epic>` spawns a swarm at WIDTH 3, UNCAPPED, and runs until the qualifying
 beads are exhausted.** There is no mode flag and no second procedure: the invoking session is
-always the coordinator and never a worker, at every width.
+always the coordinator and never a worker, at every width; a cap bounds a run you are
+watching, and an uncapped dry queue is the correct end.
 
 | override | effect |
 | --- | --- |
 | `--width N` | spawn N workers instead of 3. `--width 1` still SPAWNS one; it does not turn you into the worker |
 | `--cap N` | each worker stops after N closes. Default is uncapped — **the queue is the budget** |
 
-A cap bounds a run you are watching; uncapped, a worker that finds the queue dry exits, which
-is the correct end. Capped, it stops with beads still waiting.
-
 ## The procedure — you coordinate, you do not work
 
 **You never pick a bead, never review code, never edit a file.** Coordination lives in `br`
-claims and the beads' own `## Consumes` / `## Delivers`, not in you. A coordinator that starts
-working is a worker that has stopped coordinating.
+claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
+is a worker that has stopped coordinating.
 
 **Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
 every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
@@ -54,10 +52,12 @@ filter misses. Register with Agent Mail; install the pre-commit guard once (work
 VERBATIM — and, ONLY if `--cap N` was given, one appended line naming the cap. Verbatim means
 verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity, and the conductor **captures the minted name back from the spawn's `macro_start_session` response (`agent.name`)** and uses THAT name for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
 pool GROWS as a chain unlocks, so a worker that finds it dry and exits is correct, not idle —
-spawn a replacement only when ready beads outnumber live workers.
+spawn a replacement only when ready beads outnumber live workers. **The pool is the only work
+source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
+task; canon: `ac-pipeline/references/work-derivation.md`).
 
-**Phase 2 — close-out.** Four of its steps leave NO TRACE when they go wrong, so they are a
-script plus a checklist, not prose:
+**Phase 2 — close-out.** Four of its steps leave NO TRACE when they go wrong — script plus
+checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
     bash skills/ac-implement/scripts/coordinator.sh --run <run-id>

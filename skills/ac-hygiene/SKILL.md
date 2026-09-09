@@ -135,12 +135,10 @@ sampled hunt:
    §Journey registry). A doc with no frontmatter defaults to `peripheral`.
 3. **Untagged critical-looking surfaces become findings** — a derived surface
    with no matching journey doc, or one whose match reads `peripheral`/untagged
-   while the surface name matches payment/auth/purchase/onboarding, files
-   directly (skip the round/consensus machinery — this check is deterministic,
-   not a judgment call): `br create -t task --labels origin:ac-hygiene,hygiene-finding,journey-gap,unrefined
-   -d "Coverage audit: <surface> has no journey-registry entry (or is
-   under-tagged) — untagged critical surfaces are unprotected by the
-   runtime-proof gates."`
+   while the surface name matches payment/auth/purchase/onboarding. File per
+   `references/journey-coverage.md`: coverage gaps are unconfirmed leads
+   (`investigation`, the probe-exempt type), and only actionable defects become
+   beads — a conformance PASS is a ledger line, never a bead.
 
 If `CORE/journeys/` doesn't exist for this app, skip — nothing to audit. This
 same derivation is the starting point for the initial all-apps journey-tagging
