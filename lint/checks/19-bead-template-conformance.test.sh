@@ -62,9 +62,9 @@ cp "$ROOT/scripts/bead-template-lint.py" "$t/scripts/"
 cp "$ROOT/hooks/bead-capture-guard.py" "$t/hooks/"
 {
   for n in $(seq 1 20); do
-    printf '%s\n' '`br create -t task --labels "origin:ac-hygiene,hygiene-finding,unrefined" --title "conformant template '"$n"'"`'
+    printf '%s\n' '`br create -t task --labels "origin:ac-hygiene,hygiene-finding,unrefined" --title "fixture-do-not-file '"$n"'"`'
   done
-  printf '%s\n' '`br create -t bug --labels "origin:ac-triage,triage,<source>,unrefined" --title "finding template with no catch-stage"`'
+  printf '%s\n' '`br create -t bug --labels "origin:ac-triage,triage,<source>,unrefined" --title "fixture-do-not-file finding no-catch-stage"`'
 } > "$t/skills/bad/SKILL.md"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "no catch-stage label" "$OUT"; then
