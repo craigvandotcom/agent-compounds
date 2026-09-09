@@ -1,7 +1,5 @@
 # Feedback Reports Adapter (source #6)
 
-**Bead:** bd-vbmre.15 · **App:** Body Compass (schema `bca`, source #6 in `CORE/triage.md`)
-
 Adapter spec for ingesting solicited in-app feedback from `public.feedback_reports` into the
 beads pipeline. Distinct from source #3 (Supabase error-log clustering) — this reads
 structured reports submitted voluntarily by users via the feedback UI.
@@ -10,7 +8,7 @@ structured reports submitted voluntarily by users via the feedback UI.
 
 ## DB Contract
 
-Table: `public.feedback_reports` (Supabase project `spilwpcqjncrxptqdggn`, schema `public` — moved from `bca` 2026-07-03 (BCA bd-k1b9v): `bca` is service_role-only, clients could never INSERT)
+Table: `public.feedback_reports` (this app's Supabase project, schema `public` — moved from `bca` 2026-07-03 (BCA bd-k1b9v): `bca` is service_role-only, clients could never INSERT)
 
 | Column            | Type                              | Notes                                                        |
 | ----------------- | --------------------------------- | ------------------------------------------------------------ |
@@ -23,13 +21,13 @@ Table: `public.feedback_reports` (Supabase project `spilwpcqjncrxptqdggn`, schem
 | `screenshot_path` | text NULL                         | Evidence checked by the guard (see below)                    |
 | `status`          | text default 'submitted'          | Server-owned: submitted → triaged → fixed                    |
 | `linked_bead`     | text NULL                         | Loop-guard: set after bead creation; NULL = unclaimed         |
-| `fixed_in_build`  | text NULL                         | Set by the ac-merge write-back hook (bd-vbmre.16)            |
+| `fixed_in_build`  | text NULL                         | Set by the ship-gate's status write-back hook                |
 | `created_at`      | timestamptz default now()         | Watermark column                                             |
 
 **Auth:** service-role client, read the key name from the consuming app's env — do NOT assume
-`SUPABASE_SERVICE_ROLE_KEY`. In body-compass-app the variable is **`SUPABASE_SECRET_KEY`**
-(`.env.local`, `lib/supabase/admin.ts`); other apps may differ. The `service_role` bypasses RLS —
-no `authenticated` policy is needed here.
+`SUPABASE_SERVICE_ROLE_KEY`. In the app that first shipped this adapter the variable is
+**`SUPABASE_SECRET_KEY`** (`.env.local`, `lib/supabase/admin.ts`); other apps may differ. The
+`service_role` bypasses RLS — no `authenticated` policy is needed here.
 
 ---
 
@@ -49,11 +47,10 @@ node -e "process.exit(require('./package.json').scripts?.['triage:feedback']?0:1
 It implements Steps 0–6 below as one transactional pass, so the watermark advances from the
 rows actually claimed rather than from wall-clock time.
 
-**This is deliberately conditional.** As of 2026-08-03, seven apps carry this skill
-(`art-still-app`, `body-compass-app`, `cv-site`, `move-free-app`, `neometa-app`, `unsit-app`,
-`vitest-affected`) and **only body-compass-app** defines `triage:feedback` or references
-`feedback_reports` at all. An unconditional "run the script" instruction would tell six apps to
-execute something they do not have. When the script is absent, the inline steps below ARE the
+**This is deliberately conditional.** Seven apps carry this skill, and **only the app that
+first shipped the feedback table** defines `triage:feedback` or references `feedback_reports`
+at all. An unconditional "run the script" instruction would tell every other app to
+execute something it does not have. When the script is absent, the inline steps below ARE the
 procedure — they are the spec, not dead prose.
 
 ### Step 0 — Watermark
@@ -222,7 +219,7 @@ watermark: <new watermark ISO timestamp>
 ## Unit test cases (consuming app: `__tests__/unit/triage-feedback-adapter.test.ts`)
 
 These cases must ALL pass before this adapter ships in a wave. The test file lives in the
-consuming app (body-compass-app). Reference this spec when authoring the tests.
+consuming app that owns the feedback table. Reference this spec when authoring the tests.
 
 ### (a) New row → bead created + linked_bead set
 
@@ -313,7 +310,5 @@ And add a source-specifics entry:
   Fingerprint dedup on user_id + normalized(message) + category (not id-only — client retries re-INSERT).
   Evidence guard: skip `bug` or NULL-category rows where context claims a screenshot (replay-id claim is legacy-`bug`-only) but screenshot_path IS NULL.
   Write-back: SET linked_bead + status='triaged' after each bead creation (loop-guard).
-  Write-back for status='fixed' + fixed_in_build is the ac-merge hook (bd-vbmre.16).
+  Write-back for status='fixed' + fixed_in_build is the ship-gate's status write-back.
 ```
-
-See `ac-merge/references/feedback-writeback-hook.md` for the status write-back half.

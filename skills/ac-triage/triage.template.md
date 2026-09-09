@@ -38,7 +38,7 @@ A source that isn't configured is **skipped, not an error**. Flip to ✅ when it
   Fingerprint dedup on `user_id + normalized(message) + category` (not id-only — client retries re-INSERT).
   Evidence guard: skip bug rows where `context` claims a screenshot but `screenshot_path IS NULL`.
   Write-back: `SET linked_bead, status='triaged'` after each bead (loop-guard).
-  `status='fixed' + fixed_in_build` written by the ac-merge hook (bd-vbmre.16).
+  `status='fixed' + fixed_in_build` written by the ship-gate's status write-back.
   Full spec: `ac-triage/references/feedback-adapter.md`.
 
 ## Severity bar (drop below this)

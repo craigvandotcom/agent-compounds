@@ -35,8 +35,8 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   single-writer scheduled job in a checkout it does not control.
 
   **App-generic: capture the root from the invocation, never hardcode one app.** This job runs
-  `cwd`'d into whichever app scheduled it, so the live checkout is derived, not pinned (ac-align
-  can hardcode `BCA=…` because it only ever runs against body-compass-app; this workflow cannot):
+  `cwd`'d into whichever app scheduled it, so the live checkout is derived, not pinned (a
+  single-app workflow can hardcode its app; this cross-app workflow cannot):
 
   ```bash
   APP_ROOT="$(git -C "$(pwd)" rev-parse --show-toplevel)"   # the live checkout: board + .beads DB live here
@@ -155,7 +155,7 @@ Identity + reservations per `agent-mail/references/session-procedure.md` (mint �
   ```bash
   # cwd is still $TRIAGE_WT
   AGENT_NAME=<name> git commit -m "chore(triage): daily findings + report" -- <exact files touched>
-  git push --no-verify origin "HEAD:$DEFAULT_BRANCH"   # HEAD:main in every current neoMeta app
+  git push --no-verify origin "HEAD:$DEFAULT_BRANCH"   # HEAD:main in every current app
   ```
 
   `AGENT_NAME` inline — a fresh scheduler shell doesn't inherit the export and the pre-commit

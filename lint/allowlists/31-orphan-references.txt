@@ -4,7 +4,6 @@
 # change; growth is refused against the committed base. Emptied by the WS2 rebuilds.
 skills/ac-land/references/ui-tester-prompt.md
 skills/ac-pipeline/references/ceremony-batching-pool.md
-skills/ac-triage/workflows/scheduled-daily.md
 skills/jef-prompts/references/agent-swarm-launcher.md
 skills/jef-prompts/references/api-contract-validator.md
 skills/jef-prompts/references/brainstorm.md
