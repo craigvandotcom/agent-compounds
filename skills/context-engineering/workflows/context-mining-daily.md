@@ -128,9 +128,16 @@ drift, surface it in the report for the human instead (repo-boundary + altitude 
 If no home has drift, skip — emit nothing.
 
 Second Tier-0 check: **staged-lesson orphans** — a staged note with no live twin never reached
-a home. Sweep the last 7 days only:
+a home. Sweep the last 7 days only — **by directory date, never `find -mtime`**: a git
+checkout or submodule op bulk-resets every mtime, and `-mtime -7` then returns the WHOLE
+backlog as if it were today's staging (memory `mtime-is-not-an-activity-timestamp`).
 ```bash
-find infrastructure/context-mining/daily -mtime -7 -name '*.md' ! -name 'INDEX.md'
+# NOTE: zsh's `[` rejects `>` for string compare ("condition expected: >") — use awk.
+cut=$(date -v-7d +%F)   # macOS; GNU: date -d '7 days ago' +%F
+base=infrastructure/context-mining/daily
+for day in $(ls "$base" | awk -v c="$cut" '$0 >= c'); do
+  find "$base/$day" -name '*.md' ! -name 'INDEX.md'
+done
 ```
 A hit whose basename exists in any `memory/auto/` (or its `_archive/`) is a leftover copy —
 delete it. Otherwise promote it: route by `domain:` per step 6, add the `MEMORY.md` index
