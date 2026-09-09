@@ -5,7 +5,7 @@ description: "The closing ritual — runs LAST, after merge. To land = leave it 
 
 **You are the conductor closing a bead-work session.** Land the plane, extract learnings, propose system upgrades, hand off cleanly.
 
-Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit (on `main`, wave branch gone) or manually once a wave has shipped. See Phase 0 below for how it resolves session context in that post-merge state.
+Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage-table.md`); invoked at loop-exit (on `main`, wave branch gone) or manually once a wave has shipped. See Phase 0 below for how it resolves session context in that post-merge state. Closing order is cited from the stage table, never restated.
 
 ---
 
@@ -13,426 +13,81 @@ Run this LAST — the final stage of the pipeline (`ac-pipeline/references/stage
 
 ### Gather Session Context
 
-Resolve `ARTIFACTS_DIR` **deterministically**, per `ac-pipeline/references/run-id.md`. ac-land runs at
-loop-exit (post-merge/batch-close, on `main`) — it never claimed a batch itself, so it CANNOT
-mint or independently recompute a claim id; the orchestrator hands it the key. Never glob as
-the primary path. There is no branch-based fallback in this chain.
+Resolve `ARTIFACTS_DIR` deterministically per `ac-pipeline/references/run-id.md` — ac-land never claimed a batch itself, so it CANNOT mint a claim id; the orchestrator hands it the key, or the newest dir is a logged guess. Mechanics: `references/initialize.md`.
 
-```bash
-# 0. Loop-exit: RUN_ID set → ALL this run's dirs (scoped glob is SAFE — RUN_ID excludes
-#    foreign/stale dirs). The retrospective spans every batch this run shipped; teardown sweeps
-#    them all.
-# 1. Handed ARTIFACTS_DIR (single bead-work session, no RUN_ID) → use verbatim.
-# 2. Last resort → newest dir, with a logged warning (it was guessed).
-if [ -n "$RUN_ID" ]; then
-  ARTIFACTS_DIRS=$(ls -1dt /tmp/bead-work-*-"$RUN_ID"/ 2>/dev/null | sed 's:/$::')
-  ARTIFACTS_DIR=$(printf '%s\n' "$ARTIFACTS_DIRS" | head -1)   # primary (newest batch) for single-dir steps
-  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work     # run shipped nothing landable
-elif [ -n "$ARTIFACTS_DIR" ]; then
-  :                                                   # handed by orchestrator — use verbatim
-else
-  ARTIFACTS_DIR=$(ls -1dt /tmp/bead-work-*/ 2>/dev/null | head -1 | sed 's:/$::')
-  [ -z "$ARTIFACTS_DIR" ] && ARTIFACTS_DIR=/tmp/bead-work
-  echo "WARN: ARTIFACTS_DIR not handed and no RUN_ID scope — GUESSED $ARTIFACTS_DIR" >&2
-fi
-echo "ARTIFACTS_DIR=$ARTIFACTS_DIR"
-[ -n "$ARTIFACTS_DIRS" ] && echo "ARTIFACTS_DIRS (all batches this run, retrospective spans all): $ARTIFACTS_DIRS"
-```
+Substitute the resolved `$ARTIFACTS_DIR` into every sub-agent prompt below — never pass the variable name (sub-agents don't share the parent shell).
 
-**You MUST substitute the resolved `$ARTIFACTS_DIR` into all sub-agent prompts below.** The literal string `/tmp/bead-work` in this file is a placeholder — for parallel sessions you write the actual resolved path (e.g., `/tmp/bead-work-2939805`) into each spawned agent's prompt. Do NOT pass the variable name; sub-agents don't share the parent shell.
+Read `$ARTIFACTS_DIR/progress.md` — the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac-implement` first."
 
-Read `$ARTIFACTS_DIR/progress.md` — this is the record of what was accomplished. If it doesn't exist, STOP: "No bead-work progress found. Run `/ac-implement` first."
+**Also read the loop-retro friction carrier** — `/tmp/loop-retro-<RUN_ID>.md`, one `## <stage>` section per stage that hit friction. Hold the parsed items with `stage`/`cost`/`lesson`/`class` typing intact — they feed `reflect` directly in Phase 3 Step 0 (never through the Phase 2 prose analyst, which would destroy the structural key). Graceful degrade: carrier absent → skip and proceed as today.
 
-**Also read the loop-retro friction carrier** — `/tmp/loop-retro-<RUN_ID>.md` (resolve `<RUN_ID>`
-from the `RUN_ID` passed in; the ac-implement coordinator writes it before Exit-Land, one `## <stage>`
-section per stage that hit friction — see ac-implement § "Friction aggregation"). Hold the parsed
-per-stage friction items **with their `stage`/`cost`/`lesson`/`class` typing intact** — they feed
-`reflect` directly in Phase 3 Step 0 — standalone land; loop-driven runs return them to the
-conductor instead (§ Ordering) — (do NOT route them through the Phase 2 prose analyst, which
-would reword them and destroy the structural key D4/D5 depend on). **Graceful degrade:** if the
-carrier is absent or empty (a standalone / clean-run land), skip it entirely and proceed exactly
-as today — reflect then receives only the Phase 2 findings.
-
-Also gather:
-
-```bash
-# What beads were completed this session
-br list --json
-
-# Recent commits (the session's work)
-git log --oneline -20
-
-# Current state
-git status
-git diff --stat
-```
+Also gather: `br list --json`, `git log --oneline -20`, `git status`, `git diff --stat`.
 
 ### Declare the Run Ledger
 
-ac-land runs LAST and can compact mid-flight (a slow standalone-fallback `test:all` in 1b
-is a named risk) — and teardown that never runs leaves zombies. Declare the run ledger per
-`ac-pipeline/references/run-ledger.md` (pattern + resume doctrine there), with **each of Phase 1's three
-sub-steps as its own task** so a resume never skips teardown:
-
-```
-TaskCreate (one per section, in run order):
-  1. Initialize                            in_progress
-  2. File remaining work (1a)              pending
-  3. Quality gates (1b)                    pending
-  4. Git ops — commit + push (1c)          pending
-  5. Learn (retrospective)                 pending
-  6. Compound (system upgrades)            pending
-  7. Hand off                              pending
-  8. Teardown                              pending
-```
-
-The section headers below (`1a.` … `1c.`, then Phase 2 → Phase 4, then Teardown) map to
-these tasks 1:1; mark task 1 `completed` now. A compacted conductor reads the ledger to
-know whether teardown (task 8) still owes work. If TaskCreate is unavailable (subagent /
-fan-out path), track the same 8 sections inline in `$ARTIFACTS_DIR/progress.md`; this is
-a sanctioned equivalent, not a deviation.
+ac-land runs LAST and can compact mid-flight — teardown that never runs leaves zombies. Declare the run ledger per `ac-pipeline/references/run-ledger.md`, with each of Phase 1's three sub-steps as its own task so a resume never skips teardown. TaskCreate unavailable → track the same sections inline in `$ARTIFACTS_DIR/progress.md`. Mechanics: `references/initialize.md`.
 
 ---
 
 ## Phase 1: Land the Plane
 
-**NON-NEGOTIABLE. No work stranded locally.**
+**NON-NEGOTIABLE. No work stranded locally.** Mechanics for all three sub-steps: `references/land-phase1.md`.
 
 ### 1a. File Remaining Work
 
-- Check for any started-but-unclosed beads: `br list --json` — look for claimed/in-progress items
-- For each: either close it (if done) or add a comment documenting where you left off
-- Create new beads for any loose ends discovered during the session:
-Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
-
-  ```bash
-  # Dedup first: br list --json | grep -i "<keyword>"  — skip if an open match already exists.
-  # -t = kind of work (task/bug/investigation; -t bug only for a shipped product defect).
-  # unrefined routes the raw bead through ac-polish (bead mode) instead of treating it as already-refined.
-  br create "Follow-up: <description>" -t <type> --priority P1 --labels origin:ac-land,followup,unrefined --description "Discovered during bead-work session. Context: ..."
-  ```
-
-Mark ledger task 2 `completed`; `TaskUpdate` task 3 `in_progress`.
+Close or comment started-but-unclosed beads; file loose ends per `beads-standards/reference/bead-conventions.md` (types, unrefined-at-creation, anchor-dedupe, body template), origin `ac-land,followup,unrefined`.
 
 ### 1b. Quality Gates
 
-> **Quality gates at land (tiered-testing model — parallel-execution doctrine §5, bd-pwt44).**
-> Format / lint / type-check are cheap — always run. Do NOT run a blocking local `test:all` or
-> fire a full-suite CI run here. Two exceptions: (1) a GREEN full `test:all` / Quality-Gate pass
-> for the current HEAD already exists (legacy `ac-merge` PR path, or a publish just ran) —
-> **note-and-skip**, don't validate the same HEAD twice; (2) standalone landing with **no CI path
-> at all** — run a local `test:all` once here.
-
-> **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball.** At land time, the
-> just-merged commit's own CI Quality Gate for HEAD is frequently STILL RUNNING (the merge step
-> fires it and landing follows immediately after) — an `in_progress` run is the EXPECTED state, not
-> an anomaly. **Never report a
-> run as "stuck"/"hung"/"wedged" from its status alone or with a duration you did not measure.** A run
-> is stuck ONLY if its _computed_ elapsed time far exceeds the suite's norm: derive it from
-> `gh run view <id> --json createdAt,jobs` (or the job's `startedAt`) vs `date -u` now, and flag only
-> when elapsed > ~2× typical (this suite is ~15-20 min → threshold ~40 min+). Under the threshold →
-> report "CI in-progress, on track (Nm elapsed)" and move on; do NOT alarm, do NOT block landing.
-> Asserting an unmeasured duration is a **fabricated finding**. If you flag a run, paste the two
-> timestamps + the arithmetic; a flag without the math is not allowed.
-
-```bash
-# Format / lint / type-check run fast — terminal-only output is fine.
-pnpm format && pnpm lint && pnpm type-check
-
-# Build check (fast — terminal-only).
-pnpm build:check
-```
-
-> **STANDALONE ONLY — else SKIP.** Only run the block below if this is a standalone landing with
-> no full-suite CI path (no `quality-gate.yml` workflow in this repo, or a manual land with no
-> Phase 1c to follow). In the normal loop/tiered close, SKIP entirely: Phase 1c no longer fires any
-> full-suite CI run (that proof now happens at publish start via `ac-prove`), and a blocking local
-> full run here is the exact run §5 moves off the critical path.
->
-> ```bash
-> # tee to a log so failure detail survives tail-truncation.
-> pnpm test:all 2>&1 | tee "$ARTIFACTS_DIR/test-all.log" | tail -30
-> ```
-
-If any fail:
-
-- **Fixable in <5 min:** Fix them now, commit the fix
-- **Larger issues:** Create a P0 bead, document the failure, continue landing
-
-**Repo-wide format sweep (separate commit).** Run it here:
-
-```bash
-{ git diff --name-only; git diff --cached --name-only; } | sort -u > /tmp/pre-sweep-dirty-${RUN_ID}.txt   # foreign WIP inventory (one path per line — no porcelain column-parsing: renames list their NEW path, spaces survive) — NEVER commit these
-pnpm format   # or equivalent repo-wide prettier --write .
-git diff --stat
-```
-
-If the sweep modified any file, commit ONLY the files the sweep itself newly touched —
-**never `git add -A` / `git add .`** (H7d, `ac-pipeline/references/commit-discipline.md`:
-a wildcard add ships concurrent sessions' WIP under this sweep's message).
-Files that were already dirty before the sweep belong to other sessions — the sweep may have
-reformatted them, but they are theirs to commit:
-
-```bash
-git diff --name-only | sort | comm -23 - /tmp/pre-sweep-dirty-${RUN_ID}.txt > /tmp/fmt-pathspec-${RUN_ID}.txt
-[ -s /tmp/fmt-pathspec-${RUN_ID}.txt ] && git commit --pathspec-from-file=/tmp/fmt-pathspec-${RUN_ID}.txt -m "chore: format sweep (prettier)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-If nothing changed (tree was already formatted), or every reformatted file was pre-sweep
-dirty (foreign WIP), skip the commit.
-
-Mark ledger task 3 `completed`; `TaskUpdate` task 4 `in_progress`.
+Format / lint / type-check always run; never a blocking local full-suite run here (two named exceptions: an already-green full pass for HEAD → note-and-skip; a standalone land with no CI path → run `test:all` once). **`in_progress` ≠ stuck — COMPUTE elapsed before flagging, never eyeball** (the just-merged commit's own CI is frequently still running; flag only when computed elapsed > ~2× typical, with the two timestamps + arithmetic pasted).
 
 ### 1c. Git Operations
 
-```bash
-git add <specific files>
-git commit -m "chore: bead-work session cleanup
+Commit specific files, push, verify up to date. **No full-suite CI fire here.** The repo-wide format sweep is a separate commit of ONLY sweep-touched files — never `git add -A` (H7d, `ac-pipeline/references/commit-discipline.md`).
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-Only commit if there are uncommitted changes (cleanup, format fixes, etc.).
-
-```bash
-git pull --rebase
-git push
-git status   # Must show "up to date with origin"
-```
-
-**If push fails:** Resolve and retry. Do not proceed until pushed.
-
-**No full-suite CI fire here.** ac-land's job here is done once `main` is pushed and up to date: no CI dispatch, nothing to wait on.
-
-Mark ledger task 4 `completed`; `TaskUpdate` task 5 `in_progress`.
+Mark ledger tasks 2–4 completed as each sub-step lands.
 
 ---
 
 ## Phase 2: Learn (Retrospective)
 
-**Goal:** With complete information, identify what worked, what didn't, and what friction occurred.
+**Goal:** with complete information, identify what worked, what didn't, what friction occurred.
 
-### Spawn Retrospective Sub-Agent
+Spawn the retrospective analyst per `ac-pipeline/references/delegation-contract.md` (verbatim preamble, bounded waits) using the prompt in **`references/retrospective-prompt.md`**. Loop-exit multi-wave: substitute ALL of `$ARTIFACTS_DIRS` so the retrospective spans the whole loop session.
 
-Child-spawn contract: `ac-pipeline/references/delegation-contract.md` — verbatim preamble, bounded waits, structured returns.
-
-Spawn the retrospective analyst using the prompt in **`references/retrospective-prompt.md`** (substitute the resolved `<ARTIFACTS_DIR>`). It reads session artifacts + the workflow/skill files, reports what worked / what did not / patterns, and proposes evidence-backed system-upgrade opportunities under a strict minimum-waste bar.
-
-> **Loop-exit (multi-wave):** when `$ARTIFACTS_DIRS` is set (Phase 0 found several wave dirs for this `RUN_ID`), substitute **all** of them so the retrospective spans the whole loop session — every wave's `progress.md` — not just the last wave. A single-wave land has one dir and behaves as before.
-
-### Conductor Reviews Retrospective
-
-Read `<ARTIFACTS_DIR>/retrospective.md` (use the resolved path from Phase 0). Apply the minimum bar: did this issue cause real waste THIS session? Drop anything that's "interesting but theoretical." Keep only items where you can point to a specific moment where time or resources were lost because the information wasn't available upfront.
-
-Mark ledger task 5 `completed`; `TaskUpdate` task 6 `in_progress`.
+Conductor reviews `<ARTIFACTS_DIR>/retrospective.md` against the minimum bar: did this issue cause real waste THIS session? Drop "interesting but theoretical." Mechanics: `references/learn.md`.
 
 ---
 
 ## Phase 3: Compound (System Upgrades)
 
-**Goal:** Turn learnings into system improvements. User decides what ships.
+**Goal:** turn learnings into system improvements. User decides what ships.
 
-**NO AUTO-APPLY.** Unlike review skills (`ac-plan-clean`, `ac-hygiene`, `ac-review`, `ac-beadify`) which auto-apply consensus findings, bead-land never applies system-file upgrades itself. Full three-way rule (AUTO / HUMAN / DISREGARD): **`ac-pipeline/references/disposition.md`**.
+**NO AUTO-APPLY.** bead-land never applies system-file upgrades itself. Full three-way rule (AUTO / HUMAN / DISREGARD): `ac-pipeline/references/disposition.md`.
 
 ### Loop-retro friction disposition (D3) — runs FIRST, before Step 0
 
-**ac-land Phase 3 is the SOLE tier router.** When Phase 0 read a non-empty loop-retro carrier,
-classify **each** friction item into one of three tiers BEFORE the Step 0 `reflect` delegation
-below, and execute T1/T2 here directly — `reflect` never re-decides a tier (it only writes the
-T3 subset this router hands it). This is a **citing specialization** of `ac-pipeline/references/disposition.md`'s
-core three-way rule (DISREGARD / AUTO / HUMAN — that page § "The three-way rule", §1/§2/§3): it
-MAPS the tiers onto that fork and ADDS gates; it never redefines the fork.
+**ac-land Phase 3 is the SOLE tier router.** Classify each carrier item into T1/T2/T3 BEFORE Step 0's `reflect` delegation — `reflect` never re-decides a tier. This is a citing specialization of disposition.md's three-way rule: it MAPS the tiers onto that fork and ADDS gates; it never redefines it. Mechanics + the full tier table: `references/compound.md`.
 
 | Tier | disposition.md route | What ac-land does here | Extra gate |
 |---|---|---|---|
-| **T1 bug/defect** | AUTO (rides a bead→CI gate; auto isn't final — §2) | `br create -t bug --labels origin:ac-land,unrefined` immediately — dedupe-first per 1a's rule above (same file, § File Remaining Work) | none — **never rate-limited** (matches the Rule-0 bug lane); the T2 cap does NOT apply to bugs |
-| **T2 high-impact improvement** | HUMAN (ungated policy change — §3) | `br create -t decision … -l origin:ac-land,human-gate,skill-improvement` via the existing mechanism below | **objective bar** + **one-per-land cap** |
-| **T3 everything else** | AUTO additive-knowledge (§2), else DISREGARD (§1) | tag for the Step 0 reflect call → keyed observation (bd-jv33f.5), or drop if zero evidence | reversible memory observation only |
+| **T1 bug/defect** | AUTO | `br create -t bug` immediately, dedupe-first | none — never rate-limited |
+| **T2 high-impact improvement** | HUMAN | `br create -t decision` via the existing mechanism | objective bar + **one-per-land cap** |
+| **T3 everything else** | AUTO additive-knowledge, else DISREGARD | tag for the Step 0 reflect call → keyed observation | reversible memory observation only |
 
-**Deletion mandate — supersession ranks equally with addition.** When a T1/T2/T3 item
-SUPERSEDES or contradicts existing skill content (not just adds to it), the disposition
-MUST also consider removing/demoting the stale content, not only filing the new lesson —
-`skill-builder/references/promotion-ladder.md` ranks the two moves equally, never
-addition-plus-optional-cleanup. Removal of unique content routes through the skill's
-`MAINTENANCE.md` holding-pen (that doc's holding-zone rule), not an outright delete; a
-verbatim duplicate may still hard-delete immediately.
+**Deletion mandate — supersession ranks equally with addition** (promotion-ladder.md: removal routes through the skill's MAINTENANCE.md holding-pen, never an outright delete; verbatim duplicates may hard-delete).
 
-**T3 sub-route — skill-scoped friction vs general lesson (W4.3).** Before handing a T3 item
-to `reflect` in Step 0, tag it as either *skill-scoped friction* (about a specific skill's
-operation — its `stage` names a skill, or the narrative clearly targets one) or a *general
-lesson*. Skill-scoped friction's destination is `skills/<skill>/FRICTIONS.md`, not
-`memory/auto/` — `reflect` executes the write (see its Step 5 disposition branch); this is
-only the classification tag ac-land hands across. Apply
-`skill-builder/references/friction-capture.md` § Routing's ambiguity defaults **verbatim**:
+**T2 objective bar** — EITHER recurrence evidenced (`qmd search` hit or an open matching `skill-improvement` bead) OR material per-run cost (a confirmed defect or `cost: material`). **Per-land cap = 1** — over the bar, file the highest-cost one; demote the rest to T3.
 
-- Uncertain, loop-mechanics-flavored → default sink is `ac-pipeline`'s `FRICTIONS.md`.
-- Uncertain, general → `memory/auto/` (unchanged from today).
-- Genuinely cross-cutting → primary skill's `FRICTIONS.md`, `see <id> in <primary>` pointer
-  entry in each secondary skill's file (never a full copy).
-
-Schema, per-skill template, and the dedup rule (reuse-id-and-bump-recurrence vs mint-new) are
-`friction-capture.md`'s — don't restate them here; create the target `FRICTIONS.md` lazily
-from that reference's template if absent.
-
-**T2 objective bar** — an improvement clears iff EITHER:
-- **recurrence evidenced** — a matching observation/lesson already exists in the substrate
-  (`qmd search` hit), OR a matching open `skill-improvement` bead exists (the Save-for-later
-  dedupe check, disposition.md § Save-for-later); OR
-- **material per-run cost** — a named this-run cost: a confirmed defect, or a friction item
-  marked `cost: material` (optional Craig-set minutes floor).
-
-**Per-land cap = 1.** If more than one candidate clears the bar, file the **highest-cost** one as
-the single T2 improvement bead and **demote the rest to T3 observations** — their recurrence
-still accrues for `dream`'s full-corpus ranking (nothing lost, just deferred). T1 bugs are exempt
-from the cap.
-
-**Ordering (the sole-reflect-call rule):** (1) classify every carrier item
-into T1/T2/T3; (2) create T1 bug beads + the ≤1 T2 decision bead here — no `reflect`
-involvement; (3) **loop-driven** (the Exit-Land prompt says the conductor spawns
-reflect): SKIP the Step 0 `reflect` delegation — return the pre-classified T3 subset +
-skill-scoped tags in your summary. **Standalone**: hand the T3 subset to the single
-Step 0 `reflect` invocation below. Either way: one reflect per run, never two.
-Absent/empty carrier → no tiering; Step 0 (standalone) runs as normal.
+**Ordering (the sole-reflect-call rule):** classify every item; create T1 + the ≤1 T2 bead here; loop-driven → skip Step 0, return the pre-classified T3 subset in your summary; standalone → hand the T3 subset to the single Step 0 `reflect` invocation. **One reflect per run, never two.**
 
 ### Step 0: Capture durable lessons via `reflect`
 
-Before proposing system-file upgrades, invoke the **`reflect`** skill to capture this
-session's durable learnings (facts / decisions / recipes) into the typed, domain-routed,
-git-tracked memory substrate. `reflect` handles `{type, domain}` routing + dedupe-over-append:
-it writes low-risk lessons directly and **gates** any skill-improvement for approval (same
-discipline as below). This closes the write loop — a lesson learned here becomes retrievable
-from a different app/machine next week instead of being stranded in this transcript. Pass it
-the retrospective findings from Phase 2 as the candidate lessons — **AND the pre-classified
-T3-subset friction items from the Loop-retro friction disposition above** (the T1/T2 items were
-already turned into beads there; do NOT re-capture them here), each carrying its
-`stage`/`cost`/`lesson`/`class` (the `class` is a re-adjudicated HINT, not authoritative). Pass
-the T3 items structurally, never re-derived from prose — this is what preserves the D4/D5
-structural key, which reflect writes as keyed observations (bd-jv33f.5). This is the **sole**
-`reflect` invocation; do not add a second one. (Absent/empty carrier → no tiering ran, reflect
-gets only the Phase 2 findings, exactly as before.)
-
-Then continue with the system-file upgrade proposals below.
+Invoke **`reflect`** — the sole call, never a second — to capture this session's durable learnings into the typed, domain-routed, git-tracked substrate. Pass it the Phase 2 findings AND the pre-classified T3-subset items (each with `stage`/`cost`/`lesson`/`class`), structurally, never re-derived from prose. reflect gates any skill-improvement for approval.
 
 ### Disposition — classify, then route by mode
 
-Classify each surviving proposal per `ac-pipeline/references/disposition.md`:
-
-- **DISREGARD** — no concrete, named waste this session → drop silently (most proposals).
-- **AUTO** — pure knowledge (fact / rule / decision / recipe) → already captured by
-  `reflect` in Step 0; nothing further here.
-- **HUMAN** — system-file change (skills, AGENTS.md, CLAUDE.md, CORE, hooks, workflows) →
-  route by mode below.
-
-**Interactive session** → present + `AskUserQuestion` (next two subsections).
-
-**Headless (loop-driven land)** → NEVER `AskUserQuestion` and **NEVER post proposals to
-Slack** — a Slack card is not a decision's storage; Slack stays notification-only. File each
-HUMAN item as a decision bead per `ac-pipeline/references/disposition.md` § Save-for-later, **dedupe
-first** (same target file + gist as an open `skill-improvement` bead → comment on it
-instead), then skip ahead to Commit Compound Changes:
-
-```bash
-br create -t decision -p 3 "Proposal: <title> (<target file>)" -l origin:ac-land,human-gate,skill-improvement \
-  -d "## Decision memo
-**Target:** <file path>
-**Evidence (this session):** <what happened + concrete cost>
-**Proposed change:**
-<exact diff or content>
-**Recommendation:** <apply / apply-modified / drop>"
-```
-
-It surfaces on the `ac-human-session` docket; Craig decides there.
-
-### Present Upgrades to User
-
-First, output each upgrade opportunity so the user can see the details:
-
-```
-## Upgrade N: <title>
-**Severity:** Critical | High | Medium | Low
-**Target:** <file path>
-**Evidence:** <what happened this session>
-**Proposed Change:**
-<exact diff or content to add/modify/remove>
-```
-
-Group by severity (Critical first, Low last). Present ALL of them.
-
-Then use `AskUserQuestion` with `multiSelect: true` to let the user pick interactively:
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Which system upgrades should I apply?",
-    header: "Compound",
-    multiSelect: true,
-    options: [
-      { label: "Upgrade 1: <title>", description: "Critical — <one-line summary>" },
-      { label: "Upgrade 2: <title>", description: "High — <one-line summary>" },
-      { label: "Upgrade 3: <title>", description: "Medium — <one-line summary>" },
-      ...up to 4 options per question (AskUserQuestion limit)
-    ]
-  }]
-)
-```
-
-**If more than 4 upgrades:** Split across multiple `AskUserQuestion` calls grouped by severity. Critical+High in the first question, Medium+Low in the second. The user can always select "Other" to provide custom input (skip all, apply all, etc.).
-
-### Apply Approved Upgrades
-
-> **Apply-path routing split (this inline path is the `skill-hotfix:` hotfix hatch).**
-> This inline path exists for **same-session, user-APPROVED** upgrades — it applies them
-> immediately and traceably (via the `skill-hotfix:` commit-prefix hatch, defined under
-> Commit Compound Changes below) across **every** target class in the table below (skill
-> files AND `AGENTS.md` / `CLAUDE.md` / `MEMORY.md`). **`dream` is PRIMARY** — but only
-> for *proposal-originated* edits (unreviewed/accumulated edit proposals it emits and
-> later applies in REVIEW mode). "dream is primary" does NOT make it a router for
-> already-approved same-session work: that work legitimately stays here, on the hatch.
-> This hatch owns approved same-session hotfixes for all four target classes; dream owns
-> proposals. (Mirrored in `skills/dream/SKILL.md`.)
-
-For each approved upgrade, apply the edit directly. Common targets:
-
-| Target                | What Gets Updated                      |
-| --------------------- | -------------------------------------- |
-| `AGENTS.md`           | Workflow improvements, new conventions |
-| `CLAUDE.md`           | Orchestrator context updates           |
-| `.claude/skills/*.md` | Default lands in the skill's `references/`, its `FRICTIONS.md`, or `memory/auto/` — **never the SKILL.md spine by default.** Core insertion needs the promotion-ladder proof gate (N green runs / probe-verified fact / Craig sign-off for conductor-core — `skill-builder/references/promotion-ladder.md`), not a default landing here. |
-| `MEMORY.md`           | New patterns, gotchas, workflow notes  |
-
-### Commit Compound Changes
-
-**Commit-prefix is CONDITIONAL — `skill-hotfix:` for the approved-upgrade case, `chore:`
-for routine-only.** This land-session compound commit carries BOTH routine
-retrospective/memory-substrate saves (the common case, fires every land) AND any doctrine
-edits the Apply-Approved-Upgrades hatch applied this session. **When ≥1 approved
-doctrine/skill/memory upgrade was actually applied this session** (any of the four target
-classes in the Apply-Approved-Upgrades table — skill files, `AGENTS.md`, `CLAUDE.md`,
-`MEMORY.md`), **EMIT the commit with a `skill-hotfix:` prefix** so the out-of-band apply is
-greppable by dream's Phase 5 dedupe (`git log --grep='^skill-hotfix' -- <target_file>`).
-**A land with no approved upgrade
-(routine compound/reflect-only saves) keeps `chore:`** — do NOT blanket-relabel every
-land-session commit, or you pollute the exact dedupe signal dream keys on.
-
-```bash
-git add <specific files>
-# Approved-upgrade case (≥1 hatch apply this session — any target class):
-git commit -m "skill-hotfix: compound learnings + applied N system upgrades from retrospective
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-# Routine / no-upgrade case (compound + reflect saves only, no hatch apply):
-#   git commit -m "chore: compound learnings from bead-work session ..."
-git push
-```
-
-Advisory (not mandated): you MAY commit the Apply-Approved-Upgrades edits SEPARATELY from
-routine compounding so the `skill-hotfix:` commit touches exactly the edited `target_file` —
-a cleaner per-file signal for dream's `git log --grep='^skill-hotfix' -- <target_file>`.
-Either one-commit-conditional or split-commit satisfies the convention.
-
-Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
+Classify each surviving proposal per disposition.md: DISREGARD (no named waste → drop), AUTO (pure knowledge → already captured by reflect), HUMAN (system-file change → route by mode). **Interactive** → present + `AskUserQuestion`. **Headless** → never ask, never post to Slack (notification-only); file each HUMAN item as a decision bead, dedupe first, then skip to Commit Compound Changes. Mechanics + commit-prefix contract (`skill-hotfix:` for the approved-upgrade case, `chore:` for routine-only): `references/compound.md`.
 
 ---
 
@@ -440,220 +95,16 @@ Mark ledger task 6 `completed`; `TaskUpdate` task 7 `in_progress`.
 
 ### Session Summary
 
-Output for the user and next session:
-
-```markdown
-## Bead-Work Session Summary
-
-**Beads Completed:** N (list IDs + titles)
-**Beads Remaining:** M (from `br ready --json`)
-**Commits:** K commits pushed
-
-**Quality Gates:** All passing | Issues filed (list)
-
-**Learnings Applied:** X upgrades (list targets)
-
-**Open Issues:**
-
-- (any filed beads or blockers)
-```
-
-**Present next session choice with `AskUserQuestion`** — interactive sessions only. When driven
-headless by the ac-implement coordinator's Exit-Land prompt ("never `AskUserQuestion`"), skip this ask entirely and
-just emit the summary — the loop, not a human, decides what runs next (same carve-out as
-`ac-merge` / `ac-publish`):
-
-Note: `ac-land` runs **LAST** — after the merge. Merging is the work; landing brings it to rest (clean + wiser). When driven by the ac-implement swarm, land is the **guaranteed exit step for every stop path**, so the loop is never "done" until it has landed. By the time landing runs, THIS wave has already merged to main — there is nothing left to merge for it. The only next steps are starting the next wave or stopping.
-
-```
-AskUserQuestion(
-  questions: [{
-    question: "Session landed. What's next?",
-    header: "Next step",
-    multiSelect: false,
-    options: [
-      { label: "Start next wave", description: "Run /ac-plan or /ac-implement — {M} beads remaining, pick up the next wave" },
-      { label: "Refine remaining beads", description: "Run /ac-polish — revise remaining beads before implementing the next wave" },
-      { label: "Done for now", description: "Session over — nothing more to do until the next wave is picked up" }
-    ]
-  }]
-)
-```
+Output the summary (beads completed/remaining, commits, gates, learnings, open issues) and, interactive only, `AskUserQuestion` for next step. Headless → just emit. Mechanics + summary template: `references/handoff.md`.
 
 ### Preserve the raw friction carrier (before teardown discards /tmp)
 
-Copy it — `stage`/`cost`/`lesson`/`class` typing intact — into a git-tracked artifacts path
-FIRST, mirroring the `.claude/reviews/batch/` convention `ac-batch-close` already uses:
+Copy `/tmp/loop-retro-<RUN_ID>.md` into `.claude/reviews/loop-retro/` and commit it FIRST — `stage`/`cost`/`lesson`/`class` typing intact.
 
-```bash
-if [ -f "/tmp/loop-retro-${RUN_ID}.md" ]; then
-  DEST=".claude/reviews/loop-retro"
-  mkdir -p "$DEST"
-  cp "/tmp/loop-retro-${RUN_ID}.md" "$DEST/loop-retro-${RUN_ID}.md"
-  git add "$DEST/loop-retro-${RUN_ID}.md"
-  git commit -m "ac-land: preserve raw friction carrier — RUN ${RUN_ID}" -- "$DEST/loop-retro-${RUN_ID}.md"
-  git push origin main || { git pull --rebase origin main && git push origin main; }
-fi
-```
+### Cleanup Temp Files + Teardown (operational — part of landing)
 
-### Cleanup Temp Files
-
-Remove session artifacts (they've been consumed by retrospective). Run each block separately to avoid shell chaining that triggers safety hooks.
-
-**Concurrency-safe, two-tier teardown.** Scheduled ac-implement swarm runs can overlap in time, and one run's mixed-kind children each hold their own dir, so a blind `rm -rf /tmp/<prefix>-*` would delete a concurrently-LIVE run's in-flight artifact dirs. Two tiers, covering all 11 targets (10 glob prefixes + the bare literal `/tmp/bead-work`):
-
-- **Tier 1 — universal content-aware age-gate (LOAD-BEARING).** A dir is stale ONLY if nothing inside it — nor the dir itself — was modified within `STALE_MIN` minutes: `find "$d" -mmin -$STALE_MIN -print -quit` returning non-empty means something is fresh ⇒ LIVE ⇒ keep; empty output ⇒ demonstrably abandoned ⇒ delete. Do NOT gate on the parent dir's own mtime: in-place rewrites of files like `progress.md` do NOT bump the containing dir's mtime, so a dir-mtime gate would reap a live long-running run. Each loop is keyed to its exact `/tmp/<prefix>-*/` glob (or the literal `/tmp/bead-work`) — nothing can reach unrelated `/tmp` content.
-- **Tier 2 — RUN_ID exact-match (optimization; the 7 embedding prefixes ONLY).** Immediately delete THIS run's own dirs so it cleans up after itself without waiting out the age gate. The `[ -n "$RUN_ID" ]` guard on every line is MANDATORY: with `RUN_ID` unset or empty, the unguarded glob degenerates right back to the original unscoped bug. `work-review-*`, `batch-close-*`, external `plan-refine-*`, and bare `/tmp/bead-work` get NO tier-2 line — a RUN_ID glob never matches them, and a silent no-op masquerading as cleanup is worse than no line — they rely on the age gate alone.
-
-Every candidate is PRINTED (`STALE:` / `OWN:` lines) and nothing is deleted inside the loops — deletion happens in the compose step below, so a wrongful sweep is diagnosable post-hoc.
-
-```bash
-STALE_MIN=1440   # 24h — max plausible gap between WRITES in a live run (NOT a bound on total run duration)
-
-# Tier 1 — universal content-aware age-gate, ONE selector over all 12 targets (11 glob
-# prefixes + literal /tmp/bead-work; globs expand at the CALL SITE, so the function only
-# ever sees concrete dirs — identical per-dir semantics to writing 12 loops longhand).
-# Prefix inventory: ac-pipeline/references/run-id.md § Prefixes — keep the argument list in sync.
-stale() { for d in "$@"; do [ -d "$d" ] || continue
-  [ -z "$(find "$d" -mmin -$STALE_MIN -print -quit 2>/dev/null)" ] && echo "STALE: $d"; done; }
-stale /tmp/bead-work/ /tmp/bead-work-*/ /tmp/plan-init-*/ /tmp/batch-close-*/ \
-      /tmp/plan-refine-internal-*/ /tmp/plan-refine-*/ /tmp/plan-clean-*/ \
-      /tmp/bead-refine-*/ /tmp/beadify-*/ /tmp/hygiene-*/ /tmp/work-review-*/
-
-# Tier 2 — immediate self-cleanup by exact RUN_ID match, 7 embedding prefixes only.
-# The [ -n "$RUN_ID" ] guard is MANDATORY (unset RUN_ID degenerates the globs to the
-# original unscoped bug — one guard, wrapping every glob).
-if [ -n "$RUN_ID" ]; then
-  for d in /tmp/bead-work-*-"$RUN_ID"/ /tmp/plan-init-*-"$RUN_ID"/ \
-           /tmp/plan-refine-internal-*-"$RUN_ID"/ /tmp/plan-clean-*-"$RUN_ID"/ \
-           /tmp/bead-refine-*-"$RUN_ID"/ /tmp/beadify-*-"$RUN_ID"/ /tmp/hygiene-*-"$RUN_ID"/; do
-    [ -d "$d" ] && echo "OWN: $d"
-  done
-fi
-```
-
-**Step 2 — compose the delete from the PRINTED LITERALS (the dcg contract).** The loops
-above are SELECTORS ONLY — they print candidates and delete nothing. `rm -rf "$d"` inside
-a loop is a dynamic-path delete and dcg blocks it. Read the `STALE:`/`OWN:` lines and
-issue ONE command with the printed paths pasted verbatim as literals:
-
-```bash
-# example — paste the actual printed paths; never $VAR, never $( ), never a bare loop var
-rm -rf /tmp/bead-work-buglane-20260719-102946-27401 /tmp/bead-refine-20260719-102946-27401-refA
-```
-
-Allowed/blocked delete shapes are canon — `ac-pipeline/references/shell-guardrails.md`
-(literal `/tmp/...` paths + distinctive globs allowed; variable/substituted paths and
-home/repo `rm -rf` blocked — the version-pinned details live THERE, not here). For
-repo-tree debris (a stale `.next.stale-*`, an
-orphaned scratch file): `git rm` if tracked; else gitignore-and-flag or `dcg allow-once`
-— don't fight the guard (memory: `feedback_dcg_blocks_os_unlink`). Zero `STALE:`/`OWN:`
-lines printed = nothing to delete; step 2 is skipped.
-
-Mark ledger task 7 `completed`; `TaskUpdate` task 8 `in_progress`.
-
-### Teardown (operational — part of landing)
-
-Landing means leaving NO live debris. Run this regardless of how the session reached land
-(clean finish, iteration cap, regression stop, human "stop", or error). **Child-path
-teardown-resume:** if TaskCreate is unavailable (subagent / fan-out path), the resume
-artifact is `$ARTIFACTS_DIR/progress.md` section `### Teardown` — write it `in_progress`
-before this section starts and `completed` only after Final Verification. A compacted
-child that cannot find that section still owes teardown; do not skip it.
-
-1. **Kill spawned background tasks/waiters.** Long-running poll/wait loops are the classic
-   zombie — a `until cond; do sleep N; done` whose condition never fires runs forever.
-   Stop them by IDENTITY, not a broad sweep:
-   - For harness-tracked background tasks: `TaskStop` each one you started this session.
-   - For stray shells, list candidates and confirm each is yours before killing — match the
-     specific command, never a blanket pattern:
-     ```bash
-     ps -Ao pid,etime,command | grep -iE "until .*sleep|seq 1 .*gh (run|pr)|pnpm test:all" | grep -v grep
-     # kill -TERM <pid> ONLY for loops you recognize as this session's. Do NOT kill the
-     # self-hosted Actions runner, the dev server someone else owns, or unrelated jobs.
-     ```
-   - Then confirm none survive: re-run the `ps … grep` → expect empty.
-   - **Prevention** (the _Fail safe; leave no live debris_ law — `ac-pipeline`
-     through-threads): every waiter you create needs a hard cap (`for i in $(seq 1 N)` /
-     `timeout`), never an unbounded `until`. A waiter that can't time out is a future zombie —
-     and the rule binds when you _write_ the loop, not just when teardown sweeps for it here.
-2. **Agent Mail:** if THIS land session minted a Tier-1 identity, first release its
-   reservations (`release_file_reservations`, all paths), then Layer-1 self-deregister with its
-   `registration_token` (`deregister_agent` — never `retire_agent`: name-only cross-session
-   retire is rejected at runtime, decision `ac-ycr.8`). Don't leave reservations to TTL-expire.
-   A land session running as `FoggyCreek` (the Tier-2 chore identity — the normal case for the
-   format-sweep / report / learnings commits) holds no reservations and must NEVER be
-   deregistered or retired (`agent-mail/references/agent-identity.md` § Tier 2).
-   Then perform the **Layer-2 roster sweep** (doctrine `agent-mail/references/agent-identity.md` wiring
-   `ac-ycr.5`): the Exit-Land prompt handed you `AGENT_MAIL_ROSTER` = the loop conductor's name
-   plus every child identity this run registered.
-
-   **Project-key resolution (bd-8kdjl).** Any Agent Mail call that still takes `project_key` /
-   `human_key` MUST use the pinned literal from `.claude/hooks/session-start.md`
-   (`human_key: "neometa/<app-dir>"`). READ that file — do not derive a key from cwd,
-   `$PROJECT_ROOT`, `git rev-parse --show-toplevel`, or any absolute path. An absolute
-   path slugifies into a **forked mailbox** and the sweep reports "roster clean" by
-   absence. Observed resolver (run this, do not invent the string):
-
-   ```bash
-   PINNED_KEY=$(sed -n 's/.*human_key: *"\(neometa\/[^"]*\)".*/\1/p' \
-     .claude/hooks/session-start.md | head -1)
-   [ -n "$PINNED_KEY" ] || { echo "FATAL: no pinned human_key in session-start.md" >&2; exit 2; }
-   # Layer-2 existence check uses ONLY $PINNED_KEY (never $PROJECT_ROOT / pwd).
-   ```
-
-   Layer 2's *release* sweep itself is **not** keyed on one project_key — use the
-   sqlite query in `agent-mail/references/agent-identity.md` § "The sweep is NOT
-   project-key-agnostic" so a forked mailbox cannot hide holds. `whois` / verify
-   calls that still need a key use `$PINNED_KEY` only.
-
-   Layer 2 is **reservations-only** — for each name
-   on that roster (skip the live conductor — it deregisters itself after you return), run ONLY
-   `force_release_file_reservation` on any stale holds it left (the tool validates abandonment
-   heuristics before releasing). Do NOT `retire_agent`/`deregister_agent` the roster names:
-   name-only cross-session identity retire is rejected at runtime (decision `ac-ycr.8`; tokens live
-   with the minting session), so a dead child's identity persists as harmless roster noise until the
-   upstream admin-sweep primitive lands. Then VERIFY the reservations are clear — re-list the
-   project's holds and confirm no swept child reservation remains. This is the backstop for children
-   that died before their own Layer-1 self-deregister; do not skip it on an empty-looking roster.
-
-   **Pre-commit guard.** This is separate from the
-   roster sweep above and deregisters/retires nobody. Uninstall the mcp-agent-mail guard **only
-   when this repo's hooks are TRACKED** — i.e. `git config core.hooksPath` names a directory whose
-   `pre-commit` appears in `git ls-files`. That is the only shape in which the chain-runner wraps
-   the repo's own tracked hook and dirties the working tree; everywhere else the guard lives in
-   the untracked gitdir hooks directory, is invisible to the tree, and must be LEFT IN PLACE.
-   Do NOT gate on "did THIS session install it" — neither tool carries session or agent
-   identity, so that condition is trivially true and gates nothing.
-   Do NOT call it unconditionally either: the guard is repo-scoped, two concurrent ac-implement swarm runs
-   can share this checkout (§ Concurrency-safe, two-tier teardown), and idempotence is not
-   concurrency-safety — an unconditional uninstall strips a live sibling session's protection.
-   Fail safe toward leaving it: `ac-implement` re-installs it idempotently every session, so
-   leaving it costs nothing while removing it wrongly does. When the condition holds, call
-   `uninstall_precommit_guard(code_repo_path)` — repo path ONLY, no `project_key` (unlike its `install_precommit_guard` sibling). A `removed:false` result simply means
-   nothing was installed — a clean no-op that needs no error handling and no "is a guard present?"
-   probe first.
-
-   **Tracked-hook integrity check — run this UNCONDITIONALLY** (it is read-only unless something
-   was actually modified). Resolve the hooks directory with `git rev-parse --git-path hooks`, or
-   honour `core.hooksPath`; never assume a fixed path inside the gitdir, which does not even
-   resolve in a submodule (there `.git` is a file, not a directory). The check can only bite in
-   repos whose hooks are tracked — in the common untracked case there is nothing to find, so do
-   not hunt for a modification that cannot exist. If a tracked hook comes back modified, restore
-   it from the committed version: `git checkout -- <hook-path>`, or read the pristine copy with
-   `git show HEAD:<hook-path>` when the tree must not be touched. The file is tracked by
-   definition of the condition, so no snapshot or backup mechanism exists or needs inventing.
-3. **Working tree:** resolve or EXPLICITLY flag non-wave junk. A dirty tree the next session
-   trips over is a teardown failure. If concurrent-session files are present and not yours
-   (unmerged `UU`, stray staged files), surface them in the summary — don't silently leave
-   them, and don't blindly discard another agent's uncommitted work.
+**Landing means leaving NO live debris** — run regardless of how the session reached land (clean finish, iteration cap, regression stop, human "stop", or error). Concurrency-safe two-tier teardown (content-aware age gate + RUN_ID exact-match), Agent Mail release + roster sweep, pre-commit guard condition, tracked-hook integrity, working tree resolution. Mechanics — full detail: `references/teardown.md`.
 
 ### Final Verification
 
-```bash
-git status          # Clean working tree
-git log --oneline -1  # Latest commit pushed
-br ready --json     # What's left
-```
-
-Mark ledger task 8 `completed` — the run is landed.
+`git status` clean · `git log --oneline -1` pushed · `br ready --json` what's left. Mark ledger task 8 completed — the run is landed.

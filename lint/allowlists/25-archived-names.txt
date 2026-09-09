@@ -13,7 +13,6 @@ skills/ac-distribute/SKILL.md
 skills/ac-human-session/SKILL.md
 skills/ac-hygiene/SKILL.md
 skills/ac-hygiene/references/report-template.md
-skills/ac-land/SKILL.md
 skills/ac-pipeline/SKILL.md
 skills/ac-pipeline/references/board-scan.md
 skills/ac-pipeline/references/ceremony-batching-pool.md

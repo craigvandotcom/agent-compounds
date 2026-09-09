@@ -29,12 +29,10 @@
 2026-09-07 | craig | skills/ac-human-session/SKILL.md
 2026-09-07 | craig | skills/ac-human-session/references/docket-anti-rot.md
 2026-09-07 | craig | skills/ac-hygiene/SKILL.md
-2026-09-07 | craig | skills/ac-land/SKILL.md
 2026-09-07 | craig | skills/ac-pipeline/SKILL.md
 2026-09-07 | craig | skills/ac-pipeline/references/assurance-declarations.md
 2026-09-07 | craig | skills/ac-pipeline/references/board-scan.md
 2026-09-07 | craig | skills/ac-pipeline/references/qa-shared.md
-2026-09-07 | craig | skills/ac-publish/SKILL.md
 2026-09-07 | craig | skills/ac-publish/references/web-promote.md
 2026-09-07 | craig | skills/ac-qa-browser/SKILL.md
 2026-09-07 | craig | skills/ac-review/SKILL.md
@@ -59,7 +57,6 @@
 2026-09-07 | craig | skills/wiki/workflows/hallucination-audit.md
 2026-09-07 | craig | skills/wiki/workflows/seed-page.md
 2026-09-07 | memory/auto | skills/ac-human-session/references/docket-anti-rot.md
-2026-09-07 | memory/auto | skills/ac-land/SKILL.md
 2026-09-07 | memory/auto | skills/ac-pipeline/references/assurance-declarations.md
 2026-09-07 | memory/auto | skills/context-engineering/SKILL.md
 2026-09-07 | memory/auto | skills/context-engineering/workflows/context-mining-daily.md
@@ -81,7 +78,6 @@
 2026-09-07 | neometa | skills/ac-distribute/references/_DECISION-distribution-stack.md
 2026-09-07 | neometa | skills/ac-human-session/SKILL.md
 2026-09-07 | neometa | skills/ac-hygiene/SKILL.md
-2026-09-07 | neometa | skills/ac-land/SKILL.md
 2026-09-07 | neometa | skills/ac-pipeline/references/verification-gate.md
 2026-09-07 | neometa | skills/ac-qa-browser/SKILL.md
 2026-09-07 | neometa | skills/ac-triage/SKILL.md
