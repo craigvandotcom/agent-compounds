@@ -4,4 +4,5 @@
 # An entry may be removed once the collision is fixed (the descriptions no longer share
 # the phrase); a new entry may never be added — the check refuses entries dated after the
 # seed date and entries that no longer match a live collision.
-2026-09-07 | screenshot the app | device-testing,screenshot-refresh
+# (2026-09-09: the 'screenshot the app' device-testing/screenshot-refresh collision was
+# retired when screenshot-refresh was archived (ac-1p7j.23) — the entry shrank out.)
