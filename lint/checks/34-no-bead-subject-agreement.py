@@ -14,6 +14,14 @@ bookkeeping (`.beads/`), and report commits. It is NOT an escape hatch: a real
 change under `[no-bead]` is dropped wholesale from board-truth.sh's review
 range, so it never gets reviewed and never re-enters the corpus.
 
+The marker is matched as a TRAILING token: the convention across the window is
+`<subject> [no-bead]` (190 of 190 historical marker uses end the subject). A
+subject that merely QUOTES the marker mid-text — e.g. a feature commit
+describing the marker or the check itself — is not a marker use, and is not a
+[no-bead] commit to police (measured at landing: a005143, the check's own
+landing commit, quoted "[no-bead] commits assert subject-body agreement" in
+its subject).
+
 This check reads the git log, finds `[no-bead]`-marked commits, and flags any
 whose diff touches a file outside the ledger/board surfaces the marker is FOR.
 The window is the same range board-truth.sh derives (last release tag..HEAD,
@@ -50,7 +58,12 @@ sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
 
-NO_BEAD = re.compile(r"\[no-bead\]", re.IGNORECASE)
+# The marker is a TRAILING token (`<subject> [no-bead]` — the convention across
+# the window; 190/190 historical marker uses end the subject). A subject that
+# QUOTES the marker mid-text is describing it, not using it — the check's own
+# landing commit (a005143) quoted "[no-bead] commits assert subject-body
+# agreement" and is not a bookkeeping commit to police.
+NO_BEAD = re.compile(r"\[no-bead\]\s*$", re.IGNORECASE)
 ALLOWLIST = "lint/allowlists/34-no-bead-subject-agreement.txt"
 DEFAULT_BASE_REF = "origin/main"
 SEED_RE = re.compile(r"^#\s*seeded:\s*(\d{4}-\d{2}-\d{2})\s*$")

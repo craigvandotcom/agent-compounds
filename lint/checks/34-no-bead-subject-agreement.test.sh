@@ -137,6 +137,24 @@ else
 fi
 rm -rf "$w"
 
+# --- GREEN: a feature commit QUOTING the marker mid-subject (not a marker use) ------
+# The marker is a trailing token; a subject that describes the marker itself —
+# e.g. a feat commit about the check — must not be read as a [no-bead] commit
+# (measured false-positive class at landing: a005143).
+w="$(mktemp -d)"; trap 'rm -rf "$w" "$OUT"' EXIT
+new_repo "$w"
+( cd "$w" || exit 2
+  mkdir -p src
+  printf 'real change\n' >> src/app.py
+  git add -A; git commit -qm "feat(lint): the [no-bead] marker must not carry real changes" )
+rc=$(run_check "$w")
+if [ "$rc" = 0 ]; then
+  ok "GREEN: feat commit quoting the marker mid-subject -> exit 0"
+else
+  bad "GREEN quote case: expected 0, got $rc"; cat "$OUT"
+fi
+rm -rf "$w"
+
 # --- DISCOVERED: the runner lists the check ------------------------------------
 # The check exits 1 against the LIVE tree (the historical [no-bead] misuses it
 # exists to report — TRUE alarms a human dispositions), so this leg greps the
