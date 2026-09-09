@@ -120,7 +120,9 @@ line numbers drift, and a bead is compiled intent, never a cache of the tree.
 to pass the grep is the vacuous-AC class this pipeline exists to kill.
 
 If the bead needs a decision only a human can make, file a human-gate bead naming the gate
-reason (fork · authorization · intent · action), unclaim, go to §1. Never ask and wait.
+reason (fork · authorization · intent · action), unclaim, go to §1. Never ask and wait. The
+mid-bead exception runs the template's § Before filing and files `plan-gap` when the approved
+plan did not settle the fork; a fork found mid-bead keeps unclaim-and-file.
 
 ## 5 — SELF-REVIEW, and what it is not
 
@@ -213,11 +215,11 @@ Then post the worker receipt (body through a file) and go to §1:
 
 **Not a batch boundary — that is the coordinator's.** Release your reservations and return:
 closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim output,
-and anything you noticed but did not fix. Running CI or touching the ledger yourself fires them
-once per worker and races your siblings.
+and anything you noticed but did not fix.
 
-Discovered PRODUCT work goes to the board with `discovered-from: <bead>`; process observations
-go to the family ledger, never to a bead about ourselves.
+Discovered PRODUCT work is never filed by you: your hand-back returns PROPOSED-BEAD blocks
+(title · files · `User impact:`) for the conductor to confirm at the batch boundary. Process
+observations go to the family ledger, never to a bead about ourselves.
 
 ## After a compaction
 

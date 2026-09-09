@@ -36,7 +36,7 @@ A file reservation can only protect between *distinct* identities. So:
 |---|---|
 | `ac-loop` conductor | claims batches at selection (`--assignee $AGENT_NAME`) — the claim-visibility anchor; holds no file reservations |
 | `ac-implement` child running as its **own full session** (holds the `mcp__mcp-agent-mail__*` tools) | the canonical contended writer — **mints its own name and reserves per bead**, commits to `main`; at `PARALLEL_WIDTH>1` several run concurrently in ONE shared checkout |
-| `ac-implement` child **spawned as a stance subagent** (researcher / implementer / validator) | **still a contended writer — it COMMITS — but it CANNOT reserve anything.** The stance agents carry zero `mcp__*` tools (`agents/*.md` `tools:` lists; reproduced in bd-2p5tl), so `macro_start_session` / `file_reservation_paths` are unavailable to it. It is **handed** an `AGENT_NAME` by its conductor (re-exported in each commit's own shell — note 2 below) purely for attribution + the pre-commit guard; **the CONDUCTOR holds the reservations on its behalf.** This is the spawn mode the pipeline uses most |
+| `ac-implement` child **spawned as a stance subagent** (researcher / implementer / validator) | **still a contended writer — it COMMITS.** The child **always mints its own identity** (via `macro_start_session`, or the session-identity path where the stance tools allow), and the conductor **reads the minted name back from the spawn response (`agent.name`)** — a pre-chosen name is a SPEC VIOLATION, § below, never a hint. The conductor holds reservations on its behalf when the child cannot (stance agents carry zero `mcp__*` tools). This is the spawn mode the pipeline uses most |
 | `ac-review` | its Phase-4 auto-fix implementer edits product code; Phase 6 commits + pushes (wiring: `ac-ycr.2`) |
 | `ac-batch-close` | fix-forward edits code on red CI; minting also yields a real `registration_token` for the build slot (wiring: `ac-ycr.3`) |
 | plan-family skills (`ac-plan-init`, `ac-plan-refine-*`, `ac-plan-clean`) | already conform — mint + reserve their plan files |
@@ -49,6 +49,31 @@ call):** `macro_start_session` (mint) → `file_reservation_paths` at the **work
 **Never per-edit:** hold reservations for the whole unit of work — releasing between the
 edits of one multi-file change opens a window for another invocation to grab a file mid-task
 and corrupt both.
+
+### Handing a name is a SPEC VIOLATION — the child mints, the conductor reads back
+
+The server's observed behaviour (probed via `macro_start_session`, 2026-08-19) is two
+distinct modes, and neither matches a "hand a pre-chosen name" contract:
+
+- **MODE 1 — handed an EXISTING name without a token: HARD REFUSAL, no fallback.**
+  `macro_start_session(agent_name: "ExistingName")` →
+  "macro_start_session for an existing identity requires registration_token for agent
+  'ExistingName', unless this MCP session has already authenticated as that agent."
+  Same for `file_reservation_paths`.
+- **MODE 2 — handed a NEW, unregistered name: SILENTLY REPLACED.**
+  `macro_start_session(agent_name: "RequestedName")` → `{"agent":{"id":…,"name":"MintedOther"}}`.
+  The requested name was neither honoured nor rejected; no warning in the response.
+
+Mode 2 is decisive: silent replacement fires even with NO collision to detect, so a handed
+name is unreliable regardless of whether a token accompanies it. **A handed name is a SPEC
+VIOLATION, never a hint** — the ONLY legal identity path is child-mint, and the conductor
+reads the minted name back from the spawn response's `agent.name` for its roster and its
+Layer-2 sweep. A conductor that hands a name, records it, and later sweeps by that name
+sweeps a name that never existed.
+
+**The `settings.json` `AGENT_NAME` fallback is a separate contract:** it is the identity of
+the SESSION that has no conductor (chore commits, scheduled jobs) — **not a name to pass to
+children**, and never a stand-in for the child's own minted identity.
 
 > **When the writers CANNOT reserve, parallel safety comes from DISJOINT SCOPE — so partition
 > before you fan out.** A reservation protects only between distinct identities that can actually
@@ -91,7 +116,7 @@ even the old doctrine's own corollary forbade). Below the boundary the old model
 over-provisioned nothing, but per-worker names would: read-only stance subagents
 **never commit and never reserve** (the session conductor is the sole writer, one bead at a
 time), so they carry **no identity at all** — with ONE exception the old model never anticipated,
-now the Tier-1 stance-subagent row: a stance child that **does** commit needs a *handed* name for
+now the Tier-1 stance-subagent row: a stance child that **does** commit mints its own name for
 attribution, and takes its write protection from scope partitioning instead of a lock.
 Granularity wins exactly down to the writer boundary and is pure cost below it.
 
@@ -100,7 +125,7 @@ Granularity wins exactly down to the writer boundary and is pure cost below it.
 These are different axes; do not conflate them:
 
 - **Bead ASSIGNEE** = claim visibility. A delegated `ac-implement` child claims under
-  `CLAIM_ASSIGNEE` — the **loop's** identity, handed in the delegation prompt — so the
+  `CLAIM_ASSIGNEE` — the **loop's** identity, named in the delegation prompt — so the
   BEADS-CLOSED-GATE sees the whole batch under one name (bd-w504y; the gate also unions
   reported child identities and fails closed on an empty set).
 - **File RESERVATION** = write protection. Always under the **minting** session's own name — it
@@ -113,7 +138,7 @@ These are different axes; do not conflate them:
 | Layer | Who | When | Wiring |
 |---|---|---|---|
 | 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/batch-close ceremony end; the loop conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/batch-close self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
-| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity that actually **minted** — never a handed stance-child name, § below); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
+| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity that actually **minted** — the names the conductor read back from each spawn's `agent.name`, § below); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
 | 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land — stale-**reservation** sweep only, same project-key-agnostic query as layer 2; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
 
 Runtime-verified (`ac-ycr.8`): `retire_agent`/`deregister_agent` mark
@@ -139,11 +164,11 @@ reports a **clean roster having never looked at two thirds of it** — a false c
 shape for a teardown check. Ask the global question instead; then addressability cannot hide
 anything:
 
-> **A handed stance-child name is NOT a roster entry** (corollary of the Tier-1 stance-subagent
-> row): it never registered and holds no reservations, so it resolves in **zero** projects by
-> construction — put it on the roster and the loud failure below fires every run, which is how an
-> operator learns to ignore a real one. The roster is the set of names that **minted**; the
-> conductor's own reservations already cover its children's files.
+> **A stance-child name is a roster entry ONLY if it minted** (corollary of the Tier-1 stance-subagent
+> row): a name the conductor read back from the spawn's `agent.name` is real; a fabricated or
+> pre-chosen name never registered and holds no reservations, so it resolves in **zero** projects by
+> construction — put it on the roster and the loud failure below fires every run. The roster is the
+> set of names that **minted**; the conductor's own reservations already cover its children's files.
 
 ```bash
 AM_DB="file:$HOME/mcp_agent_mail/storage.sqlite3?mode=ro"   # read-only; never write this store
@@ -191,7 +216,7 @@ mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole
    "these three tools only, unless already authenticated" model is **retired**.
 2. `export` lives only in the bash call that ran it — every later bash call is a fresh shell
    (where `AGENT_NAME` falls back to FoggyCreek via `settings.json`). Re-assert
-   `AGENT_NAME=<your minted-OR-handed name>` in the SAME call as each `git commit`/`git push`, or the
+   `AGENT_NAME=<your minted name>` in the SAME call as each `git commit`/`git push`, or the
    pre-commit guard treats you as FoggyCreek and blocks against your own reservation.
 
 ## Enforcement (two layers over advisory reservations)

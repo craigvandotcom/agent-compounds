@@ -52,7 +52,7 @@ filter misses. Register with Agent Mail; install the pre-commit guard once (work
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM — and, ONLY if `--cap N` was given, one appended line naming the cap. Verbatim means
-verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
+verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity, and the conductor **captures the minted name back from the spawn's `macro_start_session` response (`agent.name`)** and uses THAT name for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
 pool GROWS as a chain unlocks, so a worker that finds it dry and exits is correct, not idle —
 spawn a replacement only when ready beads outnumber live workers.
 
