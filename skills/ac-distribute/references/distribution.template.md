@@ -33,7 +33,8 @@ template_version: 1
 - **ASC API key:** key id `{{KEYID}}`, **{{Admin}}** access, issuer `{{issuer-uuid}}`.
 - **`.p8` location:** `{{~/.appstoreconnect/private_keys/AuthKey_KEYID.p8}}` (chmod 600, out
   of the repo). NEVER commit the `.p8`. Custom env names if the Fastfile uses them (see the
-  art-still gotcha: `ASC_API_KEY_P8` not `APP_STORE_CONNECT_API_KEY_PATH`).
+  signing gotcha: the app's lane may use `ASC_API_KEY_P8` rather than the generic
+  `APP_STORE_CONNECT_API_KEY_PATH` — pin the actual names in the Fastfile).
 
 ## Versioning + build number (the Capacitor footgun)
 

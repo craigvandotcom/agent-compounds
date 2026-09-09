@@ -1,7 +1,7 @@
 # Distribution + Triage — Architecture & Setup Record
 
 **Status (2026-06-15):** Phase 2 LANDED. After 5 live headless ship cycles on
-art-still (builds 2→6), two decisions are ratified (below). `ac-distribute/SKILL.md`
+the pilot app (builds 2→6), two decisions are ratified (below). `ac-distribute/SKILL.md`
 is now written (ship-OUT lane); the feedback leg is SPLIT OUT into a new sibling
 skill **`ac-triage`** (signal-IN lane). Sentry wiring is teed up to a single human
 gate (create the Sentry project). The historical Phase-1 plan + results are retained
@@ -20,7 +20,7 @@ as its inbound counterpart.
 ### 1. KEEP fastlane (hybrid) — do NOT rip it out
 
 The original "NOT fastlane, use the `asc` CLI" stance predated discovering that
-art-still already standardized on fastlane. After 5 headless cycles (fastlane
+the pilot app already standardized on fastlane. After 5 headless cycles (fastlane
 **match** git-stored signing + Admin ASC API key, **no Apple 2FA at any point**),
 the lane is proven. Ratified: **fastlane owns the BUILD mile (archive → sign →
 upload); the ASC API owns the read + submit miles.** They are NOT competitors —
@@ -44,7 +44,7 @@ feedback is merely ac-triage's ASC source adapter; **Sentry is source #1**.
 
 ### 3. `ac-distribute` scope = ship OUT only
 
-Two workflows: **testflight-push** (≈ built — art-still's `pnpm ship:testflight`) and
+Two workflows: **testflight-push** (≈ built — the pilot app's `pnpm ship:testflight`) and
 **store-release** (future; ASC API; human-gated at submit). feedback-triage REMOVED
 from this skill (now `ac-triage`).
 
@@ -60,9 +60,9 @@ from this skill (now `ac-triage`).
   cherry-picked skills from rorkai/app-store-connect-cli-skills. CLI-first
   (house convention), ASC API-key auth, framework-agnostic (works for
   Capacitor). NOT fastlane (legacy, config-heavy). NOT the Blitz GUI app —
-  defer until unsit-app / move-free-app first submissions (its 4 internal-API
+  defer until other apps approach their first submissions (its 4 internal-API
   skills automate app-record creation + privacy nutrition labels, which only
-  matter for first-time submission; BCA is already live).
+  matter for first-time submission; the pilot app is already live).
 - **Two-phase adoption:** use upstream skills for 2–3 real cycles BEFORE
   writing our own wrapper skill. No speculative wrapping.
 - **Platform gate is per-workflow, not skill-wide.** Only producing the .ipa
@@ -77,7 +77,7 @@ from this skill (now `ac-triage`).
   the VM (OpenRouter-key pattern). `CORE/distribution.md` holds **pointers only**
   (key id, issuer id, where the .p8 lives).
 - **Upstream skills are temporary vendor scaffolding:** install into the
-  consuming app's `.claude/skills/` (real dirs, BCA first) — NOT into
+  consuming app's `.claude/skills/` (real dirs, pilot app first) — NOT into
   agent-compounds (public repo, upstream license, wouldn't pass registry
   conventions). The Phase 2 wrapper replaces them; delete at cleanup.
 - **The sim-QA gate is mechanical, not vibes:** testflight-push REQUIRES the
@@ -98,9 +98,9 @@ brew install asc          # homebrew-core formula, MIT, zero deps, bottled
 # homebrew-core is reviewed and the bottle is prebuilt.
 # Formula source: github.com/rorkai/App-Store-Connect-CLI
 # 2. Auth — NOT a human step. The Team Admin key already exists and the .p8 is
-#    already on this machine; art-still has used it headlessly since 2026-06-13.
-#    A team key authorizes every app in DYNQVB8R49, so it covers BCA:
-asc auth login --name bca \
+#    already on this machine; the pilot app has used it headlessly since 2026-06-13.
+#    A team key authorizes every app in the team, so it covers the pilot app:
+asc auth login --name <app-slug> \
   --key-id 4BDSRVV64D \
   --issuer-id 7c951934-341a-4a7a-88b4-7714eafb1693 \
   --private-key ~/.appstoreconnect/private_keys/AuthKey_4BDSRVV64D.p8 \
@@ -108,13 +108,13 @@ asc auth login --name bca \
 #    Stores in the system keychain by default. NEVER pass --local: that writes
 #    ./.asc/config.json into this repo, which is public. The .p8 stays outside
 #    the repo. Only creating a NEW key would be a human step.
-# 3. Cherry-pick exactly three upstream skills into BCA's .claude/skills/
+# 3. Cherry-pick exactly three upstream skills into the pilot app's .claude/skills/
 #    (not all 23 — context weight; not agent-compounds — vendor scaffolding):
 npx skills add rorkai/app-store-connect-cli-skills   # then keep only:
 #   asc-testflight-orchestration  (groups, testers, builds, What-to-Test)
 #   asc-crash-triage              (TestFlight crashes + beta feedback)
 #   asc-release-flow              (submission validation + drive + monitor)
-# 4. Validate with one real BCA TestFlight push end-to-end:
+# 4. Validate with one real TestFlight push end-to-end:
 #    bump build number → pnpm cap:build → xcodebuild archive/export → upload
 #    → wait for processing → What-to-Test from wave git log → distribute
 # 5. Record below what worked / what was missing
@@ -145,22 +145,22 @@ Consuming apps add `CORE/distribution.md` (mirror of `journeys/native.md`):
 ASC app id, bundle id, TestFlight group names, demo account for review,
 version conventions + build-number owner, screenshot specs, .p8 pointer.
 
-## Phase 1 results (cycle 1 — art-still-app, 2026-06-13)
+## Phase 1 results (cycle 1 — pilot app, 2026-06-13)
 
 ```
 date / tooling:  2026-06-13. fastlane 2.236.1 on Homebrew Ruby 4.0 (system Ruby 2.6 too old).
 auth setup:      ASC Admin API key (key 4BDSRVV64D, issuer 7c951934-…). HEADLESS — no Apple
                  2FA at any point. match created the distribution cert + app-store profile
-                 via the API key and stored them in a private git repo (neometa-ios-signing).
+                 via the API key and stored them in a private git repo (an org-private signing repo).
 testflight push: PASS — build 2 (v1.0, App 6778303129) uploaded to closed TestFlight.
 ```
 
 **MAJOR DEVIATION from the "Foundation" decision — reconcile in Phase 2:** this cycle did
-NOT use the `asc` CLI or the upstream rorkai skills. art-still-app already carried a fastlane
+NOT use the `asc` CLI or the upstream rorkai skills. the pilot app already carried a fastlane
 lane from its own rrk.1 work (`ios/App/fastlane/`), so the fastest validated path was to
 **fix + use that fastlane lane**, not introduce a second tool. The doc's "NOT fastlane"
 stance predates discovering an app already standardized on fastlane. **Phase-2 decision
-needed:** standardize the org on `asc`-CLI and rip fastlane out of art-still, OR keep
+needed:** standardize the org on `asc`-CLI and rip fastlane out of the pilot app, OR keep
 fastlane where it already exists and scope `ac-distribute` as a thin wrapper over *whatever
 each app already uses*. Recommendation: the latter — fastlane match's git-stored signing is
 genuinely good, and rewriting a working lane to asc-CLI is churn for no user value.
@@ -178,15 +178,15 @@ precondition (lane assumes assets pre-synced; and prod-env injection is needed b
 `.env.local` is backend-less); build-number bump is manual; What-to-Test from git log not
 wired; feedback-triage (crashes/beta feedback → beads) not built.
 
-**remaining for CI tag-push (art-still):** GitHub secrets `MATCH_GIT_BASIC_AUTHORIZATION`
+**remaining for CI tag-push (pilot app):** GitHub secrets `MATCH_GIT_BASIC_AUTHORIZATION`
 (PAT), `APPLE_ID`, and Sentry trio. 7 of 10 secrets already set.
 
-Per-app facts recorded in art-still: `.claude/skills/CORE/distribution.md`.
+Per-app facts recorded in the pilot app: `.claude/skills/CORE/distribution.md`.
 
 ## Cleanup
 
 - [ ] After Phase 2 skill exists: delete this file, symlink skill into
       consuming apps, delete vendored upstream skills from apps, add
       `CORE/distribution.md` per app
-- [ ] Revisit Blitz GUI app when unsit-app / move-free-app approach first
+- [ ] Revisit the GUI option when new apps approach their first submission
       App Store submission
