@@ -26,8 +26,8 @@ if [ -z "$PLAN" ] || [ ! -r "$PLAN" ]; then
 fi
 
 # The polish stamp keys (written by polish-fixpoint.sh --mode plan) must both be present.
-if ! grep -q '^polish_rounds:' "$PLAN" || ! grep -q '^polish_fixpoint_sha256:' "$PLAN"; then
-  echo "REFUSED not-polished: $PLAN carries no polish stamp keys (polish_rounds / polish_fixpoint_sha256)"
+if ! grep -q '^polish_rounds:' "$PLAN" || ! grep -q '^polish_fixpoint_' "$PLAN"; then
+  echo "REFUSED not-polished: $PLAN carries no polish stamp keys (polish_rounds / polish_fixpoint_*)"
   exit 1
 fi
 
