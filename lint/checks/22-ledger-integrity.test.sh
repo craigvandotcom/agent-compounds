@@ -4,8 +4,14 @@
 #   PROBE: an entry citing a control the constitution does not define is RED;
 #           a friction re-observed after its control landed is RED as a FAILED
 #           CONTROL; a well-formed treated entry is GREEN; an EMPTY ledger
-#           fails CLOSED (RED carrying NOT-GATED); a missing shared parser or
-#           judge is NOT-GATED (exit 2); the real registry is GREEN.
+#           fails CLOSED (RED carrying NOT-GATED); an entry with unscorable
+#           ordinals is RED as a named NOT-SCORABLE finding; a declared
+#           entries: count that mismatches the parsed entries is RED as a named
+#           entry-count mismatch; a missing shared parser or judge is NOT-GATED
+#           (exit 2); the real registry is GREEN since 2026-09-09 — the live
+#           NOT-SCORABLE pin (ac-polish's `frequency: sometimes`) was cured by a
+#           human-ledger edit in run 20260907-exhaust, so the ONE-friction-sensor
+#           pin now asserts the fix holds.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/22-ledger-integrity.test.sh
@@ -107,6 +113,40 @@ else
 fi
 rm -rf "$w"
 
+# --- RED: an entry with no scorable ordinals fails with a NAMED finding --------------
+# The folded-in --strict class: an entry whose frequency/impact/recurrence is outside
+# the schema's canonical set silently vanishes from the dream weights. Detection is
+# automated; the ledger edit is human-gated — this check only REPORTS the finding.
+w="$(mktemp -d)"
+build_tree "$w" "$LEDGER_OK" yes
+printf '%s' "$LEDGER_OK" \
+  | sed 's/^- last_seen: .*$/- last_seen: 2026-08-01/' \
+  | sed 's/^- frequency: every-run$/- frequency: sometimes/' > "$w/skills/ac-pipeline/FRICTIONS.md"
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "NOT-SCORABLE: fixture-friction" \
+   && ! printf '%s' "$out" | grep -q "FAILED CONTROL"; then
+  ok "RED: unscorable ordinals -> exit 1 naming the NOT-SCORABLE finding only"
+else
+  bad "unscorable case: expected 1 naming NOT-SCORABLE only, got $rc"; printf '%s\n' "$out"
+fi
+rm -rf "$w"
+
+# --- RED: declared entries: count disagrees with the parsed entries ------------------
+# The second folded-in --strict class: the frontmatter count is a human claim; the
+# sweep keeps it honest. Fails with its own named finding.
+w="$(mktemp -d)"
+build_tree "$w" "$LEDGER_OK" yes
+printf '%s' "$LEDGER_OK" \
+  | sed 's/^- last_seen: .*$/- last_seen: 2026-08-01/' \
+  | sed 's/^entries: 1$/entries: 2/' > "$w/skills/ac-pipeline/FRICTIONS.md"
+out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "entry-count mismatch"; then
+  ok "RED: declared entries: 2 vs 1 parsed -> exit 1 naming the entry-count mismatch"
+else
+  bad "entry-count case: expected 1 naming the mismatch, got $rc"; printf '%s\n' "$out"
+fi
+rm -rf "$w"
+
 # --- NOT-GATED: the shared parser is missing from the audited tree ---------------
 w="$(mktemp -d)"
 build_tree "$w" "$LEDGER_OK" no
@@ -129,12 +169,17 @@ else
 fi
 rm -rf "$w"
 
-# --- the real registry is green --------------------------------------------------
+# --- the real registry: the ONE sensor sees a clean scorable ledger ------------------
+# GREEN pin (2026-09-09): the live NOT-SCORABLE — ac-polish's seams-reader entry
+# carrying `frequency: sometimes`, outside the schema's canonical set — was cured
+# by a human-ledger edit (mapped to the honest nearest ordinal, `occasional`) in
+# run 20260907-exhaust. This case now asserts the fix holds: exit 0, no
+# NOT-SCORABLE named. If the ledger regresses, this case flips back to RED-first.
 out="$(python3 "$CHECK" 2>&1)"; rc=$?
-if [ "$rc" = 0 ]; then
-  ok "GREEN: the real registry's ledger contract holds"
+if [ "$rc" = 0 ] && ! printf '%s' "$out" | grep -q "NOT-SCORABLE"; then
+  ok "GREEN: the real registry's ledger is scorable — the live NOT-SCORABLE is cured"
 else
-  bad "real-tree case: expected 0, got $rc"; printf '%s\n' "$out"
+  bad "real-tree case: expected 0 with no NOT-SCORABLE, got $rc"; printf '%s\n' "$out"
 fi
 
 echo "22-ledger-integrity.test.sh: ${fails} failure(s)"

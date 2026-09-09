@@ -23,9 +23,26 @@
 #                       construction ac2 controls cite those ids and the family ledger
 #                       inherits them. Foreign ids are never flagged.
 #
+# THE SCORABLE SWEEP (folded in from friction-rollup.py --strict, 2026-09-08 ruling:
+# detection automated, mutation human-gated): every skills/*/FRICTIONS.md entry must
+# carry scorable ordinals (impact/frequency/recurrence) and every ledger's declared
+# `entries:` count must match its parsed entries — the two integrity classes the strict
+# pass existed for. This check is now the ONE friction sensor: findings are REPORT
+# ROWS, never mutations, and the frictions docket consumes them. friction-rollup.py
+# --strict stays available to other callers; its former scheduled pass had no owner and
+# is retired. With no --ledger, the sweep covers ALL ledgers; an explicit --ledger
+# scopes the sweep to that one ledger.
+#
+# FINDINGS CONTRACT (machine-readable, one row per line, grep-able for the docket):
+#   FAIL: NOT-SCORABLE: <id> (<path>): <ordinal>='<value>'; ...
+#   FAIL: entry-count mismatch: <path> declares <N>, parsed <M> (<why>)
+# plus the existing contract rows (FAIL: ledger entry '...' / FAIL: constitution: ... /
+# FAIL: FAILED CONTROL — ...).
+#
 # ONE PARSER: the ledger is parsed by `skills/skill-builder/scripts/friction-rollup.py`
-# --ledger (the shared computation delivered by ac-on0y.3). This script adds assertions,
-# never a second parse of the same files.
+# --ledger (the shared computation delivered by ac-on0y.3), and the sweep reads the
+# same script's default-all JSON — its own unscorable reasons and pointer-corrected
+# counts. This script adds assertions, never a second parse of the same files.
 #
 # Usage:  ac-ledger-integrity.sh [--ledger <path>] [--constitution <path>] [<repo root>]
 # Exit 0  the ledger and the constitution satisfy the contract
@@ -36,9 +53,10 @@ set -uo pipefail
 LEDGER=""
 CONSTITUTION=""
 ROOT=""
+LEDGER_SET=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --ledger) LEDGER="${2:-}"; shift 2 ;;
+    --ledger) LEDGER="${2:-}"; LEDGER_SET=1; shift 2 ;;
     --constitution) CONSTITUTION="${2:-}"; shift 2 ;;
     --*) echo "usage: $0 [--ledger <path>] [--constitution <path>] [<repo root>]" >&2; exit 2 ;;
     *) ROOT="$1"; shift ;;
@@ -169,7 +187,42 @@ $(printf '%s' "$LEDGER_JSON" | jq -r '
   ] | @tsv' | awk -F'\t' -v OFS="$(printf '\037')" '{$1=$1; print}')
 EOF
 
+# --- THE SCORABLE SWEEP (the folded-in --strict classes) ----------------------------
+# One parse of every skills/*/FRICTIONS.md, read from the shared rollup's default-all
+# JSON: each entry's own `unscorable` reasons and the pointer-corrected declared-vs-
+# parsed counts. Two legs, two verdict classes; each finding is a REPORT ROW for the
+# frictions docket, never a mutation of the ledger.
+SWEEP_JSON=$(python3 "$ROLLUP" --root "$ROOT" 2>/dev/null)
+if [ -z "$SWEEP_JSON" ]; then
+  echo "FAIL: NOT-GATED — the shared parser returned nothing for the ledger sweep; scorable integrity NOT-GATED"
+  exit 1
+fi
+if ! printf '%s' "$SWEEP_JSON" | jq -e 'has("dream") and has("entry_count_mismatches")' >/dev/null 2>&1; then
+  echo "FAIL: NOT-GATED — the ledger sweep parse produced no scorable document; scorable integrity NOT-GATED"
+  exit 1
+fi
+LEDGER_REL=""
+if [ "$LEDGER_SET" = 1 ]; then
+  LEDGER_REL=$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$LEDGER" "$ROOT" 2>/dev/null || true)
+fi
+NOT_SCORABLE=$(printf '%s' "$SWEEP_JSON" | jq -r --arg ledger_rel "$LEDGER_REL" '
+  .dream.entries[]
+  | select(.unscorable | length > 0)
+  | select($ledger_rel == "" or .path == $ledger_rel)
+  | "FAIL: NOT-SCORABLE: \(.id) (\(.path)): \(.unscorable | join("; "))"')
+MISMATCHES=$(printf '%s' "$SWEEP_JSON" | jq -r --arg ledger_rel "$LEDGER_REL" '
+  .entry_count_mismatches[]
+  | select($ledger_rel == "" or .path == $ledger_rel)
+  | "FAIL: entry-count mismatch: \(.path) declares \(.declared), parsed \(.parsed) (\(.why))"')
+if [ -n "$NOT_SCORABLE" ]; then printf '%s\n' "$NOT_SCORABLE"; RC=1; fi
+if [ -n "$MISMATCHES" ]; then printf '%s\n' "$MISMATCHES"; RC=1; fi
+
 if [ "$RC" -eq 0 ]; then
-  echo "ac-ledger-integrity: $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions"
+  if [ "$LEDGER_SET" = 1 ]; then
+    echo "ac-ledger-integrity: $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions"
+  else
+    LEDGER_COUNT=$(printf '%s' "$SWEEP_JSON" | jq -r '.ledgers')
+    echo "ac-ledger-integrity: $ENTRY_COUNT entr(y|ies) · $(printf '%s' "$CONTROL_IDS" | wc -w | tr -d ' ') controls — contract holds both directions · all $LEDGER_COUNT ledgers scorable, entry counts hold"
+  fi
 fi
 exit "$RC"

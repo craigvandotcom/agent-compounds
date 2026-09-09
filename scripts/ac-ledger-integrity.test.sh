@@ -163,13 +163,17 @@ else
   fail "Case 11: expected non-zero naming the missing retire clause, got $RC. Output: $OUT"
 fi
 
-# --- Case 12: the REAL seeded ledger + the REAL constitution -> PASS -----------------
-# The fixtures are not the only subject: the shipped ledger must satisfy its own check.
+# --- Case 12: the REAL registry is clean since the live finding was cured (GREEN pin) ----
+# The 2026-09-08 fold-in made this check the ONE friction sensor. Its RED-first pin —
+# the live NOT-SCORABLE (ac-polish's seams-reader entry used `frequency: sometimes`,
+# outside the schema's canonical set) — was cured by a human-ledger edit on
+# 2026-09-09 (mapped to the honest nearest ordinal, `occasional`); this case now
+# asserts the fix holds. If the ledger regresses, flip this case back to RED-first.
 OUT=$(bash "$CHECK" "$ROOT" 2>&1); RC=$?
-if [ "$RC" -eq 0 ]; then
-  pass "Case 12: the shipped ac2 ledger and constitution PASS the check"
+if [ "$RC" -eq 0 ] && ! printf '%s' "$OUT" | grep -q "NOT-SCORABLE"; then
+  pass "Case 12: the real tree is scorable — the live NOT-SCORABLE is cured"
 else
-  fail "Case 12: the real repo does not satisfy the check, rc=$RC. Output: $OUT"
+  fail "Case 12: expected 0 with no NOT-SCORABLE, got rc=$RC. Output: $OUT"
 fi
 
 # --- Case 13: ONE parser — the check reads the shared computation, never its own -----

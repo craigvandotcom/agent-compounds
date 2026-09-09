@@ -749,7 +749,7 @@ entries: 32
 ## seams-reader-invents-flow-names-the-fence-catches
 - skills: [ac-polish]
 - impact: S
-- frequency: sometimes
+- frequency: occasional
 - perceptibility: loud
 - recurrence: 1
 - related: [seams-fence-far-side-exemption-admits-neighbouring-objects]

@@ -6,21 +6,31 @@
 # severity: fail
 # fixture: lint/fixtures/22-ledger-integrity
 # ---
-"""22-ledger-integrity — the lean-family ledger's referential integrity.
+"""22-ledger-integrity — the lean family's friction sensor: one check, two surfaces.
 
 The lean family's controls and its friction ledger must still point at each
 other: every entry cites a `receipt:` and the `control:` that treats it (or
 is explicitly `untreated`), every control names the failure it prevents, and
 a friction re-observed AFTER its control landed surfaces as a FAILED CONTROL
-rather than accruing silently. The judge parses the ledger through the ONE
-shared parser (`skills/skill-builder/scripts/friction-rollup.py`) and fails
-CLOSED — a missing or empty ledger exits non-zero, because an absent sensor
-is not a clean one:
+rather than accruing silently. Since 2026-09-08 this check is also the ONE
+friction sensor for the ledger-health classes friction-rollup.py --strict
+existed for: an entry with no scorable ordinal (impact/frequency/recurrence)
+and a ledger whose declared `entries:` count disagrees with its parsed entries
+are named findings — never mutations (the ledger edit is human-gated; the
+frictions docket consumes the report rows). The judge parses the ledger through
+the ONE shared parser (`skills/skill-builder/scripts/friction-rollup.py`) and
+fails CLOSED — a missing or empty ledger exits non-zero, because an absent
+sensor is not a clean one:
 
     scripts/ac-ledger-integrity.sh <root>
 
+Findings are printed one row per line, grep-able for the docket builder on
+their class tokens: `NOT-SCORABLE:` and `entry-count mismatch`, plus the
+contract rows (unresolvable control, missing receipt, FAILED CONTROL, ...).
+
 This file is the port of the legacy lint.sh block onto the lint v2 runner
-contract; the judge is unchanged, so the verdict cannot drift:
+contract; the judge's verdicts are passed through verbatim, so they cannot
+drift:
 
   exit 0  judge green — the contract holds both directions
   exit 1  judge reported findings, passed through verbatim (this includes
