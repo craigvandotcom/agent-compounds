@@ -7,9 +7,8 @@ description: 'The batch boundary''s independent review: a post-batch verdict ove
 
 **One contract, two entry points.** The batch boundary invokes this skill over the batch it
 just closed ("review the batch"); the same contract runs targeted at any range Craig names
-(`ac-review <range>`). There is no other mode and no phase ladder — the old Phases 0–8 manual
-panel, its auto-fix stage and its convergence round are deleted: a review returns a verdict and
-findings; fixing belongs to the implement lane (§ Findings).
+(`ac-review <range>`). No phase ladder — the old Phases 0–8 manual panel is deleted: a
+review returns a verdict and findings; fixing belongs to the implement lane (§ Findings).
 
 ## Who reviews
 
@@ -35,7 +34,8 @@ findings; fixing belongs to the implement lane (§ Findings).
    failure, never a silent pass. A reviewer that dies is re-spawned ONCE.
 3. **Consensus.** `python3 scripts/consensus.py --artifacts-dir <dir> --round 1`. Exit 3
    (PANEL UNKNOWN) is a hard stop — reconstruct the manifest, never default the panel. A
-   `reviewers_missing` that survives the re-spawn → `VERDICT: NEEDS_DECISION`.
+   `reviewers_missing` that survives the re-spawn → file the un-reviewed dimension as an
+   honest harness-failure bead: `br create -t task --labels origin:ac-review,qa-blocker,review-finding,unrefined`; then `VERDICT: NEEDS_DECISION` — never `-t bug` with no catch-stage (a harness failure is not a shipped defect).
 4. **Report.** `references/report-template.md` — the `**Range:**` line (full SHAs,
    machine-parsed coverage) and the `**Panel:**` line (copied from
    `consensus-round-1.json`: the panel that ACTUALLY ran) are mandatory. Destination:
@@ -62,8 +62,8 @@ findings; fixing belongs to the implement lane (§ Findings).
 
 - Every finding carries **ACCEPT / FIX / DEFER** (DEFER names what would make it now) and a
   **catch-stage label** — the stage that SHOULD have caught it (plan · beadify · flight ·
-  implement · close · review) — **even when the fix lands in-batch**. The fix may be
-  in-batch; the label never is.
+  implement · close · review) — **even when the fix lands in-batch**: auto-applied
+  Critical/High findings write their catch-stage record — no work bead, the fix landed; **no VERDICT record** for an auto-fixed Critical/High fails the run's own checklist.
 - **Medium+ become beads.** Shipped defect → `-t bug`; mutation-probe-convicted test finding
   → `-t task`; plausible-but-unverified → `-t investigation`; labels `origin:ac-review,
   review-finding,unrefined`, `discovered-from: <bead>`, epic parent wired

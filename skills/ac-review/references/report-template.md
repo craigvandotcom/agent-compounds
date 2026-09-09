@@ -98,7 +98,10 @@ conclusion + SHA if `ac-batch-close` ran it.}
 
 {list of findings dispositioned in-batch, and each FIX finding's route — a bead id or the
 `ac-polish code` scope it was handed (ac-review's spine § Findings); reviewers never fix in
-place, so every FIX lands here with its route}
+place, so every FIX lands here with its route. Auto-fixed Critical/High findings are
+enumerated here with the SAME identifiers their VERDICT records carry, each with its
+catch-stage label — the enumeration is the record's paper trail, and a missing line reads
+as a missing VERDICT record, never a silent pass.}
 
 ### Needs Decision
 

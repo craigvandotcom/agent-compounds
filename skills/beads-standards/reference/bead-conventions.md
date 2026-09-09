@@ -46,6 +46,7 @@ children are done.
 | ----- | ------- |
 | `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `beads-standards/reference/bead-create-contract.md`, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
+| `qa-infra` | QA harness/infra failure — the NO-STAMP verdict (flaky gate, daemon crash, stuck load, env gap), never FAIL/PASS. Filed by the QA twins (`ac-qa-browser` / `ac-qa-device`) for infra-shaped NO-STAMPs so the verdict stays resolvable without mislabeling the product. |
 | `qa-blocker` | REPO-WIDE gate — Hard-stops ac-batch-close and ac-merge for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
