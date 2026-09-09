@@ -10,8 +10,6 @@
 2026-09-07 | art-still | skills/ac-qa-device/SKILL.md
 2026-09-07 | art-still | skills/ac-triage/references/feedback-adapter.md
 2026-09-07 | art-still | skills/beads-standards/SKILL.md
-2026-09-07 | body compass | skills/ac-align/workflows/weekly.md
-2026-09-07 | body compass | skills/ac-tidy/workflows/nightly.md
 2026-09-07 | body compass | skills/ac-triage/references/feedback-adapter.md
 2026-09-07 | body compass | skills/ac-ui-polish/reference/sensors.md
 2026-09-07 | body compass | skills/beads-standards/reference/human-gate-template.md
@@ -22,7 +20,6 @@
 2026-09-07 | body-compass | skills/ac-pipeline/references/commit-discipline.md
 2026-09-07 | body-compass | skills/ac-pipeline/references/run-id.md
 2026-09-07 | body-compass | skills/ac-publish/SKILL.md
-2026-09-07 | body-compass | skills/ac-tidy/workflows/nightly.md
 2026-09-07 | body-compass | skills/ac-triage/references/feedback-adapter.md
 2026-09-07 | body-compass | skills/ac-triage/workflows/scheduled-daily.md
 2026-09-07 | body-compass | skills/agent-mail/references/agent-identity.md
@@ -41,8 +38,6 @@
 2026-09-07 | craig | skills/ac-publish/references/web-promote.md
 2026-09-07 | craig | skills/ac-qa-browser/SKILL.md
 2026-09-07 | craig | skills/ac-review/SKILL.md
-2026-09-07 | craig | skills/ac-tidy/SKILL.md
-2026-09-07 | craig | skills/ac-tidy/workflows/last-run.json
 2026-09-07 | craig | skills/ac-ui-polish/SKILL.md
 2026-09-07 | craig | skills/agent-mail/references/agent-identity.md
 2026-09-07 | craig | skills/beads-standards/SKILL.md
@@ -89,7 +84,6 @@
 2026-09-07 | neometa | skills/ac-land/SKILL.md
 2026-09-07 | neometa | skills/ac-pipeline/references/verification-gate.md
 2026-09-07 | neometa | skills/ac-qa-browser/SKILL.md
-2026-09-07 | neometa | skills/ac-tidy/workflows/nightly.md
 2026-09-07 | neometa | skills/ac-triage/SKILL.md
 2026-09-07 | neometa | skills/ac-triage/references/feedback-adapter.md
 2026-09-07 | neometa | skills/ac-triage/workflows/scheduled-daily.md

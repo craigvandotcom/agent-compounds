@@ -3,7 +3,7 @@
 #
 # An open bead whose work has landed keeps its `refined` label and keeps appearing in
 # `br ready`, so a conductor selects it as ordinary implement work and spends a child
-# discovering the code already exists. No other scan catches it: ac-tidy's staleness is
+# discovering the code already exists. No other scan catches it: ac-align's reconcile staleness is
 # age-based, and Scans A-E never read a commit message.
 #
 # ADVISORY ONLY. Prints a shortlist and exits 0. It must never close, label or defer a

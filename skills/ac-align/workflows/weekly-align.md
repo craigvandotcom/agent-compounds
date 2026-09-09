@@ -3,7 +3,7 @@
 ## THIS PROMPT IS YOUR TASK — EXECUTE IMMEDIATELY
 
 You are invoked by `pai-scheduler` (Saturday ~06:00) to run the **REVIEW** mode of the
-`ac-align` skill against the Body Compass pipeline. Execute without user interaction.
+`ac-align` skill against the app whose checkout is the scheduler cwd. Execute without user interaction.
 
 **⚠️ AUTONOMOUS MODE — no human is watching.** Run every step by actually executing the
 commands. This run **applies NOTHING** — it is pure propose. There is no `AskUserQuestion`;

@@ -37,12 +37,12 @@ Three layers, because prose alone was measured insufficient:
 3. **Refine backstop** — `ac-bead-refine` repairs a missing `origin:` at stamp time
    (inferring where obvious, else `origin:unknown`). It never withholds `refined` for it.
 
-Nightly, `ac-tidy` reports post-cutover beads still missing `origin:` — a guard bypass or a
+Nightly, `ac-align`'s reconcile reports post-cutover beads still missing `origin:` — a guard bypass or a
 stale template, never auto-labelled.
 
 ## Forward-only — no backfill
 
 Enforcement does not rewrite history. Most pre-cutover beads carry no recoverable origin
-signal, so inventing one would fabricate provenance rather than record it. The `ac-tidy`
+signal, so inventing one would fabricate provenance rather than record it. The `ac-align`
 lint therefore excludes pre-cutover beads entirely; without that exclusion the report drowns
 in rows nobody can honestly fix.

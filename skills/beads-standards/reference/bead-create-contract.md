@@ -24,7 +24,7 @@ poisons every future run.
 | Probe | `## Acceptance Criteria` with at least one bullet of the shape ``Probe: `<command>` — tier: <slug>`` — born probe-bearing, so pickup has something runnable to verify against instead of a verdict someone will improvise later. Exempt: `epic` / `decision` / `investigation` — containers, forks and unconfirmed leads own no probe yet. A filer that cannot name a probe files the bead as `investigation`, the type that says so — never as a probe-less task. Enforced at capture by `hooks/bead-capture-guard.py` (same hard gate, same fail-open doctrine as the origin axis). | Every `bug` / `task` / `feature` bead, at creation |
 
 Epics are exempt from readiness: they are containers, never picked up for implementation.
-This mirrors `ac-tidy` Phase 2f, which repairs the same gap nightly for beads that predate
+This mirrors `ac-align`'s nightly readiness-label repair, which fixes the same gap nightly for beads that predate
 or bypass the gate.
 
 ## Not gated, and why

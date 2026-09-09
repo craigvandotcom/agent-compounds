@@ -57,7 +57,7 @@ ac-prove: ensure, ci depth, --ref <current main HEAD>
 
 If `ac-prove` returns a green, tip-valid proof: **do nothing else.** No bead, no Slack message,
 no report file. A healthy nightly proof is exactly the expected steady state — silence is the
-correct signal. (Contrast `ac-tidy`/`ac-triage`'s "write a proof-of-life report even on zero
+correct signal. (Contrast `ac-align`'s nightly reconcile /`ac-triage`'s "write a proof-of-life report even on zero
 findings" pattern — that doesn't apply here; `ac-prove`'s own dispatched-run history on GitHub
 Actions already IS the proof-of-life trail for this job.)
 

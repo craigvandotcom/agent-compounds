@@ -12,8 +12,8 @@ here as an owner-hosted operating contract, with two archived skill names update
 | Job | Cadence | Mode | Skill |
 |---|---|---|---|
 | Curator | Daily ~23:00 | scheduled run (ingredient review/amend) | `curate` |
-| Tidy | Nightly ~00:45 (after the 00:30 maintenance job) | NIGHTLY — propose + bounded auto-act | `ac-tidy` |
-| Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` |
+| Tidy | Nightly ~00:45 (after the 00:30 maintenance job) | NIGHTLY — propose + bounded auto-act | `ac-align` (`workflows/nightly-reconcile.md`) |
+| Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` (`workflows/weekly-align.md`) |
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-implement` swarm | scheduled, feeds beads ahead of shipping | `ac-triage` |
 | Hygiene | Weekly per active repo (manual until the first monitored run signs off scheduling) | 7-lens panel; fixes commit direct to `main`, close via `ac-publish`; deferred → epic beads. **Sole owner of the standing review of `main`** when no batch shipped in >7 days — `ac-review` provides only the diff-range mechanism and never self-schedules it | `ac-hygiene` |

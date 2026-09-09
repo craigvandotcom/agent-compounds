@@ -1,6 +1,6 @@
 ---
 name: ac-align
-description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next''. NOT for what to work on NOW (use ac-human-session board mode to read the board, ac-human-session for the gated docket), for working the idea/strategy itself (use ac-idea-lab, or strategist for org strategy), or for board reconciliation and archiving (use ac-tidy).'
+description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Owns the nightly pipeline reconcile (archive done work, repair readiness labels) and the weekly strategy align — both headless heartsbeats. Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next'', ''tidy the pipeline'', ''reconcile plans and beads''. NOT for what to work on NOW (use ac-human-session board mode to read the board, ac-human-session for the gated docket), for working the idea/strategy itself (use ac-idea-lab, or strategist for org strategy), or for codebase cleanup (use ac-hygiene).'
 ---
 
 **You are the Pipeline Alignment Director.** Ensure the execution pipeline — backlog, plans, and beads — serves the current strategy. You enforce the hierarchy: strategy shapes pipeline, not the other way around.
@@ -10,19 +10,16 @@ description: 'Align the execution pipeline against current strategy — audit ba
 | Mode | Invocation | Phase 4.5 (promotion) | Phase 6 |
 |---|---|---|---|
 | **INTERACTIVE** (default) | direct human / `ac-human-session` | `AskUserQuestion` → `git mv` on approval | present decisions, apply on approval |
-| **REVIEW** (headless) | scheduled `workflows/weekly.md` heartbeat | **emit** a scored slate as a proposal + `human-gate,pipeline-proposal` bead — NO `AskUserQuestion`, NO `git mv` | **skipped entirely** |
+| **REVIEW** (headless) | scheduled `workflows/weekly-align.md` heartbeat | **emit** a scored slate as a proposal + `human-gate,pipeline-proposal` bead — NO `AskUserQuestion`, NO `git mv` | **skipped entirely** |
+| **NIGHTLY** (headless) | scheduled `workflows/nightly-reconcile.md` heartbeat | reconcile + bounded auto-act; emits proposals for the rest | applies the sanctioned subset |
 
-REVIEW mode runs Phases 1–4 exactly as below, then diverges only at 4.5 (emit, don't move) and skips Phase 6. It applies **nothing** — pure propose. A human applies an approved slate later in `ac-human-session`, which re-invokes this skill's INTERACTIVE promotion; that re-scores `pool → active` against **live** strategy at apply time (the late-binding intent — a stale slate self-skips because the board is read fresh).
+REVIEW mode runs Phases 1–4 exactly as below, then diverges only at 4.5 (emit, don't move) and skips Phase 6. It applies **nothing** — pure propose. A human applies an approved slate later in `ac-human-session`, which re-invokes this skill's INTERACTIVE promotion; that re-scores `pool → active` against **live** strategy at apply time (a stale slate self-skips because the board is read fresh).
 
 ## The active/pool model (late version binding)
 
-The backlog has two live states — **versions are bound here, not at capture:**
+The backlog has two live states — **versions are bound here, not at capture:** `_backlog/active/` is the committed current scope (what is planned/built *now*); `_backlog/pool/` holds unsequenced candidates with no version commitment (`ac-backlog` always writes here); `_backlog/_done/` is archived (scan-excluded everywhere).
 
-- **`_backlog/active/`** — the committed current scope. What is being planned/built *now*.
-- **`_backlog/pool/`** — unsequenced candidates. Captured ideas with no version commitment (`ac-backlog` always writes here).
-- **`_backlog/_done/`** — archived (scan-excluded everywhere).
-
-`ac-align` is the **only** thing that moves items `pool → active`. It does this against *live* strategy, so the decision uses current information instead of a guess made at capture time. New ideas never enter `active/` directly — they pool, then get promoted here.
+`ac-align` is the **only** thing that moves items `pool → active`, against *live* strategy so the decision uses current information instead of a guess made at capture. New ideas never enter `active/` directly — they pool, then get promoted here.
 
 **Transition tolerance:** if an app still uses version folders (`v1-0/`, `v1-1/`, …), treat the in-progress milestone folder (per `ROADMAP.md`) as `active/`-equivalent and the rest as `pool/`-equivalent, and offer a one-time migration to `{active/, pool/, _done/}`.
 
@@ -181,7 +178,7 @@ This is the decision the backlog deliberately defers to here: **which pooled ite
    The legacy `version:` field, if present, is a **soft prior — not authoritative.** Strategy as it stands *now* wins over a guess made at capture.
 3. **Propose promotions** — the top N (default 3–5, or enough to refill `active/`):
 
-<!-- mirrored (emit spec + dedup) in workflows/weekly.md §2–4 — edit both -->
+<!-- mirrored (emit spec + dedup) in workflows/weekly-align.md §2–4 — edit both -->
 > **REVIEW mode (headless):** do NOT run the `AskUserQuestion` below and do NOT `git mv`.
 > Instead write the scored slate as a proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`;
 > frontmatter `status: pending` · `bead: <id>` · `source: ac-align` · `summary`; `## What` = the

@@ -7,7 +7,7 @@ admission tests, anti-inflation. One pipeline exists (ac2), and it has one bead 
 the ac2 four-section schema (`skills/ac-beadify/references/bead-schema.md`).
 
 Shared by the skills that file and work beads — ac-beadify, ac-implement, ac-polish,
-ac-bead-capture, ac-review, ac-hygiene, ac-qa-device, ac-qa-browser, ac-triage, ac-tidy,
+ac-bead-capture, ac-review, ac-hygiene, ac-qa-device, ac-qa-browser, ac-triage, ac-align,
 ac-human-session — and any workflow that files beads. One principle drives all of it:
 
 > **No workflow may produce prose exhaust.** Anything actionable that a
@@ -23,7 +23,7 @@ ac-human-session — and any workflow that files beads. One principle drives all
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
 | `decision` | A fork that passes the escalation test (`reference/human-gate-template.md` § The escalation test) — taste, product, money, risk | Human decision RECORDED, consequences executed |
-| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-tidy` |
+| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it —
 **diagnosed = source-traced, not inferred** — file the `bug` directly.
@@ -34,7 +34,7 @@ the symptom enters as fact; an inferred cause enters a clearly-marked
 carrier: source-traced cause → `-t bug`; inferred cause → `-t investigation`.
 
 **Epics stay open across batches.** An epic's close criterion is that its `## Delivers`
-promise is covered — and the close itself is PROPOSED by `ac-tidy`, not "children closed"
+promise is covered — and the close itself is PROPOSED by `ac-align`, not "children closed"
 mechanically and not `ac-batch-close`'s job. Parent-child edges do NOT block `br ready`
 (only `blocks` edges sequence), so an epic staying open across many batches starves no
 work and costs nothing; do not force-close an epic just because its currently-open
@@ -64,7 +64,7 @@ unknown — is machine-wide floor:
 - **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-polish`
   on convergence — no other skill, and no conductor, however strong the evidence.
   `unrefined` is the default at creation (`ac-bead-capture`, `ac-beadify`).
-- **Gap repair:** `ac-tidy`'s nightly lint auto-adds `unrefined` to beads missing all
+- **Gap repair:** `ac-align`'s nightly reconcile auto-adds `unrefined` to beads missing all
   three lifecycle labels — it never auto-adds `refined`, which is earned, never inferred.
 - `ac-implement` gates on presence of `refined`, not on the lack of `unrefined`.
 
@@ -105,7 +105,7 @@ routing behaviours:
 | In-loop exhaust (`ac-review` / QA / conductor findings) | The epic whose beads were in the batch that produced the finding; per-finding by file/scope when the batch spanned epics; fallback to a per-run review epic |
 | Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |
 
-`ac-tidy` flags what stays unparented (the parentage-gap orphan class,
+`ac-align` flags what stays unparented (the parentage-gap orphan class,
 `ac-pipeline/references/board-scan.md`). What this deliberately is NOT: no I1 provenance mandate, no
 disposition grammar, no backfill sweep — considered and cut.
 
@@ -341,7 +341,7 @@ Fix beads spawned by an investigation/decision carry a typed dep:
 4. **Nits stay in reports.** A bead is something you'd genuinely schedule.
 5. **`br lint`** enforces template sections — finding beads must carry
    repro/evidence/source reference.
-6. **ac-tidy prunes**: stale finding-beads with no activity get closed or
+6. **ac-align prunes**: stale finding-beads with no activity get closed or
    merged during pipeline housekeeping.
 
 ## Type admission

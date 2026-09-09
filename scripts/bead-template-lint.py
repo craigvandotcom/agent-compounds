@@ -55,7 +55,7 @@ def is_finding_template(cmd):
     the `ops` token; the feature-fork template files `-t decision`, not a finding, so it
     is excluded by type. Under-enforcing on an unsubstituted `-t <type>` placeholder is
     correct — the same doctrine as bead_type: it could stand for anything, and the
-    runtime guard + ac-tidy cover the substitution moment."""
+    runtime guard + ac-align's nightly reconcile cover the substitution moment."""
     labels = guard.all_labels(cmd)
     if "triage" not in labels or "ops" in labels:
         return False

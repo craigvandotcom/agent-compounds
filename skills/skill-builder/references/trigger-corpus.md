@@ -361,8 +361,8 @@ should-NOT-activate
 - PASS — "beadify this plan" (routes to ac-beadify — backlog is an idea pool, not a plan
   decomposer)
 - PASS — "refine the beads" (routes to ac-bead-refine — backlog never touches existing beads)
-- PASS — "clean up the backlog" (routes to ac-tidy, whose literal trigger it is — ac-backlog
-  fills the pool, ac-tidy grooms it)
+- PASS — "clean up the backlog" (routes to ac-align's nightly reconcile, whose literal trigger it is — ac-backlog
+  fills the pool, the nightly reconcile grooms it)
 - PASS — "add milk to my shopping list"
 
 ## ac-bead-capture
@@ -437,30 +437,6 @@ should-NOT-activate
   planning chain ends)
 - PASS — "break this rock into gravel"
 
-## ac-tidy
-
-Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
-
-should-activate
-
-- PASS — "tidy the pipeline"
-- PASS — "clean up the backlog"
-- PASS — "reconcile plans and beads"
-- PASS — "pipeline housekeeping"
-- PASS — "archive the completed items and flag orphans"
-
-should-NOT-activate
-
-- PASS — "clean up the codebase" (routes to ac-hygiene, named explicitly in ac-tidy's own tail —
-  one of only two skills in this family that already carried a NOT-for clause)
-- PASS — "add this idea to the backlog" (routes to ac-backlog — ac-tidy grooms the pool, it
-  does not fill it)
-- PASS — "clean the plan" (routes to ac-plan-clean — a plan-draft hygiene pass, not pipeline
-  housekeeping)
-- PASS — "triage the new crash reports" (routes to ac-triage — inbound external signal, not
-  board reconciliation)
-- PASS — "tidy my downloads folder"
-
 ## ac-triage
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
@@ -480,7 +456,7 @@ should-NOT-activate
   select it, but triaging the board is `bv`'s job (read-only) and getting beads workable is
   ac-bead-refine's — ac-triage is strictly INBOUND external signal, and it carried no NOT-for
   clause. Fix: add an exclusion clause naming bv / ac-bead-refine for board triage.
-- PASS — "clean up the backlog" (routes to ac-tidy — reconciling what is already on the board)
+- PASS — "clean up the backlog" (routes to ac-align's nightly reconcile — reconciling what is already on the board)
 - PASS — "bead this crash I just saw" (routes to ac-bead-capture — one user-dictated item, not
   a fetch-and-cluster run over external systems)
 - PASS — "post the release notes out to the list" (routes to ac-distribute, which ac-triage
@@ -601,6 +577,11 @@ should-activate
 - PASS — "audit the backlog against my goals"
 - PASS — "what should we plan next"
 - PASS — "promote something from the pool to active"
+- PASS — "tidy the pipeline" (nightly reconcile)
+- PASS — "clean up the backlog" (nightly reconcile)
+- PASS — "reconcile plans and beads" (nightly reconcile)
+- PASS — "pipeline housekeeping" (nightly reconcile)
+- PASS — "archive the completed items and flag orphans" (nightly reconcile)
 
 should-NOT-activate
 
@@ -614,7 +595,7 @@ should-NOT-activate
   select it over ac-idea-lab, which owns working the idea itself. Named confusion cluster in
   the bead, and it bit. Fix: the same clause names ac-idea-lab (and strategist for org
   strategy).
-- PASS — "clean up the backlog" (routes to ac-tidy — reconciling what is on the board, not
+- PASS — "clean up the backlog" (routes to the nightly reconcile — reconciling what is on the board, not
   judging it against strategy)
 - PASS — "show me the board" (routes to ac-human-session board mode — ac-align writes, it does not render)
 - PASS — "align the paragraph to the left margin"
@@ -644,10 +625,10 @@ should-NOT-activate
   exclusion clause scoping `unblock` to human gates and naming debug.
 - PASS — "show me the whole board including the loop-side work" (routes to ac-human-session
   board mode — the docket mode deliberately shows only gated work)
-- PASS — "tidy the pipeline" (routes to ac-tidy — ac-human-session only mentions tidy as an
+- PASS — "tidy the pipeline" (routes to ac-align's nightly reconcile — ac-human-session only mentions tidy as an
   optional pre-pass, not as its job)
 - PASS — "run the loop overnight" (routes to ac-loop — ac-human-session hands off TO it)
-- PASS — "reconcile the board and archive what's done" (routes to ac-tidy, named inline in
+- PASS — "reconcile the board and archive what's done" (routes to ac-align's nightly reconcile, named inline in
   the routing footer of both modes)
 - PASS — "re-prioritize the backlog against strategy" (routes to ac-align, named inline)
 - PASS — "is main green" (routes to ac-prove, which carries that exact phrase as a literal
@@ -681,7 +662,7 @@ should-NOT-activate
   audit skill. Fix: the same clause names audit.
 - PASS — "audit the skill registry for trigger collisions" (routes to ac-registry-audit, which
   names ac-hygiene inline as its counterpart)
-- PASS — "tidy the pipeline" (routes to ac-tidy — board housekeeping, not code)
+- PASS — "tidy the pipeline" (routes to ac-align's nightly reconcile — board housekeeping, not code)
 - PASS — "clean up my downloads folder"
 
 ## ac-idea-lab
@@ -784,7 +765,7 @@ should-NOT-activate
 - PASS — "clean up the codebase" (routes to ac-hygiene, named inline in its own NOT-for tail —
   the strongest exclusion clause in this family, and it is why this skill needed no fix)
 - PASS — "review this feature branch" (routes to ac-review, named inline)
-- PASS — "clean up the backlog" (routes to ac-tidy, named inline)
+- PASS — "clean up the backlog" (routes to ac-align's nightly reconcile, named inline)
 - PASS — "audit the auth module" (routes to audit, named inline as the single-domain case)
 - PASS — "write me a new skill for X" (routes to skill-builder — authoring, not auditing;
   not named inline but the description is scoped to auditing an existing corpus)
@@ -1506,14 +1487,14 @@ should-NOT-activate
 | ac-bead-capture | — | — | none needed |
 | ac-bead-refine | — | — | none needed |
 | ac-beadify | — | — | none needed |
-| ac-tidy | — | — | none needed |
+| ac-tidy (folded into ac-align) | — | — | none needed |
 | ac-distribute | "ship it to production" selected it | precision | reciprocal clause added naming ac-publish as the production release gate that calls it |
 | ac-publish | — | — | none needed |
 | ac-site-polish | — | — | none needed |
 | ac-ui-polish | — | — | none needed |
-| ac-align | "what should I work on next" and "stress-test my strategy" selected it | precision | NOT-for clause naming ac-human-session (both modes), ac-idea-lab / strategist, ac-tidy |
+| ac-align | "what should I work on next" and "stress-test my strategy" selected it | precision | NOT-for clause naming ac-human-session (both modes), ac-idea-lab / strategist, ac-hygiene |
 | ac-human-session | "unblock this failing build" selected it | precision | "unblock" scoped to human gates; clause naming debug, ac-implement / ac-loop |
-| ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, ac-registry-audit, ac-tidy |
+| ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, ac-registry-audit, ac-align's nightly reconcile |
 | ac-idea-lab | "brainstorm twenty new product ideas" selected it | precision | tail extended to name brainstorming and expert-consensus |
 | ac-pipeline | "run validate-qa-run" selected it | precision | NOT-for widened to exclude RUNNING anything it documents, hosted scripts included |
 | ac-prove | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-human-session board mode |
@@ -1572,7 +1553,7 @@ B4 score: 60 judgments, 2 failures (both precision), across 2 of the 6 bead-life
 Both re-judged PASS after the description edit. Three batches in, the predictor is now
 unambiguous and has not missed once: **the skill in a family that carries no NOT-for clause is
 the skill that fails.** ac-backlog and ac-triage were the only two of these six without one;
-ac-bead-capture, ac-bead-refine, ac-beadify and ac-tidy all carry sibling cross-references and
+ac-bead-capture, ac-bead-refine, ac-beadify and ac-align all carry sibling cross-references and
 all passed clean. Same result in B2 (ac-plan-refine-external) and B3 (the one unqualified
 trigger in ac-qa-browser). Treat "has no exclusion clause" as the batch-scan heuristic.
 

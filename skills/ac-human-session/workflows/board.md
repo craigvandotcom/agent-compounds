@@ -3,7 +3,7 @@
 **You are the factory window.** Render the entire pipeline state — every stage, both sides
 of the loop boundary — in one glance. You observe; you never act. The docket mode drives
 the human; **this mode just shows the whole board.** The other lenses stay in their own
-skills: `ac-align` judges strategy, `ac-tidy` reconciles lifecycle.
+skills: `ac-align` judges strategy, `ac-align` reconciles lifecycle and the nightly reconcile.
 
 ## I/O Contract
 
@@ -68,7 +68,7 @@ verdict decides **stale** vs current. Cheap read, org-wide sweep same as WIP abo
 
 **Friction-sensor read (`skills/*/FRICTIONS.md`):**
 `python3 skills/skill-builder/scripts/friction-rollup.py --view trends` — the same shared
-parse ac-tidy and dream run; derived at render time, no new storage, and this mode never
+parse ac-align and dream run; derived at render time, no new storage, and this mode never
 passes `--stamp`.
 
 ## Phase 2 — render
@@ -134,7 +134,7 @@ CI:    {last 3 runs: name → conclusion}
 Close with pointers, not prompts — no `AskUserQuestion`, ever:
 
 ```
-Act: gates/decisions → /ac-human-session · reconcile/archive → /ac-tidy · re-prioritize → /ac-align · ship the ready work → /ac-implement
+Act: gates/decisions → /ac-human-session · reconcile/archive → /ac-align · re-prioritize → /ac-align · ship the ready work → /ac-implement
 ```
 
 ---
@@ -147,7 +147,7 @@ Act: gates/decisions → /ac-human-session · reconcile/archive → /ac-tidy · 
    correctly hides. Never apply the loop boundary as a filter; render it as the `🤖/🧑`
    split instead.
 3. **A glance, not an audit** — cheap reads only; counts over prose; one screen if
-   possible. Depth belongs to `ac-tidy` (lifecycle truth) and `ac-align` (strategy fit).
+   possible. Depth belongs to `ac-align` (lifecycle truth + strategy fit).
 4. **Never guess a count** — a failed/ambiguous scan renders `?` with the failing command
    noted, not a plausible number.
 5. **Exit silently** — render and stop. No "want me to…?" tail; the routing footer is the

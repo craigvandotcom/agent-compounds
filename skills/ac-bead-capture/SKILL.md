@@ -62,7 +62,7 @@ Visual references per `ac-pipeline/references/design-refs.md` (save immediately,
    type admits on a test, never a title prefix; `decision` → label `human-gate` +
    pre-stage the memo: context, options, trade-offs, recommendation. For a `human-gate`/DECISION shape,
    **resolve parentage AT capture** — set `--parent <spawning-epic-id>` (Arm 0:
-   human-gate beads bypass `ac-bead-refine`'s adopt-a-parent step and `ac-tidy`'s
+   human-gate beads bypass `ac-bead-refine`'s adopt-a-parent step and `ac-align`'s nightly
    parentage flag, so their parent must be wired here at capture, not deferred; the
    template alone would leave zero-ceremony capture as a bypass). A standalone fork
    with no spawning epic records its origin in the memo `context:` instead.

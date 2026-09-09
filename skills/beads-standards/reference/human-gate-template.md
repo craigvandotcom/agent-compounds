@@ -87,7 +87,7 @@ the first failing condition:
 A human-gate bead sets its **parent = the epic whose work spawned the fork**, at creation
 time — the `--parent <spawning-epic-id>` above. This is Arm 0, the ONE place parentage is
 ENFORCED rather than conventional: human-gate/DECISION beads bypass both `ac-bead-refine`'s
-adopt-a-parent step and `ac-tidy`'s parentage flag (agents may enrich but never process a
+adopt-a-parent step and `ac-align`'s parentage flag (agents may enrich but never process a
 human-gate bead), so parentage that is conventional everywhere else must be wired here, at
 the one moment an agent creates the bead. This sits ALONGSIDE the mandatory `blocks`-edge
 wiring below — both, not either. A fork with no spawning epic (a genuinely standalone

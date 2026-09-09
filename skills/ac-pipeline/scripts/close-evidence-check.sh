@@ -26,7 +26,7 @@
 #   bug           -> the reason cites a test-shaped path (the regression test)
 #   task/feature  -> the reason names >=1 artifact from THIS bead's own ## Delivers
 #   investigation -> the reason cites a spawned bead id or a documented-answer marker
-#   epic          -> exempt (Delivers-coverage is ac-tidy's epic-close proposal)
+#   epic          -> exempt (Delivers-coverage is ac-align's epic-close proposal)
 #   human-gate    -> exempt (closure is a recorded human decision)
 #
 # HISTORICAL CLOSES ARE NEVER SWEPT: this runs at close time, on the bead being closed.
@@ -123,7 +123,7 @@ case ",$LABELS," in
   *,human-gate,*) verdict "EXEMPT" "human-gate bead — closure is a recorded human decision" 0 ;;
 esac
 if [ "$ITYPE" = "epic" ]; then
-  verdict "EXEMPT" "epic — Delivers-coverage is ac-tidy's epic-close proposal, not this gate" 0
+  verdict "EXEMPT" "epic — Delivers-coverage is ac-align's epic-close proposal, not this gate" 0
 fi
 
 # --- deliberate, recorded bypass -------------------------------------------

@@ -1,7 +1,7 @@
 # Shared board scan (the pipeline read layer)
 
 **The single way to read pipeline state — beads + plans + backlog + the gates over them — into
-a structured "board."** `ac-align`, `ac-tidy`, `ac-human-session` (docket and board modes), and `ac-loop`
+a structured "board."** `ac-align`, `ac-human-session` (docket and board modes), and `ac-loop`
 (Phase 0 orient) all read THIS, then apply their own lens. **Share the read; never the
 judgment.** The five scans are defined ONCE here so they can't drift across the skills that
 consume them.
@@ -135,13 +135,13 @@ for i in reasonless:
 ### Structural lint (parentage + edges)
 
 Beyond the status categories above, Scan A also computes two structural lint classes —
-defined ONCE here so `ac-tidy`, `ac-loop` Phase 0 orient, and standalone lint can't fork
+defined ONCE here so `ac-align`, `ac-loop` Phase 0 orient, and standalone lint can't fork
 on what "orphan" or "illegal edge" mean:
 
 - **Parentage-gap orphan** — an open, non-epic bead with no epic parent (no `parent-child`
   edge to an epic). `human-gate` beads are EXCLUDED from this class (Arm 0 owns their
   parentage — wired at creation). This is the I1 sense of "orphan" (a bead with no home
-  epic), distinct from `ac-tidy`'s older sense ("orphan = a bead referencing a plan file
+  epic), distinct from `ac-align`'s older sense ("orphan = a bead referencing a plan file
   that no longer exists") — both are reported, they are different classes.
 - **Authored epic-edge** — any `blocks` edge with an **epic endpoint** (either end an epic)
   is an I2 violation: epic order is derived from cross-epic bead edges, never authored
@@ -188,7 +188,7 @@ frontmatter:
 - **loop-ready** — the autonomous hand-off flag (the loop owns these; humans don't sign them off again)
 - **refinement_rounds** — frontmatter field, else count `### Round N` headings in the `## Refinement Log` (headings only)
 - **source_backlog**, **mtime** (recency)
-- **Fallback** (no frontmatter): `## Refinement Log` → `refined`; `Status: Approved` text → `approved`; referenced by a bead record (description OR comments — match the whole record, then filter) → `beadified`; else `draft`. Flag the missing frontmatter for `/ac-tidy`. An unparseable board (jsonl unreadable, `br` error) is an ERROR, not `N_matching=0` — empty and error stay distinguishable (never fail toward "nothing to do").
+- **Fallback** (no frontmatter): `## Refinement Log` → `refined`; `Status: Approved` text → `approved`; referenced by a bead record (description OR comments — match the whole record, then filter) → `beadified`; else `draft`. Flag the missing frontmatter for `/ac-align`. An unparseable board (jsonl unreadable, `br` error) is an ERROR, not `N_matching=0` — empty and error stay distinguishable (never fail toward "nothing to do").
 
 ## Scan C — backlog
 
@@ -306,7 +306,7 @@ therefore the consumer of last resort — **the loop noticing for itself** — n
 **An open bead whose work has already merged is invisible to every other scan.** It keeps
 its `refined` label, keeps appearing in `br ready`, and is selected as ordinary implement
 work — so a conductor spends a full opus child to discover the code already exists. No
-other scan catches it: `ac-tidy`'s staleness notion is `br stale` (**age-based, not
+other scan catches it: `ac-align`'s staleness notion is `br stale` (**age-based, not
 artifact-based**), and Scans A–C and E never open a file or read a commit message.
 
 The cheapest signal is that **the fixing commit often names the bead** — in its subject or
@@ -361,7 +361,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 | Consumer | Lens (its own judgment, NOT here) | Extra reads beyond the board |
 |----------|-----------------------------------|------------------------------|
 | **`ac-align`** | strategy fit · `pool → active` promotion · sequencing | `_strategy/` |
-| **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
+| **`ac-align` (nightly reconcile)** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human-session`** | human gates only (apply the loop boundary: drop ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`, in-flight waves, `loop-ready` plans) | PRs (`gh pr list`), prod health, org-wide `human-gate` sweep — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-human-session` (board mode)** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts | wave branches (`git branch -r`), PRs (`gh pr list`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
 | **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |

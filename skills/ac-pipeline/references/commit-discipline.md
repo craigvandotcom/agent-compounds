@@ -125,7 +125,7 @@ checkout you claimed from.
 
 **Commit in the repo that tracks the bytes, on that repo's mainline.** Resolve
 the target: `git -C "$(realpath <edited-file>)" rev-parse --show-toplevel`.
-A BCA checkout's `.claude/skills/ac-tidy` is a symlink — editing it dirties
+A BCA checkout's `.claude/skills/ac-align` is a symlink — editing it dirties
 **agent-compounds**, not BCA. `git status` in BCA staying clean is the signal
 you are about to close a bead against an empty commit. Run `git status` in the
 resolved target before committing.

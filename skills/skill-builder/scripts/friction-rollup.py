@@ -3,7 +3,7 @@
 
 The friction ledgers (`skills/*/FRICTIONS.md`, schema:
 `skill-builder/references/friction-capture.md`) had three would-be consumers and no
-shared computation: dream's W4.5 weighting pass carried the formula inline, ac-tidy had
+shared computation: dream's W4.5 weighting pass carried the formula inline, ac-align had
 no staleness scan, and no cross-skill trend surface existed at all. Worse, `last_pass`
 was defined by the schema and written by NOTHING — an unswept ledger read exactly like a
 swept one, so the freshness field was unfalsifiable evidence.
@@ -12,17 +12,20 @@ This script is the single parser. Two views come out of one pass:
   view `dream`  — the FULL W4.5 computation: per-entry weight, promotion flagging,
                   `related`-graph clusters. dream calls this instead of re-deriving it.
   view `trends` — per-skill open counts, entries added since the last scan, top-N by
-                  weight, and STALENESS flags. ac-tidy and ac-human-session's board mode read this.
+                  weight, and STALENESS flags. ac-align and ac-human-session's board mode read this.
 
 ASSURANCE — MODE: advisory · ON-FAILURE: open. It never exits non-zero on ledger
 content: a malformed ledger is REPORTED as malformed, never a hard failure, because a
 crashed sensor is a silent sensor. Callers flag; they never block on it.
-The ONE exception is opt-in `--strict`: dream's weighting pass runs it so a fifth of
-the sensor corpus cannot silently vanish from the weights. Strict flips ON-FAILURE for
-two integrity classes only — entries with no scorable ordinal (impact/frequency/
-recurrence) and `entries:` frontmatter counts that disagree with the parsed entries —
-emitting an explicit NOT-SCORABLE / entry-count mismatch line to stderr and exiting 3.
-Everything else stays advisory in both modes.
+The ONE exception is opt-in `--strict`: it flips ON-FAILURE for two integrity classes
+only — entries with no scorable ordinal (impact/frequency/recurrence) and `entries:`
+frontmatter counts that disagree with the parsed entries — emitting an explicit
+NOT-SCORABLE / entry-count mismatch line to stderr and exiting 3. Its OWNER is lint
+Check 22 (`scripts/ac-ledger-integrity.sh`), which mirrors the two classes as its own
+verdict lines so the frictions docket can consume them; the former scheduled strict
+pass had no owner and is retired (2026-09-08: detection automated, mutation
+human-gated). `--strict` stays available to any other caller. Everything else stays
+advisory in both modes.
 
 READ-ONLY BY DEFAULT. The one write path is the explicit `--stamp` flag, which stamps
 `last_pass: <today>` into every ledger this run parsed. It exists for exactly one caller:
@@ -235,7 +238,9 @@ def entry_count_mismatches(ledgers: list) -> list:
 
 def strict_fail(ledgers: list, by_id: dict) -> int:
     """--strict: the weighting pass must never silently skip a reading it cannot score.
-    Loud on stderr, exit 3. Advisory mode never calls this."""
+    Loud on stderr, exit 3. Owned by lint Check 22 (scripts/ac-ledger-integrity.sh),
+    which mirrors these classes as its own verdict lines for the frictions docket;
+    advisory mode never calls this."""
     unscorable = sorted(
         (r for r in by_id.values() if r["unscorable"]),
         key=lambda r: (r["path"], r["id"]),

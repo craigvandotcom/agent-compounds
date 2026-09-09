@@ -66,7 +66,7 @@ and corrupt both.
 
 The `settings.json` env fallback (`AGENT_NAME=FoggyCreek`, `rule-agent-mail-identity-setup`)
 is **deliberate doctrine, not an accident**: the shared identity for **serial,
-low-contention chore writers** — scheduled jobs (`ac-tidy`, `ac-align`, `dream` dailies),
+low-contention chore writers** — scheduled jobs (`ac-align`'s nightly reconcile + weekly align, `dream` dailies),
 `ac-land`'s format-sweep / report / learnings commits.
 
 **The hard rule (= the tier boundary AND the safety guard, wiring: `ac-ycr.6`):**
