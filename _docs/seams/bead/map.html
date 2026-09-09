@@ -1,0 +1,425 @@
+<!doctype html><meta charset=utf-8><title>seams — bead-capture-guard</title><style>
+    body{font:14px/1.45 -apple-system,Segoe UI,Helvetica,Arial,sans-serif;margin:0;padding:24px 28px;color:#1c1c1c;background:#fff}
+    h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:28px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px}
+    .meta{color:#555;font-size:13px;margin-bottom:6px} .meta code{background:#f3f3f3;padding:1px 4px;border-radius:3px}
+    .load span{display:inline-block;margin-right:14px;padding:2px 8px;border-radius:10px;background:#eee;font-size:12px}
+    .load .hot{background:#fde2e2} .load .zero{background:#e3f4e3}
+    table{border-collapse:collapse;font-size:12.5px} th,td{border:1px solid #e2e2e2;padding:4px 7px;vertical-align:top;text-align:left}
+    th{background:#f6f6f6;font-weight:600;position:sticky;top:0}
+    .grid td.cell{width:110px;text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+    .grid td.filled{background:#e7f0fb} .grid td.filled.nocontract{background:#fdebd0} .grid td.empty{background:#fafafa;color:#bbb}
+    .grid td.path{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+    .grid td.path.extra{color:#a33}
+    .sensor-none,.fail-none,.assert-none{color:#a33;font-weight:600}
+    .legend span{display:inline-block;margin-right:14px;font-size:12px} .legend i{display:inline-block;width:12px;height:12px;border:1px solid #ccc;vertical-align:-2px;margin-right:4px}
+    details summary{cursor:pointer;color:#345} .small{font-size:12px;color:#666}
+    </style>
+<h1>seams — bead-capture-guard</h1>
+<div class=meta>traced_at <code>b730f42d1217472a923c4eaa9323d01fd0f4f4c4</code> · rounds 6 · readers 15 · verdict <code>stamped</code></div>
+<div class=meta>fence — object: <code>bead-capture-guard · bead-create-contract · bead-template-lint · board-truth · bead-artifact</code></div>
+<div class=meta>files: 25 on the fence · grid 40/175 cells filled</div>
+<div class='meta load'><span class='hot'>competing-writers 2</span><span class=''>edges 156</span><span class='zero'>holes 0</span><span class=''>readers 15</span><span class=''>rounds 6</span><span class='zero'>unasserted-edges 0</span><span class='hot'>unchecked-assumptions 10</span><span class='hot'>unsensed-steps 4</span><span class='hot'>untrusted-inputs 3</span></div>
+<h2>object map — files × stages (empty cells are the finding)</h2>
+<div class=legend><span><i style='background:#e7f0fb'></i>edge with a contract</span><span><i style='background:#fdebd0'></i>edge, contract none</span><span><i style='background:#fafafa'></i>empty</span><span style='color:#a33'>red path = row outside the files line (older run)</span></div>
+<table class=grid><tr><th>file</th><th>create</th><th>transport</th><th>store</th><th>read</th><th>update</th><th>delete</th><th>cleanup</th></tr>
+<tr><td class='path'>./harness-sync.sh</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='build_hooks_obj renders the bead-capture-guard wiring entry (PreToolUse/Bash, all scopes, all harnesses) out of hooks/hooks.json into every harness&#x27;s own hooks dialect
+contract: the wiring entry&#x27;s assurance declaration held at source: PROBE names hooks/bead-capture-guard.test.py (38 cases, driven by lint Check 18); MODE blocking + ON-FAILURE open is legal only with the BACKSTOP escape (skills/_tools/stamp-refined.sh); MODE/ON-FAILURE vocabulary asserted by scripts/assurance-declarations-check.sh:107-108'>:366</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>hooks/bead-capture-guard.py</td>
+<td class='cell filled' title='create gate — reads the proposed `br create`/`br q` payload (labels, type, body) from the Bash tool call and blocks a non-conforming capture
+contract: exit 2 + stderr on missing `origin:`/readiness/`Probe:` (lines 326-334); tokenization shared with bead-template-lint (guard imported, docstring lines 5-6); FAIL-OPEN on unparseable shell by design, backstop = refine stamp-gate (hooks.json:104)'>:325</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>hooks/hooks.json</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='the canonical wiring entry that carries the create gate to every harness (PreToolUse/Bash, org+app+machine, 6 harnesses) — the manifest every rendered hook config derives from
+contract: assurance block lines 99-104: PROBE names the 38-case suite (executed by Check 18 in CI); MODE blocking, ON-FAILURE open, BACKSTOP skills/_tools/stamp-refined.sh — blocking+open with neither PENDING-DECISION nor BACKSTOP fails lint (scripts/assurance-declarations-check.sh:110-124)'>:108</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>lint/checks/18-guard-liveness.py</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>lint/checks/19-bead-template-conformance.py</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>lint/checks/34-no-bead-subject-agreement.py</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='classifies which diffs touching the bead board (`.beads/`) a `[no-bead]` commit may carry — policing store-area writes that the review range drops wholesale
+contract: dated shrink-only allowlist ratchet (lines 36-44, 236-258); empty window is NOT-CHECKED (exit 2), never a pass'>:74</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>lint/lib/scope.py</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='scopes the store file `.beads/issues.jsonl` into the HOOKS audit set (Check 21&#x27;s PENDING-DECISION escape surface)
+contract: single-walk frozenset — the walk runs once at import (line 59) so checks cannot disagree about what exists'>:85</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>lint/parity.sh</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>scripts/assurance-declarations-check.sh</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='resolves a wiring entry&#x27;s PENDING-DECISION escape against the committed board record, by id
+contract: escape valid only while `issue_type==&quot;decision&quot;` AND `status==&quot;open&quot;` (lines 72-79); an unreadable/absent board FAILS, never passes'>:64</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>scripts/bead-template-lint.py</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='runs the create contract over every `br create`/`br q` template shipped in skills/**/*.md
+contract: imports the runtime guard module as the ONE implementation (lines 25-29); vacuous-detector floor `scanned &lt; 20` fails loud (lines 182-185)'>:159</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/_tools/stamp-refined.sh</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='reads the bead&#x27;s labels/description/comments via `br show --json` for every gate leg
+contract: shape normaliser `if type==&quot;array&quot; then . else [.] end` — the concurrent-reader bare-OBJECT drift is absorbed at the single read entry (lines 52-58)'>:58</td>
+<td class='cell filled' title='the sole sanctioned `refined` write — strips `unrefined`, adds `refined` + path label; the downgrade leg (lines 61-68) strips a stale `refined` on content refusal
+contract: every gate leg must pass BEFORE the label writes (lines 71-174); a content refusal downgrades (rc 1); a cannot-check result (rc 2) mutates nothing'>:176</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/_tools/touchers.sh</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='reads the bead description&#x27;s `## Delivers` blocks and re-derives the `touchers:` obligation per bullet
+contract: the touchers command must exist, be well-formed, and REPRODUCE its count now (lines 183-196) — a stale list is the defect; NOT-GATED (rc 2) never reads as zero'>:128</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-beadify/references/bead-schema.md</td>
+<td class='cell filled' title='the create body contract — `br create` rejects `-f` beside a title, bodies go `-d &quot;$(cat &lt;file&gt;)&quot;`
+contract: the body is routed through the shell, so bead prose must stay dcg-safe (no command substitution, no unbalanced quoting); only comments and receipts take `-f`'>:21</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='the canonical probe extractor — `grep -o &#x27;Probe: ...&#x27;` lifts the executable probe from the body
+contract: machine-extractable form: the command alone inside single backticks, on ONE line (lines 39-49); run it on an extracted bead body, not on this file'>:48</td>
+<td class='cell filled' title='dep-edge mutation contract — `br dep add` a reversed edge and it lands SILENT
+contract: read every edge back (`br dep cycles`, then `br show` on both ends) — direction is asserted only by a post-hoc read, never at the write'>:19</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-hygiene/references/journey-coverage.md</td>
+<td class='cell filled' title='deterministic filing template — coverage gaps create `investigation` beads (the probe-exempt type) with origin + finding + readiness labels
+contract: filing as `task` would be refused by the capture guard (no born probe) — the type IS the probe exemption (lines 19-21); conformance findings go to the ledger, never a bead (lines 9-15)'>:23</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-pipeline/SKILL.md</td>
+<td class='cell filled' title='exhaust contract — every finding writes its `VERDICT:` + catch-stage label as a structured comment, even when fixed in-batch
+contract: the fix may be in-batch, the label never; verifiers write verdicts, implementers never do (Goodhart guard, beads-standards SKILL.md:208-212)'>:37</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='batch-boundary read derives from the COMMITTED `.beads/issues.jsonl`, never `br ready` alone
+contract: `br ready` measured non-deterministic AND stabilizing on a wrong count; retires only when it returns a stable count across repeated calls (lines 72-73)'>:71</td>
+<td class='cell filled' title='lifecycle-label invariant — stamp-refined is the sole writer AND the sole stripper; content refusals downgrade mechanically
+contract: a `refined` stamp is only as valid as the content it was stamped on; stale stamps are never grandfathered (lines 43-45)'>:44</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-pipeline/references/assurance-declarations.md</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='the PENDING-DECISION escape&#x27;s read of the board — an open decision keeps a blocking guard&#x27;s fail-open legal
+contract: valid ONLY while `issue_type==&quot;decision&quot;` AND `status==&quot;open&quot;`; `.beads/**` is in the registry-lint trigger paths so closing the cited bead re-runs the check (lines 40-43)'>:38</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-pipeline/references/board-scan.md</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='Scan A&#x27;s read layer — `cat .beads/issues.jsonl` is the ONLY complete source (br list never returns closed beads)
+contract: any predicate over closed beads MUST read the jsonl (br list measured 436 records vs 2,017 closed, lines 47-53); an unparseable board is an ERROR, never `N=0` (line 191)'>:37</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-pipeline/scripts/board-truth.sh</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='reads open beads (id / updated_at / created_at) and matches the ids cited by later non-bookkeeping commits
+contract: ADVISORY ONLY — exits 0 always, must never close/label/defer (lines 9-11); drops bookkeeping commits and the commit that FILED the bead (lines 48-49, 73-76)'>:60</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-polish/references/bead-checklist.md</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='polish reader question over the description&#x27;s `## Delivers` touchers lines (consumer-verification)
+contract: the reader must name the grep that derived the consumer set — hand-listed sets measured a 16.2% repair rate (lines 48-49); grading against the other shape&#x27;s rule manufactures findings (lines 36-37)'>:45</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-polish/scripts/bead-artifact.py</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='export moves the bead set (title, labels, description) from the board into one artifact.md file
+contract: FAIL-CLOSED on a partial set — an unresolvable bead means NOTHING is written (lines 118-122); the `&lt;!-- BEAD:id --&gt;` delimiters are the re-parse contract (line 47)'>:124</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='`br show --json` read of each bead (title, labels, description, blocking deps) before every export / writeback / restamp
+contract: handles both JSON shapes (list → `d[0]`, lines 83-87); a failed re-read BEFORE writing fails that bead, never writes blind (lines 271-274)'>:76</td>
+<td class='cell filled' title='writeback mutation — `br update -d &lt;desc&gt;`, conditional `--title`, additive label adds (lines 297-300); Consumes lines become `blocks` edges (line 199); the restamp sweep re-gates through stamp-refined (line 245)
+contract: ADDITIVE ONLY on edges — an edge with no Consumes line is REPORTED, never removed (lines 174-183); lifecycle labels never written here (lines 10-11); a dep-add failure fails the whole writeback (lines 303-312)'>:288</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/ac-polish/workflows/bead.md</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='the artifact-isolation rule — export ONCE at start; the loop edits the ARTIFACT; the board is untouched until the run ends
+contract: a mid-run writeback would change what the next round&#x27;s reader sees (it measures churn, not defects); writeback is one pass, additive edges only, never writes refined/unrefined (lines 28-32)'>:24</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='the VALIDATE read — element4 plus `touchers.sh check` read the artifact&#x27;s description block per bead, each round
+contract: the reader sees RED and must fix it — a round cannot record while a Delivers path that exists and is referenced owes a `touchers:` line'>:13</td>
+<td class='cell filled' title='the receipt write — polish-fixpoint.sh stamps a `POLISH-FIXPOINT:` comment on EVERY bead in the artifact, not only the epic
+contract: the receipt is a PRECONDITION of `refined`, not a grant of it (lines 34-40); stamp-refined remains the sole refined writer'>:14</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/beads-standards/SKILL.md</td>
+<td class='cell filled' title='canonical create template — `origin:&lt;skill&gt;` mandatory in --labels
+contract: origin is MANDATORY (line 113: the capture contract + its two enforcers `hooks/bead-capture-guard.py` and lint Check 19)'>:369</td>
+<td class='cell filled' title='`br sync --flush-only` exports the `.db` (source of truth) into the git-tracked `issues.jsonl`
+contract: ONE COMMITTER PER SCOPE — issues.jsonl is DERIVED, exactly one committer per scope or none (lines 453-458); sync refuses after a fast-forward pull; `--force` deletes pulled beads (lines 449-451)'>:374</td>
+<td class='cell filled' title='the store location contract — one `.beads/` per repo, `issues.jsonl` tracked, `.db` gitignored cache
+contract: deps gate only within one db — no cross-repo dependency graph (lines 302-304); public-repo rule: agent-compounds&#x27; issues.jsonl is world-readable, sensitive content stays out (lines 308-311)'>:301</td>
+<td class='cell filled' title='the read-shape contract for every consumer — `br list --json` paginated object, `br show`/`br ready --json` bare arrays
+contract: parsers must handle BOTH shapes (array vs object); `.id` on a `br show` array fails `Cannot index array with string`'>:386</td>
+<td class='cell filled' title='claim mutation — `br update &lt;id&gt; --status=in_progress`; stale &gt;7d claims challenged via `br stale --status in_progress --days 7` (line 160)
+contract: claim requires readiness first — readiness = PRESENCE of `refined`, never inferred from the absence of `unrefined` (lines 115-116)'>:370</td>
+<td class='cell filled' title='tombstone — `br delete` removes the bead; excluded from every live scan
+contract: tombstone is the only deleted status; a deleted bead leaves every scan silently'>:163</td>
+<td class='cell filled' title='wedge recovery — discard the derived JSONL and re-export from the authoritative `.db`
+contract: the `.db` is the source of truth and the JSONL regenerable (lines 453-458) — recovery is always cheap; the wedge itself is the damage'>:465</td>
+</tr>
+<tr><td class='path'>skills/beads-standards/reference/bead-conventions.md</td>
+<td class='cell filled' title='batch create — per-run epic `br create -t epic ... --labels origin:&lt;skill&gt;`, children linked via `--parent`
+contract: 2+ beads → one epic, 0-1 → no epic (don&#x27;t inflate, lines 77-79); children ship `unrefined` at creation — `refined` is earned only by the run-end refine pass (lines 84-88)'>:77</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='anchor-dedupe read — open beads&#x27; descriptions grepped for the finding&#x27;s anchor before filing
+contract: open-board population only (`--status open`); same anchor + same defect = comment, never a second bead (lines 316-320)'>:316</td>
+<td class='cell filled' title='close-time mutation gate — close-evidence-check refuses a close whose `close_reason` lacks the shape its type declares
+contract: MECHANICAL at close: exit 2 = NOT-CHECKED, never a pass (lines 290-291); a bypass requires BOTH `--force` and `EVIDENCE-BYPASS: &lt;why&gt;` in the reason, landing the escape on the bead (lines 292-293)'>:283</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/beads-standards/reference/bead-create-contract.md</td>
+<td class='cell filled' title='the canonical invocation — the required axes assembled into one create call
+contract: `origin:` FIRST, one origin per bead — two is corrupt data (line 45); enforced at runtime (hooks/bead-capture-guard.py) and statically (Check 19) (lines 8-10)'>:40</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+<tr><td class='path'>skills/beads-standards/reference/origin-provenance.md</td>
+<td class='cell filled' title='creation gate on the origin field — blocks any `br create`/`br q` whose labels carry no `origin:` token
+contract: shlex tokenization so a quoted `br create` never false-blocks; FAILS OPEN on unparseable shell (lines 31-33); scripted (Node/TS) callers enforce via a required `origin` type field instead (lines 34-36)'>:30</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+<td class='cell filled' title='refine backstop repairs a MISSING origin at stamp time (infer where obvious, else `origin:unknown`) — never withholds `refined` for it
+contract: repair, not backfill — forward-only, pre-cutover beads excluded from the lint entirely (lines 45-48); ac-align reports, never auto-labels (lines 40-41)'>:37</td>
+<td class='cell empty'>·</td>
+<td class='cell empty'>·</td>
+</tr>
+</table>
+<h2>flow map — 52 steps, in map order</h2>
+<table><tr><th>flow</th><th>step</th><th>path:line</th><th>controller</th><th>sensor</th><th>on-failure</th></tr>
+<tr><td>create</td><td>origin-label gate on `br create`/`br q`</td><td>hooks/bead-capture-guard.py:325</td><td>the agent&#x27;s harness PreToolUse hook (wired in hooks.json across 6 harnesses, org/app/machine)</td><td class=''>exit 2 + BLOCKED stderr reaches the agent</td><td class=''>open (guard itself fails open on parse error)</td></tr>
+<tr><td>create</td><td>guard wired into harness settings</td><td>hooks/hooks.json:108</td><td>harness-sync render (build_hooks_obj per harness/scope)</td><td class=''>lint Check 18 behaviour suite (38 cases) · declared BACKSTOP: stamp-refined.sh</td><td class=''>open</td></tr>
+<tr><td>create</td><td>static twin: template origin rule</td><td>scripts/bead-template-lint.py:164</td><td>lint.sh Check 19 (CI)</td><td class=''>FAIL line naming file:line</td><td class=''>surface (exit 1)</td></tr>
+<tr><td>create</td><td>Check 19 hosts the judge, never reimplements</td><td>lint/checks/19-bead-template-conformance.py:37</td><td>lint.sh</td><td class=''>missing judge = FAIL (never a silent gate)</td><td class=''>surface</td></tr>
+<tr><td>create</td><td>contract names the two enforcers (runtime + static)</td><td>skills/beads-standards/reference/bead-create-contract.md:8</td><td>prose spec (both guards implement it)</td><td class='sensor-none'>none (the guards ARE the sensor)</td><td class='fail-none'>none</td></tr>
+<tr><td>create</td><td>journey-gap files as `investigation` (probe-exempt shape)</td><td>skills/ac-hygiene/references/journey-coverage.md:23</td><td>ac-hygiene audit step, direct lane (no round machinery)</td><td class=''>the guard&#x27;s probe exemption — create succeeds</td><td class='fail-none'>none (files cleanly)</td></tr>
+<tr><td>create</td><td>PENDING-DECISION escape resolves the cited bead</td><td>scripts/assurance-declarations-check.sh:64</td><td>lint Check 21 over hooks.json assurance blocks</td><td class=''>jq over committed `.beads/issues.jsonl` (no br): issue_type==decision AND status==open</td><td class=''>surface (ad_fail; closed/missing/non-decision FAILs)</td></tr>
+<tr><td>create</td><td>origin label vocabulary (origin:manual / origin:unknown legal)</td><td>skills/beads-standards/reference/origin-provenance.md:14</td><td>prose canon; guard regex ORIGIN enforces shape</td><td class=''>guard accepts the token</td><td class='fail-none'>none</td></tr>
+<tr><td>claim</td><td>readiness = PRESENCE of `refined`, never absence of `unrefined`</td><td>skills/beads-standards/SKILL.md:115</td><td>every pickup filter</td><td class=''>label presence check; missing-both = unknown → treat as unrefined</td><td class=''>fail-safe (bead skipped)</td></tr>
+<tr><td>claim</td><td>every claim path strips `post-merge` at claim</td><td>skills/beads-standards/reference/bead-conventions.md:156</td><td>wave claim, bug-lane batch claim, ac-implement claims</td><td class=''>label gone from the board</td><td class='fail-none'>none stated</td></tr>
+<tr><td>claim</td><td>batch-boundary reads derive from committed jsonl, never `br ready` alone</td><td>skills/ac-pipeline/SKILL.md:71</td><td>conductor</td><td class=''>measured br ready instability; jsonl is the source</td><td class=''>surface (rule)</td></tr>
+<tr><td>claim</td><td>ready/unrefined/blocked/in_progress/closed classification for consumers</td><td>skills/ac-pipeline/references/board-scan.md:59</td><td>ac-loop orient, ac-align, ac-human-session (shared read)</td><td class=''>in `br ready` AND refined label</td><td class=''>routed to unrefined bucket (visible)</td></tr>
+<tr><td>update</td><td>`refined` stamped: remove unrefined, add refined + path label</td><td>skills/_tools/stamp-refined.sh:176</td><td>the skill invoking stamp_refined (sole sanctioned writer)</td><td class='sensor-none'>none on the writes themselves: each `br label add/remove` is `2&gt;/dev/null`, exit unchecked; &quot;STAMPED&quot; printed unconditionally</td><td class='fail-none'>swallow</td></tr>
+<tr><td>update</td><td>touchers count derived by rg, never remembered</td><td>skills/_tools/touchers.sh:102</td><td>touchers_check (gate) and ac-beadify (writer)</td><td class=''>rg exit code: rc&gt;1 = NOT-GATED (refusal, never a zero)</td><td class=''>surface</td></tr>
+<tr><td>update</td><td>fixpoint receipt written to every artifact bead</td><td>skills/ac-polish/workflows/bead.md:14</td><td>polish-fixpoint.sh --mode bead</td><td class=''>the receipt comment itself (a precondition, not a grant)</td><td class='fail-none'>none stated</td></tr>
+<tr><td>update</td><td>writeback updates description/title/labels</td><td>skills/ac-polish/scripts/bead-artifact.py:288</td><td>ac-polish run end (`writeback --apply`)</td><td class=''>br update exit code → failed list</td><td class=''>surface (die 1, partial-write reported)</td></tr>
+<tr><td>update</td><td>`br label add` silently no-ops on multiple labels</td><td>skills/beads-standards/SKILL.md:401</td><td>any caller</td><td class=''>verify with br show afterwards (manual convention)</td><td class='fail-none'>none (documented gotcha, no mechanism)</td></tr>
+<tr><td>update</td><td>dedupe: recurrence is `br comments add` on the existing bead, never a second bead</td><td>skills/beads-standards/reference/bead-conventions.md:311</td><td>filing lane (anchor table)</td><td class=''>comments on the open bead; recurrence is the corroboration signal</td><td class='fail-none'>none</td></tr>
+<tr><td>update</td><td>lint scope collects the bead surfaces (hooks/, issues.jsonl, templates)</td><td>lint/lib/scope.py:85</td><td>lint checks (one walk, shared)</td><td class=''>the walk itself</td><td class='fail-none'>none</td></tr>
+<tr><td>update</td><td>guard liveness re-proven at update/CI time</td><td>lint/checks/18-guard-liveness.py:102</td><td>lint.sh / CI harness job</td><td class=''>behaviour suite exit 0; missing guard = violation</td><td class=''>surface</td></tr>
+<tr><td>update</td><td>parity harness proves ports of Checks 18/19 on a doctored tree</td><td>lint/parity.sh:289</td><td>port-time gate (manual per port)</td><td class=''>verdict-set diff between legacy and ported judge</td><td class=''>surface (exit 1)</td></tr>
+<tr><td>close</td><td>close_reason mandatory + outcome-verb structured</td><td>skills/beads-standards/SKILL.md:161</td><td>closer (`br close -r`)</td><td class=''>close_reason presence; structure enables clustering</td><td class=''>canon (no mechanical check stated here)</td></tr>
+<tr><td>close</td><td>typed close evidence, mechanically enforced</td><td>skills/beads-standards/reference/bead-conventions.md:283</td><td>close-evidence-check.sh wired at the single live br close call site</td><td class=''>refuses a close whose close_reason lacks the type&#x27;s shape</td><td class=''>surface (bypass needs --force + EVIDENCE-BYPASS in the reason)</td></tr>
+<tr><td>close</td><td>a closed decision invalidates its PENDING-DECISION escape</td><td>scripts/assurance-declarations-check.sh:76</td><td>lint Check 21</td><td class=''>status != open → ad_fail (&quot;squatted on&quot;)</td><td class=''>surface</td></tr>
+<tr><td>close</td><td>Scan F flags cited-but-open beads; flag-only, never auto-close</td><td>skills/ac-pipeline/scripts/board-truth.sh:75</td><td>board-truth.sh (advisory shortlist)</td><td class=''>citation epoch &gt; last touch AND &gt; created+2h</td><td class=''>surface (VERIFY, never auto-close)</td></tr>
+<tr><td>close</td><td>`[no-bead]` commits confined to bookkeeping surfaces</td><td>lint/checks/34-no-bead-subject-agreement.py:228</td><td>lint Check 34</td><td class=''>diff paths outside .beads//FRICTIONS/MAINTENANCE/_archive → FAIL; shrink-only allowlist ratchet</td><td class=''>surface</td></tr>
+<tr><td>derive</td><td>citation mining: subject ids + Bead: trailers, bookkeeping commits dropped</td><td>skills/ac-pipeline/scripts/board-truth.sh:48</td><td>board-truth.sh</td><td class=''>awk match over flattened git log</td><td class='fail-none'>swallow (2&gt;/dev/null; empty = clean-looking)</td></tr>
+<tr><td>derive</td><td>closed beads ONLY from issues.jsonl (br list hides them)</td><td>skills/ac-pipeline/references/board-scan.md:47</td><td>every board consumer</td><td class=''>measured 436 vs 2453 undercount documented; direct jsonl read</td><td class=''>surface (rule)</td></tr>
+<tr><td>derive</td><td>issues.jsonl is DERIVED; db is source; one committer per scope</td><td>skills/beads-standards/SKILL.md:454</td><td>conductor (in-run) / one designated job (cross-job)</td><td class=''>duplicate derived content → empty commit on rebase, wedge documented</td><td class=''>surface (wedge documented, recovery = discard+re-export)</td></tr>
+<tr><td>derive</td><td>Check 34&#x27;s window mirrors board-truth&#x27;s derivation</td><td>lint/checks/34-no-bead-subject-agreement.py:168</td><td>Check 34</td><td class=''>same describe/rev-list base; no base = NOT-CHECKED rc 2</td><td class=''>surface (fail loud, never a pass)</td></tr>
+<tr><td>create</td><td>Check 18 re-proves the runtime guard alive at update/CI time</td><td>lint/checks/18-guard-liveness.py:99-110</td><td>lint.sh / CI harness job</td><td class=''>subprocess rc of bead-capture-guard.test.py; missing guard or .test.py = violation</td><td class=''>surface</td></tr>
+<tr><td>create</td><td>parity harness proves ports of Checks 18/19 on live + doctored trees (dead guard, missing judge)</td><td>lint/parity.sh:278-309</td><td>port-time gate (manual, per port)</td><td class=''>compare_sets verdict diff</td><td class=''>surface (exit 1)</td></tr>
+<tr><td>create</td><td>creation body routed through the shell (`-d &quot;$(cat &lt;file&gt;)&quot;`, dcg-safe prose)</td><td>skills/ac-beadify/references/bead-schema.md:21-23</td><td>the filer</td><td class='sensor-none'>none mechanical — dcg is the only runtime check and is wired opencode+machine only</td><td class='fail-none'>none</td></tr>
+<tr><td>create</td><td>batch epic create; 0-1 beads → no epic</td><td>skills/beads-standards/reference/bead-conventions.md:77-79</td><td>batch workflow run-end (ac-hygiene / ac-triage)</td><td class=''>the epic container + parent-child edges the scans read</td><td class='fail-none'>none stated</td></tr>
+<tr><td>create</td><td>canonical create template in the standard (origin MANDATORY)</td><td>skills/beads-standards/SKILL.md:113,369</td><td>the filer&#x27;s capture step</td><td class=''>guard + Check 19 hold it</td><td class='fail-none'>none</td></tr>
+<tr><td>update</td><td>shape decider before grading ACs (element4-check)</td><td>skills/ac-polish/references/bead-checklist.md:30-37</td><td>polish reader</td><td class=''>the element4 verdict</td><td class=''>surface (mis-grading is a finding against this file)</td></tr>
+<tr><td>update</td><td>dep-edge mutation — a reversed `br dep add` lands SILENT</td><td>skills/ac-beadify/references/bead-schema.md:19-20</td><td>beadify dependency wiring</td><td class=''>read every edge back (`br dep cycles`, `br show` both ends)</td><td class='fail-none'>none at the write (post-hoc read only)</td></tr>
+<tr><td>update</td><td>diff-closure re-verifies touchers against the ACTUAL diff</td><td>skills/beads-standards/reference/bead-create-contract.md:23</td><td>ac-implement worker §5 · code-polish §1 · ac-review Phase 5</td><td class=''>grep of the changed callers vs the declared line</td><td class=''>surface [unowned-callers]</td></tr>
+<tr><td>update</td><td>refine backstop repairs a MISSING origin at stamp time</td><td>skills/beads-standards/reference/origin-provenance.md:37-38</td><td>ac-bead-refine</td><td class=''>the label added</td><td class=''>never withholds `refined` for it</td></tr>
+<tr><td>update</td><td>ac-lint pre-commit chain installed into every repo</td><td>./harness-sync.sh:1019</td><td>harness-sync (daily infra-sync 06:30 + manual runs)</td><td class=''>note_change + the &quot;linked&quot; echo</td><td class=''>WARN + return 0 on an unresolvable hooks dir (swallow); SKIP on a real file or a symlink pointing elsewhere</td></tr>
+<tr><td>derive</td><td>VERDICT / WORKER structured comments greppable from the jsonl; verifiers write, implementers never do</td><td>skills/ac-pipeline/SKILL.md:37</td><td>the verification ceremonies</td><td class=''>`grep &#x27;VERDICT:&#x27; .beads/issues.jsonl`</td><td class='fail-none'>none — the Goodhart separation is convention, no gate</td></tr>
+<tr><td>create</td><td>render the wiring into every harness&#x27;s hooks dialect (6 harnesses × 3 scopes)</td><td>./harness-sync.sh:366-378</td><td>harness-sync render (infra-sync daily 06:30 + manual)</td><td class=''>jq failure trips `set -e` (assignment form, 386-390); malformed app settings → ERROR + FAILURES, block NOT rendered (447-451)</td><td class=''>surface</td></tr>
+<tr><td>create</td><td>PENDING-DECISION escape declared at birth, valid only while its bead is an OPEN decision</td><td>skills/ac-pipeline/references/assurance-declarations.md:14-22,37-43</td><td>mechanism author</td><td class=''>lint Check 21 over the committed jsonl</td><td class=''>surface (lint FAIL; self-expiring)</td></tr>
+<tr><td>update</td><td>VERDICT/WORKER structured comments; verifiers write, implementers never (Goodhart guard)</td><td>skills/ac-pipeline/SKILL.md:36-38</td><td>the verification ceremonies (QA/review/CI/prod)</td><td class=''>`grep &#x27;VERDICT:&#x27; .beads/issues.jsonl`</td><td class='fail-none'>none — the separation is convention, no gate</td></tr>
+<tr><td>update</td><td>escape resolution reads the COMMITTED board by id</td><td>scripts/assurance-declarations-check.sh:57-81</td><td>lint Check 21</td><td class=''>jq `select(.id == $id)` over `.beads/issues.jsonl`; issue_type==&quot;decision&quot; AND status==&quot;open&quot;</td><td class=''>surface (ad_fail; unreadable board FAILS, never passes)</td></tr>
+<tr><td>close</td><td>diff-closure re-verifies touchers against the ACTUAL diff</td><td>skills/beads-standards/reference/bead-create-contract.md:23</td><td>worker §5 · code-polish §1 · ac-review Phase 5</td><td class=''>grep of the changed callers vs the declared line</td><td class=''>surface [unowned-callers]</td></tr>
+<tr><td>close</td><td>the escape is self-expiring: `.beads/**` sits in the lint trigger paths so closing re-runs the check</td><td>skills/ac-pipeline/references/assurance-declarations.md:40-43</td><td>lint.sh (Check 21)</td><td class=''>trigger-path match re-runs the check</td><td class=''>surface (lint FAIL)</td></tr>
+<tr><td>derive</td><td>shape normaliser at the single br show read entry (the concurrent-reader bare-OBJECT drift absorbed)</td><td>skills/_tools/stamp-refined.sh:57-59</td><td>stamp_refined</td><td class=''>jq `if type==&quot;array&quot; then . else [.] end`</td><td class=''>surface (a dead filter would read as no labels, no description)</td></tr>
+<tr><td>claim</td><td>the polish run picks up its bead set: export ONCE at start, fail-closed on a partial set (an unresolvable bead means NOTHING is written)</td><td>skills/ac-polish/scripts/bead-artifact.py:118-122</td><td>the ac-polish run start (workflows/bead.md:24)</td><td class=''>per-bead br show rc → the failed list</td><td class=''>surface (die 1, artifact NOT written)</td></tr>
+<tr><td>close</td><td>Scan F blind spot: a comment refreshes updated_at and stops flagging; the shipped-uncited class is uncaught</td><td>skills/ac-pipeline/references/board-scan.md:333-336</td><td>board-truth</td><td class='sensor-none'>none for the comment-refresh case</td><td class='fail-none'>none (deliberately accepted limitation)</td></tr>
+<tr><td>derive</td><td>`br show --json` read before every export / writeback / restamp; both JSON shapes handled; a failed re-read BEFORE writing fails that bead, never writes blind</td><td>skills/ac-polish/scripts/bead-artifact.py:75-87,270-274</td><td>bead-artifact</td><td class=''>the rc + the parse</td><td class=''>surface (the failed list)</td></tr>
+<tr><td>derive</td><td>ac-lint pre-commit chain installed into every repo</td><td>./harness-sync.sh:997-1022</td><td>harness-sync (daily + manual)</td><td class=''>note_change + the linked echo</td><td class='fail-none'>swallow (unresolvable hooks dir → WARN + return 0); SKIP on a real file or foreign symlink</td></tr>
+</table>
+<h2>boundary map — 64 sides (the interface table)</h2>
+<table><tr><th>interface</th><th>side</th><th>path:line</th><th>producer</th><th>assumes</th><th>asserts</th></tr>
+<tr><td>br CLI</td><td>consumer</td><td>scripts/bead-template-lint.py:25-29</td><td>internal</td><td>the guard module loads by path and shares ONE implementation of the rules (no second copy to drift)</td><td class=''>importlib exec at load — a broken import fails the check loud</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/_tools/stamp-refined.sh:57-59</td><td>external</td><td>`br show --json` answers a one-element ARRAY normally but a bare OBJECT under concurrent readers</td><td class=''>jq normaliser `if type==&quot;array&quot; then . else [.] end` at the single entry point (57-59); a dead filter would read as &quot;no labels, no description&quot; (55-56)</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-beadify/references/bead-schema.md:19-20</td><td>external</td><td>a reversed `br dep add` is SILENT</td><td class=''>prose: read every edge back (`br dep cycles`, `br show` both ends) — convention, no gate</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-pipeline/SKILL.md:85-88</td><td>external</td><td>`br coordination status` carries worker liveness (never harness notifications); the `br` claim is the only real exclusion (Agent-Mail reservations advisory)</td><td class='assert-none'>none — a transient 5xx read as death disarmed one sweep (measured, prose)</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-pipeline/references/board-scan.md:35-45</td><td>external</td><td>`br list --json` = paginated object `.issues[]` (default 50); `br ready --json` = bare array</td><td class=''>prose warning only (&quot;fails silently-ish&quot;); the docket-health block parses and fails loud (94-102)</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-pipeline/scripts/board-truth.sh:60-62</td><td>external</td><td>`br list --status open --limit 0 --json` yields `.issues[]` with `updated_at`/`created_at`; stderr discarded</td><td class='assert-none'>none — a br failure yields an empty union and the script still prints &quot;board-truth: 0 …&quot; (79-80)</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-polish/references/bead-checklist.md:30-37</td><td>internal</td><td>`element4-check.sh` decides which shape (legacy Declared-RED vs ac2 probe-per-AC) applies before grading</td><td class='assert-none'>none — grading against the wrong shape is itself a finding, prose-enforced</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-polish/scripts/bead-artifact.py:66-72</td><td>external</td><td>`br list --json --limit 1` resolves a board from the CWD</td><td class=''>rc!=0 → NOT-GATED die 2, nothing attempted</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/ac-polish/workflows/bead.md:11-14</td><td>internal</td><td>the artifact is exported once by bead-artifact.py; VALIDATE runs element4 + touchers check over every bead</td><td class=''>prose wiring</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/beads-standards/SKILL.md:384-389</td><td>external</td><td>JSON shapes differ per subcommand: list = paginated object `.issues[]`, ready/show = bare arrays `.[0]`</td><td class=''>prose only — &quot;parsers must handle both shapes&quot; asserted nowhere mechanical</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/beads-standards/reference/bead-conventions.md:228-234</td><td>internal</td><td>`br comments add &lt;id&gt; &quot;DECISION (&lt;human&gt;): …&quot;` records the human decision; `br dep add &lt;downstream&gt; &lt;decision-id&gt;` gates br ready&#x27;s subtree</td><td class=''>br ready exclusion is external behavior; asserts none</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/beads-standards/reference/bead-create-contract.md:54-56</td><td>internal</td><td>a `br` invoked as a child process (Node/TS execFileSync) is INVISIBLE to the runtime hook</td><td class=''>TypeScript required field (BrCreateOptions.origin) — the build lives outside FILES</td></tr>
+<tr><td>br CLI</td><td>consumer</td><td>skills/beads-standards/reference/origin-provenance.md:12-16</td><td>internal</td><td>`origin:&lt;skill&gt;` values, `origin:manual`/`origin:unknown` legal; origin FIRST in the label list</td><td class=''>guard ORIGIN regex (51) + Check 19 TEMPLATE_ORIGIN (38) hold the token shape</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/_tools/stamp-refined.sh:176-179</td><td>internal</td><td>`br label remove/add` one label per call; `refined`/`unrefined` are owned by this file alone</td><td class='assert-none'>none at write — exit codes discarded (`2&gt;/dev/null`)</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-beadify/references/bead-schema.md:21-23</td><td>internal</td><td>`br create` REJECTS `-f` alongside a title; creation bodies go `-d &quot;$(cat &lt;file&gt;)&quot;`; prose must stay dcg-safe (no command substitution, no unbalanced quoting)</td><td class='assert-none'>none mechanical — dcg is the only runtime check and it is wired opencode+machine only</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-hygiene/references/journey-coverage.md:23-27</td><td>internal</td><td>a coverage gap files as `br create -t investigation` with `origin:ac-hygiene,hygiene-finding,journey-gap,unrefined` — probe-exempt type satisfies the capture contract</td><td class=''>guard (hooks/bead-capture-guard.py) + Check 19 (templates) hold it</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-pipeline/SKILL.md:64-68</td><td>internal</td><td>receipt bodies via `-f &lt;file&gt;` + explicit `--actor`; `--reason` stays ASCII-short (measured silent failures); creation bodies `-d &quot;$(cat file)&quot;`</td><td class='assert-none'>none mechanical — &quot;retires when the receipt tools take one uniform body flag&quot;</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-pipeline/scripts/board-truth.sh:40-57</td><td>internal</td><td>commit subjects/trailers carry `bd-` ids; `chore(beads)`/`[no-bead]` subjects are not work claims</td><td class='assert-none'>none mechanical — awk over a flattened log, git failures swallowed (2&gt;/dev/null)</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-polish/references/bead-checklist.md:87-89</td><td>internal</td><td>dep-edge direction graded by the reader: `br dep cycles` after any dep add; reversed edges are silent</td><td class=''>prose only</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-polish/scripts/bead-artifact.py:186-211</td><td>internal</td><td>every `## Consumes` line becomes a `blocks` edge (`br dep add`); reverse direction (edge with no line) is reported, never removed</td><td class=''>dep-add rc!=0 → failed list → exit 1 (199-201, 303-306); orphans reported on the EDGES line (204-206)</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/ac-polish/workflows/bead.md:22-32</td><td>internal</td><td>the board is untouched until the verdict; writeback --apply wires Consumes lines to edges (additive only) and never writes refined/unrefined</td><td class=''>the script&#x27;s own refusals (bead-artifact.py:66-72, 303-312)</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/beads-standards/SKILL.md:369-379</td><td>internal</td><td>canonical create/close/dep shapes; `origin:` MANDATORY on create; close_reason MANDATORY on close</td><td class=''>create shape held by guard + Check 19; close shape held by close-evidence-check at the call site</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/beads-standards/reference/bead-conventions.md:153-159</td><td>internal</td><td>every claim path strips `post-merge` at claim; beads-closed-gate.sh excludes the label</td><td class=''>prose &quot;one definition, stated once here, so no claim path forgets it&quot; — no mechanical assert in FILES</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/beads-standards/reference/bead-create-contract.md:40-50</td><td>internal</td><td>canonical invocation; `--title=&lt;value&gt;` equals form because clap rejects a `-`-leading bare positional</td><td class='assert-none'>none in-repo — scripted callers enforce in TS outside FILES</td></tr>
+<tr><td>br CLI</td><td>producer</td><td>skills/beads-standards/reference/origin-provenance.md:30-33</td><td>internal</td><td>a typed `br create`/`br q` carries origin first, one per bead</td><td class=''>the guard&#x27;s ORIGIN regex; fails OPEN on unparseable shell (32-33)</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>lint/checks/34-no-bead-subject-agreement.py:74-83</td><td>internal</td><td>a `[no-bead]` commit touches only the bookkeeping surfaces: `.beads/`, `_archive/`, FRICTIONS.md, MAINTENANCE.md</td><td class=''>is_allowed prefix/exact check; anything else in the diff → violation (228-234)</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>lint/lib/scope.py:85</td><td>internal</td><td>the ledger is exactly the root-level path `.beads/issues.jsonl`</td><td class=''>exact-path membership in the HOOKS set — no glob, no other location</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>scripts/assurance-declarations-check.sh:57-81</td><td>external</td><td>the committed JSONL holds one record per id with `issue_type` and `status` fields; `jq select(.id==$id)` finds it</td><td class=''>issue_type==&quot;decision&quot; AND status==&quot;open&quot; else the escape fails (72-79); unreadable board → fail (60-63)</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/_tools/stamp-refined.sh:122-135</td><td>external</td><td>the store&#x27;s comments array carries a conforming `POLISH-FIXPOINT:` receipt (rounds+sha256) for family-origin beads</td><td class=''>regex match else REFUSED + downgrade (125-135); rounds&lt;2 refused (131); a dead read of comments is treated as absent → refusal, not pass</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/_tools/touchers.sh:183-196</td><td>internal</td><td>the bead description (carried in the store) holds a `touchers:` line whose backticked command re-runs from the repo root and reproduces `→ N`</td><td class=''>text-shape parse only: backtick span + `→ &lt;N&gt;` + one of owned-by/out-of-scope (183-189); count must reproduce or REFUSED (191-196)</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/ac-pipeline/SKILL.md:71-73</td><td>external</td><td>`br ready` is non-deterministic and stabilizes on a wrong count; batch-boundary reads derive from the committed JSONL</td><td class='assert-none'>none mechanical — retires when br ready measures stable</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/ac-pipeline/references/assurance-declarations.md:37-43</td><td>internal</td><td>the PENDING-DECISION bead is resolvable from the COMMITTED JSONL (no br in CI); `.beads/**` sits in the registry-lint trigger paths so closing the bead re-runs the check</td><td class=''>issue_type==&quot;decision&quot; AND status==&quot;open&quot; else lint FAIL (self-expiring)</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/ac-pipeline/references/board-scan.md:37,47-57</td><td>external</td><td>`.beads/issues.jsonl` is the ONLY complete source (closed beads included); `br list` returned 436 of 2,453 with zero closed</td><td class=''>prose warning, load-bearing; asserts none mechanical</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/ac-polish/references/bead-checklist.md:45-55</td><td>internal</td><td>the artifact&#x27;s description blocks carry `touchers:` lines derivable by grep</td><td class=''>the reader must name the grep that derived the consumer set (48-49); stamp-refined re-runs and refuses a stale one</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/ac-polish/workflows/bead.md:13</td><td>internal</td><td>VALIDATE runs element4 + `touchers.sh check` over every bead&#x27;s description block each round</td><td class=''>the reader sees RED and must fix it — a round cannot record while an owed line is missing</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/beads-standards/SKILL.md:202-206,254-262</td><td>internal</td><td>VERDICT:/WORKER:/discovered-from structured comments are greppable in the JSONL and survive br version changes</td><td class=''>`grep &#x27;VERDICT:&#x27; .beads/issues.jsonl` — convention, no gate</td></tr>
+<tr><td>issues.jsonl store</td><td>consumer</td><td>skills/beads-standards/reference/bead-create-contract.md:23</td><td>internal</td><td>the touchers line names every caller the diff later changes</td><td class=''>diff-closure greps the ACTUAL changed callers and refuses `[unowned-callers]` — judge (ac-implement/scripts/diff-closure.sh) lives outside FILES</td></tr>
+<tr><td>issues.jsonl store</td><td>producer</td><td>skills/_tools/touchers.sh:16-27</td><td>internal</td><td>ac-beadify runs `derive` and writes the touchers line; stamp-refined sources this file and calls `check`</td><td class=''>ONE home, two callers — a second derivation would drift invisibly; PROBE: touchers.test.sh both polarities; MODE blocking, ON-FAILURE closed</td></tr>
+<tr><td>issues.jsonl store</td><td>producer</td><td>skills/ac-pipeline/SKILL.md:36-38</td><td>internal</td><td>verifiers write VERDICT: + catch-stage comments even when fixed in-batch; implementers never do</td><td class=''>`grep &#x27;VERDICT:&#x27; .beads/issues.jsonl` — the Goodhart separation is convention, no gate</td></tr>
+<tr><td>issues.jsonl store</td><td>producer</td><td>skills/ac-polish/workflows/bead.md:14,36-46</td><td>internal</td><td>polish-fixpoint.sh writes the `POLISH-FIXPOINT:` receipt comment to EVERY artifact bead</td><td class=''>the receipt is a PRECONDITION of `refined`, not a grant; stamp-refined remains the sole refined writer</td></tr>
+<tr><td>issues.jsonl store</td><td>producer</td><td>skills/beads-standards/SKILL.md:444-465</td><td>internal</td><td>the JSONL is DERIVED from the .db via `br sync --flush-only`; ONE committer per scope; never `--force`; never swept into a feature commit</td><td class=''>prose only — the two-writer rebase wedge (459-465) is documented, not mechanised</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>./harness-sync.sh:997-1022</td><td>internal</td><td>every repo resolves a git hooks dir (git-path or core.hooksPath); the chain accepts a symlink entry 60-ac-lint → hooks/pre-commit</td><td class=''>refuses a real file / foreign symlink (1006-1013); unresolvable dir → WARN + return 0 (1000-1003); the LINK TARGET&#x27;s existence is never tested (1019)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>hooks/hooks.json:100</td><td>internal</td><td>the guard&#x27;s PROBE declaration names hooks/bead-capture-guard.test.py (38 cases) driven by Check 18 in CI</td><td class=''>prose declaration; Check 18 is the executor (18:99-110)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>lint/checks/18-guard-liveness.py:99-110</td><td>internal</td><td>the guard file is executable AND its behaviour suite passes when driven</td><td class=''>subprocess rc==0 else violation; missing guard or .test.py → violation, never a pass (109-110)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>lint/checks/19-bead-template-conformance.py:37-51</td><td>internal</td><td>scripts/bead-template-lint.py exists, runs, exits 0</td><td class=''>missing judge → FAIL exit 1, never silent (39-41)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>lint/checks/34-no-bead-subject-agreement.py:236-260</td><td>internal</td><td>lint/allowlists/34-no-bead-subject-agreement.txt parses (seeded header, `date \| sha \| subject` entries) and a committed version exists at base</td><td class=''>malformed/duplicate/missing-header entries fail loud (106-114); growth vs the committed base refused (246-258); unresolvable base → NOTE, ratchet skipped (259-260)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>lint/lib/scope.py:87</td><td>internal</td><td>the one judge file plus templates/ are Check 19&#x27;s audit surface, fixed at import</td><td class=''>exact-path membership in the single import-time walk (`p == &quot;scripts/bead-template-lint.py&quot;`)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>lint/parity.sh:295-308</td><td>internal</td><td>a missing-script fixture makes both judges fail — a missing lint script is never read as a clean sweep</td><td class=''>compare_sets verdict diff (307)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>scripts/assurance-declarations-check.sh:83-128</td><td>internal</td><td>every hooks.json wiring entry carries assurance{PROBE, SCHEDULE, MODE, ON-FAILURE}; blocking+open needs one escape</td><td class=''>MODE∈{blocking,advisory}, ON-FAILURE∈{open,closed} (107-108); zero wiring entries → NOT-GATED fail (84-88)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>scripts/bead-template-lint.py:180-185</td><td>internal</td><td>the detector finds &gt;20 templates under skills/**/*.md — a broken detector would otherwise pass vacuously</td><td class=''>scanned&lt;20 → VACUOUS exit 1 (population assert)</td></tr>
+<tr><td>lint gate</td><td>consumer</td><td>skills/ac-pipeline/references/assurance-declarations.md:37-43</td><td>internal</td><td>the PENDING-DECISION bead is resolvable from the COMMITTED JSONL (no br in CI); `.beads/**` sits in the registry-lint trigger paths so closing the bead re-runs the check</td><td class=''>issue_type==&quot;decision&quot; AND status==&quot;open&quot; else lint FAIL (self-expiring)</td></tr>
+<tr><td>lint gate</td><td>producer</td><td>scripts/bead-template-lint.py:38</td><td>internal</td><td>shipped templates may carry unsubstituted placeholders (`origin:&lt;skill&gt;`, qa-shared&#x27;s `&lt;ac-qa-device\|ac-qa-browser&gt;`) the runtime guard must then reject</td><td class=''>TEMPLATE_ORIGIN regex (placeholder-or-slug) applied at 66-67 → violation 165; agreement with the runtime ORIGIN regex asserted in comments (34-37) only</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>./harness-sync.sh:366-378</td><td>internal</td><td>hooks.json is valid JSON; wiring entries carry event/matcher/command/timeout/scope/harnesses</td><td class=''>jq reduce renders per harness+scope; the assignment form so a jq failure trips `set -e` (387-389)</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>hooks/bead-capture-guard.py:296-303</td><td>external</td><td>a Claude-shaped PreToolUse JSON payload on stdin (`tool_name`, `tool_input.command`)</td><td class=''>`tool_name in (None,&quot;Bash&quot;)` gate (299); `br` substring pre-filter (303); malformed JSON falls to the fail-open wrapper (344-346)</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>hooks/hooks.json:98-124</td><td>internal</td><td>the wiring entry reaches every harness at PreToolUse(Bash), org+app+machine, 10s timeout; blocking + fail-open is legal only with an escape</td><td class=''>assurance declares MODE blocking / ON-FAILURE open (103); BACKSTOP: skills/_tools/stamp-refined.sh (104)</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>lint/checks/18-guard-liveness.py:99-110</td><td>internal</td><td>the guard file is executable AND its 25-case behaviour suite passes when driven</td><td class=''>subprocess rc==0 else violation; missing guard or .test.py → violation, never a pass (109-110)</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>lint/parity.sh:284-293</td><td>internal</td><td>a doctored tree (bead-capture-guard chmod -x) makes BOTH judges fail the same two legs</td><td class=''>compare_sets verdict diff blocks the port (82-93)</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>scripts/bead-template-lint.py:25-29</td><td>internal</td><td>the static twin imports the guard module by path — ONE implementation of the rules, no second copy to drift</td><td class=''>importlib exec at load — a broken import fails the check loud</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>skills/beads-standards/SKILL.md:113,239</td><td>internal</td><td>the capture contract&#x27;s two enforcers — runtime guard at creation, Check 19 on shipped templates — hold the origin/readiness axes on every `br create` in the fleet</td><td class=''>prose pointer; both enforcers are on FILES and wired (guard rows above)</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>skills/beads-standards/reference/bead-create-contract.md:8-15</td><td>internal</td><td>two enforcers implement exactly this list: runtime (guard) catches what agents TYPE, static (Check 19) catches what the registry SHIPS</td><td class=''>prose; both enforcers are on FILES and wired</td></tr>
+<tr><td>pre-commit hook</td><td>consumer</td><td>skills/beads-standards/reference/origin-provenance.md:30-41</td><td>internal</td><td>three layers: creation gate (fails OPEN on unparseable shell), scripted creation (TS type-check), refine backstop (repairs at stamp, never withholds refined)</td><td class=''>ac-align nightly reconcile reports post-cutover beads missing origin — prose report, never auto-labelled</td></tr>
+<tr><td>pre-commit hook</td><td>producer</td><td>./harness-sync.sh:386-390,445-455</td><td>internal</td><td>each harness&#x27;s settings file is parseable JSON; the hooks key is a managed projection</td><td class=''>malformed app settings → ERROR + FAILURES, block NOT rendered (447-451); write_file_if_changed diff-gates wholesale renders</td></tr>
+<tr><td>pre-commit hook</td><td>producer</td><td>hooks/bead-capture-guard.py:325-334</td><td>internal</td><td>the calling harness honours exit 2 + stderr as a block in its own hook dialect</td><td class=''>the three block messages (MESSAGE/READINESS_MESSAGE/PROBE_MESSAGE) to stderr + exit 2; native-harness honouring asserted only in prose (docstring 21-23, hooks.json _doc 2); opencode side asserted by ./harness-sync.sh:770-782</td></tr>
+<tr><td>pre-commit hook</td><td>producer</td><td>hooks/hooks.json:108</td><td>internal</td><td>`{HOOKS}` substitutes to the literal $HOME registry hooks path at render time</td><td class='assert-none'>none in-file — the substitution is harness-sync&#x27;s gsub (./harness-sync.sh:369-370)</td></tr>
+</table>
+<h2>seams seen by more than one lens (10) — fix these first</h2><table><tr><th>path</th><th>what each lens sees</th><th>lenses</th></tr>
+<tr><td>skills/_tools/stamp-refined.sh</td><td>boundary: assumption nothing asserts · flow: failure not handled, step with no sensor · object: competing writers</td><td>3</td></tr>
+<tr><td>skills/ac-beadify/references/bead-schema.md</td><td>boundary: assumption nothing asserts · flow: failure not handled, step with no sensor · object: competing writers</td><td>3</td></tr>
+<tr><td>skills/ac-pipeline/SKILL.md</td><td>boundary: assumption nothing asserts, untrusted input nothing validates · flow: failure not handled · object: competing writers</td><td>3</td></tr>
+<tr><td>skills/beads-standards/reference/bead-create-contract.md</td><td>boundary: assumption nothing asserts · flow: failure not handled, step with no sensor · object: competing writers</td><td>3</td></tr>
+<tr><td>skills/ac-hygiene/references/journey-coverage.md</td><td>flow: failure not handled · object: competing writers</td><td>2</td></tr>
+<tr><td>skills/ac-pipeline/scripts/board-truth.sh</td><td>boundary: assumption nothing asserts, untrusted input nothing validates · flow: failure not handled</td><td>2</td></tr>
+<tr><td>skills/ac-polish/workflows/bead.md</td><td>flow: failure not handled · object: competing writers</td><td>2</td></tr>
+<tr><td>skills/beads-standards/SKILL.md</td><td>flow: failure not handled · object: competing writers</td><td>2</td></tr>
+<tr><td>skills/beads-standards/reference/bead-conventions.md</td><td>flow: failure not handled · object: competing writers</td><td>2</td></tr>
+<tr><td>skills/beads-standards/reference/origin-provenance.md</td><td>flow: failure not handled · object: competing writers</td><td>2</td></tr>
+</table>
+<p class=small>rendered from map.json by seams-render.py — edit the data, never this page.</p>
