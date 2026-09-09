@@ -1,2 +1,12 @@
+# REQUIRED JOBS — job-level contract (one per line; ac-publish executed-jobs assertion)
 Quality Gate (format · lint · types · build · tests · prompt-drift)
 Supabase integration tests (real Postgres · workflow_dispatch only)
+
+# REQUIRED_STEPS — step-level contract (one per line; a step that did not conclude
+# success — skipped, cancelled, never scheduled — is NOT-GATED, never a pass)
+Unit + integration tests (vitest)
+Build check (next build)
+TypeScript check (tsc --noEmit)
+Shadow divergence check
+Supabase integration tests — real Postgres (workflow_dispatch only)
+Apply migrations — db reset (workflow_dispatch only)

@@ -41,43 +41,43 @@ trust logic here would drift against the first the week it landed.
 **Consume the RETURNED SHA, not your input `R`.** A fix-forward round commits, so the tip moves;
 tagging your original ref after one ships a commit nothing proved.
 
-## The one thing this gate adds: required jobs must have EXECUTED
+## The one thing this gate adds: required jobs AND steps must have EXECUTED
 
 A run's conclusion is a fact about the RUN, not about any job inside it, and the two diverge —
-measured live on `craigvandotcom/body-compass-app` run `33103521929`: run-level `failure`, one
-job `success`. The dangerous direction is the mirror image: a required job skipped by an `if:`,
-or never scheduled at all, leaves a green run with nothing behind it (a conclusion observed on
-that run's steps is literally `skipped`).
+measured live on run `33103521929`: run-level `failure`, one job `success`. A required job
+skipped by an `if:` or never scheduled leaves a green run with nothing behind it (the step
+conclusion is literally `skipped`). And `quality-gate.yml` emits the SAME TWO JOB NAMES for
+both tiers — a Tier-1 run passes job-level while the heavy steps skip; the step layer refuses
+it (evidence + six step names: `references/executed-jobs.md`).
 
-**So assert per-job, by name, against the run you dispatched:**
+**So assert per-job AND per-step, by name, against the run you dispatched:**
 
 ```bash
-# The app's CI contract: one required job name PER LINE — real names contain spaces and '·',
-# and a word-split list silently asserts over fragments that match nothing. The list is
-# COMMITTED DATA in the registry repo (.github/required-jobs.txt), resolved through this
-# skill's own symlinked home; deriving it from the workflow at assert time is circular —
-# a job silently deleted would vanish from a derived list too. Then read:
+# One required job name PER LINE, then a `# REQUIRED_STEPS` block of one required step name
+# PER LINE — real names contain spaces and '·'; a word-split list asserts over fragments that
+# match nothing. COMMITTED DATA (.github/required-jobs.txt), resolved via this skill's home.
 CONTRACT="$(dirname "$(readlink -f .claude/skills/ac-publish/SKILL.md)")/../../.github/required-jobs.txt"
-REQUIRED=$(cat "$CONTRACT" 2>/dev/null)
+REQUIRED=$(awk '/^# REQUIRED_STEPS/{exit} /^#/ || /^$/{next} {print}' "$CONTRACT" 2>/dev/null)
+REQUIRED_STEPS=$(awk '/^# REQUIRED_STEPS/{f=1; next} f && (/^#/ || /^$/){next} f{print}' "$CONTRACT" 2>/dev/null)
 [ -n "$REQUIRED" ] || { echo "NOT-GATED: no required-job contract at $CONTRACT — nothing was asserted"; exit 2; }
+[ -n "$REQUIRED_STEPS" ] || { echo "NOT-GATED: no required-step contract at $CONTRACT — nothing was asserted"; exit 2; }
 
+# Layer 1 — jobs must have concluded success.
 GREEN=$(gh run view "$RUN_ID" --json jobs \
           --jq '.jobs[] | select(.status=="completed" and .conclusion=="success") | .name')
 MISSING=$(comm -23 <(printf '%s\n' "$REQUIRED" | sort) <(printf '%s\n' "$GREEN" | sort))
-[ -z "$MISSING" ] || {
-  echo "NOT-GATED: required job(s) did not execute green in run $RUN_ID:"
-  printf '  %s\n' "$MISSING"; exit 2
-}
+[ -z "$MISSING" ] || { echo "NOT-GATED: required job(s) did not execute green:"; printf '  %s\n' "$MISSING"; exit 2; }
+
+# Layer 2 — steps must have concluded success; `skipped` (an `if:` guard) is NOT-GATED.
+GREEN_STEPS=$(gh run view "$RUN_ID" --json jobs \
+          --jq '[.jobs[] | .steps[]? | select(.conclusion=="success") | .name] | unique[]')
+MISSING_STEPS=$(comm -23 <(printf '%s\n' "$REQUIRED_STEPS" | sort) <(printf '%s\n' "$GREEN_STEPS" | sort))
+[ -z "$MISSING_STEPS" ] || { echo "NOT-GATED: required step(s) did not execute green:"; printf '  %s\n' "$MISSING_STEPS"; exit 2; }
 ```
 
-- **Absent from the job list** — the job never executed. `NOT-GATED`.
-- **`conclusion` of `skipped` / `cancelled` / `neutral` / null** — nothing was measured. `NOT-GATED`.
-- **`REQUIRED` empty or unreadable** — the assertion would range over an empty set, which is the
-  exact green-over-nothing this leg exists to stop. Refuse `NOT-GATED` rather than assert nothing.
-
-Executed against a live run before shipping, all three ways: a green pass, a required job that
-concluded `failure` refused by name, and an empty `REQUIRED` refused. A gate whose commands
-nobody ran is a scar list with better formatting.
+- **Absent from the job/step list, or `skipped`/`cancelled`/`neutral`** — nothing was measured. `NOT-GATED`.
+- **`REQUIRED`/`REQUIRED_STEPS` empty or unreadable** — ranges over an empty set, the exact green-over-nothing this leg exists to stop. Refuse `NOT-GATED`.
+- **The REQUIRED_STEPS contract names all six substantive steps** — 'Unit + integration tests (vitest)', 'Build check (next build)', 'TypeScript check (tsc --noEmit)', 'Shadow divergence check', 'Supabase integration tests — real Postgres (workflow_dispatch only)', 'Apply migrations — db reset (workflow_dispatch only)'. A Tier-1 run skips the heavy four; the step layer refuses it by name.
 
 `NOT-GATED` is never a pass and never a FAIL-and-continue: it is a stop. A dormant job reporting
 green is the gate-audit class (canon: `skills/ac-pipeline/references/` § assurance-declarations)
