@@ -28,8 +28,16 @@ false-positives on those and would block valid work. Tokenizing respects quoting
 a real command-position `br create` is inspected, and only the actual `-l/--labels` VALUE
 is searched for `origin:` — never the description.
 
+WHY a pre-pass BEFORE shlex: shlex collapses newlines and raises on an apostrophe inside
+a heredoc body ("bd-wywg8's"), so two multi-line shapes defeat the tokenizer — a `br create`
+on its own line after any other statement lands mid-token-stream and is never seen, and an
+unparseable heredoc body fails open by design. Both are resolved while the raw line
+structure still exists: heredoc bodies are stripped (they are DATA, never a command
+position — the `br create` text inside one must keep passing), and every remaining bare
+newline becomes a `;` separator. Quoted newlines stay intact.
+
 FAIL-OPEN on any parse failure. A guard that cannot understand a command must not wedge an
-unattended ac-loop run at 3am; a missed stamp is caught by ac-tidy's nightly repair pass.
+unattended ac-loop run at 3am; a missed stamp is caught by ac-align's nightly reconcile.
 """
 
 import json
@@ -48,7 +56,7 @@ ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
 READINESS = ("unrefined", "refined", "human-gate")
 
 # Epics are containers, never picked up for implementation, so readiness is meaningless on
-# them. This mirrors ac-tidy Phase 2f, which repairs the same gap nightly for "open non-epic"
+# them. This mirrors ac-align's nightly readiness-label repair, which fixes the same gap nightly for "open non-epic"
 # beads — the gate and the repair must agree on the exemption or they fight each other.
 READINESS_EXEMPT_TYPES = {"epic"}
 
@@ -128,6 +136,62 @@ def commands(tokens):
         yield current
 
 
+def strip_heredoc_bodies(command):
+    """Drop heredoc bodies (<<TAG / <<'TAG' / <<-TAG ... terminator line) before shlex.
+
+    The body is data — it may quote anything, including `br create` text and an
+    apostrophe — and none of it is a real command position. The opener line is kept;
+    body lines and the terminator line are dropped. A `<<-` tag strips leading tabs
+    from the terminator, matching bash.
+    """
+    lines = command.split("\n")
+    out = []
+    tag = None
+    dash = False
+    for line in lines:
+        if tag is not None:
+            check = line.lstrip("\t") if dash else line
+            if check == tag:
+                tag = None
+            continue  # body lines are data, never commands
+        m = re.search(r"<<(-?)(['\"]?)([A-Za-z0-9_][A-Za-z0-9_.-]*)\2", line)
+        if m:
+            tag = m.group(3)
+            dash = m.group(1) == "-"
+        out.append(line)
+    return "\n".join(out)
+
+
+def newlines_to_separators(command):
+    """Newline is a command separator, like ';' — but never inside a quoted string.
+
+    The `;` is space-padded: shlex only splits on whitespace, so a bare `;` glued to
+    a token would hide the boundary from CONTROL the same way the newline did.
+    """
+    out = []
+    quote = None
+    esc = False
+    for ch in command:
+        if esc:
+            out.append(ch)
+            esc = False
+        elif ch == "\\" and quote != "'":
+            out.append(ch)
+            esc = True
+        elif quote:
+            out.append(ch)
+            if ch == quote:
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+            out.append(ch)
+        elif ch == "\n":
+            out.append(" ; ")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def is_bead_create(cmd):
     """Return the subcommand if cmd is a `br create`/`br q` invocation, else None."""
     i = 0
@@ -161,7 +225,7 @@ def bead_type(cmd):
     None means "cannot know" and the readiness check is SKIPPED. A template placeholder
     like `-t <type>` could stand for `epic`, so enforcing readiness on it would block a
     legitimate epic template. Under-enforcing here is correct: the origin check still
-    applies, ac-tidy repairs readiness nightly, and lint Check 19 catches stale templates
+    applies, ac-align repairs readiness nightly, and lint Check 19 catches stale templates
     statically anyway.
     """
     val = flag_value(cmd, {"-t", "--type"}, ("--type=",))
@@ -217,7 +281,7 @@ def has_probe(cmd):
 
     An absent description BLOCKS (a probe-less create is exactly what this axis exists
     to refuse). An unsubstituted template placeholder skips, the same doctrine as
-    `bead_type`: it could stand for anything, ac-tidy repairs nightly, and lint Check 19
+    `bead_type`: it could stand for anything, ac-align repairs nightly, and lint Check 19
     catches stale templates statically.
     """
     d = description(cmd)
@@ -238,6 +302,13 @@ def main():
     command = (data.get("tool_input") or {}).get("command") or ""
     if "br" not in command:
         allow()
+
+    # Multi-line shapes first: a heredoc body is DATA (never a command position) and a
+    # bare newline is a command separator. Both must be resolved while the raw line
+    # structure still exists — shlex collapses newlines and raises on an apostrophe in
+    # a heredoc body, failing open on exactly the bypass this guard exists to block.
+    command = strip_heredoc_bodies(command)
+    command = newlines_to_separators(command)
 
     # Unparseable shell (unbalanced quotes, exotic syntax) -> fail open.
     try:

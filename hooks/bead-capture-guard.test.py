@@ -28,6 +28,13 @@ cases = [
  (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa-device"',        "origin second in list"),
  (ALLOW, 'br create "x" -t task -l "origin:unknown,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "unknown is legal"),
  (ALLOW, "cat <<'EOF'\nbr create nope\nEOF",                        "heredoc body"),
+ # --- origin gate: multi-line shapes (ac-y25j). A heredoc body is DATA, never a
+ # command position: `br create` inside it stays ALLOW, but a `br create` on its own
+ # line after a heredoc (or after any statement) is a real command and must be checked.
+ (BLOCK, 'echo hi\nbr create "t" -t task -p 2 -l human-gate',
+         "newline-separated create, no origin"),
+ (BLOCK, "cat > /tmp/x.md <<'EOF'\nit's a body\nEOF\nbr create \"t\" -t task -p 2 -l human-gate",
+         "apostrophe in heredoc body, then create, no origin"),
  (ALLOW, 'br create "x" -l "origin:a" ; br create "y" -l origin:b', "two labelled creates"),
  (BLOCK, 'br create "x" -l origin:a ; br create "y" -t task',       "second create unlabelled"),
  (ALLOW, 'echo "unbalanced \'quote',                                "unparseable -> fail open"),
