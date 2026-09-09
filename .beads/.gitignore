@@ -12,3 +12,11 @@ last-touched
 
 # Local history backups (large, transient)
 .br_history/
+
+# br 0.2.22+ (FrankenSQLite 0.3 engine) sidecars, migration artefacts and recovery bundles
+*-fsqlite-ns-gate
+*-fsqlite-ns-use
+*-wal-cert
+*-wal-cert-head
+.beads.db.schema-migration-*
+.br_recovery/
