@@ -49,7 +49,11 @@ Four things make it bite wider than its name suggests, all measured:
    path is non-compliant on its own and takes the whole compound with it. Split compound
    commands; never decorate them.
 4. **A separate rule, `core.git:checkout-ref-discard`, covers the git verb that restores a path
-   from another ref** — including on a clean path.
+   from another ref** — including on a clean path. Because the match is on command TEXT, it
+   fires even on a word merely *containing* the token — a shell function whose name embeds the
+   verb is caught the same way; rename the function, do not fight the guard. The same
+   positional parse reaches a redirect **inside a command substitution** — the substitution is
+   not a shield; give the inner statement its own compliant shape.
 
 ## Sanctioned shapes (each one empirically confirmed to pass)
 

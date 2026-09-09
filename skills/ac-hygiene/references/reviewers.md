@@ -16,13 +16,12 @@ ENVIRONMENT CONTRACT (non-negotiable):
 - Touching beads (`br`/`bv`)? The canon is `beads-standards` (+ its
   reference/bead-conventions.md for pipeline contracts) — read before inventing usage.
 - After every push: verify origin SHA == local HEAD before proceeding.
-- A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass. To DISCARD
-  a change: `git checkout HEAD -- <path>` AND unscoped `git stash` are both blocked —
-  use scoped `git stash push -- <paths>`; to read a pristine file, `git show <ref>:<path>`.
-  Destructive commands (rm / find -delete) take FULLY-LITERAL paths: resolve
-  first (`ls -d`), then paste literals — never `$VAR`, `$( )`, or a loop var.
-  /tmp literals + distinctive /tmp globs are allowed; home/repo `rm -rf` never
-  is — `git rm` if tracked, else gitignore-and-flag or ask the human.
+- A guard block (dcg / pre-commit) means CHANGE APPROACH, never bypass — the
+  blocked + sanctioned shape list is `ac-pipeline/references/shell-guardrails.md`.
+  Destructive commands (rm / find -delete) take FULLY-LITERAL paths: resolve,
+  then paste literals; home/repo `rm -rf` never — `git rm` if tracked, else
+  gitignore-and-flag or ask the human. Discard via scoped `git stash push -- <paths>`;
+  read a pristine file via `git show <ref>:<path>`.
 - Shared checkout: `git commit -- <your files>` the INSTANT its ACs verify —
   pathspec on the COMMIT, because scoping only the `add` still publishes the
   shared index. **Never `git add -A` / `git add .` / `git commit -a`** — they
