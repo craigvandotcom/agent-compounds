@@ -23,7 +23,9 @@ expect() {
 
 echo "--- ac-land Layer-2 project-key resolution ---"
 
-expect "$(grep -c 'session-start.md' "$AC_LAND" | awk '{print ($1>=1)?1:0}')" \
+# The spine may delegate the pin detail to references/teardown.md (the diet's home
+# for it); either location naming the pin source counts.
+expect "$( { grep -q 'session-start.md' "$AC_LAND" || grep -q 'session-start.md' "$SCRIPT_DIR/../references/teardown.md"; } && echo 1 || echo 0 )" \
   "ac-land names .claude/hooks/session-start.md as the pin source"
 
 # Must not assign cwd / git root / PROJECT_ROOT as the key (prose forbidding that is fine).
@@ -38,7 +40,12 @@ FIXTURE=$(mktemp -d /tmp/project-key-guard-XXXXXX)
 mkdir -p "$FIXTURE/.claude/hooks"
 printf '%s\n' '  human_key: "neometa/body-compass-app",' > "$FIXTURE/.claude/hooks/session-start.md"
 # The resolver is the sed one-liner published in ac-land — extract it, don't rewrite it.
+# The diet moved the teardown block (and the resolver with it) to references/teardown.md;
+# read the spine first, fall back to the indirection it names.
 RESOLVER=$(awk '/PINNED_KEY=\$\(sed/{flag=1} flag{print} /head -1/{if(flag) exit}' "$AC_LAND")
+if [ -z "$RESOLVER" ]; then
+  RESOLVER=$(awk '/PINNED_KEY=\$\(sed/{flag=1} flag{print} /head -1/{if(flag) exit}' "$SCRIPT_DIR/../references/teardown.md")
+fi
 if [ -z "$RESOLVER" ]; then
   expect 0 "ac-land publishes a PINNED_KEY=sed resolver"
 else
