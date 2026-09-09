@@ -268,7 +268,7 @@ Stages (Stage 0 gates everything after it):
    `submit:preflight` script).
 2. **Listing + screenshots** — managed in **ASC web** (standing config: description,
    keywords, supportUrl, screenshots, demo account). The submit lane leaves these alone
-   (`skip_metadata`). Asset side: `app-store-screenshots` / `screenshot-refresh` skills.
+   (`skip_metadata`).
 3. **Demo account** — comp it to a trial/active subscription so the reviewer can exercise
    paid features (Guideline 2.1(b)); never commit its password. The business-model reply is
    a committed text file pasted into App Review Information.

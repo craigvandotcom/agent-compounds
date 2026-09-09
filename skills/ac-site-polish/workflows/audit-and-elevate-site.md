@@ -36,7 +36,7 @@ overflow vs error/404 where reachable. **The cell is the unit of done** — one 
 > pages commonly gate sections behind scroll-triggered reveal (`opacity:0` + IntersectionObserver),
 > so a single **full-page** screenshot renders the middle of the page **blank** — and you will
 > misread "animated in" as "missing/broken". Before capturing, neutralize entrance animations (same
-> spirit as `screenshot-refresh` killing focus rings):
+> spirit as the focus-ring removal in capture tooling):
 > ```js
 > const s = document.createElement('style');
 > s.textContent = `*,*::before,*::after{opacity:1!important;transform:none!important;
@@ -85,9 +85,9 @@ every "conformant" verdict** — an errored page renders like an empty one.
    points to it), no anchors to missing ids. External links open correctly. File each break as a
    conformance defect.
 4. **Screenshot freshness** — Embedded app screenshots are current, on-brand, correctly seeded (no
-   stale data / empty states / dev chrome), and match the live app. When stale, **hand off to
-   `screenshot-refresh`** to reseed + recapture; re-audit the page after. **If the mockups are of a
-   NATIVE app, use screenshot-refresh's Option C (device capture) — not the browser path:** a local
+   stale data / empty states / dev chrome), and match the live app. When stale, **hand off the
+   recapture to the app-local capture tooling** to reseed + recapture; re-audit the page after.
+   **If the mockups are of a NATIVE app, use device capture — not the browser path:** a local
    web dev server often renders demo/mock data + auto-auth, so only the native app on device shows
    real seeded data. Match the marketing theme (e.g. dark) and crop OS chrome to the embedded format.
 
@@ -107,11 +107,9 @@ every "conformant" verdict** — an errored page renders like an empty one.
 
 Gains plateau after ~3 elevation cycles per surface — don't loop past diminishing returns.
 
-## Phase 5 — Inline SEO + a11y (BEFORE the final re-audit)
+## Phase 5 — Inline a11y (BEFORE the final re-audit)
 
 Run as composed stages so a single `/ac-site-polish` pass is genuinely one-stop:
-- **`seo-metadata`** — titles, meta description, canonical, OG/Twitter cards, sitemap, robots,
-  JSON-LD. On a mature site this *extends* existing metadata, not bootstraps.
 - **`web-design-guidelines`** — objective a11y mechanics (ARIA, focus order, form semantics, contrast
   math, motion-reduce). Do not re-wrap — call it directly.
 
@@ -142,7 +140,7 @@ regressions on adjacent pages.
 - [ ] Sensors ran before eyes on every cell.
 - [ ] Both ledgers produced (Conformance — or "N/A unratified"; Elevation with cited gaps only).
 - [ ] The 4 site axes scored per surface; link/CTA integrity has zero unresolved breaks.
-- [ ] SEO + a11y ran inline, before the final re-audit.
-- [ ] Embedded screenshots fresh (or `screenshot-refresh` handed off + re-audited).
+- [ ] A11y ran inline, before the final re-audit.
+- [ ] Embedded screenshots fresh (or the recapture handed off to the app-local capture tooling + re-audited).
 - [ ] Re-audit clean (zero sensor fails / blocker / high) at every viewport + data-state.
 - [ ] Verified running; before/after artifacts; tests pass; no sibling regressions.

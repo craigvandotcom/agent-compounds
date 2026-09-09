@@ -30,7 +30,7 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ac-publish** | The ship gate — `ac-prove` obtains the proof and this gate asserts its REQUIRED JOBS ACTUALLY EXECUTED, refusing `NOT-GATED` on a job that was absent, skipped or cancelled; then version once, tag the proven SHA (never `HEAD`), promote-not-rebuild on web, CI-built artifacts only on native, hand off to `ac-distribute` |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
-| **ac-align** | Reconcile the pipeline with current strategy |
+| **ac-align** | Reconcile the pipeline with current strategy; owns the nightly reconcile (archive done work, repair readiness labels) and the weekly strategy align |
 | **ac-plan-lab** | Deep analysis of a plan — genius (forensic review) + alien (paradigm-breaking) modes |
 | **ac-bead-capture** | Capture a raw idea/bug/decision on the go as one properly typed, routed bead |
 | **[beads-standards](./skills/beads-standards/)** | Machine-wide bead canon (not pipeline-scoped) — agent vs human bead templates, `human-gate` label taxonomy + synonym merge map, refined/unrefined semantics, status/priority/close_reason conventions, dependency-wiring requirements |
@@ -39,7 +39,6 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ac-land** | Session closure — retrospective learning + system compounding |
 | **ac-prove** | The shared tip-valid full-suite proof primitive — freshness probe / dispatch-if-stale / ensure --fix-forward; every ship path calls it instead of re-implementing its own CI-trust logic |
 | **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
-| **ac-tidy** | Pipeline housekeeping — archive done items, reconcile backlog/plans/beads (out-of-band) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
 | **ac-human-session** | Human command center — surfaces only work at a human gate (blockers, plans to approve, hopper), conducts the sit-down; board mode renders the full read-only board, loop side included |
 
@@ -61,15 +60,12 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ac-ui-polish** | Conform UI to the app's design.md then polish to premium — whole-app crawl or one screen; anti-slop audit (was ui-elevate) |
 | **ac-site-polish** | Conform the public marketing site to design.site.md then polish to premium — the public twin of ac-ui-polish |
 | **web-design-guidelines** | Accessibility, forms, animation, typography UX |
-| **app-store-screenshots** | Generate iOS App Store screenshots from real screens |
-| **screenshot-refresh** | Discover, seed, and recapture stale landing page screenshots |
-| **seo-metadata** | Add or audit SEO and social-share metadata (OG, Twitter cards, JSON-LD, sitemaps) |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 
 > `ac-distribute/` also carries `references/_DECISION-distribution-stack.md` — the distribution-stack decision doc (ratified 2026-06-15) that preceded the skill.
 
-> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version.
+> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version. `app-store-screenshots`, `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO concerns, owned by each app (reference copies in body-compass-app).
 
 **Substrate** — the AI-native-org memory skills (deploy together)
 | Skill | What it does |
