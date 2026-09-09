@@ -59,7 +59,7 @@ or journey docs.
 
 ## Method (see → act → assert)
 
-agent-browser mechanics: read `browser-testing/SKILL.md`. Loop per journey step:
+agent-browser mechanics: read `ac-qa/references/driver-browser.md`. Loop per journey step:
 
 1. `agent-browser --session {SESSION_NAME} open "{BASE_URL}<route>"` — set the app's
    viewport (CORE viewport policy), `wait --load networkidle`

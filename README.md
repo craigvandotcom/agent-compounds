@@ -53,8 +53,6 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
 | **ac-idea-lab** | Deep analysis of a raw idea — genius (forensic review) + alien (paradigm-breaking) modes |
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts; builds orchestrated `/command` workflows (`workflows/build-workflow.md`); runs the registry audit — mechanical lint passes + semantic dedup/drift (`workflows/registry-audit.md`); scores subagent prompts against the research-backed rubric (`references/prompt-rubric.md`) |
-| **browser-testing** | UI/login/flow validation via agent-browser |
-| **device-testing** | Ad-hoc native iOS-simulator driving via agent-device, with screenshot/video capture — the native twin of browser-testing |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
 | **ac-ui-polish** | Conform UI to the app's design.md then polish to premium — whole-app crawl or one screen; anti-slop audit (was ui-elevate) |

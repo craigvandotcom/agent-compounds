@@ -8,7 +8,7 @@ description: Use when QA-ing the WEB app build in a browser — full journey val
 > findings=beads, the `QA_VALIDATION` report, the conductor/worker evidence
 > protocol** — live in **`ac-pipeline/references/qa-shared.md`**; both twins reference it so they
 > stay in lockstep. This file owns the web/browser specifics only. The low-level
-> `agent-browser` CLI mechanics live in **`browser-testing/SKILL.md`** (loaded by
+> `agent-browser` CLI mechanics live in **`ac-qa/references/driver-browser.md`** (loaded by
 > the tester workers, not by you).
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds
@@ -263,7 +263,7 @@ The rules the workers run under live in **`references/journey-tester-prompt.md`*
 (refs renumber per snapshot; checkpoint fills; console errors ARE findings;
 empty ≠ clean; catch toasts; direct-navigate routes; responsive is a matrix;
 screenshot hygiene; close only your own session). Low-level CLI mechanics + the
-runaway-Chrome teardown rationale: `browser-testing/SKILL.md`.
+runaway-Chrome teardown rationale: `ac-qa/references/driver-browser.md`.
 
 ## Web shell — what to check
 
@@ -314,7 +314,7 @@ bead instead (same rule as `ac-qa-device`).
 - `ac-pipeline/scripts/validate-qa-run.sh` — mechanical pass validation
 - `references/journey-tester-prompt.md` — the worker prompt template (the core loop)
 - `web-shell-checklist.md` — what ONLY the web shell surfaces
-- `browser-testing/SKILL.md` — low-level `agent-browser` mechanics (worker-side)
+- `ac-qa/references/driver-browser.md` — low-level `agent-browser` mechanics (worker-side)
 - `ac-qa-device/SKILL.md` — the native-shell twin (Layer 2)
 - `_tools/crawl-and-capture/` — the shared full-app crawl + screenshot primitive
 - Consuming app's `CORE/journeys/` + `environments.md` + `routes.md` — the what

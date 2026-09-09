@@ -46,7 +46,7 @@ friction-prone — see `references/setup.md` appendix; don't attempt it ad hoc.
 
 | Layer | Tool | Coverage | Cost |
 | ----- | ---- | -------- | ---- |
-| 1. Browser (DOM) | `browser-testing` skill (agent-browser) | Exhaustive: every page, button, state, edge case | Cheap, fast |
+| 1. Browser (DOM) | `ac-qa/references/driver-browser.md` (agent-browser) | Exhaustive: every page, button, state, edge case | Cheap, fast |
 | 2. **Simulator (this skill)** | agent-device + simctl | Every journey happy-path with REAL native taps + the native-shell checklist | Slower per action |
 | 3. DOM-in-shell | Appium webview context | DOM truth inside the real shell (origin/cookies/storage) | Flaky; escape hatch only (`references/setup.md`) |
 
@@ -211,7 +211,7 @@ agent-device record start /tmp/qa-flow.mp4  # ... agent-device record stop
 > stalled build is a reportable outcome, not a pause.
 
 > **Screenshots / screen recordings as deliverables** (App Review evidence, bug
-> repros, demos) → the **`device-testing`** skill owns the capture recipe,
+> repros, demos) → the **`ac-qa/references/driver-device.md`** driver reference owns the capture recipe,
 > including the simulator-VFR video gotcha (raw `simctl recordVideo` is
 > variable-frame-rate; seek-trimming it plays back as black + a one-frame flash —
 > re-encode to CFR with `ffmpeg -vf fps=30` and verify playback, not just
@@ -452,5 +452,5 @@ Mac" above).
 - `references/setup.md` — Mac setup, AXe fallback, Linux→Mac remote appendix,
   Appium webview escape hatch (Layer 3)
 - `ac-qa-browser/SKILL.md` — the web-shell twin (Layer 1, exhaustive DOM coverage)
-- `browser-testing/SKILL.md` — the low-level `agent-browser` mechanics the twin wraps
+- `ac-qa/references/driver-browser.md` — the low-level `agent-browser` mechanics the twin wraps
 - Consuming app's `CORE/journeys/` + `CORE/journeys/native.md` — the what

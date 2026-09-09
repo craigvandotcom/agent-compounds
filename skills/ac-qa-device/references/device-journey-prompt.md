@@ -59,8 +59,9 @@ Read `ac-qa-device/SKILL.md` from **§ Core loop (worker-side)** down — that i
 doctrine: the see → act → assert loop (accessibility tree, @refs renumber every
 snapshot, built-in waits over sleeps), the discipline rules, § Seeing the WebView
 (hybrid apps), § State control quick reference, and § Performance & rendering claim
-limits. App-specific native facts (deep-link scheme, sim-impossible flows):
-the app's `CORE/journeys/native.md`.
+limits. For the capture recipe (screenshots, screen-recordings, the VFR-safe
+video flow) read `ac-qa/references/driver-device.md`. App-specific native facts
+(deep-link scheme, sim-impossible flows): the app's `CORE/journeys/native.md`.
 
 Assert the journey's `proof.asserts`, each PASS/FAIL with screenshot evidence to
 {ARTIFACTS_DIR}/evidence/{SESSION_NAME}-<step>.png (simctl screenshot). Steps listed

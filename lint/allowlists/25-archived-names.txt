@@ -37,9 +37,7 @@ skills/beads-standards/SKILL.md
 skills/beads-standards/reference/bead-conventions.md
 skills/beads-standards/reference/human-gate-template.md
 skills/beads-standards/reference/origin-provenance.md
-skills/browser-testing/SKILL.md
 skills/capacitor/SKILL.md
 skills/context-engineering/SKILL.md
-skills/device-testing/SKILL.md
 skills/skill-builder/references/friction-capture.md
 skills/skill-builder/references/trigger-corpus.md
