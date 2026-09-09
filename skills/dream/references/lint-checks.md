@@ -79,23 +79,21 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     citation trail reveals a fact that was never actually true. **Always gated, never an
     auto-edit to either side** — per `[[rule-proposals-become-beads]]`, every finding
     becomes a proposal, which becomes a decision bead in its target repo.
-12. **Decay / promotion by reference** `[T2 weekly, script-driven, data-gated]` — a fact
+12. **Decay by reference** `[T2 weekly, script-driven, data-gated]` — a fact
     that has earned **neither an injection nor a read** across the trailing window is an
-    archive candidate; a fact referenced often enough is a promotion candidate. This check
-    is **not a manual sweep** — it is the deterministic script
-    `infrastructure/dream-cycle/decay_lint.py`, which reads the observe-loop reference
-    signals (recall injections + qmd reads) and emits **gated** archive proposals
-    (`category: re-home`, always human-gated). It **self-arms**: it does nothing until ≥28
+    archive candidate. This check is **not a manual sweep** — it is Check F of
+    `infrastructure/scripts/health/memory-lint.py` (the ONE memory-substrate sensor;
+    absorbed `dream-cycle/decay_lint.py`, retired 2026-09-09), which reads the observe-loop
+    reference signals (recall injections + qmd reads) and emits **findings** for the dream
+    docket (`kind: decay-candidate`). It **self-arms**: it does nothing until ≥28
     days of recall data exist AND the `memory_reads` table is live, so it cannot act on a
     zero it hasn't earned. Predicate + thresholds (the script docstring is the authority —
     keep them in sync): archive requires *all* of — zero injected-count in the trailing
     **28d** window · a **coverage guard** (every non-retired machine contributed ≥**5**
     active days; shards idle >**90d** are retired, not blockers) · zero read-count in the
-    window · git mtime >**60d**. Promotion: ≥**3** total references (injected+read) in the
-    window. Every archive proposal moves the fact to `<home>/memory/archive/` (reversible,
-    audit-trailed — never deletion) and carries the verbatim blindness caveat that direct
-    `Read`-tool access and MEMORY.md-index browsing are uncounted. Emit-only: the script
-    never moves or deletes anything.
+    window · git mtime >**60d**. Report-only: memory-lint never moves or deletes anything;
+    the manual dream session rules on archiving. (decay_lint's stdout-only promotion list
+    was retired with it — noise no reader consumed, org-bj8.)
 
 13. **Provenance leak in skill text** `[T2 weekly]` — skill/canon files carrying an edit's
     STORY instead of behavior: dates in prose, director attributions, pass/wave narratives,
@@ -183,15 +181,15 @@ diff <(grep -oE '\(([a-zA-Z0-9_-]+\.md)\)' <home>/MEMORY.md | command tr -d '()'
      <(ls <home> | grep -v -E 'MEMORY|README' | sort)
 # dead wikilinks
 grep -ohrE '\[\[[a-zA-Z0-9_-]+\]\]' <homes>... | sort -u   # then check each slug exists
-# decay / promotion by reference (check 12 — self-arming, gated, emit-only)
-python3 ~/Repos/infrastructure/dream-cycle/decay_lint.py   # or --dry-run to preview
+# decay by reference (check 12 — self-arming, report-only, findings for the docket)
+python3 ~/Repos/infrastructure/scripts/health/memory-lint.py --check --json
 ```
 
-Run `decay_lint.py` in the lint phase; **tolerate absence / not-armed** — a not-armed run
-prints a single `not armed: collecting since <date>; arms <date>` line and exits 0, which
-goes into the cycle `INDEX.md` as-is (it is a status, not a failure). When armed it writes
-its own gated archive proposals into today's `proposals/<date>/` dir and prints a summary +
-promotion list; fold that summary into `INDEX.md` too.
+Run `memory-lint.py --check --json` in the lint phase; **tolerate absence / not-armed** — a
+not-armed run reports `not armed: collecting since <date>; arms <date>` in the decay
+context and emits no decay findings, which goes into the cycle `INDEX.md` as-is (it is a
+status, not a failure). Decay candidates and dedupe pairs surface through `docket-sweep.py`
+(memory-hygiene rows) — the docket is their only consumer; never self-authored proposals.
 
 Semantic checks (contradiction, staleness, duplication) need reading + `qmd search` —
 budget most lint time there; the mechanical ones are seconds.
