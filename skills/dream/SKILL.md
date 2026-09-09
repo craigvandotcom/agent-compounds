@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream docket", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads the ranked docket (infrastructure/dream-cycle/proposals/DOCKET.md), rules each item with the human, and emits approved work as task beads; the mechanical sweep keeps the docket fresh. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream dockets", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads both ranked dockets (infrastructure/dream-cycle/proposals/MEMORIES-DOCKET.md — knowledge substrate, FRICTIONS-DOCKET.md — friction ledger), rules each item with the human, and emits approved work as task beads; the mechanical sweep keeps the dockets fresh. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — human judgment over the ranked docket
@@ -9,11 +9,10 @@ description: Run the dream session — the org's deliberate self-improvement rev
 session. Not scheduled.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there).
-**Docket (input):** `infrastructure/dream-cycle/proposals/DOCKET.md` — maintained by
-the mechanical sweep (`infrastructure/dream-cycle/docket-sweep.py`), never by the
-session.
-**Status:** MANUAL (Craig ruling 2026-09-08). No scheduled dream. The only automated
-artifacts are the docket (mechanical sweep) and one idempotent docket-review bead.
+**Dockets (input):** `infrastructure/dream-cycle/proposals/MEMORIES-DOCKET.md`
+(knowledge substrate) + `FRICTIONS-DOCKET.md` (friction ledger) — maintained by
+the sweep (`docket-sweep.py`), never by the session. **Status:** MANUAL (2026-09-08).
+Only automated artifacts: the two dockets + one idempotent docket-review bead.
 
 ---
 
@@ -35,11 +34,11 @@ and nothing else:
 
 1. **Verifies premises live** — every pending proposal memo and open dream bead gets
    a verdict against HEAD: `LIVE` / `ANSWERED` / `UNJUDGED` / `STALE-EVIDENCE`.
-2. **Ranks the survivors** — frictions, memory-hygiene, wiki, and pending-proposal
-   opportunities — into `infrastructure/dream-cycle/proposals/DOCKET.md`, weighted by
-   judge score × recurrence × staleness.
-3. **Mints the single docket-review bead** if none is open (idempotent — the session's
-   handle on the board).
+2. **Ranks the survivors** into two dockets: `MEMORIES-DOCKET.md` (knowledge substrate
+   — memory-lint findings, wiki refinements, pending-memo opportunities) and
+   `FRICTIONS-DOCKET.md` (friction ledger + machinery/process proposals).
+3. **Mints the single combined docket-review bead** ('review dream dockets') if none
+   is open (idempotent — the session's handle on the board; it never closes it).
 4. **Never decides anything.** Findings only.
 
 The sweep also closes answered-at-birth items, citing the deciding artifact. It never
@@ -49,10 +48,10 @@ rules on what remains. Judgment is the session's, not the sweep's.
 
 ### Phase 1 — GATHER
 
-Read `infrastructure/dream-cycle/proposals/DOCKET.md` — the ranked survivors and the
-flagged items that re-entered. Scan fresh ledgers since the last session — friction
-logs, memory homes, wiki, pending proposals — so nothing the sweep's last pass predates
-is missed. The docket is the input; the fresh scan is the completeness check.
+Read both dockets (`MEMORIES-DOCKET.md`, `FRICTIONS-DOCKET.md` — paths above) — the
+ranked survivors and the flagged re-entries. Scan fresh ledgers since the last session
+— friction logs, memory homes, wiki, pending proposals — so nothing the sweep's last
+pass predates is missed. The dockets are the input; the fresh scan is the check.
 
 ### Phase 2 — JUDGE (with Craig)
 
