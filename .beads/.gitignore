@@ -20,3 +20,5 @@ last-touched
 *-wal-cert-head
 .beads.db.schema-migration-*
 .br_recovery/
+*.db-journal
+*.fsqlite-migration-state
