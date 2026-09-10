@@ -20,11 +20,14 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
   refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
 - `br create` REJECTS `-f` alongside a title, rc 4 (measured on `br` 0.5.12): `-f` is a
-  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`,
-  because the capture guard reads the inline body for the born `Probe:` line
-  (`--description-file` is deliberately not adopted). That
-  routes the body through the shell, so bead prose must stay dcg-safe (no command
-  substitution, no unbalanced quoting). Only comments and receipts take `-f <file>`.
+  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`
+  (`--description-file` is deliberately not adopted). That routes the body through the
+  shell, so bead prose must stay dcg-safe (no command substitution, no unbalanced
+  quoting). The capture guard reads the inline `-d` value, so a file/heredoc body is
+  OPAQUE to it and its born-`Probe:` check fails open on exactly this form; the backstop
+  is the committed-board check (`lint/checks/35-board-integrity.py`), which reads the
+  landed body and refuses a probe-less implementable bead at the ledger commit. Only
+  comments and receipts take `-f <file>`.
 
 ## The four sections
 

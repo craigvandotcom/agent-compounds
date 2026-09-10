@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ---
 # id: 35-board-integrity
-# prevents: a duplicate board record, a line that is not JSON, or an origin-less post-cutover OPEN bead sitting in the committed board unsensed — the create-time origin guards fail open on unparseable shell, and the only repair between create and refine is a backstop a bead only reaches if someone refines it
+# prevents: a duplicate board record, a line that is not JSON, or an origin-less / probe-less post-cutover OPEN implementable bead sitting in the committed board unsensed — the create-time guards fail open on unparseable shell (a body passed as `-d "$(cat file)"` or a heredoc blinds the born-probe check), and the only repair between create and refine is a backstop a bead only reaches if someone refines it
 # scope: HOOKS
 # severity: fail
 # fixture: lint/fixtures/35-board-integrity
@@ -19,7 +19,10 @@ Three FAIL rules over the committed board:
   2. an `id` that appears more than once;
   3. an OPEN bead created on or after the origin cutover (2026-08-23 — the date the
      hooks manifest's `_doc` records the origin axis becoming a hard gate) carrying no
-     `origin:` label.
+     `origin:` label, or an OPEN implementable bead (task/bug/feature) carrying no
+     `Probe:` line. The probe axis shares the origin axis's failure mode: the born-probe
+     guard reads the `br create` COMMAND, so a body passed as `-d "$(cat file)"` or a
+     heredoc makes it fail open, and this artifact read is the backstop.
 
 Closed beads are NEVER scanned — forward-only, no backfill, per the origin-provenance
 ruling: enforcement started at the cutover and the past is not relitigated. An empty or
@@ -32,9 +35,12 @@ Exit: 0 clean (at least one record scanned), 1 findings, 2 read nothing.
 
 import json
 import os
+import re
 import sys
 
 CUTOVER = "2026-08-23"  # origin axis became a hard gate (hooks/hooks.json _doc)
+IMPLEMENTABLE = ("task", "bug", "feature")  # element4's non-exempt types
+PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")  # same shape the capture guard uses
 
 
 def board_path(root):
@@ -86,9 +92,12 @@ def main():
             if not any(l.startswith("origin:") for l in labels):
                 violations.append(
                     f"{board}:{lineno} — open bead '{rid}' created {created} (on/after origin cutover {CUTOVER}) carries no origin: label")
+            if rec.get("issue_type") in IMPLEMENTABLE and not PROBE.search(rec.get("description") or ""):
+                violations.append(
+                    f"{board}:{lineno} — open {rec.get('issue_type')} bead '{rid}' created {created} carries no Probe: line")
 
     if not violations:
-        print(f"35-board-integrity: {scanned} record(s) scanned — well-formed, ids unique, open post-cutover beads origin-tagged")
+        print(f"35-board-integrity: {scanned} record(s) scanned — well-formed, ids unique, open post-cutover beads origin-tagged and implementable beads probe-bearing")
         return 0
     print("FAIL 35-board-integrity: committed board violates a board-integrity rule:")
     for v in violations:
