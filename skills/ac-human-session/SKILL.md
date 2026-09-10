@@ -187,7 +187,7 @@ Age is **derived, never separately queried**: every board pull this skill alread
    • CI {run} failed                                        → investigate
    • {N} dependabot/grouped PRs                             → review as ONE batch
    • PR #{n} {substantive title}                            → review/merge (one each)
-   • {journey} review-critical — stamp missing/stale         → run QA drive (ac-qa-device/ac-qa-browser)
+   • {journey} review-critical — stamp missing/stale         → run QA drive (ac-qa/ac-qa)
    (org-wide: group by repo · batch trivial, itemize substantive)
 
 ### 🟡 Feed the builders — next batch needs your sign-off ({N})

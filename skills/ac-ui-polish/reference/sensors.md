@@ -247,7 +247,7 @@ encode a surface/text colour).
 
 ## Sensor 4 — False-clean check — "empty ≠ clean"
 
-*(from `ac-qa-browser`/`ac-qa-device` discipline rules — empty ≠ clean; a toast
+*(from `ac-qa`/`ac-qa` discipline rules — empty ≠ clean; a toast
 is a finding.)* An errored view renders almost identically to a designed empty
 state, so a silent data-fetch failure sails through as "empty state: OK." Before
 marking any zero-content / empty-list cell audited, run:

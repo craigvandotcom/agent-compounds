@@ -457,6 +457,6 @@ Channels: `production`, `beta`, `dev`. Upload: `bunx @capgo/cli upload --channel
 
 - `supabase` — SDK patterns, migrations, RLS, type generation
 - `testing` — Vitest, RTL, Playwright; native plugin mock patterns in `reference/testing-debugging.md`
-- `ac-qa-device` — device/simulator QA automation
+- `ac-qa` — device/simulator QA automation
 - `ui-debug` — CSS/visual defect diagnosis
 - `ui-brainstorm` — design alternatives and native UI ideation

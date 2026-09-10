@@ -25,7 +25,7 @@ cases = [
  (BLOCK, 'br create "x" --labels=hygiene',                          "--labels= without origin"),
  (BLOCK, 'FOO=1 br create "x" -t task',                             "env-prefixed"),
  (BLOCK, 'br create "x" -l "notorigin:sneaky"',                     "origin as substring must not pass"),
- (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa-device"',        "origin second in list"),
+ (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa"',              "origin second in list"),
  (ALLOW, 'br create "x" -t task -l "origin:unknown,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "unknown is legal"),
  (ALLOW, "cat <<'EOF'\nbr create nope\nEOF",                        "heredoc body"),
  # --- origin gate: multi-line shapes (ac-y25j). A heredoc body is DATA, never a
@@ -40,13 +40,13 @@ cases = [
  (ALLOW, 'echo "unbalanced \'quote',                                "unparseable -> fail open"),
  (ALLOW, '/Users/x/.local/bin/br create "z" -l origin:ac-review',   "absolute path br"),
  (BLOCK, '/Users/x/.local/bin/br create "z" -t bug',                "absolute path br, no origin"),
- # qa-shared.md ships a two-twin placeholder the caller must substitute. An UNsubstituted
- # placeholder must still block — otherwise a copy-paste files beads with a literal
- # "origin:<ac-qa-device|ac-qa-browser>" and the provenance data is junk.
- (BLOCK, 'br create "x" -t bug --labels "origin:<ac-qa-device|ac-qa-browser>,qa-finding,unrefined"',
-         "unsubstituted twin placeholder must block"),
- (ALLOW, 'br create "x" -t bug --labels "origin:ac-qa-device,qa-finding,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
-         "substituted twin placeholder passes"),
+# qa-shared.md ships an origin placeholder the caller must substitute. An UNsubstituted
+  # placeholder must still block — otherwise a copy-paste files beads with a literal
+  # "origin:<ac-qa>" and the provenance data is junk.
+  (BLOCK, 'br create "x" -t bug --labels "origin:<ac-qa>,qa-finding,unrefined"',
+          "unsubstituted placeholder must block"),
+  (ALLOW, 'br create "x" -t bug --labels "origin:ac-qa,qa-finding,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "substituted placeholder passes"),
  # --- readiness axis ---
  (BLOCK, 'br create "x" -t task -l "origin:ac-review"',        "task, origin but no readiness"),
  (BLOCK, 'br create "x" -t bug -l "origin:ac-review,review-finding"', "bug, no readiness"),

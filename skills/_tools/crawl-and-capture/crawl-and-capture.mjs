@@ -6,7 +6,7 @@
 // and loops a route manifest × a viewport set, screenshotting each. Emits an
 // index.json so consumers iterate captures instead of re-crawling.
 //
-// "Capture once, consume twice": the same run feeds `ac-qa-browser` (functional
+// "Capture once, consume twice": the same run feeds `ac-qa` (functional
 // QA — errors/console/web-shell per route) AND `ac-ui-polish` (visual
 // conformance vs design.md). Neither should re-implement the crawl loop.
 //

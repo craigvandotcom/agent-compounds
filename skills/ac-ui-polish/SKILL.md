@@ -10,12 +10,12 @@ description: 'Use when polishing already-coded UI to premium quality or checking
 **Status:** Complete (the elevation engine, extended with whole-app spec-anchored conformance)
 
 > **The third member of the "verify the built app" triad** — alongside
-> `ac-qa-device` (native functional QA) and `ac-qa-browser` (web functional QA).
+> `ac-qa` (native functional QA) and `ac-qa` (web functional QA).
 > Those prove *does it work*; this proves *does it match the spec and look premium*.
 > Visual polish is bundle-determined (identical pixels in browser and native
 > webview), so this skill runs **once through the browser** — it does NOT split
 > into device/browser twins. Device-specific visual breakage (safe-area, splash,
-> keyboard overlap) is a functional check owned by `ac-qa-device`.
+> keyboard overlap) is a functional check owned by `ac-qa`.
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from
 > agent-compounds and shared across consuming apps. It contains technique and
@@ -57,7 +57,7 @@ see the delegation map. This skill owns the layer the **user perceives**.
 viewport set, **in every theme**. This manifest is the **authenticated app + auth surface** only —
 the public marketing routes live in `CORE/journeys/routes.public.md` and are owned by `ac-site-polish`
 (do not crawl them here). The shared **`_tools/crawl-and-capture`** primitive
-can produce a quick static-screenshot index (same captures `ac-qa-browser` uses), but
+can produce a quick static-screenshot index (same captures `ac-qa` uses), but
 note it emits PNGs only and has **no theme switch** — the contrast/false-clean sensors
 are `eval` on a *live* DOM, so the actual audit drives a live browser per cell (force
 theme + cold-navigate + eval). With **explicit multi-agent opt-in**, run it as the
@@ -215,9 +215,9 @@ diff**. Fill the **Definition of Done** checklist in
 | A style genuinely *isn't applying* / layout is broken (a defect) | `ui-debug` |
 | Static screenshot index of every route (whole-app mode; PNGs only, single theme, no live eval) | `_tools/crawl-and-capture` + `CORE/journeys/routes.md` |
 | Programmatic correctness checks (contrast / hardcoded colour / token symmetry) | `reference/sensors.md` (run before the visual rubric) |
-| Functional QA (does it work / native shell / console) | `ac-qa-browser`, `ac-qa-device` |
+| Functional QA (does it work / native shell / console) | `ac-qa`, `ac-qa` |
 | See it running / screenshot / confirm the change | `run`, `verify` |
-| Surface visual evidence (screenshots) to Craig for sign-off | `ac-pipeline/references/qa-shared.md` § Conductor / worker evidence protocol — UPLOAD the image via `slack-send --file` to #sofi, never a `/tmp` path in a card |
+| Surface visual evidence (screenshots) to Craig for sign-off | `ac-qa/references/qa-shared.md` § Conductor / worker evidence protocol — UPLOAD the image via `slack-send --file` to #sofi, never a `/tmp` path in a card |
 
 This skill *orchestrates* — it calls these in, it doesn't duplicate their content.
 

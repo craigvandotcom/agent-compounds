@@ -157,13 +157,13 @@ device/browser QA layer on top of the proven tip:
 
 Pass selection defers to `ac-pipeline/references/verification-gate.md` — one selection brain, never re-decided locally.
 
-- `ac-qa-device` — including the review-critical sim-PASS rule
+- `ac-qa` — including the review-critical sim-PASS rule
   (memory: `rule-review-critical-journeys-sim-pass-before-submission`) when the caller's context
   requires it (e.g. an App Store submission path).
-- `ac-qa-browser`
+- `ac-qa`
 - `ac-ui-polish` (spec-conformance/premium-polish lens, when the caller wants it)
 
-`+qa` findings that block ship are reported the same way `ac-qa-device`/`ac-qa-browser` always
+`+qa` findings that block ship are reported the same way `ac-qa`/`ac-qa` always
 report them (findings=beads) — they do not themselves trigger another fix-forward CI round
 unless the caller re-invokes `ac-prove` after fixing.
 
@@ -222,10 +222,10 @@ uses `probe`, a caller that needs "is this commit actually proven" uses `ensure`
 All of a/c/d/e are **active this plan**; b is deferred (spec is shipped, not wired to any
 scheduler entry).
 
-QA evidence/report schema: `ac-pipeline/references/qa-shared.md`.
+QA evidence/report schema: `ac-qa/references/qa-shared.md`.
 
-`+qa` depth (consumers a and d) = `ac-qa-device` (including the review-critical sim-PASS rule,
-memory `rule-review-critical-journeys-sim-pass-before-submission`) / `ac-qa-browser` /
+`+qa` depth (consumers a and d) = `ac-qa` (including the review-critical sim-PASS rule,
+memory `rule-review-critical-journeys-sim-pass-before-submission`) / `ac-qa` /
 `ac-ui-polish`, per Step 4's `+qa` layer above.
 
 **Explicitly NOT a consumer: loop-start.** Starting a new loop iteration does not call

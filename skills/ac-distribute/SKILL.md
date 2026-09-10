@@ -1,6 +1,6 @@
 ---
 name: ac-distribute
-description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The ship-OUT stage of the ac-* pipeline — position per `ac-pipeline/references/stage-table.md`; the release gate that CALLS this is ac-publish. Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa-device. For the full production release gate (version bump, proof, heavy review, tag) that CALLS this → ac-publish.
+description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The ship-OUT stage of the ac-* pipeline — position per `ac-pipeline/references/stage-table.md`; the release gate that CALLS this is ac-publish. Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa. For the full production release gate (version bump, proof, heavy review, tag) that CALLS this → ac-publish.
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and
@@ -21,7 +21,7 @@ description: Use to SHIP a built app out the door — push a signed build to Tes
 
 **Scope boundary:** this skill gets the artifact OUT. It does NOT pull crashes/feedback
 back in — that's **`ac-triage`** (inbound, headless, source-agnostic). It does NOT prove
-the build — that's **`ac-qa-device`** (run it first; this gates on its report).
+the build — that's **`ac-qa`** (run it first; this gates on its report).
 
 **Foundation:** thin wrapper over **whatever the app already uses for the build mile**
 (the proven headless shape: fastlane **match** git-stored signing + Admin ASC API key —
@@ -48,7 +48,7 @@ Mechanics: `references/workflows.md` § Workflow A.
    `ensure --fix-forward` mode before building; consume the RETURNED proven SHA, never
    the stale input ref; proceed only on a green receipt (freshness + own-`runId` +
    `conclusion=success`). Full contract: `ac-prove/SKILL.md`.
-4. **Fresh native-QA PASS** — a `ac-qa-device` `QA_VALIDATION` artifact with
+4. **Fresh native-QA PASS** — a `ac-qa` `QA_VALIDATION` artifact with
    `platform: ios-simulator|android-emulator`, `status: PASS`, `journeys_tested` fresh
    relative to the shipped commit. Mechanical, not memory; `NOT-GATED` is not a pass
    (ac-61zh.1). Review-critical journeys are gated mechanically via
@@ -78,7 +78,7 @@ Mac-bound. **Human-gated at submit.** Mechanics + the submit-lane shape:
 `references/workflows.md` § Workflow B.
 
 **Stage 0 gates everything after it:** `ac-prove ensure --fix-forward +qa` on the commit
-whose build was uploaded via Workflow A — `+qa` drives `ac-qa-device` including the
+whose build was uploaded via Workflow A — `+qa` drives `ac-qa` including the
 review-critical sim-PASS rule; consume the RETURNED proven SHA, and only advance when it
 matches the commit whose build is already `VALID` in ASC (Identity check — a fix-forward
 tip's build was never uploaded; re-run Workflow A if the SHA moved).
@@ -118,7 +118,7 @@ for every app.
 
 ## Remember
 
-- **This skill ships OUT. `ac-triage` pulls signal IN. `ac-qa-device` proves the build.**
+- **This skill ships OUT. `ac-triage` pulls signal IN. `ac-qa` proves the build.**
 - **Wrap what the app already uses** for the build — don't impose a tool.
 - **The sim-QA gate is mechanical** — a fresh PASS artifact, not a memory.
 - **A direct ship dispatch never bypasses proof** — both workflows call `ac-prove` first
@@ -130,4 +130,4 @@ for every app.
 
 ---
 
-_The outbound last mile. Prove it (ac-qa-device) → ship it (here) → listen (ac-triage)._
+_The outbound last mile. Prove it (ac-qa) → ship it (here) → listen (ac-triage)._

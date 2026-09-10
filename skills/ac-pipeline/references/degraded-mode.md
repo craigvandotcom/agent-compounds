@@ -2,7 +2,7 @@
 
 **Read this only when the probe has already tripped** — the healthy path pays nothing but the
 one-clause probe in each spine's own SKILL.md. Owners: `ac-bead-refine`, `ac-review`,
-`ac-qa-browser` (and any phase skill whose workflow mandates a panel or a conductor/worker
+`ac-qa` (and any phase skill whose workflow mandates a panel or a conductor/worker
 fan-out). One probe, one stamp grammar, three skills — defined once here so they can't drift.
 
 **The purpose is honesty, not permission.** A capability-starved run should produce a *reduced
@@ -51,7 +51,7 @@ Run the same lenses, in the same order, **sequentially in your own context**. Th
   This is not a formality: bd-hfdst **passed** a self-attested "mechanism traced at a named line"
   check with detailed but **WRONG** `file:line`s. Independence is what would have caught it.
 - **AT RISK: coverage.** Sequential lenses run out of context long before a panel runs out of
-  workers. A degraded `ac-qa-browser` pass once reported "exhaustive" while leaving 10–14
+  workers. A degraded `ac-qa` pass once reported "exhaustive" while leaving 10–14
   registry journeys undriven. So a degraded run MUST enumerate what it actually
   covered — see the `lenses`/`journeys` fields below. "Exhaustive" is a claim you have forfeited.
 
@@ -79,7 +79,7 @@ Degraded: solo (trigger=no-task-tool|spawn-529|spawn-timeout; lenses=correctness
 ```
 
 - `ac-review` report → in the header block, next to `**Range:**`.
-- `ac-qa-browser` / `ac-qa-device` manifest + `QA_VALIDATION` report → top-level key.
+- `ac-qa` / `ac-qa` manifest + `QA_VALIDATION` report → top-level key.
 - **Leave the `VERDICT:` token itself alone** — `APPROVED`/`NEEDS_DECISION` are parsed by
   `ac-loop` step 5 and by the verification gate; suffixing them would break those readers. The
   `Degraded:` field is the carrier, and a downstream consumer must read it before treating a

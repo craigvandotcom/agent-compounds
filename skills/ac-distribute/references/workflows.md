@@ -41,9 +41,9 @@ TaskCreate("Report — TESTFLIGHT_PUSH block")
    - **Only proceed on a green receipt** — freshness + own-`runId` + `conclusion=success`.
      A FAIL from `ac-prove` stops `ac-distribute` here — never archive/sign/upload off
      an unproven tree.
-   QA evidence/report schema: `ac-pipeline/references/qa-shared.md`. Pass selection:
+   QA evidence/report schema: `ac-qa/references/qa-shared.md`. Pass selection:
    `ac-pipeline/references/verification-gate.md`.
-4. **Fresh native-QA PASS.** A `ac-qa-device` `QA_VALIDATION` report artifact exists
+4. **Fresh native-QA PASS.** A `ac-qa` `QA_VALIDATION` report artifact exists
    whose `platform:` is `ios-simulator` (or `android-emulator`), `status: PASS`, and
    `journeys_tested` block is **fresh relative to the commit being shipped** — not
    memory, and **not a `browser-*` PASS**. Mechanical gate. `status: NOT-GATED` is not
@@ -52,7 +52,7 @@ TaskCreate("Report — TESTFLIGHT_PUSH block")
    run `skills/_tools/journey-stamp-check.sh --app <this-app> --sha <ship-sha> --lane
    testflight`, which never blocks but prints `WARN` lines.
    **For App Store submissions this check is absorbed into Workflow B's mandatory
-   `ac-prove ensure --fix-forward +qa` gate (Stage 0)** — `+qa` drives `ac-qa-device`
+   `ac-prove ensure --fix-forward +qa` gate (Stage 0)** — `+qa` drives `ac-qa`
    including the review-critical sim-PASS rule
    (`rule-review-critical-journeys-sim-pass-before-submission`) against the commit being
    submitted. One gate, not two — runtime behavior is the only sufficient proof, above
@@ -149,7 +149,7 @@ Stages (Stage 0 gates everything after it):
 
 0. **`ac-prove` gate — mandatory `+qa`.** Call `ac-prove` in `ensure --fix-forward +qa`
    mode on the commit whose build was uploaded via Workflow A. `+qa` drives
-   `ac-qa-device` — this IS the App Store lane's sim-PASS gate. Consume the returned
+   `ac-qa` — this IS the App Store lane's sim-PASS gate. Consume the returned
    proven SHA; only proceed on a green receipt.
    **Identity check:** Workflow B does not build — it submits a build ASC already has. If
    `ac-prove` fixed forward, the returned SHA is a NEW tip whose build was never uploaded

@@ -32,7 +32,7 @@ FLAG = re.compile(r"(^|\s)(-t|-p|-l|-d|--type|--priority|--labels|--title|--body
 CMD = re.compile(r"(^|[`\s])br (create|q)\b")
 
 # A TEMPLATE may legitimately carry an unsubstituted placeholder — `origin:<skill>`, or
-# qa-shared's two-twin `origin:<ac-qa-device|ac-qa-browser>`. That is the template doing its
+# qa-shared's `origin:<ac-qa>`. That is the template doing its
 # job. The RUNTIME guard is deliberately stricter and rejects the same placeholder, because
 # by then it must have been substituted. Same contract, different moment.
 TEMPLATE_ORIGIN = re.compile(r"^origin:(<[^>]+>|[A-Za-z0-9][A-Za-z0-9._-]*)$")

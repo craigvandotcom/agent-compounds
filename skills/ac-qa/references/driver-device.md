@@ -7,7 +7,7 @@ The engine and the see→act→assert loop are the same as the pipeline QA skill
 this skill is the **ad-hoc entry point** and owns the **capture recipe** (the
 part that bites you if you wing it). For the full driving reference (snapshot
 discipline, keyboard traps, parallel-sim isolation, setup/install) see
-**`ac-qa-device/SKILL.md`** + **`ac-qa-device/references/setup.md`**. Don't duplicate those
+**`workflows/device.md`** + **`ac-qa/references/setup.md`**. Don't duplicate those
 here.
 
 ## When to use
@@ -19,7 +19,7 @@ here.
 ## When NOT to use
 
 - Structured native QA (depth levels, `QA_VALIDATION`, native-shell checklist,
-  pipeline gating) → **`ac-qa-device`**
+  pipeline gating) → **`ac-qa`**
 - Web / browser capture or testing (agent-browser drives
   Chromium; it can emulate a phone viewport but it is NOT the native shell)
 - Unit / integration / E2E code tests → **`testing`**
@@ -34,13 +34,13 @@ npm install -g agent-device   # drive: see + act (XCUITest; sees the webview tre
 
 Resolve the sim **UDID** once and target capture by UDID, never the bare
 `booted` / a shared sim name (parallel QA on one Mac collides — see
-`ac-qa-device` § Parallel QA):
+`ac-qa` § Parallel QA):
 
 ```bash
 UDID=$(xcrun simctl list devices booted | grep -oE '[0-9A-F-]{36}' | head -1)
 ```
 
-## Drive (quick loop — full reference in ac-qa-device)
+## Drive (quick loop — full reference in ac-qa)
 
 ```bash
 # Build+install via the APP's own build command (from CORE) — never xcodebuild
@@ -162,7 +162,7 @@ start screen → held content → end screen.
 - **Stop any running recording** (`kill -INT` the simctl PID; wait for exit).
 - Leave the sim **warm** if more capture is likely (cold boot is 20–60 s); else
   tear down THIS app's QA sim via its build script (e.g. `cap-build-run.sh
-  sim-clean`) — only ever touch a sim your app owns (see `ac-qa-device`
+  sim-clean`) — only ever touch a sim your app owns (see `ac-qa`
   ownership rule).
 - Clean up scratch `.mov`/frame `.png`s; keep only the final deliverable.
 

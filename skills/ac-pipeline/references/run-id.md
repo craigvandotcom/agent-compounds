@@ -100,8 +100,8 @@ standalone run the same run-scoping safety net if it's later resumed or cross-re
 | ac-review | `work-review` | keyed on a timestamp, not the claim id or branch — a review spans a batch **diff range** since the last review-mark, not a single claimed batch, so it never had a branch-collapse problem to fix |
 | ac-batch-close (trunk-direct batch closing ceremony) | `batch-close` | keyed on the batch-anchor SHA (`ac-batch-close/SKILL.md` Phase 0) |
 | ac-plan-init | `plan-init` | keyed on the plan slug — under trunk-direct there is no wave to key on, ever (no branch, no waiting for one to open); the plan slug is the permanent key here, not a placeholder "until a wave exists" |
-| ac-qa-browser | `qa-browser` | |
-| ac-qa-device | `qa-device` | |
+| ac-qa | `qa-browser` | |
+| ac-qa | `qa-device` | |
 | ac-ui-polish | `ui-polish` | |
 | ac-bead-refine | `bead-refine` | keyed on a **per-CHILD** id — `<AGENT_NAME>-$$`, computed by the child, never accepted from the caller (bd-baudw). **The same corollary binds `bead-work`, and binds it UNCONDITIONALLY** (ac-wno: two implement children over ONE claimed batch derived the identical `/tmp/bead-work-<claim-id>-<RUN_ID>` and collided on progress.md — benign only by timing): EVERY implement child computes its own `<AGENT_NAME>-$$` key and inserts it BEFORE the RUN_ID suffix, whether or not the delegation prompt told it that it was fanned out — a child under context pressure failing to self-identify as one of N is precisely what produced that collision, so the safety may not be conditioned on it. This stage is fanned out: `ac-loop` runs up to `PARALLEL_WIDTH` refine children on disjoint bead subsets and hands them all the SAME `RUN_ID` **and** the same claim id, so neither key discriminates siblings — they collapsed onto one dir and clobbered each other's `beads-snapshot.json`, making a child stamp `refined` onto beads it never reviewed. `RUN_ID` still trails (`/tmp/bead-refine-<child-id>-<run-id>`) so the run-scoped glob keeps working. Proof: `ac-pipeline/scripts/bead-refine-concurrent-dir.test.sh` (sibling proof for the generic prefix formula: `ac-pipeline/scripts/run-id-concurrent-dir.test.sh`) |
 

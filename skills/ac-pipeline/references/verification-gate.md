@@ -1,7 +1,7 @@
 # Shared verification gate — THE pass-selection brain
 
 **Selects which verification passes run, at what depth, for any diff or scope.**
-Primary executors: the `ac-ui-polish` + `ac-qa-browser` + `ac-qa-device` triad;
+Primary executors: the `ac-ui-polish` + `ac-qa` + `ac-qa` triad;
 consumed by every ceremony that verifies (loop Verify stage, the merge/batch-close
 smoke net § below, `ac-prove`, `ac-distribute`). Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
@@ -12,7 +12,7 @@ Phase 1/2, `ac-merge`'s smoke net) consult it rather than re-deciding.
 Reference it as `ac-pipeline/references/verification-gate.md`. Method only — zero app facts.
 
 > **Companion docs.** *How* each pass runs (depth levels, journeys, findings=beads,
-> the `QA_VALIDATION` schema) lives in `ac-pipeline/references/qa-shared.md`. This file owns *whether*
+> the `QA_VALIDATION` schema) lives in `ac-qa/references/qa-shared.md`. This file owns *whether*
 > and *how deep*. The two compose: this gate picks `{passes, depth}`; each pass
 > executes its own method.
 
@@ -132,7 +132,7 @@ out-of-reach surface is UNVERIFIED and can never be discharged by a PASS
 
 ## Step 2 — select passes + depth
 
-| Wave touches… | ac-ui-polish | ac-qa-browser | ac-qa-device |
+| Wave touches… | ac-ui-polish | ac-qa | ac-qa |
 |---|---|---|---|
 | Docs / comments only (`!runtime`) | — | — | — |
 | Tests / CI only (`!runtime`) | — | — | — |
@@ -162,10 +162,10 @@ gate selects ui-polish at **`full` or `exhaustive`** depth, run the per-route fa
 **standing authorization** for that workflow's multi-agent opt-in;
 manual ad-hoc invocations still require explicit opt-in.
 
-**Native pass platform gate (reuse ac-merge semantics):** `ac-qa-device` requires
+**Native pass platform gate (reuse ac-merge semantics):** `ac-qa` requires
 `uname = Darwin`. If `native` but not on a Mac → do **not** block; emit the
 `mac-needed` note ("native-touching wave verified without device QA — run
-`ac-qa-device` smoke from a Mac before the next TestFlight push").
+`ac-qa` smoke from a Mac before the next TestFlight push").
 
 **Registry-driven smoke selection (replaces "primary journey"):** the smoke pass's
 journey list is not ad hoc — it's every journey in the registry (§Journey registry
@@ -310,19 +310,19 @@ git diff <RANGE> --name-only | grep -qE '^ios/|capacitor\.config|cap-build|@capa
 [ "$(uname)" = "Darwin" ] || SKIP_SIM_SMOKE=mac-needed          # 3. simulators need Xcode
 ```
 
-- **All hold** → load `ac-qa-device/SKILL.md`, run a **smoke** pass (build, launch, auth,
+- **All hold** → load `ac-qa/SKILL.md`, run a **smoke** pass (build, launch, auth,
   then the journeys §Journey registry selects — surfaces ∩ diff-classes AND criticality
   ≥ `core`). ~2–3 min on a warm sim.
 - **Smoke FAILS** → STOP before the ceremony proceeds. Report the `QA_VALIDATION` block
   (`platform: ios-simulator`) and ask: abort (fix first) vs proceed anyway (not
   recommended).
 - **`mac-needed`** (native-touching diff, not on a Mac) → do NOT block; surface a loud
-  report note: "native-touching change shipped without device QA — run `ac-qa-device`
+  report note: "native-touching change shipped without device QA — run `ac-qa`
   smoke from a Mac session before the next TestFlight push."
 
 **Browser twin (any OS):** if the diff touched web UI
 (`git diff <RANGE> --name-only | grep -qE '\.(tsx|jsx|css)$|app/|components/'`), load
-`ac-qa-browser/SKILL.md`, run a **smoke** pass against the dev server. FAIL reports
+`ac-qa/SKILL.md`, run a **smoke** pass against the dev server. FAIL reports
 `QA_VALIDATION` (`platform: browser-local`) and STOPs the same way; no `mac-needed`
 escape. Either twin can also be run manually at any time ("run a device/browser QA
 smoke"), independent of this net.

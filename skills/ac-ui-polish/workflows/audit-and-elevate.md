@@ -140,7 +140,7 @@ report the same root cause as N isolated mediums.
   every elevation claim.
 - Style not applying / layout broken → defect → `ui-debug`, fix, return.
 - Check responsive breakpoints and (Capacitor) native concerns — but device-only
-  visual breakage (safe-area, splash, keyboard) is `ac-qa-device`'s job, not this.
+  visual breakage (safe-area, splash, keyboard) is `ac-qa`'s job, not this.
 - Confirm **no regressions** on sibling screens sharing touched primitives, and
   re-run the app's tests for changed components.
 - **Compound the session.** If the run hit real friction or exposed a rubric/sensor

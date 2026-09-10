@@ -35,7 +35,7 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
    YET, not NEVER. **Poke first and wait for the answer; act on intermediate state
    only after the poke goes unanswered past the cap** — and prefer completing the
    delegate's work over redoing it. Evidence (RUN 20260729-170058-3584): a conductor
-   triaged a stalled `ac-qa-browser` by reading its verdict files, saw 5 findings
+   triaged a stalled `ac-qa` by reading its verdict files, saw 5 findings
    with no bead id, and filed all 5; the child then woke and filed its own richer 5
    → 4 duplicate beads plus 1 false P2 App-Store-compliance bead, all to retract.
 5. **Self-detachment is a violation too — not just spawning-a-child-and-moving-on.**

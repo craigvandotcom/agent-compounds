@@ -19,7 +19,6 @@ skills/ac-pipeline/references/commit-discipline.md
 skills/ac-pipeline/references/degraded-mode.md
 skills/ac-pipeline/references/delegation-contract.md
 skills/ac-pipeline/references/design-refs.md
-skills/ac-pipeline/references/qa-shared.md
 skills/ac-pipeline/references/risk-classification.md
 skills/ac-pipeline/references/run-id.md
 skills/ac-pipeline/references/run-ledger.md
@@ -27,7 +26,6 @@ skills/ac-pipeline/references/schedule.md
 skills/ac-pipeline/references/shell-guardrails.md
 skills/ac-pipeline/references/stage-table.md
 skills/ac-pipeline/references/verification-gate.md
-skills/ac-qa-device/SKILL.md
 skills/ac-review/SKILL.md
 skills/ac-review/references/report-template.md
 skills/ac-review/references/reviewer-prompt-template.md
