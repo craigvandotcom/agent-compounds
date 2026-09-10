@@ -9,7 +9,6 @@
 # Restored 2026-09-07 by AmberCompass after a half-finished sibling sweep left
 # the file at 1 malformed entry with 41 carriers still standing (commit lane refused).
 skills/ac-bead-capture/SKILL.md
-skills/ac-human-session/SKILL.md
 skills/ac-hygiene/SKILL.md
 skills/ac-hygiene/references/report-template.md
 skills/ac-pipeline/SKILL.md
