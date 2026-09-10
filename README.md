@@ -57,7 +57,6 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ui-debug** | CSS / visual bug investigation |
 | **ac-ui-polish** | Conform UI to the app's design.md then polish to premium — whole-app crawl or one screen; anti-slop audit (was ui-elevate) |
 | **ac-site-polish** | Conform the public marketing site to design.site.md then polish to premium — the public twin of ac-ui-polish |
-| **web-design-guidelines** | Accessibility, forms, animation, typography UX |
 | **ac-qa-device** | QA the native build on device/simulator — journeys, native shell, appearance matrix, screenshots/video |
 | **ac-qa-browser** | QA the web build in a browser (the twin) — journeys, web shell, console, responsive, screenshots |
 

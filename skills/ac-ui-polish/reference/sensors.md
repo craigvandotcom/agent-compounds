@@ -128,7 +128,7 @@ under threshold (4.5:1 body, 3:1 large/bold). Pure measurement — no eyeballing
   stop on the auth headline (704ab9a3^).
 - Limitations: it assumes white behind background *images*; manually check text
   over photos. It can't judge *aesthetic* low-contrast intent — that's the rubric's job.
-- This overlaps `web-design-guidelines` (a11y compliance). Use that skill's audit
+- This overlaps `ac-polish/references/ui-checklist.md` (a11y compliance). Use that audit
   for the authoritative WCAG pass; this sweep is the fast in-loop sensor so polish
   never *introduces* a contrast regression between rubric runs.
 

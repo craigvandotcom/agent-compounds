@@ -6,7 +6,7 @@ templated. Cross-platform: web + Capacitor (iOS/Android) builds.
 
 > **Delegation — don't re-audit mechanics here.** Objective compliance (focus
 > rings, ARIA, `prefers-reduced-motion`, touch-target *minimums*,
-> compositor-friendly props) is the authoritative job of `web-design-guidelines`.
+> compositor-friendly props) is the authoritative job of `ac-polish/references/ui-checklist.md`.
 > Capacitor safe-area / haptics / gesture *plumbing* lives in `capacitor`. This
 > file is the subjective *feel* layer that sits on top of those — assume they pass.
 
@@ -19,7 +19,7 @@ Every interactive surface needs all of its states designed, not just the default
 - **Default / rest** — the baseline
 - **Hover** (pointer devices) — subtle elevation, tint, or cursor affordance
 - **Focus** — visible, on-brand focus ring (never `outline: none` with no
-  replacement; a11y mechanics → `web-design-guidelines`)
+  replacement; a11y mechanics → `ac-polish/references/ui-checklist.md`)
 - **Active / pressed** — immediate visual response (press-scale `0.96`, never below
   `0.95`; darken) → **`recipes.md` §4** (use the app's press-scale token if defined)
 - **Disabled** — clearly distinct, reduced affordance, no hover/press response

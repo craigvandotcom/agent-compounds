@@ -1,6 +1,6 @@
 ---
 name: ac-site-polish
-description: 'Use when polishing the PUBLIC marketing website (landing page + public routes) to premium quality and/or checking it conforms to the site''s design spec — one page or a whole-site crawl. The public twin of ac-ui-polish (which owns the authenticated app); this one anchors on CORE/design.site.md. Triggers on "polish the website", "site polish", "ac-site-polish", "polish the landing page", "marketing page polish", "elevate the homepage", "the website looks like AI slop", "make the marketing site premium", "audit the public site". Covers conversion/copy hierarchy, desktop+mobile responsive craft, link/CTA integrity, and embedded-screenshot freshness, then design-spec conformance + elevation — runs a11y inline. NOT for: the authenticated app (use ac-ui-polish — anchored on design.md), accessibility audits alone (use web-design-guidelines), React data/bundle perf (use capacitor), visual/CSS defects (use ui-debug), or multi-model design ideation (use ui-brainstorm).'
+description: 'Use when polishing the PUBLIC marketing website (landing page + public routes) to premium quality and/or checking it conforms to the site''s design spec — one page or a whole-site crawl. The public twin of ac-ui-polish (which owns the authenticated app); this one anchors on CORE/design.site.md. Triggers on "polish the website", "site polish", "ac-site-polish", "polish the landing page", "marketing page polish", "elevate the homepage", "the website looks like AI slop", "make the marketing site premium", "audit the public site". Covers conversion/copy hierarchy, desktop+mobile responsive craft, link/CTA integrity, and embedded-screenshot freshness, then design-spec conformance + elevation — runs a11y inline. NOT for: the authenticated app (use ac-ui-polish — anchored on design.md), accessibility audits alone (use ac-polish/references/ui-checklist.md), React data/bundle perf (use capacitor), visual/CSS defects (use ui-debug), or multi-model design ideation (use ui-brainstorm).'
 ---
 
 # Site Polish
@@ -102,7 +102,7 @@ TaskCreate("Build coverage matrix — route (routes.public.md) × viewport × da
 TaskCreate("Sense — sensors per cell (contrast, hardcoded colour, token symmetry)")
 TaskCreate("Audit vs design.site.md — rubric + the 4 site axes, per cell")
 TaskCreate("Elevate — two ledgers (Conformance + Elevation)")
-TaskCreate("A11y — web-design-guidelines, inline")
+TaskCreate("A11y — ac-polish/references/ui-checklist.md, inline")
 TaskCreate("Re-audit — re-run sensors + rubric + axes on changed cells")
 TaskCreate("Verify — running at every viewport/data-state; before/after artifacts; DoD checklist")
 ```
@@ -134,7 +134,7 @@ In short:
              — with file:line. Capture an artifact per cell.
 4. ELEVATE   Two ledgers — Conformance (fix defects; "N/A" while spec is draft) + Elevation
              (score every surface; change ONLY with a cited gap; "no change" is a pass).
-5. A11Y  Run web-design-guidelines INLINE (before the final re-audit).
+5. A11Y  Run the ac-polish ui checklist INLINE (before the final re-audit).
 6. RE-AUDIT  Re-run sensors + rubric + axes. Pass = zero sensor fails / blocker / high.
 7. VERIFY    See it running at every viewport + data-state; before/after artifacts;
              tests pass; no sibling regressions; Definition of Done complete.
@@ -175,7 +175,7 @@ Pass selection defers to `ac-pipeline/references/verification-gate.md` — one s
 |------|----------|
 | Visual craft, perceived performance, interaction feel, anti-slop rubric, recipes, sensors | `../ac-ui-polish/reference/*.md` (reuse) |
 | Conversion structure, copy hierarchy, pricing clarity (the marketing layer) | `reference/conversion-craft.md` (this skill's own) |
-| Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `web-design-guidelines` — **run inline** |
+| Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `ac-polish/references/ui-checklist.md` — **run inline** |
 | Brand palette, pillar colour, voice/copy register, banned phrases | `brand-system` |
 | React/Next perf internals (waterfalls, bundle, hydration) | `capacitor` |
 | A style genuinely isn't applying / layout broken (a defect) | `ui-debug` |

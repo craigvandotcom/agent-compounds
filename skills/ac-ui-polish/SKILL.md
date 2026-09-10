@@ -1,6 +1,6 @@
 ---
 name: ac-ui-polish
-description: 'Use when polishing already-coded UI to premium quality or checking it conforms to the app''s design spec (CORE/design.md) — one screen or a whole-app crawl. Triggers on "polish this UI", "make this feel premium", "ui polish", "level up the design", "this looks like AI slop", "elevate this", "check design conformance", "tighten the visuals", "make it production-quality". NOT for: the public marketing site (ac-site-polish), accessibility/compliance audits (web-design-guidelines), design ideation (ui-brainstorm), React perf internals (capacitor), visual/CSS defects (ui-debug), greenfield generation.'
+description: 'Use when polishing already-coded UI to premium quality or checking it conforms to the app''s design spec (CORE/design.md) — one screen or a whole-app crawl. Triggers on "polish this UI", "make this feel premium", "ui polish", "level up the design", "this looks like AI slop", "elevate this", "check design conformance", "tighten the visuals", "make it production-quality". NOT for: the public marketing site (ac-site-polish), accessibility/compliance audits (ac-polish/references/ui-checklist.md), design ideation (ui-brainstorm), React perf internals (capacitor), visual/CSS defects (ui-debug), greenfield generation.'
 ---
 
 # UI Polish
@@ -148,7 +148,7 @@ guardrail against redesigning instead of polishing.
 - The bug is a *defect* (style not applying, broken layout) → use `ui-debug`
 - The ask is purely brand palette/voice → use `brand-system`
 - The ask is data-fetch waterfalls / bundle size / hydration internals → use `capacitor`
-- The ask is a11y compliance mechanics (ARIA, focus traps, form semantics) → use `web-design-guidelines`
+- The ask is a11y compliance mechanics (ARIA, focus traps, form semantics) → use `ac-polish/references/ui-checklist.md`
 
 ---
 
@@ -208,7 +208,7 @@ diff**. Fill the **Definition of Done** checklist in
 | Need | Skill to defer to |
 |------|-------------------|
 | Brand palette, pillar color, voice/copy register, banned phrases | `brand-system` |
-| Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `web-design-guidelines` |
+| Accessibility *mechanics* (ARIA, focus, form semantics, contrast math) | `ac-polish/references/ui-checklist.md` |
 | React/Next perf internals (waterfalls, bundle, data fetching, memoization) | `capacitor` |
 | Native bridge / cross-platform plumbing | `capacitor` |
 | Want multiple independent design opinions / consensus critique | `ui-brainstorm` |

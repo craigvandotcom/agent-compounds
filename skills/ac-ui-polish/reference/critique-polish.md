@@ -24,7 +24,7 @@ Score each item. Cite `file:line` and a concrete fix.
 
 > **Objective vs. subjective.** Sections A–E and the AI-tell sweep are this skill's
 > own taste layer. The mechanical items in **F (states/a11y)** and **G (perceived
-> perf)** are authoritatively covered by `web-design-guidelines` (compliance) and
+> perf)** are authoritatively covered by `ac-polish/references/ui-checklist.md` (compliance) and
 > `capacitor` (perf engineering) — run those for the binary pass/fail,
 > and use this rubric to judge whether the *felt* result is premium. Don't
 > re-derive their rules here; cite them.
@@ -62,7 +62,7 @@ Score each item. Cite `file:line` and a concrete fix.
 - [ ] Borders/dividers subtle (low-contrast hairlines), not heavy black lines
 - [ ] Nested rounded surfaces are concentric (`outer = inner + padding`) — not identical radii (`recipes.md` §1)
 - [ ] Elevation borders use a layered shadow, not a solid line, where appropriate (`recipes.md` §2)
-- [ ] Sufficient contrast for text (defer the math to `web-design-guidelines`)
+- [ ] Sufficient contrast for text (defer the math to `ac-polish/references/ui-checklist.md`)
 
 ### E. Imagery & iconography
 - [ ] Real / owned imagery over generic stock or obviously-AI images

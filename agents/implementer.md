@@ -24,7 +24,7 @@ Load skills based on your task. Read the skill's SKILL.md file before starting w
 - **If working with database, migrations, or RLS:** Also load `supabase`
 - **If native app builds or platform code:** Also load `capacitor`
 - **If performance optimization:** Also load `react-best-practices`
-- **If accessibility work:** Also load `web-design-guidelines`
+- **If accessibility work:** Also load `ac-polish/references/ui-checklist.md`
 
 ## Core Principle
 

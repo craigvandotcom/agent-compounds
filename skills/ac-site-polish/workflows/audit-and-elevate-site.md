@@ -110,7 +110,7 @@ Gains plateau after ~3 elevation cycles per surface — don't loop past diminish
 ## Phase 5 — Inline a11y (BEFORE the final re-audit)
 
 Run as composed stages so a single `/ac-site-polish` pass is genuinely one-stop:
-- **`web-design-guidelines`** — objective a11y mechanics (ARIA, focus order, form semantics, contrast
+- **`ac-polish/references/ui-checklist.md`** — objective a11y mechanics (ARIA, focus order, form semantics, contrast
   math, motion-reduce). Do not re-wrap — call it directly.
 
 Sequencing: run these **after ELEVATE but before the final RE-AUDIT**, so any code changes they

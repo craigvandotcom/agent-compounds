@@ -29,7 +29,7 @@ The argument picks ONE workflow file — a mandatory load, the ONLY place a mode
 Each workflow binds five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and may bind a
 sixth, READERS: how many readers a round spawns, what they are sent, and how their findings
 reach ARTIFACT (default: one reader, `reader-prompt.md` verbatim, its edits applied directly).
-It names its hand-off. Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
+`references/ui-checklist.md` holds the objective UI-compliance checklist the forthcoming `ui` mode (a WS2 bead) will run. It names its hand-off. Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
 
 ## Division of labour — strict, and the reason this works
 

@@ -1,6 +1,6 @@
 ---
 name: ui-brainstorm
-description: 'Use ONLY when the user explicitly wants MULTIPLE divergent design options or several AI models'' opinions on a UI — design ideation, exploring alternatives, or cross-model consensus ranking. Triggers on "ui brainstorm", "design options", "multiple ideas", "explore alternatives", "what would different models suggest", "consensus on this design". NOT for single-track polish of existing UI (ac-ui-polish), accessibility/compliance audits (web-design-guidelines), or visual/CSS bugs (ui-debug).'
+description: 'Use ONLY when the user explicitly wants MULTIPLE divergent design options or several AI models'' opinions on a UI — design ideation, exploring alternatives, or cross-model consensus ranking. Triggers on "ui brainstorm", "design options", "multiple ideas", "explore alternatives", "what would different models suggest", "consensus on this design". NOT for single-track polish of existing UI (ac-ui-polish), accessibility/compliance audits (ac-polish/references/ui-checklist.md), or visual/CSS bugs (ui-debug).'
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

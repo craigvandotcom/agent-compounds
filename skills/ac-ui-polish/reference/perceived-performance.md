@@ -5,7 +5,7 @@ on paper and feel slow, or slower on paper and feel instant. This skill owns the
 felt layer. **Deep perf work — bundle size, data-fetch waterfalls, hydration,
 memoization — belongs to `capacitor`; defer there.** The objective
 CLS / virtualization / image-dimension *rules* are the authoritative job of
-`web-design-guidelines`; this file is the felt layer that assumes those pass.
+`ac-polish/references/ui-checklist.md`; this file is the felt layer that assumes those pass.
 
 ---
 
