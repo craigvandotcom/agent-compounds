@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 32
+entries: 33
 ---
 
 # ac-pipeline — friction log
@@ -465,14 +465,14 @@ entries: 32
 - impact: S
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-06
+- last_seen: 2026-09-10
 - stage: ac-implement
 - status: open
 - control: untreated
-- receipt: BCA swarm run 20260905-2134 — `git add` on an already-staged removal exited 128 for two workers; both recovered with `git reset HEAD -- <path>` then re-adding (former bead bd-m88c4, closed to this ledger 2026-09-06)
+- receipt: BCA swarm run 20260905-2134 — `git add` on an already-staged removal exited 128 for two workers; both recovered with `git reset HEAD -- <path>` then re-adding (former bead bd-m88c4, closed to this ledger 2026-09-06). Recurrence 3: RUN 2026-09-10 ac2 swarm — the ac-bead-capture archive's removal half could not ship via the lane (it refuses a path not on disk and skips the staged deletion); landed as a direct git commit 4abe64d, matching the e7c0dbf precedent.
 - proposed_fix: use `git add -A -- <path>` for named paths so removals stage, and cover a deletion case in swarm-commit.test.sh
 - narrative: a bead that deletes a file (four Phase-A seed scripts, the users.email column's dead RPCs) cannot ship through the lane as written. The workaround is safe but undocumented and each worker rediscovered it.
 
@@ -711,3 +711,19 @@ entries: 32
 - receipt: RUN 2026-09-10 ac-implement swarm — every worker's swarm-commit.sh exited 5 (commit rejected by hook) across three beads, deadlocking the lane swarm-wide. lint.sh --changed ran the HOOKS-scope Check 35 board-integrity against the dirty .beads/issues.jsonl plus an in-flight uncommitted edit to lint/checks/35-board-integrity.py; the board sat mid DB→jsonl flush and 12 open beads read as probe-less (all 12 were probe-bearing once synced). No worker diff was at fault; the lane unblocked only when the foreign edit landed and the board flushed.
 - proposed_fix: run the pre-commit lane against the commit's named paths and the committed board (`git show :path` or a per-bead worktree), never the shared working tree; a HOOKS-scope check must not read a concurrently-written ledger from the worktree.
 - narrative: a gate that measures the shared worktree turns one writer's in-flight file — or a ledger caught between DB and jsonl flush — into a repo-global block. worker.md §5 already calls the two repo-wide lint gates advisory in a swarm; the pre-commit hook is the one path where that advisory silently becomes blocking, and its false red (a transiently stale board) is indistinguishable from a real board defect at the worker.
+
+## check07-couples-registry-lint-to-consumer-symlinks
+- skills: [ac2-implement]
+- impact: L
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [worker-md-gates-name-scripts-consumer-repos-lack]
+- first_seen: 2026-09-10
+- last_seen: 2026-09-10
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: RUN 2026-09-10 ac2 swarm — archiving ac-ui-polish/ac-site-polish (ac-1p7j.32) dangled `.claude/skills/<name>` across ~12 consumer layers; the pre-commit entry's `lint.sh --changed` pulled Check 07 in and refused EVERY writer's commit until `harness-sync.sh --all` ran. harness-sync does not own the three org-level `.claude/skills` dirs (books/content/software), nor simil8/.claude/skills (7 dangling links outside Check 07's union).
+- proposed_fix: make the consumer-symlink prune a lint-checked pre-step of any skill archive/rename, or scope Check 07 so a registry-local commit is not blocked by consumer-layer drift; extend harness-sync to own the org-level dirs.
+- narrative: archiving or renaming any skill is a fleet-wide breaking change to every consumer repo, and the registry's own commit lane treats those dangling links as blocking. The archive author must therefore sync the fleet before committing — but harness-sync's target list omits dirs the prune never reaches, so some links dangle indefinitely.
