@@ -3,7 +3,7 @@
   "base_ref": "origin/main",
   "lean_family_cap": 800,
   "conductor_ceiling": 170,
-  "standard_ceiling": 730,
+  "standard_ceiling": 530,
   "conductor_skills": [
     "ac-implement",
     "ac-review",

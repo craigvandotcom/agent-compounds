@@ -44,8 +44,8 @@ Found: {total} across {CURRENT_ROUND} rounds
 
 **VERDICT:** {APPROVED — every consensus finding auto-applied or deferred to a bead, no unresolved blocker | NEEDS_DECISION — an unresolved blocker / `qa-blocker` remains (named above)}
 
-<!-- The VERDICT line lets this report serve as ac-batch-close's Phase 1 review artifact
-     (path (a)) when a hygiene run's fixes are closed via ac-batch-close — same severity bar,
+<!-- The VERDICT line lets this report serve as ac-publish's Phase 1 review artifact
+     (path (a)) when a hygiene run's fixes are closed via ac-publish — same severity bar,
      no re-review of the same diff. -->
 
 **Next:** Run again in a few sessions, or after major changes.
