@@ -41,12 +41,13 @@ set -euo pipefail
 
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; OPENCODE_HOME_OVERRIDE=""; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-antigravity) VERIFY_AGY=1; shift ;;
     --root)      DO_ROOT=1; shift ;;
     --all)       DO_ALL=1; DO_ROOT=1; shift ;;
+    --opencode-home) OPENCODE_HOME_OVERRIDE="${2:-}"; shift 2 ;;
     -n|--dry-run) DRY=1; shift ;;
     --check)     DRY=1; CHECK=1; shift ;;
     --no-prune)  PRUNE=0; shift ;;
@@ -83,6 +84,7 @@ EN_GROK="$(cfg '.harnesses.grok.enabled // false')"
 GROK_HOME="$(expand_tilde "$(cfg '.harnesses.grok.home // "~/.grok"')")"
 EN_OPENCODE="$(cfg '.harnesses.opencode.enabled // false')"
 OPENCODE_HOME="$(expand_tilde "$(cfg '.harnesses.opencode.home // "~/.config/opencode"')")"
+[ -n "$OPENCODE_HOME_OVERRIDE" ] && OPENCODE_HOME="$OPENCODE_HOME_OVERRIDE"
 CODEX_SKILLS_DIR="$(cfg '.harnesses.codex.skills_mirror_dir')"
 CODEX_AGENTS_DIR="$(cfg '.harnesses.codex.agents_gen_dir')"
 DROID_SKILLS_DIR="$(cfg '.harnesses.droid.skills_mirror_dir')"
@@ -687,7 +689,43 @@ render_hooks_opencode() {
         | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))
         | { id, event, matcher: (.matcher // null), command: (.command | subst),
             timeout: (.timeout // 10) } ] }' "$HOOKS_MANIFEST")"
+
+  # THE RENDER ASSERTS WHAT IT WROTE (ac-heyt.12). Three checks, any mismatch aborts the
+  # sync naming it: the wiring parses; its entry count equals the manifest's opencode-
+  # AND-machine entries (both conjuncts — the render's own filter); and every rendered
+  # command path exists on disk after {HOOKS}/{HOME} substitution — the assumption the
+  # manifest rests on that nothing else ever asserts.
+  if ! printf '%s' "$wiring" | jq -e . >/dev/null 2>&1; then
+    echo "  FAIL: rendered opencode wiring does not parse — the render is broken; fix harness-sync.sh" >&2
+    exit 1
+  fi
+  local expect_count got_count
+  expect_count="$(jq --arg h opencode --arg s machine '[.wiring[] | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))] | length' "$HOOKS_MANIFEST")"
+  got_count="$(printf '%s' "$wiring" | jq '.wiring | length')"
+  if [ "$got_count" != "$expect_count" ]; then
+    echo "  FAIL: rendered opencode wiring entry count $got_count != manifest opencode+machine count $expect_count — the render's filter drifted from the manifest" >&2
+    exit 1
+  fi
+  if ! printf '%s' "$wiring" | jq -r '.wiring[].command' | while IFS= read -r cmd; do
+    for tok in $cmd; do
+      case "$tok" in
+        *=*) continue ;;
+        */bin/*|python3|python|bash|sh|node|cat) continue ;;
+        */*)
+          p="${tok//\$HOME/$HOME}"
+          if [ ! -e "$p" ]; then echo "  FAIL: rendered command path missing: $p (from: $cmd)" >&2; exit 1; fi
+          ;;
+      esac
+    done
+  done; then
+    exit 1
+  fi
+
   write_file_if_changed "$OPENCODE_HOME/ac-hooks.wiring.json" "$wiring"
+  if [ "$DRY" = 0 ] && ! jq -e . "$OPENCODE_HOME/ac-hooks.wiring.json" >/dev/null 2>&1; then
+    echo "  FAIL: written $OPENCODE_HOME/ac-hooks.wiring.json does not parse — the file on disk disagrees with the render" >&2
+    exit 1
+  fi
 
   content="$(cat <<'ACJS'
 // generated-by: harness-sync — do not hand-edit
@@ -695,8 +733,12 @@ render_hooks_opencode() {
 // (this dispatcher). Regenerate with ./harness-sync.sh --root.
 //
 // Wraps the canonical hook scripts for opencode, which has no shell-command hook
-// dialect. Fail-open everywhere: a hook that errors, times out, or cannot spawn must
-// never wedge a session — the same posture the other harnesses run.
+// dialect. FAIL-CLOSED on an unreadable wiring (ac-heyt.12, decision D-1): a missing,
+// renamed or unparseable wiring file means the ENTIRE hook layer is gone — that is
+// not a guard failing open, that is the guard disappearing, so every tool call is
+// denied with the repair message instead of running unguarded. Individual hook
+// failures (a script that errors, times out, or cannot spawn) still fail open —
+// fail-closed is for the disappearance of the layer, never for one hook's hiccup.
 
 import { spawn } from "node:child_process"
 import { readFileSync } from "node:fs"
@@ -704,12 +746,14 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+const WIRING_PATH = join(HERE, "..", "ac-hooks.wiring.json")
 
 let WIRING = []
+let WIRING_ERROR = null
 try {
-  WIRING = JSON.parse(readFileSync(join(HERE, "..", "ac-hooks.wiring.json"), "utf8")).wiring || []
+  WIRING = JSON.parse(readFileSync(WIRING_PATH, "utf8")).wiring || []
 } catch (e) {
-  WIRING = []
+  WIRING_ERROR = "ac-hooks: wiring unreadable at " + WIRING_PATH + " — run harness-sync.sh"
 }
 
 // opencode tool ids are lowercase; our matchers and hook scripts speak Claude names.
@@ -788,6 +832,11 @@ export const server = async ({ directory }) => {
     // UserPromptSubmit: memory-recall + the delegation reminder. Their stdout is
     // appended as an extra text part, which is how the other harnesses inject context.
     "chat.message": async (input, output) => {
+      if (WIRING_ERROR) {
+        const base = (output.parts || [])[0] || {}
+        output.parts.push({ ...base, id: (base.id || "ac") + "-achooks", type: "text", text: WIRING_ERROR })
+        return
+      }
       const entries = forEvent("UserPromptSubmit")
       if (!entries.length) return
       const parts = output.parts || []
@@ -816,6 +865,7 @@ export const server = async ({ directory }) => {
     // PreToolUse: bead-capture-guard, skill-edit-guard, dcg. A throw is
     // opencode's deny, and the message reaches the model (verified 2026-08-28).
     "tool.execute.before": async (input, output) => {
+      if (WIRING_ERROR) throw new Error(WIRING_ERROR)
       const entries = forEvent("PreToolUse")
       if (!entries.length) return
       const name = TOOL_ALIAS[input.tool] || input.tool
