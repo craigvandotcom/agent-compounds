@@ -14,6 +14,9 @@
 #                                   the v2 runner (lint/run.py) over lint/checks/
 #         ./lint.sh --check <id>    ONLY the named v2 check (repeatable)
 #         ./lint.sh --changed       only v2 checks whose scope touches the diff
+#         ./lint.sh --changed --staged  scope to the staged index (what a commit contains)
+#                                   — the pre-commit lane's mode; a dirty sibling file or
+#                                   ledger does not drag another writer's scope in
 #         ./lint.sh --json          v2 results as JSON
 #         ./lint.sh --help
 #
@@ -54,7 +57,7 @@ RUNNER_MODE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help)  usage; exit 0 ;;
-    --changed|--json) RUNNER_ARGS+=("$1"); RUNNER_MODE=1; shift ;;
+    --changed|--json|--staged) RUNNER_ARGS+=("$1"); RUNNER_MODE=1; shift ;;
     --check)    [ $# -ge 2 ] || { echo "lint.sh: --check requires an id" >&2; exit 2; }
                 RUNNER_ARGS+=("$1" "$2"); RUNNER_MODE=1; shift 2 ;;
     --check=*)  RUNNER_ARGS+=("--check" "${1#--check=}"); RUNNER_MODE=1; shift ;;

@@ -83,6 +83,24 @@ def changed_files(root):
         return None  # cannot know -> run everything, never silently skip
 
 
+def staged_files(root):
+    """The paths in the index — what a commit will actually contain.
+
+    A pre-commit lane must scope to the STAGED set, not the whole working tree: an
+    uncommitted sibling edit, or a ledger dirtied by another writer's claims, must not
+    trigger this committer's scope (measured: a dirty `.beads/issues.jsonl` pulled HOOKS
+    Check 35 into every writer's commit and deadlocked the swarm).
+    """
+    try:
+        diff = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "HEAD"], cwd=root,
+            capture_output=True, text=True, timeout=30,
+        )
+        return set(line for line in diff.stdout.splitlines() if line.strip())
+    except (subprocess.SubprocessError, OSError):
+        return None
+
+
 def intersect(scope_set, files):
     """A declared scope touches a changed file when the change is IN it."""
     for f in files:
@@ -103,6 +121,8 @@ def main():
                     help="run only this check (filename NN prefix or full stem); repeatable")
     ap.add_argument("--changed", action="store_true",
                     help="only checks whose scope intersects the working-tree diff")
+    ap.add_argument("--staged", action="store_true",
+                    help="with --changed, scope to the staged index (what a commit contains), not the working tree")
     ap.add_argument("--json", action="store_true", dest="as_json",
                     help="emit results as JSON")
     ap.add_argument("--root", default=_ROOT, help="repo root to lint (default: this checkout)")
@@ -130,7 +150,7 @@ def main():
 
     skipped = {}
     if args.changed:
-        files = changed_files(args.root)
+        files = staged_files(args.root) if args.staged else changed_files(args.root)
         if files is None:
             skipped = {}  # cannot compute a diff -> change nothing, run all
         else:

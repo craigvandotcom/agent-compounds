@@ -20,4 +20,4 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
 [ -n "$ROOT" ] || exit 0
 [ -f "$ROOT/lint.sh" ] || exit 0   # not the registry checkout — no lint to run
 
-exec bash "$ROOT"/lint.sh --changed
+exec bash "$ROOT"/lint.sh --changed --staged
