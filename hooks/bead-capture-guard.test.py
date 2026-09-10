@@ -58,8 +58,8 @@ cases = [
  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review,impact:data"',        "epic exempt from readiness"),
  (ALLOW, 'br create "Epic: x" --type=epic -l "origin:ac-hygiene,impact:data"',   "epic via --type= form"),
  # Unknowable type must SKIP readiness, not block: `<type>` could stand for epic.
- (ALLOW, 'br create "x" -t <type> -l "origin:ac-bead-capture"',      "placeholder type skips readiness"),
- (ALLOW, 'br create "x" -l "origin:ac-bead-capture"',                "absent type skips readiness"),
+ (ALLOW, 'br create "x" -t <type> -l "origin:ac-backlog"',      "placeholder type skips readiness"),
+ (ALLOW, 'br create "x" -l "origin:ac-backlog"',                "absent type skips readiness"),
  # -l is repeatable; readiness may live in the SECOND flag.
   (ALLOW, 'br create "x" -t task -l "origin:x" -l "unrefined" -d "- AC: x. Probe: `true` - tier: none"', "readiness in a repeated -l"),
   (BLOCK, 'br create "x" -t task -l "origin:x" -l "backend"',         "repeated -l, still no readiness"),

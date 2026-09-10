@@ -38,8 +38,8 @@ signal), continuous/scheduled, **headless-anywhere**, **source-agnostic** (Sentr
 Supabase, ASC, PostHog), and **cross-app** (works for web-only apps too) — orthogonal
 to ac-distribute's **outbound**, event-driven, Mac-bound shipping. So it gets its own
 skill, **`ac-triage`**: it FETCHES + clusters machine signal, then routes each finding
-to **`ac-bead-capture`** (which already classifies / routes-to-repo / dedupes). It is
-the *machine-signal sibling* to ac-bead-capture's *human-signal intake*. ASC beta
+to **`ac-backlog`**'s bead route (which already classifies / routes-to-repo / dedupes). It is
+the *machine-signal sibling* to ac-backlog's *human-signal intake*. ASC beta
 feedback is merely ac-triage's ASC source adapter; **Sentry is source #1**.
 
 ### 3. `ac-distribute` scope = ship OUT only

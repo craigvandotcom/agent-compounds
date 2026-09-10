@@ -28,11 +28,10 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ac-plan** | Idea → ONE plan file — problem, approach, artifact-named deliverables, assumptions with detection rules, risk + sequence, out-of-scope, and a success criterion the skill refuses unless it can come out false |
 | **ac-implement** | Work an epic's bead queue as a SWARM (default width 3, uncapped, until the qualifying beads are exhausted) — the invoking session coordinates, spawned workers run `references/worker.md`: `flight-check.sh` at claim, RED first, `swarm-commit.sh` at commit, `close-gate.sh` at close; `coordinator.sh` owns the close-out (stale-ledger refusal, orphan sweep, one ledger commit) |
 | **ac-publish** | The ship gate — `ac-prove` obtains the proof and this gate asserts its REQUIRED JOBS ACTUALLY EXECUTED, refusing `NOT-GATED` on a job that was absent, skipped or cancelled; then version once, tag the proven SHA (never `HEAD`), promote-not-rebuild on web, CI-built artifacts only on native, hand off to `ac-distribute` |
-| **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline) |
+| **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline); also the single-bead intake — one raw idea/bug/decision typed and filed now |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
 | **ac-align** | Reconcile the pipeline with current strategy; owns the nightly reconcile (archive done work, repair readiness labels) and the weekly strategy align |
 | **ac-plan-lab** | Deep analysis of a plan — genius (forensic review) + alien (paradigm-breaking) modes |
-| **ac-bead-capture** | Capture a raw idea/bug/decision on the go as one properly typed, routed bead |
 | **[beads-standards](./skills/beads-standards/)** | Machine-wide bead canon (not pipeline-scoped) — agent vs human bead templates, `human-gate` label taxonomy + synonym merge map, refined/unrefined semantics, status/priority/close_reason conventions, dependency-wiring requirements |
 | **[agent-mail](./skills/agent-mail/)** | Multi-agent coordination domain — session identity (two-tier contract), file reservations, release/deregister exit, build slots; owner of the session-procedure + agent-identity canons |
 | **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |

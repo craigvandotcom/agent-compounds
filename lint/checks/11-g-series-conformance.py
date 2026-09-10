@@ -17,8 +17,8 @@ same verdict strings.
   G1   the cross-cadence schedule table lives in
        ac-pipeline/references/schedule.md (rehomed 2026-09-02 from the
        ac-pipeline SKILL.md the constitution overwrote).
-  G2   ac-bead-capture carries the reverse shape-check (routing-to-backlog
-       language).
+  G2   ac-backlog carries the shape-check (small + clear routes to a bead);
+       re-pointed from the archived ac-bead-capture when ac-1p7j.27 folded it in.
   G4   ac-distribute carries the fast-forward-equivalent QA-freshness rule.
   G6   ac-land's inline Apply-Approved-Upgrades path EMITS a skill-hotfix:
        commit for the approved-upgrade case (conditional; routine compound
@@ -47,9 +47,9 @@ TABLE = [
     ("G1", "skills/ac-pipeline/references/schedule.md", "present",
      r"23:00|Cross-cadence",
      "skills/ac-pipeline/references/schedule.md missing the cross-cadence schedule table"),
-    ("G2", "skills/ac-bead-capture/SKILL.md", "present_i",
-     r"backlog",
-     "skills/ac-bead-capture/SKILL.md missing the reverse shape-check routing-to-backlog language"),
+    ("G2", "skills/ac-backlog/SKILL.md", "present_i",
+     r"small \+ clear",
+     "skills/ac-backlog/SKILL.md missing the reverse shape-check routing-to-a-bead language"),
     ("G4", "skills/ac-distribute/SKILL.md", "present",
      r"fast-forward-equivalent",
      "skills/ac-distribute/SKILL.md missing the fast-forward-equivalent QA-freshness rule"),

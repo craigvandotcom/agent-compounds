@@ -137,7 +137,7 @@ Within-run in-memory dedup handles multiple re-INSERTs arriving in the same tria
 ### Step 4 — Create bead
 
 For each surviving row, create a bead directly via `br create`, per the conventions in
-`beads-standards/reference/bead-conventions.md` (`ac-bead-capture` is the human quick-capture skill and is
+`beads-standards/reference/bead-conventions.md` (`ac-backlog` is the human quick-capture skill and is
 not invoked here):
 
 ```bash

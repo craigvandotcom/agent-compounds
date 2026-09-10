@@ -1,6 +1,6 @@
 ---
 name: ac-backlog
-description: 'Capture ideas into the backlog pool — cohesive grouping (one theme = one wave), shape-routing (small+clear goes straight to a bead), strategy-aware horizon, no version guessing at capture. Triggers: ''add to backlog'', ''capture idea'', ''backlog this'', ''note for later'', ''park this''. For a typed bead right now — a bug, a defect, a decision fork — use ac-bead-capture; for decomposing a whole plan use ac-beadify.'
+description: 'Capture ideas into the backlog pool — cohesive grouping (one theme = one wave), shape-routing (small+clear goes straight to a bead), strategy-aware horizon, no version guessing at capture. Also the single-bead intake: one raw idea, bug, observation or decision fork typed live in conversation and filed now as a bead carrying origin:ac-backlog. Triggers: ''add to backlog'', ''capture idea'', ''backlog this'', ''note for later'', ''park this'', ''bead this'', ''file this as a bead'', ''new bead'', ''log a bug'', ''track this item'', ''remember to do X''. For decomposing a whole plan use ac-beadify; for refining existing beads use ac-polish (bead mode); for polling external systems use ac-triage.'
 ---
 
 
@@ -51,7 +51,7 @@ Then assess the item's **shape** — this decides whether it belongs in the back
 
 | Shape | Goes to | Why |
 |-------|---------|-----|
-| **Small + clear** — a specific bug, a one-line chore, an obvious tiny tweak | **a bead** (route to `ac-bead-capture`) | No planning needed; it's already an execution unit |
+| **Small + clear** — a specific bug, a one-line chore, an obvious tiny tweak | **a bead** (this skill's bead route; `origin:ac-backlog`) | No planning needed; it's already an execution unit |
 | **Big or fuzzy** — a feature, a redesign, anything needing design thinking | **the backlog pool** | Needs to be thought through in a plan first |
 
 **Route by shape, not by source.** A small, well-specified item is a bead whether a human or triage found it.
@@ -65,14 +65,14 @@ AskUserQuestion(
     header: "Shape",
     multiSelect: false,
     options: [
-      { label: "Capture as bead (Recommended)", description: "Route to /ac-bead-capture — execution-ready, no plan needed" },
+      { label: "Capture as bead (Recommended)", description: "Capture it here as one typed bead — execution-ready, no plan needed" },
       { label: "Keep in backlog", description: "It's bigger than it looks / needs design — pool it" }
     ]
   }]
 )
 ```
 
-If "Capture as bead": tell the user to run `/ac-bead-capture` with the item (or hand off directly). STOP — not a backlog item.
+If "Capture as bead": STOP the backlog flow and follow `references/bead-route.md` — this skill captures it as ONE typed bead. Not a backlog item.
 
 ---
 

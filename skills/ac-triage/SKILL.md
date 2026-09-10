@@ -12,13 +12,13 @@ description: Use to pull operational + user signal BACK IN from external systems
 # ac-triage — the signal-IN lane
 
 **You poll external systems for signal and turn the real findings into beads.** The
-**external-systems sibling** to **`ac-bead-capture`**: the dividing line is not machine-vs-
-human but **polled-from-a-system vs handed-to-you-in-conversation** — triage FETCHES signal
-sitting in an external system, or it would be missed.
+**external-systems sibling** to **`ac-backlog`**'s single-bead intake: the dividing line is
+not machine-vs-human but **polled-from-a-system vs handed-to-you-in-conversation** — triage
+FETCHES signal sitting in an external system, or it would be missed.
 
 **Scope boundary:** ac-triage FETCHES + clusters external signal and routes each confirmed
-finding **by shape** — defects to **`ac-bead-capture`** (classification, repo-routing,
-dedupe), feature/experience themes to the **backlog pool** as candidates. It does NOT ship
+finding **by shape** — defects to **`ac-backlog`**'s bead route (classification,
+repo-routing, dedupe), feature/experience themes to the **backlog pool** as candidates. It does NOT ship
 builds (that's `ac-distribute`) and does NOT reimplement the bead-side conventions — it hands
 off. Headless, source-agnostic, cross-app; only the *sources* are app-specific.
 

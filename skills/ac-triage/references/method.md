@@ -93,7 +93,7 @@ Silent-skip is reserved for sources that were never wired.
 
 For each confirmed, deduped **defect**, create a typed bead directly via `br create`, per
 `beads-standards/reference/bead-conventions.md` (the authority for bead shape; raw `br create`
-is the deliberate pattern here — `ac-bead-capture` is the human quick-capture skill).
+is the deliberate pattern here — `ac-backlog` is the human quick-capture skill).
 
 ```
 br create -t bug --labels origin:ac-triage,triage,<source>,prod-finding,unrefined,impact:<class>  \

@@ -31,9 +31,9 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work" "$OUT"' EXIT
 
 build_green() { # <root>
-  mkdir -p "$1/skills/ac-pipeline/references" "$1/skills/ac-bead-capture" "$1/skills/ac-distribute" "$1/skills/ac-land"
+  mkdir -p "$1/skills/ac-pipeline/references" "$1/skills/ac-backlog" "$1/skills/ac-distribute" "$1/skills/ac-land"
   printf '%s\n' '23:00 cross-cadence sweep' > "$1/skills/ac-pipeline/references/schedule.md"
-  printf '%s\n' 'route to the backlog' > "$1/skills/ac-bead-capture/SKILL.md"
+  printf '%s\n' 'Route by shape: small + clear goes to a bead' > "$1/skills/ac-backlog/SKILL.md"
   printf '%s\n' 'fast-forward-equivalent QA counts as fresh' > "$1/skills/ac-distribute/SKILL.md"
   printf '%s\n' 'emit a skill-hotfix: commit' > "$1/skills/ac-land/SKILL.md"
 }
