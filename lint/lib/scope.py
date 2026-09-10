@@ -25,8 +25,10 @@ Sets:
               bead-template-lint.py, the one judge over them — Check 19's
               audit surface.
   CHECKS     the lint v2 check files themselves (lint/checks, harnesses excluded).
+  SCRIPTS    the runnable scripts the registry ships: .sh and .py files under
+              skills/ and scripts/, tests excluded — Check 36's audit surface.
   CACHES     directory names that are build/interpreter caches — excluded from
-             every walk.
+              every walk.
 
 Excluded from every set: CACHES dirs, .git, node_modules, and the vendored
 harness layers (.claude, .agents, .factory, .codex — symlinks into this repo's
@@ -70,6 +72,7 @@ _archive = set()
 _harnesses = set()
 _hooks = set()
 _templates = set()
+_scripts = set()
 for p in sorted(_paths):
     base = p.rsplit("/", 1)[-1]
     if base in LEDGER_NAMES:
@@ -86,6 +89,10 @@ for p in sorted(_paths):
         _hooks.add(p)
     if p.startswith("templates/") or p == "scripts/bead-template-lint.py":
         _templates.add(p)
+    if (p.startswith("skills/") or p.startswith("scripts/")) \
+       and (p.endswith(".sh") or p.endswith(".py")) \
+       and not p.endswith(".test.sh") and not p.endswith(".test.py"):
+        _scripts.add(p)
     if base == "SKILL.md" or _in_dir(p, "references") or _in_dir(p, "reference") or _in_dir(p, "workflows"):
         _live.add(p)
 
@@ -95,6 +102,7 @@ ARCHIVE = frozenset(_archive)
 HARNESSES = frozenset(_harnesses)
 HOOKS = frozenset(_hooks)
 TEMPLATES = frozenset(_templates)
+SCRIPTS = frozenset(_scripts)
 CORPUS = frozenset({CORPUS_PATH}) if os.path.isfile(os.path.join(ROOT, CORPUS_PATH)) else frozenset()
 
 CHECKS_DIR = os.path.join(ROOT, "lint", "checks")
