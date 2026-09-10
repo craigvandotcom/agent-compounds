@@ -125,7 +125,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 ### 2. Group + file (per-run epic; defects filed unrefined)
 
 - **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
-  epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage`, children linked via parent-child
+  epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage,impact:<class>`, children linked via parent-child
   deps). 0–1 beads → no epic.
 - **Finding-beads carry the `prod-finding` catch-stage label at filing** — every triage
   source is external real-user signal, so the Phase-3a template's `prod-finding` token (from

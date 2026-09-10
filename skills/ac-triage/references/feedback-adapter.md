@@ -143,7 +143,7 @@ not invoked here):
 ```bash
 br create \
   -t bug \
-  --labels origin:ac-triage,triage,feedback,prod-finding,unrefined \
+  --labels origin:ac-triage,triage,feedback,prod-finding,unrefined,impact:<class> \
   --title "<category>: <first 80 chars of message>" \
   --description "$(cat <<'EOF'
 Source: public.feedback_reports / id=<id>
@@ -165,10 +165,9 @@ EOF
   unclassified. Never `bug`: that would assert a defect the data does not support on every
   report, poisoning the bug lane with feature requests; it also buys nothing in priority.
   Re-typing an investigation upward in `br` is a one-liner; un-polluting the bug count is not.
-- `category='feature'` → `-t decision --labels origin:ac-triage,triage,feedback,human-gate,unrefined` — the
-  `human-gate` label is MANDATORY on the same command (`beads-standards` § Bead taxonomy:
-  the label, not the type, is the sole gate; without it the decision is silently workable
-  and closable by agents).
+- `category='feature'` → `-t task --labels origin:ac-triage,triage,feedback,unrefined,impact:<class>` —
+  a feature request is ordinary product work, so it files as a task bead like any other
+  finding (human ruling, 2026-09-06); it is not a human-gate decision. Fingerprint dedupe still applies.
 - The `triage,feedback,unrefined` labels are constant (`unrefined` routes every
   feedback bead through `ac-polish` (bead mode) before any implementation pickup).
 - Capture the new bead id returned by `br create` (e.g. `bd-xxxx`).
@@ -227,7 +226,7 @@ consuming app that owns the feedback table. Reference this spec when authoring t
 `screenshot_path` populated (or non-bug), `created_at > watermark`.
 
 **Expected behavior:**
-- `br create` called exactly once with `-t bug --labels origin:ac-triage,triage,feedback`.
+- `br create` called exactly once with `-t bug --labels origin:ac-triage,triage,feedback,impact:<class>`.
 - `UPDATE public.feedback_reports SET linked_bead = '<bead-id>', status = 'triaged' WHERE id = '<row-id>'` executed.
 - Run report shows `claimed: 1`.
 

@@ -35,7 +35,7 @@ review returns a verdict and findings; fixing belongs to the implement lane (§ 
 3. **Consensus.** `python3 scripts/consensus.py --artifacts-dir <dir> --round 1`. Exit 3
    (PANEL UNKNOWN) is a hard stop — reconstruct the manifest, never default the panel. A
    `reviewers_missing` that survives the re-spawn → file the un-reviewed dimension as an
-   honest harness-failure bead: `br create -t task --labels origin:ac-review,qa-blocker,review-finding,unrefined`; then `VERDICT: NEEDS_DECISION` — never `-t bug` with no catch-stage (a harness failure is not a shipped defect).
+   honest harness-failure bead: `br create -t task --labels origin:ac-review,qa-blocker,review-finding,unrefined,impact:<class>`; then `VERDICT: NEEDS_DECISION` — never `-t bug` with no catch-stage (a harness failure is not a shipped defect).
 4. **Report.** `references/report-template.md` — the `**Range:**` line (full SHAs,
    machine-parsed coverage) and the `**Panel:**` line (copied from
    `consensus-round-1.json`: the panel that ACTUALLY ran) are mandatory. Destination:
@@ -65,7 +65,7 @@ review returns a verdict and findings; fixing belongs to the implement lane (§ 
   implement · close · review) — **even when the fix lands in-batch**: auto-applied
   Critical/High findings write their catch-stage record — no work bead, the fix landed; **no VERDICT record** for an auto-fixed Critical/High fails the run's own checklist.
 - **Medium+ become beads.** Shipped defect → `-t bug`; mutation-probe-convicted test finding
-  → `-t task`; plausible-but-unverified → `-t investigation`; labels `origin:ac-review,
+  → `-t task`; plausible-but-unverified → `-t investigation`; labels `origin:ac-review,impact:<class>,
   review-finding,unrefined`, `discovered-from: <bead>`, epic parent wired
   (`parent-child`), `post-merge` stamped at creation. Creation ritual:
   `beads-standards/reference/bead-conventions.md`. **Lows stay in the report.**

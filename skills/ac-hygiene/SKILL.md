@@ -160,7 +160,7 @@ weekly panel run so findings feed the same triage/bead path as the other lenses.
 2. **Surface real findings** (dead exports, unused files, unused/unlisted deps) as hygiene
    findings — real dead code becomes cleanup findings/beads exactly like the other lenses'
    output: route through Phase 5 triage (`AUTO_IMPLEMENT` for unambiguous dead-code removal,
-   `br create -t task --labels origin:ac-hygiene,hygiene-finding,unrefined` for anything needing a human look —
+   `br create -t task --labels origin:ac-hygiene,hygiene-finding,unrefined,impact:<class>` for anything needing a human look —
    e.g. an export that *looks* dead but may be a public API surface).
 3. **Weekly cadence only** — this lens runs on `PANEL=full`; skip it on `PANEL=light` (the
    quick between-session sweep).
@@ -205,7 +205,7 @@ of — `dream` Phase 2's weekly weighting pass (`dream/SKILL.md` § Phase 2, W4.
    `weight(id) = impact_num × frequency_num × recurrence`, threshold `weight >= 12`
    (`dream/SKILL.md` § Phase 2 is the single definition; cite it, don't fork it).
 3. **An over-bar cluster files directly** as `br create -t task --labels
-   origin:ac-hygiene,hygiene-finding,skill-improvement,unrefined -d "Friction cluster-walk: <id(s)> —
+   origin:ac-hygiene,hygiene-finding,skill-improvement,unrefined,impact:<class> -d "Friction cluster-walk: <id(s)> —
    <cluster's proposed_fix(es)>. weight=<N>, skills=<list>."` — deduped via `br search`
    first, same as any other hygiene finding (Exhaust Rule). This is the direct,
    no-judge-round path; it does not replace dream's judged/gated proposal path, it
@@ -420,7 +420,7 @@ Read the consensus registry. Collect all remaining items:
 
 **Exhaust rule (see `skills/beads-standards/reference/bead-conventions.md`):** nothing actionable
 leaves as prose. Out-of-scope confirmed issues → `br create -t bug --labels
-origin:ac-hygiene,hygiene-finding,unrefined`. Worth-chasing uncertainties → `-t investigation`. Genuine
+origin:ac-hygiene,hygiene-finding,unrefined,impact:<class>`. Worth-chasing uncertainties → `-t investigation`. Genuine
 taste/product forks in an autonomous run (user not present) → `-t decision
 --labels human-gate` with a pre-staged memo, then continue — never stall the
 sweep on a question. Dedupe per the canon's anchor-dedupe rule
@@ -443,7 +443,7 @@ paths — those are deleted at Cleanup). Writing the full body now costs a minut
 full refine round later — the in-session refine step then verifies instead of authoring.
 
 **Per-run epic:** if this run created 2+ beads, group them under one epic
-(`br create -t epic "Hygiene <date> — deferred findings" -l origin:ac-hygiene`, children linked) so the
+(`br create -t epic "Hygiene <date> — deferred findings" -l origin:ac-hygiene,impact:<class>`, children linked) so the
 batch is refined together in-session (see "Refine the Run's Beads" below) and
 shipped by the loop as orphan fixes. 0–1 beads → no epic (don't inflate).
 
