@@ -9,7 +9,7 @@ re-crawling.
 **Capture once, consume twice** — one run feeds both:
 
 - **`ac-qa`** — functional QA (run `errors`/console/web-shell checklist per route)
-- **`ac-ui-polish`** — whole-app visual conformance vs `CORE/design.md`
+- **`ui-elevate`** — whole-app visual conformance vs `CORE/design.md`
 
 Neither skill re-implements the crawl loop; both call this.
 

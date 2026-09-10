@@ -7,7 +7,7 @@ admission tests, anti-inflation. One pipeline exists (ac2), and it has one bead 
 the ac2 four-section schema (`skills/ac-beadify/references/bead-schema.md`).
 
 Shared by the skills that file and work beads — ac-beadify, ac-implement, ac-polish,
-ac-bead-capture, ac-review, ac-hygiene, ac-qa, ac-qa, ac-triage, ac-align,
+ac-backlog, ac-review, ac-hygiene, ac-qa, ac-qa, ac-triage, ac-align,
 ac-human — and any workflow that files beads. One principle drives all of it:
 
 > **No workflow may produce prose exhaust.** Anything actionable that a
@@ -64,7 +64,7 @@ unknown — is machine-wide floor:
 
 - **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-polish`
   on convergence — no other skill, and no conductor, however strong the evidence.
-  `unrefined` is the default at creation (`ac-bead-capture`, `ac-beadify`).
+  `unrefined` is the default at creation (`ac-backlog`, `ac-beadify`).
 - **Gap repair:** `ac-align`'s nightly reconcile auto-adds `unrefined` to beads missing all
   three lifecycle labels — it never auto-adds `refined`, which is earned, never inferred.
 - `ac-implement` gates on presence of `refined`, not on the lack of `unrefined`.
@@ -87,9 +87,9 @@ follows the same batching contract — this is the shared authority both cite:
    batch workflow never stamps `refined` itself; it only runs the skill that does, while
    context is hot.
 
-`ac-bead-capture` is the human quick-capture skill (one bead, typed live in conversation) —
+`ac-backlog` owns the single-bead intake (one bead, typed live in conversation) —
 batch workflows create beads directly via `br create` per these conventions; they do not
-invoke `ac-bead-capture`.
+route through it.
 
 ## Bead routing (creation → parent) — convention, not a gate
 
