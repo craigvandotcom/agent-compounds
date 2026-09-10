@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 31
+entries: 32
 ---
 
 # ac-pipeline — friction log
@@ -561,16 +561,16 @@ entries: 31
 - impact: L
 - frequency: frequent
 - perceptibility: silent
-- recurrence: 2
+- recurrence: 4
 - related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-06
+- last_seen: 2026-09-10
 - stage: ac-implement
 - status: open
 - control: untreated
-- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Recurrence 3: RUN 2026-09-07 swarm-20260907-exhaust — commit 9b1d745 (stamp-refined summary-line change) carries a SIBLING's message verbatim; both workers wrote /tmp/ac-msg2.txt. Never beaded; recorded from the run reports.
-- proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
-- narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history.
+- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Recurrence 3: RUN 2026-09-07 swarm-20260907-exhaust — commit 9b1d745 (stamp-refined summary-line change) carries a SIBLING's message verbatim; both workers wrote /tmp/ac-msg2.txt. Recurrence 4: RUN 2026-09-10 — a worker's first claim (ac-1p7j.31) was signed under a sibling's actor after both wrote /tmp/ac-actor.txt; the collision path now includes the ACTOR identity, not only the message files. Never beaded; recorded from the run reports.
+- proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt`, `/tmp/ac-$ACTOR-actor.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
+- narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history. The ACTOR path is the newest collision class (2026-09-10): it corrupts claim ownership, not only the commit subject.
 
 ## review-range-derived-from-the-rebase-point-not-the-pushed-history
 - skills: [ac-review, ac2-implement]
@@ -695,3 +695,19 @@ entries: 31
 - control: untreated
 - proposed_fix: worker.md ONCE block (or swarm-commit.sh itself) asserts `git config user.name`/`user.email` are non-fixture (refuse `t@t.t` and any identity matching the 00-meta fixture constants) before the first commit; workers spawn with a known-good bootstrap instead of inheriting whatever the parent session carried.
 - narrative: the fixture identity leaked twice in one run — once as junk commits (reset, filed separately), then as the AUTHOR of 43 legitimate wave-3 commits. Nothing failed loudly; every commit landed and closed, which is exactly why attribution pollution is the quiet class. The lane's flock, pathspec and receipt checks all held; the env check is the one leg the lane never had.
+
+## precommit-lint-changed-measures-the-shared-worktree
+- skills: [ac2-implement]
+- impact: L
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: [diff-closure-measures-the-shared-worktree, parity-sh-co-edited-by-two-workers-in-flight]
+- first_seen: 2026-09-10
+- last_seen: 2026-09-10
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: RUN 2026-09-10 ac-implement swarm — every worker's swarm-commit.sh exited 5 (commit rejected by hook) across three beads, deadlocking the lane swarm-wide. lint.sh --changed ran the HOOKS-scope Check 35 board-integrity against the dirty .beads/issues.jsonl plus an in-flight uncommitted edit to lint/checks/35-board-integrity.py; the board sat mid DB→jsonl flush and 12 open beads read as probe-less (all 12 were probe-bearing once synced). No worker diff was at fault; the lane unblocked only when the foreign edit landed and the board flushed.
+- proposed_fix: run the pre-commit lane against the commit's named paths and the committed board (`git show :path` or a per-bead worktree), never the shared working tree; a HOOKS-scope check must not read a concurrently-written ledger from the worktree.
+- narrative: a gate that measures the shared worktree turns one writer's in-flight file — or a ledger caught between DB and jsonl flush — into a repo-global block. worker.md §5 already calls the two repo-wide lint gates advisory in a swarm; the pre-commit hook is the one path where that advisory silently becomes blocking, and its false red (a transiently stale board) is indistinguishable from a real board defect at the worker.
