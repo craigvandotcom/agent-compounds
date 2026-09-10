@@ -56,12 +56,20 @@ fi
 
 # resolve_pending <bead-id> -> 0 if it is an OPEN DECISION bead, else 1 with a reason
 resolve_pending() {
-  local id="$1" line
+  local id="$1" line count
   if [ ! -r "$BOARD" ]; then
     echo "board .beads/issues.jsonl unreadable — cannot resolve PENDING-DECISION"
     return 1
   fi
-  line=$(jq -c --arg id "$id" 'select(.id == $id)' "$BOARD" 2>/dev/null | head -1)
+  # The committed board is a DERIVED file with a prose-only one-committer rule: two writers
+  # exporting overlapping content leave DUPLICATE records for one id. Picking the first row
+  # resolves against an arbitrary record — refuse instead: the escape does not resolve.
+  count=$(jq -s -c --arg id "$id" '[.[] | select(.id == $id)] | length' "$BOARD" 2>/dev/null)
+  if [ "${count:-0}" -gt 1 ]; then
+    echo "cites '$id', which has $count records on the board — a duplicate export; the escape does not resolve"
+    return 1
+  fi
+  line=$(jq -c --arg id "$id" 'select(.id == $id)' "$BOARD" 2>/dev/null)
   if [ -z "$line" ]; then
     echo "cites '$id', which does not exist on the board"
     return 1

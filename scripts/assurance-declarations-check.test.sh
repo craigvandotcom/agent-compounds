@@ -96,6 +96,12 @@ run_check 1 "escape citing an OPEN NON-decision bead -> FAILS" \
 run_check 1 "escape citing a NONEXISTENT id -> FAILS" \
   "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-nope"}')"
 
+echo "--- duplicate board records (the wedge head -1 cannot survive) ---"
+DUP="$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","PENDING-DECISION":"bd-open-dec"}')"
+# The exact wedge shape: the SAME id exported twice, one record open, one closed.
+printf '%s\n' '{"id":"bd-open-dec","issue_type":"decision","status":"closed"}' >> "$DUP/.beads/issues.jsonl"
+run_check 1 "duplicate board records for a cited id -> FAILS naming the count, not head -1" "$DUP"
+
 echo "--- BACKSTOP: a ruled fail-open, not a pending one ---"
 run_check 0 "BACKSTOP naming an EXISTING path -> PASSES" \
   "$(fixture '{"PROBE":"p","SCHEDULE":"s","MODE":"blocking","ON-FAILURE":"open","BACKSTOP":"hooks/wired.sh catches the rest"}')"
