@@ -65,7 +65,7 @@ recurrence updates the existing bead/candidate, it never creates a duplicate.
 
 Designed to run **scheduled + headless** (pure API work, no Mac); also on demand
 ("triage crashes"). Defect findings land as beads the loop picks up; theme findings land as
-backlog candidates the human approves in `/ac-human-session`'s 🟢 hopper. The high-leverage
+backlog candidates the human approves in `/ac-human`'s 🟢 hopper. The high-leverage
 automation in the pipeline: the only step that manufactures work from *real users* instead
 of the team's own ideas.
 

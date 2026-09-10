@@ -107,7 +107,7 @@ CI:    {last 3 runs: name → conclusion}
 Standalone `board` mode closes with pointers, not prompts — no `AskUserQuestion`, ever:
 
 ```
-Act: gates/decisions → /ac-human-session · reconcile/re-prioritize → /ac-align · ship the ready work → /ac-implement
+Act: gates/decisions → /ac-human · reconcile/re-prioritize → /ac-align · ship the ready work → /ac-implement
 ```
 
 ---

@@ -235,7 +235,7 @@ checklist). The frozen set:
 - the VERDICT grammar tokens — `passed`/`failed`/`blocked`/`waived` + `discovered-from`
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
 - the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-bead-refine` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
-- `human-ratified` — fast-track provenance stamped only by `ac-human-session` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
+- `human-ratified` — fast-track provenance stamped only by `ac-human` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
 - `origin:<skill>` — the creator/provenance axis, enforced forward-only by `hooks/bead-capture-guard.py`
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
@@ -303,7 +303,7 @@ local cache). Deps only gate within one db — a bead belongs in the repo whose 
 changes; there is no cross-repo dependency graph (0 cross-project `blocks` edges exist
 today, confirmed by the cockpit audit — Craig himself is the only shared node across
 projects). Cross-project visibility is a dashboard/docket concern (cockpit, or
-`ac-human-session` where deployed), never a reason to invent a shared db.
+`ac-human` where deployed), never a reason to invent a shared db.
 
 **Public-repo rule:** agent-compounds's `issues.jsonl` is world-readable. Beads there
 carry no strategy, money, personal, or credential content — a sensitive decision's

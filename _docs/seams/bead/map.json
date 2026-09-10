@@ -4023,7 +4023,7 @@
    },
    "claim × skills/ac-pipeline/references/board-scan.md": {
     "contract_disagreement": false,
-    "controller": "ac-loop orient, ac-align, ac-human-session (shared read)",
+    "controller": "ac-loop orient, ac-align, ac-human (shared read)",
     "dropped": null,
     "first_round": 1,
     "flow": "claim",
@@ -6237,7 +6237,7 @@
     "contract": "any predicate over closed beads MUST read the jsonl (br list measured 436 records vs 2,017 closed, lines 47-53); an unparseable board is an ERROR, never `N=0` (line 191)",
     "contract_disagreement": false,
     "contract_first": "any predicate over closed beads MUST read the jsonl (br list measured 436 records vs 2,017 closed, lines 47-53); an unparseable board is an ERROR, never `N=0` (line 191)",
-    "downstream": "ac-align, ac-human-session, ac-loop lenses + the docket-health and structural-lint classes",
+    "downstream": "ac-align, ac-human, ac-loop lenses + the docket-health and structural-lint classes",
     "dropped": null,
     "first_round": 1,
     "found-by": "rg -n -e \"issues.jsonl\" skills/ac-pipeline/references/board-scan.md",

@@ -94,6 +94,6 @@ Confirm exit 0; a Slack failure IS a finding — retry once. Finalize `last-run.
 
 ## Applying the slate later
 
-This run only *proposes*. A human reviews the slate in `ac-human-session` and, on approval,
+This run only *proposes*. A human reviews the slate in `ac-human` and, on approval,
 re-invokes `ac-align` INTERACTIVE — which re-scores `pool → active` against **live** strategy
 at apply time (a stale slate self-skips because the board is read fresh). REVIEW never moves a file.

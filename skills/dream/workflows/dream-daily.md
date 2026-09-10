@@ -60,7 +60,7 @@ bead-docket cutover) is applied now, same as REVIEW mode — **respecting repo b
 (apply + commit INSIDE the target repo; never commit across repo boundaries). After applying,
 set `status: applied`. If a target drifted semantically, leave it `approved` and note it for
 the human instead of guessing. (New gated proposals no longer take this path — they are filed
-as decision beads in Step 7 and worked via `ac-human-session`, the decision docket.)
+as decision beads in Step 7 and worked via `ac-human`, the decision docket.)
 
 ### 5. Queue health
 For each still-`pending` proposal: flag if waiting >7 days, check for duplicates/superseded
@@ -95,7 +95,7 @@ infrastructure/tools/bin/slack-send --channel pi --card \
   --field "Auto-applied=<N>" --field "Filed as beads=<N this run>" \
   --field "Open dream beads=<M / see docket>" --field "Stale >7d=<N / none>" \
   --body "<one line: what was auto-remembered + N beads filed for your decision docket, or 'all clear'>" \
-  --context "02:00 dream queue · decide via ac-human-session (\`br ready --label dream-proposal\`) · auto-applied notes are git-revertible"
+  --context "02:00 dream queue · decide via ac-human (\`br ready --label dream-proposal\`) · auto-applied notes are git-revertible"
 ```
 Confirm exit 0; retry once on error. The job is NOT complete until this posts.
 

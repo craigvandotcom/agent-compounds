@@ -40,7 +40,7 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **ac-prove** | The shared tip-valid full-suite proof primitive — freshness probe / dispatch-if-stale / ensure --fix-forward; every ship path calls it instead of re-implementing its own CI-trust logic |
 | **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
 | **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
-| **ac-human-session** | Human command center — renders the full board first (loop side included), then drives only work at a human gate (blockers, plans to approve, hopper); `board` mode stops after the read-only board render |
+| **ac-human** | Human command center — renders the full board first (loop side included), then drives only work at a human gate (blockers, plans to approve, hopper); `board` mode stops after the read-only board render |
 
 **Engineering** (promoted from body-compass-app, the canonical donor)
 | Skill | What it does |

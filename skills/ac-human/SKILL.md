@@ -1,5 +1,5 @@
 ---
-name: ac-human-session
+name: ac-human
 description: 'The human command center — sit down and keep the factory moving. Renders the full board first (both sides of the loop boundary), then drives the docket: only work at a human gate, on a silver platter, exit-first. Optional gated tidy/align pre-pass. `board` mode stops after the render (read-only). Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next'', ''dashboard'', ''show the board'', ''state of the pipeline'', ''pipeline status'', "what''s the factory doing", ''WIP status'', ''board overview'', ''full board''. ''Unblock'' means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), and NOT doing the work itself (use ac-implement).'
 ---
 

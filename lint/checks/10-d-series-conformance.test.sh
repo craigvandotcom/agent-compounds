@@ -44,12 +44,12 @@ fi
 # --- 2 RED-ABSENT: stale wave/ pattern present -> exit 1, D9b named -----------
 t="$work/stale"
 mkdir -p "$t/skills/ac-plan-lab" "$t/skills/ac-publish/references" \
-  "$t/skills/ac-distribute" "$t/skills/ac-loop" "$t/skills/ac-human-session"
+  "$t/skills/ac-distribute" "$t/skills/ac-loop" "$t/skills/ac-human"
 printf '%s\n' 'Write Back section' > "$t/skills/ac-plan-lab/SKILL.md"
 printf '%s\n' 'the sole owner of version bumps' > "$t/skills/ac-publish/references/version-bump.md"
 printf '%s\n' 'defer to the version-bump owner' > "$t/skills/ac-distribute/SKILL.md"
 printf '%s\n' 'startswith("wave/")' > "$t/skills/ac-loop/SKILL.md"
-printf '%s\n' 'oldest-within-tier' > "$t/skills/ac-human-session/SKILL.md"
+printf '%s\n' 'oldest-within-tier' > "$t/skills/ac-human/SKILL.md"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "^FAIL 10-d-series-conformance: D9b: " "$OUT"; then
   ok "RED-ABSENT: stale wave/ pattern failed, D9b named"
@@ -60,12 +60,12 @@ fi
 # --- 3 GREEN: fully conforming tree -> exit 0 ---------------------------------
 t="$work/green"
 mkdir -p "$t/skills/ac-plan-lab" "$t/skills/ac-publish/references" \
-  "$t/skills/ac-distribute" "$t/skills/ac-loop" "$t/skills/ac-human-session"
+  "$t/skills/ac-distribute" "$t/skills/ac-loop" "$t/skills/ac-human"
 printf '%s\n' 'Write Back section' > "$t/skills/ac-plan-lab/SKILL.md"
 printf '%s\n' 'the sole owner of version bumps' > "$t/skills/ac-publish/references/version-bump.md"
 printf '%s\n' 'defer to the version-bump owner' > "$t/skills/ac-distribute/SKILL.md"
 printf '%s\n' 'clean loop skill' > "$t/skills/ac-loop/SKILL.md"
-printf '%s\n' 'oldest-within-tier' > "$t/skills/ac-human-session/SKILL.md"
+printf '%s\n' 'oldest-within-tier' > "$t/skills/ac-human/SKILL.md"
 rc=$(run_check "$t")
 if [ "$rc" = 0 ]; then
   ok "GREEN: conforming tree passes"

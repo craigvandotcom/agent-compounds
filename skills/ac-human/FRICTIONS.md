@@ -1,11 +1,11 @@
 ---
-skill: ac-human-session
+skill: ac-human
 created: 2026-07-30
 last_pass: 2026-09-06
 entries: 5
 ---
 
-# ac-human-session — friction log
+# ac-human — friction log
 
 <!-- Sensor log, not a work-surface. Never loaded with SKILL.md. On capture: read the
      entries below and judge same-vs-new before minting an id (see
@@ -13,14 +13,14 @@ entries: 5
      duplicate root friction under a new id. -->
 
 ## comment-trusted-over-the-events-audit-trail
-- skills: [ac-human-session, ac-tidy]
+- skills: [ac-human, ac-tidy]
 - impact: L
 - frequency: occasional
 - recurrence: 2
 - related: [memo-harm-never-verified-only-its-facts]
 - first_seen: 2026-07-30
 - last_seen: 2026-08-18
-- stage: ac-human-session
+- stage: ac-human
 - status: promoted
 - proposed_fix: read the bead's own `events` table FIRST, before any other anti-rot verification — a comment is a CLAIM, `events` is the RECORD.
 - narrative: the conductor re-gated bd-06opv.12 — a bead DECIDED 2026-07-10 and deliberately
@@ -46,14 +46,14 @@ entries: 5
   is as likely to be a decision as an omission.
 
 ## memo-harm-never-verified-only-its-facts
-- skills: [ac-human-session, ac-tidy]
+- skills: [ac-human, ac-tidy]
 - impact: L
 - frequency: frequent
 - recurrence: 1
 - related: [comment-trusted-over-the-events-audit-trail]
 - first_seen: 2026-07-30
 - last_seen: 2026-07-30
-- stage: ac-human-session
+- stage: ac-human
 - status: promoted
 - proposed_fix: verify the memo's HARM, not only its facts — ask "what consumes this, and what breaks if I do nothing?" before working the list.
 - narrative: proposal beads carry TOCTOU guards that re-check whether their NUMBERS went stale,
@@ -66,14 +66,14 @@ entries: 5
   finding. Landed as a clause in this skill's proposal-applying bullet (agent-compounds a7ac7f2).
 
 ## reservation-first-rule-broken-four-times-unnoticed
-- skills: [ac-human-session]
+- skills: [ac-human]
 - impact: M
 - frequency: frequent
 - recurrence: 1
 - related: []
 - first_seen: 2026-07-30
 - last_seen: 2026-07-30
-- stage: ac-human-session
+- stage: ac-human
 - status: open
 - proposed_fix: either make the Agent Mail edit guard enforcing for shared registry paths, or soften the written "no exceptions" rule to match what is actually enforced — a rule broken routinely and silently is worse than a narrower rule that holds.
 - narrative: the Development Context Protocol states "Before editing any file, call
@@ -88,14 +88,14 @@ entries: 5
   recurring-rule-escalates-to-a-gate-not-a-restatement (Repos d2e3290d).
 
 ## stock-snapshot-used-for-a-flow-claim
-- skills: [ac-human-session]
+- skills: [ac-human]
 - impact: L
 - frequency: frequent
 - recurrence: 1
 - related: [raw-count-escalated-as-if-it-were-debt, memo-harm-never-verified-only-its-facts]
 - first_seen: 2026-08-18
 - last_seen: 2026-08-18
-- stage: ac-human-session
+- stage: ac-human
 - status: open
 - proposed_fix: a claim about DIRECTION needs a FLOW measurement — count arrivals AND closes over one stated window. A stock snapshot of the open set, however well broken down by age, cannot support "growing", "draining" or "ratcheting". Name the source, the population and the window in the same breath as any number, or make no directional claim.
 - narrative: the session told Craig the docket was "a ratchet" whose only exit was him, and built
@@ -111,14 +111,14 @@ entries: 5
   `.beads/issues.jsonl` was 11. Three symptoms, one root: the census step has no defined method.
 
 ## proposed-a-guard-that-already-shipped
-- skills: [ac-human-session]
+- skills: [ac-human]
 - impact: M
 - frequency: occasional
 - recurrence: 0
 - related: [change-proposal-asserts-a-gap-the-text-already-closes]
 - first_seen: 2026-08-18
 - last_seen: 2026-08-18
-- stage: ac-human-session
+- stage: ac-human
 - status: open
 - proposed_fix: see change-proposal-asserts-a-gap-the-text-already-closes in skill-builder — grep the target for the mechanism before filing a defect that proposes it.
 - narrative: pointer entry, not re-counted (recurrence lives on the primary id in skill-builder).

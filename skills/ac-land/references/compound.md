@@ -90,7 +90,7 @@ br create -t decision -p 3 "Proposal: <title> (<target file>)" -l origin:ac-land
 **Recommendation:** <apply / apply-modified / drop>"
 ```
 
-It surfaces on the `ac-human-session` docket; the human decides there.
+It surfaces on the `ac-human` docket; the human decides there.
 
 ## Present upgrades to the user
 

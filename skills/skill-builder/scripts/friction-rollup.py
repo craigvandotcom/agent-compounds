@@ -12,7 +12,7 @@ This script is the single parser. Two views come out of one pass:
   view `dream`  — the FULL W4.5 computation: per-entry weight, promotion flagging,
                   `related`-graph clusters. dream calls this instead of re-deriving it.
   view `trends` — per-skill open counts, entries added since the last scan, top-N by
-                  weight, and STALENESS flags. ac-align and ac-human-session's board mode read this.
+                  weight, and STALENESS flags. ac-align and ac-human's board mode read this.
 
 ASSURANCE — MODE: advisory · ON-FAILURE: open. It never exits non-zero on ledger
 content: a malformed ledger is REPORTED as malformed, never a hard failure, because a

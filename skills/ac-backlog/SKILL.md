@@ -243,4 +243,4 @@ If a related plan or bead was noted: "Related: plan `{name}` / bead `{id}` cover
 
 ---
 
-_Fast capture into the pool. For planning: `/ac-plan`. For sequencing against strategy: `/ac-align`. For the human command center: `/ac-human-session`._
+_Fast capture into the pool. For planning: `/ac-plan`. For sequencing against strategy: `/ac-align`. For the human command center: `/ac-human`._

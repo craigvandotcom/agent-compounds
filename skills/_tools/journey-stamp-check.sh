@@ -161,7 +161,7 @@ if ! git -C "$APP" rev-parse --git-dir >/dev/null 2>&1; then
 fi
 
 JOURNEYS_DIR="$APP/.claude/skills/CORE/journeys"
-[[ -d "$JOURNEYS_DIR" ]] || JOURNEYS_DIR="$APP/CORE/journeys"   # bare-path form (matches ac-human-session board mode's walk)
+[[ -d "$JOURNEYS_DIR" ]] || JOURNEYS_DIR="$APP/CORE/journeys"   # bare-path form (matches ac-human board mode's walk)
 if [[ ! -d "$JOURNEYS_DIR" ]]; then
   echo "journey-stamp-check: no journeys dir at $JOURNEYS_DIR — nothing to gate"
   exit 0

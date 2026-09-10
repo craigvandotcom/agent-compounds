@@ -21,7 +21,7 @@ retires with its subject; the git history preserves the full prose.
   D8.2 ac-distribute survives the cutover and keeps defer-to-owner language.
   D9b  zero startswith("wave/") in ac-loop/SKILL.md (the allocator script is
        deleted; this is the surviving check for stale wave/ assumptions).
-  D10  ac-human-session Phase 4 Three Tiers render documents tier-first, then
+  D10  ac-human Phase 4 Three Tiers render documents tier-first, then
        oldest-within-tier ordering. The ERE is deliberately discriminating —
        bare "oldest|age|created_at" substring-matches tri-AGE/st-AGE-d.
 
@@ -58,9 +58,9 @@ TABLE = [
     ("D9b", "skills/ac-loop/SKILL.md", "absent",
      'startswith("wave/")',
      "skills/ac-loop/SKILL.md still contains stale 'startswith(\"wave/\")' pattern"),
-    ("D10", "skills/ac-human-session/SKILL.md", "present",
+    ("D10", "skills/ac-human/SKILL.md", "present",
      r"oldest-first|oldest-within|oldest-bead-first|P0.{0,3}P4 then oldest",
-     "skills/ac-human-session/SKILL.md missing the tier-first/oldest-within-tier "
+     "skills/ac-human/SKILL.md missing the tier-first/oldest-within-tier "
      "age-ordering note (Phase 4 render)"),
 ]
 

@@ -61,7 +61,7 @@ on a failed or partial fetch.
 **Configured-but-failing ≠ not-configured.** A source that CORE/triage.md marks live but
 that errors at fetch (auth 401, network, schema change) is an **escalation**, not a skip:
 mark it `✗ FAILING (<error>)` in the Phase-4 report and file ONE ops bead
-(`br create -t task --labels origin:ac-triage,unrefined,triage,ops`) so it surfaces in `ac-human-session`.
+(`br create -t task --labels origin:ac-triage,unrefined,triage,ops`) so it surfaces in `ac-human`.
 Add `human-gate` ONLY if the body states `Gate-reason: authorization —`.
 Dedupe first, update the existing open ops bead if one already tracks this failure.
 Silent-skip is reserved for sources that were never wired.
@@ -145,7 +145,7 @@ br create -t bug --labels origin:ac-triage,triage,<source>,prod-finding,unrefine
 
 For each confirmed, deduped **desire/pattern**, write a backlog **candidate** directly into
 `_backlog/pool/` (headless — no interactive grouping; the human approves it into the pool from
-`ac-human-session`'s 🟢 hopper, where grouping/refinement intent is confirmed). This is the
+`ac-human`'s 🟢 hopper, where grouping/refinement intent is confirmed). This is the
 triage→backlog promotion path: real-user *desire* becomes a planning candidate without a human
 having to notice and file it.
 
@@ -153,7 +153,7 @@ Filename `_backlog/pool/NNN-<slug>.md` (NNN = max+1 across `pool/` + `active/`):
 
 ```markdown
 ---
-status: candidate          # awaiting human approval into the pool (surfaced in ac-human-session 🟢)
+status: candidate          # awaiting human approval into the pool (surfaced in ac-human 🟢)
 type: feature
 size: M                    # S | M | L
 channel: discovery         # product | discovery | content
@@ -209,7 +209,7 @@ TRIAGE RUN  (<date>)
 sources:    sentry ✓ (12 new issues)  ·  asc ✓ (2 feedback)  ·  supabase — (not wired)
 clustered:  14 raw → 5 findings (3 defects · 2 themes)
 beads:      3 created (bd-xxxx bug, bd-yyyy bug, bd-zzzz investigation), 1 deduped to existing
-candidates: 1 created (pool/061-offline-logging.md, from 4 feedback items) — awaiting approval in ac-human-session 🟢
+candidates: 1 created (pool/061-offline-logging.md, from 4 feedback items) — awaiting approval in ac-human 🟢
 dropped:    9 (sub-threshold / known-3rd-party — listed)
 watermarks updated.
 ```

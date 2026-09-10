@@ -21,7 +21,7 @@ written reasoning. Its full `events` history:
 | 2026-07-15 14:58 | REMOVED — *"decision recorded + docket released … backfill over-gated"* |
 | 2026-07-27 18:35 | re-added by `bd-r0be9`'s apply |
 | 2026-07-27 18:**40** | REMOVED **four minutes later by that same session** — it caught itself |
-| 2026-07-30 08:45 | re-added **in error** by an `ac-human-session` conductor |
+| 2026-07-30 08:45 | re-added **in error** by an `ac-human` conductor |
 | 2026-07-30 | reverted |
 
 ## Why the conductor got it wrong

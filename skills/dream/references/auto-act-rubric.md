@@ -98,7 +98,7 @@ writes unreviewed content. The asymmetry is intentional.
    `-t decision` + `human-gate,dream-proposal` bead in its target repo (full memo inline for
    private repos; pointer-only for the public agent-compounds db) and records the bead id in
    the proposal's `bead:` frontmatter (the dedup marker). It re-checks the predicate, so a
-   manual run never files an auto-tier item. Decisions are worked via `ac-human-session` (the
+   manual run never files an auto-tier item. Decisions are worked via `ac-human` (the
    decision docket), not a Slack tap.
 5. **Digest nudge:** one summary card — *N auto-applied (listed) · M filed as beads · K open
    in the docket* — pointing at `br ready --label dream-proposal`. Slack notifies; the bead

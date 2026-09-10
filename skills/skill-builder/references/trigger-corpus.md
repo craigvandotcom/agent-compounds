@@ -586,9 +586,9 @@ should-activate
 should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "what should I work on next". One word off the listed
-  trigger `what should we plan next`, but the destination is the human docket (ac-human-session)
-  or the board read (ac-human-session board mode) — ac-align decides what to PLAN, not what to
-  touch now, and it carried no NOT-for clause. Fix: exclusion clause naming ac-human-session
+  trigger `what should we plan next`, but the destination is the human docket (ac-human)
+  or the board read (ac-human board mode) — ac-align decides what to PLAN, not what to
+  touch now, and it carried no NOT-for clause. Fix: exclusion clause naming ac-human
   (docket and board modes).
 - FAIL (precision) → PASS (after fix) — "stress-test my strategy". The description says
   `against current strategy` and `against live strategy`; that is enough strategy surface to
@@ -597,10 +597,10 @@ should-NOT-activate
   strategy).
 - PASS — "clean up the backlog" (routes to the nightly reconcile — reconciling what is on the board, not
   judging it against strategy)
-- PASS — "show me the board" (routes to ac-human-session board mode — ac-align writes, it does not render)
+- PASS — "show me the board" (routes to ac-human board mode — ac-align writes, it does not render)
 - PASS — "align the paragraph to the left margin"
 
-## ac-human-session
+## ac-human
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -623,11 +623,11 @@ should-NOT-activate
   `unblock work` is unscoped, so a technical blocker reads as a human-gate blocker; the
   destination is debug (or ac-triage for inbound signal). No NOT-for clause existed. Fix:
   exclusion clause scoping `unblock` to human gates and naming debug.
-- PASS — "show me the whole board including the loop-side work" (routes to ac-human-session
+- PASS — "show me the whole board including the loop-side work" (routes to ac-human
   board mode — the docket mode deliberately shows only gated work)
-- PASS — "tidy the pipeline" (routes to ac-align's nightly reconcile — ac-human-session only mentions tidy as an
+- PASS — "tidy the pipeline" (routes to ac-align's nightly reconcile — ac-human only mentions tidy as an
   optional pre-pass, not as its job)
-- PASS — "run the loop overnight" (routes to ac-loop — ac-human-session hands off TO it)
+- PASS — "run the loop overnight" (routes to ac-loop — ac-human hands off TO it)
 - PASS — "reconcile the board and archive what's done" (routes to ac-align's nightly reconcile, named inline in
   the routing footer of both modes)
 - PASS — "re-prioritize the backlog against strategy" (routes to ac-align, named inline)
@@ -720,7 +720,7 @@ should-NOT-activate
 - PASS — "implement the ready beads" (routes to ac-implement — covered by the stage-skill
   exclusion)
 - PASS — "close the batch" (routes to ac-batch-close, same exclusion)
-- PASS — "show me the state of the pipeline" (routes to ac-human-session board mode, which
+- PASS — "show me the state of the pipeline" (routes to ac-human board mode, which
   carries `state of the pipeline` as a literal trigger)
 
 ## ac-prove
@@ -741,7 +741,7 @@ should-NOT-activate
   `tip-valid full-suite proof` and `the full leg`, so plain local execution selects the
   CI-trust primitive; the destination is the testing skill (or just running the command).
   No NOT-for clause existed. Fix: exclusion clause naming testing.
-- PASS — "show CI status on the board" (routes to ac-human-session board mode — ac-prove
+- PASS — "show CI status on the board" (routes to ac-human board mode — ac-prove
   obtains a proof, it does not render panes)
 - PASS — "publish the release" (routes to ac-publish, the ship path that CALLS ac-prove)
 - PASS — "review the code quality across the app" (routes to ac-hygiene — the named
@@ -821,7 +821,7 @@ should-NOT-activate
   ac-bead-capture. Same root cause, same fix.
 - PASS — "generate a wave of beads from this plan" (routes to ac-beadify — named in the fix
   clause for the same reason)
-- PASS — "triage the board and tell me what's ready" (routes to bv / ac-human-session board
+- PASS — "triage the board and tell me what's ready" (routes to bv / ac-human board
   mode — reading the board is not writing a bead)
 - PASS — "what beads are on my necklace"
 
@@ -1492,12 +1492,12 @@ should-NOT-activate
 | ac-publish | — | — | none needed |
 | ac-site-polish | — | — | none needed |
 | ac-ui-polish | — | — | none needed |
-| ac-align | "what should I work on next" and "stress-test my strategy" selected it | precision | NOT-for clause naming ac-human-session (both modes), ac-idea-lab / strategist, ac-hygiene |
-| ac-human-session | "unblock this failing build" selected it | precision | "unblock" scoped to human gates; clause naming debug, ac-implement / ac-loop |
+| ac-align | "what should I work on next" and "stress-test my strategy" selected it | precision | NOT-for clause naming ac-human (both modes), ac-idea-lab / strategist, ac-hygiene |
+| ac-human | "unblock this failing build" selected it | precision | "unblock" scoped to human gates; clause naming debug, ac-implement / ac-loop |
 | ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, ac-registry-audit, ac-align's nightly reconcile |
 | ac-idea-lab | "brainstorm twenty new product ideas" selected it | precision | tail extended to name brainstorming and expert-consensus |
 | ac-pipeline | "run validate-qa-run" selected it | precision | NOT-for widened to exclude RUNNING anything it documents, hosted scripts included |
-| ac-prove | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-human-session board mode |
+| ac-prove | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-human board mode |
 | ac-registry-audit | — | — | none needed |
 | agent-mail | "how do I commit safely in the shared checkout" selected it | precision | clause naming ac-pipeline (commit-discipline, delegation-contract) and ac-distribute |
 | beads-standards | "refine these beads" and "file a bead for this crash" selected it | precision | STANDARD-not-executor clause naming ac-bead-refine, ac-bead-capture, ac-beadify |
@@ -1569,8 +1569,8 @@ review and the tag.
 
 B6 score: 80 judgments, 8 failures (all precision), across 6 of the 8 remaining `ac-*` skills.
 All re-judged PASS after the description edit. The predictor held a fifth time and cleanly: the
-four skills carrying NO NOT-for clause (ac-align, ac-human-session, ac-hygiene, ac-prove) all
-failed, and the two with the richest clauses (ac-human-session's board-mode routing tail,
+four skills carrying NO NOT-for clause (ac-align, ac-human, ac-hygiene, ac-prove) all
+failed, and the two with the richest clauses (ac-human's board-mode routing tail,
 ac-registry-audit's
 four-destination exclusion) passed all 20 judgments clean. ac-pipeline, the canon-holder, failed
 in a new way worth naming: its description ENUMERATES the scripts it hosts, which reads to a

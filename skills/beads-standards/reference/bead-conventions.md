@@ -8,7 +8,7 @@ the ac2 four-section schema (`skills/ac-beadify/references/bead-schema.md`).
 
 Shared by the skills that file and work beads — ac-beadify, ac-implement, ac-polish,
 ac-bead-capture, ac-review, ac-hygiene, ac-qa, ac-qa, ac-triage, ac-align,
-ac-human-session — and any workflow that files beads. One principle drives all of it:
+ac-human — and any workflow that files beads. One principle drives all of it:
 
 > **No workflow may produce prose exhaust.** Anything actionable that a
 > workflow doesn't act on right now leaves as a typed bead — not a report
@@ -51,7 +51,7 @@ children are done.
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
-| `human-ratified` | Fast-track provenance from `ac-human-session` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
+| `human-ratified` | Fast-track provenance from `ac-human` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
 | `tooling` | Infra/toolchain work, not app code |
 | `pipeline-proposal` | Names a plan for a human to decide on — it does NOT implement one, so it **never counts as implementation proof**. Any gate that counts beads as evidence of work done (archive gates, coverage counts, "all matching beads closed") MUST exclude these, closed ones included: a workflow that emits proposal beads and then counts them is self-certifying. Pair with `human-gate` **only** when the body states `Gate-reason: fork —` or `Gate-reason: authorization —`; otherwise the pairing is invalid. |
 
@@ -237,7 +237,7 @@ The contract that keeps autonomous sweeps safe:
    fork becomes a decision bead + blocked downstream, and the sweep
    continues elsewhere.
 
-Batching: `ac-human-session` presents all open `human-gate` beads as the
+Batching: `ac-human` presents all open `human-gate` beads as the
 **decision docket** for focused sit-down sessions — and enforces this contract
 at the dashboard: a decision arriving without a memo is flagged `⚠ no memo` and
 framed on demand (it cannot be a one-tap choice without staged options).

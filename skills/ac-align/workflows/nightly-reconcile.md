@@ -229,6 +229,6 @@ leaves an orphaned `/tmp` worktree that `git worktree list` will show until prun
 
 ## Applying proposals later
 
-This run only *proposes*. A human applies approved proposals in `ac-human-session`, which
+This run only *proposes*. A human applies approved proposals in `ac-human`, which
 re-invokes `ac-align` (or the reconcile flow above) in its normal INTERACTIVE flow — there is
 no separate apply mode here.
