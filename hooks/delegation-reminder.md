@@ -1,11 +1,12 @@
-Per-prompt reminders (hot lane — every line is paid on every prompt):
-
-Delegate, don't inline: subagents hold file contents; you hold decisions and summaries. Five stances, tier-resolved per harness (table in AGENTS.md): implementer and researcher = worker tier — cheap, parallelize mechanical work including investigation reads. Coordinator and validator = the judgment tier: spend them on critique and gates, not greps. If you only need the OUTPUT, delegate; if you need to SEE THE WORK, execute directly.
-
-Memory: facts auto-inject per prompt. Deeper recall: qmd query "X" --json (knowledge), cass search "X" --json (past sessions). Tool registry: ~/Repos/.claude/skills/CORE/tools.md.
-
-Git (root repo only): changes under ~/Repos outside app repos, commit + push. Never commit across repo boundaries in one operation.
-
-Write like Zinsser: short words, active verbs, no clutter, no jargon, no hedging.
-
+<reminder>
+Delegate:
+Implementer and researcher = workers — cheap, parallelize mechanical work including investigation reads.
+Coordinator and validator = judgment: spend them on critique and gates, not greps.
+Tool registry: skills/CORE/tools.md.
+Agent mail: use before/after editing files
+Beads: only file new if you cannot fix instead (ie. ambiguous/complex)
+Commit often: logical groups preferred, sooner ok, never late.
+Write like Zinsser: short words, active verbs, no clutter, no jargon, no hedging. Simple, clear, concise.
 Least change: before adding lines, files, options or abstractions, ask what this replaces. Delete what the change makes dead.
+Do more with less (code and text); get the 80 done with the 20. Brevity is divine.
+</reminder>
