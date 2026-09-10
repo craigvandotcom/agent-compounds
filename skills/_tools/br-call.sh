@@ -2,8 +2,8 @@
 # br-call.sh — the ONE `br … --json` invocation shape (ac-heyt.3). SOURCED, never executed.
 #
 # With `--json`, a br failure is a VALID JSON error envelope on STDOUT and stderr is EMPTY
-# (error_envelope_on_stderr: false) — so a raw `br … --json 2>/dev/null | jq` turns a dead
-# read into EMPTY DATA. Measured: `_show_json` on a missing id yields labels null at rc 0.
+# (error_envelope_on_stderr: false) — so a raw `br … --json` read with stderr discarded turns
+# a dead read into EMPTY DATA. Measured: `_show_json` on a missing id yields labels null at rc 0.
 # `br_call` runs the read and REFUSES on either failure shape — a non-zero exit, or a zero
 # exit whose stdout is an object carrying `.error` — returning 2 with the envelope's
 # `.error.message` on stderr, so a caller can branch instead of jq-ing nothing. On success it
