@@ -91,7 +91,7 @@ PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")
 IMPACT_CLASSES = ("user-visible", "data", "security", "trunk-red")
 IMPACT_REQUIRED_ORIGINS = (
     "ac-implement", "ac-review", "ac-triage", "ac-hygiene", "ac-align", "ac-prove",
-    "curate-foods",
+    "ac-qa", "ac-land", "curate-foods",
 )
 
 # The subagent refusal (ac-wp8i.3): a PreToolUse stdin carrying `agent_id` is a subagent,

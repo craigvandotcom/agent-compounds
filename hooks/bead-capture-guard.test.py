@@ -20,12 +20,12 @@ cases = [
  (ALLOW, 'echo "br create foo"',                                    "br create inside echo string"),
  (ALLOW, 'git commit -m "br create thing"',                         "br create in commit msg"),
  (BLOCK, 'cd /tmp && br create "y" -t task',                        "chained after cd"),
- (ALLOW, 'cd /tmp && br create "y" -t task -l origin:ac-land,unrefined -d "- AC: x. Probe: `true` - tier: none"', "chained, labelled"),
+  (ALLOW, 'cd /tmp && br create "y" -t task -l origin:ac-land,unrefined,impact:data -d "- AC: x. Probe: `true` - tier: none"', "chained, labelled"),
  (ALLOW, 'br create "x" --labels=origin:ac-tidy',                   "--labels= form"),
  (BLOCK, 'br create "x" --labels=hygiene',                          "--labels= without origin"),
  (BLOCK, 'FOO=1 br create "x" -t task',                             "env-prefixed"),
  (BLOCK, 'br create "x" -l "notorigin:sneaky"',                     "origin as substring must not pass"),
- (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa"',              "origin second in list"),
+  (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa,impact:data"',              "origin second in list"),
  (ALLOW, 'br create "x" -t task -l "origin:unknown,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "unknown is legal"),
  (ALLOW, "cat <<'EOF'\nbr create nope\nEOF",                        "heredoc body"),
  # --- origin gate: multi-line shapes (ac-y25j). A heredoc body is DATA, never a
@@ -45,7 +45,7 @@ cases = [
   # "origin:<ac-qa>" and the provenance data is junk.
   (BLOCK, 'br create "x" -t bug --labels "origin:<ac-qa>,qa-finding,unrefined"',
           "unsubstituted placeholder must block"),
-  (ALLOW, 'br create "x" -t bug --labels "origin:ac-qa,qa-finding,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+  (ALLOW, 'br create "x" -t bug --labels "origin:ac-qa,qa-finding,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
           "substituted placeholder passes"),
  # --- readiness axis ---
  (BLOCK, 'br create "x" -t task -l "origin:ac-review"',        "task, origin but no readiness"),
@@ -100,6 +100,14 @@ cases = [
           "subagent, bare human-gate on a task -> refused", {"agent_id": "sub-1"}),
   (ALLOW, 'br create "ACTION: do x" -t task -l "origin:ac-review,human-gate" -d "<body>"',
           "subagent, ACTION fork -> admitted", {"agent_id": "sub-1"}),
+  # --- impact-axis origins (ac-review 2026-09-11): ac-qa and ac-land file automated
+  # non-gate beads and now require impact; reflect/dream file only human-gate cards.
+  (BLOCK, 'br create "x" -t task -l "origin:ac-qa,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "ac-qa automated origin, no impact -> refused"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-qa,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "ac-qa with impact -> admitted"),
+  (BLOCK, 'br create "x" -t bug -l "origin:ac-land,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "ac-land automated origin, no impact -> refused"),
 ]
 fails = 0
 for case in cases:
