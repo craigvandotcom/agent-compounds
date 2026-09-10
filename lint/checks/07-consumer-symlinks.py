@@ -4,6 +4,10 @@
 # prevents: a dangling symlink in a consumer's harness layer (.claude/, .agents/, .factory/ of the org
 #   dirs and every deploy target) — a dead pointer that breaks a skill load or silently skips one
 # scope: LIVE_TEXT
+# changed: skip
+#   audits consumer layers OUTSIDE this repo (org and app .claude/.agents/.factory),
+#   which a commit-scoped pre-commit run cannot fix and must not be gated by.
+#   Full lint and CI still run it, and infra-sync re-stamps the fleet.
 # severity: fail
 # fixture: lint/fixtures/07-consumer-symlinks
 # ---

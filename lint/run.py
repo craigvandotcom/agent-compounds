@@ -156,6 +156,11 @@ def main():
         else:
             for c in selected:
                 h = header_of(c)
+                if str(h.get("changed", "")).lower() == "skip":
+                    # audits state OUTSIDE the repo (e.g. consumer harness layers); a
+                    # commit-scoped run cannot fix it and must not be gated by it
+                    skipped[check_id(c)] = "changed:skip"
+                    continue
                 s = getattr(scope, str(h.get("scope", "")), None)
                 if not isinstance(s, frozenset) or not intersect(s, files):
                     skipped[check_id(c)] = h.get("scope", "?")
