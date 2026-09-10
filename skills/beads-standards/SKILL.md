@@ -314,10 +314,8 @@ neutral title + pointer.
 
 ## Operating the tools — `bv` triages, `br` mutates
 
-> Migrated here from root `AGENTS.md` (2026-07-25, context-tokenomics): this is
-> look-up material, needed only once you are already doing beads work — it does not
-> belong in a file every agent loads on every spawn. Status/priority canon is above;
-> this section is purely operational.
+> Migrated here from root `AGENTS.md` (2026-07-25, context-tokenomics): look-up
+> material for beads work, never load-on-spawn prose. Status/priority canon is above.
 
 `br` ([beads_rust](https://github.com/Dicklesworthstone/beads_rust)) is the issue
 tracker; `bv` ([beads_viewer](https://github.com/Dicklesworthstone/beads_viewer)) is a
@@ -325,9 +323,8 @@ graph-aware triage engine over `.beads/beads.jsonl`. Use `bv`'s robot flags for
 deterministic, dependency-aware output (PageRank, betweenness, critical path, cycles)
 rather than parsing JSONL or guessing at graph traversal.
 
-**Scope boundary:** `bv` decides *what to work on* (triage, priority, planning).
-`br` creates, modifies and closes. **Use ONLY `--robot-*` flags — a bare `bv` launches
-an interactive TUI that blocks the session.**
+**Scope boundary:** `bv` decides *what to work on*, `br` creates, modifies and closes.
+**Use ONLY `--robot-*` flags — a bare `bv` launches an interactive TUI that blocks the session.**
 
 ### Start with triage
 
@@ -371,6 +368,8 @@ br update <id> --status=in_progress
 br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above
 br close <id1> <id2>      # close several
 br dep add <issue> <depends-on>          # wire a blocking dependency
+br update <id> --status closed           # REFUSED rc 4 — terminal states close via `br close -r` only (0.5.12)
+# .beads/policy.yaml would gate closes/transitions; a malformed one makes every command exit 7 (absent here)
 br sync --flush-only      # export DB -> JSONL
 ```
 
@@ -382,7 +381,8 @@ br sync --flush-only      # export DB -> JSONL
 
 
 - **JSON shapes differ by command.** `br list --json` returns a **paginated object**
-  (`.issues[]`) with a **50-row default limit** — pass `--limit 1000` for full sweeps. But
+  (`.issues[]`) with **no default limit** (`br schema commands` on `br` 0.5.12: `limit: 0`,
+  truncation disclosed via `has_more` — sweep with `--limit 0`). But
   `br ready --json` and `br show <id> --json` return **bare arrays** — index `.[0]` (e.g.
   `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
   array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
@@ -398,9 +398,9 @@ br sync --flush-only      # export DB -> JSONL
   Pass any multi-line body via a FILE: `br comments add <ID> -f <file>` (ID comes first),
   and capture a `br create` body with `-d "$(cat <file>)"` — the file is not re-scanned,
   so backticks and angle brackets stay literal.
-- **`br label add` silently no-ops on multiple labels.** Passing several bare label words
-  in one call exits 0 and applies NOTHING. Labels go one per call, one `-l` flag each —
-  verify with `br show` afterwards, since the CLI gives no signal either way.
+- **`br label add` applies every positional label, rc 0** (measured on `br` 0.5.12; the
+  same call errored rc 3 on 0.2.x). Mixing bare labels with `-l` flags is a validation
+  error, rc 4 — verify with `br show` afterwards.
 - **`br lint` scans the DESCRIPTION field only — never `--notes`.** A lint-required
   section added via `--notes` leaves the finding open and reads as a flaky linter. Fold
   every lint-required section into the `-d`/`-f` body.
@@ -418,9 +418,9 @@ br sync --flush-only      # export DB -> JSONL
 - **Never chain `br close` to a commit in one call.** `git commit && br close <id>` records
   the **wrong SHA** when the commit fails (untracked file, bad pathspec) — the close fires
   against whatever HEAD is. Commit, verify the SHA, *then* close as a separate step.
-- **`br dep add` does NO cycle prevention.** Edges added after an initial structure go
-  unchecked — re-run `br dep cycles` after ANY post-hoc `dep add` batch and require it
-  clean.
+- **`br dep add` refuses a write that CLOSES a cycle, rc 5** (measured on `br` 0.5.12);
+  only a lone reversed edge that closes no cycle lands silently — re-run `br dep cycles`
+  after any post-hoc `dep add` batch and require it clean.
 - **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
   closed children and epics don't auto-close on last child close — check closed children
   before triaging an epic as abandoned/empty.

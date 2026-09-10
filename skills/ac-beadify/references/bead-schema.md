@@ -16,9 +16,13 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 
 - An epic reaches its children by **parent-child**, never `blocks` — containment is not
   ordering, and wiring it as `blocks` fabricates a critical path.
-- Edge direction is `<blocked> depends-on <blocker>`. A reversed `br dep add` is SILENT, so
-  read every edge back (`br dep cycles`, then `br show` on both ends).
-- `br create` REJECTS `-f` alongside a title: creation bodies go `-d "$(cat <file>)"`. That
+- Edge direction is `<blocked> depends-on <blocker>`. A write that CLOSES a cycle is
+  refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
+  lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
+- `br create` REJECTS `-f` alongside a title, rc 4 (measured on `br` 0.5.12): `-f` is a
+  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`,
+  because the capture guard reads the inline body for the born `Probe:` line
+  (`--description-file` is deliberately not adopted). That
   routes the body through the shell, so bead prose must stay dcg-safe (no command
   substitution, no unbalanced quoting). Only comments and receipts take `-f <file>`.
 

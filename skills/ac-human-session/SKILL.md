@@ -38,8 +38,7 @@ routing footer.
 | **Verification** | Each acted item reports its result; cleared gates unblock downstream |
 
 **Exempt from the org run-ledger standard** — interactive, human-driven tap-through
-session: the rendered dashboard (Phase 3/4) IS the live progress view. No run ledger
-is added.
+session: the rendered dashboard (Phase 3/4) IS the live progress view.
 
 **`human-ratified` — this skill stamps human-ratified only.** After a recorded
 lightweight completeness check (≥1 AC an empty diff cannot satisfy + greppable
@@ -112,7 +111,7 @@ The Decision Docket is the org's single place to action decisions. At org level 
 for repo in ~/Repos ~/Repos/neometa/software/agent-compounds \
             $(while IFS= read -r a; do echo ~/Repos/neometa/software/$a; done < ~/Repos/infrastructure/apps.list); do
   [ -d "$repo/.beads" ] || continue
-  (cd "$repo" && br list --json --limit 1000 2>/dev/null) | \
+  (cd "$repo" && br list --json --limit 0 2>/dev/null) | \
     jq --arg repo "$(basename $repo)" '[.issues[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
 done
 ```
@@ -169,7 +168,7 @@ The first line is the whole sit-down in one glance (lead with it). Rough the `~{
 
 Order = distance from a stall (tier-first); **within a tier, P0→P4 then oldest** — urgency first, then the longest-stalled item so an aging blocker can't hide behind newer arrivals. Clear what's stopped, then feed backward. Omit any empty tier.
 
-Age is **derived, never separately queried**: every board pull this skill already makes carries `created_at` per bead — the org-wide sweep above (`br list --json --limit 1000`) AND the default single-project board pull (via `ac-pipeline/references/board-scan.md`). Compute `now − created_at` from whichever pull feeds the docket and render it as a compact age token (e.g. `12d`) on each bead line — add no new `br` invocation.
+Age is **derived, never separately queried**: every board pull this skill already makes carries `created_at` per bead — the org-wide sweep above (`br list --json --limit 0`) AND the default single-project board pull (via `ac-pipeline/references/board-scan.md`). Compute `now − created_at` from whichever pull feeds the docket and render it as a compact age token (e.g. `12d`) on each bead line — add no new `br` invocation.
 
 ```
 ### 🔴 Blocking — the line has stopped ({N})
@@ -214,6 +213,7 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 **Per item type — present, then one tap:**
 
 - **🔴 Decision (human-gate bead) — check the memo first:** a tap-able decision needs a *pre-staged memo* — context · options with trade-offs · a recommendation (the `-t decision` contract in `beads-standards/reference/bead-conventions.md`). Assess the bead's description + comments:
+    - **Fork card incomplete — BOUNCE, never present:** a `DECISION:` card lacking any of `evidence:` / `consequence:` / `recommendation:` is refused at the tap — label `gate-incomplete`, comment naming the missing line, `human-gate` kept — and it renders `⚠ gate-incomplete` (the escalation test's other direction: filing refuses it on the way in, this tap refuses to surface it).
     - **Memo present** → show it in 2–4 lines, then put its **options as buttons**, recommendation first + `(Recommended)`:
       ```
       AskUserQuestion(question: "{decision title}", options: [{option A (Recommended)}, {B}, {C}, {Defer}, {Done}])
@@ -233,7 +233,7 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 - **🔴 Curator lane, ELEVATED — auto-advance INTO the sitting, don't merely render it:** once the lane crosses the serving policy (`>=20` queued or oldest >21 days), it is a first-class item in this auto-advance order, right after its own itemized P0/P1s. One tap: `AskUserQuestion(question: "Curator lane: {N} queued (oldest {age}). Run the supervised sitting?", options: ["Run it now (Recommended)", "Work the top {n} only", "Skip"])`. On tap → drive `bd-8yhvb`'s supervised batch flow, then resume auto-advance. A rendered tap the loop never reaches is the exact failure this line prevents.
 - **🔴 PRs — batch the trivial:** dependabot/grouped bumps → ONE prompt ("Merge the N green dependabot PRs?"), not N. Substantive PRs → one each.
 - **🔴 CI / prod:** summarize the failure in a line, then `AskUserQuestion`: "Investigate now / File a bead / Skip."
-- **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve sets `loop-ready` in frontmatter — the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-polish {path}`.
+- **🟡 Plan:** show a tight summary (outcome · scope · top risk), then `AskUserQuestion`: "Approve → loop-ready / Send to refine / Skip." Approve writes any answer the human gave in the tap into the plan as `DECISION (<human>): …` before running `skills/_tools/plan-approve.sh <plan-path>` — the ONE writer of approval, never a hand edit of the frontmatter; the plan **leaves this view** (the loop now beadifies + implements it). Refine → `/ac-polish {path}`.
 - **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac-plan`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
 
 **Approve-then-diff capture:** when a decision or plan approval follows the human first

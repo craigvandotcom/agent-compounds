@@ -32,17 +32,17 @@ Run scans A, B, C, E **in parallel** (they're independent).
 ## Scan A — beads
 
 ```bash
-br list  --json --limit 1000   # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
+br list  --json --limit 0      # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
 br ready --json                # unblocked + ready → a FLAT array
 cat .beads/issues.jsonl        # the ONLY complete source — includes closed beads
 ```
 
 > **`br` JSON shape differs by subcommand — don't conflate them:**
-> - `br list --json` returns a **paginated object** (`default limit 50`). Always pass
->   `--limit 1000` (or page on `has_more`) and iterate **`.issues[]`**, not `.[]`.
+> - `br list --json` returns a **paginated object** (no default limit — `limit: 0` on
+>   `br` 0.5.12, truncation disclosed via `has_more`). Iterate **`.issues[]`**, not `.[]`.
 > - `br ready --json` returns a **bare array** — iterate **`.[]`**.
 > Getting this wrong fails silently-ish (`jq: Cannot index array with string …`, or
-> a truncated list at 50).
+> a truncated list you never noticed).
 
 > **⚠️ `br list --json` DOES NOT RETURN CLOSED BEADS** (br 0.2.x). It has returned 436
 > records with zero `status=closed` while

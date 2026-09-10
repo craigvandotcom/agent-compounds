@@ -126,7 +126,7 @@ as a missing VERDICT record, never a silent pass.}
 {beads labeled `post-merge` that are still open — the pre-close bead-closure gate (the loop's,
 upstream of `ac-batch-close`) excludes them deliberately (they can't close until this code is
 live), so they're listed here instead of silently dropped. Populate with
-`br list --json --limit 1000 | jq '[.issues[] | select(.status != "closed") | select((.labels // []) | index("post-merge")) | {id, title}]'` —
+`br list --json --limit 0 | jq '[.issues[] | select(.status != "closed") | select((.labels // []) | index("post-merge")) | {id, title}]'` —
 format as a checklist: `- [ ] {id}: {title}`. Omit this section entirely if the query returns
 an empty list.}
 

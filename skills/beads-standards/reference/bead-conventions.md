@@ -113,8 +113,8 @@ disposition grammar, no backfill sweep — considered and cut.
 ### `--parent` is CONTAINMENT only — never provenance (bd-nbn3h)
 
 `br create --parent <id>` mints a **dot-notation** child (`bd-xxxxx.N`) and an open
-dot-child **blocks its parent's close** (verified against `br create --help` v0.2.16 and
-the live board). So using it to record "this bead came out of that one" silently converts
+dot-child **blocks its parent's close** (verified against `br create --help` v0.2.16,
+re-verified on 0.5.12, and the live board). So using it to record "this bead came out of that one" silently converts
 the origin bead into one that cannot close until the derived work is done — which is the
 opposite of what a provenance link should cost. **Reserve `--parent` for genuine epic
 containment: "this bead is part of that epic's `## Delivers`."**
@@ -169,7 +169,7 @@ creation's job):
 The body is the FOUR-SECTION schema (`skills/ac-beadify/references/bead-schema.md`): first
 section · `## Acceptance Criteria` · `## Delivers` · `## Consumes` — nothing else, no Test Scope,
 Evidence, Scope, Proof or Notes section (test scope is an AC's probe; evidence is a `found-by`
-command; both live inside the four). `br lint` v0.2.16 compiles per-type headers in and cannot
+command; both live inside the four). `br lint` v0.2.16 (re-verified on 0.5.12) compiles per-type headers in and cannot
 be configured, so the schema meets it by NAMING the first section per type:
 
 | Type | First section header | `br lint` also wants |

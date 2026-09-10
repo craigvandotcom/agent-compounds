@@ -330,7 +330,7 @@ smoke"), independent of this net.
 **QA-blocker check (beads projects, runs regardless of platform):**
 
 ```bash
-br list --json --limit 1000 | jq '[.issues[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
+br list --json --limit 0 | jq '[.issues[] | select(.labels // [] | index("qa-blocker")) | select(.status != "closed")] | length'
 ```
 
 Open `qa-blocker` beads are unresolved user-facing breaks — treat exactly like failing
