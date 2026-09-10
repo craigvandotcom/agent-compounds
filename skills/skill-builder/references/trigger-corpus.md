@@ -647,6 +647,9 @@ should-activate
 - PASS — "weekly hygiene run"
 - PASS — "run a multi-round adversarial review over the code"
 - PASS — "find correctness and security cleanups across the app"
+- PASS — "run a test-quality audit across the codebase" (the description's `test-quality
+  checks` clause carries the suite-audit path; `testing` owns writing/fixing tests, not
+  auditing the suite)
 
 should-NOT-activate
 
