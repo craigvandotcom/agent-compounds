@@ -42,6 +42,11 @@ DRIVER="$WORK/drive.mjs"
 
 [ -f "$SYNC" ] || { echo "HARNESS FAIL: missing $SYNC"; exit 1; }
 command -v node >/dev/null 2>&1 || { echo "HARNESS FAIL: node not on PATH — the dispatcher cannot be driven"; exit 77; }
+# The render asserts every rendered command path exists under the literal
+# $HOME/Repos/... install layout (harness-sync render_hooks_opencode). A machine
+# without that layout — CI's /home/runner — cannot render, so the precondition is
+# unavailable there (exit 77 self-skip, counted loudly by run-all-harnesses.sh).
+[ -d "$HOME/Repos" ] || { echo "SKIP: no \$HOME/Repos layout — the opencode render asserts \$HOME/Repos hook paths (precondition unavailable)"; exit 77; }
 
 cat > "$DRIVER" <<'EOF'
 // Drive the rendered plugin's tool-call gate for one wiring state; print RESULT.

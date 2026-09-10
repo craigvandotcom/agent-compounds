@@ -5,7 +5,8 @@
 #   PROBE: a workflow-reminder.md carrying a dead pipeline command FAILS (C1);
 #           a delegation-reminder.md carrying a dead tool name FAILS (C2); an
 #           app-root AGENTS.md carrying a dead stage name FAILS (C3); clean or
-#           missing every-prompt files PASS; no consumer dir is NOT-GATED.
+#           missing every-prompt files PASS; no consumer dir is NOT-GATED; an
+#           absent consumer ROOT (a bare checkout) SKIPs green.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/12-deployed-app-conformance.test.sh
@@ -104,6 +105,14 @@ if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
   ok "EMPTY: no consumer dir -> NOT-GATED exit 2"
 else
   bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"; cat "$OUT"
+fi
+
+# --- 7 SKIP: absent consumer root (a consumer-less checkout) -> exit 0 -----------
+rc=$(run_check "$work/no-such-root")
+if [ "$rc" = 0 ] && grep -qi "SKIP" "$OUT"; then
+  ok "NO-ROOT: absent consumer root -> SKIP exit 0"
+else
+  bad "NO-ROOT: expected exit 0 SKIP, got $rc"; cat "$OUT"
 fi
 
 echo
