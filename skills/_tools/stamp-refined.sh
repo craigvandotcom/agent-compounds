@@ -49,13 +49,18 @@ stamp_refined() {
   # sight, never grandfathered" is bidirectional: on a CONTENT refusal, if the bead
   # currently holds `refined`, strip it. Only a content verdict downgrades — a cannot-check
   # result (element4 rc 2, unreadable bead) mutates nothing.
-  # SHAPE NORMALISER (2026-09-06). `br show --json` answers with a one-element ARRAY
+  # SHAPE NORMALISER (2026-09-06). The br show read answers with a one-element ARRAY
   # normally, but under concurrent readers it sometimes answers with the bare OBJECT.
   # Every filter below is `.[0]`, which dies "Cannot index object with number" on that
   # shape — and a dead filter reads as "no labels, no description", so the bead is refused
   # for a defect the READER invented. Normalise at the single point each read enters.
+  # The read runs through the ONE br-call helper (ac-heyt.3): a refusal mutates nothing
+  # below — the cannot-check contract the downgrade leg already observes.
+  # shellcheck source=br-call.sh
+  . "$_STAMP_REFINED_DIR/br-call.sh" 2>/dev/null \
+    || { echo "stamp_refined: FATAL — br-call.sh helper missing; refusing to read $id" >&2; return 2; }
   _show_json() {
-    br show --json "$1" 2>/dev/null | jq 'if type=="array" then . else [.] end' 2>/dev/null
+    br_call show --json "$1" | jq 'if type=="array" then . else [.] end' 2>/dev/null
   }
 
   _downgrade() {

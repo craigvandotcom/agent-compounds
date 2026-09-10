@@ -37,6 +37,12 @@
 #
 set -uo pipefail
 
+# The ONE br_call invocation shape (ac-heyt.3); a refusal is a NOT-CHECKED below,
+# never empty data. Missing helper = nothing can be read = the same NOT-CHECKED.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+  || { echo "close-evidence NOT-CHECKED: br-call.sh helper missing — no board read can be verified" >&2; exit 2; }
+
 FORCE=0
 REPORT_ONLY=0
 LIST_UNVERIFIABLE=0
@@ -53,15 +59,16 @@ done
 
 # --- audit mode: the population this gate can never verify -------------------
 if [ "$LIST_UNVERIFIABLE" = 1 ]; then
-  RAW=$(br list --status open --json 2>/dev/null || true)
+  RAW=$(br_call list --status open --json) \
+    || { echo "close-evidence NOT-CHECKED: br_call list refused — the audit verified nothing" >&2; exit 2; }
   if [ -z "$RAW" ]; then
-    echo "close-evidence NOT-CHECKED: 'br list --status open --json' returned nothing — the audit verified nothing" >&2
+    echo "close-evidence NOT-CHECKED: 'br list' returned nothing — the audit verified nothing" >&2
     exit 2
   fi
   COUNT=0
   # Only task/feature closes cross-reference ## Delivers; every other type is exempt
   # from this check by construction, so a prose-only Delivers there verifiable-closes fine.
-  # br list --json returns {issues:[...]} (an array would iterate the same way).
+  # The br list read returns {issues:[...]} (an array would iterate the same way).
   while IFS= read -r NODE; do
     [ -n "$NODE" ] || continue
     ID=$(printf '%s' "$NODE"   | jq -r '.id // empty')
@@ -99,9 +106,10 @@ if [ -z "$BEAD_ID" ] || [ -z "$REASON" ]; then
   exit 2
 fi
 
-RAW=$(br show "$BEAD_ID" --json 2>/dev/null || true)
+RAW=$(br_call show "$BEAD_ID" --json) \
+  || verdict "NOT-CHECKED" "br_call show refused for $BEAD_ID — cannot read the bead's declared evidence" 2
 if [ -z "$RAW" ]; then
-  verdict "NOT-CHECKED" "'br show $BEAD_ID --json' returned nothing — cannot read the bead's declared evidence" 2
+  verdict "NOT-CHECKED" "'br show' returned nothing for $BEAD_ID — cannot read the bead's declared evidence" 2
 fi
 
 # br returns an object for one id and an array for several; normalise.

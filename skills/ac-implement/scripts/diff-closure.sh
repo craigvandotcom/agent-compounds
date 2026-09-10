@@ -28,13 +28,19 @@
 #
 # Usage: diff-closure.sh [--base <ref>] [--bead <id> | --declared <file>] [-C <repo>]
 #   --base      what to diff the WORKING TREE against (default: merge-base of origin/main and HEAD)
-#   --bead      read the bead's `touchers:` command(s) via `br show --json` and run them
+#   --bead      read the bead's `touchers:` command(s) via the br show read and run them
 #   --declared  a file of touchers commands, one per line (what --bead would have found)
 # Symbols: TS/JS `export (function|const|class|interface|type|enum) NAME` lines added or
 # removed; SQL `alter table … (add|drop|alter) column NAME`; deleted files (by import stem).
 set -euo pipefail
 
 die2() { printf 'diff-closure: NOT-GATED %s\n' "$*" >&2; exit 2; }
+
+# The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED,
+# never empty data. Absolute path computed before any cd: BASH_SOURCE may be relative.
+# shellcheck source=br-call.sh
+BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh"
+. "$BR_CALL" 2>/dev/null || die2 "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
 
 BASE="" BEAD="" DECL="" REPO="."
 while [ $# -gt 0 ]; do
@@ -86,7 +92,9 @@ fi
 : > "$W/declared"
 if [ -n "$BEAD" ]; then
   command -v br >/dev/null 2>&1 || die2 "br not on PATH — cannot read bead $BEAD"
-  br show --json "$BEAD" 2>/dev/null | jq -r '.[0].description // ""' \
+  br_raw=$(br_call show --json "$BEAD") \
+    || die2 "br_call show refused for bead $BEAD — the touchers declaration cannot be read"
+  printf '%s' "$br_raw" | jq -r '.[0].description // ""' \
     | grep -oE 'touchers:[[:space:]]*`[^`]+`' | sed -E 's/^touchers:[[:space:]]*`//; s/`$//' > "$W/decl-cmds" || true
 elif [ -n "$DECL" ]; then
   [ -f "$DECL" ] || die2 "--declared file not found: $DECL"

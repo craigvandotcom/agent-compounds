@@ -67,6 +67,13 @@
 # Exit 1 — any assertion failed on any trial.
 set -uo pipefail
 
+# The ONE br_call invocation shape (ac-heyt.3). This harness drives the REAL br,
+# so a refusal is a harness failure, never empty data — empty reads would pass as "no
+# strays", "open pre-race", "no leak". Missing helper = every read refuses = red.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+  || { echo "HARNESS FAIL: br-call.sh helper missing — no board read can be verified"; exit 1; }
+
 N_BEADS="${1:-6}"
 TRIALS="${2:-3}"
 LABEL="claim-race-harness-smoke"
@@ -85,8 +92,9 @@ cleanup() {
   # Paranoia sweep: catches stragglers if the trap above was ever bypassed (kill -9
   # mid-run, prior aborted invocation left beads behind).
   local strays
-  strays=$(br list --json --limit 0 --label "$LABEL" --no-auto-flush --no-auto-import 2>/dev/null \
-    | jq -r '.issues[]?.id' 2>/dev/null)
+  strays=$(br_call list --json --limit 0 --label "$LABEL" --no-auto-flush --no-auto-import \
+    | jq -r '.issues[]?.id' 2>/dev/null) \
+    || { fail "br list refused in cleanup — the stray sweep is unverified"; strays=""; }
   if [ -n "$strays" ]; then
     # shellcheck disable=SC2086 -- word-split intentional, IDs are single tokens
     br delete $strays --hard --no-auto-flush --no-auto-import \
@@ -113,7 +121,8 @@ for trial in $(seq 1 "$TRIALS"); do
 
   # Pre-condition sanity: every bead starts open (in `br ready`) before the race.
   for id in "${TRIAL_IDS[@]}"; do
-    st=$(br show "$id" --json --no-auto-flush --no-auto-import 2>/dev/null | jq -r '.[0].status')
+    st=$(br_call show "$id" --json --no-auto-flush --no-auto-import | jq -r '.[0].status') \
+      || { fail "Trial $trial: br show refused for $id — pre-race status unverifiable"; continue; }
     [ "$st" = "open" ] || fail "Trial $trial: $id not open pre-race (status=$st)"
   done
 
@@ -135,7 +144,8 @@ for trial in $(seq 1 "$TRIALS"); do
   # --- Assertions 1+2: exactly one assignee per bead, no zero-claim deadlock ---
   trial_ok=1
   for id in "${TRIAL_IDS[@]}"; do
-    row=$(br show "$id" --json --no-auto-flush --no-auto-import 2>/dev/null | jq -c '.[0]')
+    row=$(br_call show "$id" --json --no-auto-flush --no-auto-import | jq -c '.[0]') \
+      || { fail "Trial $trial: br show refused for $id — claim state unverifiable"; trial_ok=0; continue; }
     # `bstatus`, not `status` — the latter is a zsh read-only special (bd-x8ios). Harmless under
     # this file's bash shebang, but the name must not be modelled anywhere in the registry.
     bstatus=$(printf '%s' "$row" | jq -r '.status // empty')
@@ -155,9 +165,11 @@ for trial in $(seq 1 "$TRIALS"); do
   # --- Assertion 3: post-claim `br ready` excludes every claimed bead, checked ---
   # from BOTH conductor identities (the loser is only knowable after the race
   # resolves above, so both are checked — the loser's view is asserted either way).
-  READY_A=$(br ready --limit 0 --assignee "$CONDUCTOR_A" --json --no-auto-flush --no-auto-import 2>/dev/null | jq -r '.[].id')
-  READY_B=$(br ready --limit 0 --assignee "$CONDUCTOR_B" --json --no-auto-flush --no-auto-import 2>/dev/null | jq -r '.[].id')
   ready_leak=0
+  READY_A=$(br_call ready --limit 0 --assignee "$CONDUCTOR_A" --json --no-auto-flush --no-auto-import | jq -r '.[].id') \
+    || { fail "Trial $trial: br ready refused for $CONDUCTOR_A — leak check unverifiable"; ready_leak=1; READY_A=""; }
+  READY_B=$(br_call ready --limit 0 --assignee "$CONDUCTOR_B" --json --no-auto-flush --no-auto-import | jq -r '.[].id') \
+    || { fail "Trial $trial: br ready refused for $CONDUCTOR_B — leak check unverifiable"; ready_leak=1; READY_B=""; }
   for id in "${TRIAL_IDS[@]}"; do
     if printf '%s\n' "$READY_A" | grep -qx "$id" || printf '%s\n' "$READY_B" | grep -qx "$id"; then
       fail "Trial $trial: $id leaked into a post-claim br ready listing (should be in_progress, excluded from ready for BOTH identities, including the loser's)"

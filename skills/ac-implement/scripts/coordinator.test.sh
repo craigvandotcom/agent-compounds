@@ -12,6 +12,7 @@
 set -uo pipefail
 
 GATE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/coordinator.sh"
+BR_CALL_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/skills/_tools/br-call.sh"
 [ -x "$GATE" ] || { echo "coordinator.test: NOT-GATED — $GATE is not executable"; exit 2; }
 command -v git >/dev/null 2>&1 || { echo "coordinator.test: SKIP — no git"; exit 77; }
 command -v jq  >/dev/null 2>&1 || { echo "coordinator.test: SKIP — no jq";  exit 77; }
@@ -49,8 +50,9 @@ mkrepo() {
   git -C "$W/$1.git" symbolic-ref HEAD refs/heads/main
   git init -q -b main "$d"; cd "$d"
   git config user.email t@t; git config user.name t; git config commit.gpgsign false
-  mkdir -p .beads skills/ac-implement/scripts
+  mkdir -p .beads skills/ac-implement/scripts skills/_tools
   cp "$GATE" skills/ac-implement/scripts/coordinator.sh
+  cp "$BR_CALL_SRC" skills/_tools/br-call.sh
   # a swarm-commit stand-in: the lane itself has its own harness; here it must only be
   # callable and honest about landing, so the LEDGER-WRITE leg has something real to verify.
   cat >skills/ac-implement/scripts/swarm-commit.sh <<'SC'

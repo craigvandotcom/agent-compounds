@@ -93,6 +93,12 @@ if [ -z "$ROOT" ]; then
 fi
 cd "$ROOT" || { echo "NOT-CHECKED: cannot enter repo root '$ROOT'" >&2; exit 2; }
 
+# The ONE br_call invocation shape (ac-heyt.3). Path computed BEFORE the cd above:
+# BASH_SOURCE may be relative, so the absolute helper path must resolve from the original
+# cwd. br_call honors AC2_BR_CMD, so the seam declared below keeps applying to the reads.
+# shellcheck source=br-call.sh
+BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh"
+
 BR="${AC2_BR_CMD:-br}"
 EVIDENCE_CORE="$ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 # Vendored-copy layout: app repos track these scripts under .agents/skills/ (the
@@ -103,6 +109,8 @@ EVIDENCE_CORE="$ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 
 refuse()      { echo "CLOSE-REFUSED: $1 — refusing: $2"; exit 1; }
 not_checked() { echo "NOT-CHECKED: $1 — $2" >&2; exit 2; }
+
+. "$BR_CALL" 2>/dev/null || not_checked "READ" "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
 
 sha256_of_stdin() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'
@@ -133,9 +141,12 @@ is_output_silent() {
   esac
 }
 
-br_field() { # <bead-id> <jq field> -> value, empty when unreadable
-  "$BR" show "$1" --json </dev/null 2>/dev/null \
-    | jq -r "if type == \"array\" then .[0] else . end | .$2 // \"\"" 2>/dev/null
+br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, never empty data
+  local v
+  v=$(br_call show "$1" --json </dev/null \
+    | jq -r "if type == \"array\" then .[0] else . end | .$2 // \"\"" 2>/dev/null) \
+    || not_checked "READ" "br_call show refused for $1 — the gate cannot verify this close"
+  printf '%s\n' "$v"
 }
 
 # ---------------------------------------------------------------------------------------

@@ -7,7 +7,7 @@
 # stamp-refined.sh runs this gate before writing `refined`; legacy boards still carry Declared-RED beads.
 #
 # Usage:
-#   element4-check.sh <bead-id> [<bead-id>...]     # resolves via `br show --json`
+#   element4-check.sh <bead-id> [<bead-id>...]     # resolves each id through br_call
 #   element4-check.sh --file <path> [--type <t>]   # checks a description file (fixtures/tests)
 #
 # Exit 0 — every checked bead satisfies element 4 (or is an exempt type).
@@ -169,14 +169,21 @@ if [ "$1" = "--file" ]; then
   exit "$RC"
 fi
 
+# The ONE br_call invocation shape (ac-heyt.3); a refusal is a CANNOT-CHECK (exit 2),
+# never empty data. Only the bead-id path reads the board, so the helper loads here, not at top.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/br-call.sh" 2>/dev/null \
+  || { echo "element4-check: ERROR — br-call.sh helper missing; cannot resolve beads" >&2; exit 2; }
+
 for id in "$@"; do
   case "$id" in --*) usage ;; esac
-  # normalise: `br show --json` returns a one-element array or, under concurrent readers, a bare object
-  raw=$(br show --json "$id" 2>/dev/null | jq 'if type=="array" then . else [.] end' 2>/dev/null || true)
-  arr=$(printf '%s' "$raw" | jq 'if type == "array" then . else [] end' 2>/dev/null) || arr='[]'
+  # normalise: the br show read returns a one-element array or, under concurrent readers, a bare object
+  raw=$(br_call show --json "$id") \
+    || { echo "element4-check: ERROR — br_call show refused for '$id'; cannot resolve the bead" >&2; exit 2; }
+  arr=$(printf '%s' "$raw" | jq 'if type=="array" then . else [.] end' 2>/dev/null) || arr='[]'
   [ -n "$arr" ] || arr='[]'
   if [ "$(printf '%s' "$arr" | jq 'length')" -eq 0 ]; then
-    echo "element4-check: ERROR — bead '$id' did not resolve via 'br show --json'" >&2
+    echo "element4-check: ERROR — bead '$id' did not resolve via 'br show'" >&2
     exit 2
   fi
   itype=$(printf '%s' "$arr" | jq -r '.[0].issue_type // "task"')

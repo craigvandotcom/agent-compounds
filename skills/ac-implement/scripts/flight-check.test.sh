@@ -52,6 +52,7 @@ case "${1:-}" in
     case "${2:-}" in
       upstream|bd-epic-kb-seams-573x7.1|bd-epic-ing-ownership-k2mpd.1)
         echo '[{"id":"resolved","status":"closed"}]' ;;
+      ac-test-0001) echo '[{"id":"ac-test-0001","labels":[]}]' ;;  # the SUT holds no refined — the stamp leg correctly skips
       *) exit 3 ;;  # exact-id miss: not on the board under that spelling
     esac ;;
   list) echo '{"issues":[{"id":"upstream","status":"closed"},{"id":"bd-epic-kb-seams-573x7.1","status":"closed"},{"id":"bd-epic-ing-ownership-k2mpd.1","status":"closed"}],"total":3,"has_more":false,"limit":5000,"offset":0}' ;;

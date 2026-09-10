@@ -67,6 +67,11 @@ PATHS=()
 refuse() { rule="$1"; shift; echo "REFUSED [$rule]: $*" >&2; exit 3; }
 usage()  { echo "usage: $0 --identity <name> --message-file <f> --path <p> [--path <p>...]" >&2; exit 2; }
 
+# The ONE br_call invocation shape (ac-heyt.3). The witness read below is
+# informational; a refusal names itself on stderr instead of yielding a bare hash.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null || true
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --_locked)       LOCKED=1; shift ;;
@@ -242,7 +247,7 @@ if [ "$LEDGER_IN_PATHS" -eq 1 ]; then
   elif [ "$AHEAD" -gt 0 ]; then
     WITNESS=""
     if command -v br >/dev/null 2>&1 && [ -f .beads/issues.jsonl ]; then
-      WITNESS=$(br sync --witness --json 2>/dev/null | jq -r '.witness.root_hash // ""' 2>/dev/null)
+      WITNESS=$(br_call sync --witness --json | jq -r '.witness.root_hash // ""' 2>/dev/null) || WITNESS=""
     fi
     remedy="upstream is $AHEAD ledger commit(s) ahead of HEAD — the derived ledger would diverge; remedy: git pull --ff-only, then br sync, then re-run"
     [ -n "$WITNESS" ] && remedy="$remedy. Sync witness root_hash: $WITNESS"

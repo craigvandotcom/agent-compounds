@@ -178,7 +178,9 @@ if ! command -v zsh >/dev/null 2>&1; then
 else
   FIXED="$WORK/fixed"; MUTANT="$WORK/mutant"; mkdir -p "$FIXED" "$MUTANT"
   cp "$STAMP" "$FIXED/stamp-refined.sh"; cp "$CHECK" "$FIXED/element4-check.sh"
+  cp "$DIR/br-call.sh" "$FIXED/br-call.sh"
   cp "$CHECK" "$MUTANT/element4-check.sh"
+  cp "$DIR/br-call.sh" "$MUTANT/br-call.sh"
   # The mutation: force the ZSH_VERSION sentinel false so both self-reads fall back to
   # the bash-only branch — exactly the pre-fix script.
   sed 's/\[ -n "${ZSH_VERSION:-}" \]/false/g' "$STAMP" >"$MUTANT/stamp-refined.sh"

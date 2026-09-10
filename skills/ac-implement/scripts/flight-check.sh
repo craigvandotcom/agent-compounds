@@ -96,6 +96,14 @@ if [ -z "$ROOT" ]; then
     || ROOT="$PWD"
 fi
 [ -d "$ROOT" ] || { echo "NOT-GATED: repo root '$ROOT' is not a directory" >&2; exit 2; }
+
+# The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED /
+# keep-stamped routing, never empty data. Sourced before the cd: BASH_SOURCE may be
+# relative, so the absolute helper path must resolve from the original cwd.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+  || { echo "NOT-GATED: br-call.sh helper missing — br reads cannot be verified" >&2; exit 2; }
+
 cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; exit 2; }
 
 # --- helpers ---------------------------------------------------------------------------
@@ -129,8 +137,9 @@ The bead is not flyable as written: re-refine it against the tree that exists."
   local title new_title
   title=""
   if [ "${AC2_DRY_RUN:-0}" != "1" ] && command -v br >/dev/null 2>&1; then
-    title=$(br show "$BEAD" --json </dev/null 2>/dev/null \
-      | jq -r 'if type == "array" then .[0] else . end | .title // ""' 2>/dev/null)
+    title=$(br_call show "$BEAD" --json </dev/null \
+      | jq -r 'if type == "array" then .[0] else . end | .title // ""' 2>/dev/null) \
+      || title=""
   fi
   case "$title" in PREMISE-FAILED:*) new_title="$title" ;; *) new_title="PREMISE-FAILED: ${title}" ;; esac
 
@@ -166,8 +175,9 @@ if [ -n "$BODY_FILE" ]; then
   [ -r "$BODY_FILE" ] || { echo "NOT-GATED: body file '$BODY_FILE' is unreadable" >&2; exit 2; }
   cat "$BODY_FILE" >"$BODY"
 elif command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-  br show "$BEAD" --json 2>/dev/null \
-    | jq -r 'if type == "array" then .[0] else . end | .description // ""' >"$BODY"
+  br_call show "$BEAD" --json \
+    | jq -r 'if type == "array" then .[0] else . end | .description // ""' >"$BODY" \
+    || { echo "NOT-GATED: br_call show refused — the bead's premises are unreadable" >&2; exit 2; }
 else
   echo "NOT-GATED: no --body-file and br/jq unavailable — the bead's premises are unreadable" >&2
   exit 2
@@ -210,18 +220,26 @@ if [ -n "$CONSUMES" ] && ! printf '%s' "$CONSUMES" | grep -qiE '^none\.?$'; then
         echo "NOT-GATED: '$line' names blocker '$blocker' but br/jq are unavailable — closure unverifiable" >&2
         exit 2
       fi
-      bstatus=$(br show "$blocker" --json </dev/null 2>/dev/null \
-        | jq -r 'if type == "array" then .[0] else . end | .status // ""')
+      # An exact-id `show` refusal IS the prefix-miss signal — br matches exact ids only,
+      # so a Consumes line citing a unique prefix (bd-decision-no-drafts for
+      # bd-decision-no-drafts-huc5z) refuses here BY DESIGN and resolves below. The
+      # resolution reads are the cannot-check points: a refused list/show there is a
+      # NOT-GATED, never a fabricated "not on the board".
+      bstatus=$(br_call show "$blocker" --json </dev/null \
+        | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null) \
+        || bstatus=""
       if [ -z "$bstatus" ]; then
         # br show matches EXACT ids only; a Consumes line may cite a unique prefix
         # (bd-decision-no-drafts for bd-decision-no-drafts-huc5z). Resolve exactly one.
-        full=$(br list --json --limit 5000 </dev/null 2>/dev/null \
+        full=$(br_call list --json --limit 0 </dev/null \
           | jq -r --arg b "$blocker" \
             '[.issues[] | select(.id | startswith($b)) | .id]
-             | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end')
+             | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end') \
+          || { echo "NOT-GATED: 'br list' refused — blocker '$blocker' resolution unverifiable" >&2; exit 2; }
         if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
-          bstatus=$(br show "$full" --json </dev/null 2>/dev/null \
-            | jq -r 'if type == "array" then .[0] else . end | .status // ""')
+          bstatus=$(br_call show "$full" --json </dev/null \
+            | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null) \
+            || { echo "NOT-GATED: 'br show' refused for resolved blocker '$full' — closure unverifiable" >&2; exit 2; }
           blocker="$full"
         fi
       fi
@@ -362,9 +380,10 @@ if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
     echo "NOT-GATED: br/jq unavailable — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
     exit 2
   fi
-  holds_refined=$(br show "$BEAD" --json </dev/null 2>/dev/null \
+  holds_refined=$(br_call show "$BEAD" --json </dev/null \
     | jq -r 'if type == "array" then .[0] else . end
-             | [ .labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null || echo 0)
+             | [ .labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null) \
+  || { echo "NOT-GATED: br_call show refused — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2; exit 2; }
   if [ "${holds_refined:-0}" -gt 0 ]; then
     STAMP_OUT=$(bash "$STAMP_GATE" "$BEAD" </dev/null 2>&1); STAMP_RC=$?
     if [ "$STAMP_RC" -eq 2 ]; then

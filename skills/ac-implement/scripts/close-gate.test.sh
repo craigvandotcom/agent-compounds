@@ -20,6 +20,7 @@ GATE="$SCRIPT_DIR/close-gate.sh"
 FLIGHT="$SCRIPT_DIR/flight-check.sh"
 AC_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 EVIDENCE_SRC="$AC_ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
+BR_CALL_SRC="$AC_ROOT/skills/_tools/br-call.sh"
 CASES=0
 FAILURES=0
 
@@ -106,8 +107,9 @@ BEAD="ac-test.1"
 # evidence core can cross-reference, and no Consumes.
 mkcase() {
   local root="$WORKDIR/$1"
-  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/.flight" "$root/.br"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'subject v1\n' >"$root/subject.txt"
   cat >"$root/body.md" <<'BODY'
@@ -150,8 +152,9 @@ write_silent_harness() {
 # file it ships. This is the shape whose close was structurally impossible before ac-hnsc.
 mkcase_prose() {
   local root="$WORKDIR/$1"
-  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/.flight" "$root/.br"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'a doc with no token yet\n' >"$root/doc.md"
   cat >"$root/body.md" <<'BODY'

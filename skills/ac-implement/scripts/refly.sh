@@ -44,14 +44,22 @@ GATE="$HERE/flight-check.sh"
 command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1 \
   || { echo "NOT-GATED: br/jq are not on PATH — stamped beads cannot be re-checked" >&2; exit 2; }
 
+# The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED /
+# keep-stamped routing, never empty data. Sourced before the cd: BASH_SOURCE may be
+# relative, so the absolute helper path must resolve from the original cwd.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+  || { echo "NOT-GATED: br-call.sh helper missing — stamped beads cannot be re-checked" >&2; exit 2; }
+
 if [ -z "$ROOT" ]; then
   ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT="$PWD"
 fi
 cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; exit 2; }
 
-STAMPED=$(br list --json --limit 5000 </dev/null 2>/dev/null \
+STAMPED=$(br_call list --json --limit 0 </dev/null \
   | jq -r '(if type == "array" then . else (.issues // []) end)[]
-           | select(.status == "open" and (.title | startswith("PREMISE-FAILED:"))) | .id')
+           | select(.status == "open" and (.title | startswith("PREMISE-FAILED:"))) | .id') \
+  || { echo "refly: NOT-GATED — br_call list refused; nothing re-checked (never a silent 'no PREMISE-FAILED beads')" >&2; exit 2; }
 
 if [ -z "$STAMPED" ]; then
   echo "refly: no PREMISE-FAILED beads on the board"
@@ -70,8 +78,9 @@ while IFS= read -r id; do
     echo "refly: $id — still stamped: $why"
     continue
   fi
-  title=$(br show "$id" --json </dev/null 2>/dev/null \
-    | jq -r 'if type == "array" then .[0] else . end | .title // ""')
+  title=$(br_call show "$id" --json </dev/null \
+    | jq -r 'if type == "array" then .[0] else . end | .title // ""') \
+    || { KEPT=$(( KEPT + 1 )); echo "refly: $id — br_call show refused; left stamped" >&2; continue; }
   new=$(printf '%s' "$title" | sed -E 's/^PREMISE-FAILED:[[:space:]]*//')
   if [ -z "$new" ] || [ "$new" = "$title" ]; then
     KEPT=$(( KEPT + 1 ))

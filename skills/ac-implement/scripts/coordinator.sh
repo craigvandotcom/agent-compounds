@@ -67,10 +67,19 @@ if [ -z "$ROOT" ]; then
 fi
 cd "$ROOT" || { echo "NOT-GATED: cannot enter repo root '$ROOT'" >&2; exit 2; }
 
+# The ONE br_call invocation shape (ac-heyt.3). Path computed BEFORE the cd above:
+# BASH_SOURCE may be relative, so the absolute helper path must resolve from the original
+# cwd. br_call honors AC2_BR_CMD, so the seam declared below keeps reads and writes on the
+# same binary.
+# shellcheck source=br-call.sh
+BR_CALL="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh"
+
 BR="${AC2_BR_CMD:-br}"
 LEDGER=".beads/issues.jsonl"
 refuse() { echo "REFUSED: $1 — $2" >&2; exit 1; }
 ungated() { echo "NOT-GATED: $1" >&2; exit 2; }
+
+. "$BR_CALL" 2>/dev/null || ungated "br-call.sh helper missing at '$BR_CALL' — no br read can be verified"
 
 command -v git >/dev/null 2>&1 || ungated "git is unavailable; nothing can be verified"
 [ -f "$LEDGER" ] || ungated "no ledger at $LEDGER — this is not an ac2 repo root"
@@ -93,13 +102,14 @@ fi
 # A claim held by an actor from THIS run that is no longer working it. Liveness comes from
 # the board, never from harness notifications: a transient 5xx once read as death.
 if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-  CLAIMS=$(RUST_LOG=error "$BR" coordination status --json 2>/dev/null || true)
+  CLAIMS=$(RUST_LOG=error br_call coordination status --json) \
+    || ungated "'$BR coordination status' refused; liveness is unknown and orphans cannot be ruled out"
   [ -n "$CLAIMS" ] || ungated "'$BR coordination status' returned nothing; liveness is unknown and orphans cannot be ruled out"
   ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --arg p "$PREFIX" \
     '[.claims[]? | select((.issue.status? // "") == "in_progress")
        | select(((.issue.assignee? // "") | startswith($p)))
        | .issue.id] | join(" ")' 2>/dev/null || echo "?")
-  [ "$ORPHANS" = "?" ] && ungated "could not parse '$BR coordination status --json'; orphans cannot be ruled out"
+  [ "$ORPHANS" = "?" ] && ungated "could not parse '$BR coordination status'; orphans cannot be ruled out"
   [ -z "${ORPHANS// /}" ] || refuse "ORPHANS" \
     "still in_progress under this run's actors: $ORPHANS. Every worker has returned, so nobody is working these. Reset each to open, clear the assignee, and comment what it left in the tree — then re-run"
 else

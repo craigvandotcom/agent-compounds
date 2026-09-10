@@ -116,6 +116,12 @@
 #        beads-closed-gate.sh                 # falls back to $AGENT_NAME
 set -o pipefail
 
+# The ONE br_call invocation shape (ac-heyt.3); a refusal below FAILS CLOSED
+# (exit 2), never empty data. Missing helper = nothing can be read = the same refusal.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+  || { echo "beads-closed-gate: br-call.sh helper missing — no board read can be verified" >&2; exit 2; }
+
 # --- Out-of-scope bead-status-bleed check (non-blocking; bd-vtrlm) ---
 # Detects whether this run's own .beads/issues.jsonl diff touches any
 # PRE-EXISTING bead ID outside this conductor's own claimed (in-scope) set.
@@ -358,7 +364,7 @@ if [ -z "$BASE_REF" ]; then
   exit 2
 fi
 
-# `br list --json` paginates (default --limit 50); --limit 0 = unlimited, so a
+# The br list read paginates (default --limit 50); --limit 0 = unlimited, so a
 # single call always returns an identity's FULL claimed set regardless of batch
 # size. `-a`/`--all` includes closed beads too — needed so the bleed check's
 # in-scope id list covers beads an identity claimed AND has already closed (a
@@ -366,20 +372,20 @@ fi
 # then UNION the results (dedupe by id).
 FULL_CLAIMED="[]"
 for a in "${ASSIGNEES[@]}"; do
-  part=$(br list --json --limit 0 --all --assignee "$a" | jq '.issues') || exit 2
+  part=$(br_call list --json --limit 0 --all --assignee "$a" | jq '.issues') || exit 2
   FULL_CLAIMED=$(jq -s 'add | unique_by(.id)' \
     <(printf '%s' "$FULL_CLAIMED") <(printf '%s' "$part")) || exit 2
 done
 
 # EXPLICIT BATCH SCOPE (bd-f83hn): resolve every `--beads` id DIRECTLY, ignoring
-# assignee. `br show --json <ids...>` returns a JSON array; on an unresolvable id
+# assignee. The br show read returns a JSON array; on an unresolvable id
 # it emits an error OBJECT instead, so the `type=="array"` guard turns any
 # resolution failure into an empty set rather than a crash — an unresolvable
 # --beads list must NOT become a way to spell --allow-empty.
 SCOPED_BEADS="[]"
 if [ -n "$BEADS_SCOPE" ]; then
   # shellcheck disable=SC2086 — deliberate word-split: BEADS_SCOPE is a space-separated id list.
-  _scoped_raw=$(br show --json $BEADS_SCOPE 2>/dev/null || true)
+  _scoped_raw=$(br_call show --json $BEADS_SCOPE) || _scoped_raw=""
   SCOPED_BEADS=$(printf '%s' "$_scoped_raw" | jq 'if type == "array" then . else [] end' 2>/dev/null) \
     || SCOPED_BEADS="[]"
   [ -n "$SCOPED_BEADS" ] || SCOPED_BEADS="[]"
@@ -397,7 +403,7 @@ if [ "$CLAIMED_COUNT" -eq 0 ] && [ "$SCOPED_COUNT" -eq 0 ] && [ "$ALLOW_EMPTY" -
   echo "  A batch was expected to be claimed under one of these identities, but br returned zero beads." >&2
   echo "  This usually means the wrong/incomplete assignee set was passed (a delegated ac-implement identity is missing)." >&2
   if [ -n "$BEADS_SCOPE" ]; then
-    echo "  --beads was passed but NONE of its ids resolved via 'br show --json' — check the ids and the .beads db." >&2
+    echo "  --beads was passed but NONE of its ids resolved via 'br show' — check the ids and the .beads db." >&2
   else
     echo "  A claim-free run (e.g. ac-loop-2, which partitions by territory) must pass its wave via --beads <ids>." >&2
   fi

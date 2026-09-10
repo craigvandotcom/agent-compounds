@@ -16,11 +16,15 @@
 #
 # Usage:   br_call <br-args…>
 # Example: data=$(br_call show ac-xyz --json) || return $?
+# Env:     AC2_BR_CMD — the br binary to use (default: br). The seam close-gate.sh and
+#          coordinator.sh declare; honoring it here keeps a converted caller's read and
+#          write on the SAME binary when the seam is set (ac-heyt.4).
 # Canon:   skills/ac-pipeline/SKILL.md (one engine per pattern); proof: br-call.test.sh
 
 br_call() {
-  local out rc
-  out="$(br "$@")"
+  local out rc br_cmd
+  br_cmd="${AC2_BR_CMD:-br}"
+  out="$("$br_cmd" "$@")"
   rc=$?
   if [ "$rc" -ne 0 ]; then
     # Non-zero exit: surface the envelope's message when stdout carried one, then the raw

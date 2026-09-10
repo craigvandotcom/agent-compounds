@@ -30,6 +30,12 @@ RANGE="" ROOT="" PATHS_FILE="" BOARD_FILE="" SELF_TEST=0
 
 not_gated() { echo "NOT-GATED: $*" >&2; exit 2; }
 
+# The ONE br_call invocation shape (ac-heyt.3); a refusal below is a NOT-GATED,
+# never empty data. SELF is already absolute, so the helper path is cwd-independent.
+# shellcheck source=br-call.sh
+. "$(cd "$(dirname "$SELF")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null \
+  || not_gated "br-call.sh helper missing — no br read can be verified"
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --range)      RANGE="${2:-}"; shift 2 ;;
@@ -247,8 +253,8 @@ if [ -n "$BOARD_FILE" ]; then
   [ -r "$BOARD_FILE" ] || not_gated "board file '$BOARD_FILE' is missing or unreadable"
   BOARD_JSON=$(cat "$BOARD_FILE")
 else
-  BOARD_JSON=$(br list --label needs-device --json 2>/dev/null) \
-    || not_gated "br list --label needs-device failed"
+  BOARD_JSON=$(br_call list --label needs-device --json) \
+    || not_gated "br list --label needs-device refused — an unreadable board must not read as an empty one"
 fi
 
 ISSUES=$(printf '%s' "$BOARD_JSON" | jq -c '
