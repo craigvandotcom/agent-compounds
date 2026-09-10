@@ -1,0 +1,37 @@
+{
+  "reviewer": "test-quality",
+  "round": 1,
+  "payload_read": "git diff a8bdaea..2b92bd1",
+  "findings": [
+    {
+      "title": "coordinator's new br coordination status refusal branch has zero covering tests",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/coordinator.test.sh",
+      "line": 33,
+      "category": "hollow-test",
+      "evidence": "ac-heyt.3/4 converted coordinator.sh's liveness read to br_call with a new fail-closed branch (`|| ungated \"'$BR coordination status' refused\"` at coordinator.sh:105-106). The test's mock br (line ~33) can only exit 0 for coordination — no AC2_TEST_* mode produces a refusal, so no case drives the new NOT-GATED path. Mutation probe: in a disposable worktree I replaced the guarded branch with the old `|| true` swallow and reran the suite — 17/17 still green. The diff's central thesis (a dead read must never read as clean or proceed) is regression-unprotected here.",
+      "fix": "Add an AC2_TEST_CS_FAIL=1 mock mode that exits non-zero (br_call's rc-2 shape), assert coordinator exits 2 with the 'coordination status' refused NOT-GATED message.",
+      "auto_fixable": true
+    },
+    {
+      "title": "close-gate's new refused-read NOT-CHECKED branch is untested",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.test.sh",
+      "line": 107,
+      "category": "hollow-test",
+      "evidence": "close-gate.sh's br_field() grew a new not_checked branch on br_call refusal (close-gate.sh:157-163). close-gate.test.sh's 38 cases all drive happy-path show reads; no case makes br show refuse. Mutation probe: reverted br_field() to the pre-diff `2>/dev/null` swallow-all form in a disposable worktree and reran the suite — all 38 cases stayed green. The guarded line can be deleted with no test noticing, so the suite costs runtime and buys no protection for this branch.",
+      "fix": "Add a close-gate test case whose AC2_TEST mock makes `show --json` exit non-zero / emit an error envelope; assert NOT-CHECKED exit 2 naming br_call show refused.",
+      "auto_fixable": true
+    },
+    {
+      "title": "flight-check's new NOT-GATED-on-refused-read branches are untested",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/flight-check.test.sh",
+      "line": 52,
+      "category": "hollow-test",
+      "evidence": "flight-check.sh converted five show/list reads to br_call, each with a new refusal branch (`|| { NOT-GATED...exit 2 }`, e.g. the holds_refined re-gate at flight-check.sh:383-387). flight-check.test.sh's mock br never exits non-zero on show/list, so all 47 cases exercise only the happy paths. Mutation probe: reverted the holds_refined branch to `... || echo 0` (the exact pre-diff swallow) in a disposable worktree and reran — 47/47 still green. The new cannot-check routing is unverified by the diff's own harness.",
+      "fix": "Add one flight-check case whose mock br fails the blocked-domain show read (e.g. AC_TEST_SHOW_FAIL=1 → exit 3 / error envelope); assert NOT-GATED exit 2 rather than a fabricated status/empty.",
+      "auto_fixable": true
+    }
+  ]
+}

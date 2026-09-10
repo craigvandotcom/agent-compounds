@@ -1,0 +1,162 @@
+[
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:81|insecure-default",
+    "reviewer": "security",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 81,
+    "category": "insecure-default",
+    "summary": "Check 35's origin rule silently skips records with no created_at and never scans in_progress beads \u2014 the backstop's live population is unsensed"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-implement/scripts/flight-check.sh:234|unbounded-query",
+    "reviewer": "performance",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/flight-check.sh",
+    "line": 234,
+    "category": "unbounded-query",
+    "summary": "flight-check re-reads the entire uncapped board once per blocker prefix-miss"
+  },
+  {
+    "round": 1,
+    "key": "scripts/assurance-declarations-check.sh:67|missing-cache",
+    "reviewer": "performance",
+    "severity": "Medium",
+    "file": "scripts/assurance-declarations-check.sh",
+    "line": 67,
+    "category": "missing-cache",
+    "summary": "assurance-declarations-check re-parses the full 2.6MB ledger per cited PENDING-DECISION id"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:78|missing-boundary-error-handling",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 78,
+    "category": "missing-boundary-error-handling",
+    "summary": "Check 35 scans only status=open \u2014 the origin backstop is blind across the in_progress/blocked/closed window"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-pipeline/scripts/board-truth.sh:74|tight-coupling",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/ac-pipeline/scripts/board-truth.sh",
+    "line": 74,
+    "category": "tight-coupling",
+    "summary": "board-truth's doctor tripwire calls raw `br`, bypassing the AC2_BR_CMD seam the list read honors"
+  },
+  {
+    "round": 1,
+    "key": "skills/_tools/stamp-refined.sh:208|pattern-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/_tools/stamp-refined.sh",
+    "line": 208,
+    "category": "pattern-drift",
+    "summary": "br_call's seam guarantee is false for writes: stamp-refined reads via the seam, writes via raw `br`"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/36-br-envelope.py:82|wrong-abstraction",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "lint/checks/36-br-envelope.py",
+    "line": 82,
+    "category": "wrong-abstraction",
+    "summary": "Check 36's regexes sense comment and prose lines \u2014 false REDs on prose, inflated routed-count signal"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-implement/scripts/swarm-commit.sh:237|missing-boundary-error-handling",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/swarm-commit.sh",
+    "line": 237,
+    "category": "missing-boundary-error-handling",
+    "summary": "swarm-commit's ledger-marshalling guard checks only the current branch's @{upstream}"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:83|missing-edge-case",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 83,
+    "category": "missing-edge-case",
+    "summary": "Check 35 treats a missing created_at as pre-cutover \u2014 the origin-less open bead it guards passes"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:56|missing-edge-case",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 56,
+    "category": "missing-edge-case",
+    "summary": "Check 35 exits 0 on a blank/newline-only ledger even though it scanned zero records"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-implement/scripts/close-gate.sh:100|logic-error",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 100,
+    "category": "logic-error",
+    "summary": "close-gate.sh and coordinator.sh resolve BR_CALL after `cd $ROOT` \u2014 their pre-cd comment is false and relative relative-path invocations break"
+  },
+  {
+    "round": 1,
+    "key": "skills/_tools/stamp-refined.sh:209|logic-error",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/_tools/stamp-refined.sh",
+    "line": 209,
+    "category": "logic-error",
+    "summary": "stamp-refined writes the labels via bare `br` while every read now honors AC2_BR_CMD \u2014 the read-back can verify a different board than it wrote"
+  },
+  {
+    "round": 1,
+    "key": "harness-sync.sh:836|null-hazard",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "harness-sync.sh",
+    "line": 836,
+    "category": "null-hazard",
+    "summary": "Dispatcher fail-closed notice dereferences output.parts without the hedge its own next line applies"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/reference/bead-conventions.md:10|stale-name",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/beads-standards/reference/bead-conventions.md",
+    "line": 10,
+    "category": "stale-name",
+    "summary": "blind ac-qa rename duplicates the skill name in prose and tables"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-pipeline/scripts/beads-closed-gate.sh:367|doc-mismatch",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/ac-pipeline/scripts/beads-closed-gate.sh",
+    "line": 367,
+    "category": "doc-mismatch",
+    "summary": "beads-closed-gate comment contradicts the measured br list default"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/reference/bead-create-contract.md:25|doc-mismatch",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/beads-standards/reference/bead-create-contract.md",
+    "line": 25,
+    "category": "doc-mismatch",
+    "summary": "impact:<class> create-contract requirement names a refusal that no code performs"
+  }
+]

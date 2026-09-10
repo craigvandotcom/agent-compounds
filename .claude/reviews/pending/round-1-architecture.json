@@ -1,0 +1,67 @@
+{
+  "reviewer": "architecture",
+  "round": 1,
+  "payload_read": "git diff a8bdaea..2b92bd1",
+  "findings": [
+    {
+      "title": "Check 36 reimplements the scope walk; the SCRIPTS set added for it is consumed by nothing",
+      "severity": "High",
+      "file": "lint/checks/36-br-envelope.py",
+      "line": 60,
+      "category": "pattern-drift",
+      "evidence": "lint/lib/scope.py's docstring law is 'Every check imports its file population from here; none walks the tree itself', and this same wave adds a new SCRIPTS set with the comment 'Check 36's audit surface' (scope.py:29-30, built at scope.py:92-95). Yet Check 36 performs its own inline os.walk over skills/ and scripts/ re-deriving the exact SCRIPTS membership rule (36-br-envelope.py:60-73: subdir filter, .sh/.py filter, test exclusion) instead of reading scope.SCRIPTS. rg over the tree shows zero consumers of scope.SCRIPTS. Two populations now encode the same contract: the next scope change (e.g. admitting hooks/ executables as scripts) lands in scope.py only, and Check 36 silently scans a different population — precisely the 'two audits cannot disagree' failure the ONE scope model exists to prevent.",
+      "fix": "Have Check 36 import scope.SCRIPTS (with the existing LINT_ROOT reload path it already re-runs) and delete the private _scripts() walk, so the file population has one definition.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Check 35 scans only status=open — the origin backstop is blind across the in_progress/blocked/closed window",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 78,
+      "category": "missing-boundary-error-handling",
+      "evidence": "Rule 3 flags a post-cutover OPEN bead with no origin: label, then `rec.get('status') != 'open'` skips every other row, and closed rows are never scanned by contract. But the create-time origin guards this check backstops 'fail open on unparseable shell', and a bead's natural path after creation is claim → in_progress → closed (br lifecycle; the committed board itself also carries 'blocked'/'tombstone' statuses — 434 records scanned: 30 open/402 closed). A bead whose origin guard failed open is therefore invisible to the only sensor meant to catch it precisely while it is being worked and at close: the ledger commit the pre-commit gate scans typically carries in_progress rows, not open ones. The escape window the check exists to close stays open for every claimed bead.",
+      "fix": "Drop the open-only filter for rule 3: audit every post-cutover record with a created_at on/after CUTOVER for an origin: label, honouring the forward-only closed-bead exception only where the provenance ruling requires it, or additionally scan in_progress rows.",
+      "auto_fixable": true
+    },
+    {
+      "title": "board-truth's doctor tripwire calls raw `br`, bypassing the AC2_BR_CMD seam the list read honors",
+      "severity": "Medium",
+      "file": "skills/ac-pipeline/scripts/board-truth.sh",
+      "line": 74,
+      "category": "tight-coupling",
+      "evidence": "board-truth.sh gates its data read through br_call (which routes on ${AC2_BR_CMD:-br}, br-call.sh's stated purpose: 'honoring it here keeps a converted caller's read and write on the SAME binary when the seam is set'), but the health tripwire two lines above is `br doctor health >/dev/null 2>&1 || NOT-GATED` — hard-named. With the seam set, binary A wires the board-shape tripwire and binary B answers the list read: a board A refuses is green-lit as 'doctor passed' while B does all the reading, or A is the unhealthy binary and B answers fine — the tripwire asserts a health the reader never inherits. It is also the one remaining raw `br` invocation among the thirteen ac-heyt.4 conversions, invisible to Check 36 (no --json).",
+      "fix": "Run the doctor probe through the seam too (\"${AC2_BR_CMD:-br}\" doctor health, or a br_call-shaped helper), so the tripwire and the read assert the same binary.",
+      "auto_fixable": true
+    },
+    {
+      "title": "br_call's seam guarantee is false for writes: stamp-refined reads via the seam, writes via raw `br`",
+      "severity": "Medium",
+      "file": "skills/_tools/stamp-refined.sh",
+      "line": 208,
+      "category": "pattern-drift",
+      "evidence": "br-call.sh's header sells the seam as keeping 'a converted caller's read and write on the SAME binary when the seam is set'. In stamp-refined.sh the reads run through br_call (honors AC2_BR_CMD) while every label write stays raw: `br label remove/add` at lines 76-77, 208-210 — and the new READ-BACK contract (ac-heyt.7) re-reads through br_call to validate those writes. When the seam is set, the write lands on binary A's board and binary B's board is consulted to certify it: the exact write-not-trusted-exit failure mode ac-heyt.7 was built to kill, re-created one abstraction up. flight-check.sh/refly.sh comment writes split the same way.",
+      "fix": "Either route the write legs through a seam-honoring call too (the read-back contract already distrusts their exits), or reword br-call.sh's header to state the real contract: the seam applies to reads only, so a caller must never mix the two when the seam differs from `br`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Check 36's regexes sense comment and prose lines — false REDs on prose, inflated routed-count signal",
+      "severity": "Medium",
+      "file": "lint/checks/36-br-envelope.py",
+      "line": 82,
+      "category": "wrong-abstraction",
+      "evidence": "RAW_READ matches any line whose text contains the shape (`br ... --json`), with no comment filtering in a repo whose product is prose: the moment any script carries a doc line like '# resolves via `br show --json`' (element4-check.sh's own header carried exactly that shape before this wave), documentation edits produce a RED commit — a prose-as-law false positive of the same class the registry's other validators hunt. Symmetrically ROUTED_READ counts comment/header mentions of br_call--json: today it reports 26 'routed call sites' for what the conversion commit itself numbers as thirteen consumers, so the 13-site vitality floor is met largely by headers and comments, not executable call sites — the count the floor protects can rise while real wiring falls.",
+      "fix": "Strip comment lines (shebang/`#`-prefixed) before matching, and count ROUTED_READ only on non-comment lines so the floor measures executable call sites.",
+      "auto_fixable": true
+    },
+    {
+      "title": "swarm-commit's ledger-marshalling guard checks only the current branch's @{upstream}",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/swarm-commit.sh",
+      "line": 237,
+      "category": "missing-boundary-error-handling",
+      "evidence": "The leg exists because '.beads/issues.jsonl is a DERIVED file whose one-committer rule is prose only — two checkouts exporting overlapping content wedge the ledger'. It compares HEAD..@{upstream} -- .beads/issues.jsonl, where @{upstream} is the CURRENT branch's tracking ref. A worker lane on a branch whose upstream is its own push target computes 0 and commits clean even while origin/main's ledger is ahead — the exact two-checkout wedge the leg exists to catch, reported as clean rather than caught. The no-upstream case got a loud NOT-CHECKED escape; the wrong-upstream case got a silent green. (Deliberately-no-fetch is fine; the boundary escape class is similar to the loop-retro finding that bare git-derived empties must be asserted non-empty.)",
+      "fix": "When the ledger path is in the pathspec, resolve the trunk tracking ref the same way the repo's other gates do (origin/main/origin/master/main/master, cf. beads-closed-gate.sh's merge-base resolution) and compare against that, falling back to the printed NOT-CHECKED when it cannot be resolved.",
+      "auto_fixable": true
+    }
+  ]
+}

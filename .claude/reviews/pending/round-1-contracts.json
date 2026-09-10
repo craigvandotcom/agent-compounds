@@ -1,0 +1,57 @@
+{
+  "reviewer": "contracts",
+  "round": 1,
+  "payload_read": "git diff a8bdaea..2b92bd1",
+  "findings": [
+    {
+      "title": "Contract doc promises a subagent-create hook gate that doesn't exist",
+      "severity": "High",
+      "file": "skills/beads-standards/reference/bead-create-contract.md",
+      "line": 62,
+      "category": "doc-mismatch",
+      "evidence": "New 'Subagent creates' section (added in this diff) states: 'When the hook stdin carries `agent_id`, a `br create` is refused unless the labels include `human-gate`. The refusal message: \"propose it in your hand-back\".' The only hook that could implement this, hooks/bead-capture-guard.py (untouched by this diff), parses only data['tool_name'] and data['tool_input']['command'] (verified at 2b92bd1, hooks/bead-capture-guard.py main()); grep at HEAD finds zero occurrences of agent_id, 'hand-back', or any human-gate-fork refusal anywhere in hooks/. The create contract is canon every br create in the fleet satisfies — a subagent filing a product bead directly gets no refusal, and the batch-boundary confirm flow it promises silently does not exist.",
+      "fix": "Decide which side is right: either implement the gate in hooks/bead-capture-guard.py (read payload agent_id; when present, exit 2 unless the parsed labels include human-gate, with the documented refusal message) or rewrite the section to describe the actual capture-guard behavior. As written the doc is a stub promise.",
+      "auto_fixable": false
+    },
+    {
+      "title": "swarm-commit ledger gate evaded by any non-exact pathspec",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/swarm-commit.sh",
+      "line": 241,
+      "category": "contract-drift",
+      "evidence": "The new ledger-behind-upstream leg promises (header line 39): 'the pathspec includes .beads/issues.jsonl and the tracking ref is AHEAD of HEAD on it — refused BEFORE the commit exists'. The sensor is `[ \"$p\" = \".beads/issues.jsonl\" ]` — an exact-string match on one --path arg. swarm-commit.sh accepts arbitrary --path values (line 81) fed straight to `git add -- \"${PATHS[@]}\"`; a `--path .`, `--path .beads`, or `--path ./.beads/issues.jsonl` commit that includes the derived ledger leaves LEDGER_IN_PATHS=0 and the gate silently never fires — the exact wedge ('two checkouts exporting overlapping content wedge the ledger, and nothing in the commit lane notices') the leg exists to prevent. Its new test (swarm-commit.test.sh case 18) covers only the exact spelling.",
+      "fix": "Normalize each --path before comparing (strip ./, collapse duplicate slashes) and treat any path that git resolves to .beads/issues.jsonl (directory spellings like .beads or . included) as LEDGER_IN_PATHS=1; add an evasion-class test for --path . and --path .beads.",
+      "auto_fixable": true
+    },
+    {
+      "title": "blind ac-qa rename duplicates the skill name in prose and tables",
+      "severity": "Medium",
+      "file": "skills/beads-standards/reference/bead-conventions.md",
+      "line": 10,
+      "category": "stale-name",
+      "evidence": "The ac-qa-browser + ac-qa-device -> ac-qa merge was a mechanical replace that left the one survivor listed twice as if two skills: bead-conventions.md:10 'ac-qa, ac-qa' and :49 'Filed by the QA twins (`ac-qa` / `ac-qa`)'; ac-pipeline/references/degraded-mode.md:82 '- `ac-qa` / `ac-qa` manifest'; ac-pipeline/references/verification-gate.md:4 'the `ac-ui-polish` + `ac-qa` + `ac-qa` triad'; ac-pipeline/references/run-id.md:103-104 rows '| ac-qa | `qa-browser` |' and '| ac-qa | `qa-device` |'. A reader of the run-id table cannot tell whether ac-qa owns one stage key or two; 'twins'/'triad' now misdescribe the executor set the gate text governs.",
+      "fix": "Collapse the duplicated entries to a single ac-qa mention ('Filed by ac-qa'), reword 'twins'/'triad' to the merged reality (ac-ui-polish + ac-qa), and in run-id.md state in one row (or one annotation) that ac-qa keys artifacts qa-browser or qa-device per workflow.",
+      "auto_fixable": true
+    },
+    {
+      "title": "beads-closed-gate comment contradicts the measured br list default",
+      "severity": "Medium",
+      "file": "skills/ac-pipeline/scripts/beads-closed-gate.sh",
+      "line": 367,
+      "category": "doc-mismatch",
+      "evidence": "The updated comment still asserts 'paginates (default --limit 50); --limit 0 = unlimited', while this same diff updates beads-standards/SKILL.md and ac-pipeline/references/board-scan.md to 'no default limit (br schema commands on br 0.5.12: limit: 0)', and the new scripts/br-contract.test.sh case C6 asserts limit: 0 on a no-limit list — the harness passes at HEAD (13 cases, 0 failures), so the comment is measured-wrong. A future editor trusting the comment's 'default 50' can drop the explicit --limit 0, shrink the claimed-set read, and make beads-closed-gate fail an identity's full claimed set on a board larger than whatever the default is.",
+      "fix": "Rewrite the comment to the measured contract: default is unlimited (limit: 0 on 0.5.12); --limit 0 stays explicit so a future br default change cannot silently truncate the claimed-set read.",
+      "auto_fixable": true
+    },
+    {
+      "title": "impact:<class> create-contract requirement names a refusal that no code performs",
+      "severity": "Medium",
+      "file": "skills/beads-standards/reference/bead-create-contract.md",
+      "line": 25,
+      "category": "doc-mismatch",
+      "evidence": "The new contract row reads 'Exempt — and a refusal names the exemption: human origins ... a fork is not an impact class', in a table whose sibling rows each name their concrete enforcer (hooks/bead-capture-guard.py, Check 19, touchers.sh, diff-closure.sh). Grep at 2b92bd1 finds no impact: label logic anywhere in hooks/, lint/, scripts/, or skills script paths — no refusal exists to name anything. Agents reading the create contract table will assume the impact axis is mechanically enforced at capture, exactly like the origin/readiness/probe rows beside it; it is prose-only.",
+      "fix": "Either add the enforcement (bead-capture-guard.py checks impact:<class> presence for the listed automated origins with the exemption message) or amend the row to say it is unenforced convention pending a gate, so the table stops implying a refusal exists.",
+      "auto_fixable": false
+    }
+  ]
+}
