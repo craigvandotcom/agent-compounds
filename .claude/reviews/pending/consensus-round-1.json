@@ -4,48 +4,31 @@
     "security",
     "performance",
     "architecture",
-    "correctness",
-    "test-quality",
-    "contracts"
+    "correctness"
   ],
   "panel_source": "manifest",
-  "panel_skipped": {},
+  "panel_skipped": {
+    "test-quality": "batch is factory/docs/shell; polish-fixpoint.test.sh is a shell harness (no product test surface)",
+    "contracts": "no product contract surface in a skills/lint-only diff"
+  },
   "reviewers_present": [
     "security",
     "performance",
     "architecture",
-    "correctness",
-    "test-quality",
-    "contracts"
+    "correctness"
   ],
   "reviewers_missing": [],
-  "total_findings": 26,
-  "after_dedup": 26,
+  "total_findings": 10,
+  "after_dedup": 10,
   "auto_fix": [
     {
-      "key": "skills/ac-pipeline/scripts/beads-closed-gate.sh:388|unvalidated-input",
-      "title": "beads-closed-gate swallows a refused br read into an empty --beads scope \u2014 the open-bead audit silently drops the wave and the gate green-lights",
+      "key": "lint/lib/consumers.py:47|failure-not-surfaced",
+      "title": "Check 07/12 SKIP-green is invalidated at the run.py boundary: the disclosure never reaches the report",
       "severity": "High",
-      "file": "skills/ac-pipeline/scripts/beads-closed-gate.sh",
-      "line": 388,
-      "category": "unvalidated-input",
-      "fix": "Make the refusal refuse, matching the wave's other twelve sites: `_scoped_raw=$(br_call show --json $BEADS_SCOPE) || { echo \"beads-closed-gate: FAIL-CLOSED \u2014 the br show read for --beads refused; the batch scope cannot be resolved (never an empty one)\" >&2; exit 2; }`. Keep the existing type==\"array\" guard for legitimately partial resolutions only.",
-      "auto_fixable": true,
-      "reviewers": [
-        "security"
-      ],
-      "reasons": [
-        "severity:High"
-      ]
-    },
-    {
-      "key": "lint/checks/36-br-envelope.py:60|pattern-drift",
-      "title": "Check 36 reimplements the scope walk; the SCRIPTS set added for it is consumed by nothing",
-      "severity": "High",
-      "file": "lint/checks/36-br-envelope.py",
-      "line": 60,
-      "category": "pattern-drift",
-      "fix": "Have Check 36 import scope.SCRIPTS (with the existing LINT_ROOT reload path it already re-runs) and delete the private _scripts() walk, so the file population has one definition.",
+      "file": "lint/lib/consumers.py",
+      "line": 47,
+      "category": "failure-not-surfaced",
+      "fix": "Print the SKIP line to stdout instead of stderr in checks 07 and 12 (stdout lines are carried verbatim into the report row), or have run.py additionally include stderr lines starting with 'SKIP'/'NOT-GATED' in findings so the aggregate cell shows the skip.",
       "auto_fixable": true,
       "reviewers": [
         "architecture"
@@ -55,157 +38,31 @@
       ]
     },
     {
-      "key": "skills/_tools/stamp-refined.sh:220|missing-validation",
-      "title": "stamp-refined read-back never asserts the path_label write \u2014 a rejected write still prints STAMPED",
+      "key": "hooks/delegation-reminder.md:4|broken-path-reference",
+      "title": "delegation-reminder.md tool-registry pointer resolves nowhere",
       "severity": "High",
-      "file": "skills/_tools/stamp-refined.sh",
-      "line": 220,
-      "category": "missing-validation",
-      "fix": "Extend the read-back: after computing labels_now, also assert the normalized label set contains the expected side-values \u2014 e.g. fail unless the joined labels match the intended set {refined present, unrefined absent, path_label present}; a WRITE-FAILED on path_label absence gives the partial write the same exit-2 verdict the refined/unrefined writes get.",
+      "file": "hooks/delegation-reminder.md",
+      "line": 4,
+      "category": "broken-path-reference",
+      "fix": "Restore the resolvable reference in hooks/delegation-reminder.md (and re-run harness-sync --all so consumers pick it up): 'Tool registry: ~/.claude/skills/CORE/tools.md' or the original '~/Repos/.claude/skills/CORE/tools.md'.",
       "auto_fixable": true,
       "reviewers": [
         "correctness"
       ],
       "reasons": [
         "severity:High"
-      ]
-    },
-    {
-      "key": "skills/ac-implement/scripts/coordinator.test.sh:33|hollow-test",
-      "title": "coordinator's new br coordination status refusal branch has zero covering tests",
-      "severity": "High",
-      "file": "skills/ac-implement/scripts/coordinator.test.sh",
-      "line": 33,
-      "category": "hollow-test",
-      "fix": "Add an AC2_TEST_CS_FAIL=1 mock mode that exits non-zero (br_call's rc-2 shape), assert coordinator exits 2 with the 'coordination status' refused NOT-GATED message.",
-      "auto_fixable": true,
-      "reviewers": [
-        "test-quality"
-      ],
-      "reasons": [
-        "severity:High"
-      ]
-    },
-    {
-      "key": "skills/ac-implement/scripts/close-gate.test.sh:107|hollow-test",
-      "title": "close-gate's new refused-read NOT-CHECKED branch is untested",
-      "severity": "High",
-      "file": "skills/ac-implement/scripts/close-gate.test.sh",
-      "line": 107,
-      "category": "hollow-test",
-      "fix": "Add a close-gate test case whose AC2_TEST mock makes `show --json` exit non-zero / emit an error envelope; assert NOT-CHECKED exit 2 naming br_call show refused.",
-      "auto_fixable": true,
-      "reviewers": [
-        "test-quality"
-      ],
-      "reasons": [
-        "severity:High"
-      ]
-    },
-    {
-      "key": "skills/ac-implement/scripts/flight-check.test.sh:52|hollow-test",
-      "title": "flight-check's new NOT-GATED-on-refused-read branches are untested",
-      "severity": "High",
-      "file": "skills/ac-implement/scripts/flight-check.test.sh",
-      "line": 52,
-      "category": "hollow-test",
-      "fix": "Add one flight-check case whose mock br fails the blocked-domain show read (e.g. AC_TEST_SHOW_FAIL=1 \u2192 exit 3 / error envelope); assert NOT-GATED exit 2 rather than a fabricated status/empty.",
-      "auto_fixable": true,
-      "reviewers": [
-        "test-quality"
-      ],
-      "reasons": [
-        "severity:High"
-      ]
-    },
-    {
-      "key": "skills/beads-standards/reference/bead-create-contract.md:62|doc-mismatch",
-      "title": "Contract doc promises a subagent-create hook gate that doesn't exist",
-      "severity": "High",
-      "file": "skills/beads-standards/reference/bead-create-contract.md",
-      "line": 62,
-      "category": "doc-mismatch",
-      "fix": "Decide which side is right: either implement the gate in hooks/bead-capture-guard.py (read payload agent_id; when present, exit 2 unless the parsed labels include human-gate, with the documented refusal message) or rewrite the section to describe the actual capture-guard behavior. As written the doc is a stub promise.",
-      "auto_fixable": false,
-      "reviewers": [
-        "contracts"
-      ],
-      "reasons": [
-        "severity:High"
-      ]
-    },
-    {
-      "key": "skills/ac-implement/scripts/swarm-commit.sh:241|contract-drift",
-      "title": "swarm-commit ledger gate evaded by any non-exact pathspec",
-      "severity": "High",
-      "file": "skills/ac-implement/scripts/swarm-commit.sh",
-      "line": 241,
-      "category": "contract-drift",
-      "fix": "Normalize each --path before comparing (strip ./, collapse duplicate slashes) and treat any path that git resolves to .beads/issues.jsonl (directory spellings like .beads or . included) as LEDGER_IN_PATHS=1; add an evasion-class test for --path . and --path .beads.",
-      "auto_fixable": true,
-      "reviewers": [
-        "contracts"
-      ],
-      "reasons": [
-        "severity:High"
-      ]
-    },
-    {
-      "key": "lint/checks/36-br-envelope.py:43|insecure-default",
-      "title": "Check 36's raw-read regex misses two formatting evasion classes \u2014 a future raw br --json read ships uncaught",
-      "severity": "Medium",
-      "file": "lint/checks/36-br-envelope.py",
-      "line": 43,
-      "category": "insecure-default",
-      "fix": "Scan the JOINED text, not per-line lines: strip backslash-newline continuations (`text.replace('\\\\\\n', ' ')`) before matching, and harden the binary token to allow quotes around it (add `[\"']?\\bbr\\b[\"']?`). Add both evasion shapes as fixture cases in 36-br-envelope.test.sh so the sensor is mutation-tested against them.",
-      "auto_fixable": true,
-      "reviewers": [
-        "security"
-      ],
-      "reasons": [
-        "same-location-consensus:correctness,security"
-      ]
-    },
-    {
-      "key": "lint/checks/36-br-envelope.py:43|missing-validation",
-      "title": "Check 36 blind to a raw br --json read split across lines \u2014 green tree with an unenrouted call site",
-      "severity": "Medium",
-      "file": "lint/checks/36-br-envelope.py",
-      "line": 43,
-      "category": "missing-validation",
-      "fix": "Scan per-logical-statement, not per-line: join backslash-continuations and match a windowed context (e.g. accumulate a 3-line sliding window before matching RAW_READ, or match `br`-invocation lines and then check --json appears within the next 3 lines; mirror this in the ROUTED_READ counting).",
-      "auto_fixable": true,
-      "reviewers": [
-        "correctness"
-      ],
-      "reasons": [
-        "same-location-consensus:correctness,security"
       ]
     }
   ],
   "deferred": [
     {
-      "key": "lint/checks/35-board-integrity.py:81|insecure-default",
-      "title": "Check 35's origin rule silently skips records with no created_at and never scans in_progress beads \u2014 the backstop's live population is unsensed",
+      "key": "skills/ac-pipeline/references/board-scan.md:129|per-run-scan-glob",
+      "title": "docket-health now reads every _plans/*.md full-text on every Scan A run",
       "severity": "Medium",
-      "file": "lint/checks/35-board-integrity.py",
-      "line": 81,
-      "category": "insecure-default",
-      "fix": "Treat an absent/unparseable created_at on an OPEN-row-shaped record as a violation (the field is mandatory in the derived board; a record that cannot prove its age must fail, not pass), and widen the status filter to the pre-close states the rule governs (`status in {\"open\", \"in_progress\"}`), keeping the never-scanned guarantee for closed beads. Add both rows to 35-board-integrity.test.sh.",
-      "auto_fixable": true,
-      "reviewers": [
-        "security"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/ac-implement/scripts/flight-check.sh:234|unbounded-query",
-      "title": "flight-check re-reads the entire uncapped board once per blocker prefix-miss",
-      "severity": "Medium",
-      "file": "skills/ac-implement/scripts/flight-check.sh",
-      "line": 234,
-      "category": "unbounded-query",
-      "fix": "Hoist one `br_call list --json --limit 0` read before the Consumes loop and resolve every prefix from that cached id list (one jq pass building {id,status}); the per-blocker `br show` for resolved ids stays as-is.",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 129,
+      "category": "per-run-scan-glob",
+      "fix": "Prefilter before the regex passes: read only the head for status/polish markers (status: refined is frontmatter, top few lines), then read the full body only for files that pass. Or gate the whole loop on len(human-gate docket) > 0 / plan-gap|gate-incomplete being present \u2014 if the docket is empty the beadify-refusal count need not be recomputed.",
       "auto_fixable": true,
       "reviewers": [
         "performance"
@@ -213,13 +70,13 @@
       "reasons": []
     },
     {
-      "key": "scripts/assurance-declarations-check.sh:67|missing-cache",
-      "title": "assurance-declarations-check re-parses the full 2.6MB ledger per cited PENDING-DECISION id",
+      "key": "skills/ac-pipeline/references/board-scan.md:132|redundant-regex-passes",
+      "title": "beadify-refusals regex triplet recompiles and rescans full plan text 3x per file",
       "severity": "Medium",
-      "file": "scripts/assurance-declarations-check.sh",
-      "line": 67,
-      "category": "missing-cache",
-      "fix": "Slurp the ledger ONCE per run into an id->count map (single `jq -s '{map}' \"$BOARD\"` exported to a variable), and have resolve_pending consult it for both the duplicate count and existence; keep one final streaming select only for the record body it needs.",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 132,
+      "category": "redundant-regex-passes",
+      "fix": "Read the frontmatter head slice (~2KB into _t) for the three ^key: probes, and run the heavy needs-human regex once over the full text only if the frontmatter probes pass; or use re.compile once outside the loop for all four patterns.",
       "auto_fixable": true,
       "reviewers": [
         "performance"
@@ -227,13 +84,27 @@
       "reasons": []
     },
     {
-      "key": "lint/checks/35-board-integrity.py:78|missing-boundary-error-handling",
-      "title": "Check 35 scans only status=open \u2014 the origin backstop is blind across the in_progress/blocked/closed window",
+      "key": "lint/lib/scope.py:125|skip-window-evasion",
+      "title": "Check 34's new ALL scope can still skip its gate: deletion-only diffs never intersect os.walk-derived ALL",
+      "severity": "Medium",
+      "file": "lint/lib/scope.py",
+      "line": 125,
+      "category": "skip-window-evasion",
+      "fix": "Make ALL (or intersection for scopes whose subject is repo state) path-population-independent: e.g. intersect also compares each changed file's parent-path prefix chain against the roots named in the check's scope members, or give repo-state checks an explicit always-run flag the run.py skip logic honours, instead of keying on membership in a walked-file snapshot.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "lint/checks/35-board-integrity.py:66|copied-gate-drift",
+      "title": "Check 35's probe backstop hand-duplicates the capture guard's IMPLEMENTABLE set and PROBE regex",
       "severity": "Medium",
       "file": "lint/checks/35-board-integrity.py",
-      "line": 78,
-      "category": "missing-boundary-error-handling",
-      "fix": "Drop the open-only filter for rule 3: audit every post-cutover record with a created_at on/after CUTOVER for an origin: label, honouring the forward-only closed-bead exception only where the provenance ruling requires it, or additionally scan in_progress rows.",
+      "line": 66,
+      "category": "copied-gate-drift",
+      "fix": "Import the constants from the one definition: in Check 35, insert the repo root on sys.path and read hooks/bead-capture-guard.py's IMPLEMENTABLE_TYPES/PROBE, or lift both into lint/lib and have the guard import the same module; keep the copy-shaped comment only if a belt check asserts equality of the two definitions.",
       "auto_fixable": true,
       "reviewers": [
         "architecture"
@@ -241,41 +112,13 @@
       "reasons": []
     },
     {
-      "key": "skills/ac-pipeline/scripts/board-truth.sh:74|tight-coupling",
-      "title": "board-truth's doctor tripwire calls raw `br`, bypassing the AC2_BR_CMD seam the list read honors",
-      "severity": "Medium",
-      "file": "skills/ac-pipeline/scripts/board-truth.sh",
-      "line": 74,
-      "category": "tight-coupling",
-      "fix": "Run the doctor probe through the seam too (\"${AC2_BR_CMD:-br}\" doctor health, or a br_call-shaped helper), so the tripwire and the read assert the same binary.",
-      "auto_fixable": true,
-      "reviewers": [
-        "architecture"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/_tools/stamp-refined.sh:208|pattern-drift",
-      "title": "br_call's seam guarantee is false for writes: stamp-refined reads via the seam, writes via raw `br`",
-      "severity": "Medium",
-      "file": "skills/_tools/stamp-refined.sh",
-      "line": 208,
-      "category": "pattern-drift",
-      "fix": "Either route the write legs through a seam-honoring call too (the read-back contract already distrusts their exits), or reword br-call.sh's header to state the real contract: the seam applies to reads only, so a caller must never mix the two when the seam differs from `br`.",
-      "auto_fixable": true,
-      "reviewers": [
-        "architecture"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "lint/checks/36-br-envelope.py:82|wrong-abstraction",
-      "title": "Check 36's regexes sense comment and prose lines \u2014 false REDs on prose, inflated routed-count signal",
+      "key": "lint/checks/36-br-envelope.py:55|decorative-counter",
+      "title": "Check 36 route-count sense counts comment/header mentions, so the routed-call-site floor is met by prose",
       "severity": "Medium",
       "file": "lint/checks/36-br-envelope.py",
-      "line": 82,
-      "category": "wrong-abstraction",
-      "fix": "Strip comment lines (shebang/`#`-prefixed) before matching, and count ROUTED_READ only on non-comment lines so the floor measures executable call sites.",
+      "line": 55,
+      "category": "decorative-counter",
+      "fix": "Strip shebang/`#`-prefixed (and shell heredoc-body lines only if practical) from each script before matching RAW_READ/ROUTED_READ so the run-floor counts executable lines.",
       "auto_fixable": true,
       "reviewers": [
         "architecture"
@@ -283,13 +126,13 @@
       "reasons": []
     },
     {
-      "key": "skills/ac-implement/scripts/swarm-commit.sh:237|missing-boundary-error-handling",
-      "title": "swarm-commit's ledger-marshalling guard checks only the current branch's @{upstream}",
-      "severity": "Medium",
-      "file": "skills/ac-implement/scripts/swarm-commit.sh",
-      "line": 237,
-      "category": "missing-boundary-error-handling",
-      "fix": "When the ledger path is in the pathspec, resolve the trunk tracking ref the same way the repo's other gates do (origin/main/origin/master/main/master, cf. beads-closed-gate.sh's merge-base resolution) and compare against that, falling back to the printed NOT-CHECKED when it cannot be resolved.",
+      "key": "lint/checks/07-consumer-symlinks.test.sh:86|weak-fixture-grep",
+      "title": "Check 12/07 fixtures assert absent-root SKIP via case-insensitive grep itself truncated to one output stream",
+      "severity": "Low",
+      "file": "lint/checks/07-consumer-symlinks.test.sh",
+      "line": 86,
+      "category": "weak-fixture-grep",
+      "fix": "Grep the SKIP line's exact stable artifact instead of case-insensitive substring of a risky stderr stream (e.g. match '^07-consumer-symlinks: SKIP ' after pinning the line to stdout).",
       "auto_fixable": true,
       "reviewers": [
         "architecture"
@@ -297,13 +140,13 @@
       "reasons": []
     },
     {
-      "key": "lint/checks/35-board-integrity.py:83|missing-edge-case",
-      "title": "Check 35 treats a missing created_at as pre-cutover \u2014 the origin-less open bead it guards passes",
+      "key": "hooks/delegation-reminder.md:0|dropped-guard-line",
+      "title": "delegation-reminder.md reformat deletes the standing git-boundary hot-lane guard",
       "severity": "Medium",
-      "file": "lint/checks/35-board-integrity.py",
-      "line": 83,
-      "category": "missing-edge-case",
-      "fix": "Fail closed on the timestamp: if the record is open and created_at is missing or does not parse to a valid `>= CUTOVER`/earlier date (i.e. created does not match ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ or is empty), append a violation ('open bead has no parseable created_at \u2014 cannot prove it is pre-cutover') instead of treating '' as before 2026-08-23.",
+      "file": "hooks/delegation-reminder.md",
+      "line": 0,
+      "category": "dropped-guard-line",
+      "fix": "Re-add the cross-repo git-boundary sentence to hooks/delegation-reminder.md (one line), or record in the bead that the rule moved to an enforcement surface (PreToolUse guard) and cite it.",
       "auto_fixable": true,
       "reviewers": [
         "correctness"
@@ -311,100 +154,16 @@
       "reasons": []
     },
     {
-      "key": "lint/checks/35-board-integrity.py:56|missing-edge-case",
-      "title": "Check 35 exits 0 on a blank/newline-only ledger even though it scanned zero records",
+      "key": "lint/run.py:151|silent-skip-undisclosed",
+      "title": "07/12 bare-checkout SKIP is promised 'disclosed' but is invisible to the runner",
       "severity": "Medium",
-      "file": "lint/checks/35-board-integrity.py",
-      "line": 56,
-      "category": "missing-edge-case",
-      "fix": "Return 2 when `scanned` is 0 even if the line array is non-empty (mirroring the empty-board guard), e.g. change the final verdict to `if not violations and scanned > 0 ... else if scanned == 0: exit 2 NOT-GATED`.",
+      "file": "lint/run.py",
+      "line": 151,
+      "category": "silent-skip-undisclosed",
+      "fix": "In lint/run.py, include stderr lines matching /^(07-consumer-symlinks|12-deployed-app-conformance): SKIP/ (or generalize: any '^\\S+: SKIP' line) in the findings array, or have the checks print the SKIP notice to stdout on the green path.",
       "auto_fixable": true,
       "reviewers": [
         "correctness"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/ac-implement/scripts/close-gate.sh:100|logic-error",
-      "title": "close-gate.sh and coordinator.sh resolve BR_CALL after `cd $ROOT` \u2014 their pre-cd comment is false and relative relative-path invocations break",
-      "severity": "Medium",
-      "file": "skills/ac-implement/scripts/close-gate.sh",
-      "line": 100,
-      "category": "logic-error",
-      "fix": "Move the BR_CALL assignment (and the `.` sourcing) ABOVE the `cd \"$ROOT\"` in close-gate.sh and coordinator.sh, matching flight-check.sh/refly.sh; or resolve from a var captured before the cd. Also correct the comment when moved.",
-      "auto_fixable": true,
-      "reviewers": [
-        "correctness"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/_tools/stamp-refined.sh:209|logic-error",
-      "title": "stamp-refined writes the labels via bare `br` while every read now honors AC2_BR_CMD \u2014 the read-back can verify a different board than it wrote",
-      "severity": "Medium",
-      "file": "skills/_tools/stamp-refined.sh",
-      "line": 209,
-      "category": "logic-error",
-      "fix": "Use the same seam for the writes: honor ${AC2_BR_CMD:-br} for the five br label calls (or export AC2_BR_CMD=\"${AC2_BR_CMD:-br}\" and invoke via br_call-style wrapper covering writes; at minimum write with \"$BR\"/\"${AC2_BR_CMD:-br}\" like close-gate.sh's BR variable).",
-      "auto_fixable": true,
-      "reviewers": [
-        "correctness"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "harness-sync.sh:836|null-hazard",
-      "title": "Dispatcher fail-closed notice dereferences output.parts without the hedge its own next line applies",
-      "severity": "Medium",
-      "file": "harness-sync.sh",
-      "line": 836,
-      "category": "null-hazard",
-      "fix": "Hedge consistently: `const parts = (output.parts ||= [])` (or `output.parts = output.parts || []`) before building base and pushing, in BOTH the WIRING_ERROR branch and the normal chat.message path, so the injected text lands on the payload opencode actually reads.",
-      "auto_fixable": true,
-      "reviewers": [
-        "correctness"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/beads-standards/reference/bead-conventions.md:10|stale-name",
-      "title": "blind ac-qa rename duplicates the skill name in prose and tables",
-      "severity": "Medium",
-      "file": "skills/beads-standards/reference/bead-conventions.md",
-      "line": 10,
-      "category": "stale-name",
-      "fix": "Collapse the duplicated entries to a single ac-qa mention ('Filed by ac-qa'), reword 'twins'/'triad' to the merged reality (ac-ui-polish + ac-qa), and in run-id.md state in one row (or one annotation) that ac-qa keys artifacts qa-browser or qa-device per workflow.",
-      "auto_fixable": true,
-      "reviewers": [
-        "contracts"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/ac-pipeline/scripts/beads-closed-gate.sh:367|doc-mismatch",
-      "title": "beads-closed-gate comment contradicts the measured br list default",
-      "severity": "Medium",
-      "file": "skills/ac-pipeline/scripts/beads-closed-gate.sh",
-      "line": 367,
-      "category": "doc-mismatch",
-      "fix": "Rewrite the comment to the measured contract: default is unlimited (limit: 0 on 0.5.12); --limit 0 stays explicit so a future br default change cannot silently truncate the claimed-set read.",
-      "auto_fixable": true,
-      "reviewers": [
-        "contracts"
-      ],
-      "reasons": []
-    },
-    {
-      "key": "skills/beads-standards/reference/bead-create-contract.md:25|doc-mismatch",
-      "title": "impact:<class> create-contract requirement names a refusal that no code performs",
-      "severity": "Medium",
-      "file": "skills/beads-standards/reference/bead-create-contract.md",
-      "line": 25,
-      "category": "doc-mismatch",
-      "fix": "Either add the enforcement (bead-capture-guard.py checks impact:<class> presence for the listed automated origins with the exemption message) or amend the row to say it is unenforced convention pending a gate, so the table stops implying a refusal exists.",
-      "auto_fixable": false,
-      "reviewers": [
-        "contracts"
       ],
       "reasons": []
     }

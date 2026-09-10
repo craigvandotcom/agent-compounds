@@ -158,5 +158,85 @@
     "line": 25,
     "category": "doc-mismatch",
     "summary": "impact:<class> create-contract requirement names a refusal that no code performs"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-pipeline/references/board-scan.md:129|per-run-scan-glob",
+    "reviewer": "performance",
+    "severity": "Medium",
+    "file": "skills/ac-pipeline/references/board-scan.md",
+    "line": 129,
+    "category": "per-run-scan-glob",
+    "summary": "docket-health now reads every _plans/*.md full-text on every Scan A run"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-pipeline/references/board-scan.md:132|redundant-regex-passes",
+    "reviewer": "performance",
+    "severity": "Medium",
+    "file": "skills/ac-pipeline/references/board-scan.md",
+    "line": 132,
+    "category": "redundant-regex-passes",
+    "summary": "beadify-refusals regex triplet recompiles and rescans full plan text 3x per file"
+  },
+  {
+    "round": 1,
+    "key": "lint/lib/scope.py:125|skip-window-evasion",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "lint/lib/scope.py",
+    "line": 125,
+    "category": "skip-window-evasion",
+    "summary": "Check 34's new ALL scope can still skip its gate: deletion-only diffs never intersect os.walk-derived ALL"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:66|copied-gate-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 66,
+    "category": "copied-gate-drift",
+    "summary": "Check 35's probe backstop hand-duplicates the capture guard's IMPLEMENTABLE set and PROBE regex"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/36-br-envelope.py:55|decorative-counter",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "lint/checks/36-br-envelope.py",
+    "line": 55,
+    "category": "decorative-counter",
+    "summary": "Check 36 route-count sense counts comment/header mentions, so the routed-call-site floor is met by prose"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/07-consumer-symlinks.test.sh:86|weak-fixture-grep",
+    "reviewer": "architecture",
+    "severity": "Low",
+    "file": "lint/checks/07-consumer-symlinks.test.sh",
+    "line": 86,
+    "category": "weak-fixture-grep",
+    "summary": "Check 12/07 fixtures assert absent-root SKIP via case-insensitive grep itself truncated to one output stream"
+  },
+  {
+    "round": 1,
+    "key": "hooks/delegation-reminder.md:0|dropped-guard-line",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "hooks/delegation-reminder.md",
+    "line": 0,
+    "category": "dropped-guard-line",
+    "summary": "delegation-reminder.md reformat deletes the standing git-boundary hot-lane guard"
+  },
+  {
+    "round": 1,
+    "key": "lint/run.py:151|silent-skip-undisclosed",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/run.py",
+    "line": 151,
+    "category": "silent-skip-undisclosed",
+    "summary": "07/12 bare-checkout SKIP is promised 'disclosed' but is invisible to the runner"
   }
 ]

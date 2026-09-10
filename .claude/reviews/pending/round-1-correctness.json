@@ -1,77 +1,37 @@
 {
-  "reviewer": "correctness",
-  "round": 1,
-  "payload_read": "git diff a8bdaea..2b92bd1",
-  "findings": [
-    {
-      "title": "stamp-refined read-back never asserts the path_label write — a rejected write still prints STAMPED",
-      "severity": "High",
-      "file": "skills/_tools/stamp-refined.sh",
-      "line": 220,
-      "category": "missing-validation",
-      "evidence": "The read-back (introduced by ac-heyt.7) asserts only refined-present and unrefined-absent; the third write `br label add \"$id\" \"$path_label\"` (line 210, exit discarded with `|| true`) is never re-read. Mutation probe executed in a sandbox (mock br named br on PATH, fixture bead ac-proof): baseline stamp prints `STAMPED ac-proof (refine-full)` rc 0; with the path-label add REFUSED (rc 4, board unchanged) the SAME `STAMPED` + rc 0 is printed. Downstream bead-artifact.py classifies runs by the STAMPED substring, and the LABEL-FREEZE refine-full/refine-light frequency series (beads-standards SKILL.md:237) silently under-counts. The comment at line 211 claims 'the label set the stamp meant to produce is asserted' — it is not.",
-      "fix": "Extend the read-back: after computing labels_now, also assert the normalized label set contains the expected side-values — e.g. fail unless the joined labels match the intended set {refined present, unrefined absent, path_label present}; a WRITE-FAILED on path_label absence gives the partial write the same exit-2 verdict the refined/unrefined writes get.",
-      "auto_fixable": true
-    },
-    {
-      "title": "Check 36 blind to a raw br --json read split across lines — green tree with an unenrouted call site",
-      "severity": "Medium",
-      "file": "lint/checks/36-br-envelope.py",
-      "line": 43,
-      "category": "missing-validation",
-      "evidence": "RAW_READ and ROUTED_READ are per-line regexes; both require br and --json on the SAME line. Executed probe: a scratch tree with 13 br_call sites plus sneaky.sh containing `out=$(` / `  br list` / `  --json` — the checker prints 'ok ... 13 routed call site(s)' and exits 0, so the raw unenrouted read passes as clean. A future converted consumer written with the flag on its own line (or a python call with br and --json on separate lines, which the twin exemption also doesn't cover outside the sanctioned file) evades the D9 completeness sensor, the exact drift the check exists to make a red commit.",
-      "fix": "Scan per-logical-statement, not per-line: join backslash-continuations and match a windowed context (e.g. accumulate a 3-line sliding window before matching RAW_READ, or match `br`-invocation lines and then check --json appears within the next 3 lines; mirror this in the ROUTED_READ counting).",
-      "auto_fixable": true
-    },
-    {
-      "title": "Check 35 treats a missing created_at as pre-cutover — the origin-less open bead it guards passes",
-      "severity": "Medium",
-      "file": "lint/checks/35-board-integrity.py",
-      "line": 83,
-      "category": "missing-edge-case",
-      "evidence": "`created = str(rec.get(\"created_at\") or \"\")[:10]`; rule 3 fires only when `created >= CUTOVER`. Executed probe: a committed board holding only `{\"id\":\"bd-z\",\"status\":\"open\",\"labels\":[],\"title\":\"no created_at\"}` (origin-less, open) exits 0 — '1 record(s) scanned — well-formed, ids unique, open post-cutover beads origin-tagged'. The check exists precisely as a backstop for the fail-open create guards (header/no header text); a record whose created_at is absent, empty or malformed fails OPEN into 'pre-cutover' and is never scanned, recreating the hole the check was written to close.",
-      "fix": "Fail closed on the timestamp: if the record is open and created_at is missing or does not parse to a valid `>= CUTOVER`/earlier date (i.e. created does not match ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ or is empty), append a violation ('open bead has no parseable created_at — cannot prove it is pre-cutover') instead of treating '' as before 2026-08-23.",
-      "auto_fixable": true
-    },
-    {
-      "title": "Check 35 exits 0 on a blank/newline-only ledger even though it scanned zero records",
-      "severity": "Medium",
-      "file": "lint/checks/35-board-integrity.py",
-      "line": 56,
-      "category": "missing-edge-case",
-      "evidence": "The NOT-GATED guard is `if not lines` — a file containing a single newline yields lines == [''], every record is skipped by `if not line: continue`, `scanned` stays 0, violations stays empty and the code prints '0 record(s) scanned — well-formed...' and returns 0. Executed probe: a dir with .beads/issues.jsonl containing only '\\n' returns rc 0. This contradicts the check's own documented exit contract ('Exit: 0 clean (at least one record scanned)') and its own premise 'a check that read nothing has proved nothing' — a truncated/blank ledger reads as a clean board.",
-      "fix": "Return 2 when `scanned` is 0 even if the line array is non-empty (mirroring the empty-board guard), e.g. change the final verdict to `if not violations and scanned > 0 ... else if scanned == 0: exit 2 NOT-GATED`.",
-      "auto_fixable": true
-    },
-    {
-      "title": "close-gate.sh and coordinator.sh resolve BR_CALL after `cd $ROOT` — their pre-cd comment is false and relative relative-path invocations break",
-      "severity": "Medium",
-      "file": "skills/ac-implement/scripts/close-gate.sh",
-      "line": 100,
-      "category": "logic-error",
-      "evidence": "Both files compute `BR_CALL=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../../_tools\" ...)\" AFTER the `cd \"$ROOT\"` (coordinator.sh:75 likewise), while the code block's own comment states 'Path computed BEFORE the cd above: BASH_SOURCE may be relative' — the sibling flight-check.sh and refly.sh genuinely source pre-cd. Executed probe: a scratch repo, invoked as `bash ../skills/ac-implement/scripts/close-gate.sh <id> --reason x` from its sub/ directory → `NOT-CHECKED: READ — br-call.sh helper missing at '/br-call.sh'` exit 2. The read now fails where the pre-diff script proceeded (pre-diff there was no helper resolution at all), turning a valid invocation into a false NOT-CHECKED. Fail-closed, but a worker lane loses a valid gate run.",
-      "fix": "Move the BR_CALL assignment (and the `.` sourcing) ABOVE the `cd \"$ROOT\"` in close-gate.sh and coordinator.sh, matching flight-check.sh/refly.sh; or resolve from a var captured before the cd. Also correct the comment when moved.",
-      "auto_fixable": true
-    },
-    {
-      "title": "stamp-refined writes the labels via bare `br` while every read now honors AC2_BR_CMD — the read-back can verify a different board than it wrote",
-      "severity": "Medium",
-      "file": "skills/_tools/stamp-refined.sh",
-      "line": 209,
-      "category": "logic-error",
-      "evidence": "The conversion routes all reads through br_call (which honors AC2_BR_CMD, br-call.sh:26), but the write legs call the bare binary: lines 76-77 (downgrade remove/add) and 208-210 (remove unrefined, add refined, add path_label). br-call.sh:19's own contract says honoring the seam 'keeps a converted caller's read and write on the SAME binary when the seam is set' — this converted caller breaks exactly that. With AC2_BR_CMD set (a different board/binary, e.g. a mirror or the harness shims this registry already uses — the FRICTIONS ledger at bd-edw72 records this identical read/write split in close-evidence-check), the read-back evaluates a different board than the three writes targeted, so a verified-looking stamp can be verified against the wrong board, and bead-artifact.py (close-gate.sh:364 deliberately passes the seam) subclasses the run by that STAMPED line.",
-      "fix": "Use the same seam for the writes: honor ${AC2_BR_CMD:-br} for the five br label calls (or export AC2_BR_CMD=\"${AC2_BR_CMD:-br}\" and invoke via br_call-style wrapper covering writes; at minimum write with \"$BR\"/\"${AC2_BR_CMD:-br}\" like close-gate.sh's BR variable).",
-      "auto_fixable": true
-    },
-    {
-      "title": "Dispatcher fail-closed notice dereferences output.parts without the hedge its own next line applies",
-      "severity": "Medium",
-      "file": "harness-sync.sh",
-      "line": 836,
-      "category": "null-hazard",
-      "evidence": "In the wire-rendered plugin, the chat.message WIRING_ERROR branch does `const base = (output.parts || [])[0] || {}` then `output.parts.push({...})` — if output.parts is ever absent, the push throws 'Cannot read properties of undefined' inside the handler, so the designed fail-closed notice never lands (and the handler crashes instead of injecting text). Two lines later the normal path of the SAME function hedges `const parts = output.parts || []`, and parts.push there would push onto a LOCAL copy — the same silent-loss shape — so the file is internally inconsistent about whether parts may be undefined. This branch is the D-1 layer-disappearance announcement; its failure mode is exactly the silent-degradation class it was written to prevent.",
-      "fix": "Hedge consistently: `const parts = (output.parts ||= [])` (or `output.parts = output.parts || []`) before building base and pushing, in BOTH the WIRING_ERROR branch and the normal chat.message path, so the injected text lands on the payload opencode actually reads.",
-      "auto_fixable": true
-    }
-  ]
+ "reviewer": "correctness",
+ "round": 1,
+ "payload_read": "git diff a2120d2..6d02fe7",
+ "findings": [
+  {
+   "title": "delegation-reminder.md tool-registry pointer resolves nowhere",
+   "severity": "High",
+   "file": "hooks/delegation-reminder.md",
+   "line": 4,
+   "category": "broken-path-reference",
+   "evidence": "The rewritten hot-lane payload (cat {HOOKS}/delegation-reminder.md, hooks/hooks.json wiring[5]) replaced the working absolute path 'Tool registry: ~/Repos/.claude/skills/CORE/tools.md' with 'Tool registry: skills/CORE/tools.md.'. That path does not exist in this registry repo (no skills/CORE/), does not exist at ~/Repos/skills/CORE/tools.md, and is not app-repo-relative either \u2014 verified on disk. Every prompt in every harness now receives a dead pointer; this file is the canon payload, not a per-harness render, so no placeholder rewrites it.",
+   "fix": "Restore the resolvable reference in hooks/delegation-reminder.md (and re-run harness-sync --all so consumers pick it up): 'Tool registry: ~/.claude/skills/CORE/tools.md' or the original '~/Repos/.claude/skills/CORE/tools.md'.",
+   "auto_fixable": true
+  },
+  {
+   "title": "delegation-reminder.md reformat deletes the standing git-boundary hot-lane guard",
+   "severity": "Medium",
+   "file": "hooks/delegation-reminder.md",
+   "line": 0,
+   "category": "dropped-guard-line",
+   "evidence": "The reformat of the every-prompt payload silently deleted two enforcement-bearing lines, not prose: 'Git (root repo only): changes under ~/Repos outside app repos, commit + push. Never commit across repo boundaries in one operation.' and the deeper-recall channel line ('qmd query ... cass search ...'). The cross-repo-commit rule was the only per-prompt guard against committing across repo boundaries in one operation; nothing in the new text carries it. A rewrite presented as retitling/trim should not drop gate-bearing lines without a replacement.",
+   "fix": "Re-add the cross-repo git-boundary sentence to hooks/delegation-reminder.md (one line), or record in the bead that the rule moved to an enforcement surface (PreToolUse guard) and cite it.",
+   "auto_fixable": true
+  },
+  {
+   "title": "07/12 bare-checkout SKIP is promised 'disclosed' but is invisible to the runner",
+   "severity": "Medium",
+   "file": "lint/run.py",
+   "line": 151,
+   "category": "silent-skip-undisclosed",
+   "evidence": "CONSUMER checks 07/12 now return 0 while printing 'SKIP \u2014 consumer root ... absent' only to STDERR to make bare checkouts green (lint/checks/07-consumer-symlinks.py:43). run.py builds result 'findings' from stdout lines plus stderr lines that start with 'FAIL' (run.py:151-156); the SKIP line is neither, and the ok path prints nothing to stdout. So --json and the human table both show 'ok' with empty detail on CI: the disclosed skip exists nowhere in the machine-readable record \u2014 exactly the empty-is-not-clean blindness check 07's own header warns about ('a skip ... never a false pass on a bare run' is now unverifiable).",
+   "fix": "In lint/run.py, include stderr lines matching /^(07-consumer-symlinks|12-deployed-app-conformance): SKIP/ (or generalize: any '^\\S+: SKIP' line) in the findings array, or have the checks print the SKIP notice to stdout on the green path.",
+   "auto_fixable": true
+  }
+ ]
 }
