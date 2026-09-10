@@ -1,3 +1,10 @@
+---
+skill: ac-beadify
+created: 2026-09-05
+last_pass: never
+entries: 1
+---
+
 # FRICTIONS — ac-beadify
 
 Fixes are proposed here and applied to the skill only after the pattern recurs or the impact is H.
