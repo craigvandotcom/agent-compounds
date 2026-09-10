@@ -2,9 +2,9 @@
 # 34-no-bead-subject-agreement.test.sh — the fixture proving Check 34's contract.
 #
 #   PROBE: a [no-bead] commit touching a code file is RED naming the file; a
-#           [no-bead] commit confined to the ledger/board surfaces (.beads/,
-#           FRICTIONS.md) is GREEN; a window with no [no-bead] commits is
-#           GREEN; the check is discovered by the runner.
+#           [no-bead] commit confined to the ledger/board/report surfaces
+#           (.beads/, FRICTIONS.md, .claude/reviews/) is GREEN; a window with no
+#           [no-bead] commits is GREEN; the check is discovered by the runner.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/34-no-bead-subject-agreement.test.sh
@@ -77,6 +77,23 @@ if [ "$rc" = 0 ]; then
   ok "GREEN: [no-bead] friction-ledger append -> exit 0"
 else
   bad "GREEN ledger case: expected 0, got $rc"; cat "$OUT"
+fi
+rm -rf "$w"
+
+# --- GREEN: a [no-bead] commit confined to the review-report surface -----------
+# A review-panel run's output (`.claude/reviews/`) is a report commit — a
+# sanctioned [no-bead] use that names beads without implementing behaviour.
+w="$(mktemp -d)"; trap 'rm -rf "$w" "$OUT"' EXIT
+new_repo "$w"
+( cd "$w" || exit 2
+  mkdir -p .claude/reviews/pending
+  printf 'panel output\n' >> .claude/reviews/pending/round-1.json
+  git add -A; git commit -qm "docs(review): batch review run-x — 6 findings [no-bead]" )
+rc=$(run_check "$w")
+if [ "$rc" = 0 ]; then
+  ok "GREEN: [no-bead] review-report commit -> exit 0"
+else
+  bad "GREEN report case: expected 0, got $rc"; cat "$OUT"
 fi
 rm -rf "$w"
 

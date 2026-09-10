@@ -10,7 +10,8 @@
 
 `[no-bead]` exists for ONE thing: bookkeeping that names beads without
 implementing them — ledger appends (FRICTIONS.md / MAINTENANCE.md), board
-bookkeeping (`.beads/`), and report commits. It is NOT an escape hatch: a real
+bookkeeping (`.beads/`), archived files (`_archive/`), and report commits
+(review-panel output under `.claude/reviews/`). It is NOT an escape hatch: a real
 change under `[no-bead]` is dropped wholesale from board-truth.sh's review
 range, so it never gets reviewed and never re-enters the corpus.
 
@@ -71,12 +72,15 @@ ENTRY_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s*\|\s*([0-9a-f]{40})\s*\|\s*(.*)$"
 
 # The surfaces [no-bead] is FOR — repo-root-relative prefixes and exact names.
 # Everything else in a [no-bead] commit's diff is a real change hiding.
-ALLOWED_PREFIXES = (".beads/", "_archive/")
+# `.claude/reviews/` is the review-report surface: a panel run's output IS a
+# report commit (the docstring names report commits as a sanctioned use), and
+# reports name beads without implementing behaviour.
+ALLOWED_PREFIXES = (".beads/", "_archive/", ".claude/reviews/")
 ALLOWED_EXACT = {"FRICTIONS.md", "MAINTENANCE.md"}
 
 
 def is_allowed(path):
-    """True when a diff path is ledger/board bookkeeping — what [no-bead] claims."""
+    """True when a diff path is ledger/board/report bookkeeping — what [no-bead] claims."""
     base = os.path.basename(path)
     if base in ALLOWED_EXACT:
         return True
@@ -261,7 +265,7 @@ def main():
 
     if violations or problems:
         print("FAIL 34-no-bead-subject-agreement: [no-bead] commits whose diff reaches beyond the "
-              "ledger/board surfaces (.beads/, FRICTIONS.md, MAINTENANCE.md, _archive/), or a "
+              "ledger/board/report surfaces (.beads/, FRICTIONS.md, MAINTENANCE.md, _archive/, .claude/reviews/), or a "
               "non-shrinking allowlist — a real change under [no-bead] is dropped from the review range "
               "forever:")
         for p in problems:
