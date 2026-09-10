@@ -9,7 +9,7 @@ G = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bead-capture-guard
 BLOCK, ALLOW = 2, 0
 cases = [
  (BLOCK, 'br create "x" -t task -p 2',                              "bare create, no labels"),
- (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "create with origin + probe"),
+ (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"', "create with origin + probe"),
  (BLOCK, 'br create "x" -t task -l "triage,unrefined"',             "labels but no origin"),
  (ALLOW, 'br create --help',                                        "help"),
  (ALLOW, 'br list --json',                                          "other subcommand"),
@@ -38,7 +38,7 @@ cases = [
  (ALLOW, 'br create "x" -l "origin:a" ; br create "y" -l origin:b', "two labelled creates"),
  (BLOCK, 'br create "x" -l origin:a ; br create "y" -t task',       "second create unlabelled"),
  (ALLOW, 'echo "unbalanced \'quote',                                "unparseable -> fail open"),
- (ALLOW, '/Users/x/.local/bin/br create "z" -l origin:ac-review',   "absolute path br"),
+ (ALLOW, '/Users/x/.local/bin/br create "z" -l origin:ac-review,impact:data',   "absolute path br"),
  (BLOCK, '/Users/x/.local/bin/br create "z" -t bug',                "absolute path br, no origin"),
 # qa-shared.md ships an origin placeholder the caller must substitute. An UNsubstituted
   # placeholder must still block — otherwise a copy-paste files beads with a literal
@@ -50,13 +50,13 @@ cases = [
  # --- readiness axis ---
  (BLOCK, 'br create "x" -t task -l "origin:ac-review"',        "task, origin but no readiness"),
  (BLOCK, 'br create "x" -t bug -l "origin:ac-review,review-finding"', "bug, no readiness"),
- (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined" -d "- AC: x. Probe: `true` - tier: none"',  "task + unrefined"),
+ (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',  "task + unrefined"),
  (ALLOW, 'br create "x" -t decision -l "origin:dream,human-gate"',    "decision + human-gate"),
  (ALLOW, 'br create "x" -t task -l "origin:x,refined" -d "- AC: x. Probe: `true` - tier: none"',  "refined accepted, not second-guessed"),
  # Epics are containers, never picked up — exempt, and must stay exempt or every
  # epic-creation template in the registry breaks.
- (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review"',        "epic exempt from readiness"),
- (ALLOW, 'br create "Epic: x" --type=epic -l "origin:ac-hygiene"',   "epic via --type= form"),
+ (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review,impact:data"',        "epic exempt from readiness"),
+ (ALLOW, 'br create "Epic: x" --type=epic -l "origin:ac-hygiene,impact:data"',   "epic via --type= form"),
  # Unknowable type must SKIP readiness, not block: `<type>` could stand for epic.
  (ALLOW, 'br create "x" -t <type> -l "origin:ac-bead-capture"',      "placeholder type skips readiness"),
  (ALLOW, 'br create "x" -l "origin:ac-bead-capture"',                "absent type skips readiness"),
@@ -67,15 +67,33 @@ cases = [
   # need one `Probe: `<command>`` ... tier: line in the body; epic/decision/investigation
   # are exempt; an absent description blocks; a placeholder body skips (bead_type doctrine).
   (BLOCK, 'br create "x" -t bug -l "origin:ac-triage,unrefined"',        "bug without Probe -> refused"),
-  (ALLOW, 'br create "x" -t bug -l "origin:ac-triage,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "bug with Probe -> admitted"),
-  (ALLOW, 'br create "x" -t investigation -l "origin:ac-triage,unrefined"', "investigation without Probe -> admitted"),
-  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-triage"',           "epic without Probe -> admitted"),
+ (ALLOW, 'br create "x" -t bug -l "origin:ac-triage,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"', "bug with Probe -> admitted"),
+ (ALLOW, 'br create "x" -t investigation -l "origin:ac-triage,unrefined,impact:data"', "investigation without Probe -> admitted"),
+  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-triage,impact:data"',           "epic without Probe -> admitted"),
   (BLOCK, 'br create "x" -t task -l "origin:ac-triage,unrefined"',       "task, absent description -> blocked"),
-  (ALLOW, 'br create "x" -t task -l "origin:ac-triage,unrefined" -d "<body>"', "placeholder body skips probe"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-triage,unrefined,impact:data" -d "<body>"', "placeholder body skips probe"),
+  # --- impact axis (ac-wp8i.3): an AUTOMATED origin needs exactly one closed-set impact
+  # label; human/plan origins and human-gate forks are exempt (a refusal names them).
+  (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "automated origin, no impact -> refused"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-human-session,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "human origin, no impact -> admitted"),
+  (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined,impact:perf" -d "- AC: x. Probe: `true` - tier: none"',
+          "impact outside the closed set -> refused"),
+  # --- subagent refusal (ac-wp8i.3): a stdin carrying agent_id may file only a human-gate
+  # fork; anything else goes back to the batch boundary as a PROPOSED-BEAD block.
+  (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "subagent, non-gate create -> refused", {"agent_id": "sub-1"}),
+  (ALLOW, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
+          "subagent, human-gate fork -> admitted", {"agent_id": "sub-1"}),
 ]
 fails = 0
-for want, cmd, name in cases:
-    p = subprocess.run([sys.executable, G], input=json.dumps({"tool_name":"Bash","tool_input":{"command":cmd}}),
+for case in cases:
+    want, cmd, name = case[0], case[1], case[2]
+    extra = case[3] if len(case) > 3 else {}
+    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}}
+    payload.update(extra)
+    p = subprocess.run([sys.executable, G], input=json.dumps(payload),
                        capture_output=True, text=True)
     got = p.returncode
     ok = got == want

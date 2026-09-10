@@ -10,6 +10,10 @@ Enforced here:
   - a readiness label on every NON-EPIC bead — `unrefined` / `human-gate`.
   - a `Probe:` line on every IMPLEMENTABLE bead (`bug` / `task` / `feature`) — born
     probe-bearing; `epic` / `decision` / `investigation` are exempt.
+  - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
+    of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
+  - a subagent (`agent_id` on stdin) files nothing but a `human-gate` fork — its
+    discovered work goes back to the batch boundary as a PROPOSED-BEAD block.
 
 WHY THIS IS A HARD GATE, not an advisory (Craig, 2026-08-23):
 `origin:` already existed as an OPTIONAL hint — plan 2026-07-16-1729-epic-bead-quality-
@@ -67,6 +71,22 @@ IMPLEMENTABLE_TYPES = {"bug", "task", "feature"}
 PROBE_EXEMPT_TYPES = {"epic", "decision", "investigation"}
 PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")
 
+# The impact axis (ac-wp8i.3): the class of damage if this bead's failure ships. CLOSED
+# set — a new class is a contract change first, then this tuple. An automated origin must
+# carry exactly one of these; `impact:trunk-red` names the failing suite/job in its
+# `User impact:` line. Human origins (`manual`, `ac-human`, formerly `ac-human-session`),
+# plan origins (`ac-beadify`, `ac-backlog`) and `human-gate` fork beads are EXEMPT — a
+# fork is not an impact class — and a refusal must name those exemptions.
+IMPACT_CLASSES = ("user-visible", "data", "security", "trunk-red")
+IMPACT_REQUIRED_ORIGINS = (
+    "ac-implement", "ac-review", "ac-triage", "ac-hygiene", "ac-align", "ac-prove",
+    "curate-foods",
+)
+
+# The subagent refusal (ac-wp8i.3): a PreToolUse stdin carrying `agent_id` is a subagent,
+# which may file ONLY a `human-gate` fork — everything else is proposed at the boundary.
+SUBAGENT_EXEMPT_LABEL = "human-gate"
+
 READINESS_MESSAGE = """\
 BLOCKED: `br {sub}` (type `{typ}`) without a readiness label.
 
@@ -115,6 +135,33 @@ probe yet. A filer that cannot name a probe files the bead as `investigation`
 — the type that says so — never as a probe-less task.
 
 Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
+"""
+
+IMPACT_MESSAGE = """\
+BLOCKED: `br {sub}` from automated origin `{origin}` without exactly one `impact:` label.
+
+`impact:<class>` records the class of damage if this bead's failure ships — exactly one of:
+
+    impact:user-visible · impact:data · impact:security · impact:trunk-red
+
+`impact:trunk-red` names the failing suite or job in the body's `User impact:` line.
+
+Exempt, and never blocked for this axis: human origins (`manual`, `ac-human` — renamed
+from `ac-human-session`), plan origins (`ac-beadify`, `ac-backlog`), and `human-gate`
+fork beads — a fork is not an impact class.
+
+Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
+"""
+
+SUBAGENT_MESSAGE = """\
+BLOCKED: `br {sub}` from a subagent — propose it in your hand-back.
+
+A subagent's discovered product work is not filed directly: return it to the batch
+boundary as a PROPOSED-BEAD block for the conductor to confirm. The one exception is the
+worker's mid-bead `human-gate` fork — add `human-gate` to --labels to file a decision card
+that unblocks you.
+
+Canon: beads-standards/reference/bead-create-contract.md § Subagent creates.\
 """
 
 
@@ -292,12 +339,34 @@ def has_probe(cmd):
     return bool(PROBE.search(d))
 
 
+def origin_skill(cmd):
+    """The `<skill>` of the first `origin:<skill>` label, or None. One origin per bead."""
+    for label in all_labels(cmd):
+        if label.startswith("origin:"):
+            return label[len("origin:"):]
+    return None
+
+
+def valid_impact(cmd):
+    """True when the labels carry EXACTLY one impact class from the closed set."""
+    classes = [lab[len("impact:"):] for lab in all_labels(cmd) if lab.startswith("impact:")]
+    return len(classes) == 1 and classes[0] in IMPACT_CLASSES
+
+
+def has_label(cmd, name):
+    return name in all_labels(cmd)
+
+
 def main():
     raw = sys.stdin.read()
     data = json.loads(raw) if raw.strip() else {}
 
     if data.get("tool_name") not in (None, "Bash"):
         allow()
+
+    # A subagent may file only a `human-gate` fork; its discovered work is proposed back
+    # at the batch boundary, never filed directly (bead-create-contract § Subagent creates).
+    is_subagent = bool(data.get("agent_id"))
 
     command = (data.get("tool_input") or {}).get("command") or ""
     if "br" not in command:
@@ -322,6 +391,9 @@ def main():
             continue
         if any(t in HELP for t in cmd):
             continue
+        if is_subagent and not has_label(cmd, SUBAGENT_EXEMPT_LABEL):
+            print(SUBAGENT_MESSAGE.format(sub=sub), file=sys.stderr)
+            sys.exit(2)
         if not has_origin(cmd):
             print(MESSAGE.format(sub=sub), file=sys.stderr)
             sys.exit(2)
@@ -331,6 +403,14 @@ def main():
             sys.exit(2)
         if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
             print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
+            sys.exit(2)
+        origin = origin_skill(cmd)
+        if (
+            origin in IMPACT_REQUIRED_ORIGINS
+            and not has_label(cmd, SUBAGENT_EXEMPT_LABEL)
+            and not valid_impact(cmd)
+        ):
+            print(IMPACT_MESSAGE.format(sub=sub, origin=origin), file=sys.stderr)
             sys.exit(2)
 
     allow()
