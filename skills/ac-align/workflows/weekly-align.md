@@ -90,6 +90,11 @@ with the stranded SHA. (No auto-apply to strand, but still confirm the proposal 
 Confirm exit 0; a Slack failure IS a finding — retry once. Finalize `last-run.json`
 (`{status: done, counts, mode, machine}`).
 
+The Slack body's one-line rollup also carries the board's docket counters, read from Scan A's
+`docket-health:` line (never recomputed): `plan-gap: N · gate-incomplete: N ·
+beadify-refusals: N`. Routine `beadify-refusals` indict the plan checklist's decisions
+question, not the plans.
+
 ---
 
 ## Applying the slate later

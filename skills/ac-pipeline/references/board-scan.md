@@ -89,7 +89,7 @@ run, `ok` included.
 # FAIL LOUD if br list --json cannot be read — do not print 0 as clean.
 DOCKET=$(br list --json --limit 0 --all) || { echo "docket-health: ERROR — br list --json failed (empty-is-not-clean)"; exit 2; }
 printf '%s' "$DOCKET" | python3 -c "
-import json, sys, datetime
+import json, sys, datetime, glob, re
 raw = sys.stdin.read()
 try:
     data = json.loads(raw)
@@ -120,13 +120,34 @@ for i in reasonless:
     created = parse_until(i.get('created_at') or i.get('created'))
     if created and (now - created).total_seconds() > 48 * 3600:
         stale.append(i)
+# The three docket counters (ac-wp8i.13), printed every run, 0 included. plan-gap and
+# gate-incomplete are bead-label-exact over the on-docket population; beadify-refusals is
+# the Scan B population (a plan at refined that was polished and still carries a
+# needs-human card — the state ac-beadify refuses on), classified with the same tokens as
+# Scan B. Empty is not clean: a failed br list already exits 2 above.
+all_docket = [i for i in issues if on_docket(i)]
+plangap = [i for i in all_docket if 'plan-gap' in (i.get('labels') or [])]
+gateinc = [i for i in all_docket if 'gate-incomplete' in (i.get('labels') or [])]
+beadref = 0
+for _p in glob.glob('_plans/*.md'):
+    try:
+        _t = open(_p, encoding='utf-8', errors='replace').read()
+    except OSError:
+        continue
+    _s = re.search(r'^status:\s*(\S+)', _t, re.M)
+    if not _s or _s.group(1) != 'refined':
+        continue
+    if not (re.search(r'^polish_rounds:', _t, re.M) and re.search(r'^polish_fixpoint_', _t, re.M)):
+        continue
+    if re.search(r'^-.*DECISION.*(?<![a-z-])needs-human(?![a-z-])|^-.*(?<![a-z-])needs-human(?![a-z-]).*DECISION', _t, re.M):
+        beadref += 1
 alarms = []
 if len(docket) > 25:
     alarms.append(str(len(docket)) + ' open gates >25')
 if stale:
     alarms.append(str(len(stale)) + ' reason-less >48h')
 suffix = (' · ALARM (' + '; '.join(alarms) + ')') if alarms else ''
-print(f'docket-health: {len(docket)} open human-gate · {len(reasonless)} reason-less{suffix}')
+print(f'docket-health: {len(docket)} open human-gate · {len(reasonless)} reason-less · plan-gap: {len(plangap)} · gate-incomplete: {len(gateinc)} · beadify-refusals: {beadref}{suffix}')
 for i in reasonless:
     print(i.get('id'))
 "
@@ -186,6 +207,9 @@ frontmatter:
 
 - **status** — `draft | refined | approved | beadified | loop-ready`; ANY other value is present-but-out-of-vocabulary and routes to `unclassified[]` with the raw value preserved — **never dropped**, and renderers MUST report it (bd-5ljt6)
 - **loop-ready** — the autonomous hand-off flag (the loop owns these; humans don't sign them off again)
+- **loop_ready_at** / **approved_by** — the approval receipt `plan-approve.sh` writes (the loop-ready stamp's ONE writer): the ISO time of approval and the approver identity. Additive keys; absent on a plan never approved.
+- **needs-human** — print `needs-human: N` per plan, N = the count of `DECISION` bullets in state `needs-human`, using the SAME extraction `plan-approve.sh` refuses on (a Decision bullet carrying the token — never a bare prose match):
+  `grep -cE '^-.*DECISION.*(^|[^-a-z])needs-human([^a-z-]|$)|^-.*(^|[^-a-z])needs-human([^a-z-]|$).*DECISION' <plan>`
 - **refinement_rounds** — frontmatter field, else count `### Round N` headings in the `## Refinement Log` (headings only)
 - **source_backlog**, **mtime** (recency)
 - **Fallback** (no frontmatter): `## Refinement Log` → `refined`; `Status: Approved` text → `approved`; referenced by a bead record (description OR comments — match the whole record, then filter) → `beadified`; else `draft`. Flag the missing frontmatter for `/ac-align`. An unparseable board (jsonl unreadable, `br` error) is an ERROR, not `N_matching=0` — empty and error stay distinguishable (never fail toward "nothing to do").
