@@ -400,7 +400,7 @@ br sync --flush-only      # export DB -> JSONL
   so backticks and angle brackets stay literal.
 - **`br label add` applies every positional label, rc 0** (measured on `br` 0.5.12; the
   same call errored rc 3 on 0.2.x). Mixing bare labels with `-l` flags is a validation
-  error, rc 4 — verify with `br show` afterwards.
+  error, rc 4 — verify with `br show` afterwards. Probe: `scripts/br-contract.test.sh`.
 - **`br lint` scans the DESCRIPTION field only — never `--notes`.** A lint-required
   section added via `--notes` leaves the finding open and reads as a flaky linter. Fold
   every lint-required section into the `-d`/`-f` body.
