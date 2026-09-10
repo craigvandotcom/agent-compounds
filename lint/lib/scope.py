@@ -25,6 +25,11 @@ Sets:
               bead-template-lint.py, the one judge over them — Check 19's
               audit surface.
   CHECKS     the lint v2 check files themselves (lint/checks, harnesses excluded).
+  ALL        every walked path — the trigger for a check that reads cross-cutting
+             repo state (the git log, the board) rather than a file population, so
+             any change must run it. Check 34's [no-bead] policing is the case: scoped
+             to LEDGER it ran only when a ledger file changed, leaving a [no-bead]
+             commit that touched code unpoliced until CI.
   SCRIPTS    the runnable scripts the registry ships: .sh and .py files under
               skills/ and scripts/, tests excluded — Check 36's audit surface.
   CACHES     directory names that are build/interpreter caches — excluded from
@@ -113,6 +118,11 @@ CHECKS = frozenset(
 ) if os.path.isdir(CHECKS_DIR) else frozenset()
 
 CACHES = frozenset({d for d in SKIP_DIRS if d not in (".git",)})
+
+# Every walked path. A check whose subject is repo state rather than a file
+# population declares this so `--changed` runs it on any edit, not only edits to
+# the files it happens to name.
+ALL = frozenset(_paths)
 
 
 def scan(paths, root=None):

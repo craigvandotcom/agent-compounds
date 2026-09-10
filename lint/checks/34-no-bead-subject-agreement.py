@@ -5,7 +5,7 @@
 #   commits wholesale from the review range, so the change is invisible to range-derived review
 #   forever (measured: 9b1d745, a stamp-refined-fixpoint.test.sh behavior change under a "Sensor-log
 #   append only" subject)
-# scope: LEDGER
+# scope: ALL
 # severity: fail
 # fixture: lint/fixtures/34-no-bead-subject-agreement
 # ---
