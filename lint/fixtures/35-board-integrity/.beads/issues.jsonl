@@ -1,0 +1,5 @@
+{"id":"ac-fix-open","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["refined"],"title":"open post-cutover origin-less"}
+{"id":"ac-fix-open","status":"open","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"duplicate id"}
+{"id":"ac-fix-closed","status":"closed","created_at":"2026-08-27T10:00:00Z","labels":[],"title":"closed pre-cutover origin-less — never scanned"}
+{"id":"ac-fix-old","status":"open","created_at":"2026-08-22T10:00:00Z","labels":[],"title":"open PRE-cutover origin-less — grandfathered"}
+not json at all
