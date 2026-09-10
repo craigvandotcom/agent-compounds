@@ -35,6 +35,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 LIFECYCLE_LABELS = {"refined", "unrefined"}
 
@@ -80,6 +81,14 @@ def show(bead_id):
         d = json.loads(out)
     except json.JSONDecodeError as exc:
         return None, f"br show returned unparseable JSON: {exc}"
+    if isinstance(d, dict) and "error" in d:
+        # With --json a br failure is a VALID error envelope on STDOUT at rc 0 with an
+        # EMPTY stderr (error_envelope_on_stderr: false) — the shape that used to decode
+        # into "a bead with nothing on it". br-read-failed: a refused read is a FAILED
+        # READ with a named refusal, never a bead and never an empty label set.
+        err_body = d.get("error")
+        msg = err_body.get("message") if isinstance(err_body, dict) else err_body
+        return None, f"br-read-failed: br show {bead_id} refused — {msg}"
     if isinstance(d, list):
         if not d:
             return None, "br show returned an empty array — the id did not resolve"
@@ -285,7 +294,24 @@ def cmd_writeback(args):
                   f"title={'CHANGED' if title_changed else 'same'} +labels={add or '-'}")
             continue
 
-        rc, _, err = br(["update", bead_id, "-d", desc])
+        # The description goes through --description-file, NEVER inline -d: a body
+        # carrying backticks or angle brackets must not be re-scanned by a shell, and
+        # br 0.5.10+ REFUSES an update that clears a non-empty body or keeps it under
+        # half its length unless --force is passed (rc 4) — a shallower cut passes
+        # silently while polish routinely SHORTENS bodies. So --force rides ONLY a
+        # shrink (new shorter than current), and every shrink is printed per bead.
+        fd, desc_path = tempfile.mkstemp(prefix="ac-bead-", suffix=".md", text=True)
+        try:
+            with os.fdopen(fd, "w") as fh:
+                fh.write(desc)
+            current = live.get("description") or ""
+            shrink = len(desc) < len(current)
+            cmd = ["update", bead_id, "--description-file", desc_path]
+            if shrink:
+                cmd.append("--force")
+            rc, _, err = br(cmd)
+        finally:
+            os.unlink(desc_path)
         if rc != 0:
             failed.append((bead_id, f"description write exited {rc}: {err.strip()[:200]}"))
             continue
@@ -298,7 +324,8 @@ def cmd_writeback(args):
             rc, _, err = br(["label", "add", bead_id, label])
             if rc != 0:
                 failed.append((bead_id, f"label add {label!r} exited {rc}"))
-        print(f"bead-artifact: WROTE {bead_id:46} +labels={add or '-'}")
+        tail = f" shrink={len(current)}B->{len(desc)}B" if shrink else ""
+        print(f"bead-artifact: WROTE {bead_id:46} +labels={add or '-'}{tail}")
 
     # Bodies are landed; the edges the bodies DECLARE are landed next, before the restamp
     # sweep re-gates anything. A dep-add failure is a writeback failure — same count, same

@@ -12,7 +12,11 @@ end of its own section · `missing_edges` in BOTH directions (an edge with no li
 missing edge — writeback is additive and must never remove one) · `blocking_deps` ignores
 `parent-child` · end-to-end over a stubbed `br`: `dep add` is issued exactly once, for the
 declared-but-unwired edge only, the unpaired edge is REPORTED and not removed, and the dry run
-issues no write at all. `br` is a PATH stub throughout: this harness never touches a board.
+issues no write at all. Two further fail-closed contracts ride the same stub: a `show --json`
+response that is an ERROR ENVELOPE is a refused read (br-read-failed), never "a bead with no
+labels" — the writeback REFUSES and names it · and the description write goes through
+`--description-file`, passing `--force` ONLY on a shrink and printing the shrink per bead.
+`br` is a PATH stub throughout: this harness never touches a board.
 
 Fixtures are typed `decision` so the RESTAMP SWEEP skips them: a proof test must not invoke
 stamp-refined.sh, whose writes are the other gate's to make.
@@ -153,7 +157,7 @@ os.makedirs(BIN); os.makedirs(FIX)
 LOG = os.path.join(W, "br.log")
 
 STUB = """#!/usr/bin/env bash
-{ printf '%s %s %s %s' "$1" "$2" "$3" "$4" | tr -d '\\n'; printf '\\n'; } >> "$BR_LOG"
+{ printf '%s' "$1"; for a in "${@:2}"; do printf ' %s' "$a"; done; printf '\\n'; } >> "$BR_LOG"
 if [ "$1 $2" = "list --json" ]; then echo '[]'; exit 0; fi
 if [ "$1 $2" = "show --json" ]; then cat "$BR_FIXTURES/$3.json"; exit 0; fi
 exit 0
@@ -186,9 +190,9 @@ write(ART, BLOCK.format(i="ac-t1", t="first", c="- none")
 ENV = dict(os.environ, PATH=BIN + os.pathsep + os.environ["PATH"], BR_LOG=LOG, BR_FIXTURES=FIX)
 
 
-def run_writeback(*extra):
+def run_writeback(*extra, artifact=ART):
     write(LOG, "")
-    r = subprocess.run([sys.executable, SCRIPT, "writeback", "--artifact", ART, *extra],
+    r = subprocess.run([sys.executable, SCRIPT, "writeback", "--artifact", artifact, *extra],
                        capture_output=True, text=True, cwd=W, env=ENV)
     return r.returncode, r.stdout + r.stderr, read(LOG).splitlines()
 
@@ -213,6 +217,10 @@ if deps == ["dep add ac-t2 ac-t1"]:
     ok("--apply: exactly one `br dep add`, in <blocked> <blocker> order, for the declared edge")
 else:
     fail("dep add calls", deps)
+if not any(ln.startswith("update ") and ln.endswith("--force") for ln in log):
+    ok("--apply: a GROW (artifact body longer than the live body) passes no --force — force is shrink-only")
+else:
+    fail("grow force", [ln for ln in log if ln.startswith("update ")])
 if not [ln for ln in log if "remove" in ln] and "dep add ac-t1" not in "\n".join(log):
     ok("--apply: the unpaired edge was reported and left alone — nothing was removed")
 else:
@@ -226,6 +234,34 @@ if out.index("bead-artifact: EDGES") > out.index("bead-artifact: WROTE") \
     ok("--apply: edges land AFTER the bodies and BEFORE the restamp sweep")
 else:
     fail("edge sync ordering", out)
+
+# a `show --json` response that is an ERROR ENVELOPE is a refused read (rc 0, empty stderr,
+# valid JSON on stdout) — never "a bead with nothing on it" for polish to proceed on air.
+write(os.path.join(FIX, "ac-err.json"),
+      json.dumps({"error": {"code": "NOT_FOUND", "message": "no such issue: ac-err"}}))
+ERR_ART = os.path.join(W, "artifact-err.md")
+write(ERR_ART, BLOCK.format(i="ac-err", t="err", c="- none"))
+rc, out, log = run_writeback("--apply", artifact=ERR_ART)
+if rc == 1 and "br-read-failed" in out and "ac-err" in out and "REFUSED" in out:
+    ok("failed read: an error envelope is a refused read (br-read-failed), not a bead with no labels")
+else:
+    fail("failed read", f"rc={rc}\n{out}")
+
+# a SHRINK — the live body longer than the artifact body — passes --force (br 0.5.10+
+# REFUSES a destructive rewrite without it) and prints the shrink per bead. A grow or an
+# equal-length rewrite must NOT carry --force.
+LONG = bead("ac-t3", "third", [])
+LONG["description"] = "x" * 400
+write(os.path.join(FIX, "ac-t3.json"), json.dumps([LONG]))
+ART3 = os.path.join(W, "artifact-shrink.md")
+write(ART3, BLOCK.format(i="ac-t3", t="third", c="- none"))
+rc, out, log = run_writeback("--apply", artifact=ART3)
+upd = [ln for ln in log if ln.startswith("update ")]
+if rc == 0 and upd and upd[0].endswith("--force") \
+        and "WROTE ac-t3" in out and "shrink=" in out:
+    ok("shrink: --force rides the update ONLY when the new body is shorter, and the shrink is printed per bead")
+else:
+    fail("shrink force", f"rc={rc}\nupd={upd}\n{out}")
 
 # a dep add that fails is a WRITEBACK failure: a Consumes line whose edge does not exist is a lie
 FAILSTUB = STUB.replace('if [ "$1 $2" = "list --json" ]',
