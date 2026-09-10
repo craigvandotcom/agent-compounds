@@ -21,5 +21,8 @@ harnesses.local.json
 # bv (beads viewer) local config and caches
 .bv/
 
+# br flush anchor 0.3.0+ — the derived base the three-way merge reads, regenerated per flush
+.beads/beads.base.jsonl
+
 # dcg probe payloads — regenerated on every probe run
 tools/dcg/fixtures/

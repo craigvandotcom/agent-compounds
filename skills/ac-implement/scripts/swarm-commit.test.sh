@@ -335,6 +335,49 @@ if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'no-claim-receipt NOT-CHECKED
   pass "with no board the gate reports NOT-CHECKED and never implies clean"
 else fail "no-claim-receipt no-board: rc=$rc out=$out"; fi
 
+# --- 18. ledger-behind-upstream: a ledger commit whose upstream is ahead is refused ---------
+# The wedge precondition: two checkouts export overlapping content and one rebases. Here the
+# remote lands a ledger commit while the local copy is stale; the lane must refuse the local
+# ledger write BEFORE it exists and name the rule.
+R="$(new_repo ledger-behind-upstream)"
+git -C "$R" branch --set-upstream-to=origin/main main
+mkdir -p "$R/.beads"
+printf '%s\n' '{"id":"bd-ledger-demo","title":"demo","status":"open"}' >"$R/.beads/issues.jsonl"
+git -C "$R" add -- .beads/issues.jsonl
+git -C "$R" commit -qm "seed ledger"
+git -C "$R" push -q origin main
+# the remote (another checkout) exports and lands a ledger change
+printf '%s\n' '{"id":"bd-ledger-demo","title":"demo","status":"closed"}' >"$R/.beads/issues.jsonl"
+git -C "$R" add -- .beads/issues.jsonl
+git -C "$R" commit -qm "remote ledger change"
+git -C "$R" push -q origin main
+# the local checkout rewinds to the pre-remote state and makes its own ledger write
+git -C "$R" reset -q --hard HEAD~1
+printf '%s\n' '{"id":"bd-ledger-demo","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
+printf 'chore(beads): ledger write from a stale checkout\n' >"$R/msg.txt"
+before="$(git -C "$R" rev-parse HEAD)"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[ledger-behind-upstream\]'; then
+  pass "refuses a ledger commit whose upstream is ahead, naming ledger-behind-upstream"
+else fail "ledger-behind-upstream: rc=$rc out=$out"; fi
+if [ "$(git -C "$R" rev-parse HEAD)" = "$before" ]; then
+  pass "the refused ledger commit never landed"
+else fail "ledger-behind-upstream: the commit landed anyway"; fi
+
+# --- 19. ledger-behind-upstream NOT-CHECKED: no upstream configured -> the skip is reported --
+R="$(new_repo ledger-no-upstream)"
+mkdir -p "$R/.beads"
+printf '%s\n' '{"id":"bd-demo","title":"demo","status":"open"}' >"$R/.beads/issues.jsonl"
+git -C "$R" add -- .beads/issues.jsonl
+git -C "$R" commit -qm "seed ledger"
+git -C "$R" remote remove origin
+printf '%s\n' '{"id":"bd-demo","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
+printf 'chore(beads): ledger write, no upstream\n' >"$R/msg.txt"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path .beads/issues.jsonl --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'ledger-behind-upstream NOT-CHECKED'; then
+  pass "with no upstream configured the gate reports NOT-CHECKED and never implies clean"
+else fail "ledger no-upstream: rc=$rc out=$out"; fi
+
 echo "---"
 echo "swarm-commit.test.sh: $CASES case(s), $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]

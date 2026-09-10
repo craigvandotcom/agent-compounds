@@ -36,6 +36,11 @@
 #                      flight receipt dated after that refusal is on record — the refusal→
 #                      rework rule lives only in worker seed text, so a worker that ignores
 #                      it ships a diff whose premise-verification loop is void
+#   ledger-behind-upstream  the pathspec includes .beads/issues.jsonl and the tracking ref
+#                      is AHEAD of HEAD on it — refused BEFORE the commit exists, with the
+#                      exact remedy printed (no upstream configured is NOT-CHECKED, never
+#                      a silent skip; no fetch is made — the tracking ref is read as last
+#                      fetched)
 #
 # EXIT CODES
 #   0  committed (and pushed unless --no-push)      3  refusal — a rule above fired
@@ -213,6 +218,36 @@ if [ -n "$SUBJECT" ] && [ -f "$BOARD" ] && command -v jq >/dev/null 2>&1; then
   done
 elif [ -n "$SUBJECT" ]; then
   echo "swarm-commit: no-claim-receipt NOT-CHECKED — no board at '$BOARD' or jq unavailable; a refused-claim subject cannot be verified (this gate reports the skip; it never implies clean)"
+fi
+
+# ---------------------------------------------------------------------------------------
+# LEG — ledger-behind-upstream. .beads/issues.jsonl is a DERIVED file whose one-committer
+# rule is prose only: two checkouts exporting overlapping content wedge the ledger, and
+# nothing in the commit lane notices. A commit whose pathspec includes the ledger is
+# refused BEFORE it exists when the tracking ref is ahead of HEAD on that path, with the
+# exact remedy printed. No upstream configured is a NOT-CHECKED line, never a silent skip.
+# Deliberately no fetch: the tracking ref is compared AS LAST FETCHED (every automated
+# puller here is already --ff-only, so a stale ref costs one loud refusal at the next
+# pull). The refusal also prints br's sync witness root_hash so two checkouts can prove
+# their derived ledgers identical without going through git at all.
+# ---------------------------------------------------------------------------------------
+LEDGER_IN_PATHS=0
+for p in "${PATHS[@]}"; do
+  [ "$p" = ".beads/issues.jsonl" ] && LEDGER_IN_PATHS=1
+done
+if [ "$LEDGER_IN_PATHS" -eq 1 ]; then
+  AHEAD=$(git rev-list --count HEAD..@{upstream} -- .beads/issues.jsonl 2>/dev/null)
+  if [ -z "${AHEAD:-}" ]; then
+    echo "swarm-commit: ledger-behind-upstream NOT-CHECKED — no upstream configured for the ledger path; a stale tracking ref cannot be compared (this gate reports the skip; it never implies clean)"
+  elif [ "$AHEAD" -gt 0 ]; then
+    WITNESS=""
+    if command -v br >/dev/null 2>&1 && [ -f .beads/issues.jsonl ]; then
+      WITNESS=$(br sync --witness --json 2>/dev/null | jq -r '.witness.root_hash // ""' 2>/dev/null)
+    fi
+    remedy="upstream is $AHEAD ledger commit(s) ahead of HEAD — the derived ledger would diverge; remedy: git pull --ff-only, then br sync, then re-run"
+    [ -n "$WITNESS" ] && remedy="$remedy. Sync witness root_hash: $WITNESS"
+    refuse ledger-behind-upstream "$remedy"
+  fi
 fi
 
 git add -- "${PATHS[@]}" || { echo "swarm-commit: git add failed; nothing committed, nothing pushed" >&2; exit 5; }
