@@ -1,15 +1,15 @@
 ---
 name: ac-polish
-description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, four modes, selected by argument; seams mode traces one object through three lenses (object · flow · boundary), converges on the merged maps, and derives its seams into a plan. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint", "ac-seams", "study the seams of", "seams plan for".'
+description: 'Polish a plan, an epic''s bead set, or a code scope to FIXPOINT — a stateless severity-gated reader per round, stamped only against a measured empty diff at round >= 2. One engine, six modes, selected by argument; seams mode traces one object through three lenses (object · flow · boundary), converges on the merged maps, and derives its seams into a plan. Triggers: "ac2 polish", "polish the plan", "polish the beads", "polish this code", "refine the ac2 beads", "run polish to fixpoint", "ac-seams", "study the seams of", "seams plan for".'
 ---
 
-# ac-polish — one fixpoint engine, four modes
+# ac-polish — one fixpoint engine, six modes
 
 ## I/O Contract
 
 |                  |                                                                                 |
 | ---------------- | ------------------------------------------------------------------------------- |
-| **Input**        | `plan <path>` · `bead <epic-id>` · `code <scope> --target <bead-id>` · `seams [<target>]` · `load <seams-map>` (draft) |
+| **Input**        | `plan <path>` · `bead <epic-id>` · `code <scope> --target <bead-id>` · `ui <scope> --target <bead-id>` · `seams [<target>]` · `load <seams-map>` (draft) |
 | **Output**       | A fixpoint-stamped artifact, or findings to the human and NO stamp                |
 | **Artifacts**    | `<state>/round-N.sha` per round · `<state>/receipt.txt` · the stamp               |
 | **Verification** | `skills/_tools/polish-fixpoint.sh` (the gate) · `polish-fixpoint.test.sh` (its proof) |
@@ -25,11 +25,11 @@ The argument picks ONE workflow file — a mandatory load, the ONLY place a mode
 | `code` | `workflows/code.md` | `references/code-checklist.md` |
 | `seams` | `workflows/seams.md` | `references/seams-checklist.md` · `references/seams-reader-prompt.md` · `references/seams-plan-template.md` |
 | `load` (after seams; machinery built, awaiting first run) | `workflows/load.md` | `references/load-checklist.md` · `references/load-reader-prompt.md` |
+| `ui` | `workflows/ui.md` | `references/ui-checklist.md` |
 
 Each workflow binds five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and may bind a
 sixth, READERS: how many readers a round spawns, what they are sent, and how their findings
-reach ARTIFACT (default: one reader, `reader-prompt.md` verbatim, its edits applied directly).
-`references/ui-checklist.md` holds the objective UI-compliance checklist the forthcoming `ui` mode (a WS2 bead) will run. It names its hand-off. Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
+reach ARTIFACT (default: one reader, `reader-prompt.md` verbatim, its edits applied directly). Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
 
 ## Division of labour — strict, and the reason this works
 

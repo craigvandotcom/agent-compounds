@@ -11,6 +11,32 @@ symmetry · `sensor-5` transition specificity (all in `ac-ui-polish/reference/se
 `DOM` = `agent-browser eval` / `page.evaluate` on the rendered page · `axe` = the a11y engine
 when wired in the app. Static grep narrows; the DOM decides.
 
+## Theme correctness — the three sensors, plus design.md token conformance
+
+The eye crashes on this axis: it sees one theme and it cannot resolve a 3.9:1 ratio or a raw
+`#0c1014` that happens to look fine where you are standing. These four questions ARE the pass
+for the sensor layer (`ac-ui-polish/reference/sensors.md`), and **each names the command that
+decides it**. Run them in EVERY theme — a defect invisible in the theme you checked is the
+whole class. A cell no sensor ran on is `unmeasured`, never a pass.
+
+- **Contrast (sensor-1)** — every text node meets WCAG AA: ≥ 4.5:1 body, ≥ 3:1 large/bold, in
+  BOTH themes. Oracle: the sensor-1 `eval` snippet run once per theme on each captured route;
+  **pass = `failures === 0` AND `unmeasurable === 0`**. An `unmeasurable` node is a loud fail
+  (the parser could not resolve its paint), never a zero.
+- **Hardcoded colour (sensor-2)** — no raw hex/rgb/hsl literal and no theme-blind
+  `text-white`/`bg-black` on a surface that flips with the theme. Oracle: the sensor-2 `rg`
+  commands over the component dirs; triage every hit STRUCTURAL (finding) vs OVERLAY /
+  BRAND-LOCKED (exempt). The `bg-white/N` alpha form on a structural element is the class that
+  keeps escaping — in one theme it is the whole visible structure.
+- **Token symmetry (sensor-3)** — every custom property used as a surface or text colour is
+  defined in BOTH theme blocks. Oracle: extract the `--var` names from the light and dark blocks
+  of the token CSS and diff the sets; a var in one block but not the other (and not deliberately
+  theme-independent) is a finding — it silently keeps a stale value when the theme flips.
+- **design.md token conformance** — every colour, spacing, radius and type value in scope is a
+  token the app's `CORE/design.md` defines, not a raw Tailwind palette value or an off-scale
+  literal. Oracle: sensor-2's grep cross-checked against `design.md`'s token set; a value off
+  the scale is a finding even when it renders correctly in the theme you checked.
+
 ## A11y — labels, ARIA, semantics, keyboard, heading order
 
 - **Alt/accessible name on every image**: `DOM` — `document.querySelectorAll('img')`, flag any

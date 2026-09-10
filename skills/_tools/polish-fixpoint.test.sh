@@ -202,6 +202,17 @@ else
   FAIL=$((FAIL+1)); echo "FAIL load receipt missing or malformed"; fi
 expect "unknown mode still NOT-GATED"           2 "NOT-GATED" -- --mode sideways --target x --state "$S5G" --artifact "$W/p5g.md" --round 1 --pre "$(sha "$W/p5g.md")"
 
+# --- 5h. ui mode: code's sibling, bead-side receipt ---------------------------
+expect "ui mode without --target -> NOT-GATED"  2 "NOT-GATED" -- --mode ui --state "$W/s5h" --artifact "$W/p0.md" --round 1 --pre "$(sha "$W/p0.md")"
+S5H="$W/s5h"; mk_plan a "$W/p5h.md"; PRE=$(sha "$W/p5h.md")
+mk_plan b "$W/p5h.md"
+"$SCRIPT" --mode ui --target ac-fixture --state "$S5H" --artifact "$W/p5h.md" --round 1 --pre "$PRE" >/dev/null 2>&1 || true
+expect "ui mode, clean round 2 -> STAMPED"      0 "STAMPED mode=ui round=2" -- --mode ui --target ac-fixture --state "$S5H" --artifact "$W/p5h.md" --round 2 --pre "$(sha "$W/p5h.md")" --findings 0 --dry-run
+if grep -q "mode=ui" "$S5H/receipt.txt" 2>/dev/null; then
+  PASS=$((PASS+1)); echo "ok   ui receipt records mode=ui"
+else
+  FAIL=$((FAIL+1)); echo "FAIL ui receipt missing mode=ui"; fi
+
 # --- 6. FROZEN INPUT: an out-of-band amendment ends the loop -------------------
 S6="$W/s6"; mk_plan a "$W/p6.md"; PRE=$(sha "$W/p6.md")
 mk_plan b "$W/p6.md"
