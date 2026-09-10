@@ -12,8 +12,14 @@ Enforced here:
     probe-bearing; `epic` / `decision` / `investigation` are exempt.
   - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
     of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
-  - a subagent (`agent_id` on stdin) files nothing but a `human-gate` fork — its
-    discovered work goes back to the batch boundary as a PROPOSED-BEAD block.
+  - a subagent (`agent_id` on stdin) files nothing but a human-gate FORK — a `decision`
+    bead or a `DECISION:`/`ACTION:` card; its discovered work goes back to the batch
+    boundary as a PROPOSED-BEAD block.
+
+Command position is resolved through the shapes a create can hide in: command
+substitution (`$(br create …)`, backticks), a shell `-c` wrapper (`sh -c 'br create …'`),
+and command wrappers (`xargs`/`env`/`sudo` … `br create`). Only a real command-position
+`br create` is inspected — a description or heredoc that quotes the text keeps passing.
 
 WHY THIS IS A HARD GATE, not an advisory (Craig, 2026-08-23):
 `origin:` already existed as an OPTIONAL hint — plan 2026-07-16-1729-epic-bead-quality-
@@ -52,6 +58,11 @@ import sys
 SUBCOMMANDS = {"create", "q"}
 CONTROL = {"&&", "||", ";", "|", "(", ")", "{", "}", "then", "do", "else", "fi", "done", "!"}
 HELP = {"-h", "--help"}
+# Command-position wrappers: `xargs br create`, `env br create`, `sudo br create` etc. are
+# still a bead create; skip the wrapper (and its flags) before looking for `br`. Shell
+# wrappers that carry the command in a `-c` argument are handled by shell_c_commands().
+WRAPPERS = {"env", "xargs", "sudo", "command", "exec", "nice", "nohup", "time", "stdbuf", "setsid"}
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
 
 # Readiness: `refined` is stamped exclusively by a refine pass, never at creation, so in
@@ -210,10 +221,17 @@ def strip_heredoc_bodies(command):
 
 
 def newlines_to_separators(command):
-    """Newline is a command separator, like ';' — but never inside a quoted string.
+    """Turn unquoted command *inlining* into separators, so the tokenizer sees the inner
+    command in command position.
 
-    The `;` is space-padded: shlex only splits on whitespace, so a bare `;` glued to
-    a token would hide the boundary from CONTROL the same way the newline did.
+    A bare newline is a command separator, like ';'. So are the delimiters of command
+    substitution — `$(`, its closed `)`, and a backtick pair — because `out=$(br create …)`
+    and `` `br create …` `` run the inner `br create` as a real command. Without this the
+    inner `br create` lands mid-token-stream (e.g. as `out=$(br`) and is never inspected,
+    which is exactly the evasion this guard exists to block. All separators are
+    space-padded: shlex only splits on whitespace, so a glued delimiter would hide the
+    boundary from CONTROL. Never touched inside a quoted string, so a description that
+    quotes `br create` keeps passing.
     """
     out = []
     quote = None
@@ -232,7 +250,7 @@ def newlines_to_separators(command):
         elif ch in "'\"":
             quote = ch
             out.append(ch)
-        elif ch == "\n":
+        elif ch == "\n" or ch == "`" or ch == "(" or ch == ")":
             out.append(" ; ")
         else:
             out.append(ch)
@@ -240,11 +258,24 @@ def newlines_to_separators(command):
 
 
 def is_bead_create(cmd):
-    """Return the subcommand if cmd is a `br create`/`br q` invocation, else None."""
+    """Return the subcommand if cmd is a `br create`/`br q` invocation, else None.
+
+    Skips leading wrapper words (`xargs`, `env`, `sudo`, …) and their flags, then
+    `VAR=value` assignments, so `xargs br create …` and `env FOO=1 br create …` are still
+    seen. A wrapper's command-in-`-c` form is expanded by `shell_c_commands()` instead.
+    """
     i = 0
-    # Skip leading VAR=value environment assignments.
-    while i < len(cmd) and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", cmd[i]):
-        i += 1
+    while i < len(cmd):
+        name = cmd[i].rsplit("/", 1)[-1]
+        if name in WRAPPERS:
+            i += 1
+            while i < len(cmd) and cmd[i].startswith("-") and cmd[i] not in ("-", "--"):
+                i += 1
+            continue
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", cmd[i]):
+            i += 1
+            continue
+        break
     if i + 1 >= len(cmd):
         return None
     name = cmd[i].rsplit("/", 1)[-1]
@@ -252,6 +283,23 @@ def is_bead_create(cmd):
         return None
     sub = cmd[i + 1]
     return sub if sub in SUBCOMMANDS else None
+
+
+def shell_c_commands(command):
+    """Yield the command strings a shell wrapper runs via its `-c` argument.
+
+    `sh -c 'br create …'`, `bash -c "br create …"` carry the real command as a quoted
+    argument, so the shlex command-position scan never sees a `br` token. Tokenize and
+    hand each `-c` argument back to the caller to run through the same pipeline.
+    """
+    try:
+        tokens = shlex.split(command, comments=False, posix=True)
+    except ValueError:
+        return
+    for i, tok in enumerate(tokens):
+        if tok in ("-c", "--command") and 0 < i and tokens[i - 1].rsplit("/", 1)[-1] in SHELLS:
+            if i + 1 < len(tokens):
+                yield tokens[i + 1]
 
 
 def flag_value(cmd, names, prefixes):
@@ -357,6 +405,53 @@ def has_label(cmd, name):
     return name in all_labels(cmd)
 
 
+def is_subagent_fork(cmd):
+    """True only for a real human-gate FORK: a `decision` bead, or a card whose title
+    carries the `DECISION:`/`ACTION:` prefix. The bare `human-gate` label is not enough —
+    otherwise any bead is fileable by appending it, which is the label-only hole this
+    closes. (The impact-axis exemption above still keys on the label alone; a fork is not
+    an impact class regardless of filer.)
+    """
+    if not has_label(cmd, SUBAGENT_EXEMPT_LABEL):
+        return False
+    if bead_type(cmd) == "decision":
+        return True
+    title = cmd[2] if len(cmd) > 2 else ""
+    return title.startswith("DECISION:") or title.startswith("ACTION:")
+
+
+def scan_tokens(tokens, is_subagent):
+    """Run every command in a token stream through the full contract, refusing on the
+    first violation. Shared by the outer command and any wrapper-expanded inner command."""
+    for cmd in commands(tokens):
+        sub = is_bead_create(cmd)
+        if sub is None:
+            continue
+        if any(t in HELP for t in cmd):
+            continue
+        if is_subagent and not is_subagent_fork(cmd):
+            print(SUBAGENT_MESSAGE.format(sub=sub), file=sys.stderr)
+            sys.exit(2)
+        if not has_origin(cmd):
+            print(MESSAGE.format(sub=sub), file=sys.stderr)
+            sys.exit(2)
+        typ = bead_type(cmd)
+        if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
+            print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
+            sys.exit(2)
+        if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
+            print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
+            sys.exit(2)
+        origin = origin_skill(cmd)
+        if (
+            origin in IMPACT_REQUIRED_ORIGINS
+            and not has_label(cmd, SUBAGENT_EXEMPT_LABEL)
+            and not valid_impact(cmd)
+        ):
+            print(IMPACT_MESSAGE.format(sub=sub, origin=origin), file=sys.stderr)
+            sys.exit(2)
+
+
 def main():
     raw = sys.stdin.read()
     data = json.loads(raw) if raw.strip() else {}
@@ -385,33 +480,16 @@ def main():
     except ValueError:
         allow()
 
-    for cmd in commands(tokens):
-        sub = is_bead_create(cmd)
-        if sub is None:
+    scan_tokens(tokens, is_subagent)
+
+    # A shell wrapper runs the real command from its `-c` argument; scan each too.
+    for inner in shell_c_commands(command):
+        inner = newlines_to_separators(strip_heredoc_bodies(inner))
+        try:
+            inner_tokens = shlex.split(inner, comments=False, posix=True)
+        except ValueError:
             continue
-        if any(t in HELP for t in cmd):
-            continue
-        if is_subagent and not has_label(cmd, SUBAGENT_EXEMPT_LABEL):
-            print(SUBAGENT_MESSAGE.format(sub=sub), file=sys.stderr)
-            sys.exit(2)
-        if not has_origin(cmd):
-            print(MESSAGE.format(sub=sub), file=sys.stderr)
-            sys.exit(2)
-        typ = bead_type(cmd)
-        if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
-            print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
-            sys.exit(2)
-        if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
-            print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
-            sys.exit(2)
-        origin = origin_skill(cmd)
-        if (
-            origin in IMPACT_REQUIRED_ORIGINS
-            and not has_label(cmd, SUBAGENT_EXEMPT_LABEL)
-            and not valid_impact(cmd)
-        ):
-            print(IMPACT_MESSAGE.format(sub=sub, origin=origin), file=sys.stderr)
-            sys.exit(2)
+        scan_tokens(inner_tokens, is_subagent)
 
     allow()
 

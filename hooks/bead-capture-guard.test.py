@@ -86,6 +86,20 @@ cases = [
           "subagent, non-gate create -> refused", {"agent_id": "sub-1"}),
   (ALLOW, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
           "subagent, human-gate fork -> admitted", {"agent_id": "sub-1"}),
+  # --- evasion classes (ac-review 2026-09-10): the guard must see a `br create` reached
+  # through command substitution, a shell `-c` wrapper, or a command wrapper; and the
+  # subagent refusal must key on a real FORK, not the bare human-gate label.
+  (BLOCK, 'out=$(br create "x" -t task)',         "command substitution, no origin"),
+  (BLOCK, '`br create "x" -t task`',              "backtick substitution, no origin"),
+  (BLOCK, "sh -c 'br create \"x\" -t task'",      "shell -c wrapper, no origin"),
+  (BLOCK, 'bash -c "br create x -t task"',        "bash -c wrapper, no origin"),
+  (BLOCK, 'xargs br create "x" -t task',          "xargs wrapper, no origin"),
+  (BLOCK, 'env br create "x" -t task',            "env wrapper, no origin"),
+  (ALLOW, 'out=$(date)',                          "substitution with no bead create"),
+  (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data,human-gate" -d "- AC: x. Probe: `true` - tier: none"',
+          "subagent, bare human-gate on a task -> refused", {"agent_id": "sub-1"}),
+  (ALLOW, 'br create "ACTION: do x" -t task -l "origin:ac-review,human-gate" -d "<body>"',
+          "subagent, ACTION fork -> admitted", {"agent_id": "sub-1"}),
 ]
 fails = 0
 for case in cases:
