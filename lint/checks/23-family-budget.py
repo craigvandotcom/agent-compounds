@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # ---
 # id: 23-family-budget
-# prevents: the lean-family files growing without a number anyone defends — every previous "keep it small" rule was prose, and every one of them lost; the cap is counted over the LOADED PATH with the mandatory-load set DERIVED from the pointers, not a hardcoded list (the measured evasion with an extra step)
+# prevents: the lean-family files growing without a number anyone defends — every previous "keep it
+#   small" rule was prose, and every one of them lost; the cap is counted over the LOADED PATH with
+#   the mandatory-load set DERIVED from the pointers, not a hardcoded list (the measured evasion with
+#   an extra step)
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/23-family-budget

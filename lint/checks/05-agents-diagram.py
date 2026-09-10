@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 05-agents-diagram
-# prevents: the repo map lying — an AGENTS.md diagram naming a top-level path that is not on disk, with the gitignored carve-out keeping a local-only dir (absent from a bare CI clone) from holding registry-lint red forever
+# prevents: the repo map lying — an AGENTS.md diagram naming a top-level path that is not on disk, with
+#   the gitignored carve-out keeping a local-only dir (absent from a bare CI clone) from holding
+#   registry-lint red forever
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/05-agents-diagram

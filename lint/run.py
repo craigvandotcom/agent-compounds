@@ -72,12 +72,12 @@ def changed_files(root):
             ["git", "diff", "--name-only", "HEAD"], cwd=root,
             capture_output=True, text=True, timeout=30,
         )
-        out = set(l for l in diff.stdout.splitlines() if l.strip())
+        out = set(line for line in diff.stdout.splitlines() if line.strip())
         untracked = subprocess.run(
             ["git", "ls-files", "--others", "--exclude-standard"], cwd=root,
             capture_output=True, text=True, timeout=30,
         )
-        out |= set(l for l in untracked.stdout.splitlines() if l.strip())
+        out |= set(line for line in untracked.stdout.splitlines() if line.strip())
         return out
     except (subprocess.SubprocessError, OSError):
         return None  # cannot know -> run everything, never silently skip
@@ -151,10 +151,11 @@ def main():
                 "file": os.path.relpath(c, args.root),
                 "exit": rc,
                 "seconds": round(secs, 2),
-                "findings": [l for l in out.splitlines() if l.strip()] + [l for l in err.splitlines() if l.strip() and l.startswith("FAIL")],
+                "findings": ([line for line in out.splitlines() if line.strip()]
+                             + [line for line in err.splitlines()
+                                if line.strip() and line.startswith("FAIL")]),
             })
 
-    ids = {r["id"]: r for r in results}
     for cid, s in sorted(skipped.items()):
         results.append({"id": cid, "file": None, "exit": None, "seconds": 0,
                         "findings": [], "skipped_scope": s})

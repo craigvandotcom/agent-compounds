@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 03-frontmatter-conformance
-# prevents: an unparseable or lying frontmatter block — a prose sentence mis-inserted between name: and description: that both presence greps read as green, a name that does not match its directory, an agent declaring a concrete model instead of a tier, and a tier no harness can stamp
+# prevents: an unparseable or lying frontmatter block — a prose sentence mis-inserted between name:
+#   and description: that both presence greps read as green, a name that does not match its directory,
+#   an agent declaring a concrete model instead of a tier, and a tier no harness can stamp
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/03-frontmatter-conformance
@@ -77,10 +79,10 @@ def check_skill(rel, path):
     with open(path, encoding="utf-8", errors="replace") as fh:
         text = fh.read()
     lines = text.split("\n")
-    name_val = next((l[len("name:"):].strip() for l in lines if l.startswith("name:")), "")
+    name_val = next((line[len("name:"):].strip() for line in lines if line.startswith("name:")), "")
     if name_val != name:
         fail(f"{rel}: name '{name_val}' != dir name '{name}'")
-    desc_val = next((l[len("description:"):].strip() for l in lines if l.startswith("description:")), "")
+    desc_val = next((line[len("description:"):].strip() for line in lines if line.startswith("description:")), "")
     if not desc_val:
         fail(f"{rel}: description is empty or missing")
 
@@ -124,16 +126,17 @@ def check_agent(rel, path):
     name = os.path.basename(path)[:-3]
     with open(path, encoding="utf-8", errors="replace") as fh:
         lines = fh.read().split("\n")
-    name_val = next((l[len("name:"):].strip() for l in lines if l.startswith("name:")), "")
+    name_val = next((line[len("name:"):].strip() for line in lines if line.startswith("name:")), "")
     if name_val != name:
         fail(f"{rel}: name '{name_val}' != filename '{name}'")
-    tier_val = next((l[len("tier:"):].strip() for l in lines if l.startswith("tier:")), "")
+    tier_val = next((line[len("tier:"):].strip() for line in lines if line.startswith("tier:")), "")
     if not tier_val:
         fail(f"{rel}: no 'tier:' — every registry agent must declare one")
     elif tier_val not in VALID_TIERS:
         fail(f"{rel}: tier '{tier_val}' not in {{orchestrator coordinator worker}}")
-    if any(l.startswith("model:") for l in lines):
-        fail(f"{rel}: 'model:' is forbidden in the registry — declare 'tier:' and let harnesses.json agent_models resolve it per harness")
+    if any(line.startswith("model:") for line in lines):
+        fail(f"{rel}: 'model:' is forbidden in the registry — declare 'tier:' and let "
+             "harnesses.json agent_models resolve it per harness")
 
 
 def check_harness_tiers(root):
@@ -180,7 +183,8 @@ def main():
         check_harness_tiers(root)
 
     if scanned == 0:
-        print(f"{CHECK_ID} NOT-CHECKED: no skills, agents or harnesses.json under {root} — verified nothing", file=sys.stderr)
+        print(f"{CHECK_ID} NOT-CHECKED: no skills, agents or harnesses.json under {root} — "
+              "verified nothing", file=sys.stderr)
         return 2
     for f in findings:
         print(f"FAIL {CHECK_ID}: {f}")

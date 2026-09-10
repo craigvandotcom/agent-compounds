@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 24-description-length
-# prevents: a skill description silently dropped by a consumer harness — opencode documents a 1-1024 character cap on skill descriptions, and the registry was once inside 6 characters of the limit with nothing watching
+# prevents: a skill description silently dropped by a consumer harness — opencode documents a 1-1024
+#   character cap on skill descriptions, and the registry was once inside 6 characters of the limit
+#   with nothing watching
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/24-description-length

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 07-consumer-symlinks
-# prevents: a dangling symlink in a consumer's harness layer (.claude/, .agents/, .factory/ of the org dirs and every deploy target) — a dead pointer that breaks a skill load or silently skips one
+# prevents: a dangling symlink in a consumer's harness layer (.claude/, .agents/, .factory/ of the org
+#   dirs and every deploy target) — a dead pointer that breaks a skill load or silently skips one
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/07-consumer-symlinks

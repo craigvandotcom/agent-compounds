@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # ---
 # id: 34-no-bead-subject-agreement
-# prevents: a real behavioral change shipping under [no-bead] — board-truth.sh drops [no-bead] commits wholesale from the review range, so the change is invisible to range-derived review forever (measured: 9b1d745, a stamp-refined-fixpoint.test.sh behavior change under a "Sensor-log append only" subject)
+# prevents: a real behavioral change shipping under [no-bead] — board-truth.sh drops [no-bead]
+#   commits wholesale from the review range, so the change is invisible to range-derived review
+#   forever (measured: 9b1d745, a stamp-refined-fixpoint.test.sh behavior change under a "Sensor-log
+#   append only" subject)
 # scope: LEDGER
 # severity: fail
 # fixture: lint/fixtures/34-no-bead-subject-agreement
@@ -197,7 +200,7 @@ def commit_files(root, sha):
     rc, out = git(root, "show", sha, "--name-only", "--format=")
     if rc != 0:
         return []
-    return [l for l in out.splitlines() if l.strip()]
+    return [line for line in out.splitlines() if line.strip()]
 
 
 def main():

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 6-portability
-# prevents: app-specific strings (schema names, app prose, local endpoints, old tracker ids) in skills/ text — the zero-tolerance grep layer under the instance-token gate's allowlist policy
+# prevents: app-specific strings (schema names, app prose, local endpoints, old tracker ids) in
+#   skills/ text — the zero-tolerance grep layer under the instance-token gate's allowlist policy
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/6-portability

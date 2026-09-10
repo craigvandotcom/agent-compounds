@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 00-meta
-# prevents: an undeclared or unfired check (no id/prevents/scope/severity/fixture, or a fixture that does not go RED) scans nothing and passes
+# prevents: an undeclared or unfired check (no id/prevents/scope/severity/fixture, or a fixture
+#   that does not go RED) scans nothing and passes
 # scope: CHECKS
 # severity: fail
 # fixture: lint/checks/00-meta.test.sh

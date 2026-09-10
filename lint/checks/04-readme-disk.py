@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 04-readme-disk
-# prevents: README drift — a skill or agent that exists on disk but is never mentioned, a README table row linking to a skill or agent that is not there, and the link-existence sub-checks silently no-oping when README.md itself is missing
+# prevents: README drift — a skill or agent that exists on disk but is never mentioned, a README table
+#   row linking to a skill or agent that is not there, and the link-existence sub-checks silently
+#   no-oping when README.md itself is missing
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/04-readme-disk
@@ -53,7 +55,8 @@ def main():
         with open(readme, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
     else:
-        findings.append(f"README: {os.path.abspath(readme)} is missing — Check 4c/4d's link-existence sub-checks silently no-op without it")
+        findings.append(f"README: {os.path.abspath(readme)} is missing — Check 4c/4d's "
+                        "link-existence sub-checks silently no-op without it")
 
     skills_dir = os.path.join(root, "skills")
     if os.path.isdir(skills_dir):

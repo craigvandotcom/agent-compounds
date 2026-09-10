@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 11-g-series-conformance
-# prevents: a G-series doctrine landing silently regressing — the cross-cadence schedule table, the backlog shape-check, the QA-freshness rule, or the skill-hotfix emit instruction going missing, or the retired UI Validation Suite block surviving
+# prevents: a G-series doctrine landing silently regressing — the cross-cadence schedule table, the
+#   backlog shape-check, the QA-freshness rule, or the skill-hotfix emit instruction going missing, or
+#   the retired UI Validation Suite block surviving
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/11-g-series-conformance

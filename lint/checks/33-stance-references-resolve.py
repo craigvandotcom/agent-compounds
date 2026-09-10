@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 33-stance-references-resolve
-# prevents: skill or hook text naming a subagent stance that no longer exists — "engineer" survived its 2026-06-11 rename for months and the review/* agents went spawn-orphaned because nothing checked that spawn instructions resolve to the roster
+# prevents: skill or hook text naming a subagent stance that no longer exists — "engineer" survived
+#   its 2026-06-11 rename for months and the review/* agents went spawn-orphaned because nothing
+#   checked that spawn instructions resolve to the roster
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/33-stance-references-resolve
@@ -82,20 +84,23 @@ def main():
         for m in DECORATED.finditer(text):
             name = m.group(1)
             if name not in known:
-                findings.append(f"{rel}: '{m.group(0).strip()}' — no agent named '{name}' in agents/ (stance references must resolve; write a lens prompt instead)")
+                findings.append(f"{rel}: '{m.group(0).strip()}' — no agent named '{name}' in agents/ "
+                                "(stance references must resolve; write a lens prompt instead)")
         for m in SUBAGENT_TYPE.finditer(text):
             name = m.group(1)
             if name not in known:
                 findings.append(f"{rel}: subagent_type \"{name}\" — no agent named '{name}' in agents/")
 
     if scanned == 0:
-        print(f"{CHECK_ID} NOT-CHECKED: no .md files found under skills/hooks/commands — verified nothing", file=sys.stderr)
+        print(f"{CHECK_ID} NOT-CHECKED: no .md files found under skills/hooks/commands — verified "
+              "nothing", file=sys.stderr)
         return 2
     for f in findings:
         print(f"FAIL {CHECK_ID}: {f}")
     if findings:
         return 1
-    print(f"  ok: {CHECK_ID} — every named subagent stance resolves ({scanned} file(s) scanned, roster: {', '.join(sorted(roster))})")
+    print(f"  ok: {CHECK_ID} — every named subagent stance resolves ({scanned} file(s) scanned, "
+          f"roster: {', '.join(sorted(roster))})")
     return 0
 
 

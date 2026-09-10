@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 26-readme-ghosts
-# prevents: a README table row naming a skill that no longer exists on disk — an archived or renamed skill keeping a standing row that advertises a dead invocation (Check 4c resolves only rows written as ](./skills/<name>/) links, so a plain-text ghost row passes unseen)
+# prevents: a README table row naming a skill that no longer exists on disk — an archived or renamed
+#   skill keeping a standing row that advertises a dead invocation (Check 4c resolves only rows
+#   written as ](./skills/<name>/) links, so a plain-text ghost row passes unseen)
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/26-readme-ghosts

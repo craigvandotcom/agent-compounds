@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 15-line-ceilings
-# prevents: an outlier or brand-new oversized SKILL.md slipping past the per-file no-net-growth ratchet — the coarse conductor-tier (1110) and standard-tier (730) line ceilings, with the one-way ratchet that refuses a raised constant that outruns its measured tier
+# prevents: an outlier or brand-new oversized SKILL.md slipping past the per-file no-net-growth
+#   ratchet — the coarse conductor-tier (1110) and standard-tier (730) line ceilings, with the one-way
+#   ratchet that refuses a raised constant that outruns its measured tier
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/15-line-ceilings

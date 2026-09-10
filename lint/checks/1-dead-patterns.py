@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 1-dead-patterns
-# prevents: dead patterns (strings naming retired machinery) living in skills/ and agents/ text — zero tolerance; a reader who copies the string revives the dead thing
+# prevents: dead patterns (strings naming retired machinery) living in skills/ and agents/ text —
+#   zero tolerance; a reader who copies the string revives the dead thing
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/1-dead-patterns

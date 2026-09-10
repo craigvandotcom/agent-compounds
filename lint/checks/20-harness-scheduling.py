@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 20-harness-scheduling
-# prevents: a proof-test harness that no workflow runs — coverage that exists as a file but never executes, the way two harnesses sat red at HEAD for an unknown period because nothing executed a single one
+# prevents: a proof-test harness that no workflow runs — coverage that exists as a file but never
+#   executes, the way two harnesses sat red at HEAD for an unknown period because nothing executed a
+#   single one
 # scope: HARNESSES
 # severity: fail
 # fixture: lint/fixtures/20-harness-scheduling

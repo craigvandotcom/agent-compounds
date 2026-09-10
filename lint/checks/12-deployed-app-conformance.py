@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 12-deployed-app-conformance
-# prevents: deployed apps' every-prompt context (hook files + AGENTS.md) still routing agents to dead pipeline commands, dead delegation tools, or dead pipeline stage names left behind by a doctrine-landing sweep
+# prevents: deployed apps' every-prompt context (hook files + AGENTS.md) still routing agents to dead
+#   pipeline commands, dead delegation tools, or dead pipeline stage names left behind by a
+#   doctrine-landing sweep
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/12-deployed-app-conformance
@@ -23,7 +25,9 @@ scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
 this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
 window is lost, never a false pass on a bare run.
 
-Exit: 0 clean, 1 dead names, 2 no consumer dir exists (NOT-GATED, never a pass).
+Exit: 0 clean, or consumer root absent (SKIP, disclosed — the check audits
+files OUTSIDE this repo and a bare checkout has none); 1 dead names;
+2 consumer root present but no consumer dir resolves (NOT-GATED, never a pass).
 """
 
 import os
@@ -53,6 +57,11 @@ def disp(path):
 
 
 def scan():
+    base = consumers.base()
+    if not os.path.isdir(base):
+        print(f"12-deployed-app-conformance: SKIP — consumer root {base} absent "
+              "(a consumer-less checkout); nothing to conform", file=sys.stderr)
+        return 0
     scanned = 0
     for d in consumers.consumer_dirs():
         if not os.path.isdir(d):

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 16-mirror-fidelity
-# prevents: a mandated verbatim mirror drifting — the child-spawn environment contract must be pasted byte-identical into every file that constructs a child prompt, and an unparsed marker must fail loudly instead of silently dropping what it cannot classify
+# prevents: a mandated verbatim mirror drifting — the child-spawn environment contract must be
+#   pasted byte-identical into every file that constructs a child prompt, and an unparsed marker must
+#   fail loudly instead of silently dropping what it cannot classify
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/16-mirror-fidelity

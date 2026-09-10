@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 10-d-series-conformance
-# prevents: a D-series doctrine landing silently regressing — a canon file losing its load-bearing marker (write-back section, sole-owner statement, defer language), a stale wave-branch pattern surviving, or the tier-age-ordering note going missing
+# prevents: a D-series doctrine landing silently regressing — a canon file losing its load-bearing
+#   marker (write-back section, sole-owner statement, defer language), a stale wave-branch pattern
+#   surviving, or the tier-age-ordering note going missing
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/10-d-series-conformance

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 29-stage-conformance
-# prevents: a skill declaring a hand-off the stage table does not carry — the canon table (skills/ac-pipeline/references/stage-table.md) rots silently while SKILL.md prose routes work elsewhere
+# prevents: a skill declaring a hand-off the stage table does not carry — the canon table
+#   (skills/ac-pipeline/references/stage-table.md) rots silently while SKILL.md prose routes work
+#   elsewhere
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/29-stage-conformance
@@ -133,7 +135,7 @@ def scan(root, chain, allowlist_path):
     allowed = set()
     if allowlist_path:
         with open(allowlist_path, encoding="utf-8") as fh:
-            allowed = {l.strip() for l in fh if l.strip() and not l.startswith("#")}
+            allowed = {line.strip() for line in fh if line.strip() and not line.startswith("#")}
 
     scanned = 0
     hits_by_skill = {}
@@ -192,8 +194,8 @@ def scan(root, chain, allowlist_path):
                     f"allowlist has no committed version at base {base[:12]} "
                     "— this is the seed; the shrink-only growth ratchet starts once it lands")
             else:
-                committed = {l.strip() for l in proc.stdout.splitlines()
-                             if l.strip() and not l.startswith("#")}
+                committed = {line.strip() for line in proc.stdout.splitlines()
+                             if line.strip() and not line.startswith("#")}
                 for entry in sorted(allowed - committed):
                     violations.append(
                         f"allowlist GREW vs base {base[:12]}: '{entry}' is not in the committed list "

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 31-orphan-references
-# prevents: a references/, reference/ or workflows/ file nothing in the registry points at — dead weight the loaded-path budget still counts when it is unconditional, and a copy that drifts with no reader to notice (nothing enumerated the reference tree against its readers before)
+# prevents: a references/, reference/ or workflows/ file nothing in the registry points at — dead
+#   weight the loaded-path budget still counts when it is unconditional, and a copy that drifts with
+#   no reader to notice (nothing enumerated the reference tree against its readers before)
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/31-orphan-references
@@ -121,7 +123,8 @@ def committed_entries(root, base):
     )
     if proc.returncode != 0:
         return None
-    return [l.strip() for l in proc.stdout.splitlines() if l.strip() and not l.startswith("#")]
+    return [line.strip() for line in proc.stdout.splitlines()
+            if line.strip() and not line.startswith("#")]
 
 
 def load_allowlist(path):
@@ -143,7 +146,8 @@ def scan(root):
 
     candidates = sorted(p for p in scope.LIVE_TEXT if is_candidate(p))
     if not candidates:
-        print("31-orphan-references NOT-CHECKED: no references/, reference/ or workflows/ file under this root — nothing scanned")
+        print("31-orphan-references NOT-CHECKED: no references/, reference/ or workflows/ file under "
+              "this root — nothing scanned")
         return 2
 
     orphans = []

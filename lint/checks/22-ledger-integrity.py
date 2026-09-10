@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 22-ledger-integrity
-# prevents: a friction ledger and its controls drifting apart — entries citing controls the constitution does not define, receipts nobody kept, and a friction re-observed after its control landed accruing silently instead of surfacing as a FAILED CONTROL
+# prevents: a friction ledger and its controls drifting apart — entries citing controls the
+#   constitution does not define, receipts nobody kept, and a friction re-observed after its control
+#   landed accruing silently instead of surfacing as a FAILED CONTROL
 # scope: LEDGER
 # severity: fail
 # fixture: lint/fixtures/22-ledger-integrity
@@ -64,7 +66,8 @@ def main():
     root = args.root or scope.ROOT
     script = os.path.join(root, JUDGE)
     if not os.path.isfile(script):
-        print(f"{CHECK_ID} NOT-CHECKED: {JUDGE} not found in {root} — family ledger integrity NOT-GATED", file=sys.stderr)
+        print(f"{CHECK_ID} NOT-CHECKED: {JUDGE} not found in {root} — family ledger integrity "
+              "NOT-GATED", file=sys.stderr)
         return 2
     proc = subprocess.run(["bash", script, root], capture_output=True, text=True)
     out = (proc.stdout + proc.stderr).strip()

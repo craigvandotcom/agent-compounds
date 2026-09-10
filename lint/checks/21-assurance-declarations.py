@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 21-assurance-declarations
-# prevents: a mechanism that does not say what it does when it breaks — a hooks/ guard that stayed fail-open against a store that does not exist, and an executable with no wiring at all, neither detectable while "wired" was the only claim anyone made
+# prevents: a mechanism that does not say what it does when it breaks — a hooks/ guard that stayed
+#   fail-open against a store that does not exist, and an executable with no wiring at all, neither
+#   detectable while "wired" was the only claim anyone made
 # scope: HOOKS
 # severity: fail
 # fixture: lint/fixtures/21-assurance-declarations

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # ---
 # id: 35-board-integrity
-# prevents: a duplicate board record, a line that is not JSON, or an origin-less / probe-less post-cutover OPEN implementable bead sitting in the committed board unsensed — the create-time guards fail open on unparseable shell (a body passed as `-d "$(cat file)"` or a heredoc blinds the born-probe check), and the only repair between create and refine is a backstop a bead only reaches if someone refines it
+# prevents: a duplicate board record, a line that is not JSON, or an origin-less / probe-less
+#   post-cutover OPEN implementable bead sitting in the committed board unsensed — the create-time
+#   guards fail open on unparseable shell (a body passed as `-d "$(cat file)"` or a heredoc blinds
+#   the born-probe check), and the only repair between create and refine is a backstop a bead only
+#   reaches if someone refines it
 # scope: HOOKS
 # severity: fail
 # fixture: lint/fixtures/35-board-integrity
@@ -51,7 +55,8 @@ def main():
     root = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("LINT_ROOT", os.getcwd())
     board = board_path(root)
     if not os.path.isfile(board):
-        print("NOT-GATED: no board at .beads/issues.jsonl — a check that read nothing has proved nothing", file=sys.stderr)
+        print("NOT-GATED: no board at .beads/issues.jsonl — a check that read nothing has proved "
+              "nothing", file=sys.stderr)
         return 2
     try:
         with open(board, encoding="utf-8", errors="replace") as fh:
@@ -88,16 +93,19 @@ def main():
             continue  # closed beads are NEVER scanned — forward-only, no backfill
         created = str(rec.get("created_at") or "")[:10]
         if created >= CUTOVER:
-            labels = [str(l) for l in (rec.get("labels") or [])]
-            if not any(l.startswith("origin:") for l in labels):
+            labels = [str(label) for label in (rec.get("labels") or [])]
+            if not any(label.startswith("origin:") for label in labels):
                 violations.append(
-                    f"{board}:{lineno} — open bead '{rid}' created {created} (on/after origin cutover {CUTOVER}) carries no origin: label")
+                    f"{board}:{lineno} — open bead '{rid}' created {created} (on/after origin cutover "
+                    f"{CUTOVER}) carries no origin: label")
             if rec.get("issue_type") in IMPLEMENTABLE and not PROBE.search(rec.get("description") or ""):
                 violations.append(
-                    f"{board}:{lineno} — open {rec.get('issue_type')} bead '{rid}' created {created} carries no Probe: line")
+                    f"{board}:{lineno} — open {rec.get('issue_type')} bead '{rid}' created {created} "
+                    "carries no Probe: line")
 
     if not violations:
-        print(f"35-board-integrity: {scanned} record(s) scanned — well-formed, ids unique, open post-cutover beads origin-tagged and implementable beads probe-bearing")
+        print(f"35-board-integrity: {scanned} record(s) scanned — well-formed, ids unique, open "
+              "post-cutover beads origin-tagged and implementable beads probe-bearing")
         return 0
     print("FAIL 35-board-integrity: committed board violates a board-integrity rule:")
     for v in violations:

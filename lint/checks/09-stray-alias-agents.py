@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 09-stray-alias-agents
-# prevents: a retired alias agent file coming back — engineer.md and reviewer.md were renamed to implementer and validator, and a stray copy re-splits the stance registry while deploy.sh keeps stamping the retired name into every harness
+# prevents: a retired alias agent file coming back — engineer.md and reviewer.md were renamed to
+#   implementer and validator, and a stray copy re-splits the stance registry while deploy.sh keeps
+#   stamping the retired name into every harness
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/09-stray-alias-agents

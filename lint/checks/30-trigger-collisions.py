@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 30-trigger-collisions
-# prevents: two skills both quoting the same trigger phrase, so one phrase selects two skills and skill selection is ambiguous — the mechanical half of ac-registry-audit's trigger-collision pass (the WS1 fold that retired that workflow)
+# prevents: two skills both quoting the same trigger phrase, so one phrase selects two skills and skill
+#   selection is ambiguous — the mechanical half of ac-registry-audit's trigger-collision pass (the
+#   WS1 fold that retired that workflow)
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/30-trigger-collisions
@@ -140,7 +142,8 @@ def main():
 
     owners, scanned = scan_skills(root)
     if scanned == 0:
-        print("30-trigger-collisions NOT-CHECKED: no skills/*/SKILL.md description found — verified nothing", file=sys.stderr)
+        print("30-trigger-collisions NOT-CHECKED: no skills/*/SKILL.md description found — verified "
+              "nothing", file=sys.stderr)
         return 2
 
     collisions = {p: sorted(s) for p, s in owners.items() if len(s) > 1}
