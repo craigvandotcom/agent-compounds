@@ -108,15 +108,25 @@ cases = [
           "ac-qa with impact -> admitted"),
   (BLOCK, 'br create "x" -t bug -l "origin:ac-land,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
           "ac-land automated origin, no impact -> refused"),
+  # --- subagent marker via the ambient AC_SUBAGENT env seam (harnesses that cannot supply
+  # the agent_id stdin field set this instead).
+  (ALLOW, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
+          "subagent via AC_SUBAGENT, decision fork -> admitted", {}, {"AC_SUBAGENT": "1"}),
+  (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "subagent via AC_SUBAGENT, non-gate create -> refused", {}, {"AC_SUBAGENT": "1"}),
 ]
 fails = 0
 for case in cases:
     want, cmd, name = case[0], case[1], case[2]
     extra = case[3] if len(case) > 3 else {}
+    env_extra = case[4] if len(case) > 4 else None
     payload = {"tool_name": "Bash", "tool_input": {"command": cmd}}
     payload.update(extra)
+    env = dict(os.environ)
+    if env_extra:
+        env.update(env_extra)
     p = subprocess.run([sys.executable, G], input=json.dumps(payload),
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, env=env)
     got = p.returncode
     ok = got == want
     if not ok:

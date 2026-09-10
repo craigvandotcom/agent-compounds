@@ -12,9 +12,12 @@ Enforced here:
     probe-bearing; `epic` / `decision` / `investigation` are exempt.
   - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
     of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
-  - a subagent (`agent_id` on stdin) files nothing but a human-gate FORK — a `decision`
-    bead or a `DECISION:`/`ACTION:` card; its discovered work goes back to the batch
-    boundary as a PROPOSED-BEAD block.
+  - a subagent files nothing but a human-gate FORK — a `decision` bead or a
+    `DECISION:`/`ACTION:` card; its discovered work goes back to the batch boundary as a
+    PROPOSED-BEAD block. Subagent identity is harness-dependent: the `agent_id` stdin field
+    OR the `AC_SUBAGENT=1` ambient marker a wrapper sets. Where a harness supplies neither
+    (opencode sends `session_id`, not `agent_id`), the refusal is INERT and only the four
+    label/body axes apply — best-effort, not a guarantee.
 
 Command position is resolved through the shapes a create can hide in: command
 substitution (`$(br create …)`, backticks), a shell `-c` wrapper (`sh -c 'br create …'`),
@@ -51,6 +54,7 @@ unattended ac-loop run at 3am; a missed stamp is caught by ac-align's nightly re
 """
 
 import json
+import os
 import re
 import shlex
 import sys
@@ -461,7 +465,13 @@ def main():
 
     # A subagent may file only a `human-gate` fork; its discovered work is proposed back
     # at the batch boundary, never filed directly (bead-create-contract § Subagent creates).
-    is_subagent = bool(data.get("agent_id"))
+    # The subagent marker is harness-dependent: `agent_id` on the stdin payload, OR the
+    # ambient `AC_SUBAGENT` a harness wrapper sets when it CAN tell a subagent from the
+    # main session. Neither is sent by every deployed harness (opencode sends session_id,
+    # not agent_id), so where both are absent the refusal is inert and only the four
+    # label/body axes apply. The seam is here so a wrapper can enforce it without a
+    # guard change.
+    is_subagent = bool(data.get("agent_id")) or os.environ.get("AC_SUBAGENT") == "1"
 
     command = (data.get("tool_input") or {}).get("command") or ""
     if "br" not in command:
