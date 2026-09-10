@@ -2,12 +2,12 @@
 
 The objective, binary compliance layer for audited UI. **Every item names its eval oracle** —
 `agent-browser … eval` in the live DOM, `axe` when available, the sensors in
-`ac-ui-polish/reference/sensors.md`, or a source grep. A cell no oracle can fill is
-`unmeasured`, never a guess. The taste layer on top is `ac-ui-polish`; this file never judges
+`ui-elevate/references/sensors.md`, or a source grep. A cell no oracle can fill is
+`unmeasured`, never a guess. The taste layer on top is `ui-elevate`; this file never judges
 premium — only correct.
 
 Oracles: `sensor-1` contrast sweep · `sensor-2` hardcoded-colour grep · `sensor-3` token
-symmetry · `sensor-5` transition specificity (all in `ac-ui-polish/reference/sensors.md`) ·
+symmetry · `sensor-5` transition specificity (all in `ui-elevate/references/sensors.md`) ·
 `DOM` = `agent-browser eval` / `page.evaluate` on the rendered page · `axe` = the a11y engine
 when wired in the app. Static grep narrows; the DOM decides.
 
@@ -15,7 +15,7 @@ when wired in the app. Static grep narrows; the DOM decides.
 
 The eye crashes on this axis: it sees one theme and it cannot resolve a 3.9:1 ratio or a raw
 `#0c1014` that happens to look fine where you are standing. These four questions ARE the pass
-for the sensor layer (`ac-ui-polish/reference/sensors.md`), and **each names the command that
+for the sensor layer (`ui-elevate/references/sensors.md`), and **each names the command that
 decides it**. Run them in EVERY theme — a defect invisible in the theme you checked is the
 whole class. A cell no sensor ran on is `unmeasured`, never a pass.
 

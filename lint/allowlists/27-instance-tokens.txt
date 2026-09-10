@@ -6,7 +6,6 @@
 # no longer match a live hit. WS2 rebuilds and WS4 migrations empty this file.
 
 2026-09-07 | art-still | skills/beads-standards/SKILL.md
-2026-09-07 | body compass | skills/ac-ui-polish/reference/sensors.md
 2026-09-07 | body compass | skills/beads-standards/reference/human-gate-template.md
 2026-09-07 | body compass | skills/capacitor/reference/plugin-catalog.md
 2026-09-07 | body compass | skills/wiki/SKILL.md
@@ -27,7 +26,6 @@
 2026-09-07 | craig | skills/ac-pipeline/references/board-scan.md
 2026-09-07 | craig | skills/ac-publish/references/web-promote.md
 2026-09-07 | craig | skills/ac-review/SKILL.md
-2026-09-07 | craig | skills/ac-ui-polish/SKILL.md
 2026-09-07 | craig | skills/agent-mail/references/agent-identity.md
 2026-09-07 | craig | skills/beads-standards/SKILL.md
 2026-09-07 | craig | skills/beads-standards/reference/2026-07-15-backfill-checklist.md
@@ -67,7 +65,6 @@
 2026-09-07 | neometa | skills/ac-human/SKILL.md
 2026-09-07 | neometa | skills/ac-hygiene/SKILL.md
 2026-09-07 | neometa | skills/ac-pipeline/references/verification-gate.md
-2026-09-07 | neometa | skills/ac-ui-polish/SKILL.md
 2026-09-07 | neometa | skills/agent-mail/references/agent-identity.md
 2026-09-07 | neometa | skills/agent-mail/references/session-procedure.md
 2026-09-07 | neometa | skills/capacitor/SKILL.md

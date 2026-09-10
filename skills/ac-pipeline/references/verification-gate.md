@@ -1,7 +1,7 @@
 # Shared verification gate — THE pass-selection brain
 
 **Selects which verification passes run, at what depth, for any diff or scope.**
-Primary executors: the `ac-ui-polish` + `ac-qa` + `ac-qa` triad;
+Primary executors: the `ui-elevate` + `ac-qa` + `ac-qa` triad;
 consumed by every ceremony that verifies (loop Verify stage, the merge/batch-close
 smoke net § below, `ac-prove`, `ac-distribute`). Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
@@ -34,7 +34,7 @@ Reference it as `ac-pipeline/references/verification-gate.md`. Method only — z
 Selection and depth are independent — don't conflate them:
 
 - **Selection** — *which* of the three run → driven by **what plane the diff touched**.
-- **Depth** — smoke / full / exhaustive (defined in `qa-shared.md`); for ui-polish,
+- **Depth** — smoke / full / exhaustive (defined in `qa-shared.md`); for ui-elevate,
   Scoped vs Whole-app → driven by **blast radius / risk**.
 
 This triad is the *runtime/visual* verification and it is the whole pre-merge gate.
@@ -84,7 +84,7 @@ CODE_FILES=$(printf '%s\n' "$FILES" | grep -vE "$PAT_DOC_TEST_CI" || true)
 printf '%s\n' "$CODE_FILES" | grep -qE '^ios/|^android/|capacitor\.config|cap-build|@capacitor' && CLASS_NATIVE=1
 git diff "$RANGE" -- package.json | grep -qE '@capacitor|capacitor' && CLASS_NATIVE=1
 
-# Web UI — visual / DOM surfaces (drives ui-polish + browser QA)
+# Web UI — visual / DOM surfaces (drives ui-elevate + browser QA)
 printf '%s\n' "$CODE_FILES" | grep -qE '\.(tsx|jsx|css)$' \
   && printf '%s\n' "$CODE_FILES" | grep -qE 'app/|components/|features/' && CLASS_WEBUI=1
 # Design-token / spec changes are app-wide visual surface — THE deliberate opt-out:
@@ -132,7 +132,7 @@ out-of-reach surface is UNVERIFIED and can never be discharged by a PASS
 
 ## Step 2 — select passes + depth
 
-| Wave touches… | ac-ui-polish | ac-qa | ac-qa |
+| Wave touches… | ui-elevate | ac-qa | ac-qa |
 |---|---|---|---|
 | Docs / comments only (`!runtime`) | — | — | — |
 | Tests / CI only (`!runtime`) | — | — | — |
@@ -150,14 +150,14 @@ full        — multiple surfaces, cross-cutting change, several journeys, or > 
 exhaustive  — release / version bump, or any file matching auth|session|payment|migration|\.sql
 ```
 
-**ui-polish scope:** `Scoped` (changed surfaces only) by default; `Whole-app` only on
+**ui-elevate scope:** `Scoped` (changed surfaces only) by default; `Whole-app` only on
 release or when design tokens / `design.md` / `globals.css` / brand changed (app-wide
 visual blast).
 
-**ui-polish execution mode (depth-gated fan-out):** at `smoke` depth (or a Scoped run
-of ≤ ~3 routes) run the single-context inline path (`audit-and-elevate.md`). When this
-gate selects ui-polish at **`full` or `exhaustive`** depth, run the per-route fan-out
-(`ac-ui-polish/workflows/whole-app-workflow.md`) — over the wave's touched routes at
+**ui-elevate execution mode (depth-gated fan-out):** at `smoke` depth (or a Scoped run
+of ≤ ~3 routes) run the single-context inline path (`ui-elevate/workflows/app.md`). When this
+gate selects ui-elevate at **`full` or `exhaustive`** depth, run the per-route fan-out
+(`ui-elevate/workflows/app-fanout.md`) — over the wave's touched routes at
 `full`, all routes at `exhaustive`/Whole-app. Gate selection at these depths is
 **standing authorization** for that workflow's multi-agent opt-in;
 manual ad-hoc invocations still require explicit opt-in.
@@ -259,7 +259,7 @@ A skip must be *visible*, or a no-run reads as "verified". Print one line into t
 conductor's report / Slack notify:
 
 ```
-Verification plan: ran review(<effort>) + ui-polish(<scope>) + qa-browser(<depth>);
+Verification plan: ran review(<effort>) + ui-elevate(<scope>) + qa-browser(<depth>);
 skipped qa-device — no native-shell files in diff.
 ```
 
@@ -336,7 +336,7 @@ br list --json --limit 0 | jq '[.issues[] | select(.labels // [] | index("qa-blo
 Open `qa-blocker` beads are unresolved user-facing breaks — treat exactly like failing
 required checks: STOP and ask (fix first vs proceed with explicit override). Valid
 resolutions: fix the bug, or — if intended behavior — update the journey doc and close
-the bead. Note: the net covers the **QA twins** only; `ac-ui-polish` is a Verify-stage
+the bead. Note: the net covers the **QA twins** only; `ui-elevate` is a Verify-stage
 pass, never re-run at close.
 
 ---

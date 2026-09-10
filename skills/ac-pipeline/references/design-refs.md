@@ -19,4 +19,4 @@ Per-stage duties:
   visual reference MUST carry the reference-image path in `## Acceptance Criteria` —
   a missing path is a **refine-blocking gap**; the Completeness Reviewer checks it and
   AC drift against the source doc's geometry.
-- **Consume** (`ac-ui-polish`, implementation): read the file, not a paraphrase.
+- **Consume** (`ui-elevate`, implementation): read the file, not a paraphrase.

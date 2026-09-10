@@ -6,7 +6,7 @@ what ui mode binds, and it is a MANDATORY load for a ui run.
 UI mode is `code` mode's sibling — the artifact is the shipped UI, so a bad edit is a defect,
 not an inert edit to a plan. It adds one axis code mode does not have: **every theme**. A fix
 that is green in the theme you looked at and invisible in the other is the exact defect class
-this mode exists to close (`ac-ui-polish/reference/sensors.md` § Why this file exists).
+this mode exists to close (`ui-elevate/references/sensors.md` § Why this file exists).
 
 ## Bindings
 
@@ -69,7 +69,7 @@ findings to the human.
 
 ## Out of scope — on purpose
 
-Taste, hierarchy, rhythm and "this feels premium" are `ac-ui-polish`'s rubric
+Taste, hierarchy, rhythm and "this feels premium" are `ui-elevate`'s rubric
 (`reference/critique-polish.md`), not this checklist. This mode closes **correctness** findings
 a command can name; a question with no oracle is DECLINED here and routed to the rubric or a bead.
 

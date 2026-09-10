@@ -55,8 +55,7 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts; builds orchestrated `/command` workflows (`workflows/build-workflow.md`); runs the registry audit — mechanical lint passes + semantic dedup/drift (`workflows/registry-audit.md`); scores subagent prompts against the research-backed rubric (`references/prompt-rubric.md`) |
 | **ui-brainstorm** | Multi-model UI critique with consensus ranking |
 | **ui-debug** | CSS / visual bug investigation |
-| **ac-ui-polish** | Conform UI to the app's design.md then polish to premium — whole-app crawl or one screen; anti-slop audit (was ui-elevate) |
-| **ac-site-polish** | Conform the public marketing site to design.site.md then polish to premium — the public twin of ac-ui-polish |
+| **ui-elevate** | Raise UI to premium — taste layer over correctness, with `app` (product) and `site` (marketing) modes; anti-slop audit; human-in-the-loop |
 | **ac-qa** | QA an app build through journeys — one engine, two workflows: browser (web shell — SPA routing, storage/session, service worker, console, responsive) and device (native shell — real taps, keyboard, safe-area, deep links, push, appearance). Depth levels, findings=beads, conductor/worker evidence protocol shared |
 
 > `ac-distribute/` also carries `references/_DECISION-distribution-stack.md` — the distribution-stack decision doc (ratified 2026-06-15) that preceded the skill.

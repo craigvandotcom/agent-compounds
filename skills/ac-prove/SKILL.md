@@ -161,7 +161,7 @@ Pass selection defers to `ac-pipeline/references/verification-gate.md` — one s
   (memory: `rule-review-critical-journeys-sim-pass-before-submission`) when the caller's context
   requires it (e.g. an App Store submission path).
 - `ac-qa`
-- `ac-ui-polish` (spec-conformance/premium-polish lens, when the caller wants it)
+- `ui-elevate` (spec-conformance/premium-polish lens, when the caller wants it)
 
 `+qa` findings that block ship are reported the same way `ac-qa`/`ac-qa` always
 report them (findings=beads) — they do not themselves trigger another fix-forward CI round
@@ -226,7 +226,7 @@ QA evidence/report schema: `ac-qa/references/qa-shared.md`.
 
 `+qa` depth (consumers a and d) = `ac-qa` (including the review-critical sim-PASS rule,
 memory `rule-review-critical-journeys-sim-pass-before-submission`) / `ac-qa` /
-`ac-ui-polish`, per Step 4's `+qa` layer above.
+`ui-elevate`, per Step 4's `+qa` layer above.
 
 **Explicitly NOT a consumer: loop-start.** Starting a new loop iteration does not call
 `ac-prove` — proof is a ship-time/checkpoint concern, not a work-intake concern.
