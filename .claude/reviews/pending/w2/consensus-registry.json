@@ -1,0 +1,52 @@
+[
+  {
+    "round": 1,
+    "key": "hooks/bead-capture-guard.py:382|fail-open-by-design",
+    "reviewer": "security",
+    "severity": "Medium",
+    "file": "hooks/bead-capture-guard.py",
+    "line": 382,
+    "category": "fail-open-by-design",
+    "summary": "Deliberate fail-open remains an actor -> entry -> gain evasion path, not just an accident"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/reference/bead-conventions.md:90|stale-canon-divergence",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/reference/bead-conventions.md",
+    "line": 90,
+    "category": "stale-canon-divergence",
+    "summary": "Fold left the live bead-capture canon still routing to the archived ac-bead-capture"
+  },
+  {
+    "round": 1,
+    "key": "skills/_tools/crawl-and-capture/README.md:12|out-of-scope-stale-refs",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/_tools/crawl-and-capture/README.md",
+    "line": 12,
+    "category": "out-of-scope-stale-refs",
+    "summary": "Liveness: _tools layer carries live refs to archived skills, outside every check's scope"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-pipeline/FRICTIONS.md:5|counter-no-feedback-loop",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/ac-pipeline/FRICTIONS.md",
+    "line": 5,
+    "category": "counter-no-feedback-loop",
+    "summary": "FRICTIONS.md entries counter drifts from the ledger (33 declared vs 35 headings)"
+  },
+  {
+    "round": 1,
+    "key": "skills/ac-pipeline/FRICTIONS.md:726|boundary-gate-untreated",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/ac-pipeline/FRICTIONS.md",
+    "line": 726,
+    "category": "boundary-gate-untreated",
+    "summary": "check07 boundary remains untreated: future archive/rename re-blocks the lane, org-level dirs never self-heal"
+  }
+]

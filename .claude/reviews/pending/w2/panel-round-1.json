@@ -1,0 +1,10 @@
+{
+  "round": 1,
+  "range": "93be4fd6f3db34caa3a24be3e7814d223807a082..0302e5d8c5fdd6f64ea978da5e90eb1a1c3dfa45",
+  "spawned": ["security", "performance", "architecture", "correctness"],
+  "skipped": {
+    "test-quality": "factory/docs/shell batch; no product test surface",
+    "contracts": "no product contract surface in a skills/hooks-only diff"
+  },
+  "note": "ac2 swarm run 20260910-swarm2 — ui-elevate build, ac-bead-capture fold, ac-hygiene diet, bead-capture-guard Impact axis. Factory-only range."
+}

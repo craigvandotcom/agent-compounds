@@ -1,0 +1,276 @@
+{
+  "round": 1,
+  "reviewers_expected": [
+    "security",
+    "performance",
+    "architecture",
+    "correctness"
+  ],
+  "panel_source": "manifest",
+  "panel_skipped": {
+    "test-quality": "factory/docs/shell batch; no product test surface",
+    "contracts": "no product contract surface in a skills/hooks-only diff"
+  },
+  "reviewers_present": [
+    "security",
+    "performance",
+    "architecture",
+    "correctness"
+  ],
+  "reviewers_missing": [],
+  "total_findings": 16,
+  "after_dedup": 16,
+  "auto_fix": [
+    {
+      "key": "hooks/bead-capture-guard.py:394|guard-bypass-label",
+      "title": "`human-gate` label is a universal subagent pass on any bead type",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 394,
+      "category": "guard-bypass-label",
+      "fix": "Restrict the subagent exemption to legitimate forks: in main(), pass `typ` into the check \u2014 `if is_subagent and not (has_label(cmd, SUBAGENT_EXEMPT_LABEL) and typ in PROBE_EXEMPT_TYPES)` \u2014 or gate the human-gate exemption on `typ == \"decision\"`. Add a test: subagent + human-gate + task type -> BLOCK.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:correctness,performance,security"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:250|wrapper-command-bypass",
+      "title": "Shell wrappers (`sh -c`, `$( )`, `env`, `xargs`) bypass the entire guard including the new subagent refusal",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 250,
+      "category": "wrapper-command-bypass",
+      "fix": "When a command contains `-c` with a subsequent argument, tokenize the `-c` value recursively through the same commands() pipeline; additionally scan for `command-substitution` wrappers by checking whether any token equals `br` or ends with `/br` outside a quoted description. At minimum add a loud test case documenting the wrapper bypass so it is a known-tracked gap rather than silent.",
+      "auto_fixable": false,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:369|unverified-payload-contract",
+      "title": "Subagent refusal gate keys on an agent_id field no deployed harness is documented to send",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 369,
+      "category": "unverified-payload-contract",
+      "fix": "Drive the field from a real subagent transcript (one driven run where a subagent executes br create) or bind to a documented discriminator; state the exact stdin key each harness must send in the guard header doc and in beads-standards/reference/bead-create-contract.md.",
+      "auto_fixable": false,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,security"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:246|guard-bypass",
+      "title": "Command substitution bypasses the entire guard, including the new subagent refusal and impact axis",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 246,
+      "category": "guard-bypass",
+      "fix": "Normalize substitution-parentheses in the pre-shlex pass (alongside strip_heredoc_bodies/newlines_to_separators): rewrite `$(` and `` ` `` as `;`-separated boundaries so inner tokens form a real command stream, or drop the bare env-assignment regex skip for tokens containing $( and instead split on the embedded paren. Add guard-test cases: `{agent_id, 'out=$(br create ...)'}` -> BLOCK, and unlabelled `X=$(br create ...)` -> BLOCK.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:394|exemption-unbounded",
+      "title": "Subagent refusal exemption is label-only: a subagent files any product bead by attaching human-gate",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 394,
+      "category": "exemption-unbounded",
+      "fix": "Tighten the exemption in the subagent branch: exempt only when has_label(human-gate) AND bead_type(cmd) == 'decision' (a fork card); every other type from a subagent exits 2 with SUBAGENT_MESSAGE. Update bead-create-contract.md \u00a7 Subagent creates to state the type condition, and add the evasion fixture to bead-capture-guard.test.py.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:correctness,performance,security"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:407|origin-ordering-dodge",
+      "title": "Impact axis dodged by self-declaring a human/plan/exempt origin first",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 407,
+      "category": "origin-ordering-dodge",
+      "fix": "Decide and enforce an order rule: reject beads carrying multiple `origin:` labels outright ( MESSAGE: one origin per bead, per the docstring claim), or if human-bead exemption must hold, validate every origin value with a closed set of EXEMPT origins and flag mixed human+automated origins (e.g. origin:manual,origin:ac-implement) as IMPACT_REQUIRED. Reuse the ORIGIN regex inside origin_skill() so both checks share one parser.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "same-location-consensus:correctness,security"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:369|trust-marker-portability",
+      "title": "Subagent refusal keyed on a per-harness stdin field that is not guaranteed everywhere",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 369,
+      "category": "trust-marker-portability",
+      "fix": "Verify which projections send agent_id (Claude Code does; Codex/Pi/Droid projections need confirming) and fall back to an ambient signal (e.g. an env var like AC_SUBAGENT=1 stamped by the harness) where the field is absent; add a per-harness assertion test analogous to the HookSync public guard so an inert refusal is caught on deploy rather than assumed.",
+      "auto_fixable": false,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,security"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:394|repeated-parsing-hot-path",
+      "title": "New impact-axis checks re-parse the label list multiple times per br create",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 394,
+      "category": "repeated-parsing-hot-path",
+      "fix": "In the main() loop, compute labels = all_labels(cmd) once per bead-create command segment and derive has_origin, has_readiness, has_probe, origin_skill, valid_impact, and the human-gate/subagent checks from that single list (or have those helpers accept the precomputed list). Removes 4 redundant scans and makes adding the next contract axis free.",
+      "auto_fixable": true,
+      "reviewers": [
+        "performance"
+      ],
+      "reasons": [
+        "same-location-consensus:correctness,performance,security"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:81|allowlist-bypass-silent",
+      "title": "Impact-axis exemption implemented as a closed origin allowlist - unlisted automated origins silently bypass",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 81,
+      "category": "allowlist-bypass-silent",
+      "fix": "Invert the predicate: require valid_impact for ANY origin:* EXCEPT explicit exemptions {manual, ac-human, ac-beadify, ac-backlog}; refuse unknown origin:* values not in either list (mirrors IMPACT_CLASSES closed-set posture). Add test cases for ac-polish/ac-qa creates.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,correctness"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:81|coverage-gap",
+      "title": "Impact axis covers only 7 of the sanctioned automated origins \u2014 ac-qa, ac-land, dream, reflect file beads with no impact label",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 81,
+      "category": "coverage-gap",
+      "fix": "Decide the universe: either add origin:ac-qa, origin:ac-land (and origin:dream/origin:reflect) to IMPACT_REQUIRED_ORIGINS and the contract row, or document in bead-create-contract.md why those origins are impact-exempt. Currently the exemption is implicit and unrecorded.",
+      "auto_fixable": false,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,correctness"
+      ]
+    },
+    {
+      "key": "hooks/bead-capture-guard.py:407|honor-system-keying",
+      "title": "origin:unknown escapes the impact axis for any automated filer",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 407,
+      "category": "honor-system-keying",
+      "fix": "Sanctioned options: (a) treat origin:unknown as impact-REQUIRED (unattributable origin is exactly when the damage class is most needed for triage); or (b) make bead-create-contract.md explicitly state that origin:unknown beads are impact-exempt and record why. Today the exemption is an accident of tuple membership, not a decision.",
+      "auto_fixable": false,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "same-location-consensus:correctness,security"
+      ]
+    }
+  ],
+  "deferred": [
+    {
+      "key": "hooks/bead-capture-guard.py:382|fail-open-by-design",
+      "title": "Deliberate fail-open remains an actor -> entry -> gain evasion path, not just an accident",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 382,
+      "category": "fail-open-by-design",
+      "fix": "Keep fail-open for wedging but close the evasion: on shlex failure, fall back to a coarse raw-string check \u2014 if the raw command contains `br create` (command-position-agnostic) AND is_subagent, still refuse with SUBAGENT_MESSAGE (proposing at the boundary costs a subagent nothing since its real output channel is the hand-back). Only truly benign noise (no br create anywhere) passes.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/beads-standards/reference/bead-conventions.md:90|stale-canon-divergence",
+      "title": "Fold left the live bead-capture canon still routing to the archived ac-bead-capture",
+      "severity": "Medium",
+      "file": "skills/beads-standards/reference/bead-conventions.md",
+      "line": 90,
+      "category": "stale-canon-divergence",
+      "fix": "Sweep bead-conventions.md (and design-refs.md line 16) to origin:ac-backlog + bead-route.md, then delete the allowlist row in the same change - the shrink-only ratchet demands removal exactly when the sweep lands.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/_tools/crawl-and-capture/README.md:12|out-of-scope-stale-refs",
+      "title": "Liveness: _tools layer carries live refs to archived skills, outside every check's scope",
+      "severity": "Medium",
+      "file": "skills/_tools/crawl-and-capture/README.md",
+      "line": 12,
+      "category": "out-of-scope-stale-refs",
+      "fix": "Extend 25-archived-names' scan set (or a sibling check) to cover skills/_tools; repoint the crawl-and-capture references to ui-elevate in the same change.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/ac-pipeline/FRICTIONS.md:5|counter-no-feedback-loop",
+      "title": "FRICTIONS.md entries counter drifts from the ledger (33 declared vs 35 headings)",
+      "severity": "Medium",
+      "file": "skills/ac-pipeline/FRICTIONS.md",
+      "line": 5,
+      "category": "counter-no-feedback-loop",
+      "fix": "Correct the counter to 35 in this change; scope 00-meta to reconcile each FRICTIONS.md entries: field against its heading count where declared.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/ac-pipeline/FRICTIONS.md:726|boundary-gate-untreated",
+      "title": "check07 boundary remains untreated: future archive/rename re-blocks the lane, org-level dirs never self-heal",
+      "severity": "Medium",
+      "file": "skills/ac-pipeline/FRICTIONS.md",
+      "line": 726,
+      "category": "boundary-gate-untreated",
+      "fix": "Adopt the friction's proposed fix as contract: a lint-checked pre-step of any skill archive/rename that prunes or refuses stale .claude/skills symlinks in all deploy targets, and extend infrastructure/ac-deploy-targets.list + harness-sync to own the org-level and simil8 dirs (or declare them out of scope loudly).",
+      "auto_fixable": false,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": []
+    }
+  ]
+}
