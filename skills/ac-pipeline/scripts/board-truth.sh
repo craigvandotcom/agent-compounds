@@ -6,9 +6,10 @@
 # discovering the code already exists. No other scan catches it: ac-align's reconcile staleness is
 # age-based, and Scans A-E never read a commit message.
 #
-# ADVISORY ONLY. Prints a shortlist and exits 0. It must never close, label or defer a
-# bead: a false stale makes the conductor skip real work, which is worse than the wasted
-# child this exists to prevent.
+# ADVISORY ONLY. Prints a shortlist and exits 0 WHEN IT RAN; a board it could not
+# examine is a NOT-GATED (exit 2), never a clean shortlist. It must never close, label
+# or defer a bead: a false stale makes the conductor skip real work, which is worse
+# than the wasted child this exists to prevent.
 #
 # Usage:  board-truth.sh [--cov-base <ref>] [--repo <dir>]
 # Output: `board-truth: N open bead(s) ...` then one `<id>\t<epoch>` line per flag.
@@ -25,11 +26,12 @@ while [ $# -gt 0 ]; do
 done
 # The ONE br_call invocation shape (ac-heyt.3). Sourced before any cd: BASH_SOURCE
 # may be relative, so the absolute helper path must be computed from the original cwd.
-# Missing helper = undefined br_call = DEGRADED at the read site below, never silence.
+# Missing helper = undefined br_call = NOT-GATED at the read site below, never silence.
 # shellcheck source=br-call.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/br-call.sh" 2>/dev/null || true
 
-# A blind source reports DEGRADED on stdout, never silence — silence reads as clean.
+# A scan that examined nothing is indistinguishable from a scan that found nothing —
+# the unexaminable board says so, never a "0 open bead(s)" clean exit.
 cd "$REPO" 2>/dev/null || { echo "board-truth: UNKNOWN — repo '$REPO' unreadable"; exit 0; }
 
 # Window anchored on the last release tag, never on the review mark: a moving anchor
@@ -63,13 +65,36 @@ awk -F'|' '{ ct=$1+0; subj=$3
   } END { for (k in seen) printf "%s\t%d\n", k, seen[k] }' "$D/commits-flat" \
   | tee "$D/cited" >/dev/null
 
-# A refusal is a DEGRADED scan, never an empty one: an unreadable board must not read as
-# "no open beads".
-OPEN_JSON=$(br_call list --status open --limit 0 --json) \
-  || { echo "board-truth: DEGRADED — 'br list' refused; the open-bead scan is empty (never a clean shortlist)"; OPEN_JSON=""; }
-printf '%s' "$OPEN_JSON" \
-  | jq -r '.issues[] | [.id, .updated_at, .created_at] | @tsv' 2>/dev/null \
-  | tee "$D/open-beads" >/dev/null
+# --- the unexaminable board is a NOT-GATED, never a clean shortlist (D6) -------------
+# A non-zero `br doctor health` (the schema tripwire — it exits 1 on a board this binary
+# refuses), a refused list read, a response without `.issues[]`, or a row missing the
+# timestamps the flag needs all exit 2 with the named line. The FLAG-ONLY contract is
+# untouched: this scan still closes, labels and defers nothing.
+if command -v br >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  br doctor health >/dev/null 2>&1 \
+    || { echo "board-truth: NOT-GATED — 'br doctor health' failed; this binary refuses the board" >&2; exit 2; }
+  OPEN_JSON=$(br_call list --status open --limit 0 --json) \
+    || { echo "board-truth: NOT-GATED — the br list read refused; the board is unreadable" >&2; exit 2; }
+  if ! printf '%s' "$OPEN_JSON" | jq -e 'type == "object" and has("issues")' >/dev/null 2>&1; then
+    echo "board-truth: NOT-GATED — the br list read returned no .issues[]; the board shape is unreadable" >&2
+    exit 2
+  fi
+  MISSING=$(printf '%s' "$OPEN_JSON" | jq -r '[.issues[] | select((.updated_at // "") == "" or (.created_at // "") == "")] | length' 2>/dev/null)
+  if [ -z "${MISSING:-}" ] || [ "${MISSING:-0}" -gt 0 ]; then
+    if [ -z "${MISSING:-}" ]; then
+      echo "board-truth: NOT-GATED — the open-bead rows are unreadable; the flag would be silent" >&2
+    else
+      echo "board-truth: NOT-GATED — ${MISSING} open bead(s) lack updated_at/created_at; the flag would be silent" >&2
+    fi
+    exit 2
+  fi
+  printf '%s' "$OPEN_JSON" \
+    | jq -r '.issues[] | [.id, .updated_at, .created_at] | @tsv' 2>/dev/null \
+    | tee "$D/open-beads" >/dev/null
+else
+  echo "board-truth: NOT-GATED — br/jq unavailable; the board cannot be read" >&2
+  exit 2
+fi
 
 to_epoch() { s=${1%.*}; s=${s%Z}
   date -u -j -f '%Y-%m-%dT%H:%M:%S' "$s" +%s 2>/dev/null || date -u -d "$1" +%s 2>/dev/null; }

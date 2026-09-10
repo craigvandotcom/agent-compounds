@@ -317,7 +317,11 @@ a `Bead:` trailer.
 ```
 
 Prints `board-truth: <n> open bead(s) …` then one `<bead-id>\t<cited-epoch>` line per flag.
-Exits 0 always. Counts only an id in a commit SUBJECT or behind a `Bead:` trailer; drops
+Exits 0 when the scan ran; exits 2 `board-truth: NOT-GATED` when the board could not be
+examined — a refused `br list`, a response without `.issues[]` or with a `.error` envelope,
+rows missing `updated_at`/`created_at`, or a failing `br doctor health` (the schema
+tripwire). A scan that examined nothing is never a clean shortlist. Counts only an id in a
+commit SUBJECT or behind a `Bead:` trailer; drops
 `chore(beads)`/`[no-bead]` bookkeeping and any commit that FILED the bead. Mechanism and
 proof harness: `scripts/board-truth.sh` + `scripts/board-truth.test.sh`.
 

@@ -54,6 +54,34 @@ if "$TARGET" --repo /nonexistent-repo-probe 2>/dev/null | grep -q 'board-truth:'
   printf '  PASS  degrades to a printed verdict on an unreadable repo\n'
 else printf '  FAIL  no verdict line on an unreadable repo — silence reads as clean\n'; FAILURES=$((FAILURES + 1)); fi
 
+echo "--- script contract: the unexaminable board says so (D6) ---"
+WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
+MOCK="$WORK/bin"; mkdir -p "$MOCK"
+REPO="$WORK/repo"; mkdir -p "$REPO"
+( cd "$REPO" && git init -q -b main . && git config user.email t@t && git config user.name t \
+  && printf 'x\n' >f.txt && git add f.txt && git commit -qm init )
+cat >"$MOCK/br" <<'EOF'
+#!/usr/bin/env bash
+case "${BR_MODE:-ok}" in
+  doctor-fail) [ "$1" = doctor ] && exit 1 ;;
+  bare-array)  [ "$1" = list ] && { printf '%s\n' '[{"id":"bd-x","updated_at":"2026-09-01T00:00:00Z","created_at":"2026-08-01T00:00:00Z"}]'; exit 0; } ;;
+esac
+exit 0
+EOF
+chmod +x "$MOCK/br"
+
+CASES=$((CASES + 1))
+OUT=$(PATH="$MOCK:$PATH" BR_MODE=doctor-fail "$TARGET" --repo "$REPO" 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && printf '%s' "$OUT" | grep -q 'board-truth: NOT-GATED'; then
+  printf '  PASS  a br that exits non-zero is a NOT-GATED (rc 2), never a clean 0\n'
+else printf '  FAIL  doctor-fail: rc=%s out=%s\n' "$RC" "$OUT"; FAILURES=$((FAILURES + 1)); fi
+
+CASES=$((CASES + 1))
+OUT=$(PATH="$MOCK:$PATH" BR_MODE=bare-array "$TARGET" --repo "$REPO" 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && printf '%s' "$OUT" | grep -q 'board-truth: NOT-GATED'; then
+  printf '  PASS  a bare-array br list answer is a NOT-GATED (rc 2), never a clean 0\n'
+else printf '  FAIL  bare-array: rc=%s out=%s\n' "$RC" "$OUT"; FAILURES=$((FAILURES + 1)); fi
+
 echo ""
 echo "board-truth.test: ${CASES} cases, ${FAILURES} failures"
 [ "$FAILURES" -eq 0 ]
