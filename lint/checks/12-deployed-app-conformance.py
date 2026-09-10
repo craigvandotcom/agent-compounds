@@ -58,7 +58,7 @@ def disp(path):
 
 def scan():
     base = consumers.base()
-    if not os.path.isdir(base):
+    if not consumers.base_present():
         print(f"12-deployed-app-conformance: SKIP — consumer root {base} absent "
               "(a consumer-less checkout); nothing to conform", file=sys.stderr)
         return 0

@@ -44,6 +44,14 @@ def base():
     return os.environ.get("LINT_CONSUMER_BASE") or os.path.expanduser("~/Repos")
 
 
+def base_present():
+    """True when the consumer ROOT exists. A bare checkout (CI) has none, so the
+    consumer-surface checks (07, 12) have nothing to audit and SKIP green rather
+    than NOT-GATE: a not-gated check makes the whole lint run exit 2, and a red
+    gate that can never pass is worse than none."""
+    return os.path.isdir(base())
+
+
 def consumer_dirs():
     root = base()
     dirs = {os.path.join(root, sub) for sub in ORG_CONSUMER_SUBPATHS}

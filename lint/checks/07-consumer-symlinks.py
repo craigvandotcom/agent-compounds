@@ -19,9 +19,10 @@ scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
 this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
 window is lost, never a false pass on a bare run.
 
-Exit: 0 every symlink resolves, 1 broken symlink(s), 2 no consumer dir exists
-(NOT-GATED, never a pass — the legacy block skipped missing dirs silently, the
-runner contract cannot).
+Exit: 0 every symlink resolves, or the consumer root is absent (SKIP, disclosed
+— the audited dirs live OUTSIDE this repo and a bare checkout has none);
+1 broken symlink(s); 2 consumer root present but no consumer dir resolves
+(NOT-GATED, never a pass).
 """
 
 import os
@@ -39,6 +40,10 @@ def fail(msg):
 
 
 def scan():
+    if not consumers.base_present():
+        print(f"07-consumer-symlinks: SKIP — consumer root {consumers.base()} absent "
+              "(a consumer-less checkout); nothing to walk", file=sys.stderr)
+        return 0
     scanned = 0
     for d in consumers.consumer_dirs():
         if not os.path.isdir(d):
