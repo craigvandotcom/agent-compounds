@@ -13,6 +13,11 @@ against — the verdicts below are model judgments recorded as evidence. Row gra
 un-verdicted rows are greppable: every phrasing row starts `- PASS`, `- FAIL`, or
 `- PASS (after fix)`.
 
+**Append-only history — do not delete or reorder sections.** Many skills judged below have
+since been archived or folded into others, so their sections no longer describe a live
+target. Judge a LIVE skill only against its own section; never reuse an archived section's
+verdicts or copy a stale skill name into a new one.
+
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) — plus
 **B2, the 5 `ac-plan-*` skills**, **B3, the 2 `ac-qa-*` skills**, **B4, the 6 bead-lifecycle
 skills**, **B5, the 4 polish/publish skills**, **B6, the 8 remaining `ac-*` skills**, and

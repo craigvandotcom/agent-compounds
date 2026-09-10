@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 33
+entries: 34
 ---
 
 # ac-pipeline — friction log
@@ -727,3 +727,19 @@ entries: 33
 - receipt: RUN 2026-09-10 ac2 swarm — archiving ac-ui-polish/ac-site-polish (ac-1p7j.32) dangled `.claude/skills/<name>` across ~12 consumer layers; the pre-commit entry's `lint.sh --changed` pulled Check 07 in and refused EVERY writer's commit until `harness-sync.sh --all` ran. harness-sync does not own the three org-level `.claude/skills` dirs (books/content/software), nor simil8/.claude/skills (7 dangling links outside Check 07's union).
 - proposed_fix: make the consumer-symlink prune a lint-checked pre-step of any skill archive/rename, or scope Check 07 so a registry-local commit is not blocked by consumer-layer drift; extend harness-sync to own the org-level dirs.
 - narrative: archiving or renaming any skill is a fleet-wide breaking change to every consumer repo, and the registry's own commit lane treats those dangling links as blocking. The archive author must therefore sync the fleet before committing — but harness-sync's target list omits dirs the prune never reaches, so some links dangle indefinitely.
+
+## subagent-gate-inert-without-a-harness-marker
+- skills: [ac2-pipeline]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [worker-md-gates-name-scripts-consumer-repos-lack]
+- first_seen: 2026-09-11
+- last_seen: 2026-09-11
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: 2026-09-11 review of hooks/bead-capture-guard.py — the subagent refusal keys on a stdin `agent_id`; the opencode hook wrapper (`~/.config/opencode/plugins/ac-hooks.js`) sends only session_id/tool_name/tool_input, and no deployed harness documents agent_id, so the refusal never fires. Verified by reading the generated wrapper.
+- proposed_fix: each harness wrapper sets `AC_SUBAGENT=1` for a subagent tool call (the seam the guard now reads, 0523d4c), or the axis is dropped to a documented best-effort; a per-harness assertion should fail loudly where the marker is absent rather than let the rule protect nothing.
+- narrative: the guard was written against an `agent_id` field no projection supplies, so a green test suite and a live hook coexisted with a rule that protects nothing — the same class as a guard that cannot fire.
