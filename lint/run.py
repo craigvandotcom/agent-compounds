@@ -66,6 +66,16 @@ def run_check(path, root, timeout=300):
         return 3, "", f"timeout after {timeout}s", time.time() - t0
 
 
+# A check discloses a verdict on stderr (SKIP / WARN / NOT-GATED). The runner must surface
+# those lines: dropping them made a degraded run — e.g. Check 07/12 SKIPping on a bare
+# checkout — read as a clean one, the disclosure the check promises never reaching the report.
+_DISCLOSURE_TOKENS = ("FAIL", "SKIP", "WARN", "NOTICE", "NOT-GATED", "NOT-CHECKED")
+
+
+def _disclosure(line):
+    return any(tok in line for tok in _DISCLOSURE_TOKENS)
+
+
 def changed_files(root):
     try:
         diff = subprocess.run(
@@ -178,7 +188,7 @@ def main():
                 "seconds": round(secs, 2),
                 "findings": ([line for line in out.splitlines() if line.strip()]
                              + [line for line in err.splitlines()
-                                if line.strip() and line.startswith("FAIL")]),
+                                if line.strip() and _disclosure(line)]),
             })
 
     for cid, s in sorted(skipped.items()):
