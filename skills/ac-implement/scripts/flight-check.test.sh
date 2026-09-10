@@ -392,7 +392,17 @@ case "${1:-}" in
   show)   shift; id=""; json=""
           while [ $# -gt 0 ]; do case "$1" in --json) json=1 ;; *) id="$1" ;; esac; shift; done
           [ "$id" = ac-l7xt-fix ] && cat "${AC_FIXTURE_JSON:?}" || exit 3 ;;
-  label)  printf '%s\n' "$*" >> "${AC_LABEL_LOG:?}"; exit 0 ;;
+  label)  printf '%s\n' "$*" >> "${AC_LABEL_LOG:?}"
+          # MUTATE the fixture so stamp-refined's READ-BACK (ac-heyt.7) sees the write:
+          # the downgrade leg asserts refined is gone and unrefined present on re-read.
+          op="${2:-}"; id="${3:-}"; name="${4:-}"
+          [ "$op" = add ] || [ "$op" = remove ] || exit 0
+          [ -n "${AC_FIXTURE_JSON:-}" ] && [ -f "$AC_FIXTURE_JSON" ] || exit 0
+          tmp="${AC_FIXTURE_JSON}.tmp"
+          jq --arg op "$op" --arg name "$name" \
+            'if $op == "add" then .labels = ((.labels // []) + [$name] | unique) else .labels = ((.labels // []) - [$name]) end' \
+            "$AC_FIXTURE_JSON" >"$tmp" && mv "$tmp" "$AC_FIXTURE_JSON"
+          exit 0 ;;
   comments) exit 0 ;;
   update) exit 0 ;;
   *) exit 3 ;;

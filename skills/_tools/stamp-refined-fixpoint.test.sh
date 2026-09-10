@@ -42,7 +42,8 @@ cd "$FIXREPO" || { echo "HARNESS FAIL: cannot enter fixture repo"; exit 1; }
 # --- the mocked board: `show --json`, `comments add -f`, and a call log -----------------
 MOCK="$WORK/bin"; mkdir -p "$MOCK"
 BR_LOG="$WORK/br.log"
-FIXTURE_BEADS="$WORK/beads.json"; export FIXTURE_BEADS BR_LOG
+BR_SHOW_COUNT="$WORK/br-show-count"; : >"$BR_SHOW_COUNT"
+FIXTURE_BEADS="$WORK/beads.json"; export FIXTURE_BEADS BR_LOG BR_SHOW_COUNT
 cat >"$MOCK/br" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$BR_LOG"
@@ -50,6 +51,12 @@ case "$1" in
   show)
     shift; ids=()
     while [ $# -gt 0 ]; do case "$1" in --json) shift ;; *) ids+=("$1"); shift ;; esac; done
+    # BR_SHOW_BUDGET=N serves the first N show reads, then dies — the switch that
+    # drives the dead-read cases (23–24) at a specific point in the flow.
+    if [ -n "${BR_SHOW_BUDGET:-}" ]; then
+      n=$(cat "$BR_SHOW_COUNT" 2>/dev/null || echo 0); n=$((n + 1)); echo "$n" >"$BR_SHOW_COUNT"
+      [ "$n" -le "$BR_SHOW_BUDGET" ] || { echo '{"error":{"code":"BR_DEAD","message":"mock dead read"}}'; exit 1; }
+    fi
     want=$(printf '%s\n' "${ids[@]}" | jq -R . | jq -s .)
     out=$(jq --argjson want "$want" '[ .[] | select(.id as $i | $want | index($i)) ]' "$FIXTURE_BEADS")
     # BR_SHOW_OBJECT=1 reproduces the shape the real `br` intermittently answers with under
@@ -59,6 +66,21 @@ case "$1" in
     fi
     [ "$(printf '%s' "$out" | jq 'length')" -gt 0 ] && { printf '%s\n' "$out"; exit 0; }
     echo '{"error":{"code":"ISSUE_NOT_FOUND"}}'; exit 1 ;;
+  label)
+    # `label add <id> <name>` / `label remove <id> <name>` — MUTATE the fixture board
+    # so the read-back leg (D1, ac-heyt.7) sees what was written. BR_LABEL_FAIL=1
+    # rejects the write without touching the board — the failed-write case.
+    if [ "${2:-}" = add ] || [ "${2:-}" = remove ]; then
+      op="$2"; id="$3"; name="$4"
+      if [ "${BR_LABEL_FAIL:-0}" = 1 ]; then exit 1; fi
+      tmp=$(mktemp)
+      jq --arg id "$id" --arg name "$name" --arg op "$op" '
+        [ .[] | if .id == $id then
+          if $op == "add" then .labels = ((.labels // []) + [$name] | unique)
+          else .labels = ((.labels // []) - [$name]) end
+        else . end ]' "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
+    fi
+    exit 0 ;;
   comments)
     # `comments add <id> -f <file>` — append the file's text as a real comment, so the
     # receipt the producer wrote is the one the reader reads.
@@ -118,7 +140,8 @@ write_board() {
     {id:"bd-external-probed", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
     {id:"bd-legacy-stale",  issue_type:"task", labels:["refined","refine-full"], description:$leg, comments:[]},
     {id:"bd-ac-stale-receipt", issue_type:"task", labels:["origin:ac-beadify","refined"], description:$schema_desc, comments:[]},
-    {id:"bd-external-already", issue_type:"task", labels:["refined","refine-full"], description:$legp, comments:[]}
+    {id:"bd-external-already", issue_type:"task", labels:["refined","refine-full"], description:$legp, comments:[]},
+    {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board
@@ -247,8 +270,8 @@ else
 fi
 
 # --- Case 9: an UNUSABLE gate mutates NOTHING — never strip on cannot-check -----------
-# (the executed wrapper collapses element4's rc 2 to exit 1; the assertion that matters
-# is the LABEL LOG, not the rc class)
+# (the executed wrapper preserves the rc class — 0 stamped · 1 refused · 2 cannot-check —
+# so a cannot-check mutates no label; the assertion that matters is the LABEL LOG)
 : >"$BR_LOG"
 OUT=$(PATH="$MOCK:$PATH" bash "$STAMP" bd-absent-from-board 2>&1); RC=$?
 if [ "$RC" -ne 0 ] && [ -z "$(grep -E 'label (add|remove) bd-absent-from-board' "$BR_LOG")" ]; then
@@ -495,6 +518,44 @@ if [ "$RC" -eq 0 ] && [ "$(stamped_count bd-b-own-cmd)" -eq 1 ]; then
   pass "Case 21: a touchers line whose only path mention is its own command owes nothing"
 else
   fail "Case 21: expected rc 0 + stamp, rc=$RC. Output: $OUT"
+fi
+
+# --- Cases 22–24: the WRITE READ-BACK (D1) — a write the board did not accept ------
+# --- (or a board that cannot be re-read) is WRITE-FAILED, never a silent STAMPED -----
+# The stamp leg and the downgrade leg each RE-READ the board after writing and assert
+# the label set they meant to produce. Exit codes are never trusted: the sensor is the
+# read-back. bd-external-probed is the clean-stamp bead (Case 3c/18a); its flow makes
+# two show reads before the read-back (element4 + the meta read).
+
+# Case 22: a FAILED `br label add` — the board is not updated, the read-back refuses.
+# bd-clean is a never-stamped bead, so the read-back cannot find an earlier refined.
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" BR_LABEL_FAIL=1 bash "$STAMP" bd-clean 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-clean" \
+   && ! echo "$OUT" | grep -q "STAMPED"; then
+  pass "Case 22: a rejected label write is WRITE-FAILED (rc 2), never a STAMPED"
+else
+  fail "Case 22: expected rc 2 + WRITE-FAILED and no STAMPED, rc=$RC. Output: $OUT"
+fi
+
+# Case 23: a DEAD READ after the write — the read-back cannot verify the stamp.
+: >"$BR_LOG"
+: >"$BR_SHOW_COUNT"
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=2 bash "$STAMP" bd-clean 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-clean"; then
+  pass "Case 23: a dead read after the write is WRITE-FAILED — the stamp is not trusted on exit codes"
+else
+  fail "Case 23: expected rc 2 + WRITE-FAILED, rc=$RC. Output: $OUT"
+fi
+
+# Case 24: a DEAD READ during the downgrade — a cannot-check, never "no stale stamp held".
+: >"$BR_LOG"
+: >"$BR_SHOW_COUNT"
+OUT=$(PATH="$MOCK:$PATH" BR_SHOW_BUDGET=2 bash "$STAMP" bd-legacy-stale 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-legacy-stale"; then
+  pass "Case 24: a dead read during the downgrade is WRITE-FAILED (rc 2), never 'no stale stamp held'"
+else
+  fail "Case 24: expected rc 2 + WRITE-FAILED, rc=$RC. Output: $OUT"
 fi
 
 echo

@@ -64,12 +64,33 @@ stamp_refined() {
   }
 
   _downgrade() {
-    local id="$1" why="$2" held
-    held=$(_show_json "$id" | jq -r '[ .[0].labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null || echo 0)
+    local id="$1" why="$2" held labels_now
+    # The HELD read is a cannot-check, never "no stale stamp held": a dead `br` or
+    # `jq` must not read as "nothing to strip" (D1).
+    held=$(_show_json "$id" | jq -r '[ .[0].labels // [] | .[] | select(. == "refined") ] | length' 2>/dev/null)
+    if [ -z "$held" ]; then
+      echo "stamp_refined: WRITE-FAILED $id — cannot re-read the board before the downgrade" >&2
+      return 2
+    fi
     [ "${held:-0}" -gt 0 ] || return 0
-    br label remove "$id" "refined" 2>/dev/null
-    br label add "$id" "unrefined" 2>/dev/null
+    br label remove "$id" "refined" 2>/dev/null || true
+    br label add "$id" "unrefined" 2>/dev/null || true
+    # READ-BACK, not a trusted exit: the downgrade meant to produce refined-absent
+    # and unrefined-present. A dead re-read is a cannot-check; a board that did not
+    # accept the writes is a mismatch — both are the single WRITE-FAILED line.
+    raw_now=$(_show_json "$id")
+    if [ -z "$raw_now" ]; then
+      echo "stamp_refined: WRITE-FAILED $id — cannot re-read the board after the downgrade" >&2
+      return 2
+    fi
+    labels_now=$(printf '%s' "$raw_now" | jq -r '.[0].labels // [] | join(",")' 2>/dev/null)
+    if printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'refined' \
+       || ! printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'unrefined'; then
+      echo "stamp_refined: WRITE-FAILED $id — the board holds: [$labels_now]" >&2
+      return 2
+    fi
     echo "stamp_refined: DOWNGRADED $id — stripped a stale 'refined' stamp ($why); it returns to the refine lane." >&2
+    return 0
   }
 
   local out rc
@@ -77,7 +98,7 @@ stamp_refined() {
   if [ "$rc" -ne 0 ]; then
     printf '%s\n' "$out" >&2
     echo "stamp_refined: REFUSED $id — element 4 unmet; no label written." >&2
-    [ "$rc" -eq 1 ] && _downgrade "$id" "element 4 unmet"
+    if [ "$rc" -eq 1 ]; then _downgrade "$id" "element 4 unmet" || return $?; fi
     return "$rc"
   fi
 
@@ -117,7 +138,7 @@ stamp_refined() {
   probes=$(printf '%s' "$meta" | jq -r '.[0].description // ""' | grep -c 'Probe:')
   if [ "${probes:-0}" -eq 0 ]; then
     echo "stamp_refined: REFUSED $id — description carries no executable 'Probe:' line; a refined bead must be probe-bearing (beads-standards: refined). Author the probes, then re-stamp. No label written." >&2
-    _downgrade "$id" "no executable Probe: line"
+    _downgrade "$id" "no executable Probe: line" || return $?
     return 1
   fi
 
@@ -129,13 +150,13 @@ stamp_refined() {
       | grep -E '^POLISH-FIXPOINT:[[:space:]].*rounds=[0-9]+.*sha256=[0-9a-f]{8,}' | tail -1)
     if [ -z "$receipt" ]; then
       echo "stamp_refined: REFUSED $id — family-origin bead with no conforming fixpoint receipt (expected a 'POLISH-FIXPOINT: … rounds=<n> sha256=<digest>' comment from skills/_tools/polish-fixpoint.sh). No label written." >&2
-      _downgrade "$id" "no conforming fixpoint receipt"
+      _downgrade "$id" "no conforming fixpoint receipt" || return $?
       return 1
     fi
     rounds=$(printf '%s' "$receipt" | sed -E 's/.*rounds=([0-9]+).*/\1/')
     if [ "${rounds:-0}" -lt 2 ]; then
       echo "stamp_refined: REFUSED $id — fixpoint receipt records rounds=$rounds; a clean FIRST round proves nothing, so a fixpoint needs a clean round >= 2. No label written." >&2
-      _downgrade "$id" "fixpoint receipt below rounds=2"
+      _downgrade "$id" "fixpoint receipt below rounds=2" || return $?
       return 1
     fi
   fi
@@ -170,7 +191,7 @@ stamp_refined() {
   if [ "$trc" -eq 1 ]; then
     printf '%s\n' "$tout" >&2
     echo "stamp_refined: REFUSED $id — [unowned-touchers] the touchers leg refused (above). Re-derive with 'skills/_tools/touchers.sh derive <path>', then re-stamp. No label written." >&2
-    _downgrade "$id" "unowned, malformed or stale touchers"
+    _downgrade "$id" "unowned, malformed or stale touchers" || return $?
     return 1
   elif [ "$trc" -ne 0 ]; then
     printf '%s\n' "$tout" >&2
@@ -178,9 +199,29 @@ stamp_refined() {
     return 2
   fi
 
-  br label remove "$id" "unrefined" 2>/dev/null
-  br label add "$id" "refined" 2>/dev/null
-  br label add "$id" "$path_label" 2>/dev/null
+  # THE STAMP IS A READ-BACK, NOT A TRUSTED EXIT (D1). The three writes discard their
+  # exits — a rejected write leaves the board unchanged and the read-back catches it —
+  # then the board is re-read and the label set the stamp meant to produce is asserted:
+  # refined present, unrefined absent. A mismatch, or a board that cannot be re-read,
+  # exits 2 with a single WRITE-FAILED line. STAMPED prints ONLY on a verified stamp —
+  # bead-artifact.py classifies a run by that substring.
+  br label remove "$id" "unrefined" 2>/dev/null || true
+  br label add "$id" "refined" 2>/dev/null || true
+  br label add "$id" "$path_label" 2>/dev/null || true
+  # READ-BACK, not a trusted exit: the stamp meant to produce refined-present and
+  # unrefined-absent. A dead re-read is a cannot-check; a board that did not accept
+  # the writes is a mismatch — both are the single WRITE-FAILED line.
+  raw_now=$(_show_json "$id")
+  if [ -z "$raw_now" ]; then
+    echo "stamp_refined: WRITE-FAILED $id — cannot re-read the board after the stamp" >&2
+    return 2
+  fi
+  labels_now=$(printf '%s' "$raw_now" | jq -r '.[0].labels // [] | join(",")' 2>/dev/null)
+  if ! printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'refined' \
+     || printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'unrefined'; then
+    echo "stamp_refined: WRITE-FAILED $id — the board holds: [$labels_now]" >&2
+    return 2
+  fi
   echo "stamp_refined: STAMPED $id ($path_label)"
 }
 
@@ -197,6 +238,12 @@ fi
 
 if [ "$_STAMP_REFINED_DIRECT" = 1 ]; then
   _rc=0
-  for _id in "$@"; do stamp_refined "$_id" || _rc=1; done
+  for _id in "$@"; do
+    stamp_refined "$_id"; _r=$?
+    # The rc CLASS is preserved, never collapsed: 2 (cannot-check) is the class the
+    # claim gate routes NOT-GATED on, and a wrapper that flattens it to 1 misroutes a
+    # WRITE-FAILED as a content refusal. First non-zero wins on multi-bead runs.
+    [ "$_r" -ne 0 ] && [ "$_rc" -eq 0 ] && _rc="$_r"
+  done
   exit "$_rc"
 fi

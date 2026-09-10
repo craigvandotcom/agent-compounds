@@ -121,6 +121,19 @@ if [ "$1" = "show" ]; then
   out=$(jq --argjson want "$want" '[ .[] | select(.id as $i | $want | index($i)) ]' "$FIXTURE_BEADS")
   [ "$(printf '%s' "$out" | jq 'length')" -gt 0 ] && { printf '%s\n' "$out"; exit 0; }
   echo '{"error":{"code":"ISSUE_NOT_FOUND"}}'
+  exit 0
+fi
+# `label add/remove <id> <name>` — MUTATE the fixture board so stamp-refined's
+# READ-BACK (ac-heyt.7) sees what was written.
+if [ "$1" = "label" ]; then
+  op="$2"; id="$3"; name="$4"
+  tmp=$(mktemp)
+  jq --arg id "$id" --arg name "$name" --arg op "$op" '
+    [ .[] | if .id == $id then
+      if $op == "add" then .labels = ((.labels // []) + [$name] | unique)
+      else .labels = ((.labels // []) - [$name]) end
+    else . end ]' "$FIXTURE_BEADS" >"$tmp" && mv "$tmp" "$FIXTURE_BEADS"
+  exit 0
 fi
 exit 0
 EOF
