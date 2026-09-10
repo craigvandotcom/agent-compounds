@@ -12,11 +12,11 @@ Fixes are proposed here and applied to the skill only after the pattern recurs o
 - first_seen: 2026-09-05
 - last_seen: 2026-09-05
 - stage: manual
-- status: open
-- proposed_fix: one rule in SKILL.md § Procedure step 2: "Before writing a DECISION bead, list
-  the facts its options turn on. If any fact is queryable now (a role attribute, a policy body,
-  a grant, a config value, a grep), query it and re-read the fork. A fork that a query settles
-  is a research gap, not a human gate — fold the answer into the plan or the consuming bead."
+- status: resolved
+- proposed_fix: LANDED 2026-09-09 (ac-wp8i.16): the query-first rule now lives in
+  skills/ac-plan/references/decisions.md ("a fork a query settles is research done now, not a
+  card", the escalation test), and ac-beadify step 2 routes an unsettled fork to a
+  `needs-human` card on the plan — `beadify-refusal: needs-human` — never to a human gate.
 - narrative: the compound-check epic (bd-epic-compound-check-n0lug) shipped one DECISION card,
   "which Postgres role does CURATE_POSTGRES_URL resolve to, and should the curator SET ROLE".
   Craig asked to settle it before bead polish and objected that the pipeline should not need a

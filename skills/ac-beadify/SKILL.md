@@ -19,10 +19,9 @@ Contract compiled TO: `references/bead-schema.md` (mandatory load); canon by poi
 
 ## The refusal that defines this skill
 
-**No probe, no bead.** An AC that names no executable probe is not a smaller AC — the bead
-is REFUSED, emitted nowhere, returned to the plan. This is a refusal, not a warning, never a
-label: softening it IS the vacuous-AC regression (measured H-impact, recurrence 5, previously
-regressed). Mechanically, for every candidate bead:
+**No probe, no bead.** An AC that names no executable probe is REFUSED, emitted nowhere,
+returned to the plan — a refusal, never a warning, never a label: softening it IS the
+vacuous-AC regression (measured H-impact, recurrence 5). Mechanically, for every candidate bead:
 
 ```sh
 # every AC must yield a probe; every probe must be runnable AND RED against current HEAD
@@ -35,24 +34,26 @@ grep -o 'Probe: `[^`]*`' "$BEAD" | sed 's/^Probe: `//; s/`$//' \
 ```
 
 Count the extracted probes against the AC bullets; fewer = REFUSED. A prose fragment
-(`wc -l`, "diff the file") is not a probe. **Execution is part of the refusal**: compile runs
-every probe against current HEAD — one that exits 0 is already green, asserts nothing, and
-REFUSES the bead naming the offending AC (dogfood #2 measured 19; baseline in
-`ac-pipeline/FRICTIONS.md`). A probe that cannot run at compile (state-mutating, needs a
-device/credentials) goes on an explicit NOT-EXECUTED list with the reason — never a silent
-skip; a probe naming an artifact this bead has yet to create keeps the guarded form
-`test -x <path> && bash <path>`, honestly RED at compile.
+(`wc -l`, "diff the file") is not a probe. **Execution is part of the refusal** — a probe
+already green at compile REFUSES the bead (dogfood #2 measured 19; baseline in
+`ac-pipeline/FRICTIONS.md`). One that cannot run (state-mutating, needs a device/credentials)
+goes on an explicit NOT-EXECUTED list — never a silent skip; one naming an artifact this bead
+has yet to create keeps the guarded form `test -x <path> && bash <path>`, honestly RED at compile.
 
 ## Procedure
 
-1. **Read the plan and the schema.** Load `references/bead-schema.md`. Confirm the plan
-   carries an approval stamp; an ungraded plan is returned, not compiled.
+1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Verify the
+   stamp yourself: `status: loop-ready`, a `## Decisions` section, zero `needs-human` cards —
+   the keys and verdicts `skills/_tools/plan-approve.sh` (the stamp's ONE writer) reads back;
+   anything else is REFUSED and the plan is returned, never compiled.
 2. **Cut the work into beads.** Sizing is from the bead-checklist, never from taste: one bead
    = one focused worker pass. Two signals govern the cut, both cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
    - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through an
-     underdetermined bead improvising decisions the bead should have made; a fork the plan does
-     not settle goes back to the plan, or out as a human gate.
+     underdetermined bead improvising decisions the bead should have made; a fork the plan
+     does not settle appends a `needs-human` card to `## Decisions`, sets `status: refined`,
+     prints `beadify-refusal: needs-human` on its own line and stops — a plan defect surfaced
+     to the docket, never a bead, never a human gate.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
@@ -76,7 +77,6 @@ skip; a probe naming an artifact this bead has yet to create keeps the guarded f
 
 ## Plan retirement — the seams chain, and the one case that refuses it
 
-Tenet 7: plan hard, then retire the plan — beads and the constitution are its only survivors.
 On a successful compile the plan file is **moved to `_plans/_done/`**, the epic bead gets a
 comment naming its new path; the plan is preserved, never deleted.
 
