@@ -43,8 +43,32 @@ FLOOR = 13
 # The raw-read shape the conversions replaced: a `br … --json` whose output is
 # piped or captured without routing through the envelope-aware helper. The same
 # rg shape ac-heyt.4's derivation used, including the `"$BR"` variable form.
-RAW_READ = re.compile(r'(?:"?\$\{?BR\}?"?|\bbr\b)\s+.*--json')
+# Quotes around the binary (`"br"` / `'br'`) are part of the token — a closing
+# quote is not whitespace, so `\bbr\b\s+` alone lets them through (ac-ia8g).
+RAW_READ = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+.*--json')
 ROUTED_READ = re.compile(r"\bbr_call\b[^\n]*--json")
+BR_START = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+')
+BR_CALL_START = re.compile(r'\bbr_call\b')
+# Windowed match context (ac-1jkr): a br / br_call invocation, then --json
+# within the next WINDOW lines. Same-line reads still match because the start
+# line is inside the window. Space-join so the existing regexes see one statement.
+WINDOW = 3
+
+
+def joined_lines(text):
+    """Yield (lineno, line) after stripping backslash-newline continuations.
+
+    `br \\` + newline + `  list --json` is one raw read; a per-line scan never
+    sees both tokens. Line numbers are those of the joined text. A `br` with
+    `--json` on a following line and no continuation is the windowed class
+    below (ac-1jkr).
+    """
+    return enumerate(text.replace("\\\n", "").splitlines(), 1)
+
+
+def window_ctx(rows, start):
+    """Space-join WINDOW lines starting at start so RAW_READ / ROUTED_READ see one statement."""
+    return " ".join(line for _, line in rows[start:start + WINDOW])
 
 # The sanctioned engines — the ONLY files that may touch the binary with --json
 # and remain clean. They ARE the envelope-aware readers; everything else routes
@@ -80,11 +104,13 @@ def main():
             continue
         if rel in SANCTIONED:
             continue  # the engines may touch the binary with --json by contract
-        for lineno, line in enumerate(text.splitlines(), 1):
-            if RAW_READ.search(line):
-                findings.append(f"raw br --json read in {rel}:{lineno}: {line.strip()}")
-            if ROUTED_READ.search(line):
+        rows = list(joined_lines(text))
+        for i, (lineno, line) in enumerate(rows):
+            ctx = window_ctx(rows, i)
+            if BR_CALL_START.search(line) and ROUTED_READ.search(ctx):
                 routed += 1
+            elif BR_START.search(line) and RAW_READ.search(ctx):
+                findings.append(f"raw br --json read in {rel}:{lineno}: {line.strip()}")
 
     # The python twin counts once toward the floor — the thirteenth call site.
     if os.path.isfile(os.path.join(root, "skills/ac-polish/scripts/bead-artifact.py")):

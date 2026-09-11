@@ -52,6 +52,25 @@ rc=$(run_check "$FIXTURE")
   && ok "the fixture's raw read is RED and names the caller" \
   || bad "fixture: rc=$rc out=$(cat "$OUT")"
 
+# --- RED: backslash-newline continuation evasion (ac-ia8g) --------------------
+# Distinct marker from sibling ac-1jkr's windowed-context cases.
+mkdir -p "$WORK/evasion-cont/skills/_tools"
+printf '#!/usr/bin/env bash\ndata=$(br \\\n  list --json --limit 0)\n' \
+  > "$WORK/evasion-cont/skills/_tools/cont.sh"
+rc=$(run_check "$WORK/evasion-cont")
+[ "$rc" -eq 1 ] && grep -q 'raw br --json read' "$OUT" \
+  && ok "backslash-newline continuation evasion is RED" \
+  || bad "evasion-cont: rc=$rc out=$(cat "$OUT")"
+
+# --- RED: quoted-binary evasion (ac-ia8g) -------------------------------------
+mkdir -p "$WORK/evasion-quoted/skills/_tools"
+printf 'data=$("br" list --json --limit 0)\n' \
+  > "$WORK/evasion-quoted/skills/_tools/q.sh"
+rc=$(run_check "$WORK/evasion-quoted")
+[ "$rc" -eq 1 ] && grep -q 'raw br --json read' "$OUT" \
+  && ok "quoted-binary evasion is RED" \
+  || bad "evasion-quoted: rc=$rc out=$(cat "$OUT")"
+
 # --- RED: a routed-only tree under the floor refuses, never a clean pass --------
 routed_tree "$WORK/floor" 5
 rc=$(run_check "$WORK/floor")
