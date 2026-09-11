@@ -202,15 +202,15 @@ stamp_refined() {
   # THE STAMP IS A READ-BACK, NOT A TRUSTED EXIT (D1). The three writes discard their
   # exits — a rejected write leaves the board unchanged and the read-back catches it —
   # then the board is re-read and the label set the stamp meant to produce is asserted:
-  # refined present, unrefined absent. A mismatch, or a board that cannot be re-read,
-  # exits 2 with a single WRITE-FAILED line. STAMPED prints ONLY on a verified stamp —
-  # bead-artifact.py classifies a run by that substring.
+  # refined present, unrefined absent, path_label present. A mismatch, or a board that
+  # cannot be re-read, exits 2 with a single WRITE-FAILED line. STAMPED prints ONLY on
+  # a verified stamp — bead-artifact.py classifies a run by that substring.
   br label remove "$id" "unrefined" 2>/dev/null || true
   br label add "$id" "refined" 2>/dev/null || true
   br label add "$id" "$path_label" 2>/dev/null || true
-  # READ-BACK, not a trusted exit: the stamp meant to produce refined-present and
-  # unrefined-absent. A dead re-read is a cannot-check; a board that did not accept
-  # the writes is a mismatch — both are the single WRITE-FAILED line.
+  # READ-BACK, not a trusted exit: the stamp meant to produce refined-present,
+  # unrefined-absent, and path_label-present. A dead re-read is a cannot-check; a
+  # board that did not accept the writes is a mismatch — both are WRITE-FAILED.
   raw_now=$(_show_json "$id")
   if [ -z "$raw_now" ]; then
     echo "stamp_refined: WRITE-FAILED $id — cannot re-read the board after the stamp" >&2
@@ -218,7 +218,8 @@ stamp_refined() {
   fi
   labels_now=$(printf '%s' "$raw_now" | jq -r '.[0].labels // [] | join(",")' 2>/dev/null)
   if ! printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'refined' \
-     || printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'unrefined'; then
+     || printf '%s' "$labels_now" | tr ',' '\n' | grep -qx 'unrefined' \
+     || ! printf '%s' "$labels_now" | tr ',' '\n' | grep -qx "$path_label"; then
     echo "stamp_refined: WRITE-FAILED $id — the board holds: [$labels_now]" >&2
     return 2
   fi

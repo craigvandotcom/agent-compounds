@@ -70,9 +70,15 @@ case "$1" in
     # `label add <id> <name>` / `label remove <id> <name>` — MUTATE the fixture board
     # so the read-back leg (D1, ac-heyt.7) sees what was written. BR_LABEL_FAIL=1
     # rejects the write without touching the board — the failed-write case.
+    # BR_LABEL_FAIL_PATH=1 rejects only the path_label add (not refined/unrefined),
+    # so a partial write (refined lands, path_label does not) is reachable.
     if [ "${2:-}" = add ] || [ "${2:-}" = remove ]; then
       op="$2"; id="$3"; name="$4"
       if [ "${BR_LABEL_FAIL:-0}" = 1 ]; then exit 1; fi
+      if [ "${BR_LABEL_FAIL_PATH:-0}" = 1 ] && [ "$op" = add ] \
+         && [ "$name" != "refined" ] && [ "$name" != "unrefined" ]; then
+        exit 1
+      fi
       tmp=$(mktemp)
       jq --arg id "$id" --arg name "$name" --arg op "$op" '
         [ .[] | if .id == $id then
@@ -141,7 +147,8 @@ write_board() {
     {id:"bd-legacy-stale",  issue_type:"task", labels:["refined","refine-full"], description:$leg, comments:[]},
     {id:"bd-ac-stale-receipt", issue_type:"task", labels:["origin:ac-beadify","refined"], description:$schema_desc, comments:[]},
     {id:"bd-external-already", issue_type:"task", labels:["refined","refine-full"], description:$legp, comments:[]},
-    {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]}
+    {id:"bd-clean",        issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]},
+    {id:"bd-path-partial", issue_type:"task", labels:["origin:ac-triage"], description:$legp, comments:[]}
   ]' >"$FIXTURE_BEADS"
 }
 write_board
@@ -556,6 +563,18 @@ if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-legacy-stale"; then
   pass "Case 24: a dead read during the downgrade is WRITE-FAILED (rc 2), never 'no stale stamp held'"
 else
   fail "Case 24: expected rc 2 + WRITE-FAILED, rc=$RC. Output: $OUT"
+fi
+
+# Case 25: a PARTIAL write — refined lands, the path_label add is rejected. The
+# read-back must refuse with WRITE-FAILED, never STAMPED: path_label absence costs
+# the same exit-2 as a refined/unrefined failure.
+: >"$BR_LOG"
+OUT=$(PATH="$MOCK:$PATH" BR_LABEL_FAIL_PATH=1 bash "$STAMP" bd-path-partial 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "WRITE-FAILED bd-path-partial" \
+   && ! echo "$OUT" | grep -q "STAMPED"; then
+  pass "Case 25: a rejected path_label write is WRITE-FAILED (rc 2), never a STAMPED"
+else
+  fail "Case 25: expected rc 2 + WRITE-FAILED and no STAMPED, rc=$RC. Output: $OUT"
 fi
 
 echo
