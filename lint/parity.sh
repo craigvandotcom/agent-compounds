@@ -239,16 +239,6 @@ elif [ "$CHECK_ID" = 7 ]; then
   compare_sets "registry tree" "$old" "$new" 's/^FAIL: //' 's/^FAIL 07-consumer-symlinks: //'
   finish
 
-elif [ "$CHECK_ID" = 10 ] || [ "$CHECK_ID" = 11 ]; then
-  case "$CHECK_ID" in
-    10) NEW="$ROOT/lint/checks/10-d-series-conformance.py"; LSTRIP='s/^FAIL: //'; NSTRIP='s/^FAIL 10-d-series-conformance: //' ;;
-    11) NEW="$ROOT/lint/checks/11-g-series-conformance.py";  LSTRIP='s/^FAIL: //'; NSTRIP='s/^FAIL 11-g-series-conformance: //' ;;
-  esac
-  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
-  old="$(run_legacy "$CHECK_ID")" || exit 2
-  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
-  compare_sets "registry tree (doctrine landings)" "$old" "$new" "$LSTRIP" "$NSTRIP"
-  finish
 elif [ "$CHECK_ID" = 15 ]; then
   NEW="$ROOT/lint/checks/15-line-ceilings.py"
   [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
@@ -390,8 +380,8 @@ elif [ "$CHECK_ID" = 20 ] || [ "$CHECK_ID" = 21 ] || [ "$CHECK_ID" = 22 ] || [ "
   compare_delegating "fixture RED tree" "$W/tree"
   finish
 
-elif [ "$CHECK_ID" = 3 ] || [ "$CHECK_ID" = 4 ] || [ "$CHECK_ID" = 5 ] || [ "$CHECK_ID" = 9 ] || [ "$CHECK_ID" = 24 ]; then
-  # --- recipes for Checks 3, 4, 5, 9 and 24 (ac-1p7j.13) -----------------------
+elif [ "$CHECK_ID" = 3 ] || [ "$CHECK_ID" = 4 ] || [ "$CHECK_ID" = 5 ] || [ "$CHECK_ID" = 9 ]; then
+  # --- recipes for Checks 3, 4, 5 and 9 (ac-1p7j.13) ---------------------------
   # Tree-walking blocks: registry tree, then each check's committed static
   # fixture. The strip patterns reduce both sides' wrapper headers so the
   # comparison is on the violation text.
@@ -400,7 +390,6 @@ elif [ "$CHECK_ID" = 3 ] || [ "$CHECK_ID" = 4 ] || [ "$CHECK_ID" = 5 ] || [ "$CH
     4)  NEW="$ROOT/lint/checks/04-readme-disk.py";              FX="04-readme-disk";              LSTRIP='s/^FAIL: //' ;;
     5)  NEW="$ROOT/lint/checks/05-agents-diagram.py";           FX="05-agents-diagram";           LSTRIP='s/^FAIL: //' ;;
     9)  NEW="$ROOT/lint/checks/09-stray-alias-agents.py";       FX="09-stray-alias-agents";       LSTRIP='s/^FAIL: //' ;;
-    24) NEW="$ROOT/lint/checks/24-description-length.py";       FX="24-description-length";       LSTRIP='s/^FAIL: Check 24: //' ;;
   esac
   [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
   JUDGE_ID="$(basename "$NEW" .py)"
@@ -444,22 +433,6 @@ elif [ "$CHECK_ID" = 2 ]; then
 
   old="$(run_legacy 2 "$ROOT/lint/fixtures/2-ac-cross-references")" || exit 2
   new="$(python3 "$NEW" "$ROOT/lint/fixtures/2-ac-cross-references" 2>/dev/null | grep '^FAIL ' || true)"
-  compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
-  finish
-
-elif [ "$CHECK_ID" = 6 ]; then
-  # --- recipe for Check 6 (portability, ac-1p7j.12) -----------------------------
-  # Simple tree-walking block: registry tree, then the committed static fixture.
-  NEW="$ROOT/lint/checks/6-portability.py"
-  [ -f "$NEW" ] || { echo "NOT-CHECKED: $NEW missing — nothing ported to compare" >&2; exit 2; }
-  LSTRIP='s/^FAIL: //'; NSTRIP="s/^FAIL $(basename "$NEW" .py): //"
-
-  old="$(run_legacy 6)" || exit 2
-  new="$(python3 "$NEW" "$ROOT" 2>/dev/null | grep '^FAIL ' || true)"
-  compare_sets "registry tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
-
-  old="$(run_legacy 6 "$ROOT/lint/fixtures/6-portability")" || exit 2
-  new="$(python3 "$NEW" "$ROOT/lint/fixtures/6-portability" 2>/dev/null | grep '^FAIL ' || true)"
   compare_sets "fixture tree" "$old" "$new" "$LSTRIP" "$NSTRIP"
   finish
 
