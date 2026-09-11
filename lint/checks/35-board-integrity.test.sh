@@ -79,6 +79,40 @@ board "$WORK/e" "$OPEN_TAGGED"
 rc=$(run_check "$WORK/e")
 [ "$rc" -eq 0 ] && ok "clean board is GREEN" || bad "clean board: rc=$rc out=$(cat "$OUT")"
 
+# --- GREEN: a pre-existing malformed bead untouched by this commit does not ---
+# --- fail a commit that only stages an unrelated bead (2026-09-12 audit) ------
+git_board() { # <dir> <lines...> — a git checkout with the board committed at HEAD
+  mkdir -p "$1/.beads"
+  git -C "$1" init -q
+  git -C "$1" config user.email "test@example.com"
+  git -C "$1" config user.name "test"
+  printf '%s\n' "${@:2}" > "$1/.beads/issues.jsonl"
+  git -C "$1" add .beads/issues.jsonl
+  git -C "$1" commit -q -m init
+}
+
+t="$WORK/scoped-clean"
+git_board "$t" "$OPEN_ORIGINLESS" "$OPEN_TAGGED"
+# this commit only touches a NEW bead — the pre-existing origin-less one is untouched
+printf '%s\n' "$OPEN_ORIGINLESS" "$OPEN_TAGGED" \
+  '{"id":"ac-new","status":"open","created_at":"2026-08-26T10:00:00Z","labels":["origin:manual"],"title":"new, unrelated"}' \
+  > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "pre-existing malformed bead untouched by this commit does not fail it" \
+  || bad "scoped-clean: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
+# --- RED: a malformed bead ADDED by this commit still fails it -----------------
+t="$WORK/scoped-dirty"
+git_board "$t" "$OPEN_TAGGED"
+# this commit adds the origin-less bead itself
+printf '%s\n' "$OPEN_TAGGED" "$OPEN_ORIGINLESS" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 1 ] && grep -q "origin: label" "$OUT" && grep -q 'ac-lost' "$OUT" \
+  && ok "malformed bead ADDED by this commit still fails it" \
+  || bad "scoped-dirty: expected exit 1 naming ac-lost, rc=$rc out=$(cat "$OUT")"
+
 # --- NOT-GATED: empty board and missing board ----------------------------------
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"
 rc=$(run_check "$WORK/f")
