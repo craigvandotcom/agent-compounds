@@ -1,26 +1,27 @@
 {
-  "status": "done",
-  "mode": "REVIEW",
+  "status": "degraded",
+  "mode": "NIGHTLY",
   "date": "2026-09-12",
   "machine": "darwin",
   "branch": "main",
-  "scope": "agent-compounds (machinery board)",
+  "scope": "body-compass-app",
   "counts": {
-    "closed_unrefined_stripped": 69,
-    "open_unrefined_stamped": 0,
-    "open_human_gates": 0,
+    "closed_unrefined_stripped": 3,
+    "open_unrefined_stamped": 3,
+    "open_human_gates_verified": 4,
     "plans_reconciled": 0,
     "proposals": 0,
     "files_moved": 0,
     "beads_created": 0
   },
-  "pushed_sha": "eeac9121d28f688247c47f50e19907a2a35b39fd",
-  "bca_pushed_sha": "eeac9121d28f688247c47f50e19907a2a35b39fd",
-  "push_verified": true,
+  "pushed_sha": null,
+  "bca_pushed_sha": "2a611199d327a5a3ffd38dffa42e2aa820adde22",
+  "push_verified": false,
+  "stranded_sha": "2a611199d327a5a3ffd38dffa42e2aa820adde22",
   "slack": {
     "channel": "sofi",
-    "status": "healthy",
-    "ts": "1789165097.488899"
+    "status": "degraded",
+    "ts": "1789167117.031709"
   },
-  "note": "Plan and _backlog reconcile is local-only in agent-compounds (_plans/ and _backlog/ are gitignored), so this run touched the tracked bead ledger only: Tier-1 readiness-label repair."
+  "note": "Reconciled 7 beads in body-compass-app (readiness-label repair + gate re-verify). Push to body-compass-app main REJECTED — a concurrent pusher landed 9c17facc on origin/main after this run's worktree forked from 969c56a9. Work is stranded at 2a611199 in a /tmp worktree pending human/next-cycle reconcile. No Tier-3 proposals emitted: parentage-gap-orphan cluster already covered by pending _plans/_proposals/2026-09-04/02-parentage-gap-orphans.md; epic-edge scan found 0 real I2 violations under Craig's bd-wgjbq ruling (issue_type==epic, not the >3-children heuristic)."
 }
