@@ -25,12 +25,14 @@ W="$(mktemp -d "${TMPDIR:-/tmp}/coord.XXXXXX")"
 trap 'rm -rf "$W"' EXIT
 BIN="$W/bin"; mkdir -p "$BIN"; PATH="$BIN:$PATH"; export PATH
 
-# Mock `br`: coordination status is driven by AC2_TEST_CLAIMS; sync --flush-only touches the
-# ledger unless told to fail. Everything else is a no-op.
+# Mock `br`: coordination status is driven by AC2_TEST_CLAIMS; AC2_TEST_CS_FAIL makes that
+# read exit non-zero (never a zero-exit empty payload — that fail-opens as "no claims").
+# sync --flush-only touches the ledger unless told to fail. Everything else is a no-op.
 cat >"$BIN/br" <<'MOCKBR'
 #!/usr/bin/env bash
 case "${1:-}" in
   coordination)
+    [ "${AC2_TEST_CS_FAIL:-0}" = "1" ] && exit 2
     [ "${AC2_TEST_CS_BROKEN:-0}" = "1" ] && { echo "not json"; exit 0; }
     if [ -n "${AC2_TEST_CLAIMS:-}" ]; then printf '%s' "$AC2_TEST_CLAIMS"
     else printf '{"summary":{},"claims":[]}'; fi ;;
@@ -123,6 +125,11 @@ rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --dry-run )
 echo "coordinator.test: a gate that cannot verify says so"
 [ "$( AC2_TEST_CS_BROKEN=1 rc_of "$W/r5" --run RUNA --dry-run )" -eq 2 ] \
   && ok "unparseable coordination status is NOT-GATED, never a pass" || bad "broken status did not exit 2"
+out="$( AC2_TEST_CS_FAIL=1 run "$W/r5" --run RUNA --dry-run )"
+rc=$( AC2_TEST_CS_FAIL=1 rc_of "$W/r5" --run RUNA --dry-run )
+[ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q "coordination status' refused" \
+  && ok "a refused coordination status read is NOT-GATED, never a fabricated orphan verdict" \
+  || bad "refused status did not exit 2 naming the read (rc=$rc): $out"
 ( cd "$W/r5" && rm -f .beads/issues.jsonl )
 [ "$(rc_of "$W/r5" --run RUNA --dry-run)" -eq 2 ] \
   && ok "a missing ledger is NOT-GATED" || bad "missing ledger did not exit 2"
