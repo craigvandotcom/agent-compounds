@@ -9,6 +9,9 @@ Sets:
   LIVE_TEXT  skill text a human or agent reads as doctrine: SKILL.md files,
              references/ and reference/ and workflows/ trees. Ledger files are
              NEVER live text — they are dated sensor logs, not doctrine.
+             .github/ is excluded outright: `_in_dir` matches "workflows" as a
+             bare path component, and .github/workflows/*.yml (CI config, not
+             skill doctrine) matched it before this carve-out existed.
   LEDGER     FRICTIONS.md and MAINTENANCE.md — exactly those two filenames,
              anywhere, including under _archive/. The FORMAT docs that teach
              their shape (skill-builder/references/maintenance-ledger.md,
@@ -34,6 +37,22 @@ Sets:
               skills/ and scripts/, tests excluded — Check 36's audit surface.
   CACHES     directory names that are build/interpreter caches — excluded from
               every walk.
+  README             the root README.md — Check 04's audit surface.
+  AGENTS_DOC         the root AGENTS.md — Check 05's audit surface.
+  AGENT_STANCES      agents/*.md, the 5 core stance files — the surface Checks
+                      03 (tier vs concrete model), 09 (retired alias names) and
+                      33 (named stances resolve) name as their subject but do
+                      not yet carry in their declared `scope:` (2026-09-12
+                      lint audit, item 3 — wiring these here does not by
+                      itself change what those checks run; each check's own
+                      header still has to name the set it wants).
+  DEPLOY_SCRIPT      deploy.sh alone — Check 08's actual subject (narrower
+                      than LIVE_TEXT, which is what it declares today).
+  HARNESS_MANIFEST   the root harnesses.json (per-harness agent-model/deploy
+                      manifest) — distinct from HARNESSES (proof-test files)
+                      above; no check names it as scope yet.
+  LINT_CONFIG        lint/config.json — no check names it as scope yet, though
+                      several (14, 15, 25, 29, 31) read it at runtime.
 
 Excluded from every set: CACHES dirs, .git, node_modules, and the vendored
 harness layers (.claude, .agents, .factory, .codex — symlinks into this repo's
@@ -78,8 +97,11 @@ _harnesses = set()
 _hooks = set()
 _templates = set()
 _scripts = set()
+_agent_stances = set()
 for p in sorted(_paths):
     base = p.rsplit("/", 1)[-1]
+    if p.startswith("agents/") and p.endswith(".md"):
+        _agent_stances.add(p)
     if base in LEDGER_NAMES:
         _ledger.add(p)
         continue
@@ -98,7 +120,8 @@ for p in sorted(_paths):
        and (p.endswith(".sh") or p.endswith(".py")) \
        and not p.endswith(".test.sh") and not p.endswith(".test.py"):
         _scripts.add(p)
-    if base == "SKILL.md" or _in_dir(p, "references") or _in_dir(p, "reference") or _in_dir(p, "workflows"):
+    if not p.startswith(".github/") \
+       and (base == "SKILL.md" or _in_dir(p, "references") or _in_dir(p, "reference") or _in_dir(p, "workflows")):
         _live.add(p)
 
 LIVE_TEXT = frozenset(_live)
@@ -108,7 +131,19 @@ HARNESSES = frozenset(_harnesses)
 HOOKS = frozenset(_hooks)
 TEMPLATES = frozenset(_templates)
 SCRIPTS = frozenset(_scripts)
+AGENT_STANCES = frozenset(_agent_stances)
 CORPUS = frozenset({CORPUS_PATH}) if os.path.isfile(os.path.join(ROOT, CORPUS_PATH)) else frozenset()
+
+
+def _one(rel):
+    return frozenset({rel}) if os.path.isfile(os.path.join(ROOT, rel)) else frozenset()
+
+
+README = _one("README.md")
+AGENTS_DOC = _one("AGENTS.md")
+DEPLOY_SCRIPT = _one("deploy.sh")
+HARNESS_MANIFEST = _one("harnesses.json")
+LINT_CONFIG = _one("lint/config.json")
 
 CHECKS_DIR = os.path.join(ROOT, "lint", "checks")
 CHECKS = frozenset(
