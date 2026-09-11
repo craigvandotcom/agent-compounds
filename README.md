@@ -39,7 +39,8 @@ groups are prose). Stage order — stage · owner · trigger · human gate · ar
 **factory-ops** — human command center, align, backlog intake, triage, native distribute.
 | Skill | What it does |
 |-------|-------------|
-| **ac-human** | Human command center — renders the full board first (loop side included), then drives only work at a human gate (blockers, plans to approve, hopper); `board` mode stops after the read-only board render |
+| **ac-board** | Read-only factory window — one glance at the whole pipeline: human gates (decisions · actions), plans by stage, beads by stage, WIP + CI health, active agents; observes only, never writes |
+| **ac-human** | Human command center — opens with `ac-board`, then drives only work at a human gate (blockers, plans to approve, hopper) |
 | **ac-align** | Reconcile the pipeline with current strategy; owns the nightly reconcile (archive done work, repair readiness labels) and the weekly strategy align |
 | **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline); also the single-bead intake — one raw idea/bug/decision typed and filed now |
 | **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |

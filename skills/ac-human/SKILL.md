@@ -1,6 +1,6 @@
 ---
 name: ac-human
-description: 'The human command center — sit down and keep the factory moving. Renders the full board first (both sides of the loop boundary), then drives the docket: only work at a human gate, on a silver platter, exit-first. Optional gated tidy/align pre-pass. `board` mode stops after the render (read-only). Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next'', ''dashboard'', ''show the board'', ''state of the pipeline'', ''pipeline status'', "what''s the factory doing", ''WIP status'', ''board overview'', ''full board''. ''Unblock'' means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), and NOT doing the work itself (use ac-implement).'
+description: 'The human command center — sit down and keep the factory moving. Opens with the full board (invokes ac-board), then drives the docket: only work at a human gate, on a silver platter, exit-first. Optional gated tidy/align pre-pass. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), and NOT doing the work itself (use ac-implement).'
 ---
 
 **You are the human's command center.** When the human sits down, show the whole board, then lay the *human-required* actions on a silver platter and conduct the session. The ac-implement swarm runs unattended, **you drive the human**.
@@ -17,11 +17,9 @@ Ready + a docket label **is the docket**, not the loop — do not drop it.
 
 ---
 
-## Board mode (the dashboard — the loop boundary off)
+## Open with the board
 
-The board is the **session opener**: before any question, render the full board per `workflows/board.md` — loop side included, read-only, no filter. It answers "is the factory running" before the docket asks anything.
-
-Invoked as `board` (triggers: `dashboard`, `show the board`, `board overview`, `full board`, …) → render it and **stop**; it is the whole response. Invoked as a session (default) → render it, then continue to the docket below.
+The board is the **session opener**: before any question, invoke **`ac-board`** (read-only, loop side included) — it answers "is the factory running" before the docket asks anything. Then continue to the docket below. To see the board alone, that is `/ac-board`; this skill keeps its eyes on human-required work.
 
 ---
 
@@ -30,7 +28,7 @@ Invoked as `board` (triggers: `dashboard`, `show the board`, `board overview`, `
 |                  |                                                                      |
 | ---------------- | -------------------------------------------------------------------- |
 | **Input**        | None (reads project/org state directly). Optional: "org-wide".       |
-| **Output**       | Board render + situational header + 🔴🟡🟢 action tiers, each with a one-click next action; actions executed on request |
+| **Output**       | ac-board render + situational header + 🔴🟡🟢 action tiers, each with a one-click next action; actions executed on request |
 | **Artifacts**    | Mutates only on explicit/confirmed action (decisions recorded, plans signed off, items promoted/planned) |
 | **Verification** | Each acted item reports its result; cleared gates unblock downstream |
 
@@ -57,7 +55,7 @@ Inside a project → that repo. At org level (root / software-lead session) or a
 
 ## Phase 1: Render first — freshen is an action, not a gate
 
-**Show the board before asking anything** — the human came to see what needs them, not to answer a setup question. Go straight to the board render (`workflows/board.md`) → then the docket.
+**Show the board before asking anything** — the human came to see what needs them, not to answer a setup question. Invoke **`ac-board`** → then the docket.
 
 Freshen (`/ac-align` — weekly align + nightly reconcile) is a *write*, so it is offered as an **option inside the action loop** (Phase 5), never an upfront gate. The scheduled nightly/weekly runs file `pipeline-proposal` beads for anything needing a human — the primary staleness signal is **proposals pending in the Docket**. Surface a one-line hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist. Headless runs skip freshen entirely.
 
@@ -65,7 +63,7 @@ Freshen (`/ac-align` — weekly align + nightly reconcile) is a *write*, so it i
 
 ## Phase 2: Scan (parallel), then apply the loop boundary
 
-**Read the board per `ac-pipeline/references/board-scan.md`** (scans A beads · B plans · C backlog) — the shared pipeline read. Phase 1 already did this read; **reuse it, never re-scan.** Apply the human-session lens below, add the docket-only reads, then **filter out everything past the loop boundary before presenting** (drop ready beads that lack a docket label, in-flight waves, `loop-ready` plans — the loop owns those).
+**ac-board rendered the board from the shared read** (`ac-pipeline/references/board-scan.md` — scans A beads · B plans · C backlog). **Reuse that read, never re-scan.** Apply the human-session lens below, add the docket-only reads, then **filter out everything past the loop boundary before presenting** (drop ready beads that lack a docket label, in-flight waves, `loop-ready` plans — the loop owns those).
 
 ### Your lens on the board
 
@@ -235,4 +233,4 @@ If the docket is empty, point at what now flows autonomously: `✅ Gates cleared
 
 ---
 
-_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-implement`. To just SEE the whole board: `board` mode._
+_The human command center. To capture an idea: `/ac-backlog`. To ship autonomously: `/ac-implement`. To just SEE the whole board: `/ac-board`._
