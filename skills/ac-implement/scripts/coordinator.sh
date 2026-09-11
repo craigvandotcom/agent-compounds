@@ -102,9 +102,19 @@ fi
 # A claim held by an actor from THIS run that is no longer working it. Liveness comes from
 # the board, never from harness notifications: a transient 5xx once read as death.
 if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-  CLAIMS=$(RUST_LOG=error br_call coordination status --json) \
-    || ungated "'$BR coordination status' refused; liveness is unknown and orphans cannot be ruled out"
-  [ -n "$CLAIMS" ] || ungated "'$BR coordination status' returned nothing; liveness is unknown and orphans cannot be ruled out"
+  CLAIMS=$(RUST_LOG=error br_call coordination status --json 2>/dev/null) || CLAIMS=""
+  if [ -z "$CLAIMS" ]; then
+    # FALLBACK, and deliberately not a skip. `br coordination` landed in a later br than some
+    # machines run -- measured absent on br 0.1.14, where this gate went NOT-GATED and took the
+    # entire close-out with it (no ledger flush, no commit). The orphan test reads only
+    # id/status/assignee, which `br list --json` already carries, so reshape that into the same
+    # {claims:[{issue:{...}}]} envelope the jq below expects. The REFUSAL keeps its teeth: a
+    # gate that cannot fire reads as coverage, which is the failure this whole file exists for.
+    CLAIMS=$(RUST_LOG=error br_call list --json --limit 0 2>/dev/null \
+      | jq -c '{claims: [ .[]? | {issue: {id: .id, status: .status, assignee: .assignee}} ]}' 2>/dev/null) \
+      || CLAIMS=""
+  fi
+  [ -n "$CLAIMS" ] || ungated "neither '$BR coordination status' nor '$BR list --json' yielded claim state; liveness is unknown and orphans cannot be ruled out"
   ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --arg p "$PREFIX" \
     '[.claims[]? | select((.issue.status? // "") == "in_progress")
        | select(((.issue.assignee? // "") | startswith($p)))
