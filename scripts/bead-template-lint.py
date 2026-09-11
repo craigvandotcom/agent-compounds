@@ -177,11 +177,123 @@ def violations():
     return out, scanned
 
 
+# --- probe-shape check (ac-attt) --------------------------------------------------
+#
+# `no probe, no bead` (ac-beadify) only asks that a `Probe:` line exist and run without
+# a syntax error — it says nothing about whether the probe can actually MEASURE the AC.
+# Three shapes pass that bar and still lie, all measured on live swarms:
+#   1. `pnpm <script> -- <file>` — pnpm forwards the literal `--` to the script, so a
+#      bare test-runner script sees `-- <file>` as ITS OWN args and runs its default
+#      (whole-suite) target; unrelated reds make the probe unwinnable (bd-yfv1j, bd-9y8ii).
+#   2. a bare `pnpm vitest run <file>` / `npx vitest run <file>` — the vitest-affected
+#      plugin can silently drop the named file on a busy trunk (bd-1khmb, bd-wzzds,
+#      bd-9yjcl). `VITEST_AFFECTED_DISABLED=1` or an explicit `--config` (the local
+#      integration lane) makes the run reliable; `pnpm test:one <file>` is the reliable
+#      single-file unit form and never matches this shape.
+#   3. `grep -c` read as pass/fail — it exits 1 when the count is 0, so a probe built on
+#      "returns 0" reads green in the unfixed state (bd-3gkp2). `grep -q` / `! grep -q`
+#      do not have this failure mode.
+PROBE_LINE = re.compile(r"Probe:\s*`([^`]*)`")
+VITEST_RUN = re.compile(r"\b(pnpm|npx)\s+vitest\s+run\b")
+# Regex, not shlex: `grep -c` reads as pass/fail just as often INSIDE a substitution
+# (`[ "$(grep -c foo file)" -eq 0 ]`) as bare — shlex collapses the quoted `$(...)` into
+# one opaque token and never sees the inner `grep`, so a token walk misses exactly the
+# shape the bead this check ships for (bd-3gkp2) was built from.
+GREP_C = re.compile(r"\bgrep\b(?:\s+-[A-Za-z]+\b)*\s+(-[A-Za-z]*c[A-Za-z]*\b|--count\b)")
+
+
+def probes(path):
+    """Yield (line_no, command) for each `Probe: `<command>`` occurrence in a markdown
+    file — the same span bead-schema.md's canonical extractor lifts
+    (`grep -o 'Probe: \\`[^\\`]*\\`'`), read here per-line so a finding names its source."""
+    with open(path, encoding="utf-8") as fh:
+        lines = fh.read().split("\n")
+    for i, line in enumerate(lines):
+        m = PROBE_LINE.search(line)
+        if m:
+            yield i + 1, m.group(1)
+
+
+def _tokens(cmd):
+    try:
+        return shlex.split(cmd, comments=False, posix=True)
+    except ValueError:
+        return cmd.split()  # unparseable prose/placeholder — best-effort, never crash
+
+
+def has_pnpm_passthrough(cmd):
+    """`pnpm <script> -- <file>` — a bare `--` token anywhere after a `pnpm` token means
+    pnpm forwards it (and everything after) to the script verbatim, so this probe does
+    not scope to `<file>` the way it appears to."""
+    toks = _tokens(cmd)
+    seen_pnpm = False
+    for tok in toks:
+        if tok.rsplit("/", 1)[-1] == "pnpm":
+            seen_pnpm = True
+        elif seen_pnpm and tok == "--":
+            return True
+    return False
+
+
+def is_bare_affected_vitest(cmd):
+    """A bare `pnpm|npx vitest run <file>` with neither the affected-plugin disable env
+    var nor an explicit `--config` (the integration lane) can silently drop the named
+    file under vitest-affected. `pnpm test:one <file>` never matches `VITEST_RUN`."""
+    if not VITEST_RUN.search(cmd):
+        return False
+    if "VITEST_AFFECTED_DISABLED=1" in cmd:
+        return False
+    if "--config" in cmd:
+        return False
+    return True
+
+
+def has_grepc_probe(cmd):
+    """`grep -c`/`--count` in command position — the exit-code failure mode. `grep -q`
+    and `! grep -q` carry no `c` in their flags and never match."""
+    return bool(GREP_C.search(cmd))
+
+
+def probe_shape_violations():
+    """Returns (violations, probes_scanned) for the three lying probe shapes above,
+    scanned across the same registry the template check covers. Same doctrine as
+    `violations()`: an unscanned corpus must never read as a clean pass."""
+    out = []
+    scanned = 0
+    for path in sorted(glob.glob(os.path.join(ROOT, "skills", "**", "*.md"), recursive=True)):
+        rel = os.path.relpath(path, ROOT)
+        for line_no, cmd in probes(path):
+            scanned += 1
+            if has_pnpm_passthrough(cmd):
+                out.append((rel, line_no,
+                    "probe uses `pnpm <script> -- <file>` — pnpm forwards the literal "
+                    "`--`, so this does not scope to <file>; use `pnpm test:one <file>`"))
+            elif is_bare_affected_vitest(cmd):
+                out.append((rel, line_no,
+                    "probe uses a bare vitest run that vitest-affected can silently drop "
+                    "— set VITEST_AFFECTED_DISABLED=1, add --config <integration config>, "
+                    "or use `pnpm test:one <file>`"))
+            elif has_grepc_probe(cmd):
+                out.append((rel, line_no,
+                    "probe uses `grep -c` as a pass/fail check — exits 1 on a zero count; "
+                    "use `grep -q` / `! grep -q`"))
+    return out, scanned
+
+
 if __name__ == "__main__":
     bad, scanned = violations()
+    shape_bad, shape_scanned = probe_shape_violations()
     if scanned < 20:
         print(f"  VACUOUS: only {scanned} bead templates found under skills/ — the "
               "detector is broken, not the registry. A pass here would be a false green.")
+        sys.exit(1)
+    bad = bad + shape_bad
+    # The probe-shape floor guards against a false GREEN only — a genuine template
+    # finding above must still be reported and failed on its own terms, never masked
+    # behind a "the other detector found nothing" message.
+    if not bad and shape_scanned < 5:
+        print(f"  VACUOUS: only {shape_scanned} Probe: line(s) found under skills/ — the "
+              "probe-shape detector is broken, not the registry. A pass here would be a false green.")
         sys.exit(1)
     for rel, line_no, why in bad:
         print(f"  {rel}:{line_no} — {why}")
@@ -191,5 +303,6 @@ if __name__ == "__main__":
             "Contract: skills/beads-standards/reference/bead-create-contract.md"
         )
     else:
-        print(f"  {scanned} bead templates scanned, all conformant")
+        print(f"  {scanned} bead templates scanned, all conformant; "
+              f"{shape_scanned} probe(s) shape-checked, all sound")
     sys.exit(1 if bad else 0)

@@ -58,6 +58,9 @@ grep -o 'Probe: `[^`]*`' <bead-file> | sed 's/^Probe: `//; s/`$//'
 - **Runnable as written.** `sh -c '<command>'` must reach completion with no syntax error
   and no *command not found* for its leading word. It does NOT mean the probe passes — at
   authoring every probe is RED by construction (see falsifiability in `bead-checklist.md`).
+  Single-file form matters too: unit probes use `pnpm test:one <file>`, integration probes
+  use `npx vitest run --config vitest.integration.local.config.mts <file>` — never
+  `pnpm <script> -- <file>` (pnpm forwards the literal `--`) or `grep -c` as pass/fail.
 - **Probing an artifact the bead has yet to create**, use the guarded form
   `test -x <path> && bash <path>` — the leading word exists today, the probe is honestly
   red until the artifact lands, and it becomes the real suite run the moment it does.
