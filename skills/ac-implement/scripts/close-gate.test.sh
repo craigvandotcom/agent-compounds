@@ -44,8 +44,10 @@ mkdir -p "$MOCK_BIN"
 PATH="$MOCK_BIN:$PATH"
 export PATH
 
-# Mock `br` — a file-backed board. `show` emits the bead, `close` flips status to closed
-# unless AC2_TEST_BR_CLOSE_NOOP=1, which is how the silent-close-failure case is driven.
+# Mock `br` — a file-backed board. `show` emits the bead unless AC2_TEST_BR_SHOW_FAIL=1
+# (the read refuses while the fixture board stays intact — ac-8n94). `close` flips
+# status to closed unless AC2_TEST_BR_CLOSE_NOOP=1, which is how the silent-close-failure
+# case is driven.
 cat >"$MOCK_BIN/br" <<'MOCKBR'
 #!/usr/bin/env bash
 STATE="${AC2_TEST_BR_STATE:-/nonexistent}"
@@ -54,6 +56,7 @@ id=""
 for a in "$@"; do case "$a" in --*) ;; -*) ;; *) [ -z "$id" ] && id="$a" ;; esac; done
 case "$cmd" in
   show)
+    [ "${AC2_TEST_BR_SHOW_FAIL:-0}" = "1" ] && exit 1
     [ -f "$STATE/$id.json" ] || exit 1
     cat "$STATE/$id.json" ;;
   close)
@@ -192,6 +195,7 @@ gate() { # <root> [extra args...]
   local root="$1"; shift
   ( cd "$root" && AC2_FLIGHT_DIR="$root/.flight" AC2_TEST_BR_STATE="$root/.br" \
       AC2_TEST_BR_CLOSE_NOOP="${AC2_TEST_BR_CLOSE_NOOP:-0}" \
+      AC2_TEST_BR_SHOW_FAIL="${AC2_TEST_BR_SHOW_FAIL:-0}" \
       AC2_TEST_UBS_MODE="${AC2_TEST_UBS_MODE:-clean}" \
       bash "$GATE" "$BEAD" --body-file "$root/body.md" --root "$root" "$@" 2>&1
     echo $? > "$RCFILE" )
@@ -529,6 +533,22 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'LANDING'; then
   pass "AC5: a close that silently did not land is caught by reading it back, naming LANDING"
 else fail "AC5 landing: rc=$GATE_RC out=$out"; fi
+
+# --- READ: show refused → NOT-CHECKED (ac-8n94). The fixture board stays intact so the
+# failure is the br_field show --json read, not a missing bead file. A refused read is
+# never a pass, and no status is fabricated.
+R="$(mk_green read-show-refused)"
+out="$(AC2_TEST_BR_SHOW_FAIL=1 gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  pass "AC5: show refused is NOT-CHECKED (exit 2) — a refused read is never a pass"
+else fail "AC5 show refused: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC5: a refused show leaves the bead open — no status is fabricated"
+else fail "AC5 show refused: the bead was closed despite the refused read"; fi
+if [ -f "$R/.br/$BEAD.json" ]; then
+  pass "AC5: the fixture board stayed intact — the refusal is the read, not a missing file"
+else fail "AC5 show refused: the fixture board was removed"; fi
 
 R="$(mk_green own-happy)"
 out="$(gate "$R" --reason "$REASON" --actor worker)"
