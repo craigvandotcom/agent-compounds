@@ -1,24 +1,22 @@
 ---
 name: ac-review
-description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range Craig names (`ac-review <range>`). Reviewers run the validator stance — a different stance from the implement workers, read-only on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; Medium+ become beads. ac-batch-close and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
+description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range Craig names (`ac-review <range>`). Reviewers run the validator stance — a different stance from the implement workers, read-only on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; only a named impact: makes a bead. ac-batch-close and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
 ---
 
 # ac-review — the post-batch review
 
-**One contract, two entry points.** The batch boundary invokes this skill over the batch it
-just closed ("review the batch"); the same contract runs targeted at any range Craig names
-(`ac-review <range>`). No phase ladder — the old Phases 0–8 manual panel is deleted: a
-review returns a verdict and findings; fixing belongs to the implement lane (§ Findings).
+**One contract, two entry points.** Batch-boundary over the just-closed batch ("review the
+batch"); same contract at any range Craig names (`ac-review <range>`). No phase ladder
+(Phases 0–8 gone): verdict + findings; fixing is the implement lane (§ Findings).
 
 ## Who reviews
 
 - **A different stance from the workers — the validator, tier-resolved per harness.**
   (L2 — survives tier convergence) The same weights re-reading their own diff are not
   independent eyes: they share the diff's blind spot; convergence never retires this rule.
-- **READ-ONLY on the shared tree.** No write or mutation tooling, no "just fixing it while
-  I'm here" — a reviewer that can edit is a second author, not a second pair of eyes (this
-  caused an H-impact incident). Sole carve-out: destructive sabotage probes run in a
-  **disposable worktree**; the result travels back as a finding, never a diff.
+- **READ-ONLY on the shared tree.** No write/mutation tooling, no "just fixing it while I'm
+  here" — a reviewer that can edit is a second author (H-impact incident). Sole carve-out:
+  sabotage probes in a **disposable worktree**; the result is a finding, never a diff.
 - **Depth by risk, not habit.** A batch touching a gate, an auth path, a migration or a
   destructive operation gets the deep panel; prose and config get one pass.
 
@@ -64,14 +62,16 @@ review returns a verdict and findings; fixing belongs to the implement lane (§ 
   **catch-stage label** — the stage that SHOULD have caught it (plan · beadify · flight ·
   implement · close · review) — **even when the fix lands in-batch**: auto-applied
   Critical/High findings write their catch-stage record — no work bead, the fix landed; **no VERDICT record** for an auto-fixed Critical/High fails the run's own checklist.
-- **Medium+ become beads.** Shipped defect → `-t bug`; mutation-probe-convicted test finding
-  → `-t task`; plausible-but-unverified → `-t investigation`; labels `origin:ac-review,impact:<class>,
-  review-finding,unrefined`, `discovered-from: <bead>`, epic parent wired
-  (`parent-child`), `post-merge` stamped at creation. Creation ritual:
-  `beads-standards/reference/bead-conventions.md`. **Lows stay in the report.**
-- **FIX findings route to beads or an `ac-polish code` run over the finding's scope** — never
-  fixed in place by a reviewer (read-only) and never auto-fixed by this skill.
-- A reasoned **"checked, no finding"** per dimension is a deliverable; silence is not coverage.
+- **Severity orders the report; only a named `impact:` makes a bead**
+  (`bead-create-contract.md` § Required axes). Else DEFER with a reason. Shipped defect →
+  `-t bug`; mutation-probe-convicted test → `-t task`; unverified → `-t investigation`;
+  labels `origin:ac-review,impact:<class>,review-finding,unrefined`, `discovered-from: <bead>`,
+  epic parent, `post-merge` (`bead-conventions.md`). FIX → bead or `ac-polish code` — never
+  in-place, never auto-fixed here. **Conductor confirm:** dedupe · confirm · file · record
+  `proposed-by:`/`confirmed-by:`; consumes workers' **PROPOSED-BEAD** blocks and reviewers'
+  findings. Forks: one decision bead per distinct fork, re-verified against HEAD before
+  filing (`human-gate-template.md` § Before filing) — never per finding. A reasoned
+  **"checked, no finding"** per dimension is a deliverable; silence is not coverage.
 
 ## Not this skill
 
