@@ -825,8 +825,26 @@ function denialReason(r) {
   return null
 }
 
-export const server = async ({ directory }) => {
+export const server = async ({ directory, client }) => {
   const cwd = directory || process.cwd()
+  // A subagent runs in a CHILD session (`parentID` set). Memoised so each session is
+  // looked up once, not per tool call. Any failure (client absent, unknown shape) reads
+  // as "not a subagent" — the marker fails OPEN, never locks a session out.
+  const subCache = new Map()
+  async function isSubagent(sessionID) {
+    if (!sessionID) return false
+    if (subCache.has(sessionID)) return subCache.get(sessionID)
+    let val = false
+    try {
+      const r = await client.session.get({ path: { id: sessionID } })
+      const s = r && (r.data || r)
+      val = !!(s && s.parentID)
+    } catch (e) {
+      val = false
+    }
+    subCache.set(sessionID, val)
+    return val
+  }
 
   return {
     // UserPromptSubmit: memory-recall + the delegation reminder. Their stdout is
@@ -874,6 +892,8 @@ export const server = async ({ directory }) => {
         tool_name: name,
         tool_input: output.args || {},
         session_id: input.sessionID || "",
+        // A child session IS a subagent — the marker bead-capture-guard refuses on.
+        agent_id: (await isSubagent(input.sessionID)) ? (input.sessionID || "") : "",
         cwd,
       })
       for (const e of entries) {
