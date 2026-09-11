@@ -5,6 +5,11 @@
 #   pipeline commands, dead delegation tools, or dead pipeline stage names left behind by a
 #   doctrine-landing sweep
 # scope: LIVE_TEXT
+# changed: skip
+#   audits consumer layers OUTSIDE this repo (deployed apps' AGENTS.md and
+#   hook files), which a commit-scoped pre-commit run cannot fix and must
+#   not be gated by — a stale sibling checkout blocked every skills/ commit
+#   in THIS repo (2026-09-12 lint audit). Full lint and CI still run it.
 # severity: fail
 # fixture: lint/fixtures/12-deployed-app-conformance
 # ---
