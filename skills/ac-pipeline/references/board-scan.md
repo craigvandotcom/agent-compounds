@@ -345,16 +345,17 @@ Exits 0 when the scan ran; exits 2 `board-truth: NOT-GATED` when the board could
 examined — a refused `br list`, a response without `.issues[]` or with a `.error` envelope,
 rows missing `updated_at`/`created_at`, or a failing `br doctor health` (the schema
 tripwire). A scan that examined nothing is never a clean shortlist. Counts only an id in a
-commit SUBJECT or behind a `Bead:` trailer; drops
-`chore(beads)`/`[no-bead]` bookkeeping and any commit that FILED the bead. Mechanism and
-proof harness: `scripts/board-truth.sh` + `scripts/board-truth.test.sh`.
+commit SUBJECT or behind a `Bead:` trailer; drops a bookkeeping-only commit (every touched
+file under `.beads/`, `_archive/` or `.claude/reviews/`, or named `FRICTIONS.md`/
+`MAINTENANCE.md`) and any commit that FILED the bead. Mechanism and proof harness:
+`scripts/board-truth.sh` + `scripts/board-truth.test.sh`.
 
 **FLAG-ONLY. This scan MUST NOT close, label, or defer anything.** A false STALE makes the
 conductor skip real work, which is strictly worse than the wasted child this exists to
 prevent. The output is a shortlist for a conductor to adjudicate by reading the bead's
 `## Delivers` and checking those artifacts at HEAD — cheap, because the list is short.
 
-**Verify it still bites after ANY edit:** run `scripts/board-truth.test.sh` (8 synthetic
+**Verify it still bites after ANY edit:** run `scripts/board-truth.test.sh` (12 synthetic
 cases, no repo or beads DB needed). A detector that silently matches nothing is worse
 than none.
 

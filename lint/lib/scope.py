@@ -27,9 +27,9 @@ Sets:
   CHECKS     the lint v2 check files themselves (lint/checks, harnesses excluded).
   ALL        every walked path — the trigger for a check that reads cross-cutting
              repo state (the git log, the board) rather than a file population, so
-             any change must run it. Check 34's [no-bead] policing is the case: scoped
-             to LEDGER it ran only when a ledger file changed, leaving a [no-bead]
-             commit that touched code unpoliced until CI.
+             any change must run it. A check scoped to a narrower set instead ran
+             only when a file in that set changed, leaving cross-cutting drift
+             unpoliced until CI.
   SCRIPTS    the runnable scripts the registry ships: .sh and .py files under
               skills/ and scripts/, tests excluded — Check 36's audit surface.
   CACHES     directory names that are build/interpreter caches — excluded from

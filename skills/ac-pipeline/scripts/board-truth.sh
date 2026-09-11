@@ -49,20 +49,47 @@ git log "$COV_BASE..HEAD" --format='%ct|%H|%s|%b' 2>/dev/null \
   | awk '/^[0-9]+\|/{if(r)print r; r=$0; next}{r=r" "$0} END{if(r)print r}' \
   | tee "$D/commits-flat" >/dev/null
 
+# Bookkeeping is decided by the diff, never a self-declared subject tag: a commit whose
+# EVERY touched file is bookkeeping (under .beads/, _archive/ or .claude/reviews/, or
+# named FRICTIONS.md/MAINTENANCE.md at any depth) names beads without implementing them.
+# A commit that touches zero files is not bookkeeping. Mixed diffs (one bookkeeping file
+# plus one real file) are NOT dropped — the real file is the claim that matters.
+git log "$COV_BASE..HEAD" --format='%H' --name-only 2>/dev/null \
+  | awk '
+      function is_bookkeeping(f,    n, parts, base) {
+        n = split(f, parts, "/"); base = parts[n]
+        if (base == "FRICTIONS.md" || base == "MAINTENANCE.md") return 1
+        if (f ~ /^\.beads\//) return 1
+        if (f ~ /^_archive\//) return 1
+        if (f ~ /^\.claude\/reviews\//) return 1
+        return 0
+      }
+      /^[0-9a-f]{40}$/ {
+        if (sha != "" && files > 0 && files == book) print sha
+        sha = $0; files = 0; book = 0
+        next
+      }
+      NF == 0 { next }
+      { files++; if (is_bookkeeping($0)) book++ }
+      END { if (sha != "" && files > 0 && files == book) print sha }
+    ' \
+  | tee "$D/bookkeeping-shas" >/dev/null
+
 # Only two shapes count as a claim that a bead was WORKED: an id in the SUBJECT, or an id
 # introduced by a `Bead:`/`Beads:` trailer. A bare mention in prose does not count — ledger
-# and report commits list dozens of ids they never touched. Bookkeeping commits are dropped
-# wholesale: they name beads without implementing them.
-awk -F'|' '{ ct=$1+0; subj=$3
-    if (subj ~ /^chore\(beads\)/ || $0 ~ /\[no-bead\]/) next
-    body=""; for(i=4;i<=NF;i++) body=body "|" $i
-    n=split(subj, t, /[^A-Za-z0-9._-]/)
-    for(i=1;i<=n;i++) if (t[i] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[t[i]]+0) seen[t[i]]=ct
-    # Split on the field separator too: the flattener prefixes each body field with `|`,
-    # so a trailer that STARTS the body arrives as `|Bead:` and would never match.
-    m=split(body, w, /[|[:space:]]+/)
-    for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
-  } END { for (k in seen) printf "%s\t%d\n", k, seen[k] }' "$D/commits-flat" \
+# and report commits list dozens of ids they never touched.
+awk -F'|' '
+    NR == FNR { bk[$1] = 1; next }
+    { ct=$1+0; subj=$3
+      if ($2 in bk) next
+      body=""; for(i=4;i<=NF;i++) body=body "|" $i
+      n=split(subj, t, /[^A-Za-z0-9._-]/)
+      for(i=1;i<=n;i++) if (t[i] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[t[i]]+0) seen[t[i]]=ct
+      # Split on the field separator too: the flattener prefixes each body field with `|`,
+      # so a trailer that STARTS the body arrives as `|Bead:` and would never match.
+      m=split(body, w, /[|[:space:]]+/)
+      for(i=1;i<m;i++) if (w[i] ~ /^[Bb]eads?:$/ && w[i+1] ~ /^bd-[A-Za-z0-9._-]+$/) if (ct>seen[w[i+1]]+0) seen[w[i+1]]=ct
+    } END { for (k in seen) printf "%s\t%d\n", k, seen[k] }' "$D/bookkeeping-shas" "$D/commits-flat" \
   | tee "$D/cited" >/dev/null
 
 # --- the unexaminable board is a NOT-GATED, never a clean shortlist (D6) -------------
