@@ -71,6 +71,16 @@ Surface these labels (consumers filter on them): `human-gate`, `dream-proposal`,
 For **epics** (dependent_count > 3 or "epic" in title): count total / ready / blocked / closed
 children.
 
+### Gate kind — decision vs action (`issue_type`, never the prefix alone)
+
+A `human-gate` bead's kind is its **`issue_type`**: `decision` → a DECISION card (a fork,
+an approval, or a proposal); `task` → an ACTION card (a do-in-the-world task). Fall back to
+the canonical title prefix (`DECISION:`/`HUMAN:` → decision, `ACTION:` → action) ONLY when
+the type is absent. **Never key on the prefix alone** — 46 of 55 historical gates carried no
+prefix (measured 2026-09-12), so a prefix-only read files actions and proposals under
+decisions and hides the actions. Prefix↔type agreement is enforced statically by
+`scripts/bead-template-lint.py`.
+
 ### Docket health (open gates + reason-less gates)
 
 **Always print.** Every listed consumer inherits this line — do not make it

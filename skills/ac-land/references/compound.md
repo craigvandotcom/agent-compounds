@@ -84,6 +84,7 @@ instead), then skip ahead to Commit Compound Changes:
 br create -t decision -p 3 "Proposal: <title> (<target file>)" -l origin:ac-land,human-gate,skill-improvement \
   -d "## Decision memo
 **Target:** <file path>
+Gate-reason: fork — apply / apply-modified / drop is a policy change only the human ratifies
 **Evidence (this session):** <what happened + concrete cost>
 **Proposed change:**
 <exact diff or content>

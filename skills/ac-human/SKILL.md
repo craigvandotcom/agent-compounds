@@ -81,7 +81,7 @@ Freshen (`/ac-align` — weekly align + nightly reconcile) is a *write*, so it i
 - **🟢 Hopper** = board backlog: `active/` items `status: captured` with no plan yet → `/ac-plan`; `status: candidate` items (triage-promoted) → approve into the pool (`→ captured`) or discard; `pool/` count → `/ac-align` promote, **only if `active/` is thin**.
 - **Loop awareness (count only)** = ready beads that lack a docket label + `loop-ready` plans + in-progress waves → the board's `🤖` line, never itemized.
 - **Queue lanes** — a machine-filed batch (any label with >5 open `human-gate` beads). Collapse, elevate, and lane-health policy: `references/docket-lanes.md`. Prefer a fresh `(tap-ready)` gate first, but the lane is still this sitting.
-- **Group the docket by title prefix (`DECISION:` vs `ACTION:`):** the two human-gate template kinds (`beads-standards` § Human-gate template) are presented grouped — forks in one cluster (one-tap choices), do-in-the-world tasks in another (checklists to run, often with a `best-done-when` hint).
+- **Group the docket by gate kind — `issue_type` (`decision` vs `task`), title prefix as fallback** (`ac-pipeline/references/board-scan.md` § Gate kind): the two human-gate template kinds (`beads-standards` § Human-gate template) are presented grouped — forks/approvals/proposals in one cluster (one-tap choices), do-in-the-world tasks in another (checklists to run, often with a `best-done-when` hint).
 
 ### Extend the docket org-wide
 

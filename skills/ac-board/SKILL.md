@@ -61,9 +61,9 @@ One shot, top-down. Omit an empty section with a single `—` so the human sees 
 {ci-gates / ci_health line — ALWAYS, ok included}
 
 ### 🧑 Human — {decisions+actions} gates
-decisions ({N})          # DECISION: forks + pipeline/dream proposals
+decisions ({N})          # issue_type decision: forks, approvals, proposals
   • {id} {age} {title}
-actions ({N})            # ACTION: do-in-the-world tasks
+actions ({N})            # issue_type task + human-gate: do-in-the-world tasks
   • {id} {age} {title}
 
 ### 📋 Plans ({N} live)
@@ -87,7 +87,7 @@ board-truth {N} shipped-uncited · {N} gates w/o memo · {N} reason-less · {N} 
 
 - **Counts first.** The three header lines are the board in a glance; sections are drill-down.
 - **Age is required** on every gate, blocked bead, and plan — `created_at`/`touched` is already in the scan; derive, never separately query.
-- **Classify gates by title prefix:** `DECISION:` → decisions, `ACTION:` → actions, proposals → decisions. Ungroupable gate beads render under decisions with their raw title.
+- **Classify gates by `issue_type`** (`board-scan` § Gate kind): `decision` → decisions (forks, approvals, proposals); `task` → actions. A canonical title prefix (`DECISION:`/`HUMAN:` vs `ACTION:`) decides only when the type is absent. Ungroupable gate beads render under decisions with their raw title.
 - **Never drop what you cannot classify** — an out-of-vocabulary plan status, or a bead with no lifecycle label, renders under `other`/`unrefined` with its raw value; a dropped item is indistinguishable from one that does not exist.
 - **CI health always prints**, `ok` included — a probe computed and not shown is a probe that protects nothing.
 - **A gate without a memo** (no `evidence:` / `consequence:` / `recommendation:`) increments the flags count; never fake options for it.

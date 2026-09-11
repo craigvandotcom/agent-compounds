@@ -72,6 +72,28 @@ cases = [
 for fn, cmd, want, name in cases:
     check(name, fn, cmd, want)
 
+# --- unit-level: the human-gate card contract (human_gate_violation) ---------------
+hg_cases = [
+    ("br create -t decision --title 'DECISION: pick X' -l origin:x,human-gate -d 'Gate-reason: fork — why'",
+     False, "conformant decision card"),
+    ("br create -t task --title 'ACTION: do x' -l origin:x,human-gate -d 'Gate-reason: authorization — why'",
+     False, "conformant action card"),
+    ("br create -t decision --title 'DECISION: pick X' -l origin:x,human-gate -d 'decision: which?'",
+     True, "human-gate body with no Gate-reason"),
+    ("br create -t task --title 'DECISION: pick X' -l origin:x,human-gate -d 'Gate-reason: fork — why'",
+     True, "DECISION: prefix with -t task"),
+    ("br create -t decision --title 'ACTION: do x' -l origin:x,human-gate -d 'Gate-reason: authorization — why'",
+     True, "ACTION: prefix with -t decision"),
+    ("br create -t decision -l origin:x,human-gate -d '<full memo>'",
+     False, "placeholder body skipped"),
+    ("br create -t decision --title 'Proposal: x' -l origin:x,human-gate -d 'Gate-reason: fork — y'",
+     False, "prefix-less title with a reason is legal"),
+    ("br create -t decision --title 'Proposal: x' -l origin:x,human-gate -d 'memo with no reason'",
+     True, "prefix-less title still needs Gate-reason"),
+]
+for cmd, want, name in hg_cases:
+    check(name, lambda s: lint.human_gate_violation(lint._tokens(s)), cmd, want)
+
 # --- integration-level: probe_shape_violations() over a real Probe: line, extracted
 # through PROBE_LINE the same way a registry .md file would be scanned -------------
 BAD_PROBE_LINES = {
@@ -137,6 +159,20 @@ elif real_out:
 else:
     print(f"ok    registry scan: {real_scanned} Probe: line(s) in the live registry, all sound")
 
-print(f"\n{len(cases) + len(BAD_PROBE_LINES) + len(GOOD_PROBE_LINES) + 1 - fails}/"
-      f"{len(cases) + len(BAD_PROBE_LINES) + len(GOOD_PROBE_LINES) + 1} passed")
+# --- the live registry's bead TEMPLATES must also scan clean (origin · readiness ·
+# catch-stage · human-gate contract) -------------------------------------------------
+tpl_out, tpl_scanned = lint.violations()
+if tpl_scanned < 20:
+    fails += 1
+    print(f"FAIL  registry templates: only {tpl_scanned} template(s) found — detector looks broken")
+elif tpl_out:
+    fails += 1
+    print(f"FAIL  registry templates: {len(tpl_out)} non-conforming template(s):")
+    for rel, line_no, why in tpl_out:
+        print(f"      {rel}:{line_no} — {why}")
+else:
+    print(f"ok    registry templates: {tpl_scanned} template(s) in the live registry, all conformant")
+
+print(f"\n{len(cases) + len(hg_cases) + len(BAD_PROBE_LINES) + len(GOOD_PROBE_LINES) + 2 - fails}/"
+      f"{len(cases) + len(hg_cases) + len(BAD_PROBE_LINES) + len(GOOD_PROBE_LINES) + 2} passed")
 sys.exit(1 if fails else 0)

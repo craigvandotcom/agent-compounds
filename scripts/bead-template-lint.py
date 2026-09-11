@@ -43,6 +43,38 @@ TEMPLATE_ORIGIN = re.compile(r"^origin:(<[^>]+>|[A-Za-z0-9][A-Za-z0-9._-]*)$")
 # the escape-attribution corpus is built by contract, not by downstream accident.
 CATCH_STAGE = ("qa-finding", "review-finding", "hygiene-finding", "ci-finding", "prod-finding")
 
+# The human-gate card contract (beads-standards § Human-gate template): `human-gate` is
+# INVALID without a `Gate-reason:` body marker, and each canonical title prefix fixes the
+# type. The runtime guard is the other half of this contract; this is its static twin.
+GATE_REASON = re.compile(r"Gate-reason:\s*(fork|authorization|intent|action)\b")
+PREFIX_KIND = {"DECISION": "decision", "HUMAN": "decision", "ACTION": "task"}
+
+
+def human_gate_violation(cmd):
+    """Reason string when a `human-gate` TEMPLATE breaks the card contract, else None.
+
+    `cmd` is a token list (guard convention). Two checks:
+      1. the body must carry `Gate-reason:` (fork|authorization|intent|action) — a
+         placeholder body (`<…>`) is skipped, same doctrine as bead_type;
+      2. a canonical title prefix fixes the type — `DECISION:`/`HUMAN:` -> decision,
+         `ACTION:` -> task. Only the prefix->type direction is checked; a prefix-less
+         template is legal (most gates are filed without one).
+    """
+    if "human-gate" not in guard.all_labels(cmd):
+        return None
+    body = guard.description(cmd)
+    if body is not None and not body.startswith("<") and not GATE_REASON.search(body):
+        return ("human-gate template with no `Gate-reason:` in its body "
+                "(fork|authorization|intent|action)")
+    title = guard.flag_value(cmd, {"--title"}, ("--title=",))
+    if title:
+        m = re.match(r"([A-Za-z]+):", title)
+        want = PREFIX_KIND.get(m.group(1).upper()) if m else None
+        typ = guard.bead_type(cmd)
+        if want and typ and typ != want:
+            return f"title prefix `{m.group(1)}:` requires `-t {want}`, got `-t {typ}`"
+    return None
+
 
 def has_catch_stage(cmd):
     return any(l in CATCH_STAGE for l in guard.all_labels(cmd))
@@ -174,6 +206,10 @@ def violations():
                     continue
                 if is_finding_template(cmd) and not has_catch_stage(cmd):
                     out.append((rel, line_no, "finding template with no catch-stage label"))
+                    continue
+                hg = human_gate_violation(cmd)
+                if hg:
+                    out.append((rel, line_no, hg))
     return out, scanned
 
 
