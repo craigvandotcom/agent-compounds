@@ -111,6 +111,22 @@ rc=$(run_check "$WORK/routed-split")
   && ok "a split br_call still counts toward the routed floor" \
   || bad "routed-split: rc=$rc out=$(cat "$OUT")"
 
+# --- GREEN: a comment or `command -v br` probe near a routed read is not a raw read
+# The false-positive guard — a comment naming `br list --json`, or a `command -v br`
+# PATH probe, must never be paired with a nearby routed `br_call … --json`.
+routed_tree "$WORK/noise" 13
+cat > "$WORK/noise/skills/_tools/noise.sh" <<'EOF'
+#!/usr/bin/env bash
+# normalise: the br show read returns one array; br list --json would be a raw read
+if command -v br >/dev/null 2>&1; then
+  data=$(br_call show ac-demo --json) || exit 2
+fi
+EOF
+rc=$(run_check "$WORK/noise")
+[ "$rc" -eq 0 ] && ! grep -q 'raw br --json read' "$OUT" \
+  && ok "a comment / 'command -v br' near a routed read is GREEN (no false positive)" \
+  || bad "noise: rc=$rc out=$(cat "$OUT")"
+
 echo
 if [ "$fails" -eq 0 ]; then
   echo "OK: every 36-br-envelope case passed ($(basename "$0"))"

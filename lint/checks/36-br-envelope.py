@@ -49,10 +49,12 @@ RAW_READ = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+.*--json')
 ROUTED_READ = re.compile(r"\bbr_call\b[^\n]*--json")
 BR_START = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+')
 BR_CALL_START = re.compile(r'\bbr_call\b')
-# Windowed match context (ac-1jkr): a br / br_call invocation, then --json
-# within the next WINDOW lines. Same-line reads still match because the start
-# line is inside the window. Space-join so the existing regexes see one statement.
-WINDOW = 3
+# A `br` token on a comment line or after `command -v` is not a read — it is prose
+# or a PATH presence probe. Without this, a bare `br list`/`br doctor` token pairs
+# with a nearby routed `br_call … --json` and reports a raw read that does not
+# exist (HEAD's whole finding set was this shape).
+COMMENT_LINE = re.compile(r"^\s*#")
+PRESENCE_CHECK = re.compile(r"command\s+-v\b")
 
 
 def joined_lines(text):
@@ -60,15 +62,25 @@ def joined_lines(text):
 
     `br \\` + newline + `  list --json` is one raw read; a per-line scan never
     sees both tokens. Line numbers are those of the joined text. A `br` with
-    `--json` on a following line and no continuation is the windowed class
-    below (ac-1jkr).
+    `--json` on a following line and no backslash is the flag-continuation class
+    handled by flag_continuation (ac-1jkr).
     """
     return enumerate(text.replace("\\\n", "").splitlines(), 1)
 
 
-def window_ctx(rows, start):
-    """Space-join WINDOW lines starting at start so RAW_READ / ROUTED_READ see one statement."""
-    return " ".join(line for _, line in rows[start:start + WINDOW])
+def flag_continuation(rows, i):
+    """The following line when it is a bare flag continuation of statement i.
+
+    `br list` then `  --json …` is one read (ac-1jkr). A following line that opens
+    with anything else is a different statement: folding it in paired a plain
+    `br doctor health` with a downstream routed `br_call … --json` and invented a
+    raw read. Only a line whose first token is a `-flag` continues the statement.
+    """
+    if i + 1 < len(rows):
+        nxt = rows[i + 1][1]
+        if nxt.lstrip().startswith("-"):
+            return nxt
+    return ""
 
 # The sanctioned engines — the ONLY files that may touch the binary with --json
 # and remain clean. They ARE the envelope-aware readers; everything else routes
@@ -106,10 +118,12 @@ def main():
             continue  # the engines may touch the binary with --json by contract
         rows = list(joined_lines(text))
         for i, (lineno, line) in enumerate(rows):
-            ctx = window_ctx(rows, i)
-            if BR_CALL_START.search(line) and ROUTED_READ.search(ctx):
+            if COMMENT_LINE.match(line) or PRESENCE_CHECK.search(line):
+                continue  # prose or a `command -v br` probe — never a read
+            stmt = f"{line} {flag_continuation(rows, i)}"
+            if BR_CALL_START.search(line) and ROUTED_READ.search(stmt):
                 routed += 1
-            elif BR_START.search(line) and RAW_READ.search(ctx):
+            elif BR_START.search(line) and RAW_READ.search(stmt):
                 findings.append(f"raw br --json read in {rel}:{lineno}: {line.strip()}")
 
     # The python twin counts once toward the floor — the thirteenth call site.
