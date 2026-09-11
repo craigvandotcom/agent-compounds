@@ -92,6 +92,25 @@ rc=$(run_check "$WORK/empty")
   && ok "a tree with no scripts is NOT-GATED (exit 2), never a pass" \
   || bad "empty: rc=$rc out=$(cat "$OUT")"
 
+# --- RED: a raw read split across lines, no backslash (ac-1jkr) -----------------
+# Marker: split — sibling ac-ia8g owns quote/continuation fixtures.
+mkdir -p "$WORK/split/skills/_tools"
+printf '#!/usr/bin/env bash\ndata=$(br list\n  --json --limit 0)\n' \
+  > "$WORK/split/skills/_tools/split.sh"
+rc=$(run_check "$WORK/split")
+[ "$rc" -eq 1 ] && grep -q 'raw br --json read' "$OUT" && grep -q 'split.sh' "$OUT" \
+  && ok "a br/--json split across lines is RED (windowed match)" \
+  || bad "split: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a split br_call still counts toward the routed floor ----------------
+routed_tree "$WORK/routed-split" 12
+printf '#!/usr/bin/env bash\ndata=$(br_call show ac-demo\n  --json) || exit 2\n' \
+  > "$WORK/routed-split/skills/_tools/consumer-split.sh"
+rc=$(run_check "$WORK/routed-split")
+[ "$rc" -eq 0 ] && grep -q 'routed call site' "$OUT" \
+  && ok "a split br_call still counts toward the routed floor" \
+  || bad "routed-split: rc=$rc out=$(cat "$OUT")"
+
 echo
 if [ "$fails" -eq 0 ]; then
   echo "OK: every 36-br-envelope case passed ($(basename "$0"))"
