@@ -111,11 +111,20 @@ def family_total(root, skills_dir, cfg):
     return total
 
 
-def scan(repo, label, base, spec, cfg):
-    """The per-file judge. Returns True when anything under the spec was seen."""
-    added = set(line for line in git(repo, "diff", "--name-only", "--diff-filter=A",
-                                     base, "--", spec).splitlines() if line.strip())
-    numstat = git(repo, "diff", "--numstat", base, "--", spec)
+def scan(repo, label, base, spec, cfg, staged=False):
+    """The per-file judge. Returns True when anything under the spec was seen.
+
+    `staged=True` (the pre-commit lane) judges the INDEX against HEAD
+    (`git diff --cached`) instead of `base` against the working tree — a
+    commit-scoped run must score what it will actually commit, not whatever
+    else happens to be dirty in a shared checkout. `base` is still accepted
+    (and printed) for message continuity; the diff itself ignores it.
+    """
+    diff_args = ("--cached", "HEAD") if staged else (base,)
+    base_label = "the staged index vs HEAD" if staged else base
+    added = set(line for line in git(repo, "diff", *diff_args, "--name-only", "--diff-filter=A",
+                                     "--", spec).splitlines() if line.strip())
+    numstat = git(repo, "diff", *diff_args, "--numstat", "--", spec)
     seen = False
     for line in numstat.splitlines():
         parts = line.split("\t")
@@ -127,7 +136,7 @@ def scan(repo, label, base, spec, cfg):
         seen = True
         net = int(a) - int(d)
         if net <= 0:
-            print(f"no-net-growth: {label}/{path} net {net} line(s) vs {base} — PASS (neutral or shrinking)")
+            print(f"no-net-growth: {label}/{path} net {net} line(s) vs {base_label} — PASS (neutral or shrinking)")
             continue
         member = member_of(path, cfg["creation_exception"])
         if member and path in added:
@@ -142,7 +151,7 @@ def scan(repo, label, base, spec, cfg):
             continue
         violations.append(f"{label}/{path} (+{net})")
     if not seen:
-        print(f"no-net-growth: {label} — no changes under '{spec}' vs {base} — PASS (nothing to check)")
+        print(f"no-net-growth: {label} — no changes under '{spec}' vs {base_label} — PASS (nothing to check)")
     return seen
 
 
@@ -175,6 +184,29 @@ def consumer_dirs(root):
 
 
 def run_full(root, cfg):
+    # The pre-commit staged lane (run.py --changed --staged) sets LINT_STAGED=1 and
+    # redirects GIT_DIR/GIT_WORK_TREE at the real repo around a staged-content
+    # snapshot (lint/run.py's materialize_staged). Leg 1 then judges the INDEX
+    # against HEAD directly — the ratchet must score what THIS commit contains, not
+    # a merge-base diff that also picks up a sibling writer's unrelated dirty file
+    # in the shared checkout. Leg 2 shells to OTHER repos entirely (`git -C <that
+    # repo>`); the redirected GIT_DIR/GIT_WORK_TREE would misdirect those calls, and
+    # those repos' local state is not this commit's to fix anyway, so leg 2 sits out
+    # the staged lane and still runs in full/CI (`bash lint.sh`, no --staged).
+    if os.environ.get("LINT_STAGED") == "1":
+        scan(root, "agent-compounds", "HEAD", "skills/*/SKILL.md", cfg, staged=True)
+        notices.append("Check 14 leg 2 (other repos' local .claude/skills) sits out the staged "
+                       "pre-commit lane — it audits state this commit cannot change; it still runs "
+                       "in the full/CI lane.")
+        for n in notices:
+            print(f"NOTICE: {n}")
+        if violations:
+            print("FAIL 14-no-net-growth: net-positive SKILL.md file(s): " + ", ".join(violations)
+                  + " — core is loaded every invocation, so it holds or shrinks. Move the content to "
+                    "references/, or delete an equivalent amount from THIS file.")
+            return 1
+        return 0
+
     base = leg1_base(root, cfg["base_ref"])
     head = git(root, "rev-parse", "HEAD")
     if not base:
