@@ -99,7 +99,22 @@ printf 'alter table foods drop column image_urls;\n' > "$R8/supabase/migrations/
 run "$R8"
 [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "image_urls  <- lib/db/read.sql" && ok "SQL: dropped column with a reader outside the diff -> REFUSED" || fail "sql" "rc=$rc $out"
 
-# --- 9. spawns nothing; assurance declared ---------------------------------------------------
+# --- 9. a change confined to .beads/issues.jsonl carrying unanchored SQL-shaped probe prose
+# must never surface a phantom symbol/caller: the ledger stores bead descriptions verbatim,
+# and the SQL alter-table pattern is not line-anchored, so literal probe text embedded in a
+# bead's description can match it with no code change behind it -> false REFUSED
+# [unowned-callers] on every bead in a run without the exclude.
+R9="$W/r9"; mkrepo "$R9"; mkdir -p "$R9/.beads"
+printf 'select image_urls from foods;\n' > "$R9/lib/db/read.sql"
+printf '{"id":"bd-1","description":"seed"}\n' > "$R9/.beads/issues.jsonl"
+git -C "$R9" add -A >/dev/null; git -C "$R9" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m beads-base >/dev/null
+printf '{"id":"bd-1","description":"seed"}\n{"id":"bd-2","description":"Migration bead - probe: alter table foods drop column image_urls"}\n' > "$R9/.beads/issues.jsonl"
+run "$R9"
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q "PASS symbols=0" \
+  && ok ".beads/issues.jsonl change carrying SQL-shaped probe prose -> PASS symbols=0 (excluded, not a phantom caller refusal)" \
+  || fail "beads jsonl excluded" "rc=$rc $out"
+
+# --- 10. spawns nothing; assurance declared ---------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "script invokes an agent"; else ok "diff-closure spawns nothing"; fi
 miss=""; for f in PROBE: SCHEDULE: MODE: ON-FAILURE:; do grep -q "$f" "$SCRIPT" || miss="$miss $f"; done
 [ -z "$miss" ] && ok "4-field assurance declaration present" || fail "assurance declaration missing:$miss"

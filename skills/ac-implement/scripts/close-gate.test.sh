@@ -380,6 +380,36 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'temporal exit-code pair
   pass "AC3f: every-probe-output-silent closes on the receipt's temporal pair — no harness demanded"
 else fail "AC3f: rc=$GATE_RC out=$out"; fi
 
+# --- 3k (bd-9y8ii, bd-fswt7.3): a `git diff --quiet` probe naming a test-shaped file must
+# never be chosen as the assertion probe — `--quiet` suppresses stdout exactly like `-q`, so
+# a COVERAGE leg that missed it reads the probe's empty output and NOT-CHECKEDs a close whose
+# real harness probe passed.
+R="$(mkcase quiet-probe)"
+write_harness "$R"; board "$R" in_progress worker
+git -C "$R" init -q
+git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false add -A >/dev/null 2>&1
+git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m base >/dev/null 2>&1
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness file is unchanged.
+  Probe: `git diff --quiet HEAD -- harness.test.sh` — tier: none
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3k: a 'git diff --quiet' probe naming a test-shaped file is never the assertion probe — the output-carrying harness probe is"
+else fail "AC3k: rc=$GATE_RC out=$out"; fi
+
 # ============================================================================================
 # AC 3g/3h/3i/3j — the fresh-verification carve-out (ac-close-gate-already-green-carveout-8r3o,
 # extended by run 20260907-exhaust): a bead with no usable claim-time receipt banks no

@@ -128,7 +128,7 @@ is_test_shaped() {
 }
 
 # A probe whose stdout is SUPPRESSED BY CONSTRUCTION can never carry assertion lines:
-# a silent test (-q) or a redirect into /dev/null produces nothing to count, so selecting
+# a silent test (-q or --quiet) or a redirect into /dev/null produces nothing to count, so selecting
 # it as the assertion-bearing probe bails COVERAGE on a bead whose harness asserts fine
 # (measured: ac-close-gate-coverage-silent-probe-ja8l, instances 4 and 5). Deliberately
 # static — it reads the probe's CONSTRUCTION, never its run: a harness that ran but
@@ -136,7 +136,7 @@ is_test_shaped() {
 # to one that passed.
 is_output_silent() {
   case "$1" in
-    *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*) return 0 ;;
+    *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*|*--quiet*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -237,9 +237,10 @@ trap 'rm -f "$BODY" "$ASSERT_OUT"' EXIT
 # The assertion-bearing probe is the one that RUNS A HARNESS, which is not always the probe
 # that happened to be RED first: `test -x <script>` is a legitimate RED and emits no
 # assertions by construction. Two filters, both required: the probe must NAME a test-shaped
-# file that exists, AND its stdout must be able to carry assertion lines (a -q test or a
-# >/dev/null redirect asserts nothing into any stream we can read — measured as instances
-# 4 and 5 of ac-close-gate-coverage-silent-probe-ja8l). When every probe is output-silent
+# file that exists, AND its stdout must be able to carry assertion lines (a -q/--quiet test or
+# a >/dev/null redirect asserts nothing into any stream we can read — measured as instances
+# 4 and 5 of ac-close-gate-coverage-silent-probe-ja8l, plus bd-9y8ii / bd-fswt7.3 for
+# `git diff --quiet`). When every probe is output-silent
 # (or none names a harness), the temporal exit-code pair recorded in the receipt is the
 # assertion, and that pair is checked below instead.
 ASSERT_PROBE=""
