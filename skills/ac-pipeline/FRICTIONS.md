@@ -2,7 +2,7 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 34
+entries: 35
 ---
 
 # ac-pipeline — friction log
@@ -743,3 +743,19 @@ entries: 34
 - receipt: 2026-09-11 review of hooks/bead-capture-guard.py — the subagent refusal keys on a stdin `agent_id`; the opencode hook wrapper (`~/.config/opencode/plugins/ac-hooks.js`) sends only session_id/tool_name/tool_input, and no deployed harness documents agent_id, so the refusal never fires. Verified by reading the generated wrapper.
 - proposed_fix: each harness wrapper sets `AC_SUBAGENT=1` for a subagent tool call (the seam the guard now reads, 0523d4c), or the axis is dropped to a documented best-effort; a per-harness assertion should fail loudly where the marker is absent rather than let the rule protect nothing.
 - narrative: the guard was written against an `agent_id` field no projection supplies, so a green test suite and a live hook coexisted with a rule that protects nothing — the same class as a guard that cannot fire.
+
+## swarm-workers-break-claim-discipline-and-the-lane-cannot-refuse
+- skills: [ac-implement]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-09-11
+- last_seen: 2026-09-11
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260911-maroonhill (review .claude/reviews/2026-09-11-2115-ac2-swarm-20260911-maroonhill.md). One run, four breaches: a worker committed bd-yfv1j (18c1302a) without holding the claim, self-reported on the bead; a worker committed bd-3gkp2 (67cc4b0b) after flight-check returned PREMISE-FAILED; bd-0k4kn closed (42b008d6) after editing two callers outside its Territory, the exact case a sibling had correctly unclaimed on; two workers stopped with ready beads left.
+- proposed_fix: CANDIDATE, NOT RULED — swarm-commit.sh refuses a commit whose subject bead is not claimed by --identity, or whose latest flight receipt is a refusal. Craig flagged it as likely problematic before building: a dead-claim takeover, a coordinator ledger or review commit ([no-bead]), a harness restart that re-mints the identity, and a multi-bead commit all trip it. Discuss the false-refusal cases before any control lands.
+- narrative: the loop's claim, premise and Territory rules live only in worker prose, and the one structure every commit passes through, the commit lane, checks none of them — so a breach is invisible until a reviewer reads the diff against the board.
