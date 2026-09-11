@@ -18,14 +18,37 @@ Flags: --check <id> (repeatable, id is the filename's NN prefix or the full
 stem), --changed (only checks whose declared scope intersects `git diff
 --name-only HEAD` plus untracked files; out-of-scope checks are skipped, never
 silent), --json (machine output), --list (print the discovered checks).
+
+The `--changed --staged` lane (the pre-commit hook's mode) judges what a
+commit will contain, not the checkout on disk: every check's DECLARED SCOPE is
+still selected from the staged file list (`staged_files()`), but each SELECTED
+check is then run against a temp dir holding the INDEX snapshot
+(`materialize_staged()`), never the working tree — a sibling writer's dirty,
+half-finished file sitting in the same shared checkout must not fail this
+committer's commit (measured: a foreign edit refused a worker's commit until
+it happened to land, FRICTIONS.md:711). Checks that shell out to git (14, 25,
+29, 31 today) still need a real `.git` to resolve base refs / `git show` a
+committed blob / diff `--cached`; rather than special-case their invocation,
+the snapshot dir is handed `GIT_DIR` (the real repo's) and `GIT_WORK_TREE`
+(the snapshot dir) as environment, so any git command a check runs resolves
+against real history while "the working tree" IS the staged snapshot —
+`git diff <base>` (no `--cached`) then already compares base against staged
+content, with no per-check code required. The one exception is 14's leg 2,
+which shells to OTHER repos entirely (`git -C <that repo>`); an inherited
+GIT_DIR/GIT_WORK_TREE pointing at THIS repo would misdirect those calls, so
+leg 2 reads the LINT_STAGED=1 env var this runner also sets and skips itself
+in the staged lane (it audits other repos' local state, which this commit
+cannot fix anyway — see that check's own docstring).
 """
 
 import concurrent.futures
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,11 +79,14 @@ def check_id(path):
     return os.path.basename(path).rsplit(".", 1)[0]
 
 
-def run_check(path, root, timeout=300):
+def run_check(path, root, timeout=300, extra_env=None):
     cmd = [sys.executable, path, root] if path.endswith(".py") else ["bash", path, root]
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     t0 = time.time()
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
         return proc.returncode, proc.stdout, proc.stderr, time.time() - t0
     except subprocess.TimeoutExpired:
         return 3, "", f"timeout after {timeout}s", time.time() - t0
@@ -111,14 +137,67 @@ def staged_files(root):
         return None
 
 
-def intersect(scope_set, files):
-    """A declared scope touches a changed file when the change is IN it."""
-    for f in files:
-        if f in scope_set:
+def git_dir_of(root):
+    """The real repo's absolute `.git` dir, or None (not a git checkout / git missing)."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", root, "rev-parse", "--absolute-git-dir"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return None
+    return proc.stdout.strip() if proc.returncode == 0 and proc.stdout.strip() else None
+
+
+def materialize_staged(root):
+    """Snapshot the INDEX — what a commit will actually contain — into a fresh temp dir.
+
+    `git checkout-index` writes only what is IN the index; an unstaged edit or an
+    untracked scratch file elsewhere in the shared checkout is never written here,
+    so a sibling writer's dirty file cannot leak into this committer's lint run.
+    Returns (worktree_dir, git_dir) on success, (None, None) on any failure — the
+    caller's cue to fall back to the real checkout, never a crash.
+    """
+    git_dir = git_dir_of(root)
+    if not git_dir:
+        return None, None
+    tmp = tempfile.mkdtemp(prefix="ac-lint-staged-")
+    try:
+        proc = subprocess.run(
+            ["git", "checkout-index", "-a", "-f", f"--prefix={tmp}{os.sep}"],
+            cwd=root, capture_output=True, text=True, timeout=60,
+        )
+    except (subprocess.SubprocessError, OSError):
+        proc = None
+    if proc is None or proc.returncode != 0:
+        shutil.rmtree(tmp, ignore_errors=True)
+        return None, None
+    return tmp, git_dir
+
+
+def intersect(scope_set, files, files_root):
+    """A declared scope touches a changed file when the change is IN it.
+
+    `files` is git-diff-relative to `files_root`; `scope_set`'s members are
+    relative to `scope.ROOT` — two independently-resolved bases that a plain
+    string compare assumes are the same string, and silently are not whenever
+    the checkout is reached through two different-looking-but-identical paths
+    (a symlink, a second mount, macOS's /tmp vs /private/tmp — exactly the
+    shape of a shared, multi-agent checkout). Both sides are normalised to a
+    real absolute path before comparing, so a genuine intersection cannot read
+    as "no scope hit" (measured: 22-ledger-integrity skipped LEDGER on a
+    commit that staged an actual ledger file).
+    """
+    real_files = {os.path.realpath(os.path.join(files_root, f)) for f in files}
+    real_dirs = {os.path.realpath(os.path.join(scope.ROOT, m.rsplit("/", 1)[0])) + os.sep
+                 for m in scope_set}
+    for m in scope_set:
+        if os.path.realpath(os.path.join(scope.ROOT, m)) in real_files:
             return True
-        # a change under a directory the set's members live in (e.g. a new
-        # references file) touches LIVE_TEXT even if not itself a member
-        if any(f.startswith(m.rsplit("/", 1)[0] + "/") for m in scope_set):
+    # a change under a directory the set's members live in (e.g. a new
+    # references file) touches LIVE_TEXT even if not itself a member
+    for rf in real_files:
+        if any(rf.startswith(d) for d in real_dirs):
             return True
     return False
 
@@ -164,7 +243,13 @@ def main():
         if files is None:
             skipped = {}  # cannot compute a diff -> change nothing, run all
         else:
+            real_files = {os.path.realpath(os.path.join(args.root, f)) for f in files}
             for c in selected:
+                if os.path.realpath(c) in real_files:
+                    # the check's OWN source changed — always re-run it, scope or not:
+                    # a check whose own file is part of the commit must prove itself
+                    # against that commit, never sit out on a scope technicality.
+                    continue
                 h = header_of(c)
                 if str(h.get("changed", "")).lower() == "skip":
                     # audits state OUTSIDE the repo (e.g. consumer harness layers); a
@@ -172,24 +257,50 @@ def main():
                     skipped[check_id(c)] = "changed:skip"
                     continue
                 s = getattr(scope, str(h.get("scope", "")), None)
-                if not isinstance(s, frozenset) or not intersect(s, files):
+                if not isinstance(s, frozenset) or not intersect(s, files, args.root):
                     skipped[check_id(c)] = h.get("scope", "?")
 
-    results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
-        futs = {ex.submit(run_check, c, args.root): c for c in selected if check_id(c) not in skipped}
-        for fut in concurrent.futures.as_completed(futs):
-            c = futs[fut]
-            rc, out, err, secs = fut.result()
-            results.append({
-                "id": check_id(c),
-                "file": os.path.relpath(c, args.root),
-                "exit": rc,
-                "seconds": round(secs, 2),
-                "findings": ([line for line in out.splitlines() if line.strip()]
-                             + [line for line in err.splitlines()
-                                if line.strip() and _disclosure(line)]),
-            })
+    # The staged lane judges what a commit will CONTAIN, not the working tree on disk:
+    # every check runs against a fresh snapshot of the INDEX so a sibling writer's dirty,
+    # half-finished file in the same shared checkout can never fail this commit's lint
+    # (measured: FRICTIONS.md:711). Checks that shell to git (14, 25, 29, 31 today) still
+    # need a real .git — GIT_DIR/GIT_WORK_TREE redirect any git call THEY make at the real
+    # history while "the working tree" is the snapshot, so `git diff <base>` (no --cached)
+    # already compares base against staged content with no per-check special-casing.
+    run_root = args.root
+    extra_env = None
+    staged_worktree = None
+    if args.changed and args.staged:
+        staged_worktree, git_dir = materialize_staged(args.root)
+        if staged_worktree:
+            run_root = staged_worktree
+            extra_env = {"GIT_DIR": git_dir, "GIT_WORK_TREE": staged_worktree, "LINT_STAGED": "1"}
+        else:
+            print("NOTICE: staged-lane materialisation failed — running the staged scope against "
+                  "the real checkout instead (an unrelated dirty file could affect this run)",
+                  file=sys.stderr)
+
+    try:
+        results = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as ex:
+            futs = {ex.submit(run_check, c, run_root, 300, extra_env): c
+                    for c in selected if check_id(c) not in skipped}
+            for fut in concurrent.futures.as_completed(futs):
+                c = futs[fut]
+                rc, out, err, secs = fut.result()
+                results.append({
+                    "id": check_id(c),
+                    "file": os.path.relpath(c, args.root),
+                    "exit": rc,
+                    "seconds": round(secs, 2),
+                    "findings": ([line for line in out.splitlines() if line.strip()]
+                                 + [line for line in err.splitlines()
+                                    if line.strip() and _disclosure(line)]),
+                })
+    finally:
+        # scratch snapshot only — never the real checkout; always cleaned up, success or not
+        if staged_worktree:
+            shutil.rmtree(staged_worktree, ignore_errors=True)
 
     for cid, s in sorted(skipped.items()):
         results.append({"id": cid, "file": None, "exit": None, "seconds": 0,
