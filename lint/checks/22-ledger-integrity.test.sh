@@ -5,13 +5,15 @@
 #           a friction re-observed after its control landed is RED as a FAILED
 #           CONTROL; a well-formed treated entry is GREEN; an EMPTY ledger
 #           fails CLOSED (RED carrying NOT-GATED); an entry with unscorable
-#           ordinals is RED as a named NOT-SCORABLE finding; a declared
-#           entries: count that mismatches the parsed entries is RED as a named
-#           entry-count mismatch; a missing shared parser or judge is NOT-GATED
-#           (exit 2); the real registry is GREEN since 2026-09-09 — the live
-#           NOT-SCORABLE pin (ac-polish's `frequency: sometimes`) was cured by a
-#           human-ledger edit in run 20260907-exhaust, so the ONE-friction-sensor
-#           pin now asserts the fix holds.
+#           ordinals is RED as a named NOT-SCORABLE finding; a missing shared
+#           parser or judge is NOT-GATED (exit 2); the real registry is GREEN
+#           since 2026-09-09 — the live NOT-SCORABLE pin (ac-polish's
+#           `frequency: sometimes`) was cured by a human-ledger edit in run
+#           20260907-exhaust, so the ONE-friction-sensor pin now asserts the
+#           fix holds. Entry counts are read at parse time (`.ledger.entries |
+#           length`), never from a hand-kept frontmatter field — the ledgers
+#           carry no `entries:` header (2026-09-12, Craig-decided lint audit:
+#           the header was a stale copy concurrent appends raced on).
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/22-ledger-integrity.test.sh
@@ -48,7 +50,6 @@ LEDGER_OK='---
 skill: ac-pipeline
 created: 2026-09-07
 last_pass: never
-entries: 1
 ---
 
 # fixture ledger
@@ -131,19 +132,16 @@ else
 fi
 rm -rf "$w"
 
-# --- RED: declared entries: count disagrees with the parsed entries ------------------
-# The second folded-in --strict class: the frontmatter count is a human claim; the
-# sweep keeps it honest. Fails with its own named finding.
+# --- GREEN: entry count in the summary line is read at parse time, not from a
+# hand-kept header (the ledgers carry no `entries:` field at all) -----------------
 w="$(mktemp -d)"
 build_tree "$w" "$LEDGER_OK" yes
-printf '%s' "$LEDGER_OK" \
-  | sed 's/^- last_seen: .*$/- last_seen: 2026-08-01/' \
-  | sed 's/^entries: 1$/entries: 2/' > "$w/skills/ac-pipeline/FRICTIONS.md"
+printf '%s' "$LEDGER_OK" | sed 's/^- last_seen: .*$/- last_seen: 2026-08-01/' > "$w/skills/ac-pipeline/FRICTIONS.md"
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "entry-count mismatch"; then
-  ok "RED: declared entries: 2 vs 1 parsed -> exit 1 naming the entry-count mismatch"
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q "1 entr(y|ies)"; then
+  ok "GREEN: entry count derived from the parsed ledger, no entries: header needed"
 else
-  bad "entry-count case: expected 1 naming the mismatch, got $rc"; printf '%s\n' "$out"
+  bad "read-time-count case: expected 0 naming '1 entr(y|ies)', got $rc"; printf '%s\n' "$out"
 fi
 rm -rf "$w"
 

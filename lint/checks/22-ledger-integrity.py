@@ -2,8 +2,9 @@
 # ---
 # id: 22-ledger-integrity
 # prevents: a friction ledger and its controls drifting apart — entries citing controls the
-#   constitution does not define, receipts nobody kept, and a friction re-observed after its control
-#   landed accruing silently instead of surfacing as a FAILED CONTROL
+#   constitution does not define, receipts nobody kept, a friction re-observed after its control
+#   landed accruing silently instead of surfacing as a FAILED CONTROL, and an entry with no scorable
+#   ordinal going unreported
 # scope: LEDGER
 # severity: fail
 # fixture: lint/fixtures/22-ledger-integrity
@@ -15,10 +16,9 @@ other: every entry cites a `receipt:` and the `control:` that treats it (or
 is explicitly `untreated`), every control names the failure it prevents, and
 a friction re-observed AFTER its control landed surfaces as a FAILED CONTROL
 rather than accruing silently. Since 2026-09-08 this check is also the ONE
-friction sensor for the ledger-health classes friction-rollup.py --strict
+friction sensor for the ledger-health class friction-rollup.py --strict
 existed for: an entry with no scorable ordinal (impact/frequency/recurrence)
-and a ledger whose declared `entries:` count disagrees with its parsed entries
-are named findings — never mutations (the ledger edit is human-gated; the
+is a named finding — never a mutation (the ledger edit is human-gated; the
 frictions docket consumes the report rows). The judge parses the ledger through
 the ONE shared parser (`skills/skill-builder/scripts/friction-rollup.py`) and
 fails CLOSED — a missing or empty ledger exits non-zero, because an absent
@@ -26,9 +26,15 @@ sensor is not a clean one:
 
     scripts/ac-ledger-integrity.sh <root>
 
+Every entry count this check reports is derived from the parsed ledger at
+read time (`.ledger.entries | length`), never from a hand-kept frontmatter
+field — the ledgers carry no `entries:` header (2026-09-12: the header was a
+stale copy concurrent appends raced on, and its comparison leg is retired
+with it).
+
 Findings are printed one row per line, grep-able for the docket builder on
-their class tokens: `NOT-SCORABLE:` and `entry-count mismatch`, plus the
-contract rows (unresolvable control, missing receipt, FAILED CONTROL, ...).
+their class token `NOT-SCORABLE:`, plus the contract rows (unresolvable
+control, missing receipt, FAILED CONTROL, ...).
 
 This file is the port of the legacy lint.sh block onto the lint v2 runner
 contract; the judge's verdicts are passed through verbatim, so they cannot

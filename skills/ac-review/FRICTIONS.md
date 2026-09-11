@@ -2,7 +2,6 @@
 skill: ac-review
 created: 2026-07-29
 last_pass: 2026-09-06
-entries: 12
 ---
 
 # ac-review — friction log

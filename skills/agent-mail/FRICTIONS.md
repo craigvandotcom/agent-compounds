@@ -2,7 +2,6 @@
 skill: agent-mail
 created: 2026-08-14
 last_pass: 2026-09-06
-entries: 5
 ---
 
 # agent-mail — friction log

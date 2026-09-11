@@ -2,7 +2,6 @@
 skill: ac-polish
 created: 2026-09-02
 last_pass: 2026-09-07
-entries: 32
 ---
 
 # ac-polish — friction log

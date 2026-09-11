@@ -15,7 +15,7 @@ cp "$ROOT/skills/skill-builder/scripts/friction-rollup.py" "$W/skills/skill-buil
 cp "$ROOT/skills/ac-pipeline/SKILL.md" "$W/skills/ac-pipeline/"
 chmod +x "$W/scripts/"*.sh
 {
-  printf -- '---\nskill: ac-pipeline\ncreated: 2026-09-07\nlast_pass: never\nentries: 1\n---\n\n# fixture ledger\n\n## fixture-friction\n'
+  printf -- '---\nskill: ac-pipeline\ncreated: 2026-09-07\nlast_pass: never\n---\n\n# fixture ledger\n\n## fixture-friction\n'
   printf -- '- skills: [ac-pipeline]\n- impact: M\n- frequency: every-run\n- perceptibility: silent\n- recurrence: 3\n'
   printf -- '- first_seen: 2026-09-01\n- last_seen: 2026-09-02\n- status: open\n- receipt: nowhere (fixture)\n'
   printf -- '- control: I99\n- control_landed: 2026-08-01\n'
@@ -35,7 +35,7 @@ cp "$ROOT/skills/skill-builder/scripts/friction-rollup.py" "$W2/skills/skill-bui
 cp "$ROOT/skills/ac-pipeline/SKILL.md" "$W2/skills/ac-pipeline/"
 chmod +x "$W2/scripts/"*.sh
 {
-  printf -- '---\nskill: ac-pipeline\ncreated: 2026-09-07\nlast_pass: never\nentries: 1\n---\n\n# fixture ledger\n\n## fixture-friction\n'
+  printf -- '---\nskill: ac-pipeline\ncreated: 2026-09-07\nlast_pass: never\n---\n\n# fixture ledger\n\n## fixture-friction\n'
   printf -- '- skills: [ac-pipeline]\n- impact: M\n- frequency: sometimes\n- perceptibility: silent\n- recurrence: 3\n'
   printf -- '- first_seen: 2026-09-01\n- last_seen: 2026-08-01\n- status: open\n- receipt: somewhere (fixture)\n'
   printf -- '- control: untreated\n'

@@ -2,7 +2,6 @@
 skill: skill-builder
 created: 2026-08-05
 last_pass: 2026-09-06
-entries: 3
 ---
 
 # skill-builder — friction log

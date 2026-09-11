@@ -2,7 +2,6 @@
 skill: ac-beadify
 created: 2026-09-05
 last_pass: never
-entries: 1
 ---
 
 # FRICTIONS — ac-beadify

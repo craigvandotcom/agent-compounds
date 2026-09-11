@@ -2,7 +2,6 @@
 skill: beads-standards
 created: 2026-07-22
 last_pass: 2026-09-08
-entries: 11
 ---
 
 # beads-standards — friction log

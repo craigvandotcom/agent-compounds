@@ -2,7 +2,6 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 35
 ---
 
 # ac-pipeline — friction log

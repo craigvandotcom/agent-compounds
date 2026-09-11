@@ -2,7 +2,6 @@
 skill: ac-human
 created: 2026-07-30
 last_pass: 2026-09-06
-entries: 5
 ---
 
 # ac-human — friction log

@@ -2,7 +2,6 @@
 skill: testing
 created: 2026-08-14
 last_pass: 2026-09-06
-entries: 1
 ---
 
 # testing — friction log
