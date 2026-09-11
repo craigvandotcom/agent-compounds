@@ -88,7 +88,8 @@ future `defer_until`):
 1. Re-read live state (`br show <id>`). Confirm the work is still blocked on a human.
 2. **Skip any id whose LIVE-checkout ledger record disagrees with this worktree's.** An
    unpushed ruling in the live checkout is invisible here, and stamping it writes a stale-open
-   record over a real close. Never reconcile the disagreement here.
+   record — with a fresh `updated_at` — over a real close. Never reconcile the
+   disagreement here: a newer `updated_at` is not newer semantics.
 
    ```bash
    rec() { python3 -c 'import json,sys
