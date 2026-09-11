@@ -217,10 +217,14 @@ if deps == ["dep add ac-t2 ac-t1"]:
     ok("--apply: exactly one `br dep add`, in <blocked> <blocker> order, for the declared edge")
 else:
     fail("dep add calls", deps)
-if not any(ln.startswith("update ") and ln.endswith("--force") for ln in log):
+# `--force` is the LAST argv element, but an inline --description value carries newlines,
+# so the stub's line-oriented log splits one invocation across physical lines and the flag
+# need not land on the line that STARTS with "update ". Assert on the flag's presence
+# anywhere in the log, which holds under both the file and the inline description form.
+if not any(ln.endswith("--force") for ln in log):
     ok("--apply: a GROW (artifact body longer than the live body) passes no --force — force is shrink-only")
 else:
-    fail("grow force", [ln for ln in log if ln.startswith("update ")])
+    fail("grow force", [ln for ln in log if ln.endswith("--force")])
 if not [ln for ln in log if "remove" in ln] and "dep add ac-t1" not in "\n".join(log):
     ok("--apply: the unpaired edge was reported and left alone — nothing was removed")
 else:
@@ -257,7 +261,7 @@ ART3 = os.path.join(W, "artifact-shrink.md")
 write(ART3, BLOCK.format(i="ac-t3", t="third", c="- none"))
 rc, out, log = run_writeback("--apply", artifact=ART3)
 upd = [ln for ln in log if ln.startswith("update ")]
-if rc == 0 and upd and upd[0].endswith("--force") \
+if rc == 0 and upd and any(ln.endswith("--force") for ln in log) \
         and "WROTE ac-t3" in out and "shrink=" in out:
     ok("shrink: --force rides the update ONLY when the new body is shorter, and the shrink is printed per bead")
 else:

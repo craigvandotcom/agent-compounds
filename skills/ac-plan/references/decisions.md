@@ -13,6 +13,26 @@ Every fork the plan turns on, one card per fork:
 - **what settles it** — the query, measurement or test that distinguishes the options.
 - **state** — `settled: <choice> — <why>` or `needs-human`.
 
+### The state line is machine-read — keep the token first
+
+`skills/_tools/plan-approve.sh` check 3 refuses approval while any card stands `needs-human`,
+and it reads the state off the LINE. The contract is one rule: **inside `## Decisions`, a
+card's state token is the first word on its line** — once a list marker, an optional `state`
+label and markdown decoration (backticks, bold) are stripped. Both shapes in use satisfy it:
+
+    - **state** — `needs-human`
+    - **state** — `settled: keep the one engine — ADR 0007 § 3`
+    `needs-human — already owned by bd-2mik, not re-decided here.`
+    `settled: apps/model-gateway/ — its own deployable and image.`
+
+Everything after the token is free prose, so a `settled:` card may discuss escalation by name
+without tripping the gate. What DOES trip it is burying the token mid-sentence
+(`this one is still needs-human`) — that line reads as prose to the gate and as an open card
+to a human, which is the disagreement the gate exists to prevent. Lead with the token.
+
+The gate is scoped to the `## Decisions` section, so the rest of the plan may use the words
+freely. It fails closed: an ambiguous line refuses rather than approves.
+
 Before writing a card, run the escalation test
 (`beads-standards/reference/human-gate-template.md` § The escalation test) — a fork a query
 settles is research done now, not a card.

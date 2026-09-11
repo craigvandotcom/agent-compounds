@@ -64,6 +64,25 @@ def br(args):
     return r.returncode, r.stdout or "", r.stderr or ""
 
 
+_DESC_FILE_SUPPORTED = None
+
+
+def desc_file_supported():
+    """Does the INSTALLED `br update` accept --description-file?
+
+    The file form is preferred (it keeps a multi-KB body out of argv), but it landed in a
+    later `br` than some machines run — measured absent on br 0.1.14, where the writeback
+    failed all five beads with `unexpected argument '--description-file'`. Falling back to
+    inline is SAFE on this call path specifically: br() runs subprocess.run with an ARGV
+    LIST and no shell, so a body carrying backticks or angle brackets is never re-scanned.
+    Probed once, from the tool's own --help, rather than parsed from a version string."""
+    global _DESC_FILE_SUPPORTED
+    if _DESC_FILE_SUPPORTED is None:
+        _, out, err = br(["update", "--help"])
+        _DESC_FILE_SUPPORTED = "--description-file" in (out + err)
+    return _DESC_FILE_SUPPORTED
+
+
 def require_board():
     """Refuse before touching anything if `br` cannot see a board from here."""
     rc, _, err = br(["list", "--json", "--limit", "1"])
@@ -294,8 +313,11 @@ def cmd_writeback(args):
                   f"title={'CHANGED' if title_changed else 'same'} +labels={add or '-'}")
             continue
 
-        # The description goes through --description-file, NEVER inline -d: a body
-        # carrying backticks or angle brackets must not be re-scanned by a shell, and
+        # The description goes through --description-file where the installed `br` has
+        # it, and NEVER through inline `-d`, whose short form br treats differently. The
+        # inline `--description` fallback below is reached only on a br without the file
+        # flag (see desc_file_supported) and is safe because br() passes an argv LIST with
+        # no shell — the "must not be re-scanned by a shell" hazard needs a shell to exist.
         # br 0.5.10+ REFUSES an update that clears a non-empty body or keeps it under
         # half its length unless --force is passed (rc 4) — a shallower cut passes
         # silently while polish routinely SHORTENS bodies. So --force rides ONLY a
@@ -306,7 +328,10 @@ def cmd_writeback(args):
                 fh.write(desc)
             current = live.get("description") or ""
             shrink = len(desc) < len(current)
-            cmd = ["update", bead_id, "--description-file", desc_path]
+            if desc_file_supported():
+                cmd = ["update", bead_id, "--description-file", desc_path]
+            else:
+                cmd = ["update", bead_id, "--description", desc]
             if shrink:
                 cmd.append("--force")
             rc, _, err = br(cmd)
