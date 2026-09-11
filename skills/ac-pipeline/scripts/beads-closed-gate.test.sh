@@ -493,6 +493,7 @@ fi
 # skipped -> exit 0.
 clear_fixtures
 write_fixture "ConductorY" '[{"id":"bd-prior1","status":"closed","labels":["infra"]},{"id":"bd-prior2","status":"closed","labels":["infra"]},{"id":"bd-cur","status":"closed","labels":["infra"]}]'
+write_beads '[{"id":"bd-prior1","status":"closed","labels":["infra"]},{"id":"bd-prior2","status":"closed","labels":["infra"]},{"id":"bd-cur","status":"closed","labels":["infra"]}]'
 PROG_CUR="$WORKDIR/progress-cur.md"
 printf '%s\n' \
   'TARGET_BEADS=1' 'WAVE=current-batch' '' \
@@ -522,6 +523,7 @@ fi
 # batch, out of scope) and never bd-cur1 (covered).
 clear_fixtures
 write_fixture "ConductorZ" '[{"id":"bd-prev","status":"closed","labels":["infra"]},{"id":"bd-cur1","status":"closed","labels":["infra"]},{"id":"bd-cur2","status":"closed","labels":["infra"]}]'
+write_beads '[{"id":"bd-prev","status":"closed","labels":["infra"]},{"id":"bd-cur1","status":"closed","labels":["infra"]},{"id":"bd-cur2","status":"closed","labels":["infra"]}]'
 PROG_Z="$WORKDIR/progress-z.md"
 printf '%s\n' \
   'TARGET_BEADS=1' 'WAVE=z-child-1' '' \
@@ -544,6 +546,7 @@ fi
 # silent default are indistinguishable there.
 clear_fixtures
 write_fixture "ConductorNH" '[{"id":"bd-nh1","status":"closed","labels":["infra"]},{"id":"bd-nh2","status":"closed","labels":["infra"]}]'
+write_beads '[{"id":"bd-nh1","status":"closed","labels":["infra"]},{"id":"bd-nh2","status":"closed","labels":["infra"]}]'
 
 # NH1 — not opted in at all (no --progress, no $PROGRESS_FILE, no $ARTIFACTS_DIR).
 OUT=$(GATE_AGENT="ConductorNH" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-nh1,bd-nh2 2>&1); RC=$?
@@ -587,6 +590,7 @@ fi
 # already cover that back-compat path).
 clear_fixtures
 write_fixture "ConductorMK" '[{"id":"bd-mk1","status":"closed","labels":["infra"]},{"id":"bd-mk2","status":"closed","labels":["infra"]}]'
+write_beads '[{"id":"bd-mk1","status":"closed","labels":["infra"]},{"id":"bd-mk2","status":"closed","labels":["infra"]}]'
 
 # MK1 — a prep file alongside a COMPLETE implement file: prep is ignored, close proceeds.
 PROG_MK_IMPL="$WORKDIR/progress-mk-impl.md"
@@ -689,14 +693,19 @@ else
   fail "Case BS3: expected exit 1 naming bd-other, got $RC. Output: $OUT"
 fi
 
-# --- Case BS4: --beads is NOT a second spelling of --allow-empty ------------
-# Zero claims AND zero ids resolve -> still FAIL-CLOSED, exit 2.
+# --- Case BS4: a refused --beads read FAIL-CLOSES, never an empty scope ------
+# Zero claims AND an unresolvable --beads list: the read itself refuses (br_call
+# returns 2 on the error envelope). That must not become `_scoped_raw=""` and
+# then the empty-claimed-set leg — the conductor branches on "the batch scope
+# cannot be resolved", not on a claim-free run.
 clear_fixtures
 OUT=$(GATE_AGENT="ConductorBS4" PROGRESS_FILE= ARTIFACTS_DIR= run_gate --beads bd-nope1,bd-nope2 2>&1); RC=$?
-if [ "$RC" -eq 2 ] && echo "$OUT" | grep -q "claimed-set is EMPTY"; then
-  pass "Case BS4: unresolvable --beads + zero claims -> still FAIL-CLOSED exit 2 (not an --allow-empty alias)"
+if [ "$RC" -eq 2 ] \
+   && echo "$OUT" | grep -q "FAIL-CLOSED — the br show read for --beads refused" \
+   && echo "$OUT" | grep -q "the batch scope cannot be resolved"; then
+  pass "Case BS4: unresolvable --beads read -> FAIL-CLOSED (the batch scope cannot be resolved)"
 else
-  fail "Case BS4: expected exit 2 with FAIL-CLOSED, got $RC. Output: $OUT"
+  fail "Case BS4: expected exit 2 with refused-read FAIL-CLOSED, got $RC. Output: $OUT"
 fi
 
 # ============================================================================
