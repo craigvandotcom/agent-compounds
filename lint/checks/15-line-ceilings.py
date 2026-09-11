@@ -23,10 +23,22 @@ it first crossed the line (or one whose growth is stamped-exempt from
 Check 14).
 
 Ratchet — ONE-WAY, by construction. The derived ceiling is recomputed from
-the live SKILL.md line counts every run and FAILS when the committed constant
-EXCEEDS it. It is NOT symmetric: a derived value looser than the constant is
-never licence to raise it — a raise is a reviewed config edit, and this check
-catches the raise that outruns the measured tier.
+the live SKILL.md line counts every run. It is NOT symmetric: a derived value
+looser than the constant is never licence to raise it — a raise is a
+reviewed config edit, and this check catches the raise that outruns the
+measured tier.
+
+FAILS only when lint/config.json ITSELF raised a ceiling above HEAD's
+committed value (2026-09-12 fix, ac-lint-audit): the check used to fail
+whenever the config constant exceeded the freshly-derived ceiling, which also
+fires when nobody touched the config but someone SHRANK the largest
+SKILL.md — the derived ceiling drops, the untouched constant is now above
+it, and the committer who improved things sees red. Comparing against HEAD's
+own committed config value tells a real raise (fail) apart from a stale
+constant that a shrink left behind (a NOTICE suggesting the constant be
+lowered, never a failure). HEAD's config unresolvable (shallow/standalone
+checkout, or the file is new) degrades to NOTICE, never a fail — a raise
+this check cannot prove is not a raise this check reports.
 
   conductor tier  ceil_to_10(tier max x 1.15) — W3.2-pilot measured cap
                   (live-run-accepted 2026-07-21; live tier max is ac-review)
@@ -40,6 +52,7 @@ never a pass).
 import json
 import os
 import re
+import subprocess
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -63,6 +76,26 @@ def ceil_to_10(max_lines, mult_pct):
 def load_config(root):
     with open(os.path.join(root, CONFIG), encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def head_ceilings(root):
+    """(conductor_ceiling, standard_ceiling) as committed at HEAD, or (None, None)
+    when unresolvable (no git, shallow/standalone checkout, file new at HEAD, or
+    malformed) — a raise this check cannot prove is never reported as one."""
+    try:
+        proc = subprocess.run(
+            ["git", "--no-optional-locks", "-C", root, "show", f"HEAD:{CONFIG}"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+    if proc.returncode != 0:
+        return None, None
+    try:
+        cfg = json.loads(proc.stdout)
+        return int(cfg["conductor_ceiling"]), int(cfg["standard_ceiling"])
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+        return None, None
 
 
 def roster(root):
@@ -114,21 +147,37 @@ def run(root):
             if lines > std_max:
                 std_max, std_owner = lines, name
 
+    head_cond_ceiling, head_std_ceiling = head_ceilings(root)
+
     std_derived = ceil_to_10(std_max, 110)
     if std_ceiling > std_derived:
-        violations.append(
-            f"ratchet violated — STANDARD_CEILING ({std_ceiling}) exceeds derived ceiling "
-            f"({std_derived} = ceil_to_10({std_max} x 1.10), tier max {std_owner}) — the ratchet "
-            "moves DOWN only; diet the skill instead of raising the constant")
+        if head_std_ceiling is not None and std_ceiling > head_std_ceiling:
+            violations.append(
+                f"ratchet violated — STANDARD_CEILING raised from {head_std_ceiling} (HEAD) to "
+                f"{std_ceiling}, exceeding the derived ceiling ({std_derived} = "
+                f"ceil_to_10({std_max} x 1.10), tier max {std_owner}) — the ratchet moves DOWN "
+                "only; diet the skill instead of raising the constant")
+        else:
+            print(f"  NOTICE ratchet        STANDARD_CEILING {std_ceiling} exceeds derived "
+                  f"{std_derived} = ceil_to_10({std_max} x 1.10), tier max {std_owner} — the "
+                  "constant was not raised (a tier-max skill shrank); consider lowering "
+                  f"standard_ceiling in {CONFIG} to match")
     else:
         print(f"  PASS  ratchet         STANDARD_CEILING {std_ceiling} <= derived {std_derived} "
               f"= ceil_to_10({std_max} x 1.10), tier max {std_owner}")
     con_derived = ceil_to_10(con_max, 115)
     if cond_ceiling > con_derived:
-        violations.append(
-            f"ratchet violated — CONDUCTOR_CEILING ({cond_ceiling}) exceeds derived ceiling "
-            f"({con_derived} = ceil_to_10({con_max} x 1.15), tier max {con_owner}) — the ratchet "
-            "moves DOWN only; diet the skill instead of raising the constant")
+        if head_cond_ceiling is not None and cond_ceiling > head_cond_ceiling:
+            violations.append(
+                f"ratchet violated — CONDUCTOR_CEILING raised from {head_cond_ceiling} (HEAD) to "
+                f"{cond_ceiling}, exceeding the derived ceiling ({con_derived} = "
+                f"ceil_to_10({con_max} x 1.15), tier max {con_owner}) — the ratchet moves DOWN "
+                "only; diet the skill instead of raising the constant")
+        else:
+            print(f"  NOTICE ratchet        CONDUCTOR_CEILING {cond_ceiling} exceeds derived "
+                  f"{con_derived} = ceil_to_10({con_max} x 1.15), tier max {con_owner} — the "
+                  "constant was not raised (a tier-max skill shrank); consider lowering "
+                  f"conductor_ceiling in {CONFIG} to match")
     else:
         print(f"  PASS  ratchet         CONDUCTOR_CEILING {cond_ceiling} <= derived {con_derived} "
               f"= ceil_to_10({con_max} x 1.15), tier max {con_owner}")
