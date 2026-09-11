@@ -55,24 +55,6 @@ SANCTIONED = frozenset({
 })
 
 
-def _scripts(root):
-    out = []
-    for sub in ("skills", "scripts"):
-        base = os.path.join(root, sub)
-        if not os.path.isdir(base):
-            continue
-        for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [d for d in dirnames if d not in scope.SKIP_DIRS]
-            for fn in filenames:
-                if fn.endswith(".test.sh") or fn.endswith(".test.py"):
-                    continue
-                if not (fn.endswith(".sh") or fn.endswith(".py")):
-                    continue
-                rel = os.path.relpath(os.path.join(dirpath, fn), root)
-                out.append(rel)
-    return sorted(out)
-
-
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
     if os.path.abspath(root) != scope.ROOT:
@@ -80,7 +62,7 @@ def main():
         import importlib
         importlib.reload(scope)
 
-    files = _scripts(root)
+    files = sorted(scope.SCRIPTS)
     if not files:
         print(f"{CHECK_ID} NOT-CHECKED: no .sh/.py script under skills/ or scripts/ "
               f"in {root} — verified nothing", file=sys.stderr)
