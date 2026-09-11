@@ -1,0 +1,18 @@
+schema_version: 1
+id: neometa.localdbguard
+name: neoMeta local Supabase reset guard
+version: 1.0.0
+keywords:
+  - supabase
+  - "db:"
+destructive_patterns:
+  - name: supabase-db-reset
+    pattern: 'supabase\b(?:\s+--?\S+(?:\s+\S+)?)*\s+db\b(?:\s+--?\S+(?:\s+\S+)?)*\s+reset(?=\s|$)'
+    severity: high
+    description: "Agents never reset a Supabase database. Apply only your new migration with `supabase migration up`; CI's proof run replays every migration from scratch. A human who needs a reset runs it."
+    explanation: "The local stack is shared by every agent session on this machine. A reset wipes and replays it under a sibling's running tests and can leave functions on stale bodies, and --linked resets PRODUCTION."
+  - name: package-db-reset
+    pattern: '(?:pnpm|npm\s+run|yarn|bun\s+run)\b(?:\s+--?\S+(?:\s+\S+)?)*\s+db:(?:reset|verify)(?=\s|$)'
+    severity: high
+    description: "db:reset and db:verify both run `supabase db reset`. Agents never reset the shared local database: apply only your new migration with `supabase migration up`, and leave a from-scratch replay to CI or a human."
+    explanation: "Both scripts wipe and replay the local stack every agent session on this machine shares."
