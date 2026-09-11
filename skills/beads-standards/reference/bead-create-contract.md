@@ -59,8 +59,12 @@ fails the type-check, rather than filing an unattributed bead.
 
 ## Subagent creates
 
-When the hook stdin carries `agent_id`, a `br create` is refused unless the labels include
-`human-gate`. The refusal message: "propose it in your hand-back". A subagent's discovered
-product work is returned to the batch boundary as PROPOSED-BEAD blocks for the conductor to
-confirm — it is never filed directly. The one exception is the worker's mid-bead `human-gate`
-fork: a decision card a subagent must file to unblock itself.
+A subagent files **NOTHING**. Every `br create` is refused — a human-gate fork included —
+and the subagent returns the work to its coordinator as a **PROPOSED-BEAD** block for the
+conductor to confirm and file: title · files · `User impact:` (and for a fork: gate reason ·
+options · recommendation). The coordinator is the single writer of beads its workers
+discover, so the batch boundary stays the one place new work enters the board.
+
+Enforcement: `bead-capture-guard` refuses when it can identify a subagent — the `agent_id`
+stdin field, or the ambient `AC_SUBAGENT=1` a harness wrapper sets. Where a harness supplies
+neither, the rule is prose, not a gate.

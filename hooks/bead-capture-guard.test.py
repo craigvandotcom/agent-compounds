@@ -80,15 +80,14 @@ cases = [
           "human origin, no impact -> admitted"),
   (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined,impact:perf" -d "- AC: x. Probe: `true` - tier: none"',
           "impact outside the closed set -> refused"),
-  # --- subagent refusal (ac-wp8i.3): a stdin carrying agent_id may file only a human-gate
-  # fork; anything else goes back to the batch boundary as a PROPOSED-BEAD block.
+  # --- subagent refusal (ac-wp8i.3): a subagent files NOTHING — every create, fork
+  # included, is refused and returned to the coordinator as a PROPOSED-BEAD.
   (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
           "subagent, non-gate create -> refused", {"agent_id": "sub-1"}),
-  (ALLOW, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
-          "subagent, human-gate fork -> admitted", {"agent_id": "sub-1"}),
+  (BLOCK, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
+          "subagent, human-gate fork -> refused", {"agent_id": "sub-1"}),
   # --- evasion classes (ac-review 2026-09-10): the guard must see a `br create` reached
-  # through command substitution, a shell `-c` wrapper, or a command wrapper; and the
-  # subagent refusal must key on a real FORK, not the bare human-gate label.
+  # through command substitution, a shell `-c` wrapper, or a command wrapper.
   (BLOCK, 'out=$(br create "x" -t task)',         "command substitution, no origin"),
   (BLOCK, '`br create "x" -t task`',              "backtick substitution, no origin"),
   (BLOCK, "sh -c 'br create \"x\" -t task'",      "shell -c wrapper, no origin"),
@@ -98,8 +97,8 @@ cases = [
   (ALLOW, 'out=$(date)',                          "substitution with no bead create"),
   (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data,human-gate" -d "- AC: x. Probe: `true` - tier: none"',
           "subagent, bare human-gate on a task -> refused", {"agent_id": "sub-1"}),
-  (ALLOW, 'br create "ACTION: do x" -t task -l "origin:ac-review,human-gate" -d "<body>"',
-          "subagent, ACTION fork -> admitted", {"agent_id": "sub-1"}),
+  (BLOCK, 'br create "ACTION: do x" -t task -l "origin:ac-review,human-gate" -d "<body>"',
+          "subagent, ACTION fork -> refused", {"agent_id": "sub-1"}),
   # --- impact-axis origins (ac-review 2026-09-11): ac-qa and ac-land file automated
   # non-gate beads and now require impact; reflect/dream file only human-gate cards.
   (BLOCK, 'br create "x" -t task -l "origin:ac-qa,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
@@ -110,8 +109,8 @@ cases = [
           "ac-land automated origin, no impact -> refused"),
   # --- subagent marker via the ambient AC_SUBAGENT env seam (harnesses that cannot supply
   # the agent_id stdin field set this instead).
-  (ALLOW, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
-          "subagent via AC_SUBAGENT, decision fork -> admitted", {}, {"AC_SUBAGENT": "1"}),
+  (BLOCK, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
+          "subagent via AC_SUBAGENT, decision fork -> refused", {}, {"AC_SUBAGENT": "1"}),
   (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
           "subagent via AC_SUBAGENT, non-gate create -> refused", {}, {"AC_SUBAGENT": "1"}),
 ]

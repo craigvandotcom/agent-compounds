@@ -119,10 +119,11 @@ line numbers drift, and a bead is compiled intent, never a cache of the tree.
 <file>`. Build the thing the AC describes, then confirm the probe goes green. Writing the token
 to pass the grep is the vacuous-AC class this pipeline exists to kill.
 
-If the bead needs a decision only a human can make, file a human-gate bead naming the gate
-reason (fork · authorization · intent · action), unclaim, go to §1. Never ask and wait. The
-mid-bead exception runs the template's § Before filing and files `plan-gap` when the approved
-plan did not settle the fork; a fork found mid-bead keeps unclaim-and-file.
+If the bead needs a decision only a human can make, do NOT file it — a subagent files
+nothing. Return the fork as a PROPOSED-BEAD block to the coordinator (gate reason — fork ·
+authorization · intent · action · plus options and a recommendation), unclaim, go to §1.
+Never ask and wait. The mid-bead case runs the template's § Before filing and proposes
+`plan-gap` when the approved plan did not settle the fork; the coordinator files it.
 
 ## 5 — SELF-REVIEW, and what it is not
 

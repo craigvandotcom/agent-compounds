@@ -12,10 +12,10 @@ Enforced here:
     probe-bearing; `epic` / `decision` / `investigation` are exempt.
   - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
     of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
-  - a subagent files nothing but a human-gate FORK — a `decision` bead or a
-    `DECISION:`/`ACTION:` card; its discovered work goes back to the batch boundary as a
-    PROPOSED-BEAD block. Subagent identity is harness-dependent: the `agent_id` stdin field
-    OR the `AC_SUBAGENT=1` ambient marker a wrapper sets. Where a harness supplies neither
+  - a subagent files NOTHING — every `br create` is refused and returned to the
+    coordinator as a PROPOSED-BEAD block; a human-gate fork is a proposal too, never a
+    direct create. Subagent identity is harness-dependent: the `agent_id` stdin field OR
+    the `AC_SUBAGENT=1` ambient marker a wrapper sets. Where a harness supplies neither
     (opencode sends `session_id`, not `agent_id`), the refusal is INERT and only the four
     label/body axes apply — best-effort, not a guarantee.
 
@@ -169,12 +169,11 @@ Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
 """
 
 SUBAGENT_MESSAGE = """\
-BLOCKED: `br {sub}` from a subagent — propose it in your hand-back.
+BLOCKED: `br {sub}` from a subagent — a subagent files NOTHING.
 
-A subagent's discovered product work is not filed directly: return it to the batch
-boundary as a PROPOSED-BEAD block for the conductor to confirm. The one exception is the
-worker's mid-bead `human-gate` fork — add `human-gate` to --labels to file a decision card
-that unblocks you.
+Return it to your coordinator as a PROPOSED-BEAD block for the conductor to confirm and
+file: title · files · `User impact:` (and for a fork: gate reason · options ·
+recommendation). No exceptions — a human-gate fork is a proposal too, never a direct create.
 
 Canon: beads-standards/reference/bead-create-contract.md § Subagent creates.\
 """
@@ -409,21 +408,6 @@ def has_label(cmd, name):
     return name in all_labels(cmd)
 
 
-def is_subagent_fork(cmd):
-    """True only for a real human-gate FORK: a `decision` bead, or a card whose title
-    carries the `DECISION:`/`ACTION:` prefix. The bare `human-gate` label is not enough —
-    otherwise any bead is fileable by appending it, which is the label-only hole this
-    closes. (The impact-axis exemption above still keys on the label alone; a fork is not
-    an impact class regardless of filer.)
-    """
-    if not has_label(cmd, SUBAGENT_EXEMPT_LABEL):
-        return False
-    if bead_type(cmd) == "decision":
-        return True
-    title = cmd[2] if len(cmd) > 2 else ""
-    return title.startswith("DECISION:") or title.startswith("ACTION:")
-
-
 def scan_tokens(tokens, is_subagent):
     """Run every command in a token stream through the full contract, refusing on the
     first violation. Shared by the outer command and any wrapper-expanded inner command."""
@@ -433,7 +417,9 @@ def scan_tokens(tokens, is_subagent):
             continue
         if any(t in HELP for t in cmd):
             continue
-        if is_subagent and not is_subagent_fork(cmd):
+        # A subagent files NOTHING — every create goes back to the coordinator as a
+        # PROPOSED-BEAD. No fork exemption: a human-gate card is a proposal too.
+        if is_subagent:
             print(SUBAGENT_MESSAGE.format(sub=sub), file=sys.stderr)
             sys.exit(2)
         if not has_origin(cmd):
