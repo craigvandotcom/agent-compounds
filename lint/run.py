@@ -119,6 +119,27 @@ def changed_files(root):
         return None  # cannot know -> run everything, never silently skip
 
 
+def _staged_index_env():
+    """Base env for a git call that must see the CALLER's staged content.
+
+    A pathspec-scoped `git commit -F msg -- path` (this repo's mandated commit
+    pattern) never touches the real `.git/index` — git builds a TEMPORARY index
+    for exactly that partial commit and points GIT_INDEX_FILE at it while hooks
+    run. hooks/pre-commit captures that path as LINT_CALLER_GIT_INDEX_FILE
+    (never the real GIT_INDEX_FILE name, so it never leaks as ambient env into
+    an unrelated fixture-building subprocess) before stripping the raw
+    variable. Without this, `git diff --cached`/`checkout-index` fall back to
+    the real index and see NONE of a pathspec'd-but-never-`git add`-ed change —
+    measured: a same-file edit to 14-no-net-growth.py landed via that exact
+    pattern and 14-no-net-growth itself reported "skipped LIVE_TEXT".
+    """
+    env = os.environ.copy()
+    caller_index = os.environ.get("LINT_CALLER_GIT_INDEX_FILE")
+    if caller_index:
+        env["GIT_INDEX_FILE"] = caller_index
+    return env
+
+
 def staged_files(root):
     """The paths in the index — what a commit will actually contain.
 
@@ -130,7 +151,7 @@ def staged_files(root):
     try:
         diff = subprocess.run(
             ["git", "diff", "--cached", "--name-only", "HEAD"], cwd=root,
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=30, env=_staged_index_env(),
         )
         return set(line for line in diff.stdout.splitlines() if line.strip())
     except (subprocess.SubprocessError, OSError):
@@ -165,7 +186,7 @@ def materialize_staged(root):
     try:
         proc = subprocess.run(
             ["git", "checkout-index", "-a", "-f", f"--prefix={tmp}{os.sep}"],
-            cwd=root, capture_output=True, text=True, timeout=60,
+            cwd=root, capture_output=True, text=True, timeout=60, env=_staged_index_env(),
         )
     except (subprocess.SubprocessError, OSError):
         proc = None
@@ -275,6 +296,12 @@ def main():
         if staged_worktree:
             run_root = staged_worktree
             extra_env = {"GIT_DIR": git_dir, "GIT_WORK_TREE": staged_worktree, "LINT_STAGED": "1"}
+            # A check's own `--cached` read (14's leg 1) must see the SAME index this
+            # materialisation used, not the real repo's ambient one — see
+            # _staged_index_env()'s docstring.
+            caller_index = os.environ.get("LINT_CALLER_GIT_INDEX_FILE")
+            if caller_index:
+                extra_env["GIT_INDEX_FILE"] = caller_index
         else:
             print("NOTICE: staged-lane materialisation failed — running the staged scope against "
                   "the real checkout instead (an unrelated dirty file could affect this run)",

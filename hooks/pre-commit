@@ -9,6 +9,21 @@
 # verified nothing is never a pass.
 set -uo pipefail
 
+# A pathspec-scoped `git commit -F msg -- path` (this repo's mandated commit
+# pattern — never a bare `git commit`, never `add -A`, on a shared index) makes
+# git build a TEMPORARY index reflecting exactly that partial commit and points
+# GIT_INDEX_FILE at it for every hook. That temp index is the ONLY place a
+# pathspec'd-but-never-`git add`-ed change is visible before the commit lands —
+# reading the real .git/index instead (what the unset below forces) sees NONE of
+# it, and `lint.sh --changed --staged` then finds an empty staged set and skips
+# every check (measured: a same-file edit to 14-no-net-growth.py landed via this
+# exact pattern and 14-no-net-growth itself reported "skipped LIVE_TEXT"). Capture
+# it BEFORE the unset, threaded through as LINT_CALLER_GIT_INDEX_FILE (never the
+# real GIT_INDEX_FILE name) so it reaches only run.py's own staged-content git
+# calls, never leaks as ambient env into a check's unrelated fixture-building
+# subprocess the way the raw variable did (below).
+export LINT_CALLER_GIT_INDEX_FILE="${GIT_INDEX_FILE:-}"
+
 # Git exports GIT_DIR/GIT_WORK_TREE/etc. into hook env. They leak into every
 # subprocess lint spawns (fixture run.sh legs inherit the raw env) and redirect
 # nested git calls at THIS repo's gitdir — check 25's fixture hung 120s on the

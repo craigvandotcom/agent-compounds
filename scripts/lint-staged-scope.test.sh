@@ -160,6 +160,34 @@ res4=$(echo "$out4" | scope_of)
 [ "$res4" = "ran" ] && ok "a genuine LEDGER hit is still detected through a symlink-aliased --root" \
                      || bad "expected the check to run despite the alias, got '$res4': $out4"
 
+# --- Case 5: a pathspec-only `git commit -- path` (this repo's mandated commit
+# pattern — never `git add`, never a bare `git commit` on a shared index) must
+# still be visible to the staged lane. Git builds a TEMPORARY index for exactly
+# that partial commit and points GIT_INDEX_FILE at it while hooks run; a real
+# pre-commit hook that captures LINT_CALLER_GIT_INDEX_FILE before stripping the
+# raw variable (hooks/pre-commit's own pattern) must let run.py see the change.
+CAPTURE_OUT=/tmp/lint-staged-scope-proof-capture.json
+rm -f "$CAPTURE_OUT"
+cat > "$W/.git/hooks/pre-commit" <<HOOK
+#!/usr/bin/env bash
+set -uo pipefail
+export LINT_CALLER_GIT_INDEX_FILE="\${GIT_INDEX_FILE:-}"
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES 2>/dev/null || true
+python3 "$RUN_PY" --root "$W" --check 50 --changed --staged --json > "$CAPTURE_OUT" 2>/dev/null
+exit 0
+HOOK
+chmod +x "$W/.git/hooks/pre-commit"
+
+git -C "$W" reset -q --hard >/dev/null
+echo "hello v3 — pathspec-only, never git-added" > "$W/skills/demo/SKILL.md"
+git -C "$W" status --short "$W/skills/demo/SKILL.md" | grep -q '^ M' \
+  || bad "setup: expected an UNSTAGED modification before the pathspec commit"
+git -C "$W" commit -q -m "pathspec-only commit, no prior add" -- "$W/skills/demo/SKILL.md" >/dev/null
+res5=$(scope_of < "$CAPTURE_OUT" 2>/dev/null)
+[ "$res5" = "ran" ] && ok "a pathspec-only commit (no prior git add) is still visible to the staged lane" \
+                     || bad "expected the check to run under a pathspec-only commit, got '$res5': $(cat "$CAPTURE_OUT" 2>/dev/null)"
+rm -f "$CAPTURE_OUT"
+
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
