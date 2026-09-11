@@ -26,3 +26,7 @@ harnesses.local.json
 
 # dcg probe payloads — regenerated on every probe run
 tools/dcg/fixtures/
+
+# ac-polish run state (round digests + receipt) — scratch; the durable receipt is on the
+# beads / plan frontmatter, so this is disposable and must never be committed
+.polish/

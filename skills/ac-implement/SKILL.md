@@ -82,8 +82,8 @@ Then, and only after it exits 0:
 
 ## The exhaust rule
 
-Discovered PRODUCT work goes to the board with `discovered-from: <bead>`. Process observations
-go to the family ledger, never to a new bead about ourselves (self-beads were 39% of the old
-board). Every finding writes its `VERDICT:` and its catch-stage label even when fixed in-batch:
-the fix may be in-batch, the label never is. Then land the plane.
+Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed by the
+coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (product work and
+mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
+ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.
 
