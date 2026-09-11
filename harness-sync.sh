@@ -1091,6 +1091,35 @@ install_lint_hook() { # <repo-root>
   echo "  linked $dest -> $AC_ROOT/hooks/pre-commit"
 }
 
+# --- ac commit-msg hook (warn-only cause line) -------------------------------------
+# Installs hooks/commit-msg directly: there is no chain runner for commit-msg the way
+# 60-ac-lint uses hooks.d/pre-commit, and one advisory hook needs none. Same refusal
+# discipline as install_lint_hook — never clobber a real file or a foreign symlink.
+install_commit_msg_hook() { # <repo-root>
+  local repo="$1" hooks_dir dest
+  hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
+  if [ -z "$hooks_dir" ]; then
+    echo "  WARN: no hooks dir resolvable for $repo — commit-msg hook not installed"
+    return 0
+  fi
+  dest="$hooks_dir/commit-msg"
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    echo "  SKIP (real file present — refusing to overwrite): $dest"
+    return 0
+  fi
+  if [ -L "$dest" ] && [ "$(readlink "$dest")" != "$AC_ROOT/hooks/commit-msg" ]; then
+    echo "  SKIP (symlink points elsewhere): $dest -> $(readlink "$dest")"
+    return 0
+  fi
+  if [ "$DRY" = 1 ]; then
+    if [ ! -e "$dest" ]; then echo "  link $dest -> $AC_ROOT/hooks/commit-msg"; note_change; fi
+    return 0
+  fi
+  ln -sfn "$AC_ROOT/hooks/commit-msg" "$dest"
+  note_change
+  echo "  linked $dest -> $AC_ROOT/hooks/commit-msg"
+}
+
 # --- target renderers -------------------------------------------------------------
 sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude layer)
   local base="$1" mode="${2:-app}" dep_extra=""
@@ -1108,6 +1137,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
   fi
 
   install_lint_hook "$base"
+  install_commit_msg_hook "$base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
     local dep_flags="$dep_extra" deploy_status
@@ -1225,6 +1255,7 @@ fi
 # The registry's OWN pre-commit — agent-compounds is not a line in the targets
 # list, so a targets-only install would leave every WS1/WS2 commit ungated.
 install_lint_hook "$AC_ROOT"
+install_commit_msg_hook "$AC_ROOT"
 
 if [ "$DO_ALL" = 1 ]; then
   [ -f "$TARGETS_LIST" ] || { echo "error: $TARGETS_LIST missing" >&2; exit 2; }
