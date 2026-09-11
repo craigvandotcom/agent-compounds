@@ -8,60 +8,52 @@ The canonical home for portable skills and agents. Deploy any subset into a proj
 
 Symlinked into a project as `.claude/skills/<name>/`.
 
-**Multi-model**
-| Skill | What it does |
-|-------|-------------|
-| **[multi-model](./skills/multi-model/)** | Access 400+ AI models (Claude, GPT, Gemini, Grok, DeepSeek) and get a panel synthesized into one consensus answer on OpenRouter Fusion |
-
-**Pipeline** — the engineering workflow, one skill per stage, all `ac-` prefixed. The runtime
-conductor is **`ac-implement`**; the design lives in **`ac-pipeline`**. Three loops feed one
-execution path: the **dev loop** (human intent → plans → waves → `ac-implement`
-ships), the **triage loop** (`ac-triage`, scheduled — production signal → defect beads), and
-the **audit loop** (`ac-review` + `ac-hygiene`, periodic — proactive hardening findings → beads; the audit checklists live in their `references/`).
-The canonical stage order — stage · owner · trigger · human gate · artifact — lives in
+The registry is seven packages (WS3 generates this map from `packages.json`; until then the
+groups are prose). Stage order — stage · owner · trigger · human gate · artifact — lives in
 `skills/ac-pipeline/references/stage-table.md`; nothing here restates it.
+
+**factory-core** — the production line. Conductor is `ac-implement`; doctrine is `ac-pipeline`.
 | Skill | What it does |
 |-------|-------------|
 | **ac-pipeline** | The pipeline doctrine — canonical stage order, each stage's contract, cross-cutting invariants, the three-loop model |
-| **ac-beadify** | Compile an approved plan into lean beads — the four-section schema (Intent / Acceptance Criteria / Delivers / Consumes), a Consumes↔edge-wired dependency graph, plan retirement; refuses any bead whose ACs name no executable probe (**no probe, no bead**) |
-| **ac-polish** | One fixpoint engine, four modes (plan · bead · code · seams) — a stateless severity-gated reader per round, sent `references/reader-prompt.md` verbatim, reporting edits + a mandatory DECLINED list; stamped by `skills/_tools/polish-fixpoint.sh` only against a measured empty diff at round ≥ 2; runs until it converges. `seams` (a.k.a. ac-seams) resolves an area to its heaviest object and TRACES it through three lenses per round — object (lifecycle stages), flow (steps with controller/sensor/on-failure), boundary (both sides' assumes/asserts) — converging on the merged maps (`scripts/seams-merge.py`, exact keys per lens) and deriving the seams (holes, competing writers, unasserted edges, unsensed steps, unchecked assumptions; cross-lens first) plus the ac-qa journey into a plan for `ac-plan`; `scripts/aim.sh churn` ranks FILES from git churn + no-import co-change, `aim.sh objects [--area]` ranks data OBJECTS by seam load (touchers × layers × writers ÷ tests) — the bridge from an area or a hot file to the object a trace needs |
 | **ac-plan** | Idea → ONE plan file — problem, approach, artifact-named deliverables, assumptions with detection rules, risk + sequence, out-of-scope, and a success criterion the skill refuses unless it can come out false |
+| **ac-polish** | One fixpoint engine, four modes (plan · bead · code · seams) — a stateless severity-gated reader per round, sent `references/reader-prompt.md` verbatim, reporting edits + a mandatory DECLINED list; stamped by `skills/_tools/polish-fixpoint.sh` only against a measured empty diff at round ≥ 2; runs until it converges. `seams` (a.k.a. ac-seams) resolves an area to its heaviest object and TRACES it through three lenses per round — object (lifecycle stages), flow (steps with controller/sensor/on-failure), boundary (both sides' assumes/asserts) — converging on the merged maps (`scripts/seams-merge.py`, exact keys per lens) and deriving the seams (holes, competing writers, unasserted edges, unsensed steps, unchecked assumptions; cross-lens first) plus the ac-qa journey into a plan for `ac-plan`; `scripts/aim.sh churn` ranks FILES from git churn + no-import co-change, `aim.sh objects [--area]` ranks data OBJECTS by seam load (touchers × layers × writers ÷ tests) — the bridge from an area or a hot file to the object a trace needs |
+| **ac-beadify** | Compile an approved plan into lean beads — the four-section schema (Intent / Acceptance Criteria / Delivers / Consumes), a Consumes↔edge-wired dependency graph, plan retirement; refuses any bead whose ACs name no executable probe (**no probe, no bead**) |
 | **ac-implement** | Work an epic's bead queue as a SWARM (default width 3, uncapped, until the qualifying beads are exhausted) — the invoking session coordinates, spawned workers run `references/worker.md`: `flight-check.sh` at claim, RED first, `swarm-commit.sh` at commit, `close-gate.sh` at close; `coordinator.sh` owns the close-out (stale-ledger refusal, orphan sweep, one ledger commit) |
+| **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
+| **ac-prove** | The shared tip-valid full-suite proof primitive — freshness probe / dispatch-if-stale / ensure --fix-forward; every ship path calls it instead of re-implementing its own CI-trust logic |
 | **ac-publish** | The ship gate — `ac-prove` obtains the proof and this gate asserts its REQUIRED JOBS ACTUALLY EXECUTED, refusing `NOT-GATED` on a job that was absent, skipped or cancelled; then version once, tag the proven SHA (never `HEAD`), promote-not-rebuild on web, CI-built artifacts only on native, hand off to `ac-distribute` |
-| **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline); also the single-bead intake — one raw idea/bug/decision typed and filed now |
-| **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
-| **ac-align** | Reconcile the pipeline with current strategy; owns the nightly reconcile (archive done work, repair readiness labels) and the weekly strategy align |
-| **ac-plan-lab** | Deep analysis of a plan — genius (forensic review) + alien (paradigm-breaking) modes |
+| **ac-land** | Session closure — retrospective learning + system compounding |
 | **[beads-standards](./skills/beads-standards/)** | Machine-wide bead canon (not pipeline-scoped) — agent vs human bead templates, `human-gate` label taxonomy + synonym merge map, refined/unrefined semantics, status/priority/close_reason conventions, dependency-wiring requirements |
 | **[agent-mail](./skills/agent-mail/)** | Multi-agent coordination domain — session identity (two-tier contract), file reservations, release/deregister exit, build slots; owner of the session-procedure + agent-identity canons |
-| **ac-review** | Feature-branch review — parallel reviewers, auto-fix + escalation |
-| **ac-land** | Session closure — retrospective learning + system compounding |
-| **ac-prove** | The shared tip-valid full-suite proof primitive — freshness probe / dispatch-if-stale / ensure --fix-forward; every ship path calls it instead of re-implementing its own CI-trust logic |
-| **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
-| **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
-| **ac-human** | Human command center — renders the full board first (loop side included), then drives only work at a human gate (blockers, plans to approve, hopper); `board` mode stops after the read-only board render |
 
-**Engineering** (promoted from body-compass-app, the canonical donor)
+**factory-verify** — QA journeys, UI elevation, tests, hygiene.
 | Skill | What it does |
 |-------|-------------|
-| **supabase** | Supabase CLI, migrations, RLS, Postgres patterns |
-| **testing** | Vitest unit/component/integration test authoring |
-| **capacitor** | TypeScript dev in Capacitor (native wrap) projects |
-| **brainstorming** | Divergent–convergent pre-planning ideation |
-| **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
-| **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
-| **ac-idea-lab** | Deep analysis of a raw idea — genius (forensic review) + alien (paradigm-breaking) modes |
-| **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts; builds orchestrated `/command` workflows (`workflows/build-workflow.md`); runs the registry audit — mechanical lint passes + semantic dedup/drift (`workflows/registry-audit.md`); scores subagent prompts against the research-backed rubric (`references/prompt-rubric.md`) |
-| **ui-brainstorm** | Multi-model UI critique with consensus ranking |
-| **ui-debug** | CSS / visual bug investigation |
-| **ui-elevate** | Raise UI to premium — taste layer over correctness, with `app` (product) and `site` (marketing) modes; anti-slop audit; human-in-the-loop |
 | **ac-qa** | QA an app build through journeys — one engine, two workflows: browser (web shell — SPA routing, storage/session, service worker, console, responsive) and device (native shell — real taps, keyboard, safe-area, deep links, push, appearance). Depth levels, findings=beads, conductor/worker evidence protocol shared |
+| **ui-elevate** | Raise UI to premium — taste layer over correctness, with `app` (product) and `site` (marketing) modes; anti-slop audit; human-in-the-loop |
+| **ui-debug** | CSS / visual bug investigation |
+| **testing** | Vitest unit/component/integration test authoring |
+| **ac-hygiene** | Iterative codebase cleanup (out-of-band, between waves) |
+
+**factory-ops** — human command center, align, backlog intake, triage, native distribute.
+| Skill | What it does |
+|-------|-------------|
+| **ac-human** | Human command center — renders the full board first (loop side included), then drives only work at a human gate (blockers, plans to approve, hopper); `board` mode stops after the read-only board render |
+| **ac-align** | Reconcile the pipeline with current strategy; owns the nightly reconcile (archive done work, repair readiness labels) and the weekly strategy align |
+| **ac-backlog** | Capture ideas into grouped backlog files (front of the pipeline); also the single-bead intake — one raw idea/bug/decision typed and filed now |
+| **ac-triage** | Pull operational + user signal back in (crashes, errors, beta feedback), cluster it, route real findings by shape |
+| **ac-distribute** | Native ship mechanics — signed build to TestFlight / App Store submission (the outbound half; `ac-triage` is the inbound counterpart) |
 
 > `ac-distribute/` also carries `references/_DECISION-distribution-stack.md` — the distribution-stack decision doc (ratified 2026-06-15) that preceded the skill.
 
-> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version. `app-store-screenshots`, `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO concerns, owned by each app (reference copies in body-compass-app).
+**stack-nextjs-supabase** — the Next.js + Supabase + Capacitor stack.
+| Skill | What it does |
+|-------|-------------|
+| **supabase** | Supabase CLI, migrations, RLS, Postgres patterns |
+| **capacitor** | TypeScript dev in Capacitor (native wrap) projects |
 
-**Substrate** — the AI-native-org memory skills (deploy together)
+**substrate** — the AI-native-org memory skills (deploy together)
 | Skill | What it does |
 |-------|-------------|
 | **context-engineering** | Canonical save-routing taxonomy and L0–L4 loading model — where durable knowledge goes and what loads when; how the compounding system runs (lanes, cadence, drains) is its `references/operations.md` |
@@ -69,9 +61,27 @@ The canonical stage order — stage · owner · trigger · human gate · artifac
 | **dream** | The org's self-improvement engine — synthesize cross-session patterns, lint the substrate, emit PR-style proposals |
 | **wiki** | Write and garden wiki synthesis pages — concept/entity/topic/contradiction pages that integrate atomic facts and decisions into one cited narrative (a derived view, not fact capture) |
 
+**meta** — authoring and auditing the registry itself.
+| Skill | What it does |
+|-------|-------------|
+| **skill-builder** | Meta-skill for authoring/refactoring skills — spine+references standard, RED-GREEN testing, validate/init scripts; builds orchestrated `/command` workflows (`workflows/build-workflow.md`); runs the registry audit — mechanical lint passes + semantic dedup/drift (`workflows/registry-audit.md`); scores subagent prompts against the research-backed rubric (`references/prompt-rubric.md`) |
+
+**library** — one-shot prompts, methodology, labs, multi-model access, UI critique.
+| Skill | What it does |
+|-------|-------------|
+| **[multi-model](./skills/multi-model/)** | Access 400+ AI models (Claude, GPT, Gemini, Grok, DeepSeek) and get a panel synthesized into one consensus answer on OpenRouter Fusion |
+| **jef-prompts** | Curated one-shot prompt library (the "jef" pack) — invoke `/jef-prompts <hint>` |
+| **jef-flywheel** | The agentic build methodology — beads + swarms, setup, lessons (Jeffrey-Emanuel) |
+| **brainstorming** | Divergent–convergent pre-planning ideation |
+| **ac-idea-lab** | Deep analysis of a raw idea — genius (forensic review) + alien (paradigm-breaking) modes |
+| **ac-plan-lab** | Deep analysis of a plan — genius (forensic review) + alien (paradigm-breaking) modes |
+| **ui-brainstorm** | Multi-model UI critique with consensus ranking |
+
+> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version. `app-store-screenshots`, `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO concerns, owned by each app (reference copies in body-compass-app).
+
 ## Commands → Skills (migration complete)
 
-Anthropic merged custom commands into skills (a `commands/x.md` and a `skills/x/SKILL.md` both create `/x`). The migration is done: the engineering workflow commands became the **Pipeline skills above**, and the `jef` prompt pack became the **`jef-prompts`** skill. Everything deploys as a skill via `deploy.sh --skills`; one legacy file remains under `commands/jef/`.
+Anthropic merged custom commands into skills (a `commands/x.md` and a `skills/x/SKILL.md` both create `/x`). The migration is done: the engineering workflow commands became the **factory-core skills above**, and the `jef` prompt pack became the **`jef-prompts`** skill. Everything deploys as a skill via `deploy.sh --skills`; one legacy file remains under `commands/jef/`.
 
 ## Prompts
 

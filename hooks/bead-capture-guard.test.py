@@ -21,7 +21,7 @@ cases = [
  (ALLOW, 'git commit -m "br create thing"',                         "br create in commit msg"),
  (BLOCK, 'cd /tmp && br create "y" -t task',                        "chained after cd"),
   (ALLOW, 'cd /tmp && br create "y" -t task -l origin:ac-land,unrefined,impact:data -d "- AC: x. Probe: `true` - tier: none"', "chained, labelled"),
- (ALLOW, 'br create "x" --labels=origin:ac-tidy',                   "--labels= form"),
+ (ALLOW, 'br create "x" --labels=origin:ac-backlog',                "--labels= form"),
  (BLOCK, 'br create "x" --labels=hygiene',                          "--labels= without origin"),
  (BLOCK, 'FOO=1 br create "x" -t task',                             "env-prefixed"),
  (BLOCK, 'br create "x" -l "notorigin:sneaky"',                     "origin as substring must not pass"),

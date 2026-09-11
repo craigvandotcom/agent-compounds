@@ -67,15 +67,28 @@ they're missing — the invariant is enforced, not conventional. To add/remove a
 ```
 agent-compounds/
 ├── skills/        # the registry — each dir = one skill (SKILL.md + references/ + workflows/)
-│   ├── ac-*       # the compounding-engineering pipeline — 3 loops, one conductor (ac-implement): dev, triage (ac-triage), audit (audit+ac-hygiene); stage order + contracts: skills/ac-pipeline/references/stage-table.md; doctrine = ac-pipeline
-│   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
-│   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
 ├── agents/        # the 5 core stances (orchestrator, coordinator, researcher, implementer, validator — each carries a semantic `tier:`, never a concrete model); domain work = stance + lens prompt from the skill, never a new agent file; each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model
 ├── deploy.sh      # symlinks skills + generates agents (tier -> model stamped from harnesses.json agent_models) into a target's .claude/
 ├── templates/     # project-AGENTS.md (new-project L0 template) + ci-build-guards.md
 │                  #   (required-NEXT_PUBLIC_* build assert + dep-removed CI gate, copy-paste)
 └── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)
 ```
+
+**v2 map** (seven packages; WS3 generates the table from `packages.json` later). Stage order
+lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates it.
+
+- **factory-core** — ac-pipeline, ac-plan, ac-polish, ac-beadify, ac-implement, ac-review, ac-prove, ac-publish, ac-land, beads-standards, agent-mail
+- **factory-verify** — ac-qa, ui-elevate, ui-debug, testing, ac-hygiene
+- **factory-ops** — ac-human, ac-align, ac-backlog, ac-triage, ac-distribute
+- **stack-nextjs-supabase** — supabase, capacitor
+- **substrate** — context-engineering, reflect, dream, wiki (deploy together)
+- **meta** — skill-builder
+- **library** — jef-prompts, jef-flywheel, brainstorming, ac-idea-lab, ac-plan-lab, multi-model, ui-brainstorm
+
+**Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled),
+`writing-guidelines` (brand-voice-coupled), `curate` — project/brand-specific. `app-store-screenshots`,
+`screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO, owned by each app
+(reference copies in body-compass-app).
 
 ## Rules
 
