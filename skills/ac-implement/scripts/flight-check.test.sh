@@ -45,10 +45,14 @@ printf 'assert one\nassert two\n' >"$WORK/root/existing-harness.test.sh"
 # queries — the suite must never depend on a developer's real beads DB, and the
 # CONSUMES leg must be reachable (a machine with real br on PATH must not leak
 # live board state into these cases).
+# AC_TEST_SHOW_FAIL=1 makes show exit 3. The exact-id miss is already the
+# prefix-resolution signal; the switch is for the resolved-id re-read, whose
+# refusal must be NOT-GATED rather than a fabricated "not on the board".
 cat >"$WORK/bin/br" <<'STUB'
 #!/usr/bin/env bash
 case "${1:-}" in
   show)
+    [ "${AC_TEST_SHOW_FAIL:-}" = "1" ] && exit 3
     case "${2:-}" in
       upstream|bd-epic-kb-seams-573x7.1|bd-epic-ing-ownership-k2mpd.1)
         echo '[{"id":"resolved","status":"closed"}]' ;;
@@ -481,6 +485,25 @@ RUN_RC=$?
   || bad "stale stamp: no receipt after clearing"
 grep -q 'add ac-l7xt-fix refined' "$WORK/labels2.log" && ok "stale stamp: the re-gate re-stamped on the way through" \
   || bad "stale stamp: re-gate did not stamp: $(cat "$WORK/labels2.log")"
+
+# ---------------------------------------------------------------------------------------
+echo "flight-check.test: case 9 — a refused resolved-blocker show is NOT-GATED, never a fabricated status"
+# ---------------------------------------------------------------------------------------
+# consumes-prefix.md already proves list resolves the prefix to exactly one id and
+# the re-read succeeds. The same body with AC_TEST_SHOW_FAIL=1 fails that re-read:
+# list still succeeds, so the gate is past prefix-resolution when show refuses.
+run "$WORK/bodies/consumes-prefix.md" AC_TEST_SHOW_FAIL=1
+[ "$RUN_RC" -eq 2 ] && ok "resolved-blocker show refusal exits 2 (NOT-GATED, not a fabricated status)" \
+  || bad "resolved-blocker refusal: expected exit 2, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'NOT-GATED' \
+  && ok "resolved-blocker refusal carries NOT-GATED" || bad "no NOT-GATED token: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'refused for resolved blocker' \
+  && ok "resolved-blocker refusal names the read that refused" || bad "did not name the read: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'closure unverifiable' \
+  && ok "resolved-blocker refusal says closure is unverifiable" || bad "did not say unverifiable: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'not on the board' \
+  && bad "resolved-blocker refusal fabricated a not-on-the-board status: $RUN_OUT" \
+  || ok "resolved-blocker refusal did not fabricate a not-on-the-board status"
 
 # ---------------------------------------------------------------------------------------
 echo ""
