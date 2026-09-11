@@ -1,34 +1,26 @@
 {
-  "status": "degraded",
+  "status": "done",
   "mode": "REVIEW",
-  "date": "2026-08-22",
+  "date": "2026-09-12",
   "machine": "darwin",
   "branch": "main",
-  "degraded_reason": "abort-on-contention at step 1 — BCA `main` diverged from `origin/main`; `git pull --ff-only` returned 'Not possible to fast-forward' and rebase/merge/reset are deny-listed",
-  "aborted_at_step": 1,
-  "divergence": {
-    "local_head": "a8202d0c9287241a787431e4d044b7fe48b8304e",
-    "origin_main": "de5810f97ee7c73afed3fd082679c43634d30111",
-    "ahead": 1,
-    "behind": 1,
-    "local_only": ["a8202d0c docs(memory): capture the dead-clearance class from RUN 7d96fdd2 [no-bead]"],
-    "remote_only": ["de5810f9 chore(ci-evidence): divergence checkpoint (clean) [skip ci]"]
-  },
+  "scope": "agent-compounds (machinery board)",
   "counts": {
-    "pool_items_scanned": 0,
-    "active_open_estimate": 0,
-    "proposed_promotions": 0,
-    "findings": 0,
+    "closed_unrefined_stripped": 69,
+    "open_unrefined_stamped": 0,
+    "open_human_gates": 0,
+    "plans_reconciled": 0,
+    "proposals": 0,
     "files_moved": 0,
     "beads_created": 0
   },
-  "proposal": null,
-  "slate": [],
-  "writes": "none — zero writes outside this status file",
-  "prior_run_note": "the 2026-08-08 stranded commit 0afa2ab8 is now an ancestor of origin/main; that divergence was resolved. This is a NEW divergence.",
-  "followups": [
-    "second consecutive scheduled ac-align REVIEW run aborted on a diverged BCA main — recurring class, needs a durable fix (auto-reconcile lane or a scheduler-side guard)",
-    "a human must reconcile a8202d0c vs de5810f9 before the next cycle can run"
-  ],
-  "slack": { "channel": "sofi", "status": "degraded", "ts": "1787371261.609609" }
+  "pushed_sha": "eeac9121d28f688247c47f50e19907a2a35b39fd",
+  "bca_pushed_sha": "eeac9121d28f688247c47f50e19907a2a35b39fd",
+  "push_verified": true,
+  "slack": {
+    "channel": "sofi",
+    "status": "healthy",
+    "ts": "1789165097.488899"
+  },
+  "note": "Plan and _backlog reconcile is local-only in agent-compounds (_plans/ and _backlog/ are gitignored), so this run touched the tracked bead ledger only: Tier-1 readiness-label repair."
 }
