@@ -1,7 +1,7 @@
 {
-  "status": "degraded",
+  "status": "healthy",
   "mode": "NIGHTLY",
-  "date": "2026-09-12",
+  "date": "2026-09-13",
   "machine": "darwin",
   "branch": "main",
   "scope": "body_compass_app",
@@ -14,14 +14,14 @@
     "files_moved": 0,
     "beads_created": 0
   },
-  "pushed_sha": "8fe0928364fbd88138bd88c2e8dc3078290911a8",
-  "bca_pushed_sha": "2a611199d327a5a3ffd38dffa42e2aa820adde22",
-  "push_verified": false,
-  "stranded_sha": "2a611199d327a5a3ffd38dffa42e2aa820adde22",
+  "pushed_sha": null,
+  "bca_pushed_sha": "1826b3229eab0addb0df06f42c680790ee90b492",
+  "push_verified": true,
+  "stranded_sha": null,
   "slack": {
     "channel": "sofi",
-    "status": "degraded",
-    "ts": "1789167117.031709"
+    "status": "healthy",
+    "ts": "1789253531.084529"
   },
-  "note": "Reconciled 7 beads in body_compass_app (readiness-label repair + gate re-verify). Push to body_compass_app main REJECTED — a concurrent pusher landed 9c17facc on origin/main after this run's worktree forked from 969c56a9. Work is stranded at 2a611199 in a /tmp worktree pending human/next-cycle reconcile. No Tier-3 proposals emitted: parentage-gap-orphan cluster already covered by pending _plans/_proposals/2026-09-04/02-parentage-gap-orphans.md; epic-edge scan found 0 real I2 violations under the human's bd-wgjbq ruling (issue_type==epic, not the >3-children heuristic)."
+  "note": "Reconciled 7 beads (readiness-label repair: 3 unrefined stripped from closed beads, 3 stamped onto open lifecycle-gap beads) + re-verified all 4 open human-gate beads still legitimately blocked, no ledger disagreement. Docket-health clean, no ALARM. Zero plans to archive, zero backlog transitions, zero closeout-drift. Epic-close candidate bd-dtpqg already gated (bd-r4n2a) and carries a Probe: line — no new proposal. Filed then retracted an I2 epic-edge proposal same run after re-deriving with issue_type==epic (bd-wgjbq's ruling) instead of the >3-children heuristic; corrected count was 0."
 }
