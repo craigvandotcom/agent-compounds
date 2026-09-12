@@ -192,6 +192,10 @@ and names the rule it broke. Exit 9 = foreign branch: stop, report, touch nothin
 the push was rejected and the commit is safe in local trunk; note it and move on, and NEVER
 pull, rebase, stash or reset to "fix" it.
 
+If the work step leaves nothing tracked changed (`git status --porcelain` names no modified
+tracked file outside the ledger), skip COMMIT — an empty commit is not evidence — and go to
+§7; the §7 reason still names every Delivers path (D2).
+
 Never stage `.beads/issues.jsonl`. The session owns the ledger; a worker that commits it
 publishes every other writer's board state under its own bead's message.
 

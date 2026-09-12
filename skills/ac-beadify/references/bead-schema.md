@@ -45,6 +45,22 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 Nothing else. There is no Scope, Proof, Notes or Discussion section — that content is either
 `## Intent` or it is not durable.
 
+## Closeout — the epic's last bead (D3/D8)
+
+Every plan-derived epic gets one closeout bead, even with no one-shots — keyed off
+`beadified:` absent, so a re-compile of a retired plan emits none.
+Header: type `task`, title `closeout: <epic title>`, the epic's priority.
+`## Intent` names the epic it closes. `## Consumes` one line per sibling
+`<id> -> <its first Delivers path>` so parity holds; wire sibling→closeout and
+closeout→epic `blocks` edges and read them back like any other edge.
+`## Acceptance Criteria`: `test ! -e <path>` per one-shot the epic leaves behind, plus
+`grep -q '^delivered:' <plan>` — tier: none. `## Delivers`: each deleted path plus the
+plan path (the worker appends the `delivered:` line to the retired plan as it deletes).
+One-shot touchers refusal (D4): beadify refuses a one-shot whose touchers reach outside
+the epic's own children. `Detect:` lift (D7): a backtick `Detect:` rides the normal
+no-probe refusal; prose ones are listed, never silently dropped, as
+`assumption not compiled: <n>`.
+
 ## The probe rule
 
 Every AC ends with its probe in exactly this form, on ONE line:

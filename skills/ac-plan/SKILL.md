@@ -43,10 +43,10 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
 3. **Write the ONE plan file.** One file, these sections, nothing ornamental:
    - **Problem** — what is wrong now, with the evidence that it is wrong.
    - **Approach** — the shape of the fix and the alternatives rejected, each with its reason.
-   - **Deliverables** — every one named as an ARTIFACT (a path, a script, a receipt), never
-     as an intention. An unnamed deliverable cannot be consumed by a bead's `## Delivers`.
-   - **Assumptions** — the ones the plan RESTS on: what the plan becomes if false, what
-     DETECTS the falsity, by when. An assumption with no detection rule is a bet.
+    - **Deliverables** — every one named as an ARTIFACT (a path, a script, a receipt), never
+      as an intention (` — one-shot` marks migration scratch existing only to land the epic, D4). Unnamed = unconsumable by `## Delivers`.
+    - **Assumptions** — the ones the plan RESTS on: what the plan becomes if false, what
+      DETECTS the falsity (`Detect:` backtick when runnable, prose otherwise), by when. No rule = a bet.
    - **Decisions** (`## Decisions`) — every fork as a card (`references/decisions.md` holds the
      shape): state `settled: <choice> — <why>` or `needs-human`; escalation test before a card.
    - **Risk + sequence** — the order of work, with the tree GREEN at every step of it. A step
