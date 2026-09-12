@@ -62,6 +62,10 @@ batch"); same contract at any range Craig names (`ac-review <range>`). No phase 
   **catch-stage label** — the stage that SHOULD have caught it (plan · beadify · flight ·
   implement · close · review) — **even when the fix lands in-batch**: auto-applied
   Critical/High findings write their catch-stage record — no work bead, the fix landed; **no VERDICT record** for an auto-fixed Critical/High fails the run's own checklist.
+- **Closed epics accept no child (D6).** A late finding against a closed epic opens a
+  follow-up epic — never a new child of the closed one, never a silent reopen. The
+  follow-up carries its own `discovered-from:` trail back to the finding; the closed epic
+  stays closed.
 - **Severity orders the report; only a named `impact:` makes a bead**
   (`bead-create-contract.md` § Required axes). Else DEFER with a reason. Shipped defect →
   `-t bug`; mutation-probe-convicted test → `-t task`; unverified → `-t investigation`;

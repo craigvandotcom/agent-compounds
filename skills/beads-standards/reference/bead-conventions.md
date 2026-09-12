@@ -23,7 +23,7 @@ ac-human — and any workflow that files beads. One principle drives all of it:
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
 | `decision` | A fork that passes the escalation test (`reference/human-gate-template.md` § The escalation test) — taste, product, money, risk | Human decision RECORDED, consequences executed |
-| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` |
+| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` (probe-less only — D5) |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it —
 **diagnosed = source-traced, not inferred** — file the `bug` directly.
@@ -33,12 +33,16 @@ the symptom enters as fact; an inferred cause enters a clearly-marked
 *unverified* slot the implementer re-derives, never inherits. Type is the
 carrier: source-traced cause → `-t bug`; inferred cause → `-t investigation`.
 
-**Epics stay open across batches.** An epic's close criterion is that its `## Delivers`
-promise is covered — and the close itself is PROPOSED by `ac-align`, not "children closed"
-mechanically and not `ac-batch-close`'s job. Parent-child edges do NOT block `br ready`
-(only `blocks` edges sequence), so an epic staying open across many batches starves no
-work and costs nothing; do not force-close an epic just because its currently-open
-children are done.
+**Epics stay open across batches — and the epic is the last bead.** The rule is that
+children block their epic: every child carries a `blocks` edge to its epic parent
+(child→parent, with the parent-child edge joining the same pair — D2), so the worker
+picks the epic last (D3), after every child has closed. An epic's close criterion is that
+its `## Delivers` promise is covered — and the close itself is PROPOSED by `ac-align`
+only for probe-less epics (D5: no `Probe:` line in the epic body names its own
+verification), never "children closed" mechanically and not `ac-batch-close`'s job.
+Parent-child edges do NOT block `br ready` (only `blocks` edges sequence), so an epic
+staying open across many batches starves no work and costs nothing; do not force-close
+an epic just because its currently-open children are done.
 
 ## Labels = gating & provenance (orthogonal to type)
 
@@ -287,8 +291,9 @@ invocation is silently reverted. `br lint` is unchanged: it checks DESCRIPTION t
 sections only (§ Body template), never `close_reason`.
 
 Still **presence-checked, not truth-checked** — semantic verification remains review's job.
-Exit 2 = NOT-CHECKED and is never a pass. `epic` and `human-gate` beads are exempt (their
-closure semantics differ). Historical closes are NEVER swept: the check runs at close time,
+Exit 2 = NOT-CHECKED and is never a pass. `human-gate` beads are exempt (their
+closure is a recorded human decision, not evidence). Epics are never exempt — they close
+through the D3/D5 path above, never an exemption. Historical closes are NEVER swept: the check runs at close time,
 on the bead being closed. A bypass requires BOTH `--force` and `EVIDENCE-BYPASS: <why>` in
 the reason, so the escape lands on the bead where a reader will meet it.
 
