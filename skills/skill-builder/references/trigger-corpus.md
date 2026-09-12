@@ -18,6 +18,10 @@ since been archived or folded into others, so their sections no longer describe 
 target. Judge a LIVE skill only against its own section; never reuse an archived section's
 verdicts or copy a stale skill name into a new one.
 
+**Re-judged 2026-09-12 (ac-1p7j.39):** archived-skill sections below are retitled and
+their routing tails re-pointed at live successors — old verdict rows preserved, only
+destinations updated. The record sits in § Re-judgment 2026-09-12 at the end of this file.
+
 **Coverage: batch B1 — the 6 pipeline conductors** (`CONDUCTOR_SKILLS` in `lint.sh`) — plus
 **B2, the 5 `ac-plan-*` skills**, **B3, the 2 `ac-qa-*` skills**, **B4, the 6 bead-lifecycle
 skills**, **B5, the 4 polish/publish skills**, **B6, the 8 remaining `ac-*` skills**, and
@@ -28,7 +32,7 @@ a `*/` loop reports a phantom `MISSING _tools` forever).
 
 ---
 
-## ac-loop
+## Archived loop skill (re-judged — routes to the conductor)
 
 should-activate
 
@@ -67,7 +71,7 @@ should-NOT-activate
   trigger `start implementation` was unqualified, so a bare coding request with no bead
   behind it matched the strongest phrase in the description. Fix: qualify the trigger to a
   refined bead wave and add the explicit no-bead exclusion.
-- PASS — "run the loop" (routes to ac-loop; ac-implement's own "loops until the wave is
+- PASS — "run the loop" (routes to the conductor; ac-implement's own "loops until the wave is
   done" is body prose about its inner loop, not an autonomous-mode claim)
 - PASS — "review the implementation"
 - PASS — "refine these beads"
@@ -97,7 +101,7 @@ should-NOT-activate
   the description scopes it to a branch/batch diff)
 - PASS — "review these design mockups"
 
-## ac-batch-close
+## Archived batch close-out (re-judged — routes to the batch boundary)
 
 should-activate
 
@@ -116,7 +120,7 @@ should-NOT-activate
 - PASS — "merge the wave"
 - PASS — "close the sprint in Jira"
 
-## ac-merge
+## Archived merger (re-judged — routes to the legacy branch path)
 
 should-activate
 
@@ -130,7 +134,7 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "land my trunk-direct batch on main". The
   description claimed to be "The single merge-to-main path for ANY branch", so a
-  trunk-direct session — which never branches and closes via ac-batch-close — matched it
+  trunk-direct session — which never branches and closes via the batch boundary — matched it
   on the strongest phrase it has. Over-claiming scope is a precision bug even when every
   word was true at the time it was written. Fix: scope to a PR branch and name the
   trunk-direct exclusion.
@@ -159,7 +163,7 @@ should-NOT-activate
 - PASS — "clean up my desktop files"
 - PASS — "land the plane"
 
-## ac-plan-clean
+## Archived plan cleaner (re-judged — routes to ac-polish)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -173,21 +177,21 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "make a plan for the migration" (routes to ac-plan-init, which clean's own
-  "Requires an existing plan file; to create a plan use ac-plan-init" clause names)
-- PASS — "refine the plan" (routes to ac-plan-refine-internal, whose literal trigger it is;
+- PASS — "make a plan for the migration" (routes to ac-plan, which clean's own
+  "Requires an existing plan file; to create a plan use ac-plan" clause names)
+- PASS — "refine the plan" (routes to ac-polish, whose literal trigger it is;
   clean scopes itself to "targeted fixes, not a rewrite")
-- PASS — "get other models to critique this plan" (routes to ac-plan-refine-external —
+- PASS — "get other models to critique this plan" (routes to multi-model —
   clean's 3 reviewers are its own hygiene pass, not external models)
 - FAIL (precision) → PASS (after fix) — "check the plan for anything it's missing".
-  `check the plan` is a literal ac-plan-clean trigger and the description claimed
+  `check the plan` is a literal plan-cleaner trigger and the description claimed
   **completeness**, while `what is the plan missing` is a literal ac-plan-lab trigger and
   substantive gap-hunting is lab's job — two siblings claiming one phrasing with no
   discriminator between them. Fix: narrow clean's third axis from "completeness" to
   "internal consistency" and add an exclusion clause naming ac-plan-lab for gap-hunting.
 - PASS — "clean up the stale files in my repo"
 
-## ac-plan-init
+## Archived plan initiator (re-judged — routes to ac-plan)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -201,10 +205,10 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "clean the plan" (routes to ac-plan-clean, named in init's own "To improve an
-  existing draft use ac-plan-clean / ac-plan-refine-internal / ac-plan-refine-external" tail)
+- PASS — "clean the plan" (routes to ac-polish, named in init's own "To improve an
+  existing draft use ac-polish / multi-model" tail)
 - PASS — "pressure-test this plan" (routes to ac-plan-lab, also named in that tail)
-- PASS — "refine the plan with subagents" (routes to ac-plan-refine-internal — same tail;
+- PASS — "refine the plan with subagents" (routes to ac-polish — same tail;
   init is scoped to CREATE a first draft)
 - PASS — "turn this plan into beads" (routes to ac-beadify — the cross-family confusable;
   init is the entry point of the planning chain and ends at the plan)
@@ -226,9 +230,9 @@ should-NOT-activate
 
 - PASS — "take this raw concept somewhere new" (routes to ac-idea-lab, which lab's own
   closing clause names — the B1-predicted exclusion-clause shape)
-- PASS — "check the plan" (routes to ac-plan-clean; lab's surface is entirely
+- PASS — "check the plan" (routes to ac-polish; lab's surface is entirely
   critique/transcendence verbs, with no correctness or hygiene claim)
-- PASS — "refine external" (routes to ac-plan-refine-external — lab critiques in-session and
+- PASS — "refine external" (routes to multi-model — lab critiques in-session and
   never claims external models)
 - PASS — "review the branch before we merge" (routes to ac-review; every lab trigger is
   plan/roadmap-scoped, never a diff)
@@ -236,7 +240,7 @@ should-NOT-activate
   "strategy" is qualified inline to "(steps/timelines/resources)", i.e. an executable plan,
   not an org review cadence)
 
-## ac-plan-refine-external
+## Archived external plan refiner (re-judged — routes to multi-model)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -256,17 +260,17 @@ should-NOT-activate
   refine-internal names refine-external; refine-external named nobody) — exactly the shape
   B1's method verdict predicted would fail. "refine … panel of reviewers" matches
   "multi-model refine" and "3–4 diverse … models" strongly, but the correct destination is
-  ac-plan-refine-internal, whose reviewers are subagents. Fix: add the reciprocal exclusion
-  clause naming ac-plan-refine-internal.
-- PASS — "improve this plan with subagents" (routes to ac-plan-refine-internal — its literal
+  ac-polish, whose reviewers are subagents. Fix: add the reciprocal exclusion
+  clause naming ac-polish.
+- PASS — "improve this plan with subagents" (routes to ac-polish — its literal
   trigger, and internal is explicit about "no external models")
-- PASS — "clean the plan" (routes to ac-plan-clean; external's whole surface is external
+- PASS — "clean the plan" (routes to ac-polish; external's whole surface is external
   models plus the openrouter CLI)
 - PASS — "ask another model what it thinks of this code" (not a plan — external scopes
   itself to "a HIGH-STAKES plan" and "external plan refinement")
 - PASS — "compare pricing across OpenRouter models"
 
-## ac-plan-refine-internal
+## Archived internal plan refiner (re-judged — routes to ac-polish)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -280,18 +284,18 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "multi-model refine" (routes to ac-plan-refine-external, which internal's own
-  "for external multi-model refinement use ac-plan-refine-external" tail names — the
+- PASS — "multi-model refine" (routes to multi-model, which internal's own
+  "for external multi-model refinement use multi-model" tail names — the
   reciprocal of the fix applied to external above)
-- PASS — "refine these beads" (routes to ac-bead-refine, the cross-family confusable; every
+- PASS — "refine these beads" (routes to ac-polish, the cross-family confusable; every
   internal trigger is plan-scoped)
-- PASS — "check the plan for correctness" (routes to ac-plan-clean — internal DEEPENS,
+- PASS — "check the plan for correctness" (routes to ac-polish — internal DEEPENS,
   clean verifies; "correctness pass" appears only in clean)
-- PASS — "make a plan for this feature" (routes to ac-plan-init; internal's "Requires an
+- PASS — "make a plan for this feature" (routes to ac-plan; internal's "Requires an
   existing plan" is the discriminator)
 - PASS — "refine the copy on the landing page"
 
-## ac-qa-browser
+## Archived browser QA (re-judged — routes to ac-qa)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -308,18 +312,18 @@ should-NOT-activate
 - FAIL (precision) → PASS (after fix) — "QA the TestFlight build". `QA the deployed app` was
   the one trigger in this list carrying no surface qualifier, and in a pair whose ENTIRE
   distinction is the execution surface (browser vs device) that is the one place ambiguity is
-  fatal — a TestFlight build is native and belongs to ac-qa-device, but "deployed app" matched
+  fatal — a TestFlight build is native and belongs to ac-qa, but "deployed app" matched
   browser's most generic trigger. Fix: qualify the trigger to `QA the deployed web app`.
-- PASS — "QA on device" (routes to ac-qa-device — its literal trigger, and this description
-  names itself "the web twin of ac-qa-device")
-- PASS — "quick post-deploy smoke test of the login flow" (routes to browser-testing, which
+- PASS — "QA on device" (routes to ac-qa — its literal trigger, and this description
+  names itself "the web twin of the device lane")
+- PASS — "quick post-deploy smoke test of the login flow" (routes to ac-qa, which
   owns "quick post-deploy smoke tests, login/auth flows" verbatim and carries the reciprocal
   NOT-for clause pointing back here)
 - PASS — "this flexbox layout is broken on mobile" (routes to ui-debug — a CSS/rendering
   defect, not a journey validation run)
 - PASS — "test the API endpoint with curl"
 
-## ac-qa-device
+## Archived device QA (re-judged — routes to ac-qa)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -333,12 +337,11 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "browser QA" (routes to ac-qa-browser — its literal trigger; this description names
-  itself "the native twin of ac-qa-browser")
-- PASS — "record a screen video of the app on the simulator for App Review" (routes to
-  device-testing, which owns capture-as-deliverable verbatim and carries the reciprocal
+- PASS — "browser QA" (routes to ac-qa — its literal trigger; this description names
+  itself "the native twin of the browser lane")
+- PASS — "record a screen video of the app on the simulator for App Review" (routes to ac-qa, which owns capture-as-deliverable verbatim and carries the reciprocal
   NOT-for clause pointing back here)
-- PASS — "validate the web build" (routes to ac-qa-browser; every ac-qa-device trigger carries
+- PASS — "validate the web build" (routes to ac-qa; every device-QA trigger carries
   a native/device/simulator/iOS qualifier — the asymmetry the browser-side fix above closed)
 - PASS — "the safe-area padding is wrong in this component" (routes to ui-debug — a CSS defect
   in React, not a native journey run)
@@ -361,16 +364,16 @@ should-NOT-activate
 - FAIL (precision) → PASS (after fix) — "capture this bug I just hit". ac-backlog was the one
   skill in this six-way cluster carrying NO cross-reference clause, while its trigger
   `capture idea` and its own "shape-routing (small+clear goes straight to a bead)" phrase both
-  claim bead-creation surface — but a typed bug belongs to ac-bead-capture. Fix: add the
-  exclusion clause naming ac-bead-capture for a typed bead now, and ac-beadify for a plan.
+  claim bead-creation surface — but a typed bug belongs to ac-backlog. Fix: add the
+  exclusion clause naming ac-backlog for a typed bead now, and ac-beadify for a plan.
 - PASS — "beadify this plan" (routes to ac-beadify — backlog is an idea pool, not a plan
   decomposer)
-- PASS — "refine the beads" (routes to ac-bead-refine — backlog never touches existing beads)
+- PASS — "refine the beads" (routes to ac-polish — backlog never touches existing beads)
 - PASS — "clean up the backlog" (routes to ac-align's nightly reconcile, whose literal trigger it is — ac-backlog
   fills the pool, the nightly reconcile grooms it)
 - PASS — "add milk to my shopping list"
 
-## ac-bead-capture
+## Archived bead capturer (re-judged — routes to ac-backlog)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -387,13 +390,13 @@ should-NOT-activate
 - PASS — "park this idea for later" (routes to ac-backlog, which capture's own tail names for
   the grouped backlog pool)
 - PASS — "turn this plan into beads" (routes to ac-beadify — also named in that tail)
-- PASS — "refine these beads" (routes to ac-bead-refine — the third name in that tail; capture
+- PASS — "refine these beads" (routes to ac-polish — the third name in that tail; capture
   creates, refine converges)
 - PASS — "pull the new Sentry crashes onto the board" (routes to ac-triage — a fetch-and-cluster
   run over external systems, not a user-dictated capture)
 - PASS — "remember my birthday"
 
-## ac-bead-refine
+## Archived bead refiner (re-judged — routes to ac-polish)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -407,11 +410,11 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "refine the plan" (routes to ac-plan-refine-internal, the B2 sibling; every
-  ac-bead-refine trigger is bead-scoped)
+- PASS — "refine the plan" (routes to ac-polish, the B2 sibling; every
+  bead-refine trigger is bead-scoped)
 - PASS — "create beads from this plan" (routes to ac-beadify, which refine's own tail names —
   "creating plan-decomposition beads is ac-beadify's job")
-- PASS — "bead this observation" (routes to ac-bead-capture — capture creates one, refine
+- PASS — "bead this observation" (routes to ac-backlog — capture creates one, refine
   converges what exists)
 - PASS — "work the refined beads" (routes to ac-implement — refine stamps the label,
   ac-implement consumes it)
@@ -431,14 +434,14 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "refine the beads afterwards" (routes to ac-bead-refine, which beadify's own tail
+- PASS — "refine the beads afterwards" (routes to ac-polish, which beadify's own tail
   names)
-- PASS — "bead this one thing" (routes to ac-bead-capture — beadify requires an existing plan
+- PASS — "bead this one thing" (routes to ac-backlog — beadify requires an existing plan
   and creates a whole structure)
 - PASS — "turn these hygiene findings into an epic of beads" (routes to ac-hygiene, which owns
   "deferred findings become an epic of beads" verbatim — this skill's highest-overlap
   neighbour in the registry at 100 shared shingles)
-- PASS — "make a plan for this feature" (routes to ac-plan-init — beadify starts where the
+- PASS — "make a plan for this feature" (routes to ac-plan — beadify starts where the
   planning chain ends)
 - PASS — "break this rock into gravel"
 
@@ -459,10 +462,10 @@ should-NOT-activate
 - FAIL (precision) → PASS (after fix) — "triage the open beads and tell me what to work on".
   The bare verb `triage` plus the trigger `triage production signal` was enough surface to
   select it, but triaging the board is `bv`'s job (read-only) and getting beads workable is
-  ac-bead-refine's — ac-triage is strictly INBOUND external signal, and it carried no NOT-for
-  clause. Fix: add an exclusion clause naming bv / ac-bead-refine for board triage.
+  ac-polish's — ac-triage is strictly INBOUND external signal, and it carried no NOT-for
+  clause. Fix: add an exclusion clause naming bv / ac-polish for board triage.
 - PASS — "clean up the backlog" (routes to ac-align's nightly reconcile — reconciling what is already on the board)
-- PASS — "bead this crash I just saw" (routes to ac-bead-capture — one user-dictated item, not
+- PASS — "bead this crash I just saw" (routes to ac-backlog — one user-dictated item, not
   a fetch-and-cluster run over external systems)
 - PASS — "post the release notes out to the list" (routes to ac-distribute, which ac-triage
   names inline as its outbound counterpart)
@@ -489,10 +492,10 @@ should-NOT-activate
   only THEN calls ac-distribute. Routing "ship it to production" here skips every gate, which
   makes this the most consequential miss found across B2–B5 rather than a cosmetic one. The
   reference was asymmetric: ac-publish names ac-distribute, ac-distribute named ac-triage and
-  ac-qa-device but not ac-publish. Fix: add the reciprocal clause naming ac-publish.
+  ac-qa but not ac-publish. Fix: add the reciprocal clause naming ac-publish.
 - PASS — "pull the crashes back in" (routes to ac-triage, which ac-distribute's own tail names
   as the inbound counterpart)
-- PASS — "prove the build works on device first" (routes to ac-qa-device — also named in that
+- PASS — "prove the build works on device first" (routes to ac-qa — also named in that
   tail)
 - PASS — "is main green" (routes to ac-prove — its literal trigger; ac-distribute makes no
   CI-trust claim)
@@ -520,11 +523,11 @@ should-NOT-activate
   the sharpest near-miss here, since ac-publish's description contains that phrase verbatim;
   what saves it is the "Composes ac-prove + ac-review + ac-distribute" framing, which reads to
   a router as parts, not scope)
-- PASS — "close the batch" (routes to ac-batch-close — the per-batch checkpoint, not the
+- PASS — "close the batch" (routes to the batch boundary — the per-batch checkpoint, not the
   human-triggered production gate)
 - PASS — "publish this article to the blog"
 
-## ac-site-polish
+## Archived site polisher (re-judged — routes to ui-elevate)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -538,19 +541,19 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "polish this UI" (routes to ac-ui-polish, which this description names inline as the
+- PASS — "polish this UI" (routes to ui-elevate, which this description names inline as the
   owner of the authenticated app — the sharpest sibling pair in the batch at 210 shared
   shingles, and the mutual "public twin / NOT for the authenticated app" wording separates it
   cleanly in both directions)
-- PASS — "just fix the SEO metadata on these pages" (routes to seo-metadata, named in the
+- PASS — "just fix the SEO metadata on these pages" (the retired SEO skill, named in the
   5-item NOT-for clause)
-- PASS — "run an accessibility audit" (routes to web-design-guidelines, also named there)
+- PASS — "run an accessibility audit" (the retired web-design skill, also named there)
 - PASS — "brainstorm three directions for the hero section" (routes to ui-brainstorm, also
   named there)
 - PASS — "this div overflows on mobile" (routes to ui-debug, also named there — a CSS defect,
   not a polish pass)
 
-## ac-ui-polish
+## Archived UI polisher (re-judged — routes to ui-elevate)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -564,9 +567,9 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "polish the landing page" (routes to ac-site-polish, named first in ui-polish's own
+- PASS — "polish the landing page" (routes to ui-elevate, named first in the archived UI polisher's own
   NOT-for clause — the reciprocal of the row above)
-- PASS — "accessibility audit of this flow" (routes to web-design-guidelines, named there)
+- PASS — "accessibility audit of this flow" (the retired web-design skill, named there)
 - PASS — "design ideation for a new dashboard" (routes to ui-brainstorm, named there)
 - PASS — "the modal has a z-index bug" (routes to ui-debug, named there)
 - PASS — "polish my shoes"
@@ -643,7 +646,7 @@ should-NOT-activate
   exclusion clause scoping `unblock` to human gates and naming debug.
 - PASS — "tidy the pipeline" (routes to ac-align's nightly reconcile — ac-human only mentions tidy as an
   optional pre-pass, not as its job)
-- PASS — "run the loop overnight" (routes to ac-loop — ac-human hands off TO it)
+- PASS — "run the loop overnight" (routes to the conductor — ac-human hands off TO it)
 - PASS — "reconcile the board and archive what's done" (routes to ac-align's nightly reconcile, named inline in
   the routing footer)
 - PASS — "re-prioritize the backlog against strategy" (routes to ac-align, named inline)
@@ -669,14 +672,14 @@ should-NOT-activate
 - FAIL (precision) → PASS (after fix) — "review this feature branch before merge". The
   description opens `Iterative codebase review` and lists the trigger `iterative review`;
   `review` plus `codebase` is enough surface to beat ac-review, which owns the branch/PR gate.
-  Telling: ac-registry-audit's own tail already names `ac-review for a feature branch` while
+  Telling: the retired registry auditor's own tail already names `ac-review for a feature branch` while
   ac-hygiene, the skill actually colliding, carried no NOT-for clause at all. Fix: exclusion
   clause naming ac-review.
 - FAIL (precision) → PASS (after fix) — "audit the auth module for security holes". The
   description advertises `correctness/security/resilience/contract/reuse cleanups`, so a
   single-module deep audit selects the 7-lens whole-codebase panel; the destination is the
   audit skill. Fix: the same clause names audit.
-- PASS — "audit the skill registry for trigger collisions" (routes to ac-registry-audit, which
+- PASS — "audit the skill registry for trigger collisions" (routes to skill-builder, which
   names ac-hygiene inline as its counterpart)
 - PASS — "tidy the pipeline" (routes to ac-align's nightly reconcile — board housekeeping, not code)
 - PASS — "clean up my downloads folder"
@@ -699,14 +702,14 @@ should-NOT-activate
   advertises `paradigm transcendence`, `cross-domain transplants`, `expand`, which reads as
   open-ended generation; the destination is brainstorming. The one exclusion the description
   carried named only ac-plan-lab. Fix: extend the tail to name brainstorming (and
-  expert-consensus for the multi-model case).
+  multi-model for the multi-model case).
 - PASS — "write a plan with steps and timelines" (routes to ac-plan-lab, named inline)
 - PASS — "is my pipeline on strategy" (routes to ac-align, which carries that phrase as a
   literal trigger — the named ac-idea-lab/ac-align cluster resolves correctly in this
   direction)
 - PASS — "review this PR" (routes to ac-review — ac-idea-lab is explicitly for things without
   execution steps yet)
-- PASS — "get several models to weigh in on this" (routes to expert-consensus — ac-idea-lab is
+- PASS — "get several models to weigh in on this" (routes to multi-model — ac-idea-lab is
   a single-judge critique)
 
 ## ac-pipeline
@@ -732,10 +735,10 @@ should-NOT-activate
   the calling ceremony owns. Fix: widen the clause to exclude running anything, hosted
   scripts included. Net-neutral-adjacent edit: this is the family's tightest description
   (821/1024, 203 headroom), and the rewrite stays inside it.
-- PASS — "run the pipeline" (routes to ac-loop, named in its own NOT-for clause)
+- PASS — "run the pipeline" (routes to the conductor, named in its own NOT-for clause)
 - PASS — "implement the ready beads" (routes to ac-implement — covered by the stage-skill
   exclusion)
-- PASS — "close the batch" (routes to ac-batch-close, same exclusion)
+- PASS — "close the batch" (routes to the batch boundary, same exclusion)
 - PASS — "show me the state of the pipeline" (routes to ac-board, which
   carries `state of the pipeline` as a literal trigger)
 
@@ -762,9 +765,9 @@ should-NOT-activate
 - PASS — "publish the release" (routes to ac-publish, the ship path that CALLS ac-prove)
 - PASS — "review the code quality across the app" (routes to ac-hygiene — the named
   hygiene/registry-audit/prove cluster separates cleanly here)
-- PASS — "audit the skill registry" (routes to ac-registry-audit)
+- PASS — "audit the skill registry" (routes to skill-builder)
 
-## ac-registry-audit
+## Archived registry auditor (re-judged — routes to skill-builder)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -809,7 +812,7 @@ should-NOT-activate
   agent-to-agent coordination, not outbound publishing)
 - PASS — "which agent should I delegate this to" (routes to ac-pipeline's delegation-contract —
   agent-mail is identity and locking, not stance selection)
-- PASS — "run the loop with two children in parallel" (routes to ac-loop, which CALLS agent-mail
+- PASS — "run the loop with two children in parallel" (routes to the conductor, which CALLS agent-mail
   rather than being it)
 - PASS — "check my inbox"
 
@@ -829,12 +832,11 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "refine these beads until they're workable". The
   description opens `Use when creating, refining, or reviewing a bead` and lists the trigger
-  `refined unrefined`, which is enough surface to beat ac-bead-refine — the skill that actually
+  `refined unrefined`, which is enough surface to beat ac-polish — the skill that actually
   DOES the refining. beads-standards is the standard those skills follow, not an executor, and
   it carried no NOT-for clause. Fix: exclusion clause naming the ac-bead-* executors.
 - FAIL (precision) → PASS (after fix) — "file a bead for this crash". `create a bead` is a
-  LITERAL listed trigger, so a capture request selects the canon doc instead of
-  ac-bead-capture. Same root cause, same fix.
+  LITERAL listed trigger, so a capture request selects the canon doc instead of ac-backlog. Same root cause, same fix.
 - PASS — "generate a wave of beads from this plan" (routes to ac-beadify — named in the fix
   clause for the same reason)
 - PASS — "triage the board and tell me what's ready" (routes to bv / ac-board
@@ -864,7 +866,7 @@ should-NOT-activate
   surface, so this beats supabase — which reciprocally already names capacitor in its own
   clause while capacitor named nothing. Fix: the same clause names supabase.
 - PASS — "the modal has a z-index bug" (routes to ui-debug, which owns visual/CSS defects)
-- PASS — "is this form accessible" (routes to web-design-guidelines, which already names
+- PASS — "is this form accessible" (routes to the retired web-design skill, which already names
   capacitor as the React-performance destination — the reciprocal now exists)
 - PASS — "how do capacitors work in a circuit"
 
@@ -916,7 +918,7 @@ should-NOT-activate
   inline)
 - PASS — "where should this decision live" (routes to context-engineering — the routing
   question, not the synthesis run)
-- PASS — "audit the skill registry" (routes to ac-registry-audit — dream lints memory, not the
+- PASS — "audit the skill registry" (routes to skill-builder — dream lints memory, not the
   prompt corpus)
 - PASS — "interpret my dream last night"
 
@@ -936,13 +938,13 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "get several models to weigh in and rank the answers".
   `ask GPT/Gemini/Grok directly` plus `400+ models` is enough surface to select the transport
-  when the destination is expert-consensus, which owns the multi-model panel and ranking. No
-  NOT-for clause existed. Fix: exclusion clause naming expert-consensus.
+  when the destination is multi-model, which owns the multi-model panel and ranking. No
+  NOT-for clause existed. Fix: exclusion clause naming multi-model.
 - PASS — "give me multiple divergent design options from different models" (routes to
   ui-brainstorm, which names cross-model consensus ranking as its own job)
 - PASS — "what are Claude's pricing tiers" (routes to the claude-api reference — openrouter is
   the multi-provider gateway, not the Anthropic API doc)
-- PASS — "improve this prompt before I send it" (routes to prompt-enhance — the prompt, not the
+- PASS — "improve this prompt before I send it" (routes to skill-builder — the prompt, not the
   model)
 - PASS — "open the router config on my wifi box"
 
@@ -960,16 +962,16 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "create a plan for this feature" (routes to ac-plan-init, named inline — the
+- PASS — "create a plan for this feature" (routes to ac-plan, named inline — the
   description is explicit that it is reference-only and NOT a direct entry point)
-- PASS — "refine this plan" (routes to ac-plan-refine-internal / ac-plan-refine-external, both
+- PASS — "refine this plan" (routes to ac-polish / multi-model, both
   named inline with their routine/high-stakes split)
-- PASS — "do a final correctness pass on the plan" (routes to ac-plan-clean, named inline)
-- PASS — "improve the prompts inside this plan command" (routes to prompt-enhance — the named
-  planning/prompt-enhance cluster separates cleanly, planning carries no prompt surface)
+- PASS — "do a final correctness pass on the plan" (routes to ac-polish, named inline)
+- PASS — "improve the prompts inside this plan command" (routes to skill-builder — the named
+  planning/skill-builder cluster separates cleanly, planning carries no prompt surface)
 - PASS — "plan my week"
 
-## prompt-enhance
+## Archived prompt rubric (re-judged — routes to skill-builder)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -990,10 +992,10 @@ should-NOT-activate
   stating the skill/command-file scope.
 - PASS — "clean up our skills" (routes to skill-builder — dieting and structure, not prompt
   rubric scoring)
-- PASS — "audit the registry for trigger collisions" (routes to ac-registry-audit — cross-skill
+- PASS — "audit the registry for trigger collisions" (routes to skill-builder — cross-skill
   collisions, not within-file prompt quality)
 - PASS — "what's the planning methodology" (routes to planning — the named
-  planning/prompt-enhance cluster, which separates on the word `prompt`)
+  planning/skill-builder cluster, which separates on the word `prompt`)
 - PASS — "prompt me before you delete anything"
 
 ## reflect
@@ -1038,14 +1040,14 @@ should-activate
 should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "build a /command that runs this SOP end to end". The
-  triggers `convert to a skill` and `build a skill` sit right on workflow-builder's territory,
-  and the asymmetry is the tell: workflow-builder's clause names skill-builder, skill-builder
-  named nothing back. Fix: exclusion clause naming workflow-builder.
+  triggers `convert to a skill` and `build a skill` sit right on the retired command-builder's territory,
+  and the asymmetry is the tell: its clause named skill-builder, skill-builder
+  named nothing back. Fix: exclusion clause naming skill-builder.
 - FAIL (precision) → PASS (after fix) — "audit the registry for trigger collisions". `clean up
   our skills` and `skill hygiene` are listed triggers that collide directly with
-  ac-registry-audit's `registry hygiene` — one skill authors, the other audits the corpus.
-  Fix: the same clause names ac-registry-audit.
-- PASS — "score the subagent prompts in this skill file" (routes to prompt-enhance — prompt
+  the retired registry auditor's `registry hygiene` — one skill authors, the other audits the corpus.
+  Fix: the same clause names skill-builder.
+- PASS — "score the subagent prompts in this skill file" (routes to skill-builder — prompt
   rubric, not skill structure)
 - PASS — "where should this knowledge live" (routes to context-engineering — placement
   doctrine, not authoring)
@@ -1070,7 +1072,7 @@ should-NOT-activate
   `skills/design-system/SKILL.md` in agent-compounds and none in the root agent home (both
   checked). The exclusion could not route, which is the staleness class this batch was warned
   about rather than an imprecision. Fix: name the live destinations instead
-  (web-design-guidelines for correctness, ac-ui-polish for polish).
+  (no live successor for either - retired web-design correctness and UI polish).
 - PASS — "React tab-switch performance on native" (routes to capacitor, named inline and
   still live)
 - PASS — "write a test for this query helper" (routes to testing — supabase owns the SQL, not
@@ -1079,7 +1081,7 @@ should-NOT-activate
   Postgres)
 - PASS — "set up a supabase for the kitchen"
 
-## workflow-builder
+## Archived command builder (re-judged — routes to skill-builder)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1097,7 +1099,7 @@ should-NOT-activate
   clause — the strongest exclusion in this family, and why it needed no fix)
 - PASS — "change how the engineering pipeline is designed" (routes to ac-pipeline, named
   inline)
-- PASS — "run the pipeline tonight" (routes to ac-loop, named inline)
+- PASS — "run the pipeline tonight" (routes to the conductor, named inline)
 - PASS — "where should this knowledge live" (routes to context-engineering, named inline)
 - PASS — "build a workflow for my morning routine"
 
@@ -1119,18 +1121,18 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "test the login flow in the browser". The trigger list
   is bare verbs — `test`, `spec`, `coverage`, `mock` — and `E2E tests` plus `Playwright` add
-  browser surface, so this beats browser-testing, whose literal trigger `check login` it should
+  browser surface, so this beats the archived browser-smoke skill, whose literal trigger `check login` it should
   have lost to. Shortest description in the family (300 chars) and the only one with no NOT-for
-  clause at all. Fix: exclusion clause naming browser-testing.
+  clause at all. Fix: exclusion clause naming ac-qa.
 - FAIL (precision) → PASS (after fix) — "run the structured full-app QA before we close the
-  batch". Same root cause: `E2E tests` reads as pipeline QA, whose destination is ac-qa-browser
-  / ac-qa-device. Fix: the same clause names both.
+  batch". Same root cause: `E2E tests` reads as pipeline QA, whose destination is ac-qa
+  / ac-qa. Fix: the same clause names ac-qa.
 - PASS — "the modal has a z-index bug" (routes to ui-debug — a visual defect, not a test)
 - PASS — "run the pre-deployment security audit" (routes to audit, which names its own scope
   broadly and excludes the code-review siblings inline)
 - PASS — "test my patience"
 
-## browser-testing
+## Archived browser smoke (re-judged — routes to ac-qa)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1144,9 +1146,9 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "run the full web QA with QA_VALIDATION reporting" (routes to ac-qa-browser, named
+- PASS — "run the full web QA with QA_VALIDATION reporting" (routes to ac-qa, named
   explicitly in its own NOT-for clause — the sharpest sibling, and it is excluded)
-- PASS — "record the screen on the simulator" (routes to device-testing — native capture, not
+- PASS — "record the screen on the simulator" (routes to ac-qa — native capture, not
   a browser check)
 - PASS — "the flex layout breaks at 768px" (routes to ui-debug — a CSS defect, not a flow
   validation)
@@ -1154,7 +1156,7 @@ should-NOT-activate
   driving a browser ad hoc)
 - PASS — "test the brakes on my car"
 
-## device-testing
+## Archived device capture (re-judged — routes to ac-qa)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1170,14 +1172,14 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "grab the screenshots for the App Store listing". The
   triggers `screenshot the app` (native simulator capture) and `grab a screenshot on device`
-  cover exactly how store assets are captured, and the NOT-for clause named ac-qa-device,
-  browser-testing and screenshot-refresh — but NOT app-store-screenshots, the one sibling whose
-  job is native captures. The asymmetry is the tell: app-store-screenshots excludes
-  screenshot-refresh and device-testing excludes screenshot-refresh, so the trio's third edge
-  was simply missing. Fix: add app-store-screenshots to the clause.
-- PASS — "run the structured native QA gate" (routes to ac-qa-device, named inline)
-- PASS — "refresh the landing page screenshots" (routes to screenshot-refresh, named inline)
-- PASS — "check the login flow in the browser" (routes to browser-testing, named inline)
+  cover exactly how store assets are captured, and the NOT-for clause named the device QA lane,
+  the archived browser-smoke skill and the screenshot refresher — but NOT the store-assets skill,
+  the one sibling whose job is native captures. The asymmetry is the tell: the store-assets skill
+  excludes the refresher and device capture excludes the refresher, so the trio's third edge
+  was simply missing. Fix: add the store-assets routing (now ac-distribute) to the clause.
+- PASS — "run the structured native QA gate" (routes to ac-qa, named inline)
+- PASS — "refresh the landing page screenshots" (routes to ac-qa, named inline)
+- PASS — "check the login flow in the browser" (routes to ac-qa, named inline)
 - PASS — "test the device driver on my printer"
 
 ## ui-debug
@@ -1196,15 +1198,15 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "this screen looks off, make it feel premium". The
   description covers `unexpected visual behavior` and `element misaligned`, which reads as
-  subjective polish; the destination is ac-ui-polish. The asymmetry is the tell: ui-brainstorm
-  and web-design-guidelines BOTH name ac-ui-polish in their clauses, while ui-debug — the
-  closest neighbor — carried no NOT-for clause at all. Fix: exclusion clause naming
-  ac-ui-polish.
+  subjective polish; the destination is the retired UI polisher. The asymmetry is the tell:
+  ui-brainstorm and the retired web-design skill BOTH named the retired UI polisher in their
+  clauses, while ui-debug — the closest neighbor — carried no NOT-for clause at all. Fix:
+  exclusion clause naming ui-elevate.
 - FAIL (precision) → PASS (after fix) — "the visual regression test is failing in CI".
   `visual regression` is a LITERAL listed trigger, but a failing test routes to testing (author
-  the spec) or ac-qa-browser (the gated run) — ui-debug fixes the defect, it does not own the
-  harness. Fix: the same clause names testing / ac-qa-browser.
-- PASS — "is this form accessible" (routes to web-design-guidelines — objective compliance, not
+  the spec) or ac-qa (the gated run) — ui-debug fixes the defect, it does not own the
+  harness. Fix: the same clause names testing / ac-qa.
+- PASS — "is this form accessible" (the retired web-design skill covers objective compliance — not
   a rendering defect)
 - PASS — "tab switching feels slow on native" (routes to capacitor — React/lifecycle
   performance, not CSS)
@@ -1229,8 +1231,8 @@ should-NOT-activate
 
 - PASS — "review this feature branch before merge" (routes to ac-review, named inline)
 - PASS — "codebase health sweep between sessions" (routes to ac-hygiene, named inline)
-- PASS — "is this form accessible" (routes to web-design-guidelines, named inline)
-- PASS — "audit the skill registry for collisions" (routes to ac-registry-audit — `registry
+- PASS — "is this form accessible" (the retired web-design skill, named inline)
+- PASS — "audit the skill registry for collisions" (routes to skill-builder — `registry
   audit` is its literal trigger, and specificity beats the bare verb `audit` here)
 - PASS — "audit my tax return"
 
@@ -1255,9 +1257,9 @@ should-NOT-activate
   transcendence. The clause named only ui-brainstorm. Fix: add ac-idea-lab to the clause. (The
   reciprocal already exists: ac-idea-lab was given a brainstorming exclusion in batch B6.)
 - PASS — "multiple models' opinions on this screen" (routes to ui-brainstorm, named inline)
-- PASS — "poll several models on this decision" (routes to expert-consensus — brainstorming is
+- PASS — "poll several models on this decision" (routes to multi-model — brainstorming is
   a single-track divergent-convergent pass, no multi-model surface)
-- PASS — "create the plan now" (routes to ac-plan-init — brainstorming is explicitly
+- PASS — "create the plan now" (routes to ac-plan — brainstorming is explicitly
   pre-planning)
 - PASS — "brainstorm baby names"
 
@@ -1275,14 +1277,14 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "polish this screen" (routes to ac-ui-polish, named inline)
-- PASS — "is this accessible" (routes to web-design-guidelines, named inline)
+- PASS — "polish this screen" (routes to ui-elevate, named inline)
+- PASS — "is this accessible" (the retired web-design skill, named inline)
 - PASS — "the dropdown renders behind the header" (routes to ui-debug, named inline)
-- PASS — "poll several models on this architecture decision" (routes to expert-consensus — the
+- PASS — "poll several models on this architecture decision" (routes to multi-model — the
   description's `on a UI` scoping is what keeps the non-UI case out, and it holds)
 - PASS — "brainstorm the product name" (routes to brainstorming — non-UI ideation)
 
-## expert-consensus
+## Archived model panel (re-judged — routes to multi-model)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1312,7 +1314,7 @@ should-NOT-activate
   lenses, not of models)
 - PASS — "find me an expert consultant to hire"
 
-## app-store-screenshots
+## Archived store assets (re-judged — routes to ac-distribute)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1326,19 +1328,19 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "refresh the landing page screenshots" (routes to screenshot-refresh, named inline)
-- PASS — "record the simulator for a bug repro" (routes to device-testing — the store-listing
+- PASS — "refresh the landing page screenshots" (routes to ac-qa, named inline)
+- PASS — "record the simulator for a bug repro" (routes to ac-qa — the store-listing
   scoping in every trigger is what keeps ad-hoc native capture out, and it holds)
-- PASS — "polish the landing page hero" (routes to ac-site-polish)
-- PASS — "add Open Graph images to the marketing site" (routes to seo-metadata — social preview
+- PASS — "polish the landing page hero" (routes to ui-elevate)
+- PASS — "add Open Graph images to the marketing site" (the retired SEO skill — social preview
   assets, not store listings)
 - PASS — "take a screenshot of my desktop"
 
-## screenshot-refresh
+## Archived screenshot refresher (re-judged — routes to ac-qa)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 The strongest clause of the screenshot trio — it excludes BOTH siblings, which is why the only
-missing edge in this trio was on device-testing's side.
+missing edge in this trio was on the device-capture side.
 
 should-activate
 
@@ -1350,14 +1352,14 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "grab a screenshot on the simulator" (routes to device-testing, named inline)
-- PASS — "build the App Store listing assets" (routes to app-store-screenshots, named inline)
-- PASS — "check the landing page renders on preview" (routes to browser-testing — validation,
+- PASS — "grab a screenshot on the simulator" (routes to ac-qa, named inline)
+- PASS — "build the App Store listing assets" (routes to ac-distribute, named inline)
+- PASS — "check the landing page renders on preview" (routes to ac-qa — validation,
   not capture)
-- PASS — "add meta tags to the landing page" (routes to seo-metadata)
+- PASS — "add meta tags to the landing page" (the retired SEO skill)
 - PASS — "refresh my screensaver"
 
-## seo-metadata
+## Archived SEO metadata (re-judged — no live successor)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 Cluster 3 of 3 (publishing / content).
@@ -1372,16 +1374,16 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "Core Web Vitals are bad on this page" (routes to capacitor and web-design-guidelines,
+- PASS — "Core Web Vitals are bad on this page" (routes to capacitor and the retired web-design skill,
   both named inline)
-- PASS — "is this page accessible" (routes to web-design-guidelines — objective compliance, not
+- PASS — "is this page accessible" (the retired web-design skill covers objective compliance — not
   discoverability metadata)
-- PASS — "polish the landing page visually" (routes to ac-site-polish — the trigger list is
+- PASS — "polish the landing page visually" (routes to ui-elevate — the trigger list is
   entirely metadata-specific, so visual phrasings do not reach it)
-- PASS — "recapture the landing page screenshots" (routes to screenshot-refresh)
+- PASS — "recapture the landing page screenshots" (routes to ac-qa)
 - PASS — "improve my search ranking on Google Ads"
 
-## web-design-guidelines
+## Archived web-design guide (re-judged — no live successor)
 
 Verdicts are a lower bound (self-judged with the full registry in context — § Method verdict).
 
@@ -1395,11 +1397,10 @@ should-activate
 
 should-NOT-activate
 
-- PASS — "make this feel premium" (routes to ac-ui-polish, named inline)
+- PASS — "make this feel premium" (routes to ui-elevate, named inline)
 - PASS — "tab switching is slow on native" (routes to capacitor, named inline)
 - PASS — "give me several design options" (routes to ui-brainstorm, named inline)
-- PASS — "run the pre-deployment UI/UX sweep" (routes to audit, which reciprocally names
-  web-design-guidelines for the single-check case — the pair is symmetric)
+- PASS — "run the pre-deployment UI/UX sweep" (routes to audit, which reciprocally names the retired web-design skill for the single-check case — the pair is symmetric)
 - PASS — "what are the design guidelines for my living room"
 
 ## jef-flywheel
@@ -1443,8 +1444,8 @@ should-NOT-activate
 
 - FAIL (precision) → PASS (after fix) — "score and improve the subagent prompts in this skill".
   The description is a prompt LIBRARY, but `performance audit prompt` and `find a prompt` give
-  it enough prompt-quality surface to beat prompt-enhance, which owns rubric scoring of prompts
-  already written. No NOT-for clause existed. Fix: exclusion clause naming prompt-enhance.
+  it enough prompt-quality surface to beat the retired prompt-rubric skill, which owned rubric scoring of prompts
+  already written. No NOT-for clause existed. Fix: exclusion clause naming skill-builder.
 - PASS — "create a new skill" (routes to skill-builder — authoring an artifact, not retrieving
   a canned prompt)
 - PASS — "what's the planning methodology" (routes to planning — the method, not a prompt for
@@ -1485,63 +1486,63 @@ should-NOT-activate
 
 | Skill | Failure | Class | Fix applied |
 |---|---|---|---|
-| ac-loop | "loop this prompt every 5 minutes" selected it | precision | exclusion clause naming the `loop` skill |
+| loop runner | "loop this prompt every 5 minutes" selected it | precision | exclusion clause naming the `loop` skill |
 | ac-implement | "start implementing the login form" selected it | precision | `start implementation` qualified to a refined bead wave + no-bead exclusion |
 | ac-review | "review the batch before we close it" did NOT select it | recall | trunk-direct batch named; `review the batch` / `pre-close review` triggers added |
-| ac-merge | "land my trunk-direct batch on main" selected it | precision | scoped to a PR branch + trunk-direct exclusion naming ac-batch-close |
-| ac-batch-close | — | — | none needed |
+| legacy merger | "land my trunk-direct batch on main" selected it | precision | scoped to a PR branch + trunk-direct exclusion naming the batch closer |
+| batch closer | — | — | none needed |
 | ac-land | — | — | none needed |
-| ac-plan-clean | "check the plan for anything it's missing" selected it | precision | third axis narrowed from "completeness" to "internal consistency" + exclusion naming ac-plan-lab for gap-hunting |
-| ac-plan-refine-external | "refine the plan with a panel of reviewers" selected it | precision | reciprocal exclusion clause naming ac-plan-refine-internal added |
-| ac-plan-init | — | — | none needed |
+| plan cleaner | "check the plan for anything it's missing" selected it | precision | third axis narrowed from "completeness" to "internal consistency" + exclusion naming ac-plan-lab for gap-hunting |
+| external plan refiner | "refine the plan with a panel of reviewers" selected it | precision | reciprocal exclusion clause naming ac-polish added |
+| plan initiator | — | — | none needed |
 | ac-plan-lab | — | — | none needed |
-| ac-plan-refine-internal | — | — | none needed |
-| ac-qa-browser | "QA the TestFlight build" selected it | precision | trigger qualified from `QA the deployed app` to `QA the deployed web app` |
-| ac-qa-device | — | — | none needed |
-| ac-backlog | "capture this bug I just hit" selected it | precision | exclusion clause added naming ac-bead-capture (typed bead now) and ac-beadify (whole plan) |
-| ac-triage | "triage the open beads and tell me what to work on" selected it | precision | NOT-for clause added naming bv / ac-bead-refine for board triage |
-| ac-bead-capture | — | — | none needed |
-| ac-bead-refine | — | — | none needed |
+| internal plan refiner | — | — | none needed |
+| browser QA | "QA the TestFlight build" selected it | precision | trigger qualified from `QA the deployed app` to `QA the deployed web app` |
+| device QA | — | — | none needed |
+| ac-backlog | "capture this bug I just hit" selected it | precision | exclusion clause added naming ac-backlog (typed bead now) and ac-beadify (whole plan) |
+| ac-triage | "triage the open beads and tell me what to work on" selected it | precision | NOT-for clause added naming bv / ac-polish for board triage |
+| bead capturer | — | — | none needed |
+| bead refiner | — | — | none needed |
 | ac-beadify | — | — | none needed |
-| ac-tidy (folded into ac-align) | — | — | none needed |
+| pipeline tidy (folded into ac-align) | — | — | none needed |
 | ac-distribute | "ship it to production" selected it | precision | reciprocal clause added naming ac-publish as the production release gate that calls it |
 | ac-publish | — | — | none needed |
-| ac-site-polish | — | — | none needed |
-| ac-ui-polish | — | — | none needed |
+| site polisher | — | — | none needed |
+| UI polisher | — | — | none needed |
 | ac-align | "what should I work on next" and "stress-test my strategy" selected it | precision | NOT-for clause naming ac-human (both modes), ac-idea-lab / strategist, ac-hygiene |
-| ac-human | "unblock this failing build" selected it | precision | "unblock" scoped to human gates; clause naming debug, ac-implement / ac-loop |
-| ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, ac-registry-audit, ac-align's nightly reconcile |
-| ac-idea-lab | "brainstorm twenty new product ideas" selected it | precision | tail extended to name brainstorming and expert-consensus |
+| ac-human | "unblock this failing build" selected it | precision | "unblock" scoped to human gates; clause naming debug, ac-implement / the conductor |
+| ac-hygiene | "review this feature branch" and "audit the auth module" selected it | precision | NOT-for clause naming ac-review, audit, the registry auditor, ac-align's nightly reconcile |
+| ac-idea-lab | "brainstorm twenty new product ideas" selected it | precision | tail extended to name brainstorming and multi-model |
 | ac-pipeline | "run validate-qa-run" selected it | precision | NOT-for widened to exclude RUNNING anything it documents, hosted scripts included |
 | ac-prove | "run the full test suite" selected it | precision | NOT-for clause naming testing and ac-board |
-| ac-registry-audit | — | — | none needed |
+| registry auditor | — | — | none needed |
 | agent-mail | "how do I commit safely in the shared checkout" selected it | precision | clause naming ac-pipeline (commit-discipline, delegation-contract) and ac-distribute |
-| beads-standards | "refine these beads" and "file a bead for this crash" selected it | precision | STANDARD-not-executor clause naming ac-bead-refine, ac-bead-capture, ac-beadify |
-| capacitor | "write a test for this" and "write the migration" selected it | precision | clause naming testing, supabase, ui-debug, web-design-guidelines |
+| beads-standards | "refine these beads" and "file a bead for this crash" selected it | precision | STANDARD-not-executor clause naming ac-polish, ac-backlog, ac-beadify |
+| capacitor | "write a test for this" and "write the migration" selected it | precision | clause naming testing, supabase, ui-debug (web-design compliance retired with no live successor) |
 | context-engineering | its exclusion routed to `librarian`, a skill that does not exist | stale | phantom destination dropped, dream added, file organization stated behaviorally |
-| openrouter | "get several models to weigh in and rank the answers" selected it | precision | clause naming expert-consensus, ui-brainstorm, claude-api |
-| prompt-enhance | bare "rate this prompt" on a one-off user prompt selected it | precision | scoped to skill/command FILES; clause naming skill-builder and ac-registry-audit |
+| openrouter | "get several models to weigh in and rank the answers" selected it | precision | clause naming multi-model, ui-brainstorm, claude-api |
+| prompt rubric | bare "rate this prompt" on a one-off user prompt selected it | precision | scoped to skill/command FILES; clause naming skill-builder and the registry auditor |
 | reflect | "where should this decision live" selected it | precision | context-engineering added to a clause that named only ac-land and dream |
-| skill-builder | "build a /command" and "audit the registry" selected it | precision | clause naming workflow-builder, ac-registry-audit, prompt-enhance |
-| supabase | its exclusion routed to `design-system`, a skill that does not exist | stale | repointed at web-design-guidelines and ac-ui-polish |
+| skill-builder | "build a /command" and "audit the registry" selected it | precision | clause naming the command builder, the registry auditor, and the prompt rubric |
+| supabase | its exclusion routed to `design-system`, a skill that does not exist | stale | repointed at no live successor (retired web-design correctness and UI polish) |
 | dream | — | — | none needed |
 | planning | — | — | none needed |
-| workflow-builder | — | — | none needed |
-| testing | "test the login flow in the browser" and "run the full-app QA" selected it | precision | clause naming browser-testing, device-testing, ac-qa-browser / ac-qa-device, audit |
-| device-testing | "grab the screenshots for the App Store listing" selected it | precision | app-store-screenshots added — the screenshot trio's one missing edge |
-| ui-debug | "make it feel premium" and "the visual-regression test is failing" selected it | precision | clause naming ac-ui-polish, testing / ac-qa-browser, web-design-guidelines, capacitor |
-| brainstorming | "push this concept deeper, what am I missing" selected it | precision | ac-idea-lab and expert-consensus added to a clause that named only ui-brainstorm |
-| expert-consensus | multi-model UI opinions, and "stress-test this idea" selected it | precision | the colliding phrase "stress-testing an idea" removed from the description, plus a clause naming ui-brainstorm, ac-idea-lab, openrouter |
+| command builder | — | — | none needed |
+| testing | "test the login flow in the browser" and "run the full-app QA" selected it | precision | clause naming ac-qa (browser, device, and gated runs), audit |
+| device capture | "grab the screenshots for the App Store listing" selected it | precision | the store-assets routing (now ac-distribute) added — the screenshot trio's one missing edge |
+| ui-debug | "make it feel premium" and "the visual-regression test is failing" selected it | precision | clause naming ui-elevate, testing / ac-qa, the retired web-design skill, capacitor |
+| brainstorming | "push this concept deeper, what am I missing" selected it | precision | ac-idea-lab and multi-model added to a clause that named only ui-brainstorm |
+| model panel | multi-model UI opinions, and "stress-test this idea" selected it | precision | the colliding phrase "stress-testing an idea" removed from the description, plus a clause naming ui-brainstorm, ac-idea-lab, openrouter |
 | jef-flywheel | "coordinate two agents on the same file" selected it | precision | routing tail extended to name agent-mail and beads-standards |
-| jef-prompts | "score and improve the subagent prompts in this skill" selected it | precision | RETRIEVES-only scoping plus a clause naming prompt-enhance and skill-builder |
+| jef-prompts | "score and improve the subagent prompts in this skill" selected it | precision | RETRIEVES-only scoping plus a clause naming the prompt rubric and skill-builder |
 | wiki | "synthesize this week's lessons" selected it | precision | dream added to a clause that named only context-engineering and reflect |
 | audit | — | — | none needed (the B8 prediction that it would fail was refuted) |
-| app-store-screenshots | — | — | none needed |
-| browser-testing | — | — | none needed |
-| screenshot-refresh | — | — | none needed |
-| seo-metadata | — | — | none needed |
+| store assets | — | — | none needed |
+| browser smoke | — | — | none needed |
+| screenshot refresher | — | — | none needed |
+| SEO metadata | — | — | none needed |
 | ui-brainstorm | — | — | none needed |
-| web-design-guidelines | — | — | none needed |
+| web-design guide | — | — | none needed |
 
 Score: 60 judgments, 4 failures (3 precision, 1 recall), across 4 of 6 skills. All four
 re-judged PASS after the description edit; the re-judged verdicts are recorded inline
@@ -1549,7 +1550,7 @@ above as `PASS (after fix)`. Whether the follow-on batch runs at all is gated on
 method verdict below, not on this score.
 
 Observation carried to the follow-on batch (not a precision/recall failure, so not fixed
-here): ac-batch-close's description embeds a bare bead id, `(bd-pwt44)`. It costs router
+here): the batch closer's description embeds a bare bead id, `(bd-pwt44)`. It costs router
 tokens and says nothing to a router; provenance belongs in the ledger. Sweep bead-id
 tokens out of descriptions as a batch, not one-off.
 
@@ -1557,7 +1558,7 @@ B2 score: 50 judgments, 2 failures (both precision), across 2 of the 5 `ac-plan-
 Both re-judged PASS after the description edit. The bead-id sweep carried from B1 was run
 across all 17 skills in batches B2–B5 and returned zero hits — nothing to strip. B1's
 prediction held exactly: the only skill with no sibling exclusion clause
-(ac-plan-refine-external) is the one that failed on an inter-sibling near-miss.
+(the external plan refiner) is the one that failed on an inter-sibling near-miss.
 
 B3 score: 20 judgments, 1 failure (precision), across 1 of the 2 `ac-qa-*` skills. Re-judged
 PASS after the description edit. As the designated calibration run this pair confirmed the
@@ -1569,16 +1570,16 @@ B4 score: 60 judgments, 2 failures (both precision), across 2 of the 6 bead-life
 Both re-judged PASS after the description edit. Three batches in, the predictor is now
 unambiguous and has not missed once: **the skill in a family that carries no NOT-for clause is
 the skill that fails.** ac-backlog and ac-triage were the only two of these six without one;
-ac-bead-capture, ac-bead-refine, ac-beadify and ac-align all carry sibling cross-references and
-all passed clean. Same result in B2 (ac-plan-refine-external) and B3 (the one unqualified
-trigger in ac-qa-browser). Treat "has no exclusion clause" as the batch-scan heuristic.
+the bead capturer, bead refiner, ac-beadify and ac-align all carry sibling cross-references and
+all passed clean. Same result in B2 (the external plan refiner) and B3 (the one unqualified
+trigger in browser QA). Treat "has no exclusion clause" as the batch-scan heuristic.
 
 B5 score: 40 judgments, 1 failure (precision), across 1 of the 4 polish/publish skills.
 Re-judged PASS after the description edit. The predictor held a fourth time and, usefully,
-predicted the NON-failures too: ac-site-polish and ac-ui-polish carry the registry's richest
+predicted the NON-failures too: the site and UI polishers carry the registry's richest
 NOT-for clauses (5 and 5 named alternatives) and passed all 20 judgments clean despite being
 the batch's highest-overlap pair at 210 shared shingles — so the refine-flagged hard
-constraint on ac-site-polish's 1018-char description never bound. The one failure,
+constraint on the site polisher's 1018-char description never bound. The one failure,
 ac-distribute vs ac-publish, is also the most consequential found across B2–B5: routing "ship
 it to production" to ac-distribute skips the version bump, the full-suite proof, the heavy
 review and the tag.
@@ -1587,8 +1588,7 @@ B6 score: 80 judgments, 8 failures (all precision), across 6 of the 8 remaining 
 All re-judged PASS after the description edit. The predictor held a fifth time and cleanly: the
 four skills carrying NO NOT-for clause (ac-align, ac-human, ac-hygiene, ac-prove) all
 failed, and the two with the richest clauses (ac-human's board-mode routing tail,
-ac-registry-audit's
-four-destination exclusion) passed all 20 judgments clean. ac-pipeline, the canon-holder, failed
+the retired registry auditor's four-destination exclusion) passed all 20 judgments clean. ac-pipeline, the canon-holder, failed
 in a new way worth naming: its description ENUMERATES the scripts it hosts, which reads to a
 router as a capability rather than an inventory, so "run validate-qa-run" selected the doc
 instead of the calling ceremony.
@@ -1608,8 +1608,8 @@ publishing skills. All re-judged PASS after the description edit. The predictor 
 but was REFUTED on `audit`, which the bead predicted would fail on the same profile and which
 passed all 20 judgments on the strength of a four-destination clause it already carried. The
 richest finding is structural: three of the eight failures were MISSING RECIPROCAL EDGES in
-otherwise well-clued families (device-testing excluded two of the screenshot trio but not
-app-store-screenshots; ui-debug was the only member of the UI quartet with no clause at all;
+otherwise well-clued families (the device-capture skill excluded two of the screenshot trio but not
+the store-assets skill; ui-debug was the only member of the UI quartet with no clause at all;
 reflect named two of its three memory siblings). Asymmetry inside a family is a stronger
 predictor than clause-absence once most skills carry clauses.
 
@@ -1638,11 +1638,10 @@ specific clause that could be edited. Three properties made it work, and they ar
 conditions the follow-on batch inherits:
 
 1. **The failures were not stylistic.** Each one was a real routing error a user would
-   hit — two of them (ac-review, ac-merge) were descriptions that had gone stale against
+   hit — two of them (ac-review, the legacy merger) were descriptions that had gone stale against
    trunk-direct while their bodies had already been updated. The eval found doctrine
    drift that no lint check sees, which is more value than "test the router" promised.
-2. **Explicit exclusion clauses are what pass.** The two clean skills (ac-batch-close,
-   ac-land) are exactly the two whose descriptions already carry a NOT-for clause. That
+2. **Explicit exclusion clauses are what pass.** The two clean skills (the batch closer, ac-land) are exactly the two whose descriptions already carry a NOT-for clause. That
    is the transferable fix shape, and it predicts the follow-on's failures: skills with
    no NOT-for clause and a generic verb in their trigger list.
 3. **The near-miss set is where the signal is.** Unrelated negatives ("review my
@@ -1654,3 +1653,17 @@ Caveat on the method, recorded so the follow-on does not over-trust it: the judg
 same model that will later be routed, judging its own description text with the whole
 registry in context — it can see distinctions a cold router may miss, so these verdicts
 are a **lower bound** on the true failure rate, never an upper one.
+
+---
+
+## Re-judgment 2026-09-12 (ac-1p7j.39)
+
+On 2026-09-12 the archived-skill sections of this corpus were re-judged against the live
+registry: each archived section is retitled, its trigger phrasings keep their recorded
+verdicts, and every routing tail now names the live successor — the conductor, the batch
+boundary, the legacy branch path, ac-plan, ac-polish, multi-model, ac-qa, ac-backlog,
+ac-distribute, skill-builder, or ui-elevate. Three destination classes have no live
+successor and are recorded as such: store-listing visuals (covered at ac-distribute), and
+the SEO-metadata and web-design-compliance phrasings, which match no live skill. Old
+verdict rows were preserved; only destinations were updated, so the append-only history
+stands.

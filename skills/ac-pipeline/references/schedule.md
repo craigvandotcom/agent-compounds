@@ -21,7 +21,7 @@ here as an owner-hosted operating contract, with two archived skill names update
 
 **Triage-before-swarm ordering** is the one cadence rule with a *hard dependency* on another
 job — triage must feed the board before the swarm consumes it — rather than a fixed wall-clock
-slot. It was enforced at the archived `ac-loop`'s own "Scheduling" section, decoupled so a
-triage failure never blocked shipping. **That enforcer went with `ac-loop` and nothing has
+slot. It was enforced at the archived loop skill's own "Scheduling" section, decoupled so a
+triage failure never blocked shipping. **That enforcer went with the archive and nothing has
 replaced it:** `ac-implement`'s coordinator does not check when triage last ran. Until it does,
 this row is a stated rule with no mechanism, and is recorded as such rather than left implied.

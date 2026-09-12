@@ -64,8 +64,8 @@ poll loop, an API hiccup, a paused sub-subagent — and never resumes. Silence t
    `agent-mail/references/agent-identity.md` § Tier 1.
 
 **Applies to:** any `ac-*` skill that spawns background agents and continues —
-notably `ac-review` (parallel reviewers) and `ac-merge` (waiting on PR
-feedback/CI), plus `ac-loop`/`ac-qa-*` build monitors — AND any skill/session that
+notably `ac-review` (parallel reviewers) and PR-waiting sessions (waiting on PR
+feedback/CI), plus conductor and `ac-qa-*` build monitors — AND any skill/session that
 backgrounds its OWN long-running command (test suite, build, CI poll) instead of
 waiting for it in-shell (the self-detachment case in clause 5). Load this before
 writing a spawn-and-continue OR a background-your-own-command step.
@@ -78,7 +78,7 @@ Clauses 1–5 above govern the CONDUCTOR. This section governs the CHILD — and
 rule is: **the conductor includes the preamble block below VERBATIM in every child
 delegation prompt.** A pointer ("see delegation-contract.md") is NOT sufficient: a
 fresh child acts before it reads, and every environment rule it must re-derive is
-a rediscovered failure. Evidence (ac-loop RUN 20260719-102946-27401): with
+a rediscovered failure. Evidence (conductor RUN 20260719-102946-27401): with
 pointer-only guidance, 3 distinct children self-detached and 3 independently
 rediscovered the Agent Mail token rule; after the conductor began inlining these
 clauses verbatim, recurrence dropped to zero for the rest of the run.

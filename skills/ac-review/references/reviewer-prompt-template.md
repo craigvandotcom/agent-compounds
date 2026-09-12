@@ -149,7 +149,7 @@ it should, *without leaking*, or that the measurement as a whole answers the int
    API-success point, not inside a later try a downstream throw can drop.
 
 Evidence: two independent waves shipped fully green (28 green unit tests + tsc clean; 3-reviewer
-`ac-bead-refine` + every engineer's own tests) yet an honesty-briefed reviewer found a High
+refine pass + every engineer's own tests) yet an honesty-briefed reviewer found a High
 feedback-loop bug in one and `ac-review` found 6 High bugs across 5 of these classes in the
 other (incl. a PII leak that falsified the app's own privacy claim). PostHog is the shared
 stack across every app — this checklist recurs, it is not app-specific.

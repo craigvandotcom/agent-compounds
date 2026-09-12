@@ -1,6 +1,6 @@
 ---
 name: beads-standards
-description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-bead-refine, to capture one use ac-backlog, to generate a wave use ac-beadify.'
+description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-polish, to capture one use ac-backlog, to generate a wave use ac-beadify.'
 ---
 
 # Beads Standards
@@ -236,7 +236,7 @@ checklist). The frozen set:
 - `human-gate` — the sole human marker
 - the VERDICT grammar tokens — `passed`/`failed`/`blocked`/`waived` + `discovered-from`
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
-- the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-bead-refine` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
+- the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-polish` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
 - `human-ratified` — fast-track provenance stamped only by `ac-human` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
 - `origin:<skill>` — the creator/provenance axis, enforced forward-only by `hooks/bead-capture-guard.py`
 
@@ -268,7 +268,7 @@ Fields are **joinable for future model-level comparison**: `model` groups runs b
 `skill@version` (the agent-compounds git SHA at skill-load) is the **skills-eval before/after
 axis** — it lets a doctrine change be measured against outcomes. Per-bead **token cost is
 excluded** (a child can't observe its own usage — a per-bead split would be fabricated
-precision); token cost is reported at batch/child granularity by `ac-batch-close`.
+precision); token cost is reported at batch/child granularity by the batch boundary.
 
 ## Label hygiene rules
 
@@ -287,7 +287,7 @@ precision); token cost is reported at batch/child granularity by `ac-batch-close
   `repo:agent-compounds`/`repo-agent-compounds`). Pick the kebab-case form, rename
   with `br label rename <old> <new>`.
 - **`qa-blocker` is REPO-WIDE, not per-bead.** It is a gate label: Hard-stops
-  ac-batch-close and ac-merge for every batch in this repo until removed. Use it only
+  batch close-out for every batch in this repo until removed. Use it only
   when the whole ship path must halt pending QA. To mark a single bead blocked, use a
   `blocks` dependency — never this label. (There is no `blocked` status.)
 

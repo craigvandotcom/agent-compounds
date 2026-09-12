@@ -22,7 +22,7 @@ Load at the START of any session touching:
 - iOS/Android app lifecycle, backgrounding, or App.resume
 - Native plugin integration, feature gating, or custom Swift/Kotlin bridges
 - Build, deployment, or App Store work
-- **Planning any feature** — load before `ac-plan-init` or `ac-plan-refine-internal`
+- **Planning any feature** — load before planning (`ac-plan`) or plan refinement (`ac-polish`)
 
 **Scope — `(protected)/app/*` routes only.** This skill does not apply to web landing/marketing pages. In the BCA codebase, `app/(public)/*` routes (`about`, `blog`, `privacy`, `terms`, `foods`) are served by the full Next.js Vercel deployment — not WKWebView. For those routes: hover states are valid, `next/image` optimization is active, Server Components and middleware work, Core Web Vitals are the performance target, and `revalidateOnFocus: false` / `App.resume` patterns are irrelevant. `app/(auth)/*` is a mixed context — auth flows must work on both web and native (OAuth deep links).
 

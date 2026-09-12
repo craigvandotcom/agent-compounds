@@ -101,7 +101,7 @@ Convention with no mechanical enforcer, claimed as nothing more: every pipeline 
 `FRICTIONS.md` beside this file is the pipeline family's friction ledger — process observations
 exhaust there, never to the board (Invariant 6). lint Check 22
 (`scripts/ac-ledger-integrity.sh`) enforces the control <-> friction contract both directions.
-Cross-cutting entries' primaries live in `_archive/skills/ac-loop/FRICTIONS.md`.
+Cross-cutting entries' primaries live in the archived loop skill's `FRICTIONS.md` (under `_archive/skills/`).
 
 ## Operating contracts and gates (owner-hosted here)
 

@@ -45,7 +45,7 @@ promotion/demotion becomes data-driven instead of vibes-driven.
 | `related` | list of related friction ids — the on-insert graph, a byproduct of the dedup judgment |
 | `first_seen` / `last_seen` | dates |
 | `proposed_fix` | one-line pre-drafted fix, ready to paste into a bead if this cluster gets promoted |
-| `stage` | the pipeline stage/skill run that emitted it (e.g. `ac-loop`, `hygiene-pass`, `dream`, `curate`, `reflect`, `manual`) |
+| `stage` | the pipeline stage/skill run that emitted it (e.g. `ac-implement`, `hygiene-pass`, `dream`, `curate`, `reflect`, `manual`) |
 | `status` | `open` \| `promoted` \| `resolved` \| `wontfix` |
 | `narrative` | prose — what happened, why it's friction |
 
@@ -53,7 +53,7 @@ promotion/demotion becomes data-driven instead of vibes-driven.
 
 ```
 ## bug-lane-claim-race
-- skills: [ac-loop]
+- skills: [ac-implement]
 - impact: M
 - frequency: occasional
 - perceptibility: silent
@@ -61,7 +61,7 @@ promotion/demotion becomes data-driven instead of vibes-driven.
 - related: []
 - first_seen: 2026-06-10
 - last_seen: 2026-07-18
-- stage: ac-loop
+- stage: ac-implement
 - status: open
 - proposed_fix: claim the bead before the ready-scan re-reads, not after — close the read-then-write gap.
 - narrative: two concurrent loop instances both selected the same bug-lane bead because the
@@ -148,7 +148,7 @@ get recorded there, building the graph without extra work.
 Frictions route to a skill's `FRICTIONS.md` via ac-land's tier-router (**W4.3, not yet
 built**) — full routing logic lives there. The ambiguity defaults it will apply:
 
-- **Uncertain, loop-mechanics-flavored** → default sink is `ac-loop`'s `FRICTIONS.md`.
+- **Uncertain, loop-mechanics-flavored** → default sink is the pipeline family ledger (`ac-pipeline/FRICTIONS.md`).
 - **Uncertain, general** → `memory/auto/` (the existing catch-all substrate).
 - **Genuinely cross-cutting** → record once in the *primary* skill's `FRICTIONS.md`, with a
   `see <id> in <primary>` pointer entry in each secondary skill's file (never a full copy).

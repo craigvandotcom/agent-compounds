@@ -1,7 +1,7 @@
 # Degraded single-conductor mode (bd-nreuv)
 
 **Read this only when the probe has already tripped** — the healthy path pays nothing but the
-one-clause probe in each spine's own SKILL.md. Owners: `ac-bead-refine`, `ac-review`,
+one-clause probe in each spine's own SKILL.md. Owners: `ac-polish`, `ac-review`,
 `ac-qa` (and any phase skill whose workflow mandates a panel or a conductor/worker
 fan-out). One probe, one stamp grammar, three skills — defined once here so they can't drift.
 
@@ -81,13 +81,13 @@ Degraded: solo (trigger=no-task-tool|spawn-529|spawn-timeout; lenses=correctness
 - `ac-review` report → in the header block, next to `**Range:**`.
 - `ac-qa` / `ac-qa` manifest + `QA_VALIDATION` report → top-level key.
 - **Leave the `VERDICT:` token itself alone** — `APPROVED`/`NEEDS_DECISION` are parsed by
-  `ac-loop` step 5 and by the verification gate; suffixing them would break those readers. The
+  the batch boundary (step 5) and by the verification gate; suffixing them would break those readers. The
   `Degraded:` field is the carrier, and a downstream consumer must read it before treating a
   `VERDICT: APPROVED` as a panel verdict.
 
 ## 4. `refine-light-solo` — what the light path means with no distinct subagent
 
-**The problem.** `ac-bead-refine`'s light-path criterion #4 requires the mechanism trace to be
+**The problem.** The light-path criterion #4 requires the mechanism trace to be
 "confirmed by a single spawned adversarial subagent DISTINCT from the trace's author (never
 conductor self-concurring)". With no `Task` tool that is **structurally unreachable**, and the
 observed consequence was the worst of the three options: children stamped `refine-full` — the

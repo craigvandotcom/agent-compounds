@@ -9,7 +9,7 @@ Every bead carries exactly one `origin:` label naming the workflow that created 
 
 | Label | Meaning |
 |---|---|
-| `origin:<skill>` | The skill that created the bead — `origin:ac-review`, `origin:ac-hygiene`, `origin:ac-beadify`, `origin:ac-triage`, `origin:ac-qa`, `origin:ac-qa`, `origin:curate-foods`, `origin:dream`, `origin:reflect`, `origin:ac-land`, `origin:ac-tidy`, `origin:ac-batch-close`, `origin:ac-align`, `origin:ac-prove`, `origin:ac-backlog`, `origin:ac-bead-refine`. |
+| `origin:<skill>` | The skill that created the bead — `origin:ac-review`, `origin:ac-hygiene`, `origin:ac-beadify`, `origin:ac-triage`, `origin:ac-qa`, `origin:ac-qa`, `origin:curate-foods`, `origin:dream`, `origin:reflect`, `origin:ac-land`, `origin:ac-align`, `origin:ac-prove`, `origin:ac-backlog`, `origin:ac-polish`. |
 | `origin:manual` | Hand-authored, created outside any skill. |
 | `origin:unknown` | Genuinely unattributable. Legal and honest — mirrors the `discovered-from: unknown` precedent. Never guess, never invent a source. |
 
@@ -17,7 +17,7 @@ Put `origin:` FIRST in the label list. One origin per bead: two is corrupt data.
 
 ## Not the same as `skill:<name>`
 
-`skill:<name>` names the bead's SUBJECT — "this bead is about ac-loop". `origin:` names its
+`skill:<name>` names the bead's SUBJECT — "this bead is about `ac-implement`". `origin:` names its
 CREATOR. Independent axes; a bead may carry both, and often should. Do not merge them.
 
 Also distinct from `discovered-from:`, which names the SOURCE BEAD an escape traces to.
@@ -34,7 +34,7 @@ Three layers, because prose alone was measured insufficient:
 2. **Scripted creation** — the hook cannot see `br` invoked as a child process from Node/TS.
    Those paths enforce in code instead: `BrCreateOptions.origin` is a required field, so a
    call site that omits it fails the TypeScript build.
-3. **Refine backstop** — `ac-bead-refine` repairs a missing `origin:` at stamp time
+3. **Refine backstop** — `ac-polish` repairs a missing `origin:` at stamp time
    (inferring where obvious, else `origin:unknown`). It never withholds `refined` for it.
 
 Nightly, `ac-align`'s reconcile reports post-cutover beads still missing `origin:` — a guard bypass or a

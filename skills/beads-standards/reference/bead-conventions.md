@@ -39,7 +39,7 @@ children block their epic: every child carries a `blocks` edge to its epic paren
 picks the epic last (D3), after every child has closed. An epic's close criterion is that
 its `## Delivers` promise is covered — and the close itself is PROPOSED by `ac-align`
 only for probe-less epics (D5: no `Probe:` line in the epic body names its own
-verification), never "children closed" mechanically and not `ac-batch-close`'s job.
+verification), never "children closed" mechanically and not the batch boundary's job.
 Parent-child edges do NOT block `br ready` (only `blocks` edges sequence), so an epic
 staying open across many batches starves no work and costs nothing; do not force-close
 an epic just because its currently-open children are done.
@@ -51,7 +51,7 @@ an epic just because its currently-open children are done.
 | `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `beads-standards/reference/bead-create-contract.md`, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
 | `qa-infra` | QA harness/infra failure — the NO-STAMP verdict (flaky gate, daemon crash, stuck load, env gap), never FAIL/PASS. Filed by the QA twins (`ac-qa` / `ac-qa`) for infra-shaped NO-STAMPs so the verdict stays resolvable without mislabeling the product. |
-| `qa-blocker` | REPO-WIDE gate — Hard-stops ac-batch-close and ac-merge for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
+| `qa-blocker` | REPO-WIDE gate — Hard-stops batch close-out for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
@@ -81,12 +81,12 @@ follows the same batching contract — this is the shared authority both cite:
 1. **2+ beads → one per-run epic.** `br create -t epic "<Skill> <date> — <noun>" --labels origin:<skill>` (e.g.
    "Hygiene 2026-07-07 — deferred findings", "Triage 2026-07-07 — findings"), children
    linked via `--parent` (`parent-child` dep). 0–1 beads → no epic (don't inflate).
-2. **≥1 bead → in-session `ac-bead-refine` at run end.** Scoped to the epic if one exists
+2. **≥1 bead → in-session refine (`ac-polish` bead mode) at run end.** Scoped to the epic if one exists
    (2+ beads), to the single bead otherwise. The conductor still holds every cluster, source
    permalink, and repro rationale in context right now — a deferred refine session has to
    re-derive all of it from cold. 0 beads → nothing to refine.
 3. **Single-stamper invariant intact.** Children ship `unrefined` at creation, same as any
-   other bead. The run-end `ac-bead-refine` invocation is what earns `refined` — on its own
+   other bead. The run-end refine invocation is what earns `refined` — on its own
    convergence, exclusively, exactly as for any other bead (see Lifecycle labels above). The
    batch workflow never stamps `refined` itself; it only runs the skill that does, while
    context is hot.
@@ -106,7 +106,7 @@ routing behaviours:
 | Creation source | Parent routing |
 | --------------- | -------------- |
 | `ac-beadify` (plan → beads) | The plan's epic, with cross-epic `blocks` edges wired per the plan's data flow |
-| Ad-hoc capture / raw `br create` | Deferred — `ac-bead-refine` adopts an obvious parent when it processes the bead. A `human-gate`/DECISION shape instead resolves parentage AT capture (Arm 0), never deferred |
+| Ad-hoc capture / raw `br create` | Deferred — `ac-polish` adopts an obvious parent when it processes the bead. A `human-gate`/DECISION shape instead resolves parentage AT capture (Arm 0), never deferred |
 | In-loop exhaust (`ac-review` / QA / conductor findings) | The epic whose beads were in the batch that produced the finding; per-finding by file/scope when the batch spanned epics; fallback to a per-run review epic |
 | Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |
 

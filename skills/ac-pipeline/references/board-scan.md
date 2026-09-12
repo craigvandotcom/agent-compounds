@@ -1,8 +1,8 @@
 # Shared board scan (the pipeline read layer)
 
 **The single way to read pipeline state — beads + plans + backlog + the gates over them — into
-a structured "board."** `ac-align`, `ac-board`, `ac-human` (docket), and `ac-loop`
-(Phase 0 orient) all read THIS, then apply their own lens. **Share the read; never the
+a structured "board."** `ac-align`, `ac-board`, `ac-human` (docket), and `ac-implement`
+(conductor orient) all read THIS, then apply their own lens. **Share the read; never the
 judgment.** The five scans are defined ONCE here so they can't drift across the skills that
 consume them.
 
@@ -166,7 +166,7 @@ for i in reasonless:
 ### Structural lint (parentage + edges)
 
 Beyond the status categories above, Scan A also computes two structural lint classes —
-defined ONCE here so `ac-align`, `ac-loop` Phase 0 orient, and standalone lint can't fork
+defined ONCE here so `ac-align`, the `ac-implement` conductor orient, and standalone lint can't fork
 on what "orphan" or "illegal edge" mean:
 
 - **Parentage-gap orphan** — an open, non-epic bead with no epic parent (no `parent-child`
@@ -192,7 +192,7 @@ relationships these two classes need.
 
 Derived read over the ready-orphan set — ranks the file paths cited in bead descriptions
 by density. The consumer's lens (densest cluster first, disjoint clusters per parallel
-child) stays with the consumer (`ac-loop` § Batch orphans by FILE CLUSTER).
+child) stays with the consumer (the conductor's batch-by-file-cluster selection).
 
 ```bash
 # Densest file clusters across the ready orphan set (drives batch selection).
@@ -406,7 +406,7 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 | **`ac-align` (nightly reconcile)** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
 | **`ac-human`** (session) | render the board first, then human gates only (apply the loop boundary: drop ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`, in-flight waves, `loop-ready` plans) | prod health, org-wide `human-gate` sweep; PRs/CI reuse the board render — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-board`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts; also the session opener `ac-human` invokes, where the docket below is the drill-down | wave branches (`git branch -r`), PRs (`gh pr list`), active-agent roster (`scripts/agent-roster.py`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
-| **`ac-loop`** | Phase 0 orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-implement`** (conductor) | Orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.

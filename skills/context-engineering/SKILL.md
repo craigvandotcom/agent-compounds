@@ -173,7 +173,7 @@ A subagent's fresh context is **exactly**: its own system prompt · the task mes
 auto-memory, CORE, or the skill listing — the listing arrives only if the agent holds the
 `Skill` tool.
 
-**The rule that follows: L0 is paid per spawn, not per session.** An `ac-loop` wave runs a
+**The rule that follows: L0 is paid per spawn, not per session.** An implement-lane wave runs a
 documented 3-level hierarchy (conductor → phase sub-session → workers), so a ~4.5k chain
 costs ~16× per wave. When applying the cleanup rubric, price an always-on line at
 `cost × (1 + agents per wave)`, never once.

@@ -20,6 +20,6 @@ contradictory orders and none contained polish, prove or distribute.)
 | Triage | `ac-triage` | scheduled, ≥30 min before any swarm | proposal only — files beads | defect beads | app `CORE/triage.md` |
 | Housekeeping | `ac-align` (nightly reconcile) · `ac-hygiene` (weekly panel) · `ac-review <range>` (targeted manual) | cross-cadence — see `ac-pipeline/references/schedule.md` | fixes commit direct; repairs are bounded | tidy proposals · hygiene fixes · audit findings→beads | `ac-review` (checklists behind the panel) |
 
-Retired names (`ac-loop`, `ac-merge`, `ac-batch-close`, `ac-bead-refine`) own no row: their
+Retired names own no row (anything under `_archive/skills/` with no live successor): their
 live duties are folded into the rows above (`ac-implement` conducts; the swarm commits to
 `main` directly — there is no merge stage; `ac-beadify` + the refine stamp own bead quality).

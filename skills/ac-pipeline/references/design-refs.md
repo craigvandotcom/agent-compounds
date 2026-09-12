@@ -13,9 +13,9 @@ Distinct from agent-captured CURRENT state (`_plans/research/…-baseline-screen
 
 Per-stage duties:
 
-- **Capture** (`ac-plan-init` research docs, `ac-backlog` items and single-bead capture
+- **Capture** (`ac-plan` research docs, `ac-backlog` items and single-bead capture
   notes): save on receipt, cite the path in the doc/`## Notes`.
-- **Beadify / refine** (`ac-beadify`, `ac-bead-refine`): a UI bead derived from a
+- **Beadify / refine** (`ac-beadify`, `ac-polish`): a UI bead derived from a
   visual reference MUST carry the reference-image path in `## Acceptance Criteria` —
   a missing path is a **refine-blocking gap**; the Completeness Reviewer checks it and
   AC drift against the source doc's geometry.

@@ -2,12 +2,11 @@
 
 **Selects which verification passes run, at what depth, for any diff or scope.**
 Primary executors: the `ui-elevate` + `ac-qa` + `ac-qa` triad;
-consumed by every ceremony that verifies (loop Verify stage, the merge/batch-close
+consumed by every ceremony that verifies (the implement Verify pass, the ceremony
 smoke net § below, `ac-prove`, `ac-distribute`). Running all three
 passes on every wave is waste — a one-line copy fix does not need a simulator
 boot. This file decides, from the wave's diff, **which passes run and at what
-depth**. It is the single source; conductors (`ac-loop`
-Phase 1/2, `ac-merge`'s smoke net) consult it rather than re-deciding.
+depth**. It is the single source; conductors (implement Phase 1/2, the ceremony smoke net) consult it rather than re-deciding.
 
 Reference it as `ac-pipeline/references/verification-gate.md`. Method only — zero app facts.
 
@@ -26,7 +25,7 @@ Reference it as `ac-pipeline/references/verification-gate.md`. Method only — z
 - Journey registry
 - Step 3 — override hooks (force, regardless of diff)
 - Step 4 — emit the decision line (mandatory — never skip silently)
-- Ceremony smoke net (ac-merge / ac-batch-close) — the one definition
+- Ceremony smoke net (batch boundary) — the one definition
 - Format-first gate
 
 ## Two axes
@@ -46,14 +45,14 @@ time, and standing code quality is `ac-hygiene`'s lane on its own cadence.
 ## Step 1 — classify the diff
 
 Run against the batch's range: everything since the review-mark (the last commit that
-touched `.claude/reviews/batch/` — the batch mark `ac-batch-close` advances;
+touched `.claude/reviews/batch/` — the batch mark the batch boundary advances;
 bootstrap fallback when no batch commit exists yet: the last `v*` tag).
 Fail-safe: a class flips on when **any** file matches; ambiguity counts as a match,
 never a skip.
 
 ```bash
 # Batch-mark anchor (the range every batch consumer shares).
-# Single-writer invariant (bd-kudrb): ONLY ac-batch-close's Act 2 commits to
+# Single-writer invariant (bd-kudrb): ONLY the batch boundary's Act 2 commits to
 # .claude/reviews/batch/. Any second writer would land a commit inside the very
 # range this probe bounds — which is exactly the under-scoping it exists to stop; otherwise the
 # probe returns a commit inside the range it is meant to bound and the gate silently
@@ -162,7 +161,7 @@ gate selects ui-elevate at **`full` or `exhaustive`** depth, run the per-route f
 **standing authorization** for that workflow's multi-agent opt-in;
 manual ad-hoc invocations still require explicit opt-in.
 
-**Native pass platform gate (reuse ac-merge semantics):** `ac-qa` requires
+**Native pass platform gate (reuse legacy-merge semantics):** `ac-qa` requires
 `uname = Darwin`. If `native` but not on a Mac → do **not** block; emit the
 `mac-needed` note ("native-touching wave verified without device QA — run
 `ac-qa` smoke from a Mac before the next TestFlight push").
@@ -246,7 +245,7 @@ surface ships untagged and silently unprotected.
 ## Step 3 — override hooks (force, regardless of diff)
 
 - **Open `qa-blocker` bead on a plane** → force re-run that plane's QA. (Same bead
-  that gates `ac-merge`.)
+  that gates the legacy merge path.)
 - **auth / session / payment / migration touched** → never smoke; min depth `full`,
   review at high effort.
 - **Explicit human request** ("run a full device QA") → honor over the gate.
@@ -283,14 +282,14 @@ A conductor may report a CI tier green ONLY on one of:
   *recorded* and does not satisfy this branch.
 
 Neither present → report `<tier>: NOT GATED (<reason>)`. Never "green", and never a silent
-skip that leaves the tier unmentioned. Binding on `ac-batch-close` Act 1 (its
+skip that leaves the tier unmentioned. Binding on the batch boundary's Act 1 (its
 file-absence branch routes here) and on any future ceremony that dispatches CI.
 
 ---
 
-## Ceremony smoke net (ac-merge / ac-batch-close) — the one definition
+## Ceremony smoke net (batch boundary) — the one definition
 
-The closing ceremony (`ac-batch-close`; `ac-merge` on the surviving PR path) runs a
+The closing ceremony (the batch boundary; the legacy merge on the surviving PR path) runs a
 **smoke**-only QA pass on the state that actually ships, using this same classifier.
 Complementary, not redundant: the Verify stage proves pre-close code at gate-selected
 depth; the ceremony re-proves post-change code at smoke (the diff can change between
@@ -343,7 +342,7 @@ pass, never re-run at close.
 
 ## Format-first gate
 
-**Canonical home for the format-first rule.** Consumers (`ac-merge`, `ac-hygiene`,
+**Canonical home for the format-first rule.** Consumers (the legacy merge path, `ac-hygiene`,
 `ac-implement`, `ac-land`) carry the rule + a one-clause why and mirror-mark this
 section — edit here first, then propagate.
 

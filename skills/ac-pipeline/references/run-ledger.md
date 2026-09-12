@@ -1,7 +1,7 @@
 # Run ledger — the ceremony resume anchor (shared)
 
 **Scope (ac-gcj.4):** the ONE definition of the run-ledger pattern the long-running
-ceremonies (`ac-loop`, `ac-merge`, `ac-batch-close`, `ac-land`) all use. Each skill keeps
+ceremonies (`ac-implement`, `ac-land`) all use. Each skill keeps
 only its own task table + the state vars it persists; the pattern lives here.
 
 ## Why

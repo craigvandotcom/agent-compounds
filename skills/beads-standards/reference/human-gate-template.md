@@ -86,8 +86,7 @@ the first failing condition:
 
 A human-gate bead sets its **parent = the epic whose work spawned the fork**, at creation
 time — the `--parent <spawning-epic-id>` above. This is Arm 0, the ONE place parentage is
-ENFORCED rather than conventional: human-gate/DECISION beads bypass both `ac-bead-refine`'s
-adopt-a-parent step and `ac-align`'s parentage flag (agents may enrich but never process a
+ENFORCED rather than conventional: human-gate/DECISION beads bypass both the refiner's (`ac-polish`) adopt-a-parent step and `ac-align`'s parentage flag (agents may enrich but never process a
 human-gate bead), so parentage that is conventional everywhere else must be wired here, at
 the one moment an agent creates the bead. This sits ALONGSIDE the mandatory `blocks`-edge
 wiring below — both, not either. A fork with no spawning epic (a genuinely standalone
@@ -177,7 +176,7 @@ Work too large or too consequential to implement directly — a model rework, an
 architecture change, anything where inventing the design inside a ticket is the wrong
 shape — files as an `ACTION:` card, never an agent bead.
 
-The action is *kick off the planning chain*: `ac-plan-init` → refine → approve →
+The action is *kick off the planning chain*: `ac-plan` → refine → approve →
 `ac-beadify`. Put the analysis already done in the body as the brief. Close the card when
 the plan is beadified.
 

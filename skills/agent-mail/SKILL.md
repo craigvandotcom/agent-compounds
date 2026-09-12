@@ -37,7 +37,7 @@ reservations, teardown, build slots. The MCP server provides the tools
 
 - Pre-commit reservation guard install: `install_precommit_guard` — invoked in
   `ac-implement` Phase 0; blocks commits touching another agent's reserved paths.
-- Build slots (advisory, always-grant): usage pattern in `ac-batch-close` § Build Slot;
+- Build slots (advisory, always-grant): usage pattern in the batch boundary's § Build Slot;
   memory `agent-mail-build-slot-advisory`.
 - Child-spawn contract (children usually hold NO Agent Mail tools — conductor reserves
   on their behalf): `ac-pipeline/references/delegation-contract.md`.

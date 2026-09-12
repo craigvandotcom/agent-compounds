@@ -3,8 +3,8 @@
 Each pipeline stage keeps private scratch in `/tmp` (`$ARTIFACTS_DIR`: `progress.md`, findings,
 consensus files). The rule: **a stage NEVER guesses which dir is its own.** It derives the dir
 from keys it can compute, never by globbing `/tmp` and hoping (the newest-wins / "solo vs
-parallel" heuristics caused real bugs — ac-land picking the wrong session's dir; ac-merge
-orphaning a timestamped dir on resume).
+parallel" heuristics caused real bugs — ac-land picking the wrong session's dir; a legacy
+branch-merge orphaning a timestamped dir on resume).
 
 ## ToC
 - The key: the claim/batch id (trunk-direct — NOT the branch)
@@ -22,11 +22,11 @@ every session. Keying the artifact dir on that constant would make every concurr
 compute the identical `/tmp/bead-work-main` and clobber each other's scratch — this is exactly
 the bug bd-u2lo1.9 re-keys away from. The wave-slug convention this doc used to document is
 retired for every skill still under trunk-direct; it remains valid **only** on the legacy
-branch path, `ac-merge` (see Prefixes, below), which still has an actual wave/feature branch to
+branch path (see Prefixes, below), which still has an actual wave/feature branch to
 key on.
 
 The replacement key is the **CLAIM/BATCH ID**, minted once per claimed batch by
-claim-at-selection (`ac-loop` Phase 1/2, or `ac-implement` Phase 1a standalone — precedent:
+claim-at-selection (the conductor's selection, or `ac-implement` Phase 1a standalone — precedent:
 body-compass-app memory `claim-adopted-beads-before-planning`): format
 `<first-claimed-bead-id>-<YYYYMMDD>` (e.g. `bd-u2lo1.1-20260712`). It is unique per batch
 (a different first-claimed bead or a different day yields a different id), shared by every
@@ -61,7 +61,7 @@ is a fixed sequence, always in this order:
 
 Every consuming skill's Phase 0 follows this order:
 
-- A session that receives the claim id already minted — handed down by `ac-loop`'s delegation
+- A session that receives the claim id already minted — handed down by the conductor's delegation
   prompt (e.g. "claim id `bd-u2lo1.1-20260712`"), or recovered from an existing
   `$ARTIFACTS_DIR/.claim-id` on resume — skips straight to step 2.
 - A standalone first-run session that has to mint its own computes the identical id *ahead of*
@@ -71,7 +71,7 @@ Every consuming skill's Phase 0 follows this order:
 
 ## RUN_ID: the orchestrator's run scope (two jobs) — mint-if-absent
 
-An **orchestrator always mints one `RUN_ID` per run** (ac-loop Phase 0:
+An **orchestrator always mints one `RUN_ID` per run** (conductor Phase 0:
 `RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"`) and passes it (`RUN_ID=<id>`) to every stage it spawns. It
 does two jobs:
 
@@ -98,12 +98,11 @@ standalone run the same run-scoping safety net if it's later resumed or cross-re
 |---|---|---|
 | ac-implement **+** ac-land (shared bead-work session) | `bead-work` | keyed on the claim id (bd-u2lo1.9 re-keying) **plus a per-CHILD id** — `/tmp/bead-work-<claim-id>-<AGENT_NAME>-<pid>[-<run-id>]`, the child key computed by the child and applied UNCONDITIONALLY, never conditioned on the child knowing whether it is one of N (ac-wno). `RUN_ID` still trails LAST so ac-land's `/tmp/bead-work-*-$RUN_ID` glob keeps gathering every child of the run. Derivation: `ac-implement/SKILL.md` Phase 0 § Configuration. Proof: `ac-pipeline/scripts/bead-work-concurrent-dir.test.sh` |
 | ac-review | `work-review` | keyed on a timestamp, not the claim id or branch — a review spans a batch **diff range** since the last review-mark, not a single claimed batch, so it never had a branch-collapse problem to fix |
-| ac-batch-close (trunk-direct batch closing ceremony) | `batch-close` | keyed on the batch-anchor SHA (`ac-batch-close/SKILL.md` Phase 0) |
-| ac-plan-init | `plan-init` | keyed on the plan slug — under trunk-direct there is no wave to key on, ever (no branch, no waiting for one to open); the plan slug is the permanent key here, not a placeholder "until a wave exists" |
+| ac-plan | `plan-init` | keyed on the plan slug — under trunk-direct there is no wave to key on, ever (no branch, no waiting for one to open); the plan slug is the permanent key here, not a placeholder "until a wave exists" |
 | ac-qa | `qa-browser` | |
 | ac-qa | `qa-device` | |
 | ui-elevate | `ui-elevate` | |
-| ac-bead-refine | `bead-refine` | keyed on a **per-CHILD** id — `<AGENT_NAME>-$$`, computed by the child, never accepted from the caller (bd-baudw). **The same corollary binds `bead-work`, and binds it UNCONDITIONALLY** (ac-wno: two implement children over ONE claimed batch derived the identical `/tmp/bead-work-<claim-id>-<RUN_ID>` and collided on progress.md — benign only by timing): EVERY implement child computes its own `<AGENT_NAME>-$$` key and inserts it BEFORE the RUN_ID suffix, whether or not the delegation prompt told it that it was fanned out — a child under context pressure failing to self-identify as one of N is precisely what produced that collision, so the safety may not be conditioned on it. This stage is fanned out: `ac-loop` runs up to `PARALLEL_WIDTH` refine children on disjoint bead subsets and hands them all the SAME `RUN_ID` **and** the same claim id, so neither key discriminates siblings — they collapsed onto one dir and clobbered each other's `beads-snapshot.json`, making a child stamp `refined` onto beads it never reviewed. `RUN_ID` still trails (`/tmp/bead-refine-<child-id>-<run-id>`) so the run-scoped glob keeps working. Proof: `ac-pipeline/scripts/bead-refine-concurrent-dir.test.sh` (sibling proof for the generic prefix formula: `ac-pipeline/scripts/run-id-concurrent-dir.test.sh`) |
+| ac-polish (refine) | `bead-refine` | keyed on a **per-CHILD** id — `<AGENT_NAME>-$$`, computed by the child, never accepted from the caller (bd-baudw). **The same corollary binds `bead-work`, and binds it UNCONDITIONALLY** (ac-wno: two implement children over ONE claimed batch derived the identical `/tmp/bead-work-<claim-id>-<RUN_ID>` and collided on progress.md — benign only by timing): EVERY implement child computes its own `<AGENT_NAME>-$$` key and inserts it BEFORE the RUN_ID suffix, whether or not the delegation prompt told it that it was fanned out — a child under context pressure failing to self-identify as one of N is precisely what produced that collision, so the safety may not be conditioned on it. This stage is fanned out: the conductor runs up to `PARALLEL_WIDTH` refine children on disjoint bead subsets and hands them all the SAME `RUN_ID` **and** the same claim id, so neither key discriminates siblings — they collapsed onto one dir and clobbered each other's `beads-snapshot.json`, making a child stamp `refined` onto beads it never reviewed. `RUN_ID` still trails (`/tmp/bead-refine-<child-id>-<run-id>`) so the run-scoped glob keeps working. Proof: `ac-pipeline/scripts/run-id-concurrent-dir.test.sh` (the generic prefix formula; the per-stage sibling proof retired with the stage) |
 
 > **Fan-out corollary (general).** The claim-id key is **batch-scoped** and `RUN_ID` is
 > **run-scoped** — neither is child-scoped. Any stage a conductor fans out over subsets of
@@ -112,7 +111,7 @@ standalone run the same run-scoping safety net if it's later resumed or cross-re
 > it is un-enforceable (the next conductor forgets), and it breaks the `-$RUN_ID` glob
 > ac-land relies on.
 
-`ac-merge` — the legacy branch path only (`.claude/legacy-branches.txt` projects: dependabot,
+The legacy branch path only (`.claude/legacy-branches.txt` projects: dependabot,
 human feature branches) — still keys its `wave-merge` prefix on an actual wave/feature branch
 slug. That's correct there and is deliberately untouched by this re-keying: it's a different,
 still-live code path with a real branch to key on, not a stale reference.
@@ -122,14 +121,14 @@ still-live code path with a real branch to key on, not a stale reference.
 - **Standalone (human):** one session, one claimed batch → `RUN_ID` absent (or minted locally
   per the mint-if-absent rule above) → `/tmp/bead-work-bd-u2lo1.1-<AGENT_NAME>-<pid>-20260712`
   (the per-child key is unconditional — a lone session carries it too).
-- **In ac-loop, single session per batch (the common case):** identical — the claim id suffices,
-  no cross-session disambiguation needed. `RUN_ID` is still minted at ac-loop's own Phase 0 and
+- **Conductor, single session per batch (the common case):** identical — the claim id suffices,
+  no cross-session disambiguation needed. `RUN_ID` is still minted at the conductor's own Phase 0 and
   threaded through, purely for the loop-exit scoping job (below).
-- **In ac-loop, parallel children on one batch (width >1):** ac-loop does **NOT** supply a
-  distinct `RUN_ID` per child — `ac-loop-swarm/SKILL.md` Phase 0 mints exactly ONE `RUN_ID` per run
+- **Conductor, parallel children on one batch (width >1):** the conductor does **NOT** supply a
+  distinct `RUN_ID` per child — the coordinator mints exactly ONE `RUN_ID` per run
   and threads it verbatim into every child, by design (it identifies the run, not the child).
   Disambiguation is therefore the **child's** job, via the fan-out corollary above; a stage
-  that assumes RUN_ID separates its siblings is assuming something ac-loop never promised
+  that assumes RUN_ID separates its siblings is assuming something the conductor never promised
   (this stale assumption is what hid bd-baudw).
 
 ## The ac-land exception (a consumer that can't self-derive)
@@ -138,7 +137,7 @@ ac-land runs **at loop-exit, after the final batch-close** — by then the claim
 long gone and ac-land itself never claimed anything, so it **cannot mint or independently
 recompute a claim id.** This is precisely why it used to glob. Resolution order for ac-land:
 
-1. **RUN_ID scopes it (loop exit).** ac-loop passes `RUN_ID`; ac-land gathers **all** of this
+1. **RUN_ID scopes it (loop exit).** The coordinator passes `RUN_ID`; ac-land gathers **all** of this
    run's dirs with the scoped glob `/tmp/bead-work-*-$RUN_ID` — safe because RUN_ID excludes
    foreign/stale dirs. The retrospective spans every batch the run shipped; teardown sweeps them.
    A single-batch run yields one dir on the same code path.

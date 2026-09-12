@@ -226,7 +226,7 @@ this path).
 - `--no-verify` on push is deliberate (pre-push full-tree build false-positives on
   foreign WIP); real verification is the per-commit gate + post-push CI.
 - Never force-push `main`.
-- `--force-with-lease` on a NON-main working branch (e.g. ac-merge's pre-PR wave-branch push, ac-merge/SKILL.md §Push) is the sanctioned exception — branch-scoped only, never `main`.
+- `--force-with-lease` on a NON-main working branch (e.g. a pre-PR wave-branch push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never stash. Never `git add -A`.
 - `cross-repo` beads: commit in the repo that tracks the files (see § Cross-repo).
 - One scheduled writer per generated artifact (`.beads/issues.jsonl`, tidy
