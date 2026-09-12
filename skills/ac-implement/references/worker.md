@@ -85,8 +85,7 @@ Exit non-zero, or `VALIDATION_FAILED` → someone else has it. `BURNED="$BURNED 
 Claim succeeded → record it, body through a FILE (an inline body with an apostrophe truncates
 at exit 0):
 
-    printf 'CLAIM: %s\n' "$ACTOR" > /tmp/ac-claim.txt
-    RUST_LOG=error br comments add <id> -f /tmp/ac-claim.txt
+    f=$(mktemp) && printf 'CLAIM: %s\n' "$ACTOR" > "$f" && RUST_LOG=error br comments add <id> -f "$f"
 
 Gate the comment on the claim's exit status. A lost race must not comment.
 
@@ -179,9 +178,8 @@ holder and go back to §1 — never broadcast, never wait on a reply.
 
 ## 6 — COMMIT
 
-    printf '%s\n' "<subject>" "" "<body naming the failure this commit prevents>" > /tmp/ac-msg.txt
-    bash skills/ac-implement/scripts/swarm-commit.sh \
-      --identity "$ACTOR" --message-file /tmp/ac-msg.txt \
+    f=$(mktemp) && printf '%s\n' "<subject>" "" "<body naming the failure this commit prevents>" > "$f" && bash skills/ac-implement/scripts/swarm-commit.sh \
+      --identity "$ACTOR" --message-file "$f" \
       --path <file> --path <file>
 
 Every path named, message through a file, identity passed — the lane refuses the alternatives
@@ -208,9 +206,7 @@ evidence core cross-references it and refuses otherwise.
 
 Then post the worker receipt (body through a file) and go to §1:
 
-    printf 'WORKER: model=%s actor=%s tree=%s\n' "<model>" "$ACTOR" "$(git rev-parse --short HEAD)" \
-      > /tmp/ac-worker.txt
-    RUST_LOG=error br comments add <id> -f /tmp/ac-worker.txt
+    f=$(mktemp) && printf 'WORKER: model=%s actor=%s tree=%s\n' "<model>" "$ACTOR" "$(git rev-parse --short HEAD)" > "$f" && RUST_LOG=error br comments add <id> -f "$f"
 
 ## 8 — HAND BACK
 

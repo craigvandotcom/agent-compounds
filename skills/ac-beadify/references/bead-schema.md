@@ -13,9 +13,13 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 
 `title` · `type` · `priority` · deps (`blocks` / parent-child / `discovered-from`) ·
 `labels` (risk tags as needed: `migration` · `native`).
+- Epic beads (`type: epic`) carry `## Success Criteria` plus probe-bearing
+  `## Acceptance Criteria` — the probes are what a worker pick closes against (D3).
 
-- An epic reaches its children by **parent-child**, never `blocks` — containment is not
-  ordering, and wiring it as `blocks` fabricates a critical path.
+- An epic reaches its children by **parent-child** (containment), and every child pays
+  back a child→epic `blocks` edge (sequencing, the D2 shape) — containment is not ordering,
+  but without the return edge the epic can never be picked last. A parent→child `blocks`
+  edge still fabricates a critical path and stays refused.
 - Edge direction is `<blocked> depends-on <blocker>`. A write that CLOSES a cycle is
   refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
@@ -138,7 +142,7 @@ from a git hook — a hook cannot see a DB-only close.
 
 ## Delivers
 - gate: skills/ac-implement/scripts/close-gate.sh
-  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 6 · owned by: ac-qn7h.2
+  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 8 · owned by: ac-qn7h.2
 - harness: skills/ac-implement/scripts/close-gate.test.sh
   touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · owned by: ac-qn7h.2
 - wiring: the close step of skills/ac-implement/SKILL.md invokes the gate

@@ -64,7 +64,11 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
    `## Consumes` cites `<blocker-id> -> <artifact>` that the blocker's Delivers promises, or
    `none`; a `<…>` placeholder is REFUSED (it reads as a premise). Then create the edges and
    read them back: direction is `<blocked> depends-on <blocker>`, a reversed `br dep add` is
-   SILENT, and an epic reaches its children by parent-child, never `blocks`.
+   SILENT, so read every edge back (`br dep cycles`, then `br show` on both ends). Every
+   child of the compiled epic gets TWO edges — parent-child (containment) plus a child→epic
+   `blocks` edge (sequencing, the D2 shape) — and both are read back the same way. The
+   no-probe refusal names epics explicitly: an epic whose body carries no `Probe:` line is
+   refused like any other probe-less bead.
 - **Consumes↔edge parity, both directions.** Every Consumes line has an edge; every edge
       has a Consumes line. Verify with `br dep cycles` plus `br show` on both ends.
 - **One path per `## Delivers` bullet, and every delivered path that ALREADY EXISTS owes a

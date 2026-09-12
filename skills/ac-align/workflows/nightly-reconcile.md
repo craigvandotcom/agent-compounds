@@ -121,7 +121,14 @@ future `defer_until`):
     fail-safe `unrefined` onto any OPEN bead with a lifecycle-label gap (never `refined`,
     that stamp is only earned), per the lint in `beads-standards` § Lifecycle labels,
   - reconcile stale epic-close proposals whose target epic is already closed (close the
-    proposal bead `obsolete: moot — target <id> already closed`).
+    proposal bead `obsolete: moot — target <id> already closed`). A closed epic accepts
+    no child (D6, `ac-review/SKILL.md`) — a late finding opens a follow-up epic instead.
+  - **Epic-Close Proposals (D5):** re-emit the retired tidy's proposal for an epic with
+    zero open children ONLY when its body carries no `Probe:` line — a probe-less epic
+    only. An epic that names its own probes closes through a worker pick, never a proposal.
+  - **Epic-edge report (D2):** report `blocks` edges with an epic endpoint through the
+    child→parent + parent-child-pair predicate (`ac-pipeline/references/board-scan.md`);
+    anything else stays an I2 violation for Tier-3 conversion, never auto-fix.
 - **Tier 2 — auto-apply provably-done archive:** ONLY when the Tier-2 toggle is ON *and* the
   positive-proof gate passes. Otherwise the item falls through to a Tier-3 proposal.
 - **Never touch OPEN `human-gate` or `qa-blocker` beads** — gated, not housekeeping. Exception:

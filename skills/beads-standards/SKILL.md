@@ -134,8 +134,10 @@ never into the board repo. Do not overload `human-gate` as a routing stopgap.
 **Bead-level `blocks` edges are the only authored sequencing truth.** Epic order is
 DERIVED from the cross-epic bead edges beneath it — epics are sequenced so as to honour
 the bead edges that cross between them, never the reverse — epic order follows the bead
-edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge** (a `blocks` edge with an epic endpoint is an I2 violation —
-the epic-edge detector in `ac-pipeline/references/board-scan.md` reports it).
+edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge.**
+D2: a `blocks` edge with an epic endpoint is legal ONLY when it runs child→parent AND
+a parent-child edge already joins the same pair — everything else stays an I2 violation.
+The epic-edge detector in `ac-pipeline/references/board-scan.md` implements this predicate.
 
 The only legitimate cross-epic edge is a genuinely bead-shaped **consume** — bead B needs
 an artifact bead A delivers. The falsifiability test before adding any cross-epic edge:
@@ -423,7 +425,8 @@ br sync --flush-only      # export DB -> JSONL
   after any post-hoc `dep add` batch and require it clean.
 - **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
   closed children and epics don't auto-close on last child close — check closed children
-  before triaging an epic as abandoned/empty.
+  before triaging an epic as abandoned/empty. D3 caveat: children-closed is necessary but
+  not sufficient — the close still needs green probes and a worker pick (the epic is the last bead).
 - **`br` in a NON-TTY context (scripts/agents) mis-executes compound one-liners** — a call chained
   with `&&`, or inside a `for` loop, pipe or substitution, can fail with a "not a terminal" error.
   Give every `br` call its own standalone Bash invocation (worker.md's `--json`/`-f` pattern).

@@ -62,7 +62,7 @@ Categorize every bead:
 |----------|------|
 | **ready (refined)** | in `br ready` AND has the `refined` label (presence, not absence of `unrefined` — `skills/beads-standards/reference/bead-conventions.md`) |
 | **unrefined** | lacks the `refined` label — has `unrefined`, or no lifecycle label at all (needs `/ac-polish`) |
-| **blocked** | `status=open`, NOT in `br ready` |
+| **blocked** | `status=open`, NOT in `br ready` — excludes epics (epics keep their own `closed/total children` line, never the generic blocked bucket) |
 | **in_progress** | `status=in_progress` |
 | **closed** | `status=closed`/`done` |
 
@@ -174,11 +174,14 @@ on what "orphan" or "illegal edge" mean:
   parentage — wired at creation). This is the I1 sense of "orphan" (a bead with no home
   epic), distinct from `ac-align`'s older sense ("orphan = a bead referencing a plan file
   that no longer exists") — both are reported, they are different classes.
-- **Authored epic-edge** — any `blocks` edge with an **epic endpoint** (either end an epic)
-  is an I2 violation: epic order is derived from cross-epic bead edges, never authored
-  directly (`skills/beads-standards/SKILL.md` § Sequencing & parentage). Report it ALWAYS;
-  converting it into the right bead-level edge needs human judgment, so route the
-  conversion to Tier 3 rather than auto-fixing.
+- **Authored epic-edge (D2 predicate)** — a `blocks` edge with an epic endpoint is legal
+  ONLY when it runs child→parent AND a parent-child edge already joins the same pair;
+  every other epic-endpoint shape stays an I2 violation: epic order is derived from
+  cross-epic bead edges, never authored directly (`skills/beads-standards/SKILL.md`
+  § Sequencing & parentage). Until child→epic edges exist on today's boards the narrowed
+  detector must match the old verdicts (no false positives on legacy shapes). Report
+  violations ALWAYS; converting one into the right bead-level edge needs human judgment,
+  so route the conversion to Tier 3 rather than auto-fixing.
 
 **Edge queries read `.beads/issues.jsonl` directly.** `br list --json` (0.2.16) returns
 the beads but NO dependency edges — parse the jsonl for the `blocks` / `parent-child`
