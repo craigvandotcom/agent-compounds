@@ -174,7 +174,8 @@ on what "orphan" or "illegal edge" mean:
   parentage — wired at creation). This is the I1 sense of "orphan" (a bead with no home
   epic), distinct from `ac-align`'s older sense ("orphan = a bead referencing a plan file
   that no longer exists") — both are reported, they are different classes.
-- **Authored epic-edge** — any `blocks` edge with an epic endpoint is an I2 violation:
+- **Authored epic-edge** — any `blocks` edge with an epic endpoint is an I2 violation
+  (an epic is `issue_type == "epic"` — never inferred from child count; bd-wgjbq ruled that heuristic invalid):
   containment (`parent-child`) already sequences an epic against its children, and epic
   order is otherwise derived from cross-epic bead edges, never authored directly
   (`skills/beads-standards/SKILL.md` § Sequencing & parentage). Report violations ALWAYS;
