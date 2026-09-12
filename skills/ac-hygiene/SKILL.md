@@ -58,9 +58,8 @@ confirmed issues → a bead; worth-chasing uncertainties → `-t investigation`;
 taste/product forks in an autonomous run → `-t decision --labels human-gate` with a pre-staged
 memo. A bead is something you'd schedule; nits stay in the report. Canon:
 `beads-standards/reference/bead-conventions.md`. When deferred findings batch into a
-per-run epic, every child gets TWO edges — parent-child (containment) plus a child→epic
-`blocks` edge (sequencing, the D2 shape) — and both are read back (`br dep cycles`, then
-`br show` on both ends).
+per-run epic, every child gets the parent-child (containment) edge, read back
+(`br show` on both ends).
 
 **Deletion mandate.** A stale/superseded/duplicate finding is REMOVAL-as-disposition, equal to
 fixing: a verbatim duplicate deletes outright, a still-needed extract moves to `references/`,

@@ -33,10 +33,10 @@ the symptom enters as fact; an inferred cause enters a clearly-marked
 *unverified* slot the implementer re-derives, never inherits. Type is the
 carrier: source-traced cause → `-t bug`; inferred cause → `-t investigation`.
 
-**Epics stay open across batches — and the epic is the last bead.** The rule is that
-children block their epic: every child carries a `blocks` edge to its epic parent
-(child→parent, with the parent-child edge joining the same pair — D2), so the worker
-picks the epic last (D3), after every child has closed. An epic's close criterion is that
+**Epics stay open across batches — and the epic is the last bead.** Parent-child
+containment alone sequences the epic after its children — `br ready` never offers an
+epic with an open child — so the worker picks the epic last (D3), after every child
+has closed. An epic's close criterion is that
 its `## Delivers` promise is covered — and the close itself is PROPOSED by `ac-align`
 only for probe-less epics (D5: no `Probe:` line in the epic body names its own
 verification), never "children closed" mechanically and not the batch boundary's job.

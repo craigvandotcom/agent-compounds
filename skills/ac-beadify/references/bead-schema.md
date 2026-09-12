@@ -16,10 +16,9 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 - Epic beads (`type: epic`) carry `## Success Criteria` plus probe-bearing
   `## Acceptance Criteria` — the probes are what a worker pick closes against (D3).
 
-- An epic reaches its children by **parent-child** (containment), and every child pays
-  back a child→epic `blocks` edge (sequencing, the D2 shape) — containment is not ordering,
-  but without the return edge the epic can never be picked last. A parent→child `blocks`
-  edge still fabricates a critical path and stays refused.
+- An epic reaches its children by **parent-child** (containment) only — containment alone
+  already keeps the epic from being picked before its children close. Any `blocks` edge
+  with an epic endpoint still fabricates a critical path and stays refused.
 - Edge direction is `<blocked> depends-on <blocker>`. A write that CLOSES a cycle is
   refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).

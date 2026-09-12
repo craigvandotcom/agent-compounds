@@ -135,9 +135,9 @@ never into the board repo. Do not overload `human-gate` as a routing stopgap.
 DERIVED from the cross-epic bead edges beneath it — epics are sequenced so as to honour
 the bead edges that cross between them, never the reverse — epic order follows the bead
 edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge.**
-D2: a `blocks` edge with an epic endpoint is legal ONLY when it runs child→parent AND
-a parent-child edge already joins the same pair — everything else stays an I2 violation.
-The epic-edge detector in `ac-pipeline/references/board-scan.md` implements this predicate.
+No authored `blocks` edge may have an epic endpoint — containment (`parent-child`) already
+sequences an epic against its children, and every epic-endpoint `blocks` edge is an I2
+violation. The epic-edge detector in `ac-pipeline/references/board-scan.md` implements this.
 
 The only legitimate cross-epic edge is a genuinely bead-shaped **consume** — bead B needs
 an artifact bead A delivers. The falsifiability test before adding any cross-epic edge:

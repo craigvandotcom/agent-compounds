@@ -126,9 +126,8 @@ future `defer_until`):
   - **Epic-Close Proposals (D5):** re-emit the retired tidy's proposal for an epic with
     zero open children ONLY when its body carries no `Probe:` line — a probe-less epic
     only. An epic that names its own probes closes through a worker pick, never a proposal.
-   - **Epic-edge report (D2):** report `blocks` edges with an epic endpoint through the
-     child→parent + parent-child-pair predicate (`ac-pipeline/references/board-scan.md`);
-     anything else stays an I2 violation for Tier-3 conversion, never auto-fix.
+   - **Epic-edge report:** report every `blocks` edge with an epic endpoint as an I2
+     violation (`ac-pipeline/references/board-scan.md`) for Tier-3 conversion, never auto-fix.
    - **Closeout-drift mirror:** a `_done/` plan carrying `beadified:` whose epic is closed
      but no `delivered:` line — or a `delivered:` line whose epic is still open — reports
      `closeout-drift`. Either direction means the closeout bead never landed both halves.
