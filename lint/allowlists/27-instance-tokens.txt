@@ -17,8 +17,6 @@
 2026-09-07 | body-compass | skills/beads-standards/SKILL.md
 2026-09-07 | body-compass | skills/beads-standards/reference/bead-create-contract.md
 2026-09-07 | body-compass | skills/beads-standards/reference/human-gate-template.md
-2026-09-07 | craig | skills/ac-human/SKILL.md
-2026-09-07 | craig | skills/ac-human/references/docket-anti-rot.md
 2026-09-07 | craig | skills/ac-pipeline/SKILL.md
 2026-09-07 | craig | skills/ac-pipeline/references/assurance-declarations.md
 2026-09-07 | craig | skills/ac-pipeline/references/board-scan.md
@@ -43,7 +41,6 @@
 2026-09-07 | craig | skills/wiki/workflows/garden.md
 2026-09-07 | craig | skills/wiki/workflows/hallucination-audit.md
 2026-09-07 | craig | skills/wiki/workflows/seed-page.md
-2026-09-07 | memory/auto | skills/ac-human/references/docket-anti-rot.md
 2026-09-07 | memory/auto | skills/ac-pipeline/references/assurance-declarations.md
 2026-09-07 | memory/auto | skills/context-engineering/SKILL.md
 2026-09-07 | memory/auto | skills/context-engineering/workflows/context-mining-daily.md
@@ -60,7 +57,6 @@
 2026-09-07 | memory/auto | skills/wiki/workflows/hallucination-audit.md
 2026-09-07 | memory/auto | skills/wiki/workflows/seed-page.md
 2026-09-07 | move-free | skills/beads-standards/reference/human-gate-template.md
-2026-09-07 | neometa | skills/ac-human/SKILL.md
 2026-09-07 | neometa | skills/ac-pipeline/references/verification-gate.md
 2026-09-07 | neometa | skills/agent-mail/references/agent-identity.md
 2026-09-07 | neometa | skills/agent-mail/references/session-procedure.md

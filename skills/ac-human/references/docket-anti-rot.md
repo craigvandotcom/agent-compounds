@@ -8,15 +8,15 @@ if you are looking for what to DO, go back to the spine's Decision Docket bullet
 ## The incident that made it a step
 
 `bd-06opv.12` ("DECISION: V5 zone-classification pipeline — ship, keep-V4, or kill?") was
-**decided 2026-07-10** and deliberately released by Craig **three separate times**, each with
+**decided 2026-07-10** and deliberately released by the human operator **three separate times**, each with
 written reasoning. Its full `events` history:
 
 | when | event |
 |---|---|
 | 2026-07-10 11:49 | `human-gate` added at creation |
-| 2026-07-11 08:08:**25** | REMOVED — **one second** after Craig's "DECISION: VALIDATE-THEN-SHIP" comment |
+| 2026-07-11 08:08:**25** | REMOVED — **one second** after the human's "DECISION: VALIDATE-THEN-SHIP" comment |
 | 2026-07-11 22:49 | re-added |
-| 2026-07-12 09:19 | REMOVED — *"DOCKET RELEASE (Craig): decision already recorded 07-10"* |
+| 2026-07-12 09:19 | REMOVED — *"DOCKET RELEASE: decision already recorded 07-10"* |
 | 2026-07-15 11:51 | re-added |
 | 2026-07-15 14:58 | REMOVED — *"decision recorded + docket released … backfill over-gated"* |
 | 2026-07-27 18:35 | re-added by `bd-r0be9`'s apply |
@@ -40,7 +40,7 @@ id**:
 Neither was injected on that turn; the recall hook surfaced an unrelated tmux fact. **Two written
 rules lost to one unread audit trail.** That is why this check was escalated out of the memory
 substrate and into a step in the spine (agent-compounds `a7ac7f2`) rather than restated a third
-time — see `infrastructure/memory/auto/recurring-rule-escalates-to-a-gate-not-a-restatement.md`
+time — see the memory-substrate rule `recurring-rule-escalates-to-a-gate-not-a-restatement.md`
 and the parent doctrine at `context-engineering` § PROMOTION & DEMOTION.
 
 ## The generalisable shape

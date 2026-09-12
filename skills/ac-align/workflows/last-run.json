@@ -4,7 +4,7 @@
   "date": "2026-09-12",
   "machine": "darwin",
   "branch": "main",
-  "scope": "body-compass-app",
+  "scope": "body_compass_app",
   "counts": {
     "closed_unrefined_stripped": 3,
     "open_unrefined_stamped": 3,
@@ -23,5 +23,5 @@
     "status": "degraded",
     "ts": "1789167117.031709"
   },
-  "note": "Reconciled 7 beads in body-compass-app (readiness-label repair + gate re-verify). Push to body-compass-app main REJECTED — a concurrent pusher landed 9c17facc on origin/main after this run's worktree forked from 969c56a9. Work is stranded at 2a611199 in a /tmp worktree pending human/next-cycle reconcile. No Tier-3 proposals emitted: parentage-gap-orphan cluster already covered by pending _plans/_proposals/2026-09-04/02-parentage-gap-orphans.md; epic-edge scan found 0 real I2 violations under Craig's bd-wgjbq ruling (issue_type==epic, not the >3-children heuristic)."
+  "note": "Reconciled 7 beads in body_compass_app (readiness-label repair + gate re-verify). Push to body_compass_app main REJECTED — a concurrent pusher landed 9c17facc on origin/main after this run's worktree forked from 969c56a9. Work is stranded at 2a611199 in a /tmp worktree pending human/next-cycle reconcile. No Tier-3 proposals emitted: parentage-gap-orphan cluster already covered by pending _plans/_proposals/2026-09-04/02-parentage-gap-orphans.md; epic-edge scan found 0 real I2 violations under the human's bd-wgjbq ruling (issue_type==epic, not the >3-children heuristic)."
 }
