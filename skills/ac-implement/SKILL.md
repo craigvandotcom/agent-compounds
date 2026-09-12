@@ -45,8 +45,8 @@ is a worker that has stopped coordinating.
 **Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
 every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
 needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing
-filter reports a pool the workers cannot claim — plus drop `issue_type: epic`, which the label
-filter misses. Register with Agent Mail; install the pre-commit guard once (workers never do).
+filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's
+terminal pick (worker.md §8), closed with no work step. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM — and, ONLY if `--cap N` was given, one appended line naming the cap. Verbatim means
@@ -74,10 +74,10 @@ Then, and only after it exits 0:
    repo-wide gates are authoritative HERE — only here is the tree free of half-finished sibling edits.
 2. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
-3. **Epic-close** — an epic with every parent-child child `closed` and every `## Delivers`
-   line covered by a child's delivery-shaped close_reason (`shipped:` / `fixed:` / `done:`)
-   is itself closed: `br close <epic> -r "shipped: <children>"` naming them. An uncovered
-   Delivers line leaves the epic open and files a finding with `discovered-from: <epic>`.
+3. **Epic-close** — probe-less (legacy) epics ONLY: no `Probe:` line, every parent-child child
+   `closed`, every `## Delivers` line covered by a delivery-shaped close_reason (`shipped:` / `fixed:` /
+   `done:`) → `br close <epic> -r "shipped: <children>"` naming them. A probe-bearing epic closes only
+   by the worker's terminal pick (worker.md §8), never here; an uncovered line leaves it open + files a finding with `discovered-from: <epic>`.
 4. **Release reservations and deregister** every worker identity, including any you swept.
 
 ## The exhaust rule

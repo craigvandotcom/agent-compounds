@@ -41,18 +41,23 @@ starvation, and total starvation was measured from exactly these omissions.
       | jq -r --arg me "$ACTOR" '
           [ .[]
             | select(.status == "open")
-            | select(.issue_type != "epic" and .issue_type != "decision")
+            | select(.issue_type != "decision")
             | select(((.labels // []) | any(. == "epic" or . == "human-gate"
                         or . == "device" or . == "unrefined")) | not)
             | select((.assignee // "") == "" or (.assignee // "") == $me)
             | select((.title | startswith("PREMISE-FAILED:")) | not)
           ]
-          | sort_by(if .issue_type == "bug" then 0 else 1 end, .priority, .created_at)
+          | sort_by(if .issue_type == "bug" then 0
+                    elif .issue_type == "epic" then 2 else 1 end, .priority, .created_at)
           | .[].id'
 
 Take the first id that is NOT in `$BURNED`. **A bead whose claim was just refused is never
 re-picked in the same pass** — without that rule the loop burns its whole budget re-claiming
-one bead it cannot have. No eligible id left → go to the batch boundary (§8).
+one bead it cannot have. No eligible id left → go to the batch boundary (§9).
+
+**An epic id out of this query is the terminal pick, never ordinary work.** Epics sort
+last, so a ready epic surfaces only when no child remains to claim; route it to §8 with
+the id — never §2's work path. There is no work step and no commit on an epic.
 
 **The prod-write gate is part of eligibility, and it is claim-time.** A bead meeting
 beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or DELETEs user-data rows, (ii)
@@ -208,7 +213,25 @@ Then post the worker receipt (body through a file) and go to §1:
 
     f=$(mktemp) && printf 'WORKER: model=%s actor=%s tree=%s\n' "<model>" "$ACTOR" "$(git rev-parse --short HEAD)" > "$f" && RUST_LOG=error br comments add <id> -f "$f"
 
-## 8 — HAND BACK
+## 8 — EPIC, the terminal pick
+
+An epic id arrives here from §1 when every child is closed and the epic carries
+`refined`. It is closed, never worked: no work step (§4), no commit (§6).
+
+Flight premise — every child closed. Read it from the JSONL union of dotted-id
+children (`<epic>.*`) and parent-child-edge children (memory
+`epic-close-childset-union-dotted-and-edges`): any child still open → the premise
+fails. Comment the epic, unclaim, go to §1. The bounce adds NO `PREMISE-FAILED:`
+prefix — that prefix is flight-check's alone — so a bounced epic re-enters §1
+cleanly; a repeat claim→unclaim loop on one epic in a single run is the falsity
+detector, surfaced by the run ledger.
+
+Then run every `Probe:` in the epic's own ACs at HEAD. All green → CLOSE through
+close-gate.sh with the probe receipt as the close evidence (the reason cites it, per
+the evidence core's epic rule). Any red → comment `spec-contradiction`, unclaim, go
+to §1. A red probe bounces the close; it never bounces the loop.
+
+## 9 — HAND BACK
 
 **Not a batch boundary — that is the coordinator's.** Release your reservations and return:
 closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim output,
