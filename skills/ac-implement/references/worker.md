@@ -233,7 +233,8 @@ detector, surfaced by the run ledger.
 Then run every `Probe:` in the epic's own ACs at HEAD. All green → CLOSE through
 close-gate.sh with the probe receipt as the close evidence (the reason cites it, per
 the evidence core's epic rule). Any red → comment `spec-contradiction`, unclaim, go
-to §1. A red probe bounces the close; it never bounces the loop.
+to §1. A red probe bounces the close; it never bounces the loop. Zero `Probe:` lines
+bounces the same way — an epic never closes on an empty probe set.
 
 ## 9 — HAND BACK
 
