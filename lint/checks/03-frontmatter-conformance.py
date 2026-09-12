@@ -4,7 +4,7 @@
 # prevents: an unparseable or lying frontmatter block — a prose sentence mis-inserted between name:
 #   and description: that both presence greps read as green, a name that does not match its directory,
 #   an agent declaring a concrete model instead of a tier, and a tier no harness can stamp
-# scope: LIVE_TEXT
+# scope: LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST
 # severity: fail
 # fixture: lint/fixtures/03-frontmatter-conformance
 # ---

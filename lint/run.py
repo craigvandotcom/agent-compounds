@@ -196,6 +196,36 @@ def materialize_staged(root):
     return tmp, git_dir
 
 
+_SCOPE_SPLIT = re.compile(r"[\s,]+")
+
+
+def resolve_scope(raw):
+    """Resolve a check's declared `scope:` value to one unioned frozenset.
+
+    A header may name several sets in one line (`LIVE_TEXT AGENT_STANCES
+    HARNESS_MANIFEST`, comma-separated works too) — split on whitespace and/or
+    commas, look each token up in lib.scope, and union what resolves.
+
+    Returns (frozenset, None) on success. Returns (None, bad_token) the moment
+    any token does not name a set in lib.scope: a typo'd or unknown scope name
+    must never quietly resolve to "skip this check forever" — that silent
+    degrade (the old `if not isinstance(s, frozenset): skip` path) is exactly
+    the false-pass this function replaces. The caller turns a bad token into a
+    hard runner error, never a skip.
+    """
+    raw = str(raw or "").strip()
+    tokens = [t for t in _SCOPE_SPLIT.split(raw) if t]
+    if not tokens:
+        return None, raw or "(empty)"
+    union = frozenset()
+    for t in tokens:
+        s = getattr(scope, t, None)
+        if not isinstance(s, frozenset):
+            return None, t
+        union = union | s
+    return union, None
+
+
 def intersect(scope_set, files, files_root):
     """A declared scope touches a changed file when the change is IN it.
 
@@ -265,6 +295,18 @@ def main():
             skipped = {}  # cannot compute a diff -> change nothing, run all
         else:
             real_files = {os.path.realpath(os.path.join(args.root, f)) for f in files}
+            # lint/config.json is read at RUNTIME by several checks (14, 15, 25, 29,
+            # 31, 32) to retune their own thresholds — it is config, not a file
+            # population any one of those checks' `scope:` sets could name without
+            # also claiming the other five checks' subjects. Rather than wiring
+            # LINT_CONFIG into six headers this pass does not own, a config-file
+            # change bypasses scope filtering entirely: every selected check runs
+            # (still honouring `changed: skip`), because one file can silently
+            # retune six checks' verdicts and only a full run proves none broke.
+            config_changed = bool(scope.LINT_CONFIG) and any(
+                os.path.realpath(os.path.join(args.root, p)) in real_files
+                for p in scope.LINT_CONFIG
+            )
             for c in selected:
                 if os.path.realpath(c) in real_files:
                     # the check's OWN source changed — always re-run it, scope or not:
@@ -277,9 +319,20 @@ def main():
                     # commit-scoped run cannot fix it and must not be gated by it
                     skipped[check_id(c)] = "changed:skip"
                     continue
-                s = getattr(scope, str(h.get("scope", "")), None)
-                if not isinstance(s, frozenset) or not intersect(s, files, args.root):
-                    skipped[check_id(c)] = h.get("scope", "?")
+                if config_changed:
+                    continue  # lint/config.json in the diff -> run everything, see above
+                raw_scope = h.get("scope", "")
+                resolved, bad_token = resolve_scope(raw_scope)
+                if resolved is None:
+                    # A scope name that names no set in lib.scope must FAIL LOUDLY —
+                    # never degrade to a silent skip (that silent-skip path is the bug
+                    # a typo'd or unknown scope name used to hide behind forever).
+                    print(f"NOT-GATED: {check_id(c)} declares unresolvable scope name "
+                          f"'{bad_token}' (header scope: '{raw_scope}') — lib.scope has "
+                          "no such set; fix the check's header", file=sys.stderr)
+                    return 2
+                if not intersect(resolved, files, args.root):
+                    skipped[check_id(c)] = raw_scope
 
     # The staged lane judges what a commit will CONTAIN, not the working tree on disk:
     # every check runs against a fresh snapshot of the INDEX so a sibling writer's dirty,

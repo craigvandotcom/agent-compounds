@@ -4,8 +4,8 @@
 #
 # Builds a throwaway registry-shaped repo in /tmp — never the real checkout —
 # carrying a COPY of THIS repo's actual lint/run.py + lint/lib/*.py (so the
-# exact code under review is what's exercised) plus two tiny demo checks. Two
-# guarantees are under test:
+# exact code under review is what's exercised) plus a handful of tiny demo
+# checks. Guarantees under test:
 #
 #   1. The staged lane judges the INDEX, not the working tree: a dirty,
 #      UNSTAGED sibling file that would trip a check must never fail a commit
@@ -16,6 +16,18 @@
 #      genuine scope-set hit is still detected when the diff root and
 #      `lib.scope`'s own root are two different-but-identical strings, via a
 #      symlink alias (the 22-ledger-integrity skip class).
+#   3. A `scope:` header naming SEVERAL sets (whitespace/comma-separated) is
+#      resolved as a UNION by the runner's own token-by-token lookup, not by
+#      depending on some precomputed alias for that exact combination — a
+#      change under only ONE of the named sets still selects the check, and a
+#      change under NEITHER still skips it.
+#   4. An unresolvable scope token is a LOUD runner error (NOT-GATED, exit 2,
+#      naming the check and the bad token) — never a silent skip, whether or
+#      not any file changed.
+#   5. lint/config.json in the diff bypasses scope filtering for every OTHER
+#      selected check (config can retune any check's thresholds at runtime),
+#      while a check declaring `changed: skip` stays skipped regardless —
+#      the config bypass is not a license to ignore that escape hatch.
 #
 # Runs under bash. Exit 0 = every case passed.
 
@@ -112,9 +124,89 @@ if __name__ == "__main__":
     sys.exit(main())
 PY
 
+# Check C: scope names TWO real sets (`LEDGER TEMPLATES`) that share no
+# precomputed alias in lib.scope — proves the runner's own token-by-token
+# union, not a hardcoded combination string.
+cat > "$W/lint/checks/52-demo-multiscope.py" <<'PY'
+#!/usr/bin/env python3
+# ---
+# id: 52-demo-multiscope
+# prevents: demo — proves a multi-name `scope:` header resolves as a union
+# scope: LEDGER TEMPLATES
+# severity: fail
+# fixture: lint/checks/52-demo-multiscope.py
+# ---
+import sys
+
+
+def main():
+    print("ok: 52-demo-multiscope RAN")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+PY
+
+# Check D: an unresolvable scope token — must be a loud runner error, never a
+# silent skip.
+cat > "$W/lint/checks/53-demo-badscope.py" <<'PY'
+#!/usr/bin/env python3
+# ---
+# id: 53-demo-badscope
+# prevents: demo — proves an unresolvable scope name fails loudly
+# scope: LIVE_TEXT NOT_A_REAL_SCOPE_NAME
+# severity: fail
+# fixture: lint/checks/53-demo-badscope.py
+# ---
+import sys
+
+
+def main():
+    print("ok: 53-demo-badscope RAN (should never print — the runner must error first)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+PY
+
+# Check E: scope LEDGER, `changed: skip` — must stay skipped even when
+# lint/config.json is in the diff (the config bypass is not a license to
+# ignore an explicit changed:skip escape hatch).
+cat > "$W/lint/checks/54-demo-changed-skip.py" <<'PY'
+#!/usr/bin/env python3
+# ---
+# id: 54-demo-changed-skip
+# prevents: demo — proves changed:skip survives the config-bypass rule
+# scope: LEDGER
+# changed: skip
+# severity: fail
+# fixture: lint/checks/54-demo-changed-skip.py
+# ---
+import sys
+
+
+def main():
+    print("ok: 54-demo-changed-skip RAN")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+PY
+
 echo "hello" > "$W/skills/demo/SKILL.md"
 echo "hello" > "$W/skills/demo2/SKILL.md"
-git -C "$W" add -A
+mkdir -p "$W/templates"
+echo "template" > "$W/templates/probe.md"
+echo "{}" > "$W/lint/config.json"
+git -C "$W" add \
+  "$W/lint/checks/50-demo-token.py" "$W/lint/checks/51-demo-ledger.py" \
+  "$W/lint/checks/52-demo-multiscope.py" "$W/lint/checks/53-demo-badscope.py" \
+  "$W/lint/checks/54-demo-changed-skip.py" \
+  "$W/skills/demo/SKILL.md" "$W/skills/demo2/SKILL.md" \
+  "$W/templates/probe.md" "$W/lint/config.json"
 git -C "$W" commit -qm base >/dev/null
 
 run_new() { ( cd "$W" && python3 "$RUN_PY" --root "$W" "$@" ); }
@@ -187,6 +279,64 @@ res5=$(scope_of < "$CAPTURE_OUT" 2>/dev/null)
 [ "$res5" = "ran" ] && ok "a pathspec-only commit (no prior git add) is still visible to the staged lane" \
                      || bad "expected the check to run under a pathspec-only commit, got '$res5': $(cat "$CAPTURE_OUT" 2>/dev/null)"
 rm -f "$CAPTURE_OUT"
+
+# --- Case 6a: a multi-name `scope:` header (`LEDGER TEMPLATES`) is selected by
+# a change under ONLY ONE of the named sets — the runner's own token-by-token
+# union, not a hardcoded alias for this exact two-word combination (no such
+# alias exists in lib.scope; only the real registry's six wired headers get
+# one, purely for 00-meta.py's benefit — see lib/scope.py's own comment).
+git -C "$W" reset -q --hard >/dev/null
+echo "template v2" > "$W/templates/probe.md"
+git -C "$W" add "$W/templates/probe.md"
+out6a=$(run_new --check 52 --changed --staged --json)
+res6a=$(echo "$out6a" | scope_of)
+[ "$res6a" = "ran" ] && ok "multi-name scope 'LEDGER TEMPLATES' runs on a TEMPLATES-only hit" \
+                      || bad "expected the check to run on a TEMPLATES hit, got '$res6a': $out6a"
+
+# --- Case 6b: the same multi-name header is SKIPPED when the change is under
+# NEITHER named set — the union must not degrade to "always run".
+git -C "$W" reset -q --hard >/dev/null
+echo "hello v4" > "$W/skills/demo/SKILL.md"
+git -C "$W" add "$W/skills/demo/SKILL.md"
+out6b=$(run_new --check 52 --changed --staged --json)
+res6b=$(echo "$out6b" | scope_of)
+[ "$res6b" = "LEDGER TEMPLATES" ] && ok "multi-name scope 'LEDGER TEMPLATES' skips a hit under neither set" \
+                      || bad "expected skipped_scope='LEDGER TEMPLATES', got '$res6b': $out6b"
+
+# --- Case 7: an unresolvable scope token is a LOUD runner error (NOT-GATED,
+# exit 2, naming both the check and the bad token) — never a silent skip. No
+# --json here: main() returns 2 before any JSON is ever printed on this path.
+git -C "$W" reset -q --hard >/dev/null
+echo "hello v5" > "$W/skills/demo/SKILL.md"
+git -C "$W" add "$W/skills/demo/SKILL.md"
+out7=$(run_new --check 53 --changed --staged 2>&1)
+rc7=$?
+if [ "$rc7" = "2" ] && printf '%s' "$out7" | grep -q "NOT-GATED" \
+   && printf '%s' "$out7" | grep -q "NOT_A_REAL_SCOPE_NAME" \
+   && printf '%s' "$out7" | grep -q "53-demo-badscope"; then
+  ok "an unresolvable scope token is a loud NOT-GATED error (rc=2), naming the check and the bad token"
+else
+  bad "expected a loud NOT-GATED rc=2 naming the check + bad token, got rc='$rc7': $out7"
+fi
+
+# --- Case 8a: lint/config.json in the diff bypasses scope filtering for a
+# check with no config-plumbing of its own — one file can retune several
+# checks' thresholds at runtime, so its presence in the diff runs everything.
+git -C "$W" reset -q --hard >/dev/null
+echo '{"probe": true}' > "$W/lint/config.json"
+git -C "$W" add "$W/lint/config.json"
+out8a=$(run_new --check 51 --changed --staged --json)
+res8a=$(echo "$out8a" | scope_of)
+[ "$res8a" = "ran" ] && ok "lint/config.json in the diff runs a scope-LEDGER check with no LEDGER file staged" \
+                      || bad "expected the config bypass to run the check, got '$res8a': $out8a"
+
+# --- Case 8b: ...but a check declaring `changed: skip` stays skipped even
+# when lint/config.json is in the diff — the bypass is not a license to
+# override that explicit escape hatch.
+out8b=$(run_new --check 54 --changed --staged --json)
+res8b=$(echo "$out8b" | scope_of)
+[ "$res8b" = "changed:skip" ] && ok "changed:skip still holds even with lint/config.json in the diff" \
+                      || bad "expected skipped_scope='changed:skip', got '$res8b': $out8b"
 
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"

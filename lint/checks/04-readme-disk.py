@@ -5,7 +5,7 @@
 #   row linking to a skill or agent that is not there, a skill-table row naming a skill in plain bold
 #   text (no link) that does not exist on disk, and the link-existence sub-checks silently no-oping
 #   when README.md itself is missing
-# scope: LIVE_TEXT
+# scope: LIVE_TEXT README
 # severity: fail
 # fixture: lint/fixtures/04-readme-disk
 # ---

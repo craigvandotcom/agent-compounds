@@ -4,7 +4,7 @@
 # prevents: a retired alias agent file coming back — engineer.md and reviewer.md were renamed to
 #   implementer and validator, and a stray copy re-splits the stance registry while deploy.sh keeps
 #   stamping the retired name into every harness
-# scope: LIVE_TEXT
+# scope: LIVE_TEXT AGENT_STANCES
 # severity: fail
 # fixture: lint/fixtures/09-stray-alias-agents
 # ---

@@ -4,7 +4,7 @@
 # prevents: deploy.sh's --dry-run writing into the target dir it is asked to preview (a "dry" run that
 #   stamps) or exiting nonzero — inertness is proven by running the real dry run against a temp dir on
 #   the first skill found
-# scope: LIVE_TEXT
+# scope: LIVE_TEXT DEPLOY_SCRIPT
 # severity: fail
 # fixture: lint/fixtures/08-deploy-dry-run-inert
 # ---

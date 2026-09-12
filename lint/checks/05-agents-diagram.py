@@ -4,7 +4,7 @@
 # prevents: the repo map lying — an AGENTS.md diagram naming a top-level path that is not on disk, with
 #   the gitignored carve-out keeping a local-only dir (absent from a bare CI clone) from holding
 #   registry-lint red forever
-# scope: LIVE_TEXT
+# scope: LIVE_TEXT AGENTS_DOC
 # severity: fail
 # fixture: lint/fixtures/05-agents-diagram
 # ---
