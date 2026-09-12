@@ -72,7 +72,7 @@ AskUserQuestion(
 )
 ```
 
-If "Capture as bead": STOP the backlog flow and follow `references/bead-route.md` — this skill captures it as ONE typed bead. Not a backlog item.
+If "Capture as bead": STOP the backlog flow and follow `references/bead-route.md` — this skill captures it as ONE typed bead. Not a backlog item. When the route files the bead under a per-run epic — or under an Arm-0 human-gate parent — it wires TWO edges: parent-child (containment) plus a child→epic `blocks` edge (sequencing, the D2 shape), and reads both back (`br dep cycles`, then `br show` on both ends).
 
 ---
 

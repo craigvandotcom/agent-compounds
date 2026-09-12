@@ -192,7 +192,8 @@ One-line intent, synthesized from {N} reports.
 **Per-run epic:** if this run created 2+ finding-beads (Phase 3a), group them under one
 epic (`br create -t epic "Triage <date> — findings" -l origin:ac-triage,impact:<class>`, children linked via parent-child
 deps) so the batch ships to refinement and the loop as one cohesive
-unit. 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) aren't beads —
+unit. Every child also gets a child→epic `blocks` edge (sequencing, the D2 shape) — read
+both edges back (`br dep cycles`, then `br show` on both ends). 0–1 beads → no epic (don't inflate). Backlog candidates (Phase 3b) aren't beads —
 they don't count toward this threshold and aren't epic children.
 
 Beads ship `unrefined` — there is no in-session refine step. Refinement happens through
