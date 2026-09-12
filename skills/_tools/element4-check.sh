@@ -30,7 +30,7 @@
 #     coverage FAILS — otherwise the widening degrades into "has an AC section".
 set -uo pipefail
 
-EXEMPT_TYPES="epic decision investigation"
+EXEMPT_TYPES="decision investigation"
 
 usage() { sed -n '9,11p' "$0" >&2; exit 2; }
 

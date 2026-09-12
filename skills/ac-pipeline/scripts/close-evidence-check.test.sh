@@ -131,13 +131,49 @@ else
 fi
 
 echo "--- exemptions ---"
-run_gate 0 "epic -> EXEMPT" -- bd-epic "closing the epic"
 run_gate 0 "human-gate bead -> EXEMPT" -- bd-gated "human ruled"
 
 echo "--- investigation ---"
 run_gate 0 "investigation citing a spawned bead id -> PASS" -- bd-inv "answered; spawned ac-1227"
 run_gate 0 "investigation citing a documented answer -> PASS" -- bd-inv "written up in docs/findings.md"
 run_gate 1 "investigation with neither -> REFUSE" -- bd-inv "looked into it, all good"
+
+echo "--- epic: the probe receipt plus Delivers paths existing on disk ---"
+# Delivers paths resolve against the cwd (the live call site runs from the repo root
+# via close-gate.sh), so these cases run from $WORKDIR where the promised path exists.
+mkdir -p "$WORKDIR/epicship"
+touch "$WORKDIR/epicship/thing.sh"
+EPIC_DELIVERS='## Intent
+whatever
+## Delivers
+- script: epicship/thing.sh
+## Consumes
+- none'
+bead bd-epic-ship epic '[]' "$EPIC_DELIVERS"
+EPIC_GONE_DELIVERS='## Intent
+whatever
+## Delivers
+- script: epicship/gone.sh
+## Consumes
+- none'
+bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS"
+run_epic() { # <expected exit> <label> -- <gate args...>
+  local want="$1" label="$2"; shift 3
+  CASES=$((CASES + 1))
+  local out rc
+  out=$(cd "$WORKDIR" && env "PATH=$MOCK_BIN:$PATH" bash "$GATE" "$@" 2>&1); rc=$?
+  if [ "$rc" = "$want" ]; then
+    printf '  PASS  %s\n' "$label"
+  else
+    printf '  FAIL  %s (wanted exit %s, got %s)\n' "$label" "$want" "$rc"
+    printf '%s\n' "$out" | sed 's/^/          | /'
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+run_epic 1 "epic without evidence -> REFUSE" -- bd-epic-ship "closing the epic"
+run_epic 0 "epic with receipt -> PASS" -- bd-epic-ship "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 red-probe ... exit 0"
+run_epic 1 "epic with receipt but no declared artifact named -> REFUSE" -- bd-epic-ship "shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+run_epic 1 "epic with receipt but a promised path missing on disk -> REFUSE" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 
 echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
 jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \
