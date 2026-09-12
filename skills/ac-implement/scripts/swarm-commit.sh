@@ -58,7 +58,7 @@ ORIG=("$@")
 LOCKED=0
 IDENTITY="${AC2_COMMIT_IDENTITY:-}"   # explicit lane channel ONLY — never AGENT_NAME
 MSGFILE=""
-BRANCH="main"
+BRANCH=""            # resolved below: --branch, then git config ac2.trunk, then main
 REMOTE="origin"
 TIMEOUT=600
 PUSH=1
@@ -172,6 +172,20 @@ export AGENT_NAME="$IDENTITY" BR_AGENT_NAME="$IDENTITY"
 # the file the writer named. The guard's reading and git's reading must be the SAME reading,
 # or the lane admits one path and commits another.
 export GIT_LITERAL_PATHSPECS=1
+
+# TRUNK RESOLUTION, and why it is not simply the current HEAD. BRANCH is the EXPECTED
+# branch: the guard below compares HEAD against it and refuses when they differ. Resolving it
+# from HEAD would make that comparison HEAD = HEAD, always true, and would retire a tested
+# guard without saying so. So the trunk is DECLARED, never observed:
+#   1. --branch, the caller's explicit intent;
+#   2. `git config ac2.trunk`, the checkout's own declaration (repo-local, not tracked);
+#   3. main, the last resort.
+# Step 2 exists because the bare `main` constant is wrong for any repo whose trunk is not main
+# -- including THIS one, whose trunk is easy-code. Measured 2026-09-12 on the easy-mode
+# checkout (trunk `dev`): coordinator.sh's close-out took REFUSED [foreign-branch] exit 9 on
+# every run, so the swarm's ledger could never be committed by the coordinator that owns it.
+[ -n "$BRANCH" ] || BRANCH="$(git config ac2.trunk 2>/dev/null || true)"
+[ -n "$BRANCH" ] || BRANCH="main"
 
 CUR="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 [ "$CUR" = "$BRANCH" ] || { echo "REFUSED [foreign-branch]: HEAD is on '$CUR', this commit was written for '$BRANCH'; stop and touch nothing" >&2; exit 9; }

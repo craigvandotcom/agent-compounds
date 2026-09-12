@@ -42,10 +42,11 @@
 
 set -uo pipefail
 
-RUN=""; ROOT=""; PREFIX=""; DRY=0; MIRROR=0
+RUN=""; ROOT=""; PREFIX=""; DRY=0; MIRROR=0; BRANCH=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --run)             RUN="${2:-}"; shift 2 ;;
+    --branch)          BRANCH="${2:-}"; shift 2 ;;
     --root)            ROOT="${2:-}"; shift 2 ;;
     --actor-prefix)    PREFIX="${2:-}"; shift 2 ;;
     --mirror-artifacts) MIRROR=1; shift ;;
@@ -149,8 +150,22 @@ printf '%s\n\n%s\n' \
 # swarm-commit.sh lives beside THIS script, never under "$ROOT/skills/": in consumer
 # repos these scripts are reached via the .agents/skills/ symlink, so a $ROOT-relative
 # path does not exist (measured: BCA swarm 2026-09-04, LEDGER-WRITE via missing file).
+# --branch is FORWARDED, never defaulted here: swarm-commit.sh owns trunk resolution
+# (--branch, then `git config ac2.trunk`, then main) and its foreign-branch guard compares
+# HEAD against it. Passing nothing lets that resolution run; passing a value states intent.
+# Without this passthrough the close-out could not name a trunk at all, so on any checkout
+# whose trunk is not `main` the coordinator's own ledger commit was refused unconditionally
+# -- measured 2026-09-12 on easy-mode (trunk `dev`), where the swarm's ledger had to be
+# committed by hand against the lane this script exists to keep single.
+# The expansion below is GUARDED (`${A[@]+"${A[@]}"}`) rather than a bare `"${A[@]}"`:
+# this repo runs on bash 3.2 (macOS), where expanding an EMPTY array under `set -u` is an
+# "unbound variable" error. A bare expansion here would break every close-out that does not
+# pass --branch, which is the default path -- a worse defect than the one this fixes.
+BRANCH_ARG=()
+[ -n "$BRANCH" ] && BRANCH_ARG=(--branch "$BRANCH")
+
 bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/swarm-commit.sh" \
-  --identity "coordinator-$RUN" --message-file "$MSG" --path "$LEDGER" \
+  --identity "coordinator-$RUN" --message-file "$MSG" --path "$LEDGER" ${BRANCH_ARG[@]+"${BRANCH_ARG[@]}"} \
   || refuse "LEDGER-WRITE" "swarm-commit.sh refused the ledger commit; read its refusal — the ledger is flushed to disk but UNCOMMITTED"
 
 AFTER=$(git rev-parse HEAD 2>/dev/null || echo none)

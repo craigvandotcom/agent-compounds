@@ -181,6 +181,33 @@ if [ "$rc" -eq 9 ] && printf '%s' "$out" | grep -q 'foreign-branch'; then
   pass "stops on a foreign branch (exit 9) without committing"
 else fail "foreign-branch: rc=$rc out=$out"; fi
 
+# --- 8b. trunk resolution: --branch, then git config ac2.trunk, then main --------------------
+# Seeded 2026-09-12 with the BRANCH="" change. Without these three cases the resolution chain
+# was unproven, and the bare `main` constant it replaced had already refused every coordinator
+# close-out on a non-main trunk.
+R="$(new_repo trunk-from-config)"
+git -C "$R" checkout -q -b easy-code
+git -C "$R" config ac2.trunk easy-code
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "git config ac2.trunk declares the trunk, so a non-main branch is not foreign"
+else fail "ac2.trunk not honoured: rc=$rc out=$out"; fi
+
+R="$(new_repo trunk-flag-wins)"
+git -C "$R" checkout -q -b easy-code
+git -C "$R" config ac2.trunk some-other-branch
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --branch easy-code --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "--branch outranks git config ac2.trunk"
+else fail "--branch did not outrank ac2.trunk: rc=$rc out=$out"; fi
+
+R="$(new_repo trunk-default-main)"
+git -C "$R" checkout -q -b not-main
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 9 ] && printf '%s' "$out" | grep -q 'foreign-branch'; then
+  pass "with neither --branch nor ac2.trunk the default is still main, so the guard still refuses"
+else fail "default-main regressed — the guard must not be retired by the resolution: rc=$rc out=$out"; fi
+
 # --- 9. push rejected is not fatal -----------------------------------------------------------
 R="$(new_repo push-rejected)"
 out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --remote no-such-remote 2>&1)"; rc=$?

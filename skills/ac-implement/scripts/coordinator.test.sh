@@ -156,6 +156,27 @@ mkrepo r9
 [ "$( AC2_TEST_FLUSH_FAIL=1 rc_of "$W/r9" --run R )" -eq 2 ] \
   && ok "a failed flush is NOT-GATED — the disk ledger is not trusted" || bad "failed flush was not NOT-GATED"
 
+echo "coordinator.test: --branch is forwarded to the lane (2026-09-12)"
+# Seeded with the passthrough. Before it, coordinator.sh could not name a trunk at all, so on
+# any checkout whose trunk is not `main` its own ledger commit was refused unconditionally.
+# Case 1 is the fix; case 2 is the regression guard for the bash-3.2 empty-array hazard the
+# guarded expansion exists for -- a bare "${BRANCH_ARG[@]}" breaks EVERY default close-out.
+mkrepo rb1
+( cd "$W/rb1" && git fetch -q origin && git checkout -q -b easy-code )
+BB=$( cd "$W/rb1" && git rev-parse HEAD )
+out="$(AC2_TEST_LEDGER="$W/rb1/.beads/issues.jsonl" run "$W/rb1" --run RB --branch easy-code)"
+if [ "$( cd "$W/rb1" && git rev-parse HEAD )" != "$BB" ]; then
+  ok "--branch reaches the lane, so a non-main trunk closes out"
+else bad "--branch was not forwarded; the ledger never committed: $out"; fi
+
+mkrepo rb2
+( cd "$W/rb2" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
+BB2=$( cd "$W/rb2" && git rev-parse HEAD )
+out="$(AC2_TEST_LEDGER="$W/rb2/.beads/issues.jsonl" run "$W/rb2" --run RB2)"
+if [ "$( cd "$W/rb2" && git rev-parse HEAD )" != "$BB2" ]; then
+  ok "omitting --branch still closes out — the empty array never expands unbound"
+else bad "default close-out broke without --branch: $out"; fi
+
 echo "coordinator.test: the optional --mirror-artifacts checkpoint (ac-28nm)"
 mkrepo r10
 ( cd "$W/r10" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )

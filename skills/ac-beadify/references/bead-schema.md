@@ -59,7 +59,8 @@ grep -o 'Probe: `[^`]*`' <bead-file> | sed 's/^Probe: `//; s/`$//'
   `test -x <path> && bash <path>` — the leading word exists today, the probe is honestly
   red until the artifact lands, and it becomes the real suite run the moment it does.
 - **Tier** is one slug from the *Test-tier slugs* table
-  (below): `standing-vitest` · `supabase-integration` · `e2e` · `none`.
+  (below): `standing-vitest` · `supabase-integration` · `e2e` · `standing-harness` · `ubs` ·
+  `none`.
 - Prose fragments (`wc -l`, "diff the file", "grep for it") are NOT probes and `ac-beadify`
   refuses the bead.
 
@@ -76,11 +77,26 @@ cannot run is a probe nobody ran.
 | `standing-vitest` | The repo's default unit/component gate (`pnpm test` / `pnpm test:all`) |
 | `supabase-integration` | Local-stack DB suite (`pnpm test:integration:local` or the repo equivalent) |
 | `e2e` | Playwright / device / browser journey suite |
+| `standing-harness` | A bash proof harness under `scripts/*.test.sh` (exit contract `0` pass / `77` self-skip / anything else fail — `AGENTS.md` § Project Commands) |
+| `ubs` | Ultimate Bug Scanner coverage — a scanner, not a suite; distinct from `none` because ubs *does* check something, just not by running a test |
 | `none` | Docs, config, or prose — no executable suite applies |
 
 An AC touching `supabase/migrations/**`, `lib/db/**`, or any SQL / RLS / RPC / GRANT
-surface **MUST** name `supabase-integration`. `none` is valid only when no executable
+surface **MUST** name `supabase-integration`. An AC touching `scripts/*.test.sh` or the
+harnesses `scripts/run-all-harnesses.sh` drives **MUST** name `standing-harness`, not `none` —
+a bash proof harness is a real suite that can fail. `none` is valid only when no executable
 suite can break. Each slug gets a one-line justification.
+
+**Ruling (the operator, bd-yj05, 2026-09-07):** widened from four slugs to six. Measured
+2026-09-06 over `.beads/issues.jsonl`: 6 live `standing-harness` occurrences and 2 live `ubs`
+occurrences existed before either slug was in this table — the vocabulary now matches what
+this repo actually tests with, rather than forcing a re-point of already-authored probes.
+
+**Why this copy was behind (2026-09-12).** A wave compiled against THIS file's four-slug list
+shipped a bead whose harness probe declared `none`; the consuming repo's lint lifts the rule
+from its own product copy, which already carried six, and failed the bead at the batch
+boundary. The two copies of this file are read by different readers for the same decision —
+when they disagree, the author is told one thing and graded by another.
 
 ## Deleted relative to the six-element contract
 
