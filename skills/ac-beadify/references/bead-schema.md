@@ -142,7 +142,7 @@ from a git hook — a hook cannot see a DB-only close.
 
 ## Delivers
 - gate: skills/ac-implement/scripts/close-gate.sh
-  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 6 · owned by: ac-qn7h.2
+  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 8 · owned by: ac-qn7h.2
 - harness: skills/ac-implement/scripts/close-gate.test.sh
   touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · owned by: ac-qn7h.2
 - wiring: the close step of skills/ac-implement/SKILL.md invokes the gate
