@@ -89,6 +89,8 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   (`br dep cycles`)? Reversed edges are silent.
 - Does every cited artifact appear verbatim in the blocker's `## Delivers`?
 - Is any epic→child relation wired as `blocks` instead of parent-child?
+- Does every child carry a `blocks` edge to its epic (the child→epic edge beadify
+  answers at compile)? A child without one never unblocks its epic's terminal pick.
 
 ## 8. seam coverage
 

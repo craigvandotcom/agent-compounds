@@ -230,10 +230,13 @@ def blocking_deps(live):
 def restamp_sweep(bead_ids):
     """Re-gate every implementable bead through stamp-refined.sh (the sole writer).
 
-    Decisions and epics are skipped: element 4 exempts them and a receipt records polish,
-    not implement-readiness. Outcomes: STAMPED (conforming), DOWNGRADED (stale stamp
-    stripped by the gate's own downgrade leg), or a routed-around refusal (rc 2). The
-    sweep never fails the writeback: a downgrade is the gate working, not an error.
+    Decisions are skipped: element 4 exempts them and a receipt records polish,
+    not implement-readiness. Epics are NOT skipped: an epic's `refined` means what it
+    means on a child (D4) — a probe-less epic is DOWNGRADED by the gate's own downgrade
+    leg and returns to the refine lane. Outcomes: STAMPED (conforming), DOWNGRADED
+    (stale stamp stripped by the gate's own downgrade leg), or a routed-around refusal
+    (rc 2). The sweep never fails the writeback: a downgrade is the gate working,
+    not an error.
     """
     targets = []
     for bead_id in bead_ids:
@@ -241,7 +244,7 @@ def restamp_sweep(bead_ids):
         if live is None:
             print(f"bead-artifact: RESTAMP SKIP {bead_id} — could not re-read: {err}")
             continue
-        if live.get("issue_type") in ("epic", "decision"):
+        if live.get("issue_type") == "decision":
             continue
         targets.append(bead_id)
     if not targets:
@@ -342,7 +345,7 @@ def cmd_writeback(args):
         sweepable = 0
         for bead_id, _, _ in beads:
             live, err = show(bead_id)
-            if live is not None and live.get("issue_type") not in ("epic", "decision"):
+            if live is not None and live.get("issue_type") != "decision":
                 sweepable += 1
         print(f"bead-artifact: DRY  RESTAMP SWEEP would re-gate {sweepable} implementable "
               f"bead(s) through stamp-refined.sh after --apply.")

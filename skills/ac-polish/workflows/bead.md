@@ -49,6 +49,11 @@ Stamp `refined` only on beads that are implementable work. A `decision`-type bea
 fork and element 4 exempts it — a receipt records that it was polished; it does not make it
 ready to implement. Leave those, and anything held, for the human.
 
+Epics gate like children: every child carries a `blocks` edge to its epic (the child→epic
+edge), and the restamp sweep re-gates the epic through `stamp-refined.sh` with it. A
+probe-less epic sweeps back to refine — DOWNGRADED is the gate working, reversible, never
+an error exit.
+
 ## Prod-write gate wiring — the predicate, evaluated at refine
 
 Evaluate every bead against beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or
