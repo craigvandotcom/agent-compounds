@@ -378,6 +378,32 @@ if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'ledger-behind-upstream NOT-C
   pass "with no upstream configured the gate reports NOT-CHECKED and never implies clean"
 else fail "ledger no-upstream: rc=$rc out=$out"; fi
 
+# --- 20. message-file-rewrite: a rewrite during the lock wait must not change the commit --
+# Swarm workers share one /tmp: a worker's lane call can wait minutes on the commit
+# lock while a sibling rewrites the caller's message file. The lane snapshots the
+# file before the wait, so the commit carries the original subject.
+R="$(new_repo message-file-rewrite)"
+COMMON="$(git -C "$R" rev-parse --git-common-dir)"
+case "$COMMON" in /*) ;; *) COMMON="$(cd "$R" && cd "$COMMON" && pwd)" ;; esac
+LOCKFILE="$COMMON/ac-swarm-commit.lock"
+printf 'lane: original subject message-file-rewrite\n\noriginal body\n' >"$R/msg.txt"
+flock -w 10 "$LOCKFILE" sleep 6 &
+HOLDER=$!
+sleep 1
+(cd "$R" && "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push >"$R/lane.out" 2>&1) &
+LANE_PID=$!
+sleep 1
+printf 'lane: REWRITTEN subject — must not land\n\nrewritten body\n' >"$R/msg.txt"
+wait "$HOLDER" 2>/dev/null
+wait "$LANE_PID"; rc=$?
+out="$(cat "$R/lane.out" 2>/dev/null)"
+if [ "$rc" -eq 0 ] && [ "$(git -C "$R" log -1 --format=%s)" = "lane: original subject message-file-rewrite" ]; then
+  pass "message-file-rewrite: a rewrite during the lock wait does not change the commit"
+else fail "message-file-rewrite: rc=$rc subject='$(git -C "$R" log -1 --format=%s 2>/dev/null)' out=$out"; fi
+if git -C "$R" log -1 --format=%B | grep -q "original body"; then
+  pass "message-file-rewrite: the commit body is the original too"
+else fail "message-file-rewrite body: '$(git -C "$R" log -1 --format=%B 2>/dev/null)'"; fi
+
 echo "---"
 echo "swarm-commit.test.sh: $CASES case(s), $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]

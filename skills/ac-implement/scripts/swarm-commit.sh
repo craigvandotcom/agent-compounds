@@ -148,8 +148,30 @@ case "$COMMON_DIR" in /*) ;; *) COMMON_DIR="$(cd "$COMMON_DIR" && pwd)" ;; esac
 LOCKFILE="$COMMON_DIR/ac-swarm-commit.lock"
 
 if [ "$LOCKED" -eq 0 ]; then
-  "$FLOCK" -w "$TIMEOUT" -E 4 "$LOCKFILE" "$0" --_locked "${ORIG[@]}"
+  # Snapshot the message file BEFORE taking the lock. Swarm workers share one /tmp
+  # and the lane validates --message-file up front but used to read it only at
+  # `git commit -F` after the flock wait — a sibling rewriting the caller's file
+  # during the wait changed the commit subject/body under a different bead's code.
+  MSG_SNAPSHOT="$(mktemp "${TMPDIR:-/tmp}/swarm-commit-msg.XXXXXX")" \
+    || { echo "swarm-commit: cannot create message snapshot" >&2; exit 5; }
+  cp -- "$MSGFILE" "$MSG_SNAPSHOT" \
+    || { rm -f "$MSG_SNAPSHOT"; echo "swarm-commit: cannot snapshot message file" >&2; exit 5; }
+  LOCK_ARGS=()
+  _prev_is_msg=0
+  for _a in "${ORIG[@]}"; do
+    if [ "$_prev_is_msg" -eq 1 ]; then
+      LOCK_ARGS+=("$MSG_SNAPSHOT")
+      _prev_is_msg=0
+      continue
+    fi
+    case "$_a" in
+      --message-file|-F) LOCK_ARGS+=("$_a"); _prev_is_msg=1 ;;
+      *) LOCK_ARGS+=("$_a") ;;
+    esac
+  done
+  "$FLOCK" -w "$TIMEOUT" -E 4 "$LOCKFILE" "$0" --_locked "${LOCK_ARGS[@]}"
   rc=$?
+  rm -f "$MSG_SNAPSHOT"
   [ "$rc" -eq 4 ] && echo "swarm-commit: LANE-BUSY — another writer held $LOCKFILE for ${TIMEOUT}s; nothing was committed" >&2
   exit "$rc"
 fi
