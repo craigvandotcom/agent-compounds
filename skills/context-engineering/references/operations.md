@@ -31,7 +31,7 @@ going.
 
 | Lane | Atom | Capture | Refine | Drain | Enforce |
 |---|---|---|---|---|---|
-| **L3 memory** | a fact/rule/decision in `memory/auto/` | `reflect` at session end; nightly context-mining | `dream` Phase 2 synthesis | `dream` REVIEW + the daily queue job | `memory-lint.py` |
+| **L3 memory** | a fact/rule/decision in `<memory-root>` | `reflect` at session end; nightly context-mining | `dream` Phase 2 synthesis | `dream` REVIEW + the daily queue job | `memory-lint.py` |
 | **Skill frictions** | a `FRICTIONS.md` entry in a skill | the skill's own run, via `reflect` | weighting by impact × frequency × recurrence | `skill-builder` hygiene-pass; promotion to skill text | `lint.sh` |
 | **Wiki synthesis** | a cited page in `wiki/` | promotion from clustered facts | monthly garden pass | hallucination audit | `memory-lint.py` (wiki kind) |
 

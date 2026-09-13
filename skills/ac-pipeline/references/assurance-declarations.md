@@ -2,8 +2,8 @@
 
 **Owner-hosted canon.** Two consumers point here, neither copies: `skill-builder`'s
 authoring standards (birth requirement for new mechanisms) and the app-layer gate-audit
-doctrine (NOT-GATED refusal shapes). Governing rule:
-`infrastructure/memory/auto/an-assurance-claim-without-a-loop-is-decoration.md`.
+doctrine (NOT-GATED refusal shapes). Governing rule: the infrastructure memory
+root's `an-assurance-claim-without-a-loop-is-decoration.md`.
 
 > **A claim without a feedback loop is decoration. Delete > Construct > Sense.**
 > "Wired" and "working" are different claims. A mechanism that cannot fail visibly is
@@ -21,7 +21,7 @@ Every mechanism declares these AT BIRTH. In `hooks/hooks.json` they live in the 
 | `MODE` | `blocking` \| `advisory` | event/matcher shape cannot distinguish them — advisory `skill-edit-guard` and blocking `bead-capture-guard` are BOTH `PreToolUse` |
 | `ON-FAILURE` | `open` \| `closed` | fail-open is a design choice; undeclared, it is discovered during an incident |
 
-**Which way to fail is decided by REVERSIBILITY, not by convenience** (ruling, Craig 2026-09-02,
+**Which way to fail is decided by REVERSIBILITY, not by convenience** (ruling, the operator, 2026-09-02,
 made on `dcg`). A guard whose guarded failure is RECOVERABLE — a missed bead capture, a skipped
 telemetry line — may fail `open`: wedging an unattended run costs more than the miss. A guard
 whose guarded failure is IRREVERSIBLE — a destructive command, a force-push, a ledger overwrite —

@@ -49,7 +49,7 @@ Put `origin:` FIRST in the label list. One origin per bead; two is corrupt data.
 Titles that can begin with `-` (a markdown bullet) must use the equals form
 `--title=<value>`: `br`'s clap parser rejects a bare positional or two-token flag value
 starting with `-`. Scripted callers already do this — see `BrCreateOptions` in
-body-compass-app `scripts/curate-foods/lib/br.ts`.
+the consuming app's `scripts/curate-foods/lib/br.ts`.
 
 ## Scripted callers
 

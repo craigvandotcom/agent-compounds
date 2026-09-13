@@ -124,7 +124,7 @@
 | `resources.md`            | Complete list of all sources: repos, tweets, articles, PKM files         |
 | `tweet-insights.md`       | Practical insights extracted from Jeffrey's tweets (Oct 2025 - Feb 2026) |
 
-## Tool Priority (For Craig's 3-Agent Scale)
+## Tool Priority (for the operator's 3-agent scale)
 
 | Priority | Tool                 | Why                                                                     |
 | -------- | -------------------- | ----------------------------------------------------------------------- |
@@ -141,7 +141,7 @@
 
 **Skip for now:** SLB (overkill at 3 agents), WA (needs WezTerm), Brenner Bot, XF, RCH, GIIL
 
-## Cost (Craig's Actual Scale)
+## Cost (the operator's actual scale)
 
 **Starting with 3 agents, not 10+:**
 

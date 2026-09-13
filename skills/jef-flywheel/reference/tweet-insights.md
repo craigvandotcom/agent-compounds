@@ -80,7 +80,7 @@ Practical knowledge extracted from @doodlestein's X/Twitter that goes beyond the
 > "Too many tools at once give the models 'paradox of choice' analysis paralysis and blows so much of the context window that it's like knocking them on the head with a lead pipe."
 
 - Solution: "tool search meta-tool" — keep core tools globally, add others on demand
-- At Craig's 3-agent scale: less of an issue, but still worth keeping MCP configs minimal
+- At the operator's 3-agent scale: less of an issue, but still worth keeping MCP configs minimal
 - Only include the tools agents actually need for the current task
 
 ## The Flywheel Effect

@@ -71,7 +71,7 @@ Convention with no mechanical enforcer, claimed as nothing more: every pipeline 
 - **Batch-boundary reads.** (L1) Derive from the committed `.beads/issues.jsonl`, never `br ready` alone
   (measured non-deterministic AND stabilizing on a wrong count). *retires when:* `br ready` returns a stable
   count across repeated calls on a fixed tree.
-- **COORDINATOR.** (L1) BUILT — human ruling, Craig 2026-08-29. The pipeline runs as a SWARM by
+- **COORDINATOR.** (L1) BUILT — human ruling, the operator, 2026-08-29. The pipeline runs as a SWARM by
   default (width 3, uncapped, until the qualifying beads are exhausted); width and cap are the
   human's call, not a telemetry threshold. The invoking session is always the coordinator and
   never a worker, at every width — one procedure, no mode branch. **The ruling OVERRIDES this

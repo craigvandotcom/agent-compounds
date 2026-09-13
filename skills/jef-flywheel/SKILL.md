@@ -236,7 +236,7 @@ Logical commit groupings with detailed messages. Consider a dedicated commit age
 - [named_tmux_manager](https://github.com/Dicklesworthstone/named_tmux_manager) -- NTM
 - [claude_agent_session_store](https://github.com/Dicklesworthstone/claude_agent_session_store) -- CASS
 
-### Craig's PKM Research
+### The operator's PKM Research
 
 - `knowledge/2-areas/agentic-engineering/advanced/05-jeffrey-emmanuel-agentic-flywheel.md`
 - `knowledge/2-areas/agentic-engineering/research/jeffrey-emanuel-planning-methodology.md`

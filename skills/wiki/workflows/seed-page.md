@@ -9,11 +9,11 @@ existing page already covers this concept — `qmd search`/`grep <domain>/wiki/`
 ## Steps
 
 1. **Gather sources.** `qmd query`/`grep` the relevant memory homes
-   (`<domain>/memory/auto/`), `alignment/decisions/`, and — for conceptual/philosophy
+   (`<memory-root>`), `alignment/decisions/`, and — for conceptual/philosophy
    topics — `references/`. Read every source you intend to cite; don't paraphrase from
    memory of having read it once.
 2. **Classify the type.** concept | entity | topic | contradiction (SKILL.md table).
-   Nothing fits → that's a schema question for Craig, not a reason to force-fit.
+   Nothing fits → that's a schema question for the operator, not a reason to force-fit.
 3. **Draft the frontmatter.** Full contract (`title, type, sources, related, created,
    updated, confidence, trigger`) — `status: draft`. Write `trigger:` as the retrieval
    condition (when should an agent load this page), not a summary of its content.
@@ -27,8 +27,8 @@ existing page already covers this concept — `qmd search`/`grep <domain>/wiki/`
    - Every `[[link]]` resolves (facts, decisions, or other wiki pages — not a guess)
    - No sentence lacks a citation
    - `status: draft` (never flip to canonical yourself)
-7. **Hand off to Craig for review.** Point at the file; don't summarize its content in
-   the request — Craig reads the page itself. Craig flips `status: canonical` (or asks
+7. **Hand off to the operator for review.** Point at the file; don't summarize its content in
+   the request — the operator reads the page itself. The operator flips `status: canonical` (or asks
    for changes) — this workflow's job ends at draft.
 
 ## Do NOT

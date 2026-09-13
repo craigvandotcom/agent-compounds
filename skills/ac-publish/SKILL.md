@@ -119,7 +119,7 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
    > This step once read "CI-built artifacts ONLY" — unenforceable in a consuming app whose CI
    > signing lane is intermittently broken, so it was ignored (an ignored rule is worse than
    > none), and it pushed every risky ship onto the local lane while that lane had NO gate at
-   > all (body-compass, 2026-08-31: `ios-release.yml` gated on check-runs, `ship-testflight.sh`
+   > all (a consuming app, 2026-08-31: `ios-release.yml` gated on check-runs, `ship-testflight.sh`
    > had zero). State the property you actually need; make both lanes able to satisfy it.
 4. **Verify identity, not version strings.** Confirm what production actually serves is the
    proven SHA. Two deployments can mint the same version.

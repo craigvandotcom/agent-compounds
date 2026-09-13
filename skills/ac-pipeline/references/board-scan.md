@@ -316,7 +316,7 @@ CI_WHY=""
 echo "ci-gates: $(( $(wc -l < "$D/sched") )) scheduled · ${CI_GATES:-none} · ci_health: $CI_HEALTH$CI_WHY"
 ```
 
-Verified under `bash` **and** `zsh` against the live `body-compass-app` (3 scheduled workflows →
+Verified under `bash` **and** `zsh` against a live consuming app (3 scheduled workflows →
 `ALARM` on the real `e2e.yml` streak) and on every degraded input: `gh` absent from `PATH`,
 `gh` present but unauthenticated, no network, and a repo with no scheduled workflow.
 
@@ -332,7 +332,7 @@ Verified under `bash` **and** `zsh` against the live `body-compass-app` (3 sched
 
 **Alert DELIVERY is deliberately not wired** (bd-o9vmx, human-gated): there is no Slack webhook
 anywhere in the fleet and the curator's "Slack alert" is LLM-emitted prose a human reads,
-so picking a channel and provisioning a secret is Craig's call. This scan is
+so picking a channel and provisioning a secret is the operator's call. This scan is
 therefore the consumer of last resort — **the loop noticing for itself** — not a notification.
 
 ---

@@ -149,7 +149,7 @@ Frictions route to a skill's `FRICTIONS.md` via ac-land's tier-router (**W4.3, n
 built**) — full routing logic lives there. The ambiguity defaults it will apply:
 
 - **Uncertain, loop-mechanics-flavored** → default sink is the pipeline family ledger (`ac-pipeline/FRICTIONS.md`).
-- **Uncertain, general** → `memory/auto/` (the existing catch-all substrate).
+- **Uncertain, general** → the memory substrate's catch-all home (the existing default sink).
 - **Genuinely cross-cutting** → record once in the *primary* skill's `FRICTIONS.md`, with a
   `see <id> in <primary>` pointer entry in each secondary skill's file (never a full copy).
 </content>

@@ -25,14 +25,14 @@ The holding zone is one concept serving both directions: content on its way **up
 addition that hasn't earned a higher tier) and content on its way **out** (removed from active use,
 quarantined before deletion) both sit here. It is a *buffer*, never a permanent store.
 
-**What is NOT a rung** (added 2026-07-30 — Craig and a conductor independently mis-drew this ladder
+**What is NOT a rung** (added 2026-07-30 — the operator and a conductor independently mis-drew this ladder
 as `SKILL.md → references → FRICTIONS → memory → delete`, and the conductor then proposed rebuilding
 doctrine that already existed. If you are about to invent a demotion path, read this first):
 
 | Not a rung | What it actually is |
 |---|---|
 | `FRICTIONS.md` | a **sensor log** (`references/friction-capture.md`) — *input* to promotion decisions, never a destination for demoted content. Sibling of `MAINTENANCE.md`, different question: "is this skill causing recurring pain?" vs "is this skill shaped right?" |
-| the memory substrate (qmd / `memory/auto/`) | **L3 on the PLACEMENT axis, not a tier on this ladder.** A different system, with its own routing |
+| the memory substrate (qmd / the memory homes) | **L3 on the PLACEMENT axis, not a tier on this ladder.** A different system, with its own routing |
 | `MAINTENANCE.md` | not a fourth tier — its holding-pen **is** tier 3 |
 
 **This ladder governs movement WITHIN one skill.** Moving content *between* the skill layer and the
@@ -50,7 +50,7 @@ lower altitude is the exact drift the parent forbids.
    ┌─ 1 · SKILL.md core ───────  proof gate:                     no longer needed every run
    │                             N green runs that EXERCISE it           │
    │                             / probe-verified fact                   ▼
-   │                             / Craig sign-off (conductor core)       │
+   │                             / the operator's sign-off (conductor core)       │
    │                                     ▲                               │
    ├─ 2 · references/ ─────────  demonstrated useful ≥N times            no longer pulled at all
    │                                     ▲                               ▼
@@ -62,7 +62,7 @@ lower altitude is the exact drift the parent forbids.
 
 **The references→core rung, spelled out** (the diagram's tier-1 proof gate, stated in prose so it
 reads as a rule and not just a picture): promoting content into **SKILL.md core** requires N green
-runs that exercise it, or a probe-verified fact — and for **conductor-core** specifically, Craig's
+runs that exercise it, or a probe-verified fact — and for **conductor-core** specifically, the operator's
 sign-off on top of that evidence. Promotion into `references/` needs the evidence alone; no sign-off
 is required below tier 1.
 
@@ -178,4 +178,4 @@ holding zone exists precisely so an uncertain call is reversible.
 - **The hygiene-pass** applies the ladder section-by-section; the **cut-log** records deletions;
   the **churn detector** (`git log -S`) supplies the contested/settled signal.
 - **The plan's WS1** should cite this file as its promotion-ladder deliverable rather than authoring
-  a duplicate; the only genuinely-new rung it adds on top is the conductor-core **Craig sign-off**.
+  a duplicate; the only genuinely-new rung it adds on top is the conductor-core **operator sign-off**.

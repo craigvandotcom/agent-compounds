@@ -27,7 +27,7 @@ key on.
 
 The replacement key is the **CLAIM/BATCH ID**, minted once per claimed batch by
 claim-at-selection (the conductor's selection, or `ac-implement` Phase 1a standalone — precedent:
-body-compass-app memory `claim-adopted-beads-before-planning`): format
+a consuming app's memory note `claim-adopted-beads-before-planning`): format
 `<first-claimed-bead-id>-<YYYYMMDD>` (e.g. `bd-u2lo1.1-20260712`). It is unique per batch
 (a different first-claimed bead or a different day yields a different id), shared by every
 stage that touches that batch, and requires no handshake beyond reading a file:

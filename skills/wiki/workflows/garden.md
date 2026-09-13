@@ -19,7 +19,7 @@ the dream cycle.
 2. **Dedupe/merge.** Scan for near-duplicate pages on the same concept (the
    create-vs-update judgment failing silently in `seed-page.md`). Found a duplicate →
    propose a merge (don't apply unilaterally if either page is `status: canonical` —
-   that's Craig's call); merging two `draft` pages is fine to do directly.
+   that's the operator's call); merging two `draft` pages is fine to do directly.
 3. **Citation audit.** Sample pages for THE CITATION RULE compliance — every claim
    still traces to a real `[[wikilink]]` target. A link that no longer resolves (the
    source fact was pruned/renamed) is a dead-link finding, same severity as
@@ -50,5 +50,5 @@ The Timeline itself is never edited or reordered by a garden pass, only appended
 
 A short report: pages touched, merges proposed (not applied to canonical pages), dead
 links found, staleness flags, contradiction pages created/updated, timeline entries
-appended. Anything touching a `canonical` page's substance → Craig review, same gate as
+appended. Anything touching a `canonical` page's substance → operator review, same gate as
 seeding.

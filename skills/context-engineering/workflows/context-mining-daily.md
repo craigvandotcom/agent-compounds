@@ -7,7 +7,7 @@ Phase 2c retired the persistent per-level agent pattern; identity now loads from
 `skills/CORE/`, this is pure procedure) for context mining (Phase 2.v2). Execute this
 workflow now.
 
-Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md` (Loop 1 —
+Architecture: `<org>/alignment/decisions/2026-06-26-tiered-memory-autonomy.md` (Loop 1 —
 Capture backstop + Loop 2 — Tier-0 daily hygiene). You are the **daily backstop**: in-session
 `reflect` is the primary capture; you catch what it missed and run the cheap, lossless hygiene.
 
@@ -20,7 +20,7 @@ queue job can auto-apply.
 ```bash
 git log --all --since="24 hours ago" --oneline
 ```
-Collect commits from infrastructure, neometa, content, software/* repos.
+Collect commits from the infrastructure, org, content, and software repos.
 
 ### 2. Reflect-gap detection (the capture backstop)
 Some sessions do real work — or make a decision in pure conversation — and never run
@@ -46,10 +46,11 @@ transcript only when that summary reports a surprise or a failure. Never skip on
 outright — under-flagging loses a lesson.
 
 ### 3. Check Structured Memory
-Review recent writes in:
-- infrastructure/memory/auto/
-- neometa/memory/auto/
-- neometa/alignment/decisions/
+Review recent writes in the live memory homes (resolve the actual paths from the
+deployment's instance-map — placeholders below, never literals):
+- the infrastructure memory home
+- the org memory home (`<org>/memory/`)
+- `<org>/alignment/decisions/`
 
 ### 4. Extract Signals
 Find learning opportunities:
@@ -68,10 +69,10 @@ qmd search "<pattern>"
 
 ### 6. Classify & Apply
 For genuinely new lessons:
-- Classify: {fact, rule, decision, skill-improvement, recipe} × {neoMeta, personal, global, app-local}
+- Classify: {fact, rule, decision, skill-improvement, recipe} × {org, personal, global, app-local}
 - Write the note into its live memory home and add its `MEMORY.md` index line in the same
-  step: `global`/`personal` → `infrastructure/memory/auto/` · `neoMeta` →
-  `neometa/memory/auto/` · `app-local` → `<app>/memory/auto/`, committed inside that repo.
+  step: `global`/`personal` → the infrastructure home · `org` →
+  the org home · `app-local` → the app's `factory.json` `memory.root`, committed inside that repo.
 - Never write a lesson to `infrastructure/context-mining/daily/<YYYY-MM-DD>/`. Nothing reads
   it — retrieval queries the memory + wiki lobes, so a note left there never injects
   (memory `context-mining-staging-dir-is-write-only`). That dir holds `INDEX.md` only.
@@ -85,11 +86,13 @@ mechanical** checks run daily, because they are lossless and the script can re-d
 Today's Tier-0 check: **index drift** — a `MEMORY.md` line pointing at a note file that no
 longer exists. Detect it per home:
 ```bash
-for home in infrastructure/memory/auto neometa/memory/auto \
-            neometa/software/*/memory/auto; do
+# Homes are placeholders — resolve the infrastructure home, the org home, and each
+# app repo's home (its factory.json memory.root) from the deployment's instance-map first.
+for home in <infra-memory-home> <org-memory-home> \
+            <org>/software/*/<app-memory-home>; do
   [ -f "$home/MEMORY.md" ] || continue
   # index slugs whose target file is absent = dangling lines
-  # `command` prefixes are REQUIRED: on Craig's Mac `tr` is an alias for
+  # `command` prefixes are REQUIRED: on the operator's Mac `tr` is an alias for
   # `tmux new-session -A -s repos` and `grep` is a Claude Code function — bare `tr`
   # emits nothing in a non-TTY shell, which silently zeroes the left operand and makes
   # this check report "0 drift" unconditionally. Also drop `slug.md`: it is the
@@ -123,7 +126,7 @@ evidence: [dangling index lines: <slugs>]
 ## What
 <paste the FULL re-derived MEMORY.md with the dangling lines removed, inside a ``` fence>
 ```
-Only root-memory homes (`infrastructure/memory/auto/`) auto-apply; for an app-local home with
+Only root-memory homes (the infrastructure home) auto-apply; for an app-local home with
 drift, surface it in the report for the human instead (repo-boundary + altitude rules).
 If no home has drift, skip — emit nothing.
 
@@ -139,7 +142,7 @@ for day in $(ls "$base" | awk -v c="$cut" '$0 >= c'); do
   find "$base/$day" -name '*.md' ! -name 'INDEX.md'
 done
 ```
-A hit whose basename exists in any `memory/auto/` (or its `_archive/`) is a leftover copy —
+A hit whose basename exists in any memory home (or its `_archive/`) is a leftover copy —
 delete it. Otherwise promote it: route by `domain:` per step 6, add the `MEMORY.md` index
 line, delete the staged copy, record it in today's `INDEX.md`. Reporting an orphan without
 promoting it keeps it.

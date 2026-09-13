@@ -5,7 +5,7 @@ description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` 
 
 # Beads Standards
 
-**Purpose:** one canon so a bead written in body-compass-app reads the same as one in
+**Purpose:** one canon so a bead written in one consuming app reads the same as one in
 the root repo or agent-compounds.
 **Status:** Complete (ratified 2026-07-15, cockpit-mission-panel audit — bead `ac-lv5`)
 
@@ -13,7 +13,7 @@ the root repo or agent-compounds.
 
 One standard, every `.beads/` project — apps, root repo, agent-compounds itself, and
 any future personal-task db. Adoption is **per-project and currently uneven**
-(refined/unrefined coverage: body-compass 87%, root/art-still 0%) — that's expected,
+(coverage varies by board: the flagship app's board is mostly refined, newer boards barely) — that's expected,
 not a violation to chase down retroactively. This skill defines what a **new** bead
 must do; § Backfill below is the one-time catch-up list for what's already behind.
 
@@ -29,13 +29,13 @@ Every bead is one of two kinds; the kind decides who may close it.
 | Kind | Default | Marker | Closes |
 |---|---|---|---|
 | **Agent bead** | Yes — every bead starts here | none | Any agent, on verified completion |
-| **Human bead** | No — must be explicit | `human-gate` label | Craig only; agents enrich, never close |
+| **Human bead** | No — must be explicit | `human-gate` label | the operator only; agents enrich, never close |
 
 **`human-gate` is the SOLE human marker.** Assignee is clean but ~9% populated;
 `DECISION:`-prefixed titles leak past label-based scans. Five deprecated synonyms
 **merge into `human-gate`** — replace on sight, never create a new one:
 
-`human-only` · `human-blocked` · `human-required` · `craig-required` · `craig-context` → **`human-gate`**
+`human-only` · `human-blocked` · `human-required` · `<operator>-required` · `<operator>-context` → **`human-gate`** (the last two carried the operator's `factory.json` `human.name` literally — quote them from the live label list, never from this doc)
 
 Why it matters beyond hygiene: the cockpit's leverage/on-you lanes and its 15-second
 decision rule are computed directly off this one label (`is_pending` + `human-gate`
@@ -44,7 +44,7 @@ synonym is a bead the cockpit cannot see.
 
 ## Human-gate template (two card kinds — one gate label)
 
-A human bead is a **card**, not a flag — everything Craig needs to act is on it.
+A human bead is a **card**, not a flag — everything the operator needs to act is on it.
 `human-gate` stays the **SOLE** gate label: no `-gate` variant is ever introduced. The
 two kinds below differ only by **title prefix** and body template, so the cockpit's
 `is_pending` + `human-gate` predicates are untouched — the split is at the template
@@ -75,7 +75,7 @@ test, with `## Before filing` as the run order. Every site points there and defi
 itself. (`HUMAN:` remains an accepted alias prefix for a decision-shaped gate that isn't a
 fork — an approval, credential handoff, or go/no-go — same fields, same wiring rule.)
 
-**`ACTION:` — an action card** (a do-in-the-world task only Craig can perform — a console
+**`ACTION:` — an action card** (a do-in-the-world task only the operator can perform — a console
 toggle, a store submission, a credential handoff). Not a fork, so **no options block**; the
 copy-paste field block + worked example (BCA `bd-l6khg.13`) live in
 `reference/human-gate-template.md` § ACTION cards.
@@ -303,7 +303,7 @@ contradiction, `defer_until` gaps): `reference/2026-07-15-backfill-checklist.md`
 Every repo with work has its own `.beads/` (`issues.jsonl` tracked, `.db` gitignored
 local cache). Deps only gate within one db — a bead belongs in the repo whose code it
 changes; there is no cross-repo dependency graph (0 cross-project `blocks` edges exist
-today, confirmed by the cockpit audit — Craig himself is the only shared node across
+today, confirmed by the cockpit audit — the operator is the only shared node across
 projects). Cross-project visibility is a dashboard/docket concern (cockpit, or
 `ac-human` where deployed), never a reason to invent a shared db.
 

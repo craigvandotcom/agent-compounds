@@ -13,7 +13,7 @@ content — the countermeasure named for the specific failure mode in
 across successive edits). "While trust is established" (per
 `infrastructure/plans/memory-wiki-upgrade.md` Phase 4 item 3) — this cadence exists
 because the wiki is young; it is not assumed to be a permanent need, but it does not
-retire itself either — a future decision to relax it is Craig's, made on evidence from
+retire itself either — a future decision to relax it is the operator's, made on evidence from
 several clean audits, not a default.
 
 **Relationship to other passes:** distinct from `garden.md`'s citation-audit pass (which
@@ -26,14 +26,14 @@ adversarial spot-check that complements dream's exhaustive-but-shallower weekly 
 ## Steps
 
 1. **Sample.** From every `status: draft` or `status: canonical` page across all live
-   wiki domains (`neometa/wiki/` is the only live one today), extract every sentence
+   wiki domains (`<org>/wiki/` is the only live one today), extract every sentence
    carrying a `[[wikilink]]` citation. Assign each a stable index (page + line number) and
    pick **5 at random** (a simple seeded/uniform draw — the point is unbiased sampling,
    not statistical rigor at this volume). Record the sample list in the audit's output
    (page, line, claim text, cited slug) before tracing anything — committing to the
    sample first prevents post-hoc cherry-picking of easy-to-verify claims.
 2. **Trace each claim to its cited source.** For each of the 5: open the cited
-   `[[slug]]` (resolves to a `memory/auto/`, `alignment/decisions/`, or another
+   `[[slug]]` (resolves to a memory-home note, an `alignment/decisions/` note, or another
    `wiki/` note per the cross-home resolution `memory-lint.py` already proves for link
    *validity* — this step checks *content*, not just link existence). Read the source
    and judge: does it actually support the wiki page's claim, faithfully (not
@@ -48,7 +48,7 @@ adversarial spot-check that complements dream's exhaustive-but-shallower weekly 
      laundering signal. **Becomes a proposal bead**, per
      `[[rule-proposals-become-beads]]` — never an auto-edit, and never silently dropped
      from the report. File via `br create` in the repo the wiki page lives in (today,
-     root — `neometa/wiki/` is inside the root repo), type `decision`, labels
+     root — `<org>/wiki/` is inside the root repo), type `decision`, labels
      `human-gate,wiki-audit` (NOT `dream-proposal` — that queue's bead lane was retired
      2026-08-27; wiki-integrity items are knowledge defects for the human docket, not
      pipeline self-beads), description naming the page/line/claim and why it's

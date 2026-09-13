@@ -88,7 +88,7 @@ printf '%s\n' "$CODE_FILES" | grep -qE '\.(tsx|jsx|css)$' \
   && printf '%s\n' "$CODE_FILES" | grep -qE 'app/|components/|features/' && CLASS_WEBUI=1
 # Design-token / spec changes are app-wide visual surface — THE deliberate opt-out:
 # `design.md` is markdown by design, so this probe alone reads $FILES, not $CODE_FILES.
-printf '%s\n' "$FILES" | grep -qE 'globals\.css|design\.md|tailwind\.config|@neometa/brand|tokens' && CLASS_WEBUI=1
+printf '%s\n' "$FILES" | grep -qE 'globals\.css|design\.md|tailwind\.config|@<org>/brand|tokens' && CLASS_WEBUI=1
 
 # Web runtime — non-visual but affects browser behavior (routing/data/api/hooks/middleware)
 printf '%s\n' "$CODE_FILES" | grep -qE 'app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)' && CLASS_WEBRT=1

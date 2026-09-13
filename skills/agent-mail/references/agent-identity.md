@@ -161,9 +161,9 @@ by name after validating abandonment heuristics.
 
 ### The sweep is NOT project-key-agnostic — query the store, don't loop per name
 
-**One checkout mints SEVERAL project keys.** A 12-identity run on one `body-compass-app`
-checkout registered across three: `neometa/body-compass-app` (7), the **absolute path** (4),
-and bare `body-compass-app` (1) — re-verified live below. So a per-name
+**One checkout mints SEVERAL project keys.** A 12-identity run on one consuming-app
+checkout registered across three: `<org>/example-app` (7), the **absolute path** (4),
+and bare `example-app` (1) — re-verified live below. So a per-name
 `force_release_file_reservation` loop keyed on the "obvious" key resolves 4 of 12; the other 8
 return `Agent '<name>' not found in project '<key>'`, and a loop that tolerates that error
 reports a **clean roster having never looked at two thirds of it** — a false clean, the worst
@@ -238,8 +238,8 @@ mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole
 
 ## Project key format (canonical — the one home for the key-format rule)
 
-**Rule: always pass the app's canonical two-segment key `neometa/<app-dir>` (e.g.
-`neometa/body-compass-app`, `neometa/agent-compounds`) — READ the pinned `human_key`
+**Rule: always pass the app's canonical two-segment key `<org>/<app-dir>` (e.g.
+`<org>/example-app`, `<org>/agent-compounds`) — READ the pinned `human_key`
 from the app's `.claude/hooks/session-start.md`. NEVER derive it from cwd, the repo
 root, or `git rev-parse --show-toplevel`, and never an absolute path or ad-hoc slug.**
 One canonical key = one shared mailbox; a divergent key forks a *separate* project
@@ -259,12 +259,12 @@ validator enforces a format:
 
 | `human_key` passed | Server result | Resolved project slug | Effect |
 |---|---|---|---|
-| `neometa/agent-compounds` (canonical two-segment) | accepted | `neometa-agent-compounds` (the shared project) | joins the ONE canonical mailbox ✅ |
-| `sandbox/w2-shakedown` (two-segment, non-neometa) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
-| `/Users/…/agent-compounds` (absolute path) | accepted | `users-craigvanheerden-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
+| `<org>/agent-compounds` (canonical two-segment) | accepted | `<org>-agent-compounds` (the shared project) | joins the ONE canonical mailbox ✅ |
+| `sandbox/w2-shakedown` (two-segment, non-org) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
+| `/Users/…/agent-compounds` (absolute path) | accepted | `users-<operator>-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
 
 **Reconciliation verdict.** An earlier shakedown saw
-`macro_start_session` *reject* a non-neometa key with `human_key must be an absolute path-like
+`macro_start_session` *reject* a non-org key with `human_key must be an absolute path-like
 project key` — an error that flatly contradicted this doctrine. That error **no longer
 reproduces**: the current server accepts every form above. So the doctrine is
 accurate as stated — an absolute path *does* fork a distinct mailbox (row 3, confirmed live) —

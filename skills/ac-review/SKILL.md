@@ -1,12 +1,12 @@
 ---
 name: ac-review
-description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range Craig names (`ac-review <range>`). Reviewers run the validator stance — a different stance from the implement workers, read-only on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; only a named impact: makes a bead. The batch boundary and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
+description: 'The batch boundary''s independent review: a post-batch verdict over the committed batch range, invoked by the batch boundary (trigger: ''review the batch''), plus the same contract run targeted at any range the operator names (`ac-review <range>`). Reviewers run the validator stance — a different stance from the implement workers, read-only on the shared tree, and every finding carries ACCEPT/FIX/DEFER plus a catch-stage label; only a named impact: makes a bead. The batch boundary and ac-publish route its report via report_dest. Triggers: ''/ac-review'', ''review the batch'', ''review this range''.'
 ---
 
 # ac-review — the post-batch review
 
 **One contract, two entry points.** Batch-boundary over the just-closed batch ("review the
-batch"); same contract at any range Craig names (`ac-review <range>`). No phase ladder
+batch"); same contract at any range the operator names (`ac-review <range>`). No phase ladder
 (Phases 0–8 gone): verdict + findings; fixing is the implement lane (§ Findings).
 
 ## Who reviews

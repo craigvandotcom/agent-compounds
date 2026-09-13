@@ -21,10 +21,13 @@ db is local to each project) — `cd` into the repo before the `br` calls.
 
 Every occurrence of a deprecated human-marker label merges to `human-gate`:
 
-`human-only` · `human-blocked` · `human-required` · `craig-required` · `craig-context`
+`human-only` · `human-blocked` · `human-required` · `<operator>-required` · `<operator>-context`
+(the last two carried the operator's name literally — substitute it from the app's
+`factory.json` `human.name` when running the loop below)
 
 ```bash
-for old in human-only human-blocked human-required craig-required craig-context; do
+OPERATOR=$(jq -r '.human.name' factory.json)
+for old in human-only human-blocked human-required "$OPERATOR-required" "$OPERATOR-context"; do
   br label rename "$old" human-gate 2>/dev/null || true
 done
 ```
@@ -121,7 +124,8 @@ After running the applicable items in a repo:
 
 ```bash
 br sync --flush-only
-br label list-all | grep -iE "human-only|human-blocked|human-required|craig-required|craig-context"
+OPERATOR=$(jq -r '.human.name' factory.json)
+br label list-all | grep -iE "human-only|human-blocked|human-required|$OPERATOR-required|$OPERATOR-context"
 # expect zero matches
 git add .beads/issues.jsonl && git commit -m "chore(beads): backfill to beads-standards canon"
 ```

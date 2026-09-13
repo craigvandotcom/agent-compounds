@@ -18,7 +18,7 @@ homes, PLACEMENT/ALTITUDE all come from there; this skill is the `synthesis` typ
 method).
 **Evidence base:** `references/research-basis.md` — distills the field research + our
 internal audit; read before seeding pages or designing a garden pass.
-**Status:** live — schema + 7 canonical pages in `neometa/wiki/` (ratified 2026-07-19
+**Status:** live — schema + 7 canonical pages in `<org>/wiki/` (ratified 2026-07-19
 after adversarial citation review); provenance: `infrastructure/plans/memory-wiki-upgrade.md` Phase 3
 
 ---
@@ -44,12 +44,12 @@ after adversarial citation review); provenance: `infrastructure/plans/memory-wik
 | Type | It is… | Example |
 |---|---|---|
 | **concept** | an idea/pattern that recurs across facts/decisions | "the flywheel", "low time preference" |
-| **entity** | a named thing with a lifecycle (product, agent, system) | "Body Compass product thesis", "the agent org" |
+| **entity** | a named thing with a lifecycle (product, agent, system) | "the example-app product thesis", "the agent org" |
 | **topic** | a bounded subject area integrating several concepts/entities | "the content engine", "health protocol stack" |
-| **contradiction** | two or more sourced claims that disagree, recorded not hidden | "unsit-app branch doctrine vs BCA doctrine" |
+| **contradiction** | two or more sourced claims that disagree, recorded not hidden | "one app's branch doctrine vs another's" |
 
 One canonical page per concept — kebab-case filename, `<domain>/wiki/<slug>.md`
-(`neometa/wiki/` is the first and only live domain; other domains get one only when
+(`<org>/wiki/` is the first and only live domain; other domains get one only when
 they earn it, per context-engineering's "no slot → flag a taxonomy bug, never invent a
 folder" rule).
 
@@ -100,7 +100,7 @@ layer; see Common Mistakes below.
 
 **Every claim in a wiki page carries a `[[wikilink]]` to the fact, decision, or source
 it comes from.** Pages are DERIVED views, never a source of truth — the atomic facts in
-`<domain>/memory/auto/`, the decisions in `alignment/decisions/`, and the raw sources in
+the domain memory root (`<memory-root>`), the decisions in `alignment/decisions/`, and the raw sources in
 `references/`/`knowledge/` remain canonical. A sentence with no citation trail is not
 synthesis, it's a claim with nowhere to verify it — cut it or find its source first.
 
@@ -130,7 +130,7 @@ when this judgment call was missed.
 raw sources (references/, knowledge/, research reports)
         │ never edited by agents — read, cited, immutable
         ▼
-canonical facts + decisions (memory/auto/, alignment/decisions/)
+canonical facts + decisions (the memory homes, alignment/decisions/)
         │ append-only claims — the ground truth
         ▼
 synthesis pages (wiki/)
@@ -150,10 +150,10 @@ Treat a "this page took effort to write, don't rewrite it" instinct as the anti-
 it is (`references/research-basis.md`: ouroboros compression, ingest-everything
 automation).
 
-## Craig reviews before canonical
+## The operator reviews before canonical
 
 New pages and material edits land `status: draft`. A page only becomes `status:
-canonical` after Craig reviews it — flip the frontmatter field, nothing else changes.
+canonical` after the operator reviews it — flip the frontmatter field, nothing else changes.
 Draft pages are still linkable and citable (a page in progress is still useful), but a
 draft's claims carry lower trust than a canonical one until reviewed. Never self-flip
 `canonical` — that's the self-certification anti-pattern
@@ -168,7 +168,7 @@ draft's claims carry lower trust than a canonical one until reviewed. Never self
 | A near-duplicate page for the same concept | Update the existing page instead (create-vs-update judgment) |
 | Scope creep ("all of my knowledge" pages) | Most-cited death in the field research — bounded ontology, one domain at a time |
 | Precious/protected pages resistant to regeneration | Violates the regenerability mindset — pages are cache |
-| Self-flipping `status: canonical` | Craig reviews every page before it's canonical |
+| Self-flipping `status: canonical` | The operator reviews every page before it's canonical |
 | Building a browsing UI before the substrate is trustworthy | Obsidian is the browsing surface; no rendered site (not-build list) |
 
 ---
@@ -197,7 +197,7 @@ draft's claims carry lower trust than a canonical one until reviewed. Never self
 | Writing a wiki page as if it were a new source of truth | It's a derived view — every claim traces up the authority chain |
 | Skipping `qmd search` before drafting | Dedupe-over-append — update the existing page |
 | Omitting `trigger:` | Write the retrieval-trigger clause, same discipline as a skill description |
-| Flipping `status: canonical` yourself | Craig reviews first |
+| Flipping `status: canonical` yourself | The operator reviews first |
 | Mirroring a beads/status dashboard into a page | Point at it, never copy it |
 | Treating a stale page as precious | Regenerate from cited sources; pages are cache |
 | Editing or deleting a Timeline entry | Timeline is append-only — correct by appending a new dated entry |

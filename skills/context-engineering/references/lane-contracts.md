@@ -33,7 +33,7 @@ reachable one — see `context-engineering` § PROMOTION & DEMOTION.
 
 ## Lane 1 — L3 memory
 
-**Atom:** one fact, rule, or decision, one file, in a `memory/auto/` home with an index
+**Atom:** one fact, rule, or decision, one file, in a `<memory-root>` home with an index
 line in that dir's `MEMORY.md`.
 
 **Guarantees:** every atom is retrievable by any agent through the same surface (`qmd`)

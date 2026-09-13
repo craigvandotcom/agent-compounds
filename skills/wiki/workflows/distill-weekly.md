@@ -24,11 +24,11 @@ Alignment Check section (step 6) rather than forcing it into a fact file, and no
 3. **Refresh NOW.md.** Update against "stale lines are worse than missing lines" (the
    rule NOW.md already carries) — remove anything the week's review superseded, add
    what's now current. This is an edit-in-place, not an append.
-4. **Fix `neometa/alignment/README.md`'s front door** if this week's changes created a
+4. **Fix `<org>/alignment/README.md`'s front door** if this week's changes created a
    new dead reference (the org-level file — distinct from the root `alignment/` debris
    already removed in Phase 2c). Check its links resolve.
 5. **Wiki-page touch-check.** Does this week's decisions-log addition change or
-   contradict a claim on any existing `neometa/wiki/` page? If yes → that page needs an
+   contradict a claim on any existing `<org>/wiki/` page? If yes → that page needs an
    update (route through `garden.md`'s dedupe/citation passes, or `seed-page.md` if the
    decision opens a genuinely new concept with no page yet). Update means appending a
    dated Timeline entry (below the page's `--- <!-- timeline -->` divider) recording what

@@ -420,7 +420,7 @@ procedure** — multi-step processes a session or a scheduled job runs (a weekly
 a seed/garden/distill cadence, an interactive create/refine flow). Level-scoped
 **operating cadences** (a domain's daily heartbeat, weekly review) route to
 `CORE/workflows/` at that level if no domain skill owns the topic yet, or to the owning
-skill's `workflows/` if one does (e.g. `neometa/wiki/`'s garden cadence lives in the
+skill's `workflows/` if one does (e.g. the wiki's garden cadence lives in the
 `wiki` skill's `workflows/`, not a standalone home) — never a parallel `_agent-*/workflows/`
 directory (decided 2026-07-13, `infrastructure/plans/memory-wiki-upgrade.md` Phase 2c:
 the per-level persistent-agent homes that pattern came from are retired). See

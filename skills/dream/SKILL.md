@@ -19,7 +19,7 @@ Only automated artifacts: the two dockets + one idempotent docket-review bead.
 ## What dream is now
 
 A deliberate, human-run session with the agent present. Not scheduled, not headless.
-The docket is the input; the session is judgment, mining, and ruling. Craig reads the
+The docket is the input; the session is judgment, mining, and ruling. The operator reads the
 ranked docket, rules each item, and the agent captures the decisions — and mines what
 the sweep only flagged.
 
@@ -53,9 +53,9 @@ ranked survivors and the flagged re-entries. Scan fresh ledgers since the last s
 — friction logs, memory homes, wiki, pending proposals — so nothing the sweep's last
 pass predates is missed. The dockets are the input; the fresh scan is the check.
 
-### Phase 2 — JUDGE (with Craig)
+### Phase 2 — JUDGE (with the operator)
 
-Rule each ranked item with Craig. Mine the consolidations and wiki refinements the
+Rule each ranked item with the operator. Mine the consolidations and wiki refinements the
 sweep flagged. Capture every ruling in **EXACT phrasing — never paraphrase**: the words
 are the decision, and a paraphrase is a new decision nobody ruled on.
 

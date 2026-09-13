@@ -8,8 +8,8 @@ description: The canonical context + memory architecture for the AI-native org. 
 **Purpose:** one codified, tool- and agent-agnostic answer to the two questions every
 agent keeps re-deciding: **where does durable knowledge go (WRITE)** and **what enters
 the context window when (READ)**.
-**Domain:** AI-native-org substrate (north star: `neometa/alignment/ai-native-org.md`;
-plan: `neometa/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
+**Domain:** AI-native-org substrate (north star: `<org>/alignment/ai-native-org.md`;
+plan: `<org>/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
 **Status:** Complete
 **Operations:** how the compounding system runs — lanes, executors, cadence, drains, health surface — lives in `references/operations.md`.
 
@@ -67,7 +67,7 @@ flag, never a new folder to invent.*
 
 | Type | It is… | Home-kind | Format |
 |---|---|---|---|
-| **fact** | a discrete true thing | `<domain>/memory/auto/<slug>.md` + index line in that dir's `MEMORY.md` | markdown + frontmatter |
+| **fact** | a discrete true thing | `<memory-root>/<slug>.md` + index line in that dir's `MEMORY.md` | markdown + frontmatter |
 | **rule** | a generalizable constraint ("always X when Y") | same as fact, `type: rule` (CM's playbook.yaml is a derived view, not the home) | markdown |
 | **decision** | a choice + rationale + consequences | `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` | markdown |
 | **recipe** | a repeatable prompt/workflow (said/done ≥2×) | prompt-library: `agent-compounds/skills/jef-prompts/references/` + catalog line | markdown |
@@ -78,16 +78,16 @@ flag, never a new folder to invent.*
 
 | Domain | Subject is… | Memory root | Decisions |
 |---|---|---|---|
-| **neometa** | the business, apps, brand, books | `neometa/memory/` | `neometa/alignment/decisions/` |
-| **content** | content-craft lessons: what works on which platform, editorial patterns — distinct from neoMeta org/strategy facts | `neometa/content/memory/` | `neometa/alignment/decisions/` |
-| **app-local** | one app's internals | `<app>/memory/auto/` (each own-repo app) | app docs |
+| **org** | the business, apps, brand, books | `<org>/memory/` | `<org>/alignment/decisions/` |
+| **content** | content-craft lessons: what works on which platform, editorial patterns — distinct from org strategy facts | `<org>/content/memory/` | `<org>/alignment/decisions/` |
+| **app-local** | one app's internals | the app's `factory.json` `memory.root` (each own-repo app) | app docs |
 | **personal** | life, PKM, journaling | `knowledge/` | — |
 | **global** | tooling, agents, infra, PAI | `infrastructure/memory/` | `infrastructure/memory/` |
 
 > **Public-skill boundary:** this skill is the **method**; the example paths above are
 > illustrative. The deployment's **actual** homes, altitudes, and lobes live in the internal
-> instance-map (neoMeta: the `neometa-context-map` memory fact) — keep deployment specifics
-> there, not here, so the skill stays generic/reusable.
+> instance-map (the `org-context-map` memory fact) — keep deployment specifics
+> there, not here, so the skill stays generic/reusable. (`<memory-root>` below = the domain's memory-note home: an app's `factory.json` `memory.root`, else the shared substrate root.)
 
 **Underscore convention:** `_`-prefixed directories (`_agent-*`, `_plans`, `_backlog`,
 `_strategy`, `_archive`, etc.) are **transient working state** — scratch, in-flight, or
@@ -124,7 +124,7 @@ name: <kebab-slug>
 description: <one line — the recall hook>
 metadata:
   type: fact | rule | decision
-  domain: neometa | app-local | personal | global
+  domain: org | app-local | personal | global
   evidence: <outcome that grounds this, with date>
   tags: [optional]
 ---
@@ -151,7 +151,7 @@ shape): `- [Title](slug.md) — <one-line hook>`. One line per fact/rule; never 
 | **L0 — Identity** | root `AGENTS.md` (canonical; read natively by Codex/Droid/Pi — **Claude Code does NOT read `AGENTS.md` at all**, so the `@AGENTS.md` import in its `CLAUDE.md` shim is load-bearing, not cosmetic: delete the shim and the whole stack goes silently dark) + thin shims (`CLAUDE.md`) | Always-on — and paid **per agent spawn, not per session** (see § What a subagent inherits). **<150 lines, pointers not content.** The shim adds only the agent-specific CORE path. |
 | **L1 — CORE** | operating manual (conventions, tool inventory, project map) | Session-start hook. Keep progressive (thin index → sub-files), not monolithic. |
 | **L2 — Skills** | capabilities | Progressive disclosure: frontmatter always (~100 tok) → SKILL.md body on invoke → `references/` on demand. One level of reference depth. Authoring mechanics + the hard listing budget (descriptions overflow → skills silently drop): skill-builder `references/token-economics.md`. |
-| **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Relevance pre-retrieval:** the per-prompt memory recall hook runs HYBRID retrieval over the memory homes + every app's `/memory/auto/` — per-term keyword search (BM25, union-ranked, ≥2 terms must agree) always, plus semantic (`vsearch`) adaptively by machine tier: fast machines run it every prompt, slow machines only on conceptual triggers, to keep latency bounded. NEVER bulk-load the full index. |
+| **L3 — Memory** | the WRITE-side substrate (facts/rules/decisions/recipes) | **Relevance pre-retrieval:** the per-prompt memory recall hook runs HYBRID retrieval over the memory homes + every app's memory root — per-term keyword search (BM25, union-ranked, ≥2 terms must agree) always, plus semantic (`vsearch`) adaptively by machine tier: fast machines run it every prompt, slow machines only on conceptual triggers, to keep latency bounded. NEVER bulk-load the full index. |
 | **L4 — Knowledge** | PKM, references, corpus, transcripts | On-demand retrieval (`qmd query`/`search`, file reads). |
 
 **Read rules:**
@@ -250,7 +250,7 @@ high it loads into unrelated sessions).
 |---|---|---|
 | One project | the app's own `AGENTS.md` / CORE / memory | an app-specific build quirk |
 | All projects in a sub-domain | the sub-domain `AGENTS.md` (e.g. `software/`) | "never commit across repo boundaries" |
-| A whole domain | the domain L0 (e.g. `neometa/`) | the flywheel, the pillars |
+| A whole domain | the domain L0 (e.g. `<org>/`) | the flywheel, the pillars |
 | Everything, every domain | repo-root L0 | the agent identity shim |
 
 Cascade-aware: hot-lane files load from cwd up to root, so a sub-domain `AGENTS.md` is already
@@ -281,7 +281,7 @@ Placement isn't once-and-for-all — context earns its layer continuously, in **
   broadly applicable** has outgrown retrieval → escalate to a skill (L2) or a context file
   (L0/L1) **at the right altitude**. The bar is high — promotion buys always-on cost, so demand
   proof (recalled/applied repeatedly; ≥N occurrences; not situational). **The dream cycle runs
-  the promotion check (review-only)** — it never fires automatically (a human session with Craig
+  the promotion check (review-only)** — it never fires automatically (a human session with the operator
   present is the other legitimate trigger).
 - **`recurrence` is the escalation counter; N=2 is the threshold.** A rule RE-BROKEN after being
   written has proven L3 retrieval is the wrong medium — stop rewording, move it. 2+ with no move

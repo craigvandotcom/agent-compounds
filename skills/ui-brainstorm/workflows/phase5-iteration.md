@@ -338,7 +338,7 @@ Suggested weights: [Updated based on outcomes]
 **Memory substrate update:**
 
 Invoke the **reflect** skill at session end to capture learnings to the memory
-substrate (`infrastructure/memory/auto/` or the app-local equivalent) — typed
+substrate (the infrastructure memory home or the app-local equivalent) — typed
 fact/rule file + `MEMORY.md` index line, dedupe-over-append via `qmd search` first.
 
 **Manual tracking (optional):**

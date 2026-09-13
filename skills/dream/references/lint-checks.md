@@ -1,8 +1,9 @@
 # Substrate lint — the hygiene checklist (dream Phase 3)
 
-Sweep targets: `infrastructure/memory/auto/`, `neometa/memory/auto/`, each app's
-`memory/auto/`, `neometa/alignment/decisions/`, `infrastructure/eval/golden/`,
-`neometa/wiki/` (check 11 below is wiki-specific; the others treat wiki pages as
+Sweep targets (resolve the actual homes from the deployment's instance-map — placeholders
+below, never literals): the infrastructure memory home, the org memory home, each app's
+memory root (its `factory.json` `memory.root`), `<org>/alignment/decisions/`, `infrastructure/eval/golden/`,
+`<org>/wiki/` (check 11 below is wiki-specific; the others treat wiki pages as
 read-only citation targets, not sweep subjects — the wiki skill's own `garden.md`
 owns wiki-internal hygiene).
 Every finding → candidate proposal (`category: lint-fix`), judged like everything else.
@@ -11,7 +12,7 @@ compounding errors. Staleness is silent.
 
 ## Cadence is split by reversibility (the tier, not the calendar)
 
-Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
+Architecture: `<org>/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
 
 - **Tier-0 (mechanical, lossless, code-re-derivable) → runs DAILY**, emitted by the
   Context Mining job (`.claude/skills/context-engineering/workflows/context-mining-daily.md`
@@ -65,8 +66,8 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     pending" note nothing ever re-checked). Grep seed: `grep -rin "can't be\|cannot be\|not
     possible\|no way to" <memory homes>`, then check each hit for `evidence:` and for
     downstream skip/PASS language nearby.
-11. **Wiki↔facts contradiction** `[T2 weekly]` — for every `neometa/wiki/*.md` page (draft
-    or canonical), walk its `[[wikilink]]` citations into `memory/auto/` and
+11. **Wiki↔facts contradiction** `[T2 weekly]` — for every `<org>/wiki/*.md` page (draft
+    or canonical), walk its `[[wikilink]]` citations into the memory homes and
     `alignment/decisions/` and diff the page's claim against the cited note's *current*
     text. A claim that no longer matches its source — the fact was updated/superseded since
     the page cited it, or the page overstated/misstated it at write time — is a finding.
@@ -148,11 +149,11 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
 Named for the anti-pattern it defends against — "ouroboros compression": repeated
 dedupe/summarize cycles silently eroding nuance (`../wiki/references/research-basis.md`'s
 anti-patterns table; the wiki skill's countermeasure on its own layer is the
-regenerability mindset + Craig's canonical-page review gate — this is dream's mirror
+regenerability mindset + the operator's canonical-page review gate — this is dream's mirror
 of that discipline, applied to the *facts* layer instead of the *synthesis* layer).
 
-**Canonical facts (`memory/auto/`, `alignment/decisions/`) are append-only.** Only
-synthesis/wiki pages (`neometa/wiki/`) are ever rewritten in place — that's what makes
+**Canonical facts (the memory homes, `alignment/decisions/`) are append-only.** Only
+synthesis/wiki pages (`<org>/wiki/`) are ever rewritten in place — that's what makes
 them regenerable cache rather than ground truth (see the wiki skill's authority chain).
 A dream proposal that merges or dedupes two memory notes is therefore never a silent
 in-place rewrite of the older slug: it is a *reviewable replacement*, and review needs

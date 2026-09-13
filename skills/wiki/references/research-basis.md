@@ -55,7 +55,7 @@ The field's first empirical retrospective on the Karpathy pattern (~760 pages, o
 month in) found **"time maintaining vs. time saved is roughly a wash"** — the wiki does
 not self-populate with value, and works best in narrow, well-sourced technical domains
 (research report §1). This is why Phase 3 seeds only 5-10 pages in ONE bounded domain
-(`neometa/wiki/`) rather than attempting broad coverage, and why `workflows/garden.md`
+(`<org>/wiki/`) rather than attempting broad coverage, and why `workflows/garden.md`
 treats maintenance as a real, budgeted cost rather than assuming the wiki pays for
 itself automatically.
 
