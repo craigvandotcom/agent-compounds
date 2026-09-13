@@ -1174,8 +1174,25 @@ guard_public() { # <target-base-dir> — 0 if every stamped harness path is giti
 # `git rev-parse --git-path hooks`, which also honours a target's core.hooksPath
 # (body-compass-app's husky `_`). Never clobbers the chain runner or a real
 # pre-commit file — refuses loudly, like deploy.sh does for skills.
+# Hook symlinks are RELATIVE, always. An absolute target bakes one machine's layout
+# into a link that is committed in some repos (agent-compounds tracks its own
+# .husky/_/hooks.d/pre-commit/60-ac-lint as ../../../../hooks/pre-commit) and would be a
+# dead path on any other host — the same spell-the-path defect ac-9ahd removed from the
+# engine itself. install_commit_msg_hook used to link absolutely while install_lint_hook's
+# committed form was relative, so the installer and the tree disagreed and every sync
+# printed "SKIP (symlink points elsewhere)" at the one it did not write.
+# Accepts either form when deciding whether a link is OURS, so an existing absolute link
+# from an older sync is adopted and rewritten rather than skipped forever.
+hook_link_target() { # <dest> <canon-path> -> the relative target to write
+  relpath "$(dirname "$1")" "$2"
+}
+hook_link_is_ours() { # <dest> <canon-path>
+  local have; have="$(readlink "$1")"
+  [ "$have" = "$(hook_link_target "$1" "$2")" ] || [ "$have" = "$2" ]
+}
+
 install_lint_hook() { # <repo-root>
-  local repo="$1" hooks_dir chain_dir dest
+  local repo="$1" hooks_dir chain_dir dest want
   hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
   if [ -z "$hooks_dir" ]; then
     echo "  WARN: no hooks dir resolvable for $repo — ac-lint hook not installed"
@@ -1187,18 +1204,25 @@ install_lint_hook() { # <repo-root>
     echo "  SKIP (real file present — refusing to overwrite): $dest"
     return 0
   fi
-  if [ -L "$dest" ] && [ "$(readlink "$dest")" != "$AC_ROOT/hooks/pre-commit" ]; then
+  if [ -L "$dest" ] && ! hook_link_is_ours "$dest" "$AC_ROOT/hooks/pre-commit"; then
     echo "  SKIP (symlink points elsewhere): $dest -> $(readlink "$dest")"
     return 0
   fi
   if [ "$DRY" = 1 ]; then
-    if [ ! -e "$dest" ]; then echo "  link $dest -> $AC_ROOT/hooks/pre-commit"; note_change; fi
+    if [ ! -e "$dest" ] || [ "$(readlink "$dest")" != "$(hook_link_target "$dest" "$AC_ROOT/hooks/pre-commit")" ]; then
+      echo "  link $dest -> $(hook_link_target "$dest" "$AC_ROOT/hooks/pre-commit")"; note_change; fi
     return 0
   fi
   mkdir -p "$chain_dir"
-  ln -sfn "$AC_ROOT/hooks/pre-commit" "$dest"
-  note_change
-  echo "  linked $dest -> $AC_ROOT/hooks/pre-commit"
+  want="$(hook_link_target "$dest" "$AC_ROOT/hooks/pre-commit")"
+  # Only write when it differs. `ln -sfn` always rewrites, so the unconditional form
+  # re-linked every hook on every run and counted each as a change — 16 per --all with
+  # nothing actually changing, which inflates the drift signal the --check leg reads.
+  if [ "$(readlink "$dest" 2>/dev/null)" != "$want" ]; then
+    ln -sfn "$want" "$dest"
+    note_change
+    echo "  linked $dest -> $want"
+  fi
 }
 
 # --- ac commit-msg hook (warn-only cause line) -------------------------------------
@@ -1206,7 +1230,7 @@ install_lint_hook() { # <repo-root>
 # 60-ac-lint uses hooks.d/pre-commit, and one advisory hook needs none. Same refusal
 # discipline as install_lint_hook — never clobber a real file or a foreign symlink.
 install_commit_msg_hook() { # <repo-root>
-  local repo="$1" hooks_dir dest
+  local repo="$1" hooks_dir dest want
   hooks_dir="$(git -C "$repo" rev-parse --git-path hooks 2>/dev/null)"
   if [ -z "$hooks_dir" ]; then
     echo "  WARN: no hooks dir resolvable for $repo — commit-msg hook not installed"
@@ -1217,17 +1241,24 @@ install_commit_msg_hook() { # <repo-root>
     echo "  SKIP (real file present — refusing to overwrite): $dest"
     return 0
   fi
-  if [ -L "$dest" ] && [ "$(readlink "$dest")" != "$AC_ROOT/hooks/commit-msg" ]; then
+  if [ -L "$dest" ] && ! hook_link_is_ours "$dest" "$AC_ROOT/hooks/commit-msg"; then
     echo "  SKIP (symlink points elsewhere): $dest -> $(readlink "$dest")"
     return 0
   fi
   if [ "$DRY" = 1 ]; then
-    if [ ! -e "$dest" ]; then echo "  link $dest -> $AC_ROOT/hooks/commit-msg"; note_change; fi
+    if [ ! -e "$dest" ] || [ "$(readlink "$dest")" != "$(hook_link_target "$dest" "$AC_ROOT/hooks/commit-msg")" ]; then
+      echo "  link $dest -> $(hook_link_target "$dest" "$AC_ROOT/hooks/commit-msg")"; note_change; fi
     return 0
   fi
-  ln -sfn "$AC_ROOT/hooks/commit-msg" "$dest"
-  note_change
-  echo "  linked $dest -> $AC_ROOT/hooks/commit-msg"
+  want="$(hook_link_target "$dest" "$AC_ROOT/hooks/commit-msg")"
+  # Only write when it differs. `ln -sfn` always rewrites, so the unconditional form
+  # re-linked every hook on every run and counted each as a change — 16 per --all with
+  # nothing actually changing, which inflates the drift signal the --check leg reads.
+  if [ "$(readlink "$dest" 2>/dev/null)" != "$want" ]; then
+    ln -sfn "$want" "$dest"
+    note_change
+    echo "  linked $dest -> $want"
+  fi
 }
 
 # --- target renderers -------------------------------------------------------------
