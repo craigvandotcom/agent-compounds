@@ -4,6 +4,7 @@ Implementer and researcher = workers — cheap, parallelize mechanical work incl
 Coordinator and validator = judgment: spend them on critique and gates, not greps.
 Tool registry: ~/Repos/.claude/skills/CORE/tools.md.
 Agent mail: use before/after editing files
+Recall before re-deriving: qmd = facts/rules/wiki (`qmd query "X"`), cass = past session transcripts, every machine (`cass search "X" --json`). Auto-injection covers qmd only.
 Beads: only file new if you cannot fix instead (ie. ambiguous/complex)
 Commit often: logical groups preferred, sooner ok, never late.
 Git: in the root ~/Repos repo, commit + push; never commit across repo boundaries in one operation.

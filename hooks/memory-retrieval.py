@@ -76,7 +76,8 @@ MIN_PROMPT_LEN = 25  # skip trivial prompts ("yes", "ok", short follow-ups)
 # and the book library are all indexed and searchable, just never auto-injected.
 WIDER_RECALL_HINT = (
     "Wider recall (not auto-injected): `qmd query $'lex:Q\\nvec:Q' --no-rerank` "
-    "searches the whole machine; add `-c <collection>` to scope to one repo."
+    "searches every fact on the machine (add `-c <collection>` to scope to one repo); "
+    "`cass search \"Q\" --json` searches past agent-session transcripts."
 )
 DESC_MAX = 280      # injected description cap — descriptions are the distilled claim, snippets are noise
 
