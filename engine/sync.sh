@@ -1040,8 +1040,34 @@ $digest"
 }
 
 render_mcp_root() {
-  local src="$ORG_ROOT/.mcp.json" body content
-  [ -f "$src" ] || { echo "  WARN: $src missing — MCP projection skipped"; return 0; }
+  local src body content
+  # CANON is mcp/*.json — one file per server, filename = server name (ac-jjwx). Merged
+  # here into the single {mcpServers:{...}} object every harness dialect below renders
+  # from, so adding a server is adding a file and never editing this function. The old
+  # single $ORG_ROOT/.mcp.json stays a fallback for a machine that has not migrated.
+  src="$(mktemp)"
+  if compgen -G "$AC_ROOT/mcp/*.json" >/dev/null; then
+    python3 - "$AC_ROOT/mcp" "$src" <<'PY'
+import json, os, sys
+d, out = sys.argv[1], sys.argv[2]
+servers = {}
+for name in sorted(os.listdir(d)):
+    if not name.endswith(".json"):
+        continue
+    with open(os.path.join(d, name)) as fh:
+        body = json.load(fh)
+    body.pop("_doc", None)          # documentation is canon for humans, not for the harness
+    servers[name[:-5]] = body
+with open(out, "w") as fh:
+    json.dump({"mcpServers": servers}, fh, indent=2)
+PY
+  elif [ -f "$ORG_ROOT/.mcp.json" ]; then
+    cp "$ORG_ROOT/.mcp.json" "$src"
+  else
+    rm -f "$src"
+    echo "  WARN: no mcp/*.json canon and no $ORG_ROOT/.mcp.json — MCP projection skipped"
+    return 0
+  fi
 
   if [ "$EN_CODEX" = "true" ]; then
     echo "  -- codex MCP (.codex/config.toml [mcp_servers], generated)"

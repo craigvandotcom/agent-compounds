@@ -1,0 +1,8 @@
+{
+  "_doc": "mcp_agent_mail — multi-agent coordination: session identity, file reservations, messaging. Upstream Dicklesworthstone/mcp_agent_mail, cloned to ~/mcp_agent_mail and run through uv (see infrastructure/scripts/setup-mac.sh). The bearer token is a VARIABLE REFERENCE, never a literal: this repo is public, and the value lives in the gnome-keyring `login` collection reached via with-secrets. A literal here would be a committed credential, which the repo's gitleaks pre-commit hook exists to refuse.",
+  "command": "uv",
+  "args": ["run", "--directory", "${HOME}/mcp_agent_mail", "mcp-agent-mail"],
+  "env": {
+    "HTTP_BEARER_TOKEN": "${HTTP_BEARER_TOKEN}"
+  }
+}
