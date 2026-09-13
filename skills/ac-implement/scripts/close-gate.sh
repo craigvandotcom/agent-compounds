@@ -345,12 +345,16 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   if printf '%s' "$SCAN_OUT" | grep -qiE 'no supported languages detected|nothing was checked'; then
     not_checked "SCANNER" "ubs ran no scanner over ${#SCAN_FILES[@]} file(s) — 'nothing was checked' is explicitly NOT a pass"
   fi
-  # SUM, not head -1: ubs runs one scanner PER LANGUAGE and each prints its own
-  # 'Files scanned: N'. Taking the first match under-counted any bead touching two
-  # languages and refused a clean close (measured on ac-9ahd: bash + python, both
-  # scanned clean, reported as '1 of 2').
-  SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oiE 'files scanned[^0-9]*([0-9]+)' \
-    | grep -oE '[0-9]+' | awk '{n+=$1} END{print n+0}')
+  # Read ubs's Combined Summary 'Files: N' — the authoritative total. The per-scanner
+  # 'Files scanned: N' lines are NOT it: ubs runs several scanners and each prints its
+  # own count, so the first match under-counts a two-language bead ('1 of 2' on ac-9ahd)
+  # and summing them over-counts when scanners overlap ('4 of 2' on ac-ys8f). Both were
+  # measured here. Fall back to the max per-scanner count if the summary is absent.
+  SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oE '^Files: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  if [ -z "${SCANNED:-}" ]; then
+    SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oiE 'files scanned[^0-9]*([0-9]+)' \
+      | grep -oE '[0-9]+' | sort -n | tail -1)
+  fi
   [ -n "${SCANNED:-}" ] || not_checked "SCANNER" "ubs printed no 'Files scanned' count — coverage is unassertable"
   [ "$SCANNED" -eq "${#SCAN_FILES[@]}" ] \
     || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCAN_FILES[@]} file(s) — a shortfall is NOT-GATED, not a pass"
