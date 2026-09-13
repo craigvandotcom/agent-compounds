@@ -42,15 +42,15 @@ watching, and an uncapped dry queue is the correct end.
 claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
 is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
+**Phase 0 — orient.** Assert trunk. Resolve `<scripts>` ONCE: the absolute `scripts/` directory beside THIS SKILL.md, as loaded — never repo-relative `skills/ac-implement/scripts`, which in a repo carrying its own fork of this registry names different scripts. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
 every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
 needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing
 filter reports a pool the workers cannot claim — plus drop `issue_type: epic`, which the label
 filter misses. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
-VERBATIM — and, ONLY if `--cap N` was given, one appended line naming the cap. Verbatim means
-verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity, and the conductor **captures the minted name back from the spawn's `macro_start_session` response (`agent.name`)** and uses THAT name for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
+VERBATIM, followed by one appended line `SCRIPTS=<scripts>` (the worker refuses to start without it) — and, ONLY if `--cap N` was given, one more line naming the cap. Verbatim means
+verbatim: a paraphrased loop is a different loop, and the worker cannot tell which one it got. The conductor hands NO agent name to a child — the child always mints its own identity, and the conductor **captures the minted name back from the `ACTOR:` first line of the worker's hand-back** (a child's `macro_start_session` response is not visible to the parent) and uses THAT name for its roster and its Layer-2 sweep (canon: `agent-mail/references/agent-identity.md` § Handing a name is a SPEC VIOLATION). Then WAIT: do not poll `br`, do not read worker transcripts, do not work beads. The
 pool GROWS as a chain unlocks, so a worker that finds it dry and exits is correct, not idle —
 spawn a replacement only when ready beads outnumber live workers. **The pool is the only work
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
@@ -60,7 +60,7 @@ task; canon: `ac-pipeline/references/work-derivation.md`).
 checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
-    bash skills/ac-implement/scripts/coordinator.sh --run <run-id>
+    bash <scripts>/coordinator.sh --run <run-id>
 
 It refuses `LEDGER-STALE` (origin moved — flushing would overwrite another writer's closes),
 `ORPHANS` (a claim held by a worker of this run that has returned), or `LEDGER-WRITE` (nothing

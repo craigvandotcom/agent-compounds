@@ -10,23 +10,58 @@ There is no second mode in which those become yours.
 Three scripts refuse on your behalf. **Call them; do not re-check what they already refuse.**
 A hand-check beside a script is a second copy of the rule, and the two will drift.
 
-    skills/ac-implement/scripts/flight-check.sh    at claim   — premises + the RED receipt
-    skills/ac-implement/scripts/swarm-commit.sh    at commit  — the repo-global commit lane
-    skills/ac-implement/scripts/close-gate.sh      at close   — the temporal causal probe
+    "$SCRIPTS"/flight-check.sh    at claim   — premises + the RED receipt
+    "$SCRIPTS"/swarm-commit.sh    at commit  — the repo-global commit lane
+    "$SCRIPTS"/close-gate.sh      at close   — the temporal causal probe
 
 ## ONCE, at session start
 
-    ACTOR="ac-$(date -u +%Y%m%d-%H%M%S)-$$"   # one identity signs --actor AND the commit
+**`SCRIPTS` is handed to you, never derived.** The coordinator appends one line to this prompt,
+`SCRIPTS=<absolute path>` — the `scripts/` directory of the ac-implement skill IT loaded. Set
+that variable before anything else. Never substitute a repo-relative `skills/ac-implement/scripts`:
+a repo whose own `skills/` tree is a different registry (a product fork of this one) resolves
+that path to a DIFFERENT set of scripts — measured in easy-mode, where it named copies with no
+`diff-closure.sh` and a commit lane that refused the trunk. No `SCRIPTS=` line → stop and hand
+back `NOT-GATED: no scripts root`; there is nothing trustworthy to guess.
+
+**In a swarm, the identity is the Agent Mail name.** Call `macro_start_session` with the
+project key and NO `agent_name` — the server mints one — and set `ACTOR` to exactly the
+`agent.name` it returns. Exactly, because `swarm-commit.sh` exports `AGENT_NAME="$ACTOR"` and
+the guard compares that against your reservations' holder; anything else rejects your OWN
+commit as a foreign conflict. Never let the identity come from the static `AGENT_NAME` env for
+the same reason: a static fallback shadows the live session name and fails in the direction of
+looking like someone else.
+
+**Only when Agent Mail tools are absent** (a single worker outside a swarm, or a harness that
+does not expose them) mint the identity locally, and say so in the hand-back as an unverified
+tier — no reservations were possible:
+
+    ACTOR="ac-$(date -u +%Y%m%d-%H%M%S)-$$-$(openssl rand -hex 4 2>/dev/null || printf '%04x%04x' $RANDOM $RANDOM)"
+
+**The random tail is load-bearing, not decoration:** the clock and `$$` both collide — sandboxed
+workers have independent PID namespaces and start in the same UTC second. Two workers that
+compute the same identity are never refused, because the pick filter treats `assignee == $me`
+as claimable: the second claim does not return `VALIDATION_FAILED`, both hold one bead, and the
+tree that ships pairs one worker's src with the other's in-progress test.
+
+Then, whichever way `ACTOR` was set:
+
+    SCRATCH="/tmp/$ACTOR"; mkdir -p "$SCRATCH"  # every scratch file this loop names lives HERE
     BURNED=""                                   # ids whose claim was refused THIS pass
 
-**In a swarm**, register with Agent Mail first and make `ACTOR` carry the name it returns.
-Never let the identity come from the static `AGENT_NAME` env: a static fallback shadows the
-live session name, and the guard then compares your reservation's holder against the fallback
-and rejects your OWN commit as a foreign conflict. The live name is the identity; the env
-fallback is a trap that fails in the direction of looking like someone else.
+**Every file this loop writes is a per-worker temp path**, derived from `$ACTOR` and reached only
+through `$SCRATCH`. A fixed name is the identity collision one level down, and the READ side is
+the dangerous half: at width > 1 the last writer wins the file, and the worker that reads it
+back gets a SIBLING's identity — it then claims and signs with a name the board holds for
+someone else, and the close is refused `CLOSE-REFUSED: OWNERSHIP`. **Never keep `ACTOR`, or
+anything derived from it, in a directory your harness offers as "your" scratchpad or temp dir.**
+A harness scratchpad belongs to the SESSION that spawned you and is shared by every sibling it
+spawned — measured 2026-09-13: a worker stored its identity there, a sibling's write replaced it
+19 seconds later, and the worker claimed a bead under the sibling's name, orphaning it. Hold
+`ACTOR` in the shell variable and the paths under `$SCRATCH`; nowhere else.
 
-Read the epic and the constitution (`skills/ac-pipeline/SKILL.md`) once. Do not re-read them
-per bead.
+Read the epic and the constitution (`"$SCRIPTS"/../../ac-pipeline/SKILL.md`) once. Do not
+re-read them per bead.
 
 ## 1 — PICK
 
@@ -37,16 +72,29 @@ its title is not prefixed `PREMISE-FAILED:` (only the coordinator's `refly.sh` r
 prefix, by re-checking; never strip it by hand). Anything else is not a narrower filter — it is
 starvation, and total starvation was measured from exactly these omissions.
 
-    RUST_LOG=error br ready --json -l refined \
-      | jq -r --arg me "$ACTOR" '
-          [ .[]
-            | select(.status == "open")
-            | select(.issue_type != "epic" and .issue_type != "decision")
-            | select(((.labels // []) | any(. == "epic" or . == "human-gate"
-                        or . == "device" or . == "unrefined")) | not)
-            | select((.assignee // "") == "" or (.assignee // "") == $me)
-            | select((.title | startswith("PREMISE-FAILED:")) | not)
-          ]
+**`br ready --json` returns `labels: null`.** The `-l refined` flag filters server-side, but
+the records it hands back carry no labels, so a label test applied to `br ready` output is a
+NO-OP that silently admits every `human-gate` / `device` / `unrefined` bead. Measured: a
+`human-gate` bead sat pickable in the pool (re-measured 2026-09-13: still `null`). Labels must
+therefore be RE-HYDRATED from `br list`, which does return them. Both calls need `--limit 0` —
+`br ready` defaults to 20 and `br list` to 50, and a truncated pool is starvation that looks
+like an empty queue.
+
+    RUST_LOG=error br ready --json -l refined --limit 0 \
+      | jq -r '.[] | objects | .id' > "$SCRATCH/ready.ids"
+
+    RUST_LOG=error br list --json --status open --limit 0 \
+      | jq -r --arg me "$ACTOR" --arg ready "$(cat "$SCRATCH/ready.ids")" '
+          ($ready | split("\n") | map(select(length > 0))) as $R
+          | [ .[] | objects
+              | select(.id as $i | $R | index($i))
+              | select(.status == "open")
+              | select(.issue_type != "epic" and .issue_type != "decision")
+              | select(((.labels // []) | any(. == "epic" or . == "human-gate"
+                          or . == "device" or . == "unrefined")) | not)
+              | select((.assignee // "") == "" or (.assignee // "") == $me)
+              | select((.title | startswith("PREMISE-FAILED:")) | not)
+            ]
           | sort_by(if .issue_type == "bug" then 0 else 1 end, .priority, .created_at)
           | .[].id'
 
@@ -85,14 +133,14 @@ Exit non-zero, or `VALIDATION_FAILED` → someone else has it. `BURNED="$BURNED 
 Claim succeeded → record it, body through a FILE (an inline body with an apostrophe truncates
 at exit 0):
 
-    printf 'CLAIM: %s\n' "$ACTOR" > /tmp/ac-claim.txt
-    RUST_LOG=error br comments add <id> -f /tmp/ac-claim.txt
+    printf 'CLAIM: %s\n' "$ACTOR" > "$SCRATCH/claim.txt"
+    RUST_LOG=error br comments add <id> -f "$SCRATCH/claim.txt"
 
 Gate the comment on the claim's exit status. A lost race must not comment.
 
 ## 3 — FLIGHT CHECK
 
-    bash skills/ac-implement/scripts/flight-check.sh <id>
+    bash "$SCRIPTS"/flight-check.sh <id>
 
 - **exit 0** — premises hold, a RED was observed, the receipt is banked. Continue.
 - **exit 1** — `PREMISE-FAILED: <CLASS>`. This is a ROUTING decision, not an error: the script
@@ -109,8 +157,9 @@ exist yet" is the weakest possible answer to what the diff caused.
 ## 4 — WORK
 
 Implement the bead as written. Load the domain skill it names. `## Territory` IS your file
-list, verbatim; a Territory that contradicts its own ACs is a spec defect — comment
-`spec-contradiction`, unclaim, go to §1.
+list, verbatim — and a bead that carries no `## Territory` (the schema drops it from Phase 3
+on) gives you its `## Delivers` paths instead. A file list that contradicts its own ACs is a
+spec defect — comment `spec-contradiction`, unclaim, go to §1.
 
 Relocate every anchor by the bead's QUOTED text, never by a line number: on a shared trunk
 line numbers drift, and a bead is compiled intent, never a cache of the tree.
@@ -128,7 +177,7 @@ plan did not settle the fork; a fork found mid-bead keeps unclaim-and-file.
 
 **First, the reverse closure — before you read your own diff:**
 
-    bash skills/ac-implement/scripts/diff-closure.sh --bead <id>
+    bash "$SCRIPTS"/diff-closure.sh --bead <id>
 
 It greps the callers, outside your diff, of every export you changed or file you deleted, and
 compares them to the bead's `touchers:` line. `REFUSED [unowned-callers]` names a caller the
@@ -178,13 +227,18 @@ holder and go back to §1 — never broadcast, never wait on a reply.
 
 ## 6 — COMMIT
 
-    printf '%s\n' "<subject>" "" "<body naming the failure this commit prevents>" > /tmp/ac-msg.txt
-    bash skills/ac-implement/scripts/swarm-commit.sh \
-      --identity "$ACTOR" --message-file /tmp/ac-msg.txt \
+    printf '%s\n' "<subject>" "" "<body naming the failure this commit prevents>" > "$SCRATCH/msg.txt"
+    bash "$SCRIPTS"/swarm-commit.sh \
+      --identity "$ACTOR" --message-file "$SCRATCH/msg.txt" \
+      --branch "$(git rev-parse --abbrev-ref HEAD)" \
       --path <file> --path <file>
 
-Every path named, message through a file, identity passed — the lane refuses the alternatives
-and names the rule it broke. Exit 9 = foreign branch: stop, report, touch nothing. Exit 10 =
+Every path named, message through a file, identity passed, **trunk supplied** — the lane refuses
+the alternatives and names the rule it broke. Pass `--branch` explicitly: the lane falls back to
+`git config ac2.trunk` and then `main`, and a worker whose checkout declares neither does the
+whole bead — flight check, work, self-review, green ACs — and is refused at the last step.
+Resolve the value from the checkout you are on, or take the one the coordinator named; never a
+constant in this file. Exit 9 = foreign branch: stop, report, touch nothing. Exit 10 =
 the push was rejected and the commit is safe in local trunk; note it and move on, and NEVER
 pull, rebase, stash or reset to "fix" it.
 
@@ -193,7 +247,7 @@ publishes every other writer's board state under its own bead's message.
 
 ## 7 — CLOSE
 
-    bash skills/ac-implement/scripts/close-gate.sh <id> \
+    bash "$SCRIPTS"/close-gate.sh <id> \
       --reason "shipped: <what landed>. Delivered: <paths>" \
       --actor "$ACTOR" --scan <file> <file>
 
@@ -208,14 +262,16 @@ evidence core cross-references it and refuses otherwise.
 Then post the worker receipt (body through a file) and go to §1:
 
     printf 'WORKER: model=%s actor=%s tree=%s\n' "<model>" "$ACTOR" "$(git rev-parse --short HEAD)" \
-      > /tmp/ac-worker.txt
-    RUST_LOG=error br comments add <id> -f /tmp/ac-worker.txt
+      > "$SCRATCH/worker.txt"
+    RUST_LOG=error br comments add <id> -f "$SCRATCH/worker.txt"
 
 ## 8 — HAND BACK
 
-**Not a batch boundary — that is the coordinator's.** Release your reservations and return:
-closed / blocked / premise-failed ids, your unverified tiers with the tool's verbatim output,
-and anything you noticed but did not fix.
+**Not a batch boundary — that is the coordinator's.** Release your reservations, deregister
+your Agent Mail identity, and return: closed / blocked / premise-failed ids, your unverified
+tiers with the tool's verbatim output, and anything you noticed but did not fix. The hand-back's
+first line is `ACTOR: <the identity you signed with>` — the coordinator cannot see your tool
+responses, so this line is the only way the minted name reaches its roster and its orphan sweep.
 
 Discovered PRODUCT work is never filed by you: your hand-back returns PROPOSED-BEAD blocks
 (title · files · `User impact:`) for the conductor to confirm at the batch boundary. Process
@@ -226,7 +282,9 @@ observations go to the family ledger, never to a bead about ourselves.
 A compaction drops the loop, not the bead. Immediately **re-read this file and the current
 bead** (`br show <id> --json`) before continuing. Resuming from a compacted summary of the loop
 is how a worker silently skips the flight check or the close gate — the two steps whose absence
-is invisible in the result.
+is invisible in the result. `ACTOR`, `SCRATCH` and `SCRIPTS` are shell state a compaction does
+not keep: recover `ACTOR` from the bead's own `CLAIM:` comment, never from a file outside
+`$SCRATCH`, and `SCRIPTS` from the line at the end of this prompt.
 
 ## STOP
 
