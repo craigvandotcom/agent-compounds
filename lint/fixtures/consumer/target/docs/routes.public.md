@@ -1,0 +1,1 @@
+# Public routes (consumer fixture)
