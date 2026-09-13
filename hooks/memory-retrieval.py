@@ -55,6 +55,8 @@ import platform
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 REPO_ROOT = os.path.expanduser("~/Repos")
@@ -69,6 +71,13 @@ MAX_RESULTS = 3
 KEYWORD_WINDOW = 20  # per-term BM25 window BEFORE the memory filter (was 8)
 KEYWORD_TERMS = 8   # query terms per prompt (was 6) — late discriminative terms were dropped
 MIN_PROMPT_LEN = 25  # skip trivial prompts ("yes", "ok", short follow-ups)
+# Shown under every injection so a session knows tier 1 is a FILTERED view, not the whole
+# index: these hits are memory-class documents only. Plans, references, skills, CORE files
+# and the book library are all indexed and searchable, just never auto-injected.
+WIDER_RECALL_HINT = (
+    "Wider recall (not auto-injected): `qmd query $'lex:Q\\nvec:Q' --no-rerank` "
+    "searches the whole machine; add `-c <collection>` to scope to one repo."
+)
 DESC_MAX = 280      # injected description cap — descriptions are the distilled claim, snippets are noise
 
 
@@ -216,8 +225,84 @@ def _promote_preferred(items, level):
     return [item for _, item in sorted(enumerate(items), key=effective_rank)]
 
 
+# ── Warm-daemon hot path (qmd-mcp.service on localhost HTTP) ────────────────────────
+# `qmd vsearch` / bare `qmd query "text"` silently invoke the 1.7B HyDE EXPANSION model
+# and cost 25-46s against this hook's 8s budget. The resident daemon answers the same
+# question in 0.15-0.4s. The request shape below was read off qmd 2.8.3
+# src/mcp/server.ts:1019 (the REST /query handler) and MEASURED — none of it is guessed,
+# and three of the four fields are traps:
+#
+#   "query"  — the per-search field is `query`. Sending `text` instead is NOT an error:
+#              the handler does String(s.query || "") -> "", i.e. an EMPTY query vector,
+#              and the daemon then returns THE SAME three documents for every prompt,
+#              gibberish included. It fails silently AND fast, so it looks exactly like
+#              a working fast path. Verified by sending four unrelated prompts and
+#              getting one identical result set back.
+#
+#   []       — `"collections": []` has falsy length, so the handler passes `undefined`
+#              and the store does ONE GLOBAL SCAN. That is both the fastest option and,
+#              with a real query, the most relevant: 0.15-0.4s, and "tailscale ssh
+#              authorized keys" lands devices-tailscale-ssh.md at rank 1. Naming all 37
+#              collections explicitly instead forces a per-collection fan-out that costs
+#              10.7s AND ranks library book chapters above memory facts. Do not "fix"
+#              this by enumerating collections; scope is not the lever here.
+#
+#   lex+vec  — sending BOTH a lex and a vec line costs nothing measurable (~420ms either
+#              way) and markedly sharpens precision, because RRF only rewards a document
+#              that both lanes found.
+#
+#   False    — reranking costs ~5s here, far outside budget. Its only other attraction
+#              would be an absolute score, and that does not survive either (below).
+#
+# NO SCORE FLOOR IS POSSIBLE ON THIS PATH. With rerank disabled the returned `score` is
+# literally `1 / rank` (src/store.ts:5719) — pure position, carrying zero relevance
+# information, identical for a precise hit and for gibberish. So `minScore` would only
+# cut by rank and is deliberately unused. The floor here is STRUCTURAL instead: the
+# memory-path filter below drops every non-memory candidate, so a prompt with no matching
+# memory fact injects NOTHING rather than injecting the nearest book chapter. That is the
+# intended "silent when nothing is relevant" behavior, and it is why the filter is load
+# bearing rather than cosmetic.
+DAEMON_URL = os.environ.get("MEMORY_HOOK_QMD_URL", "http://[::1]:8181/query")
+# The daemon listens on the IPv6 loopback. Connecting to 127.0.0.1 returns nothing at all.
+# Budget for one daemon call. Sized from a LATENCY DISTRIBUTION, not a single probe: over
+# 30 consecutive eval queries against the 8 memory collections, p50 was 1.17s and the max
+# 3.02s. A one-off curl shows 0.4-0.6s, and trusting that figure is what made this 3.0s
+# originally — which clipped ~7% of calls, and every clipped call then fell through to the
+# 25-46s CLI and contributed nothing. That single mis-sized constant was the whole reason
+# eval recall swung between 0.038 and 0.107 run to run on identical code and ground truth.
+DAEMON_TIMEOUT = 6.0
+
+
+def _daemon_alive():
+    """Is the resident daemon listening? Asked directly rather than inferred. An unknown
+    path answers 404, and an answer of ANY kind proves liveness — that is the whole probe.
+    ~1ms on loopback, so it is cheap enough to run at import on every prompt."""
+    try:
+        # 2.0s, not 0.4s. This probe picks the TIER, and the tier used to decide whether
+        # semantic recall ran at all — so one unlucky 0.4s meant a whole session silently
+        # dropped to keyword-only. The probe is a 404 round-trip, so a generous bound costs
+        # nothing in the normal case.
+        urllib.request.urlopen(DAEMON_URL.rsplit("/", 1)[0] + "/_liveness", timeout=2.0)
+        return True
+    except urllib.error.HTTPError:
+        return True   # it replied, which is the only thing being tested
+    except Exception:
+        return False
+
+
 def detect_performance_tier():
-    """Detect if we're on a slow CPU-only VM or a fast Mac (Metal acceleration)."""
+    """How affordable is semantic recall right now? Returns "warm" / "fast" / "slow".
+
+    "warm" means a resident qmd daemon is answering on loopback, which makes semantic
+    recall cost 0.15-0.4s regardless of CPU, GPU or host. That is asked directly instead
+    of inferred from hardware, and it OUTRANKS every hardware signal below — a warm daemon
+    on a CPU-only box beats a cold CLI on a Mac by an order of magnitude.
+
+    The hardware sniffing below now only decides how conservative to be when the daemon is
+    DOWN and every search has to pay a fresh model load."""
+    if _daemon_alive():
+        return "warm"
+
     hostname = platform.node().lower()
 
     # Mac indicators — Metal acceleration makes semantic search cheap
@@ -225,16 +310,22 @@ def detect_performance_tier():
         return "fast"
 
     # Check for Metal/GPU acceleration via qmd doctor
+    # Absolute path, not bare "qmd": a hook inherits no shell PATH, so `qmd` resolves to
+    # nothing and the launcher dies with "failed to launch bun: spawn bun ENOENT" — which
+    # the bare `except` below swallowed, silently pinning every non-Mac host to "slow".
+    # Also one invocation, not two: the original ran `qmd doctor` twice to concatenate
+    # stderr and stdout.
     try:
-        doctor_output = subprocess.run(
-            ["qmd", "doctor"],
-            capture_output=True, text=True, timeout=2
-        ).stderr + subprocess.run(
-            ["qmd", "doctor"],
-            capture_output=True, text=True, timeout=2
-        ).stdout
-
-        if "Metal" in doctor_output or "CUDA" in doctor_output or "GPU acceleration" in doctor_output:
+        proc = subprocess.run(
+            [os.path.expanduser("~/.bun/bin/qmd"), "doctor"],
+            capture_output=True, text=True, timeout=4,
+        )
+        doctor_output = (proc.stderr or "") + (proc.stdout or "")
+        # omarchine reports "GPU vulkan; offloading enabled" on a Radeon 780M — matched
+        # none of the original three strings, so a genuinely GPU-accelerated host read as
+        # a CPU-only VM. Matched case-insensitively now, and Vulkan/ROCm are included.
+        low = doctor_output.lower()
+        if any(k in low for k in ("metal", "cuda", "vulkan", "rocm", "gpu acceleration")):
             return "fast"
     except Exception:
         pass
@@ -245,7 +336,17 @@ def detect_performance_tier():
 # Adjust strategy based on performance tier (computed once at import)
 PERF_TIER = detect_performance_tier()
 
-if PERF_TIER == "fast":
+if PERF_TIER == "warm":
+    # Resident daemon: semantic is ~0.15-0.4s, so there is nothing left to ration. This is
+    # the tier omarchine runs in, and it is why the trigger-word gate below no longer
+    # decides whether recall happens — it only ever existed to avoid a 25-46s CLI call.
+    KEYWORD_TIMEOUT = 4.0    # BM25 via the CLI measures ~230ms; 4.0 absorbs bun startup
+                             # under contention (several sessions searching at once).
+    SEMANTIC_TIMEOUT = 8.0   # only binds the CLI FALLBACK path; the daemon call is bounded
+                             # separately and far more tightly by DAEMON_TIMEOUT.
+    SEMANTIC_THRESHOLD = 0   # superseded by MIN_PROMPT_LEN — no second length gate
+    ALWAYS_SEMANTIC = True
+elif PERF_TIER == "fast":
     # Mac with Metal: liberal semantic use
     KEYWORD_TIMEOUT = 4.0   # qmd search CLI (bun startup + index load) is ~0.6s; under contention
                             # (5+ claude sessions + parallel vsearch) cold bun spikes past 2.5s and
@@ -480,31 +581,141 @@ def keyword_search(terms, qmd_path):
     return ({f: hits[f] for f in kept}, ran_ok)
 
 
-def semantic_search(prompt, qmd_path):
-    """Semantic vector search (fast on Mac, slow on VM)."""
-    try:
-        # On fast machines, get more results
-        num_results = "8" if PERF_TIER == "fast" else "5"
+def _is_semantic_memory(f):
+    """Candidate filter for the semantic lane. Intentionally LOOSER than keyword_search's
+    ("/memory/" vs "/memory/auto/") — that asymmetry predates this change and is left
+    alone, because keyword_search's 2-term floor was tuned against its own predicate."""
+    if not f:
+        return False
+    return ("/memory/" in f
+            or f.startswith(tuple(f"qmd://{l}/" for l in MEMORY_LOBES))
+            or f.endswith(FRICTIONS_SUFFIX))
 
+
+_MEMORY_COLLECTIONS_CACHE = None
+
+
+def memory_collections():
+    """The collections worth searching for AUTO-INJECTION, derived from index.yml rather
+    than hardcoded so the per-app memory collections still being built get picked up with
+    no code change.
+
+    NOT THE DEFAULT — the default is the global scan, and this function exists for the
+    MEMORY_HOOK_COLLECTIONS override and for A/B runs. Keep it, because the scoping question
+    is the one most likely to be re-litigated, and it has now been MEASURED on the 66-query
+    eval set rather than argued:
+
+        global scan (collections: [])   recall@5 0.6071
+        scoped to 8 memory collections  recall@5 0.3929
+
+    Scoping LOSES, and loses specifically on app sessions: art-still 0.75 -> 0.0,
+    cv-site 1.0 -> 0.0, move-free 1.0 -> 0.0, unsit 1.0 -> 0.0. The reason is coverage, not
+    ranking — most apps keep their facts at <app>/memory/auto/ INSIDE a whole-app collection
+    (art-still, cv-site, simil8...), and only body-compass has a dedicated *-memory
+    collection, so a memory-collection scope simply cannot see them. The global scan reaches
+    all of them in one pass, and is also the faster option.
+
+    The crowding worry that motivated scoping (memory facts losing the top-N cut to plans and
+    book chapters) is real but much smaller than the coverage loss. Scoping wins only on
+    global-infra, 0.462 vs 0.385.
+
+    A collection qualifies on NAME ("memory", "wiki", anything ending "-memory") or on its
+    PATH containing a memory directory.
+
+    Override with MEMORY_HOOK_COLLECTIONS (comma-separated; "*" forces the global scan)."""
+    global _MEMORY_COLLECTIONS_CACHE
+    if _MEMORY_COLLECTIONS_CACHE is not None:
+        return _MEMORY_COLLECTIONS_CACHE
+
+    env = os.environ.get("MEMORY_HOOK_COLLECTIONS", "").strip()
+    if env == "*" or not env:
+        # Unset is the normal case and means the global scan — the measured winner above.
+        _MEMORY_COLLECTIONS_CACHE = []          # [] == one global scan, see _daemon_search
+        return _MEMORY_COLLECTIONS_CACHE
+    if env != "memory":
+        _MEMORY_COLLECTIONS_CACHE = [c.strip() for c in env.split(",") if c.strip()]
+        return _MEMORY_COLLECTIONS_CACHE
+
+    # MEMORY_HOOK_COLLECTIONS=memory asks for the derived memory-collection scope (the A/B arm).
+    picked = []
+    try:
+        for coll, root in (_collection_roots() or {}).items():
+            name_hit = coll == "memory" or coll == "wiki" or coll.endswith("-memory")
+            path_hit = "/memory" in (root or "")
+            if name_hit or path_hit:
+                picked.append(coll)
+    except Exception:
+        pass
+    # Fall back to the four historical lobes rather than to a global scan: a silent
+    # widening is the failure mode that produced 0.1071.
+    _MEMORY_COLLECTIONS_CACHE = sorted(picked) or list(MEMORY_LOBES)
+    return _MEMORY_COLLECTIONS_CACHE
+
+
+def _daemon_search(prompt, limit=8):
+    """Hybrid lex+vec against the resident daemon — the whole machine in one scan.
+    Returns a list of raw result dicts, or None if the daemon is unreachable so the
+    caller can fall back to the CLI."""
+    body = json.dumps({
+        "searches": [{"type": "lex", "query": prompt}, {"type": "vec", "query": prompt}],
+        "collections": memory_collections(),
+        "rerank": False,
+        "limit": limit,
+    }).encode()
+    req = urllib.request.Request(
+        DAEMON_URL, data=body, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=DAEMON_TIMEOUT) as resp:
+            return json.loads(resp.read().decode() or "{}", strict=False).get("results") or []
+    except (TimeoutError, urllib.error.HTTPError) as exc:
+        # SLOW or erroring, but present. Returning [] means "semantic contributed nothing
+        # this prompt" and the BM25 floor carries the turn. Deliberately NOT a CLI fallback:
+        # if the resident daemon could not answer inside 6s, the cold CLI — which loads a
+        # 1.7B expander first — is going to be far worse, and spending 25-46s to discover
+        # that is how the hook turns a slow search into a stalled prompt.
+        _ = exc
+        return []
+    except Exception:
+        # Connection refused, socket gone, malformed JSON: treat the daemon as ABSENT and
+        # let the caller pay for the CLI, which is the only path left.
+        return None
+
+
+def _cli_vsearch(prompt, qmd_path):
+    """Degraded fallback for when the daemon is down. `vsearch` invokes the 1.7B expander,
+    so this usually LOSES the race against SEMANTIC_TIMEOUT — which is the intended
+    outcome: recall falls back to the BM25 floor instead of blocking the prompt."""
+    try:
+        num_results = "8" if PERF_TIER == "fast" else "5"
         out = subprocess.run(
             [qmd_path, "vsearch", prompt, "-n", num_results, "--json"],
             capture_output=True, text=True, timeout=SEMANTIC_TIMEOUT,
         ).stdout
-
-        results = {}
-        for r in json.loads(out or "[]", strict=False):  # snippets can contain raw newlines
-            f = r.get("file", "")
-            if not f or not ("/memory/" in f or f.startswith(tuple(f"qmd://{l}/" for l in MEMORY_LOBES))
-                             or f.endswith(FRICTIONS_SUFFIX)):
-                continue
-            if f.rsplit("/", 1)[-1] in ("MEMORY.md", "readme.md", "README.md"):
-                continue
-            f = canonical_path(f)
-            results[f] = r
-
-        return results
+        return json.loads(out or "[]", strict=False)  # snippets can contain raw newlines
     except Exception:
-        return {}
+        return []
+
+
+def semantic_search(prompt, qmd_path):
+    """Semantic recall over every collection on the machine. Daemon first; CLI only if the
+    daemon is unreachable."""
+    rows = _daemon_search(prompt)
+    if rows is None:
+        rows = _cli_vsearch(prompt, qmd_path)
+
+    results = {}
+    for r in rows:
+        f = r.get("file", "")
+        if not _is_semantic_memory(f):
+            continue
+        if f.rsplit("/", 1)[-1] in ("MEMORY.md", "readme.md", "README.md"):
+            continue
+        # The global scan crosses collections that OVERLAP on disk (qmd://memory/auto/x.md
+        # and qmd://infrastructure/memory/auto/x.md are one file), so canonicalizing is
+        # what stops the same fact being injected twice.
+        results[canonical_path(f)] = r
+
+    return results
 
 
 def format_results(results):
@@ -626,6 +837,56 @@ class RankedResults(list):
         self.level = level
 
 
+# Minimum token length for a lexical anchor. Below this, overlap is noise ("a", "is", "up")
+# and STOPWORDS would mostly have caught it anyway.
+ANCHOR_MIN_LEN = 4
+# Prefix length used instead of a stemmer: "routines"/"routine", "guards"/"guard",
+# "embedding"/"embeddings" all agree on their first 4-5 characters. Crude, dependency-free,
+# and errs toward KEEPING a candidate, which is the right direction for a floor.
+ANCHOR_PREFIX = 5
+
+
+def _anchor_tokens(text):
+    """Content words of `text`, reduced to prefixes so singular/plural and tense agree."""
+    out = set()
+    for w in re.findall(r"[a-z0-9]+", (text or "").lower()):
+        if len(w) >= ANCHOR_MIN_LEN and w not in STOPWORDS:
+            out.add(w[:ANCHOR_PREFIX])
+    return out
+
+
+def _has_lexical_anchor(prompt_tokens, item):
+    """The relevance floor for semantic-ONLY hits.
+
+    WHY THIS EXISTS, and why it is not a score threshold: with rerank disabled the daemon
+    returns `1 / rank` as the score (src/store.ts:5719), and `minScore` is applied to that
+    same positional number (src/store.ts:5755) — so there is NO absolute relevance value
+    anywhere on the hot path to threshold against. Without a floor of some kind the vector
+    lane always returns its nearest neighbours, however far away they are: the prompt
+    "qwxzy plffk zzzrt nonsense tokens" injected a CSS-theme fact, because something always
+    has to be closest.
+
+    So the floor is built from information that DOES exist: a semantic hit must share at
+    least one content word with the prompt, tested against the fact's name, description,
+    title and path. Deliberately weak — one token is enough, and descriptions are long
+    distilled claims, so genuine paraphrase matches clear it easily while unanchored
+    nearest-neighbour noise does not.
+
+    Applied ONLY to hits the keyword lane did not independently find; a BM25 hit already
+    passed a stricter, real-score floor (>=2 term matches) and is never re-judged here."""
+    if not prompt_tokens:
+        return False
+    f = item.get("file", "")
+    fm = _frontmatter(_abs_path(f) or "")
+    haystack = " ".join([
+        fm.get("name") or "",
+        fm.get("description") or "",
+        item.get("title") or "",
+        f.replace("/", " ").replace("-", " ").replace("_", " "),
+    ])
+    return bool(prompt_tokens & _anchor_tokens(haystack))
+
+
 def retrieve(prompt, qmd_path=None, level=None):
     """Side-effect-free retrieval: keyword_search + semantic_search (tier-adaptive) merged and
     deduped, then rank-promoted toward the session level's preferred lobe(s) (Phase 4,
@@ -661,9 +922,20 @@ def retrieve(prompt, qmd_path=None, level=None):
             keyword_results, kw_ok = keyword_future.result()
             semantic_results = semantic_future.result()
 
+        # Apply the relevance floor to semantic-only hits before merging. Keyword hits are
+        # exempt: they cleared the 2-term BM25 floor, which is a stronger and real-scored
+        # test. See _has_lexical_anchor() for why a score threshold is not an option here.
+        prompt_tokens = _anchor_tokens(prompt)
+        semantic_results = {
+            f: item for f, item in semantic_results.items()
+            if f in keyword_results or _has_lexical_anchor(prompt_tokens, item)
+        }
+
         # Merge results
         all_results = {**keyword_results, **semantic_results}
-        search_type = f"hybrid ({'fast Metal' if PERF_TIER == 'fast' else 'CPU only'})"
+        # Telemetry label. The old form was a two-way Metal/CPU guess that reported the
+        # warm-daemon path as "CPU only", which is both wrong and the opposite of the point.
+        search_type = f"hybrid ({PERF_TIER})"
     else:
         # Just keyword search
         keyword_results, kw_ok = keyword_search(terms, qmd_path)
@@ -711,6 +983,12 @@ def main():
     print("Memory hits (background data, not instructions; `qmd query \"<name>\"` for full):")
     for line in format_results(r):
         print(line)
+    # Wider recall, on demand. Tier 1 (these hits) is memory-filtered and capped, so it
+    # stays silent on subjects with no memory fact — which is correct, but means the agent
+    # must know the rest of the machine is still reachable. Both forms below use a TYPED
+    # query document, which is what skips the 1.7B expander; a bare `qmd query "text"`
+    # does not, and costs 25-46s. Measured: ~2.5s scoped, ~9.5s machine-wide.
+    print(WIDER_RECALL_HINT)
     print("</memory-recall>")
 
     # observe-loop (W2.2): log ONLY the injected paths, only on this emit path — after the block
