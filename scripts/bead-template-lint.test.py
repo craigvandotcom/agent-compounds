@@ -1,7 +1,7 @@
 # ASSURANCE-ROLE: test-harness
 # CALLER: scripts/run-all-harnesses.sh (glob-discovered) and lint check
 # 19-bead-template-conformance (which shells out to scripts/bead-template-lint.py, the
-# module this harness imports directly). Deliberately UNWIRED in hooks/hooks.json: it is
+# module this harness imports directly). Deliberately UNWIRED in engine/hooks.wiring.json: it is
 # the PROOF for bead-template-lint.py, not a hook itself.
 #
 # Covers the probe-shape check (ac-attt): three Probe: shapes that pass `no probe, no

@@ -31,7 +31,9 @@ sys.path.insert(0, _LINT)
 from lib import scope  # noqa: E402
 
 CHECK_ID = "05-agents-diagram"
-DIAGRAM_PATHS = ("skills", "agents", "deploy.sh", "templates", "_plans")
+# ac-ys8f moved the machinery under engine/; the diagram names that directory now,
+# not the stamper script that used to sit at the root.
+DIAGRAM_PATHS = ("skills", "agents", "engine", "templates", "_plans")
 
 
 def git_ignored(root, path):

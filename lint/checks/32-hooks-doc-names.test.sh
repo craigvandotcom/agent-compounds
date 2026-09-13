@@ -5,7 +5,7 @@
 #           path is RED naming the field; a live reference resolves GREEN;
 #           file names (ac-x.js) and bead ids (ac-x.y) are never read as
 #           skill references; structured PENDING-DECISION fields are out of
-#           scope; an empty scan is NOT-GATED (exit 2); the real hooks.json
+#           scope; an empty scan is NOT-GATED (exit 2); the real wiring manifest
 #           is green.
 #
 # ASSURANCE
@@ -30,7 +30,7 @@ run_check() { # <tmp-root> <out-file> -> exit code
 
 write_manifest() { # <root> <doc-text> <backstop-text> <pending-text>
   local root="$1" doc="$2" backstop="$3" pending="$4"
-  mkdir -p "$root/hooks" "$root/skills/real"
+  mkdir -p "$root/hooks" "$root/engine" "$root/skills/real"
   printf -- '---\nname: real\ndescription: "the one live skill"\n---\n\n# real\n' > "$root/skills/real/SKILL.md"
   printf '%s' "$(cat <<EOF
 {
@@ -43,7 +43,7 @@ write_manifest() { # <root> <doc-text> <backstop-text> <pending-text>
   ]
 }
 EOF
-)" > "$root/hooks/hooks.json"
+)" > "$root/engine/hooks.wiring.json"
 }
 
 # --- RED: _doc naming a missing ac- skill --------------------------------------
@@ -111,10 +111,10 @@ else
 fi
 rm -rf "$w"
 
-# --- REAL: the live hooks.json resolves clean ----------------------------------
+# --- REAL: the live wiring manifest resolves clean ----------------------------------
 rc=$(python3 "$CHECK" >/tmp/32hd-out.txt 2>&1; echo $?)
 if [ "$rc" = 0 ]; then
-  ok "REAL: live hooks.json -> exit 0"
+  ok "REAL: live wiring manifest -> exit 0"
 else
   bad "REAL: expected 0, got $rc"; cat /tmp/32hd-out.txt
 fi

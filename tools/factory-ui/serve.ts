@@ -14,8 +14,8 @@
  *   POST /api/targets/reset        { target } — drop packages= (back to default: all)
  *   POST /api/harness/enabled      { harness, enabled } — edit harnesses.json
  *   POST /api/verify               { target } — run lint/consumer.py per cell (streamed)
- *   POST /api/check                run harness-sync.sh --check (streamed)
- *   POST /api/sync                 run harness-sync.sh --all (streamed)
+ *   POST /api/check                run engine/sync.sh --check (streamed)
+ *   POST /api/sync                 run engine/sync.sh --all (streamed)
  *
  * Per-target packages live as `packages=a,b` tokens on the targets-list line
  * (`<dir> [public] [packages=csv]`; absent = all packages — the full-set policy
@@ -35,7 +35,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..",
 const MANIFEST = path.join(ROOT, "skills", "packages.json");
 const HARNESSES = path.join(ROOT, "harnesses.json");
 const CONSUMER = path.join(ROOT, "lint", "consumer.py");
-const SYNC = path.join(ROOT, "harness-sync.sh");
+const SYNC = path.join(ROOT, "engine", "sync.sh");
 
 function reposRoot(): string {
   try {
@@ -141,8 +141,8 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>factory ma
 <h2>targets × packages <small>(edits the targets list)</small></h2><div id="tgts"></div>
 <h2>harnesses <small>(edits harnesses.json enabled flags)</small></h2><div id="harn"></div>
 <h2>run</h2><div id="v"></div>
-<p><button onclick="run('/api/check')">Check (harness-sync.sh --check)</button>
-<button onclick="run('/api/sync')">Sync (harness-sync.sh --all)</button></p>
+<p><button onclick="run('/api/check')">Check (engine/sync.sh --check)</button>
+<button onclick="run('/api/sync')">Sync (engine/sync.sh --all)</button></p>
 <pre id="out"></pre>
 <script>
 let S=null;

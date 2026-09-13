@@ -13,7 +13,7 @@
 | Field | Value |
 |---|---|
 | **Name** | agent-compounds |
-| **Stack** | Markdown skills/agents + bash (`harness-sync.sh` → `deploy.sh`); no app runtime |
+| **Stack** | Markdown skills/agents + bash (`engine/sync.sh` → `engine/deploy.sh`); no app runtime |
 | **Type** | Shared engineering tooling registry (skills, agents, prompt library, plans) |
 | **Purpose** | Canonical source of the neoMeta engineering skill/agent registry, symlink-deployed into every app |
 
@@ -21,16 +21,16 @@
 
 | Operation | Command |
 |---|---|
-| **Sync ALL harness homes (root + apps)** | `./harness-sync.sh --all` (drift check: `--check`) |
-| **List deployables** | `./deploy.sh --list` |
-| **Selective one-off stamp (non-target project)** | `./deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
-| **Dry run** | `./harness-sync.sh --all -n` / `./deploy.sh <target> --all -n` |
+| **Sync ALL harness homes (root + apps)** | `./engine/sync.sh --all` (drift check: `--check`) |
+| **List deployables** | `./engine/deploy.sh --list` |
+| **Selective one-off stamp (non-target project)** | `./engine/deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
+| **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
 ## Distribution policy (2026-06-13, Craig-approved)
 
 **Full set everywhere, auto-synced — no per-project exclude list.** Every INTERNAL neoMeta
-app gets the entire registry (all skills + all agents) via `deploy.sh --all`. There is no
+app gets the entire registry (all skills + all agents) via `engine/deploy.sh --all`. There is no
 selective per-app skill list anymore — availability is uniform.
 
 **Consumer requirement (2026-07-08):** every deploy target's `.claude/settings.json` must
@@ -68,7 +68,9 @@ they're missing — the invariant is enforced, not conventional. To add/remove a
 agent-compounds/
 ├── skills/        # the registry — each dir = one skill (SKILL.md + references/ + workflows/)
 ├── agents/        # the 5 core stances (orchestrator, coordinator, researcher, implementer, validator — each carries a semantic `tier:`, never a concrete model); domain work = stance + lens prompt from the skill, never a new agent file; each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model
-├── deploy.sh      # symlinks skills + generates agents (tier -> model stamped from harnesses.json agent_models) into a target's .claude/
+├── engine/        # the machinery: the renderer, the stamper and the wiring manifest.
+│                  #   Content stays at the root — 4,201 symlinks resolve through it. Check 37
+│                  #   forbids the engine spelling a canon path instead of deriving it.
 ├── templates/     # project-AGENTS.md (new-project L0 template) + ci-build-guards.md
 │                  #   (required-NEXT_PUBLIC_* build assert + dep-removed CI gate, copy-paste)
 └── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)

@@ -2,7 +2,7 @@
 # assurance-declarations-check.test.sh — proof harness for the assurance-triad declaration
 # check and its orphan detection (ac-on0y.4), and so for lint.sh Check 21.
 #
-# Every case builds a throwaway root under $TMPDIR with its own hooks/hooks.json, its own
+# Every case builds a throwaway root under $TMPDIR with its own engine/hooks.wiring.json, its own
 # hooks/ executables, and its own .beads/issues.jsonl. Fixture beads are synthetic jsonl
 # lines fed to the parser — NEVER live board mutations. The final case runs the check
 # against the REAL repo so the fixtures cannot drift into proving something it does not do.
@@ -29,17 +29,17 @@ fixture() {
   local decl="$1" extra="${2:-}"
   N=$((N + 1))
   local root="$WORK/f$N"
-  mkdir -p "$root/hooks" "$root/.beads"
+  mkdir -p "$root/hooks" "$root/engine" "$root/.beads"
 
   printf '#!/bin/bash\nexit 0\n' > "$root/hooks/wired.sh"
 
   if [ -n "$decl" ]; then
     jq -n --argjson a "$decl" \
       '{_doc:"fixture", wiring:[{id:"wired", event:"PreToolUse", command:"{HOOKS}/wired.sh", harnesses:["claude"], scope:["org"], assurance:$a}]}' \
-      > "$root/hooks/hooks.json"
+      > "$root/engine/hooks.wiring.json"
   else
     jq -n '{_doc:"fixture", wiring:[{id:"wired", event:"PreToolUse", command:"{HOOKS}/wired.sh", harnesses:["claude"], scope:["org"]}]}' \
-      > "$root/hooks/hooks.json"
+      > "$root/engine/hooks.wiring.json"
   fi
 
   # A synthetic board: one OPEN decision, one CLOSED decision, one OPEN task.
@@ -138,7 +138,7 @@ exit 0')"
 
 echo "--- a check that verified nothing is never a pass ---"
 EMPTY="$(fixture "$GOOD")"
-jq -n '{_doc:"fixture", wiring:[]}' > "$EMPTY/hooks/hooks.json"
+jq -n '{_doc:"fixture", wiring:[]}' > "$EMPTY/engine/hooks.wiring.json"
 run_check 1 "zero wiring entries -> FAILS (NOT-GATED)" "$EMPTY"
 
 echo "--- against the live repo ---"

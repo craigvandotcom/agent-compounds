@@ -30,7 +30,7 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-SYNC="$ROOT/harness-sync.sh"
+SYNC="$ROOT/engine/sync.sh"
 
 fails=0
 ok()  { echo "  ok    $1"; }

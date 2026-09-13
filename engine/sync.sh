@@ -41,7 +41,12 @@
 
 set -euo pipefail
 
-AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The engine lives in engine/; AC_ROOT stays the REPO root, one level up. Content
+# (skills/, hooks/, agents/) deliberately did NOT move — 4,201 symlinks across the
+# deploy targets resolve through it, and dangling links after a big move are the
+# recurring failure here (ac-ys8f).
+ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
 
 DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; TARGETS=()
 while [ $# -gt 0 ]; do
@@ -58,6 +63,12 @@ while [ $# -gt 0 ]; do
     *)           TARGETS+=("$1"); shift ;;
   esac
 done
+# A bare --check/-n means "check the engine's own render": default it to --root
+# rather than erroring. Without this `sync.sh --check` exits 2 having rendered
+# nothing, which reads as a failing regeneration check when nothing was checked.
+if [ "$DRY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ] && [ "$VERIFY_AGY" = 0 ] && [ "$REPORT" = 0 ]; then
+  DO_ROOT=1
+fi
 [ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
 
 CHANGES=0
@@ -398,7 +409,7 @@ write_file_if_changed() {
   note_change
 }
 
-HOOKS_MANIFEST="$AC_ROOT/hooks/hooks.json"
+HOOKS_MANIFEST="$ENGINE_DIR/hooks.wiring.json"
 # Literal-$HOME path so rendered configs stay portable: the consuming harness expands
 # $HOME itself, so one rendered file works for any user. DERIVED from AC_ROOT rather
 # than hardcoded — the old constant named the Mac's monorepo path, so on every other
@@ -581,7 +592,7 @@ render_context_grok() {
   echo "  -- grok global rules ($GROK_HOME/AGENTS.md, generated)"
   build_machine_global_rules "Other harnesses receive this context via per-prompt hook injection; Grok discards
 hook stdout, so this file carries the same canon statically. It applies when
-working anywhere under ~/Repos."
+working anywhere in the workspace repos."
   write_generated "$GROK_HOME/AGENTS.md" "$BMGR_CONTENT"
 }
 
@@ -599,7 +610,7 @@ render_context_antigravity() {
   echo "  -- antigravity global rules ($AGY_HOME/AGENTS.md, generated)"
   build_machine_global_rules "Antigravity exposes no session-start or pre-prompt hook event, so
 this file carries statically the canon that hook-fed harnesses receive per prompt.
-It applies when working anywhere under ~/Repos."
+It applies when working anywhere in the workspace repos."
   write_generated "$AGY_HOME/AGENTS.md" "$BMGR_CONTENT"
 }
 
@@ -699,7 +710,7 @@ verify_antigravity() {
     echo "  NO LOAD LINE FOUND — hooks.json has not been read by an Antigravity session yet."
     echo "  The hooks manager loads at SESSION start, never at server boot: run one CLI"
     echo "  conversation (agy -p '...' works headless) or open a workspace in the IDE,"
-    echo "  then re-run: harness-sync.sh --verify-antigravity"
+    echo "  then re-run: engine/sync.sh --verify-antigravity"
     rc=1
   fi
 
@@ -714,7 +725,7 @@ verify_antigravity() {
 # render_hooks_opencode — opencode has NO shell-command hook dialect; its only
 # extension surface is a JS/TS plugin. Rather than fork the hook logic, we generate a
 # thin wrapper plugin that shells out to the SAME scripts every other harness runs, so
-# hooks/hooks.json stays the single canon (verified 2026-08-28: a plugin receives Bun's
+# engine/hooks.wiring.json stays the single canon (verified 2026-08-28: a plugin receives Bun's
 # `$` and node:child_process, and a probe plugin blocked a bash call and injected a
 # prompt part end-to-end).
 #
@@ -738,7 +749,7 @@ render_hooks_opencode() {
 
   local wiring content
   wiring="$(jq --arg h opencode --arg s machine --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" "$SUBST_JQ"'
-    { _doc: "generated-by: harness-sync from agent-compounds/hooks/hooks.json — do not hand-edit",
+    { _doc: "generated-by: engine/sync.sh from agent-compounds/engine/hooks.wiring.json — do not hand-edit",
       wiring: [ .wiring[]
         | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))
         | { id, event, matcher: (.matcher // null), command: (.command | subst),
@@ -750,7 +761,7 @@ render_hooks_opencode() {
   # command path exists on disk after {HOOKS}/{HOME} substitution — the assumption the
   # manifest rests on that nothing else ever asserts.
   if ! printf '%s' "$wiring" | jq -e . >/dev/null 2>&1; then
-    echo "  FAIL: rendered opencode wiring does not parse — the render is broken; fix harness-sync.sh" >&2
+    echo "  FAIL: rendered opencode wiring does not parse — the render is broken; fix engine/sync.sh" >&2
     exit 1
   fi
   local expect_count got_count
@@ -783,8 +794,8 @@ render_hooks_opencode() {
 
   content="$(cat <<'ACJS'
 // generated-by: harness-sync — do not hand-edit
-// Source of truth: agent-compounds/hooks/hooks.json (wiring) + harness-sync.sh
-// (this dispatcher). Regenerate with ./harness-sync.sh --root.
+// Source of truth: agent-compounds/engine/hooks.wiring.json (wiring) + engine/sync.sh
+// (this dispatcher). Regenerate with ./engine/sync.sh --root.
 //
 // Wraps the canonical hook scripts for opencode, which has no shell-command hook
 // dialect. FAIL-CLOSED on an unreadable wiring (ac-heyt.12, decision D-1): a missing,
@@ -807,7 +818,7 @@ let WIRING_ERROR = null
 try {
   WIRING = JSON.parse(readFileSync(WIRING_PATH, "utf8")).wiring || []
 } catch (e) {
-  WIRING_ERROR = "ac-hooks: wiring unreadable at " + WIRING_PATH + " — run harness-sync.sh"
+  WIRING_ERROR = "ac-hooks: wiring unreadable at " + WIRING_PATH + " — run engine/sync.sh"
 }
 
 // opencode tool ids are lowercase; our matchers and hook scripts speak Claude names.
@@ -1003,7 +1014,7 @@ render_context_opencode() {
 # Machine-global rules (Repos fleet)
 
 This is the machine-global floor, loaded in every opencode session. It applies when
-working anywhere under ~/Repos. Project-level AGENTS.md (the doctrine L0) loads natively
+working anywhere in the workspace repos. Project-level AGENTS.md (the doctrine L0) loads natively
 from the cwd tree alongside it, and skills load natively from .claude/skills.
 
 The per-prompt lane (memory recall + the delegation reminder) is NOT carried here: since
@@ -1226,7 +1237,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     # (no real diff noise) — that is not a failure. But PIPESTATUS[0] still holds
     # deploy.sh's own exit code regardless of the trailing `|| true`, so check it
     # explicitly instead of silently discarding a genuine deploy.sh crash.
-    "$AC_ROOT/deploy.sh" "$base" $dep_scope $dep_flags | sed 's/^/  [deploy.sh] /' | grep -v '^  \[deploy.sh\] $' || true
+    "$ENGINE_DIR/deploy.sh" "$base" $dep_scope $dep_flags | sed 's/^/  [deploy.sh] /' | grep -v '^  \[deploy.sh\] $' || true
     deploy_status="${PIPESTATUS[0]}"
     [ "$deploy_status" -eq 0 ] || { echo "  ERROR: deploy.sh failed (exit $deploy_status) for $base" >&2; exit "$deploy_status"; }
     render_hooks_app "$base"
@@ -1256,7 +1267,7 @@ sync_root() {
     echo "  -- claude layer (deploy.sh: skills symlinks + generated agents)"
     local dep_flags="" deploy_status
     [ "$DRY" = 1 ] && dep_flags="-n"
-    "$AC_ROOT/deploy.sh" "$base" --all $dep_flags | sed 's/^/  [deploy.sh] /' || true
+    "$ENGINE_DIR/deploy.sh" "$base" --all $dep_flags | sed 's/^/  [deploy.sh] /' || true
     deploy_status="${PIPESTATUS[0]}"
     [ "$deploy_status" -eq 0 ] || { echo "  ERROR: deploy.sh failed (exit $deploy_status) for $base" >&2; exit "$deploy_status"; }
   fi
@@ -1447,7 +1458,7 @@ render_report() {
   {
     printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n'
     printf '<title>factory matrix</title></head><body>\n'
-    printf '<!-- generated by harness-sync.sh --report — do not hand-edit -->\n'
+    printf '<!-- generated by engine/sync.sh --report — do not hand-edit -->\n'
     printf '<h1>factory matrix</h1>\n<p>generated %s on %s from files on disk; regenerating re-reads them.</p>\n' "$now" "$machine"
     printf '<h2>packages (skills/packages.json)</h2>\n<table border="1">\n'
     printf '<tr><th>package</th><th>blurb</th><th>skills</th><th>requires</th></tr>\n'
@@ -1547,7 +1558,7 @@ if [ "$FAILURES" -gt 0 ]; then
   exit 1
 fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then
-  echo "DRIFT: projections out of sync — run harness-sync.sh to converge" >&2
+  echo "DRIFT: projections out of sync — run engine/sync.sh to converge" >&2
   exit 1
 fi
 

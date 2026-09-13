@@ -54,7 +54,9 @@
 
 set -euo pipefail
 
-AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# engine/ holds the machinery; AC_ROOT is the repo root one level up, where the
+# content it stamps (skills/, agents/) still lives.
+AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Tier->model config: same manifest deep-merge as harness-sync.sh (harnesses.json
 # committed base, harnesses.local.json machine overrides on top).

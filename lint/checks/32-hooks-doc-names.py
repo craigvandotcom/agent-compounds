@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ---
 # id: 32-hooks-doc-names
-# prevents: hooks/hooks.json documentation text (the `_doc` fields and `assurance` entries) naming
+# prevents: engine/hooks.wiring.json documentation text (the `_doc` fields and `assurance` entries) naming
 #   skills that do not exist — prose pointing operators and agents at archived or never-built skills,
 #   the way the fail-open rationale once justified itself by naming the retired ac-loop and
 #   ac-bead-refine
@@ -54,7 +54,7 @@ sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
 
-MANIFEST = "hooks/hooks.json"
+MANIFEST = "engine/hooks.wiring.json"
 SKILL_RE = re.compile(r"^skills/([^/]+)/SKILL\.md$")
 SKILLS_PATH_RE = re.compile(r"\bskills/[A-Za-z0-9_./-]+")
 

@@ -30,7 +30,8 @@ Sets:
   HARNESSES  proof-test harnesses (*.test.sh / *.test.py) plus the runner that
              executes them and the workflow that schedules it — Check 20's
              audit surface.
-  HOOKS      hooks/hooks.json, the hooks/ executables it wires, and the bead
+  ENGINE     engine/ — the renderer, the stamper and the wiring manifest.
+  HOOKS      engine/hooks.wiring.json, the hooks/ executables it wires, and the bead
               board its PENDING-DECISION escapes resolve against — Check 21's
               audit surface.
   TEMPLATES  the templates/ the registry ships plus scripts/
@@ -57,7 +58,7 @@ Sets:
                       a header can list several set names separated by
                       whitespace/commas; lint/run.py resolves and unions them
                       (see its `_resolve_scope`).
-  DEPLOY_SCRIPT      deploy.sh alone — Check 08's actual subject (narrower
+  DEPLOY_SCRIPT      engine/deploy.sh alone — Check 08's actual subject (narrower
                       than LIVE_TEXT). Named in 08's header alongside LIVE_TEXT.
   HARNESS_MANIFEST   the root harnesses.json (per-harness agent-model/deploy
                       manifest) — distinct from HARNESSES (proof-test files)
@@ -122,6 +123,7 @@ _ledger = set()
 _archive = set()
 _harnesses = set()
 _hooks = set()
+_engine = set()
 _templates = set()
 _scripts = set()
 _agent_stances = set()
@@ -139,8 +141,14 @@ for p in sorted(_paths):
         _harnesses.add(p)
     if p.startswith(".github/workflows/"):
         _harnesses.add(p)
-    if p.startswith("hooks/") or p == ".beads/issues.jsonl":
+    # engine/hooks.wiring.json is the wiring manifest — it moved out of hooks/ in
+    # ac-ys8f but is still the HOOKS surface, so name it beside the prefix rule.
+    if p.startswith("hooks/") or p == ".beads/issues.jsonl" or p == "engine/hooks.wiring.json":
         _hooks.add(p)
+    # ENGINE — the relocated machinery (ac-ys8f). Its own surface, because Check 37
+    # asks a question no other scope does: does the engine hardcode a path to canon.
+    if p.startswith("engine/"):
+        _engine.add(p)
     if p.startswith("templates/") or p == "scripts/bead-template-lint.py":
         _templates.add(p)
     if (p.startswith("skills/") or p.startswith("scripts/")) \
@@ -160,6 +168,7 @@ LEDGER = frozenset(_ledger)
 ARCHIVE = frozenset(_archive)
 HARNESSES = frozenset(_harnesses)
 HOOKS = frozenset(_hooks)
+ENGINE = frozenset(_engine)
 TEMPLATES = frozenset(_templates)
 SCRIPTS = frozenset(_scripts)
 AGENT_STANCES = frozenset(_agent_stances)
@@ -172,7 +181,7 @@ def _one(rel):
 
 README = _one("README.md")
 AGENTS_DOC = _one("AGENTS.md")
-DEPLOY_SCRIPT = _one("deploy.sh")
+DEPLOY_SCRIPT = _one("engine/deploy.sh")
 HARNESS_MANIFEST = _one("harnesses.json")
 LINT_CONFIG = _one("lint/config.json")
 

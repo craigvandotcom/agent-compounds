@@ -1,0 +1,7 @@
+{
+  "_doc": "Fixture. This prose names $HOME/Repos/infrastructure on purpose — _doc is documentation and is outside the check.",
+  "wiring": [
+    { "id": "clean", "event": "PreToolUse", "command": "python3 {INFRA}/hooks/guard.py" },
+    { "id": "dirty", "event": "PostToolUse", "command": "python3 $HOME/Repos/infrastructure/tools/logger.py" }
+  ]
+}

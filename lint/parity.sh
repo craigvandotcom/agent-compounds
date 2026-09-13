@@ -346,10 +346,10 @@ elif [ "$CHECK_ID" = 20 ] || [ "$CHECK_ID" = 21 ] || [ "$CHECK_ID" = 22 ] || [ "
         printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' > "$w/.github/workflows/ci.yml"
         ;;
       21)
-        mkdir -p "$w/hooks"
+        mkdir -p "$w/hooks" "$w/engine"
         cp "$ROOT/scripts/assurance-declarations-check.sh" "$w/scripts/"
         chmod +x "$w/scripts/"*.sh
-        printf '{"wiring":[{"id":"demo","command":"echo hi"}]}\n' > "$w/hooks/hooks.json"
+        printf '{"wiring":[{"id":"demo","command":"echo hi"}]}\n' > "$w/engine/hooks.wiring.json"
         ;;
       22)
         mkdir -p "$w/skills/skill-builder/scripts" "$w/skills/ac-pipeline"
