@@ -11,5 +11,21 @@
     "grok": true,
     "opencode": true,
     "antigravity": true
+  },
+  "exceptions": {
+    "_doc": "EDITORIAL exclusions only — human judgement, the one hand-maintained input. Technical exclusions (a public target whose harness layer must stay gitignored) are DERIVED by engine/exceptions.sh and never listed here; writing a derived fact down by hand is how the two copies drift. These eleven skills operate the org — the factory itself, the brain, the daily surfaces — and have no job inside an app repo. They also enter manual-only at org scope, so the registry validator counts them as zero standing cost. Default policy is unchanged and remains full-set-everywhere: every other asset reaches every managed target. Headroom (20,700 of ~30,000) is what makes that affordable; if it falls below ~2,000 chars, revisit tags-plus-subscriptions.",
+    "org_only_skills": [
+      "CORE",
+      "admin",
+      "agent-builder",
+      "claude-code",
+      "daily-brief",
+      "debug",
+      "image-gen",
+      "knowledge-management",
+      "pai",
+      "research",
+      "strategist"
+    ]
   }
 }
