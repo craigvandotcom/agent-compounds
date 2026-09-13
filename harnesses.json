@@ -1,6 +1,5 @@
 {
-  "_doc": "harness-sync manifest (committed base — PORTABLE values only). Machine-specific overrides go in harnesses.local.json (gitignored; template: harnesses.local.json.example). harness-sync.sh deep-merges local over this base. Env vars beat both where noted.",
-  "repos_root": "~/Repos",
+  "_doc": "harness-sync manifest (committed base — PORTABLE values only). Machine-specific overrides go in harnesses.local.json (gitignored; template: harnesses.local.json.example). harness-sync.sh deep-merges local over this base. Env vars beat both where noted. | ac-9ahd: the single root key this file used to carry is GONE. It encoded one machine's monorepo layout and the engine hard-failed without it; worse, when a stale directory happened to exist at that path the [ -d ] guard passed and the failure surfaced later as missing rendered paths. Layout now lives in harness.config.json (target search globs + a machine enable map), and the org root is derived from the engine's own location. This file keeps per-harness DETAIL only: homes, mirror dirs, tiers.",
   "harnesses": {
     "claude": {
       "enabled": true,

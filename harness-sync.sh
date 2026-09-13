@@ -76,16 +76,53 @@ fi
 cfg() { echo "$CFG" | jq -r "$1"; }
 expand_tilde() { case "$1" in "~"|"~/"*) echo "${HOME}${1#\~}" ;; *) echo "$1" ;; esac; }
 
-REPOS_ROOT="$(expand_tilde "$(cfg '.repos_root')")"
-[ -d "$REPOS_ROOT" ] || { echo "error: repos_root $REPOS_ROOT missing" >&2; exit 2; }
+# --- layout manifest (ac-9ahd) -------------------------------------------------
+# The engine SELF-LOCATES rather than reading a root key. ORG_ROOT is AC_ROOT's third
+# parent, which is correct in every supported layout:
+#   Mac monorepo  ~/Repos/neometa/software/agent-compounds  -> ~/Repos
+#   three-repo    ~/mission/software/agent-compounds        -> ~
+# This was already the idiom below for the memory-lint path; ac-9ahd generalized it and
+# deleted the `repos_root` key, which hard-failed the engine on any layout but the Mac's
+# and was the root cause of the rendered-path 404s in every deploy target.
+ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
 
-EN_CLAUDE="$(cfg '.harnesses.claude.enabled')"
-EN_CODEX="$(cfg '.harnesses.codex.enabled')"
-EN_DROID="$(cfg '.harnesses.droid.enabled')"
-EN_PI="$(cfg '.harnesses.pi.enabled')"
-EN_GROK="$(cfg '.harnesses.grok.enabled // false')"
+LAYOUT="$AC_ROOT/harness.config.json"
+[ -f "$LAYOUT" ] || { echo "error: $LAYOUT missing" >&2; exit 2; }
+lcfg() { jq -r "$1" "$LAYOUT"; }
+
+# The DOMAIN repo is AC_ROOT's second parent (<domain-repo>/software/agent-compounds),
+# which names itself differently per layout — hence derived, never spelled. Its basename
+# is also the scope label the memory digest prints.
+DOMAIN_REPO="$(cd "$AC_ROOT/../.." && pwd)"
+
+# Resolved target dirs from the layout manifest's search globs. build_memory_digest.py
+# takes these on argv rather than a root: it used to glob a hardcoded domain-repo segment
+# that only existed on the Mac, so it collected nothing elsewhere while still exiting 0.
+resolved_targets() {
+  local g d
+  while IFS= read -r g; do
+    [ -n "$g" ] || continue
+    for d in $AC_ROOT/$g; do
+      [ -d "$d/memory/auto" ] && (cd "$d" && pwd)
+    done
+  done < <(lcfg '.targets[]')
+}
+
+# A harness runs here only if the MACHINE enables it (layout manifest) AND its own detail
+# config enables it (harnesses.json). Two questions, two homes: "is this harness installed
+# on this box" is machine fact, "how is it wired" is harness detail. Absent from the layout
+# map means yes, so adding a harness to harnesses.json does not silently disable it.
+harness_on() { # <name> <detail-enabled>
+  local m; m="$(jq -r --arg h "$1" '.harnesses[$h] // true' "$LAYOUT")"
+  if [ "$m" = "false" ] || [ "$2" != "true" ]; then echo false; else echo true; fi
+}
+EN_CLAUDE="$(harness_on claude "$(cfg '.harnesses.claude.enabled')")"
+EN_CODEX="$(harness_on codex "$(cfg '.harnesses.codex.enabled')")"
+EN_DROID="$(harness_on droid "$(cfg '.harnesses.droid.enabled')")"
+EN_PI="$(harness_on pi "$(cfg '.harnesses.pi.enabled')")"
+EN_GROK="$(harness_on grok "$(cfg '.harnesses.grok.enabled // false')")"
 GROK_HOME="$(expand_tilde "$(cfg '.harnesses.grok.home // "~/.grok"')")"
-EN_OPENCODE="$(cfg '.harnesses.opencode.enabled // false')"
+EN_OPENCODE="$(harness_on opencode "$(cfg '.harnesses.opencode.enabled // false')")"
 OPENCODE_HOME="$(expand_tilde "$(cfg '.harnesses.opencode.home // "~/.config/opencode"')")"
 [ -n "$OPENCODE_HOME_OVERRIDE" ] && OPENCODE_HOME="$OPENCODE_HOME_OVERRIDE"
 CODEX_SKILLS_DIR="$(cfg '.harnesses.codex.skills_mirror_dir')"
@@ -93,11 +130,11 @@ CODEX_AGENTS_DIR="$(cfg '.harnesses.codex.agents_gen_dir')"
 DROID_SKILLS_DIR="$(cfg '.harnesses.droid.skills_mirror_dir')"
 DROID_AGENTS_DIR="$(cfg '.harnesses.droid.agents_gen_dir')"
 DROID_HOME="$(expand_tilde "$(cfg '.harnesses.droid.home')")"
-DROID_FARM_SKILLS="$REPOS_ROOT/$(cfg '.harnesses.droid.tracked_farm_skills')"
-DROID_FARM_DROIDS="$REPOS_ROOT/$(cfg '.harnesses.droid.tracked_farm_droids')"
+DROID_FARM_SKILLS="$ORG_ROOT/$(cfg '.harnesses.droid.tracked_farm_skills')"
+DROID_FARM_DROIDS="$ORG_ROOT/$(cfg '.harnesses.droid.tracked_farm_droids')"
 PI_HOME_ENV="$(cfg '.harnesses.pi.home_env')"
 PI_HOME="${!PI_HOME_ENV:-$(expand_tilde "$(cfg '.harnesses.pi.home_default')")}"
-EN_AGY="$(cfg '.harnesses.antigravity.enabled // false')"
+EN_AGY="$(harness_on antigravity "$(cfg '.harnesses.antigravity.enabled // false')")"
 AGY_HOME="$(expand_tilde "$(cfg '.harnesses.antigravity.home // "~/.gemini/antigravity"')")"
 AGY_CONFIG_DIR="$(expand_tilde "$(cfg '.harnesses.antigravity.config_dir // "~/.gemini/config"')")"
 AGY_SKILLS_DIR="$(cfg '.harnesses.antigravity.skills_mirror_dir // ".agents/skills"')"
@@ -122,7 +159,7 @@ print(os.path.normpath(t))' "$dir" "$tgt"
 is_managed() { # <normalized-path> <target-base>
   local p="$1" base="$2" r
   for r in "$AC_ROOT" "$base/.claude/skills" "$base/.claude/agents" \
-           "$REPOS_ROOT/.claude/skills" "$REPOS_ROOT/.claude/agents" "$REPOS_ROOT/infrastructure"; do
+           "$ORG_ROOT/.claude/skills" "$ORG_ROOT/.claude/agents" "$ORG_ROOT/infrastructure"; do
     case "$p" in "$r"|"$r"/*) return 0 ;; esac
   done
   return 1
@@ -263,7 +300,7 @@ gen_codex_agents() { # <src-agents-dir> <dest-dir>
     [ -e "$f" ] || continue
     parse_agent "$f"
     name="${A_NAME:-$(basename "$f" .md)}"
-    relsrc="${f/#$REPOS_ROOT\//}"
+    relsrc="${f/#$ORG_ROOT\//}"
     write_generated "$dest/$name.toml" "$(printf '%s' \
 "# $STAMP — do not hand-edit (source: $relsrc)
 name = \"$name\"
@@ -282,7 +319,7 @@ gen_droid_droids() { # <src-agents-dir> <dest-dir>
     [ -e "$f" ] || continue
     parse_agent "$f"
     name="${A_NAME:-$(basename "$f" .md)}"
-    relsrc="${f/#$REPOS_ROOT\//}"
+    relsrc="${f/#$ORG_ROOT\//}"
     write_generated "$dest/$name.md" "$(printf '%s' \
 "---
 name: $name
@@ -325,7 +362,7 @@ gen_opencode_agents() { # <src-agents-dir> <dest-dir>
     [ -f "$f" ] || { echo "  WARN: stance $name.md missing in $src (skipped)"; continue; }
     parse_agent "$f"
     omodel="$(tier_model opencode "${A_TIER:-}" "$name")"
-    relsrc="${f/#$REPOS_ROOT\//}"
+    relsrc="${f/#$ORG_ROOT\//}"
     tools="$(awk '/^---[[:space:]]*$/{c++; next} c==1 && /^tools:/{print; exit}' "$f")"
     if printf '%s' "$tools" | grep -qE 'Write|Edit'; then edit_perm="allow"; else edit_perm="deny"; fi
     write_generated "$dest/$name.md" "$(printf '%s' \
@@ -362,8 +399,13 @@ write_file_if_changed() {
 }
 
 HOOKS_MANIFEST="$AC_ROOT/hooks/hooks.json"
-# literal-$HOME path so rendered configs stay portable across machines
-HOOKS_PATH_LIT='$HOME/Repos/neometa/software/agent-compounds/hooks'
+# Literal-$HOME path so rendered configs stay portable: the consuming harness expands
+# $HOME itself, so one rendered file works for any user. DERIVED from AC_ROOT rather
+# than hardcoded — the old constant named the Mac's monorepo path, so on every other
+# layout the rendered UserPromptSubmit entry pointed at a file that does not exist and
+# the recall hook 404'd on EVERY prompt in EVERY deploy target (measured: 7 targets,
+# 31 drift failures, ac-vh7k's baseline receipt). Keep the $HOME prefix unexpanded.
+HOOKS_PATH_LIT='$HOME'"${AC_ROOT#$HOME}/hooks"
 
 # build_hooks_obj <harness> <scope> — manifest -> harness's hooks object for one
 # placement scope (machine|org|app; entries default to org). The scope field on each
@@ -384,7 +426,7 @@ build_hooks_obj() {
 
 render_hooks_root() {
   [ -f "$HOOKS_MANIFEST" ] || { echo "  WARN: $HOOKS_MANIFEST missing — hooks skipped"; return 0; }
-  local obj content settings="$REPOS_ROOT/.claude/settings.json"
+  local obj content settings="$ORG_ROOT/.claude/settings.json"
 
   if [ "$EN_CLAUDE" = "true" ] && [ -f "$settings" ]; then
     echo "  -- claude hooks (.claude/settings.json#hooks)"
@@ -399,7 +441,7 @@ render_hooks_root() {
     obj="$(build_hooks_obj codex org)"
     local before=$CHANGES
     content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
-    write_file_if_changed "$REPOS_ROOT/.codex/hooks.json" "$content"
+    write_file_if_changed "$ORG_ROOT/.codex/hooks.json" "$content"
     [ "$CHANGES" -gt "$before" ] && [ "$DRY" = 0 ] && \
       echo "  NOTE: codex hooks.json changed — re-trust once via /hooks in the Codex TUI"
   fi
@@ -407,8 +449,8 @@ render_hooks_root() {
     echo "  -- droid hooks (infrastructure/harness-config/droid/hooks.json -> ~/.factory/hooks.json)"
     obj="$(build_hooks_obj droid org)"
     content="$(jq -n --argjson h "$obj" '{hooks: $h}')"
-    write_file_if_changed "$REPOS_ROOT/infrastructure/harness-config/droid/hooks.json" "$content"
-    ensure_home_link "$DROID_HOME/hooks.json" "$REPOS_ROOT/infrastructure/harness-config/droid/hooks.json"
+    write_file_if_changed "$ORG_ROOT/infrastructure/harness-config/droid/hooks.json" "$content"
+    ensure_home_link "$DROID_HOME/hooks.json" "$ORG_ROOT/infrastructure/harness-config/droid/hooks.json"
   fi
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi hooks skipped by design (TS-extension surface only)"
@@ -490,7 +532,7 @@ build_machine_global_rules() {
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
   dr="$(cat "$AC_ROOT/hooks/delegation-reminder.manual-recall.md")"
   shim="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
-  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
+  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$DOMAIN_REPO" $(resolved_targets))"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
@@ -943,7 +985,7 @@ render_context_opencode() {
   local ss shim digest content
   ss="$(cat "$AC_ROOT/hooks/session-start.md")"
   shim="$(cat "$AC_ROOT/hooks/machine-global-shim.md")"
-  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$REPOS_ROOT")"; then
+  if ! digest="$(python3 "$AC_ROOT/hooks/build_memory_digest.py" "$DOMAIN_REPO" $(resolved_targets))"; then
     echo "  WARN: memory digest generation failed — rendering rules without it"
     digest="*(digest generation failed on last sync — search qmd directly)*"
   fi
@@ -978,7 +1020,7 @@ $digest"
 }
 
 render_mcp_root() {
-  local src="$REPOS_ROOT/.mcp.json" body content
+  local src="$ORG_ROOT/.mcp.json" body content
   [ -f "$src" ] || { echo "  WARN: $src missing — MCP projection skipped"; return 0; }
 
   if [ "$EN_CODEX" = "true" ]; then
@@ -996,13 +1038,13 @@ render_mcp_root() {
     content="$(printf '%s\n%s' \
 "# $STAMP — do not hand-edit (source: .mcp.json). Loaded only when this project is trusted in ~/.codex/config.toml." \
 "$body")"
-    write_generated "$REPOS_ROOT/.codex/config.toml" "$content"
+    write_generated "$ORG_ROOT/.codex/config.toml" "$content"
   fi
   if [ "$EN_DROID" = "true" ]; then
     echo "  -- droid MCP (infrastructure/harness-config/droid/mcp.json -> ~/.factory/mcp.json)"
     content="$(jq '{mcpServers: (.mcpServers | with_entries(.value |= (if .command then ({type:"stdio"} + .) else . end)))}' "$src")"
-    write_file_if_changed "$REPOS_ROOT/infrastructure/harness-config/droid/mcp.json" "$content"
-    ensure_home_link "$DROID_HOME/mcp.json" "$REPOS_ROOT/infrastructure/harness-config/droid/mcp.json"
+    write_file_if_changed "$ORG_ROOT/infrastructure/harness-config/droid/mcp.json" "$content"
+    ensure_home_link "$DROID_HOME/mcp.json" "$ORG_ROOT/infrastructure/harness-config/droid/mcp.json"
   fi
   if [ "$EN_PI" = "true" ]; then
     echo "  NOTE: pi MCP skipped by design (no MCP support in harness)"
@@ -1046,7 +1088,7 @@ ensure_home_link() {
 # registry unless a line says otherwise). sync_target honours it by passing
 # `deploy.sh --package <pkgs> --agents all` instead of `--all` (agents are
 # global stances, owned by no package, so they always deploy whole).
-TARGETS_LIST="$REPOS_ROOT/infrastructure/ac-deploy-targets.list"
+TARGETS_LIST="$ORG_ROOT/infrastructure/ac-deploy-targets.list"
 
 is_public_target() { # <basename>
   [ -f "$TARGETS_LIST" ] || return 1
@@ -1193,7 +1235,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
 }
 
 sync_root() {
-  local base="$REPOS_ROOT"
+  local base="$ORG_ROOT"
   echo "== root: $base"
 
   if [ "$EN_CLAUDE" = "true" ]; then
@@ -1428,12 +1470,30 @@ install_commit_msg_hook "$AC_ROOT"
 
 if [ "$DO_ALL" = 1 ]; then
   [ -f "$TARGETS_LIST" ] || { echo "error: $TARGETS_LIST missing" >&2; exit 2; }
+  # Two sources, INTERSECTED, because they answer different questions: the layout
+  # manifest's `targets` globs say where on this machine to look, and the roster in
+  # ac-deploy-targets.list says which of those are deploy targets (plus their `public`
+  # flag and `packages` column). Intersecting means neither can silently widen the other
+  # — a glob cannot add a target the roster never named, and a roster line cannot reach
+  # outside the declared search path. It also replaces the old hardcoded "$AC_ROOT/../"
+  # assumption that targets are always siblings.
+  CANDIDATES=()
+  while IFS= read -r g; do
+    [ -n "$g" ] || continue
+    for d in $AC_ROOT/$g; do
+      [ -d "$d" ] && CANDIDATES+=("$(cd "$d" && pwd)")
+    done
+  done < <(lcfg '.targets[]')
   while IFS= read -r line; do
     line="${line%%#*}"; line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
     [ -n "$line" ] || continue
     name="${line%%[[:space:]]*}"   # first token = dir; rest = flags (e.g. `public`)
-    if [ -d "$AC_ROOT/../$name" ]; then
-      sync_target "$AC_ROOT/../$name" app
+    match=""
+    for c in ${CANDIDATES[@]+"${CANDIDATES[@]}"}; do
+      [ "$(basename "$c")" = "$name" ] && { match="$c"; break; }
+    done
+    if [ -n "$match" ]; then
+      sync_target "$match" app
     else
       echo "WARN: target missing on this machine: $name"
     fi

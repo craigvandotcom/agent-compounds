@@ -54,31 +54,49 @@ def parse_frontmatter(path):
     return out
 
 
-def collect(repos_root):
-    domain_rules, app_rules, domain_rest = [], [], []
-    domain_dir = os.path.join(repos_root, "neometa", "memory", "auto")
-    for f in sorted(glob.glob(os.path.join(domain_dir, "*.md"))):
+def _memories(directory):
+    """(name, type, description) for every frontmattered memory in one memory/auto dir."""
+    for f in sorted(glob.glob(os.path.join(directory, "*.md"))):
         if os.path.basename(f) == "MEMORY.md":
             continue
         fm = parse_frontmatter(f)
-        if not fm.get("name"):
-            continue
-        entry = (fm["name"], "neometa", fm.get("description", ""))
-        (domain_rules if fm.get("type") == "rule" else domain_rest).append(entry)
-    for d in sorted(glob.glob(os.path.join(repos_root, "neometa", "software", "*", "memory", "auto"))):
-        app = d.split(os.sep)[-3]
-        for f in sorted(glob.glob(os.path.join(d, "*.md"))):
-            if os.path.basename(f) == "MEMORY.md":
-                continue
-            fm = parse_frontmatter(f)
-            if fm.get("name") and fm.get("type") == "rule":
-                app_rules.append((fm["name"], app, fm.get("description", "")))
+        if fm.get("name"):
+            yield fm["name"], fm.get("type"), fm.get("description", "")
+
+
+def collect(domain_repo, target_dirs):
+    """Digest the domain repo's memories plus each RESOLVED target's.
+
+    ac-9ahd: this used to take a single `repos_root` and glob a hardcoded domain-repo
+    path segment under it. That segment was the Mac monorepo's own repo name and does
+    not exist in the three-repo layout, so the digest silently collected NOTHING there —
+    and because harness-sync runs under `set -euo pipefail`, an unset root aborted the
+    first machine-global render outright. No manifest target could repair it, because the
+    defect was a hardcoded path segment rather than a wrong root. So the caller now
+    resolves the directories and passes them in; this function assumes no layout at all.
+
+    The scope label is likewise DERIVED from the domain repo's own basename — which
+    differs per layout — rather than hardcoded to one machine's repo name.
+    """
+    domain_rules, app_rules, domain_rest = [], [], []
+    scope = os.path.basename(os.path.normpath(domain_repo)) or "domain"
+    for name, mtype, desc in _memories(os.path.join(domain_repo, "memory", "auto")):
+        entry = (name, scope, desc)
+        (domain_rules if mtype == "rule" else domain_rest).append(entry)
+    for target in sorted(target_dirs):
+        app = os.path.basename(os.path.normpath(target))
+        for name, mtype, desc in _memories(os.path.join(target, "memory", "auto")):
+            if mtype == "rule":
+                app_rules.append((name, app, desc))
     return domain_rules, app_rules, domain_rest
 
 
 def main():
-    repos_root = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/Repos")
-    domain_rules, app_rules, domain_rest = collect(repos_root)
+    # argv: <domain-repo-dir> [<resolved-target-dir> ...] — the caller resolves layout.
+    if len(sys.argv) < 2:
+        sys.exit("usage: build_memory_digest.py <domain-repo-dir> [<target-dir> ...]")
+    domain_repo, target_dirs = sys.argv[1], sys.argv[2:]
+    domain_rules, app_rules, domain_rest = collect(domain_repo, target_dirs)
     ordered = domain_rules + app_rules + domain_rest
     shown, omitted = ordered[:CAP], len(ordered) - min(len(ordered), CAP)
     for name, scope, desc in shown:
