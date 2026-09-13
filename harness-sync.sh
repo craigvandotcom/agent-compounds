@@ -34,6 +34,8 @@
 #   ./harness-sync.sh --root              # root repo + machine homes (~/.factory, pi home)
 #   ./harness-sync.sh <app-dir>           # one app target
 #   ./harness-sync.sh --all               # --root + every app in ac-deploy-targets.list
+#   ./harness-sync.sh --report            # render _reports/factory-matrix.html
+#                                         # (read-only: targets x packages x harnesses)
 #   Options: -n/--dry-run · --check (dry-run; exit 1 if anything would change) · --no-prune
 #            --verify-antigravity (sensor: did Antigravity actually LOAD what we wrote?)
 
@@ -41,12 +43,13 @@ set -euo pipefail
 
 AC_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; OPENCODE_HOME_OVERRIDE=""; TARGETS=()
+DRY=0; CHECK=0; PRUNE=1; DO_ROOT=0; DO_ALL=0; VERIFY_AGY=0; REPORT=0; OPENCODE_HOME_OVERRIDE=""; TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-antigravity) VERIFY_AGY=1; shift ;;
     --root)      DO_ROOT=1; shift ;;
     --all)       DO_ALL=1; DO_ROOT=1; shift ;;
+    --report)    REPORT=1; shift ;;
     --opencode-home) OPENCODE_HOME_OVERRIDE="${2:-}"; shift 2 ;;
     -n|--dry-run) DRY=1; shift ;;
     --check)     DRY=1; CHECK=1; shift ;;
@@ -55,7 +58,7 @@ while [ $# -gt 0 ]; do
     *)           TARGETS+=("$1"); shift ;;
   esac
 done
-[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || { echo "error: need --root, --all, a target dir, or --verify-antigravity" >&2; exit 2; }
+[ "$DO_ROOT" = 1 ] || [ ${#TARGETS[@]} -gt 0 ] || [ "$VERIFY_AGY" = 1 ] || [ "$REPORT" = 1 ] || { echo "error: need --root, --all, --report, a target dir, or --verify-antigravity" >&2; exit 2; }
 
 CHANGES=0
 note_change() { CHANGES=$((CHANGES + 1)); }
@@ -1264,6 +1267,153 @@ sync_root() {
   render_mcp_root
 }
 
+# --- --report: the static factory matrix (WS3, ac-6asz.4) ---------------------------
+# harness-sync.sh --report renders _reports/factory-matrix.html (at the end of
+# the run, after any sync work, so the page shows the files as they stand).
+# Zero infrastructure, read-only: the files stay the truth and the page only
+# shows them. Rows = deploy targets from ac-deploy-targets.list; columns = the
+# harness homes sync_target projects into (.claude/skills + generated agents,
+# the .agents/skills codex+pi+antigravity mirror, the .factory/skills droid
+# mirror); the package dimension comes from skills/packages.json plus each
+# line's optional packages= token (absent = every package, the full-set
+# policy). A listed target whose dir is absent on this machine reads `missing`,
+# never a guess; a missing targets list leaves the targets table a notice —
+# the packages section always renders, because the manifest is always here.
+report_html_esc() { # stdin -> stdout
+  sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+}
+
+report_pkg_ok() { # <name> -> 0 iff a real package with a skills array
+  jq -e --arg p "$1" '.[$p] | type == "object" and (.skills | type == "array")' \
+    "$AC_ROOT/skills/packages.json" >/dev/null 2>&1
+}
+
+report_expected() { # <pkgs-csv> -> newline skill names (manifest expansion, or all)
+  if [ -z "$1" ]; then
+    (cd "$AC_ROOT/skills" 2>/dev/null && {
+      find . -name SKILL.md | sed 's#^\./##;s#/SKILL\.md$##'
+      find . -maxdepth 1 -mindepth 1 -type d -name '_*' | sed 's#^\./##'
+    } | sort -u)
+  else
+    local m="$AC_ROOT/skills/packages.json" p got
+    [ -f "$m" ] || return 0
+    IFS=',' read -ra arr <<< "$1"
+    for p in "${arr[@]}"; do
+      got="$(jq -r --arg p "$p" '.[$p].skills[]? // empty' "$m" 2>/dev/null)" \
+        && [ -n "$got" ] && printf '%s\n' "$got"
+    done
+    (cd "$AC_ROOT/skills" 2>/dev/null \
+      && find . -maxdepth 1 -mindepth 1 -type d -name '_*' | sed 's#^\./##')
+  fi | sort -u
+}
+
+report_managed() { # <dir> -> newline names of symlinks resolving inside AC_ROOT
+  # The managed surface only: real files/dirs and foreign symlinks are the
+  # app's own (deploy.sh never clobbers them), so they never count as drift.
+  # Resolution is FULL-chain (realpath): mirrors deliberately point at the
+  # target's own .claude/skills, which in turn points into AC_ROOT — a
+  # one-hop read would misclassify every chained mirror link as foreign.
+  # realpath is non-strict on the final component, so a DANGLING inside-AC
+  # link still reports as managed (a dangling foreign link stays the app's).
+  local d="$1" l t
+  [ -d "$d" ] || return 0
+  for l in "$d"/*; do
+    [ -L "$l" ] || continue
+    t="$(cd "$(dirname "$l")" && python3 -c '
+import os, sys
+t = sys.argv[1]
+print(os.path.realpath(os.path.join(os.getcwd(), t) if not os.path.isabs(t) else t))
+' "$(readlink "$l")")"
+    case "$t" in "$AC_ROOT"|"$AC_ROOT"/*) basename "$l" ;; esac
+  done | sort -u
+}
+
+report_mirror_cell() { # <mirror-dir> <claude-dir> -> ok | drift (+a -b) | no mirror dir
+  local mhere mthere mextra mmiss
+  [ -d "$1" ] || { printf 'no mirror dir'; return; }
+  mhere="$(report_managed "$1")"
+  mthere="$(report_managed "$2")"
+  mextra="$(comm -23 <(printf '%s\n' "$mhere") <(printf '%s\n' "$mthere") | grep -c . || true)"
+  mmiss="$(comm -13 <(printf '%s\n' "$mhere") <(printf '%s\n' "$mthere") | grep -c . || true)"
+  if [ "$mextra" = 0 ] && [ "$mmiss" = 0 ]; then printf 'ok'; else printf 'drift (+%s -%s)' "$mextra" "$mmiss"; fi
+}
+
+report_target_row() { # <name> — prints one <tr>
+  # NOTE: `name` and `base` ride separate `local` commands on purpose — one
+  # `local` line expands every word before any binding takes effect, so
+  # `local name="$1" base="$AC_ROOT/../$name"` would read the OUTER (empty)
+  # $name and silently score the parent dir instead of the target.
+  local name="$1" pkgs exp s
+  local base="$AC_ROOT/../$name"
+  local present=0 miss=0 dang=0 status="ok" details=""
+  if [ ! -d "$base" ]; then
+    printf '<tr><td>%s</td><td colspan="6">missing on this machine</td></tr>\n' "$name"
+    return
+  fi
+  pkgs="$(target_packages "$name")"
+  [ -n "$pkgs" ] || pkgs="all"
+  if [ "$pkgs" != "all" ]; then
+    IFS=',' read -ra arr <<< "$pkgs"
+    for s in "${arr[@]}"; do
+      report_pkg_ok "$s" || { status="unknown-package"; details="line names unknown package '$s'"; }
+    done
+  fi
+  exp="$(report_expected "$([ "$pkgs" = "all" ] && printf '' || printf '%s' "$pkgs")")"
+  for s in $exp; do
+    if [ -e "$base/.claude/skills/$s" ]; then present=$((present + 1)); else miss=$((miss + 1)); fi
+  done
+  for s in $(report_managed "$base/.claude/skills"); do
+    [ -e "$base/.claude/skills/$s" ] || dang=$((dang + 1))
+  done
+  local total=0; total="$(printf '%s\n' "$exp" | grep -c . || true)"
+  [ "$miss" = 0 ] && [ "$dang" = 0 ] || { [ "$status" = "ok" ] && status="drift"; details="missing=$miss dangling=$dang"; }
+  local mirror droid
+  mirror="$(report_mirror_cell "$base/.agents/skills" "$base/.claude/skills")"
+  droid="$(report_mirror_cell "$base/.factory/skills" "$base/.claude/skills")"
+  case "$mirror/$droid" in
+    ok/ok|ok/"no mirror dir"|"no mirror dir"/ok|"no mirror dir"/"no mirror dir") ;;
+    *) [ "$status" = "ok" ] && status="drift" ;;
+  esac
+  local nagents=0
+  [ -d "$base/.claude/agents" ] && nagents="$(ls "$base"/.claude/agents/*.md 2>/dev/null | wc -l | tr -d ' ')"
+  [ "$status" = "ok" ] && details="converged"
+  name="$(printf '%s' "$name" | report_html_esc)"
+  details="$(printf '%s' "$details" | report_html_esc)"
+  printf '<tr><td>%s</td><td>%s</td><td>%s/%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s (%s)</td></tr>\n' \
+    "$name" "$pkgs" "$present" "$total" "$mirror" "$droid" "$nagents" "$status" "$details"
+}
+
+render_report() {
+  local out="$AC_ROOT/_reports/factory-matrix.html" now machine
+  now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  machine="$(hostname 2>/dev/null || echo unknown)"
+  mkdir -p "$AC_ROOT/_reports"
+  {
+    printf '<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n'
+    printf '<title>factory matrix</title></head><body>\n'
+    printf '<!-- generated by harness-sync.sh --report — do not hand-edit -->\n'
+    printf '<h1>factory matrix</h1>\n<p>generated %s on %s from files on disk; regenerating re-reads them.</p>\n' "$now" "$machine"
+    printf '<h2>packages (skills/packages.json)</h2>\n<table border="1">\n'
+    printf '<tr><th>package</th><th>blurb</th><th>skills</th><th>requires</th></tr>\n'
+    jq -r 'to_entries[] | select(.key | startswith("_") | not)
+      | "<tr><td>\(.key | @html)</td><td>\(.value.blurb // "" | @html)</td><td>\(.value.skills | length)</td><td>\(((.value.requires // []) | join(", ")) | @html)</td></tr>"' \
+      "$AC_ROOT/skills/packages.json"
+    printf '</table>\n<h2>targets x harnesses (ac-deploy-targets.list)</h2>\n<table border="1">\n'
+    printf '<tr><th>target</th><th>packages</th><th>claude skills present/expected</th><th>.agents/skills mirror</th><th>.factory/skills mirror</th><th>claude agents</th><th>status</th></tr>\n'
+    if [ -f "$TARGETS_LIST" ]; then
+      while IFS= read -r line; do
+        line="${line%%#*}"; line="$(printf '%s' "$line" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+        [ -n "$line" ] || continue
+        report_target_row "${line%%[[:space:]]*}"
+      done < "$TARGETS_LIST"
+    else
+      printf '<tr><td colspan="7">targets list absent on this machine (%s) — packages above still render</td></tr>\n' "$TARGETS_LIST"
+    fi
+    printf '</table>\n</body></html>\n'
+  } > "$out"
+  echo "rendered $out"
+}
+
 # --- run ---------------------------------------------------------------------------
 if [ "$VERIFY_AGY" = 1 ] && [ "$DO_ROOT" = 0 ] && [ ${#TARGETS[@]} -eq 0 ]; then
   verify_antigravity; exit $?
@@ -1325,4 +1475,10 @@ fi
 if [ "$CHECK" = 1 ] && [ "$CHANGES" -gt 0 ]; then
   echo "DRIFT: projections out of sync — run harness-sync.sh to converge" >&2
   exit 1
+fi
+
+# --report renders last, after any sync work above, so the page always shows
+# the files as they stand when the run ends. Opt-in only: --all never renders.
+if [ "$REPORT" = 1 ]; then
+  render_report
 fi
