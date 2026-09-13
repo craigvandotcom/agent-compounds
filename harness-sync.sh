@@ -406,14 +406,20 @@ HOOKS_MANIFEST="$AC_ROOT/hooks/hooks.json"
 # the recall hook 404'd on EVERY prompt in EVERY deploy target (measured: 7 targets,
 # 31 drift failures, ac-vh7k's baseline receipt). Keep the $HOME prefix unexpanded.
 HOOKS_PATH_LIT='$HOME'"${AC_ROOT#$HOME}/hooks"
+# Same treatment for the infrastructure repo: {INFRA} in the wiring manifest. Those
+# commands used to spell the Mac's monorepo path inline, so every rendered guard and
+# logger pointed at a file that does not exist off that machine — the PostToolUse
+# activity logger failed on EVERY tool call here until this landed.
+INFRA_PATH_LIT='$HOME'"${ORG_ROOT#$HOME}/infrastructure"
 
 # build_hooks_obj <harness> <scope> — manifest -> harness's hooks object for one
 # placement scope (machine|org|app; entries default to org). The scope field on each
 # wiring entry is the single source of hook placement (plan: hooks-scopes-grok Phase 3).
 build_hooks_obj() {
-  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" '
+  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" '
     def subst: (if type == "object" then .[$h] else . end)
       | gsub("\\{HOOKS\\}"; $hooks)
+      | gsub("\\{INFRA\\}"; $infra)
       | gsub("\\{HOME\\}"; "$HOME");
     reduce (.wiring[]
             | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))) as $e ({};
