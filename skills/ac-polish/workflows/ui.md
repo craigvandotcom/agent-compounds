@@ -46,7 +46,7 @@ the parser cannot resolve is a loud fail, never a silent zero.
 
 Apply the findings, then run tests, the build, `ubs` over the changed files, and the sensors in
 every theme. Red on any leg means the round is NOT recorded: revert or fix it, then record.
-`ubs` exit 0 counts only when `Files scanned` equals the number of files passed — a shortfall
+`ubs` exit 0 counts only when the Combined Summary's `Files: N` equals the number of files passed — a shortfall
 is NOT-GATED, not a pass.
 
 ## The scope must be UNCLAIMED

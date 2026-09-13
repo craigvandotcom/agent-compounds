@@ -41,7 +41,7 @@ the code itself states (a type, a documented invariant, a test's premise).
   an untested behaviour: name it, at file:line.
 - Does it build and typecheck? Run the build. A green suite over a tree that does not compile
   proves nothing.
-- Does `ubs <changed-files>` exit 0 AND report `Files scanned` equal to the count you passed?
+- Does `ubs <changed-files>` exit 0 AND report a Combined Summary `Files: N` equal to the count you passed?
   A shortfall is NOT-GATED, not a pass — ubs silently drops file types it does not cover.
 
 ## 3. untrusted input
