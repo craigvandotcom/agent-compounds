@@ -412,15 +412,21 @@ HOOKS_PATH_LIT='$HOME'"${AC_ROOT#$HOME}/hooks"
 # activity logger failed on EVERY tool call here until this landed.
 INFRA_PATH_LIT='$HOME'"${ORG_ROOT#$HOME}/infrastructure"
 
+# ONE definition of the placeholder substitution, shared by both renderers below.
+# It lived twice — build_hooks_obj and the opencode wiring render — and the copies
+# drifted the moment {INFRA} was added to one: the opencode render emitted a literal
+# "{INFRA}/hooks/am-edit-guard.py" and its own assert caught it. Constitution
+# Invariant 5, one engine per pattern.
+SUBST_JQ='def subst: (if type == "object" then .[$h] else . end)
+      | gsub("\\{HOOKS\\}"; $hooks)
+      | gsub("\\{INFRA\\}"; $infra)
+      | gsub("\\{HOME\\}"; "$HOME");'
+
 # build_hooks_obj <harness> <scope> — manifest -> harness's hooks object for one
 # placement scope (machine|org|app; entries default to org). The scope field on each
 # wiring entry is the single source of hook placement (plan: hooks-scopes-grok Phase 3).
 build_hooks_obj() {
-  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" '
-    def subst: (if type == "object" then .[$h] else . end)
-      | gsub("\\{HOOKS\\}"; $hooks)
-      | gsub("\\{INFRA\\}"; $infra)
-      | gsub("\\{HOME\\}"; "$HOME");
+  jq --arg h "$1" --arg s "$2" --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" "$SUBST_JQ"'
     reduce (.wiring[]
             | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))) as $e ({};
       .[$e.event] += [
@@ -731,10 +737,7 @@ render_hooks_opencode() {
   echo "  -- opencode hooks (plugins/ac-hooks.js + ac-hooks.wiring.json, generated)"
 
   local wiring content
-  wiring="$(jq --arg h opencode --arg s machine --arg hooks "$HOOKS_PATH_LIT" '
-    def subst: (if type == "object" then .[$h] else . end)
-      | gsub("\\{HOOKS\\}"; $hooks)
-      | gsub("\\{HOME\\}"; "$HOME");
+  wiring="$(jq --arg h opencode --arg s machine --arg hooks "$HOOKS_PATH_LIT" --arg infra "$INFRA_PATH_LIT" "$SUBST_JQ"'
     { _doc: "generated-by: harness-sync from agent-compounds/hooks/hooks.json — do not hand-edit",
       wiring: [ .wiring[]
         | select((.harnesses | index($h)) and ((.scope // ["org"]) | index($s)))
@@ -1103,9 +1106,14 @@ is_public_target() { # <basename>
 
 target_packages() { # <basename> -> packages csv on stdout, empty when the line names none
   [ -f "$TARGETS_LIST" ] || return 0
-  grep -E "^[[:space:]]*$1([[:space:]#]|$)" "$TARGETS_LIST" | head -1 \
+  # `|| true`: the trailing grep exits 1 when the line carries no packages= column,
+  # which is the COMMON case (absent means the full set). Under `set -euo pipefail`
+  # that non-zero propagated out of the pkgs="$(...)" assignment and killed the whole
+  # --all run after the first target. It was masked while TARGETS_LIST resolved to a
+  # path that did not exist, because the guard above returned first.
+  { grep -E "^[[:space:]]*$1([[:space:]#]|$)" "$TARGETS_LIST" | head -1 \
     | sed -E 's/^[^[:space:]]+//' | tr ' ' '\n' \
-    | grep -E '^packages=' | head -1 | sed 's/^packages=//'
+    | grep -E '^packages=' | head -1 | sed 's/^packages=//'; } || true
 }
 
 guard_public() { # <target-base-dir> — 0 if every stamped harness path is gitignored
