@@ -2,7 +2,7 @@
 # 15-line-ceilings.test.sh — the contract harness for lint/checks/15-line-ceilings.py.
 #
 #   PROBE: a SKILL.md over its tier ceiling is FAILED with the skill named; a
-#           config.json ceiling RAISED beyond HEAD's committed value AND
+#           manifest `_lint` ceiling RAISED beyond HEAD's committed value AND
 #           beyond its measured tier is FAILED by the one-way ratchet; an
 #           UNCHANGED constant left stranded above the derived ceiling by a
 #           tier-max skill SHRINKING is a NOTICE, never a fail (2026-09-12
@@ -35,16 +35,16 @@ run_check() {
 work="$(mktemp -d)"
 trap 'rm -rf "$work" "$OUT"' EXIT
 
-write_config() { # <root> <conductor_ceiling> <standard_ceiling>
-  mkdir -p "$1/lint"
-  printf '{\n  "conductor_ceiling": %s,\n  "standard_ceiling": %s,\n  "conductor_skills": ["cond-lead"]\n}\n' \
-    "$2" "$3" > "$1/lint/config.json"
+write_manifest() { # <root> <conductor_ceiling> <standard_ceiling>
+  mkdir -p "$1/skills"
+  printf '{\n  "_lint": {\n    "conductor_ceiling": %s,\n    "standard_ceiling": %s,\n    "conductor_skills": ["cond-lead"]\n  }\n}\n' \
+    "$2" "$3" > "$1/skills/packages.json"
 }
 
 # --- 1 RED: standard skill over the ceiling -> exit 1, skill named ------------
 t="$work/red"
 mkdir -p "$t/skills/big" "$t/skills/cond-lead"
-write_config "$t" 1110 730
+write_manifest "$t" 1110 730
 python3 - "$t" <<'PYEOF'
 import sys
 t = sys.argv[1]
@@ -58,12 +58,12 @@ else
   bad "RED: expected exit 1 naming 'big', got $rc"; cat "$OUT"
 fi
 
-# --- 2 RATCHET: config.json ceiling RAISED beyond HEAD's committed value -----
-# HEAD commits conductor_ceiling: 1110; the working tree raises it to 1300,
-# beyond the derived ceiling too -> a real raise, refused.
+# --- 2 RATCHET: manifest ceiling RAISED beyond HEAD's committed value -----
+# HEAD commits conductor_ceiling: 1110 in skills/packages.json; the working
+# tree raises it to 1300, beyond the derived ceiling too -> a real raise, refused.
 t="$work/ratchet"
 mkdir -p "$t/skills/cond-lead" "$t/skills/small"
-write_config "$t" 1110 730
+write_manifest "$t" 1110 730
 python3 - "$t" <<'PYEOF'
 import sys
 t = sys.argv[1]
@@ -73,8 +73,8 @@ PYEOF
 git -C "$t" init -q -b main
 git -C "$t" config user.email t@t.t; git -C "$t" config user.name t
 git -C "$t" add -A && git -C "$t" commit -qm base
-write_config "$t" 1300 730
-git -C "$t" add lint/config.json
+write_manifest "$t" 1300 730
+git -C "$t" add skills/packages.json
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "ratchet violated — CONDUCTOR_CEILING raised from 1110 (HEAD) to 1300" "$OUT"; then
   ok "RATCHET: raised-beyond-HEAD constant refused, derived value named"
@@ -90,7 +90,7 @@ fi
 # protects.
 t="$work/notice-shrink"
 mkdir -p "$t/skills/cond-lead" "$t/skills/big"
-write_config "$t" 1110 730
+write_manifest "$t" 1110 730
 python3 - "$t" <<'PYEOF'
 import sys
 t = sys.argv[1]
@@ -118,7 +118,7 @@ fi
 # reported as one — degrade to NOTICE, not a fail.
 t="$work/notice-no-git"
 mkdir -p "$t/skills/cond-lead" "$t/skills/small"
-write_config "$t" 1110 730
+write_manifest "$t" 1110 730
 python3 - "$t" <<'PYEOF'
 import sys
 t = sys.argv[1]
@@ -138,7 +138,7 @@ fi
 # so the green tree's standard tier max is 700 lines.
 t="$work/green"
 mkdir -p "$t/skills/cond-lead" "$t/skills/small"
-write_config "$t" 1110 730
+write_manifest "$t" 1110 730
 python3 - "$t" <<'PYEOF'
 import sys
 t = sys.argv[1]
@@ -154,7 +154,7 @@ fi
 
 # --- 4 NOT-GATED: no skills -> exit 2 -----------------------------------------
 t="$work/empty"
-write_config "$t" 1110 730
+write_manifest "$t" 1110 730
 rc=$(run_check "$t")
 if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
   ok "EMPTY: no skills -> NOT-GATED exit 2"

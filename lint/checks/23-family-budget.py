@@ -16,6 +16,10 @@ that judge unchanged, so the verdict cannot drift:
 
     scripts/ac-budget-check.sh <root>
 
+Past the judge's green, the per-package leg reads the package budgets through
+the manifest (skills/packages.json via lint/lib/manifest.py): every package's
+live-measured spine and loaded lines must fit its manifest budget.
+
 The judge's legs: family <=800 SKILL.md lines across the six lean workflow
 skills + the constitution; spine / worst-path / total numbers DERIVED from
 each SKILL.md's pointers and mode tables (a pointer that resolves to nothing
@@ -40,9 +44,66 @@ _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
+from lib import manifest  # noqa: E402  (per-package budgets read through the manifest)
 
 CHECK_ID = "23-family-budget"
 JUDGE = "scripts/ac-budget-check.sh"
+
+
+def count_lines(path):
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        return sum(1 for _ in fh)
+
+
+def package_budgets(root):
+    """The per-package budgets THROUGH the manifest (ac-6asz.3): every package's
+    live-measured spine (member SKILL.md lines, the always-loaded surface) and
+    loaded (all Markdown under member dirs) must fit its manifest budget —
+    the same measure the manifest's `_measured` block records, recomputed from
+    the files on every run, never reread from memory. A root without the
+    manifest predates it (synthetic fixture trees): NOTICE and stand aside,
+    the judge's verdict stands — the real tree always carries it, so the leg
+    always runs there."""
+    try:
+        pkgs = manifest.packages(root)
+    except manifest.ManifestMissing as exc:
+        print(f"  NOTICE {CHECK_ID}: {exc} — per-package budget leg skipped, judge verdict stands")
+        return 0
+    failures = 0
+    for name, pkg in sorted(pkgs.items()):
+        if name.startswith("_") or not isinstance(pkg, dict):
+            continue
+        members = pkg.get("skills", [])
+        budget = pkg.get("budget", {})
+        if not isinstance(budget, dict) or "spine" not in budget or "loaded" not in budget:
+            print(f"FAIL {CHECK_ID}: package '{name}' carries no spine/loaded budget — "
+                  "a package without a budget is unbudgeted growth")
+            failures += 1
+            continue
+        spine = 0
+        loaded = 0
+        for skill in members:
+            smd = os.path.join(root, "skills", skill, "SKILL.md")
+            if os.path.isfile(smd):
+                spine += count_lines(smd)
+            sdir = os.path.join(root, "skills", skill)
+            for dirpath, _dirnames, filenames in os.walk(sdir):
+                for fn in filenames:
+                    if fn.endswith(".md"):
+                        loaded += count_lines(os.path.join(dirpath, fn))
+        legs = []
+        if spine > budget["spine"]:
+            legs.append(f"spine {spine} > {budget['spine']}")
+        if loaded > budget["loaded"]:
+            legs.append(f"loaded {loaded} > {budget['loaded']}")
+        if legs:
+            print(f"FAIL {CHECK_ID}: package '{name}' over budget — {', '.join(legs)} "
+                  f"({len(members)} member(s)) — diet the package or raise the budget deliberately")
+            failures += 1
+        else:
+            print(f"  PASS {name:<22} spine {spine:>6}/{budget['spine']:<6} "
+                  f"loaded {loaded:>6}/{budget['loaded']:<6}")
+    return 1 if failures else 0
 
 
 def main():
@@ -60,6 +121,9 @@ def main():
     proc = subprocess.run(["bash", script, root], capture_output=True, text=True)
     out = (proc.stdout + proc.stderr).strip()
     if proc.returncode == 0:
+        if package_budgets(root) != 0:
+            print(f"FAIL {CHECK_ID}: per-package budget violation(s) — see above")
+            return 1
         for line in out.splitlines():
             print("  " + line)
         print(f"  ok: {CHECK_ID} — the family budget and anti-drift legs hold")

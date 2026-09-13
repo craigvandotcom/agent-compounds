@@ -12,9 +12,9 @@
 
 Ported VERBATIM from the legacy bash block (proven by lint/parity.sh against
 the extracted block, before the block was removed from lint.sh). Same roster
-derivation, same ratchet arithmetic, same verdict strings. The constants
-moved to lint/config.json (conductor_ceiling, standard_ceiling,
-conductor_skills) per the bead intent — a ceiling change is a config change.
+derivation, same ratchet arithmetic, same verdict strings. The constants moved
+to skills/packages.json (`_lint`: conductor_ceiling, standard_ceiling,
+conductor_skills) per the bead intent — a ceiling change is a manifest change.
 
 These ceilings are a COARSE BACKSTOP for outliers and brand-new large skills
 — SECONDARY to Check 14's per-file no-net-growth ratchet, which is the
@@ -28,7 +28,7 @@ looser than the constant is never licence to raise it — a raise is a
 reviewed config edit, and this check catches the raise that outruns the
 measured tier.
 
-FAILS only when lint/config.json ITSELF raised a ceiling above HEAD's
+FAILS only when the manifest's `_lint` ceilings are raised above HEAD's
 committed value (2026-09-12 fix, ac-lint-audit): the check used to fail
 whenever the config constant exceeded the freshly-derived ceiling, which also
 fires when nobody touched the config but someone SHRANK the largest
@@ -60,8 +60,10 @@ _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
+from lib import manifest  # noqa: E402  (ceilings read through the manifest)
 
-CONFIG = "lint/config.json"
+CONFIG = "skills/packages.json"
+SECTION = "_lint"
 SKILL_RE = re.compile(r"^skills/[^/]+/SKILL\.md$")
 
 violations = []
@@ -74,13 +76,24 @@ def ceil_to_10(max_lines, mult_pct):
 
 
 def load_config(root):
-    with open(os.path.join(root, CONFIG), encoding="utf-8") as fh:
-        return json.load(fh)
+    """The ceiling constants, read from the manifest's `_lint` section through
+    lint/lib/manifest.py (ac-6asz.3) — lint/config.json is deleted, so the
+    manifest is the only source. Raises ManifestMissing (an OSError) naming
+    the defect, which run() reports as a FAIL."""
+    section = manifest.packages(root).get(SECTION)
+    if not isinstance(section, dict):
+        raise manifest.ManifestMissing(
+            f"manifest missing the '{SECTION}' section: {os.path.join(root, CONFIG)}")
+    for key in ("conductor_ceiling", "standard_ceiling", "conductor_skills"):
+        if key not in section:
+            raise manifest.ManifestMissing(
+                f"manifest '{SECTION}' section lacks '{key}': {os.path.join(root, CONFIG)}")
+    return section
 
 
 def head_ceilings(root):
     """(conductor_ceiling, standard_ceiling) as committed at HEAD, or (None, None)
-    when unresolvable (no git, shallow/standalone checkout, file new at HEAD, or
+    when unresolvable (no git, shallow/standalone checkout, manifest new at HEAD, or
     malformed) — a raise this check cannot prove is never reported as one."""
     try:
         proc = subprocess.run(
@@ -92,7 +105,7 @@ def head_ceilings(root):
     if proc.returncode != 0:
         return None, None
     try:
-        cfg = json.loads(proc.stdout)
+        cfg = json.loads(proc.stdout)[SECTION]
         return int(cfg["conductor_ceiling"]), int(cfg["standard_ceiling"])
     except (ValueError, KeyError, TypeError, json.JSONDecodeError):
         return None, None
@@ -127,8 +140,8 @@ def run(root):
         std_ceiling = int(cfg["standard_ceiling"])
         cfg_conductors = list(cfg["conductor_skills"])
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        print(f"FAIL 15-line-ceilings: {CONFIG} missing or incomplete ({exc}) — "
-              "the ceiling constants are a config change, never a script edit")
+        print(f"FAIL 15-line-ceilings: {CONFIG}#{SECTION} missing or incomplete ({exc}) — "
+              "the ceiling constants are a manifest change, never a script edit")
         return 1
 
     ros = roster(root)
@@ -161,7 +174,7 @@ def run(root):
             print(f"  NOTICE ratchet        STANDARD_CEILING {std_ceiling} exceeds derived "
                   f"{std_derived} = ceil_to_10({std_max} x 1.10), tier max {std_owner} — the "
                   "constant was not raised (a tier-max skill shrank); consider lowering "
-                  f"standard_ceiling in {CONFIG} to match")
+                  f"standard_ceiling in {CONFIG}#{SECTION} to match")
     else:
         print(f"  PASS  ratchet         STANDARD_CEILING {std_ceiling} <= derived {std_derived} "
               f"= ceil_to_10({std_max} x 1.10), tier max {std_owner}")
@@ -177,7 +190,7 @@ def run(root):
             print(f"  NOTICE ratchet        CONDUCTOR_CEILING {cond_ceiling} exceeds derived "
                   f"{con_derived} = ceil_to_10({con_max} x 1.15), tier max {con_owner} — the "
                   "constant was not raised (a tier-max skill shrank); consider lowering "
-                  f"conductor_ceiling in {CONFIG} to match")
+                  f"conductor_ceiling in {CONFIG}#{SECTION} to match")
     else:
         print(f"  PASS  ratchet         CONDUCTOR_CEILING {cond_ceiling} <= derived {con_derived} "
               f"= ceil_to_10({con_max} x 1.15), tier max {con_owner}")

@@ -1036,11 +1036,25 @@ ensure_home_link() {
 # committed (dangling links for external cloners + internal-structure leak).
 # check-ignore is pure pattern matching — probe paths need not exist; they stand
 # in for anything sync_target would create.
+#
+# Line format: `<dir-name> [public] [packages=a,b]`. The optional `packages=`
+# token (WS3) names the deploy packages deploy.sh stamps for that target;
+# ABSENT means every package — the full-set policy (every app gets the entire
+# registry unless a line says otherwise). sync_target honours it by passing
+# `deploy.sh --package <pkgs> --agents all` instead of `--all` (agents are
+# global stances, owned by no package, so they always deploy whole).
 TARGETS_LIST="$REPOS_ROOT/infrastructure/ac-deploy-targets.list"
 
 is_public_target() { # <basename>
   [ -f "$TARGETS_LIST" ] || return 1
   grep -Eq "^[[:space:]]*$1[[:space:]]+public([[:space:]]|#|$)" "$TARGETS_LIST"
+}
+
+target_packages() { # <basename> -> packages csv on stdout, empty when the line names none
+  [ -f "$TARGETS_LIST" ] || return 0
+  grep -E "^[[:space:]]*$1([[:space:]#]|$)" "$TARGETS_LIST" | head -1 \
+    | sed -E 's/^[^[:space:]]+//' | tr ' ' '\n' \
+    | grep -E '^packages=' | head -1 | sed 's/^packages=//'
 }
 
 guard_public() { # <target-base-dir> — 0 if every stamped harness path is gitignored
@@ -1140,7 +1154,12 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
   install_commit_msg_hook "$base"
 
   if [ "$mode" = "app" ] && [ "$EN_CLAUDE" = "true" ]; then
-    local dep_flags="$dep_extra" deploy_status
+    local dep_flags="$dep_extra" deploy_status dep_scope="--all" pkgs
+    pkgs="$(target_packages "$(basename "$base")")"
+    # Per-target packages from ac-deploy-targets.list (WS3): a named subset
+    # deploys package-filtered skills with whole agents; absent honours the
+    # full-set policy by keeping --all.
+    [ -n "$pkgs" ] && dep_scope="--package $pkgs --agents all"
     [ "$DRY" = 1 ] && dep_flags="$dep_flags -n"
     # deploy.sh output counts as change signal only in --check via its own diff-noise;
     # it is idempotent, so re-running is always safe.
@@ -1148,7 +1167,7 @@ sync_target() { # <target-base-dir> ("app" mode: also runs deploy.sh for .claude
     # (no real diff noise) — that is not a failure. But PIPESTATUS[0] still holds
     # deploy.sh's own exit code regardless of the trailing `|| true`, so check it
     # explicitly instead of silently discarding a genuine deploy.sh crash.
-    "$AC_ROOT/deploy.sh" "$base" --all $dep_flags | sed 's/^/  [deploy.sh] /' | grep -v '^  \[deploy.sh\] $' || true
+    "$AC_ROOT/deploy.sh" "$base" $dep_scope $dep_flags | sed 's/^/  [deploy.sh] /' | grep -v '^  \[deploy.sh\] $' || true
     deploy_status="${PIPESTATUS[0]}"
     [ "$deploy_status" -eq 0 ] || { echo "  ERROR: deploy.sh failed (exit $deploy_status) for $base" >&2; exit "$deploy_status"; }
     render_hooks_app "$base"

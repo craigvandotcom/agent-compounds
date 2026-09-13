@@ -98,7 +98,8 @@ expect "already-pushed SHRINK is still a pass" 0 "$base" '.claude/skills/*/SKILL
 # --- LEAN ac FAMILY: creation defers to the family cap, growth does not (ac-g2v4) ---
 # A brand-new SKILL.md always has `del = 0`, so the net is always positive and a
 # creation was ALWAYS a violation — which made the ac family uncreatable. Creation now
-# answers to the ac family TOTAL instead (lint/config.json). Creation is distinguished
+# answers to the ac family TOTAL instead (the manifest's `_lint` section,
+# skills/packages.json — lint/config.json is deleted, ac-6asz.3). Creation is distinguished
 # from a pure-addition EDIT with --diff-filter=A: both print `N 0` on numstat, so
 # numstat alone cannot tell them apart.
 git checkout -q -- .claude/skills/foo/SKILL.md 2>/dev/null || true
@@ -134,7 +135,7 @@ git checkout -q -- .claude/skills/ac-plan/SKILL.md 2>/dev/null
 
 # Creation over the family cap is still a violation — the cap is the payment, and
 # the exemption is a deferral to it, not an amnesty. (The registry fixture has one
-# family file, so the cap breach needs a bigger family; the config cap is 800 and
+# family file, so the cap breach needs a bigger family; the manifest cap is 800 and
 # the created file alone stays under it — over-cap is asserted by 80+700 lines.)
 mkdir -p .claude/skills/ac-polish
 seq 1 800 | sed 's/^/line /' > .claude/skills/ac-polish/SKILL.md

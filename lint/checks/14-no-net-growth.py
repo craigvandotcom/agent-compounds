@@ -26,7 +26,7 @@ shape, same verdict strings, same degrades:
          read as checked.
 
 The ONE structural exception: a NEW lean-family SKILL.md answers to the family
-TOTAL (lint/config.json lean_family_cap) instead of its own per-file delta —
+TOTAL (the manifest's `_lint` section) instead of its own per-file delta —
 a deferral to the cap, never an amnesty. Creation is told apart from a
 pure-addition edit by --diff-filter=A (both print `N 0` on numstat). Growth of
 an existing member never defers. There is NO prose token: ec5fa64 removed
@@ -40,7 +40,6 @@ Modes:
 Exit: 0 clean, 1 violations, 2 population empty (no tree, no consumers).
 """
 
-import json
 import os
 import re
 import subprocess
@@ -51,6 +50,7 @@ _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
+from lib import manifest  # noqa: E402  (check-14 lists read through the manifest)
 
 violations = []
 notices = []
@@ -91,8 +91,29 @@ def leg1_base(root, base_ref):
 
 
 def load_config(root):
-    with open(os.path.join(root, "lint", "config.json"), encoding="utf-8") as fh:
-        return json.load(fh)
+    """The check-14 lists (base_ref, lean_family, creation_exception,
+    lean_family_cap), read from the manifest's `_lint` section through
+    lint/lib/manifest.py (ac-6asz.3) — lint/config.json is deleted, so the
+    manifest is the only source. Raises ManifestMissing naming the defect,
+    which the caller reports as a FAIL (never a traceback)."""
+    section = manifest.packages(root).get("_lint")
+    if not isinstance(section, dict):
+        raise manifest.ManifestMissing(
+            f"manifest missing the '_lint' section: {os.path.join(root, 'skills', 'packages.json')}")
+    for key in ("base_ref", "lean_family", "creation_exception", "lean_family_cap"):
+        if key not in section:
+            raise manifest.ManifestMissing(
+                f"manifest '_lint' section lacks '{key}': "
+                f"{os.path.join(root, 'skills', 'packages.json')}")
+    return section
+
+
+def require_config(cfg_root):
+    try:
+        return load_config(cfg_root)
+    except manifest.ManifestMissing as exc:
+        print(f"FAIL 14-no-net-growth: {exc} — the manifest is the only source of these lists")
+        sys.exit(1)
 
 
 def member_of(path, members):
@@ -267,18 +288,18 @@ def main():
     cfg_root = scope.ROOT
     if args and args[0] == "--scan":
         repo, label, base, spec = args[1], args[2], args[3], args[4]
-        cfg = load_config(cfg_root)
+        cfg = require_config(cfg_root)
         scan(repo, label, base, spec, cfg)
         if violations:
             print("FAIL 14-no-net-growth: net-positive SKILL.md file(s): " + ", ".join(violations))
             return 1
         return 0
     if args and args[0] == "--base-of":
-        cfg = load_config(cfg_root)
+        cfg = require_config(cfg_root)
         print(base_of(args[1], cfg["base_ref"]))
         return 0
     if args and args[0] == "--leg1-base":
-        cfg = load_config(cfg_root)
+        cfg = require_config(cfg_root)
         print(leg1_base(args[1], cfg["base_ref"]))
         return 0
     root = args[0] if args else scope.ROOT
@@ -287,7 +308,7 @@ def main():
         import importlib
         importlib.reload(scope)
         cfg_root = scope.ROOT
-    cfg = load_config(cfg_root)
+    cfg = require_config(cfg_root)
     rc = run_full(root, cfg)
     if rc == 0 and not notices and not os.path.isdir(os.path.join(root, "skills")):
         return 2

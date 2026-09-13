@@ -27,6 +27,10 @@
 # Options:
 #   --skills a,b,c | all    symlink the named skills (or every skill)
 #   --agents a,b | all      generate the named agents (or every agent)
+#   --package a,b           symlink the skills in the named WS3 packages
+#                           (skills/packages.json) plus the shared _* dirs;
+#                           agents are NOT deployed unless --agents is also
+#                           given. Cannot be combined with --skills/--all.
 #   --all                   all skills + all agents
 #   --list                  print what's available and exit
 #   --no-prune              keep orphaned symlinks (default: prune them)
@@ -87,7 +91,30 @@ PRUNE=1
 REQ_IGNORED=0
 SKILLS_REQ=""
 AGENTS_REQ=""
+PKG_REQ=""
 TARGET=""
+
+print_usage() {
+  cat <<'USAGE'
+Usage:
+  ./deploy.sh <target-project-dir> [options]
+
+Options:
+  --skills a,b,c | all    symlink the named skills (or every skill)
+  --agents a,b | all      generate the named agents (or every agent)
+  --package a,b           symlink the skills in the named WS3 packages
+                          (skills/packages.json) plus the shared _* dirs;
+                          agents are NOT deployed unless --agents is also
+                          given. Cannot be combined with --skills/--all.
+  --all                   all skills + all agents
+  --list                  print what's available and exit
+  --no-prune              keep orphaned symlinks (default: prune them)
+  --require-ignored       refuse to stamp unless the target's git repo ignores
+                          the harness paths this script creates
+  -n, --dry-run           show what would happen, change nothing
+  -h, --help              print this help and exit
+USAGE
+}
 
 # Recursive-safe enumeration: a skill is any dir containing SKILL.md; an agent is
 # any .md file. Names are paths relative to skills/ or agents/ (e.g. "ac-plan" or,
@@ -112,8 +139,10 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --skills)   SKILLS_REQ="$2"; shift 2 ;;
     --agents)   AGENTS_REQ="$2"; shift 2 ;;
+    --package)  PKG_REQ="${2:-}"; [ -n "$PKG_REQ" ] || { echo "error: --package needs a package list (csv of skills/packages.json names)" >&2; exit 2; }; shift 2 ;;
     --all)      SKILLS_REQ="all"; AGENTS_REQ="all"; shift ;;
     --list)     list_available; exit 0 ;;
+    -h|--help)  print_usage; exit 0 ;;
     --no-prune) PRUNE=0; shift ;;
     --require-ignored) REQ_IGNORED=1; shift ;;
     -n|--dry-run) DRY=1; shift ;;
@@ -127,6 +156,33 @@ if [ -z "$TARGET" ]; then
 fi
 [ -d "$TARGET" ] || { echo "error: target dir does not exist: $TARGET" >&2; exit 2; }
 TARGET="$(cd "$TARGET" && pwd)"   # absolutize
+
+# --package a,b — resolve WS3 package names to member skills through the manifest.
+# skills/_tools/ is stamped by EVERY package, never owned by one, so a package-only
+# stamp always carries the shared _* dirs (a bare named list would drop them, and the
+# polish/beadify stages would have no gate to run). Unknown names fail loud: silently
+# deploying nothing would look exactly like success.
+if [ -n "$PKG_REQ" ]; then
+  [ -z "$SKILLS_REQ" ] || { echo "error: --package cannot be combined with --skills or --all (one skill selector)" >&2; exit 2; }
+  PKGS_MANIFEST="$AC_ROOT/skills/packages.json"
+  [ -f "$PKGS_MANIFEST" ] || { echo "error: package manifest missing: $PKGS_MANIFEST" >&2; exit 2; }
+  EXPANDED=""
+  IFS=',' read -ra PKG_ARR <<< "$PKG_REQ"
+  for p in "${PKG_ARR[@]}"; do
+    p="${p#"${p%%[![:space:]]*}"}"
+    p="${p%"${p##*[![:space:]]}"}"
+    [ -n "$p" ] || { echo "error: --package carries an empty name" >&2; exit 2; }
+    got="$(jq -r --arg p "$p" '
+      .[$p] as $pkg
+      | if ($pkg | type) != "object" or ($pkg.skills | type) != "array" then
+          error("unknown package")
+        else $pkg.skills[] end' "$PKGS_MANIFEST" 2>/dev/null)" \
+      || { echo "error: unknown package '$p' (see skills/packages.json for the package names)" >&2; exit 2; }
+    EXPANDED="$EXPANDED,$(printf '%s' "$got" | paste -sd, -)"
+  done
+  for s in $(list_skills | grep '^_'); do EXPANDED="$EXPANDED,$s"; done
+  SKILLS_REQ="$(printf '%s' "$EXPANDED" | tr ',' '\n' | sed '/^$/d' | sort -u | paste -sd, -)"
+fi
 
 # --require-ignored: public-repo guard. check-ignore is pure pattern matching, so
 # probe paths need not exist — they stand in for anything this script would create.
