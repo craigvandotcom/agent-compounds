@@ -6,7 +6,7 @@ an over-bar `loud` one that must NOT promote, a stamping run AND a default run t
 leave every byte alone. A one-sided case is satisfied by a check that always fires.
 
 Run directly:  python3 skills/skill-builder/scripts/friction-rollup.test.py
-Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.py).
+Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.py).
 """
 
 import datetime

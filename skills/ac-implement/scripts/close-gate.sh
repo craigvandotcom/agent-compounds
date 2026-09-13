@@ -5,7 +5,7 @@
 # ASSURANCE
 #   PROBE:      bash skills/ac-implement/scripts/close-gate.test.sh
 #   SCHEDULE:   every ac2 worker close; the harness runs on every
-#               scripts/run-all-harnesses.sh invocation, which lint.sh Check 20 audits.
+#               scripts/run-all-proofs.sh invocation, which lint.sh Check 20 audits.
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #

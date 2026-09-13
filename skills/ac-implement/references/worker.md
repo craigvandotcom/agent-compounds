@@ -148,14 +148,14 @@ registry:
 
     bash lint.sh                        # compare FAILING CHECK NAMES to the known baseline;
                                         # never pin or assert an absolute failure count
-    bash scripts/run-all-harnesses.sh   # or your own new/changed *.test.sh directly
+    bash scripts/run-all-proofs.sh   # or your own new/changed *.test.sh directly
     ubs "<file>" "<file>"               # ONE call, every path quoted; read the DETAIL lines
 
 `ubs` has no shell or markdown scanner: over those it prints *"nothing was checked (this is NOT
 a pass)"*. Report that verbatim as an unverified tier.
 
 **IN A SWARM, THE TWO REPO-WIDE GATES ABOVE ARE ADVISORY TO YOU AND AUTHORITATIVE TO NOBODY.**
-`lint.sh` and `run-all-harnesses.sh` measure the WORKING TREE, which holds every sibling's
+`lint.sh` and `run-all-proofs.sh` measure the WORKING TREE, which holds every sibling's
 uncommitted edits as well as yours. Measured: `lint.sh` returned a clean baseline that was
 produced ENTIRELY by a sibling's uncommitted change while committed HEAD was still red — a
 bead would have closed on a green that existed in no commit. So at N>1: run them to catch your

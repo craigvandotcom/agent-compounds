@@ -22,7 +22,7 @@
 #   PROBE:      skills/_tools/touchers.test.sh — both polarities over every verdict below
 #   SCHEDULE:   every `refined` stamp (stamp-refined.sh sources this file and calls
 #               touchers_check); every ac-beadify Delivers/Consumes wiring step (`derive`);
-#               and on every CI run via scripts/run-all-harnesses.sh
+#               and on every CI run via scripts/run-all-proofs.sh
 #   MODE:       blocking
 #   ON-FAILURE: closed   (a count that could not be derived is a refusal, never a zero)
 #

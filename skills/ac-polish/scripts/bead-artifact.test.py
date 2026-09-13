@@ -2,7 +2,7 @@
 """bead-artifact.test.py — RED/GREEN proof harness for bead-artifact.py's edge sync.
 
 ASSURANCE-ROLE: test-harness
-CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.py glob) and any local run.
+CALLER: scripts/run-all-proofs.sh (discovered by its *.test.py glob) and any local run.
 
 The defect this covers: writeback landed BODIES and not EDGES, so a polish reader who added
 a `## Consumes` line wrote a blocker the board never learned about (measured 2026-09-06 on

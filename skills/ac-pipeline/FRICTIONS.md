@@ -326,7 +326,7 @@ last_pass: 2026-09-07
 - status: open
 - control: untreated
 - receipt: BCA run 2026-09-04 — three workers reported `bash lint.sh` and
-  `bash scripts/run-all-harnesses.sh` exit 127 ("No such file or directory"); those registry
+  `bash scripts/run-all-proofs.sh` exit 127 ("No such file or directory"); those registry
   scripts exist only in the skills repo, not in consumer app repos
 - proposed_fix: worker.md section 5 should derive the gate commands from the consumer repo
   (package.json quality gate or a repo-declared gates file) instead of hard-coding registry

@@ -2,7 +2,7 @@
 # diff-closure.test.sh — RED/GREEN proof harness for diff-closure.sh.
 #
 # ASSURANCE-ROLE: test-harness
-# CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.sh glob) and any local run.
+# CALLER: scripts/run-all-proofs.sh (discovered by its *.test.sh glob) and any local run.
 #
 # Every case builds a fresh fixture repo with KNOWN callers, applies one working-tree change,
 # and asserts the verdict token and the named files:

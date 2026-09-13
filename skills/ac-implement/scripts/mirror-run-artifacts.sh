@@ -7,7 +7,7 @@
 # ASSURANCE
 #   PROBE:      bash skills/ac-implement/scripts/mirror-run-artifacts.test.sh
 #   SCHEDULE:   at every batch-boundary checkpoint, after the ledger flush in coordinator.sh;
-#               the harness runs on every scripts/run-all-harnesses.sh invocation.
+#               the harness runs on every scripts/run-all-proofs.sh invocation.
 #   MODE:       non-blocking advisory
 #   ON-FAILURE: closed
 #

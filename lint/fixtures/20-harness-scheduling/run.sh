@@ -9,7 +9,7 @@ W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 
 mkdir -p "$W/scripts" "$W/.github/workflows" "$W/lint/checks"
 cp "$ROOT/scripts/harness-scheduling-check.sh" "$W/scripts/"
-cp "$ROOT/scripts/run-all-harnesses.sh" "$W/scripts/"
+cp "$ROOT/scripts/run-all-proofs.sh" "$W/scripts/"
 chmod +x "$W/scripts/"*.sh
 printf '#!/usr/bin/env bash\n# demo proof harness\nexit 0\n' > "$W/lint/checks/demo.test.sh"
 chmod +x "$W/lint/checks/demo.test.sh"
@@ -19,6 +19,6 @@ printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps
 out="$(python3 "$CHECK" "$W" 2>&1)"; rc=$?
 echo "$out" | sed 's/^/  | /'
 if [ "$rc" -ne 1 ]; then echo "fixture: expected RED (exit 1) for an unscheduled harness suite, got $rc"; exit "$rc"; fi
-printf '%s' "$out" | grep -q "no .github/workflows/\*.yml references run-all-harnesses.sh" \
+printf '%s' "$out" | grep -q "no .github/workflows/\*.yml references run-all-proofs.sh" \
   || { echo "fixture: the unscheduled-workflow violation was not the report"; exit 1; }
 exit 0

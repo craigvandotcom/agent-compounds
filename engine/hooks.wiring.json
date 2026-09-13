@@ -97,7 +97,7 @@
     {
       "id": "bead-capture-guard",
       "assurance": {
-        "PROBE": "hooks/bead-capture-guard.test.py (38 cases), driven by lint.sh Check 18 and executed by scripts/run-all-harnesses.sh in CI",
+        "PROBE": "hooks/bead-capture-guard.test.py (38 cases), driven by lint.sh Check 18 and executed by scripts/run-all-proofs.sh in CI",
         "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)",
         "MODE": "blocking",
         "ON-FAILURE": "open",

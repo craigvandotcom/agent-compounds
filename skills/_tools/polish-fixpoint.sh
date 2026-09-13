@@ -14,7 +14,7 @@
 # ASSURANCE (ac-pipeline/references/assurance-declarations.md § The four fields):
 #   PROBE:      skills/_tools/polish-fixpoint.test.sh — RED/GREEN over every verdict below
 #   SCHEDULE:   once per polish round, from ac-polish's round step; and on every CI run
-#               via scripts/run-all-harnesses.sh (registry-lint `harnesses` job)
+#               via scripts/run-all-proofs.sh (registry-lint `harnesses` job)
 #   MODE:       blocking
 #   ON-FAILURE: closed   (no receipt, no stamp — the refusal is the feature)
 #

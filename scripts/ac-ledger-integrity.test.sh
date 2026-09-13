@@ -7,7 +7,7 @@
 # failure mode this pipeline was built to stop believing.
 #
 # Run directly:  bash scripts/ac-ledger-integrity.test.sh
-# Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.sh).
+# Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.sh).
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

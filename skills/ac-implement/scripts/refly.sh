@@ -5,7 +5,7 @@
 # ASSURANCE
 #   PROBE:      bash skills/ac-implement/scripts/refly.test.sh
 #   SCHEDULE:   once per ac2 swarm run, in Phase 0 (SKILL.md), before the pool is counted;
-#               the harness runs on every scripts/run-all-harnesses.sh invocation, which
+#               the harness runs on every scripts/run-all-proofs.sh invocation, which
 #               lint.sh Check 20 audits for scheduling.
 #   MODE:       advisory — a bead it cannot re-check stays stamped; it never stamps
 #   ON-FAILURE: closed — br/jq missing or flight-check absent exits 2 and strips nothing

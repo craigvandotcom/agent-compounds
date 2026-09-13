@@ -137,7 +137,7 @@ for p in sorted(_paths):
     if p == "_archive" or p.startswith("_archive/"):
         _archive.add(p)
         continue
-    if p.endswith(".test.sh") or p.endswith(".test.py") or p == "scripts/run-all-harnesses.sh":
+    if p.endswith(".test.sh") or p.endswith(".test.py") or p == "scripts/run-all-proofs.sh":
         _harnesses.add(p)
     if p.startswith(".github/workflows/"):
         _harnesses.add(p)

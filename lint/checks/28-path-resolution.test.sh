@@ -6,7 +6,7 @@
 # tree so the assertions cannot drift with the live registry's citations.
 #
 # Run directly:  bash lint/checks/28-path-resolution.test.sh
-# Discovered automatically by scripts/run-all-harnesses.sh.
+# Discovered automatically by scripts/run-all-proofs.sh.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

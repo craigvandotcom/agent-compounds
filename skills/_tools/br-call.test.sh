@@ -6,7 +6,7 @@
 # the happy path. A real br invocation is never made: the helper's contract is shape-only.
 #
 # Run directly:  bash skills/_tools/br-call.test.sh
-# Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.sh).
+# Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.sh).
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

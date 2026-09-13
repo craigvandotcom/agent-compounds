@@ -65,7 +65,7 @@ def discover():
     for rel in sorted(scope.CHECKS):
         fn = os.path.basename(rel)
         if fn.endswith(".test.sh"):
-            continue  # proof harnesses run under run-all-harnesses.sh, not the lint suite
+            continue  # proof harnesses run under run-all-proofs.sh, not the lint suite
         if fn.endswith(".py") or fn.endswith(".sh"):
             out.append(os.path.join(_ROOT, rel))
     return out

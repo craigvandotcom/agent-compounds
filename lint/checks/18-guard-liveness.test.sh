@@ -8,7 +8,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/18-guard-liveness.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail

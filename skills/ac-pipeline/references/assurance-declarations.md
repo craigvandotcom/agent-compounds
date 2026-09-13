@@ -65,7 +65,7 @@ When a gate cannot verify, it must say so and FAIL. Silence is never success.
   prints a clean report; a suite killed by `bail` reads as passed.
 - **A stale exemption must fail.** Quarantines, skips, and escapes each carry a sensor
   that fires when they stop applying — a quarantined test that starts PASSING fails the
-  run (`scripts/run-all-harnesses.sh`), a closed decision bead invalidates its escape.
+  run (`scripts/run-all-proofs.sh`), a closed decision bead invalidates its escape.
 
 Enforcement: `lint.sh` Check 18 (a guard can fire) · Check 20 (a proof test is run) ·
 Check 21 (a mechanism declares its failure semantics), each with a `*.test.sh` harness

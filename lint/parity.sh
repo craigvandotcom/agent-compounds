@@ -340,7 +340,7 @@ elif [ "$CHECK_ID" = 20 ] || [ "$CHECK_ID" = 21 ] || [ "$CHECK_ID" = 22 ] || [ "
     case "$CHECK_ID" in
       20)
         mkdir -p "$w/.github/workflows" "$w/lint/checks"
-        cp "$ROOT/scripts/harness-scheduling-check.sh" "$ROOT/scripts/run-all-harnesses.sh" "$w/scripts/"
+        cp "$ROOT/scripts/harness-scheduling-check.sh" "$ROOT/scripts/run-all-proofs.sh" "$w/scripts/"
         chmod +x "$w/scripts/"*.sh
         printf '#!/usr/bin/env bash\n# demo proof harness\nexit 0\n' > "$w/lint/checks/demo.test.sh"
         printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' > "$w/.github/workflows/ci.yml"

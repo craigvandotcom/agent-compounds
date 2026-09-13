@@ -2,7 +2,7 @@
 """seams-merge.test.py — RED/GREEN proof harness for seams-merge.py (three lenses, one artifact).
 
 ASSURANCE-ROLE: test-harness
-CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.py glob) and any local run.
+CALLER: scripts/run-all-proofs.sh (discovered by its *.test.py glob) and any local run.
 
 Rules asserted: each lens keys exactly (object stage×path · flow flow×path · boundary
 interface×side×path) · one artifact holds three maps and its digest moves only on an edge ·

@@ -2,7 +2,7 @@
 # aim.test.sh — RED/GREEN proof harness for aim.sh, all four modes (churn · objects · files · status).
 #
 # ASSURANCE-ROLE: test-harness
-# CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.sh glob) and any local run.
+# CALLER: scripts/run-all-proofs.sh (discovered by its *.test.sh glob) and any local run.
 #
 # churn fixture (known git history):
 #   big.txt    changed 6 times alone (+init), 206 lines -> hotspot #1 (7 × 206)

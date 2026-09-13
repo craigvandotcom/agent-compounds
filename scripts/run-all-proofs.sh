@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# run-all-harnesses.sh — execute every committed proof-test harness in this registry.
+# run-all-proofs.sh — execute every committed proof-test harness in this registry.
 #
 # Born from ac-on0y.1. At its writing 14 shell harnesses and 1 python harness existed
 # and NOT ONE workflow executed any of them: `grep -l 'test\.sh' .github/workflows/*.yml`
@@ -8,8 +8,8 @@
 # failure class lint.sh Check 18 was born from.
 #
 # Usage:
-#   run-all-harnesses.sh          run every discovered harness; exit 1 if any fails
-#   run-all-harnesses.sh --list   print the harnesses that WOULD run (repo-relative,
+#   run-all-proofs.sh          run every discovered harness; exit 1 if any fails
+#   run-all-proofs.sh --list   print the harnesses that WOULD run (repo-relative,
 #                                 sorted, one per line) and exit 0 — this is the
 #                                 surface scripts/harness-scheduling-check.sh audits
 #

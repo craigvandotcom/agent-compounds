@@ -2,7 +2,7 @@
 # polish-fixpoint.test.sh — RED/GREEN proof harness for polish-fixpoint.sh.
 #
 # ASSURANCE-ROLE: test-harness
-# CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.sh glob) and any local run.
+# CALLER: scripts/run-all-proofs.sh (discovered by its *.test.sh glob) and any local run.
 #
 # Every case asserts the VERDICT TOKEN, not just the exit status: the refusals differ from
 # each other in kind (continue vs round-1-clean vs bound-exhausted vs out-of-band) and all

@@ -21,7 +21,7 @@
 #   PROBE:      skills/ac-implement/scripts/diff-closure.test.sh — fixture repos with known
 #               callers; asserts refuse / pass-with-declaration / drift / deletion / new export
 #   SCHEDULE:   worker §5 before self-review · ac-polish code-checklist §1 · ac-review Phase 5;
-#               and on every CI run via scripts/run-all-harnesses.sh
+#               and on every CI run via scripts/run-all-proofs.sh
 #   MODE:       blocking
 #   ON-FAILURE: closed — a refusal exits 1 before any commit; no bead and no callers passes,
 #               so a self-contained hotfix pays nothing

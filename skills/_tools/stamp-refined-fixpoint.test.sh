@@ -12,7 +12,7 @@
 # rather than coverage — Case 7 mutates the producer's token to prove the coupling.
 #
 # Run directly:  bash skills/_tools/stamp-refined-fixpoint.test.sh
-# Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.sh).
+# Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.sh).
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
