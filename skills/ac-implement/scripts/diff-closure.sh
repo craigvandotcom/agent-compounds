@@ -27,7 +27,7 @@
 #               so a self-contained hotfix pays nothing
 #
 # Usage: diff-closure.sh [--base <ref>] [--bead <id> | --declared <file>] [-C <repo>]
-#   --base      what to diff the WORKING TREE against (default: merge-base of origin/main and HEAD)
+#   --base      what to diff the WORKING TREE against (default: merge-base of origin/<git config ac2.trunk, else main> and HEAD)
 #   --bead      read the bead's `touchers:` command(s) via the br show read and run them
 #   --declared  a file of touchers commands, one per line (what --bead would have found)
 # Symbols: TS/JS `export (function|const|class|interface|type|enum) NAME` lines added or
@@ -58,8 +58,13 @@ git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die2 "not a gi
 ROOT=$(git -C "$REPO" rev-parse --show-toplevel)
 cd "$ROOT"
 if [ -z "$BASE" ]; then
-  BASE=$(git merge-base origin/main HEAD 2>/dev/null || true)
-  [ -n "$BASE" ] || die2 "no --base and no origin/main to derive one from"
+  # The trunk is the checkout's own declaration (`git config ac2.trunk`, the same resolution
+  # swarm-commit.sh uses), never a `main` constant. Measured 2026-09-13 on easy-mode (trunk
+  # `dev`, origin/main 581 commits behind): a hardcoded origin/main swept that whole history
+  # into every bead's diff and REFUSED each one with ~30 unrelated symbols.
+  TRUNK=$(git config ac2.trunk 2>/dev/null || true); TRUNK=${TRUNK:-main}
+  BASE=$(git merge-base "origin/$TRUNK" HEAD 2>/dev/null || true)
+  [ -n "$BASE" ] || die2 "no --base and no origin/$TRUNK to derive one from"
 fi
 git rev-parse --verify -q "$BASE^{commit}" >/dev/null || die2 "base is not a commit: $BASE"
 

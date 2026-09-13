@@ -99,6 +99,23 @@ printf 'alter table foods drop column image_urls;\n' > "$R8/supabase/migrations/
 run "$R8"
 [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "image_urls  <- lib/db/read.sql" && ok "SQL: dropped column with a reader outside the diff -> REFUSED" || fail "sql" "rc=$rc $out"
 
+# --- 10. default base follows the declared trunk, not origin/main ---------------------------
+R10="$W/r10"; mkrepo "$R10"
+git -C "$R10" update-ref refs/remotes/origin/main HEAD
+sed -i.bak 's/updateFood(id: string)/updateFood(id: string, opts: {})/' "$R10/lib/db/foods.ts"; rm -f "$R10/lib/db/foods.ts.bak"
+git -C "$R10" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qam trunk-work >/dev/null
+git -C "$R10" update-ref refs/remotes/origin/dev HEAD
+git -C "$R10" config ac2.trunk dev
+out=$("$SCRIPT" -C "$R10" 2>&1); rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q "PASS symbols=0" \
+  && ok "no --base, trunk declared dev: committed trunk history is not swept into the diff -> PASS" \
+  || fail "default base follows ac2.trunk" "rc=$rc $out"
+git -C "$R10" config --unset ac2.trunk
+out=$("$SCRIPT" -C "$R10" 2>&1); rc=$?
+[ "$rc" = 1 ] && printf '%s' "$out" | grep -q "updateFood" \
+  && ok "no --base, no trunk declared: falls back to origin/main (old behaviour preserved)" \
+  || fail "fallback to origin/main" "rc=$rc $out"
+
 # --- 9. spawns nothing; assurance declared ---------------------------------------------------
 if grep -nE '(^|[^[:alnum:]_-])(claude|codex|droid)[[:space:]]|subagent' "$SCRIPT" >/dev/null; then fail "script invokes an agent"; else ok "diff-closure spawns nothing"; fi
 miss=""; for f in PROBE: SCHEDULE: MODE: ON-FAILURE:; do grep -q "$f" "$SCRIPT" || miss="$miss $f"; done

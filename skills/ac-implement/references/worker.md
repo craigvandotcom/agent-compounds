@@ -149,8 +149,11 @@ Gate the comment on the claim's exit status. A lost race must not comment.
 
 **If this bead DELIVERS ITS OWN HARNESS**, the RED banked at claim is only "the harness does
 not exist". That is a real RED but a weak one. Write the harness, **see it fail for the reason
-the AC names, before any fix**, and re-run flight-check so the receipt anchors that stronger
-moment. Nothing refuses you if you skip it — `close-gate` stopped hash-locking the test — but
+the AC names, before any fix**, and re-run flight-check THEN — with the harness written and the
+fix NOT yet applied — so the receipt anchors that stronger moment. **Never run flight-check
+after the fix is in the tree**: its probe is green, so it refuses `PREMISE-FAILED: RED`, prefixes
+the title and unclaims the bead you just finished, and only the coordinator can recover it
+(measured five times in one run, 2026-09-13). Once the fix is applied, the next gate is §5, not §3. Nothing refuses you if you skip it — `close-gate` stopped hash-locking the test — but
 ac-review reads the diff against the receipt for causal sufficiency, and "the file did not
 exist yet" is the weakest possible answer to what the diff caused.
 
