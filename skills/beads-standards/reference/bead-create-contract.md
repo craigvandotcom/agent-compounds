@@ -26,7 +26,7 @@ poisons every future run.
 | Provenance | A confirmed bead carries `proposed-by:` and `confirmed-by:` body lines — who proposed the work and who confirmed it at the batch boundary. | Every confirmed bead |
 
 Epics are exempt from readiness: they are containers, never picked up for implementation.
-This mirrors `ac-align`'s nightly readiness-label repair, which fixes the same gap nightly for beads that predate
+This mirrors `ac-tidy`'s nightly readiness-label repair, which fixes the same gap nightly for beads that predate
 or bypass the gate.
 
 ## Not gated, and why

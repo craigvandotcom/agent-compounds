@@ -27,7 +27,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   triage in the live checkout. **Explicitly create a dedicated worktree** off fresh
   `origin/<default-branch>` and
   run the entire rest of this skeleton inside it — the pattern is ac-align's
-  (`ac-align/workflows/nightly-reconcile.md` § 0). This is EXPLICIT worktree creation in the workflow —
+  (`ac-tidy/SKILL.md` § 1). This is EXPLICIT worktree creation in the workflow —
   never rely on the harness's background-isolation feature, which is disabled
   (`bg-worktree-isolation-disabled`: `bgIsolation=none`). This is the **scheduled-heartbeat
   carve-out** to `ac-pipeline`'s no-worktrees invariant (`ac-pipeline/SKILL.md` § Coordination
@@ -63,7 +63,7 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
 - **Worktree-creation failure is the ONE pre-write abort that survives** (the `||` branch
   above), and that is accepted precedent, not a residual defect: it escalates over Slack and
   `exit 0`s with zero writes, deliberately touching nothing in the app checkout, exactly as
-  `ac-align/workflows/nightly-reconcile.md` § 0 handles its own. It cannot file a bead because there is no
+  `ac-tidy/SKILL.md` § 1 handles its own. It cannot file a bead because there is no
   safe tree to write one into; Slack is the whole channel. Use ac-triage's own
   `TRIAGE DEGRADED: <reason>` vocabulary (step 5) — `slack-send` takes the message
   positionally; do not reach for another skill's `--card`/`--status` flags here.

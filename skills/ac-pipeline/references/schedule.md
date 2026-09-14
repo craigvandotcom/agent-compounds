@@ -12,7 +12,7 @@ here as an owner-hosted operating contract, with two archived skill names update
 | Job | Cadence | Mode | Skill |
 |---|---|---|---|
 | Curator | Daily ~23:00 | scheduled run (ingredient review/amend) | `curate` |
-| Tidy | Nightly ~00:45 (after the 00:30 maintenance job) | NIGHTLY — propose + bounded auto-act | `ac-align` (`workflows/nightly-reconcile.md`) |
+| Tidy | Nightly ~00:45 (after the 00:30 maintenance job) | NIGHTLY — apply provable fixes, file findings as beads | `ac-tidy` |
 | Align | Weekly, Saturday ~06:00 | REVIEW — propose only, no writes | `ac-align` (`workflows/weekly-align.md`) |
 | Dream | Weekly, Sunday ~05:00 | CYCLE — propose only, no writes | `dream` |
 | Triage | Must fire **≥30 min before** any `ac-implement` swarm | scheduled, feeds beads ahead of shipping | `ac-triage` |

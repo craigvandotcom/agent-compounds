@@ -50,7 +50,7 @@ position — the `br create` text inside one must keep passing), and every remai
 newline becomes a `;` separator. Quoted newlines stay intact.
 
 FAIL-OPEN on any parse failure. A guard that cannot understand a command must not wedge an
-unattended ac-loop run at 3am; a missed stamp is caught by ac-align's nightly reconcile.
+unattended ac-loop run at 3am; a missed stamp is caught by ac-tidy.
 """
 
 import json
@@ -75,7 +75,7 @@ ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
 READINESS = ("unrefined", "refined", "human-gate")
 
 # Epics are containers, never picked up for implementation, so readiness is meaningless on
-# them. This mirrors ac-align's nightly readiness-label repair, which fixes the same gap nightly for "open non-epic"
+# them. This mirrors ac-tidy's nightly readiness-label repair, which fixes the same gap nightly for "open non-epic"
 # beads — the gate and the repair must agree on the exemption or they fight each other.
 READINESS_EXEMPT_TYPES = {"epic"}
 
@@ -323,7 +323,7 @@ def bead_type(cmd):
     None means "cannot know" and the readiness check is SKIPPED. A template placeholder
     like `-t <type>` could stand for `epic`, so enforcing readiness on it would block a
     legitimate epic template. Under-enforcing here is correct: the origin check still
-    applies, ac-align repairs readiness nightly, and lint Check 19 catches stale templates
+    applies, ac-tidy repairs readiness nightly, and lint Check 19 catches stale templates
     statically anyway.
     """
     val = flag_value(cmd, {"-t", "--type"}, ("--type=",))
@@ -379,7 +379,7 @@ def has_probe(cmd):
 
     An absent description BLOCKS (a probe-less create is exactly what this axis exists
     to refuse). An unsubstituted template placeholder skips, the same doctrine as
-    `bead_type`: it could stand for anything, ac-align repairs nightly, and lint Check 19
+    `bead_type`: it could stand for anything, ac-tidy repairs nightly, and lint Check 19
     catches stale templates statically.
     """
     d = description(cmd)

@@ -98,13 +98,13 @@ board-truth {N} shipped-uncited · {N} gates w/o memo · {N} reason-less · {N} 
 Pointers, never prompts — no `AskUserQuestion`:
 
 ```
-Act: gates/decisions → /ac-human · reconcile/re-prioritize → /ac-align · ship ready work → /ac-implement
+Act: gates/decisions → /ac-human · reconcile → /ac-tidy · re-prioritize → /ac-align · ship ready work → /ac-implement
 ```
 
 ## Principles
 
 1. **Read-only is sacred** — no writes, no `br` mutations, no label changes, no prompts. If you want to fix what you see, you are the wrong skill: route it.
-2. **A glance, not an audit** — cheap reads only, counts over prose, one screen if possible. Depth belongs to `ac-human` (drive the docket) and `ac-align` (reconcile).
+2. **A glance, not an audit** — cheap reads only, counts over prose, one screen if possible. Depth belongs to `ac-human` (drive the docket), `ac-tidy` (reconcile) and `ac-align` (strategy).
 3. **No loop-boundary filter** — the loop side is the answer to "is the factory running". Show it.
 4. **Never guess a count** — `?` plus the failing command beats a plausible number.
 5. **Exit silently** — render and stop. The routing footer is the hand-off.

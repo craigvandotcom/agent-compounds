@@ -37,7 +37,7 @@ Three layers, because prose alone was measured insufficient:
 3. **Refine backstop** — `ac-polish` repairs a missing `origin:` at stamp time
    (inferring where obvious, else `origin:unknown`). It never withholds `refined` for it.
 
-Nightly, `ac-align`'s reconcile reports post-cutover beads still missing `origin:` — a guard bypass or a
+Nightly, `ac-tidy` reports post-cutover beads still missing `origin:` — a guard bypass or a
 stale template, never auto-labelled.
 
 ## Forward-only — no backfill

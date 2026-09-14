@@ -47,7 +47,7 @@ The board is the **session opener**: before any question, invoke **`ac-board`** 
 
 Inside a project → that repo (`PROJECT_ROOT=$(git rev-parse --show-toplevel)`). At org level or asked "across everything" → the org-wide sweep (`references/session-scan.md` § Extend the docket org-wide).
 
-**Show the board before asking anything** — the human came to see what needs them, not to answer a setup question. Invoke **`ac-board`** → then the docket. Freshen (`/ac-align` — weekly align + nightly reconcile) is a *write*, so it is offered as an **option inside the action loop** (Phase 5), never an upfront gate. Surface a one-line hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist. Headless runs skip freshen entirely.
+**Show the board before asking anything** — the human came to see what needs them, not to answer a setup question. Invoke **`ac-board`** → then the docket. Freshen (`/ac-tidy` housekeeping, `/ac-align` strategy) is a *write*, so it is offered as an **option inside the action loop** (Phase 5), never an upfront gate. Surface a one-line hint (`⚠ {N} pipeline proposals pending — review Docket`) whenever open `pipeline-proposal` beads exist. Headless runs skip freshen entirely.
 
 ---
 

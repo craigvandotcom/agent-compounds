@@ -13,7 +13,7 @@ Sets:
              bare path component, and .github/workflows/*.yml (CI config, not
              skill doctrine) matched it before this carve-out existed. A
              generated `.json` file under a `workflows/` dir (e.g.
-             ac-align's nightly `last-run.json` receipt) is likewise excluded
+             ac-tidy's nightly `last-run.json` receipt) is likewise excluded
              (2026-09-12 lint audit, item 4): it is machine-written STATE (a
              run receipt necessarily naming real scope/notes, e.g.
              "body-compass-app"), not doctrine a human authored, so Check 27's
@@ -155,7 +155,7 @@ for p in sorted(_paths):
        and (p.endswith(".sh") or p.endswith(".py")) \
        and not p.endswith(".test.sh") and not p.endswith(".test.py"):
         _scripts.add(p)
-    # A generated `.json` receipt under a workflows/ dir (e.g. ac-align's nightly
+    # A generated `.json` receipt under a workflows/ dir (e.g. ac-tidy's nightly
     # last-run.json) is machine-written STATE, not doctrine — see the LIVE_TEXT
     # docstring above. Everything else workflows/ carries (prose, scripts) stays.
     is_workflow_json_receipt = p.endswith(".json") and _in_dir(p, "workflows")
