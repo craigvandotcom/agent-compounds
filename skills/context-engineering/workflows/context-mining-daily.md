@@ -107,10 +107,27 @@ for home in <infra-memory-home> <org-memory-home> \
     <(ls "$home" | command grep -vE 'MEMORY|README' | sort -u)
 done
 ```
-Sanity-check before trusting a "0 drift" result: the left operand should be non-empty
-(`… | wc -l` ≈ the number of index lines). An empty left operand means the pipeline broke,
-not that the index is clean.
-For each home with dangling lines, **emit an `index-prune` proposal** into today's dream
+Sanity-check before trusting a "0 drift" result — and make it an EXACT equality, not a
+smell test. "Non-empty" is too weak: on 2026-09-15 this check read 293 slugs against a
+337-line index and reported 0 drift, then read 337 and reported 17 six minutes later on
+the same bytes. A plausible-looking undercount passes "non-empty" and silently hides real
+drift. Assert the invariant instead, and refuse the result if it fails:
+```bash
+lines=$(command grep -c '^- \[' "$home/MEMORY.md")   # index bullets
+slugs=$(… the left operand … | wc -l)                 # slugs the pipeline extracted
+[ "$slugs" -eq "$lines" ] || echo "BROKEN: extracted $slugs of $lines index lines — do NOT trust the drift count"
+```
+
+**Before pruning, prove the content is actually gone.** A dangling index line means the
+FILE is absent, not that the LESSON is lost — the prune is only lossless if no copy
+survives. Check all three, per slug:
+`infrastructure/context-mining/daily/*/<slug>.md` (staged, never promoted) · `$home/_archive/`
+· `git log -- memory/auto/<slug>.md`. A slug with a surviving body is a **promotion**, not a
+prune: move it into the home (the index line is already correct) and leave it out of the
+proposal. On 2026-09-15, 5 of 17 dangling slugs still had their bodies in the 2026-08-25
+staging dir — pruning those would have destroyed five real lessons under a "lossless" label.
+
+For each home with genuinely dead lines, **emit an `index-prune` proposal** into today's dream
 queue (`infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`) so the 02:00 job auto-applies it.
 Frontmatter the classifier requires (`infrastructure/dream-cycle/classify.py` is the authority
 — it re-derives and applies the prune itself, you only flag it):
