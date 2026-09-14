@@ -31,7 +31,7 @@ ingest → scan → alignment audit → sequencing), then follow REVIEW-mode beh
 ### 1. Sync + abort-on-contention
 
 ```bash
-git -C ~/Repos pull --ff-only     # VM rebase/merge/reset deny-listed
+git pull --ff-only                # the app checkout; rebase/merge/reset deny-listed
 ```
 
 If the pull can't fast-forward OR `git status --porcelain _backlog/ _plans/` shows another

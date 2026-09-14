@@ -101,12 +101,8 @@ committed scope.** Run when `active/` is thin, the milestone just shipped, or th
    legacy `version:` field is a **soft prior, not authoritative** — live strategy wins.
 3. **Propose promotions** (top N, default 3–5 or enough to refill `active/`).
 
-> **REVIEW mode (headless):** do NOT `AskUserQuestion` / `git mv`. Write the scored slate as a
-> proposal file (`_plans/_proposals/<YYYY-MM-DD>/NN-<slug>.md`; frontmatter `status: pending`
-> · `bead: <id>` · `source: ac-align` · `summary`; `## What` = the slate, `## Why` = rationale
-> + the Phase 3–4 findings) and file one `human-gate,pipeline-proposal` bead pointing at it
-> (dedup: skip a cluster already covered by an open such bead). Then return — REVIEW applies
-> nothing.
+> **REVIEW mode (headless):** no `AskUserQuestion`, no `git mv` — emit the slate per
+> `workflows/weekly-align.md` § 2–4 and return.
 
 **INTERACTIVE only — promote approved items:** `AskUserQuestion` (multiSelect) naming each
 pool file + why it fits; on approval `git mv` each `pool/<file>` → `active/<file>` and set
@@ -142,6 +138,7 @@ Apply approved changes. Do NOT modify files without explicit user confirmation.
 - **Ask before changing (INTERACTIVE).** Suggest archival, deferral, or promotion — never
   silently delete or move. In **REVIEW** mode there is no human: emit a proposal, apply
   nothing.
+- **Traceability.** Backlog items and plans should name the strategy element they serve.
 
 ---
 
