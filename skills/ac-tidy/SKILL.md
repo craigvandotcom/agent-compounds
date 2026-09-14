@@ -29,9 +29,9 @@ Read the board per `ac-pipeline/references/board-scan.md`. Closed beads come fro
 ### 2b. Surviving-gate verify
 
 For each open `human-gate` bead: `br show`, confirm it is still blocked on a human. If
-`$BCA/.beads/issues.jsonl` and the worktree's copy disagree on its status, skip it (live
-checkout disagrees; a newer `updated_at` is not newer semantics). Otherwise stamp a comment
-`verified: <date>`. Never de-gate, close, or edit the body.
+`$BCA/.beads/issues.jsonl` and the worktree's copy disagree on its status, skip it: the
+live checkout disagrees, and a newer `updated_at` is not newer semantics. On every other bead
+Stamp a comment `verified: <date>`. Never de-gate, close, or edit the body.
 
 ## 3. Reconcile — provable, apply
 
