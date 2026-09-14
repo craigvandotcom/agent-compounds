@@ -14,7 +14,7 @@ deterministic. This workflow covers what no mechanical check catches.
 
 Run this after several rounds of skill authoring/refactoring, or whenever the
 catalog "feels" tangled. For app *code* cleanup use `/ac-hygiene`; for pipeline
-state use `/ac-align` (nightly reconcile).
+state use `/ac-tidy`.
 
 ---
 

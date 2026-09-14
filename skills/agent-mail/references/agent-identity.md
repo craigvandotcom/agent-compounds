@@ -97,7 +97,7 @@ children**, and never a stand-in for the child's own minted identity.
 
 The `settings.json` env fallback (`AGENT_NAME=FoggyCreek`, `rule-agent-mail-identity-setup`)
 is **deliberate doctrine, not an accident**: the shared identity for **serial,
-low-contention chore writers** — scheduled jobs (`ac-align`'s nightly reconcile + weekly align, `dream` dailies),
+low-contention chore writers** — scheduled jobs (`ac-tidy` nightly, `ac-align` weekly, `dream` dailies),
 `ac-land`'s format-sweep / report / learnings commits.
 
 **The hard rule (= the tier boundary AND the safety guard, wiring: `ac-ycr.6`):**

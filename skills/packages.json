@@ -62,7 +62,8 @@
       "multi-model",
       "ac-qa",
       "ui-elevate",
-      "ac-board"
+      "ac-board",
+      "ac-tidy"
     ]
   },
   "factory-core": {
@@ -130,6 +131,7 @@
     "skills": [
       "ac-human",
       "ac-align",
+      "ac-tidy",
       "ac-backlog",
       "ac-triage",
       "ac-distribute"

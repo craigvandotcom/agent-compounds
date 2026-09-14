@@ -69,7 +69,7 @@ unknown — is machine-wide floor:
 - **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-polish`
   on convergence — no other skill, and no conductor, however strong the evidence.
   `unrefined` is the default at creation (`ac-backlog`, `ac-beadify`).
-- **Gap repair:** `ac-align`'s nightly reconcile auto-adds `unrefined` to beads missing all
+- **Gap repair:** `ac-tidy`'s nightly run auto-adds `unrefined` to beads missing all
   three lifecycle labels — it never auto-adds `refined`, which is earned, never inferred.
 - `ac-implement` gates on presence of `refined`, not on the lack of `unrefined`.
 

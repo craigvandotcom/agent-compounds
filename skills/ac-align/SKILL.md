@@ -1,6 +1,6 @@
 ---
 name: ac-align
-description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Owns the nightly pipeline reconcile (archive done work, repair readiness labels) and the weekly strategy align — both headless heartbeats. Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next'', ''tidy the pipeline'', ''reconcile plans and beads''. NOT for what to work on NOW (use ac-board to read the board, ac-human for the gated docket), for working the idea/strategy itself (use ac-idea-lab, or strategist for org strategy), or for codebase cleanup (use ac-hygiene).'
+description: 'Align the execution pipeline against current strategy — audit backlog/plans/beads for fit, sequence, and gaps, and own pool → active promotion (binding versions late, against live strategy). Owns the weekly strategy-align heartbeat. Triggers: ''align pipeline'', ''pipeline alignment'', ''is my pipeline on strategy'', ''audit backlog against goals'', ''what should we plan next''. NOT for what to work on NOW (use ac-board to read the board, ac-human for the gated docket), for working the idea/strategy itself (use ac-idea-lab), for board housekeeping (use ac-tidy), or for codebase cleanup (use ac-hygiene).'
 ---
 
 **You are the Pipeline Alignment Director.** Ensure the execution pipeline — backlog, plans,
@@ -13,7 +13,6 @@ not the other way around.
 |---|---|---|---|
 | **INTERACTIVE** (default) | direct human / `ac-human` | `AskUserQuestion` → `git mv` on approval | present decisions, apply on approval |
 | **REVIEW** (headless) | scheduled `workflows/weekly-align.md` heartbeat | **emit** a scored slate as a proposal + `human-gate,pipeline-proposal` bead — NO `AskUserQuestion`, NO `git mv` | **skipped entirely** |
-| **NIGHTLY** (headless) | scheduled `workflows/nightly-reconcile.md` heartbeat | reconcile + bounded auto-act; emits proposals for the rest | applies the sanctioned subset |
 
 REVIEW runs Phases 1–4, diverges only at 4.5 (emit, don't move) and skips Phase 6 — applies
 **nothing**. A human applies an approved slate later in `ac-human`, which re-invokes
@@ -126,7 +125,7 @@ Template: `references/report-template.md`.
 
 ## Phase 6: User Decisions
 
-> **INTERACTIVE only — REVIEW/NIGHTLY skip this phase** (they emit proposals, never apply).
+> **INTERACTIVE only — REVIEW skips this phase** (it emits proposals, never applies).
 
 Present each recommendation category via `AskUserQuestion` (grouped, not per-item when >3).
 Apply approved changes. Do NOT modify files without explicit user confirmation.
