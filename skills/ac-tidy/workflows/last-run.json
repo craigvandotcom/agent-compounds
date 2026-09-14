@@ -1,27 +1,28 @@
 {
   "status": "healthy",
   "mode": "NIGHTLY",
-  "date": "2026-09-13",
-  "machine": "darwin",
+  "date": "2026-09-15",
+  "machine": "omarchine",
   "branch": "main",
   "scope": "body_compass_app",
   "counts": {
-    "closed_unrefined_stripped": 3,
-    "open_unrefined_stamped": 3,
+    "closed_unrefined_stripped": 0,
+    "open_unrefined_stamped": 0,
     "open_human_gates_verified": 4,
     "plans_reconciled": 0,
     "proposals": 0,
     "files_moved": 0,
-    "beads_created": 0
+    "beads_created": 2,
+    "labels_corrected": 1
   },
-  "pushed_sha": "88960c7287a255e3a8761ee562b5c416db2550ea",
-  "bca_pushed_sha": "1826b3229eab0addb0df06f42c680790ee90b492",
+  "pushed_sha": "69633476b09be3454c8ac28e43fda93771e2fe0b",
+  "bca_pushed_sha": "69633476b09be3454c8ac28e43fda93771e2fe0b",
   "push_verified": true,
   "stranded_sha": null,
   "slack": {
-    "channel": "sofi",
+    "channel": "bca",
     "status": "healthy",
-    "ts": "1789253531.084529"
+    "ts": "1789426855.927259"
   },
-  "note": "Reconciled 7 beads (readiness-label repair: 3 unrefined stripped from closed beads, 3 stamped onto open lifecycle-gap beads) + re-verified all 4 open human-gate beads still legitimately blocked, no ledger disagreement. Docket-health clean, no ALARM. Zero plans to archive, zero backlog transitions, zero closeout-drift. Epic-close candidate bd-dtpqg already gated (bd-r4n2a) and carries a Probe: line — no new proposal. Filed then retracted an I2 epic-edge proposal same run after re-deriving with issue_type==epic (bd-wgjbq's ruling) instead of the >3-children heuristic; corrected count was 0."
+  "note": "Re-verified all 4 open human-gate beads, still legitimately blocked (stamped verified:). Beads/plans/backlog scan otherwise came back clean: 0 closed+unrefined, 0 open beads missing a lifecycle label, 0 open pipeline-proposal beads on a closed epic, 0 plans/backlog rows matching an apply-table condition. One provable fix: bd-dynamic-chunk-reject-sticks-boundary-75uxe carried origin:bd-4dosp (a bead ID, not a skill) — corrected to origin:unknown + discovered-from:bd-4dosp. Filed bd-9ihj6 (bd-76rlb/bd-pz8md look like duplicate curate-foods amend write-path beads, needs a human merge call) and bd-6kwqo (infra: br's auto-discovery ignored the worktree cwd during the isolate step and silently wrote every mutation to the live checkout instead of the worktree — verified via diff that nothing else was touched, but the NIGHTLY isolation guarantee is not currently real; needs a human/deeper session to root-cause). Docket-health: 4 open human-gate, 3 reason-less, ALARM on the reason-less>48h threshold — pre-existing, not introduced this run."
 }
