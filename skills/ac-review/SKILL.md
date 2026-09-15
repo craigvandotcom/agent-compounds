@@ -30,28 +30,19 @@ batch"); same contract at any range the operator names (`ac-review <range>`). No
    manifest (`panel-round-1.json`: spawned/skipped) BEFORE spawning — `consensus.py` refuses
    to run without it (exit 3), and a spawned dimension with no output file is a partial
    failure, never a silent pass. A reviewer that dies is re-spawned ONCE.
-3. **Consensus.** `python3 scripts/consensus.py --artifacts-dir <dir> --round 1`. Exit 3
-   (PANEL UNKNOWN) is a hard stop — reconstruct the manifest, never default the panel. A
-   `reviewers_missing` that survives the re-spawn → file the un-reviewed dimension as an
-   honest harness-failure bead: `br create -t task --labels origin:ac-review,qa-blocker,review-finding,unrefined,impact:<class>`; then `VERDICT: NEEDS_DECISION` — never `-t bug` with no catch-stage (a harness failure is not a shipped defect).
-4. **Report.** `references/report-template.md` — the `**Range:**` line (full SHAs,
-   machine-parsed coverage) and the `**Panel:**` line (copied from
-   `consensus-round-1.json`: the panel that ACTUALLY ran) are mandatory. Destination:
-   `.claude/reviews/pending/` when the boundary passes `report_dest`, `.claude/reviews/`
+3. **Consensus.** `python3 scripts/consensus.py --artifacts-dir <dir> --round 1`. Exit 3 (PANEL UNKNOWN) is a hard stop — reconstruct the manifest, never default the panel. A
+   `reviewers_missing` that survives the re-spawn → file the un-reviewed dimension as an honest harness-failure bead: `br create -t task --labels origin:ac-review,qa-blocker,review-finding,unrefined,impact:<class>`; then `VERDICT: NEEDS_DECISION` — never `-t bug` with no catch-stage (a harness failure is not a shipped defect).
+4. **Report.** `references/report-template.md` — the `**Range:**` line (full SHAs, machine-parsed coverage) and the `**Panel:**` line (copied from
+   `consensus-round-1.json`: the panel that ACTUALLY ran) are mandatory. Destination: `.claude/reviews/pending/` when the boundary passes `report_dest`, `.claude/reviews/`
    root otherwise — never `.claude/reviews/batch/` (that dir is the review-mark).
-5. **Verdict.** `VERDICT: APPROVED` only if every manifest dimension reported, findings are
-   dispositioned, and no qa-blocker remains; else `VERDICT: NEEDS_DECISION` — the boundary
-   stops instead of closing. The panel/conductor writes the verdict; the implementer whose
-   diff is under review never does (the party optimising against the measure cannot record
-   the verdict).
+5. **Verdict.** `VERDICT: APPROVED` only if every manifest dimension reported, findings are dispositioned, and no qa-blocker remains; else `VERDICT: NEEDS_DECISION` —
+   the boundary stops instead of closing. The panel/conductor writes the verdict; the implementer whose diff is under review never does (the party optimising against the measure cannot record the verdict).
 
 ## What the review judges
 
-- The dimensions in `references/review-dimensions.md`, plus two a green suite cannot see:
-  **fixture-shape validity** — could each test's fixtures EXIST in production? a test over an
-  impossible input asserts nothing — and **causal sufficiency** — for every bead the batch
-  closed, does THIS diff produce that GREEN? (The token is not the thing; and the probe may
-  have flipped for another cause — a sibling's commit, an already-green AC.)
+- The dimensions in `references/review-dimensions.md`, plus two a green suite cannot see: **fixture-shape validity** — could each test's fixtures EXIST in production?
+  a test over an impossible input asserts nothing — and **causal sufficiency** — for every bead the batch closed, does THIS diff produce that GREEN? (The token is
+  not the thing; and the probe may have flipped for another cause — a sibling's commit, an already-green AC.)
 - **Review surface:** code a user reaches in production, or code that writes what a user
   reads (`review-dimensions.md` § Review surface). Factory findings (scripts, tests, CI,
   `.claude/`, docs) are report-only; sole exception: a mutation-probe-convicted test finding.
@@ -60,18 +51,21 @@ batch"); same contract at any range the operator names (`ac-review <range>`). No
 
 - Every finding carries **ACCEPT / FIX / DEFER** (DEFER names what would make it now) and a
   **catch-stage label** — the stage that SHOULD have caught it (plan · beadify · flight ·
-  implement · close · review) — **even when the fix lands in-batch**: auto-applied
-  Critical/High findings write their catch-stage record — no work bead, the fix landed; **no VERDICT record** for an auto-fixed Critical/High fails the run's own checklist.
+  implement · close · review) — **even when the fix lands in-batch**: the bead is still filed
+  and carries the catch-stage record; a FIX with no bead fails the run's checklist.
 - **Closed epics accept no child (D6).** A late finding against a closed epic opens a
   follow-up epic — never a new child of the closed one, never a silent reopen. The
   follow-up carries its own `discovered-from:` trail back to the finding; the closed epic
   stays closed.
 - **Severity orders the report; only a named `impact:` makes a bead**
-  (`bead-create-contract.md` § Required axes). Else DEFER with a reason. Shipped defect →
-  `-t bug`; mutation-probe-convicted test → `-t task`; unverified → `-t investigation`;
+  (`bead-create-contract.md` § Required axes). Else DEFER with a reason. In batch mode each
+  Critical is filed at P0 and each High at P1 — Medium and below are report-only. Shipped
+  defect → `-t bug`; mutation-probe-convicted test → `-t task`; unverified → `-t investigation`;
   labels `origin:ac-review,impact:<class>,review-finding,unrefined`, `discovered-from: <bead>`,
-  epic parent, `post-merge` (`bead-conventions.md`). FIX → bead or `ac-polish code` — never
-  in-place, never auto-fixed here. **Conductor confirm:** dedupe · confirm · file · record
+  a `Probe:` line carrying the reviewer's reproducing command, and a parent-child edge to the
+  open epic — never `post-merge`: these beads block the epic's close. FIX → bead or `ac-polish code` —
+  never in-place. A round filing no P0/P1 writes `REVIEW: APPROVED <range>` on the epic
+  (`br comments add <epic> ...`). **Conductor confirm:** dedupe · confirm · file · record
   `proposed-by:`/`confirmed-by:`; consumes workers' **PROPOSED-BEAD** blocks and reviewers'
   findings. Forks: one decision bead per distinct fork, re-verified against HEAD before
   filing (`human-gate-template.md` § Before filing) — never per finding. A reasoned
