@@ -76,9 +76,7 @@ MISSING_STEPS=$(comm -23 <(printf '%s\n' "$REQUIRED_STEPS" | sort) <(printf '%s\
 - **`REQUIRED`/`REQUIRED_STEPS` empty or unreadable** — ranges over an empty set, the exact green-over-nothing this leg exists to stop. Refuse `NOT-GATED`.
 - **The REQUIRED_STEPS contract names all six substantive steps** — 'Unit + integration tests (vitest)', 'Build check (next build)', 'TypeScript check (tsc --noEmit)', 'Shadow divergence check', 'Supabase integration tests — real Postgres (workflow_dispatch only)', 'Apply migrations — db reset (workflow_dispatch only)'. A Tier-1 run skips the heavy four; the step layer refuses it by name.
 
-`NOT-GATED` is never a pass and never a FAIL-and-continue: it is a stop. A dormant job reporting
-green is the gate-audit class (canon: `skills/ac-pipeline/references/` § assurance-declarations)
-— how a pipeline ships unproven code while every dashboard stays green.
+`NOT-GATED` is never a pass and never a FAIL-and-continue: it is a stop. A dormant job reporting green is the gate-audit class (canon: `skills/ac-pipeline/references/` § assurance-declarations) — how a pipeline ships unproven code while every dashboard stays green.
 
 ## Open needs-device surfaces — refuse before tagging
 
@@ -103,8 +101,7 @@ silently. Pull QA earlier only when that table says so; then pass `+qa` to `ac-p
 
 ## Ship, in this order
 
-1. **Tag the PROVEN SHA explicitly, never `HEAD`.** Phase 0 and the proof leg are done, so this
-   list opens on a proven SHA that already carries its own bump. `ac-prove` pushes evidence
+1. **Tag the PROVEN SHA explicitly, never `HEAD`.** Phase 0 and the proof leg are done, so this list opens on a proven SHA that already carries its own bump. `ac-prove` pushes evidence
    commits, so by the time this step runs `HEAD` has moved past the commit that was proven.
 2. **Web — promote, do not rebuild.** The artifact the proof validated is the artifact that ships:
    an alias move over its staged build, never `vercel deploy --prod`. Mechanics: `references/web-promote.md`.
@@ -141,3 +138,5 @@ guard refuses a probe-less create, so a filer that cannot name one files `invest
 
 CI trust logic (`ac-prove`, exclusively) · the store upload itself (`ac-distribute`) · QA
 selection (the class table) · inbound triage — escapes are LABELLED here, worked elsewhere.
+
+Next: /ac-distribute <build>

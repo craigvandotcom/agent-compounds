@@ -8,7 +8,9 @@ contradictory orders and none contained polish, prove or distribute.)
 
 **No stage invokes the next.** Every stage ends by stopping on its own `Next` cell below —
 a question first when a human act comes next, then the skill. Chaining happens only when
-the human says "X then Y".
+the human says "X then Y". The one exception: Implement runs Review at its batch boundary
+(`skills/ac-implement/SKILL.md` Phase 2) — review must read the committed batch before the
+epic can close, so the boundary invokes it instead of waiting for a human to chain it.
 
 | Stage | Owner skill | Trigger | Human gate | Artifact | Next | Non-ac skills loaded |
 |---|---|---|---|---|---|---|
