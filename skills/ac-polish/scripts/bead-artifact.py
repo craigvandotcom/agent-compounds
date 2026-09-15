@@ -7,6 +7,13 @@ and to land it again.
 Both halves FAIL CLOSED. A setup error is NOT-GATED, never a silent no-op; a partial write
 is reported and exits non-zero.
 
+A CLOSED bead is a record, never an artifact: export REFUSES a closed id and writes nothing;
+writeback REFUSES a bead that closed since export. Each exported block carries `base:`, the
+sha256 of the live title+body at export; writeback compares it to the board FIRST and REFUSES
+the whole set when any bead moved (another session edited it) — re-export, re-run, never
+overwrite. Measured 2026-09-15: a writeback landed a body exported 90 minutes earlier and
+reverted a refine another session had made in between.
+
 Lifecycle labels (`refined` / `unrefined`) are NEVER written here directly. `skills/_tools/stamp-refined.sh`
 owns that pair. An artifact holds the label snapshot taken at export and must not restore it.
 Writeback also syncs the dependency graph to what the bodies declare: every `## Consumes`
@@ -73,6 +80,14 @@ def require_board():
                f"\n  br said: {err.strip()[:300]}")
 
 
+def base_digest(live):
+    """sha256 of the live title+body — the export snapshot writeback checks freshness against.
+    Comments and labels are excluded on purpose: a receipt comment must not read as a move."""
+    import hashlib
+    blob = (live.get("title") or "") + "\n" + (live.get("description") or "")
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
 def show(bead_id):
     rc, out, err = br(["show", "--json", bead_id])
     if rc != 0 or not out.strip():
@@ -110,11 +125,16 @@ def cmd_export(args):
         if d is None:
             failed.append((bead_id, err))
             continue
+        if d.get("status") == "closed":
+            failed.append((bead_id, "closed — a closed description is a record of what shipped, "
+                                    "never a polish artifact; export the epic's OPEN children"))
+            continue
         labels = ",".join(d.get("labels") or []) or "none"
         blocks += [
             f"<!-- BEAD:{bead_id} -->",
             f"# {bead_id} — {d.get('title', '')}",
-            f"type: {d.get('issue_type')} · priority: {d.get('priority')} · labels: {labels}",
+            f"type: {d.get('issue_type')} · priority: {d.get('priority')} · labels: {labels}"
+            f" · base: {base_digest(d)}",
             "",
             (d.get("description") or "").rstrip(),
             "",
@@ -156,7 +176,7 @@ def parse(path):
 
 
 def artifact_labels(meta_line):
-    m = re.search(r"labels:\s*(.+?)\s*$", meta_line)
+    m = re.search(r"labels:\s*(.+?)\s*(?:·\s*base:.*)?$", meta_line)
     if not m or m.group(1).strip() == "none":
         return set()
     return {x.strip() for x in m.group(1).split(",") if x.strip()}
@@ -278,6 +298,32 @@ def cmd_writeback(args):
     dry = not args.apply
     failed = []
     edge_plan = []
+
+    # FRESHNESS GATE — before a single write. Every block's `base:` is the live title+body
+    # digest at export; a bead whose board body differs was edited by someone else since,
+    # and a bead that closed since is a record. One moved or closed bead REFUSES the whole
+    # set with nothing written: a partial landing over a moving board is the stale write
+    # this gate exists to stop.
+    stale = []
+    for bead_id, title, desc in beads:
+        m = re.search(rf"<!-- BEAD:{re.escape(bead_id)} -->\n[^\n]*\n([^\n]*)", raw)
+        meta = m.group(1) if m else ""
+        b = re.search(r"·\s*base:\s*([0-9a-f]{16})", meta)
+        live, err = show(bead_id)
+        if live is None:
+            stale.append((bead_id, f"could not re-read: {err}"))
+        elif live.get("status") == "closed":
+            stale.append((bead_id, "closed since export — a closed description is a record, never rewritten"))
+        elif not b:
+            stale.append((bead_id, "no `base:` snapshot in the artifact — re-export with the current script"))
+        elif b.group(1) != base_digest(live):
+            stale.append((bead_id, f"moved since export (board {base_digest(live)} vs export {b.group(1)}) "
+                                   "— another writer edited it; re-export and re-run, never overwrite"))
+    if stale:
+        for bead_id, why in stale:
+            print(f"bead-artifact: STALE {bead_id} — {why}", file=sys.stderr)
+        die(1, f"REFUSED stale-artifact — {len(stale)} of {len(beads)} beads moved or closed since "
+               "export. NOTHING was written.")
 
     for bead_id, title, desc in beads:
         live, err = show(bead_id)

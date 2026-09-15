@@ -8,14 +8,25 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | knob | bead mode |
 | --- | --- |
 | **TARGET** | the epic id |
-| **ARTIFACT** | the epic's bead set exported to one file by `scripts/bead-artifact.py export` |
+| **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>`. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
 | **CHECKLIST** | `references/bead-checklist.md` |
 | **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact PLUS the touchers leg per bead: `skills/_tools/touchers.sh check <description-file> <bead-id>` — the `--file` mode reads the artifact's description block, so a round cannot record while a Delivers path that exists and is referenced owes a `touchers:` line (the reader sees RED and must fix it) |
 | **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment to EVERY bead in the artifact, not only the epic — no hand fan-out |
 
+## Scope — the epic and its OPEN children, nothing that is done
+
+Read child status BEFORE scoping. The ids are the epic plus every child still open —
+`RUST_LOG=error br list --json` excludes closed beads by default; keep the ids that start with
+`<epic>.`. Say the count out loud before round 1: *"ac-xxxx: 3 open of 15 children"*. A
+request for "all open beads" resolves to the epics that HAVE open children. An epic whose
+children are all closed is not polished — it is done-checked (`bead-checklist.md` § 10): run
+its own probes, and each red one is a finding that blocks the close, never a decline.
+Measured 2026-09-15: "all open beads" run as "all open epics" rewrote 52 closed descriptions
+and receipted 84 closed beads for nothing.
+
 ## Run PER-EPIC, never per-bead
 
-One loop over the epic's whole bead set. Per-bead is a ~20x cost difference for no measured
+One loop over the epic's open bead set. Per-bead is a ~20x cost difference for no measured
 gain, and cross-bead defects — Consumes↔edge parity, duplicated Delivers, a contradiction
 between two siblings — are invisible to a per-bead reader.
 
@@ -26,6 +37,11 @@ ends. A mid-run writeback changes what the next round's reader sees, and the rou
 measures churn instead of defects.
 
 Land it with `scripts/bead-artifact.py writeback --apply` AFTER the verdict, in one pass.
+Every exported block carries `base:`, the digest of that bead's live title+body at export.
+Writeback checks it FIRST and REFUSES the whole set, writing nothing, if any bead moved or
+closed since — another session edited it. Re-export and re-run; never overwrite. (Measured
+2026-09-15: a writeback landed bodies exported 90 minutes earlier over a refine made in
+between.)
 Writeback also wires every `## Consumes` line to its dependency edge — additive only, never a
 removal — and reports on one `EDGES` line any edge that has no Consumes line.
 The script refuses when `br` cannot resolve a board from the CWD, and never writes `refined`

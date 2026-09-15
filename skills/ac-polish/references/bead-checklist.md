@@ -111,3 +111,14 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   description + comments. That choice moves the answer more often than the arithmetic does.
 - Does the bead restate canon that already exists in `beads-standards` or
   `ac-pipeline/references/`? Replace it with the pointer.
+
+## 10. epic done-check (only when no child is open)
+
+- An epic with no open children has nothing left to polish — its beads are records. Run
+  the epic's OWN `Probe:` lines at HEAD and report each exit.
+- Every red probe is a finding with a disposition, never a DECLINED item: name what blocks
+  the close — a renamed path the probe still cites (refine the probe), a sibling that never
+  landed its piece (a bead), a baseline failure outside the epic (name the owner). "Drift"
+  is not a disposition.
+- Does the epic carry the review receipt its close path requires? A missing receipt is the
+  first blocker, named first.
