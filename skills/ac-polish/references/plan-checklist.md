@@ -16,16 +16,22 @@ A question you cannot answer YES with evidence is a **DECLINED** item, not a fin
 the gap is itself a correctness, contradiction or unimplementability defect. Declining honestly
 is the reader doing its job; reaching for a finding to justify the round is not.
 
+**Citations.** A `path:line` whose line merely moved (same text, new line number) is DECLINED,
+never a re-raised finding; a citation whose path no longer exists in the tree is class (a). A
+DECLINED item the plan already owns from an earlier round is listed once, never restated as if
+newly found.
+
 ## 1. completeness
 
 - Is every deliverable named as an artifact — a path, a script, a receipt — rather than an
   intention?
 - Is the work partitioned with no gap between parts: does something own each seam, each
-  caller, each trigger, each write-path the plan disturbs? The oracle: for every existing
-  artifact the Deliverables reshape, the plan names the toucher list AND the command that
-  derived it, and each toucher is either a deliverable or named in Out of scope. A toucher
-  `rg` finds that is in neither is class (c) — no defined mechanism updates it. Command
-  shapes: `ac-polish/references/seams-checklist.md`.
+  caller, each trigger, each write-path the plan disturbs? The oracle is MECHANICAL: for every
+  object the plan's `## Seams` table names (`references/plan-seams-reader.md`'s output), re-run
+  `touchers.sh derive <path>` for its SOURCE row and the same TEST globs the reader used. Any
+  file either returns that carries no row in `## Seams`, is not itself a Deliverable, and is
+  not named in Out of scope is an **unowned seam** — class (c), no defined mechanism updates
+  it.
 - Does anything in the plan depend on a fact nobody verified? Name the command that
   verified it.
 
@@ -81,3 +87,8 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   to pick a side on the plan's behalf.
 - Is there a `needs-human` card a query settles? That is class (a) correctness — run the
   query and record `settled: <choice> — <why>` instead.
+- Does a `## Vision` section exist, and does no Decisions card contradict it? A plan with
+  forks but no stated Vision has nothing to settle them against.
+- Is every `settled:` card traceable to a quote from `## Vision`? A settled card with no
+  vision quote is class (a) — the choice was made without the one thing the plan claims to
+  steer by.
