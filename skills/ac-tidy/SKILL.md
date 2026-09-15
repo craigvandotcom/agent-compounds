@@ -17,8 +17,11 @@ Apply what is provable. File a bead for what is not. Never guess.
 
 Do NOT reconcile in the live checkout. `BCA=$(git rev-parse --show-toplevel)` is the live app
 checkout. Fetch `origin/main`, `git worktree add --detach "$WT" origin/main`, `cd "$WT"`, then
-`br sync` to rebuild the beads DB from `issues.jsonl`. Skill files resolve only through
-`$BCA/.claude/…` (relative symlinks). If the worktree cannot be created: Slack degraded, exit,
+`br sync --db "$WT/.beads/beads.db"` to rebuild the beads DB from `issues.jsonl`.
+`br` auto-discovery ignores worktree cwd and resolves to the live checkout (bd-6kwqo) —
+pass `--db "$WT/.beads/beads.db"` explicitly on EVERY `br` invocation in the worktree,
+never rely on cwd. Skill files resolve only through
+$BCA/.claude/… (relative symlinks). If the worktree cannot be created: Slack degraded, exit,
 nothing written.
 
 ## 2. Scan
