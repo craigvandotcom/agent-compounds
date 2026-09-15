@@ -1,6 +1,6 @@
 # approval-brief.md — the one-screen brief ac-plan and the ac-human plan tap render
 
-`ac-plan/SKILL.md` step 7 (approval) and `ac-human/references/action-loop.md`'s 🟡 Plan tap
+`ac-plan/SKILL.md` step 8 (approval) and `ac-human/references/action-loop.md`'s 🟡 Plan tap
 both render THIS shape from the same plan file — one producer, two callers, never two texts
 for one decision. OUT: the `AskUserQuestion` wiring itself (a separate bead); this file is
 only what the brief contains and where each line comes from.
@@ -25,7 +25,7 @@ itself, is what makes the tap informed rather than a formality.
 | deliverables | `## Deliverables` | as paths, one per line — an artifact, never an intention |
 | seams + tests | `## Seams` | rows whose disposition is not `no seam`, ordered by toucher count (highest first); a `must update` test row renders beside its object, not in a separate list |
 | biggest risk | `## Risk + sequence` | the risk plus the assumption it rests on — one pair, not the whole risk list |
-| open cards | `## Decisions` | every card still `needs-human`, question + recommended option; a plan with none renders "none open" |
+| open cards | `## Decisions` | every card still `needs-human`, question + recommended option + its default tag (`[default: <option>]` or `[no default]`, read from the card — a design question with a default is not a vision question with none); a plan with none renders "none open" |
 | improvements | agent-proposed, opt-in | up to two "beyond the ask" items, each one line, each declined by default until the human opts in |
 | commits-to line | this file, verbatim sense | what approval commits to (above) — the brief always ends here |
 
@@ -48,6 +48,8 @@ still works" belong on one line.
 ```markdown
 ## Approve <plan-slug>?
 
+**Plan:** <plan-path> — the file, open it any time; the question below never stands in for it.
+
 **What changes:** <two lines from ## Vision>
 
 **Deliverables:**
@@ -59,7 +61,7 @@ still works" belong on one line.
 
 **Biggest risk:** <risk> — rests on: <assumption>
 
-**Open decisions:** <question — recommended: option> | "none open"
+**Open decisions:** <question — recommended: option [default: option] | [no default]> | "none open"
 
 **Beyond the ask (opt-in):**
 - <improvement, one line>
@@ -68,4 +70,7 @@ still works" belong on one line.
 
 **Approving commits to:** beads cut and implemented with no further contact, unless a later
 polish round changes a gated section — then only the changed sections come back for a re-approve.
+
+**Approve / Change / Park / Show me the plan** — Show me the plan prints the whole plan
+file and re-asks; Approve is never taken sight-unseen.
 ```
