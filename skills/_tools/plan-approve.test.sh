@@ -98,10 +98,18 @@ mk_plan "$W/p7.md" "- D1 x" "$SETTLED_CARD" "a"
 OUT=$("$SCRIPT" approve "$W/p7.md" "" 2>&1)
 expect "$(grep -c 'REFUSED no-approver' <<<"$OUT")" 1 "empty approver -> REFUSED no-approver"
 
-# 8 — approve with no second arg defaults to git config user.name (non-empty in this env)
+# 8 — approve with no second arg defaults to git config user.name; the value is injected
+#     through git's env config so the case does not depend on the host (CI has none set)
 mk_plan "$W/p8.md" "- D1 x" "$SETTLED_CARD" "a"
-OUT=$("$SCRIPT" approve "$W/p8.md" 2>&1)
+OUT=$(GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0=ci-tester "$SCRIPT" approve "$W/p8.md" 2>&1)
 expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "omitted approver falls back to git config user.name"
+expect "$(grep -c '^approved_by: ci-tester$' "$W/p8.md")" 1 "the git user.name is what gets written"
+
+# 8b — no second arg AND no git user.name anywhere -> REFUSED no-approver, nothing written
+mk_plan "$W/p8b.md" "- D1 x" "$SETTLED_CARD" "a"
+OUT=$(GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0= "$SCRIPT" approve "$W/p8b.md" 2>&1)
+expect "$(grep -c 'REFUSED no-approver' <<<"$OUT")" 1 "empty git user.name and no arg -> REFUSED no-approver"
+expect "$(grep -c '^approved_by:' "$W/p8b.md")" 0 "a refused approve writes no approver"
 
 # 9 — missing plan file -> NOT-GATED
 OUT=$("$SCRIPT" approve "$W/absent.md" "Craig" 2>&1)
