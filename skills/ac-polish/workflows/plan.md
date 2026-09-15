@@ -11,6 +11,7 @@ what plan mode binds, and it is a MANDATORY load for a plan run.
 | **ARTIFACT** | the plan file itself — the loop edits it in place |
 | **CHECKLIST** | `references/plan-checklist.md` |
 | **VALIDATE** | none — a plan has no executable form. Every round records. |
+| **READERS** | ONE `coordinator` per round — the reader judges correctness, contradiction and unimplementability and applies its own edits, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode plan` rewrites the plan's YAML frontmatter |
 | **GATE** | after STAMPED, `plan-approve.sh ready <plan>` — the hand-off never invokes the next stage itself; see below |
 

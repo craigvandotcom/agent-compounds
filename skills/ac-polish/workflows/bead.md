@@ -11,6 +11,7 @@ what bead mode binds, and it is a MANDATORY load for a bead run.
 | **ARTIFACT** | the epic plus its OPEN children, exported to one file by `scripts/bead-artifact.py export --ids <epic>,<open children>`. Never a closed bead: a closed description is the record of what shipped, and export REFUSES a closed id (see § Scope) |
 | **CHECKLIST** | `references/bead-checklist.md` |
 | **VALIDATE** | `skills/_tools/element4-check.sh` over every bead in the artifact PLUS the touchers leg per bead: `skills/_tools/touchers.sh check <description-file> <bead-id>` — the `--file` mode reads the artifact's description block, so a round cannot record while a Delivers path that exists and is referenced owes a `touchers:` line (the reader sees RED and must fix it) |
+| **READERS** | ONE `coordinator` per round — it applies its own edits and must fix a VALIDATE RED itself, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode bead` writes the `POLISH-FIXPOINT:` receipt comment to EVERY bead in the artifact, not only the epic — no hand fan-out |
 
 ## Scope — the epic and its OPEN children, nothing that is done
@@ -21,6 +22,8 @@ Read child status BEFORE scoping. The ids are the epic plus every child still op
 request for "all open beads" resolves to the epics that HAVE open children. An epic whose
 children are all closed is not polished — it is done-checked (`bead-checklist.md` § 10): run
 its own probes, and each red one is a finding that blocks the close, never a decline.
+A bead with no epic is its own TARGET and a one-bead artifact; several open standalones may
+share one artifact to share the round cost, and a closed one is refused like any other.
 Measured 2026-09-15: "all open beads" run as "all open epics" rewrote 52 closed descriptions
 and receipted 84 closed beads for nothing.
 

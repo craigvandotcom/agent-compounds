@@ -16,6 +16,7 @@ this mode exists to close (`ui-elevate/references/sensors.md` § Why this file e
 | **ARTIFACT** | `<STATE>/ui-artifact.txt` — `scripts/code-manifest.py` over the UI scope, plus one `sensors <sha256> <report>` line per sensor report |
 | **CHECKLIST** | `references/ui-checklist.md` — the sensor questions, design.md token conformance, the a11y/compliance set |
 | **VALIDATE** | tests green · build green · `ubs <changed-files>` clean · sensors green in EVERY theme |
+| **READERS** | ONE `coordinator` per round — it edits shipped UI files in place under the severity gate, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode ui --target <bead-id>` writes the receipt to that bead |
 
 ## The artifact is a manifest plus the sensor digests

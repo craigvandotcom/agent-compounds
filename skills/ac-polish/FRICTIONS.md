@@ -349,6 +349,49 @@ last_pass: 2026-09-07
   `20260809220000_…`. Each was fixed by hand in the report outside the repo; the orchestrator
   editing reader output is exactly the division-of-labour breach the SKILL warns about.
 
+## element4-file-mode-false-fail-on-large-artifact
+- skills: [ac-polish]
+- impact: M
+- frequency: every-run
+- perceptibility: misleading
+- recurrence: 1
+- related: [element4-check-flaky-under-concurrent-readers]
+- first_seen: 2026-09-15
+- last_seen: 2026-09-15
+- stage: manual
+- proposed_fix: `check_schema_probes` must not pipe the whole description through `grep -q`
+  under `set -uo pipefail` — grep exits on first match, `printf` takes SIGPIPE (141), and
+  pipefail turns a MATCH into a non-match (measured `pipeline_rc=141`). Read the header with
+  a here-string (`grep -qiE … <<<"$desc"`) or awk over the variable, and add a >128 KB
+  fixture case to element4-check.test.sh.
+- narrative: bead-mode polish over the 41-bead ac-1p7j artifact (132,889 bytes).
+  `element4-check.sh --file` returned FAIL "no '## Declared RED' header and no '## Acceptance
+  Criteria' section" on a file carrying 42 AC sections; per-bead invocation PASSed all 42. The
+  false RED refuses to record a clean round, so the loop stalls on a gate that measured
+  nothing. Files below ~128 KB (every earlier epic that run) PASS in whole-file mode, which is
+  why it read as content until the pipeline rc was traced.
+
+## touchers-path-misspelling-evades-the-gate
+- skills: [ac-polish, beads-standards]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [stamp-refined-reads-clause-paths-as-delivers-obligations, severity-gate-declines-touchers-that-stamp-refined-refuses]
+- first_seen: 2026-09-15
+- last_seen: 2026-09-15
+- stage: manual
+- proposed_fix: the `## Delivers` path extraction (touchers.sh and stamp-refined.sh's
+  obligation derivation) should NOT-GATE on a bullet naming a path-shaped token its regex
+  cannot parse — a space inside the path (`skills/ac-review/ SKILL.md`), an ellipsis, a
+  backslash — instead of silently reading no path and reproducing green. A gate that cannot
+  see an obligation must fail loud, never fall back to "nothing owed".
+- narrative: ac-wp8i.4's `## Delivers` bullet reads
+  "`skills/ac-review/ SKILL.md or its lean successor…`" — a real, existing, referenced path
+  written with a space after the slash. The path regex matches nothing, so `touchers.sh check`
+  reports OK; a round-4 reader verified that normalising the spelling makes the gate REFUSE
+  (the path is owed → 1). The gate is green on exactly the bullet it cannot parse.
+
 ## element4-check-flaky-under-concurrent-readers
 - skills: [ac-polish]
 - impact: M
@@ -382,10 +425,10 @@ last_pass: 2026-09-07
 - impact: M
 - frequency: every-run
 - perceptibility: silent
-- recurrence: 3
+- recurrence: 4
 - related: [bead-mode-receipt-lands-on-epic-stamper-reads-children]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-06
+- last_seen: 2026-09-15
 - stage: manual
 - status: open
 - proposed_fix: bead-checklist.md § 3 should state that a `## Delivers` bullet naming an
@@ -411,6 +454,14 @@ last_pass: 2026-09-07
   implementable beads. Six repair agents and ~90 minutes to re-derive counts the loop never
   measured. Same shape as before; the reader checklist §3 names touchers, the readers decline
   them, VALIDATE never runs stamp-refined's derivation.
+  Re-observed 2026-09-15 (agent-compounds v2 epic ac-1p7j, 42 beads): the round-1 reader
+  DECLINED all 24 touchers REDs (missing lines, stale counts, multi-path bullets) as "known
+  cross-epic drift" after the orchestrator's own prompt note mis-scoped the decline; VALIDATE
+  was red across 24 beads and nothing could be recorded until a separate repair pass added 30
+  lines, updated 16 counts and split 7 bullets. On the two epics that followed the orchestrator
+  pre-warned "a `touchers:` RED is class (c) — derive and fix it" and the readers did. The
+  checklist wording is still unchanged; the workaround is prompt text the orchestrator writes
+  per run.
 
 ## stamp-refined-reads-clause-paths-as-delivers-obligations
 - skills: [ac-polish, beads-standards]

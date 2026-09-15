@@ -28,8 +28,8 @@ The argument picks ONE workflow file — a mandatory load, the ONLY place a mode
 | `ui` | `workflows/ui.md` | `references/ui-checklist.md` |
 
 Each workflow binds five knobs — TARGET, ARTIFACT, CHECKLIST, VALIDATE, STAMP — and may bind a
-sixth, READERS: how many readers a round spawns, what they are sent, and how their findings
-reach ARTIFACT (default: one reader, `reader-prompt.md` verbatim, its edits applied directly). Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
+sixth, READERS: how many readers, which stance, what they are sent, how findings reach ARTIFACT (default: one `coordinator` — judgment that can edit — sent `reader-prompt.md` verbatim, edits applied directly).
+No spawnable stance in the harness → a plain subagent on the parent model, the stance's rules pasted first. Nothing else about a mode exists. Doctrine: `skills/ac-pipeline/SKILL.md`.
 
 ## Division of labour — strict, and the reason this works
 

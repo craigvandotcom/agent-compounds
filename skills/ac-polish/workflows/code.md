@@ -14,6 +14,7 @@ is the thing that ships.** A bad edit to a plan is inert. A bad edit here is a d
 | **ARTIFACT** | `scripts/code-manifest.py <scope>` — one `sha  path` line per in-scope file |
 | **CHECKLIST** | `references/code-checklist.md` |
 | **VALIDATE** | tests green · build green · `ubs <changed-files>` clean |
+| **READERS** | ONE `coordinator` per round — it edits shipped code in place under the severity gate, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode code --target <bead-id>` writes the receipt to that bead |
 
 ## The manifest is the artifact — never a concatenation of the source
