@@ -92,3 +92,5 @@ newly found.
 - Is every `settled:` card traceable to a quote from `## Vision`? A settled card with no
   vision quote is class (a) — the choice was made without the one thing the plan claims to
   steer by.
+- Appended `needs-human` cards and recorded `settled:` cards both follow the one card
+  grammar in `skills/ac-plan/references/decisions.md`.

@@ -5,17 +5,20 @@ canon it defers to stays where it lives.
 
 ## The card
 
-Every fork the plan turns on, one card per fork:
+Every fork the plan turns on, one card per fork. One card is a top-level bullet
+plus its sub-bullets; `settled: <choice> — <why>` reads plain or bold;
+`vision: "<quoted ## Vision line>"` sits anywhere in the card; `needs-human` is
+the open token.
 
 - **question** — the fork, in one line.
 - **options** — each with its one-line tradeoff.
 - **recommendation** — one line; a card with no recommendation is an unfinished analysis.
 - **what settles it** — the query, measurement or test that distinguishes the options.
-- **vision** — `vision: "<quoted line>"`, the `## Vision` line this card rests on. A settled
+- **vision** — `vision: "<quoted ## Vision line>"` anywhere in the card, the `## Vision` line this card rests on. A settled
   card that cannot quote one is not a decision — it is an assumption about intent, and an
   assumption about intent is always a question: append it as a fresh `needs-human` card
   instead of settling it silently ("no vision line, no agent decision").
-- **state** — `settled: <choice> — <why>` or `needs-human`.
+- **state** — `settled: <choice> — <why>`, plain or bold, or `needs-human`.
 
 Before writing a card, run the escalation test
 (`beads-standards/reference/human-gate-template.md` § The escalation test) — a fork a query
@@ -44,11 +47,12 @@ The agent may offer up to two "beyond the ask" improvements alongside the plan �
 line, each explicitly opt-in, surfaced in the same approval round as the Decisions cards
 (`references/approval-brief.md`). An improvement is never folded into the plan's Deliverables
 on the agent's own judgement; it is accepted only when the human opts in on the tap.
+An accepted improvement appends one sentence to `## Vision`, so its card has a line to quote.
 
 ## The live-human ask
 
 When a human is present, batch every `needs-human` card into ONE AskUserQuestion round and
-record each answer as `DECISION (<human>): <choice> — <why>`. An unattended run leaves them
+record each answer by rewriting the card's state line to `settled: <choice> — <why>`. An unattended run leaves them
 `needs-human` for the docket — never invent an answer.
 
 ## The `Human gates:` line

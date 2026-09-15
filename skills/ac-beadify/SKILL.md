@@ -50,8 +50,8 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
    = one focused worker pass. Two signals govern the cut, both cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
    - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through an
-     underdetermined bead improvising decisions the bead should have made; a fork the plan
-     does not settle appends a `needs-human` card to `## Decisions`, sets `status: refined`,
+      underdetermined bead improvising decisions the bead should have made; a fork the plan does not
+      settle appends a `needs-human` card to `## Decisions` per the one card grammar in `skills/ac-plan/references/decisions.md`, sets `status: refined`,
      prints `beadify-refusal: needs-human` on its own line and stops — a plan defect surfaced
      to the docket, never a bead, never a human gate.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
