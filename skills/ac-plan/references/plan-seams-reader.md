@@ -1,8 +1,7 @@
 # plan-seams-reader.md — ac-plan's own seams reader prompt, sent VERBATIM to every reader
 
-`ac-plan/SKILL.md` step 2's mechanical exception (an `rg` hit on a Deliverable's name) sends
-the reshaped object through ONE blind reader before the Approach is written. That reader is
-THIS prompt, not `ac-polish/references/seams-reader-prompt.md` — that file's six blanks
+The per-object reader `ac-plan/SKILL.md` step 4 spawns is THIS prompt, not
+`ac-polish/references/seams-reader-prompt.md` — that file's six blanks
 (`<LENS>`, `<SUBJECT>`, `<FILES>`, `<MAPS>`, `<CHECKLIST>`, `<REPORT>`) are filled by seams
 mode's own machinery (`seams-merge.py`, the maps ledger, the seams checklist), none of which
 a plain `ac-plan` run has. This prompt is OBJECT LENS ONLY and repo-agnostic: no maps, no
