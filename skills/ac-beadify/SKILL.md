@@ -9,7 +9,7 @@ description: 'Compile an APPROVED ac2 plan into lean beads — the four-section 
 
 |                  |                                                                              |
 | ---------------- | ---------------------------------------------------------------------------- |
-| **Input**        | One APPROVED plan file (`ac-plan`, graded by `ac-polish` plan-checklist)     |
+| **Input**        | One plan `plan-approve.sh check` accepts (`ac-plan`, graded by `ac-polish` plan-checklist) |
 | **Output**       | Beads in `br` on the ac2 schema, with every dependency edge wired both ways    |
 | **Artifacts**    | The epic bead; the plan moved to `_plans/_done/` (retirement)                  |
 | **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity |
@@ -42,10 +42,10 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 
 ## Procedure
 
-1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Verify the
-   stamp yourself: `status: loop-ready`, a `## Decisions` section, zero `needs-human` cards —
-   the keys and verdicts `skills/_tools/plan-approve.sh` (the stamp's ONE writer) reads back;
-   anything else is REFUSED and the plan is returned, never compiled.
+1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Run
+   `skills/_tools/plan-approve.sh check <plan>` — the writer's own read-back, never a hand
+   grep of its keys. Non-zero (`REFUSED …` or `NOT-GATED …`) is REFUSED and the plan is
+   returned, never compiled.
 2. **Cut the work into beads.** Sizing is from the bead-checklist, never from taste: one bead
    = one focused worker pass. Two signals govern the cut, both cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
@@ -58,6 +58,9 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
    **Line numbers are banned in Intent** — a `file:line` anchor decays before the claim does.
+   **The epic's `## Success Criteria` opens with the plan's `## Vision` verbatim** — inside
+   the section, since the schema allows nothing outside the four — so every implement
+   worker decides against the human's own words, not a paraphrase of them.
 4. **Apply the refusal** (§ above) to every bead before any of them is created. Refuse the
    bead, not the batch — but do not create a partial graph around a refused node.
 5. **Wire Delivers/Consumes as the graph.** `## Delivers` names artifacts; a dependent's
@@ -100,4 +103,4 @@ The guard lives HERE — the only place its condition still holds.
 
 ## Hand-off
 
-A compiled epic with no grading is a dead end: hand the bead set to `ac-polish` first.
+End with `Next: /ac-polish bead <epic>` and stop.
