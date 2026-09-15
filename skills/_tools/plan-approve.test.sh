@@ -3,9 +3,10 @@
 # (ac-ympj.1, hardened ac-zug5.2). Every verdict case asserts the EXIT CODE as well as
 # the token, so weakening a refusal (or zeroing an exit) turns a case red. Decision
 # fixtures use the one card grammar decisions.md prescribes — a top-level `-` bullet
-# plus `+` sub-bullets, plain `settled:`, `vision:` quoting the ## Vision line on its
-# own sub-bullet — because the shipped parser groups a card as one top-level bullet
-# block; a one-line bold card is a shape the grammar never prescribes. Coverage: a
+# plus `-` or `+` sub-bullets (both shapes pinned: ac-zug5.13), plain `settled:`,
+# `vision:` quoting the ## Vision line on its own sub-bullet — because the shipped
+# parser groups a card as one top-level bullet block; a one-line bold card is a
+# shape the grammar never prescribes. Coverage: a
 # failing polarity for every gated section (Vision, Deliverables, Decisions, Out of
 # scope, Success criterion, Seams, Human gates) and every refusal token (needs-human,
 # no-decisions, no-seams, seams-incomplete, uncited-decision, no-approver,
@@ -81,6 +82,19 @@ BOTH_CARD="- **A fork?**
   + needs-human
   + settled: a (Craig).
   + vision: \"$vision_line\""
+# The prescribed `-` sub-bullet shape (ac-zug5.13): same grammar as above with the
+# `-` sub-bullet marker decisions.md prescribes — the parser used to split every
+# `-` line into its own block and false-refuse the card as uncited-decision.
+SETTLED_DASH_CARD="- **A fork?**
+  - options: a, b.
+  - settled: a (Craig).
+  - vision: \"$vision_line\""
+OPEN_DASH_CARD="- **A fork?**
+  - options: a, b.
+  - needs-human"
+NOVISION_DASH_CARD="- **A fork?**
+  - options: a, b.
+  - settled: a (Craig)."
 SEAMS_OK="| object | finding | disposition |
 | --- | --- | --- |
 | \`$REAL_PATH\` | some finding | -> D1 |"
@@ -109,6 +123,24 @@ cap "$SCRIPT" approve "$W/p2b.md" "Craig"
 expect "$RC" 1 "needs-human + settled card -> exit 1"
 expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "needs-human beats settled: both-tokens card -> REFUSED needs-human 1"
 expect "$(grep -c '^status: draft$' "$W/p2b.md")" 1 "both-tokens plan is not re-stamped"
+
+# 3b — the prescribed `-` sub-bullet card approves (ac-zug5.13)
+mk_plan "$W/p1dash.md" "- D1 x" "$SETTLED_DASH_CARD" "a"
+cap "$SCRIPT" approve "$W/p1dash.md" "Craig"
+expect "$RC" 0 "dash sub-bullet card -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "dash sub-bullet card -> APPROVED"
+
+# 3c — a dash open card is still refused as open: the grouping fix must not swallow needs-human
+mk_plan "$W/p2dash.md" "- D1 x" "$OPEN_DASH_CARD" "a"
+cap "$SCRIPT" approve "$W/p2dash.md" "Craig"
+expect "$RC" 1 "dash open card -> exit 1"
+expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "dash open card -> REFUSED needs-human 1"
+
+# 3d — a dash settled card with no vision quote is still refused as uncited
+mk_plan "$W/p6dash.md" "- D1 x" "$NOVISION_DASH_CARD" "a"
+cap "$SCRIPT" approve "$W/p6dash.md" "Craig"
+expect "$RC" 1 "dash settled card with no vision quote -> exit 1"
+expect "$(grep -c 'REFUSED uncited-decision 1' <<<"$OUT")" 1 "dash settled card with no vision quote -> REFUSED uncited-decision 1"
 
 # 4 — approve refuses a missing ## Decisions section (exit 1)
 {

@@ -215,7 +215,11 @@ mode_approve() {
   # settled block wants a `vision: "<quoted line>"` quote.
   local dec_body; dec_body=$(_section_body "$plan" "## Decisions")
   local numbered maxb b block settled_no_vision=0 open_needs_human=0
-  numbered=$(printf '%s\n' "$dec_body" | awk '{ if ($0 ~ /^[[:space:]]*[-*][[:space:]]/) b++; printf "%d\t%s\n", b+0, $0 }')
+  # A card is ONE top-level bullet block: only a column-0 bullet starts a new
+  # block, so indented sub-bullets (`-` or `+`) stay inside the enclosing card.
+  # Splitting on indented bullets instead false-refuses the prescribed `-`
+  # sub-bullet card (the `settled:` line lands alone, with no `vision:`).
+  numbered=$(printf '%s\n' "$dec_body" | awk '{ if ($0 ~ /^[-*][[:space:]]/) b++; printf "%d\t%s\n", b+0, $0 }')
   maxb=$(printf '%s\n' "$numbered" | awk -F'\t' '{ if ($1+0 > m) m = $1+0 } END { print m+0 }')
   b=0
   while [ "$b" -le "$maxb" ]; do
