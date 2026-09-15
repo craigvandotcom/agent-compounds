@@ -217,9 +217,10 @@ ls "$PROJECT_ROOT/_plans/"*.md 2>/dev/null
 Skip `README.md`, `_done/`, `research/`, `templates/`, `checkpoints/`. Per plan, read
 frontmatter:
 
-- **status** — `draft | refined | approved | beadified | loop-ready`; ANY other value is present-but-out-of-vocabulary and routes to `unclassified[]` with the raw value preserved — **never dropped**, and renderers MUST report it (bd-5ljt6)
-- **loop-ready** — the autonomous hand-off flag (the loop owns these; humans don't sign them off again)
-- **loop_ready_at** / **approved_by** — the approval receipt `plan-approve.sh` writes (the loop-ready stamp's ONE writer): the ISO time of approval and the approver identity. Additive keys; absent on a plan never approved.
+- **status** — `draft | refined | approved | bead-ready | beadified`; ANY other value is present-but-out-of-vocabulary and routes to `unclassified[]` with the raw value preserved — **never dropped**, and renderers MUST report it (bd-5ljt6)
+- **bead-ready** — the autonomous hand-off status (the loop owns these; humans don't sign them off again), written by `plan-approve.sh ready` after `approved` + polish
+- **approved_by** / **approved_at** / **approved_sha256** — the human approval receipt `plan-approve.sh approve` writes (the ONE writer): approver identity, ISO time, and the digest over the gated sections. Additive keys; absent on a plan never approved.
+- **bead_ready_at** / **regate** — the `plan-approve.sh ready` receipt: the ISO time it flipped `approved` → `bead-ready`, and `regate: none` unless a later gated-section edit demands re-approval (then it names the changed sections). Additive keys; absent on a plan never readied.
 - **needs-human** — print `needs-human: N` per plan, N = the count of `DECISION` bullets in state `needs-human`, using the SAME extraction `plan-approve.sh` refuses on (a Decision bullet carrying the token — never a bare prose match):
   `grep -cE '^-.*DECISION.*(^|[^-a-z])needs-human([^a-z-]|$)|^-.*(^|[^-a-z])needs-human([^a-z-]|$).*DECISION' <plan>`
 - **refinement_rounds** — frontmatter field, else count `### Round N` headings in the `## Refinement Log` (headings only)
@@ -382,7 +383,7 @@ caught only by checking a bead's declared artifacts at HEAD, which is not automa
 
 ```
 beads:    { ready[], unrefined[], blocked[], in_progress[], epics[], byLabel{} }
-plans:    { draft[], refined[], approved[], beadified[], loop_ready[], unclassified[] }
+plans:    { draft[], refined[], approved[], bead_ready[], beadified[], unclassified[] }
 backlog:  { active[], pool[], candidates[], unclassified[] }   # candidates = status:candidate
 ci:       { gates[] (workflow, verdict, streak, sched_age_h, cadence_h), health }
 truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory shortlist, never an action
@@ -403,9 +404,9 @@ truth:    { flagged[] (bead_id, cited_epoch), count }   # Scan F — advisory sh
 |----------|-----------------------------------|------------------------------|
 | **`ac-align`** | strategy fit · `pool → active` promotion · sequencing | `_strategy/` |
 | **`ac-tidy`** | lifecycle reconciliation · archival · orphan/stale flags | bead↔plan cross-references |
-| **`ac-human`** (session) | render the board first, then human gates only (apply the loop boundary: drop ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`, in-flight waves, `loop-ready` plans) | prod health, org-wide `human-gate` sweep; PRs/CI reuse the board render — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
+| **`ac-human`** (session) | render the board first, then human gates only (apply the loop boundary: drop ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`, in-flight waves, `bead-ready` / `beadified` plans) | prod health, org-wide `human-gate` sweep; PRs/CI reuse the board render — **scheduled-CI health comes from Scan E, not an ad-hoc `gh run list`** |
 | **`ac-board`** | render-only — the WHOLE board, both sides of the loop boundary; no judgment, no writes, no prompts; also the session opener `ac-human` invokes, where the docket below is the drill-down | wave branches (`git branch -r`), PRs (`gh pr list`), active-agent roster (`scripts/agent-roster.py`), **Scan E for scheduled gates** (own `gh run list` only for the CURRENT head's checks) |
-| **`ac-implement`** (conductor) | Orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `loop-ready` plans, `.claude/legacy-branches.txt` |
+| **`ac-implement`** (conductor) | Orient — classify the actionable set (orphans · unrefined · plan waves · bug lane) + the parentage-gap/epic-edge structural lint, to drive the autonomous run; **print Scan E's `ci-gates` line EVERY run, `ok` included; print Scan F's `board-truth` line EVERY run, `0` included, and adjudicate any flagged bead BEFORE dispatching an implement child at it; print Scan A's `docket-health` line EVERY run** | `bv --robot-triage`, `bead-ready` plans, `.claude/legacy-branches.txt` |
 
 The board is the shared substrate; the lens is each skill's reason to exist. Don't move a lens
 in here, and don't re-specify a scan out there.

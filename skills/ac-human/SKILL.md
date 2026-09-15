@@ -11,7 +11,7 @@ You drive only work at a human gate. The instant work becomes autonomous-handlea
 
 - ❌ **ready beads that lack `human-gate` / `pipeline-proposal` / `dream-proposal`** — the loop implements them
 - ❌ **in-progress beads / waves** — the loop is running them
-- ❌ **`loop-ready` plans** — the loop beadifies + implements them
+- ❌ **`bead-ready` / `beadified` plans** — the loop beadifies + implements them
 
 Ready + a docket label **is the docket**, not the loop — do not drop it.
 
@@ -56,7 +56,7 @@ Inside a project → that repo (`PROJECT_ROOT=$(git rev-parse --show-toplevel)`)
 **Reuse the board's read, never re-scan** (`ac-pipeline/references/board-scan.md` — scans A beads · B plans · C backlog), add the docket-only reads, then **filter out everything past the loop boundary before presenting**:
 
 - **🔴 Decision Docket (PRIMARY)** = open board beads matching `human-gate` OR `pipeline-proposal` OR `dream-proposal`, pre-staged with a memo; agents enrich but **never** close them. Applying a proposal: invoke the owning skill's INTERACTIVE flow, then `status: applied` + `br close`. Discarding: `status: rejected` + `br close`, no skill. **Verify before presenting** — ~1 read of live state, the bead's own `events` table FIRST, freshness bound on `(tap-ready)`. Full lens: `references/session-scan.md`.
-- **🟡 Plans awaiting sign-off** = board plans `status: draft | refined`, NOT `loop-ready`. Most-invested first.
+- **🟡 Plans awaiting sign-off** = board plans `status: draft | refined` (needs approve) OR `status: approved` with polish keys present (needs ready), NOT `bead-ready` / `beadified`. Most-invested first.
 - **🟢 Hopper** = `active/` captured → `/ac-plan`; `candidate` → approve into pool / discard; thin `active/` → promote the pool (`/ac-align`).
 - **Loop awareness (count only)** → the board's `🤖` line, never itemized.
 - **Queue lanes** = any label with >5 open `human-gate` beads. Collapse, elevate, lane-health: `references/docket-lanes.md`.
@@ -96,7 +96,7 @@ After rendering, *drive* the session one item at a time, top of 🔴 downward �
 
 ## Phase 6: Hand-off
 
-**Sweep the ledger before anything else** — every ruling already committed itself in Phase 5; this catches only rulings taken outside that block. `git status --porcelain .beads/issues.jsonl` must come back empty; if not, run the Phase 5 commit line before handing off. Leftover stays `human-gate` by default — report `{N} remaining` and offer leave-on-docket (recommended) / mark-some-loop-eligible (you name them; never auto-strip) / start-`/ac-implement`. If the docket is empty: `✅ Gates cleared. The loop will pick up {ready_beads} beads + {loop_ready_plans} loop-ready plans on its next run.` — offer Start /ac-implement vs leave-for-schedule.
+**Sweep the ledger before anything else** — every ruling already committed itself in Phase 5; this catches only rulings taken outside that block. `git status --porcelain .beads/issues.jsonl` must come back empty; if not, run the Phase 5 commit line before handing off. Leftover stays `human-gate` by default — report `{N} remaining` and offer leave-on-docket (recommended) / mark-some-loop-eligible (you name them; never auto-strip) / start-`/ac-implement`. If the docket is empty: `✅ Gates cleared. The loop will pick up {ready_beads} beads + {bead_ready_plans} bead-ready plans on its next run.` — offer Start /ac-implement vs leave-for-schedule.
 
 ---
 

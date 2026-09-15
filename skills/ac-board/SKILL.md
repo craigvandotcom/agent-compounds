@@ -34,7 +34,7 @@ Inside a project → that repo. Asked "org-wide" → repeat per `.beads/` repo a
 
 ## Phase 1 — scan (read-only, parallel)
 
-**Read the board per `ac-pipeline/references/board-scan.md`** — scans **A** beads · **B** plans · **E** scheduled-CI health · **F** board-truth. Apply **no loop-boundary filter**: keep both sides (ready beads, `loop-ready` plans, in-progress work).
+**Read the board per `ac-pipeline/references/board-scan.md`** — scans **A** beads · **B** plans · **E** scheduled-CI health · **F** board-truth. Apply **no loop-boundary filter**: keep both sides (ready beads, `bead-ready` / `beadified` plans, in-progress work).
 
 Two reads board-scan does not carry:
 
@@ -56,7 +56,7 @@ One shot, top-down. Omit an empty section with a single `—` so the human sees 
 ```
 ## Board — {project} · {date}
 
-🤖 loop: {ready} ready · {loop_ready} loop-ready plans · {in_progress} in-progress · {waves}w · {prs}PR
+🤖 loop: {ready} ready · {bead_ready} bead-ready plans · {in_progress} in-progress · {waves}w · {prs}PR
 🧑 you: {decisions} decisions · {actions} actions
 {ci-gates / ci_health line — ALWAYS, ok included}
 
@@ -67,9 +67,9 @@ actions ({N})            # issue_type task + human-gate: do-in-the-world tasks
   • {id} {age} {title}
 
 ### 📋 Plans ({N} live)
-draft {N} · polished {N} · approved {N} · loop-ready {N} · other {N}
+draft {N} · refined {N} · approved {N} · bead-ready {N} · beadified {N} · other {N}
   • {plan} [{stage} · touched {date}]
-(polished = status: refined (ac-polish stamp) · loop-ready = loop-owned · other = out-of-vocabulary, raw status shown)
+(refined = ac-polish stamp · bead-ready = loop-owned, awaiting beadify · beadified = compiled into an epic · other = out-of-vocabulary, raw status shown)
 
 ### 🧿 Beads ({N} open, loop-side)
 unrefined {N} · refined {N} · blocked {N}

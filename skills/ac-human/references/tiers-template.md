@@ -21,7 +21,7 @@ oldest; omit empty tiers); this file carries the render block.
    (org-wide: group by repo · batch trivial, itemize substantive)
 
 ### 🟡 Feed the builders — next batch needs your sign-off ({N})
-   Plans waiting on you; approving makes them loop-ready and they leave your view.
+   Plans waiting on you; approving moves draft→approved, then ready moves approved→bead-ready, and they leave your view once bead-ready.
    • {plan} [{Nr {tier} → trajectory}, touched {date}]      → approve / refine
    • {journey} commerce/core — stamp missing/stale           → schedule a QA drive
 
