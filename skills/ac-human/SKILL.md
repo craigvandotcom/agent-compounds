@@ -1,6 +1,6 @@
 ---
 name: ac-human
-description: 'The human command center — sit down and keep the factory moving. Opens with the full board (invokes ac-board), then drives the docket: only work at a human gate, on a silver platter, exit-first. Optional gated tidy/align pre-pass. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' means a HUMAN gate only — NOT a technical blocker (use debug, or ac-triage for inbound signal), and NOT doing the work itself (use ac-implement).'
+description: 'The human command center — sit down and keep the factory moving. Opens with the full board (invokes ac-board), then drives the docket: only work at a human gate, on a silver platter, exit-first. Optional gated tidy/align pre-pass. Triggers: ''human session'', ''what needs me'', ''sit down'', ''unblock work'', ''my action items'', "what''s blocked on me", ''keep the factory moving'', ''human next''. ''Unblock'' means a HUMAN gate only — NOT a technical blocker (use ac-backlog to file it, or ac-triage for inbound signal), and NOT doing the work itself (use ac-implement).'
 ---
 
 **You are the human's command center.** When the human sits down, show the whole board, then lay the *human-required* actions on a silver platter and conduct the session. The ac-implement swarm runs unattended, **you drive the human**.

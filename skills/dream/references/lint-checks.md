@@ -183,7 +183,7 @@ diff <(grep -oE '\(([a-zA-Z0-9_-]+\.md)\)' <home>/MEMORY.md | command tr -d '()'
 # dead wikilinks
 grep -ohrE '\[\[[a-zA-Z0-9_-]+\]\]' <homes>... | sort -u   # then check each slug exists
 # decay by reference (check 12 — self-arming, report-only, findings for the docket)
-python3 ~/Repos/infrastructure/scripts/health/memory-lint.py --check --json
+python3 ~/infrastructure/scripts/health/memory-lint.py --check --json
 ```
 
 Run `memory-lint.py --check --json` in the lint phase; **tolerate absence / not-armed** — a

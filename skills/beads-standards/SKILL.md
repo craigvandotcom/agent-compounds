@@ -1,6 +1,6 @@
 ---
 name: beads-standards
-description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-polish, to capture one use ac-backlog, to generate a wave use ac-beadify.'
+description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project in any of the three repos (~/infrastructure, ~/mission incl. its apps, ~/personal) — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-polish, to capture one use ac-backlog, to generate a wave use ac-beadify.'
 ---
 
 # Beads Standards
@@ -123,7 +123,7 @@ carry it alone. (Measured: bd-1538r, 2026-08-29 — self-held in prose, claimed 
 
 **`cross-repo` — work whose bytes live in a different git repo than the board that
 holds the ticket.** Mandatory body line: `Repo: <name>` (the owning checkout —
-`agent-compounds`, root `~/Repos`, etc.). Enforcement: `ac-implement/SKILL.md`
+`agent-compounds`, `infrastructure`, etc.). Enforcement: `ac-implement/SKILL.md`
 selection filter still *selects* these beads (the board that holds the id is the
 only one that can see them); the env-prerequisite table + `ac-pipeline/references/commit-discipline.md`
 § Cross-repo skill/infra beads require the session to **commit in that repo**,

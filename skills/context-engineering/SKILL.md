@@ -314,13 +314,13 @@ duplicating a domain skill is a registry bug.
 
 | Agent | Stance | Tool boundary | Why the boundary is load-bearing |
 |---|---|---|---|
+| **orchestrator** | plans, sequences, delegates; holds decisions & batch boundaries | all tools, but delegates the doing | implementing itself defeats the point of holding the plan |
+| **coordinator** | looks, understands, critiques, synthesizes | read-only (no Write/Edit) | can't fix what it's meant to judge |
 | **researcher** | gather & distill, never produce | read-only + web (no Write/Edit) | can't pollute the substrate |
 | **implementer** | scoped production | all tools | — (scoped by prompt, not tools) |
 | **validator** | adversarial — refute, verify, judge | read-only + test-running (no Write/Edit) | can't "fix" its way out of a finding |
 
-Kept outside the trio: infra agents (memory-capture/retriever — hook plumbing) and
-harness built-ins (`Explore`, `Plan`, `general-purpose` — use them when they fit; the
-trio adds our retrieval conventions + the missing adversarial stance).
+Kept outside the five: infra agents (hook plumbing), harness built-ins (`Explore`, `Plan`, `general-purpose`).
 
 ## Agent-info routing (decision 2026-07-13)
 

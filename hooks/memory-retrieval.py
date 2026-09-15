@@ -59,7 +59,9 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-REPO_ROOT = os.path.expanduser("~/Repos")
+INFRA_ROOT = os.environ.get("INFRA_ROOT", os.path.expanduser("~/infrastructure"))
+MISSION_ROOT = os.environ.get("MISSION_ROOT", os.path.expanduser("~/mission"))
+PERSONAL_ROOT = os.environ.get("PERSONAL_ROOT", os.path.expanduser("~/personal"))
 MEMORY_LOBES = ["memory", "neometa-memory", "content-memory", "wiki"]  # L3 memory homes + synthesis pages — full content
 # W4.6 (organic friction surfacing, skill-builder/references/friction-capture.md): per-skill
 # FRICTIONS.md sensor logs are already qmd-indexed (they fall inside each engineering-collection
@@ -86,9 +88,9 @@ def _app_dir_lobe_pairs():
     """(app-dir, lobe-name) pairs from infrastructure/apps.list, e.g.
     ("body-compass-app", "body-compass"), ("cv-site", "cv-site"). Single source for both
     app_lobes() (lobe names only) and detect_level() (needs the raw app-dir name to match
-    a session's cwd against neometa/software/<app-dir>/)."""
+    a session's cwd against MISSION_ROOT/software/<app-dir>/)."""
     try:
-        with open(os.path.join(REPO_ROOT, "infrastructure", "apps.list")) as fh:
+        with open(os.path.join(INFRA_ROOT, "apps.list")) as fh:
             dirs = [a.strip() for a in fh if a.strip()]
         return [(d, d.removesuffix("-app")) for d in dirs]
     except Exception:
@@ -107,41 +109,47 @@ def app_lobes():
 
 
 def detect_level(cwd=None):
-    """Classify a session's cwd into one of: "root" / "neometa" / "content" / "app:<lobe>" /
-    "knowledge" — feeds the Phase 4 injection rank-boost (org-c5f/org-mm9). cwd defaults to
+    """Classify a session's cwd into one of: "root" / "neometa" / "content" / "app:<lobe>"
+    — feeds the Phase 4 injection rank-boost (org-c5f/org-mm9). cwd defaults to
     the hook process's own os.getcwd(): the UserPromptSubmit hook is a fresh subprocess per
     prompt that inherits the session's cwd (same convention agent-compounds/hooks/
     trauma_guard.py already relies on via Path.cwd() — verified empirically here too, see
     the "level" field added to log_injection()'s telemetry line).
 
-    Mapping (first match wins, checked against REPO_ROOT-relative path segments):
-      - under neometa/software/<app-dir>/ (per infrastructure/apps.list, matched via
+    Post-split (2026-09) the old single REPO_ROOT is three separate repos — INFRA_ROOT,
+    MISSION_ROOT, PERSONAL_ROOT — so classification checks each in turn rather than one
+    set of REPO_ROOT-relative path segments. "neometa"/"content"/"app:<lobe>" keep their
+    OLD label strings (preferred_lobes() and the qmd collection names they key off —
+    neometa-memory, content-memory — are unchanged by the split, only the filesystem root
+    moved from ~/Repos/neometa to ~/mission).
+
+    Mapping (first match wins):
+      - under MISSION_ROOT/software/<app-dir>/ (per infrastructure/apps.list, matched via
         _app_dir_lobe_pairs()) -> "app:<lobe-name>"
-      - under neometa/content/ -> "content"
-      - under neometa/ (anything else, incl. neometa/software itself or an app dir NOT in
+      - under MISSION_ROOT/content/ -> "content"
+      - under MISSION_ROOT/ (anything else, incl. software/ itself or an app dir NOT in
         apps.list) -> "neometa"
-      - under knowledge/ -> "knowledge"
-      - everything else (incl. REPO_ROOT itself, infrastructure/, or outside the repo) ->
-        "root" (no preference — see preferred_lobes())."""
+      - everything else (incl. INFRA_ROOT, PERSONAL_ROOT, or outside all three repos) ->
+        "root" (no preference — see preferred_lobes()). The old top-level "knowledge/"
+        dir (and its qmd collection) does not exist post-split — PKM content now lives
+        as several personal/* collections with no single common lobe name, so a session
+        under PERSONAL_ROOT gets no special preference, same as "root"."""
     cwd = cwd or os.getcwd()
+    real_cwd = os.path.realpath(cwd)
     try:
-        rel = os.path.relpath(os.path.realpath(cwd), os.path.realpath(REPO_ROOT))
+        rel = os.path.relpath(real_cwd, os.path.realpath(MISSION_ROOT))
     except Exception:
         return "root"
     if rel == os.curdir or rel.startswith(".."):
         return "root"
     parts = rel.split(os.sep)
-    if parts[0] == "knowledge":
-        return "knowledge"
-    if parts[0] != "neometa":
-        return "root"
-    if len(parts) >= 2 and parts[1] == "software" and len(parts) >= 3:
-        app_dir = parts[2]
+    if parts[0] == "software" and len(parts) >= 2:
+        app_dir = parts[1]
         for d, lobe in _app_dir_lobe_pairs():
             if d == app_dir:
                 return f"app:{lobe}"
-        return "neometa"  # neometa/software/<dir not in apps.list>
-    if len(parts) >= 2 and parts[1] == "content":
+        return "neometa"  # mission/software/<dir not in apps.list>
+    if parts[0] == "content":
         return "content"
     return "neometa"
 
@@ -159,19 +167,12 @@ def preferred_lobes(level):
         on this hot-lane path.
       - "content"   -> {"content-memory"}
       - "neometa"   -> {"neometa-memory"}
-      - "knowledge" -> {"knowledge"} — NOTE: under the CURRENT candidate filter
-        (is_memory(): MEMORY_LOBES prefix OR "/memory/auto/" substring), knowledge/ docs
-        essentially never become candidates in the first place (no memory/auto/
-        convention there today), so this mapping is a near always-no-op right now. That's
-        correct for Phase 4's scope — boost re-ranks EXISTING candidates, it does not
-        widen candidate selection (a separate, unscoped change).
-      - "root" (or anything unrecognized) -> set() — no preference, global stance."""
+      - "root" (or anything unrecognized, incl. a session under PERSONAL_ROOT — see
+        detect_level()) -> set() — no preference, global stance."""
     if level == "content":
         return {"content-memory"}
     if level == "neometa":
         return {"neometa-memory"}
-    if level == "knowledge":
-        return {"knowledge"}
     if level.startswith("app:"):
         name = level.split(":", 1)[1]
         return {name, f"{name}-core"}
@@ -727,7 +728,7 @@ def format_results(results):
     return [_inject_line(data) for data in results[:MAX_RESULTS]]
 
 
-HEALTH_FILE = os.path.join(REPO_ROOT, "infrastructure", "health", "reports", "memory-hook-health.json")
+HEALTH_FILE = os.path.join(INFRA_ROOT, "health", "reports", "memory-hook-health.json")
 DEBOUNCE_THRESHOLD = 2  # consecutive failed runs before the status-bar 'mem' dot goes red
 
 
@@ -741,7 +742,7 @@ def log_recall(paths):
     try:
         import datetime
         machine_id = platform.node().lower().removesuffix(".local")
-        d = os.path.join(REPO_ROOT, "infrastructure", "telemetry")
+        d = os.path.join(INFRA_ROOT, "telemetry")
         os.makedirs(d, exist_ok=True)
         line = json.dumps({"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                            "memories": list(paths)})
@@ -767,7 +768,7 @@ def log_injection(query, injected, n_candidates, level="root"):
     try:
         import datetime
         machine_id = platform.node().lower().removesuffix(".local")
-        d = os.path.join(REPO_ROOT, "infrastructure", "telemetry")
+        d = os.path.join(INFRA_ROOT, "telemetry")
         os.makedirs(d, exist_ok=True)
         line = json.dumps({"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                            "query": query,

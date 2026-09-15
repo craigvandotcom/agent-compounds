@@ -115,7 +115,7 @@ git ls-remote origin main   # must match
 **The board that holds the ticket is not always the git repo that holds the files.**
 App boards (a consuming app's especially) file `cross-repo` beads whose `## Repo
 ownership` names `agent-compounds` (shared skills, via the app's `.claude/skills/*`
-symlinks) or root `~/Repos` (infra/jobs). The **app loop must implement them** —
+symlinks) or `infrastructure` (infra/jobs). The **app loop must implement them** —
 the target repo's beads db does not contain these IDs, so they are invisible there.
 Skipping them in the app loop is how they sit in limbo.
 
