@@ -1,8 +1,5 @@
 {
-  "_doc": "mcp_agent_mail — multi-agent coordination: session identity, file reservations, messaging. Upstream Dicklesworthstone/mcp_agent_mail, cloned to ~/mcp_agent_mail and run through uv (see infrastructure/scripts/setup-mac.sh). The bearer token is a VARIABLE REFERENCE, never a literal: this repo is public, and the value lives in the gnome-keyring `login` collection reached via with-secrets. A literal here would be a committed credential, which the repo's gitleaks pre-commit hook exists to refuse.",
-  "command": "uv",
-  "args": ["run", "--directory", "${HOME}/mcp_agent_mail", "mcp-agent-mail"],
-  "env": {
-    "HTTP_BEARER_TOKEN": "${HTTP_BEARER_TOKEN}"
-  }
+  "_doc": "mcp_agent_mail — multi-agent coordination: session identity, file reservations, messaging. Upstream Dicklesworthstone/mcp_agent_mail at ~/mcp_agent_mail, run as the systemd user unit agent-mail.service (infrastructure/systemd). HTTP, not stdio: upstream allows ONE server per storage root, so an in-process stdio client cannot coexist with the service. Local sessions hit 127.0.0.1 and pass through the server's localhost bypass; a remote client (the Mac at G3) adds `headers.Authorization: Bearer <token>` in ITS machine-local copy; the token lives in the gnome-keyring `login` collection (with-secrets) and never in this public repo.",
+  "type": "http",
+  "url": "http://127.0.0.1:8765/api/"
 }
