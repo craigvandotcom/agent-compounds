@@ -59,11 +59,19 @@ exit 0
 EOF
 chmod +x "$MOCK_BIN/br"
 
-# bead <id> <issue_type> <labels-json> <description>
+# bead <id> <issue_type> <labels-json> <description> [comments-json]
+# The comments key mirrors the real `br show --json` shape (an array of
+# {id, issue_id, author, text, created_at}); absent means no comments yet.
 bead() {
-  jq -n --arg id "$1" --arg t "$2" --arg d "$4" --argjson l "$3" \
-    '{id:$id, issue_type:$t, status:"in_progress", labels:$l, description:$d}' \
+  jq -n --arg id "$1" --arg t "$2" --arg d "$4" --argjson l "$3" --argjson c "${5:-[]}" \
+    '{id:$id, issue_type:$t, status:"in_progress", labels:$l, description:$d, comments:$c}' \
     > "$FIXTURE_DIR/$1.json"
+}
+
+# review_comment <issue-id> <text> -> comments-json with one comment in br show shape
+review_comment() {
+  jq -n --arg i "$1" --arg t "$2" \
+    '[{id:1, issue_id:$i, author:"reviewer", text:$t, created_at:"2026-09-15T00:00:00Z"}]'
 }
 
 run_gate() { # <expected exit> <label> -- <gate args...>
@@ -149,14 +157,15 @@ whatever
 - script: epicship/thing.sh
 ## Consumes
 - none'
-bead bd-epic-ship epic '[]' "$EPIC_DELIVERS"
+bead bd-epic-ship epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-ship 'REVIEW: APPROVED epicship/thing.sh at feb39cc')"
 EPIC_GONE_DELIVERS='## Intent
 whatever
 ## Delivers
 - script: epicship/gone.sh
 ## Consumes
 - none'
-bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS"
+bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS" "$(review_comment bd-epic-gone 'REVIEW: APPROVED epicship/gone.sh at feb39cc')"
+bead bd-epic-noreview epic '[]' "$EPIC_DELIVERS"
 run_epic() { # <expected exit> <label> -- <gate args...>
   local want="$1" label="$2"; shift 3
   CASES=$((CASES + 1))
@@ -172,6 +181,7 @@ run_epic() { # <expected exit> <label> -- <gate args...>
 }
 run_epic 1 "epic without evidence -> REFUSE" -- bd-epic-ship "closing the epic"
 run_epic 0 "epic with receipt -> PASS" -- bd-epic-ship "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 red-probe ... exit 0"
+run_epic 1 "epic with probe receipt but no REVIEW: APPROVED comment -> REFUSE" -- bd-epic-noreview "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 run_epic 1 "epic with receipt but no declared artifact named -> REFUSE" -- bd-epic-ship "shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 run_epic 1 "epic with receipt but a promised path missing on disk -> REFUSE" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 
