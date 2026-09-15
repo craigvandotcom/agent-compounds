@@ -14,8 +14,7 @@ description: 'Work an ac2 epic''s bead queue as a SWARM — you coordinate, spaw
 | **Artifacts**    | Flight receipts (`<git-common-dir>/ac-flight/`), the run ledger, close receipts |
 | **Verification** | `close-gate.sh` per bead; the batch CI run + `ac-review` per batch            |
 
-**The prompt IS the skill.** `references/worker.md` (mandatory load) is the executable loop;
-this file is its frame. Doctrine: `skills/ac-pipeline/SKILL.md`; bead + commit canon by pointer.
+**The prompt IS the skill.** `references/worker.md` (mandatory load) is the executable loop; this file is its frame. Doctrine: `skills/ac-pipeline/SKILL.md`; bead + commit canon by pointer.
 
 ## What this skill does NOT do
 
@@ -26,10 +25,8 @@ route on the class it names.
 
 ## Defaults — a swarm, and one procedure for every width
 
-**`ac2 implement <epic>` spawns a swarm at WIDTH 3, UNCAPPED, and runs until the qualifying
-beads are exhausted.** There is no mode flag and no second procedure: the invoking session is
-always the coordinator and never a worker, at every width; a cap bounds a run you are
-watching, and an uncapped dry queue is the correct end.
+**`ac2 implement <epic>` spawns a swarm at WIDTH 3, UNCAPPED, and runs until the qualifying beads are exhausted.** There is no mode flag and no second procedure: the invoking session is
+always the coordinator and never a worker, at every width; a cap bounds a run you are watching, and an uncapped dry queue is the correct end.
 
 | override | effect |
 | --- | --- |
@@ -42,10 +39,8 @@ watching, and an uncapped dry queue is the correct end.
 claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
 is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
-every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
-needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing
-filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's
+**Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
+needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's
 terminal pick (worker.md §8), closed with no work step. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
@@ -56,8 +51,8 @@ spawn a replacement only when ready beads outnumber live workers. **The pool is 
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
 task; canon: `ac-pipeline/references/work-derivation.md`).
 
-**Phase 2 — close-out.** Four of its steps leave NO TRACE when they go wrong — script plus
-checklist, not prose:
+**Phase 2 — close-out, then review to a bound of three rounds.** Close-out leaves NO TRACE
+when it goes wrong — script plus checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
     bash skills/ac-implement/scripts/coordinator.sh --run <run-id>
@@ -69,15 +64,17 @@ hands the commit itself to `swarm-commit.sh`, so there is still exactly one comm
 
 Then, and only after it exits 0:
 
-1. **Batch CI on the committed tree, then `ac-review`** (the post-batch reviewer panel — a
-   DIFFERENT model from the implement workers, read-only; `skills/ac-review/SKILL.md`). The
-   repo-wide gates are authoritative HERE — only here is the tree free of half-finished sibling edits.
-2. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
+1. **Batch CI on the committed tree, then `ac-review`** on the batch range — the post-batch
+   reviewer panel (a DIFFERENT model from the implement workers, read-only;
+   `skills/ac-review/SKILL.md`). The repo-wide gates are authoritative HERE — only here is the
+   tree free of half-finished sibling edits. Rounds 2–3 review from the last receipt's range head.
+2. **If review filed P0/P1 children, wave again:** `ac-polish bead` on them, then spawn a further
+   wave of workers on the new children — the coordinator never picks a bead and never edits a
+   file — then review again. At most three rounds; the epic closes only through the worker's
+   terminal pick (worker.md §8), once every child is closed and the `REVIEW: APPROVED` receipt
+   is on the epic.
+3. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
-3. **Epic-close** — probe-less (legacy) epics ONLY: no `Probe:` line, every parent-child child
-   `closed`, every `## Delivers` line covered by a delivery-shaped close_reason (`shipped:` / `fixed:` /
-   `done:`) → `br close <epic> -r "shipped: <children>"` naming them. A probe-bearing epic closes only
-   by the worker's terminal pick (worker.md §8), never here; an uncovered line leaves it open + files a finding with `discovered-from: <epic>`.
 4. **Release reservations and deregister** every worker identity, including any you swept.
 
 ## The exhaust rule

@@ -230,6 +230,10 @@ prefix — that prefix is flight-check's alone — so a bounced epic re-enters �
 cleanly; a repeat claim→unclaim loop on one epic in a single run is the falsity
 detector, surfaced by the run ledger.
 
+When every child is closed but the epic carries no `REVIEW: APPROVED` comment, comment
+`review-pending`, unclaim, go to §1. This bounce is not the falsity detector above — the
+epic is waiting on review, not wrongly picked.
+
 Then run every `Probe:` in the epic's own ACs at HEAD. All green → CLOSE through
 close-gate.sh with the probe receipt as the close evidence (the reason cites it, per
 the evidence core's epic rule). Any red → comment `spec-contradiction`, unclaim, go
