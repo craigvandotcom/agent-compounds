@@ -59,6 +59,8 @@ a line to cut — the plan is graded on whether its claims are checkable, never 
    - **Success criterion** — exactly one. See the refusal below.
 3b. **Ask the live human once** — one batched AskUserQuestion round for every `needs-human`
     card, recorded `DECISION (<human>): <choice> — <why>`; unattended → stays `needs-human`.
+    The approval round itself renders `references/approval-brief.md`'s one-screen shape —
+    the same brief `ac-human`'s plan tap shows — never an improvised summary.
 4. **Hand off** (§ below). Do not stop at a written plan.
 
 ## The success criterion — a refusal, not a suggestion

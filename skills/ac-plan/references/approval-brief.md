@@ -1,0 +1,71 @@
+# approval-brief.md — the one-screen brief ac-plan and the ac-human plan tap render
+
+`ac-plan/SKILL.md` step 7 (approval) and `ac-human/references/action-loop.md`'s 🟡 Plan tap
+both render THIS shape from the same plan file — one producer, two callers, never two texts
+for one decision. OUT: the `AskUserQuestion` wiring itself (a separate bead); this file is
+only what the brief contains and where each line comes from.
+
+**If the brief does not fit one screen, the plan is too big — never the brief too short.** A
+brief that needs scrolling to show what approval commits to has already lost the human's
+attention before the question is asked.
+
+## What approval commits to
+
+The human sees this brief, taps once, and that tap is the whole gate: the plan's beads get
+cut and implemented with no further contact — unless a later polish round moves a section the
+approval digest covers (`plan-approve.sh ready` then reports `regate <sections>` and the
+changed sections come back for a one-tap re-approve). Saying so, in these words, on the brief
+itself, is what makes the tap informed rather than a formality.
+
+## The seven lines, and where each is read from
+
+| line | source | rule |
+| --- | --- | --- |
+| what changes | `## Vision` | two lines, plain prose — never the raw section, which may run long |
+| deliverables | `## Deliverables` | as paths, one per line — an artifact, never an intention |
+| seams + tests | `## Seams` | rows whose disposition is not `no seam`, ordered by toucher count (highest first); a `must update` test row renders beside its object, not in a separate list |
+| biggest risk | `## Risk + sequence` | the risk plus the assumption it rests on — one pair, not the whole risk list |
+| open cards | `## Decisions` | every card still `needs-human`, question + recommended option; a plan with none renders "none open" |
+| improvements | agent-proposed, opt-in | up to two "beyond the ask" items, each one line, each declined by default until the human opts in |
+| commits-to line | this file, verbatim sense | what approval commits to (above) — the brief always ends here |
+
+A line with nothing to show renders its own absence ("no open cards", "no improvements
+offered") — it is never dropped silently, because a dropped line and an empty one read the
+same to a human skimming for what is missing.
+
+## Seams rows on the brief
+
+`## Seams` rows carry an object, a finding and a disposition (`→ D<n>` · `→ Out of scope` ·
+`→ bead`). The brief drops every row whose disposition is `no seam` — those rows exist so the
+seams scan can show its own completeness, not because the human needs to see them — and
+orders what remains by toucher count, heaviest object first, so the biggest blast radius is
+the first thing read. A test row (`unchanged` · `must update` · `none exists`) renders beside
+the object it tests, never pulled into a separate section: "what breaks" and "what proves it
+still works" belong on one line.
+
+## Skeleton
+
+```markdown
+## Approve <plan-slug>?
+
+**What changes:** <two lines from ## Vision>
+
+**Deliverables:**
+- <path>
+- <path>
+
+**Seams + tests** (ordered by toucher count, `no seam` rows dropped):
+- <object> — <finding> → <disposition> · tests: <unchanged | must update | none exists>
+
+**Biggest risk:** <risk> — rests on: <assumption>
+
+**Open decisions:** <question — recommended: option> | "none open"
+
+**Beyond the ask (opt-in):**
+- <improvement, one line>
+- <improvement, one line>
+| "none offered"
+
+**Approving commits to:** beads cut and implemented with no further contact, unless a later
+polish round changes a gated section — then only the changed sections come back for a re-approve.
+```
