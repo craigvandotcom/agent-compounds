@@ -15,7 +15,7 @@ auto-advance, Done as escape); this file carries the per-type playbook.
     - **Memo missing/thin** (a bare "HUMAN: decide X" with no options) → it is **not tap-ready; do NOT fake buttons.** Surface it as `⚠ no memo` and offer: `Frame it now` (research + write the memo onto the bead, then present options) / `Decide raw` / `Skip` / `Done`. The dashboard **self-heals** bare beads into tap-ready ones.
   On tap (either path) → record + execute + close + **confirm the ripple**, then auto-advance:
   ```bash
-  br comments add <id> "DECISION (<human>): <choice> — <why>"
+  br comments add <id> "RULING (<human>): <choice> — <why>"
   # ...carry out consequences...
   br close <id> --reason "<what was decided/done>"
   br sync --flush-only && git add .beads/issues.jsonl \
@@ -28,7 +28,7 @@ auto-advance, Done as escape); this file carries the per-type playbook.
 - **🔴 PRs — batch the trivial:** dependabot/grouped bumps → ONE prompt ("Merge the N green dependabot PRs?"), not N. Substantive PRs → one each.
 - **🔴 CI / prod:** summarize the failure in a line, then `AskUserQuestion`: "Investigate now / File a bead / Skip."
 - **🟡 Plan:** render `skills/ac-plan/references/approval-brief.md`'s one-screen brief, then split by status:
-    - **`status: draft | refined`** (needs approve) → `AskUserQuestion`: "Approve / Send to refine / Skip." Approve writes any answer the human gave in the tap into the plan as `DECISION (<human>): …` before running `skills/_tools/plan-approve.sh approve <plan-path> "$(git config user.name)"` — the ONE writer of approval, never a hand edit of the frontmatter. Refine → `/ac-polish {path}`.
+    - **`status: draft | refined`** (needs approve) → `AskUserQuestion`: "Approve / Send to refine / Skip." Approve records each ruling by rewriting the ruled card's state line in place to `settled: <choice> — <why>` with its `vision:` quote, in the one card grammar in `skills/ac-plan/references/decisions.md` — never by appending a line — then runs `skills/_tools/plan-approve.sh approve <plan-path> "$(git config user.name)"` — the ONE writer of approval, never a hand edit of the frontmatter. Show the script's own verdict line to the human: `REFUSED …` → offer Send to refine (`/ac-polish {path}`); `NOT-GATED …` → stop and say the gate could not check. Refine → `/ac-polish {path}`.
     - **`status: approved`** with polish keys present (needs ready) → run `skills/_tools/plan-approve.sh ready <plan-path>`. `READY` → the plan **leaves this view** (now `bead-ready`). `REFUSED regate <sections>` → show the named changed sections and offer re-approve (re-run `plan-approve.sh approve`), then retry `ready`.
 - **🟢 Hopper** (only once 🔴/🟡 are clear, or the human jumps here): `AskUserQuestion` to pick which `active/` item to plan (→ `/ac-plan`), approve/discard a triage candidate, or promote the pool (→ `/ac-align`).
 
