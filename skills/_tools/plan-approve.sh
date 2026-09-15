@@ -27,11 +27,12 @@
 #                         plan too. Never writes.
 #
 # THE DIGEST: sha256 over the concatenated bodies of `## Vision`, `## Deliverables`,
-# `## Decisions`, `## Out of scope`, `## Success criterion` (prefix match — a real plan
-# carries `## Deliverables (artifacts)`) plus the `Human gates:` line — extracted with the
-# same awk shape touchers.sh uses for `## Delivers`, the header parameterized rather than a
-# second parser. `approved_sha256` is that single digest, exactly as named in the plan;
-# `approved_section_digest` is a per-section breakdown of the SAME six pieces so `ready` can
+# `## Decisions`, `## Out of scope`, `## Success Criteria` (prefix `## Success C`, so
+# the capital-C spelling a real plan carries hashes instead of empty) and `## Seams`,
+# plus the `Human gates:` line — extracted with the same awk shape touchers.sh uses for
+# `## Delivers`, the header parameterized rather than a second parser. `approved_sha256`
+# is that single digest, exactly as named in the plan;
+# `approved_section_digest` is a per-section breakdown of the SAME seven pieces so `ready` can
 # name the section that moved instead of only reporting "something changed" — state that
 # must live in the plan (git-durable) rather than a scratch dir, because `ready` can run in
 # a session that never saw `approve`'s tmpdir.
@@ -51,6 +52,15 @@
 set -u
 
 die_notgated() { printf 'NOT-GATED: %s\n' "$*"; exit 2; }
+
+# Fail-closed digest guard: `set -u` is on but there is no pipefail, so an exit
+# inside `$( ... | _sha )` never reaches the caller — the error text would become
+# the digest and every mode would exit 0. Each mode calls this FIRST so a missing
+# sha tool refuses from the mode itself (exit 2), never from inside a substitution.
+_require_sha() {
+  command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1 \
+    || die_notgated "no shasum or sha256sum on PATH — cannot compute a digest"
+}
 
 _sha() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 | awk '{print $1}'
@@ -82,12 +92,13 @@ _section_digest_one() {
     Deliverables)     _section_body "$file" "## Deliverables" | _sha ;;
     Decisions)        _section_body "$file" "## Decisions" | _sha ;;
     OutOfScope)       _section_body "$file" "## Out of scope" | _sha ;;
-    SuccessCriterion) _section_body "$file" "## Success criterion" | _sha ;;
+    SuccessCriterion) _section_body "$file" "## Success C" | _sha ;;
+    Seams)            _section_body "$file" "## Seams" | _sha ;;
     HumanGates)       _human_gates_line "$file" | _sha ;;
   esac
 }
 
-_SECTION_LABELS="Vision Deliverables Decisions OutOfScope SuccessCriterion HumanGates"
+_SECTION_LABELS="Vision Deliverables Decisions OutOfScope SuccessCriterion Seams HumanGates"
 
 _compute_section_digests() {
   local file="$1" label out=""
@@ -104,7 +115,8 @@ _compute_overall_digest() {
     _section_body "$file" "## Deliverables"
     _section_body "$file" "## Decisions"
     _section_body "$file" "## Out of scope"
-    _section_body "$file" "## Success criterion"
+    _section_body "$file" "## Success C"
+    _section_body "$file" "## Seams"
     _human_gates_line "$file"
   } | _sha
 }
@@ -115,20 +127,42 @@ _fm_get() {
   awk -v k="^${key}:" 'NR==1 && $0=="---"{infm=1; next} infm && $0=="---"{exit} infm && $0 ~ k {sub(k,""); sub(/^[[:space:]]*/,""); print; exit}' "$file"
 }
 
+# Print the frontmatter block only (between the line-1 `---` and its closer), so
+# predicates read the stamp, never a fenced example or body text.
+_fm_block() {
+  local file="$1"
+  awk 'NR==1 && $0=="---" { infm=1; next } infm && $0=="---" { exit } infm' "$file"
+}
+
+# Print the file minus fenced code blocks, so a fenced example can never satisfy
+# a section-existence predicate.
+_unfenced() {
+  awk '/^[[:space:]]*```/ { f = !f; next } !f' "$1"
+}
+
 # Write/replace frontmatter keys. Args: file, then "key=value" pairs. Keys not already
 # present are inserted just before the closing `---`; keys already present are replaced
 # in place — idempotent, and it never disturbs a key it was not told to write (the same
 # passthrough discipline polish-fixpoint.sh uses for its own polish_* keys).
 _fm_write() {
   local file="$1"; shift
-  head -1 "$file" | grep -q '^---[[:space:]]*$' || die_notgated "plan has no YAML frontmatter to stamp: $file"
+  [ "$(head -1 "$file")" = "---" ] || die_notgated "plan has no exact YAML frontmatter opener on line 1: $file"
+  # Frontmatter values are single-line by construction: a literal newline inside a
+  # value would land as a new key line on write — the injection ENVIRON alone cannot
+  # stop (it stops escape EXPANSION, not embedded newlines). Refuse instead of
+  # writing it.
+  case "$*" in
+    *$'\n'*) die_notgated "refusing multi-line frontmatter value" ;;
+  esac
   local tmp; tmp=$(mktemp)
-  # Separators passed as literal bytes via -v (never as an awk \x escape — gawk/mawk/nawk
-  # disagree on whether \x1e is an escape or four literal characters, so the shell resolves
-  # the byte and awk only ever sees a plain string compare).
-  awk -v pairs="$*" -v PAIRSEP="$(printf '\037')" -v KVSEP="$(printf '\036')" '
+  # Pairs travel via the environment, never -v: awk expands escapes in -v
+  # assignments, so a crafted approver name could add frontmatter keys.
+  # Separators stay -v as literal bytes resolved by the shell (gawk/mawk/nawk
+  # disagree on whether \x1e is an escape or four literal characters, so awk
+  # only ever sees a plain string compare).
+  PAIRS="$*" awk -v PAIRSEP="$(printf '\037')" -v KVSEP="$(printf '\036')" '
     BEGIN {
-      n = split(pairs, kv, PAIRSEP)
+      n = split(ENVIRON["PAIRS"], kv, PAIRSEP)
       for (i = 1; i <= n; i++) {
         split(kv[i], one, KVSEP)
         keys[i] = one[1]; vals[i] = one[2]
@@ -150,7 +184,8 @@ _fm_write() {
     { print }
   ' "$file" > "$tmp" \
   || { rm -f "$tmp"; die_notgated "frontmatter write failed for $file"; }
-  mv "$tmp" "$file"
+  mv "$tmp" "$file" \
+  || { rm -f "$tmp"; die_notgated "frontmatter move failed for $file"; }
 }
 
 # _fm_write's caller passes pairs as "key<0x1e>value<0x1f>key<0x1e>value…" — small helper
@@ -171,12 +206,13 @@ _fm_pairs() {
 mode_approve() {
   local plan="$1" who="${2-}"
   [ -n "$plan" ] && [ -r "$plan" ] || die_notgated "plan missing or unreadable: ${plan:-<none>}"
-
-  local root; root=$(git rev-parse --show-toplevel 2>/dev/null)
+  _require_sha
 
   # needs-human N — an open Decision card. A card is a top-level bullet block inside
-  # ## Decisions; "settled" is a bold `**settled:` token on the block, "needs-human" the
-  # bare word as a standalone token (never inside "settled").
+  # ## Decisions, per the one card grammar in skills/ac-plan/references/decisions.md:
+  # the open token `needs-human` is checked BEFORE `settled:` (plain or bold), so a
+  # block carrying the open token is open even beside a settled-looking line; a
+  # settled block wants a `vision: "<quoted line>"` quote.
   local dec_body; dec_body=$(_section_body "$plan" "## Decisions")
   local numbered maxb b block settled_no_vision=0 open_needs_human=0
   numbered=$(printf '%s\n' "$dec_body" | awk '{ if ($0 ~ /^[[:space:]]*[-*][[:space:]]/) b++; printf "%d\t%s\n", b+0, $0 }')
@@ -186,10 +222,10 @@ mode_approve() {
     block=$(printf '%s\n' "$numbered" | awk -F'\t' -v want="$b" '$1+0 == want { sub(/^[0-9]*\t/, ""); print }')
     b=$((b + 1))
     [ -n "$(printf '%s' "$block" | tr -d '[:space:]')" ] || continue
-    if printf '%s' "$block" | grep -q '\*\*settled:'; then
-      printf '%s' "$block" | grep -q 'vision:[[:space:]]*"' || settled_no_vision=$((settled_no_vision + 1))
-    elif printf '%s' "$block" | grep -qE '(^|[^a-zA-Z-])needs-human([^a-zA-Z-]|$)'; then
+    if printf '%s' "$block" | grep -qE '(^|[^a-zA-Z-])needs-human([^a-zA-Z-]|$)'; then
       open_needs_human=$((open_needs_human + 1))
+    elif printf '%s' "$block" | grep -qE '(^|[^a-zA-Z-])settled:'; then
+      printf '%s' "$block" | grep -q 'vision:[[:space:]]*"' || settled_no_vision=$((settled_no_vision + 1))
     fi
   done
 
@@ -198,34 +234,32 @@ mode_approve() {
     exit 1
   fi
 
-  if ! grep -q '^## Decisions' "$plan"; then
+  if ! _unfenced "$plan" | grep -q '^## Decisions'; then
     printf 'REFUSED no-decisions: %s carries no ## Decisions section\n' "$plan"
     exit 1
   fi
 
-  if ! grep -q '^## Seams' "$plan"; then
+  if ! _unfenced "$plan" | grep -q '^## Seams'; then
     printf 'REFUSED no-seams: %s carries no ## Seams section\n' "$plan"
     exit 1
   fi
 
-  # seams-incomplete <path> — every Deliverable path that exists in the tree owes a row in
-  # ## Seams (matched by basename substring, the same short-form the Seams table itself
-  # uses — `plan-approve.sh` for `skills/_tools/plan-approve.sh`).
+  # seams-incomplete <path> — every path extracted from the whole ## Deliverables
+  # bullet blocks owes a row in ## Seams, matched by FULL path (the Seams table
+  # carries the same full form) and exempting nothing: a new file's row
+  # reads `new — no touchers`. No git anywhere, so the check behaves the same inside
+  # and outside a worktree.
   local seams_body; seams_body=$(_section_body "$plan" "## Seams")
   local deliv_body; deliv_body=$(_section_body "$plan" "## Deliverables")
-  local paths incomplete="" p base
+  local paths incomplete="" p
   paths=$(printf '%s\n' "$deliv_body" | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u)
-  if [ -n "$root" ]; then
-    while IFS= read -r p; do
-      [ -n "$p" ] || continue
-      p="${p#./}"
-      [ -f "$root/$p" ] || continue
-      base=$(basename "$p")
-      printf '%s\n' "$seams_body" | grep -qF "$base" || incomplete="${incomplete}${incomplete:+ }${p}"
-    done <<EOF
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    p="${p#./}"
+    printf '%s\n' "$seams_body" | grep -qF "$p" || incomplete="${incomplete}${incomplete:+ }${p}"
+  done <<EOF
 $paths
 EOF
-  fi
   if [ -n "$incomplete" ]; then
     printf 'REFUSED seams-incomplete %s\n' "$incomplete"
     exit 1
@@ -269,8 +303,9 @@ EOF
 mode_ready() {
   local plan="$1"
   [ -n "$plan" ] && [ -r "$plan" ] || die_notgated "plan missing or unreadable: ${plan:-<none>}"
+  _require_sha
 
-  if ! grep -q '^polish_rounds:' "$plan" || ! grep -q '^polish_fixpoint_' "$plan"; then
+  if [ -z "$(_fm_get "$plan" polish_rounds)" ] || ! _fm_block "$plan" | grep -q '^polish_fixpoint_'; then
     printf 'REFUSED not-polished: %s carries no polish stamp keys (polish_rounds / polish_fixpoint_*)\n' "$plan"
     exit 1
   fi
@@ -310,6 +345,7 @@ mode_ready() {
 mode_check() {
   local plan="$1"
   [ -n "$plan" ] && [ -r "$plan" ] || die_notgated "plan missing or unreadable: ${plan:-<none>}"
+  _require_sha
 
   local status approved_by approved_at approved_sha
   status=$(_fm_get "$plan" status)

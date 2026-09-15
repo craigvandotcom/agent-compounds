@@ -28,10 +28,10 @@ expect() {
 
 W=$(mktemp -d /tmp/plan-approve-test-XXXXXX)
 
-# A Deliverable path that genuinely exists in the tree, so seams-incomplete / seams-complete
-# fixtures exercise the real filesystem-existence check rather than a "new" no-op path.
+# A Deliverable path with a ## Seams row carrying the same FULL path, so the
+# seams-complete fixtures exercise the full-path row requirement (ac-zug5.1: rows
+# match by full path, never basename, and exempt nothing).
 REAL_PATH="skills/_tools/touchers.sh"
-REAL_BASE="touchers.sh"
 
 vision_line='writes the vision back in plain prose'
 
@@ -49,7 +49,7 @@ mk_plan() {
 SETTLED_CARD="- **A fork?** Options: a, b. **settled: a (Craig).** vision: \"$vision_line\""
 SEAMS_OK="| object | finding | disposition |
 | --- | --- | --- |
-| \`$REAL_BASE\` | some finding | -> D1 |"
+| \`$REAL_PATH\` | some finding | -> D1 |"
 
 # 1 — approve on a clean plan -> APPROVED, four identity keys + the internal ledger written
 mk_plan "$W/p1.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
