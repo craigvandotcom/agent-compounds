@@ -2,7 +2,7 @@
 
 > **This registry _is_ `code-pipe`** — the software factory (the `ac-*` production line
 > + code QC + code-domain skills), one half of the agentic-factory pair alongside
-> **`content-pipe`** (the publishing house, at `neometa/content/content-pipe/`). Both
+> **`content-pipe`** (the publishing house, at `~/mission/content/content-pipe/`). Both
 > consume one shared substrate (`context-engineering`/`reflect`/`dream`) so they write to
 > a single memory ledger. A literal `code-pipe` rename + any monorepo convergence are
 > deferred future-state — see `_plans/2026-06-23-factory-split-refactor.md`. Ops skills
@@ -47,7 +47,7 @@ each app in `infrastructure/ac-deploy-targets.list` it runs `deploy.sh --all` (t
 layer) and then projects that layer into every other harness home — `.agents/skills`
 (Codex+Pi), `.factory/` (Droid, skills+droids+hooks+MCP), `.codex/` (generated agent TOMLs,
 hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored `harnesses.local.json`);
-hook wiring canon: `hooks/hooks.json`. A newly added registry skill therefore lands in every
+hook wiring canon: `engine/hooks.wiring.json`. A newly added registry skill therefore lands in every
 app AND every harness on the next sync with **no manual re-stamp** (idempotent:
 creates/refreshes symlinks only, never clobbers a real file — so local customizations like
 art-still's `design-system` survive; generated files are stamp-gated).
