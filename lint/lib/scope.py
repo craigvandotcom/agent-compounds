@@ -63,13 +63,14 @@ Sets:
   HARNESS_MANIFEST   the root harnesses.json (per-harness agent-model/deploy
                       manifest) — distinct from HARNESSES (proof-test files)
                       above. Named in 03's header (it reads harnesses.json too).
-  LINT_CONFIG        lint/config.json — read at runtime by several checks (14,
-                      15, 25, 29, 31, 32), any of which its thresholds can
-                      change. Not wired into any check's `scope:` header:
-                      lint/run.py instead special-cases it (a config change
-                      bypasses the --changed scope filter and runs every
-                      check, since one file can silently retune six checks'
-                      verdicts — see run.py's own comment).
+  LINT_CONFIG        skills/packages.json (`_lint` section) — read at runtime
+                       by several checks (14, 15, 25, 29, 31, 32), any of
+                       which its thresholds can change. Not wired into any
+                       check's `scope:` header: lint/run.py instead
+                       special-cases it (a config change bypasses the
+                       --changed scope filter and runs every check, since one
+                       file can silently retune six checks' verdicts — see
+                       run.py's own comment).
 
 Multi-name scope headers: a check's `# scope:` line may name more than one
 set (`LIVE_TEXT AGENT_STANCES HARNESS_MANIFEST`); 00-meta.py's header
@@ -183,7 +184,7 @@ README = _one("README.md")
 AGENTS_DOC = _one("AGENTS.md")
 DEPLOY_SCRIPT = _one("engine/deploy.sh")
 HARNESS_MANIFEST = _one("harnesses.json")
-LINT_CONFIG = _one("lint/config.json")
+LINT_CONFIG = _one("skills/packages.json")
 
 # --- composite scope aliases -------------------------------------------------
 # 00-meta.py's header-contract validator does one literal `getattr(scope,

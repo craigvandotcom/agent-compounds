@@ -295,14 +295,15 @@ def main():
             skipped = {}  # cannot compute a diff -> change nothing, run all
         else:
             real_files = {os.path.realpath(os.path.join(args.root, f)) for f in files}
-            # lint/config.json is read at RUNTIME by several checks (14, 15, 25, 29,
-            # 31, 32) to retune their own thresholds — it is config, not a file
-            # population any one of those checks' `scope:` sets could name without
-            # also claiming the other five checks' subjects. Rather than wiring
-            # LINT_CONFIG into six headers this pass does not own, a config-file
-            # change bypasses scope filtering entirely: every selected check runs
-            # (still honouring `changed: skip`), because one file can silently
-            # retune six checks' verdicts and only a full run proves none broke.
+            # skills/packages.json (`_lint`) is read at RUNTIME by several checks
+            # (14, 15, 25, 29, 31, 32) to retune their own thresholds — it is
+            # config, not a file population any one of those checks' `scope:`
+            # sets could name without also claiming the other five checks'
+            # subjects. Rather than wiring LINT_CONFIG into six headers this
+            # pass does not own, a config-file change bypasses scope filtering
+            # entirely: every selected check runs (still honouring
+            # `changed: skip`), because one file can silently retune six
+            # checks' verdicts and only a full run proves none broke.
             config_changed = bool(scope.LINT_CONFIG) and any(
                 os.path.realpath(os.path.join(args.root, p)) in real_files
                 for p in scope.LINT_CONFIG
@@ -320,7 +321,7 @@ def main():
                     skipped[check_id(c)] = "changed:skip"
                     continue
                 if config_changed:
-                    continue  # lint/config.json in the diff -> run everything, see above
+                    continue  # skills/packages.json in the diff -> run everything, see above
                 raw_scope = h.get("scope", "")
                 resolved, bad_token = resolve_scope(raw_scope)
                 if resolved is None:

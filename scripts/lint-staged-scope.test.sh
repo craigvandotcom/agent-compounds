@@ -24,10 +24,11 @@
 #   4. An unresolvable scope token is a LOUD runner error (NOT-GATED, exit 2,
 #      naming the check and the bad token) — never a silent skip, whether or
 #      not any file changed.
-#   5. lint/config.json in the diff bypasses scope filtering for every OTHER
-#      selected check (config can retune any check's thresholds at runtime),
-#      while a check declaring `changed: skip` stays skipped regardless —
-#      the config bypass is not a license to ignore that escape hatch.
+#   5. skills/packages.json in the diff bypasses scope filtering for every OTHER
+#      selected check (the manifest's `_lint` section can retune any check's
+#      thresholds at runtime), while a check declaring `changed: skip` stays
+#      skipped regardless — the manifest bypass is not a license to ignore
+#      that escape hatch.
 #
 # Runs under bash. Exit 0 = every case passed.
 
@@ -172,13 +173,13 @@ if __name__ == "__main__":
 PY
 
 # Check E: scope LEDGER, `changed: skip` — must stay skipped even when
-# lint/config.json is in the diff (the config bypass is not a license to
+# skills/packages.json is in the diff (the manifest bypass is not a license to
 # ignore an explicit changed:skip escape hatch).
 cat > "$W/lint/checks/54-demo-changed-skip.py" <<'PY'
 #!/usr/bin/env python3
 # ---
 # id: 54-demo-changed-skip
-# prevents: demo — proves changed:skip survives the config-bypass rule
+# prevents: demo — proves changed:skip survives the manifest-bypass rule
 # scope: LEDGER
 # changed: skip
 # severity: fail
@@ -200,13 +201,13 @@ echo "hello" > "$W/skills/demo/SKILL.md"
 echo "hello" > "$W/skills/demo2/SKILL.md"
 mkdir -p "$W/templates"
 echo "template" > "$W/templates/probe.md"
-echo "{}" > "$W/lint/config.json"
+echo "{}" > "$W/skills/packages.json"
 git -C "$W" add \
   "$W/lint/checks/50-demo-token.py" "$W/lint/checks/51-demo-ledger.py" \
   "$W/lint/checks/52-demo-multiscope.py" "$W/lint/checks/53-demo-badscope.py" \
   "$W/lint/checks/54-demo-changed-skip.py" \
   "$W/skills/demo/SKILL.md" "$W/skills/demo2/SKILL.md" \
-  "$W/templates/probe.md" "$W/lint/config.json"
+  "$W/templates/probe.md" "$W/skills/packages.json"
 git -C "$W" commit -qm base >/dev/null
 
 run_new() { ( cd "$W" && python3 "$RUN_PY" --root "$W" "$@" ); }
@@ -319,24 +320,24 @@ else
   bad "expected a loud NOT-GATED rc=2 naming the check + bad token, got rc='$rc7': $out7"
 fi
 
-# --- Case 8a: lint/config.json in the diff bypasses scope filtering for a
+# --- Case 8a: skills/packages.json in the diff bypasses scope filtering for a
 # check with no config-plumbing of its own — one file can retune several
 # checks' thresholds at runtime, so its presence in the diff runs everything.
 git -C "$W" reset -q --hard >/dev/null
-echo '{"probe": true}' > "$W/lint/config.json"
-git -C "$W" add "$W/lint/config.json"
+echo '{"probe": true}' > "$W/skills/packages.json"
+git -C "$W" add "$W/skills/packages.json"
 out8a=$(run_new --check 51 --changed --staged --json)
 res8a=$(echo "$out8a" | scope_of)
-[ "$res8a" = "ran" ] && ok "lint/config.json in the diff runs a scope-LEDGER check with no LEDGER file staged" \
-                      || bad "expected the config bypass to run the check, got '$res8a': $out8a"
+[ "$res8a" = "ran" ] && ok "skills/packages.json in the diff runs a scope-LEDGER check with no LEDGER file staged" \
+                      || bad "expected the manifest bypass to run the check, got '$res8a': $out8a"
 
 # --- Case 8b: ...but a check declaring `changed: skip` stays skipped even
-# when lint/config.json is in the diff — the bypass is not a license to
+# when skills/packages.json is in the diff — the bypass is not a license to
 # override that explicit escape hatch.
 out8b=$(run_new --check 54 --changed --staged --json)
 res8b=$(echo "$out8b" | scope_of)
-[ "$res8b" = "changed:skip" ] && ok "changed:skip still holds even with lint/config.json in the diff" \
-                      || bad "expected skipped_scope='changed:skip', got '$res8b': $out8b"
+[ "$res8b" = "changed:skip" ] && ok "changed:skip still holds even with skills/packages.json in the diff" \
+                               || bad "expected skipped_scope='changed:skip', got '$res8b': $out8b"
 
 echo "---"
 echo "PASS=$PASS FAIL=$FAIL"
