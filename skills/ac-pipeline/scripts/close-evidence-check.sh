@@ -245,8 +245,12 @@ case "$ITYPE" in
     # `REVIEW: APPROVED` comment on the epic proves review passed — read from the
     # bead's own comments (`br show --json` carries a `comments` key), never the
     # close reason. Unreadable or absent comments refuse: a gate that cannot see the
-    # receipt must not assume it.
-    if ! printf '%s' "$NODE" | jq -r '.comments // [] | .[].text // empty' 2>/dev/null | grep -q 'REVIEW: APPROVED'; then
+    # receipt must not assume it. The match is anchored to a receipt-shaped line
+    # (`^REVIEW: APPROVED`, the shape ac-review writes with the range): a bare
+    # substring grep is satisfied by a negation sentence stating the receipt is
+    # ABSENT (measured live on ac-zug5: "No REVIEW: APPROVED receipt written…"),
+    # which would close the epic on an explicit non-receipt (ac-7lpp).
+    if ! printf '%s' "$NODE" | jq -r '.comments // [] | .[].text // empty' 2>/dev/null | grep -q '^REVIEW: APPROVED'; then
       verdict "REFUSE" "epic — no REVIEW: APPROVED comment on the epic: review has not passed, so the epic cannot close" 1
     fi
 

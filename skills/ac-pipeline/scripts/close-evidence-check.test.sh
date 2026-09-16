@@ -184,6 +184,12 @@ run_epic 0 "epic with receipt -> PASS" -- bd-epic-ship "shipped: epic landed. De
 run_epic 1 "epic with probe receipt but no REVIEW: APPROVED comment -> REFUSE" -- bd-epic-noreview "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 run_epic 1 "epic with receipt but no declared artifact named -> REFUSE" -- bd-epic-ship "shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 run_epic 1 "epic with receipt but a promised path missing on disk -> REFUSE" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+# Polarity case (ac-7lpp): a negation sentence stating the receipt is ABSENT
+# contains the bare string but is not a receipt-shaped line — it must refuse.
+# Mirrors the live comment on ac-zug5 ("No REVIEW: APPROVED receipt written…"),
+# which satisfied the pre-anchor substring grep.
+bead bd-epic-negated epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-negated 'No REVIEW: APPROVED receipt written: the round is clean but a P1 child is now open, so the receipt waits for the re-review.')"
+run_epic 1 "epic with negated receipt sentence containing the string -> REFUSE" -- bd-epic-negated "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 
 echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
 jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \
