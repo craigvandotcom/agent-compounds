@@ -54,6 +54,13 @@ def scan():
             continue  # skip non-existent dirs silently — the legacy verdict
         scanned += 1
         for dirpath, dirnames, filenames in os.walk(d):
+            # Ambient job sandboxes (e.g. ~/.claude/jobs/*/tmp/...) are foreign
+            # scratch trees no commit in this repo can fix — never descend.
+            if "jobs" in dirnames:
+                dirnames[:] = [x for x in dirnames if x != "jobs"]
+            if "jobs" in os.path.relpath(dirpath, d).split(os.sep):
+                dirnames[:] = []
+                continue
             for name in dirnames + filenames:
                 p = os.path.join(dirpath, name)
                 if os.path.islink(p) and not os.path.exists(p):
