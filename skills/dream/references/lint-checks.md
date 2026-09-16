@@ -80,21 +80,7 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     citation trail reveals a fact that was never actually true. **Always gated, never an
     auto-edit to either side** — per `[[rule-proposals-become-beads]]`, every finding
     becomes a proposal, which becomes a decision bead in its target repo.
-12. **Decay by reference** `[T2 weekly, script-driven, data-gated]` — a fact
-    that has earned **neither an injection nor a read** across the trailing window is an
-    archive candidate. This check is **not a manual sweep** — it is Check F of
-    `infrastructure/scripts/health/memory-lint.py` (the ONE memory-substrate sensor;
-    absorbed `dream-cycle/decay_lint.py`, retired 2026-09-09), which reads the observe-loop
-    reference signals (recall injections + qmd reads) and emits **findings** for the dream
-    docket (`kind: decay-candidate`). It **self-arms**: it does nothing until ≥28
-    days of recall data exist AND the `memory_reads` table is live, so it cannot act on a
-    zero it hasn't earned. Predicate + thresholds (the script docstring is the authority —
-    keep them in sync): archive requires *all* of — zero injected-count in the trailing
-    **28d** window · a **coverage guard** (every non-retired machine contributed ≥**5**
-    active days; shards idle >**90d** are retired, not blockers) · zero read-count in the
-    window · git mtime >**60d**. Report-only: memory-lint never moves or deletes anything;
-    the manual dream session rules on archiving. (decay_lint's stdout-only promotion list
-    was retired with it — noise no reader consumed, org-bj8.)
+12. **Decay by reference** `[DISABLED 2026-09-16 — usage-based decay/promotion off pending memory-stewardship research]` — the reference-signal half (recall injections + qmd reads) was retired with `dream-cycle/decay_lint.py` and never ported: `memory-lint.py` covers structural checks only (index, wikilinks, frontmatter, cited paths, freshness). No usage-based archive or promotion signal runs anywhere until the research lands.
 
 13. **Provenance leak in skill text** `[T2 weekly]` — skill/canon files carrying an edit's
     STORY instead of behavior: dates in prose, director attributions, pass/wave narratives,
