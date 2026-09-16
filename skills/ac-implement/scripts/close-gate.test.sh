@@ -88,7 +88,8 @@ esac
 MOCKBR
 chmod +x "$MOCK_BIN/br"
 
-# Mock `ubs` — modes drive the scanner leg's four outcomes.
+# Mock `ubs` — modes drive the scanner leg's outcomes, including ac-x9dy's
+# finding-less exit-1 (js tool-side noise) versus exit-1-with-findings.
 cat >"$MOCK_BIN/ubs" <<'MOCKUBS'
 #!/usr/bin/env bash
 n=$#
@@ -100,6 +101,14 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
             echo "   subject.txt:12:3  possible defect here"
             echo "Summary: 12 categories checked"; exit 0 ;;
   nocount)  echo "UBS Meta-Runner"; echo "Summary: 12 categories checked"; exit 0 ;;
+  exit1-clean) echo "UBS Meta-Runner"; echo "Files scanned: $n"
+            echo "Files: $n"; echo "Critical: 0"; echo "Warning: 0"; echo "Info: 0"; exit 1 ;;
+  exit1-findings) echo "UBS Meta-Runner"; echo "Files scanned: $n"
+            echo "   subject.txt:12:3  possible defect here"
+            echo "Files: $n"; echo "Critical: 1"; echo "Warning: 0"; echo "Info: 0"; exit 1 ;;
+  exit1-summary) echo "UBS Meta-Runner"; echo "Files scanned: $n"
+            echo "   Location: /tmp/x.py:2:11"
+            echo "Files: $n"; echo "Critical: 2"; echo "Warning: 1"; echo "Info: 1"; exit 1 ;;
 esac
 MOCKUBS
 chmod +x "$MOCK_BIN/ubs"
@@ -554,6 +563,27 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: scanned == handed with no detail findings passes the scanner leg"
 else fail "AC4 clean: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-exit1-clean)"
+out="$(AC2_TEST_UBS_MODE=exit1-clean gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: finding-less exit-1 passes — the verdict is the finding count, never the exit code alone (ac-x9dy)"
+else fail "AC4 exit1-clean: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-exit1-findings)"
+out="$(AC2_TEST_UBS_MODE=exit1-findings gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: exit-1-with-findings still refuses (ac-x9dy)"
+else fail "AC4 exit1-findings: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-exit1-summary)"
+out="$(AC2_TEST_UBS_MODE=exit1-summary gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: exit-1 with summary-only findings refuses — the Combined Summary corroborates where DETAIL misses (ac-x9dy python shape)"
+else fail "AC4 exit1-summary: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-empty-argv)"
 out="$(gate "$R" --reason "$REASON")"

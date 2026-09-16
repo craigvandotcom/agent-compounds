@@ -365,8 +365,14 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   [ "$SCANNED" -eq "${#SCAN_FILES[@]}" ] \
     || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCAN_FILES[@]} file(s) — a shortfall is NOT-GATED, not a pass"
   FINDINGS=$(printf '%s' "$SCAN_OUT" | grep -cE '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+' || true)
-  [ "$SCAN_RC" -eq 0 ] && [ "${FINDINGS:-0}" -eq 0 ] \
-    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) over ${#SCAN_FILES[@]} scanned file(s)"
+  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict
+  # is the finding count, never the exit code alone. The DETAIL regex misses python
+  # bandit Location lines, so the Combined Summary counters corroborate.
+  SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] && [ "${SUM_WARN:-0}" -eq 0 ] && [ "${SUM_INFO:-0}" -eq 0 ] \
+    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}/Warning ${SUM_WARN:-0}/Info ${SUM_INFO:-0}) over ${#SCAN_FILES[@]} scanned file(s)"
   echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
