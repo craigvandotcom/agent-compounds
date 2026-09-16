@@ -122,7 +122,7 @@ slugs=$(… the left operand … | wc -l)                 # slugs the pipeline e
 FILE is absent, not that the LESSON is lost — the prune is only lossless if no copy
 survives. Check all three, per slug:
 `infrastructure/context-mining/daily/*/<slug>.md` (staged, never promoted) · `$home/_archive/`
-· `git log -- memory/auto/<slug>.md`. A slug with a surviving body is a **promotion**, not a
+· `git log -- <memory-home>/auto/<slug>.md`. A slug with a surviving body is a **promotion**, not a
 prune: move it into the home (the index line is already correct) and leave it out of the
 proposal. On 2026-09-15, 5 of 17 dangling slugs still had their bodies in the 2026-08-25
 staging dir — pruning those would have destroyed five real lessons under a "lossless" label.
