@@ -260,13 +260,38 @@ fi
 # ---------------------------------------------------------------------------------------
 LEDGER_IN_PATHS=0
 for p in "${PATHS[@]}"; do
-  # Normalise before comparing: the same ledger is spelled `./.beads/issues.jsonl`,
-  # `.beads//issues.jsonl`, or the directory `.beads` / `.beads/` — and git stages the
-  # ledger under every one of those spellings, so the check must fire under all of them.
+  # Canonicalize before comparing: the same ledger is spelled
+  # `./.beads/issues.jsonl`, `.beads//issues.jsonl`, the directory `.beads` /
+  # `.beads/` — and git stages the ledger under every one of those spellings, so
+  # the check must fire under all of them. A segment stack resolves `.` and `..`
+  # lexically (ac-b94y: the ac-qvcb normalizer stripped leading `./` BEFORE
+  # collapsing `//`, turning `.//.beads/issues.jsonl` into `/.beads/...`, and
+  # never touched dot segments at all — so `.beads/./issues.jsonl` and
+  # `a/../.beads/issues.jsonl` each committed silently). A leading `..` is
+  # preserved, never resolved: `../.beads/issues.jsonl` names the PARENT's
+  # ledger, not this repo's, and must not trip the gate.
   np="$p"
-  while [ "${np#./}" != "$np" ]; do np="${np#./}"; done
-  while [[ "$np" == *"//"* ]]; do np="${np//\/\//\/}"; done
-  np="${np%/}"
+  np_abs=0; case "$np" in /*) np_abs=1 ;; esac
+  np_out=""; np_rest="$np"
+  while [ -n "$np_rest" ]; do
+    case "$np_rest" in
+      */*) np_seg="${np_rest%%/*}"; np_rest="${np_rest#*/}" ;;
+      *)   np_seg="$np_rest"; np_rest="" ;;
+    esac
+    case "$np_seg" in
+      ""|".") continue ;;
+      "..")
+        np_top="${np_out##*/}"
+        if [ -n "$np_out" ] && [ "$np_top" != ".." ]; then
+          case "$np_out" in */*) np_out="${np_out%/*}" ;; *) np_out="" ;; esac
+        elif [ "$np_abs" -eq 0 ]; then
+          np_out="${np_out:+$np_out/}.."
+        fi ;;
+      *) np_out="${np_out:+$np_out/}$np_seg" ;;
+    esac
+  done
+  np="$np_out"
+  [ "$np_abs" -eq 1 ] && np="/$np"
   case "$np" in
     .beads/issues.jsonl|.beads) LEDGER_IN_PATHS=1 ;;
   esac

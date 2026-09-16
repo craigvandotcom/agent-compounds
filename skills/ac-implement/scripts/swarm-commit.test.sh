@@ -409,9 +409,13 @@ else fail "message-file-rewrite body: '$(git -C "$R" log -1 --format=%B 2>/dev/n
 # comparison (`--path` must equal `.beads/issues.jsonl`). Any other spelling of the
 # same file — `./.beads/issues.jsonl`, `.beads//issues.jsonl`, or the directory
 # `.beads` itself — sailed past the gate while `git add` still staged the ledger.
+# The ac-qvcb normalizer closed those but still admitted DOT-SEGMENT spellings
+# (ac-b94y, convicted live by post-batch review against the landed script):
+# `.beads/./issues.jsonl`, `.//.beads/issues.jsonl` (strip order turned `.//`
+# into `/.`, defeating the `//` collapse), and `a/../.beads/issues.jsonl`.
 # Each evasion spelling below rebuilds case 18's wedge (remote ahead on the ledger
 # path) and asserts the UPSTREAM gate fires rather than a silent commit.
-for evasion in "./.beads/issues.jsonl" ".beads//issues.jsonl" ".beads"; do
+for evasion in "./.beads/issues.jsonl" ".beads//issues.jsonl" ".beads" ".beads/./issues.jsonl" ".//.beads/issues.jsonl" "a/../.beads/issues.jsonl"; do
   R="$(new_repo "ledger-evasion-$(printf '%s' "$evasion" | tr '/.' '__')")"
   git -C "$R" branch --set-upstream-to=origin/main main
   mkdir -p "$R/.beads"
