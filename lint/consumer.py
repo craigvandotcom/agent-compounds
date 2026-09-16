@@ -28,10 +28,10 @@ sys.path.insert(0, os.path.join(_HERE, "lib"))
 from manifest import (  # noqa: E402
     ManifestMissing,
 )
-from manifest import (
+from manifest import (  # noqa: E402
     factory as read_factory_template,
 )
-from manifest import (
+from manifest import (  # noqa: E402
     packages as read_packages,
 )
 
