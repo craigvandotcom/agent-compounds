@@ -27,7 +27,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "lib"))
 from manifest import (  # noqa: E402
     ManifestMissing,
+)
+from manifest import (
     factory as read_factory_template,
+)
+from manifest import (
     packages as read_packages,
 )
 
