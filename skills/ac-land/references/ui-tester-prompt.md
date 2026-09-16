@@ -30,6 +30,7 @@ ENVIRONMENT CONTRACT (non-negotiable):
   sweep a concurrent agent's staged work into your bead's commit, silently.
   Minimal working-tree dwell; run `br` from the bead-board repo root.
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
+- Never file beads (`br create`): machinery goes in `friction:`, product in your return summary — the conductor is the run's only filer.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
 Spawn one implementer per matched journey (the browser journey prompt is the lens) (all in one message, parallel). Substitute the resolved `<ARTIFACTS_DIR>` from Phase 0.
