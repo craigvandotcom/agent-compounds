@@ -357,6 +357,32 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
   pass "AC3e: '  PASS: <label>' assertion lines are recognized as assertion results"
 else fail "AC3e: rc=$GATE_RC out=$out"; fi
 
+# --- 3g (heyt P1, instance 6): an existence-predicate chain (`test -f` over test-shaped
+# files) names harness files but emits nothing — `test` has no stdout. The assertion-bearing
+# probe must be the output-carrying harness probe, never the predicate chain.
+R="$(mkcase coverage-silent-testchain)"
+write_registry_format_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness files exist.
+  Probe: `test -f harness.test.sh && test -f subject.txt` — tier: none
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3g: a test-predicate chain naming test-shaped files is never the assertion probe — the output-carrying harness probe is"
+else fail "AC3g: rc=$GATE_RC out=$out"; fi
+
 # --- 3f (the Delivers carve-out, guarded): when EVERY probe's stdout is suppressed by
 # construction, the temporal exit-code pair recorded in the receipt is the assertion —
 # the same case the prose path already handled. This must never have to grow a harness.

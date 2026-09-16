@@ -137,8 +137,14 @@ is_test_shaped() {
 is_output_silent() {
   case "$1" in
     *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*|*--quiet*) return 0 ;;
-    *) return 1 ;;
   esac
+  # A probe composed solely of existence predicates (`test -f/-d`, `[ ... ]`) joined by
+  # connectors emits nothing by construction — `test` has no stdout — so it can never
+  # carry assertion lines either (measured: heyt P1 `test -f` chain shadowing the
+  # asserting runner probe). Strip predicates and connectors; silence is an empty rest.
+  local rest
+  rest=$(printf '%s' "$1" | sed -E 's/test[[:space:]]+-[a-zA-Z]+[[:space:]]+[^&|;]+//g; s/\[[^]]*\]//g; s/&&|\|\||;//g; s/[[:space:]]//g')
+  [ -z "$rest" ]
 }
 
 br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, never empty data
