@@ -260,7 +260,16 @@ fi
 # ---------------------------------------------------------------------------------------
 LEDGER_IN_PATHS=0
 for p in "${PATHS[@]}"; do
-  [ "$p" = ".beads/issues.jsonl" ] && LEDGER_IN_PATHS=1
+  # Normalise before comparing: the same ledger is spelled `./.beads/issues.jsonl`,
+  # `.beads//issues.jsonl`, or the directory `.beads` / `.beads/` — and git stages the
+  # ledger under every one of those spellings, so the check must fire under all of them.
+  np="$p"
+  while [ "${np#./}" != "$np" ]; do np="${np#./}"; done
+  while [[ "$np" == *"//"* ]]; do np="${np//\/\//\/}"; done
+  np="${np%/}"
+  case "$np" in
+    .beads/issues.jsonl|.beads) LEDGER_IN_PATHS=1 ;;
+  esac
 done
 if [ "$LEDGER_IN_PATHS" -eq 1 ]; then
   AHEAD=$(git rev-list --count HEAD..@{upstream} -- .beads/issues.jsonl 2>/dev/null)

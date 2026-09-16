@@ -404,6 +404,53 @@ if git -C "$R" log -1 --format=%B | grep -q "original body"; then
   pass "message-file-rewrite: the commit body is the original too"
 else fail "message-file-rewrite body: '$(git -C "$R" log -1 --format=%B 2>/dev/null)'"; fi
 
+# --- 21. ledger-evasion: a non-exact spelling of the ledger still trips the upstream gate
+# The ledger-behind-upstream leg used to detect the ledger by one exact-string
+# comparison (`--path` must equal `.beads/issues.jsonl`). Any other spelling of the
+# same file — `./.beads/issues.jsonl`, `.beads//issues.jsonl`, or the directory
+# `.beads` itself — sailed past the gate while `git add` still staged the ledger.
+# Each evasion spelling below rebuilds case 18's wedge (remote ahead on the ledger
+# path) and asserts the UPSTREAM gate fires rather than a silent commit.
+for evasion in "./.beads/issues.jsonl" ".beads//issues.jsonl" ".beads"; do
+  R="$(new_repo "ledger-evasion-$(printf '%s' "$evasion" | tr '/.' '__')")"
+  git -C "$R" branch --set-upstream-to=origin/main main
+  mkdir -p "$R/.beads"
+  printf '%s\n' '{"id":"bd-ledger-evasion","title":"demo","status":"open"}' >"$R/.beads/issues.jsonl"
+  git -C "$R" add -- .beads/issues.jsonl
+  git -C "$R" commit -qm "seed ledger"
+  git -C "$R" push -q origin main
+  printf '%s\n' '{"id":"bd-ledger-evasion","title":"demo","status":"closed"}' >"$R/.beads/issues.jsonl"
+  git -C "$R" add -- .beads/issues.jsonl
+  git -C "$R" commit -qm "remote ledger change"
+  git -C "$R" push -q origin main
+  git -C "$R" reset -q --hard HEAD~1
+  printf '%s\n' '{"id":"bd-ledger-evasion","title":"demo","status":"open","note":"local write"}' >"$R/.beads/issues.jsonl"
+  printf 'chore(beads): ledger write from a stale checkout via %s\n' "$evasion" >"$R/msg.txt"
+  before="$(git -C "$R" rev-parse HEAD)"
+  out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "$evasion" --no-push 2>&1)"; rc=$?
+  if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[ledger-behind-upstream\]'; then
+    pass "ledger-evasion: spelling '$evasion' trips ledger-behind-upstream, not a silent commit"
+  else fail "ledger-evasion '$evasion': rc=$rc out=$out"; fi
+  if [ "$(git -C "$R" rev-parse HEAD)" = "$before" ]; then
+    pass "ledger-evasion: the '$evasion' commit never landed"
+  else fail "ledger-evasion '$evasion': the commit landed anyway"; fi
+done
+
+# --- 22. the directory spelling of the whole tree stays an unscoped pathspec ------------
+# `--path .` must NOT dodge into the ledger leg: it sweeps the shared index, so it stays
+# refused as an unscoped pathspec (the directory spelling of the tree root, not of the
+# ledger dir). The assertion pins BOTH the refusal AND which rule fired.
+R="$(new_repo ledger-dot-path)"
+out="$(cd "$R" && "$LANE" --identity t --message-file msg.txt --path "." --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[unscoped-pathspec\]'; then
+  pass "the directory spelling '.' stays refused as unscoped-pathspec"
+else fail "directory spelling '.': rc=$rc out=$out"; fi
+if printf '%s' "$out" | grep -q 'ledger-behind-upstream'; then
+  fail "directory spelling '.': dodged into the ledger leg"
+else
+  pass "directory spelling '.': cannot dodge into the ledger leg"
+fi
+
 echo "---"
 echo "swarm-commit.test.sh: $CASES case(s), $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]
