@@ -25,7 +25,11 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "lib"))
-from manifest import ManifestMissing, factory as read_factory_template, packages as read_packages  # noqa: E402
+from manifest import (  # noqa: E402
+    ManifestMissing,
+    factory as read_factory_template,
+    packages as read_packages,
+)
 
 CHECK = "consumer"
 REGISTRY_ROOT = os.path.dirname(_HERE)
@@ -171,7 +175,10 @@ def main(argv):
                     fail(f"dangling symlink: {os.path.join(home, entry)} "
                          f"-> {os.readlink(full)} (target does not exist)")
         if required_home and links == 0:
-            fail(f"nothing scanned: {home_dir} holds no symlinks — an install with no links is not an install (this is NOT a pass)")
+            fail(
+                f"nothing scanned: {home_dir} holds no symlinks — "
+                "an install with no links is not an install (this is NOT a pass)"
+            )
 
     if failures:
         print("\n".join(failures), file=sys.stderr)
