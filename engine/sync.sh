@@ -1357,12 +1357,6 @@ sync_root() {
         link "$mentry" "$mdest/$(basename "$mentry")" "$base"
       done
     fi
-    # The infrastructure operating-manual skill itself (SKILL.md at the repo root, not
-    # under infrastructure/skills/) has no link — mirror it in as its own skill so it is
-    # discoverable the same way as everything else under .claude/skills.
-    if [ -f "$ORG_ROOT/infrastructure/SKILL.md" ]; then
-      link "$ORG_ROOT/infrastructure" "$mdest/infrastructure" "$base"
-    fi
   fi
 
   if [ "$EN_CODEX" = "true" ] || [ "$EN_PI" = "true" ] || [ "$EN_AGY" = "true" ]; then
