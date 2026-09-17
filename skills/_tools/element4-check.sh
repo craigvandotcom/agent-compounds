@@ -45,7 +45,7 @@ fail_bead() {
 check_schema_probes() {
   local label="$1" desc="$2"
 
-  if ! printf '%s\n' "$desc" | grep -qiE '^## Acceptance[[:space:]]+Criteria'; then
+  if ! grep -qiE '^## Acceptance[[:space:]]+Criteria' <<<"$desc"; then
     fail_bead "$label" "no '## Declared RED' header and no '## Acceptance Criteria' section — element 4 of the implementation contract is missing"
     return 1
   fi
@@ -93,7 +93,7 @@ check_description() {
 
   # Shape selection is a rule, not a race: a `## Declared RED` header, when present,
   # decides — even if the description ALSO carries probe-carrying ACs.
-  if ! printf '%s\n' "$desc" | grep -qE '^## Declared RED[[:space:]]*$'; then
+  if ! grep -qE '^## Declared RED[[:space:]]*$' <<<"$desc"; then
     check_schema_probes "$label" "$desc"
     return $?
   fi
@@ -112,8 +112,8 @@ check_description() {
   fi
 
   # Sanctioned n/a form: `RED: n/a` carries a reason on the same line.
-  if printf '%s\n' "$body" | grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a'; then
-    if printf '%s\n' "$body" | grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a[[:space:]]*([-—:]|--)[[:space:]]*[^[:space:]]'; then
+  if grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a' <<<"$body"; then
+    if grep -qiE '^[[:space:]]*RED:[[:space:]]*n/a[[:space:]]*([-—:]|--)[[:space:]]*[^[:space:]]' <<<"$body"; then
       printf 'element4-check: PASS %s (element 4 via ## Declared RED — n/a with a stated reason)\n' "$label"
       return 0
     fi
@@ -136,7 +136,7 @@ check_description() {
   if [ -n "$(printf '%s' "$terr" | tr -d '[:space:]')" ]; then
     local path
     for path in $(printf '%s\n' "$body" | grep -oE '[A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+\.[A-Za-z0-9]+' | sort -u); do
-      printf '%s\n' "$terr" | grep -qF "$path" && continue
+      grep -qF "$path" <<<"$terr" && continue
       case "$path" in
         *.test.*|*.spec.*|tests/*|*/tests/*|__tests__/*|*/__tests__/*)
           fail_bead "$label" "Declared RED names test file '$path', absent from this bead's ## Territory — Territory wins at implement time, so this RED cannot be satisfied"
