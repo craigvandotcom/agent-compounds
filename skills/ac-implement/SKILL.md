@@ -39,8 +39,11 @@ always the coordinator and never a worker, at every width; a cap bounds a run yo
 claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that starts working
 is a worker that has stopped coordinating.
 
-**Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
-needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's
+**Phase 0 — orient.** Assert trunk. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
+every `PREMISE-FAILED:` bead, strips the stamp from those that fly again (a cached verdict
+needs an expiry), and TRIAGES the rest — one disposition-close attempt through
+`close-gate.sh`, which lands it when the work exists at HEAD or a Consumes blocker closed
+dispositionally, and leaves the stamp otherwise. Count the eligible pool with worker.md §1's filter VERBATIM — a differing filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's
 terminal pick (worker.md §8), closed with no work step. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
@@ -83,4 +86,9 @@ Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed 
 coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (product work and
 mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
 ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.
+
+**Stale and superseded board state is closed by the swarm itself, never parked for a human.**
+A worker closes what it holds through §4b; the Phase 0 sweep closes what it can prove
+settled through the same gate. Only intent waits for a human: `wontfix`, `human-gate`,
+and DECISION beads on prod writes.
 

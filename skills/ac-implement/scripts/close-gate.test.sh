@@ -522,6 +522,118 @@ if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
 else fail "AC3j: the bead was closed despite the refusal"; fi
 
 # ============================================================================================
+# AC 3l/3m/3n — the DISPOSITION carve-out (condition e, the cascade): a disposition close
+# whose probes are NOT all green closes ONLY when every Consumes blocker is closed with a
+# disposition close reason, read live from the board — never assumed, never a bare claim.
+# The close claims "the state this bead aimed at is settled", NOT "a diff caused a flip",
+# so it may land where the temporal pair cannot (no receipt, RED probe still red).
+# ============================================================================================
+
+DEP="bd-upstream-9zz"
+board_dep() { # <root> <status> <assignee> <close reason> — the consumed blocker on the mock board
+  jq -n --arg id "$DEP" --arg st "$2" --arg as "$3" --arg cr "$4" \
+    '{id:$id,title:"upstream fixture",issue_type:"task",status:$st,assignee:$as,labels:[],description:"consumed by the fixture bead",close_reason:$cr}' \
+    >"$1/.br/$DEP.json"
+}
+
+# --- 3l: probe RED at HEAD (work never landed), blocker closed wontfix → ACCEPTED via the
+# cascade leg, and the TRIAGE-CLOSE record lands on the bead — the bead's stranded-premise
+# close, verified.
+R="$(mkcase cascade-accept)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "triager" "wontfix: the upstream chose not to ship — premise retired (bd-upstream.abc)"
+out="$(gate "$R" --reason "obsolete: TRIAGE — the consumed blocker closed wontfix. Delivered: gone.md" --actor worker)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'cascade'; then
+  pass "AC3l: a disposition close with a red probe and a disposition-closed blocker is accepted via the cascade leg"
+else fail "AC3l: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC3l: the cascade close landed"
+else fail "AC3l: the cascade close did not land"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q 'TRIAGE-CLOSE' "$R/.br/comments.log"; then
+  pass "AC3l: the cascade evidence is RECORDED on the bead (TRIAGE-CLOSE comment)"
+else fail "AC3l: no TRIAGE-CLOSE record landed on the bead"; fi
+
+# --- 3m: the SAME red-probe disposition close where the blocker closed shipped: (the
+# deliverable is final, not retired) → REFUSED. The cascade does not rescue a premise
+# that was delivered-and-moved-on; that staleness is intent, and intent stays human.
+R="$(mkcase cascade-shipped-blocker)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "worker" "shipped: the upstream landed its deliverable"
+out="$(gate "$R" --reason "obsolete: TRIAGE — resolved at HEAD by other work. Delivered: gone.md")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'disposition close'; then
+  pass "AC3m: a disposition close rescued by a shipped-closed blocker is refused — the cascade demands a disposition close"
+else fail "AC3m: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC3m: the refused cascade close leaves the bead open"
+else fail "AC3m: the bead was closed despite the refusal"; fi
+
+# --- 3n: the blocker is OPEN → the premise is not gone, the cascade does not hold → REFUSED.
+R="$(mkcase cascade-open-blocker)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" open "" ""
+out="$(gate "$R" --reason "obsolete: TRIAGE — resolved at HEAD by other work. Delivered: gone.md")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'disposition close'; then
+  pass "AC3n: a disposition close over an OPEN blocker is refused — the premise still holds"
+else fail "AC3n: rc=$GATE_RC out=$out"; fi
+
+# --- 3o: wontfix is NOT a disposition carve-out verb — intent stays human.
+R="$(mkcase cascade-wontfix-reason)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "triager" "wontfix: premise retired (bd-upstream-9zz)"
+out="$(gate "$R" --reason "wontfix: we decided not to build this. Delivered: gone.md")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'fresh-verify'; then
+  pass "AC3o: a wontfix: close with a red probe is refused by the fresh-verify guard — wontfix is not a carve-out verb; intent stays human"
+else fail "AC3o: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
 # AC 4 — the scanner leg
 # ============================================================================================
 mk_green() { # a fixture standing at the moment of a legitimate close

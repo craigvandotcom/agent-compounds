@@ -114,7 +114,8 @@ exist yet" is the weakest possible answer to what the diff caused.
 
 Implement the bead as written. Load the domain skill it names. `## Territory` IS your file
 list, verbatim; a Territory that contradicts its own ACs is a spec defect — comment
-`spec-contradiction`, unclaim, go to §1.
+`spec-contradiction`, and try §4b first when the contradiction is that the work already
+exists; otherwise unclaim, go to §1.
 
 Relocate every anchor by the bead's QUOTED text, never by a line number: on a shared trunk
 line numbers drift, and a bead is compiled intent, never a cache of the tree.
@@ -129,6 +130,27 @@ authorization · intent · action · plus options and a recommendation), unclaim
 Never ask and wait. The mid-bead case runs the template's § Before filing and proposes
 `plan-gap` when the approved plan did not settle the fork; the coordinator files it.
 
+## 4b — DISPOSITION — the bead in hand may already be someone else's work
+
+Before you unclaim on a spec defect, one attempt belongs to the gate. A bead whose work
+ALREADY EXISTS at HEAD closes `obsolete:`, and the gate — never your judgement — verifies
+that claim: every AC probe must exit 0 at HEAD with no Consumes blocker open, and the reason
+must name a `## Delivers` artifact the evidence core resolves.
+
+    bash skills/ac-implement/scripts/close-gate.sh <id> \
+      --reason "obsolete: the defect is resolved at HEAD by other work (<sha>). Delivered: <a Delivers path>" \
+      --actor "$ACTOR"
+
+- **exit 0** — closed. Post the worker receipt (§7) and go to §1.
+- **exit 1** — `CLOSE-REFUSED` — the staleness claim was wrong or unprovable (a red probe,
+  an unresolved artifact, an open blocker). Fall back to the routing you were on: comment,
+  unclaim, §1. The refusal IS the finding; do not retry with different wording.
+- **exit 2** — `NOT-CHECKED` — never a close. Fall back as above.
+
+`wontfix:` is not yours to file — "we decided not to build this" is intent, and intent stays
+human. Stale beads you do NOT hold (premise-stamped, blockers closed around them) are the
+coordinator's refly sweep, not yours; never chase a bead you do not hold.
+
 ## 5 — SELF-REVIEW, and what it is not
 
 **First, the reverse closure — before you read your own diff:**
@@ -139,8 +161,9 @@ It greps the callers, outside your diff, of every export you changed or file you
 compares them to the bead's `touchers:` line. `REFUSED [unowned-callers]` names a caller the
 bead never declared: that is a spec defect of the same class as a probe reading outside your
 Territory — the declaration was wrong or your change grew. Do not update the caller quietly:
-comment the bead with the named files, unclaim, go to §1. `PASS` means the plan knew its
-callers. Test files outside the diff are reported, never refused — they break loudly.
+comment the bead with the named files, and try §4b first when the callers' work already
+landed; otherwise unclaim, go to §1. `PASS` means the plan knew its callers. Test files
+outside the diff are reported, never refused — they break loudly.
 
 Re-read your diff against the bead's ACs with fresh eyes: every AC, does the change actually
 do what it describes, or only what its probe measures? Then run the project's gates — for this
@@ -207,7 +230,9 @@ publishes every other writer's board state under its own bead's message.
 
 The reason's verb LEADS (`shipped` · `fixed` · `wontfix` · `duplicate` · `obsolete`; a bug
 closes `fixed:`) and it must name an artifact from this bead's own `## Delivers` — the gate's
-evidence core cross-references it and refuses otherwise.
+evidence core cross-references it and refuses otherwise. The disposition verbs are §4b's
+route: they are attempted while you still hold the claim, never after flight-check has
+unclaimed you.
 
 - **exit 0** — every leg held and the close was READ BACK as landed.
 - **exit 1** — `CLOSE-REFUSED: <LEG>`. Fix what the leg names and re-run. Do not close around it.
