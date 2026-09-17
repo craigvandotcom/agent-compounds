@@ -1,28 +1,29 @@
 {
   "status": "healthy",
   "mode": "NIGHTLY",
-  "date": "2026-09-16",
+  "date": "2026-09-18",
   "machine": "omarchine",
   "branch": "main",
   "scope": "body_compass_app",
   "counts": {
     "closed_unrefined_stripped": 1,
-    "open_unrefined_stamped": 1,
-    "open_human_gates_verified": 4,
+    "open_unrefined_stamped": 0,
+    "open_human_gates_verified": 3,
     "plans_reconciled": 0,
     "proposals": 0,
     "files_moved": 0,
-    "beads_created": 0,
-    "labels_corrected": 0
+    "beads_created": 1,
+    "beads_created_and_self_closed": 1,
+    "labels_corrected": 1
   },
-  "pushed_sha": "e84b5e769df4c0f316804e009f7188f34eb46ca4",
-  "bca_pushed_sha": "e84b5e769df4c0f316804e009f7188f34eb46ca4",
+  "pushed_sha": "70245a08b47de6a9c5a79f397f42b2123e03d137",
+  "bca_pushed_sha": "70245a08b47de6a9c5a79f397f42b2123e03d137",
   "push_verified": true,
   "stranded_sha": null,
   "slack": {
     "channel": "bca",
     "status": "healthy",
-    "ts": "1789512667.967029"
+    "ts": "1789685604.086049"
   },
-  "note": "Re-verified all 4 open human-gate beads (bd-m7rh2, bd-8yql5, bd-9bgfv, bd-r4n2a) — status agreed between BCA local copy and worktree/origin-main for all 4, br show confirms each is still genuinely blocked on a human, stamped verified: 2026-09-16. Two provable label fixes: bd-5229g (closed, still carried unrefined) stripped; bd-s26x5 (open non-epic, no unrefined/refined/human-gate) got unrefined added. 0 open pipeline-proposal beads found at all (all 64 historical ones already closed) so the closed-epic check was a no-op. Backlog scan (56 files): none fully-checked or status:complete, none captured-but-named-by-a-plan (both live plans have no source_backlog / source_backlog:none). Plans scan: only 2 non-done plans exist, neither beadified nor missing frontmatter; noted (not acted on, out of the reconcile table's scope) that 2026-08-26-2100-gate-audit-remediation.md carries status:loop-ready, which is out-of-vocabulary per Scan B and should be surfaced to ac-align. Step 4 structural checks: all 14 open epics carry a Probe: line (D5 n/a); exactly one authored blocks-edge onto an epic (bd-dtpqg -> bd-m7rh2) and it's already named by two open beads (bd-r4n2a, bd-m7rh2) so no new finding filed. Checked all 12 _done/ seams plans carrying a beadified: field against their target epic's live status — zero disagreed (none stamped delivered: while its epic is still open, matching reality). Did not run an exhaustive duplicate/mergeable sweep across the ~3700-bead board this run (no signal pointing at a new duplicate; last night's bd-9ihj6 ruling already covered the one known pair)."
+  "note": "Re-verified all 3 open human-gate beads (bd-m7rh2, bd-8yql5, bd-r4n2a) — status agreed between BCA local .beads/issues.jsonl and the worktree copy for all 3, br show confirms each is still genuinely blocked on a human, stamped verified: 2026-09-18. Docket-health: 3 open human-gate, 1 reason-less >48h (bd-r4n2a — pre-existing, carried over from prior runs, not a new gap). One provable label fix: bd-9bgfv (closed, still carried unrefined) stripped. 0 open pipeline-proposal beads. 0 open non-epic beads missing a readiness label. No label literally named beads-standards found. Backlog scan (57 files under active/ + pool/ + root): none fully-checked or status:complete, none captured-but-named-by-a-plan (both live plans — 2026-09-16-2236-gate-refusal-small-epic.md [approved] and 2026-09-03-seams-personal-zone-promotion-demotion.md [draft, seams_verdict unstamped] — reference no _backlog file). Plans scan: only those 2 non-done plans exist; neither beadified, neither missing frontmatter; the previously-flagged 2026-08-26-2100-gate-audit-remediation.md is now correctly in _plans/_done/ (superseded). Step 4 structural checks: computed the full parent-child/blocks graph over 3704 jsonl records — 137 epics, 0 open epics with zero open children AND no Probe: line, exactly 1 authored blocks-edge onto an epic (bd-m7rh2 -> bd-dtpqg, the same one flagged 2026-09-16). Filed it as bd-0m18u before finding last night's last-run.json note that this exact edge was already evaluated and deliberately left unfiled (named by bd-r4n2a + bd-m7rh2 themselves) — closed bd-0m18u obsolete/duplicate in the same run once caught. Checked all 9 _done/ plans carrying a beadified: field: none also carry delivered:, so no beadified/delivered/epic-state disagreement is computable this run (all pre-emptively 'retired by ac-tidy', not shipped-and-stamped). No exhaustive duplicate/mergeable sweep run against the full board this pass — only the two 050-numbered wellness-tracker backlog files looked duplicate-shaped and were confirmed to be deliberately sequenced sub-features (v1.1/v1.2), not a collision. Lesson for next run: check last-run.json's note field for previously-declined targets BEFORE filing a Step-4 finding, not after."
 }
