@@ -92,6 +92,14 @@ coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (prod
 mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
 ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.
 
+**Budget the ratchet before writing.** A finding-scoped fix — "add the missing caveat",
+"correct this sentence" — carries no line budget, so its compression cost prices as free and
+surfaces only at refusal, when the pull is toward the `net-growth-ok` stamp to preserve text
+already written. Decide compress-vs-stamp — fold the addition into an existing bullet vs.
+content genuinely new enough to warrant the stamp — BEFORE the first edit, not after the
+ratchet refuses. Mechanical note: an HTML-comment stamp cannot live inside a bash fence, so a
+fenced addition forces the stamp onto an added prose line outside the fence.
+
 **Stale and superseded board state is closed by the swarm itself, never parked for a human.**
 A worker closes what it holds through §4b; the Phase 0 sweep closes what it can prove
 settled through the same gate. Only intent waits for a human: `wontfix`, `human-gate`,
