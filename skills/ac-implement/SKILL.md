@@ -80,6 +80,11 @@ Then, and only after it exits 0:
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
 4. **Release reservations and deregister** every worker identity, including any you swept.
 
+**Shell divergence.** A pasted bash snippet is bash-authored by default and silently diverges
+under the org's zsh instead of erroring when it hits an offender like `tr` shadowed by a tmux
+alias, unquoted glob expansion, or array/brace-expansion bash tolerates. Run it once and
+verify under zsh — the harness's actual shell — before it ships.
+
 ## The exhaust rule
 
 Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed by the
