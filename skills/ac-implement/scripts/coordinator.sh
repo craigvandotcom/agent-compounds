@@ -28,8 +28,14 @@
 # already the repo-global lane. One committer, one lane, one place to fix.
 #
 # Usage:
-#   coordinator.sh --run <run-id> [--root <repo root>] [--actor-prefix <p>]
+#   coordinator.sh --run <run-id> [--root <repo root>] [--actor <name>]...
 #                  [--mirror-artifacts] [--dry-run]
+#
+# --actor <name>      REPEATABLE. One per worker whose minted name the conductor captured
+#                     at spawn (Agent Mail's macro_start_session response, agent.name) — the
+#                     roster the orphan sweep selects claims against, exact match, never a
+#                     prefix. An empty roster (no --actor passed at all) is NOT-GATED
+#                     unconditionally: a sweep with no set to select on has not swept.
 #
 # --mirror-artifacts  OPTIONAL checkpoint (ac-28nm): after a successful ledger flush, mirror
 #                     this run's /tmp-mortal scratch into <git-common-dir>/ac-flight/<run-id>/
@@ -42,19 +48,23 @@
 
 set -uo pipefail
 
-RUN=""; ROOT=""; PREFIX=""; DRY=0; MIRROR=0
+RUN=""; ROOT=""; DRY=0; MIRROR=0
+ACTORS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --run)             RUN="${2:-}"; shift 2 ;;
     --root)            ROOT="${2:-}"; shift 2 ;;
-    --actor-prefix)    PREFIX="${2:-}"; shift 2 ;;
+    --actor)           ACTORS+=("${2:-}"); shift 2 ;;
     --mirror-artifacts) MIRROR=1; shift ;;
     --dry-run)         DRY=1; shift ;;
     *) echo "NOT-GATED: unknown argument '$1'" >&2; exit 2 ;;
   esac
 done
-[ -n "$RUN" ] || { echo "NOT-GATED: --run <run-id> is required; without it the orphan sweep cannot tell this run's actors from a live sibling run's" >&2; exit 2; }
-[ -n "$PREFIX" ] || PREFIX="swarm-$RUN"
+[ -n "$RUN" ] || { echo "NOT-GATED: --run <run-id> is required" >&2; exit 2; }
+# A distinct, unconditional failure mode: fires purely on an empty --actor set, regardless
+# of whether br/jq are present or the board is reachable — "a sweep with no set to select on
+# has not swept" is never read as "nothing to sweep, so pass clean."
+[ "${#ACTORS[@]}" -gt 0 ] || { echo "NOT-GATED when empty: no --actor roster passed; the orphan sweep has no set to select on" >&2; exit 2; }
 
 if [ -z "$ROOT" ]; then
   # ROOT is the CONSUMER repo's root, never the script's own repo: these scripts are
@@ -105,9 +115,10 @@ if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   CLAIMS=$(RUST_LOG=error br_call coordination status --json) \
     || ungated "'$BR coordination status' refused; liveness is unknown and orphans cannot be ruled out"
   [ -n "$CLAIMS" ] || ungated "'$BR coordination status' returned nothing; liveness is unknown and orphans cannot be ruled out"
-  ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --arg p "$PREFIX" \
+  ROSTER_JSON=$(printf '%s\n' "${ACTORS[@]}" | jq -R . | jq -s .)
+  ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --argjson roster "$ROSTER_JSON" \
     '[.claims[]? | select((.issue.status? // "") == "in_progress")
-       | select(((.issue.assignee? // "") | startswith($p)))
+       | ((.issue.assignee? // "") as $a | select($roster | index($a)))
        | .issue.id] | join(" ")' 2>/dev/null || echo "?")
   [ "$ORPHANS" = "?" ] && ungated "could not parse '$BR coordination status'; orphans cannot be ruled out"
   [ -z "${ORPHANS// /}" ] || refuse "ORPHANS" \

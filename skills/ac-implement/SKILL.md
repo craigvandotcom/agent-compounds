@@ -58,7 +58,7 @@ task; canon: `ac-pipeline/references/work-derivation.md`).
 when it goes wrong — script plus checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
-    bash skills/ac-implement/scripts/coordinator.sh --run <run-id>
+    bash skills/ac-implement/scripts/coordinator.sh --run <run-id> --actor <name>...  # one per Phase-1-minted name
 
 It refuses `LEDGER-STALE` (origin moved — flushing would overwrite another writer's closes),
 `ORPHANS` (a claim held by a worker of this run that has returned), or `LEDGER-WRITE` (nothing

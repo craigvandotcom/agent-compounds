@@ -78,6 +78,11 @@ echo "coordinator.test: argument and precondition refusals"
 mkrepo r1
 [ "$(rc_of "$W/r1")" -eq 2 ] && ok "no --run is NOT-GATED, not a silent default" || bad "missing --run did not exit 2"
 [ "$(rc_of "$W/r1" --run x --bogus)" -eq 2 ] && ok "an unknown argument is NOT-GATED" || bad "unknown arg did not exit 2"
+out="$(run "$W/r1" --run x)"
+rc=$(rc_of "$W/r1" --run x)
+[ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-GATED when empty' \
+  && ok "no --actor roster is NOT-GATED when empty, never a silent pass — a sweep with no set to select on has not swept" \
+  || bad "empty --actor roster was not refused (rc=$rc): $out"
 
 echo "coordinator.test: LEDGER-STALE — the refusal that earns the file"
 mkrepo r2
@@ -87,7 +92,7 @@ git clone -q "$W/r2.git" "$W/r2b" && cd "$W/r2b" \
   && printf '{"id":"b","status":"closed"}\n' >>.beads/issues.jsonl \
   && git commit -qam "other writer closes b" && git push -q origin HEAD:main && cd "$W"
 ( cd "$W/r2" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-out="$(run "$W/r2" --run R --dry-run)"; rc=$(rc_of "$W/r2" --run R --dry-run)
+out="$(run "$W/r2" --run R --actor A --dry-run)"; rc=$(rc_of "$W/r2" --run R --actor A --dry-run)
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'LEDGER-STALE' \
   && ok "an upstream ahead ON THE LEDGER is REFUSED before any flush" \
   || bad "stale upstream was not refused (rc=$rc): $out"
@@ -97,70 +102,70 @@ printf '%s' "$out" | grep -q 'sync --import-only' \
 # Level with upstream -> the leg passes.
 mkrepo r3
 ( cd "$W/r3" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-[ "$(rc_of "$W/r3" --run R --dry-run)" -eq 0 ] \
+[ "$(rc_of "$W/r3" --run R --actor A --dry-run)" -eq 0 ] \
   && ok "level with upstream, the ledger leg passes" || bad "a level repo was refused"
 
 # No upstream at all -> skipped WITH A LINE, never silently treated as clean.
 mkrepo r4
 ( cd "$W/r4" && git branch -q --unset-upstream >/dev/null 2>&1; git remote remove origin >/dev/null 2>&1 )
-out="$(run "$W/r4" --run R --dry-run)"
+out="$(run "$W/r4" --run R --actor A --dry-run)"
 printf '%s' "$out" | grep -q 'LEDGER-STALE skipped' \
   && ok "with no upstream the leg SAYS it skipped rather than passing quietly" \
   || bad "no-upstream case was silent: $out"
 
-echo "coordinator.test: ORPHANS — and it must discriminate between runs"
-CLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress","assignee":"swarm-RUNA-Cave"}}]}'
+echo "coordinator.test: ORPHANS — selects by actor roster, not a prefix"
+CLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress","assignee":"Cave"}}]}'
 mkrepo r5
 ( cd "$W/r5" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-out="$(AC2_TEST_CLAIMS="$CLAIM" run "$W/r5" --run RUNA --dry-run)"
-rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --dry-run )
+out="$(AC2_TEST_CLAIMS="$CLAIM" run "$W/r5" --run RUNA --actor Cave --dry-run)"
+rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor Cave --dry-run )
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'ORPHANS' && printf '%s' "$out" | grep -q 'ac-1' \
-  && ok "a live claim under THIS run's actor is REFUSED and named" \
+  && ok "a rostered actor's claim is picked up as an orphan and named" \
   || bad "orphan not refused (rc=$rc): $out"
-# THE DISCRIMINATING CASE: another run's worker is not this run's orphan.
-[ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNB --dry-run )" -eq 0 ] \
-  && ok "a claim under a DIFFERENT run's actor is left alone" \
-  || bad "the sweep stole a sibling run's live claim"
+# THE DISCRIMINATING CASE: an unrostered actor's claim is left alone, exact match only.
+[ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor Other --dry-run )" -eq 0 ] \
+  && ok "an unrostered actor's claim is left alone" \
+  || bad "the sweep selected a claim outside the roster"
 
 echo "coordinator.test: a gate that cannot verify says so"
-[ "$( AC2_TEST_CS_BROKEN=1 rc_of "$W/r5" --run RUNA --dry-run )" -eq 2 ] \
+[ "$( AC2_TEST_CS_BROKEN=1 rc_of "$W/r5" --run RUNA --actor Cave --dry-run )" -eq 2 ] \
   && ok "unparseable coordination status is NOT-GATED, never a pass" || bad "broken status did not exit 2"
-out="$( AC2_TEST_CS_FAIL=1 run "$W/r5" --run RUNA --dry-run )"
-rc=$( AC2_TEST_CS_FAIL=1 rc_of "$W/r5" --run RUNA --dry-run )
+out="$( AC2_TEST_CS_FAIL=1 run "$W/r5" --run RUNA --actor Cave --dry-run )"
+rc=$( AC2_TEST_CS_FAIL=1 rc_of "$W/r5" --run RUNA --actor Cave --dry-run )
 [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q "coordination status' refused" \
   && ok "a refused coordination status read is NOT-GATED, never a fabricated orphan verdict" \
   || bad "refused status did not exit 2 naming the read (rc=$rc): $out"
 ( cd "$W/r5" && rm -f .beads/issues.jsonl )
-[ "$(rc_of "$W/r5" --run RUNA --dry-run)" -eq 2 ] \
+[ "$(rc_of "$W/r5" --run RUNA --actor Cave --dry-run)" -eq 2 ] \
   && ok "a missing ledger is NOT-GATED" || bad "missing ledger did not exit 2"
 
 echo "coordinator.test: the write leg"
 mkrepo r6
 ( cd "$W/r6" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
 BEFORE=$( cd "$W/r6" && git rev-parse HEAD )
-AC2_TEST_LEDGER="$W/r6/.beads/issues.jsonl" run "$W/r6" --run R >/dev/null 2>&1
+AC2_TEST_LEDGER="$W/r6/.beads/issues.jsonl" run "$W/r6" --run R --actor A >/dev/null 2>&1
 AFTER=$( cd "$W/r6" && git rev-parse HEAD )
 [ "$BEFORE" != "$AFTER" ] && ok "a changed ledger is flushed and committed" || bad "the ledger commit did not land"
 
 mkrepo r7
 ( cd "$W/r7" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
 B7=$( cd "$W/r7" && git rev-parse HEAD )
-out="$(run "$W/r7" --run R)"          # no AC2_TEST_LEDGER -> flush changes nothing
+out="$(run "$W/r7" --run R --actor A)"          # no AC2_TEST_LEDGER -> flush changes nothing
 [ "$( cd "$W/r7" && git rev-parse HEAD )" = "$B7" ] && printf '%s' "$out" | grep -q 'ledger unchanged' \
   && ok "an unchanged ledger commits NOTHING and says so" || bad "empty flush still moved HEAD: $out"
 
 # A commit that reports success without landing is the silent-write failure this leg exists for.
 mkrepo r8
 ( cd "$W/r8" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-out="$( AC2_TEST_LEDGER="$W/r8/.beads/issues.jsonl" AC2_TEST_COMMIT_NOOP=1 run "$W/r8" --run R )"
-rc=$( AC2_TEST_LEDGER="$W/r8/.beads/issues.jsonl" AC2_TEST_COMMIT_NOOP=1 rc_of "$W/r8" --run R )
+out="$( AC2_TEST_LEDGER="$W/r8/.beads/issues.jsonl" AC2_TEST_COMMIT_NOOP=1 run "$W/r8" --run R --actor A )"
+rc=$( AC2_TEST_LEDGER="$W/r8/.beads/issues.jsonl" AC2_TEST_COMMIT_NOOP=1 rc_of "$W/r8" --run R --actor A )
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'LEDGER-WRITE' \
   && ok "a commit that exits 0 without moving HEAD is REFUSED, not believed" \
   || bad "silent no-op commit was accepted (rc=$rc): $out"
 
 mkrepo r9
 ( cd "$W/r9" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-[ "$( AC2_TEST_FLUSH_FAIL=1 rc_of "$W/r9" --run R )" -eq 2 ] \
+[ "$( AC2_TEST_FLUSH_FAIL=1 rc_of "$W/r9" --run R --actor A )" -eq 2 ] \
   && ok "a failed flush is NOT-GATED — the disk ledger is not trusted" || bad "failed flush was not NOT-GATED"
 
 echo "coordinator.test: the optional --mirror-artifacts checkpoint (ac-28nm)"
@@ -173,7 +178,7 @@ echo "MIRRORED: $*" >> .mirror.log
 exit 0
 MIR
 chmod +x "$W/r10/skills/ac-implement/scripts/mirror-run-artifacts.sh"
-AC2_TEST_LEDGER="$W/r10/.beads/issues.jsonl" run "$W/r10" --run RM --mirror-artifacts >/dev/null 2>&1
+AC2_TEST_LEDGER="$W/r10/.beads/issues.jsonl" run "$W/r10" --run RM --actor A --mirror-artifacts >/dev/null 2>&1
 grep -q 'MIRRORED: --run RM' "$W/r10/.mirror.log" \
   && ok "--mirror-artifacts invokes the mirror leg after the flush" \
   || bad "--mirror-artifacts did not invoke the mirror leg"
@@ -181,8 +186,8 @@ grep -q 'MIRRORED: --run RM' "$W/r10/.mirror.log" \
 # Non-blocking: a missing mirror script is noted and the close still exits 0.
 mkrepo r11
 ( cd "$W/r11" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-out="$(AC2_TEST_LEDGER="$W/r11/.beads/issues.jsonl" run "$W/r11" --run RN --mirror-artifacts)"
-rc=$( AC2_TEST_LEDGER="$W/r11/.beads/issues.jsonl" rc_of "$W/r11" --run RN --mirror-artifacts )
+out="$(AC2_TEST_LEDGER="$W/r11/.beads/issues.jsonl" run "$W/r11" --run RN --actor A --mirror-artifacts)"
+rc=$( AC2_TEST_LEDGER="$W/r11/.beads/issues.jsonl" rc_of "$W/r11" --run RN --actor A --mirror-artifacts )
 [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'mirror skipped' \
   && ok "a missing mirror script is non-blocking — noted, never refused" \
   || bad "missing mirror script was not non-blocking (rc=$rc): $out"
