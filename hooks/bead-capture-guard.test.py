@@ -52,7 +52,7 @@ cases = [
  (BLOCK, 'br create "x" -t bug -l "origin:ac-review,review-finding"', "bug, no readiness"),
  (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',  "task + unrefined"),
  (ALLOW, 'br create "x" -t decision -l "origin:dream,human-gate"',    "decision + human-gate"),
- (ALLOW, 'br create "x" -t task -l "origin:x,refined" -d "- AC: x. Probe: `true` - tier: none"',  "refined accepted, not second-guessed"),
+ (BLOCK, 'br create "x" -t task -l "origin:x,refined" -d "- AC: x. Probe: `true` - tier: none"',  "refined rejected at create, sole writer is stamp-refined.sh"),
  # Epics are containers, never picked up — exempt, and must stay exempt or every
  # epic-creation template in the registry breaks.
  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review,impact:data"',        "epic exempt from readiness"),

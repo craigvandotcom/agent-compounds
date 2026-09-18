@@ -69,10 +69,11 @@ WRAPPERS = {"env", "xargs", "sudo", "command", "exec", "nice", "nohup", "time", 
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
 
-# Readiness: `refined` is stamped exclusively by a refine pass, never at creation, so in
-# practice a new bead carries `unrefined` or `human-gate`. `refined` is still accepted —
-# rejecting it here would be this guard second-guessing the refine pass.
-READINESS = ("unrefined", "refined", "human-gate")
+# Readiness: `stamp-refined.sh` is the sole writer AND sole stripper of `refined`
+# (skills/beads-standards/SKILL.md) — applied at refine convergence, never at creation.
+# Accepting `refined` here was the one door that sole-writer invariant left open, so a new
+# bead carries only `unrefined` or `human-gate`.
+READINESS = ("unrefined", "human-gate")
 
 # Epics are containers, never picked up for implementation, so readiness is meaningless on
 # them. This mirrors ac-tidy's nightly readiness-label repair, which fixes the same gap nightly for "open non-epic"
