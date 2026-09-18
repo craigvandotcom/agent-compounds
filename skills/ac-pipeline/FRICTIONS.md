@@ -759,3 +759,23 @@ last_pass: 2026-09-07
 - receipt: BCA swarm run 20260911-maroonhill (review .claude/reviews/2026-09-11-2115-ac2-swarm-20260911-maroonhill.md). One run, four breaches: a worker committed bd-yfv1j (18c1302a) without holding the claim, self-reported on the bead; a worker committed bd-3gkp2 (67cc4b0b) after flight-check returned PREMISE-FAILED; bd-0k4kn closed (42b008d6) after editing two callers outside its Territory, the exact case a sibling had correctly unclaimed on; two workers stopped with ready beads left.
 - proposed_fix: CANDIDATE, NOT RULED — swarm-commit.sh refuses a commit whose subject bead is not claimed by --identity, or whose latest flight receipt is a refusal. Craig flagged it as likely problematic before building: a dead-claim takeover, a coordinator ledger or review commit ([no-bead]), a harness restart that re-mints the identity, and a multi-bead commit all trip it. Discuss the false-refusal cases before any control lands.
 - narrative: the loop's claim, premise and Territory rules live only in worker prose, and the one structure every commit passes through, the commit lane, checks none of them — so a breach is invisible until a reviewer reads the diff against the board.
+
+## diff-closure-counts-prose-mentions-as-callers
+- skills: [ac-implement, ac-pipeline]
+- impact: M
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [diff-closure-measures-the-shared-worktree]
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- control: untreated
+- proposed_fix: match callers on import or call syntax (`import … SYMBOL`, `SYMBOL(`), not on
+  the bare word. Or report prose-only hits (comments, markdown) separately from refused callers.
+- narrative: `callers_of` in `diff-closure.sh` greps the symbol as a word. Typing an exported
+  `createAdminClient` gave REFUSED [unowned-callers] with 6 callers the bead's `touchers:` line
+  did not declare. The worker reported that all six were comment or doc mentions, not imports.
+  A worker who trusts the count treats the bead spec as wrong, or pads `touchers:` with files
+  it never changes.

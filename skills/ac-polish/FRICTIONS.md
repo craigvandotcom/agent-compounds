@@ -832,3 +832,21 @@ last_pass: 2026-09-07
   folder is git-ignored, and no transcript or subagent log keeps the reader reports. When
   `plan-approve.sh` asked for a regate on a plan already at its fixpoint, nothing could show
   the human what the earlier rounds had edited.
+
+## prod-label-audit-misses-already-refined-beads
+- skills: [ac-polish, ac-implement]
+- impact: H
+- frequency: rare
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- proposed_fix: before a swarm opens, sweep every claimable `refined` bead in the epic (not only
+  this run's polish set) against the `sensitive-prod` predicate, and stamp or gate what matches.
+- narrative: a bead that minted production rows and re-ran a live batch over prod data carried
+  no `sensitive-prod` label. It was already `refined` before the run, so bead-mode polish never
+  read it, and live swarm workers could claim it. The conductor noticed by chance and gated it
+  by hand. Nothing in the pipeline would have caught it.
