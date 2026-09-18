@@ -19,7 +19,7 @@ door every board change already walks through: the pre-commit chain runs `lint.s
 --changed`, and `.beads/issues.jsonl` is in HOOKS scope, so the LEDGER COMMIT ITSELF is
 the gate.
 
-Three FAIL rules over the committed board:
+Five FAIL rules over the committed board:
   1. a line that is not JSON;
   2. an `id` that appears more than once;
   3. an OPEN bead created on or after the origin cutover (2026-08-23 — the date the
@@ -28,6 +28,13 @@ Three FAIL rules over the committed board:
      `Probe:` line. The probe axis shares the origin axis's failure mode: the born-probe
      guard reads the `br create` COMMAND, so a body passed as `-d "$(cat file)"` or a
      heredoc makes it fail open, and this artifact read is the backstop.
+  4. ANY row (either status, both lanes) whose `status` is outside the canon set
+     (`skills/beads-standards/SKILL.md` § Status & priority canon: open / in_progress /
+     blocked / deferred / closed / tombstone).
+  5. staged lane only (skipped on a whole-board run, per Commit-scoped format rules
+     below): a `WORKER:`-prefixed comment on a changed id that does not match the canon
+     grammar's three fields, `model=`/`actor=`/`tree=` (§ Worker-identity stamp) — shape
+     only, never the fields' truth.
 
 Closed beads are NEVER scanned — forward-only, no backfill, per the origin-provenance
 ruling: enforcement started at the cutover and the past is not relitigated. An empty or
@@ -59,6 +66,10 @@ CUTOVER = "2026-08-23"  # origin axis became a hard gate (hooks/hooks.json _doc)
 IMPLEMENTABLE = ("task", "bug", "feature")  # element4's non-exempt types
 PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")  # same shape the capture guard uses
 LEDGER_REL = ".beads/issues.jsonl"
+# canon status set — skills/beads-standards/SKILL.md § Status & priority canon
+STATUS_CANON = {"open", "in_progress", "blocked", "deferred", "closed", "tombstone"}
+# canon WORKER: grammar — skills/beads-standards/SKILL.md § Worker-identity stamp
+WORKER_RE = re.compile(r"^WORKER: model=\S+ actor=\S+ tree=\S+$")
 
 
 def board_path(root):
@@ -152,8 +163,22 @@ def main():
             violations.append(f"{board}:{lineno} — duplicate id '{rid}' (first seen at line {seen_ids[rid]})")
         else:
             seen_ids[rid] = lineno
-        if rec.get("status") != "open":
-            continue  # closed beads are NEVER scanned — forward-only, no backfill
+        status = rec.get("status")
+        if status not in STATUS_CANON:
+            violations.append(
+                f"{board}:{lineno} — off-canon status is RED: bead '{rid}' has status "
+                f"'{status}', outside the canon set {sorted(STATUS_CANON)}")
+        if changed_ids is not None and rid in changed_ids:
+            for comment in (rec.get("comments") or []):
+                text = str(comment.get("text") or "") if isinstance(comment, dict) else ""
+                stripped = text.strip()
+                if stripped.startswith("WORKER:") and not WORKER_RE.match(stripped):
+                    violations.append(
+                        f"{board}:{lineno} — malformed WORKER receipt is RED: bead '{rid}' comment "
+                        f"{stripped!r} does not match the canon grammar 'WORKER: model=<id> "
+                        "actor=<id> tree=<sha>'")
+        if status != "open":
+            continue  # closed beads are NEVER scanned for origin/probe — forward-only, no backfill
         created = str(rec.get("created_at") or "")[:10]
         if created >= CUTOVER and (changed_ids is None or rid in changed_ids):
             labels = [str(label) for label in (rec.get("labels") or [])]

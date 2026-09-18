@@ -6,7 +6,10 @@
 #           implementable bead (task/bug/feature) without a Probe: line is RED;
 #           a probed task and an exempt decision are GREEN; closed beads and
 #           pre-cutover beads are NEVER scanned (GREEN); a clean board is GREEN;
-#           an empty or missing board is NOT-GATED (exit 2).
+#           an off-canon status is RED regardless of lane or open/closed; a
+#           malformed WORKER: receipt on a changed id is RED in the staged lane
+#           and skipped entirely in the whole-board lane; an empty or missing
+#           board is NOT-GATED (exit 2).
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/35-board-integrity.test.sh
@@ -79,6 +82,24 @@ board "$WORK/e" "$OPEN_TAGGED"
 rc=$(run_check "$WORK/e")
 [ "$rc" -eq 0 ] && ok "clean board is GREEN" || bad "clean board: rc=$rc out=$(cat "$OUT")"
 
+# --- RED: off-canon status, unconditional (fires even on a non-open row) -------
+board "$WORK/status-red" '{"id":"ac-donebad","status":"done","created_at":"2026-08-01T10:00:00Z","labels":[],"title":"off canon status"}'
+rc=$(run_check "$WORK/status-red")
+[ "$rc" -eq 1 ] && grep -q "off-canon status is RED" "$OUT" && grep -q 'ac-donebad' "$OUT" \
+  && ok "off-canon status is RED even when status != open" \
+  || bad "off-canon status: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: every canon status, including the newly-admitted blocked -----------
+board "$WORK/status-green" \
+  '{"id":"ac-s1","status":"open","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"o"}' \
+  '{"id":"ac-s2","status":"in_progress","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"i"}' \
+  '{"id":"ac-s3","status":"blocked","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"b"}' \
+  '{"id":"ac-s4","status":"deferred","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"d"}' \
+  '{"id":"ac-s5","status":"closed","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"c"}' \
+  '{"id":"ac-s6","status":"tombstone","created_at":"2026-08-01T10:00:00Z","labels":["origin:manual"],"title":"t"}'
+rc=$(run_check "$WORK/status-green")
+[ "$rc" -eq 0 ] && ok "every canon status (incl. blocked) is GREEN" || bad "canon statuses: rc=$rc out=$(cat "$OUT")"
+
 # --- GREEN: a pre-existing malformed bead untouched by this commit does not ---
 # --- fail a commit that only stages an unrelated bead (2026-09-12 audit) ------
 git_board() { # <dir> <lines...> — a git checkout with the board committed at HEAD
@@ -112,6 +133,34 @@ rc=$(run_check "$t")
 [ "$rc" -eq 1 ] && grep -q "origin: label" "$OUT" && grep -q 'ac-lost' "$OUT" \
   && ok "malformed bead ADDED by this commit still fails it" \
   || bad "scoped-dirty: expected exit 1 naming ac-lost, rc=$rc out=$(cat "$OUT")"
+
+# --- RED: a malformed WORKER: receipt on a changed id, staged lane only -------
+WORKER_BAD='{"id":"ac-workerbad","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"bad worker stamp","comments":[{"id":1,"issue_id":"ac-workerbad","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-25T10:01:00Z"}]}'
+WORKER_GOOD='{"id":"ac-workerok","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"good worker stamp","comments":[{"id":2,"issue_id":"ac-workerok","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-25T10:01:00Z"}]}'
+
+t="$WORK/worker-staged-red"
+git_board "$t" "$OPEN_TAGGED"
+# this commit adds the malformed-WORKER-comment bead itself — it is a changed id
+printf '%s\n' "$OPEN_TAGGED" "$WORKER_BAD" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 1 ] && grep -q "malformed WORKER receipt is RED" "$OUT" && grep -q 'ac-workerbad' "$OUT" \
+  && ok "malformed WORKER: receipt on a changed id is RED in the staged lane" \
+  || bad "worker-staged-red: rc=$rc out=$(cat "$OUT")"
+
+t="$WORK/worker-staged-green"
+git_board "$t" "$OPEN_TAGGED"
+printf '%s\n' "$OPEN_TAGGED" "$WORKER_GOOD" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "canon WORKER: receipt (model=/actor=/tree=) is GREEN in the staged lane" \
+  || bad "worker-staged-green: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a malformed WORKER: receipt is skipped entirely on a whole-board run
+board "$WORK/worker-wholeboard" "$OPEN_TAGGED" "$WORKER_BAD"
+rc=$(run_check "$WORK/worker-wholeboard")
+[ "$rc" -eq 0 ] && ok "malformed WORKER: receipt is skipped entirely on a whole-board run" \
+  || bad "worker-wholeboard: rc=$rc out=$(cat "$OUT")"
 
 # --- NOT-GATED: empty board and missing board ----------------------------------
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"

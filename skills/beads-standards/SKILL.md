@@ -160,6 +160,7 @@ provenance uses `-t discovered-from`, never `--parent`.
 |---|---|
 | `open` | Not yet started |
 | `in_progress` | Actively claimed. Stale >7 days gets challenged — re-verify the claim before trusting it (`br stale --status in_progress --days 7`; tighter than `br stale`'s generic 30-day default) |
+| `blocked` | parked after repeated failure, needs a human |
 | `closed` | Done. **Requires `close_reason`** (`br close -r "..."`) |
 | `deferred` | Scheduled for later. **Requires `defer_until`** (`br defer --until <date>`) — a deferred bead with no date is a lost bead |
 | `tombstone` | Deleted (`br delete`) — excluded from every "live" scan |
@@ -261,14 +262,14 @@ is a per-child session + model, otherwise unrecoverable. At close, the implement
 stable-greppable-prefix style as the VERDICT grammar (`grep 'WORKER:' .beads/issues.jsonl`):
 
 ```
-WORKER: model=<model-id> session=<session-name> skill@version=<agent-compounds SHA> duration=<wall-clock>
+WORKER: model=<model-id> actor=<actor-id> tree=<tree-sha>
 ```
 
 Fields are **joinable for future model-level comparison**: `model` groups runs by model,
-`skill@version` (the agent-compounds git SHA at skill-load) is the **skills-eval before/after
-axis** — it lets a doctrine change be measured against outcomes. Per-bead **token cost is
-excluded** (a child can't observe its own usage — a per-bead split would be fabricated
-precision); token cost is reported at batch/child granularity by the batch boundary.
+`tree` (the tree SHA at close) is the **skills-eval before/after axis** — it lets a doctrine
+change be measured against outcomes. Per-bead **token cost is excluded** (a child can't
+observe its own usage — a per-bead split would be fabricated precision); token cost is
+reported at batch/child granularity by the batch boundary.
 
 ## Label hygiene rules
 
@@ -288,8 +289,8 @@ precision); token cost is reported at batch/child granularity by the batch bound
   with `br label rename <old> <new>`.
 - **`qa-blocker` is REPO-WIDE, not per-bead.** It is a gate label: Hard-stops
   batch close-out for every batch in this repo until removed. Use it only
-  when the whole ship path must halt pending QA. To mark a single bead blocked, use a
-  `blocks` dependency — never this label. (There is no `blocked` status.)
+  when the whole ship path must halt pending QA. To mark a single bead blocked, use the
+  `blocked` status (§ Status & priority canon), never this label.
 
 ## Backfill (2026-07-15 audit) — one-time alignment checklist
 
@@ -321,7 +322,7 @@ neutral title + pointer.
 
 `br` ([beads_rust](https://github.com/Dicklesworthstone/beads_rust)) is the issue
 tracker; `bv` ([beads_viewer](https://github.com/Dicklesworthstone/beads_viewer)) is a
-graph-aware triage engine over `.beads/beads.jsonl`. Use `bv`'s robot flags for
+graph-aware triage engine over `.beads/issues.jsonl`. Use `bv`'s robot flags for
 deterministic, dependency-aware output (PageRank, betweenness, critical path, cycles)
 rather than parsing JSONL or guessing at graph traversal.
 

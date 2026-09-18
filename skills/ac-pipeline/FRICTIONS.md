@@ -706,7 +706,8 @@ last_pass: 2026-09-07
 - last_seen: 2026-09-10
 - stage: ac-implement
 - status: open
-- control: untreated
+- control: C-batch-boundary-reads
+- control_landed: 2026-09-12
 - receipt: RUN 2026-09-10 ac-implement swarm — every worker's swarm-commit.sh exited 5 (commit rejected by hook) across three beads, deadlocking the lane swarm-wide. lint.sh --changed ran the HOOKS-scope Check 35 board-integrity against the dirty .beads/issues.jsonl plus an in-flight uncommitted edit to lint/checks/35-board-integrity.py; the board sat mid DB→jsonl flush and 12 open beads read as probe-less (all 12 were probe-bearing once synced). No worker diff was at fault; the lane unblocked only when the foreign edit landed and the board flushed.
 - proposed_fix: run the pre-commit lane against the commit's named paths and the committed board (`git show :path` or a per-bead worktree), never the shared working tree; a HOOKS-scope check must not read a concurrently-written ledger from the worktree.
 - narrative: a gate that measures the shared worktree turns one writer's in-flight file — or a ledger caught between DB and jsonl flush — into a repo-global block. worker.md §5 already calls the two repo-wide lint gates advisory in a swarm; the pre-commit hook is the one path where that advisory silently becomes blocking, and its false red (a transiently stale board) is indistinguishable from a real board defect at the worker.

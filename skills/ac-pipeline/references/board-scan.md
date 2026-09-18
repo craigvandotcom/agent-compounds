@@ -117,6 +117,7 @@ def parse_until(s):
     try: return datetime.datetime.fromisoformat(s)
     except Exception: return None
 def on_docket(i):
+    # reads the canon status set (skills/beads-standards/SKILL.md § Status & priority canon)
     st = i.get('status')
     if st == 'deferred': return False
     until = parse_until(i.get('defer_until'))
