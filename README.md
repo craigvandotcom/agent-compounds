@@ -100,7 +100,7 @@ the map). Stage order — stage · owner · trigger · human gate · artifact �
 
 > **Unpackaged:** `ac-board` — read-only factory window: one glance at the whole pipeline (human gates, plans by stage, beads by stage, WIP + CI health, active agents); observes only, never writes. It belongs to no package.
 
-> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version. `app-store-screenshots`, `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO concerns, owned by each app (reference copies in body-compass-app).
+> **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled), `writing-guidelines` (brand-voice-coupled), `curate` — these are project/brand-specific and can't have one shared version. `app-store-screenshots`, `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO concerns, owned by each app (reference copies live in whichever app owns those concerns).
 
 ## Commands → Skills (migration complete)
 

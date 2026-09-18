@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# dcg-fail-closed — wrapper enforcing ruling ac-dcg-fails-closed-u7hj (Craig, 2026-09-02):
+# dcg-fail-closed — wrapper enforcing ruling ac-dcg-fails-closed-u7hj (operator, 2026-09-02):
 # dcg guards irreversible actions, so when dcg cannot render a decision — crash, missing
 # binary, non-JSON output — the wrapper BLOCKS. A broken destructive-command guard stops
 # the line; it does not wave commands through at the moment the environment is broken

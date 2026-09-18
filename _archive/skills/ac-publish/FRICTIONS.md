@@ -27,7 +27,7 @@ entries: 1
   `production-db` environment exist, and a bead with no trigger simply ages. Gate the wiring
   on: (1) SEC-1 — stop passing the DB password as a `--password` CLI arg on link /
   migration-list / db-push, where it is visible via `ps aux` on the self-hosted runner, which
-  is Craig's own dev machine; check whether the installed Supabase CLI supports
+  is the operator's own dev machine; check whether the installed Supabase CLI supports
   `--password-stdin` or reads `SUPABASE_DB_PASSWORD` from env and use whichever exists.
   (2) SEC-2 — `db-deploy-push.sh:44` captures `supabase migration list ... 2>&1` into LIST and
   echoes it; the CLI does not echo the password but auth-failure stderr could surface

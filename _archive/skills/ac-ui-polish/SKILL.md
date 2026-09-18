@@ -115,7 +115,7 @@ short, single-context loop where a run-tasks list would be ceremony, not clarity
 ## The spec anchor — `CORE/design.md`
 
 The **baseline is the app's `CORE/design.md`** (Google `design.md` format: token
-YAML + prose Do's/Don'ts), which itself references the neoMeta-level brand spec.
+YAML + prose Do's/Don'ts), which itself references the org-level brand spec.
 Read it FIRST, before any audit, and scope every suggestion to it — this is the
 guardrail against redesigning instead of polishing.
 
@@ -217,7 +217,7 @@ diff**. Fill the **Definition of Done** checklist in
 | Programmatic correctness checks (contrast / hardcoded colour / token symmetry) | `reference/sensors.md` (run before the visual rubric) |
 | Functional QA (does it work / native shell / console) | `ac-qa`, `ac-qa` |
 | See it running / screenshot / confirm the change | `run`, `verify` |
-| Surface visual evidence (screenshots) to Craig for sign-off | `ac-qa/references/qa-shared.md` § Conductor / worker evidence protocol — UPLOAD the image via `slack-send --file` to #sofi, never a `/tmp` path in a card |
+| Surface visual evidence (screenshots) to the operator for sign-off | `ac-qa/references/qa-shared.md` § Conductor / worker evidence protocol — UPLOAD the image via `slack-send --file` to #sofi, never a `/tmp` path in a card |
 
 This skill *orchestrates* — it calls these in, it doesn't duplicate their content.
 

@@ -43,7 +43,7 @@ TIER=<user selection>
 # Light:  AGENT_MODEL=sonnet, AGENT_COUNT=3, PERSONAS=simple, MIN_ROUNDS=2, MAX_ROUNDS=4
 # Medium: AGENT_MODEL=opus,   AGENT_COUNT=3, PERSONAS=simple, MIN_ROUNDS=2, MAX_ROUNDS=4
 # Heavy:  AGENT_MODEL=opus,   AGENT_COUNT=6, PERSONAS=heavy,  MIN_ROUNDS=3, MAX_ROUNDS=6
-# MIN_ROUNDS=2 is an ABSOLUTE floor across every tier (Craig's call, 2026-07-07) — light/medium
+# MIN_ROUNDS=2 is an ABSOLUTE floor across every tier (an operator ruling, 2026-07-07) — light/medium
 # are raised to it here; heavy's own floor of 3 already clears it, so heavy is unchanged.
 
 CURRENT_ROUND=1
@@ -129,7 +129,7 @@ Use the agent name registered at session start (from `macro_start_session`). Com
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: <session agent name>,
   paths: [PLAN_REL],
   ttl_seconds: 14400,
@@ -142,7 +142,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "WIP: plan-refine-internal — {PLAN_REL}",
@@ -607,7 +607,7 @@ find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: <session agent name>,
   paths: [PLAN_REL]
 )
@@ -617,7 +617,7 @@ mcp__mcp-agent-mail__release_file_reservations(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "DONE: plan-refine-internal — {PLAN_REL}",

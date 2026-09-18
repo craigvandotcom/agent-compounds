@@ -10,10 +10,11 @@
 
 The registry is portable engineering doctrine; nothing in skills/ may name a
 specific deployment of it. This check greps a fixed token set over skills/
-LIVE_TEXT and refuses every hit that the dated allowlist does not carry.
+LIVE_TEXT and refuses every hit that the dated allowlist does not carry. The
+token strings themselves stay in this file so the gate can keep refusing them.
 
-Token set — the app names (body compass, art-still, move-free, unsit), the
-product family (neometa), the human (craig), the memory substrate paths
+Token set — the app names (hyphen and prose forms), the product-family
+name, the operator's name, the memory substrate paths
 (memory/auto), the shared Supabase id, plus every pattern legacy Check 6
 carried (canonical_ingredients, 127.0.0.1:54321, bd-8nse, bd-9veq). Matching
 is case-insensitive.

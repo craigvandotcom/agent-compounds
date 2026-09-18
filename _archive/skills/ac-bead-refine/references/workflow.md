@@ -703,11 +703,11 @@ alone gates nothing; memory `decision-beads-need-human-gate-label-at-filing`). I
 14+ times.
 
 **Limb B is why the gate is not type-keyed any more.** A `task`- or `feature`-typed bead whose
-ACs need Craig reached `refined` with no `human-gate` and was relabelled BY HAND by a round-2
+ACs need the operator reached `refined` with no `human-gate` and was relabelled BY HAND by a round-2
 reviewer — the gate never looked, because it only ever inspected `.issue_type` and `.title`.
 `human-gate` is the SOLE marker `ac-human-session` and `ac-loop` compute their leverage/on-you
 lanes from, so a bead that is agent-ready by label but decision-blocked in fact gets claimed by
-an autonomous wave and either stalls or is answered by an agent guessing Craig's ruling.
+an autonomous wave and either stalls or is answered by an agent guessing the operator's ruling.
 
 Limb B keys on the DECLARED `Gate-reason:` marker, not on prose sniffing. That is deliberate:
 a selector that greps for decision-ish words over-flags, and every over-flag writes a

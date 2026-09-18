@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # mirror-run-artifacts.sh — the ac2 CHECKPOINT leg: mirror a run's /tmp-mortal state into
-# the repo's durable ac-flight tree at a batch boundary (ac-28nm, Craig ruling 2026-09-07
+# the repo's durable ac-flight tree at a batch boundary (ac-28nm, the operator ruling 2026-09-07
 # option b).
 #
 # ASSURANCE

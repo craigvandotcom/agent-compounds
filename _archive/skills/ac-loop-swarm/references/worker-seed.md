@@ -123,7 +123,7 @@ CLOSED=0
            whatever else is sitting in the shared index (`commit-discipline.md` § H7d).
            `-F <msgfile>`, never inline `-m`: an apostrophe in the body closes the wrapper's
            quote, truncating the commit and skipping the push at exit 0.
-           NEVER `.git/<name>.lock` — `.git` is a FILE in every neoMeta app (submodule), so
+           NEVER `.git/<name>.lock` — `.git` is a FILE in every consumer app (submodule), so
            that path never opens and the mutex silently does nothing.
            exit 9 → the checkout is on a foreign branch: STOP, report, touch nothing.
            The pre-push build compiles the WORKING TREE, so a sibling's half-edit reddens your

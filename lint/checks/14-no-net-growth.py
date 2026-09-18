@@ -49,7 +49,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
-from lib import scope  # noqa: E402
+from lib import consumers, scope  # noqa: E402
 from lib import manifest  # noqa: E402  (check-14 lists read through the manifest)
 
 violations = []
@@ -176,32 +176,9 @@ def scan(repo, label, base, spec, cfg, staged=False):
     return seen
 
 
-def consumer_dirs(root):
-    """The union Check 7 builds: org dirs ∪ ac-deploy-targets.list ∪ vitest-affected."""
-    home = os.path.expanduser("~")
-    dirs = [
-        os.path.join(home, "Repos/.claude"),
-        os.path.join(home, "Repos/neometa/content/.claude"),
-        os.path.join(home, "Repos/neometa/books/.claude"),
-        os.path.join(home, "Repos/neometa/software/.claude"),
-    ]
-    lst = os.path.join(root, "..", "..", "infrastructure", "ac-deploy-targets.list")
-    if not os.path.isfile(lst):
-        # AC_ROOT/../../../infrastructure — resolve the same way lint.sh does
-        lst = os.path.normpath(os.path.join(root, "..", "..", "..", "infrastructure", "ac-deploy-targets.list"))
-    if os.path.isfile(lst):
-        with open(lst, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.split("#", 1)[0].strip()
-                if line:
-                    dirs.append(os.path.join(home, "Repos", "neometa", "software", line, ".claude"))
-    dirs.append(os.path.join(home, "Repos/neometa/software/vitest-affected/.claude"))
-    seen, out = set(), []
-    for d in dirs:
-        if d not in seen:
-            seen.add(d)
-            out.append(d)
-    return out
+def consumer_dirs(_root):
+    """Same union Check 7 builds — layout-derived, never a named domain path."""
+    return consumers.consumer_dirs()
 
 
 def run_full(root, cfg):

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dcg pack probe for neometa.stashguard — BOTH its rules, despite the historical
+# dcg pack probe for dcg.stashguard — BOTH its rules, despite the historical
 # filename: unscoped-stash-save and whole-tree-add (bd-ctlqg). Fixtures live in
 # this FILE, never on the dcg-scanned command line — the matcher is string-based
 # and fires on its own test payloads.

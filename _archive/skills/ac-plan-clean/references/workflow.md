@@ -125,7 +125,7 @@ Use the agent name registered at session start (from `macro_start_session`). Com
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: <session agent name>,
   paths: [PLAN_REL],
   ttl_seconds: 14400,
@@ -138,7 +138,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "WIP: plan-clean — {PLAN_REL}",
@@ -385,7 +385,7 @@ Read the plan as the beadify conductor would: can each implementation step becom
   nothing to bound Territory with
 - Cross-phase ordering justified only strategically: ordering between phase groups with no consumed
   artifact behind it (epics never block epics — a beadify trap)
-- Un-gated human forks: "needs a decision" / "ask Craig" notes not shaped for the human-gate
+- Un-gated human forks: "needs a decision" / "ask the operator" notes not shaped for the human-gate
   template (Gate-reason: fork | authorization | intent | action, with the DECISION/ACTION card
   fields) — an unmarked note won't convert into a valid human-gate bead
 - Unfalsifiable "Done when": success criteria that can't convert to acceptance criteria with a
@@ -590,7 +590,7 @@ find "$ARTIFACTS_DIR" -mindepth 1 -delete && rmdir "$ARTIFACTS_DIR" 2>/dev/null 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: <session agent name>,
   paths: [PLAN_REL]
 )
@@ -600,7 +600,7 @@ mcp__mcp-agent-mail__release_file_reservations(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   sender_name: <session agent name>,
   to: [<session agent name>],
   subject: "DONE: plan-clean — {PLAN_REL}",

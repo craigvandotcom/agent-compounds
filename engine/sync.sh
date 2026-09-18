@@ -90,7 +90,7 @@ expand_tilde() { case "$1" in "~"|"~/"*) echo "${HOME}${1#\~}" ;; *) echo "$1" ;
 # --- layout manifest (ac-9ahd) -------------------------------------------------
 # The engine SELF-LOCATES rather than reading a root key. ORG_ROOT is AC_ROOT's third
 # parent, which is correct in every supported layout:
-#   Mac monorepo  ~/Repos/neometa/software/agent-compounds  -> ~/Repos
+#   Mac monorepo  ~/Repos/<org>/software/agent-compounds  -> ~/Repos
 #   three-repo    ~/mission/software/agent-compounds        -> ~
 # This was already the idiom below for the memory-lint path; ac-9ahd generalized it and
 # deleted the `repos_root` key, which hard-failed the engine on any layout but the Mac's

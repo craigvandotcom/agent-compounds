@@ -145,7 +145,7 @@ without applying the session (0-for-4 across the 2026-07-12 shakedown; also
 >   no two concurrent sessions share a refresh-token family. Source the pool from the app's
 >   `CORE/journeys/environments.md` (an `accounts:`/worker-account list) and assign one per
 >   worker in the manifest (`account` field per parallel entry), passed via `{AUTH_PROFILE}`.
->   **Provisioning the extra accounts is a human/Craig step** — until the pool exists, fall back:
+>   **Provisioning the extra accounts is a human/operator step** — until the pool exists, fall back:
 > - **INTERIM — serialize auth-sensitive waves:** set a `serialize_auth: true` manifest flag
 >   that forces the parallel lane to run sequentially (one active session at a time) whenever a
 >   per-worker account pool is NOT provisioned, OR run against a quiescent dev server / local
@@ -246,7 +246,7 @@ fi
 workers deliberately DO NOT self-clean them (`references/journey-tester-prompt.md` § Teardown:
 "leave cleanup to the conductor's sweep") — so a leftover row survives every run unless YOU
 delete it here. It is a "leave the account as found" violation and pollutes the next run's
-baseline (incident: `QA Smoke Test 20260716-w2` entry left in test@neometa.app). Concretely:
+baseline (incident: `QA Smoke Test 20260716-w2` entry left in test@example.com). Concretely:
 
 1. Confirm no QA run is still in flight (this run's workers are all closed, per the session
    sweep above).

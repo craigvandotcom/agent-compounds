@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dcg pack probe for neometa.localdbguard (tools/dcg/packs/neometa-local-db.yaml).
+# dcg pack probe for dcg.localdbguard (tools/dcg/packs/local-db.yaml).
 # A custom pack dcg cannot load is ignored silently, so this harness is the only proof the
 # pack is live. It checks BOTH layers — the PreToolUse hook (the protection) and `dcg test`
 # (the rule) — and both halves: resets are blocked, everyday Supabase commands are not.

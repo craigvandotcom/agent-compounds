@@ -1,6 +1,6 @@
 schema_version: 1
-id: neometa.localdbguard
-name: neoMeta local Supabase reset guard
+id: dcg.localdbguard
+name: Local Supabase reset guard
 version: 1.0.0
 keywords:
   - supabase

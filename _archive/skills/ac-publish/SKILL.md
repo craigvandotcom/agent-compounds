@@ -5,7 +5,7 @@ description: 'The manual, human-triggered release gate — the definitive "ship 
 
 # ac-publish — Manual Release Gate
 
-**You are the publish conductor.** Publish is **manual** — Craig triggers it; there is no autonomous
+**You are the publish conductor.** Publish is **manual** — the operator triggers it; there is no autonomous
 promoter (parallel-execution doctrine §6). Your job spans several things no other skill owns
 end-to-end: **mint the single release version** (Phase 0 — relocated here from `ac-batch-close`
 Phase 2; see `version-bump-defaults-to-patch`), act as the *definitive confidence gate* before
@@ -206,7 +206,7 @@ Never trust a stale prior-SHA green; `ac-prove` proves the *exact* ref you pass 
 
 `ac-prove`'s `+qa` layer is where the one genuinely-new expensive check at publish happens —
 full device/browser QA against the release build (`ac-qa-device` + `ac-qa-browser`, per
-`qa-gating-craig-owns-visual-agent-functional`: agent runs functional QA, Craig owns visual
+`qa-gating-operator-owns-visual-agent-functional`: agent runs functional QA, the operator owns visual
 sign-off). This is also where every non-peripheral journey's `last_pass` stamp gets refreshed
 (per `rule-review-critical-journeys-sim-pass-before-submission` — review-critical journeys must
 show a sim-PASS on the exact build before submission), so `ac-distribute`'s store gate
@@ -251,7 +251,7 @@ Read each new migration and classify it per `rule-migrations-expand-contract`:
   (collision-aware: `migration fetch` → review → `db push` → verify) before shipping.
 - **Contract (drop / rename / narrow / `NOT NULL` without default):** allowed **only as a deliberate,
   explicitly-approved step after old native builds have aged out** — check the oldest still-live
-  native build version against what the contract removes; Craig approves the push. A contract that
+  native build version against what the contract removes; the operator approves the push. A contract that
   hasn't met the aged-out bar stays **held** (merged, unapplied) — do not push it as part of this
   release.
 - **Backward-incompatible change bundled into one migration:** → **stop**, split into an expand-now /
@@ -287,7 +287,7 @@ echo "${LIST}" | awk -F'|' 'NR>2 { l=$1; r=$2; gsub(/[[:space:]]/,"",l); gsub(/[
   classifier above.
 - **If any are pending:** apply them now — `supabase db push` (collision-aware, exactly the expand
   path above: `migration fetch` → review → `db push` → verify). Publish is human-triggered, so
-  `rule-shared-supabase-schemas` is satisfied and Craig confirms the push. Then **re-run
+  `rule-shared-supabase-schemas` is satisfied and the operator confirms the push. Then **re-run
   `supabase migration list` and confirm zero pending** before proceeding.
 - **Post-apply ops (non-blocking follow-through, NOT part of the gate):** if a just-applied
   migration's body or its originating bead documents a required post-apply step (e.g.
@@ -303,8 +303,8 @@ This gate blocks the ship; it is not a warning.
 
 If `ac-prove` reports FAIL (Phase 1 — its own internal fix-forward loop already exhausted, or a
 `+qa` blocker it doesn't auto-fix), or migrations (Phase 2) surface an issue: **add a
-"Fix-in-session — round {N}" task now** (`in_progress`) and fix it — you may ask Craig. Get to
-100% before shipping. Publish is human-present, so fixing here is the rule: **only Craig elects
+"Fix-in-session — round {N}" task now** (`in_progress`) and fix it — you may ask the operator. Get to
+100% before shipping. Publish is human-present, so fixing here is the rule: **only the operator elects
 to stop and file a bead instead** — never file one on your own judgement. A fix commit moves the
 tip, so **re-invoke `ac-prove` against the new commit** (never re-bump — see Phase 1's
 Fix-forward re-pin) and adopt whatever `R` it returns — **mark "Fix-in-session — round {N}"
@@ -381,7 +381,7 @@ Fix-forward re-pin) and adopt whatever `R` it returns — **mark "Fix-in-session
    build produced by the `main` push is ever a valid promote target; verify this via
    `vercel inspect` before promoting, never by URL naming alone. If `vercel inspect` shows the
    candidate is a preview build, or no staged deployment for `R` can be found, **abort this step**
-   with an explicit message and surface it to Craig — never report a completed ship on an
+   with an explicit message and surface it to the operator — never report a completed ship on an
    unverified or wrong-artifact promote.
 
 4. **Post-promotion verify — deployment IDENTITY, never a version-grep.** Confirm production is
@@ -418,7 +418,7 @@ Fix-forward re-pin) and adopt whatever `R` it returns — **mark "Fix-in-session
 
 ## Remember
 
-- **Manual only** — Craig triggers publish; no autonomous promoter (doctrine §6).
+- **Manual only** — the operator triggers publish; no autonomous promoter (doctrine §6).
 - **Mint once, at Phase 0** — the single version/build bump for the agent-batch path lives here
   now (moved from `ac-batch-close` Phase 2); `ac-merge`'s legacy-PR bump path is untouched.
 - **Pin → bump → push → prove, in that order** — the bump must ride inside the pinned commit

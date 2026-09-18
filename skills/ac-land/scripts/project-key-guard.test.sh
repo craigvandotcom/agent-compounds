@@ -38,7 +38,7 @@ fi
 # Extract the resolver ac-land publishes and run it against a fixture pin.
 FIXTURE=$(mktemp -d /tmp/project-key-guard-XXXXXX)
 mkdir -p "$FIXTURE/.claude/hooks"
-printf '%s\n' '  human_key: "neometa/body-compass-app",' > "$FIXTURE/.claude/hooks/session-start.md"
+printf '%s\n' '  human_key: "org/example-app",' > "$FIXTURE/.claude/hooks/session-start.md"
 # The resolver is the sed one-liner published in ac-land — extract it, don't rewrite it.
 # The diet moved the teardown block (and the resolver with it) to references/teardown.md;
 # read the spine first, fall back to the indirection it names.
@@ -51,17 +51,17 @@ if [ -z "$RESOLVER" ]; then
 else
   expect 1 "ac-land publishes a PINNED_KEY=sed resolver"
   GOT=$(cd "$FIXTURE" && eval "$RESOLVER" && printf '%s' "$PINNED_KEY")
-  if [ "$GOT" = "neometa/body-compass-app" ]; then
-    expect 1 "resolver against fixture pin returns neometa/body-compass-app"
+  if [ "$GOT" = "org/example-app" ]; then
+    expect 1 "resolver against fixture pin returns org/example-app"
   else
-    expect 0 "resolver against fixture pin returns neometa/body-compass-app (got: $GOT)"
+    expect 0 "resolver against fixture pin returns org/example-app (got: $GOT)"
   fi
 fi
 rm -rf "$FIXTURE"
 
 # Live compare when this checkout (or a sibling app) has a session-start pin.
 # Walk up from cwd looking for .claude/hooks/session-start.md — works when the
-# test is invoked from body-compass-app or any neoMeta app.
+# test is invoked from a consumer app checkout.
 PIN_FILE=""
 d=$(pwd)
 while [ "$d" != / ]; do
@@ -71,12 +71,9 @@ while [ "$d" != / ]; do
   fi
   d=$(dirname "$d")
 done
-if [ -z "$PIN_FILE" ] && [ -f /Users/craigvanheerden/Repos/neometa/software/body-compass-app/.claude/hooks/session-start.md ]; then
-  PIN_FILE=/Users/craigvanheerden/Repos/neometa/software/body-compass-app/.claude/hooks/session-start.md
-fi
 
 if [ -n "$PIN_FILE" ]; then
-  PINNED=$(sed -n 's/.*human_key: *"\(neometa\/[^"]*\)".*/\1/p' "$PIN_FILE" | head -1)
+  PINNED=$(sed -n 's/.*human_key: *"\([^"]*\)".*/\1/p' "$PIN_FILE" | head -1)
   REPO_ROOT=$(cd "$(dirname "$PIN_FILE")/../.." && pwd)
   GOT=$(cd "$REPO_ROOT" && eval "$RESOLVER" && printf '%s' "$PINNED_KEY")
   if [ -n "$PINNED" ] && [ "$GOT" = "$PINNED" ]; then

@@ -31,8 +31,8 @@ last_pass: 2026-09-06
   can be proved WITHOUT uploading: `xcodebuild archive` (Release, manual signing, match
   AppStore profiles) succeeded; `-exportArchive` with `method: app-store-connect` and
   `signingStyle: manual` produced a 19.5 MB signed `App.ipa`; app plus
-  BodyCompassWidgetExtension both signed `Apple Distribution: Craig Van Heerden (DYNQVB8R49)`
-  with embedded profile `match AppStore com.craigvan.bodycompass` carrying
+  BodyCompassWidgetExtension both signed `the Apple Distribution signing identity`
+  with embedded profile `the App Store provisioning profile` carrying
   `aps-environment: production`; `codesign --verify --deep --strict` passed. What was never
   exercised is the upload leg and the dSYM gate. A premise correction found during refine
   matters for whoever picks this up: the original AC required `gh workflow run

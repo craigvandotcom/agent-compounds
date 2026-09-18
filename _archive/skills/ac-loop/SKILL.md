@@ -5,11 +5,11 @@ description: 'Autonomous bead-shipping loop — runs scheduled, drives orphan fi
 
 # ac-loop — Autonomous Shipping Loop
 
-**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same stage skills the pipeline uses (ac-implement, ac-merge, etc.), but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only Craig can make — and only in interactive sessions.
+**You are the loop conductor.** You drive refined work to merge without waiting for human sign-off at stage gates — that's the job. You delegate to the same stage skills the pipeline uses (ac-implement, ac-merge, etc.), but you pre-answer their operational questions (bead count, session mode, next-step choices) so they run headlessly — each in a **fresh spawned session** (see Orchestration contract below). You pause only for genuine forks — decisions only the operator can make — and only in interactive sessions.
 
 When invoked interactively (`/ac-loop`), `AskUserQuestion` renders in the terminal for simple bounded forks. When invoked by the scheduler (headless), never `AskUserQuestion` — apply the Exhaust Rule: leave the `human-gate` decision bead in place, post an advisory Slack nudge, and keep working everything else. Decisions are answered via `ac-human-session` (the docket), not mid-run. **One exception:** the Phase 0 **width prompt** never uses `AskUserQuestion` (it has no timeout) — it is a timed plain-text ask, first output of the run (see Phase 0 § Width Prompt).
 
-> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not `human-gate` is loop-eligible** — if `unrefined`, you refine it (`ac-bead-refine`) first, then implement; if `refined`, you implement. The `unrefined` label routes a bead *through* refinement — **it is NOT a human gate**. The **only** thing exempt from autonomous implementation is a **`human-gate`** bead (surfaced, never auto-closed). **`cross-repo` is not an exemption.** Those IDs live on THIS board and are invisible in the target repo's beads db — this loop implements them. The implement child commits in the repo that tracks the files (`ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra beads). Do not skip them; do not wait for an agent-compounds loop that cannot see them. Craig controls what *enters* the pipeline **upstream** — at the backlog pool (`ac-backlog`) and via plan `loop-ready` sign-off; once an idea is a *bead* it is already committed work, so drive it to merge, furthest-advanced first. (Refinement *priority* still favours signed-off/furthest-advanced work — but nothing non-`human-gate` is gated *out*.)
+> **Scope contract:** You work the pipeline, not the backlog. You never touch raw backlog items (`_backlog/pool/`) or unrefined *plans*. **Every bead on the board that is not `human-gate` is loop-eligible** — if `unrefined`, you refine it (`ac-bead-refine`) first, then implement; if `refined`, you implement. The `unrefined` label routes a bead *through* refinement — **it is NOT a human gate**. The **only** thing exempt from autonomous implementation is a **`human-gate`** bead (surfaced, never auto-closed). **`cross-repo` is not an exemption.** Those IDs live on THIS board and are invisible in the target repo's beads db — this loop implements them. The implement child commits in the repo that tracks the files (`ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra beads). Do not skip them; do not wait for an agent-compounds loop that cannot see them. the operator controls what *enters* the pipeline **upstream** — at the backlog pool (`ac-backlog`) and via plan `loop-ready` sign-off; once an idea is a *bead* it is already committed work, so drive it to merge, furthest-advanced first. (Refinement *priority* still favours signed-off/furthest-advanced work — but nothing non-`human-gate` is gated *out*.)
 
 > **Orchestration contract — 3-level, non-negotiable.** You are a *conductor*, not a doer. Every
 > "Invoke `<skill>`" / "Run `<skill>`" step in this file means **spawn a fresh sub-session
@@ -172,7 +172,7 @@ project's active reservations and, for any hold older than the reservation TTL f
 
 ```
 mcp__mcp-agent-mail__force_release_file_reservation(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — never absolute (agent-mail/references/agent-identity.md § Project key format)
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — never absolute (agent-mail/references/agent-identity.md § Project key format)
   path: "<stale reservation path>"      // the tool validates abandonment heuristics before releasing
 )
 ```
@@ -257,11 +257,11 @@ br ready --limit 0 --json | jq '[.[] | select(
 LEGACY_FILE="$(git rev-parse --show-toplevel)/.claude/legacy-branches.txt"
 [ -f "$LEGACY_FILE" ] && grep -v '^[[:space:]]*$' "$LEGACY_FILE" 2>/dev/null
 
-# Plans marked loop-ready (Craig's explicit gate — only these enter the loop)
+# Plans marked loop-ready (the operator's explicit gate — only these enter the loop)
 grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 ```
 
-> **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — Craig has not yet signed them off for autonomous execution. This is intentional: Craig sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
+> **The loop-ready gate:** Only plans with `status: loop-ready` in their frontmatter are touched by the loop. Plans marked `refined`, `draft`, or anything else are invisible to the loop — the operator has not yet signed them off for autonomous execution. This is intentional: the operator sets `loop-ready` at the end of `ac-plan-refine` (optionally after running `ac-plan-clean`), which is the explicit hand-off signal.
 
 > **Plan-frontmatter `depends-on:` convention (plan-level admission gate).** A loop-ready
 > plan MAY declare a machine-readable `depends-on:` frontmatter field naming one or more
@@ -429,7 +429,7 @@ After orphans are clear (or if no orphans), advance the highest-priority plan wi
 ### Pick the next plan
 
 ```bash
-# Loop-ready plans (Craig's explicit gate)
+# Loop-ready plans (the operator's explicit gate)
 LOOP_READY_PLANS=$(grep -l "status: loop-ready" _plans/*.md 2>/dev/null)
 
 # Of those, find which have refined, non-human-gate ready beads (--limit 0 mandatory — bare `br ready` caps at 20)
@@ -538,7 +538,7 @@ other batch's proof defers here: one verify, one beads-closed gate, one close, o
 
 > **ARIA = Autonomy-Regulated Intelligent Assistance.** Fire only when there is no more eligible work to implement — the loop is idle because of human gates, not because the agent gave up.
 
-This phase persists. The loop does not exit after a nudge — it re-checks at interval and nudges again until Craig acts. Bottlenecks need pressure, not a single polite mention.
+This phase persists. The loop does not exit after a nudge — it re-checks at interval and nudges again until the operator acts. Bottlenecks need pressure, not a single polite mention.
 
 ### Decision Matrix
 
@@ -549,7 +549,7 @@ This phase persists. The loop does not exit after a nudge — it re-checks at in
 | Plan exists but all beads are `unrefined` | Advisory nudge: "Plan X has N beads awaiting refinement — run `/ac-bead-refine`" |
 | Unrefined non-`human-gate` bead of ANY origin (lone capture, beadified epic, or plan-traceable) | **NOT an ARIA case** — these are eligible work. The loop refines them (`ac-bead-refine`) and ships them in Phase 1/2 per Work priority #2; they should never reach ARIA idle. Only nudge if refinement itself is *blocked* (e.g. `ac-bead-refine` couldn't converge and surfaced a `human-gate` decision) — then it's the `human-gate` row above. A captured bead is committed work, not a raw idea awaiting promotion (that lives in the backlog *pool*). |
 | Refined plans exist but no beads yet | Advisory nudge: "Plan X is ready for `/ac-beadify`" |
-| Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
+| Backlog items (raw ideas, not plans) | Advisory nudge ONLY — the operator decides what enters the pipeline |
 | Nothing at all (no backlog, no plans, no beads) | Session-end notify: "Pipeline clear — nothing waiting" |
 
 ### Advisory nudge format
@@ -586,11 +586,11 @@ AskUserQuestion(
 )
 ```
 
-On answer: record the decision in the bead (`br comments add <id> "DECISION (Craig): <choice> — <answer text>"`), execute the consequence (remove `human-gate` label, unblock dependents), then continue the loop.
+On answer: record the decision in the bead (`br comments add <id> "DECISION (human): <choice> — <answer text>"`), execute the consequence (remove `human-gate` label, unblock dependents), then continue the loop.
 
 ### Re-nudge cadence
 
-After a nudge, re-check on the next scheduled loop fire. If the block persists: send another nudge (do not suppress). The nudge IS the signal — Craig needs to feel the bottleneck until he clears it.
+After a nudge, re-check on the next scheduled loop fire. If the block persists: send another nudge (do not suppress). The nudge IS the signal — the operator needs to feel the bottleneck until he clears it.
 
 ---
 
@@ -714,7 +714,7 @@ fighting the machine. Hold these:
   ≤200–400-word child summaries; a watchdog/poke on every child (background resume chains
   break silently); strict repo + pathspec instructions per child. Pull heavy sub-steps
   (e2e / prod-build) OUT of the implementer into their own gated step.
-- **Ramp evidence:** the carrier's `width:` line is the ramp input (§ Run telemetry) — Craig
+- **Ramp evidence:** the carrier's `width:` line is the ramp input (§ Run telemetry) — the operator
   moves width at the prompt; the default rises only after green windows at the current default.
 
 ---
@@ -837,7 +837,7 @@ PAI job config, triage decoupling, keep-awake layers: `references/scheduling.md`
 
 ---
 
-## What Craig Controls (Never Automated)
+## What the operator controls (Never Automated)
 
 | Item | Why |
 |------|-----|
@@ -846,7 +846,7 @@ PAI job config, triage decoupling, keep-awake layers: `references/scheduling.md`
 | Closing `human-gate` decision beads | Domain/taste/risk — agent prepares, human decides |
 | Pipeline entry | Plan `loop-ready` sign-off + beadify approval ratify the spec contract wholesale; per-bead refine executes it autonomously — deviations come back as `human-gate` decision beads |
 
-The loop never touches these. It nudges Craig when they're bottlenecks.
+The loop never touches these. It nudges the operator when they're bottlenecks.
 
 ---
 

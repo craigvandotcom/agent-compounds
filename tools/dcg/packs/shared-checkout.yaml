@@ -1,6 +1,6 @@
 schema_version: 1
-id: neometa.stashguard
-name: neoMeta shared-checkout safety
+id: dcg.stashguard
+name: Shared-checkout safety
 version: 1.1.0
 destructive_patterns:
   - name: unscoped-stash-save

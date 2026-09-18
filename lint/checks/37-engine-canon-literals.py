@@ -22,9 +22,9 @@ Forbidden in engine/ CODE:
   1  An absolute home-anchored path — `$HOME/Repos/...`, `~/Repos/...`, `/Users/<x>/...`,
      `/home/<x>/...`. These name one machine. `$HOME` alone is fine and is how rendered
      configs stay portable: the consuming harness expands it.
-  2  A hardcoded domain-repo segment — `neometa/software/`, `mission/software/`. The
-     domain repo names itself differently per layout, so spelling either one is the
-     same bug wearing a different name.
+  2  A hardcoded domain-repo segment — `<name>/software/` as a path component. The
+     domain repo names itself differently per layout, so spelling any one name is
+     the same bug wearing a different name.
 
 PROSE IS OUT OF SCOPE, deliberately. Comments, docstrings and `_doc` fields explain this
 history and must be able to quote the very literals the check forbids — including the
@@ -52,7 +52,7 @@ PATTERNS = (
     (re.compile(r'\$HOME/Repos|~/Repos'), "home-anchored monorepo literal"),
     (re.compile(r'/Users/[A-Za-z0-9._-]+/'), "absolute macOS home path"),
     (re.compile(r'/home/[A-Za-z0-9._-]+/'), "absolute Linux home path"),
-    (re.compile(r'\b(?:neometa|mission)/software/'), "hardcoded domain-repo segment"),
+    (re.compile(r'\b[A-Za-z0-9._-]+/software/'), "hardcoded domain-repo segment"),
 )
 
 

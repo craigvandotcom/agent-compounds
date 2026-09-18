@@ -32,7 +32,7 @@ answerable in ≤10 words).
 > (surfaced, never auto-closed). **`cross-repo` is not an exemption.** Those IDs live on
 > THIS board; the target repo's beads db does not have them. This cycle implements them.
 > Workers commit in the repo that tracks the files
-> (`ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra beads). Craig
+> (`ac-pipeline/references/commit-discipline.md` § Cross-repo skill/infra beads). the operator
 > controls what *enters* the pipeline upstream (`ac-backlog`, plan `loop-ready` sign-off).
 
 > **Orchestration contract — 3-level, non-negotiable.** Every "Invoke `<skill>`" / "Run
@@ -132,7 +132,7 @@ export RUN_ID="$(date +%Y%m%d-%H%M%S)-$$"   # scopes THIS run's /tmp scratch (ac
 Then sweep reservations stranded by a prior run that died before its `ac-land` teardown
 (`agent-mail/references/agent-identity.md` Deregistration, Layer 3): for any hold older
 than the 7200 s TTL floor, call `force_release_file_reservation` with the canonical
-`neometa/<app-dir>` project key. This is a stale-**RESERVATION** sweep ONLY — never
+`<org>/<app-dir>` project key. This is a stale-**RESERVATION** sweep ONLY — never
 `retire_agent`/`deregister_agent` (name-only cross-session retire is rejected at runtime,
 decision `ac-ycr.8`).
 
@@ -160,7 +160,7 @@ br ready --limit 0 --json | jq '[.[] | select(.labels | index("human-gate"))]'
 # P0/P1 bypass candidates (see § Bypass lane)
 br ready --limit 0 --json | jq '[.[] | select((.priority <= 1) and (.labels | index("human-gate") | not))]'
 
-# Plans marked loop-ready (Craig's explicit gate — only these enter the loop)
+# Plans marked loop-ready (the operator's explicit gate — only these enter the loop)
 grep -l "status: loop-ready" _plans/*.md 2>/dev/null
 ```
 
@@ -418,7 +418,7 @@ Bisect invocation, cluster formation, sampling rule and the probe protocol:
 
 > **`post-merge` lifecycle — stamp at creation, strip at claim** (`beads-standards/reference/bead-conventions.md` § Claim semantics — `post-merge` exhaust). Every exhaust bead created during the run — Phase-2 discoveries, QA-pass beads, Exhaust-Rule decision beads — is **stamped `post-merge` AT CREATION** and parented into its epic; an unstamped follow-up under the run's identity is a genuinely-open in-scope bead that blocks the run's own close. Every claim path **strips `post-merge` at claim**, so an adopted bead is closeable again. The two halves are one rule; never do one alone.
 
-**Publish stays human.** `ac-loop-2` never releases — that is `ac-publish`, invoked by Craig.
+**Publish stays human.** `ac-loop-2` never releases — that is `ac-publish`, invoked by the operator.
 
 ---
 
@@ -508,7 +508,7 @@ clean run yields a header-only carrier.
 
 > **ARIA = Autonomy-Regulated Intelligent Assistance.** Fires only when there is no more
 > eligible work — the loop is idle because of human gates, not because it gave up. This
-> phase persists: re-check at interval and nudge again until Craig acts.
+> phase persists: re-check at interval and nudge again until the operator acts.
 
 | Signal | Action |
 |--------|--------|
@@ -517,12 +517,12 @@ clean run yields a header-only carrier.
 | Wave specified but this run is headless | Advisory nudge: "Wave for `<lanes>` is specified — run `/ac-loop-2` interactively to continue" |
 | Unrefined non-`human-gate` bead of any origin | **NOT an ARIA case** — that is Phase 1 work. Nudge only if refinement itself surfaced a `human-gate` fork (then it is row 1) |
 | Loop-ready plans exist but no beads | **NOT an ARIA case** — Phase 1 beadifies them |
-| Backlog items (raw ideas, not plans) | Advisory nudge ONLY — Craig decides what enters the pipeline |
+| Backlog items (raw ideas, not plans) | Advisory nudge ONLY — the operator decides what enters the pipeline |
 | Nothing at all | Session-end notify: "Pipeline clear — nothing waiting" |
 
 Advisory nudges post via `slack-send --channel sofi --card` (or the app's channel), listing
 each waiting item with its one-line decision. On an answered `AskUserQuestion`: record it
-(`br comments add <id> "DECISION (Craig): <choice> — <answer>"`), execute the consequence
+(`br comments add <id> "DECISION (human): <choice> — <answer>"`), execute the consequence
 (remove `human-gate`, unblock dependents), continue.
 
 ---
@@ -596,7 +596,7 @@ PAI job config, triage decoupling, keep-awake layers: **`references/scheduling.m
 
 ---
 
-## What Craig Controls (never automated)
+## What the operator controls (never automated)
 
 | Item | Why |
 |------|-----|

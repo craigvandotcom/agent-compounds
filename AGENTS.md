@@ -15,7 +15,7 @@
 | **Name** | agent-compounds |
 | **Stack** | Markdown skills/agents + bash (`engine/sync.sh` → `engine/deploy.sh`); no app runtime |
 | **Type** | Shared engineering tooling registry (skills, agents, prompt library, plans) |
-| **Purpose** | Canonical source of the neoMeta engineering skill/agent registry, symlink-deployed into every app |
+| **Purpose** | Canonical source of the engineering skill/agent registry, symlink-deployed into every app |
 
 ## Project Commands
 
@@ -27,9 +27,9 @@
 | **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
-## Distribution policy (2026-06-13, Craig-approved)
+## Distribution policy (2026-06-13, approved)
 
-**Full set everywhere, auto-synced — no per-project exclude list.** Every INTERNAL neoMeta
+**Full set everywhere, auto-synced — no per-project exclude list.** Every internal
 app gets the entire registry (all skills + all agents) via `engine/deploy.sh --all`. There is no
 selective per-app skill list anymore — availability is uniform.
 
@@ -50,7 +50,7 @@ hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored `harnesses.local
 hook wiring canon: `engine/hooks.wiring.json`. A newly added registry skill therefore lands in every
 app AND every harness on the next sync with **no manual re-stamp** (idempotent:
 creates/refreshes symlinks only, never clobbers a real file — so local customizations like
-art-still's `design-system` survive; generated files are stamp-gated).
+a project's `design-system` survive; generated files are stamp-gated).
 
 **Public repos (the `public` flag, 2026-07-10):** public OSS repos (e.g. `vitest-affected`)
 are synced like everyone else — the concern was never the sync, it was *committing* the
@@ -90,7 +90,7 @@ lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates i
 **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled),
 `writing-guidelines` (brand-voice-coupled), `curate` — project/brand-specific. `app-store-screenshots`,
 `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO, owned by each app
-(reference copies in body-compass-app).
+(reference copies live in whichever app owns those concerns).
 
 ## Rules
 

@@ -76,7 +76,7 @@ transcripts, do not work beads yourself.
    ```
    Verify by arithmetic (`Created`/`Updated`/`Skipped`), not by eye —
    `_docs/runbooks/beads-ledger-recovery.md`. THEN land the code commits:
-   `git rebase origin/main && git push`. Never stash — `neometa.stashguard` blocks the plain and
+   `git rebase origin/main && git push`. Never stash — `dcg.stashguard` blocks the plain and
    the scoped form alike. Foreign WIP blocking the rebase, or a conflict →
    `_docs/runbooks/beads-ledger-recovery.md`; exhausted → `human-gate` bead
    (`Gate-reason: action`). If a graft is unavoidable for the code commits, graft code files
@@ -119,7 +119,7 @@ transcripts, do not work beads yourself.
   WIP. One checkout is one HEAD; workers diverge only from a foreign push, reconciled once
   at close-out.
 - Commit under `flock "$(git rev-parse --git-common-dir)/swarm-commit.lock"`, asserting
-  `main` inside the lock. Never `.git/<name>.lock`: `.git` is a FILE in every neoMeta app,
+  `main` inside the lock. Never `.git/<name>.lock`: `.git` is a FILE in every consumer app,
   so that path never opens and the mutex silently does nothing. Replaces `index.lock` retries.
 - Scoped checks only. Never the full suite; never unfiltered `tsc`. A shared dirty tree
   reports siblings' half-edits as your failures. `vitest related` with

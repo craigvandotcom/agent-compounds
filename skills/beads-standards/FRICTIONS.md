@@ -116,7 +116,7 @@ last_pass: 2026-09-08
 - stage: ac-loop
 - status: resolved
 - proposed_fix: LANDED 2026-09-08 (ac-rksh, § `br` gotchas): the JSON-shapes bullet ("JSON shapes differ by command") + the `br list` hides-CLOSED/`--all` bullet ("`br list` hides CLOSED beads by default — pass `--all`") now live in skills/beads-standards/SKILL.md. Document the shapes in the br cheatsheet: `br list --json` returns an OBJECT (`{issues:[…], total, limit, offset, has_more}`) and needs an explicit `--limit 0`; `br ready --json` and `br show --json` return BARE ARRAYS. Give the defensive filter form (`(.issues // .)`) so one jq expression survives both. Confirm against the live tool before writing (per `verify-doctrine-claims-against-live-tools`).
-- narrative: a jq filter written for `br ready --json` errored with "Cannot index array with string" when reused against `br list --json`, because the two subcommands of the same CLI return different top-level shapes; `br list` additionally truncates unless given `--limit 0`, so a board scan silently under-reports without it. A third shape showed up in the same run from the refine side: a bead AC specified parsing `br show --json` as an object and was unbuildable as written because it too returns a bare array. Cost is one wasted call per rediscovery, but the shape is rediscovered independently by every agent that scripts a board scan, and nothing in the registry documents it. Knowledge captured meanwhile as the neoMeta memory fact `br-cli-json-shapes-and-body-quoting`; this entry tracks the doctrine gap that keeps making it necessary.
+- narrative: a jq filter written for `br ready --json` errored with "Cannot index array with string" when reused against `br list --json`, because the two subcommands of the same CLI return different top-level shapes; `br list` additionally truncates unless given `--limit 0`, so a board scan silently under-reports without it. A third shape showed up in the same run from the refine side: a bead AC specified parsing `br show --json` as an object and was unbuildable as written because it too returns a bare array. Cost is one wasted call per rediscovery, but the shape is rediscovered independently by every agent that scripts a board scan, and nothing in the registry documents it. Knowledge captured meanwhile as the memory fact `br-cli-json-shapes-and-body-quoting`; this entry tracks the doctrine gap that keeps making it necessary.
   **RUN 20260811-113939-36193 (BCA), +1 — same root (br subcommand defaults and shapes silently
   narrow or reshape the result set), and this time it cost a dispatched child.** Two confirmations
   and one addition. CONFIRMED: `br show --json` does return a bare array, as this entry already
@@ -266,11 +266,11 @@ last_pass: 2026-09-08
   git/OS user. No skill anywhere instructs agents to pass any of the three (grepped the whole
   registry: zero hits for `--actor`), and `br --help` does not document `BEADS_ACTOR` at all, so
   the silent default is the human. Every agent that writes a comment or a close reason without
-  an actor signs it `craigvanheerden`. The cost is not cosmetic and has already been paid once:
-  on bd-g30lp, Craig discharged a fork himself on 2026-08-18 ("the fork is now resolved ...
+  an actor signs it as the human git identity. The cost is not cosmetic and has already been paid once:
+  on bd-g30lp, the operator discharged a fork himself on 2026-08-18 ("the fork is now resolved ...
   Dropping human-gate and releasing it to the loop"). Two days later an ac-loop-2 conductor
   posted a "CONDUCTOR RULING" that re-stamped `human-gate`, and because that comment rendered as
-  `[craigvanheerden]` it read as Craig contradicting himself rather than as an agent overriding
+  `[the git user]` it read as the operator contradicting himself rather than as an agent overriding
   him. A 2026-08-21 refine run had to reconstruct the comment trail to establish which of the two
   was actually the human before it could restore his decision. The generalisable half: an
   identity field that silently falls back to the most authoritative principal in the system is

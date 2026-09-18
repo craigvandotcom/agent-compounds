@@ -563,7 +563,7 @@ Mark ledger task 8 `completed`; `TaskUpdate` task 9 `in_progress`.
 ### Verify the Deploy Actually Shipped
 
 If the project deploys on push to main (Vercel: `vercel.json` present or a known Vercel
-project — simil8, cv-site, neometa-app, move-free-app, art-still-app marketing):
+project — simil8, cv-site, org-app, move-free-app, art-still-app marketing):
 
 ```bash
 # Poll — a bare foreground `sleep 90` is BLOCKED by the harness; the sleep must sit in a loop.

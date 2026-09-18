@@ -159,7 +159,7 @@ last_pass: 2026-09-06
   where whitespace is content. The generalisable half is the timing: every commit after the final
   gate is unverified by construction, and close is the busiest post-gate window in a run, so the
   close ritual should contain nothing that can change product bytes at all. Fleet rule:
-  `neometa/memory/auto/formatting-is-content-when-the-file-is-a-prompt`.
+  `memory/auto/formatting-is-content-when-the-file-is-a-prompt`.
 
 ## bsd-find-will-not-traverse-the-tmp-symlink
 - skills: [ac-land]

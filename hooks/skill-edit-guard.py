@@ -18,7 +18,7 @@ Edit|Write is not the only way to change a skill file: a `file_path` under skill
 a Bash `command` that writes there (redirect, tee, in-place sed/perl, cp/mv). Wire the
 hook on BOTH the Edit|Write and Bash matchers — on Bash alone it never sees Edit, and on
 Edit|Write alone a one-line `perl -0pi` rewrites doctrine ungoverned.
-Scope was SKILL.md-only until 2026-08-05; broadened on Craig's call — the standards
+Scope was SKILL.md-only until 2026-08-05; broadened on an operator ruling — the standards
 (promotion ladder, friction capture, single-home, no-provenance) bind every file in a
 skill, not just the spine, so references/ and FRICTIONS.md edits must see them too.
 Exit 2 BLOCKS this first
@@ -79,7 +79,7 @@ MAINTENANCE.md, tools/.
     `node scripts/skill-diet-conservation.mjs` when moving content, to confirm nothing
     unique is lost.
   - PROMOTION LADDER (skills/skill-builder/references/promotion-ladder.md): UP needs
-    PROOF (N green runs / probe-verified, + Craig sign-off for conductor core); DOWN
+    PROOF (N green runs / probe-verified, + the operator sign-off for conductor core); DOWN
     needs only disuse. A NEW LESSON enters at the BOTTOM (FRICTIONS.md / references),
     never straight into core. Removed content ages in MAINTENANCE.md before git-delete.
   - FRICTION CAPTURE (skills/skill-builder/references/friction-capture.md): landing a

@@ -32,7 +32,7 @@ entries: 33
   population for which skipping the re-open is defensible, and a "verified" claim inherited from a
   prior refine round is not evidence of anything. Two further data points from the same run. (1) The
   adversarial break-attempt round caught a territory omission that would have shipped a
-  self-contradictory, byte-parity-CI-enforced prompt pair asserting the OPPOSITE of Craig's ruling —
+  self-contradictory, byte-parity-CI-enforced prompt pair asserting the OPPOSITE of the operator's ruling —
   a refine without that round would have stamped the bead refined. (2) Two refined beads had a FALSE
   central claim (bd-pntbn asserted missing dispositions; 26/26 beads carried them) and a DEAD premise
   (bd-a3b0p, closed as superseded) — so premise falsification is not a rare outcome of the check, it
@@ -341,8 +341,8 @@ entries: 33
 - proposed_fix: when a refine RULES on whether another bead is a live human gate (or on any state a human can change out-of-band), it must read that target bead's COMMENT TAIL newest-first, not body plus notes alone, and record the timestamp of the newest evidence it read. A ruling with no evidence timestamp cannot be TOCTOU-checked at execution time.
 - narrative: NEAR-MISS, caught only by a downstream TOCTOU re-check. bd-kxcwr's refine ruled bd-bt9n8
   a genuine live human gate, reading its body and Notes. bd-bt9n8 carried a comment timestamped
-  09:34:38Z recording Craig's ratification of 3 of 4 downgrades — posted 34 MINUTES BEFORE the refine
-  ruled at 10:08. The row set actually awaiting Craig was EMPTY. Executing the ruling would have
+  09:34:38Z recording the operator's ratification of 3 of 4 downgrades — posted 34 MINUTES BEFORE the refine
+  ruled at 10:08. The row set actually awaiting a human was EMPTY. Executing the ruling would have
   written a marker creating a FALSE gate, re-arming the exact reason-less-gate alarm that a sibling
   bead had spent its entire run clearing (62 reason-less gates down to 1). Caught only because the
   ledger lane's own AC8 re-checked at execution time instead of trusting the refine. The asymmetry
@@ -529,7 +529,7 @@ entries: 33
 - related: [filed-beads-carry-drifted-anchors-and-false-premises]
 
 - trigger: during a refine run the conductor spun bd-jxj42 out of bd-q7h0e to carry a
-  "discharged" diagnosis forward, and Craig pushed back — "I don't know why you're creating
+  "discharged" diagnosis forward, and the operator pushed back — "I don't know why you're creating
   new beads during the bead."
 - cost: bd-jxj42 was filed with FIVE inherited claims and all five were false: wrong mechanism
   (named a guard the code path never reaches), "already discharged — do not re-derive" (the

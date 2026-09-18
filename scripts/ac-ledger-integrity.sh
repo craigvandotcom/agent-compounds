@@ -32,7 +32,7 @@
 # is retired. With no --ledger, the sweep covers ALL ledgers; an explicit --ledger
 # scopes the sweep to that one ledger.
 #
-# ENTRY COUNTS (2026-09-12, Craig-decided lint audit): every entry count in this
+# ENTRY COUNTS (2026-09-12, decided lint audit): every entry count in this
 # script's own output is derived from the parsed ledger at read time
 # (`.ledger.entries | length`), never from a hand-kept frontmatter field. The
 # ledgers used to carry an `entries: N` header that a mismatch leg compared

@@ -201,7 +201,7 @@ The range is 34 commits and carries substantially more than the six bug-lane bea
   final child. Verified fully wired across `ac-land` ↔ `ac-loop`.
 - `3532347`, `b10d650` — sharpening batch A (ac-kb8 / ac-qsz / ac-wno partial).
 - `a8823c3`, `698b2cd` — ac-znk.5: child-preamble beads line; beads-guard NOT earned.
-- `c04f2ba`, `f7e7a80` — **loop-lite retired** (ablation complete, Craig-directed deletion).
+- `c04f2ba`, `f7e7a80` — **loop-lite retired** (ablation complete, operator-directed deletion).
 - `d67f073`, `912362f` — ac-3jy: lint Check 5 tolerates gitignored diagram paths;
   unbreaks registry-lint CI red since 07-30. Probed clean by the test-quality lens.
 - `eb6cdcd` — hot-lane hook edit (see Accepted above).

@@ -26,7 +26,7 @@ description: 'Use to DEEPEN an existing plan via multi-agent (internal, no exter
 
 ## Engineering Skill
 
-**Before refining:** load this project's engineering standard from `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps: `capacitor` (`capacitor/SKILL.md`). Reviewers must evaluate plan decisions against these engineering constraints — not just correctness and completeness.
+**Before refining:** load this project's engineering standard from `CORE/SKILL.md` (§ "Engineering standard"). For current consumer apps: `capacitor` (`capacitor/SKILL.md`). Reviewers must evaluate plan decisions against these engineering constraints — not just correctness and completeness.
 
 ## Procedure
 

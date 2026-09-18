@@ -1,6 +1,6 @@
 # Phase-4 cutover slate — the enumerated moment
 
-**Status: EXECUTED 2026-08-28.** Human ruling: Craig authorised the cutover; it ran as one
+**Status: EXECUTED 2026-08-28.** Human ruling: the operator authorised the cutover; it ran as one
 atomic commit anchored by tag `pre-ac2-cutover`. Eleven skills are in `_archive/skills/`,
 their enforcers retired, their references re-pointed, and the deploy targets re-synced.
 
@@ -60,7 +60,7 @@ Derived from the plan's "Absorbs / replaces (at Phase-4 cutover)" column:
 | 10 | `ac-merge` | `ac2-publish` |
 | 11 | `ac-publish` | `ac2-publish` |
 
-**That is ELEVEN, and ELEVEN IS FINAL — human ruling (Craig, 2026-08-28).** `lint.sh`'s ac2
+**That is ELEVEN, and ELEVEN IS FINAL — human ruling (operator, 2026-08-28).** `lint.sh`'s ac2
 net-growth exception comment says "the twelve they absorb"; that count is STALE and is corrected
 to eleven as part of the cutover prep. There is no twelfth skill.
 
@@ -269,7 +269,7 @@ commits, this section is void and must be rewritten before scheduling.
 
 ---
 
-## 9. Open questions — ALL THREE ANSWERED (Craig, 2026-08-28)
+## 9. Open questions — ALL THREE ANSWERED (operator, 2026-08-28)
 
 > **Q-A — CLOSED. The archive set is ELEVEN; there is no twelfth.** `lint.sh`'s "twelve" is
 > stale and gets corrected in cutover prep. `ac-review` and `ac-pipeline` SURVIVE, which

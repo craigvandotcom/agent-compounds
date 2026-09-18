@@ -81,7 +81,7 @@ if [ "$1" = "--registry" ]; then
     # lacks that setting, its real budget is ~15k — deploy the setting, don't
     # shrink here. Raise both together, deliberately.
     #
-    # ac2 CUTOVER — the archive-before-use ordering ruling (Craig, 2026-08-27, bead
+    # ac2 CUTOVER — the archive-before-use ordering ruling (operator, 2026-08-27, bead
     # ac-g2v4). The ac2 pipeline family must be WRITTEN before the twelve legacy ac-*
     # skills it absorbs can be archived, so both families sit on disk for the length of
     # the build. Measured with this script across that lifecycle: 29,637 before the

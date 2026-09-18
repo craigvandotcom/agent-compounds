@@ -33,7 +33,7 @@ entries: 25
   but `.git` in body-compass-app is a 64-byte git-submodule POINTER FILE, so `mkdir` returns
   ENOTDIR on every one of 450 retries — indistinguishable from "lock held" to the retry loop. Found
   independently by two lanes (the curator lane observed ZERO lock directory while siblings were
-  landing commits), then reproduced by the conductor. SYSTEMIC: every neoMeta app under `software/`
+  landing commits), then reproduced by the conductor. SYSTEMIC: every consumer app under `software/`
   is a submodule, so this is not BCA-specific. Five clean Phase-2 commits landed anyway — through
   lane spacing and territory disjointness, NOT through the mechanism briefed to provide that
   guarantee, which makes the clean outcome zero evidence the mutex works. Compounding: the 450x2s
@@ -43,7 +43,7 @@ entries: 25
   queue acquired first try at the `--git-common-dir` path. Beads bd-ye0rp (P0, its body still
   specifies the narrower `--git-dir` and needs amending), ac-ac-loop2-commit-mutex-submodule-fsmh
   (agent-compounds board), bd-giy7u (P1, the 900s-vs-600s collision). Fleet fact:
-  `neometa/memory/auto/loop-retro-neometa-app-dotgit-is-a-pointer-file.md`.
+  `memory/auto/loop-retro-org-app-dotgit-is-a-pointer-file.md`.
   **+1 — the briefed template is itself unrunnable, and lanes fork it silently.** A build lane
   handed the mutex recipe could not run the RELEASE line: dcg blocks any redirect whose target
   is a runtime-expanded variable, which is exactly the shape the briefed recipe is written in.
@@ -211,7 +211,7 @@ entries: 25
   load-bearing rather than ceremony, and makes an inherited "verified" claim from a prior refine
   round worthless as evidence. Element 6 (the adversarial break-attempt round) separately caught a
   territory omission that would have shipped a self-contradictory, byte-parity-CI-enforced prompt
-  pair asserting the OPPOSITE of Craig's ruling; a refine without that round would have stamped it
+  pair asserting the OPPOSITE of the operator's ruling; a refine without that round would have stamped it
   refined. Both elements earned their cost in measured terms this run — record that before anyone
   proposes trimming them.
   **+1, and the payoff moved from CORRECTING beads to KILLING them.** A later run's spec phase
@@ -244,9 +244,9 @@ entries: 25
   defined NO overflow behaviour. RUN 20260811-113939-36193 opened with 83 unrefined beads against a
   width of 5, so "every" silently degraded to "as many as fit" and the conductor improvised a cut.
   The nearest signal to hand was `priority` — which on this board encodes WHO FILED THE BEAD, not
-  its value. Measured: 9 of 9 Craig-reported beads sat at P2; 14 of 26 agent-filed beads sat at
+  its value. Measured: 9 of 9 operator-reported beads sat at P2; 14 of 26 agent-filed beads sat at
   P0/P1. A `priority <= 1` cut therefore admitted 14 agent-filed beads and STRUCTURALLY ZERO
-  human-reported ones — it was arithmetically impossible for a Craig bug report to enter the wave.
+  human-reported ones — it was arithmetically impossible for a the operator bug report to enter the wave.
   Eleven of his product bugs (input hidden behind the keyboard, credit-failed rows never
   self-healing, widget staleness) were ready, unblocked, non-human-gate, and invisible; one was
   re-discovered hours later by an expensive device-QA pass in the same run. The loop shipped
@@ -720,7 +720,7 @@ entries: 25
   bd-8v1l2 reported 7 red tests as "pre-existing, PROVEN by a side-by-side run" against two
   commits it described as pristine HEAD. Both were INSIDE the wave. A throwaway worktree at the
   wave's true predecessor was 845 passed / 0 failed, so all 7 reds were the run's own. The
-  conductor had already repeated the claim upward to Craig before the worktree corrected it, so
+  conductor had already repeated the claim upward to the operator before the worktree corrected it, so
   the false classification left the machine. What makes this a spine defect rather than one
   bead's mistake: Phase 3 asks children to classify failures as ours-or-theirs but never supplies
   the only datum that can answer the question, so every child improvises a baseline from whatever

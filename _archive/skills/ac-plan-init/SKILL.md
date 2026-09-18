@@ -147,7 +147,7 @@ Use the agent name registered at session start (from `macro_start_session` — N
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
                                         # mirror: agent-mail/references/agent-identity.md — edit there first
   agent_name: <session agent name>,
   paths: [BACKLOG_REL],   # or "_plans/new" if no source backlog
@@ -161,7 +161,7 @@ mcp__mcp-agent-mail__file_reservation_paths(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
                                         # mirror: agent-mail/references/agent-identity.md — edit there first
   sender_name: <session agent name>,
   to: [<session agent name>],
@@ -192,7 +192,7 @@ Append to `$ARTIFACTS_DIR/progress.md`:
 
 ### Skill Routing
 
-**Engineering skill first.** Before routing to domain-specific skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps this is `capacitor` (`capacitor/SKILL.md`). Read it now if any aspect of the plan touches UI, navigation, data fetching, auth, storage, lifecycle, or build — which is almost always.
+**Engineering skill first.** Before routing to domain-specific skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For current consumer apps this is `capacitor` (`capacitor/SKILL.md`). Read it now if any aspect of the plan touches UI, navigation, data fetching, auth, storage, lifecycle, or build — which is almost always.
 
 After loading the engineering skill, check `AGENTS.md` > "Available Skills" for additional domain skills. Include relevant skill paths in each agent prompt.
 
@@ -497,7 +497,7 @@ Re-derive `BACKLOG_REL` at point of use (shell vars are call-scoped — Phase 0'
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
                                         # mirror: agent-mail/references/agent-identity.md — edit there first
   agent_name: <session agent name>,
   paths: [BACKLOG_REL]
@@ -508,7 +508,7 @@ mcp__mcp-agent-mail__release_file_reservations(
 
 ```
 mcp__mcp-agent-mail__send_message(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
                                         # mirror: agent-mail/references/agent-identity.md — edit there first
   sender_name: <session agent name>,
   to: [<session agent name>],

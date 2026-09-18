@@ -25,7 +25,7 @@ Fixes are proposed here and applied to the skill only after the pattern recurs o
   `needs-human` card on the plan — `beadify-refusal: needs-human` — never to a human gate.
 - narrative: the compound-check epic (bd-epic-compound-check-n0lug) shipped one DECISION card,
   "which Postgres role does CURATE_POSTGRES_URL resolve to, and should the curator SET ROLE".
-  Craig asked to settle it before bead polish and objected that the pipeline should not need a
+  the operator asked to settle it before bead polish and objected that the pipeline should not need a
   human here. Two read-only SQL queries and one grep settled it in minutes: the `postgres` role
   has BYPASSRLS and owns the tables, `service_role` bypasses RLS too (so option c was not a
   hardening), and every policy is keyed to auth.uid() (so option b, a dedicated role, would need

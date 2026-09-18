@@ -23,7 +23,7 @@ last_pass: 2026-09-06
 - status: promoted
 - proposed_fix: read the bead's own `events` table FIRST, before any other anti-rot verification — a comment is a CLAIM, `events` is the RECORD.
 - narrative: the conductor re-gated bd-06opv.12 — a bead DECIDED 2026-07-10 and deliberately
-  released by Craig three separate times with written reasoning — for the FOURTH time, believing
+  released by the operator three separate times with written reasoning — for the FOURTH time, believing
   its `human-gate` label had been silently lost. It had not. Every removal was a documented
   deliberate release, and the full 10-entry history sat in `.beads/beads.db` `events` the whole
   time. The conductor instead trusted bd-r0be9's comment, which logged an 18:35 re-add but NOT
@@ -78,11 +78,11 @@ last_pass: 2026-09-06
 - narrative: the Development Context Protocol states "Before editing any file, call
   file_reservation_paths ... No exceptions." This session edited FOUR shared registry files
   (three SKILL.md spines plus ac-pipeline/references/board-scan.md) without reserving any of them, and did not
-  notice until Craig asked about the skill-edit hook. `am-edit-guard.py` is registered at user
+  notice until the operator asked about the skill-edit hook. `am-edit-guard.py` is registered at user
   scope but in `AM_EDIT_GUARD_MODE=advisory`, so nothing blocked or warned. The instructive part
   is the contrast within one session: every convention with a GATE (line budget, net-growth token,
   pointer integrity, registry listing budget) was honoured automatically and without conscious
-  effort, while the prose-only convention was broken four times. Craig declined to flip the guard
+  effort, while the prose-only convention was broken four times. the operator declined to flip the guard
   to enforcing pending a decision on scope. Directly supports the fleet rule
   recurring-rule-escalates-to-a-gate-not-a-restatement (Repos d2e3290d).
 
@@ -97,7 +97,7 @@ last_pass: 2026-09-06
 - stage: ac-human
 - status: open
 - proposed_fix: a claim about DIRECTION needs a FLOW measurement — count arrivals AND closes over one stated window. A stock snapshot of the open set, however well broken down by age, cannot support "growing", "draining" or "ratcheting". Name the source, the population and the window in the same breath as any number, or make no directional claim.
-- narrative: the session told Craig the docket was "a ratchet" whose only exit was him, and built
+- narrative: the session told the operator the docket was "a ratchet" whose only exit was him, and built
   a structural argument on it — 73 open, 23% older than 30 days, oldest 114 days. Every number was
   correct and the conclusion was still wrong: over the same window the board had closed 98 and
   created 81. The drain existed and was larger than the inflow; it was simply never measured.
@@ -124,4 +124,4 @@ last_pass: 2026-09-06
   Local manifestation: a P1 bead was filed proposing a detect-and-refuse guard for a CI workflow
   that already carried that exact guard in the same file, and minutes later this skill proposed
   generalising an ac-tidy rule that had already shipped. Both were structural inferences about a
-  system, presented to Craig as findings, and both cost a refutation cycle.
+  system, presented to the operator as findings, and both cost a refutation cycle.

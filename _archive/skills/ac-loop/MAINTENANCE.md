@@ -108,7 +108,7 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
   trunk-direct migration bd-u2lo1: the bug lane formerly minted a `bugs/batch-<YYYYMMDD>-<n>`
   branch...)" blockquote. Superseding change: commit `3016b40` ("docs(ac-loop): migrate Bug Lane +
   stale refs to trunk-direct [bd-smrcb, bd-gojie]", 2026-07-12) — itself the commit that added this
-  note as "retained, reversible per Craig" pending a post-migration reassessment (bd-smrcb). Both
+  note as "retained, reversible per the operator" pending a post-migration reassessment (bd-smrcb). Both
   bd-smrcb and bd-u2lo1 no longer resolve in `br show` (closed/purged) and 8 days have passed with
   no reversal signal — git (3016b40) is the archive; the note added no operative behavior beyond
   what the paragraph above it already states (claim-at-selection, direct-to-main, one ceremony).
@@ -136,7 +136,7 @@ wired live, guard-rails extracted (see Cut-log 2026-08-03).
   authoritative copy. −6 lines.
 - [2026-07-20, W3.2 pilot] NOT TOUCHED per explicit scope: § Phase pipelining permissions
   (bd-chd5p.3 / Item 2). Analyzed only — grep evidence + recommendation in the W3.2 pilot report
-  (`ac-2wg.2`); no edit made. Left in the holding-pen-adjacent "flagged for Craig's gate" state
+  (`ac-2wg.2`); no edit made. Left in the holding-pen-adjacent "flagged for the operator's gate" state
   noted in Health above, not the Cut-log proper (nothing was cut).
 - Net this pass: 956 → 948 (−8 lines; the depends-on dedup landed a slightly larger prose block
   than the original despite the line-count drop, because the compressed forward-pointer replaced

@@ -134,7 +134,7 @@ If the plan file has no changes (already committed), git will report "nothing to
 ### Configuration
 
 ```bash
-MIN_ROUNDS=2          # ABSOLUTE floor (Craig's call, 2026-07-07) — never finalize before round 2,
+MIN_ROUNDS=2          # ABSOLUTE floor (an operator ruling, 2026-07-07) — never finalize before round 2,
                       # even on an incremental round 1; each round runs ~4 external models (~$2),
                       # so the floor costs ~$4 minimum — deliberate, to bound external-review spend.
 MAX_ROUNDS=5
@@ -638,7 +638,7 @@ fi
 ```
 
 **Rule 2 (the round floor): the `MIN_ROUNDS=2` floor is ABSOLUTE.** Each round runs ~4 external
-models in parallel (~$2/round), so the floor costs ~$4 minimum — deliberate, Craig set it that
+models in parallel (~$2/round), so the floor costs ~$4 minimum — deliberate, the operator set it that
 way to bound spend while still buying real cross-round signal. An incremental round 1 is not
 evidence of convergence; it is evidence one round can't tell. **Never even ask the user to
 finalize before `CURRENT_ROUND >= MIN_ROUNDS`** — on an incremental round short of the floor,
@@ -1011,7 +1011,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ### User Can Adjust Process
 
-**`MIN_ROUNDS=2` is NOT user-adjustable** — it's an absolute floor (Craig's call, 2026-07-07).
+**`MIN_ROUNDS=2` is NOT user-adjustable** — it's an absolute floor (an operator ruling, 2026-07-07).
 Every override below adjusts `MAX_ROUNDS` only; the floor still applies underneath it.
 
 **"Quick refinement (3 rounds max)"**

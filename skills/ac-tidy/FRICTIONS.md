@@ -30,7 +30,7 @@ entries: 5
   than not reporting it. Compounding it, the memo's premise was false: measured, only 1 of 102
   open findings carried any evidence of a merged fix, so the "stale bookkeeping to be pruned"
   framing was wrong and an auto-pruner would have had nothing to close. Fixed in
-  agent-compounds 4d8ec80 after Craig ruled A+D on bd-8ms5t.
+  agent-compounds 4d8ec80 after the operator ruled A+D on bd-8ms5t.
 
 ## class-harm-escalated-without-verifying-any-consumer
 - skills: [ac-tidy]

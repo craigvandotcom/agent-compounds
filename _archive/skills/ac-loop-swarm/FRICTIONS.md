@@ -211,7 +211,7 @@ entries: 60
   prescribed calls never checked against the harness that runs them, and the first thing a worker
   does is the worst place to put one. FIRST INSTANCE — the close-out reconcile step named
   `git stash push -u` as its escape from a dirty
-  tree. `neometa.stashguard` forbids that in a shared checkout, and forbids the scoped
+  tree. `dcg.stashguard` forbids that in a shared checkout, and forbids the scoped
   `git stash push -- <paths>` form the guard's own hint recommends, so both exits the step knew
   about were walls. Doctrine that names an impossible command is worse than doctrine that names
   nothing: it spends the reader's confidence before it spends their time, and the reader assumes
@@ -294,7 +294,7 @@ entries: 60
 - proposed_fix: a guard's remedy text must be checked against the other guards installed in the same repo; where two guards mutually exclude, the runbook route is the only exit and the guard should name it.
 - narrative: close-out needed to restore one file to HEAD before a fast-forward. `dcg`'s
   `core.git:checkout-discard` refuses `git checkout -- <path>` and its refusal text prescribes
-  `git stash` — which `neometa.stashguard` forbids outright in this checkout, in both the plain
+  `git stash` — which `dcg.stashguard` forbids outright in this checkout, in both the plain
   and the scoped form. Two guards, each naming the other's forbidden command as the safe
   alternative, so following either message walks into the other wall. This is distinct from the
   related entry, where DOCTRINE named a blocked command: here the blocked command is prescribed
@@ -318,7 +318,7 @@ entries: 60
 - proposed_fix: write the message to a file and use `git commit -F <file>`; never an inline `-m` inside a single-quoted `sh -c` wrapper.
 - narrative: the commit step is a `sh -c '…'` wrapper so that the whole add/commit/push sequence
   runs under one flock. The message is passed inline with `-m`. Any apostrophe in the body — and
-  this board's prose is full of them, `Craig's`, a bead id's possessive — closes the outer single
+  this board's prose is full of them, `the operator's`, a bead id's possessive — closes the outer single
   quote. What lands is a commit TRUNCATED at that apostrophe, and the `git push` that followed it
   on the same line never runs at all, while the wrapper still exits 0. Three failures compose into
   one silent one: the message is corrupted, the push is skipped, and the status code says success,
@@ -459,9 +459,9 @@ entries: 60
 - last_seen: 2026-08-26
 - stage: ac-loop-swarm
 - status: open
-- proposed_fix: either commit a types stub, or make the worker seed name `pnpm --filter @neometa/capacitor-stillness build` as a prerequisite before type-check on plugin API changes.
-- narrative: SECOND INSTANCE 20260826-164408-17004 CobaltBeacon — new `appendSessionDump` / harness methods on definitions.ts missed tsc until `pnpm --filter @neometa/capacitor-stillness build`. Same gitignored dist/.
-- narrative: RUN 20260824-231514-17151 PurpleFinch — `@neometa/capacitor-stillness` types come from gitignored `dist/`. Adding `addListener('storage-full')` does not type-check until `pnpm --filter @neometa/capacitor-stillness build`. A scoped type-check RED on a reserved definitions.ts change is therefore a missing-artifact problem, not a type error in the source the worker just wrote.
+- proposed_fix: either commit a types stub, or make the worker seed name `pnpm --filter @org/capacitor-stillness build` as a prerequisite before type-check on plugin API changes.
+- narrative: SECOND INSTANCE 20260826-164408-17004 CobaltBeacon — new `appendSessionDump` / harness methods on definitions.ts missed tsc until `pnpm --filter @org/capacitor-stillness build`. Same gitignored dist/.
+- narrative: RUN 20260824-231514-17151 PurpleFinch — `@org/capacitor-stillness` types come from gitignored `dist/`. Adding `addListener('storage-full')` does not type-check until `pnpm --filter @org/capacitor-stillness build`. A scoped type-check RED on a reserved definitions.ts change is therefore a missing-artifact problem, not a type error in the source the worker just wrote.
 
 ## playwright-reuseexistingserver-binds-foreign-localhost-3000
 - skills: [ac-loop-swarm]
@@ -946,7 +946,7 @@ entries: 60
 - proposed_fix: scope the whole-tree-add and rm-rf rules to the PROJECT tree, so a repo created under `mktemp -d` is out of their jurisdiction. The rules exist to protect this checkout; a throwaway repo is not it.
 - narrative: RUN 20260828-000851-51620 CloudyIsland — verifying git's
   `commit --amend -- <pathspec>` semantics before relying on them required a scratch repo. Inside
-  a fresh `mktemp -d`, `git add .` tripped `neometa.stashguard:whole-tree-add` and
+  a fresh `mktemp -d`, `git add .` tripped `dcg.stashguard:whole-tree-add` and
   `rm -rf "$T"` tripped `core.filesystem:rm-rf-general`. Each cost a retry cycle.
   Worth logging precisely because the worker was doing the RIGHT thing — executing a command's
   semantics rather than assuming them, which is this project's standing remedy for the

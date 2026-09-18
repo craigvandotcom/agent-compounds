@@ -1,11 +1,11 @@
 """consumers — the consumer-dir union for the deployed-surface checks (07, 12).
 
-Org-level consumers are fixed paths under the repos root; app consumers come
+Org-level consumers are discovered from the repos root; app consumers come
 from `infrastructure/ac-deploy-targets.list` — the single source of truth
 infra-sync.sh uses to propagate the full registry (see AGENTS.md
 "Auto-propagation"). Reading it here means a newly added deploy target is
 automatically covered with no manual re-stamp of either check. Falls back to
-the last-known app list if the file is unreachable (e.g. a standalone checkout),
+on-disk discovery if the file is unreachable (e.g. a standalone checkout),
 so coverage degrades gracefully instead of silently dropping to zero.
 
 vitest-affected is DELIBERATELY kept on the union by explicit append: it carries
@@ -22,18 +22,6 @@ import os
 
 ORG_CONSUMER_SUBPATHS = (
     ".claude",
-    "neometa/content/.claude",
-    "neometa/books/.claude",
-    "neometa/software/.claude",
-)
-
-FALLBACK_APPS = (
-    "body-compass-app",
-    "unsit-app",
-    "art-still-app",
-    "cv-site",
-    "move-free-app",
-    "neometa-app",
 )
 
 # Covered before the union existed; keep explicit so coverage never regresses.
@@ -58,9 +46,23 @@ def base_present():
     return os.path.isdir(base())
 
 
-def consumer_dirs():
-    root = base()
-    dirs = {os.path.join(root, sub) for sub in ORG_CONSUMER_SUBPATHS}
+def _software_roots(root):
+    """`software/` dirs under the org root, whether the domain is a child or the root itself."""
+    roots = []
+    direct = os.path.join(root, "software")
+    if os.path.isdir(direct):
+        roots.append(direct)
+    try:
+        for name in os.listdir(root):
+            cand = os.path.join(root, name, "software")
+            if os.path.isdir(cand):
+                roots.append(cand)
+    except OSError:
+        pass
+    return roots
+
+
+def _listed_apps(root):
     deploy_list = os.path.join(root, "infrastructure", "ac-deploy-targets.list")
     apps = []
     if os.path.isfile(deploy_list):
@@ -69,8 +71,22 @@ def consumer_dirs():
                 line = line.split("#", 1)[0].strip()
                 if line:
                     apps.append(line)
-    else:
-        apps = list(FALLBACK_APPS)
-    dirs.update(os.path.join(root, "neometa", "software", app, ".claude") for app in apps)
-    dirs.update(os.path.join(root, "neometa", "software", app, ".claude") for app in EXPLICIT_APPS)
+    return apps
+
+
+def consumer_dirs():
+    root = base()
+    dirs = {os.path.join(root, sub) for sub in ORG_CONSUMER_SUBPATHS}
+    sw_roots = _software_roots(root)
+    for sw in sw_roots:
+        domain = os.path.dirname(sw)
+        dirs.add(os.path.join(domain, "content", ".claude"))
+        dirs.add(os.path.join(domain, "books", ".claude"))
+        dirs.add(os.path.join(sw, ".claude"))
+    apps = _listed_apps(root)
+    for sw in sw_roots:
+        for app in apps:
+            dirs.add(os.path.join(sw, app, ".claude"))
+        for app in EXPLICIT_APPS:
+            dirs.add(os.path.join(sw, app, ".claude"))
     return sorted(dirs)

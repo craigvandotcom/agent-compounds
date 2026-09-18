@@ -101,7 +101,7 @@ before editing.
 
 ```
 mcp__mcp-agent-mail__install_precommit_guard(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   code_repo_path: PROJECT_ROOT
 )
 ```
@@ -374,7 +374,7 @@ If the guard is true (skip):
 
 ```
 mcp__mcp-agent-mail__file_reservation_paths(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
   paths: ["<the bead's ## Territory list (element 3), verbatim>"],
   ttl_seconds: 7200,
@@ -449,7 +449,7 @@ TaskUpdate(task: "Bead {BEADS_COMPLETED + 1} of {TARGET_BEADS}", subject: "Bead 
 
 **The affected-graph can silently subset an explicit test selection (conductor's job to pre-empt).** `vitest --affected` derives the suite set from the import graph, so a test asserting against a shared interface that does NOT import the changed file is silently dropped — and the run still exits 0. When the bead touches a shared interface (a type, schema, mock, fixture, API contract): (1) **name the affected suites in the engineer prompt** — the conductor knows what changed, the child sees only its own diff; (2) find the mock/assertion owners with `grep -rl "<changed symbol>" --include='*.test.*' .` — any hit outside the changed file's own suite is in scope; (3) `VITEST_AFFECTED_DISABLED=1` is pre-authorized for this case — the child does not need to ask.
 
-**Engineering skill first (conductor's job):** Before identifying domain skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For all current neoMeta apps this is `capacitor` (`capacitor/SKILL.md`). Include it in the engineer prompt for any bead touching UI, navigation, data fetching, auth, storage, lifecycle, or build.
+**Engineering skill first (conductor's job):** Before identifying domain skills, load this project's engineering standard declared in `CORE/SKILL.md` (§ "Engineering standard"). For current consumer apps this is `capacitor` (`capacitor/SKILL.md`). Include it in the engineer prompt for any bead touching UI, navigation, data fetching, auth, storage, lifecycle, or build.
 
 **Skill routing (conductor's job):** Read the bead spec and identify relevant domain skills from `AGENTS.md` > "Available Skills". Include the relevant skill paths in the engineer prompt below.
 
@@ -593,7 +593,7 @@ Release the file reservation using the **same paths reserved in Phase 1a** (the 
 
 ```
 mcp__mcp-agent-mail__release_file_reservations(
-  project_key: CANONICAL_PROJECT_KEY,   // canonical "neometa/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  project_key: CANONICAL_PROJECT_KEY,   // canonical "<org>/<app-dir>" key — key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   agent_name: AGENT_NAME,
   paths: ["<same paths passed to file_reservation_paths in Phase 1a>"]
 )

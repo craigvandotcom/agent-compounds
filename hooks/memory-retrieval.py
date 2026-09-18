@@ -16,8 +16,8 @@ for longer/conceptual prompts. Timeouts/thresholds are tuned per tier (see
 memory: qmd-cli-latency-hook-timeout-floors). Injects top-3 hits as one plain
 `name: description` line each — the frontmatter description IS the injected content;
 qmd's snippet field is a diff hunk over frontmatter and is never emitted. The name
-re-resolves via `qmd query "<name>"` (pointers-not-content). Format ruling (Craig
-2026-09-08): no markdown decoration, no qmd path, no snippet — the description is the
+re-resolves via `qmd query "<name>"` (pointers-not-content). Format ruling
+(2026-09-08): no markdown decoration, no qmd path, no snippet — the description is the
 distilled claim and everything else was noise; the stricter ≥2-term match floor (both
 tiers) raised recall@5 while cutting injected noise.
 
@@ -37,7 +37,7 @@ boost, not a filter (see PROMOTION's docstring for the exact formula and its
 displacement-cap proof). NOTE — MEMORY_LOBES is a HOT-LANE surface: every entry is
 queried on every prompt, so adding/removing a lobe changes per-prompt latency and
 the recall surface for ALL sessions. The wiki lobe means wiki-page quality
-(gardening, dedup) directly shapes injected context everywhere (bead org-yp4). DECISION (org-6ls, Craig 2026-07-19): the alignment
+(gardening, dedup) directly shapes injected context everywhere (bead org-yp4). DECISION (org-6ls, the operator 2026-07-19): the alignment
 collection (decisions/STRATEGY) is deliberately NOT an injection lobe — decisions are
 deliberate-retrieval-only (`qmd query`); the 6 decision-shaped qrels are retired.
 
@@ -62,7 +62,19 @@ from concurrent.futures import ThreadPoolExecutor
 INFRA_ROOT = os.environ.get("INFRA_ROOT", os.path.expanduser("~/infrastructure"))
 MISSION_ROOT = os.environ.get("MISSION_ROOT", os.path.expanduser("~/mission"))
 PERSONAL_ROOT = os.environ.get("PERSONAL_ROOT", os.path.expanduser("~/personal"))
-MEMORY_LOBES = ["memory", "neometa-memory", "content-memory", "wiki"]  # L3 memory homes + synthesis pages — full content
+
+
+def _csv_env(name, default):
+    raw = os.environ.get(name)
+    if raw:
+        return [x.strip() for x in raw.split(",") if x.strip()]
+    return list(default)
+
+
+# L3 memory homes + synthesis pages. Override with QMD_MEMORY_LOBES (comma-separated)
+# when this machine's qmd collections use different names.
+MEMORY_LOBES = _csv_env("QMD_MEMORY_LOBES", ["memory", "software-memory", "content-memory", "wiki"])
+SOFTWARE_MEMORY_LOBE = os.environ.get("QMD_SOFTWARE_LOBE", "software-memory")
 # W4.6 (organic friction surfacing, skill-builder/references/friction-capture.md): per-skill
 # FRICTIONS.md sensor logs are already qmd-indexed (they fall inside each engineering-collection
 # skill's **/*.md glob) but previously never matched a memory lobe, so a related friction never
@@ -109,7 +121,7 @@ def app_lobes():
 
 
 def detect_level(cwd=None):
-    """Classify a session's cwd into one of: "root" / "neometa" / "content" / "app:<lobe>"
+    """Classify a session's cwd into one of: "root" / "org" / "content" / "app:<lobe>"
     — feeds the Phase 4 injection rank-boost (org-c5f/org-mm9). cwd defaults to
     the hook process's own os.getcwd(): the UserPromptSubmit hook is a fresh subprocess per
     prompt that inherits the session's cwd (same convention agent-compounds/hooks/
@@ -118,17 +130,16 @@ def detect_level(cwd=None):
 
     Post-split (2026-09) the old single REPO_ROOT is three separate repos — INFRA_ROOT,
     MISSION_ROOT, PERSONAL_ROOT — so classification checks each in turn rather than one
-    set of REPO_ROOT-relative path segments. "neometa"/"content"/"app:<lobe>" keep their
-    OLD label strings (preferred_lobes() and the qmd collection names they key off —
-    neometa-memory, content-memory — are unchanged by the split, only the filesystem root
-    moved from ~/Repos/neometa to ~/mission).
+    set of REPO_ROOT-relative path segments. Labels "org"/"content"/"app:<lobe>" key
+    preferred_lobes() and the qmd collection names they boost (SOFTWARE_MEMORY_LOBE,
+    content-memory). The filesystem root moved with the split layout.
 
     Mapping (first match wins):
       - under MISSION_ROOT/software/<app-dir>/ (per infrastructure/apps.list, matched via
         _app_dir_lobe_pairs()) -> "app:<lobe-name>"
       - under MISSION_ROOT/content/ -> "content"
       - under MISSION_ROOT/ (anything else, incl. software/ itself or an app dir NOT in
-        apps.list) -> "neometa"
+        apps.list) -> "org"
       - everything else (incl. INFRA_ROOT, PERSONAL_ROOT, or outside all three repos) ->
         "root" (no preference — see preferred_lobes()). The old top-level "knowledge/"
         dir (and its qmd collection) does not exist post-split — PKM content now lives
@@ -148,10 +159,10 @@ def detect_level(cwd=None):
         for d, lobe in _app_dir_lobe_pairs():
             if d == app_dir:
                 return f"app:{lobe}"
-        return "neometa"  # mission/software/<dir not in apps.list>
+        return "org"  # mission/software/<dir not in apps.list>
     if parts[0] == "content":
         return "content"
-    return "neometa"
+    return "org"
 
 
 def preferred_lobes(level):
@@ -161,18 +172,17 @@ def preferred_lobes(level):
     boosted.
 
       - "app:<name>"  -> {name, "<name>-core"} — the "-core" sibling is included
-        unconditionally: if that qmd collection doesn't exist for this app (e.g.
-        move-free, neometa have none today), no candidate will ever carry that qmd://
+        unconditionally: if that qmd collection doesn't exist for this app, no candidate will ever carry that qmd://
         prefix, so it's a harmless no-op rather than requiring a runtime index.yml read
         on this hot-lane path.
       - "content"   -> {"content-memory"}
-      - "neometa"   -> {"neometa-memory"}
+      - "org"   -> {SOFTWARE_MEMORY_LOBE}
       - "root" (or anything unrecognized, incl. a session under PERSONAL_ROOT — see
         detect_level()) -> set() — no preference, global stance."""
     if level == "content":
         return {"content-memory"}
-    if level == "neometa":
-        return {"neometa-memory"}
+    if level == "org":
+        return {SOFTWARE_MEMORY_LOBE}
     if level.startswith("app:"):
         name = level.split(":", 1)[1]
         return {name, f"{name}-core"}
@@ -426,7 +436,7 @@ def extract_keywords(text, limit=8):
 # --- Collection-overlap canonicalization (org-aga defect 2) -----------------
 # qmd collections overlap on disk (infrastructure/** and memory/** both cover
 # infrastructure/memory/**; content/** and content-memory/** both cover
-# neometa/content/memory/**). The same fact therefore arrives under two qmd://
+# content/memory/**). The same fact therefore arrives under two qmd://
 # paths, splits its own match count, and can occupy two of the five slots.
 # Canonicalize every hit to ONE qmd:// path per real file, preferring a memory
 # lobe so downstream lobe-prefix checks still fire. Falls back to the two
@@ -571,7 +581,7 @@ def keyword_search(terms, qmd_path):
             hits[f] = r
             counts[f] = counts.get(f, 0) + 1
 
-    # Require ≥2 term matches on BOTH tiers (Craig 2026-09-08: one stray keyword is not
+    # Require ≥2 term matches on BOTH tiers (operator 2026-09-08: one stray keyword is not
     # relevance — the 1-match floor injected noise like three unrelated "capture" hits).
     # The semantic path is unaffected; the eval gate (retrieval-evals/run-evals.py) judges it.
     min_matches = 2

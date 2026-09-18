@@ -76,4 +76,4 @@ execute directly."
 1. **Quick-nav table:** `~/.claude/skills/CORE/SKILL.md`
 2. **Search the knowledge base:** `qmd search "X" --json`
 3. **Search past sessions:** `cass search "X" --json`
-4. **Ask Craig** when architecture isn't clear
+4. **Ask the operator** when architecture isn't clear
