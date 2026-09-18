@@ -814,3 +814,21 @@ last_pass: 2026-09-07
   filed 15 rows under `pause` and `resume`, names absent from the flows line. All 15 were fenced.
   The rows were real and belonged under `emit` and `apply`; the reader lost them to a naming
   choice. First time the flow fence has caught invented names rather than drift.
+
+## plan-mode-keeps-no-reader-reports
+- skills: [ac-polish]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: []
+- first_seen: 2026-09-18
+- last_seen: 2026-09-18
+- stage: manual
+- status: open
+- proposed_fix: plan mode saves each round's reader report under `<STATE>/reports/r<N>.md`,
+  as bead and seams mode already do, so a later re-approval can show what the rounds changed.
+- narrative: `workflows/plan.md` keeps only the per-round digests (`round-N.sha`). The plan
+  folder is git-ignored, and no transcript or subagent log keeps the reader reports. When
+  `plan-approve.sh` asked for a regate on a plan already at its fixpoint, nothing could show
+  the human what the earlier rounds had edited.
