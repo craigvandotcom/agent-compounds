@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 25-archived-names
-# prevents: a retired skill's name surviving in live doctrine — an archiving commit that leaves a pointer standing (Check 2 resolves only /ac-* slash refs, so bare-text ghosts pass unseen)
+# prevents: a retired skill's name surviving in live doctrine — an archiving commit that leaves a
+#   pointer standing (Check 2 resolves only /ac-* slash refs, so bare-text ghosts pass unseen)
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/25-archived-names

@@ -57,7 +57,7 @@ ac-prove: ensure, ci depth, --ref <current main HEAD>
 
 If `ac-prove` returns a green, tip-valid proof: **do nothing else.** No bead, no Slack message,
 no report file. A healthy nightly proof is exactly the expected steady state — silence is the
-correct signal. (Contrast `ac-align`'s nightly reconcile /`ac-triage`'s "write a proof-of-life report even on zero
+correct signal. (Contrast `ac-tidy` /`ac-triage`'s "write a proof-of-life report even on zero
 findings" pattern — that doesn't apply here; `ac-prove`'s own dispatched-run history on GitHub
 Actions already IS the proof-of-life trail for this job.)
 
@@ -85,7 +85,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
 
    ```bash
    br create "ac-prove nightly: <structural failure key>" -t bug \
-     --labels "origin:ac-prove,unrefined,ac-prove-nightly" -p 2 \
+     --labels "origin:ac-prove,unrefined,ac-prove-nightly,impact:<class>" -p 2 \
      --description "Nightly ensure-depth ac-prove run went red at <SHA/runId/URL>. <failing job/step + first failure>. Filed by the scheduled ac-prove heartbeat — fix-forward is never invoked from this path, so this needs a human/loop pickup."
    ```
 

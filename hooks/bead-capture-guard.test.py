@@ -1,5 +1,5 @@
 # ASSURANCE-ROLE: test-harness
-# CALLER: scripts/run-all-harnesses.sh (glob-discovered, executed by the registry-lint
+# CALLER: scripts/run-all-proofs.sh (glob-discovered, executed by the registry-lint
 # `harnesses` CI job since ac-on0y.1) and lint.sh Check 18, which drives the same cases.
 # Deliberately UNWIRED in hooks/hooks.json: it is the PROOF for bead-capture-guard.py,
 # not a hook itself. Declared so orphan detection (lint Check 21) does not read a live
@@ -9,7 +9,7 @@ G = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bead-capture-guard
 BLOCK, ALLOW = 2, 0
 cases = [
  (BLOCK, 'br create "x" -t task -p 2',                              "bare create, no labels"),
- (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "create with origin + probe"),
+ (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"', "create with origin + probe"),
  (BLOCK, 'br create "x" -t task -l "triage,unrefined"',             "labels but no origin"),
  (ALLOW, 'br create --help',                                        "help"),
  (ALLOW, 'br list --json',                                          "other subcommand"),
@@ -20,12 +20,12 @@ cases = [
  (ALLOW, 'echo "br create foo"',                                    "br create inside echo string"),
  (ALLOW, 'git commit -m "br create thing"',                         "br create in commit msg"),
  (BLOCK, 'cd /tmp && br create "y" -t task',                        "chained after cd"),
- (ALLOW, 'cd /tmp && br create "y" -t task -l origin:ac-land,unrefined -d "- AC: x. Probe: `true` - tier: none"', "chained, labelled"),
- (ALLOW, 'br create "x" --labels=origin:ac-tidy',                   "--labels= form"),
+  (ALLOW, 'cd /tmp && br create "y" -t task -l origin:ac-land,unrefined,impact:data -d "- AC: x. Probe: `true` - tier: none"', "chained, labelled"),
+ (ALLOW, 'br create "x" --labels=origin:ac-backlog',                "--labels= form"),
  (BLOCK, 'br create "x" --labels=hygiene',                          "--labels= without origin"),
  (BLOCK, 'FOO=1 br create "x" -t task',                             "env-prefixed"),
  (BLOCK, 'br create "x" -l "notorigin:sneaky"',                     "origin as substring must not pass"),
- (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa"',              "origin second in list"),
+  (ALLOW, 'br create "x" -l "unrefined,origin:ac-qa,impact:data"',              "origin second in list"),
  (ALLOW, 'br create "x" -t task -l "origin:unknown,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "unknown is legal"),
  (ALLOW, "cat <<'EOF'\nbr create nope\nEOF",                        "heredoc body"),
  # --- origin gate: multi-line shapes (ac-y25j). A heredoc body is DATA, never a
@@ -38,28 +38,28 @@ cases = [
  (ALLOW, 'br create "x" -l "origin:a" ; br create "y" -l origin:b', "two labelled creates"),
  (BLOCK, 'br create "x" -l origin:a ; br create "y" -t task',       "second create unlabelled"),
  (ALLOW, 'echo "unbalanced \'quote',                                "unparseable -> fail open"),
- (ALLOW, '/Users/x/.local/bin/br create "z" -l origin:ac-review',   "absolute path br"),
+ (ALLOW, '/Users/x/.local/bin/br create "z" -l origin:ac-review,impact:data',   "absolute path br"),
  (BLOCK, '/Users/x/.local/bin/br create "z" -t bug',                "absolute path br, no origin"),
 # qa-shared.md ships an origin placeholder the caller must substitute. An UNsubstituted
   # placeholder must still block — otherwise a copy-paste files beads with a literal
   # "origin:<ac-qa>" and the provenance data is junk.
   (BLOCK, 'br create "x" -t bug --labels "origin:<ac-qa>,qa-finding,unrefined"',
           "unsubstituted placeholder must block"),
-  (ALLOW, 'br create "x" -t bug --labels "origin:ac-qa,qa-finding,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+  (ALLOW, 'br create "x" -t bug --labels "origin:ac-qa,qa-finding,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
           "substituted placeholder passes"),
  # --- readiness axis ---
  (BLOCK, 'br create "x" -t task -l "origin:ac-review"',        "task, origin but no readiness"),
  (BLOCK, 'br create "x" -t bug -l "origin:ac-review,review-finding"', "bug, no readiness"),
- (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined" -d "- AC: x. Probe: `true` - tier: none"',  "task + unrefined"),
+ (ALLOW, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',  "task + unrefined"),
  (ALLOW, 'br create "x" -t decision -l "origin:dream,human-gate"',    "decision + human-gate"),
  (ALLOW, 'br create "x" -t task -l "origin:x,refined" -d "- AC: x. Probe: `true` - tier: none"',  "refined accepted, not second-guessed"),
  # Epics are containers, never picked up — exempt, and must stay exempt or every
  # epic-creation template in the registry breaks.
- (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review"',        "epic exempt from readiness"),
- (ALLOW, 'br create "Epic: x" --type=epic -l "origin:ac-hygiene"',   "epic via --type= form"),
+ (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-review,impact:data"',        "epic exempt from readiness"),
+ (ALLOW, 'br create "Epic: x" --type=epic -l "origin:ac-hygiene,impact:data"',   "epic via --type= form"),
  # Unknowable type must SKIP readiness, not block: `<type>` could stand for epic.
- (ALLOW, 'br create "x" -t <type> -l "origin:ac-bead-capture"',      "placeholder type skips readiness"),
- (ALLOW, 'br create "x" -l "origin:ac-bead-capture"',                "absent type skips readiness"),
+ (ALLOW, 'br create "x" -t <type> -l "origin:ac-backlog"',      "placeholder type skips readiness"),
+ (ALLOW, 'br create "x" -l "origin:ac-backlog"',                "absent type skips readiness"),
  # -l is repeatable; readiness may live in the SECOND flag.
   (ALLOW, 'br create "x" -t task -l "origin:x" -l "unrefined" -d "- AC: x. Probe: `true` - tier: none"', "readiness in a repeated -l"),
   (BLOCK, 'br create "x" -t task -l "origin:x" -l "backend"',         "repeated -l, still no readiness"),
@@ -67,16 +67,65 @@ cases = [
   # need one `Probe: `<command>`` ... tier: line in the body; epic/decision/investigation
   # are exempt; an absent description blocks; a placeholder body skips (bead_type doctrine).
   (BLOCK, 'br create "x" -t bug -l "origin:ac-triage,unrefined"',        "bug without Probe -> refused"),
-  (ALLOW, 'br create "x" -t bug -l "origin:ac-triage,unrefined" -d "- AC: x. Probe: `true` - tier: none"', "bug with Probe -> admitted"),
-  (ALLOW, 'br create "x" -t investigation -l "origin:ac-triage,unrefined"', "investigation without Probe -> admitted"),
-  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-triage"',           "epic without Probe -> admitted"),
+ (ALLOW, 'br create "x" -t bug -l "origin:ac-triage,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"', "bug with Probe -> admitted"),
+ (ALLOW, 'br create "x" -t investigation -l "origin:ac-triage,unrefined,impact:data"', "investigation without Probe -> admitted"),
+  (ALLOW, 'br create "Epic: x" -t epic -l "origin:ac-triage,impact:data"',           "epic without Probe -> admitted"),
   (BLOCK, 'br create "x" -t task -l "origin:ac-triage,unrefined"',       "task, absent description -> blocked"),
-  (ALLOW, 'br create "x" -t task -l "origin:ac-triage,unrefined" -d "<body>"', "placeholder body skips probe"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-triage,unrefined,impact:data" -d "<body>"', "placeholder body skips probe"),
+  # --- impact axis (ac-wp8i.3): an AUTOMATED origin needs exactly one closed-set impact
+  # label; human/plan origins and human-gate forks are exempt (a refusal names them).
+  (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "automated origin, no impact -> refused"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-human-session,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "human origin, no impact -> admitted"),
+  (BLOCK, 'br create "x" -t task -l "origin:ac-implement,unrefined,impact:perf" -d "- AC: x. Probe: `true` - tier: none"',
+          "impact outside the closed set -> refused"),
+  # --- subagent refusal (ac-wp8i.3): a subagent files NOTHING — every create, fork
+  # included, is refused and returned to the coordinator as a PROPOSED-BEAD.
+  (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "subagent, non-gate create -> refused", {"agent_id": "sub-1"}),
+  (BLOCK, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
+          "subagent, human-gate fork -> refused", {"agent_id": "sub-1"}),
+  # --- evasion classes (ac-review 2026-09-10): the guard must see a `br create` reached
+  # through command substitution, a shell `-c` wrapper, or a command wrapper.
+  (BLOCK, 'out=$(br create "x" -t task)',         "command substitution, no origin"),
+  (BLOCK, '`br create "x" -t task`',              "backtick substitution, no origin"),
+  (BLOCK, "sh -c 'br create \"x\" -t task'",      "shell -c wrapper, no origin"),
+  (BLOCK, 'bash -c "br create x -t task"',        "bash -c wrapper, no origin"),
+  (BLOCK, 'xargs br create "x" -t task',          "xargs wrapper, no origin"),
+  (BLOCK, 'env br create "x" -t task',            "env wrapper, no origin"),
+  (ALLOW, 'out=$(date)',                          "substitution with no bead create"),
+  (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data,human-gate" -d "- AC: x. Probe: `true` - tier: none"',
+          "subagent, bare human-gate on a task -> refused", {"agent_id": "sub-1"}),
+  (BLOCK, 'br create "ACTION: do x" -t task -l "origin:ac-review,human-gate" -d "<body>"',
+          "subagent, ACTION fork -> refused", {"agent_id": "sub-1"}),
+  # --- impact-axis origins (ac-review 2026-09-11): ac-qa and ac-land file automated
+  # non-gate beads and now require impact; reflect/dream file only human-gate cards.
+  (BLOCK, 'br create "x" -t task -l "origin:ac-qa,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "ac-qa automated origin, no impact -> refused"),
+  (ALLOW, 'br create "x" -t task -l "origin:ac-qa,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "ac-qa with impact -> admitted"),
+  (BLOCK, 'br create "x" -t bug -l "origin:ac-land,unrefined" -d "- AC: x. Probe: `true` - tier: none"',
+          "ac-land automated origin, no impact -> refused"),
+  # --- subagent marker via the ambient AC_SUBAGENT env seam (harnesses that cannot supply
+  # the agent_id stdin field set this instead).
+  (BLOCK, 'br create "x" -t decision -l "origin:ac-review,human-gate"',
+          "subagent via AC_SUBAGENT, decision fork -> refused", {}, {"AC_SUBAGENT": "1"}),
+  (BLOCK, 'br create "x" -t task -l "origin:ac-review,unrefined,impact:data" -d "- AC: x. Probe: `true` - tier: none"',
+          "subagent via AC_SUBAGENT, non-gate create -> refused", {}, {"AC_SUBAGENT": "1"}),
 ]
 fails = 0
-for want, cmd, name in cases:
-    p = subprocess.run([sys.executable, G], input=json.dumps({"tool_name":"Bash","tool_input":{"command":cmd}}),
-                       capture_output=True, text=True)
+for case in cases:
+    want, cmd, name = case[0], case[1], case[2]
+    extra = case[3] if len(case) > 3 else {}
+    env_extra = case[4] if len(case) > 4 else None
+    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}}
+    payload.update(extra)
+    env = dict(os.environ)
+    if env_extra:
+        env.update(env_extra)
+    p = subprocess.run([sys.executable, G], input=json.dumps(payload),
+                       capture_output=True, text=True, env=env)
     got = p.returncode
     ok = got == want
     if not ok:

@@ -7,7 +7,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/05-agents-diagram.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail
@@ -25,10 +25,10 @@ bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 # this repo, so the enclosing .gitignore governs — same as the legacy block).
 out="$(python3 "$CHECK" "$ROOT/lint/fixtures/05-agents-diagram" 2>&1)"; rc=$?
 if [ "$rc" = 1 ] \
-   && printf '%s' "$out" | grep -q "diagram path missing: deploy.sh" \
+   && printf '%s' "$out" | grep -q "diagram path missing: engine" \
    && printf '%s' "$out" | grep -q "diagram path missing: templates" \
    && printf '%s' "$out" | grep -q "NOTICE: diagram path '_plans' is gitignored"; then
-  ok "RED: static fixture -> exit 1 naming deploy.sh and templates; _plans skipped as gitignored"
+  ok "RED: static fixture -> exit 1 naming engine and templates; _plans skipped as gitignored"
 else
   bad "RED case: expected 1 naming two paths + the _plans NOTICE, got $rc"; printf '%s\n' "$out"
 fi

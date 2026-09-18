@@ -1,0 +1,1 @@
+# Design spec (consumer fixture)

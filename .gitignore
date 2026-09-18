@@ -26,3 +26,11 @@ harnesses.local.json
 
 # dcg probe payloads — regenerated on every probe run
 tools/dcg/fixtures/
+
+# ac-polish run state (round digests + receipt) — scratch; the durable receipt is on the
+# beads / plan frontmatter, so this is disposable and must never be committed
+.polish/
+# ...and the path ac-polish ACTUALLY writes to. The .polish/ rule above states the intent
+# ("must never be committed") but never matched, so every polish run left .claude/state/
+# showing as untracked and a `git add -A` would have committed it.
+.claude/state/

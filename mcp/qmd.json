@@ -1,0 +1,5 @@
+{
+  "_doc": "qmd — the local markdown/semantic search server over the memory substrate. One file per server is the canon shape (ac-jjwx): the engine merges mcp/*.json into each harness's dialect, keyed by filename, so adding a server is adding a file. NO env block on purpose: qmd resolves its own index under ~/.cache/qmd, and the Mac's old .mcp.json pinned QMD_INDEX_PATH to an absolute /Users/... path — a machine literal that is wrong everywhere else and exactly what Check 37 forbids in the engine. Carrying it here would reintroduce the defect one directory over.",
+  "command": "qmd",
+  "args": ["mcp"]
+}

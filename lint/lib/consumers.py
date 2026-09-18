@@ -13,7 +13,7 @@ a `public` flag in the list (its harness layer is gitignored), and the whole-lin
 parsing below reproduces the legacy block verbatim — the flagged line yields a
 nonexistent dir that is skipped, and the explicit append is what covers it.
 
-LINT_CONSUMER_BASE (default: $HOME/Repos) is a TEST-ONLY seam: the fixture
+LINT_CONSUMER_BASE (default: the derived org root) is a TEST-ONLY seam: the fixture
 harnesses point it at a temp consumer tree. Unset in production every path is
 identical to the legacy bash block's.
 """
@@ -41,7 +41,21 @@ EXPLICIT_APPS = ("vitest-affected",)
 
 
 def base():
-    return os.environ.get("LINT_CONSUMER_BASE") or os.path.expanduser("~/Repos")
+    # Derived, not spelled: this file sits at <org>/<domain>/software/agent-compounds/
+    # lint/lib/, so the org root is five parents up — ~/Repos on the Mac monorepo, ~ in
+    # the three-repo split. The old hardcoded default named one machine's layout and
+    # returned a path that does not exist anywhere else.
+    here = os.path.dirname(os.path.abspath(__file__))
+    derived = os.path.normpath(os.path.join(here, *([os.pardir] * 5)))
+    return os.environ.get("LINT_CONSUMER_BASE") or derived
+
+
+def base_present():
+    """True when the consumer ROOT exists. A bare checkout (CI) has none, so the
+    consumer-surface checks (07, 12) have nothing to audit and SKIP green rather
+    than NOT-GATE: a not-gated check makes the whole lint run exit 2, and a red
+    gate that can never pass is worse than none."""
+    return os.path.isdir(base())
 
 
 def consumer_dirs():

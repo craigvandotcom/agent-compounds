@@ -10,7 +10,7 @@ teardown ordering, skill-specific reservation params).
 
 ```
 mcp__mcp-agent-mail__macro_start_session(
-  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "neometa/<app-dir>" key; key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
+  human_key: CANONICAL_PROJECT_KEY,   // this tool takes human_key (other tools take project_key) — canonical "<org>/<app-dir>" key; key-format + never-absolute rule: agent-mail/references/agent-identity.md § Project key format
   program: "claude-code",
   model: "<the model THIS session is running, e.g. claude-opus-5>"  // never a fixed string — a stale pin misattributes every commit and review
 )

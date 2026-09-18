@@ -1,11 +1,11 @@
 ---
 name: beads-standards
-description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project under ~/Repos — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-bead-refine, to capture one use ac-bead-capture, to generate a wave use ac-beadify.'
+description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project in any of the three repos (~/infrastructure, ~/mission incl. its apps, ~/personal) — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-polish, to capture one use ac-backlog, to generate a wave use ac-beadify.'
 ---
 
 # Beads Standards
 
-**Purpose:** one canon so a bead written in body-compass-app reads the same as one in
+**Purpose:** one canon so a bead written in one consuming app reads the same as one in
 the root repo or agent-compounds.
 **Status:** Complete (ratified 2026-07-15, cockpit-mission-panel audit — bead `ac-lv5`)
 
@@ -13,7 +13,7 @@ the root repo or agent-compounds.
 
 One standard, every `.beads/` project — apps, root repo, agent-compounds itself, and
 any future personal-task db. Adoption is **per-project and currently uneven**
-(refined/unrefined coverage: body-compass 87%, root/art-still 0%) — that's expected,
+(coverage varies by board: the flagship app's board is mostly refined, newer boards barely) — that's expected,
 not a violation to chase down retroactively. This skill defines what a **new** bead
 must do; § Backfill below is the one-time catch-up list for what's already behind.
 
@@ -29,13 +29,13 @@ Every bead is one of two kinds; the kind decides who may close it.
 | Kind | Default | Marker | Closes |
 |---|---|---|---|
 | **Agent bead** | Yes — every bead starts here | none | Any agent, on verified completion |
-| **Human bead** | No — must be explicit | `human-gate` label | Craig only; agents enrich, never close |
+| **Human bead** | No — must be explicit | `human-gate` label | the operator only; agents enrich, never close |
 
 **`human-gate` is the SOLE human marker.** Assignee is clean but ~9% populated;
 `DECISION:`-prefixed titles leak past label-based scans. Five deprecated synonyms
 **merge into `human-gate`** — replace on sight, never create a new one:
 
-`human-only` · `human-blocked` · `human-required` · `craig-required` · `craig-context` → **`human-gate`**
+`human-only` · `human-blocked` · `human-required` · `<operator>-required` · `<operator>-context` → **`human-gate`** (the last two carried the operator's `factory.json` `human.name` literally — quote them from the live label list, never from this doc)
 
 Why it matters beyond hygiene: the cockpit's leverage/on-you lanes and its 15-second
 decision rule are computed directly off this one label (`is_pending` + `human-gate`
@@ -44,7 +44,7 @@ synonym is a bead the cockpit cannot see.
 
 ## Human-gate template (two card kinds — one gate label)
 
-A human bead is a **card**, not a flag — everything Craig needs to act is on it.
+A human bead is a **card**, not a flag — everything the operator needs to act is on it.
 `human-gate` stays the **SOLE** gate label: no `-gate` variant is ever introduced. The
 two kinds below differ only by **title prefix** and body template, so the cockpit's
 `is_pending` + `human-gate` predicates are untouched — the split is at the template
@@ -75,7 +75,7 @@ test, with `## Before filing` as the run order. Every site points there and defi
 itself. (`HUMAN:` remains an accepted alias prefix for a decision-shaped gate that isn't a
 fork — an approval, credential handoff, or go/no-go — same fields, same wiring rule.)
 
-**`ACTION:` — an action card** (a do-in-the-world task only Craig can perform — a console
+**`ACTION:` — an action card** (a do-in-the-world task only the operator can perform — a console
 toggle, a store submission, a credential handoff). Not a fork, so **no options block**; the
 copy-paste field block + worked example (BCA `bd-l6khg.13`) live in
 `reference/human-gate-template.md` § ACTION cards.
@@ -123,7 +123,7 @@ carry it alone. (Measured: bd-1538r, 2026-08-29 — self-held in prose, claimed 
 
 **`cross-repo` — work whose bytes live in a different git repo than the board that
 holds the ticket.** Mandatory body line: `Repo: <name>` (the owning checkout —
-`agent-compounds`, root `~/Repos`, etc.). Enforcement: `ac-implement/SKILL.md`
+`agent-compounds`, `infrastructure`, etc.). Enforcement: `ac-implement/SKILL.md`
 selection filter still *selects* these beads (the board that holds the id is the
 only one that can see them); the env-prerequisite table + `ac-pipeline/references/commit-discipline.md`
 § Cross-repo skill/infra beads require the session to **commit in that repo**,
@@ -134,8 +134,10 @@ never into the board repo. Do not overload `human-gate` as a routing stopgap.
 **Bead-level `blocks` edges are the only authored sequencing truth.** Epic order is
 DERIVED from the cross-epic bead edges beneath it — epics are sequenced so as to honour
 the bead edges that cross between them, never the reverse — epic order follows the bead
-edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge** (a `blocks` edge with an epic endpoint is an I2 violation —
-the epic-edge detector in `ac-pipeline/references/board-scan.md` reports it).
+edges, it never leads them. **No workflow EVER authors an epic->epic dependency edge.**
+No authored `blocks` edge may have an epic endpoint — containment (`parent-child`) already
+sequences an epic against its children, and every epic-endpoint `blocks` edge is an I2
+violation. The epic-edge detector in `ac-pipeline/references/board-scan.md` implements this.
 
 The only legitimate cross-epic edge is a genuinely bead-shaped **consume** — bead B needs
 an artifact bead A delivers. The falsifiability test before adding any cross-epic edge:
@@ -234,8 +236,8 @@ checklist). The frozen set:
 - `human-gate` — the sole human marker
 - the VERDICT grammar tokens — `passed`/`failed`/`blocked`/`waived` + `discovered-from`
 - the catch-stage closed set — `qa-finding`/`review-finding`/`hygiene-finding`/`ci-finding`/`prod-finding`
-- the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-bead-refine` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
-- `human-ratified` — fast-track provenance stamped only by `ac-human-session` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
+- the refine-path pair — `refine-full`/`refine-light` (stamped by `ac-polish` at finalize; `refine-light` records a disclosed reduced-process deviation, making the light-path frequency/safety measurable)
+- `human-ratified` — fast-track provenance stamped only by `ac-human` after a lightweight completeness check; not a synonym for the gauntlet and never a stamp of `refined`
 - `origin:<skill>` — the creator/provenance axis, enforced forward-only by `hooks/bead-capture-guard.py`
 
 Adding a NEW load-bearing label is allowed (it breaks no existing series); **renaming or retiring** a frozen one requires the migration note. Worked example — **`degraded-solo`** (added 2026-07-29, bd-nreuv): a capability-starved run (no `Task` tool, or spawns exhausted) stamps it **alongside** the path label, never instead of it, so the pair series above stays intact and `refine-full ∧ degraded-solo` is one grep; grammar + the `refine-light-solo` criteria live in `ac-pipeline/references/degraded-mode.md`. Migration log:
@@ -266,7 +268,7 @@ Fields are **joinable for future model-level comparison**: `model` groups runs b
 `skill@version` (the agent-compounds git SHA at skill-load) is the **skills-eval before/after
 axis** — it lets a doctrine change be measured against outcomes. Per-bead **token cost is
 excluded** (a child can't observe its own usage — a per-bead split would be fabricated
-precision); token cost is reported at batch/child granularity by `ac-batch-close`.
+precision); token cost is reported at batch/child granularity by the batch boundary.
 
 ## Label hygiene rules
 
@@ -285,7 +287,7 @@ precision); token cost is reported at batch/child granularity by `ac-batch-close
   `repo:agent-compounds`/`repo-agent-compounds`). Pick the kebab-case form, rename
   with `br label rename <old> <new>`.
 - **`qa-blocker` is REPO-WIDE, not per-bead.** It is a gate label: Hard-stops
-  ac-batch-close and ac-merge for every batch in this repo until removed. Use it only
+  batch close-out for every batch in this repo until removed. Use it only
   when the whole ship path must halt pending QA. To mark a single bead blocked, use a
   `blocks` dependency — never this label. (There is no `blocked` status.)
 
@@ -301,9 +303,9 @@ contradiction, `defer_until` gaps): `reference/2026-07-15-backfill-checklist.md`
 Every repo with work has its own `.beads/` (`issues.jsonl` tracked, `.db` gitignored
 local cache). Deps only gate within one db — a bead belongs in the repo whose code it
 changes; there is no cross-repo dependency graph (0 cross-project `blocks` edges exist
-today, confirmed by the cockpit audit — Craig himself is the only shared node across
+today, confirmed by the cockpit audit — the operator is the only shared node across
 projects). Cross-project visibility is a dashboard/docket concern (cockpit, or
-`ac-human-session` where deployed), never a reason to invent a shared db.
+`ac-human` where deployed), never a reason to invent a shared db.
 
 **Public-repo rule:** agent-compounds's `issues.jsonl` is world-readable. Beads there
 carry no strategy, money, personal, or credential content — a sensitive decision's
@@ -423,7 +425,8 @@ br sync --flush-only      # export DB -> JSONL
   after any post-hoc `dep add` batch and require it clean.
 - **An epic with 0 OPEN children is usually DONE, not empty.** The open-board view hides
   closed children and epics don't auto-close on last child close — check closed children
-  before triaging an epic as abandoned/empty.
+  before triaging an epic as abandoned/empty. D3 caveat: children-closed is necessary but
+  not sufficient — the close still needs green probes and a worker pick (the epic is the last bead).
 - **`br` in a NON-TTY context (scripts/agents) mis-executes compound one-liners** — a call chained
   with `&&`, or inside a `for` loop, pipe or substitution, can fail with a "not a terminal" error.
   Give every `br` call its own standalone Bash invocation (worker.md's `--json`/`-f` pattern).

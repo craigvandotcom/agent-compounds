@@ -78,7 +78,7 @@ NO-OP that silently admits every `human-gate` / `device` / `unrefined` bead. Mea
 `human-gate` bead sat pickable in the pool (re-measured 2026-09-13: still `null`). Labels must
 therefore be RE-HYDRATED from `br list`, which does return them. Both calls need `--limit 0` —
 `br ready` defaults to 20 and `br list` to 50, and a truncated pool is starvation that looks
-like an empty queue.
+like an empty queue. Epics stay in the pool: they sort last and are the terminal pick (§8).
 
     RUST_LOG=error br ready --json -l refined --limit 0 \
       | jq -r '.[] | objects | .id' > "$SCRATCH/ready.ids"
@@ -89,18 +89,23 @@ like an empty queue.
           | [ .[] | objects
               | select(.id as $i | $R | index($i))
               | select(.status == "open")
-              | select(.issue_type != "epic" and .issue_type != "decision")
+              | select(.issue_type != "decision")
               | select(((.labels // []) | any(. == "epic" or . == "human-gate"
                           or . == "device" or . == "unrefined")) | not)
               | select((.assignee // "") == "" or (.assignee // "") == $me)
               | select((.title | startswith("PREMISE-FAILED:")) | not)
             ]
-          | sort_by(if .issue_type == "bug" then 0 else 1 end, .priority, .created_at)
+          | sort_by(if .issue_type == "bug" then 0
+                    elif .issue_type == "epic" then 2 else 1 end, .priority, .created_at)
           | .[].id'
 
 Take the first id that is NOT in `$BURNED`. **A bead whose claim was just refused is never
 re-picked in the same pass** — without that rule the loop burns its whole budget re-claiming
-one bead it cannot have. No eligible id left → go to the batch boundary (§8).
+one bead it cannot have. No eligible id left → go to the batch boundary (§9).
+
+**An epic id out of this query is the terminal pick, never ordinary work.** Epics sort
+last, so a ready epic surfaces only when no child remains to claim; route it to §8 with
+the id — never §2's work path. There is no work step and no commit on an epic.
 
 **The prod-write gate is part of eligibility, and it is claim-time.** A bead meeting
 beads-standards' prod-write predicate — (i) INSERTs, UPDATEs or DELETEs user-data rows, (ii)
@@ -162,7 +167,8 @@ exist yet" is the weakest possible answer to what the diff caused.
 Implement the bead as written. Load the domain skill it names. `## Territory` IS your file
 list, verbatim — and a bead that carries no `## Territory` (the schema drops it from Phase 3
 on) gives you its `## Delivers` paths instead. A file list that contradicts its own ACs is a
-spec defect — comment `spec-contradiction`, unclaim, go to §1.
+spec defect — comment `spec-contradiction`, and try §4b first when the contradiction is that
+the work already exists; otherwise unclaim, go to §1.
 
 Relocate every anchor by the bead's QUOTED text, never by a line number: on a shared trunk
 line numbers drift, and a bead is compiled intent, never a cache of the tree.
@@ -171,10 +177,32 @@ line numbers drift, and a bead is compiled intent, never a cache of the tree.
 <file>`. Build the thing the AC describes, then confirm the probe goes green. Writing the token
 to pass the grep is the vacuous-AC class this pipeline exists to kill.
 
-If the bead needs a decision only a human can make, file a human-gate bead naming the gate
-reason (fork · authorization · intent · action), unclaim, go to §1. Never ask and wait. The
-mid-bead exception runs the template's § Before filing and files `plan-gap` when the approved
-plan did not settle the fork; a fork found mid-bead keeps unclaim-and-file.
+If the bead needs a decision only a human can make, do NOT file it — a subagent files
+nothing. Return the fork as a PROPOSED-BEAD block to the coordinator (gate reason — fork ·
+authorization · intent · action · plus options and a recommendation), unclaim, go to §1.
+Never ask and wait. The mid-bead case runs the template's § Before filing and proposes
+`plan-gap` when the approved plan did not settle the fork; the coordinator files it.
+
+## 4b — DISPOSITION — the bead in hand may already be someone else's work
+
+Before you unclaim on a spec defect, one attempt belongs to the gate. A bead whose work
+ALREADY EXISTS at HEAD closes `obsolete:`, and the gate — never your judgement — verifies
+that claim: every AC probe must exit 0 at HEAD with no Consumes blocker open, and the reason
+must name a `## Delivers` artifact the evidence core resolves.
+
+    bash "$SCRIPTS"/close-gate.sh <id> \
+      --reason "obsolete: the defect is resolved at HEAD by other work (<sha>). Delivered: <a Delivers path>" \
+      --actor "$ACTOR"
+
+- **exit 0** — closed. Post the worker receipt (§7) and go to §1.
+- **exit 1** — `CLOSE-REFUSED` — the staleness claim was wrong or unprovable (a red probe,
+  an unresolved artifact, an open blocker). Fall back to the routing you were on: comment,
+  unclaim, §1. The refusal IS the finding; do not retry with different wording.
+- **exit 2** — `NOT-CHECKED` — never a close. Fall back as above.
+
+`wontfix:` is not yours to file — "we decided not to build this" is intent, and intent stays
+human. Stale beads you do NOT hold (premise-stamped, blockers closed around them) are the
+coordinator's refly sweep, not yours; never chase a bead you do not hold.
 
 ## 5 — SELF-REVIEW, and what it is not
 
@@ -186,8 +214,9 @@ It greps the callers, outside your diff, of every export you changed or file you
 compares them to the bead's `touchers:` line. `REFUSED [unowned-callers]` names a caller the
 bead never declared: that is a spec defect of the same class as a probe reading outside your
 Territory — the declaration was wrong or your change grew. Do not update the caller quietly:
-comment the bead with the named files, unclaim, go to §1. `PASS` means the plan knew its
-callers. Test files outside the diff are reported, never refused — they break loudly.
+comment the bead with the named files, and try §4b first when the callers' work already
+landed; otherwise unclaim, go to §1. `PASS` means the plan knew its callers. Test files
+outside the diff are reported, never refused — they break loudly.
 
 Re-read your diff against the bead's ACs with fresh eyes: every AC, does the change actually
 do what it describes, or only what its probe measures? Then run the project's gates — for this
@@ -195,14 +224,14 @@ registry:
 
     bash lint.sh                        # compare FAILING CHECK NAMES to the known baseline;
                                         # never pin or assert an absolute failure count
-    bash scripts/run-all-harnesses.sh   # or your own new/changed *.test.sh directly
+    bash scripts/run-all-proofs.sh   # or your own new/changed *.test.sh directly
     ubs "<file>" "<file>"               # ONE call, every path quoted; read the DETAIL lines
 
 `ubs` has no shell or markdown scanner: over those it prints *"nothing was checked (this is NOT
 a pass)"*. Report that verbatim as an unverified tier.
 
 **IN A SWARM, THE TWO REPO-WIDE GATES ABOVE ARE ADVISORY TO YOU AND AUTHORITATIVE TO NOBODY.**
-`lint.sh` and `run-all-harnesses.sh` measure the WORKING TREE, which holds every sibling's
+`lint.sh` and `run-all-proofs.sh` measure the WORKING TREE, which holds every sibling's
 uncommitted edits as well as yours. Measured: `lint.sh` returned a clean baseline that was
 produced ENTIRELY by a sibling's uncommitted change while committed HEAD was still red — a
 bead would have closed on a green that existed in no commit. So at N>1: run them to catch your
@@ -245,6 +274,10 @@ constant in this file. Exit 9 = foreign branch: stop, report, touch nothing. Exi
 the push was rejected and the commit is safe in local trunk; note it and move on, and NEVER
 pull, rebase, stash or reset to "fix" it.
 
+If the work step leaves nothing tracked changed (`git status --porcelain` names no modified
+tracked file outside the ledger), skip COMMIT — an empty commit is not evidence — and go to
+§7; the §7 reason still names every Delivers path (D2).
+
 Never stage `.beads/issues.jsonl`. The session owns the ledger; a worker that commits it
 publishes every other writer's board state under its own bead's message.
 
@@ -256,7 +289,9 @@ publishes every other writer's board state under its own bead's message.
 
 The reason's verb LEADS (`shipped` · `fixed` · `wontfix` · `duplicate` · `obsolete`; a bug
 closes `fixed:`) and it must name an artifact from this bead's own `## Delivers` — the gate's
-evidence core cross-references it and refuses otherwise.
+evidence core cross-references it and refuses otherwise. The disposition verbs are §4b's
+route: they are attempted while you still hold the claim, never after flight-check has
+unclaimed you.
 
 - **exit 0** — every leg held and the close was READ BACK as landed.
 - **exit 1** — `CLOSE-REFUSED: <LEG>`. Fix what the leg names and re-run. Do not close around it.
@@ -268,7 +303,30 @@ Then post the worker receipt (body through a file) and go to §1:
       > "$SCRATCH/worker.txt"
     RUST_LOG=error br comments add <id> -f "$SCRATCH/worker.txt"
 
-## 8 — HAND BACK
+## 8 — EPIC, the terminal pick
+
+An epic id arrives here from §1 when every child is closed and the epic carries
+`refined`. It is closed, never worked: no work step (§4), no commit (§6).
+
+Flight premise — every child closed. Read it from the JSONL union of dotted-id
+children (`<epic>.*`) and parent-child-edge children (memory
+`epic-close-childset-union-dotted-and-edges`): any child still open → the premise
+fails. Comment the epic, unclaim, go to §1. The bounce adds NO `PREMISE-FAILED:`
+prefix — that prefix is flight-check's alone — so a bounced epic re-enters §1
+cleanly; a repeat claim→unclaim loop on one epic in a single run is the falsity
+detector, surfaced by the run ledger.
+
+When every child is closed but the epic carries no `REVIEW: APPROVED` comment, comment
+`review-pending`, unclaim, go to §1. This bounce is not the falsity detector above — the
+epic is waiting on review, not wrongly picked.
+
+Then run every `Probe:` in the epic's own ACs at HEAD. All green → CLOSE through
+close-gate.sh with the probe receipt as the close evidence (the reason cites it, per
+the evidence core's epic rule). Any red → comment `spec-contradiction`, unclaim, go
+to §1. A red probe bounces the close; it never bounces the loop. Zero `Probe:` lines
+bounces the same way — an epic never closes on an empty probe set.
+
+## 9 — HAND BACK
 
 **Not a batch boundary — that is the coordinator's.** Release your reservations, deregister
 your Agent Mail identity, and return: closed / blocked / premise-failed ids, your unverified

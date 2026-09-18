@@ -19,7 +19,7 @@
 #               refusal rule, the lock, the scoping, the lint-staged repair and the
 #               non-worker second-process case
 #   SCHEDULE:   on every commit taken through the lane; and on every CI run via
-#               scripts/run-all-harnesses.sh (registry-lint `harnesses` job)
+#               scripts/run-all-proofs.sh (registry-lint `harnesses` job)
 #   MODE:       blocking
 #   ON-FAILURE: closed — a refusal exits non-zero BEFORE the commit, and a rejected commit
 #               can never reach the push. Silence is never success here: every refusal
@@ -148,8 +148,30 @@ case "$COMMON_DIR" in /*) ;; *) COMMON_DIR="$(cd "$COMMON_DIR" && pwd)" ;; esac
 LOCKFILE="$COMMON_DIR/ac-swarm-commit.lock"
 
 if [ "$LOCKED" -eq 0 ]; then
-  "$FLOCK" -w "$TIMEOUT" -E 4 "$LOCKFILE" "$0" --_locked "${ORIG[@]}"
+  # Snapshot the message file BEFORE taking the lock. Swarm workers share one /tmp
+  # and the lane validates --message-file up front but used to read it only at
+  # `git commit -F` after the flock wait — a sibling rewriting the caller's file
+  # during the wait changed the commit subject/body under a different bead's code.
+  MSG_SNAPSHOT="$(mktemp "${TMPDIR:-/tmp}/swarm-commit-msg.XXXXXX")" \
+    || { echo "swarm-commit: cannot create message snapshot" >&2; exit 5; }
+  cp -- "$MSGFILE" "$MSG_SNAPSHOT" \
+    || { rm -f "$MSG_SNAPSHOT"; echo "swarm-commit: cannot snapshot message file" >&2; exit 5; }
+  LOCK_ARGS=()
+  _prev_is_msg=0
+  for _a in "${ORIG[@]}"; do
+    if [ "$_prev_is_msg" -eq 1 ]; then
+      LOCK_ARGS+=("$MSG_SNAPSHOT")
+      _prev_is_msg=0
+      continue
+    fi
+    case "$_a" in
+      --message-file|-F) LOCK_ARGS+=("$_a"); _prev_is_msg=1 ;;
+      *) LOCK_ARGS+=("$_a") ;;
+    esac
+  done
+  "$FLOCK" -w "$TIMEOUT" -E 4 "$LOCKFILE" "$0" --_locked "${LOCK_ARGS[@]}"
   rc=$?
+  rm -f "$MSG_SNAPSHOT"
   [ "$rc" -eq 4 ] && echo "swarm-commit: LANE-BUSY — another writer held $LOCKFILE for ${TIMEOUT}s; nothing was committed" >&2
   exit "$rc"
 fi
@@ -252,7 +274,41 @@ fi
 # ---------------------------------------------------------------------------------------
 LEDGER_IN_PATHS=0
 for p in "${PATHS[@]}"; do
-  [ "$p" = ".beads/issues.jsonl" ] && LEDGER_IN_PATHS=1
+  # Canonicalize before comparing: the same ledger is spelled
+  # `./.beads/issues.jsonl`, `.beads//issues.jsonl`, the directory `.beads` /
+  # `.beads/` — and git stages the ledger under every one of those spellings, so
+  # the check must fire under all of them. A segment stack resolves `.` and `..`
+  # lexically (ac-b94y: the ac-qvcb normalizer stripped leading `./` BEFORE
+  # collapsing `//`, turning `.//.beads/issues.jsonl` into `/.beads/...`, and
+  # never touched dot segments at all — so `.beads/./issues.jsonl` and
+  # `a/../.beads/issues.jsonl` each committed silently). A leading `..` is
+  # preserved, never resolved: `../.beads/issues.jsonl` names the PARENT's
+  # ledger, not this repo's, and must not trip the gate.
+  np="$p"
+  np_abs=0; case "$np" in /*) np_abs=1 ;; esac
+  np_out=""; np_rest="$np"
+  while [ -n "$np_rest" ]; do
+    case "$np_rest" in
+      */*) np_seg="${np_rest%%/*}"; np_rest="${np_rest#*/}" ;;
+      *)   np_seg="$np_rest"; np_rest="" ;;
+    esac
+    case "$np_seg" in
+      ""|".") continue ;;
+      "..")
+        np_top="${np_out##*/}"
+        if [ -n "$np_out" ] && [ "$np_top" != ".." ]; then
+          case "$np_out" in */*) np_out="${np_out%/*}" ;; *) np_out="" ;; esac
+        elif [ "$np_abs" -eq 0 ]; then
+          np_out="${np_out:+$np_out/}.."
+        fi ;;
+      *) np_out="${np_out:+$np_out/}$np_seg" ;;
+    esac
+  done
+  np="$np_out"
+  [ "$np_abs" -eq 1 ] && np="/$np"
+  case "$np" in
+    .beads/issues.jsonl|.beads) LEDGER_IN_PATHS=1 ;;
+  esac
 done
 if [ "$LEDGER_IN_PATHS" -eq 1 ]; then
   AHEAD=$(git rev-list --count HEAD..@{upstream} -- .beads/issues.jsonl 2>/dev/null)

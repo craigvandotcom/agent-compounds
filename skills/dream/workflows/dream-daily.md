@@ -11,8 +11,8 @@ workflow now.
 
 Manage the dream cycle review queue **and apply what is safe to apply unattended.**
 Weekly synthesis remains Sunday 05:00 (that EMITS proposals, never applies). This daily run
-is the **apply engine**: it auto-applies the deterministic safe tier, applies Craig's
-already-approved backlog, posts only what genuinely needs his decision, and reports.
+is the **apply engine**: it auto-applies the deterministic safe tier, applies the operator's
+already-approved backlog, posts only what genuinely needs their decision, and reports.
 
 Policy (read it — it is the contract): the **auto-act rubric**
 (`.claude/skills/dream/references/auto-act-rubric.md`). The split is enforced
@@ -31,14 +31,14 @@ for d in infrastructure/dream-cycle/proposals/*/; do
   python3 infrastructure/dream-cycle/classify.py --dir "$d"
 done
 ```
-Each line is `<tier>\t<path>\t<reason>`. `auto` = safe to apply now; `gated` = needs Craig.
+Each line is `<tier>\t<path>\t<reason>`. `auto` = safe to apply now; `gated` = needs the operator.
 
 ### 3. Apply the AUTO tier (unattended — Stage-1 autonomy)
 The `auto` tier has two shapes — the classifier's reason names which (`Tier-1` or `Tier-0`):
 
 **Tier-1 — new memory note (the agent applies the prose):**
 - Write the new note to its `target_file` (the paste-ready content in the proposal's `## What`),
-  and add its one index line to `infrastructure/memory/auto/MEMORY.md`.
+  and add its one index line to the infrastructure home's `MEMORY.md`.
 - Set the proposal's frontmatter `status: applied`.
 - If the `target_file` somehow already exists (race with another machine), SKIP it, set
   `status: pending`, and let it fall to the gated path — never overwrite.
@@ -55,12 +55,12 @@ Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only 
 commit them to root: `git add infrastructure/ && git commit -m "dream: auto-apply <N> (Tier-0/1 rubric)" && git push`.
 
 ### 4. Apply the APPROVED backlog (legacy — pre-bead Slack approvals)
-Any proposal at `status: approved` (Craig tapped Approve on a prior Slack card, before the
+Any proposal at `status: approved` (the operator tapped Approve on a prior Slack card, before the
 bead-docket cutover) is applied now, same as REVIEW mode — **respecting repo boundaries**
 (apply + commit INSIDE the target repo; never commit across repo boundaries). After applying,
 set `status: applied`. If a target drifted semantically, leave it `approved` and note it for
 the human instead of guessing. (New gated proposals no longer take this path — they are filed
-as decision beads in Step 7 and worked via `ac-human-session`, the decision docket.)
+as decision beads in Step 7 and worked via `ac-human`, the decision docket.)
 
 ### 5. Queue health
 For each still-`pending` proposal: flag if waiting >7 days, check for duplicates/superseded
@@ -95,7 +95,7 @@ infrastructure/tools/bin/slack-send --channel pi --card \
   --field "Auto-applied=<N>" --field "Filed as beads=<N this run>" \
   --field "Open dream beads=<M / see docket>" --field "Stale >7d=<N / none>" \
   --body "<one line: what was auto-remembered + N beads filed for your decision docket, or 'all clear'>" \
-  --context "02:00 dream queue · decide via ac-human-session (\`br ready --label dream-proposal\`) · auto-applied notes are git-revertible"
+  --context "02:00 dream queue · decide via ac-human (\`br ready --label dream-proposal\`) · auto-applied notes are git-revertible"
 ```
 Confirm exit 0; retry once on error. The job is NOT complete until this posts.
 

@@ -1,0 +1,24 @@
+{
+  "_doc": "consumer fixture target (ac-6asz.2): every package-required key filled; path keys resolve inside this tree.",
+  "design_spec": "docs/design-spec.md",
+  "journeys_dir": "e2e/journeys",
+  "routes_manifest": "docs/routes.md",
+  "routes_public_manifest": "docs/routes.public.md",
+  "ui_audit": "docs/ui-audit.md",
+  "serve_prod": "npm run serve-prod",
+  "ci_gate_script": "npm run ci:gate",
+  "store": {
+    "app_store_id": "1234567890",
+    "team_id": "ABCDE12345"
+  },
+  "triage": {
+    "sentry_project": "fixture-app",
+    "supabase_schema": "app"
+  },
+  "human": {
+    "name": "Fixture Human"
+  },
+  "memory": {
+    "root": "memory"
+  }
+}

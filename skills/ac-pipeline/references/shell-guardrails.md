@@ -148,8 +148,8 @@ skips every item is the same failure as a loop that ran zero times — count wha
 abort when a non-empty input resolved nothing.
 
 `set -o pipefail` helps inside a script but does not save a pipeline whose consumer legitimately
-exits 0 on empty input; capture-then-check is the shape that always works. Live instance:
-`ac-bead-refine/references/workflow.md` § Phase 5 (parity gate + `refined` stamp loop), where
+exits 0 on empty input; capture-then-check is the shape that always works. Live instance
+(archived): the bead-refine workflow's § Phase 5 (parity gate + `refined` stamp loop), where
 both call sites failed silent and open — a decision bead missing `human-gate` could reach
 `refined` without a single bead being checked. Bite-proof:
 `ac-pipeline/scripts/bead-refine-concurrent-dir.test.sh` Case 9.

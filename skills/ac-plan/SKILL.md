@@ -14,68 +14,54 @@ description: 'Turn an idea into ONE ac2 plan file — problem, approach, deliver
 | **Artifacts**    | Explorer notes in `_plans/research/` — only if explorers were run             |
 | **Verification** | `ac-polish plan <path>` to fixpoint; `ac-polish/references/plan-checklist.md` is the bar |
 
-Doctrine: `skills/ac-pipeline/SKILL.md` — including the model-tier Calibration (planning runs
-OPUS-tier; a Calibration with a retirement measurement, not a fact to restate here). Bead and
+Doctrine: `skills/ac-pipeline/SKILL.md` — including the model-tier Calibration (planning runs OPUS-tier; a Calibration with a retirement measurement, not a fact to restate here). Bead and
 commit canon: `beads-standards` and `ac-pipeline/references/` BY POINTER — restated nowhere.
 
 ## Before anything: the task-size floor
 
-**A trivial single-file change with no dependency structure BYPASSES ac2 entirely** — no plan,
-no beads, no ceremony. Applying the pipeline to a nit is a defect in judgement, not diligence.
+**A trivial single-file change with no dependency structure BYPASSES ac2 entirely** — no plan, no beads, no ceremony. Applying the pipeline to a nit is a defect in judgement, not diligence.
 
 ## What goes in the plan — the ten-year test
 
-Be optimistic about the model, pessimistic about what we must actually say. State only what
-a capable model **cannot infer**: our conventions, our file locations, our failure history,
-the specific decisions this work turns on. Every line that would be obvious in ten years is
+Be optimistic about the model, pessimistic about what we must actually say. State only what a capable model **cannot infer**: our conventions, our file locations, our failure history, the specific decisions this work turns on. Every line that would be obvious in ten years is
 a line to cut — the plan is graded on whether its claims are checkable, never on its length.
+
+**The citation rule.** Every claim about the tree cites a path plus a quoted phrase or the finding command — never `file:line`, which drifts on a shared trunk before the claim does.
 
 ## Procedure
 
 1. **Size the work.** Below the floor → stop, do it directly. Otherwise continue.
-2. **Explorers are OPTIONAL, and size selects them** — run them only when the surface is
-   genuinely unknown; a small, well-understood change gets none. ONE mechanical exception:
-   `rg` each Deliverable's name; a hit means the plan RESHAPES an existing object, and that
-   object gets one blind seams reader (`ac-polish/references/seams-reader-prompt.md`)
-   before the Approach is written — its touchers become deliverables or Out-of-scope
-   entries, its findings feed Problem. Notes land in `_plans/research/`; none ran → say so
-   in one line.
-3. **Write the ONE plan file.** One file, these sections, nothing ornamental:
-   - **Problem** — what is wrong now, with the evidence that it is wrong.
-   - **Approach** — the shape of the fix and the alternatives rejected, each with its reason.
-   - **Deliverables** — every one named as an ARTIFACT (a path, a script, a receipt), never
-     as an intention. An unnamed deliverable cannot be consumed by a bead's `## Delivers`.
-   - **Assumptions** — the ones the plan RESTS on: what the plan becomes if false, what
-     DETECTS the falsity, by when. An assumption with no detection rule is a bet.
-   - **Decisions** (`## Decisions`) — every fork as a card (`references/decisions.md` holds the
-     shape): state `settled: <choice> — <why>` or `needs-human`; escalation test before a card.
-   - **Risk + sequence** — the order of work, with the tree GREEN at every step of it. A step
-     that turns lint, CI or a gate red before its enabling step lands is a sequencing defect.
-     Each risk gets a countermeasure that is a mechanism, not a resolution to be careful. A
-     `Human gates:` line names every authorization gate (store submit, PROD migration) for
-     beadify to compile with `human-gate` + `Gate-reason: authorization` (`references/decisions.md`).
-   - **Out of scope** — stated explicitly, each exclusion either deferred (and to what) or
-     refused (and why). An unbounded plan cannot be finished, only abandoned.
-   - **Success criterion** — exactly one. See the refusal below.
-3b. **Ask the live human once** — one batched AskUserQuestion round for every `needs-human`
-    card, recorded `DECISION (<human>): <choice> — <why>`; unattended → stays `needs-human`.
-4. **Hand off** (§ below). Do not stop at a written plan.
+2. **Ask only the obvious questions** — the ones without which the brief would be a guess; a capable read of the codebase answers the rest. Explorers are OPTIONAL, size selects them. Notes land in `_plans/research/`; none ran → say so.
+3. **Draft the vision brief** in plain words a non-engineer follows — no pipeline
+   jargon, and the same rule wherever the vision or plan is shown to the human —
+   corrected by the human in free text, then frozen verbatim as `## Vision`.
+4. **Seams scan.** Every path in the conductor's drafted deliverable list is an object, no
+   cap — `## Deliverables` is written in step 5, so the scan reads the draft, never the
+   plan. Derive its file list (`skills/_tools/touchers.sh derive <path>` plus the repo's
+   test globs) and spawn one fresh reader per object IN PARALLEL, sent
+   `references/plan-seams-reader.md` verbatim — only for a non-empty derived list (empty
+   gets no reader: an empty sweep proves nothing). One row per file, silence banned,
+   completeness by count; an OUT-OF-PLAN claim survives only when it names the deliverable
+   it compromises, is P0–P2, and a fresh second reader confirms it (same file, § Confirming
+   an OUT-OF-PLAN claim).
+5. **Write the ONE plan file**, `## Vision` first: Problem, Approach, Deliverables (artifacts, never intentions — ` — one-shot` marks migration scratch, D4), Assumptions (what DETECTS
+   the falsity, by when), Decisions (§ next step), `## Seams` (after Decisions — one row per surviving finding, object by object; `plan-checklist.md` § 1 re-derives every object's touchers against it — an uncovered file is an unowned seam), Risk + sequence (`Human gates:` names every authorization gate), Out of scope, Success criterion.
+6. **Decisions and improvements** per `references/decisions.md`: `settled: <choice> — <why>` or `needs-human`, each settled card quoting its `## Vision` line;
+   up to two opt-in improvements alongside, never folded into Deliverables on the agent's own judgement — each accepted one appends one sentence to `## Vision`, quoted by its card.
+7. **Diet pass to fixpoint.** Spawn a fresh orchestrator-tier reader with the plan and one question — where is the fat: the same
+   functionality, experience and reliability with less or simpler. One floor: it never proposes cutting a refusal, a fail-closed check or a
+   confirmed finding — those return as questions, not cuts. It returns cuts with reasons, never edits; the conductor applies each cut unless it
+   reverses a confirmed Seams row or orphans a Vision sentence (both read from the plan itself), and repeats until a round proposes no change to a mechanism.
+8. **Approve.** Render `references/approval-brief.md`'s brief and run ONE question round — open cards plus **Approve / Change / Park**. Approve runs
+   `skills/_tools/plan-approve.sh approve <plan> "$(git config user.name)"`, the ONE writer, never a hand edit. Unattended: the plan stays `draft` and the docket shows it waiting.
+9. **Stop.** End with the line `Next: /ac-polish plan <path>` — never invoke the next stage.
 
 ## The success criterion — a refusal, not a suggestion
 
-**REFUSE to emit a plan whose success criterion cannot come out FALSE.** Write the observed
-falsifier beside it. Three ways a criterion fails, each sends it back:
+**REFUSE to emit a plan whose success criterion cannot come out FALSE.** Write the observed falsifier beside it. Three ways a criterion fails, each sends it back:
 
 - **Unfalsifiable** — no observation could contradict it. It is a slogan.
-- **Already true today** — the plan asserts nothing, satisfied by an empty diff; measure
-  now, and if it passes the criterion is not the plan's criterion.
+- **Already true today** — the plan asserts nothing, satisfied by an empty diff; measure now, and if it passes the criterion is not the plan's criterion.
 - **Unowned** — nobody and nothing is named to evaluate it, on what artifact, and when.
 
 One criterion, not three. A plan with several success criteria has not decided what it is for.
-
-## Hand-off — plan, then hand off
-
-`ac-plan` ENDS by handing the finished file to **`ac-polish plan <path>`**, which polishes
-to fixpoint and ends by invoking `ac-beadify`. A polished plan with no beads is a measured
-dead-end — our census found `loop-ready` plans with no live successor. Never end by reporting
-a written plan and stopping; if the hand-off cannot happen now, queue it with the human.

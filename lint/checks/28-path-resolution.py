@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 28-path-resolution
-# prevents: skill text citing a file that does not exist on disk — moved and retired paths staying cited for months (Check 2 and the budget check both skip these by design)
+# prevents: skill text citing a file that does not exist on disk — moved and retired paths staying
+#   cited for months (Check 2 and the budget check both skip these by design)
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/28-path-resolution

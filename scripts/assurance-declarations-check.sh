@@ -42,14 +42,14 @@
 set -uo pipefail
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-HOOKS_JSON="$ROOT/hooks/hooks.json"
+HOOKS_JSON="$ROOT/engine/hooks.wiring.json"
 BOARD="$ROOT/.beads/issues.jsonl"
 FAILURES=0
 
 ad_fail() { echo "FAIL: $*"; FAILURES=$(( FAILURES + 1 )); }
 
 if [ ! -r "$HOOKS_JSON" ]; then
-  ad_fail "hooks/hooks.json missing — wiring and its declarations unverifiable"
+  ad_fail "engine/hooks.wiring.json missing — wiring and its declarations unverifiable"
   echo "assurance-declarations: ${FAILURES} failure(s)"
   exit 1
 fi

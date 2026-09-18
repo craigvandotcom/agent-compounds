@@ -10,7 +10,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/30-trigger-collisions.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail
@@ -77,7 +77,7 @@ python3 - "$w" <<'PYEOF'
 import sys, pathlib
 w = sys.argv[1]
 # YAML single-quoted scalars with doubled-quote apostrophes — the exact shape
-# ac-human-session's docket/board descriptions carry on the real tree.
+# ac-human's docket/board descriptions carry on the real tree.
 for skill, tail in (("aa", " and others."), ("bb", " too.")):
     d = "Asks \"what''s the factory doing\" " + tail
     body = f"---\nname: {skill}\ndescription: '{d}'\n---\n\n# {skill}\n"

@@ -10,6 +10,19 @@ Enforced here:
   - a readiness label on every NON-EPIC bead — `unrefined` / `human-gate`.
   - a `Probe:` line on every IMPLEMENTABLE bead (`bug` / `task` / `feature`) — born
     probe-bearing; `epic` / `decision` / `investigation` are exempt.
+  - exactly one `impact:<class>` label on every bead from an AUTOMATED origin — the class
+    of damage if it ships; human/plan origins and `human-gate` fork beads are exempt.
+  - a subagent files NOTHING — every `br create` is refused and returned to the
+    coordinator as a PROPOSED-BEAD block; a human-gate fork is a proposal too, never a
+    direct create. Subagent identity is harness-dependent: the `agent_id` stdin field OR
+    the `AC_SUBAGENT=1` ambient marker a wrapper sets. Where a harness supplies neither
+    (opencode sends `session_id`, not `agent_id`), the refusal is INERT and only the four
+    label/body axes apply — best-effort, not a guarantee.
+
+Command position is resolved through the shapes a create can hide in: command
+substitution (`$(br create …)`, backticks), a shell `-c` wrapper (`sh -c 'br create …'`),
+and command wrappers (`xargs`/`env`/`sudo` … `br create`). Only a real command-position
+`br create` is inspected — a description or heredoc that quotes the text keeps passing.
 
 WHY THIS IS A HARD GATE, not an advisory (Craig, 2026-08-23):
 `origin:` already existed as an OPTIONAL hint — plan 2026-07-16-1729-epic-bead-quality-
@@ -37,10 +50,11 @@ position — the `br create` text inside one must keep passing), and every remai
 newline becomes a `;` separator. Quoted newlines stay intact.
 
 FAIL-OPEN on any parse failure. A guard that cannot understand a command must not wedge an
-unattended ac-loop run at 3am; a missed stamp is caught by ac-align's nightly reconcile.
+unattended ac-loop run at 3am; a missed stamp is caught by ac-tidy.
 """
 
 import json
+import os
 import re
 import shlex
 import sys
@@ -48,6 +62,11 @@ import sys
 SUBCOMMANDS = {"create", "q"}
 CONTROL = {"&&", "||", ";", "|", "(", ")", "{", "}", "then", "do", "else", "fi", "done", "!"}
 HELP = {"-h", "--help"}
+# Command-position wrappers: `xargs br create`, `env br create`, `sudo br create` etc. are
+# still a bead create; skip the wrapper (and its flags) before looking for `br`. Shell
+# wrappers that carry the command in a `-c` argument are handled by shell_c_commands().
+WRAPPERS = {"env", "xargs", "sudo", "command", "exec", "nice", "nohup", "time", "stdbuf", "setsid"}
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
 
 # Readiness: `refined` is stamped exclusively by a refine pass, never at creation, so in
@@ -56,7 +75,7 @@ ORIGIN = re.compile(r"(^|,)origin:[A-Za-z0-9][A-Za-z0-9._-]*(,|$)")
 READINESS = ("unrefined", "refined", "human-gate")
 
 # Epics are containers, never picked up for implementation, so readiness is meaningless on
-# them. This mirrors ac-align's nightly readiness-label repair, which fixes the same gap nightly for "open non-epic"
+# them. This mirrors ac-tidy's nightly readiness-label repair, which fixes the same gap nightly for "open non-epic"
 # beads — the gate and the repair must agree on the exemption or they fight each other.
 READINESS_EXEMPT_TYPES = {"epic"}
 
@@ -66,6 +85,22 @@ READINESS_EXEMPT_TYPES = {"epic"}
 IMPLEMENTABLE_TYPES = {"bug", "task", "feature"}
 PROBE_EXEMPT_TYPES = {"epic", "decision", "investigation"}
 PROBE = re.compile(r"Probe:\s*`[^`]+`[^\n]*\btier:")
+
+# The impact axis (ac-wp8i.3): the class of damage if this bead's failure ships. CLOSED
+# set — a new class is a contract change first, then this tuple. An automated origin must
+# carry exactly one of these; `impact:trunk-red` names the failing suite/job in its
+# `User impact:` line. Human origins (`manual`, `ac-human`, formerly `ac-human-session`),
+# plan origins (`ac-beadify`, `ac-backlog`) and `human-gate` fork beads are EXEMPT — a
+# fork is not an impact class — and a refusal must name those exemptions.
+IMPACT_CLASSES = ("user-visible", "data", "security", "trunk-red")
+IMPACT_REQUIRED_ORIGINS = (
+    "ac-implement", "ac-review", "ac-triage", "ac-hygiene", "ac-align", "ac-prove",
+    "ac-qa", "ac-land", "curate-foods",
+)
+
+# The subagent refusal (ac-wp8i.3): a PreToolUse stdin carrying `agent_id` is a subagent,
+# which may file ONLY a `human-gate` fork — everything else is proposed at the boundary.
+SUBAGENT_EXEMPT_LABEL = "human-gate"
 
 READINESS_MESSAGE = """\
 BLOCKED: `br {sub}` (type `{typ}`) without a readiness label.
@@ -117,6 +152,32 @@ probe yet. A filer that cannot name a probe files the bead as `investigation`
 Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
 """
 
+IMPACT_MESSAGE = """\
+BLOCKED: `br {sub}` from automated origin `{origin}` without exactly one `impact:` label.
+
+`impact:<class>` records the class of damage if this bead's failure ships — exactly one of:
+
+    impact:user-visible · impact:data · impact:security · impact:trunk-red
+
+`impact:trunk-red` names the failing suite or job in the body's `User impact:` line.
+
+Exempt, and never blocked for this axis: human origins (`manual`, `ac-human` — renamed
+from `ac-human-session`), plan origins (`ac-beadify`, `ac-backlog`), and `human-gate`
+fork beads — a fork is not an impact class.
+
+Canon: beads-standards/reference/bead-create-contract.md § Required axes.\
+"""
+
+SUBAGENT_MESSAGE = """\
+BLOCKED: `br {sub}` from a subagent — a subagent files NOTHING.
+
+Return it to your coordinator as a PROPOSED-BEAD block for the conductor to confirm and
+file: title · files · `User impact:` (and for a fork: gate reason · options ·
+recommendation). No exceptions — a human-gate fork is a proposal too, never a direct create.
+
+Canon: beads-standards/reference/bead-create-contract.md § Subagent creates.\
+"""
+
 
 def allow():
     sys.exit(0)
@@ -163,10 +224,17 @@ def strip_heredoc_bodies(command):
 
 
 def newlines_to_separators(command):
-    """Newline is a command separator, like ';' — but never inside a quoted string.
+    """Turn unquoted command *inlining* into separators, so the tokenizer sees the inner
+    command in command position.
 
-    The `;` is space-padded: shlex only splits on whitespace, so a bare `;` glued to
-    a token would hide the boundary from CONTROL the same way the newline did.
+    A bare newline is a command separator, like ';'. So are the delimiters of command
+    substitution — `$(`, its closed `)`, and a backtick pair — because `out=$(br create …)`
+    and `` `br create …` `` run the inner `br create` as a real command. Without this the
+    inner `br create` lands mid-token-stream (e.g. as `out=$(br`) and is never inspected,
+    which is exactly the evasion this guard exists to block. All separators are
+    space-padded: shlex only splits on whitespace, so a glued delimiter would hide the
+    boundary from CONTROL. Never touched inside a quoted string, so a description that
+    quotes `br create` keeps passing.
     """
     out = []
     quote = None
@@ -185,7 +253,7 @@ def newlines_to_separators(command):
         elif ch in "'\"":
             quote = ch
             out.append(ch)
-        elif ch == "\n":
+        elif ch == "\n" or ch == "`" or ch == "(" or ch == ")":
             out.append(" ; ")
         else:
             out.append(ch)
@@ -193,11 +261,24 @@ def newlines_to_separators(command):
 
 
 def is_bead_create(cmd):
-    """Return the subcommand if cmd is a `br create`/`br q` invocation, else None."""
+    """Return the subcommand if cmd is a `br create`/`br q` invocation, else None.
+
+    Skips leading wrapper words (`xargs`, `env`, `sudo`, …) and their flags, then
+    `VAR=value` assignments, so `xargs br create …` and `env FOO=1 br create …` are still
+    seen. A wrapper's command-in-`-c` form is expanded by `shell_c_commands()` instead.
+    """
     i = 0
-    # Skip leading VAR=value environment assignments.
-    while i < len(cmd) and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", cmd[i]):
-        i += 1
+    while i < len(cmd):
+        name = cmd[i].rsplit("/", 1)[-1]
+        if name in WRAPPERS:
+            i += 1
+            while i < len(cmd) and cmd[i].startswith("-") and cmd[i] not in ("-", "--"):
+                i += 1
+            continue
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", cmd[i]):
+            i += 1
+            continue
+        break
     if i + 1 >= len(cmd):
         return None
     name = cmd[i].rsplit("/", 1)[-1]
@@ -205,6 +286,23 @@ def is_bead_create(cmd):
         return None
     sub = cmd[i + 1]
     return sub if sub in SUBCOMMANDS else None
+
+
+def shell_c_commands(command):
+    """Yield the command strings a shell wrapper runs via its `-c` argument.
+
+    `sh -c 'br create …'`, `bash -c "br create …"` carry the real command as a quoted
+    argument, so the shlex command-position scan never sees a `br` token. Tokenize and
+    hand each `-c` argument back to the caller to run through the same pipeline.
+    """
+    try:
+        tokens = shlex.split(command, comments=False, posix=True)
+    except ValueError:
+        return
+    for i, tok in enumerate(tokens):
+        if tok in ("-c", "--command") and 0 < i and tokens[i - 1].rsplit("/", 1)[-1] in SHELLS:
+            if i + 1 < len(tokens):
+                yield tokens[i + 1]
 
 
 def flag_value(cmd, names, prefixes):
@@ -225,7 +323,7 @@ def bead_type(cmd):
     None means "cannot know" and the readiness check is SKIPPED. A template placeholder
     like `-t <type>` could stand for `epic`, so enforcing readiness on it would block a
     legitimate epic template. Under-enforcing here is correct: the origin check still
-    applies, ac-align repairs readiness nightly, and lint Check 19 catches stale templates
+    applies, ac-tidy repairs readiness nightly, and lint Check 19 catches stale templates
     statically anyway.
     """
     val = flag_value(cmd, {"-t", "--type"}, ("--type=",))
@@ -281,7 +379,7 @@ def has_probe(cmd):
 
     An absent description BLOCKS (a probe-less create is exactly what this axis exists
     to refuse). An unsubstituted template placeholder skips, the same doctrine as
-    `bead_type`: it could stand for anything, ac-align repairs nightly, and lint Check 19
+    `bead_type`: it could stand for anything, ac-tidy repairs nightly, and lint Check 19
     catches stale templates statically.
     """
     d = description(cmd)
@@ -292,12 +390,74 @@ def has_probe(cmd):
     return bool(PROBE.search(d))
 
 
+def origin_skill(cmd):
+    """The `<skill>` of the first `origin:<skill>` label, or None. One origin per bead."""
+    for label in all_labels(cmd):
+        if label.startswith("origin:"):
+            return label[len("origin:"):]
+    return None
+
+
+def valid_impact(cmd):
+    """True when the labels carry EXACTLY one impact class from the closed set."""
+    classes = [lab[len("impact:"):] for lab in all_labels(cmd) if lab.startswith("impact:")]
+    return len(classes) == 1 and classes[0] in IMPACT_CLASSES
+
+
+def has_label(cmd, name):
+    return name in all_labels(cmd)
+
+
+def scan_tokens(tokens, is_subagent):
+    """Run every command in a token stream through the full contract, refusing on the
+    first violation. Shared by the outer command and any wrapper-expanded inner command."""
+    for cmd in commands(tokens):
+        sub = is_bead_create(cmd)
+        if sub is None:
+            continue
+        if any(t in HELP for t in cmd):
+            continue
+        # A subagent files NOTHING — every create goes back to the coordinator as a
+        # PROPOSED-BEAD. No fork exemption: a human-gate card is a proposal too.
+        if is_subagent:
+            print(SUBAGENT_MESSAGE.format(sub=sub), file=sys.stderr)
+            sys.exit(2)
+        if not has_origin(cmd):
+            print(MESSAGE.format(sub=sub), file=sys.stderr)
+            sys.exit(2)
+        typ = bead_type(cmd)
+        if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
+            print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
+            sys.exit(2)
+        if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
+            print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
+            sys.exit(2)
+        origin = origin_skill(cmd)
+        if (
+            origin in IMPACT_REQUIRED_ORIGINS
+            and not has_label(cmd, SUBAGENT_EXEMPT_LABEL)
+            and not valid_impact(cmd)
+        ):
+            print(IMPACT_MESSAGE.format(sub=sub, origin=origin), file=sys.stderr)
+            sys.exit(2)
+
+
 def main():
     raw = sys.stdin.read()
     data = json.loads(raw) if raw.strip() else {}
 
     if data.get("tool_name") not in (None, "Bash"):
         allow()
+
+    # A subagent may file only a `human-gate` fork; its discovered work is proposed back
+    # at the batch boundary, never filed directly (bead-create-contract § Subagent creates).
+    # The subagent marker is harness-dependent: `agent_id` on the stdin payload, OR the
+    # ambient `AC_SUBAGENT` a harness wrapper sets when it CAN tell a subagent from the
+    # main session. Neither is sent by every deployed harness (opencode sends session_id,
+    # not agent_id), so where both are absent the refusal is inert and only the four
+    # label/body axes apply. The seam is here so a wrapper can enforce it without a
+    # guard change.
+    is_subagent = bool(data.get("agent_id")) or os.environ.get("AC_SUBAGENT") == "1"
 
     command = (data.get("tool_input") or {}).get("command") or ""
     if "br" not in command:
@@ -316,22 +476,16 @@ def main():
     except ValueError:
         allow()
 
-    for cmd in commands(tokens):
-        sub = is_bead_create(cmd)
-        if sub is None:
+    scan_tokens(tokens, is_subagent)
+
+    # A shell wrapper runs the real command from its `-c` argument; scan each too.
+    for inner in shell_c_commands(command):
+        inner = newlines_to_separators(strip_heredoc_bodies(inner))
+        try:
+            inner_tokens = shlex.split(inner, comments=False, posix=True)
+        except ValueError:
             continue
-        if any(t in HELP for t in cmd):
-            continue
-        if not has_origin(cmd):
-            print(MESSAGE.format(sub=sub), file=sys.stderr)
-            sys.exit(2)
-        typ = bead_type(cmd)
-        if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
-            print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
-            sys.exit(2)
-        if typ is not None and typ in IMPLEMENTABLE_TYPES and not has_probe(cmd):
-            print(PROBE_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
-            sys.exit(2)
+        scan_tokens(inner_tokens, is_subagent)
 
     allow()
 

@@ -31,7 +31,7 @@ ingest → scan → alignment audit → sequencing), then follow REVIEW-mode beh
 ### 1. Sync + abort-on-contention
 
 ```bash
-git -C ~/Repos pull --ff-only     # VM rebase/merge/reset deny-listed
+git pull --ff-only                # the app checkout; rebase/merge/reset deny-listed
 ```
 
 If the pull can't fast-forward OR `git status --porcelain _backlog/ _plans/` shows another
@@ -90,10 +90,13 @@ with the stranded SHA. (No auto-apply to strand, but still confirm the proposal 
 Confirm exit 0; a Slack failure IS a finding — retry once. Finalize `last-run.json`
 (`{status: done, counts, mode, machine}`).
 
+The Slack body's one-line rollup also carries the board's docket counters, read from Scan A's
+`docket-health:` line (never recomputed): `plan-gap: N · gate-incomplete: N`.
+
 ---
 
 ## Applying the slate later
 
-This run only *proposes*. A human reviews the slate in `ac-human-session` and, on approval,
+This run only *proposes*. A human reviews the slate in `ac-human` and, on approval,
 re-invokes `ac-align` INTERACTIVE — which re-scores `pool → active` against **live** strategy
 at apply time (a stale slate self-skips because the board is read fresh). REVIEW never moves a file.

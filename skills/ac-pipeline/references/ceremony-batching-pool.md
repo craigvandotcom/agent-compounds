@@ -1,7 +1,7 @@
 # Ceremony batching pool — mechanics (bd-chd5p.2)
 
-Shared reference for **`ac-loop`** (owns per-close append + idle-drain) and **`ac-batch-close`**
-(owns report-commit ack + drain). `ac-loop` SKILL.md § Ceremony batching pool holds the engagement
+Shared reference for the **implement lane** (owns per-close append + idle-drain) and the
+**batch boundary** (owns report-commit ack + drain). `ac-implement` holds the engagement
 summary + hookpoints (the *when*); this file holds the full mechanics (the *how*). Read this before
 executing any pool RMW / drain.
 
@@ -71,7 +71,7 @@ Under flock, only if `in_flight` empty: move selected set `pending` → `in_flig
 never assign-overwrite non-empty `in_flight`; recompute `first_close_ts` from remaining
 `pending`.
 
-## Report-commit ack (ac-batch-close)
+## Report-commit ack (batch boundary)
 
 Remove **only this batch's `in_flight` IDs**. Never whole-file wipe. Non-pool
 ceremonies (planned-wave, pure risk-solo with no snapshot) must not clear
@@ -114,8 +114,8 @@ Per-cycle ac-review remains **unbatched**. Bisection cost capped by selected-set
 ## Refine-during-ceremony guard-rails
 
 
-Binding whenever refine children run concurrently with a ceremony (`ac-loop`
-§ Concurrency guard-rails).
+Binding whenever refine children run concurrently with a ceremony (the conductor's
+concurrency guard-rails).
 
 **Git ledger commit (mixed-state sanctioned).** The **ceremony** commits whatever
 `.beads/issues.jsonl` state exists at report-commit time; refine children **never**
@@ -133,7 +133,7 @@ has **no per-line staging**. Two rules follow, and they are NOT the same rule:
 2. **Prep children hold their MUTATIONS as well — while a ceremony is in flight** (the
    scope of this whole section). A refine or beadify child defers every `br` mutation verb
    until told the ledger is flushed, and reads freely meanwhile. Where no ceremony can be
-   concurrent — a phase-gated loop's prep phase behind a barrier (ac-loop-2 Phase 1) — the
+   concurrent — a phase-gated run's prep phase behind a barrier — the
    hold has nothing to protect: prep children mutate directly, and the conductor flushes +
    commits the ledger at the barrier. Implement children DO mutate — closing their beads is
    the job — but rule 1 still binds them: they mutate, they never commit the ledger.

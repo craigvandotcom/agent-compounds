@@ -34,12 +34,12 @@ A file reservation can only protect between *distinct* identities. So:
 
 | Session | Why it's Tier 1 |
 |---|---|
-| `ac-loop` conductor | claims batches at selection (`--assignee $AGENT_NAME`) — the claim-visibility anchor; holds no file reservations |
+| `ac-implement` conductor | claims batches at selection (`--assignee $AGENT_NAME`) — the claim-visibility anchor; holds no file reservations |
 | `ac-implement` child running as its **own full session** (holds the `mcp__mcp-agent-mail__*` tools) | the canonical contended writer — **mints its own name and reserves per bead**, commits to `main`; at `PARALLEL_WIDTH>1` several run concurrently in ONE shared checkout |
 | `ac-implement` child **spawned as a stance subagent** (researcher / implementer / validator) | **still a contended writer — it COMMITS.** The child **always mints its own identity** (via `macro_start_session`, or the session-identity path where the stance tools allow), and the conductor **reads the minted name back from the spawn response (`agent.name`)** — a pre-chosen name is a SPEC VIOLATION, § below, never a hint. The conductor holds reservations on its behalf when the child cannot (stance agents carry zero `mcp__*` tools). This is the spawn mode the pipeline uses most |
 | `ac-review` | its Phase-4 auto-fix implementer edits product code; Phase 6 commits + pushes (wiring: `ac-ycr.2`) |
-| `ac-batch-close` | fix-forward edits code on red CI; minting also yields a real `registration_token` for the build slot (wiring: `ac-ycr.3`) |
-| plan-family skills (`ac-plan-init`, `ac-plan-refine-*`, `ac-plan-clean`) | already conform — mint + reserve their plan files |
+| batch boundary (fix-forward) | fix-forward edits code on red CI; minting also yields a real `registration_token` for the build slot (wiring: `ac-ycr.3`) |
+| plan-family skills (`ac-plan`, `ac-polish` plan modes) | already conform — mint + reserve their plan files |
 
 **Lifecycle (token-holding sessions only — a stance child has no `macro_start_session` to
 call):** `macro_start_session` (mint) → **`am-identity-set.sh <minted-name>`** (rewrite this
@@ -88,7 +88,7 @@ children**, and never a stand-in for the child's own minted identity.
 > entire safety argument. Measured: four implementer children at width
 > 2 across two repos, conductor holding every reservation centrally, scope partitioned by repo —
 > **zero collisions, but the safety came from the disjointness, not from the reservations.** The
-> enforcement mechanism is `ac-loop` § Efficiency § Parallelism's pre-dispatch width-N check
+> enforcement mechanism is the conductor's Efficiency § Parallelism pre-dispatch width-N check
 > (bd-3sh8k): **both** *tree-disjointness* (no shared expected file set) **and**
 > *resource-disjointness* (no shared build dir, serve port, Supabase stack, ledger). Overlap →
 > serialize.
@@ -97,7 +97,7 @@ children**, and never a stand-in for the child's own minted identity.
 
 The `settings.json` env fallback (`AGENT_NAME=FoggyCreek`, `rule-agent-mail-identity-setup`)
 is **deliberate doctrine, not an accident**: the shared identity for **serial,
-low-contention chore writers** — scheduled jobs (`ac-align`'s nightly reconcile + weekly align, `dream` dailies),
+low-contention chore writers** — scheduled jobs (`ac-tidy` nightly, `ac-align` weekly, `dream` dailies),
 `ac-land`'s format-sweep / report / learnings commits.
 
 **The hard rule (= the tier boundary AND the safety guard, wiring: `ac-ycr.6`):**
@@ -143,9 +143,9 @@ These are different axes; do not conflate them:
 
 | Layer | Who | When | Wiring |
 |---|---|---|---|
-| 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/batch-close ceremony end; the loop conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/batch-close self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
+| 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/boundary ceremony end; the conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/boundary self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
 | 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity that actually **minted** — the names the conductor read back from each spawn's `agent.name`, § below); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
-| 3. **Stale sweep + TTL floor** | next run's `ac-loop` Phase 0 | catches runs that died before land — stale-**reservation** sweep only, same project-key-agnostic query as layer 2; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
+| 3. **Stale sweep + TTL floor** | next run's conductor Phase 0 | catches runs that died before land — stale-**reservation** sweep only, same project-key-agnostic query as layer 2; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
 
 Runtime-verified (`ac-ycr.8`): `retire_agent`/`deregister_agent` mark
 `registration_token` optional in the *schema* but **reject name-only calls at runtime** unless
@@ -161,9 +161,9 @@ by name after validating abandonment heuristics.
 
 ### The sweep is NOT project-key-agnostic — query the store, don't loop per name
 
-**One checkout mints SEVERAL project keys.** A 12-identity run on one `body-compass-app`
-checkout registered across three: `neometa/body-compass-app` (7), the **absolute path** (4),
-and bare `body-compass-app` (1) — re-verified live below. So a per-name
+**One checkout mints SEVERAL project keys.** A 12-identity run on one consuming-app
+checkout registered across three: `<org>/example-app` (7), the **absolute path** (4),
+and bare `example-app` (1) — re-verified live below. So a per-name
 `force_release_file_reservation` loop keyed on the "obvious" key resolves 4 of 12; the other 8
 return `Agent '<name>' not found in project '<key>'`, and a loop that tolerates that error
 reports a **clean roster having never looked at two thirds of it** — a false clean, the worst
@@ -238,8 +238,8 @@ mcp_agent_mail`); it needs an upstream issue, and this sweep method is the whole
 
 ## Project key format (canonical — the one home for the key-format rule)
 
-**Rule: always pass the app's canonical two-segment key `neometa/<app-dir>` (e.g.
-`neometa/body-compass-app`, `neometa/agent-compounds`) — READ the pinned `human_key`
+**Rule: always pass the app's canonical two-segment key `<org>/<app-dir>` (e.g.
+`<org>/example-app`, `<org>/agent-compounds`) — READ the pinned `human_key`
 from the app's `.claude/hooks/session-start.md`. NEVER derive it from cwd, the repo
 root, or `git rev-parse --show-toplevel`, and never an absolute path or ad-hoc slug.**
 One canonical key = one shared mailbox; a divergent key forks a *separate* project
@@ -259,12 +259,12 @@ validator enforces a format:
 
 | `human_key` passed | Server result | Resolved project slug | Effect |
 |---|---|---|---|
-| `neometa/agent-compounds` (canonical two-segment) | accepted | `neometa-agent-compounds` (the shared project) | joins the ONE canonical mailbox ✅ |
-| `sandbox/w2-shakedown` (two-segment, non-neometa) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
-| `/Users/…/agent-compounds` (absolute path) | accepted | `users-craigvanheerden-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
+| `<org>/agent-compounds` (canonical two-segment) | accepted | `<org>-agent-compounds` (the shared project) | joins the ONE canonical mailbox ✅ |
+| `sandbox/w2-shakedown` (two-segment, non-org) | accepted | `sandbox-w2-shakedown` (a different project) | forks a separate mailbox ⚠️ |
+| `/Users/…/agent-compounds` (absolute path) | accepted | `users-<operator>-…-agent-compounds` (a different project) | forks a **per-machine** mailbox — split-brain ⚠️ |
 
 **Reconciliation verdict.** An earlier shakedown saw
-`macro_start_session` *reject* a non-neometa key with `human_key must be an absolute path-like
+`macro_start_session` *reject* a non-org key with `human_key must be an absolute path-like
 project key` — an error that flatly contradicted this doctrine. That error **no longer
 reproduces**: the current server accepts every form above. So the doctrine is
 accurate as stated — an absolute path *does* fork a distinct mailbox (row 3, confirmed live) —
@@ -275,7 +275,7 @@ same resolved-project identity — which is exactly why a divergent key defeats 
 ## Conformance status
 
 **Doctrine ratified (epic `ac-ycr`); wiring in flight.** Live today: Tier-1
-minting in ac-loop / ac-implement / plan family; CLAIM_ASSIGNEE threading + gate union;
+minting in the conductor / ac-implement / plan family; CLAIM_ASSIGNEE threading + gate union;
 Tier-2 chore commits in scheduled workflows. Pending (blocked on this file's rewrite, now
 landed): `ac-ycr.2` (review mint+reserve) · `ac-ycr.3` (batch-close mint) · `ac-ycr.4`
 (self-deregister) · `ac-ycr.5` (roster hand-off + sweeps) · `ac-ycr.6` (FoggyCreek guard) ·

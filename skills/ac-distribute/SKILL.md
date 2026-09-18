@@ -1,6 +1,6 @@
 ---
 name: ac-distribute
-description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The ship-OUT stage of the ac-* pipeline — position per `ac-pipeline/references/stage-table.md`; the release gate that CALLS this is ac-publish. Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa. For the full production release gate (version bump, proof, heavy review, tag) that CALLS this → ac-publish.
+description: Use to SHIP a built app out the door — push a signed build to TestFlight (closed beta), or submit a release to the App Store. The ship-OUT stage of the ac-* pipeline — position per `ac-pipeline/references/stage-table.md`; the hand-off target of the ac-publish release gate. Triggers on "ship to testflight", "push a build", "release to app store", "cut a build", "distribute the app", "submit for review". For pulling crashes/feedback BACK IN → ac-triage. For proving the build first → ac-qa. For the full production release gate (version bump, proof, heavy review, tag) before this → ac-publish.
 ---
 
 > **Generic skill — method only, zero app facts.** Symlinked from agent-compounds and

@@ -2,15 +2,15 @@
 
 One report per shipped batch, ONE template — there is no parallel `.claude/batch-closes/`
 home. This file is the **single source of truth** for the shared report sections (Summary,
-Beads Completed, Changes, Test Coverage, Known post-merge tails, Also carried); `ac-batch-close`
+Beads Completed, Changes, Test Coverage, Known post-merge tails, Also carried); the batch boundary
 Phase 5 references these sections rather than re-specifying them, and appends only its own
 **Deploy** section — edit the shared sections HERE, not there. Destination is set by the
 invocation (C4 mode switch, already built in the `ac-review` rewrite — this template does not
 decide it):
 
-- **Batch-close invocation** (`ac-batch-close` passes `report_dest=.claude/reviews/pending/`) →
+- **Batch-boundary invocation** (passes `report_dest=.claude/reviews/pending/`) →
   writes to `.claude/reviews/pending/YYYY-MM-DD-HHMM-[batch-anchor].md`. This does **not**
-  advance the review-mark: `ac-batch-close`'s Act 3 `git mv`s this file into
+  advance the review-mark: the boundary's Act 3 `git mv`s this file into
   `.claude/reviews/batch/` in the same commit that lands the batch-close summary, and that
   single commit is the mark (bd-kudrb — a report committed straight into `batch/` mid-batch
   was returned by the anchor probe as a commit inside its own range). Under trunk-direct this
@@ -80,7 +80,7 @@ review with no batch: "N/A (standalone review)".}
 ## Test Coverage
 
 {quality-gate results — tests passing, lint clean, type-check clean; Tier 1 CI dispatch
-conclusion + SHA if `ac-batch-close` ran it.}
+conclusion + SHA if the batch boundary ran it.}
 
 ## Review
 
@@ -124,7 +124,7 @@ as a missing VERDICT record, never a silent pass.}
 ## Known post-merge tails
 
 {beads labeled `post-merge` that are still open — the pre-close bead-closure gate (the loop's,
-upstream of `ac-batch-close`) excludes them deliberately (they can't close until this code is
+upstream of batch close-out) excludes them deliberately (they can't close until this code is
 live), so they're listed here instead of silently dropped. Populate with
 `br list --json --limit 0 | jq '[.issues[] | select(.status != "closed") | select((.labels // []) | index("post-merge")) | {id, title}]'` —
 format as a checklist: `- [ ] {id}: {title}`. Omit this section entirely if the query returns

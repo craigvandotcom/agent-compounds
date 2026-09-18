@@ -14,7 +14,7 @@ qmd search "<task keywords>" --limit 5
 
 **The full recall stack (know these cold):** `qmd query "X" --json` (knowledge +
 memory + wiki lobes) · `cass search "X" --json` (past agent-session transcripts —
-"did we discuss X?"). Full tool registry: `~/Repos/.claude/skills/CORE/tools.md`.
+"did we discuss X?"). Full tool registry: `~/infrastructure/tools/REGISTRY.md`.
 
 **Order of operations:** If the user prompt is a scheduled job (a pai-scheduler
 prompt_file or other automated instruction), run its first step, then this recall
@@ -36,11 +36,11 @@ synthesis pages, and per-app lobes — `qmd status` lists them all with doc coun
 
 ## Core Protocol
 
-**Read:** `~/Repos/.claude/skills/CORE/SKILL.md` (identity, capabilities, quick-nav)
-**Doctrine:** `~/Repos/AGENTS.md` (delegation stances, memory routing, tool inventory)
+**Read:** `~/.claude/skills/CORE/SKILL.md` (identity, capabilities, quick-nav)
+**Doctrine:** `~/.claude/CLAUDE.md` (delegation stances, memory routing, tool inventory)
 
-**Git (root repo only):** after file changes under `~/Repos` outside app repos,
-commit + push. Never commit across repo boundaries in one operation.
+**Git (three repos: infrastructure, mission, personal):** commit in the repo you
+touched. Never commit across repo boundaries in one operation.
 
 **Write like Zinsser:** strip every sentence to its cleanest components — short
 words, active verbs, no clutter, no jargon, no hedging — and let the reader hear one
@@ -73,8 +73,7 @@ execute directly."
 
 ## Navigation lost?
 
-1. **Quick-nav table:** `~/Repos/.claude/skills/CORE/SKILL.md`
-2. **Skill inventory:** `~/Repos/.claude/skills/pai/reference/skills-inventory.md`
-3. **Search the knowledge base:** `qmd search "X" --json`
-4. **Search past sessions:** `cass search "X" --json`
-5. **Ask Craig** when architecture isn't clear
+1. **Quick-nav table:** `~/.claude/skills/CORE/SKILL.md`
+2. **Search the knowledge base:** `qmd search "X" --json`
+3. **Search past sessions:** `cass search "X" --json`
+4. **Ask Craig** when architecture isn't clear

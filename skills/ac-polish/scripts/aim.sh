@@ -23,7 +23,7 @@
 #               co-changes, columns, types and touchers; asserts every column of both tables,
 #               the --area bridge, the stoplist, and NOT-GATED on bad arguments
 #   SCHEDULE:   once per seams session, at the start prompt (workflows/seams.md § TARGET); and
-#               on every CI run via scripts/run-all-harnesses.sh
+#               on every CI run via scripts/run-all-proofs.sh
 #   MODE:       advisory — it ranks candidates; the human picks the target
 #   ON-FAILURE: open — a usage error exits 2 with NOT-GATED; too few commits prints the hotspot
 #               table plus a coupling refusal; an empty inventory says so. Nothing it prints is

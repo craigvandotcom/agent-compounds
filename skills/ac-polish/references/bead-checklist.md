@@ -88,7 +88,8 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 - Is the direction right (`<blocked> depends-on <blocker>`) and the graph acyclic
   (`br dep cycles`)? Reversed edges are silent.
 - Does every cited artifact appear verbatim in the blocker's `## Delivers`?
-- Is any epic→child relation wired as `blocks` instead of parent-child?
+- Is any epic-child relation (either direction) wired as `blocks` instead of parent-child?
+  Containment alone sequences the epic's terminal pick — no other edge is needed.
 
 ## 8. seam coverage
 
@@ -110,3 +111,14 @@ is the reader doing its job; reaching for a finding to justify the round is not.
   description + comments. That choice moves the answer more often than the arithmetic does.
 - Does the bead restate canon that already exists in `beads-standards` or
   `ac-pipeline/references/`? Replace it with the pointer.
+
+## 10. epic done-check (only when no child is open)
+
+- An epic with no open children has nothing left to polish — its beads are records. Run
+  the epic's OWN `Probe:` lines at HEAD and report each exit.
+- Every red probe is a finding with a disposition, never a DECLINED item: name what blocks
+  the close — a renamed path the probe still cites (refine the probe), a sibling that never
+  landed its piece (a bead), a baseline failure outside the epic (name the owner). "Drift"
+  is not a disposition.
+- Does the epic carry the review receipt its close path requires? A missing receipt is the
+  first blocker, named first.

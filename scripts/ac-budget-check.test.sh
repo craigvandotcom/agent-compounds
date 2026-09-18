@@ -7,7 +7,7 @@
 # side of the line. A cap proven only by a passing tree is a cap nobody has tested.
 #
 # Run directly:  bash scripts/ac-budget-check.test.sh
-# Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.sh).
+# Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.sh).
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

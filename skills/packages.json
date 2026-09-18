@@ -1,0 +1,205 @@
+{
+  "_doc": "packages.json — the deploy units (ac-6asz.1). One object per package: blurb (one-line display text the README generator renders), skills[] (registry member dirs under skills/ — every entry MUST name a dir carrying SKILL.md; render-readme-packages.py refuses a dead name), agents[] / hooks[] (empty: the five agent stances are global, generated per harness from harnesses.json agent_models, and hook wiring is global in hooks/hooks.json — no package owns either), requires[] (top-level templates/factory.json keys the package's skills read; live bindings are store + triage + design_spec/routes_manifest/routes_public_manifest/ui_audit, the rest are plan-declared per the factory.json _doc and land when WS4 migrates the readers), budget {spine, loaded} (spine = member SKILL.md line cap, the always-loaded surface; loaded = all-Markdown-under-member-dirs cap; measured 2026-09-13 in _measured, budgets set above measured with headroom — Checks 13/23 read these through lint/lib/manifest.py, next bead). skills/_tools/ is stamped by EVERY package, never owned by one. ac-board ships unpackaged by design (read-only window, in no plan package list). Member lists follow the AGENTS.md v2 map (plan §WS3), corrected to on-disk names: ac-human (not ac-human-session), ui-brainstorm stays in library (ui-elevate did not absorb it).",
+  "_measured": {
+    "date": "2026-09-13",
+    "factory-core": {
+      "loaded": 12599,
+      "spine": 1583
+    },
+    "factory-ops": {
+      "loaded": 3021,
+      "spine": 729
+    },
+    "factory-verify": {
+      "loaded": 9137,
+      "spine": 808
+    },
+    "library": {
+      "loaded": 16028,
+      "spine": 1129
+    },
+    "meta": {
+      "loaded": 5856,
+      "spine": 462
+    },
+    "stack-nextjs-supabase": {
+      "loaded": 4485,
+      "spine": 937
+    },
+    "substrate": {
+      "loaded": 2209,
+      "spine": 897
+    }
+  },
+  "_lint": {
+    "_doc": "relocated lint v2 constants (ac-6asz.3): lint/config.json is deleted, so this section is the only source. Checks 14/15 read caps, ceilings and base_ref through lint/lib/manifest.py; Checks 13/23 read the per-package budgets above the same way. Values moved verbatim — a constant change is a manifest change, never a script edit. The README renderer skips '_' keys, so the 7-package map is unaffected.",
+    "base_ref": "origin/main",
+    "lean_family_cap": 800,
+    "conductor_ceiling": 170,
+    "standard_ceiling": 530,
+    "conductor_skills": [
+      "ac-implement",
+      "ac-review",
+      "ac-publish",
+      "ac-land"
+    ],
+    "lean_family": [
+      "ac-plan",
+      "ac-polish",
+      "ac-beadify",
+      "ac-implement",
+      "ac-publish",
+      "ac-pipeline",
+      "ac-review"
+    ],
+    "creation_exception": [
+      "ac-plan",
+      "ac-polish",
+      "ac-beadify",
+      "ac-implement",
+      "ac-publish",
+      "ac-pipeline",
+      "multi-model",
+      "ac-qa",
+      "ui-elevate",
+      "ac-board",
+      "ac-tidy"
+    ]
+  },
+  "factory-core": {
+    "agents": [],
+    "blurb": "the production line (conductor: ac-implement; doctrine: ac-pipeline)",
+    "budget": {
+      "loaded": 14000,
+      "spine": 1800
+    },
+    "hooks": [],
+    "requires": [
+      "ci_gate_script"
+    ],
+    "skills": [
+      "ac-pipeline",
+      "ac-plan",
+      "ac-polish",
+      "ac-beadify",
+      "ac-implement",
+      "ac-review",
+      "ac-prove",
+      "ac-publish",
+      "ac-land",
+      "beads-standards",
+      "agent-mail"
+    ]
+  },
+  "factory-verify": {
+    "agents": [],
+    "blurb": "QA journeys, UI elevation, tests, hygiene",
+    "budget": {
+      "loaded": 11000,
+      "spine": 1000
+    },
+    "hooks": [],
+    "requires": [
+      "design_spec",
+      "journeys_dir",
+      "routes_manifest",
+      "routes_public_manifest",
+      "ui_audit",
+      "serve_prod"
+    ],
+    "skills": [
+      "ac-qa",
+      "ui-elevate",
+      "ui-debug",
+      "testing",
+      "ac-hygiene"
+    ]
+  },
+  "factory-ops": {
+    "agents": [],
+    "blurb": "human command center, align, backlog intake, triage, native distribute",
+    "budget": {
+      "loaded": 4000,
+      "spine": 900
+    },
+    "hooks": [],
+    "requires": [
+      "store",
+      "triage",
+      "human"
+    ],
+    "skills": [
+      "ac-human",
+      "ac-align",
+      "ac-tidy",
+      "ac-backlog",
+      "ac-triage",
+      "ac-distribute"
+    ]
+  },
+  "stack-nextjs-supabase": {
+    "agents": [],
+    "blurb": "the Next.js + Supabase + Capacitor stack",
+    "budget": {
+      "loaded": 6000,
+      "spine": 1100
+    },
+    "hooks": [],
+    "requires": [],
+    "skills": [
+      "supabase",
+      "capacitor"
+    ]
+  },
+  "substrate": {
+    "agents": [],
+    "blurb": "the AI-native-org memory skills (deploy together)",
+    "budget": {
+      "loaded": 3000,
+      "spine": 1100
+    },
+    "hooks": [],
+    "requires": [
+      "memory",
+      "human"
+    ],
+    "skills": [
+      "context-engineering",
+      "reflect",
+      "dream",
+      "wiki"
+    ]
+  },
+  "meta": {
+    "agents": [],
+    "blurb": "authoring and auditing the registry itself",
+    "budget": {
+      "loaded": 7000,
+      "spine": 600
+    },
+    "hooks": [],
+    "requires": [],
+    "skills": [
+      "skill-builder"
+    ]
+  },
+  "library": {
+    "agents": [],
+    "blurb": "one-shot prompts, methodology, labs, multi-model access, UI critique",
+    "budget": {
+      "loaded": 18000,
+      "spine": 1300
+    },
+    "hooks": [],
+    "requires": [],
+    "skills": [
+      "jef-prompts",
+      "jef-flywheel",
+      "brainstorming",
+      "ac-idea-lab",
+      "ac-plan-lab",
+      "multi-model",
+      "ui-brainstorm"
+    ]
+  }
+}

@@ -26,7 +26,11 @@
 #   bug           -> the reason cites a test-shaped path (the regression test)
 #   task/feature  -> the reason names >=1 artifact from THIS bead's own ## Delivers
 #   investigation -> the reason cites a spawned bead id or a documented-answer marker
-#   epic          -> exempt (Delivers-coverage is ac-align's epic-close proposal)
+#   epic          -> the reason cites the probe receipt close-gate.sh ran from, AND
+#                    every ## Delivers path exists on disk (exit-0 itself is
+#                    close-gate.sh's GREEN leg, which runs before this core), AND a
+#                    `REVIEW: APPROVED` comment sits on the epic's own comments —
+#                    review passed, read from the bead, never the reason
 #   human-gate    -> exempt (closure is a recorded human decision)
 #
 # HISTORICAL CLOSES ARE NEVER SWEPT: this runs at close time, on the bead being closed.
@@ -130,9 +134,6 @@ fi
 case ",$LABELS," in
   *,human-gate,*) verdict "EXEMPT" "human-gate bead — closure is a recorded human decision" 0 ;;
 esac
-if [ "$ITYPE" = "epic" ]; then
-  verdict "EXEMPT" "epic — Delivers-coverage is ac-align's epic-close proposal, not this gate" 0
-fi
 
 # --- deliberate, recorded bypass -------------------------------------------
 if printf '%s' "$REASON" | grep -qE 'EVIDENCE-BYPASS:[[:space:]]*[^[:space:]]'; then
@@ -215,6 +216,61 @@ case "$ITYPE" in
     printf 'close-evidence[%s] declared artifacts:\n' "$BEAD_ID" >&2
     printf '  - %s\n' $ARTIFACTS >&2
     verdict "REFUSE" "$ITYPE — close reason names NONE of the artifacts this bead's own ## Delivers promised" 1
+    ;;
+
+  epic)
+    # An epic closes on its children's temporal pairs: the close reason cites the probe
+    # receipt line close-gate.sh ran from, and every ## Delivers path must exist on disk —
+    # the epic promises integration, so a promised path that was never created is a
+    # refusal, not a wave-through. (That every probe exited 0 is close-gate.sh's GREEN
+    # leg, which runs before this core; the citation is what lands it in the record.)
+    DELIVERS=$(printf '%s' "$DESC" | awk '/^##[[:space:]]*Delivers/{p=1;next} p&&/^##[[:space:]]/{exit} p')
+    if [ -z "$(printf '%s' "$DELIVERS" | tr -d '[:space:]')" ]; then
+      verdict "NOT-CHECKED" "epic has no populated '## Delivers' section — there is no declared artifact to cross-reference. Give the bead a Delivers section, or bypass explicitly" 2
+    fi
+
+    ARTIFACTS=$(printf '%s' "$DELIVERS" \
+      | grep -oE '[A-Za-z0-9_.][A-Za-z0-9_./-]*\.[A-Za-z0-9]+' \
+      | grep -vE '^\.+$' | LC_ALL=C sort -u)
+
+    if [ -z "$ARTIFACTS" ]; then
+      verdict "UNVERIFIABLE-DELIVERS" "epic bead $BEAD_ID carries a prose-only '## Delivers' — no path-shaped artifact exists to cross-reference, so NO close of this bead can ever pass evidence check. Fix the bead (give Delivers a path) or bypass explicitly. Audit siblings: close-evidence-check.sh --list-unverifiable" 2
+    fi
+
+    if ! printf '%s' "$REASON" | grep -qiE 'probe receipt'; then
+      verdict "REFUSE" "epic — close reason cites no probe receipt: an epic closes on its children's temporal pairs, so the reason must cite the probe receipt line close-gate.sh ran from (every probe exit 0)" 1
+    fi
+
+    # The review receipt: the probe receipt proves the probes ran green, but only a
+    # `REVIEW: APPROVED` comment on the epic proves review passed — read from the
+    # bead's own comments (`br show --json` carries a `comments` key), never the
+    # close reason. Unreadable or absent comments refuse: a gate that cannot see the
+    # receipt must not assume it. The match is anchored to a receipt-shaped line
+    # (`^REVIEW: APPROVED`, the shape ac-review writes with the range): a bare
+    # substring grep is satisfied by a negation sentence stating the receipt is
+    # ABSENT (measured live on ac-zug5: "No REVIEW: APPROVED receipt written…"),
+    # which would close the epic on an explicit non-receipt (ac-7lpp).
+    if ! printf '%s' "$NODE" | jq -r '.comments // [] | .[].text // empty' 2>/dev/null | grep -q '^REVIEW: APPROVED'; then
+      verdict "REFUSE" "epic — no REVIEW: APPROVED comment on the epic: review has not passed, so the epic cannot close" 1
+    fi
+
+    MISSING=""
+    while IFS= read -r art; do
+      [ -n "$art" ] || continue
+      if ! printf '%s' "$REASON" | grep -qF -- "$art"; then
+        base="${art##*/}"
+        if [ "$base" = "$art" ] || ! printf '%s' "$REASON" | grep -qF -- "$base"; then
+          verdict "REFUSE" "epic — close reason names NONE of the artifacts this bead's own ## Delivers promised (missing '$art')" 1
+        fi
+      fi
+      [ -e "$art" ] || MISSING="$MISSING $art"
+    done <<< "$ARTIFACTS"
+
+    if [ -n "$MISSING" ]; then
+      verdict "REFUSE" "epic — declared artifact(s) missing on disk:$MISSING" 1
+    fi
+
+    verdict "PASS" "epic — close reason cites the probe receipt and every declared artifact exists" 0
     ;;
 
   *)

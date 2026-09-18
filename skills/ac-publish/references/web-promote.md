@@ -25,7 +25,7 @@ vercel promote "$STAGED_URL"   # dashboard equivalent: "Promote to Production"
 `NEXT_PUBLIC_*` at build time — not swappable after the fact — so promoting one ships the wrong
 keys and flags. Only the staged production-target build is a valid target, and `vercel inspect` is
 the only thing that tells the two apart; URL naming is not evidence. A preview, or no staged build
-for `$SHA`, **aborts this step** and is surfaced to Craig — never report a ship on an unverified
+for `$SHA`, **aborts this step** and is surfaced to the operator — never report a ship on an unverified
 promote.
 
 ## Then re-assert the domain flag — and read it back

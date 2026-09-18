@@ -44,8 +44,10 @@ mkdir -p "$MOCK_BIN"
 PATH="$MOCK_BIN:$PATH"
 export PATH
 
-# Mock `br` — a file-backed board. `show` emits the bead, `close` flips status to closed
-# unless AC2_TEST_BR_CLOSE_NOOP=1, which is how the silent-close-failure case is driven.
+# Mock `br` — a file-backed board. `show` emits the bead unless AC2_TEST_BR_SHOW_FAIL=1
+# (the read refuses while the fixture board stays intact — ac-8n94). `close` flips
+# status to closed unless AC2_TEST_BR_CLOSE_NOOP=1, which is how the silent-close-failure
+# case is driven.
 cat >"$MOCK_BIN/br" <<'MOCKBR'
 #!/usr/bin/env bash
 STATE="${AC2_TEST_BR_STATE:-/nonexistent}"
@@ -54,6 +56,7 @@ id=""
 for a in "$@"; do case "$a" in --*) ;; -*) ;; *) [ -z "$id" ] && id="$a" ;; esac; done
 case "$cmd" in
   show)
+    [ "${AC2_TEST_BR_SHOW_FAIL:-0}" = "1" ] && exit 1
     [ -f "$STATE/$id.json" ] || exit 1
     cat "$STATE/$id.json" ;;
   close)
@@ -85,7 +88,8 @@ esac
 MOCKBR
 chmod +x "$MOCK_BIN/br"
 
-# Mock `ubs` — modes drive the scanner leg's four outcomes.
+# Mock `ubs` — modes drive the scanner leg's outcomes, including ac-x9dy's
+# finding-less exit-1 (js tool-side noise) versus exit-1-with-findings.
 cat >"$MOCK_BIN/ubs" <<'MOCKUBS'
 #!/usr/bin/env bash
 n=$#
@@ -97,6 +101,14 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
             echo "   subject.txt:12:3  possible defect here"
             echo "Summary: 12 categories checked"; exit 0 ;;
   nocount)  echo "UBS Meta-Runner"; echo "Summary: 12 categories checked"; exit 0 ;;
+  exit1-clean) echo "UBS Meta-Runner"; echo "Files scanned: $n"
+            echo "Files: $n"; echo "Critical: 0"; echo "Warning: 0"; echo "Info: 0"; exit 1 ;;
+  exit1-findings) echo "UBS Meta-Runner"; echo "Files scanned: $n"
+            echo "   subject.txt:12:3  possible defect here"
+            echo "Files: $n"; echo "Critical: 1"; echo "Warning: 0"; echo "Info: 0"; exit 1 ;;
+  exit1-summary) echo "UBS Meta-Runner"; echo "Files scanned: $n"
+            echo "   Location: /tmp/x.py:2:11"
+            echo "Files: $n"; echo "Critical: 2"; echo "Warning: 1"; echo "Info: 1"; exit 1 ;;
 esac
 MOCKUBS
 chmod +x "$MOCK_BIN/ubs"
@@ -192,6 +204,7 @@ gate() { # <root> [extra args...]
   local root="$1"; shift
   ( cd "$root" && AC2_FLIGHT_DIR="$root/.flight" AC2_TEST_BR_STATE="$root/.br" \
       AC2_TEST_BR_CLOSE_NOOP="${AC2_TEST_BR_CLOSE_NOOP:-0}" \
+      AC2_TEST_BR_SHOW_FAIL="${AC2_TEST_BR_SHOW_FAIL:-0}" \
       AC2_TEST_UBS_MODE="${AC2_TEST_UBS_MODE:-clean}" \
       bash "$GATE" "$BEAD" --body-file "$root/body.md" --root "$root" "$@" 2>&1
     echo $? > "$RCFILE" )
@@ -353,6 +366,32 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
   pass "AC3e: '  PASS: <label>' assertion lines are recognized as assertion results"
 else fail "AC3e: rc=$GATE_RC out=$out"; fi
 
+# --- 3g (heyt P1, instance 6): an existence-predicate chain (`test -f` over test-shaped
+# files) names harness files but emits nothing — `test` has no stdout. The assertion-bearing
+# probe must be the output-carrying harness probe, never the predicate chain.
+R="$(mkcase coverage-silent-testchain)"
+write_registry_format_harness "$R"; board "$R" in_progress worker
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness files exist.
+  Probe: `test -f harness.test.sh && test -f subject.txt` — tier: none
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3g: a test-predicate chain naming test-shaped files is never the assertion probe — the output-carrying harness probe is"
+else fail "AC3g: rc=$GATE_RC out=$out"; fi
+
 # --- 3f (the Delivers carve-out, guarded): when EVERY probe's stdout is suppressed by
 # construction, the temporal exit-code pair recorded in the receipt is the assertion —
 # the same case the prose path already handled. This must never have to grow a harness.
@@ -375,6 +414,36 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'temporal exit-code pair'; then
   pass "AC3f: every-probe-output-silent closes on the receipt's temporal pair — no harness demanded"
 else fail "AC3f: rc=$GATE_RC out=$out"; fi
+
+# --- 3k (bd-9y8ii, bd-fswt7.3): a `git diff --quiet` probe naming a test-shaped file must
+# never be chosen as the assertion probe — `--quiet` suppresses stdout exactly like `-q`, so
+# a COVERAGE leg that missed it reads the probe's empty output and NOT-CHECKEDs a close whose
+# real harness probe passed.
+R="$(mkcase quiet-probe)"
+write_harness "$R"; board "$R" in_progress worker
+git -C "$R" init -q
+git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false add -A >/dev/null 2>&1
+git -C "$R" -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -q -m base >/dev/null 2>&1
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the harness file is unchanged.
+  Probe: `git diff --quiet HEAD -- harness.test.sh` — tier: none
+- the harness passes.
+  Probe: `bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+fly "$R"; fix_subject "$R"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'COVERAGE ok'; then
+  pass "AC3k: a 'git diff --quiet' probe naming a test-shaped file is never the assertion probe — the output-carrying harness probe is"
+else fail "AC3k: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 3g/3h/3i/3j — the fresh-verification carve-out (ac-close-gate-already-green-carveout-8r3o,
@@ -453,6 +522,118 @@ if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
 else fail "AC3j: the bead was closed despite the refusal"; fi
 
 # ============================================================================================
+# AC 3l/3m/3n — the DISPOSITION carve-out (condition e, the cascade): a disposition close
+# whose probes are NOT all green closes ONLY when every Consumes blocker is closed with a
+# disposition close reason, read live from the board — never assumed, never a bare claim.
+# The close claims "the state this bead aimed at is settled", NOT "a diff caused a flip",
+# so it may land where the temporal pair cannot (no receipt, RED probe still red).
+# ============================================================================================
+
+DEP="bd-upstream-9zz"
+board_dep() { # <root> <status> <assignee> <close reason> — the consumed blocker on the mock board
+  jq -n --arg id "$DEP" --arg st "$2" --arg as "$3" --arg cr "$4" \
+    '{id:$id,title:"upstream fixture",issue_type:"task",status:$st,assignee:$as,labels:[],description:"consumed by the fixture bead",close_reason:$cr}' \
+    >"$1/.br/$DEP.json"
+}
+
+# --- 3l: probe RED at HEAD (work never landed), blocker closed wontfix → ACCEPTED via the
+# cascade leg, and the TRIAGE-CLOSE record lands on the bead — the bead's stranded-premise
+# close, verified.
+R="$(mkcase cascade-accept)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "triager" "wontfix: the upstream chose not to ship — premise retired (bd-upstream.abc)"
+out="$(gate "$R" --reason "obsolete: TRIAGE — the consumed blocker closed wontfix. Delivered: gone.md" --actor worker)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'cascade'; then
+  pass "AC3l: a disposition close with a red probe and a disposition-closed blocker is accepted via the cascade leg"
+else fail "AC3l: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC3l: the cascade close landed"
+else fail "AC3l: the cascade close did not land"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q 'TRIAGE-CLOSE' "$R/.br/comments.log"; then
+  pass "AC3l: the cascade evidence is RECORDED on the bead (TRIAGE-CLOSE comment)"
+else fail "AC3l: no TRIAGE-CLOSE record landed on the bead"; fi
+
+# --- 3m: the SAME red-probe disposition close where the blocker closed shipped: (the
+# deliverable is final, not retired) → REFUSED. The cascade does not rescue a premise
+# that was delivered-and-moved-on; that staleness is intent, and intent stays human.
+R="$(mkcase cascade-shipped-blocker)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "worker" "shipped: the upstream landed its deliverable"
+out="$(gate "$R" --reason "obsolete: TRIAGE — resolved at HEAD by other work. Delivered: gone.md")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'disposition close'; then
+  pass "AC3m: a disposition close rescued by a shipped-closed blocker is refused — the cascade demands a disposition close"
+else fail "AC3m: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC3m: the refused cascade close leaves the bead open"
+else fail "AC3m: the bead was closed despite the refusal"; fi
+
+# --- 3n: the blocker is OPEN → the premise is not gone, the cascade does not hold → REFUSED.
+R="$(mkcase cascade-open-blocker)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" open "" ""
+out="$(gate "$R" --reason "obsolete: TRIAGE — resolved at HEAD by other work. Delivered: gone.md")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'disposition close'; then
+  pass "AC3n: a disposition close over an OPEN blocker is refused — the premise still holds"
+else fail "AC3n: rc=$GATE_RC out=$out"; fi
+
+# --- 3o: wontfix is NOT a disposition carve-out verb — intent stays human.
+R="$(mkcase cascade-wontfix-reason)"
+cat >"$R/body.md" <<'BODY'
+## Acceptance Criteria
+- the consumed artifact exists.
+  Probe: `test -f gone.md` — tier: none
+
+## Delivers
+- artifact: gone.md
+
+## Consumes
+- bd-upstream-9zz -> gone.md (landed)
+BODY
+board "$R" in_progress worker
+board_dep "$R" closed "triager" "wontfix: premise retired (bd-upstream-9zz)"
+out="$(gate "$R" --reason "wontfix: we decided not to build this. Delivered: gone.md")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'fresh-verify'; then
+  pass "AC3o: a wontfix: close with a red probe is refused by the fresh-verify guard — wontfix is not a carve-out verb; intent stays human"
+else fail "AC3o: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
 # AC 4 — the scanner leg
 # ============================================================================================
 mk_green() { # a fixture standing at the moment of a legitimate close
@@ -495,6 +676,27 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: scanned == handed with no detail findings passes the scanner leg"
 else fail "AC4 clean: rc=$GATE_RC out=$out"; fi
 
+R="$(mk_green scan-exit1-clean)"
+out="$(AC2_TEST_UBS_MODE=exit1-clean gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: finding-less exit-1 passes — the verdict is the finding count, never the exit code alone (ac-x9dy)"
+else fail "AC4 exit1-clean: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-exit1-findings)"
+out="$(AC2_TEST_UBS_MODE=exit1-findings gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: exit-1-with-findings still refuses (ac-x9dy)"
+else fail "AC4 exit1-findings: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-exit1-summary)"
+out="$(AC2_TEST_UBS_MODE=exit1-summary gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: exit-1 with summary-only findings refuses — the Combined Summary corroborates where DETAIL misses (ac-x9dy python shape)"
+else fail "AC4 exit1-summary: rc=$GATE_RC out=$out"; fi
+
 R="$(mk_green scan-empty-argv)"
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
@@ -529,6 +731,22 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'LANDING'; then
   pass "AC5: a close that silently did not land is caught by reading it back, naming LANDING"
 else fail "AC5 landing: rc=$GATE_RC out=$out"; fi
+
+# --- READ: show refused → NOT-CHECKED (ac-8n94). The fixture board stays intact so the
+# failure is the br_field show --json read, not a missing bead file. A refused read is
+# never a pass, and no status is fabricated.
+R="$(mk_green read-show-refused)"
+out="$(AC2_TEST_BR_SHOW_FAIL=1 gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
+  pass "AC5: show refused is NOT-CHECKED (exit 2) — a refused read is never a pass"
+else fail "AC5 show refused: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC5: a refused show leaves the bead open — no status is fabricated"
+else fail "AC5 show refused: the bead was closed despite the refused read"; fi
+if [ -f "$R/.br/$BEAD.json" ]; then
+  pass "AC5: the fixture board stayed intact — the refusal is the read, not a missing file"
+else fail "AC5 show refused: the fixture board was removed"; fi
 
 R="$(mk_green own-happy)"
 out="$(gate "$R" --reason "$REASON" --actor worker)"

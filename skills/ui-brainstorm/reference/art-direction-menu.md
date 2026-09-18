@@ -27,7 +27,7 @@ note is a starting point, never a mandate to ship the look by default.
 - **Mesh gradient (restrained).** — *Restrained, non-default variant only.* A muted,
   brand-neutral mesh field over a dark base (e.g. `--mesh-bg #030712`) can add depth —
   but it is admissible **only** when it does not drift to the purple/blue 45° AI-default
-  fingerprint. Cite `ac-ui-polish/reference/critique-polish.md` §D (anti AI-default
+  fingerprint. Cite `ui-elevate/references/critique-polish.md` §D (anti AI-default
   gradient) whenever proposing it, so the review catches drift.
 
 - **Dither atmosphere.** — *Site hero only.* Bayer-4×4 ordered-dither canvas texture,

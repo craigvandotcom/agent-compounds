@@ -378,14 +378,17 @@ for a in "${ASSIGNEES[@]}"; do
 done
 
 # EXPLICIT BATCH SCOPE (bd-f83hn): resolve every `--beads` id DIRECTLY, ignoring
-# assignee. The br show read returns a JSON array; on an unresolvable id
-# it emits an error OBJECT instead, so the `type=="array"` guard turns any
-# resolution failure into an empty set rather than a crash — an unresolvable
-# --beads list must NOT become a way to spell --allow-empty.
+# assignee. br_call refuses a non-array error envelope (return 2); a refused
+# read FAIL-CLOSES here — never an empty-string fallback — so an unresolvable
+# `--beads` list cannot masquerade as a claim-free run or a spellable `--allow-empty`.
 SCOPED_BEADS="[]"
 if [ -n "$BEADS_SCOPE" ]; then
   # shellcheck disable=SC2086 — deliberate word-split: BEADS_SCOPE is a space-separated id list.
-  _scoped_raw=$(br_call show --json $BEADS_SCOPE) || _scoped_raw=""
+  _scoped_raw=$(br_call show --json $BEADS_SCOPE) || {
+    echo "beads-closed-gate: FAIL-CLOSED — the br show read for --beads refused" >&2
+    echo "  the batch scope cannot be resolved" >&2
+    exit 2
+  }
   SCOPED_BEADS=$(printf '%s' "$_scoped_raw" | jq 'if type == "array" then . else [] end' 2>/dev/null) \
     || SCOPED_BEADS="[]"
   [ -n "$SCOPED_BEADS" ] || SCOPED_BEADS="[]"

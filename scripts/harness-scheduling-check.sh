@@ -9,7 +9,7 @@
 # Exit 0  every harness is scheduled
 # Exit 1  at least one is not (each reported as FAIL: ...)
 #
-# THE ASSERTION, and why it is not circular: scripts/run-all-harnesses.sh discovers
+# THE ASSERTION, and why it is not circular: scripts/run-all-proofs.sh discovers
 # harnesses by glob and a workflow runs that ONE script, so no harness is named in a
 # workflow individually. This check therefore recomputes the inventory INDEPENDENTLY —
 # its own find, its own excludes — and compares it against what the runner claims via
@@ -20,7 +20,7 @@
 set -uo pipefail
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-RUNNER_REL="scripts/run-all-harnesses.sh"
+RUNNER_REL="scripts/run-all-proofs.sh"
 RUNNER="$ROOT/$RUNNER_REL"
 FAILURES=0
 
@@ -36,8 +36,8 @@ fi
 
 # 2 — some workflow actually invokes it. A runner nobody calls is the same defect
 #     one level up: the thing that runs the proof tests must itself be scheduled.
-if ! grep -lq "run-all-harnesses" "$ROOT"/.github/workflows/*.yml 2>/dev/null; then
-  hs_fail "no .github/workflows/*.yml references run-all-harnesses.sh — the harness suite is unscheduled"
+if ! grep -lq "run-all-proofs" "$ROOT"/.github/workflows/*.yml 2>/dev/null; then
+  hs_fail "no .github/workflows/*.yml references run-all-proofs.sh — the harness suite is unscheduled"
 fi
 
 # 3 — independent inventory vs the runner's claimed inventory.

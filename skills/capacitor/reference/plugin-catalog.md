@@ -1,12 +1,12 @@
 # Capacitor Plugin Catalog
 
-**When to read:** Choosing which plugin to install for a native feature, looking up package names, or understanding Body Compass-specific use cases.
+**When to read:** Choosing which plugin to install for a native feature, looking up package names, or understanding app-specific use cases.
 
 Install pattern: `pnpm add @capacitor/plugin-name && npx cap sync`
 
 ---
 
-## Core Plugins (Body Compass Use Cases)
+## Core Plugins (example use cases)
 
 | Plugin              | Package                          | Use Case                                  |
 | ------------------- | -------------------------------- | ----------------------------------------- |

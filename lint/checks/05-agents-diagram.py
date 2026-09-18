@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # ---
 # id: 05-agents-diagram
-# prevents: the repo map lying — an AGENTS.md diagram naming a top-level path that is not on disk, with the gitignored carve-out keeping a local-only dir (absent from a bare CI clone) from holding registry-lint red forever
-# scope: LIVE_TEXT
+# prevents: the repo map lying — an AGENTS.md diagram naming a top-level path that is not on disk, with
+#   the gitignored carve-out keeping a local-only dir (absent from a bare CI clone) from holding
+#   registry-lint red forever
+# scope: LIVE_TEXT AGENTS_DOC
 # severity: fail
 # fixture: lint/fixtures/05-agents-diagram
 # ---
@@ -29,7 +31,9 @@ sys.path.insert(0, _LINT)
 from lib import scope  # noqa: E402
 
 CHECK_ID = "05-agents-diagram"
-DIAGRAM_PATHS = ("skills", "agents", "deploy.sh", "templates", "_plans")
+# ac-ys8f moved the machinery under engine/; the diagram names that directory now,
+# not the stamper script that used to sit at the root.
+DIAGRAM_PATHS = ("skills", "agents", "engine", "templates", "_plans")
 
 
 def git_ignored(root, path):

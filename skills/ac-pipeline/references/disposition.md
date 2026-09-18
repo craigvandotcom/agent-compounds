@@ -42,7 +42,7 @@ this site defines nothing itself. Fails the test → fold in or record
 **HUMAN means a decision bead — full stop.** Per `bead-conventions.md` § Decision beads:
 `-t decision`, labels `human-gate,skill-improvement` (for system-upgrade proposals), P3,
 pre-staged memo (target file · session evidence · exact proposed diff · recommendation).
-It surfaces on the `ac-human-session` docket and cannot be lost.
+It surfaces on the `ac-human` docket and cannot be lost.
 
 - **Headless:** never `AskUserQuestion`, and **never Slack as a decision's storage** — Slack
   is for milestone notifications only; a card that scrolls away is a dropped proposal.

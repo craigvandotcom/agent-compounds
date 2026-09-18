@@ -8,7 +8,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/20-harness-scheduling.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail
@@ -26,12 +26,12 @@ build_tree() { # <root> <with-workflow-ref:yes|no>
   local w="$1" ref="$2"
   mkdir -p "$w/scripts" "$w/.github/workflows" "$w/lint/checks"
   cp "$REG" "$w/scripts/"
-  cp "$ROOT/scripts/run-all-harnesses.sh" "$w/scripts/"
+  cp "$ROOT/scripts/run-all-proofs.sh" "$w/scripts/"
   chmod +x "$w/scripts/"*.sh
   printf '#!/usr/bin/env bash\n# demo proof harness\nexit 0\n' > "$w/lint/checks/demo.test.sh"
   chmod +x "$w/lint/checks/demo.test.sh"
   if [ "$ref" = yes ]; then
-    printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bash scripts/run-all-harnesses.sh\n' > "$w/.github/workflows/ci.yml"
+    printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: bash scripts/run-all-proofs.sh\n' > "$w/.github/workflows/ci.yml"
   else
     printf 'name: ci\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' > "$w/.github/workflows/ci.yml"
   fi
@@ -41,7 +41,7 @@ build_tree() { # <root> <with-workflow-ref:yes|no>
 w="$(mktemp -d)"
 build_tree "$w" no
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "no .github/workflows/\*.yml references run-all-harnesses.sh"; then
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "no .github/workflows/\*.yml references run-all-proofs.sh"; then
   ok "RED: unscheduled suite -> exit 1 naming the missing workflow reference"
 else
   bad "RED case: expected 1 naming the unscheduled suite, got $rc"; printf '%s\n' "$out"

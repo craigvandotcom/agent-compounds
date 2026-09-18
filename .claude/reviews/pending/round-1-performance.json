@@ -1,26 +1,26 @@
 {
   "reviewer": "performance",
   "round": 1,
-  "payload_read": "git diff a8bdaea..2b92bd1",
+  "payload_read": "git diff a2120d2..6d02fe7",
   "findings": [
     {
-      "title": "flight-check re-reads the entire uncapped board once per blocker prefix-miss",
+      "title": "docket-health now reads every _plans/*.md full-text on every Scan A run",
       "severity": "Medium",
-      "file": "skills/ac-implement/scripts/flight-check.sh",
-      "line": 234,
-      "category": "unbounded-query",
-      "evidence": "The cap removal (--limit 5000 -> --limit 0) was correct (truncation read as empty), but the replacement query is now unbounded and unfetched per-line: the full-board `br list --json --limit 0` sits INSIDE the per-blocker Consumes loop, so every blocker line whose exact id misses triggers its own full-board read. Measured on this repo's 434-record board: 104KB of JSON, ~66ms per read (br serialize + pipe + first jq parse; streaming jq over the equivalent ledger measured 85ms). So a bead citing K unique-prefix blockers costs (K+1) full-board reads and the consume gate runs on every refined bead in every consuming repo, where boards only grow. The consumer needs two fields (id, status); there is no field projection and no pagination in the call. Same-class site: refly.sh:59 does one full-board read per invocation (bounded, acceptable, noted for the same fix shape).",
-      "fix": "Hoist one `br_call list --json --limit 0` read before the Consumes loop and resolve every prefix from that cached id list (one jq pass building {id,status}); the per-blocker `br show` for resolved ids stays as-is.",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 129,
+      "category": "per-run-scan-glob",
+      "evidence": "The shared board-scan python snippet gained a glob.glob('_plans/*.md') loop that opens and fully reads every plan file plus 3 re.search passes per file, every time docket-health prints. _plans/ is local-untracked and unbounded; on this checkout it is 21 files / 11MB, so each invocation reads ~11MB and regex-scans it (~100-300ms). Scan A runs in ac-loop Phase 0 (every run), the ac-human session/board opener, nightly reconcile, and weekly align — so this cost rides the most frequent read layer in the pipeline. The beadify-refusals population is in practice near zero; 11MB of IO is paid to compute it.",
+      "fix": "Prefilter before the regex passes: read only the head for status/polish markers (status: refined is frontmatter, top few lines), then read the full body only for files that pass. Or gate the whole loop on len(human-gate docket) > 0 / plan-gap|gate-incomplete being present — if the docket is empty the beadify-refusal count need not be recomputed.",
       "auto_fixable": true
     },
     {
-      "title": "assurance-declarations-check re-parses the full 2.6MB ledger per cited PENDING-DECISION id",
+      "title": "beadify-refusals regex triplet recompiles and rescans full plan text 3x per file",
       "severity": "Medium",
-      "file": "scripts/assurance-declarations-check.sh",
-      "line": 67,
-      "category": "missing-cache",
-      "evidence": "The new duplicate-record check makes resolve_pending read the whole ledger TWICE per cited id: a `jq -s` slurp that builds the full array (measured 22ms on this repo's 2.6MB / 434-record board) plus the pre-existing streaming select (85ms), and resolve_pending is called inside two loops (hooks-manifest wiring entries at line 122, orphan hook files at line 157) — O(citations x full board) re-reading a derived file whose record count grows monotonically (closed records included). At ~10-20 citations this adds ~0.5-1.5s to every `lint --changed` pre-commit run, and it re-reads the same file it could parse once.",
-      "fix": "Slurp the ledger ONCE per run into an id->count map (single `jq -s '{map}' \"$BOARD\"` exported to a variable), and have resolve_pending consult it for both the duplicate count and existence; keep one final streaming select only for the record body it needs.",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 132,
+      "category": "redundant-regex-passes",
+      "evidence": "Inside the loop each plan undergoes re.search('^status:', ...) then re.search('^polish_rounds:') then re.search('^polish_fixpoint_') then the needs-human alternating-Concat regex — four independent passes over ~500KB average file text where the first three target frontmatter (first ~1KB). The needs-human regex is the heaviest (lookbehind/lookahead alternation) and only runs on survivors, but the frontmatter probes scan the entire body each time; combined with the glob cost this is O(total-plan-bytes x 4) per run, ~1-2x the necessary work.",
+      "fix": "Read the frontmatter head slice (~2KB into _t) for the three ^key: probes, and run the heavy needs-human regex once over the full text only if the frontmatter probes pass; or use re.compile once outside the loop for all four patterns.",
       "auto_fixable": true
     }
   ]

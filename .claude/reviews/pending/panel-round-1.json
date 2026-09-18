@@ -1,13 +1,10 @@
 {
- "range": "a8bdaea..2b92bd1",
- "round": 1,
- "spawned": [
-  "security",
-  "performance",
-  "architecture",
-  "correctness",
-  "test-quality",
-  "contracts"
- ],
- "skipped": []
+  "round": 1,
+  "range": "a2120d2..6d02fe7",
+  "spawned": ["security", "performance", "architecture", "correctness"],
+  "skipped": {
+    "test-quality": "batch is factory/docs/shell; polish-fixpoint.test.sh is a shell harness (no product test surface)",
+    "contracts": "no product contract surface in a skills/lint-only diff"
+  },
+  "note": "factory/docs-only batch (skills prose, lint checks, shell tools) — product review surface yields APPROVED; core four still run for correctness/architecture on the scripts."
 }

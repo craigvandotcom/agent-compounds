@@ -9,7 +9,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/36-br-envelope.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail
@@ -52,6 +52,25 @@ rc=$(run_check "$FIXTURE")
   && ok "the fixture's raw read is RED and names the caller" \
   || bad "fixture: rc=$rc out=$(cat "$OUT")"
 
+# --- RED: backslash-newline continuation evasion (ac-ia8g) --------------------
+# Distinct marker from sibling ac-1jkr's windowed-context cases.
+mkdir -p "$WORK/evasion-cont/skills/_tools"
+printf '#!/usr/bin/env bash\ndata=$(br \\\n  list --json --limit 0)\n' \
+  > "$WORK/evasion-cont/skills/_tools/cont.sh"
+rc=$(run_check "$WORK/evasion-cont")
+[ "$rc" -eq 1 ] && grep -q 'raw br --json read' "$OUT" \
+  && ok "backslash-newline continuation evasion is RED" \
+  || bad "evasion-cont: rc=$rc out=$(cat "$OUT")"
+
+# --- RED: quoted-binary evasion (ac-ia8g) -------------------------------------
+mkdir -p "$WORK/evasion-quoted/skills/_tools"
+printf 'data=$("br" list --json --limit 0)\n' \
+  > "$WORK/evasion-quoted/skills/_tools/q.sh"
+rc=$(run_check "$WORK/evasion-quoted")
+[ "$rc" -eq 1 ] && grep -q 'raw br --json read' "$OUT" \
+  && ok "quoted-binary evasion is RED" \
+  || bad "evasion-quoted: rc=$rc out=$(cat "$OUT")"
+
 # --- RED: a routed-only tree under the floor refuses, never a clean pass --------
 routed_tree "$WORK/floor" 5
 rc=$(run_check "$WORK/floor")
@@ -72,6 +91,41 @@ rc=$(run_check "$WORK/empty")
 [ "$rc" -eq 2 ] && grep -q 'NOT-CHECKED' "$OUT" \
   && ok "a tree with no scripts is NOT-GATED (exit 2), never a pass" \
   || bad "empty: rc=$rc out=$(cat "$OUT")"
+
+# --- RED: a raw read split across lines, no backslash (ac-1jkr) -----------------
+# Marker: split — sibling ac-ia8g owns quote/continuation fixtures.
+mkdir -p "$WORK/split/skills/_tools"
+printf '#!/usr/bin/env bash\ndata=$(br list\n  --json --limit 0)\n' \
+  > "$WORK/split/skills/_tools/split.sh"
+rc=$(run_check "$WORK/split")
+[ "$rc" -eq 1 ] && grep -q 'raw br --json read' "$OUT" && grep -q 'split.sh' "$OUT" \
+  && ok "a br/--json split across lines is RED (windowed match)" \
+  || bad "split: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a split br_call still counts toward the routed floor ----------------
+routed_tree "$WORK/routed-split" 12
+printf '#!/usr/bin/env bash\ndata=$(br_call show ac-demo\n  --json) || exit 2\n' \
+  > "$WORK/routed-split/skills/_tools/consumer-split.sh"
+rc=$(run_check "$WORK/routed-split")
+[ "$rc" -eq 0 ] && grep -q 'routed call site' "$OUT" \
+  && ok "a split br_call still counts toward the routed floor" \
+  || bad "routed-split: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a comment or `command -v br` probe near a routed read is not a raw read
+# The false-positive guard — a comment naming `br list --json`, or a `command -v br`
+# PATH probe, must never be paired with a nearby routed `br_call … --json`.
+routed_tree "$WORK/noise" 13
+cat > "$WORK/noise/skills/_tools/noise.sh" <<'EOF'
+#!/usr/bin/env bash
+# normalise: the br show read returns one array; br list --json would be a raw read
+if command -v br >/dev/null 2>&1; then
+  data=$(br_call show ac-demo --json) || exit 2
+fi
+EOF
+rc=$(run_check "$WORK/noise")
+[ "$rc" -eq 0 ] && ! grep -q 'raw br --json read' "$OUT" \
+  && ok "a comment / 'command -v br' near a routed read is GREEN (no false positive)" \
+  || bad "noise: rc=$rc out=$(cat "$OUT")"
 
 echo
 if [ "$fails" -eq 0 ]; then

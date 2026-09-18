@@ -4,7 +4,7 @@
 #
 # ASSURANCE
 #   PROBE:      this file IS the probe — bash skills/ac-implement/scripts/mirror-run-artifacts.test.sh
-#   SCHEDULE:   every scripts/run-all-harnesses.sh run (repo-wide *.test.sh discovery),
+#   SCHEDULE:   every scripts/run-all-proofs.sh run (repo-wide *.test.sh discovery),
 #               which lint.sh Check 20 audits for scheduling.
 #   MODE:       blocking
 #   ON-FAILURE: closed

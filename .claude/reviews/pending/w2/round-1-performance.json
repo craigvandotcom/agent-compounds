@@ -1,0 +1,17 @@
+{
+  "reviewer": "performance",
+  "round": 1,
+  "payload_read": "git diff 93be4fd..0302e5d",
+  "findings": [
+    {
+      "title": "New impact-axis checks re-parse the label list multiple times per br create",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 394,
+      "category": "repeated-parsing-hot-path",
+      "evidence": "The only hot-path change in the batch is this PreToolUse guard, which runs on EVERY Bash tool call (not just br create). For a br create command, main() now calls all_labels(cmd) up to 5x per command segment: has_label(SUBAGENT_EXEMPT) (line 394, and again inside the impact check line 410), has_readiness (line 401), origin_skill (line 407), valid_impact (line 411). Each call re-iterates flags and re-splits every -l value on commas. Quantified: ~br create has ~10-20 tokens and ~5 labels; 5 scans x ~10 labels x ~1us string ops = ~50us of added CPU. Against the guard's real budget — full python3 interpreter startup on every Bash invocation, ~20-50ms, pre-existing — this is ~0.1% and NOT Critical/High. The fix is a trivial single-pass collection of the label list once per command and passing it to the four predicates; worth doing only because it also simplifies the code. Note also the guard itself remains O(command length) — the new heredoc/newline pre-passes and shlex are unchanged in shape.",
+      "fix": "In the main() loop, compute labels = all_labels(cmd) once per bead-create command segment and derive has_origin, has_readiness, has_probe, origin_skill, valid_impact, and the human-gate/subagent checks from that single list (or have those helpers accept the precomputed list). Removes 4 redundant scans and makes adding the next contract axis free.",
+      "auto_fixable": true
+    }
+  ]
+}

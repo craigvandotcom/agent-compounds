@@ -14,8 +14,7 @@ description: 'Work an ac2 epic''s bead queue as a SWARM — you coordinate, spaw
 | **Artifacts**    | Flight receipts (`<git-common-dir>/ac-flight/`), the run ledger, close receipts |
 | **Verification** | `close-gate.sh` per bead; the batch CI run + `ac-review` per batch            |
 
-**The prompt IS the skill.** `references/worker.md` (mandatory load) is the executable loop;
-this file is its frame. Doctrine: `skills/ac-pipeline/SKILL.md`; bead + commit canon by pointer.
+**The prompt IS the skill.** `references/worker.md` (mandatory load) is the executable loop; this file is its frame. Doctrine: `skills/ac-pipeline/SKILL.md`; bead + commit canon by pointer.
 
 ## What this skill does NOT do
 
@@ -26,10 +25,8 @@ route on the class it names.
 
 ## Defaults — a swarm, and one procedure for every width
 
-**`ac2 implement <epic>` spawns a swarm at WIDTH 3, UNCAPPED, and runs until the qualifying
-beads are exhausted.** There is no mode flag and no second procedure: the invoking session is
-always the coordinator and never a worker, at every width; a cap bounds a run you are
-watching, and an uncapped dry queue is the correct end.
+**`ac2 implement <epic>` spawns a swarm at WIDTH 3, UNCAPPED, and runs until the qualifying beads are exhausted.** There is no mode flag and no second procedure: the invoking session is
+always the coordinator and never a worker, at every width; a cap bounds a run you are watching, and an uncapped dry queue is the correct end.
 
 | override | effect |
 | --- | --- |
@@ -43,10 +40,11 @@ claims and the beads' own `## Consumes` / `## Delivers`. A coordinator that star
 is a worker that has stopped coordinating.
 
 **Phase 0 — orient.** Assert trunk. Resolve `<scripts>` ONCE: the absolute `scripts/` directory beside THIS SKILL.md, as loaded — never repo-relative `skills/ac-implement/scripts`, which in a repo carrying its own fork of this registry names different scripts. Run `bash <scripts>/refly.sh --root "$PWD"`: it re-checks
-every `PREMISE-FAILED:` bead and strips the stamp from those that fly again (a cached verdict
-needs an expiry). Count the eligible pool with worker.md §1's filter VERBATIM — a differing
-filter reports a pool the workers cannot claim — plus drop `issue_type: epic`, which the label
-filter misses. Register with Agent Mail; install the pre-commit guard once (workers never do).
+every `PREMISE-FAILED:` bead, strips the stamp from those that fly again (a cached verdict
+needs an expiry), and TRIAGES the rest — one disposition-close attempt through
+`close-gate.sh`, which lands it when the work exists at HEAD or a Consumes blocker closed
+dispositionally, and leaves the stamp otherwise. Count the eligible pool with worker.md §1's filter VERBATIM — a differing filter reports a pool the workers cannot claim — epics count: a ready epic is a worker's
+terminal pick (worker.md §8), closed with no work step. Register with Agent Mail; install the pre-commit guard once (workers never do).
 
 **Phase 1 — spawn, then wait.** Spawn `width` implementer subagents — never `general`, which has no tier and rides the orchestrator's model — whose prompt is `references/worker.md`
 VERBATIM, followed by one appended line `SCRIPTS=<scripts>` (the worker refuses to start without it) — and, ONLY if `--cap N` was given, one more line naming the cap. Verbatim means
@@ -56,8 +54,8 @@ spawn a replacement only when ready beads outnumber live workers. **The pool is 
 source — `br`'s filter, never tree text** (a `br create` line in a file is a template, not a
 task; canon: `ac-pipeline/references/work-derivation.md`).
 
-**Phase 2 — close-out.** Four of its steps leave NO TRACE when they go wrong — script plus
-checklist, not prose:
+**Phase 2 — close-out, then review to a bound of three rounds.** Close-out leaves NO TRACE
+when it goes wrong — script plus checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
     bash <scripts>/coordinator.sh --run <run-id>
@@ -69,21 +67,28 @@ hands the commit itself to `swarm-commit.sh`, so there is still exactly one comm
 
 Then, and only after it exits 0:
 
-1. **Batch CI on the committed tree, then `ac-review`** (the post-batch reviewer panel — a
-   DIFFERENT model from the implement workers, read-only; `skills/ac-review/SKILL.md`). The
-   repo-wide gates are authoritative HERE — only here is the tree free of half-finished sibling edits.
-2. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
+1. **Batch CI on the committed tree, then `ac-review`** on the batch range — the post-batch
+   reviewer panel (a DIFFERENT model from the implement workers, read-only;
+   `skills/ac-review/SKILL.md`). The repo-wide gates are authoritative HERE — only here is the
+   tree free of half-finished sibling edits. Rounds 2–3 review from the last receipt's range head.
+2. **If review filed P0/P1 children, wave again:** `ac-polish bead` on them, then spawn a further
+   wave of workers on the new children — the coordinator never picks a bead and never edits a
+   file — then review again. At most three rounds; the epic closes only through the worker's
+   terminal pick (worker.md §8), once every child is closed and the `REVIEW: APPROVED` receipt
+   is on the epic.
+3. **Telemetry.** Report width, wall time, and gate-wait vs work time — the constitution drops
    the width to 1 if two tuning sessions show no throughput over width 1, and this number decides.
-3. **Epic-close** — an epic with every parent-child child `closed` and every `## Delivers`
-   line covered by a child's delivery-shaped close_reason (`shipped:` / `fixed:` / `done:`)
-   is itself closed: `br close <epic> -r "shipped: <children>"` naming them. An uncovered
-   Delivers line leaves the epic open and files a finding with `discovered-from: <epic>`.
 4. **Release reservations and deregister** every worker identity, including any you swept.
 
 ## The exhaust rule
 
-Discovered PRODUCT work goes to the board with `discovered-from: <bead>`. Process observations
-go to the family ledger, never to a new bead about ourselves (self-beads were 39% of the old
-board). Every finding writes its `VERDICT:` and its catch-stage label even when fixed in-batch:
-the fix may be in-batch, the label never is. Then land the plane.
+Discovered PRODUCT work goes to the board with `discovered-from: <bead>`, filed by the
+coordinator alone: it confirms and files each worker's PROPOSED-BEAD block (product work and
+mid-bead forks); a worker files NOTHING, it proposes. Process observations go to the family
+ledger, never a self-bead; every finding writes its VERDICT and catch-stage label.
+
+**Stale and superseded board state is closed by the swarm itself, never parked for a human.**
+A worker closes what it holds through §4b; the Phase 0 sweep closes what it can prove
+settled through the same gate. Only intent waits for a human: `wontfix`, `human-gate`,
+and DECISION beads on prod writes.
 

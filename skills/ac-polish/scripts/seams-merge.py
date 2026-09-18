@@ -40,7 +40,7 @@ ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four f
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py — RED/GREEN over every rule above
   SCHEDULE:   once per seams round (workflows/seams.md § MERGE) and once at hand-off; once
               per load round and at load-hand-off (workflows/load.md); and on every CI run
-              via scripts/run-all-harnesses.sh
+              via scripts/run-all-proofs.sh
   MODE:       blocking — the artifact is written only by this script during a seams run
   ON-FAILURE: closed — a report that does not parse exits 2 NOT-GATED and writes nothing;
               a stale map exits 1 STALE before anything is read

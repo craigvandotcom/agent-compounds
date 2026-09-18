@@ -43,7 +43,7 @@ build_fixture() {
   printf '#!/usr/bin/env bash\nexit 0\n' > "$root/skills/beta/two.test.sh"
   printf 'import sys\nsys.exit(0)\n'      > "$root/hooks/three.test.py"
 
-  printf 'name: CI\njobs:\n  harnesses:\n    steps:\n      - run: bash scripts/run-all-harnesses.sh\n' \
+  printf 'name: CI\njobs:\n  harnesses:\n    steps:\n      - run: bash scripts/run-all-proofs.sh\n' \
     > "$root/.github/workflows/ci.yml"
 
   {
@@ -52,8 +52,8 @@ build_fixture() {
     local h
     for h in "$@"; do printf '  echo "%s"\n' "$h"; done
     printf '  exit 0\nfi\nexit 0\n'
-  } > "$root/scripts/run-all-harnesses.sh"
-  chmod +x "$root/scripts/run-all-harnesses.sh"
+  } > "$root/scripts/run-all-proofs.sh"
+  chmod +x "$root/scripts/run-all-proofs.sh"
 
   printf '%s' "$root"
 }
@@ -87,7 +87,7 @@ expect "$(printf '%s' "$out" | grep -q 'unscheduled' && echo 1 || echo 0)" \
 # RED 3 — the runner itself is gone.
 # shellcheck disable=SC2086
 R3=$(build_fixture no-runner $ALL)
-rm -f "$R3/scripts/run-all-harnesses.sh"
+rm -f "$R3/scripts/run-all-proofs.sh"
 bash "$CHECK" "$R3" >/dev/null 2>&1
 expect "$( [ $? -ne 0 ] && echo 1 || echo 0 )" "runner missing entirely -> FAILS"
 

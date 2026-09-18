@@ -7,10 +7,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CHECK="$ROOT/lint/checks/21-assurance-declarations.py"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 
-mkdir -p "$W/scripts" "$W/hooks"
+mkdir -p "$W/scripts" "$W/hooks" "$W/engine"
 cp "$ROOT/scripts/assurance-declarations-check.sh" "$W/scripts/"
 chmod +x "$W/scripts/"*.sh
-printf '{"wiring":[{"id":"demo","command":"echo hi"}]}\n' > "$W/hooks/hooks.json"
+printf '{"wiring":[{"id":"demo","command":"echo hi"}]}\n' > "$W/engine/hooks.wiring.json"
 
 out="$(python3 "$CHECK" "$W" 2>&1)"; rc=$?
 echo "$out" | sed 's/^/  | /'

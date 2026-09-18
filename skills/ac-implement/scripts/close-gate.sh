@@ -5,7 +5,7 @@
 # ASSURANCE
 #   PROBE:      bash skills/ac-implement/scripts/close-gate.test.sh
 #   SCHEDULE:   every ac2 worker close; the harness runs on every
-#               scripts/run-all-harnesses.sh invocation, which lint.sh Check 20 audits.
+#               scripts/run-all-proofs.sh invocation, which lint.sh Check 20 audits.
 #   MODE:       blocking
 #   ON-FAILURE: closed
 #
@@ -44,6 +44,18 @@
 #   the bead itself edits, so the receipt hash-locks the probe COMMAND alone and the SUBJECT is
 #   free to move — otherwise this leg is unsatisfiable for every prose bead by construction.
 #   The full argument, and the guard that keeps a harness-bearing bead out of it, sits at LEG 3.
+#
+# THE DISPOSITION CARVE-OUT (ac-triage): a close whose reason leads with a disposition
+# verb (obsolete: / duplicate: / superseded:) claims "the state this bead aimed at is
+# settled" — never "a diff caused a flip". The claim is verified by whichever leg actually
+# holds, decided HERE, never assumed:
+#   (e-green)   every AC probe exits 0 at HEAD — the work exists; someone else landed it
+#   (e-cascade) every `## Consumes` blocker is CLOSED with a disposition close reason —
+#               the premise is gone by the plan's own closure (close_reason read live
+#               from the board, with flight-check's exact-id/prefix resolution)
+# wontfix: EXCLUDED — "we decided not to build this" is intent, and intent stays human.
+# A disposition close may land even where the temporal pair is unavailable (no receipt,
+# or a receipt whose RED probe is still red); a shipped:/fixed: close may not.
 #
 # Usage:
 #   close-gate.sh <bead-id> --reason "<close reason>" [--actor <name>]
@@ -128,7 +140,7 @@ is_test_shaped() {
 }
 
 # A probe whose stdout is SUPPRESSED BY CONSTRUCTION can never carry assertion lines:
-# a silent test (-q) or a redirect into /dev/null produces nothing to count, so selecting
+# a silent test (-q or --quiet) or a redirect into /dev/null produces nothing to count, so selecting
 # it as the assertion-bearing probe bails COVERAGE on a bead whose harness asserts fine
 # (measured: ac-close-gate-coverage-silent-probe-ja8l, instances 4 and 5). Deliberately
 # static — it reads the probe's CONSTRUCTION, never its run: a harness that ran but
@@ -136,9 +148,15 @@ is_test_shaped() {
 # to one that passed.
 is_output_silent() {
   case "$1" in
-    *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*) return 0 ;;
-    *) return 1 ;;
+    *grep\ -q*|*rg\ -q*|*\|grep\ -q*|*\>/dev/null*|*\>/\ dev/null*|*--quiet*) return 0 ;;
   esac
+  # A probe composed solely of existence predicates (`test -f/-d`, `[ ... ]`) joined by
+  # connectors emits nothing by construction — `test` has no stdout — so it can never
+  # carry assertion lines either (measured: heyt P1 `test -f` chain shadowing the
+  # asserting runner probe). Strip predicates and connectors; silence is an empty rest.
+  local rest
+  rest=$(printf '%s' "$1" | sed -E 's/test[[:space:]]+-[a-zA-Z]+[[:space:]]+[^&|;]+//g; s/\[[^]]*\]//g; s/&&|\|\||;//g; s/[[:space:]]//g')
+  [ -z "$rest" ]
 }
 
 br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, never empty data
@@ -147,6 +165,72 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
     | jq -r "if type == \"array\" then .[0] else . end | .$2 // \"\"" 2>/dev/null) \
     || not_checked "READ" "br_call show refused for $1 — the gate cannot verify this close"
   printf '%s\n' "$v"
+}
+
+# THE DISPOSITION VERB: parsed from the close reason, never from the bead's labels — the
+# reason is the caller's claim, and this gate judges claims. Leading whitespace allowed;
+# `wontfix` is deliberately absent (intent stays human).
+DISPOSITION=0
+case "$(printf '%s' "$REASON" | sed -E 's/^[[:space:]]+//')" in
+  obsolete:*|duplicate:*|superseded:*) DISPOSITION=1 ;;
+esac
+CASCADE_DETAIL=""
+
+# consumes_state — condition (e)'s premise reader, verified live from the board: every
+# `## Consumes` blocker line must resolve to a bead CLOSED (any close reason) for a
+# disposition close at all — an OPEN blocker is a live premise, and a close that kills a
+# live premise is intent, not triage. CONSUMES_DISPO additionally demands a disposition
+# verb on every blocker's close_reason (the cascade leg). The Consumes line shape and the
+# blocker extraction are flight-check.sh's (Refusal 1), including its exact-id/prefix
+# resolution — the two gates cannot drift apart on what a premise is. Zero blocker lines
+# (`## Consumes: none`) reads as closed: no premise, nothing alive.
+CONSUMES_CLOSED=0
+CONSUMES_DISPO=0
+cascade_holds() {
+  local lines line blocker bnode bstatus bclose detail="" full
+  CONSUMES_CLOSED=0; CONSUMES_DISPO=0
+  lines=$(awk '/^## /{ inb = ($0 ~ "^## Consumes([[:space:]]|$)") ? 1 : 0; next }
+                inb { print }' "$BODY" | sed 's/^[[:space:]]*-[[:space:]]*//' | grep -v '^[[:space:]]*$')
+  if [ -z "$lines" ]; then
+    CONSUMES_CLOSED=1; CONSUMES_DISPO=1; return 0
+  fi
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in *"->"*) ;; *) continue ;; esac
+    blocker=$(printf '%s' "$line" | sed -n 's/^\([A-Za-z][A-Za-z0-9._-]*\).*/\1/p' | sed 's/[-._]*$//')
+    [ -n "$blocker" ] || continue
+    bnode=$(br_call show "$blocker" --json </dev/null 2>/dev/null) || bnode=""
+    if [ -z "$bnode" ]; then
+      # br matches EXACT ids only; a Consumes line may cite a unique prefix — resolve
+      # exactly one, the same rule flight-check applies. An ambiguous or absent blocker
+      # fails BOTH legs: the premise cannot be proven settled.
+      full=$(br_call list --json --limit 0 </dev/null \
+        | jq -r --arg b "$blocker" \
+            '[.issues[] | select(.id | startswith($b)) | .id]
+               | if length == 1 then .[0] elif length == 0 then "" else "AMBIGUOUS" end' 2>/dev/null) || full=""
+      if [ -n "$full" ] && [ "$full" != "AMBIGUOUS" ]; then
+        blocker="$full"
+        bnode=$(br_call show "$blocker" --json </dev/null 2>/dev/null) || bnode=""
+      fi
+    fi
+    [ -n "$bnode" ] || return 0
+    bstatus=$(printf '%s' "$bnode" | jq -r 'if type == "array" then .[0] else . end | .status // ""' 2>/dev/null)
+    [ "$bstatus" = "closed" ] || return 0
+    bclose=$(printf '%s' "$bnode" | jq -r 'if type == "array" then .[0] else . end | (.close_reason // .closeReason // "")' 2>/dev/null)
+    # The BLOCKER's own disposition may be any non-fix verb — the intent decision was
+    # already made and recorded on the blocker; the child close merely reads it back.
+    case "$bclose" in
+      obsolete:*|duplicate:*|superseded:*|wontfix:*|wont-fix:*) detail="$detail $blocker($(printf '%s' "$bclose" | cut -c1-60))" ;;
+      *) CONSUMES_CLOSED=1; return 0 ;;
+    esac
+  done <<EOF
+$lines
+EOF
+  CONSUMES_CLOSED=1
+  [ -n "$detail" ] || return 0
+  CASCADE_DETAIL="$detail"
+  CONSUMES_DISPO=1
+  return 0
 }
 
 # ---------------------------------------------------------------------------------------
@@ -181,6 +265,8 @@ RED_BEAD=$(rfield 'bead')
 #   (d) the abuse-guard: a fresh-verify attempt on a bead with ANY not-green probe is
 #       REFUSED. A fresh close claims only that the state the bead aimed at holds at HEAD;
 #       it never claims a diff caused a flip.
+# A red-probe disposition close routes through the DISPOSITION carve-out instead
+# (condition e, the cascade — see the header).
 FRESH_VERIFY=0
 if [ ! -s "$RECEIPT_FILE" ] || [ -z "$RED_PROBE" ] || [ "$RED_BEAD" != "$BEAD" ]; then
   FRESH_VERIFY=1
@@ -237,9 +323,10 @@ trap 'rm -f "$BODY" "$ASSERT_OUT"' EXIT
 # The assertion-bearing probe is the one that RUNS A HARNESS, which is not always the probe
 # that happened to be RED first: `test -x <script>` is a legitimate RED and emits no
 # assertions by construction. Two filters, both required: the probe must NAME a test-shaped
-# file that exists, AND its stdout must be able to carry assertion lines (a -q test or a
-# >/dev/null redirect asserts nothing into any stream we can read — measured as instances
-# 4 and 5 of ac-close-gate-coverage-silent-probe-ja8l). When every probe is output-silent
+# file that exists, AND its stdout must be able to carry assertion lines (a -q/--quiet test or
+# a >/dev/null redirect asserts nothing into any stream we can read — measured as instances
+# 4 and 5 of ac-close-gate-coverage-silent-probe-ja8l, plus bd-9y8ii / bd-fswt7.3 for
+# `git diff --quiet`). When every probe is output-silent
 # (or none names a harness), the temporal exit-code pair recorded in the receipt is the
 # assertion, and that pair is checked below instead.
 ASSERT_PROBE=""
@@ -269,21 +356,51 @@ while IFS= read -r pr; do
   PROBE_RUN=$(( PROBE_RUN + 1 ))
   PROBE_RESULTS+=("$pr => exit $rc")
   [ "$rc" -eq 0 ] && PROBE_GREEN=$(( PROBE_GREEN + 1 ))
-  if [ "$FRESH_VERIFY" = 1 ] && [ "$rc" -ne 0 ]; then
-    refuse "GREEN" "fresh-verify: probe '$pr' exits $rc at HEAD — a fresh-verified close demands EVERY AC probe green; one red probe is a refusal"
-  fi
-  if [ "$pr" = "$RED_PROBE" ] && [ "$rc" -ne 0 ]; then
-    refuse "GREEN" "the RED probe still exits $rc — it never reported GREEN, so the diff caused nothing"
+  if [ "$rc" -ne 0 ]; then
+    if [ "$DISPOSITION" = 0 ]; then
+      if [ "$FRESH_VERIFY" = 1 ]; then
+        refuse "GREEN" "fresh-verify: probe '$pr' exits $rc at HEAD — a fresh-verified close demands EVERY AC probe green; one red probe is a refusal"
+      fi
+      if [ "$pr" = "$RED_PROBE" ]; then
+        refuse "GREEN" "the RED probe still exits $rc — it never reported GREEN, so the diff caused nothing"
+      fi
+    fi
+    # DISPOSITION=1 with a red probe is NOT refused here — the cascade leg decides after
+    # the loop (condition e); refusing inline would deny the only honest close a
+    # premise-gone bead can carry.
   fi
 done <<EOF
 $PROBES
 EOF
 
+# THE DISPOSITION RESOLUTION (condition e): a disposition close is decided here by
+# whichever leg actually holds — the work exists AND no Consumes blocker is open (green),
+# or the premise is gone by the plan's own closure (every blocker closed with a disposition
+# close). Neither leg holds → refuse: the claim of settledness was wrong or unprovable.
+DISPOSITION_LEG=""
+if [ "$DISPOSITION" = 1 ]; then
+  cascade_holds
+  if [ "$PROBE_GREEN" -eq "$PROBE_EXPECTED" ] && [ "$CONSUMES_CLOSED" = 1 ]; then
+    DISPOSITION_LEG="green"
+  elif [ "$PROBE_GREEN" -ne "$PROBE_EXPECTED" ] && [ "$CONSUMES_DISPO" = 1 ]; then
+    DISPOSITION_LEG="cascade"
+    echo "close-gate[$BEAD] disposition cascade — rescued by closed blocker(s):$CASCADE_DETAIL (a disposition close never claims a causal flip)"
+  else
+    refuse "GREEN" "disposition close: $(( PROBE_EXPECTED - PROBE_GREEN )) of $PROBE_EXPECTED probe(s) red at HEAD and the Consumes premise does not support the close (a blocker is open, unresolved, or carries no disposition close) — the close claims the state this bead aimed at is settled, and neither leg of that claim holds"
+  fi
+fi
+
 [ "$PROBE_RUN" -eq "$PROBE_EXPECTED" ] \
   || not_checked "COVERAGE" "files-run ($PROBE_RUN) != files-expected ($PROBE_EXPECTED) — a partial run is not a pass"
-[ "$PROBE_GREEN" -eq "$PROBE_EXPECTED" ] \
-  || refuse "GREEN" "$(( PROBE_EXPECTED - PROBE_GREEN )) of $PROBE_EXPECTED probe(s) are not green"
-echo "close-gate[$BEAD] GREEN ok — $PROBE_GREEN/$PROBE_EXPECTED probe(s) green, files-run == files-expected"
+if [ "$DISPOSITION" = 0 ]; then
+  [ "$PROBE_GREEN" -eq "$PROBE_EXPECTED" ] \
+    || refuse "GREEN" "$(( PROBE_EXPECTED - PROBE_GREEN )) of $PROBE_EXPECTED probe(s) are not green"
+fi
+if [ "$DISPOSITION_LEG" = "cascade" ]; then
+  echo "close-gate[$BEAD] GREEN ok — $PROBE_GREEN/$PROBE_EXPECTED probe(s) green, the rest settled by the cascade leg"
+else
+  echo "close-gate[$BEAD] GREEN ok — $PROBE_GREEN/$PROBE_EXPECTED probe(s) green, files-run == files-expected"
+fi
 
 # Assertion results — the anti-bail leg. In vitest's JSON report the field is literally
 # `assertionResults` under `.testResults[]`; for a shell harness the analogue is its own
@@ -316,7 +433,9 @@ else
   # a moment ago. It is only an assertion because the receipt actually carries the before
   # value, so a receipt without red-exit gets no credit here.
   RED_EXIT=$(rfield 'red-exit')
-  if [ "$FRESH_VERIFY" = 1 ]; then
+  if [ "$DISPOSITION_LEG" = "cascade" ]; then
+    ASSERTIONS=1; ASSERT_SOURCE="the cascade check (blocker(s)$CASCADE_DETAIL closed with disposition closes on the board — a disposition close never claims a causal flip)"
+  elif [ "$FRESH_VERIFY" = 1 ]; then
     # No claim-time receipt under the carve-out: the fresh verification IS the assertion —
     # LEG 4 measured every AC probe green at HEAD, and LEG 8 records it per-probe.
     ASSERTIONS=1; ASSERT_SOURCE="the fresh-verification itself (all $PROBE_GREEN probe(s) green at HEAD, per-probe results recorded on the bead at landing)"
@@ -344,13 +463,28 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   if printf '%s' "$SCAN_OUT" | grep -qiE 'no supported languages detected|nothing was checked'; then
     not_checked "SCANNER" "ubs ran no scanner over ${#SCAN_FILES[@]} file(s) — 'nothing was checked' is explicitly NOT a pass"
   fi
-  SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oiE 'files scanned[^0-9]*([0-9]+)' | grep -oE '[0-9]+' | head -1)
+  # Read ubs's Combined Summary 'Files: N' — the authoritative total. The per-scanner
+  # 'Files scanned: N' lines are NOT it: ubs runs several scanners and each prints its
+  # own count, so the first match under-counts a two-language bead ('1 of 2' on ac-9ahd)
+  # and summing them over-counts when scanners overlap ('4 of 2' on ac-ys8f). Both were
+  # measured here. Fall back to the max per-scanner count if the summary is absent.
+  SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oE '^Files: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  if [ -z "${SCANNED:-}" ]; then
+    SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oiE 'files scanned[^0-9]*([0-9]+)' \
+      | grep -oE '[0-9]+' | sort -n | tail -1)
+  fi
   [ -n "${SCANNED:-}" ] || not_checked "SCANNER" "ubs printed no 'Files scanned' count — coverage is unassertable"
   [ "$SCANNED" -eq "${#SCAN_FILES[@]}" ] \
     || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCAN_FILES[@]} file(s) — a shortfall is NOT-GATED, not a pass"
   FINDINGS=$(printf '%s' "$SCAN_OUT" | grep -cE '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+' || true)
-  [ "$SCAN_RC" -eq 0 ] && [ "${FINDINGS:-0}" -eq 0 ] \
-    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) over ${#SCAN_FILES[@]} scanned file(s)"
+  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict
+  # is the finding count, never the exit code alone. The DETAIL regex misses python
+  # bandit Location lines, so the Combined Summary counters corroborate.
+  SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] && [ "${SUM_WARN:-0}" -eq 0 ] && [ "${SUM_INFO:-0}" -eq 0 ] \
+    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}/Warning ${SUM_WARN:-0}/Info ${SUM_INFO:-0}) over ${#SCAN_FILES[@]} scanned file(s)"
   echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
@@ -401,21 +535,32 @@ POST_STATUS=$(br_field "$BEAD" status)
 [ "$POST_STATUS" = "closed" ] \
   || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
 
-# THE FRESH-VERIFY RECORD: a close accepted on fresh verification leaves the receipt it
-# ran from on the bead — the record is the difference between a verified close and a
-# wave-through, and a comment nobody wrote proves nothing to the next reader.
-if [ "$FRESH_VERIFY" = 1 ]; then
+# THE LANDING RECORD: a close accepted on fresh verification or on the cascade leg leaves
+# the evidence it ran from on the bead — the record is the difference between a verified
+# close and a wave-through, and a comment nobody wrote proves nothing to the next reader.
+if [ "$DISPOSITION_LEG" = "cascade" ] || [ "$FRESH_VERIFY" = 1 ]; then
   FRESH_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
   FRESH_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  PER_PROBE=""
-  for r in "${PROBE_RESULTS[@]:-}"; do
-    [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
-  done
-  "$BR" comments add "$BEAD" \
-    "FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS — per-probe:$PER_PROBE" \
-    </dev/null >/dev/null 2>&1 || true
-  echo "close-gate[$BEAD] fresh-verify RECORDED on the bead"
+  if [ "$DISPOSITION_LEG" = "cascade" ]; then
+    "$BR" comments add "$BEAD" \
+      "TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS; AC probes NOT all green, and a disposition close never claims a causal flip." \
+      </dev/null >/dev/null 2>&1 || true
+    echo "close-gate[$BEAD] TRIAGE-CLOSE RECORDED on the bead"
+  else
+    PER_PROBE=""
+    for r in "${PROBE_RESULTS[@]:-}"; do
+      [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
+    done
+    "$BR" comments add "$BEAD" \
+      "FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS — per-probe:$PER_PROBE" \
+      </dev/null >/dev/null 2>&1 || true
+    echo "close-gate[$BEAD] fresh-verify RECORDED on the bead"
+  fi
 fi
 
-echo "close-gate[$BEAD] CLOSED — RED before the diff, test unchanged, GREEN after: the diff caused the flip."
+if [ "$DISPOSITION" = 1 ]; then
+  echo "close-gate[$BEAD] CLOSED — disposition ($DISPOSITION_LEG): the state this bead aimed at is settled at HEAD; no causal flip is claimed."
+else
+  echo "close-gate[$BEAD] CLOSED — RED before the diff, test unchanged, GREEN after: the diff caused the flip."
+fi
 exit 0

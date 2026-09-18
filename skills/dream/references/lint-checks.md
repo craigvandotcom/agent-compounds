@@ -1,8 +1,9 @@
 # Substrate lint — the hygiene checklist (dream Phase 3)
 
-Sweep targets: `infrastructure/memory/auto/`, `neometa/memory/auto/`, each app's
-`memory/auto/`, `neometa/alignment/decisions/`, `infrastructure/eval/golden/`,
-`neometa/wiki/` (check 11 below is wiki-specific; the others treat wiki pages as
+Sweep targets (resolve the actual homes from the deployment's instance-map — placeholders
+below, never literals): the infrastructure memory home, the org memory home, each app's
+memory root (its `factory.json` `memory.root`), `<org>/alignment/decisions/`, `infrastructure/eval/golden/`,
+`<org>/wiki/` (check 11 below is wiki-specific; the others treat wiki pages as
 read-only citation targets, not sweep subjects — the wiki skill's own `garden.md`
 owns wiki-internal hygiene).
 Every finding → candidate proposal (`category: lint-fix`), judged like everything else.
@@ -11,7 +12,7 @@ compounding errors. Staleness is silent.
 
 ## Cadence is split by reversibility (the tier, not the calendar)
 
-Architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
+Architecture: `<org>/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
 
 - **Tier-0 (mechanical, lossless, code-re-derivable) → runs DAILY**, emitted by the
   Context Mining job (`.claude/skills/context-engineering/workflows/context-mining-daily.md`
@@ -65,8 +66,8 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     pending" note nothing ever re-checked). Grep seed: `grep -rin "can't be\|cannot be\|not
     possible\|no way to" <memory homes>`, then check each hit for `evidence:` and for
     downstream skip/PASS language nearby.
-11. **Wiki↔facts contradiction** `[T2 weekly]` — for every `neometa/wiki/*.md` page (draft
-    or canonical), walk its `[[wikilink]]` citations into `memory/auto/` and
+11. **Wiki↔facts contradiction** `[T2 weekly]` — for every `<org>/wiki/*.md` page (draft
+    or canonical), walk its `[[wikilink]]` citations into the memory homes and
     `alignment/decisions/` and diff the page's claim against the cited note's *current*
     text. A claim that no longer matches its source — the fact was updated/superseded since
     the page cited it, or the page overstated/misstated it at write time — is a finding.
@@ -79,21 +80,7 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     citation trail reveals a fact that was never actually true. **Always gated, never an
     auto-edit to either side** — per `[[rule-proposals-become-beads]]`, every finding
     becomes a proposal, which becomes a decision bead in its target repo.
-12. **Decay by reference** `[T2 weekly, script-driven, data-gated]` — a fact
-    that has earned **neither an injection nor a read** across the trailing window is an
-    archive candidate. This check is **not a manual sweep** — it is Check F of
-    `infrastructure/scripts/health/memory-lint.py` (the ONE memory-substrate sensor;
-    absorbed `dream-cycle/decay_lint.py`, retired 2026-09-09), which reads the observe-loop
-    reference signals (recall injections + qmd reads) and emits **findings** for the dream
-    docket (`kind: decay-candidate`). It **self-arms**: it does nothing until ≥28
-    days of recall data exist AND the `memory_reads` table is live, so it cannot act on a
-    zero it hasn't earned. Predicate + thresholds (the script docstring is the authority —
-    keep them in sync): archive requires *all* of — zero injected-count in the trailing
-    **28d** window · a **coverage guard** (every non-retired machine contributed ≥**5**
-    active days; shards idle >**90d** are retired, not blockers) · zero read-count in the
-    window · git mtime >**60d**. Report-only: memory-lint never moves or deletes anything;
-    the manual dream session rules on archiving. (decay_lint's stdout-only promotion list
-    was retired with it — noise no reader consumed, org-bj8.)
+12. **Decay by reference** `[DISABLED 2026-09-16 — usage-based decay/promotion off pending memory-stewardship research]` — the reference-signal half (recall injections + qmd reads) was retired with `dream-cycle/decay_lint.py` and never ported: `memory-lint.py` covers structural checks only (index, wikilinks, frontmatter, cited paths, freshness). No usage-based archive or promotion signal runs anywhere until the research lands.
 
 13. **Provenance leak in skill text** `[T2 weekly]` — skill/canon files carrying an edit's
     STORY instead of behavior: dates in prose, director attributions, pass/wave narratives,
@@ -148,11 +135,11 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
 Named for the anti-pattern it defends against — "ouroboros compression": repeated
 dedupe/summarize cycles silently eroding nuance (`../wiki/references/research-basis.md`'s
 anti-patterns table; the wiki skill's countermeasure on its own layer is the
-regenerability mindset + Craig's canonical-page review gate — this is dream's mirror
+regenerability mindset + the operator's canonical-page review gate — this is dream's mirror
 of that discipline, applied to the *facts* layer instead of the *synthesis* layer).
 
-**Canonical facts (`memory/auto/`, `alignment/decisions/`) are append-only.** Only
-synthesis/wiki pages (`neometa/wiki/`) are ever rewritten in place — that's what makes
+**Canonical facts (the memory homes, `alignment/decisions/`) are append-only.** Only
+synthesis/wiki pages (`<org>/wiki/`) are ever rewritten in place — that's what makes
 them regenerable cache rather than ground truth (see the wiki skill's authority chain).
 A dream proposal that merges or dedupes two memory notes is therefore never a silent
 in-place rewrite of the older slug: it is a *reviewable replacement*, and review needs
@@ -182,7 +169,7 @@ diff <(grep -oE '\(([a-zA-Z0-9_-]+\.md)\)' <home>/MEMORY.md | command tr -d '()'
 # dead wikilinks
 grep -ohrE '\[\[[a-zA-Z0-9_-]+\]\]' <homes>... | sort -u   # then check each slug exists
 # decay by reference (check 12 — self-arming, report-only, findings for the docket)
-python3 ~/Repos/infrastructure/scripts/health/memory-lint.py --check --json
+python3 ~/infrastructure/scripts/health/memory-lint.py --check --json
 ```
 
 Run `memory-lint.py --check --json` in the lint phase; **tolerate absence / not-armed** — a

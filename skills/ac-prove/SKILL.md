@@ -1,6 +1,6 @@
 ---
 name: ac-prove
-description: Use to obtain-or-produce a tip-valid full-suite proof for a commit — the shared freshness-probe/dispatch/fix-forward primitive every ship path calls instead of re-implementing its own CI-trust logic. Wraps scripts/ci/publish-checkpoint-gate.mjs (freshness) + quality-gate.yml's reason=prove dispatch (the full leg). Three modes — probe (read-only), ensure (probe + dispatch-if-stale), ensure --fix-forward (blocking, ship-path only). Triggers on "prove this commit", "ac-prove", "is main green", "get a fresh checkpoint", "prove the tip", "gate on a full proof". NOT for running tests locally (use testing) or for reading CI state as a board pane (use ac-human-session board mode).
+description: Use to obtain-or-produce a tip-valid full-suite proof for a commit — the shared freshness-probe/dispatch/fix-forward primitive every ship path calls instead of re-implementing its own CI-trust logic. Wraps scripts/ci/publish-checkpoint-gate.mjs (freshness) + quality-gate.yml's reason=prove dispatch (the full leg). Three modes — probe (read-only), ensure (probe + dispatch-if-stale), ensure --fix-forward (blocking, ship-path only). Triggers on "prove this commit", "ac-prove", "is main green", "get a fresh checkpoint", "prove the tip", "gate on a full proof". NOT for running tests locally (use testing) or for reading CI state as a board pane (use ac-board).
 ---
 
 # ac-prove — Obtain-or-Produce a Tip-Valid Full Proof
@@ -161,7 +161,7 @@ Pass selection defers to `ac-pipeline/references/verification-gate.md` — one s
   (memory: `rule-review-critical-journeys-sim-pass-before-submission`) when the caller's context
   requires it (e.g. an App Store submission path).
 - `ac-qa`
-- `ac-ui-polish` (spec-conformance/premium-polish lens, when the caller wants it)
+- `ui-elevate` (spec-conformance/premium-polish lens, when the caller wants it)
 
 `+qa` findings that block ship are reported the same way `ac-qa`/`ac-qa` always
 report them (findings=beads) — they do not themselves trigger another fix-forward CI round
@@ -226,7 +226,7 @@ QA evidence/report schema: `ac-qa/references/qa-shared.md`.
 
 `+qa` depth (consumers a and d) = `ac-qa` (including the review-critical sim-PASS rule,
 memory `rule-review-critical-journeys-sim-pass-before-submission`) / `ac-qa` /
-`ac-ui-polish`, per Step 4's `+qa` layer above.
+`ui-elevate`, per Step 4's `+qa` layer above.
 
 **Explicitly NOT a consumer: loop-start.** Starting a new loop iteration does not call
 `ac-prove` — proof is a ship-time/checkpoint concern, not a work-intake concern.

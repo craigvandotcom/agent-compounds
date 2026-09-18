@@ -1,0 +1,70 @@
+{
+ "reviewer": "architecture",
+ "round": 1,
+ "payload_read": "git diff 93be4fd..0302e5d",
+ "findings": [
+  {
+   "title": "Subagent refusal gate keys on an agent_id field no deployed harness is documented to send",
+   "severity": "High",
+   "file": "hooks/bead-capture-guard.py",
+   "line": 369,
+   "category": "unverified-payload-contract",
+   "evidence": "is_subagent = bool(data.get(\"agent_id\")) - Claude Code PreToolUse stdin is documented to carry tool_name/tool_input/session_id/cwd/hook_event_name; agent_id appears in no hook-schema contract in this repo and in no other hook (grep: only this guard). The guard tests and lint/checks/18-guard-liveness both pass while the trigger can never fire: the test constructs a synthetic payload with agent_id 'sub-1', which is not evidence the real harness produces the field. The failure mode is the silent one - subagents keep filing non-gate beads directly and none of the three gates notice.",
+   "fix": "Drive the field from a real subagent transcript (one driven run where a subagent executes br create) or bind to a documented discriminator; state the exact stdin key each harness must send in the guard header doc and in beads-standards/reference/bead-create-contract.md.",
+   "auto_fixable": false
+  },
+  {
+   "title": "Impact-axis exemption implemented as a closed origin allowlist - unlisted automated origins silently bypass",
+   "severity": "Medium",
+   "file": "hooks/bead-capture-guard.py",
+   "line": 81,
+   "category": "allowlist-bypass-silent",
+   "evidence": "IMPACT_REQUIRED_ORIGINS is a positive tuple (ac-implement, ac-review, ac-triage, ac-hygiene, ac-align, ac-prove, curate-foods); the impact gate fires only when origin is in the tuple. Every other origin - ac-polish, ac-qa (files qa-blocker beads), any future ac-* skill - files beads with no impact: label and gets no block, with no error surface. The canon in bead-create-contract.md says the axis applies to automated origins generally; the mechanical layer implements the invariant as an allowlist, so a newly registered automated skill silently escapes.",
+   "fix": "Invert the predicate: require valid_impact for ANY origin:* EXCEPT explicit exemptions {manual, ac-human, ac-beadify, ac-backlog}; refuse unknown origin:* values not in either list (mirrors IMPACT_CLASSES closed-set posture). Add test cases for ac-polish/ac-qa creates.",
+   "auto_fixable": true
+  },
+  {
+   "title": "Fold left the live bead-capture canon still routing to the archived ac-bead-capture",
+   "severity": "Medium",
+   "file": "skills/beads-standards/reference/bead-conventions.md",
+   "line": 90,
+   "category": "stale-canon-divergence",
+   "evidence": "ac-backlog's new bead-route.md opens with 'Authority for types, labels and lifecycle: beads-standards/reference/bead-conventions.md' - yet that canon still says (lines 10, 67, 90-92) that ac-bead-capture is the human quick-capture skill and to invoke it, a skill directory that no longer exists (moved to _archive). Following the new intake hits the canon and is pointed at a ghost. The allowlist row for bead-conventions.md still stands and nothing in this diff or the ac-1p7j.27 fold schedules cleanup; lint stays green while the ghost persists. Same class, smaller: skills/ac-pipeline/references/design-refs.md:16 still lists ac-bead-capture as a capture source.",
+   "fix": "Sweep bead-conventions.md (and design-refs.md line 16) to origin:ac-backlog + bead-route.md, then delete the allowlist row in the same change - the shrink-only ratchet demands removal exactly when the sweep lands.",
+   "auto_fixable": true
+  },
+  {
+   "title": "Liveness: _tools layer carries live refs to archived skills, outside every check's scope",
+   "severity": "Medium",
+   "file": "skills/_tools/crawl-and-capture/README.md",
+   "line": 12,
+   "category": "out-of-scope-stale-refs",
+   "evidence": "crawl-and-capture/README.md:12 and crawl-and-capture.mjs:10 route visual-polish work to ac-ui-polish, archived by this diff. Check 25's LIVE_TEXT scope (SKILL.md, references/, workflows/) excludes skills/_tools, so no carrier registered and lint passes while the pointers dangle: a tool the QA triad actually runs hands its output to a skill that no longer resolves. Same boundary the new check07 friction exposed for consumer layers - the registry-internal tool layer is a third un-owned surface.",
+   "fix": "Extend 25-archived-names' scan set (or a sibling check) to cover skills/_tools; repoint the crawl-and-capture references to ui-elevate in the same change.",
+   "auto_fixable": true
+  },
+  {
+   "title": "FRICTIONS.md entries counter drifts from the ledger (33 declared vs 35 headings)",
+   "severity": "Medium",
+   "file": "skills/ac-pipeline/FRICTIONS.md",
+   "line": 5,
+   "category": "counter-no-feedback-loop",
+   "evidence": "Header says entries: 33 (incremented 32-33 in this diff) but the file carries 35 titled friction entries; it was already off (34 heads vs 32) before the diff, and the new increment assumed a correct base. Nothing verifies the counter - 00-meta passes. An assurance figure with no loop is decoration; readers that trust entries: for coverage math read it off by two.",
+   "fix": "Correct the counter to 35 in this change; scope 00-meta to reconcile each FRICTIONS.md entries: field against its heading count where declared.",
+   "auto_fixable": true
+  },
+  {
+   "title": "check07 boundary remains untreated: future archive/rename re-blocks the lane, org-level dirs never self-heal",
+   "severity": "Medium",
+   "file": "skills/ac-pipeline/FRICTIONS.md",
+   "line": 726,
+   "category": "boundary-gate-untreated",
+   "evidence": "This diff's own archive (ac-ui-polish, ac-site-polish) triggered the swarm friction the same diff logs - consumer .claude/skills symlinks dangled and the pre-commit lane refused every writer until harness-sync.sh --all ran - yet harness-sync does not own the three org-level .claude/skills dirs (books/content/software) nor simil8/.claude/skills, so 7 links dangle outside Check 07's union with no surface. Control is logged as untreated; the next skill archive/rename repeats the fleet-wide block and the recesses can never converge.",
+   "fix": "Adopt the friction's proposed fix as contract: a lint-checked pre-step of any skill archive/rename that prunes or refuses stale .claude/skills symlinks in all deploy targets, and extend infrastructure/ac-deploy-targets.list + harness-sync to own the org-level and simil8 dirs (or declare them out of scope loudly).",
+   "auto_fixable": false
+  }
+ ],
+ "friction": [
+  "6 findings: guard contract-verification, allowlist-vs-deny-default posture, unswept stale refs, counter drift, untreated boundary; two auto_fixable items are deletions inside the already-open fold, not ripple scope"
+ ]
+}

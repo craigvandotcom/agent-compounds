@@ -2,7 +2,7 @@
 
 > **This registry _is_ `code-pipe`** — the software factory (the `ac-*` production line
 > + code QC + code-domain skills), one half of the agentic-factory pair alongside
-> **`content-pipe`** (the publishing house, at `neometa/content/content-pipe/`). Both
+> **`content-pipe`** (the publishing house, at `~/mission/content/content-pipe/`). Both
 > consume one shared substrate (`context-engineering`/`reflect`/`dream`) so they write to
 > a single memory ledger. A literal `code-pipe` rename + any monorepo convergence are
 > deferred future-state — see `_plans/2026-06-23-factory-split-refactor.md`. Ops skills
@@ -13,7 +13,7 @@
 | Field | Value |
 |---|---|
 | **Name** | agent-compounds |
-| **Stack** | Markdown skills/agents + bash (`harness-sync.sh` → `deploy.sh`); no app runtime |
+| **Stack** | Markdown skills/agents + bash (`engine/sync.sh` → `engine/deploy.sh`); no app runtime |
 | **Type** | Shared engineering tooling registry (skills, agents, prompt library, plans) |
 | **Purpose** | Canonical source of the neoMeta engineering skill/agent registry, symlink-deployed into every app |
 
@@ -21,16 +21,16 @@
 
 | Operation | Command |
 |---|---|
-| **Sync ALL harness homes (root + apps)** | `./harness-sync.sh --all` (drift check: `--check`) |
-| **List deployables** | `./deploy.sh --list` |
-| **Selective one-off stamp (non-target project)** | `./deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
-| **Dry run** | `./harness-sync.sh --all -n` / `./deploy.sh <target> --all -n` |
+| **Sync ALL harness homes (root + apps)** | `./engine/sync.sh --all` (drift check: `--check`) |
+| **List deployables** | `./engine/deploy.sh --list` |
+| **Selective one-off stamp (non-target project)** | `./engine/deploy.sh <target> --skills a,b --agents x,y` (or `--all`) |
+| **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
 ## Distribution policy (2026-06-13, Craig-approved)
 
 **Full set everywhere, auto-synced — no per-project exclude list.** Every INTERNAL neoMeta
-app gets the entire registry (all skills + all agents) via `deploy.sh --all`. There is no
+app gets the entire registry (all skills + all agents) via `engine/deploy.sh --all`. There is no
 selective per-app skill list anymore — availability is uniform.
 
 **Consumer requirement (2026-07-08):** every deploy target's `.claude/settings.json` must
@@ -47,7 +47,7 @@ each app in `infrastructure/ac-deploy-targets.list` it runs `deploy.sh --all` (t
 layer) and then projects that layer into every other harness home — `.agents/skills`
 (Codex+Pi), `.factory/` (Droid, skills+droids+hooks+MCP), `.codex/` (generated agent TOMLs,
 hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored `harnesses.local.json`);
-hook wiring canon: `hooks/hooks.json`. A newly added registry skill therefore lands in every
+hook wiring canon: `engine/hooks.wiring.json`. A newly added registry skill therefore lands in every
 app AND every harness on the next sync with **no manual re-stamp** (idempotent:
 creates/refreshes symlinks only, never clobbers a real file — so local customizations like
 art-still's `design-system` survive; generated files are stamp-gated).
@@ -67,15 +67,30 @@ they're missing — the invariant is enforced, not conventional. To add/remove a
 ```
 agent-compounds/
 ├── skills/        # the registry — each dir = one skill (SKILL.md + references/ + workflows/)
-│   ├── ac-*       # the compounding-engineering pipeline — 3 loops, one conductor (ac-implement): dev, triage (ac-triage), audit (audit+ac-hygiene); stage order + contracts: skills/ac-pipeline/references/stage-table.md; doctrine = ac-pipeline
-│   ├── context-engineering, reflect, dream   # the AI-native-org substrate trio (deploy together)
-│   └── …          # ui/web/react/capacitor/supabase/testing/seo + jef-prompts (recipe library)
 ├── agents/        # the 5 core stances (orchestrator, coordinator, researcher, implementer, validator — each carries a semantic `tier:`, never a concrete model); domain work = stance + lens prompt from the skill, never a new agent file; each carries a semantic `tier:` (orchestrator|coordinator|worker), never a concrete model
-├── deploy.sh      # symlinks skills + generates agents (tier -> model stamped from harnesses.json agent_models) into a target's .claude/
+├── engine/        # the machinery: the renderer, the stamper and the wiring manifest.
+│                  #   Content stays at the root — 4,201 symlinks resolve through it. Check 37
+│                  #   forbids the engine spelling a canon path instead of deriving it.
 ├── templates/     # project-AGENTS.md (new-project L0 template) + ci-build-guards.md
 │                  #   (required-NEXT_PUBLIC_* build assert + dep-removed CI gate, copy-paste)
 └── _plans/        # working plans — local-only, untracked (.gitignored; this repo is public)
 ```
+
+**v2 map** (seven packages; WS3 generates the table from `packages.json` later). Stage order
+lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates it.
+
+- **factory-core** — ac-pipeline, ac-plan, ac-polish, ac-beadify, ac-implement, ac-review, ac-prove, ac-publish, ac-land, beads-standards, agent-mail
+- **factory-verify** — ac-qa, ui-elevate, ui-debug, testing, ac-hygiene
+- **factory-ops** — ac-human, ac-align, ac-backlog, ac-triage, ac-distribute
+- **stack-nextjs-supabase** — supabase, capacitor
+- **substrate** — context-engineering, reflect, dream, wiki (deploy together)
+- **meta** — skill-builder
+- **library** — jef-prompts, jef-flywheel, brainstorming, ac-idea-lab, ac-plan-lab, multi-model, ui-brainstorm
+
+**Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled),
+`writing-guidelines` (brand-voice-coupled), `curate` — project/brand-specific. `app-store-screenshots`,
+`screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO, owned by each app
+(reference copies in body-compass-app).
 
 ## Rules
 

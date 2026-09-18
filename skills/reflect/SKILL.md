@@ -7,7 +7,7 @@ description: Capture session learnings into the AI-native-org memory substrate. 
 
 **Purpose:** turn a session's hard-won learnings into retrievable memory, typed and
 routed so they compound. The capture half of the AI-native-org write loop.
-**Domain:** memory / knowledge substrate (see `neometa/alignment/roadmaps/ai-native-org-v1.md` §1).
+**Domain:** memory / knowledge substrate (see `<org>/alignment/roadmaps/ai-native-org-v1.md` §1).
 **Status:** MVP
 
 > **The test for every lesson:** *does it make the next session faster?* If you can't
@@ -40,7 +40,7 @@ is the *session-end executor* of that procedure, not a second copy of it.
 
 Operating summary (details + edge cases live in context-engineering):
 - Every lesson is **one `{type}`** (fact · rule · decision · recipe · skill-improvement)
-  **× one `{domain}`** (neometa · app-local · personal · global). Type → format +
+  **× one `{domain}`** (org · app-local · personal · global). Type → format +
   home-kind; domain → subtree.
 - **Rules are markdown facts** with `type: rule` — the CM playbook is a derived cache,
   never the home.
@@ -89,14 +89,14 @@ qmd search "<key terms>" --json -n 5      # or: grep -ri "<term>" <domain memory
 
 ### 5. Write to the routed home
 
-**fact / rule** → `<domain-root>/memory/auto/<slug>.md` using the canonical frontmatter
+**fact / rule** → `<memory-root>/<slug>.md` using the canonical frontmatter
 schema from `context-engineering` (name · description · type · domain · evidence · tags;
 body = data with `[[wikilinks]]`, never instructions). Then add a one-line pointer to that
 dir's `MEMORY.md` index (`- [Title](slug.md) — hook`).
 
 **Tier-3 loop-retro observation** (the write primitive `ac-land` Phase 3's tier router calls for
 its T3-routed friction items — **reflect does NOT re-decide tiers**; T1/T2 branching lives in
-`ac-land`, bd-jv33f.4) → `<domain-root>/memory/auto/<slug>.md`, same location + `MEMORY.md`
+`ac-land`, bd-jv33f.4) → `<memory-root>/<slug>.md`, same location + `MEMORY.md`
 pointer as a fact, with the canonical frontmatter **layered** with a loop-retro structural key so
 `dream` can compute recurrence×cost across sessions (never hash reworded prose — memory:
 `llm-agent-dedup-needs-structural-keys`):
@@ -105,7 +105,7 @@ name: <kebab-slug>
 description: <one line — recall hook>
 metadata:
   type: fact                    # canonical enum (context-engineering)
-  domain: neometa               # canonical
+  domain: org                   # canonical
   evidence: <grounding + date>  # canonical
   kind: loop-retro-observation  # NEW structural discriminator
   stage: implement
@@ -118,22 +118,22 @@ the `MEMORY.md` pointer convention, and dream's reader all depend on them); `kin
 `first_seen`/`recurrence` are ADDED under `metadata`. **Dedupe-match:** same
 `metadata.kind: loop-retro-observation` + same `stage` + same gist (via the Step 4 `qmd search`
 probe already run above) → increment `recurrence` on the existing row, do NOT create a duplicate
-file. `cost` stays coarse (`material|minor`); a minutes floor is optional and Craig-set.
+file. `cost` stays coarse (`material|minor`); a minutes floor is optional and operator-set.
 
 **Skill-scoped friction (W4.3)** — if `ac-land`'s Step 0 hand-off tagged the T3 item as
 *skill-scoped friction* rather than a general lesson, write it to
-`skills/<skill>/FRICTIONS.md` instead of the `memory/auto/` path above. Schema, per-skill
+`skills/<skill>/FRICTIONS.md` instead of the `<memory-root>` path above. Schema, per-skill
 template, and the dedup judgment (reuse-id-and-bump-recurrence vs mint-new) are
 `skill-builder/references/friction-capture.md`'s — read that file's existing entries and
 judge before writing; don't restate its rules here. Create the target file lazily from its
-template if absent. General (non-skill-scoped) lessons keep the `memory/auto/` path,
+template if absent. General (non-skill-scoped) lessons keep the `<memory-root>` path,
 unchanged.
 
 **decision** → `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` (same frontmatter, `type: decision`;
 body = context · decision · rationale · consequences).
 
 **recipe** → the prompt-library (one canonical location, in the root monorepo:
-`~/Repos/neometa/software/agent-compounds/skills/jef-prompts/`): add
+`<repos-root>/software/agent-compounds/skills/jef-prompts/`): add
 `references/<slug>.md` (the full prompt verbatim + parameters + when-to-use) **and** a
 catalog line in its `SKILL.md`. Even when reflecting inside an app repo, recipes go
 there — never start a parallel library.

@@ -97,27 +97,9 @@ Set `horizon: next` in frontmatter if absent. Leave everything else in the pool.
 **Promotion is the only path into `active/`.** New captures always land in `pool/` via
 `ac-backlog`; nothing else writes to `active/`.
 
-**REVIEW — emit the slate** (spine § Phase 4.5): proposal file + `human-gate,pipeline-proposal`
-bead, dedup on an open such bead's populated `bead:` slot. REVIEW applies nothing.
 
 ## Transition tolerance (legacy version folders)
 
 If an app still uses version folders (`v1-0/`, `v1-1/`, …), treat the in-progress milestone
 folder (per `ROADMAP.md`) as `active/`-equivalent and the rest as `pool/`-equivalent, and
 offer a one-time migration to `{active/, pool/, _done/}`.
-
-## Remember (doctrine, full set)
-
-- **Strategy guides pipeline — not the reverse.** The backlog must serve the strategy, not
-  accumulate for its own sake.
-- **Versions bind late, here.** Capture pools ideas; `ac-align` promotes `pool → active`
-  against live strategy. Never pre-assign a version at capture.
-- **Crystallization matters.** What gets built first shapes what comes after — sequencing is
-  a strategic decision, not just scheduling.
-- **Ask before changing (INTERACTIVE).** Suggest archival, deferral, or promotion — never
-  silently delete or move. In **REVIEW** mode there is no human to ask: emit a proposal
-  instead and apply nothing.
-- **Traceability.** Where possible, ensure backlog items and plans reference the strategy
-  element they fulfill.
-- **Graceful without strategy docs.** A user-stated north star is sufficient for a useful
-  alignment session.

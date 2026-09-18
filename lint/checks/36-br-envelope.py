@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # ---
 # id: 36-br-envelope
-# prevents: a raw `br … --json` read that bypasses the envelope-aware helper — with --json a br failure is a VALID error envelope on STDOUT and an EMPTY stderr, so a raw piped/captured read converts a dead read into EMPTY DATA and the gate downstream reads "no labels", "no beads", "nothing stale" — and passes
+# prevents: a raw `br … --json` read that bypasses the envelope-aware helper — with --json a br
+#   failure is a VALID error envelope on STDOUT and an EMPTY stderr, so a raw piped/captured read
+#   converts a dead read into EMPTY DATA and the gate downstream reads "no labels", "no beads",
+#   "nothing stale" — and passes
 # scope: SCRIPTS
 # severity: fail
 # fixture: lint/fixtures/36-br-envelope
@@ -40,8 +43,44 @@ FLOOR = 13
 # The raw-read shape the conversions replaced: a `br … --json` whose output is
 # piped or captured without routing through the envelope-aware helper. The same
 # rg shape ac-heyt.4's derivation used, including the `"$BR"` variable form.
-RAW_READ = re.compile(r'(?:"?\$\{?BR\}?"?|\bbr\b)\s+.*--json')
+# Quotes around the binary (`"br"` / `'br'`) are part of the token — a closing
+# quote is not whitespace, so `\bbr\b\s+` alone lets them through (ac-ia8g).
+RAW_READ = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+.*--json')
 ROUTED_READ = re.compile(r"\bbr_call\b[^\n]*--json")
+BR_START = re.compile(r'(?:"?\$\{?BR\}?"?|[\'"]?\bbr\b[\'"]?)\s+')
+BR_CALL_START = re.compile(r'\bbr_call\b')
+# A `br` token on a comment line or after `command -v` is not a read — it is prose
+# or a PATH presence probe. Without this, a bare `br list`/`br doctor` token pairs
+# with a nearby routed `br_call … --json` and reports a raw read that does not
+# exist (HEAD's whole finding set was this shape).
+COMMENT_LINE = re.compile(r"^\s*#")
+PRESENCE_CHECK = re.compile(r"command\s+-v\b")
+
+
+def joined_lines(text):
+    """Yield (lineno, line) after stripping backslash-newline continuations.
+
+    `br \\` + newline + `  list --json` is one raw read; a per-line scan never
+    sees both tokens. Line numbers are those of the joined text. A `br` with
+    `--json` on a following line and no backslash is the flag-continuation class
+    handled by flag_continuation (ac-1jkr).
+    """
+    return enumerate(text.replace("\\\n", "").splitlines(), 1)
+
+
+def flag_continuation(rows, i):
+    """The following line when it is a bare flag continuation of statement i.
+
+    `br list` then `  --json …` is one read (ac-1jkr). A following line that opens
+    with anything else is a different statement: folding it in paired a plain
+    `br doctor health` with a downstream routed `br_call … --json` and invented a
+    raw read. Only a line whose first token is a `-flag` continues the statement.
+    """
+    if i + 1 < len(rows):
+        nxt = rows[i + 1][1]
+        if nxt.lstrip().startswith("-"):
+            return nxt
+    return ""
 
 # The sanctioned engines — the ONLY files that may touch the binary with --json
 # and remain clean. They ARE the envelope-aware readers; everything else routes
@@ -52,24 +91,6 @@ SANCTIONED = frozenset({
 })
 
 
-def _scripts(root):
-    out = []
-    for sub in ("skills", "scripts"):
-        base = os.path.join(root, sub)
-        if not os.path.isdir(base):
-            continue
-        for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = [d for d in dirnames if d not in scope.SKIP_DIRS]
-            for fn in filenames:
-                if fn.endswith(".test.sh") or fn.endswith(".test.py"):
-                    continue
-                if not (fn.endswith(".sh") or fn.endswith(".py")):
-                    continue
-                rel = os.path.relpath(os.path.join(dirpath, fn), root)
-                out.append(rel)
-    return sorted(out)
-
-
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else scope.ROOT
     if os.path.abspath(root) != scope.ROOT:
@@ -77,7 +98,7 @@ def main():
         import importlib
         importlib.reload(scope)
 
-    files = _scripts(root)
+    files = sorted(scope.SCRIPTS)
     if not files:
         print(f"{CHECK_ID} NOT-CHECKED: no .sh/.py script under skills/ or scripts/ "
               f"in {root} — verified nothing", file=sys.stderr)
@@ -95,11 +116,15 @@ def main():
             continue
         if rel in SANCTIONED:
             continue  # the engines may touch the binary with --json by contract
-        for lineno, line in enumerate(text.splitlines(), 1):
-            if RAW_READ.search(line):
-                findings.append(f"raw br --json read in {rel}:{lineno}: {line.strip()}")
-            if ROUTED_READ.search(line):
+        rows = list(joined_lines(text))
+        for i, (lineno, line) in enumerate(rows):
+            if COMMENT_LINE.match(line) or PRESENCE_CHECK.search(line):
+                continue  # prose or a `command -v br` probe — never a read
+            stmt = f"{line} {flag_continuation(rows, i)}"
+            if BR_CALL_START.search(line) and ROUTED_READ.search(stmt):
                 routed += 1
+            elif BR_START.search(line) and RAW_READ.search(stmt):
+                findings.append(f"raw br --json read in {rel}:{lineno}: {line.strip()}")
 
     # The python twin counts once toward the floor — the thirteenth call site.
     if os.path.isfile(os.path.join(root, "skills/ac-polish/scripts/bead-artifact.py")):

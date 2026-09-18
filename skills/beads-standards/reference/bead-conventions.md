@@ -7,8 +7,8 @@ admission tests, anti-inflation. One pipeline exists (ac2), and it has one bead 
 the ac2 four-section schema (`skills/ac-beadify/references/bead-schema.md`).
 
 Shared by the skills that file and work beads — ac-beadify, ac-implement, ac-polish,
-ac-bead-capture, ac-review, ac-hygiene, ac-qa, ac-qa, ac-triage, ac-align,
-ac-human-session — and any workflow that files beads. One principle drives all of it:
+ac-backlog, ac-review, ac-hygiene, ac-qa, ac-qa, ac-triage, ac-align,
+ac-human — and any workflow that files beads. One principle drives all of it:
 
 > **No workflow may produce prose exhaust.** Anything actionable that a
 > workflow doesn't act on right now leaves as a typed bead — not a report
@@ -23,7 +23,7 @@ ac-human-session — and any workflow that files beads. One principle drives all
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
 | `decision` | A fork that passes the escalation test (`reference/human-gate-template.md` § The escalation test) — taste, product, money, risk | Human decision RECORDED, consequences executed |
-| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` |
+| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` (probe-less only — D5) |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it —
 **diagnosed = source-traced, not inferred** — file the `bug` directly.
@@ -33,12 +33,16 @@ the symptom enters as fact; an inferred cause enters a clearly-marked
 *unverified* slot the implementer re-derives, never inherits. Type is the
 carrier: source-traced cause → `-t bug`; inferred cause → `-t investigation`.
 
-**Epics stay open across batches.** An epic's close criterion is that its `## Delivers`
-promise is covered — and the close itself is PROPOSED by `ac-align`, not "children closed"
-mechanically and not `ac-batch-close`'s job. Parent-child edges do NOT block `br ready`
-(only `blocks` edges sequence), so an epic staying open across many batches starves no
-work and costs nothing; do not force-close an epic just because its currently-open
-children are done.
+**Epics stay open across batches — and the epic is the last bead.** Parent-child
+containment alone sequences the epic after its children — `br ready` never offers an
+epic with an open child — so the worker picks the epic last (D3), after every child
+has closed. An epic's close criterion is that
+its `## Delivers` promise is covered — and the close itself is PROPOSED by `ac-align`
+only for probe-less epics (D5: no `Probe:` line in the epic body names its own
+verification), never "children closed" mechanically and not the batch boundary's job.
+Parent-child edges do NOT block `br ready` (only `blocks` edges sequence), so an epic
+staying open across many batches starves no work and costs nothing; do not force-close
+an epic just because its currently-open children are done.
 
 ## Labels = gating & provenance (orthogonal to type)
 
@@ -47,11 +51,11 @@ children are done.
 | `origin:<skill>` | Which workflow created the bead (`origin:manual`, `origin:unknown` also legal) — required by the capture contract, `beads-standards/reference/bead-create-contract.md`, which every `br create` in the fleet satisfies. Complementary to `discovered-from` (a typed dep/body field naming the SOURCE BEAD an escape traces to): `origin:` names the CREATING WORKFLOW, `discovered-from` names the SOURCE BEAD — not duplicates. |
 | `qa-finding` / `review-finding` / `hygiene-finding` | Which lens found it |
 | `qa-infra` | QA harness/infra failure — the NO-STAMP verdict (flaky gate, daemon crash, stuck load, env gap), never FAIL/PASS. Filed by the QA twins (`ac-qa` / `ac-qa`) for infra-shaped NO-STAMPs so the verdict stays resolvable without mislabeling the product. |
-| `qa-blocker` | REPO-WIDE gate — Hard-stops ac-batch-close and ac-merge for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
+| `qa-blocker` | REPO-WIDE gate — Hard-stops batch close-out for every batch in this repo while open, not a per-bead "blocked" marker. For a single bead, use a `blocks` dependency — never this label. |
 | `human-gate` | Agents may enrich but NEVER close — see decision beads below |
 | `unrefined` | Not implementation-ready — ac-implement skips it |
 | `refined` | Implementation-ready — the ONLY green light (see lifecycle contract below) |
-| `human-ratified` | Fast-track provenance from `ac-human-session` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
+| `human-ratified` | Fast-track provenance from `ac-human` (completeness check, not the gauntlet). Implement-eligible without `refined`; does NOT stamp `refined` / `refine-full` / `refine-light` |
 | `tooling` | Infra/toolchain work, not app code |
 | `pipeline-proposal` | Names a plan for a human to decide on — it does NOT implement one, so it **never counts as implementation proof**. Any gate that counts beads as evidence of work done (archive gates, coverage counts, "all matching beads closed") MUST exclude these, closed ones included: a workflow that emits proposal beads and then counts them is self-certifying. Pair with `human-gate` **only** when the body states `Gate-reason: fork —` or `Gate-reason: authorization —`; otherwise the pairing is invalid. |
 
@@ -64,8 +68,8 @@ unknown — is machine-wide floor:
 
 - **Single-stamper invariant:** `refined` is applied **exclusively** by `/ac-polish`
   on convergence — no other skill, and no conductor, however strong the evidence.
-  `unrefined` is the default at creation (`ac-bead-capture`, `ac-beadify`).
-- **Gap repair:** `ac-align`'s nightly reconcile auto-adds `unrefined` to beads missing all
+  `unrefined` is the default at creation (`ac-backlog`, `ac-beadify`).
+- **Gap repair:** `ac-tidy`'s nightly run auto-adds `unrefined` to beads missing all
   three lifecycle labels — it never auto-adds `refined`, which is earned, never inferred.
 - `ac-implement` gates on presence of `refined`, not on the lack of `unrefined`.
 
@@ -77,19 +81,19 @@ follows the same batching contract — this is the shared authority both cite:
 1. **2+ beads → one per-run epic.** `br create -t epic "<Skill> <date> — <noun>" --labels origin:<skill>` (e.g.
    "Hygiene 2026-07-07 — deferred findings", "Triage 2026-07-07 — findings"), children
    linked via `--parent` (`parent-child` dep). 0–1 beads → no epic (don't inflate).
-2. **≥1 bead → in-session `ac-bead-refine` at run end.** Scoped to the epic if one exists
+2. **≥1 bead → in-session refine (`ac-polish` bead mode) at run end.** Scoped to the epic if one exists
    (2+ beads), to the single bead otherwise. The conductor still holds every cluster, source
    permalink, and repro rationale in context right now — a deferred refine session has to
    re-derive all of it from cold. 0 beads → nothing to refine.
 3. **Single-stamper invariant intact.** Children ship `unrefined` at creation, same as any
-   other bead. The run-end `ac-bead-refine` invocation is what earns `refined` — on its own
+   other bead. The run-end refine invocation is what earns `refined` — on its own
    convergence, exclusively, exactly as for any other bead (see Lifecycle labels above). The
    batch workflow never stamps `refined` itself; it only runs the skill that does, while
    context is hot.
 
-`ac-bead-capture` is the human quick-capture skill (one bead, typed live in conversation) —
+`ac-backlog` owns the single-bead intake (one bead, typed live in conversation) —
 batch workflows create beads directly via `br create` per these conventions; they do not
-invoke `ac-bead-capture`.
+route through it.
 
 ## Bead routing (creation → parent) — convention, not a gate
 
@@ -102,7 +106,7 @@ routing behaviours:
 | Creation source | Parent routing |
 | --------------- | -------------- |
 | `ac-beadify` (plan → beads) | The plan's epic, with cross-epic `blocks` edges wired per the plan's data flow |
-| Ad-hoc capture / raw `br create` | Deferred — `ac-bead-refine` adopts an obvious parent when it processes the bead. A `human-gate`/DECISION shape instead resolves parentage AT capture (Arm 0), never deferred |
+| Ad-hoc capture / raw `br create` | Deferred — `ac-polish` adopts an obvious parent when it processes the bead. A `human-gate`/DECISION shape instead resolves parentage AT capture (Arm 0), never deferred |
 | In-loop exhaust (`ac-review` / QA / conductor findings) | The epic whose beads were in the batch that produced the finding; per-finding by file/scope when the batch spanned epics; fallback to a per-run review epic |
 | Per-run batch workflows (`ac-hygiene`, `ac-triage`, …) | Per-run epic for 2+ beads; **0–1 beads → no epic** (unchanged — see § Batch-producing workflows) |
 
@@ -237,7 +241,7 @@ The contract that keeps autonomous sweeps safe:
    fork becomes a decision bead + blocked downstream, and the sweep
    continues elsewhere.
 
-Batching: `ac-human-session` presents all open `human-gate` beads as the
+Batching: `ac-human` presents all open `human-gate` beads as the
 **decision docket** for focused sit-down sessions — and enforces this contract
 at the dashboard: a decision arriving without a memo is flagged `⚠ no memo` and
 framed on demand (it cannot be a one-tap choice without staged options).
@@ -287,8 +291,9 @@ invocation is silently reverted. `br lint` is unchanged: it checks DESCRIPTION t
 sections only (§ Body template), never `close_reason`.
 
 Still **presence-checked, not truth-checked** — semantic verification remains review's job.
-Exit 2 = NOT-CHECKED and is never a pass. `epic` and `human-gate` beads are exempt (their
-closure semantics differ). Historical closes are NEVER swept: the check runs at close time,
+Exit 2 = NOT-CHECKED and is never a pass. `human-gate` beads are exempt (their
+closure is a recorded human decision, not evidence). Epics are never exempt — they close
+through the D3/D5 path above, never an exemption. Historical closes are NEVER swept: the check runs at close time,
 on the bead being closed. A bypass requires BOTH `--force` and `EVIDENCE-BYPASS: <why>` in
 the reason, so the escape lands on the bead where a reader will meet it.
 

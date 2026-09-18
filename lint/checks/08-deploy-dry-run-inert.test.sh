@@ -7,7 +7,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/08-deploy-dry-run-inert.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail
@@ -28,11 +28,12 @@ run_check() { # <tmp-root> -> exit code; output in $OUT
 work="$(mktemp -d)"
 trap 'rm -rf "$work" "$OUT"' EXIT
 
-build_tree() { # <root> <deploy-body>  -> root with skills/alpha + executable deploy.sh
+build_tree() { # <root> <deploy-body>  -> root with skills/alpha + executable engine/deploy.sh
   mkdir -p "$1/skills/alpha"
   printf '# alpha\n' > "$1/skills/alpha/SKILL.md"
-  printf '%s\n' "$2" > "$1/deploy.sh"
-  chmod +x "$1/deploy.sh"
+  mkdir -p "$1/engine"
+  printf '%s\n' "$2" > "$1/engine/deploy.sh"
+  chmod +x "$1/engine/deploy.sh"
 }
 
 # --- 1 RED-EXIT: dry run exits nonzero -> exit 1, exit code named ------------
@@ -73,8 +74,9 @@ fi
 # --- 4 RED-NOSKILL: no skill to test with is a finding, not NOT-GATED --------
 t="$work/no-skill"
 mkdir -p "$t/skills"
-printf '%s\n' '#!/bin/sh' 'exit 0' > "$t/deploy.sh"
-chmod +x "$t/deploy.sh"
+mkdir -p "$t/engine"
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$t/engine/deploy.sh"
+chmod +x "$t/engine/deploy.sh"
 rc=$(run_check "$t")
 if [ "$rc" = 1 ] && grep -q "could not find any skill to test with" "$OUT"; then
   ok "RED-NOSKILL: empty skills tree is a finding"

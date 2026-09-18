@@ -8,7 +8,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/21-assurance-declarations.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail
@@ -24,10 +24,10 @@ bad() { echo "  FAIL  $1"; fails=$((fails + 1)); }
 
 build_tree() { # <root> <hooks-json-text>
   local w="$1" body="$2"
-  mkdir -p "$w/scripts" "$w/hooks"
+  mkdir -p "$w/scripts" "$w/hooks" "$w/engine"
   cp "$REG" "$w/scripts/"
   chmod +x "$w/scripts/"*.sh
-  printf '%s' "$body" > "$w/hooks/hooks.json"
+  printf '%s' "$body" > "$w/engine/hooks.wiring.json"
 }
 
 DECL='{"PROBE":"run the test harness","SCHEDULE":"CI lint job","MODE":"blocking","ON-FAILURE":"closed"}'
@@ -67,8 +67,8 @@ rm -rf "$w"
 
 # --- NOT-GATED: the judge script is missing from the audited tree ---------------
 w="$(mktemp -d)"
-mkdir -p "$w/hooks"
-printf '{"wiring":[]}\n' > "$w/hooks/hooks.json"
+mkdir -p "$w/hooks" "$w/engine"
+printf '{"wiring":[]}\n' > "$w/engine/hooks.wiring.json"
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
 if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q "NOT-CHECKED"; then
   ok "NOT-GATED: missing judge -> exit 2, verified nothing"

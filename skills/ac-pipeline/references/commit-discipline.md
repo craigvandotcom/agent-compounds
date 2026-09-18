@@ -113,9 +113,9 @@ git ls-remote origin main   # must match
 ## Cross-repo skill/infra beads (commit-root)
 
 **The board that holds the ticket is not always the git repo that holds the files.**
-App boards (body-compass-app especially) file `cross-repo` beads whose `## Repo
+App boards (a consuming app's especially) file `cross-repo` beads whose `## Repo
 ownership` names `agent-compounds` (shared skills, via the app's `.claude/skills/*`
-symlinks) or root `~/Repos` (infra/jobs). The **app loop must implement them** —
+symlinks) or `infrastructure` (infra/jobs). The **app loop must implement them** —
 the target repo's beads db does not contain these IDs, so they are invisible there.
 Skipping them in the app loop is how they sit in limbo.
 
@@ -226,7 +226,7 @@ this path).
 - `--no-verify` on push is deliberate (pre-push full-tree build false-positives on
   foreign WIP); real verification is the per-commit gate + post-push CI.
 - Never force-push `main`.
-- `--force-with-lease` on a NON-main working branch (e.g. ac-merge's pre-PR wave-branch push, ac-merge/SKILL.md §Push) is the sanctioned exception — branch-scoped only, never `main`.
+- `--force-with-lease` on a NON-main working branch (e.g. a pre-PR wave-branch push) is the sanctioned exception — branch-scoped only, never `main`.
 - Never stash. Never `git add -A`.
 - `cross-repo` beads: commit in the repo that tracks the files (see § Cross-repo).
 - One scheduled writer per generated artifact (`.beads/issues.jsonl`, tidy

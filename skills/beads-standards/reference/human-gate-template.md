@@ -1,7 +1,7 @@
 # Human-gate template — full copy-paste + worked example
 
 The decision-card shape is the whole point: it makes the bead a *sufficient
-statistic* for the decision — everything Craig needs to decide in 15 seconds is on
+statistic* for the decision — everything the operator needs to decide in 15 seconds is on
 the card, nothing requires opening a chat log or a plan doc to reconstruct.
 
 ## ToC
@@ -22,7 +22,7 @@ br create -t decision --labels origin:<skill>,human-gate \
   --title "DECISION: <the fork, in one line>" \
   -d "$(cat <<'EOF'
 decision: <one-sentence question>
-Gate-reason: fork — <why this is a genuine fork only Craig can resolve>
+Gate-reason: fork — <why this is a genuine fork only the operator can resolve>
 evidence: <what the escalation test found — how each condition was checked>
 consequence: user-visible | money | irreversible | intent
 recommendation: <option, one line — a fork card with no recommendation is an
@@ -86,8 +86,7 @@ the first failing condition:
 
 A human-gate bead sets its **parent = the epic whose work spawned the fork**, at creation
 time — the `--parent <spawning-epic-id>` above. This is Arm 0, the ONE place parentage is
-ENFORCED rather than conventional: human-gate/DECISION beads bypass both `ac-bead-refine`'s
-adopt-a-parent step and `ac-align`'s parentage flag (agents may enrich but never process a
+ENFORCED rather than conventional: human-gate/DECISION beads bypass both the refiner's (`ac-polish`) adopt-a-parent step and `ac-align`'s parentage flag (agents may enrich but never process a
 human-gate bead), so parentage that is conventional everywhere else must be wired here, at
 the one moment an agent creates the bead. This sits ALONGSIDE the mandatory `blocks`-edge
 wiring below — both, not either. A fork with no spawning epic (a genuinely standalone
@@ -119,23 +118,23 @@ in a batch sweep. An un-wired human-gate bead is invisible to:
 
 ```bash
 br create -t decision --labels origin:<skill>,human-gate \
-  --parent <move-free-reminders-epic-id> \
-  --title "DECISION: push notification provider for Move Free" \
+  --parent <example-reminders-epic-id> \
+  --title "DECISION: push notification provider for the example app" \
   -d "$(cat <<'EOF'
-decision: Which push-notification provider do we standardize on for Move Free's
+decision: Which push-notification provider do we standardize on for the example app's
 reminder system?
-Gate-reason: fork — provider choice is a product/risk fork only Craig can resolve
+Gate-reason: fork — provider choice is a product/risk fork only the operator can resolve
 
 options:
   a) OneSignal — free tier covers current scale, fastest to wire, but adds a
      third-party SDK to every native build
   b) Native APNs/FCM direct — no SDK dependency, more code to own, matches the
-     "own your stack" preference from body-compass
-  c) Defer entirely — ship Move Free v1 without push, revisit post-launch
+     "own your stack" preference from the sibling app
+  c) Defer entirely — ship the example app v1 without push, revisit post-launch
 
-context: Reminder system (bd-abc12) is blocked on this. body-compass shipped (b)
-in 2026-03; Move Free's timeline is tighter so (a) may be the pragmatic call this
-once. No cost data yet at Move Free's projected user count.
+context: Reminder system (bd-abc12) is blocked on this. The sibling app shipped (b)
+in 2026-03; the example app's timeline is tighter so (a) may be the pragmatic call this
+once. No cost data yet at the example app's projected user count.
 EOF
 )"
 # -> prints e.g. bd-mf9k1
@@ -145,7 +144,7 @@ br dep add bd-abc12 bd-mf9k1   # reminder-system bead now blocked on the decisio
 
 ## ACTION cards (do-in-the-world tasks)
 
-Some human beads aren't forks — they're a task only Craig can perform (a console
+Some human beads aren't forks — they're a task only the operator can perform (a console
 toggle, a store submission, a credential handoff). Same `human-gate` label (still the
 sole gate label — no new `-gate` variant), different **title prefix** (`ACTION:`) and a
 checklist body instead of options. No options block: an action card is a *do-this*, not
@@ -155,7 +154,7 @@ a *choose-between*.
 br create -t task --labels origin:<skill>,human-gate \
   --title "ACTION: <the action, one line>" \
   -d "$(cat <<'EOF'
-Gate-reason: authorization — <why this needs Craig's authorization>
+Gate-reason: authorization — <why this needs the operator's authorization>
 what:            <the action, one line>
 where:           <the exact surface — console / app / URL / menu path>
 checklist:
@@ -177,7 +176,7 @@ Work too large or too consequential to implement directly — a model rework, an
 architecture change, anything where inventing the design inside a ticket is the wrong
 shape — files as an `ACTION:` card, never an agent bead.
 
-The action is *kick off the planning chain*: `ac-plan-init` → refine → approve →
+The action is *kick off the planning chain*: `ac-plan` → refine → approve →
 `ac-beadify`. Put the analysis already done in the body as the brief. Close the card when
 the plan is beadified.
 
@@ -188,13 +187,13 @@ plan" judgement belongs in the human session, not buried in a backlog nobody can
 
 ```bash
 br create -t task --labels origin:<skill>,human-gate \
-  --title "ACTION: configure the ASC intro-offer for Body Compass" \
+  --title "ACTION: configure the ASC intro-offer for the example app" \
   -d "$(cat <<'EOF'
-Gate-reason: authorization — ASC console toggle only Craig can perform
-what: Set up the introductory offer (7-day free trial) on the Body Compass
+Gate-reason: authorization — ASC console toggle only the operator can perform
+what: Set up the introductory offer (7-day free trial) on the example app's
 subscription in App Store Connect so it ships with the next version.
 
-where: App Store Connect → Body Compass → Subscriptions → <group> → the monthly
+where: App Store Connect → <the app> → Subscriptions → <group> → the monthly
 product → Introductory Offers.
 
 checklist:
@@ -224,8 +223,8 @@ close. Closure requires a recorded human decision, then the agent executes the
 consequences and closes:
 
 ```bash
-br comments add bd-mf9k1 -m "DECISION (Craig): option (a), OneSignal. Free tier is
+br comments add bd-mf9k1 -m "DECISION (operator): option (a), OneSignal. Free tier is
 fine at this scale, revisit if we outgrow it."
 # ... agent implements the consequence, then:
-br close bd-mf9k1 -r "shipped: OneSignal wired per Craig's decision (see comments)"
+br close bd-mf9k1 -r "shipped: OneSignal wired per the operator's decision (see comments)"
 ```

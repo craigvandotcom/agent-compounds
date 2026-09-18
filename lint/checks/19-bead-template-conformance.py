@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 19-bead-template-conformance
-# prevents: a non-conforming br create template shipping in the registry — a stale template is copied, so it reproduces the defect on every future run, and the agent copying it has no reason to doubt it
+# prevents: a non-conforming br create template shipping in the registry — a stale template is
+#   copied, so it reproduces the defect on every future run, and the agent copying it has no reason
+#   to doubt it
 # scope: TEMPLATES
 # severity: fail
 # fixture: lint/fixtures/19-bead-template-conformance

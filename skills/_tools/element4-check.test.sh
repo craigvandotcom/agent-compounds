@@ -94,13 +94,46 @@ else
   fail "Case 5: expected exit 1, got $RC. Output: $OUT"
 fi
 
-# --- Case 6: exempt issue types skip the check ------------------------------
-write_fx exempt.md "$BODY_COMMON"
-OUT=$(bash "$CHECK" --file "$WORK/exempt.md" --type epic 2>&1); RC=$?
-if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "SKIP"; then
-  pass "Case 6: an exempt issue_type (epic) skips the check (exit 0)"
+# --- Case 6: epics are GRADED, not skipped ------------------------------------
+# An epic with probes is graded (passes like any other type); a probe-less epic
+# fails without probes. Only decision/investigation skip the check.
+EPIC_PROBED='## Intent
+Why this epic matters.
+
+## Acceptance Criteria
+- The thing ships.
+  Probe: `test -x skills/ac-implement/scripts/close-gate.sh` — tier: none
+
+## Delivers
+- gate: skills/ac-implement/scripts/close-gate.sh
+
+## Consumes
+- none
+'
+write_fx epic-graded.md "$EPIC_PROBED"
+OUT=$(bash "$CHECK" --file "$WORK/epic-graded.md" --type epic 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "via probe-carrying"; then
+  pass "Case 6: epic with probes is graded (exit 0 via the probe-carrying branch, not SKIP)"
 else
-  fail "Case 6: expected exit 0 with SKIP, got $RC. Output: $OUT"
+  fail "Case 6: expected exit 0 via the probe-carrying branch, got $RC. Output: $OUT"
+fi
+
+# --- Case 6b: a probe-less epic FAILS (graded means graded) -------------------
+write_fx epic-bare.md "$BODY_COMMON"
+OUT=$(bash "$CHECK" --file "$WORK/epic-bare.md" --type epic 2>&1); RC=$?
+if [ "$RC" -eq 1 ]; then
+  pass "Case 6b: a probe-less epic is REJECTED (exit 1) — graded, not skipped"
+else
+  fail "Case 6b: expected exit 1 for a probe-less epic, got $RC. Output: $OUT"
+fi
+
+# --- Case 6c: decision still skips the check ----------------------------------
+write_fx exempt.md "$BODY_COMMON"
+OUT=$(bash "$CHECK" --file "$WORK/exempt.md" --type decision 2>&1); RC=$?
+if [ "$RC" -eq 0 ] && echo "$OUT" | grep -q "SKIP"; then
+  pass "Case 6c: an exempt issue_type (decision) skips the check (exit 0)"
+else
+  fail "Case 6c: expected exit 0 with SKIP, got $RC. Output: $OUT"
 fi
 
 # ============================================================================

@@ -14,6 +14,7 @@ is the thing that ships.** A bad edit to a plan is inert. A bad edit here is a d
 | **ARTIFACT** | `scripts/code-manifest.py <scope>` — one `sha  path` line per in-scope file |
 | **CHECKLIST** | `references/code-checklist.md` |
 | **VALIDATE** | tests green · build green · `ubs <changed-files>` clean |
+| **READERS** | ONE `coordinator` per round — it edits shipped code in place under the severity gate, so it needs judgment tier AND the Edit tool; `references/reader-prompt.md` verbatim |
 | **STAMP** | `polish-fixpoint.sh --mode code --target <bead-id>` writes the receipt to that bead |
 
 ## The manifest is the artifact — never a concatenation of the source
@@ -28,7 +29,7 @@ Apply the round's findings, then run the suite, the build, and `ubs` over the ch
 A round that leaves any of them red is NOT recorded: revert it or fix it, then record. Without
 this a run reaches "fixpoint" on a tree that does not compile.
 
-`ubs` exit 0 counts only when `Files scanned` equals the number of files passed — it silently
+`ubs` exit 0 counts only when the Combined Summary's `Files: N` equals the number of files passed — it silently
 drops file types it does not cover, and a shortfall is NOT-GATED, not a pass.
 
 ## The scope must be UNCLAIMED

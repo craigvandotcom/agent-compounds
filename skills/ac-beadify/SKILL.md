@@ -9,7 +9,7 @@ description: 'Compile an APPROVED ac2 plan into lean beads — the four-section 
 
 |                  |                                                                              |
 | ---------------- | ---------------------------------------------------------------------------- |
-| **Input**        | One APPROVED plan file (`ac-plan`, graded by `ac-polish` plan-checklist)     |
+| **Input**        | One plan `plan-approve.sh check` accepts (`ac-plan`, graded by `ac-polish` plan-checklist) |
 | **Output**       | Beads in `br` on the ac2 schema, with every dependency edge wired both ways    |
 | **Artifacts**    | The epic bead; the plan moved to `_plans/_done/` (retirement)                  |
 | **Verification** | `br dep cycles` · `br lint` · the probe-extractor below · Consumes↔edge parity |
@@ -42,37 +42,41 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
 
 ## Procedure
 
-1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Verify the
-   stamp yourself: `status: loop-ready`, a `## Decisions` section, zero `needs-human` cards —
-   the keys and verdicts `skills/_tools/plan-approve.sh` (the stamp's ONE writer) reads back;
-   anything else is REFUSED and the plan is returned, never compiled.
+1. **Read the plan and check it mechanically.** Load `references/bead-schema.md`. Run
+   `skills/_tools/plan-approve.sh check <plan>` — the writer's own read-back, never a hand
+   grep of its keys. Non-zero (`REFUSED …` or `NOT-GATED …`) is REFUSED and the plan is
+   returned, never compiled.
 2. **Cut the work into beads.** Sizing is from the bead-checklist, never from taste: one bead
    = one focused worker pass. Two signals govern the cut, both cheaper here than at implement:
    - **Split signal** — heavy in-bead cognition at implement time means it was too big; split it.
    - **Under-specification is a PREMISE-FAILURE class** — a worker must never grind through an
-     underdetermined bead improvising decisions the bead should have made; a fork the plan
-     does not settle appends a `needs-human` card to `## Decisions`, sets `status: refined`,
+      underdetermined bead improvising decisions the bead should have made; a fork the plan does not
+      settle appends a `needs-human` card to `## Decisions` per the one card grammar in `skills/ac-plan/references/decisions.md`, sets `status: refined`,
      prints `beadify-refusal: needs-human` on its own line and stops — a plan defect surfaced
      to the docket, never a bead, never a human gate.
 3. **Write each bead to the four-section schema, exactly.** `## Intent` · `## Acceptance
    Criteria` · `## Delivers` · `## Consumes` — first header per type: `bug` → `## Steps to
    Reproduce`, `epic` → `## Success Criteria` (`br lint` compiles those in). Nothing else.
    **Line numbers are banned in Intent** — a `file:line` anchor decays before the claim does.
+   **The epic's `## Success Criteria` opens with the plan's `## Vision` verbatim** — inside
+   the section, since the schema allows nothing outside the four — so every implement
+   worker decides against the human's own words, not a paraphrase of them.
 4. **Apply the refusal** (§ above) to every bead before any of them is created. Refuse the
    bead, not the batch — but do not create a partial graph around a refused node.
 5. **Wire Delivers/Consumes as the graph.** `## Delivers` names artifacts; a dependent's
    `## Consumes` cites `<blocker-id> -> <artifact>` that the blocker's Delivers promises, or
    `none`; a `<…>` placeholder is REFUSED (it reads as a premise). Then create the edges and
    read them back: direction is `<blocked> depends-on <blocker>`, a reversed `br dep add` is
-   SILENT, and an epic reaches its children by parent-child, never `blocks`.
-- **Consumes↔edge parity, both directions.** Every Consumes line has an edge; every edge
-      has a Consumes line. Verify with `br dep cycles` plus `br show` on both ends.
+   SILENT, so read every edge back (`br dep cycles`, then `br show` on both ends). Every
+   child of the compiled epic gets ONE edge — parent-child (containment) — read back the
+    same way. The no-probe refusal names epics explicitly (a probe-less epic is refused like any other bead); parity holds both ways.
 - **One path per `## Delivers` bullet, and every delivered path that ALREADY EXISTS owes a
       touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
       write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <sibling bead>``
       — else `out-of-scope: <why>`.
-6. **Create the beads** per the schema's Header fields: `br create` REJECTS `-f` alongside a
-   title, so bodies go `-d "$(cat <file>)"` and bead text must stay dcg-safe.
+5b. **Emit the closeout bead** — D3: every plan-derived epic gets one even with no one-shots
+    (keyed off `beadified:` absent); emit the closeout bead per `references/bead-schema.md` § Closeout (D8 shape, edges + readback, one-shot refusal D4, `Detect:` lift D7).
+6. **Create the beads** per the schema's Header fields — bodies go `-d "$(cat <file>)"` (`br create` REJECTS `-f` with a title); bead text stays dcg-safe.
 7. **Retire the plan** (§ below).
 
 ## Plan retirement — the seams chain, and the one case that refuses it
@@ -99,4 +103,4 @@ The guard lives HERE — the only place its condition still holds.
 
 ## Hand-off
 
-A compiled epic with no grading is a dead end: hand the bead set to `ac-polish` first.
+End with `Next: /ac-polish bead <epic>` and stop.

@@ -21,7 +21,7 @@ probe-exempt type — never as `task`, which the bead-capture-guard refuses with
 a born probe:
 
     br create -t investigation \
-      --labels origin:ac-hygiene,hygiene-finding,journey-gap,unrefined \
+      --labels origin:ac-hygiene,hygiene-finding,journey-gap,unrefined,impact:<class> \
       -d "Coverage audit: <surface> has no journey-registry entry (or is
       under-tagged) — untagged critical surfaces are unprotected by the
       runtime-proof gates."

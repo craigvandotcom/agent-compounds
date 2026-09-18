@@ -75,6 +75,9 @@ removed or relocated until its inventory entry exists.
    checklist against the rewrite and confirms every rule survives — in the spine, in a
    script, or behind a condition-labeled pointer — and flags any rule that got weaker
    on the enforcement hierarchy. A weakened rule is a FAIL: restore it or move it up.
+5. **Run the consumer pins:** `grep -rl "skills/<name>" ~/mission/software/*/__tests__` —
+   every hit is a test that pins this skill's text verbatim. Run those tests after the
+   rewrite; a red one blocks the pass (a line wrap or a case change breaks a pin).
 
 **For a structural DIET (oversized SKILL.md, section-level extraction — not just rule
 polish), use `workflows/hygiene-pass.md` instead** — it adds the section-by-section

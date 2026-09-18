@@ -1,182 +1,476 @@
 #!/usr/bin/env bash
-# plan-approve.test.sh — RED/GREEN proof harness for plan-approve.sh.
-#
-# ASSURANCE-ROLE: test-harness
-# CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.sh glob) and any local run.
-#
-# EVERY CHECK IS TESTED IN BOTH DIRECTIONS. The 2026-09-11 defect (ac-1p7j) is the reason the
-# rule is written down here: the previous harness proved only that SOME string refused, using
-# a fixture shape (`- DECISION … state: needs-human`) that NO document prescribes and no plan
-# ever emitted. The matcher scored 0 against every real plan while this harness stayed green.
-# So each case below pins its fixture to a shape with a named source — `ac-plan/references/
-# decisions.md`, or a line lifted verbatim from a plan that shipped — and every REFUSES case
-# is paired with an APPROVES twin that differs only in the state token.
-#
-# Exit 0 = all cases pass.
-set -uo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# plan-approve.test.sh — RED/GREEN over every plan-approve.sh verdict, all three modes
+# (ac-ympj.1, hardened ac-zug5.2). Every verdict case asserts the EXIT CODE as well as
+# the token, so weakening a refusal (or zeroing an exit) turns a case red. Decision
+# fixtures use the one card grammar decisions.md prescribes — a top-level `-` bullet
+# plus `-` or `+` sub-bullets (both shapes pinned: ac-zug5.13), plain `settled:`,
+# `vision:` quoting the ## Vision line on its own sub-bullet — because the shipped
+# parser groups a card as one top-level bullet block; a one-line bold card is a
+# shape the grammar never prescribes. Coverage: a
+# failing polarity for every gated section (Vision, Deliverables, Decisions, Out of
+# scope, Success criterion, Seams, Human gates) and every refusal token (needs-human,
+# no-decisions, no-seams, seams-incomplete, uncited-decision, no-approver,
+# not-polished, not-approved, regate, digest-mismatch, NOT-GATED); a `## Success
+# Criteria` (capital-C) fixture proving the SuccessCriterion digest leg hashes real
+# content instead of empty; a no-sha-tool case asserting exit 2; and the whole suite
+# runs from any cwd (it parks itself in TMPDIR before the first case).
+set -u
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT="$HERE/plan-approve.sh"
-[ -f "$SCRIPT" ] || { echo "HARNESS FAIL: $SCRIPT missing"; exit 1; }
+PF="$HERE/polish-fixpoint.sh"
+BASH_BIN="$(command -v bash)"
 FAILURES=0
 CASES=0
 
 expect() {
   CASES=$((CASES + 1))
   if [ "$1" = "$2" ]; then
-    printf '  ok    %s\n' "$3"
+    printf '  PASS  %s\n' "$3"
   else
     printf '  FAIL  %s (want %s got %s)\n' "$3" "$2" "$1"
     FAILURES=$((FAILURES + 1))
   fi
 }
 
-FM_POLISHED='---
-status: draft
-created: 2026-09-05
-polish_rounds: 4
-polish_fixpoint_sha256: b3275a306b626c0eb07bbb626f04a8ede39d1f5c1ec2b9f56a59503de8c58c00
----
-# Plan'
-FM_UNPOLISHED='---
-status: draft
-created: 2026-09-05
----
-# Plan'
-TAIL='## Risk and sequence
+# cap runs the script, banking stdout in $OUT and the exit code in $RC: every
+# verdict case then asserts BOTH, so a refusal that prints right but exits
+# wrong (or vice versa) still goes red.
+cap() {
+  OUT=$("$@" 2>&1); RC=$?
+}
 
-Ship it in one wave.'
+# BSD sed requires `sed -i.bak`; GNU accepts the same form.
+sedi() {
+  local f="$1"; shift
+  sed -i.bak "$@" "$f"
+  rm -f "$f.bak"
+}
 
-W=$(mktemp -d "${TMPDIR:-/tmp}/plan-approve-test-XXXXXX")
-trap 'rm -rf "$W"' EXIT
+W=$(mktemp -d /tmp/plan-approve-test-XXXXXX)
 
-# mkplan <file> <frontmatter> <decisions-body>
-mkplan() { printf '%s\n\n%s\n\n%s\n' "$2" "$3" "$TAIL" > "$1"; }
+# The suite never depends on the invoking cwd: everything it touches travels by
+# absolute path, and it parks itself in TMPDIR before the first case.
+cd "${TMPDIR:-/tmp}"
 
-# ---- the two card shapes, each in both states --------------------------------
-# SHAPE A — the bullet card decisions.md prescribes (§ The card).
-A_SETTLED=$(cat <<'EOF'
-## Decisions
+# A Deliverable path with a ## Seams row carrying the same FULL path, so the
+# seams-complete fixtures exercise the full-path row requirement (ac-zug5.1: rows
+# match by full path, never basename, and exempt nothing).
+REAL_PATH="skills/_tools/touchers.sh"
 
-- **question** — which storage engine.
-- **options** — sqlite (simple) · postgres (concurrent).
-- **recommendation** — sqlite.
-- **what settles it** — the concurrent-writer probe.
-- **state** — `settled: sqlite — one writer, measured in the probe`
-EOF
-)
-A_OPEN=$(cat <<'EOF'
-## Decisions
+vision_line='writes the vision back in plain prose'
 
-- **question** — which storage engine.
-- **options** — sqlite (simple) · postgres (concurrent).
-- **recommendation** — sqlite.
-- **what settles it** — the concurrent-writer probe.
-- **state** — `needs-human`
-EOF
-)
+mk_plan() {
+  # mk_plan <file> <deliverables-body> <decisions-body> <seams-body> [extra-frontmatter]
+  local file="$1" deliv="$2" dec="$3" seams="$4" extra="${5:-}"
+  {
+    printf -- '---\nstatus: draft\ncreated: 2026-09-05\n'
+    [ -n "$extra" ] && printf '%s\n' "$extra"
+    printf -- '---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n%s\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
+      "$vision_line" "$deliv" "$dec" "$seams"
+  } > "$file"
+}
 
-# SHAPE B — the heading-per-card shape real plans emit. Both lines are VERBATIM from
-# easy-mode `_plans/2026-09-11-0851-model-gateway.md`, the plan the old matcher passed.
-B_SETTLED=$(cat <<'EOF'
-## Decisions
+# The prescribed card: top-level `-` bullet, `+` sub-bullets, plain `settled:`,
+# `vision:` quoting the ## Vision line on its own sub-bullet.
+SETTLED_CARD="- **A fork?**
+  + options: a, b.
+  + settled: a (Craig).
+  + vision: \"$vision_line\""
+OPEN_CARD="- **A fork?**
+  + options: a, b.
+  + needs-human"
+NOVISION_CARD="- **A fork?**
+  + options: a, b.
+  + settled: a (Craig)."
+# needs-human beats settled: a card carrying both the open token and a settled
+# line is refused as open — settled+needs-human never settles silently.
+BOTH_CARD="- **A fork?**
+  + options: a, b.
+  + needs-human
+  + settled: a (Craig).
+  + vision: \"$vision_line\""
+# The prescribed `-` sub-bullet shape (ac-zug5.13): same grammar as above with the
+# `-` sub-bullet marker decisions.md prescribes — the parser used to split every
+# `-` line into its own block and false-refuse the card as uncited-decision.
+SETTLED_DASH_CARD="- **A fork?**
+  - options: a, b.
+  - settled: a (Craig).
+  - vision: \"$vision_line\""
+OPEN_DASH_CARD="- **A fork?**
+  - options: a, b.
+  - needs-human"
+NOVISION_DASH_CARD="- **A fork?**
+  - options: a, b.
+  - settled: a (Craig)."
+SEAMS_OK="| object | finding | disposition |
+| --- | --- | --- |
+| \`$REAL_PATH\` | some finding | -> D1 |"
 
-### Where the gateway lives
-`settled: apps/model-gateway/ — its own deployable and image.` Forced from three sides:
-ADR 0007 requires it not sit under either path sub-check 4 covers.
-EOF
-)
-B_OPEN=$(cat <<'EOF'
-## Decisions
+# 1 — approve on a clean plan -> APPROVED (exit 0), identity keys + ledger written
+mk_plan "$W/p1.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+cap "$SCRIPT" approve "$W/p1.md" "Craig"
+expect "$RC" 0 "clean plan -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "clean plan -> APPROVED"
+expect "$(grep -c '^status: approved$' "$W/p1.md")" 1 "approve writes status: approved"
+expect "$(grep -c '^approved_by: Craig$' "$W/p1.md")" 1 "approve writes approved_by"
+expect "$(grep -c '^approved_at:' "$W/p1.md")" 1 "approve writes approved_at"
+expect "$(grep -c '^approved_sha256:' "$W/p1.md")" 1 "approve writes approved_sha256"
+expect "$(grep -c '^approved_section_digest:' "$W/p1.md")" 1 "approve writes the internal section ledger"
 
-### ADR 0007's rule-3 exemption
-`needs-human — already owned by bd-2mik, not re-decided here.` bd-2mik holds the FIX verdict
-and states OUT: reversing the exemption. This plan does not answer it.
-EOF
-)
+# 2 — approve refuses an open Decision card (exit 1)
+mk_plan "$W/p2.md" "- D1 x" "$OPEN_CARD" "a"
+cap "$SCRIPT" approve "$W/p2.md" "Craig"
+expect "$RC" 1 "open Decision card -> exit 1"
+expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "open Decision card -> REFUSED needs-human 1"
+expect "$(grep -c '^status: draft$' "$W/p2.md")" 1 "refused plan is not re-stamped"
 
-echo "shell: ${ZSH_VERSION:+zsh $ZSH_VERSION}${BASH_VERSION:+bash $BASH_VERSION}"
-echo "-- shape A: the bullet card decisions.md prescribes --"
+# 3 — a card carrying both needs-human and settled: is refused as OPEN (exit 1)
+mk_plan "$W/p2b.md" "- D1 x" "$BOTH_CARD" "a"
+cap "$SCRIPT" approve "$W/p2b.md" "Craig"
+expect "$RC" 1 "needs-human + settled card -> exit 1"
+expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "needs-human beats settled: both-tokens card -> REFUSED needs-human 1"
+expect "$(grep -c '^status: draft$' "$W/p2b.md")" 1 "both-tokens plan is not re-stamped"
 
-# 1 — A settled -> APPROVED, three keys written
-mkplan "$W/a1.md" "$FM_POLISHED" "$A_SETTLED"
-OUT=$("$SCRIPT" "$W/a1.md" "Craig" 2>&1)
-expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "A/settled -> APPROVED"
-expect "$(grep -c '^status: loop-ready$' "$W/a1.md")" 1 "approval writes status: loop-ready"
-expect "$(grep -c '^loop_ready_at:' "$W/a1.md")" 1 "approval writes loop_ready_at"
-expect "$(grep -c '^approved_by: Craig$' "$W/a1.md")" 1 "approval writes approved_by"
+# 3b — the prescribed `-` sub-bullet card approves (ac-zug5.13)
+mk_plan "$W/p1dash.md" "- D1 x" "$SETTLED_DASH_CARD" "a"
+cap "$SCRIPT" approve "$W/p1dash.md" "Craig"
+expect "$RC" 0 "dash sub-bullet card -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "dash sub-bullet card -> APPROVED"
 
-# 2 — A open -> REFUSED, and the plan is NOT re-stamped
-mkplan "$W/a2.md" "$FM_POLISHED" "$A_OPEN"
-OUT=$("$SCRIPT" "$W/a2.md" "Craig" 2>&1)
-expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "A/open -> REFUSED needs-human 1"
-expect "$(grep -c '^status: draft$' "$W/a2.md")" 1 "refused plan is not re-stamped"
+# 3c — a dash open card is still refused as open: the grouping fix must not swallow needs-human
+mk_plan "$W/p2dash.md" "- D1 x" "$OPEN_DASH_CARD" "a"
+cap "$SCRIPT" approve "$W/p2dash.md" "Craig"
+expect "$RC" 1 "dash open card -> exit 1"
+expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "dash open card -> REFUSED needs-human 1"
 
-echo "-- shape B: the heading-per-card shape real plans emit --"
+# 3d — a dash settled card with no vision quote is still refused as uncited
+mk_plan "$W/p6dash.md" "- D1 x" "$NOVISION_DASH_CARD" "a"
+cap "$SCRIPT" approve "$W/p6dash.md" "Craig"
+expect "$RC" 1 "dash settled card with no vision quote -> exit 1"
+expect "$(grep -c 'REFUSED uncited-decision 1' <<<"$OUT")" 1 "dash settled card with no vision quote -> REFUSED uncited-decision 1"
 
-# 3 — B settled -> APPROVED
-mkplan "$W/b1.md" "$FM_POLISHED" "$B_SETTLED"
-OUT=$("$SCRIPT" "$W/b1.md" "Craig" 2>&1)
-expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "B/settled -> APPROVED"
+# 4 — approve refuses a missing ## Decisions section (exit 1)
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\nv\n\n## Deliverables\n\n- D1 x\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success criterion\n\ns\n'
+} > "$W/p3.md"
+cap "$SCRIPT" approve "$W/p3.md" "Craig"
+expect "$RC" 1 "no ## Decisions -> exit 1"
+expect "$(grep -c 'REFUSED no-decisions' <<<"$OUT")" 1 "no ## Decisions -> REFUSED no-decisions"
 
-# 4 — REGRESSION (ac-1p7j): the exact card the old matcher scored 0 against.
-mkplan "$W/b2.md" "$FM_POLISHED" "$B_OPEN"
-OUT=$("$SCRIPT" "$W/b2.md" "Craig" 2>&1)
-expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "B/open -> REFUSED (regression: real plan shape)"
-expect "$(grep -c '^status: draft$' "$W/b2.md")" 1 "B/open refused plan is not re-stamped"
+# 5 — approve refuses a missing ## Seams section (exit 1)
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\nv\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Out of scope\n\nn\n\n## Success criterion\n\ns\n' "$SETTLED_CARD"
+} > "$W/p4.md"
+cap "$SCRIPT" approve "$W/p4.md" "Craig"
+expect "$RC" 1 "no ## Seams -> exit 1"
+expect "$(grep -c 'REFUSED no-seams' <<<"$OUT")" 1 "no ## Seams -> REFUSED no-seams"
 
-echo "-- the word vs the state token: prose must not refuse a healthy plan --"
+# 6 — approve refuses an existing Deliverable path with no ## Seams row (exit 1)
+mk_plan "$W/p5.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "| object | finding | disposition |
+| --- | --- | --- |
+| \`unrelated-name\` | x | -> D1 |"
+cap "$SCRIPT" approve "$W/p5.md" "Craig"
+expect "$RC" 1 "existing path with no Seams row -> exit 1"
+expect "$(grep -c "REFUSED seams-incomplete $REAL_PATH" <<<"$OUT")" 1 "existing path with no Seams row -> REFUSED seams-incomplete"
 
-# 5 — prose OUTSIDE the Decisions section naming the state
-mkplan "$W/p1.md" "$FM_POLISHED" "$A_SETTLED
-"
-printf 'Any unsettled fork stays needs-human until the docket clears it.\n' >> "$W/p1.md"
-OUT=$("$SCRIPT" "$W/p1.md" "Craig" 2>&1)
-expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "prose outside Decisions naming needs-human -> APPROVED"
+# 7 — approve refuses a settled card with no vision: quote (exit 1)
+mk_plan "$W/p6.md" "- D1 x" "$NOVISION_CARD" "a"
+cap "$SCRIPT" approve "$W/p6.md" "Craig"
+expect "$RC" 1 "settled card with no vision quote -> exit 1"
+expect "$(grep -c 'REFUSED uncited-decision 1' <<<"$OUT")" 1 "settled card with no vision quote -> REFUSED uncited-decision 1"
 
-# 6 — prose INSIDE the Decisions section, token not line-initial
-mkplan "$W/p2.md" "$FM_POLISHED" "$A_SETTLED
-An unattended run leaves a card \`needs-human\` for the docket — never invent an answer."
-OUT=$("$SCRIPT" "$W/p2.md" "Craig" 2>&1)
-expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "prose inside Decisions, token mid-line -> APPROVED"
+# 8 — approve refuses an explicitly empty approver (exit 1)
+mk_plan "$W/p7.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/p7.md" ""
+expect "$RC" 1 "empty approver -> exit 1"
+expect "$(grep -c 'REFUSED no-approver' <<<"$OUT")" 1 "empty approver -> REFUSED no-approver"
 
-# 7 — a SETTLED card whose why-text names the state it rejected
-mkplan "$W/p3.md" "$FM_POLISHED" '## Decisions
+# 9 — approve with no second arg defaults to git config user.name; the value is injected
+#     through git's env config so the case does not depend on the host (CI has none set)
+mk_plan "$W/p8.md" "- D1 x" "$SETTLED_CARD" "a"
+OUT=$(GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0=ci-tester "$SCRIPT" approve "$W/p8.md" 2>&1); RC=$?
+expect "$RC" 0 "omitted approver falls back to git config user.name -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "omitted approver falls back to git config user.name"
+expect "$(grep -c '^approved_by: ci-tester$' "$W/p8.md")" 1 "the git user.name is what gets written"
 
-- **state** — `settled: defer to bd-2mik — the needs-human escalation was rejected`'
-OUT=$("$SCRIPT" "$W/p3.md" "Craig" 2>&1)
-expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "settled card naming needs-human in its why -> APPROVED"
+# 10 — no second arg AND no git user.name anywhere -> REFUSED no-approver (exit 1)
+mk_plan "$W/p8b.md" "- D1 x" "$SETTLED_CARD" "a"
+OUT=$(GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0= "$SCRIPT" approve "$W/p8b.md" 2>&1); RC=$?
+expect "$RC" 1 "empty git user.name and no arg -> exit 1"
+expect "$(grep -c 'REFUSED no-approver' <<<"$OUT")" 1 "empty git user.name and no arg -> REFUSED no-approver"
+expect "$(grep -c '^approved_by:' "$W/p8b.md")" 0 "a refused approve writes no approver"
 
-echo "-- counting, and the remaining verdicts --"
+# 10b — a polluted environment cannot smuggle an approver past the git default:
+# any env fallback re-added under another name would land its sentinel here.
+mk_plan "$W/p8c.md" "- D1 x" "$SETTLED_CARD" "a"
+OUT=$(GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0=ci-tester APPROVER=env-sentinel APPROVED_BY=env-sentinel PLAN_APPROVER=env-sentinel AGENT_NAME=env-sentinel AGENT_IDENTITY=env-sentinel "$SCRIPT" approve "$W/p8c.md" 2>&1); RC=$?
+expect "$RC" 0 "polluted env with no arg -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "polluted env with no arg -> APPROVED via git user.name"
+expect "$(grep -c '^approved_by: ci-tester$' "$W/p8c.md")" 1 "polluted env leaves the git user.name as approver"
+expect "$(grep -c 'env-sentinel' "$W/p8c.md")" 0 "no env value leaks into the approval record"
 
-# 8 — two open cards report N=2, not 1
-mkplan "$W/n2.md" "$FM_POLISHED" "$A_OPEN
-
-### A second fork
-\`needs-human — nobody has ruled on the credential owner.\`"
-OUT=$("$SCRIPT" "$W/n2.md" "Craig" 2>&1)
-expect "$(grep -c 'REFUSED needs-human 2' <<<"$OUT")" 1 "two open cards -> REFUSED needs-human 2"
-
-# 9 — the Decisions section runs to EOF (no following `## ` to close the slice)
-printf '%s\n\n%s\n' "$FM_POLISHED" "$B_OPEN" > "$W/eof1.md"
-OUT=$("$SCRIPT" "$W/eof1.md" "Craig" 2>&1)
-expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "Decisions section at EOF, open -> REFUSED"
-printf '%s\n\n%s\n' "$FM_POLISHED" "$B_SETTLED" > "$W/eof2.md"
-OUT=$("$SCRIPT" "$W/eof2.md" "Craig" 2>&1)
-expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "Decisions section at EOF, settled -> APPROVED"
-
-# 10 — no polish stamp -> REFUSED not-polished
-mkplan "$W/u1.md" "$FM_UNPOLISHED" "$A_SETTLED"
-OUT=$("$SCRIPT" "$W/u1.md" "Craig" 2>&1)
-expect "$(grep -c 'REFUSED not-polished' <<<"$OUT")" 1 "no polish stamp -> REFUSED not-polished"
-
-# 11 — no ## Decisions section -> REFUSED no-decisions
-printf '%s\n\n%s\n' "$FM_POLISHED" "$TAIL" > "$W/d0.md"
-OUT=$("$SCRIPT" "$W/d0.md" "Craig" 2>&1)
-expect "$(grep -c 'REFUSED no-decisions' <<<"$OUT")" 1 "no Decisions section -> REFUSED no-decisions"
-
-# 12 — missing plan file -> NOT-GATED
-OUT=$("$SCRIPT" "$W/absent.md" "Craig" 2>&1)
+# 11 — missing plan file -> NOT-GATED (exit 2, never a refusal)
+cap "$SCRIPT" approve "$W/absent.md" "Craig"
+expect "$RC" 2 "missing plan -> exit 2"
 expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "missing plan -> NOT-GATED"
 
+# 12 — the bare positional form (no mode) refuses; so does an unknown mode (exit 2)
+cap "$SCRIPT" "$W/p1.md" "Craig"
+expect "$RC" 2 "bare positional form (no mode) -> exit 2"
+expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "bare positional form (no mode) -> NOT-GATED"
+cap "$SCRIPT" frobnicate "$W/p1.md"
+expect "$RC" 2 "unknown mode -> exit 2"
+expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "unknown mode -> NOT-GATED"
+
+# 13 — the AM_SELF / BR_AGENT_NAME agent-identity fallback is entirely gone
+expect "$(grep -cE 'AM_SELF|BR_AGENT_NAME' "$SCRIPT")" 0 "AM_SELF/BR_AGENT_NAME fallback is gone from the script"
+
+# 14 — a ## Success Criteria (capital-C) fixture: approve then ready succeed, so the
+# SuccessCriterion digest leg is proven hashing real content instead of empty.
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
+    "$vision_line" "$SETTLED_CARD"
+} > "$W/capc.md"
+cap "$SCRIPT" approve "$W/capc.md" "Craig"
+expect "$RC" 0 "## Success Criteria plan -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "## Success Criteria plan -> APPROVED"
+
+# --- ready mode -----------------------------------------------------------------------
+
+add_polish_keys() {
+  # Simulate a polish stamp without running the reader loop: the two keys ready() checks.
+  local file="$1"
+  sedi "$file" '2a\
+polish_rounds: 2\
+polish_fixpoint_sha256: deadbeef'
+}
+
+# 15 — ready refuses not-polished before polish keys exist (exit 1)
+mk_plan "$W/r1.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/r1.md" "Craig"
+expect "$RC" 0 "setup: approve r1"
+cap "$SCRIPT" ready "$W/r1.md"
+expect "$RC" 1 "ready before polish -> exit 1"
+expect "$(grep -c 'REFUSED not-polished' <<<"$OUT")" 1 "ready before polish -> REFUSED not-polished"
+
+# 16 — ready refuses not-approved when status never reached approved (exit 1)
+mk_plan "$W/r2.md" "- D1 x" "$SETTLED_CARD" "a"
+add_polish_keys "$W/r2.md"
+cap "$SCRIPT" ready "$W/r2.md"
+expect "$RC" 1 "ready on a never-approved plan -> exit 1"
+expect "$(grep -c 'REFUSED not-approved' <<<"$OUT")" 1 "ready on a never-approved plan -> REFUSED not-approved"
+
+# 17 — ready with a matching digest -> READY (exit 0), writes bead-ready + regate: none
+mk_plan "$W/r3.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/r3.md" "Craig"
+expect "$RC" 0 "setup: approve r3"
+add_polish_keys "$W/r3.md"
+cap "$SCRIPT" ready "$W/r3.md"
+expect "$RC" 0 "matching digest -> exit 0"
+expect "$(grep -c '^READY:' <<<"$OUT")" 1 "matching digest -> READY"
+expect "$(grep -c '^status: bead-ready$' "$W/r3.md")" 1 "ready writes status: bead-ready"
+expect "$(grep -c '^bead_ready_at:' "$W/r3.md")" 1 "ready writes bead_ready_at"
+expect "$(grep -c '^regate: none$' "$W/r3.md")" 1 "ready writes regate: none"
+
+# 18 — ready on the capital-C fixture with no edits -> READY (exit 0)
+add_polish_keys "$W/capc.md"
+cap "$SCRIPT" ready "$W/capc.md"
+expect "$RC" 0 "## Success Criteria plan with no edits -> exit 0"
+expect "$(grep -c '^READY:' <<<"$OUT")" 1 "## Success Criteria plan with no edits -> READY"
+
+# 19 — ready after an edit INSIDE ## Deliverables -> REFUSED regate Deliverables (exit 1)
+mk_plan "$W/r4.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+cap "$SCRIPT" approve "$W/r4.md" "Craig"
+expect "$RC" 0 "setup: approve r4"
+add_polish_keys "$W/r4.md"
+sedi "$W/r4.md" 's/a thing\./a DIFFERENT thing./'
+cap "$SCRIPT" ready "$W/r4.md"
+expect "$RC" 1 "edit inside ## Deliverables -> exit 1"
+expect "$(grep -c '^REFUSED regate Deliverables$' <<<"$OUT")" 1 "edit inside ## Deliverables -> REFUSED regate Deliverables"
+
+# 20 — ready after an edit INSIDE ## Vision names only that section (exit 1)
+mk_plan "$W/v.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/v.md" "Craig"
+expect "$RC" 0 "setup: approve v"
+add_polish_keys "$W/v.md"
+sedi "$W/v.md" '/^## Vision$/,/^## / s/plain prose/plain PROSE/'
+cap "$SCRIPT" ready "$W/v.md"
+expect "$RC" 1 "edit inside ## Vision -> exit 1"
+expect "$(grep -c '^REFUSED regate Vision$' <<<"$OUT")" 1 "edit inside ## Vision -> REFUSED regate Vision"
+
+# 21 — ready after an edit INSIDE ## Decisions names only that section (exit 1)
+mk_plan "$W/d.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/d.md" "Craig"
+expect "$RC" 0 "setup: approve d"
+add_polish_keys "$W/d.md"
+sedi "$W/d.md" 's/options: a, b\./options: a, b, c./'
+cap "$SCRIPT" ready "$W/d.md"
+expect "$RC" 1 "edit inside ## Decisions -> exit 1"
+expect "$(grep -c '^REFUSED regate Decisions$' <<<"$OUT")" 1 "edit inside ## Decisions -> REFUSED regate Decisions"
+
+# 22 — ready after an edit INSIDE ## Out of scope names only that section (exit 1)
+mk_plan "$W/o.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/o.md" "Craig"
+expect "$RC" 0 "setup: approve o"
+add_polish_keys "$W/o.md"
+sedi "$W/o.md" 's/^- nothing$/- everything else/'
+cap "$SCRIPT" ready "$W/o.md"
+expect "$RC" 1 "edit inside ## Out of scope -> exit 1"
+expect "$(grep -c '^REFUSED regate OutOfScope$' <<<"$OUT")" 1 "edit inside ## Out of scope -> REFUSED regate OutOfScope"
+
+# 23 — ready after an edit INSIDE ## Success Criteria names only that section (exit 1):
+# the capital-C leg hashes content, so moving the section regates instead of staying READY.
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
+    "$vision_line" "$SETTLED_CARD"
+} > "$W/capc-reg.md"
+cap "$SCRIPT" approve "$W/capc-reg.md" "Craig"
+expect "$RC" 0 "setup: approve capc-reg"
+add_polish_keys "$W/capc-reg.md"
+sedi "$W/capc-reg.md" 's/Some criterion\./Some amended criterion./'
+cap "$SCRIPT" ready "$W/capc-reg.md"
+expect "$RC" 1 "edit inside ## Success Criteria -> exit 1"
+expect "$(grep -c '^REFUSED regate SuccessCriterion$' <<<"$OUT")" 1 "edit inside ## Success Criteria -> REFUSED regate SuccessCriterion"
+
+# 24 — ready after an edit INSIDE ## Seams names only that section (exit 1)
+mk_plan "$W/s.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+cap "$SCRIPT" approve "$W/s.md" "Craig"
+expect "$RC" 0 "setup: approve s"
+add_polish_keys "$W/s.md"
+sedi "$W/s.md" 's/some finding/some OTHER finding/'
+cap "$SCRIPT" ready "$W/s.md"
+expect "$RC" 1 "edit inside ## Seams -> exit 1"
+expect "$(grep -c '^REFUSED regate Seams$' <<<"$OUT")" 1 "edit inside ## Seams -> REFUSED regate Seams"
+
+# 25 — ready after adding a Human gates: line names only that section (exit 1):
+# the line lives in frontmatter, outside every ## body, so only its own leg moves.
+mk_plan "$W/h.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/h.md" "Craig"
+expect "$RC" 0 "setup: approve h"
+add_polish_keys "$W/h.md"
+sedi "$W/h.md" '2a\
+Human gates: none'
+cap "$SCRIPT" ready "$W/h.md"
+expect "$RC" 1 "added Human gates: line -> exit 1"
+expect "$(grep -c '^REFUSED regate HumanGates$' <<<"$OUT")" 1 "added Human gates: line -> REFUSED regate HumanGates"
+
+# 26 — ready after an edit OUTSIDE every gated section -> READY (exit 0)
+mk_plan "$W/r5.md" "- D1 x" "$SETTLED_CARD" "a" "amended_after_stamp: an ungated frontmatter note"
+cap "$SCRIPT" approve "$W/r5.md" "Craig"
+expect "$RC" 0 "setup: approve r5"
+add_polish_keys "$W/r5.md"
+sedi "$W/r5.md" 's/an ungated frontmatter note/a DIFFERENT ungated frontmatter note/'
+cap "$SCRIPT" ready "$W/r5.md"
+expect "$RC" 0 "edit outside every gated section -> exit 0"
+expect "$(grep -c '^READY:' <<<"$OUT")" 1 "edit outside every gated section -> READY, no regate"
+
+# --- check mode -------------------------------------------------------------------------
+
+# 27 — check refuses missing-keys before any approval (exit 1)
+mk_plan "$W/c1.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" check "$W/c1.md"
+expect "$RC" 1 "check with no approval keys -> exit 1"
+expect "$(grep -c 'REFUSED missing-keys' <<<"$OUT")" 1 "check with no approval keys -> REFUSED missing-keys"
+
+# 28 — check refuses status <status> when approved but not yet ready (exit 1)
+mk_plan "$W/c2.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/c2.md" "Craig"
+expect "$RC" 0 "setup: approve c2"
+cap "$SCRIPT" check "$W/c2.md"
+expect "$RC" 1 "check on approved-but-not-ready -> exit 1"
+expect "$(grep -c 'REFUSED status approved' <<<"$OUT")" 1 "check on approved-but-not-ready -> REFUSED status approved"
+
+# 29 — check passes OK on a bead-ready plan (exit 0)
+mk_plan "$W/c3.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/c3.md" "Craig"
+expect "$RC" 0 "setup: approve c3"
+add_polish_keys "$W/c3.md"
+cap "$SCRIPT" ready "$W/c3.md"
+expect "$RC" 0 "setup: ready c3"
+cap "$SCRIPT" check "$W/c3.md"
+expect "$RC" 0 "bead-ready plan -> exit 0"
+expect "$(grep -c '^OK:' <<<"$OUT")" 1 "bead-ready plan -> check OK"
+
+# 30 — check also passes on a retired plan's shape: status: done, keys untouched (exit 0)
+mk_plan "$W/c4.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/c4.md" "Craig"
+expect "$RC" 0 "setup: approve c4"
+add_polish_keys "$W/c4.md"
+cap "$SCRIPT" ready "$W/c4.md"
+expect "$RC" 0 "setup: ready c4"
+sedi "$W/c4.md" 's/^status: bead-ready$/status: done/'
+cap "$SCRIPT" check "$W/c4.md"
+expect "$RC" 0 "retired (status: done) plan -> exit 0"
+expect "$(grep -c '^OK:' <<<"$OUT")" 1 "retired (status: done) plan -> check OK"
+
+# 31 — check refuses digest-mismatch when a gated section moved after ready (exit 1)
+mk_plan "$W/c5.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
+cap "$SCRIPT" approve "$W/c5.md" "Craig"
+expect "$RC" 0 "setup: approve c5"
+add_polish_keys "$W/c5.md"
+cap "$SCRIPT" ready "$W/c5.md"
+expect "$RC" 0 "setup: ready c5"
+sedi "$W/c5.md" 's/a thing\./a THIRD thing./'
+cap "$SCRIPT" check "$W/c5.md"
+expect "$RC" 1 "gated section moved after ready -> exit 1"
+expect "$(grep -c 'REFUSED digest-mismatch' <<<"$OUT")" 1 "gated section moved after ready -> REFUSED digest-mismatch"
+
+# 32 — the documented `## Deliverables (artifacts)` prefix-match fixture: approve, then
+# ready with no edits -> both succeed against the variant header (exit 0).
+{
+  printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables (artifacts)\n\n- **D1 `%s`** — a thing.\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
+    "$vision_line" "$REAL_PATH" "$SETTLED_CARD" "$SEAMS_OK"
+} > "$W/artifacts.md"
+cap "$SCRIPT" approve "$W/artifacts.md" "Craig"
+expect "$RC" 0 "## Deliverables (artifacts) header -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "## Deliverables (artifacts) header -> APPROVED"
+add_polish_keys "$W/artifacts.md"
+cap "$SCRIPT" ready "$W/artifacts.md"
+expect "$RC" 0 "## Deliverables (artifacts) header with no edits -> exit 0"
+expect "$(grep -c '^READY:' <<<"$OUT")" 1 "## Deliverables (artifacts) header with no edits -> READY"
+
+# 33 — approve is re-runnable (the re-approve half of the regate flow): approving twice on
+# an unchanged plan still succeeds (exit 0) and re-stamps a fresh approved_at.
+mk_plan "$W/reapp.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/reapp.md" "Craig"
+expect "$RC" 0 "setup: first approve reapp"
+cap "$SCRIPT" approve "$W/reapp.md" "Craig"
+expect "$RC" 0 "re-approve on an unchanged plan -> exit 0"
+expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "re-approve on an unchanged plan -> APPROVED again"
+expect "$(grep -c '^approved_by: Craig$' "$W/reapp.md")" 1 "re-approve keeps exactly one approved_by line"
+
+# 34 — with no shasum or sha256sum on PATH every mode refuses closed: NOT-GATED (exit 2),
+# never a digest over empty input.
+NOSHADIR=$(mktemp -d /tmp/plan-approve-test-nosha-XXXXXX)
+mk_plan "$W/nosha.md" "- D1 x" "$SETTLED_CARD" "a"
+OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" approve "$W/nosha.md" "Craig" 2>&1); RC=$?
+expect "$RC" 2 "approve with no sha tool -> exit 2"
+expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "approve with no sha tool -> NOT-GATED"
+OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" ready "$W/nosha.md" 2>&1); RC=$?
+expect "$RC" 2 "ready with no sha tool -> exit 2"
+expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "ready with no sha tool -> NOT-GATED"
+OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" check "$W/nosha.md" 2>&1); RC=$?
+expect "$RC" 2 "check with no sha tool -> exit 2"
+expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "check with no sha tool -> NOT-GATED"
+rm -rf "$NOSHADIR"
+
+# --- gotcha: approved keys survive polish-fixpoint.sh --mode plan -----------------------
+
+mk_plan "$W/pf.md" "- D1 x" "$SETTLED_CARD" "a"
+cap "$SCRIPT" approve "$W/pf.md" "Craig"
+expect "$RC" 0 "setup: approve pf"
+BEFORE_KEYS=$(grep '^approved_' "$W/pf.md" | sort)
+STATE=$(mktemp -d /tmp/plan-approve-test-pf-XXXXXX)
+sha() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'; else sha256sum "$1" | awk '{print $1}'; fi; }
+D1=$(sha "$W/pf.md")
+"$PF" --state "$STATE" --artifact "$W/pf.md" --round 1 --pre "$D1" --mode plan >/dev/null 2>&1
+D2=$(sha "$W/pf.md")
+"$PF" --state "$STATE" --artifact "$W/pf.md" --round 2 --pre "$D2" --findings 0 --mode plan >/dev/null 2>&1
+AFTER_KEYS=$(grep '^approved_' "$W/pf.md" | sort)
+expect "$([ "$BEFORE_KEYS" = "$AFTER_KEYS" ] && echo same)" "same" "approved_* keys survive polish-fixpoint.sh --mode plan across two rounds"
+expect "$(grep -c '^polish_rounds: 2$' "$W/pf.md")" 1 "polish-fixpoint still stamps its own keys on the same file"
+rm -rf "$STATE"
+
+rm -rf "$W"
 printf 'plan-approve.test: %s cases, %s failures\n' "$CASES" "$FAILURES"
 [ "$FAILURES" -eq 0 ]

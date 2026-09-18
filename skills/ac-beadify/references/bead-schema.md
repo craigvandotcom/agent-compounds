@@ -13,18 +13,24 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 
 `title` · `type` · `priority` · deps (`blocks` / parent-child / `discovered-from`) ·
 `labels` (risk tags as needed: `migration` · `native`).
+- Epic beads (`type: epic`) carry `## Success Criteria` plus probe-bearing
+  `## Acceptance Criteria` — the probes are what a worker pick closes against (D3).
 
-- An epic reaches its children by **parent-child**, never `blocks` — containment is not
-  ordering, and wiring it as `blocks` fabricates a critical path.
+- An epic reaches its children by **parent-child** (containment) only — containment alone
+  already keeps the epic from being picked before its children close. Any `blocks` edge
+  with an epic endpoint still fabricates a critical path and stays refused.
 - Edge direction is `<blocked> depends-on <blocker>`. A write that CLOSES a cycle is
   refused, rc 5 (measured on `br` 0.5.12) — only a lone reversed edge that closes no cycle
   lands silently, so read every edge back (`br dep cycles`, then `br show` on both ends).
 - `br create` REJECTS `-f` alongside a title, rc 4 (measured on `br` 0.5.12): `-f` is a
-  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`,
-  because the capture guard reads the inline body for the born `Probe:` line
-  (`--description-file` is deliberately not adopted). That
-  routes the body through the shell, so bead prose must stay dcg-safe (no command
-  substitution, no unbalanced quoting). Only comments and receipts take `-f <file>`.
+  bulk `## Title` importer, not a body file — creation bodies go `-d "$(cat <file>)"`
+  (`--description-file` is deliberately not adopted). That routes the body through the
+  shell, so bead prose must stay dcg-safe (no command substitution, no unbalanced
+  quoting). The capture guard reads the inline `-d` value, so a file/heredoc body is
+  OPAQUE to it and its born-`Probe:` check fails open on exactly this form; the backstop
+  is the committed-board check (`lint/checks/35-board-integrity.py`), which reads the
+  landed body and refuses a probe-less implementable bead at the ledger commit. Only
+  comments and receipts take `-f <file>`.
 
 ## The four sections
 
@@ -37,6 +43,22 @@ commit discipline in `ac-pipeline/references/` (`commit-discipline.md`, `run-led
 
 Nothing else. There is no Scope, Proof, Notes or Discussion section — that content is either
 `## Intent` or it is not durable.
+
+## Closeout — the epic's last bead (D3/D8)
+
+Every plan-derived epic gets one closeout bead, even with no one-shots — keyed off
+`beadified:` absent, so a re-compile of a retired plan emits none.
+Header: type `task`, title `closeout: <epic title>`, the epic's priority.
+`## Intent` names the epic it closes. `## Consumes` one line per sibling
+`<id> -> <its first Delivers path>` so parity holds; wire sibling→closeout and
+closeout→epic `blocks` edges and read them back like any other edge.
+`## Acceptance Criteria`: `test ! -e <path>` per one-shot the epic leaves behind, plus
+`grep -q '^delivered:' <plan>` — tier: none. `## Delivers`: each deleted path plus the
+plan path (the worker appends the `delivered:` line to the retired plan as it deletes).
+One-shot touchers refusal (D4): beadify refuses a one-shot whose touchers reach outside
+the epic's own children. `Detect:` lift (D7): a backtick `Detect:` rides the normal
+no-probe refusal; prose ones are listed, never silently dropped, as
+`assumption not compiled: <n>`.
 
 ## The probe rule
 
@@ -55,6 +77,9 @@ grep -o 'Probe: `[^`]*`' <bead-file> | sed 's/^Probe: `//; s/`$//'
 - **Runnable as written.** `sh -c '<command>'` must reach completion with no syntax error
   and no *command not found* for its leading word. It does NOT mean the probe passes — at
   authoring every probe is RED by construction (see falsifiability in `bead-checklist.md`).
+  Single-file form matters too: unit probes use `pnpm test:one <file>`, integration probes
+  use `npx vitest run --config vitest.integration.local.config.mts <file>` — never
+  `pnpm <script> -- <file>` (pnpm forwards the literal `--`) or `grep -c` as pass/fail.
 - **Probing an artifact the bead has yet to create**, use the guarded form
   `test -x <path> && bash <path>` — the leading word exists today, the probe is honestly
   red until the artifact lands, and it becomes the real suite run the moment it does.
@@ -148,11 +173,11 @@ from a git hook — a hook cannot see a DB-only close.
 
 ## Delivers
 - gate: skills/ac-implement/scripts/close-gate.sh
-  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 6 · owned by: ac-qn7h.2
+  touchers: `rg -l -F "scripts/close-gate" . -g '!skills/ac-implement/scripts/close-gate.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 8 · owned by: ac-qn7h.2
 - harness: skills/ac-implement/scripts/close-gate.test.sh
   touchers: `rg -l -F "scripts/close-gate.test" . -g '!skills/ac-implement/scripts/close-gate.test.sh' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 2 · owned by: ac-qn7h.2
 - wiring: the close step of skills/ac-implement/SKILL.md invokes the gate
-  touchers: `rg -l -F "ac-implement/SKILL" . -g '!skills/ac-implement/SKILL.md' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 6 · out-of-scope: the referrers cite the skill by path, not the close step this bead edits
+  touchers: `rg -l -F "ac-implement/SKILL" . -g '!skills/ac-implement/SKILL.md' -g '!node_modules/**' -g '!.beads/**' -g '!_plans/**' -g '!_backlog/**' -g '!_docs/**' -g '!docs/**' -g '!memory/**' -g '!CHANGELOG*'` → 7 · out-of-scope: the referrers cite the skill by path, not the close step this bead edits
 
 ## Consumes
 - ac-qn7h -> skills/ac-pipeline/SKILL.md (the MODE / ON-FAILURE declaration this script conforms to)

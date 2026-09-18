@@ -8,8 +8,8 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/00-meta.test.sh   (self-hosted; also scheduled
-#             by scripts/run-all-harnesses.sh, audited by lint.sh Check 20)
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#             by scripts/run-all-proofs.sh, audited by lint.sh Check 20)
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail

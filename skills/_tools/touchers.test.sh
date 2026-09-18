@@ -13,7 +13,7 @@
 # scoping the flat read lost (Cases 5 and 9), plus the NOT-GATED control (Case 10).
 #
 # Run directly:  bash skills/_tools/touchers.test.sh
-# Discovered automatically by scripts/run-all-harnesses.sh (glob over *.test.sh).
+# Discovered automatically by scripts/run-all-proofs.sh (glob over *.test.sh).
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

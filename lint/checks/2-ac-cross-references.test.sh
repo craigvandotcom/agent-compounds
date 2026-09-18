@@ -7,7 +7,7 @@
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/2-ac-cross-references.test.sh
-#   SCHEDULE: scripts/run-all-harnesses.sh + CI harness job
+#   SCHEDULE: scripts/run-all-proofs.sh + CI harness job
 #   MODE:     blocking
 #   ON-FAILURE: closed
 set -uo pipefail

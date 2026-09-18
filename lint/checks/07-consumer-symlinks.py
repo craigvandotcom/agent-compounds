@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 # ---
 # id: 07-consumer-symlinks
-# prevents: a dangling symlink in a consumer's harness layer (.claude/, .agents/, .factory/ of the org dirs and every deploy target) — a dead pointer that breaks a skill load or silently skips one
+# prevents: a dangling symlink in a consumer's harness layer (.claude/, .agents/, .factory/ of the org
+#   dirs and every deploy target) — a dead pointer that breaks a skill load or silently skips one
 # scope: LIVE_TEXT
+# changed: skip
+#   audits consumer layers OUTSIDE this repo (org and app .claude/.agents/.factory),
+#   which a commit-scoped pre-commit run cannot fix and must not be gated by.
+#   Full lint and CI still run it, and infra-sync re-stamps the fleet.
 # severity: fail
 # fixture: lint/fixtures/07-consumer-symlinks
 # ---
@@ -18,9 +23,10 @@ scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
 this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
 window is lost, never a false pass on a bare run.
 
-Exit: 0 every symlink resolves, 1 broken symlink(s), 2 no consumer dir exists
-(NOT-GATED, never a pass — the legacy block skipped missing dirs silently, the
-runner contract cannot).
+Exit: 0 every symlink resolves, or the consumer root is absent (SKIP, disclosed
+— the audited dirs live OUTSIDE this repo and a bare checkout has none);
+1 broken symlink(s); 2 consumer root present but no consumer dir resolves
+(NOT-GATED, never a pass).
 """
 
 import os
@@ -38,12 +44,23 @@ def fail(msg):
 
 
 def scan():
+    if not consumers.base_present():
+        print(f"07-consumer-symlinks: SKIP — consumer root {consumers.base()} absent "
+              "(a consumer-less checkout); nothing to walk", file=sys.stderr)
+        return 0
     scanned = 0
     for d in consumers.consumer_dirs():
         if not os.path.isdir(d):
             continue  # skip non-existent dirs silently — the legacy verdict
         scanned += 1
         for dirpath, dirnames, filenames in os.walk(d):
+            # Ambient job sandboxes (e.g. ~/.claude/jobs/*/tmp/...) are foreign
+            # scratch trees no commit in this repo can fix — never descend.
+            if "jobs" in dirnames:
+                dirnames[:] = [x for x in dirnames if x != "jobs"]
+            if "jobs" in os.path.relpath(dirpath, d).split(os.sep):
+                dirnames[:] = []
+                continue
             for name in dirnames + filenames:
                 p = os.path.join(dirpath, name)
                 if os.path.islink(p) and not os.path.exists(p):

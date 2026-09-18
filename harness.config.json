@@ -1,0 +1,31 @@
+{
+  "_doc": "MACHINE/LAYOUT MANIFEST (ac-9ahd). Replaces the single `repos_root` key harnesses.json used to carry, which hard-failed the engine on any layout but the Mac monorepo. Two keys, deliberately. `targets` says WHERE to look for deploy targets, as path globs resolved against this repo's own directory — so the engine never needs to know whether it sits in a monorepo or a three-repo split. `harnesses` says which harnesses are enabled on this machine. Nothing more: the engine self-locates its canon from its own path (AC_ROOT), and the org root is AC_ROOT's third parent in every supported layout (Mac ~/Repos/neometa/software/agent-compounds -> ~/Repos; three-repo ~/mission/software/agent-compounds -> ~). That derivation was already this script's idiom for the memory-lint path before ac-9ahd generalized it. WHAT this manifest deliberately does NOT carry: per-target policy. Which siblings are actually deploy targets, whether one is `public`, and its `packages` column all stay in infrastructure/ac-deploy-targets.list. Listing target names here too would be a second home for the same fact and the two would drift; `targets` is a search path, the list is the roster, and --all is their intersection.",
+  "targets": [
+    "../*"
+  ],
+  "harnesses": {
+    "claude": true,
+    "codex": true,
+    "droid": true,
+    "pi": true,
+    "grok": true,
+    "opencode": true,
+    "antigravity": true
+  },
+  "exceptions": {
+    "_doc": "EDITORIAL exclusions only — human judgement, the one hand-maintained input. Technical exclusions (a public target whose harness layer must stay gitignored) are DERIVED by engine/exceptions.sh and never listed here; writing a derived fact down by hand is how the two copies drift. These eleven skills operate the org — the factory itself, the brain, the daily surfaces — and have no job inside an app repo. They also enter manual-only at org scope, so the registry validator counts them as zero standing cost. Default policy is unchanged and remains full-set-everywhere: every other asset reaches every managed target. Headroom (20,700 of ~30,000) is what makes that affordable; if it falls below ~2,000 chars, revisit tags-plus-subscriptions.",
+    "org_only_skills": [
+      "CORE",
+      "admin",
+      "agent-builder",
+      "claude-code",
+      "daily-brief",
+      "debug",
+      "image-gen",
+      "knowledge-management",
+      "pai",
+      "research",
+      "strategist"
+    ]
+  }
+}

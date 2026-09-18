@@ -21,7 +21,7 @@
 #   PROBE:      skills/ac-implement/scripts/diff-closure.test.sh — fixture repos with known
 #               callers; asserts refuse / pass-with-declaration / drift / deletion / new export
 #   SCHEDULE:   worker §5 before self-review · ac-polish code-checklist §1 · ac-review Phase 5;
-#               and on every CI run via scripts/run-all-harnesses.sh
+#               and on every CI run via scripts/run-all-proofs.sh
 #   MODE:       blocking
 #   ON-FAILURE: closed — a refusal exits 1 before any commit; no bead and no callers passes,
 #               so a self-contained hotfix pays nothing
@@ -71,14 +71,18 @@ git rev-parse --verify -q "$BASE^{commit}" >/dev/null || die2 "base is not a com
 W=$(mktemp -d "${TMPDIR:-/tmp}/diff-closure-XXXXXX"); trap 'rm -rf "$W"' EXIT
 
 # --- 1. what changed: files, deleted files, and the symbols whose DEFINITION lines moved ---
-git diff --name-only "$BASE" -- . | sort -u > "$W/changed"
-git diff --name-status "$BASE" -- . | awk '$1=="D"{print $2}' > "$W/deleted"
-git diff -U0 "$BASE" -- . \
+# .beads/ is excluded from every leg here: the ledger stores bead descriptions verbatim,
+# including literal probe/AC prose, and that prose can match the symbol regexes below (the
+# SQL alter-table pattern is not line-anchored) with no code change behind it — false
+# REFUSED [unowned-callers] on every bead in a run otherwise.
+git diff --name-only "$BASE" -- . ':(exclude).beads/' | sort -u > "$W/changed"
+git diff --name-status "$BASE" -- . ':(exclude).beads/' | awk '$1=="D"{print $2}' > "$W/deleted"
+git diff -U0 "$BASE" -- . ':(exclude).beads/' \
   | grep -E '^[-+][^-+]' \
   | sed -E 's/^[-+]//' \
   | grep -oE '^\s*export\s+(default\s+)?(async\s+)?(function\*?|const|let|var|class|interface|type|enum)\s+[A-Za-z_$][A-Za-z0-9_$]*' \
   | awk '{print $NF}' | sort -u > "$W/symbols" || true
-git diff -U0 "$BASE" -- . \
+git diff -U0 "$BASE" -- . ':(exclude).beads/' \
   | grep -E '^[-+][^-+]' \
   | grep -ioE 'alter table\s+\S+\s+(add|drop|alter)\s+column\s+[a-z_][a-z0-9_]*' \
   | awk '{print $NF}' | sort -u >> "$W/symbols" || true

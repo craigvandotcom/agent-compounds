@@ -30,6 +30,7 @@ ENVIRONMENT CONTRACT (non-negotiable):
   sweep a concurrent agent's staged work into your bead's commit, silently.
   Minimal working-tree dwell; run `br` from the bead-board repo root.
 - Autonomous run: never AskUserQuestion — Exhaust Rule.
+- Never file beads (`br create`): machinery goes in `friction:`, product in your return summary — the conductor is the run's only filer.
 - Return a structured `friction:` block (stage/cost/lesson/class; `[]` if clean).
 
 The shared prompt for all panel reviewers. Spawn one Task **per spawned
@@ -149,7 +150,7 @@ it should, *without leaking*, or that the measurement as a whole answers the int
    API-success point, not inside a later try a downstream throw can drop.
 
 Evidence: two independent waves shipped fully green (28 green unit tests + tsc clean; 3-reviewer
-`ac-bead-refine` + every engineer's own tests) yet an honesty-briefed reviewer found a High
+refine pass + every engineer's own tests) yet an honesty-briefed reviewer found a High
 feedback-loop bug in one and `ac-review` found 6 High bugs across 5 of these classes in the
 other (incl. a PII leak that falsified the app's own privacy claim). PostHog is the shared
 stack across every app — this checklist recurs, it is not app-specific.

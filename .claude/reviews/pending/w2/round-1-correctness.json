@@ -1,0 +1,47 @@
+{
+  "reviewer": "correctness",
+  "round": 1,
+  "payload_read": "git diff 93be4fd..0302e5d",
+  "findings": [
+    {
+      "title": "Command substitution bypasses the entire guard, including the new subagent refusal and impact axis",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 246,
+      "category": "guard-bypass",
+      "evidence": "is_bead_create() skips a leading VAR=value-looking token then requires token[i]=='br'. A create inside $( ) yields a token like 'out=$(br' which matches the env-assignment regex, so token[i+1] is 'create' and the whole command is skipped — exit 0. Reproduced: {agent_id:'s1', command:'out=$(br create \"x\" -t task -l \"origin:ac-implement,unrefined,impact:data\" -d \"- AC: Probe: `p` - tier: none\")'} -> exit 0. `X=$(br create x -t task -p 2)` (no labels at all) also exits 0. The diff's headline enforcements (impact axis, subagent refusal) are both trivially evaded by a common capture-idiom: `id=$(br create ...)`. The `br create` inside a quoted string test exists to prevent false positives from naive text scanning; the bypass exploits the opposite corner.",
+      "fix": "Normalize substitution-parentheses in the pre-shlex pass (alongside strip_heredoc_bodies/newlines_to_separators): rewrite `$(` and `` ` `` as `;`-separated boundaries so inner tokens form a real command stream, or drop the bare env-assignment regex skip for tokens containing $( and instead split on the embedded paren. Add guard-test cases: `{agent_id, 'out=$(br create ...)'}` -> BLOCK, and unlabelled `X=$(br create ...)` -> BLOCK.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Subagent refusal exemption is label-only: a subagent files any product bead by attaching human-gate",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 394,
+      "category": "exemption-unbounded",
+      "evidence": "Sub-agent refusal fires when is_subagent and human-gate is absent from the labels; that is the ONLY condition. The contract reserves the exemption for 'the worker's mid-bead human-gate fork: a decision card' — but the guard never checks bead_type==decision nor any fork-card field. Reproduced: {agent_id:'s1', command:'br create \"secret work\" -t task -l \"origin:ac-implement,unrefined,human-gate\" -d \"- AC: Probe: `p` - tier: none\"'} -> exit 0. One label on any type/flags sail past the refusal AND the impact exemption AND simultaneously satisfy readiness. The newly landed enforcement degrades to 'append one word to defeat it', which is the exact shape the guard exists to prevent (the origin-axis design memory: the label was never the problem, the absence of an enforcer was).",
+      "fix": "Tighten the exemption in the subagent branch: exempt only when has_label(human-gate) AND bead_type(cmd) == 'decision' (a fork card); every other type from a subagent exits 2 with SUBAGENT_MESSAGE. Update bead-create-contract.md § Subagent creates to state the type condition, and add the evasion fixture to bead-capture-guard.test.py.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Impact axis covers only 7 of the sanctioned automated origins — ac-qa, ac-land, dream, reflect file beads with no impact label",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 81,
+      "category": "coverage-gap",
+      "evidence": "IMPACT_REQUIRED_ORIGINS = (ac-implement, ac-review, ac-triage, ac-hygiene, ac-align, ac-prove, curate-foods). But origin-provenance.md (the canon the origin axis cites) sanctions origin:ac-qa and origin:ac-land (both live skills/ dirs verified), and origin:dream / origin:reflect (the substrate trio files skill-improvement beads). Reproduced: br create with -l 'origin:ac-qa,unrefined' (and origin:ac-land) and NO impact label -> exit 0. The contract's Required-axes row copies the same 7-item list, so guard and doc agree — but the axis silently exempts automated filers with sanctioned origins. An automated workflow routed via ac-land or ac-qa escapes the new axis entirely.",
+      "fix": "Decide the universe: either add origin:ac-qa, origin:ac-land (and origin:dream/origin:reflect) to IMPACT_REQUIRED_ORIGINS and the contract row, or document in bead-create-contract.md why those origins are impact-exempt. Currently the exemption is implicit and unrecorded.",
+      "auto_fixable": false
+    },
+    {
+      "title": "origin:unknown escapes the impact axis for any automated filer",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 407,
+      "category": "honor-system-keying",
+      "evidence": "The impact check keys on origin in IMPACT_REQUIRED_ORIGINS. origin:unknown is explicitly legal ('when genuinely unattributable — never guess', contract Required-axes row) but 'unknown' is also the path of least resistance: any automated workflow that omits the true origin keys to 'unknown' and skips the impact axis with zero refusal. Reproduced: br create -l 'origin:unknown,unrefined,impact:zzz' (even an invalid impact class) -> exit 0. The origin axis hard-gated exactly this failure mode in 2026-08-23 (label presence was never the problem; absence of enforcement was) — the impact axis inherits the same hole through the origin value.",
+      "fix": "Sanctioned options: (a) treat origin:unknown as impact-REQUIRED (unattributable origin is exactly when the damage class is most needed for triage); or (b) make bead-create-contract.md explicitly state that origin:unknown beads are impact-exempt and record why. Today the exemption is an accident of tuple membership, not a decision.",
+      "auto_fixable": false
+    }
+  ]
+}

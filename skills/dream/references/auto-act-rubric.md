@@ -4,7 +4,7 @@
 week still produced ~10 cards, most of them paste-ready memory ADDs scoring 10/10 — changes
 a human cannot meaningfully second-guess ("should we *remember* this latency fact?"). The
 gate's value is real for judgment-laden changes and ~zero for append-only facts. This rubric
-splits the queue so Craig's attention lands only where his judgment changes the outcome.
+splits the queue so the operator's attention lands only where their judgment changes the outcome.
 
 **The principle (unchanged from the skill's hard rules):** Stage-1 autonomy is
 **deterministic** hygiene only. The gate is the safe default; `auto` must be *earned* by
@@ -12,7 +12,7 @@ every clause of a deterministic predicate. No LLM judgment decides the tier — 
 re-introduce the very risk the gate exists for. The predicate is implemented, byte-for-byte,
 in `infrastructure/dream-cycle/classify.py` (this doc is the spec; the script is the
 enforcement — keep them in sync). The autonomy axis is **reversibility × judgment, not
-cadence** — architecture: `neometa/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
+cadence** — architecture: `<org>/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
 
 ---
 
@@ -28,9 +28,11 @@ A proposal is Tier-1 `auto` **iff ALL of these hold** (any failure → `gated`):
 1. `status: pending` (already-decided proposals route elsewhere).
 2. `category` ∈ {`fact`, `rule`} (a `lint-fix` that creates a brand-new note also qualifies).
 3. `target_repo: root`.
-4. `target_file` is **one literal `.md` path** directly under `infrastructure/memory/auto/`
+4. `target_file` is **one literal `.md` path** directly under the infrastructure memory home
+   (the deployment's actual home — `classify.py` pins the same path on its side, so the
+   spec↔script sync is by resolution, not by a shared literal)
    **and is not `MEMORY.md`** (the always-loaded hot lane is never auto-edited beyond its one
-   new index line). A prose value naming several files (`".../auto/ (5 files) + foo.py"`)
+   new index line). A prose value naming several files (`".../<memory-dir>/ (5 files) + foo.py"`)
    is `gated` — it would otherwise pass both the prefix and the not-exists test in clause 6
    and false-auto a multi-file EDIT as a pure ADD.
 5. `judge.score ≥ 9` (high-confidence only; the ≥7 ship bar is for *existence*, ≥9 for *autonomy*).
@@ -71,7 +73,7 @@ Everything else, explicitly including:
 - **Lossy or judgment-laden hygiene** — near-duplicate *merges*, summarise/compress,
   contradiction resolution (Tier-2; these *delete information*, so never auto).
 - **Edits to existing notes** that aren't a verified Tier-0 op.
-- **`decision`s** — strategic commitments deserve Craig's eyes even as memory ADDs.
+- **`decision`s** — strategic commitments deserve the operator's eyes even as memory ADDs.
 - **`skill-improvement` / `re-home`** — touch L2 skills or move knowledge across altitude.
 - **Anything outside root memory** — app repos, agent-compounds, code, config.
 - **judge < 9** (for the Tier-1 path) — shippable but not autonomous-grade.
@@ -91,14 +93,14 @@ writes unreviewed content. The asymmetry is intentional.
 2. **Auto-tier → apply now** (no card): **Tier-1** — write the new note + its MEMORY.md index
    line, set `status: applied`. **Tier-0** — `classify.py --apply-tier0 <proposal>` (the
    script re-derives, re-verifies, writes, and flips status itself). Commit in root, push.
-3. **Approved backlog → apply now:** any proposal already at `status: approved` (Craig
+3. **Approved backlog → apply now:** any proposal already at `status: approved` (the operator
    tapped Approve on a prior card) is applied the same way — this closes the
    approve-but-never-applied gap.
 4. **Gated + still pending + unfiled → decision bead:** `file-beads.py` files each as a
    `-t decision` + `human-gate,dream-proposal` bead in its target repo (full memo inline for
    private repos; pointer-only for the public agent-compounds db) and records the bead id in
    the proposal's `bead:` frontmatter (the dedup marker). It re-checks the predicate, so a
-   manual run never files an auto-tier item. Decisions are worked via `ac-human-session` (the
+   manual run never files an auto-tier item. Decisions are worked via `ac-human` (the
    decision docket), not a Slack tap.
 5. **Digest nudge:** one summary card — *N auto-applied (listed) · M filed as beads · K open
    in the docket* — pointing at `br ready --label dream-proposal`. Slack notifies; the bead

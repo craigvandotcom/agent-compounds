@@ -10,7 +10,7 @@ object, traced_at, seams_load, and a coverage note.
 ASSURANCE (skills/ac-pipeline/references/assurance-declarations.md § The four fields):
   PROBE:      skills/ac-polish/scripts/seams-merge.test.py § kept map — RED/GREEN over the writers
   SCHEDULE:   once per seams hand-off (seams-merge.py handoff --keep) and on every CI run via
-              scripts/run-all-harnesses.sh
+              scripts/run-all-proofs.sh
   MODE:       blocking — the html is written only from a map.json this script parsed whole
   ON-FAILURE: closed — an unreadable or shapeless map.json exits 2 NOT-GATED, writes nothing
 

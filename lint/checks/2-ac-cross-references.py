@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ---
 # id: 2-ac-cross-references
-# prevents: /ac-skill cross-references in live skill text pointing at a skill directory that does not exist — an invocation of a skill the registry does not ship
+# prevents: /ac-skill cross-references in live skill text pointing at a skill directory that does not
+#   exist — an invocation of a skill the registry does not ship
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/2-ac-cross-references
@@ -103,7 +104,8 @@ def main():
             glob_prefixes.append(g)
 
     if scanned == 0:
-        print(f"{CHECK_ID} NOT-CHECKED: no SKILL.md/references/workflows file under skills/ in {root} — verified nothing",
+        print(f"{CHECK_ID} NOT-CHECKED: no SKILL.md/references/workflows file under skills/ in {root} — "
+              "verified nothing",
               file=sys.stderr)
         return 2
 

@@ -125,6 +125,10 @@ Then map each inventory item to its post-diet home: inline-spine / script / cond
 validator-stance subagent to walk the inventory against the planned rewrite and confirm zero rules
 weakened; treat its verdict as a gate, not advice.
 
+**Consumer pins are part of the gate.** `grep -rl "skills/<name>" ~/mission/software/*/__tests__`
+lists the app tests that pin this skill's text verbatim; run them after the diet, and a red one
+blocks the pass. Keep a pinned phrase on one line or move the pin with the text.
+
 ### A5. Execute — move text, don't rewrite logic
 
 1. Create each target file (`references/<x>.md`, or `_shared/<x>.md` for ≥2-consumer blocks); add a

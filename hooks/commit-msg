@@ -1,0 +1,58 @@
+#!/usr/bin/env sh
+# commit-msg — warn-only cause line for substantive commits (replaces check 34's
+# bead-token gate with a stated reason a reviewer can judge).
+#
+# WARNS (never blocks) when a commit touches real files but names no cause: no
+# `Cause:` line, no `Bead:`/`Beads:` trailer, no bead id from any repo (bd-…,
+# ac-…) anywhere in the message. `[no-bead]` is NOT an escape — the tag no
+# longer means anything to tooling. Silent when every staged file is
+# bookkeeping (.beads/, _archive/, .claude/reviews/, or FRICTIONS.md/
+# MAINTENANCE.md at any depth) — bookkeeping names no cause by design.
+#
+# SAFETY: this hook is ALWAYS advisory. It must never block a commit — every
+# path below ends in `exit 0`. Do not add a nonzero exit without lifting that.
+
+msg_file="$1"
+msg=$(cat "$msg_file" 2>/dev/null || true)
+
+# A stated cause, a bead trailer, or a bead id from any repo -> silent.
+if printf '%s\n' "$msg" | grep -Eq '(^|[[:space:]])Cause:'; then
+  exit 0
+fi
+if printf '%s\n' "$msg" | grep -Eiq '(^|[[:space:]])Beads?:'; then
+  exit 0
+fi
+if printf '%s\n' "$msg" | grep -Eq '(^|[^a-zA-Z0-9])(bd|ac)-[a-z0-9][a-z0-9._-]*'; then
+  exit 0
+fi
+
+# Every staged file is bookkeeping (same set as check 34's diff rule) -> silent.
+staged=$(git diff --cached --name-only 2>/dev/null || true)
+if [ -n "$staged" ]; then
+  all_bookkeeping=1
+  IFS='
+'
+  for f in $staged; do
+    base=$(basename "$f")
+    case "$f" in
+      .beads/*|_archive/*|.claude/reviews/*) continue ;;
+      *)
+        case "$base" in
+          FRICTIONS.md|MAINTENANCE.md) continue ;;
+          *) all_bookkeeping=0; break ;;
+        esac
+        ;;
+    esac
+  done
+  if [ "$all_bookkeeping" = "1" ]; then
+    exit 0
+  fi
+fi
+
+printf '\n' >&2
+printf '%s\n' "warning: commit-msg — this commit changes real files but names no cause." >&2
+printf '%s\n' "  Add 'Cause: <bead id in any repo | decision file | finding>' to the message." >&2
+printf '%s\n' "  (warn-only — commit NOT blocked)" >&2
+printf '\n' >&2
+
+exit 0

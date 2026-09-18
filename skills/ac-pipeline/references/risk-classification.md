@@ -3,7 +3,7 @@
 **Canonical path:** `agent-compounds/skills/ac-pipeline/references/risk-classification.md`
 (apps symlink under `.agents/skills/_shared/` / `.claude/skills/_shared/`).
 
-Consumers: **ac-loop**, **ac-batch-close**, **ac-review**, **ac-bead-refine**.
+Consumers: **ac-implement**, **ac-review**, **ac-polish**.
 Every risk-gated decision keys on **files touched**, computed over a git range
 or an explicit file set — **never** on a batch's self-declared kind/label.
 
@@ -129,9 +129,9 @@ Same steps 2–4 over the supplied file set (no git range).
 Six bindings — **3 git-range + 3 file-set**. Callers reference these by name;
 do not invent alternate windows.
 
-### 1. ac-batch-close (git-range)
+### 1. Batch close-out (git-range)
 
-Ceremony batch range:
+Batch range:
 
 | Batch shape | Range |
 | ----------- | ----- |
@@ -168,7 +168,7 @@ File set of the bead under refine (same files the refine stamp will cite).
 
 Two file sets: the bug's root-cause trace (binding #4) and the candidate
 non-bug wave's touched set. **This is NOT the child fan-out disjointness test**
-(`ac-loop` § Efficiency — which siblings may run side by side); this one decides
+(conductor efficiency — which siblings may run side by side); this one decides
 whether a bug freezes the board.
 
 A P2 or P3 bug releases the board only when ALL THREE hold — a conjunction, not

@@ -1,6 +1,6 @@
 ---
 name: ui-debug
-description: Debug UI bugs, CSS styling issues, and unexpected visual behavior in React/Next.js apps. Use when elements render wrong, styles do not apply, or layout breaks across viewports. Triggers on CSS bug, style not applying, layout broken, element misaligned, rendering issue, responsive bug, flexbox/grid issue, visual regression. NOT for premium polish (ac-ui-polish), a failing visual-regression test (testing, ac-qa), accessibility (ac-polish/references/ui-checklist.md), or performance (capacitor).
+description: Debug UI bugs, CSS styling issues, and unexpected visual behavior in React/Next.js apps. Use when elements render wrong, styles do not apply, or layout breaks across viewports. Triggers on CSS bug, style not applying, layout broken, element misaligned, rendering issue, responsive bug, flexbox/grid issue, visual regression. NOT for premium polish (ui-elevate), a failing visual-regression test (testing, ac-qa), accessibility (ac-polish/references/ui-checklist.md), or performance (capacitor).
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

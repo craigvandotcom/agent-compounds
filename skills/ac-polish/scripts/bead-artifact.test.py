@@ -2,7 +2,7 @@
 """bead-artifact.test.py — RED/GREEN proof harness for bead-artifact.py's edge sync.
 
 ASSURANCE-ROLE: test-harness
-CALLER: scripts/run-all-harnesses.sh (discovered by its *.test.py glob) and any local run.
+CALLER: scripts/run-all-proofs.sh (discovered by its *.test.py glob) and any local run.
 
 The defect this covers: writeback landed BODIES and not EDGES, so a polish reader who added
 a `## Consumes` line wrote a blocker the board never learned about (measured 2026-09-06 on
@@ -167,10 +167,15 @@ write(stub_path, STUB)
 os.chmod(stub_path, os.stat(stub_path).st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def bead(bead_id, title, deps):
-    return {"id": bead_id, "title": title, "issue_type": "decision", "priority": 1,
+def bead(bead_id, title, deps, status="open"):
+    return {"id": bead_id, "title": title, "issue_type": "decision", "priority": 1, "status": status,
             "labels": ["origin:ac-beadify"], "description": "stale — the artifact is the source",
             "dependencies": deps}
+
+
+def base(bead_id, title):
+    """The export snapshot: sha256 of live title+body, as the artifact's `base:` field carries it."""
+    return ba.base_digest(bead(bead_id, title, []))
 
 
 # ac-t1 carries an edge nobody declared (reported, never removed) plus its parent-child edge
@@ -181,11 +186,23 @@ write(os.path.join(FIX, "ac-t1.json"),
                                          {"id": "ac-epic", "dependency_type": "parent-child"}])))
 write(os.path.join(FIX, "ac-t2.json"), json.dumps([bead("ac-t2", "second", [])]))
 
-BLOCK = ("<!-- BEAD:{i} -->\n# {i} — {t}\ntype: decision · priority: 1 · labels: origin:ac-beadify\n\n"
+BLOCK = ("<!-- BEAD:{i} -->\n# {i} — {t}\ntype: decision · priority: 1 · labels: origin:ac-beadify · base: {b}\n\n"
          "## Intent\nfixture body.\n\n## Consumes\n{c}\n\n<!-- /BEAD:{i} -->\n\n")
+
+
+def block(i, t, c, b=None):
+    return BLOCK.format(i=i, t=t, c=c, b=b or base(i, t))
+
+
 ART = os.path.join(W, "artifact.md")
-write(ART, BLOCK.format(i="ac-t1", t="first", c="- none")
-      + BLOCK.format(i="ac-t2", t="second", c="- ac-t1 -> `the thing ac-t1 delivers`"))
+write(ART, block("ac-t1", "first", "- none")
+      + block("ac-t2", "second", "- ac-t1 -> `the thing ac-t1 delivers`"))
+
+if ba.artifact_labels("type: decision · priority: 1 · labels: origin:ac-beadify,x · base: 0123456789abcdef") \
+        == {"origin:ac-beadify", "x"}:
+    ok("artifact_labels: the trailing `base:` field is not read as a label")
+else:
+    fail("artifact_labels base", ba.artifact_labels("labels: a · base: 0123456789abcdef"))
 
 ENV = dict(os.environ, PATH=BIN + os.pathsep + os.environ["PATH"], BR_LOG=LOG, BR_FIXTURES=FIX)
 
@@ -244,7 +261,7 @@ else:
 write(os.path.join(FIX, "ac-err.json"),
       json.dumps({"error": {"code": "NOT_FOUND", "message": "no such issue: ac-err"}}))
 ERR_ART = os.path.join(W, "artifact-err.md")
-write(ERR_ART, BLOCK.format(i="ac-err", t="err", c="- none"))
+write(ERR_ART, block("ac-err", "err", "- none", b="0" * 16))
 rc, out, log = run_writeback("--apply", artifact=ERR_ART)
 if rc == 1 and "br-read-failed" in out and "ac-err" in out and "REFUSED" in out:
     ok("failed read: an error envelope is a refused read (br-read-failed), not a bead with no labels")
@@ -258,7 +275,7 @@ LONG = bead("ac-t3", "third", [])
 LONG["description"] = "x" * 400
 write(os.path.join(FIX, "ac-t3.json"), json.dumps([LONG]))
 ART3 = os.path.join(W, "artifact-shrink.md")
-write(ART3, BLOCK.format(i="ac-t3", t="third", c="- none"))
+write(ART3, block("ac-t3", "third", "- none", b=ba.base_digest(LONG)))
 rc, out, log = run_writeback("--apply", artifact=ART3)
 upd = [ln for ln in log if ln.startswith("update ")]
 if rc == 0 and upd and any(ln.endswith("--force") for ln in log) \
@@ -266,6 +283,58 @@ if rc == 0 and upd and any(ln.endswith("--force") for ln in log) \
     ok("shrink: --force rides the update ONLY when the new body is shorter, and the shrink is printed per bead")
 else:
     fail("shrink force", f"rc={rc}\nupd={upd}\n{out}")
+
+# FRESHNESS: a bead whose live body differs from the export snapshot was edited by someone
+# else in between. The whole set is REFUSED before a single write — never a stale overwrite.
+MOVED = bead("ac-t4", "fourth", [])
+MOVED["description"] = "edited by another session after export"
+write(os.path.join(FIX, "ac-t4.json"), json.dumps(MOVED))
+ART4 = os.path.join(W, "artifact-stale.md")
+write(ART4, block("ac-t1", "first", "- none") + block("ac-t4", "fourth", "- none"))
+rc, out, log = run_writeback("--apply", artifact=ART4)
+if rc == 1 and "REFUSED stale-artifact" in out and "STALE ac-t4" in out and "moved since export" in out \
+        and not [ln for ln in log if ln.startswith("update ")]:
+    ok("freshness: one moved bead refuses the whole writeback, names it, and nothing is written (not even ac-t1)")
+else:
+    fail("freshness moved", f"rc={rc}\n{out}\nlog={log}")
+
+# a block with no `base:` is an artifact from before the snapshot existed — refused, re-export
+ART5 = os.path.join(W, "artifact-nobase.md")
+write(ART5, "<!-- BEAD:ac-t1 -->\n# ac-t1 — first\ntype: decision · priority: 1 · labels: origin:ac-beadify\n\n"
+            "## Intent\nfixture body.\n\n## Consumes\n- none\n\n<!-- /BEAD:ac-t1 -->\n")
+rc, out, log = run_writeback("--apply", artifact=ART5)
+if rc == 1 and "no `base:` snapshot" in out and not [ln for ln in log if ln.startswith("update ")]:
+    ok("freshness: an artifact with no `base:` snapshot is refused, nothing written")
+else:
+    fail("freshness nobase", f"rc={rc}\n{out}")
+
+# CLOSED beads are records. Writeback refuses one that closed since export; export refuses one
+# named in --ids and writes no artifact at all.
+CLOSED = bead("ac-t6", "sixth", [], status="closed")
+write(os.path.join(FIX, "ac-t6.json"), json.dumps(CLOSED))
+ART6 = os.path.join(W, "artifact-closed.md")
+write(ART6, block("ac-t6", "sixth", "- none"))
+rc, out, log = run_writeback("--apply", artifact=ART6)
+if rc == 1 and "closed since export" in out and not [ln for ln in log if ln.startswith("update ")]:
+    ok("closed: writeback refuses a bead that closed since export, nothing written")
+else:
+    fail("closed writeback", f"rc={rc}\n{out}")
+OUTDIR = os.path.join(W, "export-closed")
+r = subprocess.run([sys.executable, SCRIPT, "export", "--out", OUTDIR, "--ids", "ac-t1,ac-t6"],
+                   capture_output=True, text=True, cwd=W, env=ENV)
+if r.returncode == 1 and "ac-t6" in r.stderr and "closed" in r.stderr \
+        and not os.path.exists(os.path.join(OUTDIR, "artifact.md")):
+    ok("closed: export refuses a closed id and writes NO artifact (the open sibling is not exported alone)")
+else:
+    fail("closed export", f"rc={r.returncode}\n{r.stdout}{r.stderr}")
+OUTDIR2 = os.path.join(W, "export-open")
+r = subprocess.run([sys.executable, SCRIPT, "export", "--out", OUTDIR2, "--ids", "ac-t1"],
+                   capture_output=True, text=True, cwd=W, env=ENV)
+exported = read(os.path.join(OUTDIR2, "artifact.md")) if r.returncode == 0 else ""
+if r.returncode == 0 and f"· base: {base('ac-t1', 'first')}" in exported:
+    ok("export: every block carries `base:`, the live title+body digest writeback checks against")
+else:
+    fail("export base", f"rc={r.returncode}\n{r.stdout}{r.stderr}\n{exported[:300]}")
 
 # a dep add that fails is a WRITEBACK failure: a Consumes line whose edge does not exist is a lie
 FAILSTUB = STUB.replace('if [ "$1 $2" = "list --json" ]',

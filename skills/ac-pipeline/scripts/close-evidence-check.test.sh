@@ -59,11 +59,19 @@ exit 0
 EOF
 chmod +x "$MOCK_BIN/br"
 
-# bead <id> <issue_type> <labels-json> <description>
+# bead <id> <issue_type> <labels-json> <description> [comments-json]
+# The comments key mirrors the real `br show --json` shape (an array of
+# {id, issue_id, author, text, created_at}); absent means no comments yet.
 bead() {
-  jq -n --arg id "$1" --arg t "$2" --arg d "$4" --argjson l "$3" \
-    '{id:$id, issue_type:$t, status:"in_progress", labels:$l, description:$d}' \
+  jq -n --arg id "$1" --arg t "$2" --arg d "$4" --argjson l "$3" --argjson c "${5:-[]}" \
+    '{id:$id, issue_type:$t, status:"in_progress", labels:$l, description:$d, comments:$c}' \
     > "$FIXTURE_DIR/$1.json"
+}
+
+# review_comment <issue-id> <text> -> comments-json with one comment in br show shape
+review_comment() {
+  jq -n --arg i "$1" --arg t "$2" \
+    '[{id:1, issue_id:$i, author:"reviewer", text:$t, created_at:"2026-09-15T00:00:00Z"}]'
 }
 
 run_gate() { # <expected exit> <label> -- <gate args...>
@@ -131,13 +139,57 @@ else
 fi
 
 echo "--- exemptions ---"
-run_gate 0 "epic -> EXEMPT" -- bd-epic "closing the epic"
 run_gate 0 "human-gate bead -> EXEMPT" -- bd-gated "human ruled"
 
 echo "--- investigation ---"
 run_gate 0 "investigation citing a spawned bead id -> PASS" -- bd-inv "answered; spawned ac-1227"
 run_gate 0 "investigation citing a documented answer -> PASS" -- bd-inv "written up in docs/findings.md"
 run_gate 1 "investigation with neither -> REFUSE" -- bd-inv "looked into it, all good"
+
+echo "--- epic: the probe receipt plus Delivers paths existing on disk ---"
+# Delivers paths resolve against the cwd (the live call site runs from the repo root
+# via close-gate.sh), so these cases run from $WORKDIR where the promised path exists.
+mkdir -p "$WORKDIR/epicship"
+touch "$WORKDIR/epicship/thing.sh"
+EPIC_DELIVERS='## Intent
+whatever
+## Delivers
+- script: epicship/thing.sh
+## Consumes
+- none'
+bead bd-epic-ship epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-ship 'REVIEW: APPROVED epicship/thing.sh at feb39cc')"
+EPIC_GONE_DELIVERS='## Intent
+whatever
+## Delivers
+- script: epicship/gone.sh
+## Consumes
+- none'
+bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS" "$(review_comment bd-epic-gone 'REVIEW: APPROVED epicship/gone.sh at feb39cc')"
+bead bd-epic-noreview epic '[]' "$EPIC_DELIVERS"
+run_epic() { # <expected exit> <label> -- <gate args...>
+  local want="$1" label="$2"; shift 3
+  CASES=$((CASES + 1))
+  local out rc
+  out=$(cd "$WORKDIR" && env "PATH=$MOCK_BIN:$PATH" bash "$GATE" "$@" 2>&1); rc=$?
+  if [ "$rc" = "$want" ]; then
+    printf '  PASS  %s\n' "$label"
+  else
+    printf '  FAIL  %s (wanted exit %s, got %s)\n' "$label" "$want" "$rc"
+    printf '%s\n' "$out" | sed 's/^/          | /'
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+run_epic 1 "epic without evidence -> REFUSE" -- bd-epic-ship "closing the epic"
+run_epic 0 "epic with receipt -> PASS" -- bd-epic-ship "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 red-probe ... exit 0"
+run_epic 1 "epic with probe receipt but no REVIEW: APPROVED comment -> REFUSE" -- bd-epic-noreview "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+run_epic 1 "epic with receipt but no declared artifact named -> REFUSE" -- bd-epic-ship "shipped: epic landed. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+run_epic 1 "epic with receipt but a promised path missing on disk -> REFUSE" -- bd-epic-gone "shipped: epic landed. Delivered: epicship/gone.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+# Polarity case (ac-7lpp): a negation sentence stating the receipt is ABSENT
+# contains the bare string but is not a receipt-shaped line — it must refuse.
+# Mirrors the live comment on ac-zug5 ("No REVIEW: APPROVED receipt written…"),
+# which satisfied the pre-anchor substring grep.
+bead bd-epic-negated epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-negated 'No REVIEW: APPROVED receipt written: the round is clean but a P1 child is now open, so the receipt waits for the re-review.')"
+run_epic 1 "epic with negated receipt sentence containing the string -> REFUSE" -- bd-epic-negated "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
 
 echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
 jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \

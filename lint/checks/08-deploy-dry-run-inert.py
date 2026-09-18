@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # ---
 # id: 08-deploy-dry-run-inert
-# prevents: deploy.sh's --dry-run writing into the target dir it is asked to preview (a "dry" run that stamps) or exiting nonzero — inertness is proven by running the real dry run against a temp dir on the first skill found
-# scope: LIVE_TEXT
+# prevents: deploy.sh's --dry-run writing into the target dir it is asked to preview (a "dry" run that
+#   stamps) or exiting nonzero — inertness is proven by running the real dry run against a temp dir on
+#   the first skill found
+# scope: LIVE_TEXT DEPLOY_SCRIPT
 # severity: fail
 # fixture: lint/fixtures/08-deploy-dry-run-inert
 # ---
@@ -10,7 +12,7 @@
 
 Ported from the legacy Check 8 bash block in lint.sh (proven by lint/parity.sh
 against the extracted legacy block before the block was removed). Same verdicts:
-run `deploy.sh <tmp> --skills <first-skill> -n`; a nonzero exit is a finding, and
+run `engine/deploy.sh <tmp> --skills <first-skill> -n`; a nonzero exit is a finding, and
 any file left in the temp dir is a finding (a crash before any write would also
 leave the dir empty, so the exit code is checked too — or the inertness test
 passes for a broken deploy.sh).
@@ -67,7 +69,7 @@ def scan(root):
     if not first:
         fail("deploy.sh dry-run self-test: could not find any skill to test with")
     else:
-        deploy = os.path.join(root, "deploy.sh")
+        deploy = os.path.join(root, "engine", "deploy.sh")
         with tempfile.TemporaryDirectory(prefix="ac-lint-08-") as tmp:
             try:
                 proc = subprocess.run(

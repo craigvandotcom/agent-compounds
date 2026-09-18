@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # ---
 # id: 13-skill-registry
-# prevents: the always-loaded skill-listing budget being breached, a description over the per-skill 1024-char cap, and a skill flagged disable-model-invocation being invoked from another skill's body — the invocation graph recomputed from the files on every run, never from memory
+# prevents: the always-loaded skill-listing budget being breached, a description over the per-skill
+#   1024-char cap, and a skill flagged disable-model-invocation being invoked from another skill's
+#   body — the invocation graph recomputed from the files on every run, never from memory
 # scope: LIVE_TEXT
 # severity: fail
 # fixture: lint/fixtures/13-skill-registry
@@ -22,6 +24,12 @@ breach, an over-cap description and a graph violation fail the judge alike,
 and one generic line would land a newly-introduced breach silently behind
 the other two.
 
+Past the judge's green, the manifest leg reads the registry through the
+manifest (skills/packages.json via lint/lib/manifest.py): every package
+member must resolve to a dir carrying SKILL.md — the same dead-name refusal
+the README generator enforces, so the deploy units cannot name a skill that
+is not there.
+
 Exit: 0 judge green, 1 judge reported findings (the dedicated budget line
 first when the BREACH marker is present, then the generic line), 2 judge
 missing from the audited root or the judge verified nothing — NOT-GATED,
@@ -37,9 +45,40 @@ _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
+from lib import manifest  # noqa: E402  (registry read through the manifest)
 
 CHECK_ID = "13-skill-registry"
 JUDGE = "skills/skill-builder/scripts/validate-skill.sh"
+
+
+def manifest_leg(root):
+    """The registry THROUGH the manifest (ac-6asz.3): every package member must
+    name a dir carrying SKILL.md — the same dead-name refusal the README
+    generator enforces, so the package set deploy.sh installs from cannot name
+    a skill that is not there. A root without the manifest predates it
+    (synthetic fixture trees): NOTICE and stand aside, the judge's verdict
+    stands — the real tree always carries it, so the leg always runs there."""
+    try:
+        pkgs = manifest.packages(root)
+    except manifest.ManifestMissing as exc:
+        print(f"  NOTICE {CHECK_ID}: {exc} — manifest leg skipped, judge verdict stands")
+        return 0
+    dead = []
+    members = 0
+    for name, pkg in sorted(pkgs.items()):
+        if name.startswith("_") or not isinstance(pkg, dict):
+            continue
+        for skill in pkg.get("skills", []):
+            members += 1
+            if not os.path.isfile(os.path.join(root, "skills", skill, "SKILL.md")):
+                dead.append(f"package '{name}' names '{skill}' with no skills/{skill}/SKILL.md")
+    if dead:
+        for d in dead:
+            print(f"FAIL {CHECK_ID}: manifest names a dead skill — {d}")
+        return 1
+    print(f"  ok: {CHECK_ID} — manifest packages resolve ({members} member(s) across "
+          f"{sum(1 for n, p in pkgs.items() if not n.startswith('_') and isinstance(p, dict))} package(s))")
+    return 0
 
 
 def main():
@@ -53,17 +92,23 @@ def main():
     script = os.path.join(root, JUDGE)
     skills = os.path.join(root, "skills")
     if not os.path.isfile(script):
-        print(f"{CHECK_ID} NOT-CHECKED: {JUDGE} not found in {root} — the skill registry is unverified", file=sys.stderr)
+        print(f"{CHECK_ID} NOT-CHECKED: {JUDGE} not found in {root} — the skill registry is "
+              "unverified", file=sys.stderr)
         return 2
     if not os.path.isdir(skills):
-        print(f"{CHECK_ID} NOT-CHECKED: no skills/ directory under {root} — the registry is unverified", file=sys.stderr)
+        print(f"{CHECK_ID} NOT-CHECKED: no skills/ directory under {root} — the registry is "
+              "unverified", file=sys.stderr)
         return 2
     proc = subprocess.run(["bash", script, "--registry", skills], capture_output=True, text=True)
     if proc.returncode == 0:
-        print(f"  ok: {CHECK_ID} — the skill registry is inside its budget, every description is under the cap, and the invocation graph holds")
+        if manifest_leg(root) != 0:
+            return 1
+        print(f"  ok: {CHECK_ID} — the skill registry is inside its budget, every description is "
+              "under the cap, and the invocation graph holds")
         return 0
     if proc.returncode == 2:
-        print(f"{CHECK_ID} NOT-GATED: the judge verified nothing — {(proc.stdout + proc.stderr).strip()}", file=sys.stderr)
+        print(f"{CHECK_ID} NOT-GATED: the judge verified nothing — "
+              f"{(proc.stdout + proc.stderr).strip()}", file=sys.stderr)
         return 2
     # Legacy parked the judge's full output in a temp file and named the path —
     # mirror that: only the dedicated budget line and the generic line print,
@@ -71,9 +116,12 @@ def main():
     detail = "/tmp/ac-lint-registry.out"
     with open(detail, "w", encoding="utf-8") as fh:
         fh.write(proc.stdout + proc.stderr)
-    breach = next((l for l in proc.stdout.splitlines() if l.startswith("registry-description-budget: BREACH")), "")
+    breach = next((line for line in proc.stdout.splitlines()
+                   if line.startswith("registry-description-budget: BREACH")), "")
     if breach:
-        print(f"FAIL {CHECK_ID} budget: {breach} — the always-loaded skill-listing budget is over. Diet descriptions or archive absorbed skills; raising skillListingBudgetFraction is a deliberate, separate decision.")
+        print(f"FAIL {CHECK_ID} budget: {breach} — the always-loaded skill-listing budget is over. "
+              "Diet descriptions or archive absorbed skills; raising skillListingBudgetFraction is a "
+              "deliberate, separate decision.")
     print(f"FAIL {CHECK_ID}: skill-registry validation (budget / >1024 desc / invocation-graph) — details: {detail}")
     return 1
 

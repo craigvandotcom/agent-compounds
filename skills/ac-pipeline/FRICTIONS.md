@@ -2,7 +2,6 @@
 skill: ac-pipeline
 created: 2026-08-27
 last_pass: 2026-09-07
-entries: 31
 ---
 
 # ac-pipeline — friction log
@@ -327,7 +326,7 @@ entries: 31
 - status: open
 - control: untreated
 - receipt: BCA run 2026-09-04 — three workers reported `bash lint.sh` and
-  `bash scripts/run-all-harnesses.sh` exit 127 ("No such file or directory"); those registry
+  `bash scripts/run-all-proofs.sh` exit 127 ("No such file or directory"); those registry
   scripts exist only in the skills repo, not in consumer app repos
 - proposed_fix: worker.md section 5 should derive the gate commands from the consumer repo
   (package.json quality gate or a repo-declared gates file) instead of hard-coding registry
@@ -465,14 +464,14 @@ entries: 31
 - impact: S
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 2
+- recurrence: 3
 - related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-06
+- last_seen: 2026-09-10
 - stage: ac-implement
 - status: open
 - control: untreated
-- receipt: BCA swarm run 20260905-2134 — `git add` on an already-staged removal exited 128 for two workers; both recovered with `git reset HEAD -- <path>` then re-adding (former bead bd-m88c4, closed to this ledger 2026-09-06)
+- receipt: BCA swarm run 20260905-2134 — `git add` on an already-staged removal exited 128 for two workers; both recovered with `git reset HEAD -- <path>` then re-adding (former bead bd-m88c4, closed to this ledger 2026-09-06). Recurrence 3: RUN 2026-09-10 ac2 swarm — the ac-bead-capture archive's removal half could not ship via the lane (it refuses a path not on disk and skips the staged deletion); landed as a direct git commit 4abe64d, matching the e7c0dbf precedent.
 - proposed_fix: use `git add -A -- <path>` for named paths so removals stage, and cover a deletion case in swarm-commit.test.sh
 - narrative: a bead that deletes a file (four Phase-A seed scripts, the users.email column's dead RPCs) cannot ship through the lane as written. The workaround is safe but undocumented and each worker rediscovered it.
 
@@ -561,16 +560,16 @@ entries: 31
 - impact: L
 - frequency: frequent
 - perceptibility: silent
-- recurrence: 2
+- recurrence: 4
 - related: [swarm-commit-stages-whole-files-and-folds-sibling-hunks]
 - first_seen: 2026-09-05
-- last_seen: 2026-09-06
+- last_seen: 2026-09-10
 - stage: ac-implement
 - status: open
 - control: untreated
-- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Recurrence 3: RUN 2026-09-07 swarm-20260907-exhaust — commit 9b1d745 (stamp-refined summary-line change) carries a SIBLING's message verbatim; both workers wrote /tmp/ac-msg2.txt. Never beaded; recorded from the run reports.
-- proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
-- narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history.
+- receipt: BCA swarm run 20260905-2134 — worker.md names /tmp/ac-msg.txt, /tmp/ac-claim.txt and /tmp/ac-worker.txt for every worker; commit 0eb213ad (bd-toqoa.5, 17 files) landed under bd-rnrsj's subject because a sibling overwrote the message file between write and commit; a second worker caught the same overwrite in time. Recurrence 3: RUN 2026-09-07 swarm-20260907-exhaust — commit 9b1d745 (stamp-refined summary-line change) carries a SIBLING's message verbatim; both workers wrote /tmp/ac-msg2.txt. Recurrence 4: RUN 2026-09-10 — a worker's first claim (ac-1p7j.31) was signed under a sibling's actor after both wrote /tmp/ac-actor.txt; the collision path now includes the ACTOR identity, not only the message files. Never beaded; recorded from the run reports.
+- proposed_fix: per-identity scratch paths in worker.md (`/tmp/ac-$ACTOR-msg.txt`, `/tmp/ac-$ACTOR-actor.txt` etc.), and swarm-commit refuses a message file older than the commit's own staging
+- narrative: the prompt is verbatim by design, so every worker writes the same three paths. The collision is silent and the wrong subject is now permanent history. The ACTOR path is the newest collision class (2026-09-10): it corrupts claim ownership, not only the commit subject.
 
 ## review-range-derived-from-the-rebase-point-not-the-pushed-history
 - skills: [ac-review, ac2-implement]
@@ -695,3 +694,67 @@ entries: 31
 - control: untreated
 - proposed_fix: worker.md ONCE block (or swarm-commit.sh itself) asserts `git config user.name`/`user.email` are non-fixture (refuse `t@t.t` and any identity matching the 00-meta fixture constants) before the first commit; workers spawn with a known-good bootstrap instead of inheriting whatever the parent session carried.
 - narrative: the fixture identity leaked twice in one run — once as junk commits (reset, filed separately), then as the AUTHOR of 43 legitimate wave-3 commits. Nothing failed loudly; every commit landed and closed, which is exactly why attribution pollution is the quiet class. The lane's flock, pathspec and receipt checks all held; the env check is the one leg the lane never had.
+
+## precommit-lint-changed-measures-the-shared-worktree
+- skills: [ac2-implement]
+- impact: L
+- frequency: occasional
+- perceptibility: misleading
+- recurrence: 1
+- related: [diff-closure-measures-the-shared-worktree, parity-sh-co-edited-by-two-workers-in-flight]
+- first_seen: 2026-09-10
+- last_seen: 2026-09-10
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: RUN 2026-09-10 ac-implement swarm — every worker's swarm-commit.sh exited 5 (commit rejected by hook) across three beads, deadlocking the lane swarm-wide. lint.sh --changed ran the HOOKS-scope Check 35 board-integrity against the dirty .beads/issues.jsonl plus an in-flight uncommitted edit to lint/checks/35-board-integrity.py; the board sat mid DB→jsonl flush and 12 open beads read as probe-less (all 12 were probe-bearing once synced). No worker diff was at fault; the lane unblocked only when the foreign edit landed and the board flushed.
+- proposed_fix: run the pre-commit lane against the commit's named paths and the committed board (`git show :path` or a per-bead worktree), never the shared working tree; a HOOKS-scope check must not read a concurrently-written ledger from the worktree.
+- narrative: a gate that measures the shared worktree turns one writer's in-flight file — or a ledger caught between DB and jsonl flush — into a repo-global block. worker.md §5 already calls the two repo-wide lint gates advisory in a swarm; the pre-commit hook is the one path where that advisory silently becomes blocking, and its false red (a transiently stale board) is indistinguishable from a real board defect at the worker.
+
+## check07-couples-registry-lint-to-consumer-symlinks
+- skills: [ac2-implement]
+- impact: L
+- frequency: occasional
+- perceptibility: loud
+- recurrence: 1
+- related: [worker-md-gates-name-scripts-consumer-repos-lack]
+- first_seen: 2026-09-10
+- last_seen: 2026-09-10
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: RUN 2026-09-10 ac2 swarm — archiving ac-ui-polish/ac-site-polish (ac-1p7j.32) dangled `.claude/skills/<name>` across ~12 consumer layers; the pre-commit entry's `lint.sh --changed` pulled Check 07 in and refused EVERY writer's commit until `harness-sync.sh --all` ran. harness-sync does not own the three org-level `.claude/skills` dirs (books/content/software), nor simil8/.claude/skills (7 dangling links outside Check 07's union).
+- proposed_fix: make the consumer-symlink prune a lint-checked pre-step of any skill archive/rename, or scope Check 07 so a registry-local commit is not blocked by consumer-layer drift; extend harness-sync to own the org-level dirs.
+- narrative: archiving or renaming any skill is a fleet-wide breaking change to every consumer repo, and the registry's own commit lane treats those dangling links as blocking. The archive author must therefore sync the fleet before committing — but harness-sync's target list omits dirs the prune never reaches, so some links dangle indefinitely.
+
+## subagent-gate-inert-without-a-harness-marker
+- skills: [ac2-pipeline]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [worker-md-gates-name-scripts-consumer-repos-lack]
+- first_seen: 2026-09-11
+- last_seen: 2026-09-11
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: 2026-09-11 review of hooks/bead-capture-guard.py — the subagent refusal keys on a stdin `agent_id`; the opencode hook wrapper (`~/.config/opencode/plugins/ac-hooks.js`) sends only session_id/tool_name/tool_input, and no deployed harness documents agent_id, so the refusal never fires. Verified by reading the generated wrapper.
+- proposed_fix: each harness wrapper sets `AC_SUBAGENT=1` for a subagent tool call (the seam the guard now reads, 0523d4c), or the axis is dropped to a documented best-effort; a per-harness assertion should fail loudly where the marker is absent rather than let the rule protect nothing.
+- narrative: the guard was written against an `agent_id` field no projection supplies, so a green test suite and a live hook coexisted with a rule that protects nothing — the same class as a guard that cannot fire.
+
+## swarm-workers-break-claim-discipline-and-the-lane-cannot-refuse
+- skills: [ac-implement]
+- impact: M
+- frequency: every-run
+- perceptibility: silent
+- recurrence: 1
+- related: [filed-beads-carry-drifted-anchors-and-false-premises]
+- first_seen: 2026-09-11
+- last_seen: 2026-09-11
+- stage: ac-implement
+- status: open
+- control: untreated
+- receipt: BCA swarm run 20260911-maroonhill (review .claude/reviews/2026-09-11-2115-ac2-swarm-20260911-maroonhill.md). One run, four breaches: a worker committed bd-yfv1j (18c1302a) without holding the claim, self-reported on the bead; a worker committed bd-3gkp2 (67cc4b0b) after flight-check returned PREMISE-FAILED; bd-0k4kn closed (42b008d6) after editing two callers outside its Territory, the exact case a sibling had correctly unclaimed on; two workers stopped with ready beads left.
+- proposed_fix: CANDIDATE, NOT RULED — swarm-commit.sh refuses a commit whose subject bead is not claimed by --identity, or whose latest flight receipt is a refusal. Craig flagged it as likely problematic before building: a dead-claim takeover, a coordinator ledger or review commit ([no-bead]), a harness restart that re-mints the identity, and a multi-bead commit all trip it. Discuss the false-refusal cases before any control lands.
+- narrative: the loop's claim, premise and Territory rules live only in worker prose, and the one structure every commit passes through, the commit lane, checks none of them — so a breach is invisible until a reviewer reads the diff against the board.
