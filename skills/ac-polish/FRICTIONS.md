@@ -230,14 +230,14 @@ last_pass: 2026-09-07
   the ledger is the only honest witness that a round happened.
 
 ## seams-reader-stance-cannot-write-report
-- skills: [ac-polish]
+- skills: [ac-polish, ac-plan]
 - impact: M
 - frequency: occasional
 - perceptibility: loud
-- recurrence: 1
+- recurrence: 2
 - related: []
 - first_seen: 2026-09-04
-- last_seen: 2026-09-04
+- last_seen: 2026-09-18
 - stage: manual
 - status: open
 - proposed_fix: name the reader agent in `workflows/seams.md` READERS and make it one that can
