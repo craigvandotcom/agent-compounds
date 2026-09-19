@@ -43,11 +43,13 @@ question. Two defaults, and they are not the same default:
 
 ## Improvements — opt-in, capped, never silent
 
-The agent may offer up to two "beyond the ask" improvements alongside the plan — each one
+The agent may offer up to two opt-in lines alongside the plan — an improvement beyond the ask,
+or a diet-pass trade short of it (a cut that loses something the agent still backs) — each one
 line, each explicitly opt-in, surfaced in the same approval round as the Decisions cards
 (`references/approval-brief.md`). An improvement is never folded into the plan's Deliverables
 on the agent's own judgement; it is accepted only when the human opts in on the tap.
-An accepted improvement appends one sentence to `## Vision`, so its card has a line to quote.
+An accepted improvement appends one sentence to `## Vision`, so its card has a line to quote;
+an accepted trade rewrites or removes the `## Vision` sentence it narrows.
 
 ## The live-human ask
 

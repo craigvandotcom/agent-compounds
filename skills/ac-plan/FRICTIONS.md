@@ -2,7 +2,7 @@
 skill: ac-plan
 created: 2026-09-18
 last_pass: never
-entries: 8
+entries: 10
 ---
 
 # ac-plan — friction log
@@ -16,10 +16,10 @@ entries: 8
 - impact: L
 - frequency: occasional
 - perceptibility: silent
-- recurrence: 1
-- related: [diet-repeated-question-is-a-cut, seams-fixpoint-never-stamps-on-accumulator]
+- recurrence: 2
+- related: [diet-repeated-question-is-a-cut, seams-fixpoint-never-stamps-on-accumulator, diet-applies-cuts-that-lose-something]
 - first_seen: 2026-09-18
-- last_seen: 2026-09-18
+- last_seen: 2026-09-19
 - stage: ac-plan
 - status: open
 - proposed_fix: bound the diet (about eight rounds) and stop on two consecutive rounds with no
@@ -31,16 +31,19 @@ entries: 8
   gate's ownership check, the empty-roster verdict, the ruling tap in the commit lane, a
   token rename) because each reader is stateless and can always find one more thing. The
   prior run (2026-09-15) settled in 6, so the rule reads as bounded when it is not.
+  2026-09-19 (body-compass image-analysis-speed plan): three rounds, still proposing mechanism
+  cuts in round three; stopped by judgement. Fix landed in step 7: stop when a round yields
+  nothing to apply, three rounds at most. Keep open until a later run shows the bound holds.
 
 ## diet-repeated-question-is-a-cut
 - skills: [ac-plan]
 - impact: M
 - frequency: occasional
 - perceptibility: misleading
-- recurrence: 1
+- recurrence: 2
 - related: [diet-fixpoint-unbounded-with-stateless-readers]
 - first_seen: 2026-09-18
-- last_seen: 2026-09-18
+- last_seen: 2026-09-19
 - stage: ac-plan
 - status: open
 - proposed_fix: state in step 7 that the floor protects the FINDING, never the conductor's
@@ -50,6 +53,8 @@ entries: 8
   its own mechanism: the check-36 token edit came back seven rounds running, the fence lint
   four, the read helper three, before each was dropped or moved. Every one of those rounds was
   paid for a cut the plan eventually took.
+  2026-09-19: JSON mode and the compound-cache-write step came back in each of three rounds.
+  Step 7 now answers a question by lookup and never mints a card for it; a kept cut stays kept.
 
 ## diet-doubles-as-correctness-review
 - skills: [ac-plan, ac-polish]
@@ -172,6 +177,49 @@ entries: 8
   capture guard, the approval script), each needing a late reader, and two of those late
   readers found P0 claims. Meanwhile the Seams rows kept quoting the draft the first readers
   saw, so three test rows contradicted the final Deliverables until a diet reader caught it.
+
+## diet-applies-cuts-that-lose-something
+- skills: [ac-plan]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [diet-fixpoint-unbounded-with-stateless-readers, diet-repeated-question-is-a-cut, vision-frozen-without-human-correction]
+- first_seen: 2026-09-19
+- last_seen: 2026-09-19
+- stage: ac-plan
+- status: open
+- proposed_fix: landed in step 7 — the conductor applies a cut only when the replacement is named
+  and nothing is lost; a cut losing a safeguard, a Seams finding or a Vision sentence is kept
+  without a card; a trade the conductor backs rides the opt-in line (decisions.md § Improvements).
+- narrative: the old rule applied every cut unless it reversed a Seams row or orphaned a Vision
+  sentence, so a safeguard with no Seams row and no Vision sentence had no protection. On the
+  image-analysis-speed plan the diet removed JSON response mode (no speed gain, but the guard
+  for the model switch) and deferred approved scope, and nothing asked. Replayed against the
+  pre-trim plan before landing the fix. Test learning: asking the READER to name "what is lost"
+  made it defensive (3 finds per round against 6–7 with the old question, and it missed a
+  stream-header correctness issue) — so the reader's question is unchanged and only the
+  conductor's rule moved.
+
+## vision-frozen-without-human-correction
+- skills: [ac-plan]
+- impact: M
+- frequency: occasional
+- perceptibility: silent
+- recurrence: 1
+- related: [diet-applies-cuts-that-lose-something]
+- first_seen: 2026-09-19
+- last_seen: 2026-09-19
+- stage: ac-plan
+- status: open
+- proposed_fix: render the whole `## Vision` on the approval brief, not two lines, so an
+  agent-written sentence the human never corrected is at least read once before the tap.
+- narrative: step 3 says the human corrects the vision brief before it is frozen. The conductor
+  skipped that round trip and froze its own wording, including "tidy the small server steps that
+  the timers show are worth it" for a user item that was unconditional. Every later check
+  (Seams, diet, a fresh judge applying the new step 7) then correctly protected the agent's
+  sentence, not the user's intent — the replay judge applied the deferral and said so. Nothing
+  detects a skipped step 3; the approval brief shows only two Vision lines.
 
 ## see seams-reader-stance-cannot-write-report in ac-polish
 - pointer: primary entry lives in `skills/ac-polish/FRICTIONS.md`; not re-counted here.

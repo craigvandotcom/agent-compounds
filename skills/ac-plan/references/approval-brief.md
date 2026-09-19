@@ -26,7 +26,7 @@ itself, is what makes the tap informed rather than a formality.
 | seams + tests | `## Seams` | rows whose disposition is not `no seam`, ordered by toucher count (highest first); a `must update` test row renders beside its object, not in a separate list |
 | biggest risk | `## Risk + sequence` | the risk plus the assumption it rests on — one pair, not the whole risk list |
 | open cards | `## Decisions` | every card still `needs-human`, question + recommended option + its default tag (`[default: <option>]` or `[no default]`, read from the card — a design question with a default is not a vision question with none); a plan with none renders "none open" |
-| improvements | agent-proposed, opt-in | up to two "beyond the ask" items, each one line, each declined by default until the human opts in |
+| improvements | agent-proposed, opt-in | up to two items beyond or short of the ask (`decisions.md` § Improvements), each one line, each declined by default until the human opts in |
 | commits-to line | this file, verbatim sense | what approval commits to (above) — the brief always ends here |
 
 A line with nothing to show renders its own absence ("no open cards", "no improvements
@@ -63,9 +63,9 @@ still works" belong on one line.
 
 **Open decisions:** <question — recommended: option [default: option] | [no default]> | "none open"
 
-**Beyond the ask (opt-in):**
-- <improvement, one line>
-- <improvement, one line>
+**Opt-in (beyond or short of the ask):**
+- <improvement or trade, one line>
+- <improvement or trade, one line>
 | "none offered"
 
 **Approving commits to:** beads cut and implemented with no further contact, unless a later
