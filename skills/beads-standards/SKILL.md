@@ -390,11 +390,11 @@ br sync --flush-only      # export DB -> JSONL
   `br show <id> --json | jq '.[0].labels'`), NOT `.id` directly: `jq '.id'` on a `br show`
   array fails with `Cannot index array with string`. Don't reach for `.issues` on these.
   Parsers must handle both shapes.
-- **`br list` hides CLOSED beads by default — pass `--all`.** Without it an existence
-  probe false-negatives: a conductor once concluded a plan had zero beads and dispatched
-  a beadify child, when the epic was 18/20 closed and shipped. Sound probe form:
-  `br list --all --limit 0 --json`, matched against title AND labels AND description —
-  matching descriptions only misses beads titled from the plan's own heading.
+- **A closed-bead existence probe needs `--all`, or it false-negatives** (a conductor once
+  dispatched a beadify child on an 18/20-closed epic). Use the one closed-read line
+  (`ac-pipeline/references/board-scan.md` Scan A: `br_call list --all --status closed --json`),
+  matched against title AND labels AND description — description-only misses beads titled
+  from the plan's own heading.
 - **A `-d`/`--description` body is shell text, not a literal.** A double-quoted body
   containing backticks runs command substitution; an angle-bracket `<placeholder>` parses
   as a redirect. Both fail with a shell-syntax error that names nothing about the bead.

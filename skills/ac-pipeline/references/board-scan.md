@@ -32,10 +32,13 @@ Run scans A, B, C, E **in parallel** (they're independent).
 ## Scan A — beads
 
 ```bash
-br list  --json --limit 0      # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
-br ready --json                # unblocked + ready → a FLAT array
-cat .beads/issues.jsonl        # the ONLY complete source — includes closed beads
+br_call list  --limit 0        # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
+br_call ready                  # unblocked + ready → a FLAT array
 ```
+
+`br_call` (`skills/_tools/br-call.sh`) is the ONE routed `br … --json` read — it refuses both
+failure envelopes (a non-zero exit and a zero-exit `.error` payload) so a dead read never
+reads as empty data.
 
 > **`br` JSON shape differs by subcommand — don't conflate them:**
 > - `br list --json` returns a **paginated object** (no default limit — `limit: 0` on
@@ -44,17 +47,30 @@ cat .beads/issues.jsonl        # the ONLY complete source — includes closed be
 > Getting this wrong fails silently-ish (`jq: Cannot index array with string …`, or
 > a truncated list you never noticed).
 
-> **⚠️ `br list --json` DOES NOT RETURN CLOSED BEADS** (br 0.2.x). It has returned 436
-> records with zero `status=closed` while
-> `.beads/issues.jsonl` held 2,453 records of which 2,017 were closed. `--limit` does not
-> help. This is **load-bearing**: the Tier-1 stale-`unrefined`-on-CLOSED-beads sweep and
-> the Tier-2 positive-proof archive gate both need closed beads, and both would silently
-> under-count to **zero** — a false clean, not an error. **Any predicate involving closed
-> beads must read `.beads/issues.jsonl` directly.**
->
-> Related: `br sync` in a fresh worktree rebuilds from JSONL and reports
-> `Created: 2453 issues` while `br list` then shows 436. The two numbers are consistent
-> only once the above is understood — it is not a corrupt import.
+**The one row-shape idiom, fenced HERE — every Scan A read pipes through it, never a second
+copy:**
+
+```bash
+br_call <sub> --json | jq -e 'if type=="object" then .issues else . end | if all(.[]; .id and .status and .created_at) then . else error("row shape") end'
+```
+
+Unwrap `list`'s `.issues` or take the bare array (`ready`/`show` already return one), and
+error — `jq -e` exits non-zero — if any row lacks `id`, `status` or `created_at`. Never a
+filter that silently drops the bad row and passes: a dropped row is a false clean, exactly
+the failure class this idiom exists to stop. This is measured present on every row of every
+subcommand on the live board, so the guard fires only on a real future shape change — a
+renamed field failing the `-e` is the sensor working, not a bug to route around.
+
+**The one closed-read line — never `cat .beads/issues.jsonl` for this:**
+
+```bash
+br_call list --all --status closed --json
+```
+
+`--all` surfaces closed beads (measured on `br` 0.5.12: 516 rows, equal to the jsonl's 516
+closed rows; `--all` omits the tombstone row). Any predicate involving closed beads reads
+through this one line — everywhere else in this repo that named a `.beads/issues.jsonl` read
+or an `--all` remedy now points back here instead of restating the recipe.
 
 Categorize every bead:
 
@@ -96,19 +112,18 @@ than `48h` (age from `created_at`). Print the same standing as the Scan E
 run, `ok` included.
 
 ```bash
-# FAIL LOUD if br list --json cannot be read — do not print 0 as clean.
-DOCKET=$(br list --json --limit 0 --all) || { echo "docket-health: ERROR — br list --json failed (empty-is-not-clean)"; exit 2; }
+# FAIL LOUD if br list --json cannot be read or fails the row-shape idiom — do not print 0
+# as clean. The idiom's own `-e` is the shape guard now; no second one in the python below.
+DOCKET=$(br_call list --limit 0 --all --json \
+  | jq -e 'if type=="object" then .issues else . end | if all(.[]; .id and .status and .created_at) then . else error("row shape") end') \
+  || { echo "docket-health: ERROR — br list --json failed or row shape invalid (empty-is-not-clean)"; exit 2; }
 printf '%s' "$DOCKET" | python3 -c "
 import json, sys, datetime, re
 raw = sys.stdin.read()
 try:
-    data = json.loads(raw)
+    issues = json.loads(raw)
 except Exception as e:
     print('docket-health: ERROR — unparseable br list --json (empty-is-not-clean):', e)
-    sys.exit(2)
-issues = data.get('issues') if isinstance(data, dict) else data
-if issues is None:
-    print('docket-health: ERROR — unexpected br list shape (empty-is-not-clean)')
     sys.exit(2)
 now = datetime.datetime.now(datetime.timezone.utc)
 def parse_until(s):

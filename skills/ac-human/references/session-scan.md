@@ -23,9 +23,13 @@ the spine's loop boundary — this lens applies AFTER the boundary filter.
 At org level or asked "across everything", sweep ALL `.beads/` repos, not just this one. Roots come from the environment, never literals — `REPOS_ROOT` (the workspace root, e.g. `~/Repos`) and `APPS_LIST` (a file listing workspace-relative app paths, one per line):
 
 ```bash
+# br_call (skills/_tools/br-call.sh) is the ONE routed `br … --json` read — source it once,
+# before the loop; a refused read now surfaces on stderr instead of being swallowed by
+# `2>/dev/null` (that swallow was the exact failure this routes around).
+. "$(git rev-parse --show-toplevel)/skills/_tools/br-call.sh"
 for repo in "$REPOS_ROOT" $(while IFS= read -r a; do echo "$REPOS_ROOT"/$a; done < "$APPS_LIST"); do
   [ -d "$repo/.beads" ] || continue
-  (cd "$repo" && br list --json --limit 0 2>/dev/null) | \
+  (cd "$repo" && br_call list --json --limit 0) | \
     jq --arg repo "$(basename $repo)" '[.issues[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
 done
 ```

@@ -26,8 +26,8 @@ nothing written.
 
 ## 2. Scan
 
-Read the board per `ac-pipeline/references/board-scan.md`. Closed beads come from
-`.beads/issues.jsonl`, never `br list`. Print the docket-health line.
+Read the board per `ac-pipeline/references/board-scan.md` (closed beads: Scan A's
+`br_call list --all --status closed --json`, never a raw `br list`). Print the docket-health line.
 
 ### 2b. Surviving-gate verify
 
