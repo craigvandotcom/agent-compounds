@@ -137,8 +137,10 @@ rc=$(run_check "$t")
 # --- RED: a malformed WORKER: receipt on a changed id, staged lane only -------
 WORKER_BAD='{"id":"ac-workerbad","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"bad worker stamp","comments":[{"id":1,"issue_id":"ac-workerbad","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-25T10:01:00Z"}]}'
 # The COMBINED-CLEAN fixture: a canon status (closed), a canon WORKER: receipt, and a
-# GATE:-prefixed landing record together — one assertion covers rules 4, 5 and 6 at once.
-WORKER_GOOD='{"id":"ac-workerok","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"good worker stamp","comments":[{"id":2,"issue_id":"ac-workerok","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-25T10:01:00Z"},{"id":5,"issue_id":"ac-workerok","author":"x","text":"GATE: receipt — ac-workerok — RED probe: true; reason: shipped","created_at":"2026-08-25T10:02:00Z"}]}'
+# GATE:-prefixed landing record — citing the flight receipt's own `at:` stamp (the same
+# comment flight-check.sh posts at claim) — together: one assertion covers rules 4, 5 and 6
+# (including the evidence citation) at once.
+WORKER_GOOD='{"id":"ac-workerok","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"good worker stamp","comments":[{"id":2,"issue_id":"ac-workerok","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-25T10:01:00Z"},{"id":20,"issue_id":"ac-workerok","author":"x","text":"FLIGHT-RECEIPT v1\nbead: ac-workerok\nat: 2026-08-25T09:00:00Z","created_at":"2026-08-25T09:00:01Z"},{"id":5,"issue_id":"ac-workerok","author":"x","text":"GATE: receipt — ac-workerok — RED probe: true; receipt-at: 2026-08-25T09:00:00Z; reason: shipped","created_at":"2026-08-25T10:02:00Z"}]}'
 
 t="$WORK/worker-staged-red"
 git_board "$t" "$OPEN_TAGGED"
@@ -180,7 +182,7 @@ rc=$(run_check "$t")
 # --- GREEN: a multi-line canon receipt (canon first line + a note line) stays green ----
 t="$WORK/worker-multiline"
 git_board "$t" "$OPEN_TAGGED"
-WORKER_MULTILINE='{"id":"ac-multiline","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"multi-line worker stamp","comments":[{"id":4,"issue_id":"ac-multiline","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234\nnote: closed after review","created_at":"2026-08-25T10:01:00Z"},{"id":6,"issue_id":"ac-multiline","author":"x","text":"GATE: receipt — ac-multiline — RED probe: true; reason: shipped","created_at":"2026-08-25T10:02:00Z"}]}'
+WORKER_MULTILINE='{"id":"ac-multiline","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"multi-line worker stamp","comments":[{"id":4,"issue_id":"ac-multiline","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234\nnote: closed after review","created_at":"2026-08-25T10:01:00Z"},{"id":21,"issue_id":"ac-multiline","author":"x","text":"FLIGHT-RECEIPT v1\nbead: ac-multiline\nat: 2026-08-25T09:00:00Z","created_at":"2026-08-25T09:00:01Z"},{"id":6,"issue_id":"ac-multiline","author":"x","text":"GATE: receipt — ac-multiline — RED probe: true; receipt-at: 2026-08-25T09:00:00Z; reason: shipped","created_at":"2026-08-25T10:02:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$WORKER_MULTILINE" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")
@@ -198,15 +200,65 @@ rc=$(run_check "$t")
   && ok "a closed row with no GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: landing record is RED" \
   || bad "landing-red: rc=$rc out=$(cat "$OUT")"
 
-# --- GREEN: the same transition carrying a GATE: receipt landing record --------
+# --- GREEN: the same transition carrying a GATE: receipt landing record whose citation
+# --- resolves against the flight receipt sitting on the same row (the record cites its
+# --- evidence, ac-4y7l.31) -----------------------------------------------------
 t="$WORK/landing-green"
 git_board "$t" "$OPEN_TAGGED"
-LANDING_PRESENT='{"id":"ac-landingpresent","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed with a landing record","comments":[{"id":7,"issue_id":"ac-landingpresent","author":"x","text":"GATE: receipt — ac-landingpresent — RED probe: true; reason: shipped","created_at":"2026-08-25T10:01:00Z"}]}'
+LANDING_PRESENT='{"id":"ac-landingpresent","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed with a landing record","comments":[{"id":22,"issue_id":"ac-landingpresent","author":"x","text":"FLIGHT-RECEIPT v1\nbead: ac-landingpresent\nat: 2026-08-25T09:00:00Z","created_at":"2026-08-25T09:00:01Z"},{"id":7,"issue_id":"ac-landingpresent","author":"x","text":"GATE: receipt — ac-landingpresent — RED probe: true; receipt-at: 2026-08-25T09:00:00Z; reason: shipped","created_at":"2026-08-25T10:01:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$LANDING_PRESENT" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")
-[ "$rc" -eq 0 ] && ok "a closed row carrying a GATE: receipt landing record is GREEN" \
+[ "$rc" -eq 0 ] && ok "a closed row carrying a GATE: receipt landing record that cites its evidence is GREEN" \
   || bad "landing-green: rc=$rc out=$(cat "$OUT")"
+
+# --- RED: THE RECORD CITES ITS EVIDENCE — a bare `GATE: receipt` with no citation at all,
+# --- the exact bypass `br close --transition-comment "GATE: receipt"` used to satisfy rule 6
+# --- with zero evidence behind it, is now refused (Craig's ruling on ac-4y7l.29, ac-4y7l.31).
+t="$WORK/landing-bare-bypass"
+git_board "$t" "$OPEN_TAGGED"
+LANDING_BARE='{"id":"ac-bare","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed via a bare transition-comment bypass","comments":[{"id":23,"issue_id":"ac-bare","author":"x","text":"GATE: receipt","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_BARE" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 1 ] && grep -q 'cites no evidence' "$OUT" && grep -q 'ac-bare' "$OUT" \
+  && ok "a bare GATE: receipt with no citation (the close-gate.sh bypass) is RED — the record cites its evidence, or it is refused" \
+  || bad "landing-bare-bypass: rc=$rc out=$(cat "$OUT")"
+
+# --- RED: a GATE: receipt citing a receipt-at stamp that resolves against NOTHING on the
+# --- row — a forged or stale citation is refused exactly like no citation at all.
+t="$WORK/landing-mismatched-citation"
+git_board "$t" "$OPEN_TAGGED"
+LANDING_MISMATCH='{"id":"ac-mismatch","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"citation resolves to nothing","comments":[{"id":24,"issue_id":"ac-mismatch","author":"x","text":"GATE: receipt — ac-mismatch — RED probe: true; receipt-at: 2099-01-01T00:00:00Z; reason: shipped","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_MISMATCH" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 1 ] && grep -q 'cites no evidence' "$OUT" && grep -q 'ac-mismatch' "$OUT" \
+  && ok "a GATE: receipt citation that resolves against nothing on the row is RED" \
+  || bad "landing-mismatched-citation: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: an uncited FIRST landing comment followed by a CITED addendum still passes —
+# --- the check asks "does evidence exist among what this commit added", never "is the
+# --- first prefixed comment perfect" (retroactively citing a pre-existing receipt after
+# --- close-gate.sh grew this requirement, ac-4y7l.24/.25, is exactly this shape).
+t="$WORK/landing-addendum-cites"
+git_board "$t" "$OPEN_TAGGED"
+LANDING_ADDENDUM='{"id":"ac-addendum","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"first comment uncited, addendum cites it","comments":[{"id":27,"issue_id":"ac-addendum","author":"x","text":"FLIGHT-RECEIPT v1\nbead: ac-addendum\nat: 2026-08-25T09:00:00Z","created_at":"2026-08-25T09:00:01Z"},{"id":28,"issue_id":"ac-addendum","author":"x","text":"GATE: receipt — ac-addendum — RED probe: true; reason: shipped","created_at":"2026-08-25T10:01:00Z"},{"id":29,"issue_id":"ac-addendum","author":"x","text":"GATE: receipt-addendum — ac-addendum — receipt-at: 2026-08-25T09:00:00Z (retroactive citation)","created_at":"2026-08-25T10:02:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_ADDENDUM" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "an uncited first landing comment plus a cited addendum still passes — any new landing comment citing evidence is enough" \
+  || bad "landing-addendum-cites: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a GATE: decided landing record citing the ruling comment's own id ---------
+t="$WORK/landing-decided-cited"
+git_board "$t" "$OPEN_TAGGED"
+LANDING_DECIDED='{"id":"ac-decided","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed via the ruling path","comments":[{"id":25,"issue_id":"ac-decided","author":"x","text":"DECISION (Craig): option A — because it is cheaper","created_at":"2026-08-25T09:00:00Z"},{"id":26,"issue_id":"ac-decided","author":"x","text":"GATE: decided — ac-decided — decided: option A; ruling verified: DECISION (Craig): option A — because it is cheaper (ruling-comment: #25; at abc1234)","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_DECIDED" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "a GATE: decided landing record citing the ruling comment's own id is GREEN" \
+  || bad "landing-decided-cited: rc=$rc out=$(cat "$OUT")"
 
 # --- GREEN: a bead already closed at HEAD, relabeled this commit — not a NEW close ---
 t="$WORK/landing-precloseD-untouched"
@@ -237,7 +289,7 @@ rc=$(run_check "$t")
 # --- GREEN: a FRESH-VERIFY: close is a valid landing record --------------------
 t="$WORK/landing-freshverify"
 git_board "$t" "$OPEN_TAGGED"
-FRESHVERIFY_CLOSE='{"id":"ac-freshverify","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed on a fresh-verify","comments":[{"id":9,"issue_id":"ac-freshverify","author":"x","text":"FRESH-VERIFY: ac-freshverify — probes re-run green at HEAD","created_at":"2026-08-25T10:01:00Z"}]}'
+FRESHVERIFY_CLOSE='{"id":"ac-freshverify","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed on a fresh-verify","comments":[{"id":9,"issue_id":"ac-freshverify","author":"x","text":"FRESH-VERIFY: ac-freshverify — probes re-run green at (tree: abc1234)","created_at":"2026-08-25T10:01:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$FRESHVERIFY_CLOSE" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")
@@ -247,7 +299,7 @@ rc=$(run_check "$t")
 # --- GREEN: a TRIAGE-CLOSE: (cascade) close is a valid landing record ----------
 t="$WORK/landing-cascade"
 git_board "$t" "$OPEN_TAGGED"
-CASCADE_CLOSE='{"id":"ac-cascade","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed on the cascade leg","comments":[{"id":10,"issue_id":"ac-cascade","author":"x","text":"TRIAGE-CLOSE: ac-cascade — cascade close accepted on a consumed blocker","created_at":"2026-08-25T10:01:00Z"}]}'
+CASCADE_CLOSE='{"id":"ac-cascade","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed on the cascade leg","comments":[{"id":10,"issue_id":"ac-cascade","author":"x","text":"TRIAGE-CLOSE: ac-cascade — cascade close accepted on a consumed blocker (tree: abc1234)","created_at":"2026-08-25T10:01:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$CASCADE_CLOSE" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")

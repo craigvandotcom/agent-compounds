@@ -49,6 +49,13 @@ Six FAIL rules over the committed board:
      close. The close sensor is board-side (every close path, prose or script, human or
      system); it never asks WHO closed, only whether a NEW landing record exists.
      Board-side per the Decisions card; this is deliberately not fence lint.
+     THE RECORD CITES ITS EVIDENCE (ac-4y7l.31): a landing record present is not enough —
+     `GATE: receipt` must cite `receipt-at: <stamp>` matching an `at: <stamp>` line on
+     another comment of the SAME row (the flight receipt); `GATE: decided` must cite
+     `ruling-comment: #<id>` matching a same-row comment with that id whose text starts
+     `DECISION (`; `FRESH-VERIFY:`/`TRIAGE-CLOSE:` must self-cite `tree: <sha>`. A bare
+     `br close --transition-comment "GATE: receipt"` with no citation — the bypass that
+     skips close-gate.sh entirely — is RED, not a pass.
 
 Rules 3 (origin: label, Probe: line) skip closed beads — forward-only, no backfill, per
 the origin-provenance ruling: enforcement started at the cutover and the past is not
@@ -89,6 +96,11 @@ LEDGER_REL = ".beads/issues.jsonl"
 STATUS_CANON = {"open", "in_progress", "blocked", "deferred", "closed", "tombstone"}
 # canon WORKER: grammar — skills/beads-standards/SKILL.md § Worker-identity stamp
 WORKER_RE = re.compile(r"^WORKER: model=\S+ actor=\S+ tree=\S+$")
+# rule 6's evidence citations — the exact tokens close-gate.sh's landing text carries
+RECEIPT_CITE_RE = re.compile(r"receipt-at:\s*([^\s;]+)")
+DECIDED_CITE_RE = re.compile(r"ruling-comment:\s*#(\d+)")
+TREE_CITE_RE = re.compile(r"tree:\s*([0-9a-f]{4,40})")
+DECISION_LINE_RE = re.compile(r"^DECISION \(")
 
 
 def board_path(root):
@@ -245,17 +257,68 @@ def main():
             # NEW comment (per the id/created_at+text key above, never a stale receipt
             # already on the row at HEAD) naming the evidence it closed on. Staged lane
             # only, same scope as rule 5 — no whole-board fallback (no backfill by doctrine).
+            #
+            # THE RECORD CITES ITS EVIDENCE (ac-4y7l.31, Craig's ruling on ac-4y7l.29):
+            # a bare `br close --transition-comment "GATE: receipt"` used to satisfy this
+            # rule with no evidence behind it at all — close-gate.sh skipped entirely still
+            # passed. A landing record now must NAME something this check can resolve
+            # against the SAME row's comments (new or pre-existing): `GATE: receipt` cites
+            # `receipt-at: <stamp>`, cross-checked against an `at: <stamp>` line elsewhere on
+            # the row (the flight receipt close-gate.sh itself posted at claim); `GATE:
+            # decided` cites `ruling-comment: #<id>`, cross-checked against a comment with
+            # that id whose text starts `DECISION (`; `FRESH-VERIFY:`/`TRIAGE-CLOSE:` name
+            # the tree they verified as `tree: <sha>`, self-citing (fresh-verify runs
+            # precisely when no separate receipt exists to point at).
             if status == "closed" and head_status.get(rid) != "closed":
                 comments = new_worker_comments.get(rid, [])
-                landed = any(
-                    isinstance(c, dict) and str(c.get("text") or "").strip()
-                    .startswith(("GATE:", "FRESH-VERIFY:", "TRIAGE-CLOSE:"))
-                    for c in comments)
-                if not landed:
+                all_comments = rec.get("comments") or []
+                landings = [
+                    str(c.get("text") or "").strip() for c in comments
+                    if isinstance(c, dict)
+                    and str(c.get("text") or "").strip().startswith(("GATE:", "FRESH-VERIFY:", "TRIAGE-CLOSE:"))
+                ]
+                if not landings:
                     violations.append(
                         f"{board}:{lineno} — closed bead '{rid}' carries no landing record is RED: "
                         "close through skills/ac-implement/scripts/close-gate.sh — see "
                         "ac-human/references/action-loop.md")
+                else:
+                    # ANY new landing-shaped comment resolving its citation is enough — the
+                    # check asks "does evidence exist among what this commit added", never
+                    # "is the FIRST prefixed comment perfect" (a later addendum citing the
+                    # same pre-existing receipt is just as real as an inline citation).
+                    cited = False
+                    for landing in landings:
+                        m = RECEIPT_CITE_RE.search(landing) if landing.startswith("GATE: receipt") else None
+                        if m:
+                            stamp = m.group(1)
+                            if any(
+                                isinstance(c, dict)
+                                and re.search(rf"(?m)^at:\s*{re.escape(stamp)}\s*$", str(c.get("text") or ""))
+                                for c in all_comments
+                            ):
+                                cited = True
+                                break
+                            continue
+                        if landing.startswith("GATE: decided"):
+                            m = DECIDED_CITE_RE.search(landing)
+                            if m and any(
+                                isinstance(c, dict) and str(c.get("id")) == m.group(1)
+                                and DECISION_LINE_RE.match(str(c.get("text") or "").strip())
+                                for c in all_comments
+                            ):
+                                cited = True
+                                break
+                            continue
+                        if landing.startswith(("FRESH-VERIFY:", "TRIAGE-CLOSE:")) and TREE_CITE_RE.search(landing):
+                            cited = True
+                            break
+                    if not cited:
+                        violations.append(
+                            f"{board}:{lineno} — closed bead '{rid}' landing record cites no "
+                            "evidence on the bead is RED: the record cites its evidence, or "
+                            "close-gate.sh's own landing text is bypassed — close through "
+                            "skills/ac-implement/scripts/close-gate.sh")
         if status != "open":
             continue  # closed beads are NEVER scanned for origin/probe — forward-only, no backfill
         created = str(rec.get("created_at") or "")[:10]

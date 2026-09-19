@@ -54,6 +54,29 @@ STATE="${AC2_TEST_BR_STATE:-/nonexistent}"
 cmd="${1:-}"; shift 2>/dev/null || true
 id=""
 for a in "$@"; do case "$a" in --*) ;; -*) ;; *) [ -z "$id" ] && id="$a" ;; esac; done
+
+# next_id <bead-id> — a per-bead incrementing integer comment id, the real br 0.5.12 shape
+# (`{"id": <int>, ...}`) — needed so a citation-by-id (GATE: decided's ruling-comment id) has
+# a real id to cite and check-35's cross-reference can resolve it.
+next_id() {
+  local seqf="$STATE/$1.seq" n
+  n=$(cat "$seqf" 2>/dev/null || echo 0)
+  n=$((n + 1))
+  printf '%s' "$n" >"$seqf"
+  printf '%s' "$n"
+}
+
+append_comment() { # <bead-id> <text> — one writer for both the close-transition path and
+                    # `comments add`, so the two can never disagree on shape.
+  local cid="$1" body="$2" cfile cnid
+  cfile="$STATE/$cid.comments.json"
+  [ -f "$cfile" ] || echo '[]' >"$cfile"
+  cnid=$(next_id "$cid")
+  jq --arg t "$body" --argjson i "$cnid" \
+    '. + [{"id":$i,"author":"mock","created_at":"2026-01-01T00:00:00Z","text":$t}]' \
+    "$cfile" >"$cfile.tmp" 2>/dev/null && mv "$cfile.tmp" "$cfile"
+}
+
 case "$cmd" in
   show)
     [ "${AC2_TEST_BR_SHOW_FAIL:-0}" = "1" ] && exit 1
@@ -73,10 +96,7 @@ case "$cmd" in
     jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json"
     if [ -n "$tc" ]; then
       printf '%s\n' "$tc" >> "$STATE/comments.log"
-      cfile="$STATE/$id.comments.json"
-      [ -f "$cfile" ] || echo '[]' >"$cfile"
-      jq --arg t "$tc" '. + [{"author":"mock","created_at":"2026-01-01T00:00:00Z","text":$t}]' \
-        "$cfile" >"$cfile.tmp" 2>/dev/null && mv "$cfile.tmp" "$cfile"
+      append_comment "$id" "$tc"
     fi ;;
   comments)
     sub="${1:-}"
@@ -108,10 +128,7 @@ case "$cmd" in
     done
     [ -f "$STATE/$cid.json" ] || exit 1
     printf '%s\n' "$body" >> "$STATE/comments.log"
-    cfile="$STATE/$cid.comments.json"
-    [ -f "$cfile" ] || echo '[]' >"$cfile"
-    jq --arg t "$body" '. + [{"author":"mock","created_at":"2026-01-01T00:00:00Z","text":$t}]' \
-      "$cfile" >"$cfile.tmp" 2>/dev/null && mv "$cfile.tmp" "$cfile"
+    append_comment "$cid" "$body"
     exit 0 ;;
   *) exit 0 ;;
 esac

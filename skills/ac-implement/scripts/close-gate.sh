@@ -235,28 +235,33 @@ human_is_authorized() {
 #   Return 1 — the comments read itself refused; the caller decides whether that is
 #              NOT-CHECKED (the type-routed path) or simply "no override" (LEG 6, which only
 #              ever narrows an existing refusal and never turns a refusal into a pass).
+#
+# Also sets $RULING_COMMENT_ID to the winning comment's own `id` — LEG 8's landing record
+# cites it (`ruling-comment: #<id>`) so check 35 rule 6 (ac-4y7l.31) can cross-reference the
+# ruling back to a real comment on the row, never a bare unverifiable claim.
 find_authorized_ruling() {
-  local comments_json raw_lines line actor humans_csv
-  RULING=""
+  local comments_json rows cid ctext actor humans_csv
+  RULING=""; RULING_COMMENT_ID=""
   comments_json=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null) || return 1
-  raw_lines=$(printf '%s' "$comments_json" | jq -r '.[].text // empty | split("\n")[0]' 2>/dev/null \
-    | grep -E '^DECISION \([^<)][^)]*\): \S')
-  [ -n "$raw_lines" ] || return 0
+  rows=$(printf '%s' "$comments_json" \
+    | jq -r '.[] | [(.id // ""), ((.text // "") | split("\n")[0])] | @tsv' 2>/dev/null)
+  [ -n "$rows" ] || return 0
   humans_csv=$(read_humans)
-  while IFS= read -r line; do
-    [ -n "$line" ] || continue
-    actor=$(printf '%s' "$line" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
+  while IFS=$'\t' read -r cid ctext; do
+    [ -n "$ctext" ] || continue
+    printf '%s' "$ctext" | grep -qE '^DECISION \([^<)][^)]*\): \S' || continue
+    actor=$(printf '%s' "$ctext" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
     [ -n "$actor" ] || continue
     if [ "$actor" = "ac-tidy" ]; then
       if has_label "pipeline-proposal" \
-         && printf '%s' "$line" | grep -qE '^DECISION \(ac-tidy\): moot([[:space:]]|$)'; then
-        RULING="$line"
+         && printf '%s' "$ctext" | grep -qE '^DECISION \(ac-tidy\): moot([[:space:]]|$)'; then
+        RULING="$ctext"; RULING_COMMENT_ID="$cid"
       fi
     elif human_is_authorized "$actor" "$humans_csv"; then
-      RULING="$line"
+      RULING="$ctext"; RULING_COMMENT_ID="$cid"
     fi
   done <<EOF
-$raw_lines
+$rows
 EOF
   return 0
 }
@@ -275,7 +280,7 @@ if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
   command -v "$BR" >/dev/null 2>&1 || not_checked "OWNERSHIP" "br unavailable — the ruling close cannot be verified"
   RULE_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
   RULE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  RULE_TEXT="GATE: decided — $BEAD — $REASON; ruling verified: $RULING (at $RULE_SHA by ${ACTOR:-<unattributed>} at $RULE_TS)"
+  RULE_TEXT="GATE: decided — $BEAD — $REASON; ruling verified: $RULING (ruling-comment: #${RULING_COMMENT_ID:-none}; at $RULE_SHA by ${ACTOR:-<unattributed>} at $RULE_TS)"
   # The landing record commits ATOMICALLY with the close via --transition-comment (br
   # 0.5.12) — no separate post-close write, so no post-close RECORD-FAILED can follow a
   # close that already landed.
@@ -369,6 +374,7 @@ rfield() { printf '%s\n' "$LAST" | grep -m1 "^$1:" | sed "s|^$1:[[:space:]]*||";
 
 RED_PROBE=$(rfield 'red-probe')
 RED_BEAD=$(rfield 'bead')
+RED_AT=$(rfield 'at')
 
 # THE FRESH-VERIFICATION CARVE-OUT (ac-close-gate-already-green-carveout-8r3o, extended by
 # run 20260907-exhaust): a bead with no usable claim-time receipt banks no temporal anchor,
@@ -684,22 +690,28 @@ fi
 # follow a close that already landed.
 LND_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LND_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Every branch below names its evidence in a shape check 35 rule 6 (ac-4y7l.31) can
+# cross-reference on the SAME row: `GATE: receipt` cites the flight receipt's own `at:`
+# stamp (`receipt-at:`); `GATE: decided` cites the ruling comment's id (`ruling-comment:
+# #<id>`, set above by find_authorized_ruling); the cascade and fresh-verify branches
+# self-cite the tree they verified (`tree: <sha>`) — there is no separate receipt to point
+# at in either case.
 if [ "$DISPOSITION_LEG" = "cascade" ]; then
   LND_LABEL="TRIAGE-CLOSE"
-  LND_TEXT="TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS; AC probes NOT all green, and a disposition close never claims a causal flip."
+  LND_TEXT="TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at (tree: $LND_SHA) by ${ACTOR:-<unattributed>} at $LND_TS; AC probes NOT all green, and a disposition close never claims a causal flip."
 elif [ "$FRESH_VERIFY" = 1 ]; then
   PER_PROBE=""
   for r in "${PROBE_RESULTS[@]:-}"; do
     [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
   done
   LND_LABEL="fresh-verify"
-  LND_TEXT="FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS — per-probe:$PER_PROBE"
+  LND_TEXT="FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at (tree: $LND_SHA) by ${ACTOR:-<unattributed>} at $LND_TS — per-probe:$PER_PROBE"
 else
   # The ordinary receipt-backed close (DISPOSITION=0) and a disposition close resolved on
   # its `green` leg with a usable receipt both write the same record — one text, covering
   # both.
   LND_LABEL="GATE: receipt"
-  LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
+  LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; receipt-at: ${RED_AT:-none}; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
 fi
 
 # The landing record says so: a scanner refusal that a human ruling overrode is named on the
