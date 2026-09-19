@@ -36,7 +36,7 @@ A file reservation can only protect between *distinct* identities. So:
 |---|---|
 | `ac-implement` conductor | claims batches at selection (`--assignee $AGENT_NAME`) — the claim-visibility anchor; holds no file reservations |
 | `ac-implement` child running as its **own full session** (holds the `mcp__mcp-agent-mail__*` tools) | the canonical contended writer — **mints its own name and reserves per bead**, commits to `main`; at `PARALLEL_WIDTH>1` several run concurrently in ONE shared checkout |
-| `ac-implement` child **spawned as a stance subagent** (researcher / implementer / validator) | **still a contended writer — it COMMITS.** The child **always mints its own identity** (via `macro_start_session`, or the session-identity path where the stance tools allow), and the conductor **reads the minted name back from the spawn response (`agent.name`)** — a pre-chosen name is a SPEC VIOLATION, § below, never a hint. The conductor holds reservations on its behalf when the child cannot (stance agents carry zero `mcp__*` tools). This is the spawn mode the pipeline uses most |
+| `ac-implement` child **spawned as a stance subagent** — **implementer only** (researcher/validator are read-only, never commit, and carry no Agent Mail tools — the writer boundary from § The principle) | **still a contended writer — it COMMITS.** The child **always mints its own identity** (via `macro_start_session`) and holds its own reservations directly — the implementer stance carries `file_reservation_paths`, `renew_file_reservations`, `release_file_reservations` and `send_message` — a pre-chosen name is a SPEC VIOLATION, § below, never a hint. The conductor never reads a name back from a spawn response: it builds its roster from agents **registered since the run started** (`resource://agents/{project_key}` filtered by `task_description`) and uses those names for its roster and its Layer-2 sweep. This is the spawn mode the pipeline uses most |
 | `ac-review` | its Phase-4 auto-fix implementer edits product code; Phase 6 commits + pushes (wiring: `ac-ycr.2`) |
 | batch boundary (fix-forward) | fix-forward edits code on red CI; minting also yields a real `registration_token` for the build slot (wiring: `ac-ycr.3`) |
 | plan-family skills (`ac-plan`, `ac-polish` plan modes) | already conform — mint + reserve their plan files |
@@ -73,9 +73,10 @@ distinct modes, and neither matches a "hand a pre-chosen name" contract:
 Mode 2 is decisive: silent replacement fires even with NO collision to detect, so a handed
 name is unreliable regardless of whether a token accompanies it. **A handed name is a SPEC
 VIOLATION, never a hint** — the ONLY legal identity path is child-mint, and the conductor
-reads the minted name back from the spawn response's `agent.name` for its roster and its
-Layer-2 sweep. A conductor that hands a name, records it, and later sweeps by that name
-sweeps a name that never existed.
+builds its roster from agents **registered since the run started**
+(`resource://agents/{project_key}` filtered by `task_description`), using those names for its
+roster and its Layer-2 sweep. A conductor that hands a name, records it, and later sweeps by
+that name sweeps a name that never existed.
 
 **The `settings.json` `AGENT_NAME` fallback is a separate contract:** it is the identity of
 the SESSION that has no conductor (chore commits, scheduled jobs) — **not a name to pass to
@@ -144,7 +145,7 @@ These are different axes; do not conflate them:
 | Layer | Who | When | Wiring |
 |---|---|---|---|
 | 1. **Self-deregister** | every Tier-1 minter, for its own name only | at its own session exit (implement Phase Final; review/boundary ceremony end; the conductor last, AFTER `ac-land` returns) | `ac-ycr.4` (ac-implement Phase Final + loop conductor); review/boundary self-deregister land with their own lifecycle wiring — `ac-ycr.2` / `ac-ycr.3` |
-| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity that actually **minted** — the names the conductor read back from each spawn's `agent.name`, § below); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
+| 2. **Roster sweep — reservations only** | `ac-land` | at loop exit — the Exit-Land prompt hands it the roster (loop name + every child identity that actually **minted** — the names the conductor queried from agents registered since the run started, § below); land runs `force_release_file_reservation` on the roster's stale holds — **but resolve the roster per § The sweep is NOT project-key-agnostic, never a per-name loop on one assumed key**. Identities are **not** retired here — see below | `ac-ycr.5` |
 | 3. **Stale sweep + TTL floor** | next run's conductor Phase 0 | catches runs that died before land — stale-**reservation** sweep only, same project-key-agnostic query as layer 2; reservation TTL (7200 s) is the absolute floor. There is **no identity TTL** | `ac-ycr.5` |
 
 Runtime-verified (`ac-ycr.8`): `retire_agent`/`deregister_agent` mark
@@ -171,10 +172,12 @@ shape for a teardown check. Ask the global question instead; then addressability
 anything:
 
 > **A stance-child name is a roster entry ONLY if it minted** (corollary of the Tier-1 stance-subagent
-> row): a name the conductor read back from the spawn's `agent.name` is real; a fabricated or
-> pre-chosen name never registered and holds no reservations, so it resolves in **zero** projects by
-> construction — put it on the roster and the loud failure below fires every run. The roster is the
-> set of names that **minted**; the conductor's own reservations already cover its children's files.
+> row): a name the conductor found among agents registered since the run started is real; a
+> fabricated or pre-chosen name never registered and holds no reservations, so it resolves in
+> **zero** projects by construction — put it on the roster and the loud failure below fires every
+> run. The roster is the set of names that **minted** and self-registered during the run; each
+> minted implementer child holds its own reservations directly, so the sweep exists to catch what
+> a dead child left behind, never to substitute for the child's own release.
 
 ```bash
 AM_DB="file:$HOME/mcp_agent_mail/storage.sqlite3?mode=ro"   # read-only; never write this store

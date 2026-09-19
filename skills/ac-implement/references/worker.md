@@ -26,6 +26,9 @@ name it returns. Never let the identity come from the static `AGENT_NAME` env: a
 fallback shadows the live session name, and the guard then compares your reservation's holder
 against the fallback and rejects your OWN commit as a foreign conflict. The live name is the
 identity; the env fallback is a trap that fails in the direction of looking like someone else.
+**If registration fails, do not fall back to the static `ac-<ts>-<pid>` form and keep going** —
+a worker under the fallback name is invisible to the roster's registered-since-run-start query,
+so its claims are orphans the sweep cannot see. Hand back immediately (§9), claiming nothing.
 
 Read the epic and the constitution (`skills/ac-pipeline/SKILL.md`) once. Do not re-read them
 per bead.
