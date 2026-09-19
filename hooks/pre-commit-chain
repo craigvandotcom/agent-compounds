@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# pre-commit-chain — the one runner installed as <git-common-dir>/hooks/pre-commit.
+#
+# Why it exists: every repo's pre-commit was a bare gitleaks script (installed 2026-09-10),
+# so nothing ran the entries in hooks.d/pre-commit/ — the registry's changed-scope lint
+# (60-ac-lint, check 35 included) never ran at commit time (ac-4y7l.20).
+#
+# It runs gitleaks exactly as before, then every executable entry in hooks.d/pre-commit/ in
+# name order. The first entry that fails refuses the commit. Installed by copy into each
+# repo; this file is the source of truth.
+set -uo pipefail
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --no-banner --staged --redact=100 . \
+    || { echo "pre-commit: gitleaks found a secret in the staged changes; commit blocked." >&2; exit 1; }
+fi
+
+CHAIN="$(git rev-parse --git-common-dir)/hooks/hooks.d/pre-commit"
+[ -d "$CHAIN" ] || exit 0
+for entry in "$CHAIN"/*; do
+  [ -f "$entry" ] && [ -x "$entry" ] || continue
+  "$entry" "$@" || { echo "pre-commit: $(basename "$entry") refused the commit." >&2; exit 1; }
+done
+exit 0

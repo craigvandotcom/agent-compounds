@@ -772,6 +772,7 @@ last_pass: 2026-09-07
 - stage: manual
 - status: open
 - control: untreated
+- receipt: 6db37ba (unreflected body-compass-app swarm session, 2026-09-18 — a worker's hand-back: diff-closure refused 6 comment and doc mentions of createAdminClient as undeclared callers)
 - proposed_fix: match callers on import or call syntax (`import … SYMBOL`, `SYMBOL(`), not on
   the bare word. Or report prose-only hits (comments, markdown) separately from refused callers.
 - narrative: `callers_of` in `diff-closure.sh` greps the symbol as a word. Typing an exported

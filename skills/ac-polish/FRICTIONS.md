@@ -835,7 +835,7 @@ last_pass: 2026-09-07
 
 ## prod-label-audit-misses-already-refined-beads
 - skills: [ac-polish, ac-implement]
-- impact: H
+- impact: L
 - frequency: rare
 - perceptibility: silent
 - recurrence: 1
