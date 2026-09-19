@@ -175,12 +175,16 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
 # decision bead whoever holds it. Every other `issue_type`/label combination falls through
 # to the unchanged leg 1-8 flow below.
 #
-# WHO MAY RULE (Craig's ruling on ac-4y7l.21, 2026-09-19): every no-probe close requires a
-# ruling signed by a human name on the canon's `Humans who rule:` line
-# (skills/beads-standards/reference/bead-conventions.md § Decision beads). The only
-# non-human ruling accepted is `DECISION (ac-tidy): moot` on a bead labelled
-# `pipeline-proposal`. Any other agent name is refused CLOSE-REFUSED DECISION. OUT:
-# verifying that the named human actually wrote the comment (plan risk R1).
+# WHO MAY RULE (Craig's ruling on ac-4y7l.21, 2026-09-19, list location per ac-4y7l.30): every
+# no-probe close requires a ruling signed by a name on the CLOSING BOARD's own `.beads/config.yaml`
+# `humans:` key (comma-separated; `<human>` in every template is copied VERBATIM from that
+# key — skills/beads-standards/reference/bead-conventions.md and
+# skills/ac-human/references/action-loop.md both point here, never restate the list). A board
+# with no key authorizes nobody — fail closed, not NOT-CHECKED: a missing/empty list is a
+# deterministic "nobody", the same as any other unlisted name. The only non-human ruling
+# accepted is the exact `DECISION (ac-tidy): moot` on a bead labelled `pipeline-proposal` — a
+# non-`moot` ac-tidy ruling is refused like any other unauthorized actor. OUT: verifying that
+# the named human actually wrote the comment (plan risk R1).
 # ---------------------------------------------------------------------------------------
 BEAD_TYPE=$(br_field "$BEAD" issue_type)
 BEAD_LABELS=$(br_call show "$BEAD" --json </dev/null \
@@ -188,51 +192,78 @@ BEAD_LABELS=$(br_call show "$BEAD" --json </dev/null \
   || not_checked "READ" "br_call show refused for $BEAD — the gate cannot verify this close"
 has_label() { case ",$BEAD_LABELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 
+# read_humans — the closing board's own `.beads/config.yaml` `humans:` key, raw (comma-
+# separated, untrimmed). A missing file or missing key prints nothing — fail closed, never an
+# error: "no key" IS "authorizes nobody" (Craig's ruling on ac-4y7l.30), not an unverifiable
+# state.
+read_humans() {
+  local cfg="$ROOT/.beads/config.yaml"
+  [ -f "$cfg" ] || return 0
+  grep -m1 '^humans:' "$cfg" | sed 's/^humans:[[:space:]]*//'
+}
+
+# human_is_authorized <actor> <humans-csv> — split the csv on commas; each entry is trimmed
+# of LEADING/TRAILING whitespace only, so a multi-word name ("Craig van Heerden") is compared
+# as one whole entry, never split on its own inner spaces.
+human_is_authorized() {
+  local actor entry
+  actor=$(printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  [ -n "$2" ] || return 1
+  local IFS=,
+  for entry in $2; do
+    entry=$(printf '%s' "$entry" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    [ "$entry" = "$actor" ] && return 0
+  done
+  return 1
+}
+
 # find_authorized_ruling — the ONE matcher for a recorded "DECISION (<actor>): ..." comment
-# signed by an authorized human (or the literal `DECISION (ac-tidy): moot` on a
+# signed by an authorized human (or the exact `DECISION (ac-tidy): moot` on a
 # `pipeline-proposal` bead). Sets $RULING to the authorized line, or empty when none is
 # found/authorized. Shared by the type-routed ruling path directly below AND LEG 6's
-# scanner-refusal override, so the two never drift apart — a fix to this matcher (ac-4y7l.25)
-# lands for both callers at once. A ruling is a comment's own FIRST LINE, at column 0, naming
-# an actor that is not a bare template placeholder (`<human>`) — this excludes both an
-# indented draft buried inside a longer note and an unfilled template quoted on a memo's
-# second line.
+# scanner-refusal override, so the two never drift apart. A ruling is a comment's own FIRST
+# LINE, at column 0, naming an actor that is not a bare template placeholder (`<human>`) —
+# this excludes both an indented draft buried inside a longer note and an unfilled template
+# quoted on a memo's second line.
+#
+# THE NEWEST AUTHORIZED RULING WINS: every DECISION-shaped first line across every comment is
+# checked, in board order (oldest first), and each authorized one OVERWRITES $RULING — so an
+# earlier `DECISION (agent)` never blocks a later valid human ruling, and between two human
+# rulings the newer one stands, never the first `grep -m1` hit found.
+#
 #   Return 0 — the comments read succeeded (RULING may still be empty: none was authorized).
 #   Return 1 — the comments read itself refused; the caller decides whether that is
 #              NOT-CHECKED (the type-routed path) or simply "no override" (LEG 6, which only
 #              ever narrows an existing refusal and never turns a refusal into a pass).
-#   Return 2 — a non-ac-tidy actor ruled but bead-conventions.md is missing, so the
-#              humans-who-rule list could not be read at all.
 find_authorized_ruling() {
-  local comments_json raw actor authorized=0 conv_file humans
+  local comments_json raw_lines line actor humans_csv
   RULING=""
   comments_json=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null) || return 1
-  raw=$(printf '%s' "$comments_json" | jq -r '.[].text // empty | split("\n")[0]' 2>/dev/null \
-    | grep -m1 -E '^DECISION \([^<)][^)]*\): \S')
-  [ -n "$raw" ] || return 0
-  actor=$(printf '%s' "$raw" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
-  if [ "$actor" = "ac-tidy" ]; then
-    has_label "pipeline-proposal" && authorized=1
-  else
-    conv_file="$ROOT/skills/beads-standards/reference/bead-conventions.md"
-    [ -f "$conv_file" ] || conv_file="$ROOT/.agents/skills/beads-standards/reference/bead-conventions.md"
-    if [ -f "$conv_file" ]; then
-      humans=$(grep -m1 '^Humans who rule:' "$conv_file" | sed 's/^Humans who rule:[[:space:]]*//')
-      case ",${humans// /}," in *",$actor,"*) authorized=1 ;; esac
-    else
-      return 2
+  raw_lines=$(printf '%s' "$comments_json" | jq -r '.[].text // empty | split("\n")[0]' 2>/dev/null \
+    | grep -E '^DECISION \([^<)][^)]*\): \S')
+  [ -n "$raw_lines" ] || return 0
+  humans_csv=$(read_humans)
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    actor=$(printf '%s' "$line" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
+    [ -n "$actor" ] || continue
+    if [ "$actor" = "ac-tidy" ]; then
+      if has_label "pipeline-proposal" \
+         && printf '%s' "$line" | grep -qE '^DECISION \(ac-tidy\): moot([[:space:]]|$)'; then
+        RULING="$line"
+      fi
+    elif human_is_authorized "$actor" "$humans_csv"; then
+      RULING="$line"
     fi
-  fi
-  [ "$authorized" = 1 ] && RULING="$raw"
+  done <<EOF
+$raw_lines
+EOF
   return 0
 }
 
 if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
-  find_authorized_ruling; FR_RC=$?
-  case "$FR_RC" in
-    1) not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified" ;;
-    2) not_checked "DECISION" "bead-conventions.md missing — the humans-who-rule list cannot be read" ;;
-  esac
+  find_authorized_ruling \
+    || not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
   if [ -z "$RULING" ]; then
     echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment on $BEAD is both a real ruling (first line, column 0, no placeholder actor) and signed by an authorized human — or ac-tidy on a pipeline-proposal bead — a ruling must be recorded before this bead can close" >&2
     exit 1

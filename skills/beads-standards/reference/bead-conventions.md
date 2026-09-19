@@ -223,12 +223,15 @@ contract plus useful pointers, not prophecy dressed as fact.
 
 ## Decision beads (the human-gate contract)
 
-Humans who rule: Craig
-
-The line above, in this exact form, is the sole authority `close-gate.sh`
-(`skills/ac-implement/scripts/close-gate.sh`) reads for who may sign a
-`DECISION (<actor>): ...` ruling comment. The sole non-human exception is
-`DECISION (ac-tidy): moot` on a bead labelled `pipeline-proposal`; any other agent name is
+Who may rule: the closing board's own `.beads/config.yaml` `humans:` key
+(comma-separated names) — that key, read live by `close-gate.sh`
+(`skills/ac-implement/scripts/close-gate.sh`) from the board it closes on, is
+the sole authority for who may sign a `DECISION (<actor>): ...` ruling
+comment; `<human>` in every template (here and in
+`skills/ac-human/references/action-loop.md`) is copied VERBATIM from that
+key, never restated by hand. A board with no `humans:` key authorizes
+nobody — fail closed. The sole non-human exception is `DECISION (ac-tidy):
+moot` on a bead labelled `pipeline-proposal`; any other agent name is
 refused CLOSE-REFUSED DECISION.
 
 The contract that keeps autonomous sweeps safe:

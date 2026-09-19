@@ -223,7 +223,11 @@ close. Closure requires a recorded human decision, then the agent executes the
 consequences and closes:
 
 ```bash
-br comments add bd-mf9k1 -m "DECISION (operator): option (a), OneSignal. Free tier is
+# "Jordan" here is a stand-in for whichever name is actually on the closing board's own
+# `.beads/config.yaml` `humans:` key (bead-conventions.md § Decision beads) — copied
+# VERBATIM from that key, never a role like "operator", which the gate refuses because
+# it names nobody on that key.
+br comments add bd-mf9k1 -m "DECISION (Jordan): option (a), OneSignal. Free tier is
 fine at this scale, revisit if we outgrow it."
 # ... agent implements the consequence, then close through the gate (the ruling idiom
 # fenced once at skills/ac-human/references/action-loop.md — never a bare `br close`).
