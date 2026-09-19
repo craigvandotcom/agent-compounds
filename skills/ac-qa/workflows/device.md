@@ -32,11 +32,15 @@ commands, so the structure (layers, checklist, journey reuse) carries over.
 
 ## Platform Gate (read first)
 
-**Everything here requires macOS** (Xcode + simulators). Check before doing
-anything: `uname` → if not `Darwin`, **stop** — write `$ARTIFACTS_DIR/unverified_tiers.txt`
-(shape: qa-shared.md § non-run artifact), report simulator QA needs a Mac session,
-hand off (ac-61zh.1). Remote Linux→Mac driving (idb gRPC) exists but is
-friction-prone — see `references/setup.md` appendix; don't attempt it ad hoc.
+**Simulators need macOS** (Xcode). Resolve the host before anything else:
+
+1. `uname` = `Darwin` → run here.
+2. Otherwise, if the deployment's CORE names a macOS host (its machines reference), probe it:
+   `ssh -o BatchMode=yes -o ConnectTimeout=5 <host> true`. Exit 0 → run every step on that
+   host over SSH — `references/setup.md` § Remote macOS host.
+3. No host, or the probe fails → never wait or ask. Write `$ARTIFACTS_DIR/unverified_tiers.txt`
+   (shape: qa-shared.md § non-run artifact), file a bead labelled `needs-device` whose
+   `## Delivers` names the native paths, report `mac-needed`.
 
 ## Layered QA model — what to test where
 
