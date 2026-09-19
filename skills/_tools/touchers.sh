@@ -64,8 +64,33 @@ _touchers_globs() {
 # The stem is the last TWO path segments with the extension dropped — narrow enough that
 # `foods` does not match every food in the tree, wide enough to catch an import written as
 # `../db/foods`.
+#
+# EXCEPT when that second segment is a GENERIC CONTAINER (`src`, `lib`, `test`, …), which in a
+# workspace makes the stem collide with every package at once: `packages/ledger/src/event.ts`
+# and `apps/worker/src/event.ts` both yield `src/event`, and `src/index` matched 141 files
+# repo-wide. Measured 2026-09-19 in an easy-mode swarm: a bead's declared count moved whenever
+# ANY sibling touched a same-named file in ANY package, bouncing it PREMISE-FAILED: STALE-STAMP
+# on work it had nothing to do with. Three bounces on two beads in one run, all spurious.
+# So a generic container inside `packages/<x>/` or `apps/<x>/` takes the workspace name too:
+# `ledger/src/event` (9 files), `control-plane/src/index` (16) instead of `src/index` (141).
+#
+# This does NOT fix the opposite skew. A file with a DISTINCTIVE basename imported relatively
+# (`../vocabulary.ts`) is missed by the two-segment stem entirely — `src/vocabulary` saw 17
+# where the real caller set was 119 — and diff-closure.sh then refuses [unowned-callers] on
+# callers the bead could not have known to declare. That case still needs a hand-widened
+# command in the bead; the escape hatch is that `touchers_check` re-runs the DECLARED command,
+# so an author may write a better one than this heuristic derives.
 _touchers_stem() {
-  printf '%s' "$1" | awk -F/ '{ s=$NF; sub(/\.[^.]*$/, "", s); if (NF>1) s=$(NF-1) "/" s; print s }'
+  printf '%s' "$1" | awk -F/ '{
+    s = $NF; sub(/\.[^.]*$/, "", s)
+    if (NF > 1) {
+      parent = $(NF-1)
+      s = parent "/" s
+      generic = (parent == "src" || parent == "lib" || parent == "test" || parent == "tests" || parent == "dist")
+      if (generic && NF > 2 && ($1 == "packages" || $1 == "apps")) s = $2 "/" s
+    }
+    print s
+  }'
 }
 
 # The command a bead pastes: the gate's shape, rooted at `.` so it runs from the repo root.
