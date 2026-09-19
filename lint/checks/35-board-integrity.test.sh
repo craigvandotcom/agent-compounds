@@ -254,20 +254,24 @@ rc=$(run_check "$t")
 [ "$rc" -eq 0 ] && ok "a cascade close passes rule 6" \
   || bad "landing-cascade: expected exit 0, rc=$rc out=$(cat "$OUT")"
 
-# --- GREEN: identity is by id, never position — a legacy comment sorted after a new
-# --- one (a same-second created_at tie can reorder) is still recognized as legacy ---
+# --- GREEN: identity is by id, never position — a new comment sorted before a legacy
+# --- receipt (a same-second created_at tie can reorder) is still recognized correctly.
+# --- A naive "the last comment is the new one" positional slice would misjudge here: the
+# --- true new comment (id 13) sits FIRST, so a positional slice would instead flag the
+# --- LAST comment (id 11, legacy and malformed) as new and go RED — the case only stays
+# --- green under identity-by-id.
 t="$WORK/comment-identity-not-position"
 LEGACY_REORDER_HEAD='{"id":"ac-reorder","status":"open","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual"],"title":"legacy comment reordered","comments":[{"id":11,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"},{"id":12,"issue_id":"ac-reorder","author":"x","text":"GATE: receipt — ac-reorder — RED probe: true; reason: shipped","created_at":"2026-08-20T10:02:00Z"}]}'
 git_board "$t" "$OPEN_TAGGED" "$LEGACY_REORDER_HEAD"
-# staged: the two HEAD comments come back in the OPPOSITE order (simulating a same-second
-# tie resort by br) plus one genuinely new comment appended after them
-REORDER_STAGED='{"id":"ac-reorder","status":"open","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual","touched-this-commit"],"title":"legacy comment reordered","comments":[{"id":12,"issue_id":"ac-reorder","author":"x","text":"GATE: receipt — ac-reorder — RED probe: true; reason: shipped","created_at":"2026-08-20T10:02:00Z"},{"id":11,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"},{"id":13,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-20T10:03:00Z"}]}'
+# staged: the genuinely new canon comment (id 13) is sorted BEFORE the two legacy HEAD
+# comments, which also come back reordered (simulating a same-second tie resort by br)
+REORDER_STAGED='{"id":"ac-reorder","status":"open","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual","touched-this-commit"],"title":"legacy comment reordered","comments":[{"id":13,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-20T10:03:00Z"},{"id":12,"issue_id":"ac-reorder","author":"x","text":"GATE: receipt — ac-reorder — RED probe: true; reason: shipped","created_at":"2026-08-20T10:02:00Z"},{"id":11,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$REORDER_STAGED" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")
 # id=11's malformed WORKER: text is legacy (present at HEAD, just reordered) and must
 # NEVER be re-judged — only id=13 is new, and it is canon-shaped, so this is GREEN
-[ "$rc" -eq 0 ] && ok "a legacy receipt sorted after a new comment is not re-judged (identity by id, never position)" \
+[ "$rc" -eq 0 ] && ok "a new comment sorted before a legacy receipt is not misjudged (identity by id, never position)" \
   || bad "comment-identity-not-position: expected exit 0, rc=$rc out=$(cat "$OUT")"
 
 # --- NOT-GATED: empty board and missing board ----------------------------------
