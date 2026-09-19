@@ -159,11 +159,9 @@ fix NOT yet applied — so the receipt anchors that stronger moment. **Never run
 after the fix is in the tree**: its probe is green, so it refuses `PREMISE-FAILED: RED`, prefixes
 the title and unclaims the bead you just finished, and only the coordinator can recover it
 (measured five times in one run, 2026-09-13). Once the fix is applied, the next gate is §5, not §3.
-The re-run no longer re-gates the `refined` stamp: once a receipt exists, flight-check treats the
-invocation as a re-run and says so. It used to re-check the stamp against a tree you had already
-begun changing — and the harness this very step told you to write is a new referrer, so a
-sibling `touchers:` count moved and bounced you STALE-STAMP for obeying (measured 2026-09-19,
-twice on one bead, the second time discarding finished work into a stash). Nothing refuses you if you skip it — `close-gate` stopped hash-locking the test — but
+The re-run does NOT re-gate the `refined` stamp — once a receipt exists the stamp leg steps
+aside and says so. The stamp is a claim-time premise; the harness you were just told to write
+is a new referrer, so re-gating would bounce you STALE-STAMP for obeying this step. Nothing refuses you if you skip it — `close-gate` stopped hash-locking the test — but
 ac-review reads the diff against the receipt for causal sufficiency, and "the file did not
 exist yet" is the weakest possible answer to what the diff caused.
 
