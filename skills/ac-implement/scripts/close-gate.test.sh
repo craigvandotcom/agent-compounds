@@ -140,6 +140,31 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
   exit1-summary) echo "UBS Meta-Runner"; echo "Files scanned: $n"
             echo "   Location: /tmp/x.py:2:11"
             echo "Files: $n"; echo "Critical: 2"; echo "Warning: 1"; echo "Info: 1"; exit 1 ;;
+  content)  # reads each arg file for '# UBS-FINDING: <token>' lines and emits one DETAIL
+            # line per token found, at the token's REAL line number in that invocation's
+            # copy of the file — this is what lets a baseline (base-tree) run and a HEAD
+            # run of the SAME logical finding disagree on line number while agreeing on
+            # everything else, so the scanner-leg's baseline diff has something real to
+            # match by rule+text and reject by line number.
+            echo "UBS Meta-Runner"
+            total=0
+            for f in "$@"; do
+              total=$((total+1))
+              ln=0
+              while IFS= read -r line || [ -n "$line" ]; do
+                ln=$((ln+1))
+                case "$line" in
+                  *'# UBS-FINDING:'*)
+                    tok="${line#*# UBS-FINDING:}"
+                    tok="$(printf '%s' "$tok" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+                    echo "   $f:$ln:1  finding $tok present — rule.$tok"
+                    ;;
+                esac
+              done < "$f"
+            done
+            echo "Files scanned: $total"
+            echo "Files: $total"; echo "Critical: 0"; echo "Warning: 0"; echo "Info: 0"
+            exit 0 ;;
 esac
 MOCKUBS
 chmod +x "$MOCK_BIN/ubs"
@@ -863,6 +888,87 @@ else fail "AC4 empty argv: rc=$GATE_RC out=$out"; fi
 if grep -q 'NOT-CHECKED' "$GATE"; then
   pass "AC4: the gate carries the NOT-CHECKED verdict"
 else fail "AC4: the gate never emits NOT-CHECKED"; fi
+
+# ============================================================================================
+# AC 4b — the scanner leg's baseline diff (ac-4y7l.23): a pre-existing ubs finding does not
+# refuse a close, and a new one still does. A REAL git repo backs these two cases — the
+# receipt's own `tree:` field is the baseline, read by the gate exactly as flight-check
+# wrote it, never hand-forged.
+# ============================================================================================
+if command -v git >/dev/null 2>&1; then
+
+mkcase_scanbase() { # <name> — a fixture whose base COMMIT carries one ubs finding (OLD1)
+  local root="$WORKDIR/$1"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
+  cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  ( cd "$root" && git init -q && git config user.email t@t.co && git config user.name t )
+  printf 'line1\n# UBS-FINDING: OLD1\nline3\n' >"$root/subject.txt"
+  ( cd "$root" && git add subject.txt && git commit -qm base )
+  cat >"$root/body.md" <<'BODY'
+## Acceptance Criteria
+- the subject file exists.
+  Probe: `test -f subject.txt` — tier: none
+- the harness passes.
+  Probe: `test -x harness.test.sh && bash harness.test.sh` — tier: none
+
+## Delivers
+- artifact: subject.txt
+- harness: harness.test.sh
+
+## Consumes
+- none
+BODY
+  echo "$root"
+}
+
+# Case A: the diff moves OLD1 to a different line (proving the match ignores line number)
+# and adds no new finding. Pre-existing alone must NOT refuse the close.
+R="$(mkcase_scanbase scan-baseline-preexisting)"
+write_harness "$R"
+board "$R" in_progress worker
+fly "$R"
+printf 'shifted\nline1\nline3\n# UBS-FINDING: OLD1\nFIXED\n' >"$R/subject.txt"
+out="$(AC2_TEST_UBS_MODE=content gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'pre-existing ubs finding'; then
+  pass "AC4b: a pre-existing ubs finding does not refuse a close — matched by rule+text at a moved line, against the flight receipt's own tree"
+else fail "AC4b preexisting: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC4b: the pre-existing-only close landed"
+else fail "AC4b: the pre-existing-only close did not land"; fi
+
+# Case B: same base, but the diff keeps OLD1 AND introduces NEW1 — a real new finding still
+# refuses, and the refusal names both counts.
+R="$(mkcase_scanbase scan-baseline-newfinding)"
+write_harness "$R"
+board "$R" in_progress worker
+fly "$R"
+printf 'line1\n# UBS-FINDING: OLD1\nline3\nFIXED\n# UBS-FINDING: NEW1\n' >"$R/subject.txt"
+out="$(AC2_TEST_UBS_MODE=content gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s' "$out" | grep -q '1 new finding' && printf '%s' "$out" | grep -q '1 pre-existing finding'; then
+  pass "AC4b: a genuinely new ubs finding still refuses, alongside the pre-existing one that does not"
+else fail "AC4b new: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4b: the refused new-finding close leaves the bead unclosed"
+else fail "AC4b new: the bead did not stay unclosed"; fi
+
+# Case C: same finding, but the fixture is the plain non-git shape every other AC4 fixture
+# uses (no receipt-usable tree) — with no baseline to consult, the finding counts new and
+# refuses, exactly the pre-ac-4y7l.23 behavior. Never a narrower refusal than before.
+R="$(mk_green scan-baseline-unusable)"
+printf 'line1\n# UBS-FINDING: OLD1\nline3\nFIXED\n' >"$R/subject.txt"
+out="$(AC2_TEST_UBS_MODE=content gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s' "$out" | grep -qi 'unusable'; then
+  pass "AC4b: with no usable baseline tree at all, every finding counts new and the close refuses (unchanged pre-ac-4y7l.23 behavior)"
+else fail "AC4b unusable baseline: rc=$GATE_RC out=$out"; fi
+
+else
+  pass "AC4b: git unavailable — baseline-diff cases skipped (the rest of the suite does not need git)"
+fi
 
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED

@@ -528,6 +528,14 @@ echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $AS
 # LEG 6 — SCANNER. Only on non-empty argv, and it asserts scanned-equals-passed by reading
 # the DETAIL lines, never the summary counter: ubs's summary counts CATEGORIES CHECKED, not
 # findings, and it silently drops every language it has no scanner for.
+#
+# A finding present at BOTH the flight receipt's own tree and HEAD is PRE-EXISTING — this
+# bead inherited it, did not cause it, and it does not refuse the close. Only a finding that
+# is at HEAD and absent at the base refuses (skills/ac-pipeline/FRICTIONS.md,
+# scanner-leg-has-no-baseline). Findings are matched by RULE + CODE TEXT, never by line
+# number (a line can shift for reasons unrelated to this bead's own edit). A scanned file
+# that does not exist at the base tree has no baseline at all, so every one of its findings
+# counts as new — the same rule a brand-new file gets.
 # ---------------------------------------------------------------------------------------
 if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   command -v ubs >/dev/null 2>&1 \
@@ -556,9 +564,94 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
   SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
   SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] && [ "${SUM_WARN:-0}" -eq 0 ] && [ "${SUM_INFO:-0}" -eq 0 ] \
-    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}/Warning ${SUM_WARN:-0}/Info ${SUM_INFO:-0}) over ${#SCAN_FILES[@]} scanned file(s)"
-  echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
+
+  if [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] && [ "${SUM_WARN:-0}" -eq 0 ] && [ "${SUM_INFO:-0}" -eq 0 ]; then
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
+  else
+    # BASELINE — the flight receipt's own tree, read from the SAME parsed receipt LEG 1
+    # already read ($LAST/rfield). No usable tree (missing receipt, 'no-git', or a sha this
+    # repo cannot resolve) means no baseline exists AT ALL: every finding counts new, which
+    # is the pre-existing behavior this leg had before this AC — a strict superset, never a
+    # narrower refusal.
+    BASE_TREE=$(rfield 'tree')
+    BASE_USABLE=0
+    if [ -n "$BASE_TREE" ] && [ "$BASE_TREE" != "no-git" ] \
+       && git cat-file -e "${BASE_TREE}^{commit}" 2>/dev/null; then
+      BASE_USABLE=1
+    fi
+
+    # sig_of — the comparison key: RULE + CODE TEXT, never the line[:col] locator. Splits
+    # the DETAIL line's first token (path:line or path:line:col) on ':' rather than a
+    # greedy regex — a greedy `[^[:space:]]+:[0-9]+(:[0-9]+)?` mis-assigns the line number
+    # into the path group under POSIX ERE's leftmost-longest rule (measured here). The path
+    # stays IN the signature so two files cannot collide on the same message text.
+    sig_of() {
+      awk '{
+        n = split($1, a, ":")
+        if (n == 2 && a[2] ~ /^[0-9]+$/) { loc = a[1] }
+        else if (n == 3 && a[2] ~ /^[0-9]+$/ && a[3] ~ /^[0-9]+$/) { loc = a[1] }
+        else { next }
+        msg = ""
+        for (i = 2; i <= NF; i++) { msg = msg (i > 2 ? " " : "") $i }
+        if (msg != "") print loc " :: " msg
+      }'
+    }
+    HEAD_SIGS=$(printf '%s\n' "$SCAN_OUT" | sig_of)
+    HEAD_COUNT=$(printf '%s\n' "$HEAD_SIGS" | grep -c '[^[:space:]]' || true)
+
+    SCRATCH=""
+    trap 'rm -f "$BODY" "$ASSERT_OUT"; [ -n "$SCRATCH" ] && rm -rf "$SCRATCH"' EXIT
+    BASE_SIGS=""
+    if [ "$BASE_USABLE" = 1 ]; then
+      SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/ac-close-scan-base.XXXXXX") || SCRATCH=""
+      if [ -n "$SCRATCH" ]; then
+        BASE_REL_FILES=()
+        for f in "${SCAN_FILES[@]}"; do
+          d=$(dirname "$f")
+          [ "$d" = "." ] || mkdir -p "$SCRATCH/$d" 2>/dev/null
+          # A file absent at the base tree (new file, or `git show` refuses) gets no entry
+          # here — it is simply never in BASE_REL_FILES, so it has no baseline scan at all
+          # and every one of its HEAD findings falls out of the sig match below as new.
+          git show "${BASE_TREE}:${f}" >"$SCRATCH/$f" 2>/dev/null && BASE_REL_FILES+=("$f")
+        done
+        if [ "${#BASE_REL_FILES[@]}" -gt 0 ]; then
+          BASE_OUT=$(cd "$SCRATCH" && ubs "${BASE_REL_FILES[@]}" 2>&1)
+          BASE_SIGS=$(printf '%s\n' "$BASE_OUT" | sig_of)
+        fi
+      fi
+    fi
+
+    NEW_COUNT=0
+    PRE_COUNT=0
+    if [ -n "$HEAD_SIGS" ]; then
+      while IFS= read -r s; do
+        [ -n "$s" ] || continue
+        if [ -n "$BASE_SIGS" ] && printf '%s\n' "$BASE_SIGS" | grep -qxF "$s"; then
+          PRE_COUNT=$(( PRE_COUNT + 1 ))
+        else
+          NEW_COUNT=$(( NEW_COUNT + 1 ))
+        fi
+      done <<EOF
+$HEAD_SIGS
+EOF
+    fi
+    # A finding ubs reports only in its Combined Summary counters (the DETAIL regex misses
+    # some shapes, e.g. bandit's `Location:` lines) cannot be matched to any baseline
+    # signature at all — it is conservatively counted new. The pre-existing rescue is a
+    # narrow carve-out on findings this leg CAN identify, never a blind spot on the ones it
+    # cannot.
+    SUM_TOTAL=$(( ${SUM_CRIT:-0} + ${SUM_WARN:-0} + ${SUM_INFO:-0} ))
+    if [ "$SUM_TOTAL" -gt "$HEAD_COUNT" ]; then
+      NEW_COUNT=$(( NEW_COUNT + (SUM_TOTAL - HEAD_COUNT) ))
+    fi
+
+    BASE_NOTE="unusable — no resolvable receipt tree, so every finding counts new"
+    [ "$BASE_USABLE" = 1 ] && BASE_NOTE="${BASE_TREE:0:12}"
+    if [ "$NEW_COUNT" -gt 0 ]; then
+      refuse "SCANNER" "ubs exit $SCAN_RC with $NEW_COUNT new finding(s) and $PRE_COUNT pre-existing finding(s) over ${#SCAN_FILES[@]} scanned file(s) (baseline: $BASE_NOTE)"
+    fi
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, $PRE_COUNT pre-existing ubs finding(s) rescued (baseline: $BASE_NOTE), 0 new"
+  fi
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
 fi
