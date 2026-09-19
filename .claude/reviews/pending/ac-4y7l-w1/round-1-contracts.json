@@ -1,0 +1,67 @@
+{
+  "reviewer": "contracts",
+  "round": 1,
+  "payload_read": "git diff 2e14a91..dfab85f",
+  "findings": [
+    {
+      "title": "Roster orphan sweep reads .issue.assignee, a field br coordination status never emits, so the ORPHANS refusal can never fire on a real claim",
+      "severity": "Critical",
+      "file": "skills/ac-implement/scripts/coordinator.sh",
+      "line": 121,
+      "category": "stub-in-production",
+      "evidence": "Promise (header lines 34-38, ac-implement/SKILL.md:61-63): the sweep keeps an in_progress claim whose assignee exactly matches a --actor roster member and refuses ORPHANS. Reality: br 0.5.12 `br coordination status --json` puts the holder at `.claims[].assessment.assignee`; `.issue` carries id/title/status/labels/latest_comments and NO assignee (live: ac-pf6n -> issue.assignee null, assessment.assignee 'ac-20260916-172808-148122'). The selector `(.issue.assignee? // \"\") as $a | select($roster | index($a))` therefore always tests \"\" against the roster. Reproduced: `coordinator.sh --run probe --actor ac-20260916-172808-148122 --dry-run` exits 0 with 'both refusals held' while that actor holds in_progress ac-pf6n. The test mock (coordinator.test.sh:117) invents `{\"issue\":{...,\"assignee\":\"Cave\"}}`, so 19/19 pass against a shape prod never produces. The code is wrong; the documented intent is right. The pre-diff prefix selector had the same defect, but this diff rewrote exactly this line and re-stated its promise.",
+      "fix": "Select on `(.assessment.assignee? // .issue.assignee? // \"\")`; change coordinator.test.sh's CLAIM fixture to the real shape (assignee under .assessment, none under .issue) and add a case that captures a live `br coordination status --json` sample as the fixture so a schema drift fails the test.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Check 35 WORKER rule relitigates the past: every legacy receipt on a touched bead goes RED, contradicting the no-backfill ruling",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 172,
+      "category": "contract-drift",
+      "evidence": "Promise (bead ac-4y7l.1 and docstring lines 35-39): staged-lane only, 'no backfill by doctrine', 'the past is not relitigated'. Reality: for any changed id the loop checks ALL of that row's comments, not the comments this commit added, and WORKER_RE anchors `$` on the whole stripped text. The live ledger holds 122 WORKER: comments that fail the regex: old four-field receipts (ac-07v, ac-08k), prefix reuse ('WORKER: diff-closure REFUSED', ac-1p7j.23), and canon-grammar receipts followed by note lines (ac-1p7j.25, ac-1p7j.26). body-compass-app holds 499 four-field receipts. Reproduced in a scratch repo: adding one label to closed ac-1p7j.25 and staging makes check 35 exit 1 ('malformed WORKER receipt is RED'). A committer cannot fix that, because comments are append-only, so a routine ac-tidy label repair or a reopen of an old bead blocks the ledger commit. The bead's intent (shape-check new receipts, no backfill) is right; the code is wrong.",
+      "fix": "Diff comments by comment id against HEAD's row and check only the newly added ones. Match the grammar on the first line only (`WORKER_RE.match(stripped.splitlines()[0])`) or document that a receipt must be single-line. Add a test with a touched legacy bead that carries an old-grammar receipt, expected GREEN, and one with a multi-line canon receipt.",
+      "auto_fixable": true
+    },
+    {
+      "title": "qa-blocker bullet now says 'use the blocked status' to mark a bead blocked, contradicting the canon's own blocks-edge rule and the blocked row's semantics",
+      "severity": "Medium",
+      "file": "skills/beads-standards/SKILL.md",
+      "line": 292,
+      "category": "contract-drift",
+      "evidence": "The bead told the implementer only to delete the parenthetical '(There is no `blocked` status.)'. The diff also rewrote the guidance from 'use a `blocks` dependency' to 'use the `blocked` status'. That contradicts three places: the same file line 120 (a hold waiting on work is 'an open `blocks` edge'), line 163 (`blocked` = 'parked after repeated failure, needs a human', not waiting on work), and reference/bead-conventions.md:54 ('For a single bead, use a `blocks` dependency — never this label'). An agent that follows line 292 sets status for a dependency wait, which drops the edge that bv/br sequencing reads. The pre-edit guidance was right; the diff overreached its bead scope.",
+      "fix": "Restore 'To mark a single bead waiting on other work, use a `blocks` dependency — never this label' and drop only the stale parenthetical, as ac-4y7l.1 specified.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Canon says tree= is 'the tree SHA' and the skills-eval before/after axis; the producer writes the consumer repo's short commit SHA",
+      "severity": "Medium",
+      "file": "skills/beads-standards/SKILL.md",
+      "line": 268,
+      "category": "doc-mismatch",
+      "evidence": "Canon (lines 265-270): `tree=<tree-sha>`, 'tree (the tree SHA at close) is the skills-eval before/after axis — it lets a doctrine change be measured'. Producer (ac-implement/references/worker.md:243): `$(git rev-parse --short HEAD)`, which is a commit SHA, not a tree SHA, taken from the repo the worker runs in. In a consumer app (body-compass-app etc.) skills are symlinked from agent-compounds, so the app's HEAD carries no information about the doctrine version. The rationale was carried over from the deleted `skill@version` (the agent-compounds SHA at skill-load) and attached to a field that cannot support it. The code's value is the honest one; the canon's claim is wrong.",
+      "fix": "Reword to `tree=<short commit SHA of the working repo at close>` and drop the skills-eval-axis claim, or make the producer stamp the agent-compounds SHA (`git -C \"$(dirname \"$(readlink -f skills/ac-implement)\")\" rev-parse --short HEAD`) and say so.",
+      "auto_fixable": true
+    },
+    {
+      "title": "'Empty roster is NOT-GATED unconditionally' is bypassed by --actor \"\", which selects every unassigned-looking claim; a trailing --actor hangs forever",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/coordinator.sh",
+      "line": 57,
+      "category": "lying-signature",
+      "evidence": "Header lines 35-38 promise an empty roster is NOT-GATED unconditionally. `--actor)  ACTORS+=(\"${2:-}\"); shift 2` accepts an empty name, so `--actor \"$NAME\"` with a failed Phase-1 capture yields ACTORS=(\"\"), which passes the `${#ACTORS[@]} -gt 0` gate. Combined with the .issue.assignee null read, roster [\"\"] matches every in_progress claim. Reproduced: `--run x --actor \"\" --dry-run` refused ORPHANS on ac-pf6n, which belongs to a different actor. A bare trailing `--actor` makes `shift 2` fail without shifting, so the loop spins forever (`timeout 5 ... --run x --actor` -> rc=124). The documented intent is right; the parser is wrong.",
+      "fix": "In the --actor arm: `[ -n \"${2:-}\" ] || { echo \"NOT-GATED: --actor needs a non-empty name\" >&2; exit 2; }` before the append (the same guard fixes the shift-2 hang for this flag; apply it to --run/--root too). Add coordinator.test.sh cases for `--actor \"\"` and a trailing `--actor`, both expected rc 2.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Check 35 docstring still says closed beads are NEVER scanned and describes rule 4 as 'either status', but rules 4 and 5 now scan closed rows",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 39,
+      "category": "doc-mismatch",
+      "evidence": "Line 39: 'Closed beads are NEVER scanned — forward-only, no backfill'. Line 31: rule 4 applies to 'ANY row (either status...)', wording left over from a two-status world, while the canon set now has six. Lines 47-48 list the commit-scoped per-bead FORMAT rules as '(origin: label, Probe: line)' and omit the new WORKER rule, which is also commit-scoped. The code (lines 166-179) now checks status and WORKER receipts on closed, blocked, deferred and tombstone rows. The code matches the bead; the docstring is stale.",
+      "fix": "Line 39 -> 'Closed beads are never scanned for the origin/probe rules (3)'. Line 31 -> 'ANY row, whatever its status, both lanes'. Add the WORKER receipt to the commit-scoped rule list at line 47.",
+      "auto_fixable": true
+    }
+  ]
+}

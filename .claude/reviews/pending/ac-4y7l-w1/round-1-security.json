@@ -1,0 +1,57 @@
+{
+  "reviewer": "security",
+  "round": 1,
+  "payload_read": "git diff 2e14a91..dfab85f",
+  "findings": [
+    {
+      "title": "Capture guard is bypassed whole by a glued shell separator (`cd /tmp; br create ...`)",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 191,
+      "category": "parser-bypass",
+      "evidence": "Actor: any agent, subagents included, that composes a Bash command. Entry point: tool_input.command. commands() splits only on a CONTROL token that stands alone, and newlines_to_separators() pads only newline, backtick, ( and ), never ; & |. shlex.split('cd /tmp; br create x') returns ['cd','/tmp;','br','create','x']: the `;` is glued to the previous word, so the create is never in command position. Verified by running the hook: `true; br create x -t task -l \"origin:x,refined\"` exits 0, as do `cd /tmp; br create ...` and `true&&br create ...`, while the space-padded `true && br create ...` exits 2. What the agent gets: every axis fails open at once, including the refusal this diff adds (refined at create), origin, readiness, probe, impact and the subagent refusal (a subagent's `echo '}'; br create x` exits 0 even with agent_id set). This predates the diff (00e2ca4), but it falsifies the premise of ac-4y7l.2 that the guard is 'the one place this rule cannot be dodged'. check 35 does not backstop readiness or `refined` at all. The test suite covers only the space-padded ` ; ` and ` && ` forms (test.py lines 22, 38).",
+      "fix": "Tokenize with shlex.shlex(command, posix=True, punctuation_chars=True) and whitespace_split=True, so that ; & | && || come out as separate tokens. Or pad unquoted ; & | in newlines_to_separators() the way ( and ) are padded now. Add BLOCK cases for `cd /tmp; br create \"y\" -t task`, `true;br create ...`, `true&&br create ...` and `a|br create ...`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "`refined` is dropped from the readiness allowlist but never refused, so four create shapes still stamp it",
+      "severity": "High",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 76,
+      "category": "fail-open-gate",
+      "evidence": "Actor: a conductor or agent filing a bead that wants it to skip the refine pass. The diff only removes 'refined' from READINESS, and has_readiness() (line 353) is any-of, so `refined` is merely not counted. It is never refused. Verified exit 0 through the hook: (a) `-l \"origin:x,unrefined,refined\"`; (b) `-l origin:x,unrefined -l refined`; (c) no `-t` flag: bead_type() returns None and line 430 skips readiness AND probe, yet a disposable br board confirmed `br create \"x\" -l \"origin:x,refined\"` yields issue_type=task, labels [origin:x, refined], a born-refined task with no probe and no readiness grade; (d) `-t epic -l origin:x,refined`, and `-t \"$T\"`. The sole-writer invariant's post-create doors are also unguarded: `br label add <id> refined` and `br update <id> --add-label refined` exit 0. What the agent gets: a `refined` label that stamp-refined.sh never wrote. Shape (c) puts the bead straight into worker.md's pickup query (`br ready -l refined`, which excludes only unrefined/human-gate/device/epic). It is caught downstream only if flight-check's STALE-STAMP re-gate runs. The flipped test covers only the single `-l origin:x,refined` shape.",
+      "fix": "Add an explicit refusal before the readiness check that applies to every type, including None and epic: `if has_label(cmd, \"refined\"): print(REFINED_MESSAGE); sys.exit(2)`. Treat an absent `-t` as br's default `task` rather than 'cannot know', and keep the skip for `<`/`$` placeholders only. Extend the guard to `br label add ... refined` and `br update ... --add-label refined` (sanctioned when called from stamp-refined.sh, e.g. via an env marker the wrapper sets). Add BLOCK cases for shapes (a) to (d).",
+      "auto_fixable": true
+    },
+    {
+      "title": "Empty-roster refusal counts argv slots, not names: `--actor \"\"` passes and the sweep selects nothing",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/coordinator.sh",
+      "line": 67,
+      "category": "fail-open-gate",
+      "evidence": "Actor: the conductor running close-out, typically with `--actor \"$W1\"` where W1 was never captured, or a zsh loop over an empty roster field. Entry point: the --actor argv. ACTORS+=(\"${2:-}\") appends an empty string, so ${#ACTORS[@]} is 1 and the new 'NOT-GATED when empty' check passes. Verified: `coordinator.sh --run R --actor \"\" --root /nonexistent` gets past line 67 to the cd, rc=2 from cd, not from the roster check. ROSTER_JSON becomes [\"\"], and jq `index(\"\")` then matches only claims whose assignee is null or empty. Replaying the jq on a claim set with assignee 'Cave' selects nothing, so every rostered-actor orphan is missed and the gate exits 0 as 'ORPHANS held'. This is exactly the 'a sweep with no set to select on has not swept' state that ac-4y7l.7 made NOT-GATED. A trailing bare `--actor` also hangs forever: `shift 2` fails with $#=1 and the loop never advances (timeout 5 gave rc=124).",
+      "fix": "In the arg loop, refuse an empty or missing value: `--actor) [ -n \"${2:-}\" ] || { echo 'NOT-GATED: --actor needs a non-empty name' >&2; exit 2; }; ACTORS+=(\"$2\"); shift 2 ;;` and apply the same guard to --run and --root. Optionally list in_progress claims whose assignee is not on the roster as an advisory line, so an incomplete roster is visible and not silent.",
+      "auto_fixable": true
+    },
+    {
+      "title": "WORKER: rule scans every historic comment on a changed bead, so 98 legacy receipts wedge any touch of 120 closed beads",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 175,
+      "category": "retroactive-gate-wedge",
+      "evidence": "Actor: any agent or sweep that modifies a closed bead, for example a reopen, a comment, a label repair or the Tier-1 closed-bead sweep in board-scan.md, or the coordinator's ledger flush that carries it. Rule 5 iterates ALL comments of every changed id, and this runs BEFORE the `status != open` skip. The live board holds 98 `WORKER:` comments in the retired four-field grammar (`model= session= skill@version= duration=`, e.g. 'WORKER: model=claude-opus-4-8 session=SageCrane(sub:ScarletGlen) skill@version=a0f2c4f duration=~4m') across 120 beads, all closed. Any row change to one of them makes it a changed id, and the commit goes RED on a receipt written weeks before the canon changed. This contradicts the file's own rule at line 39, 'Closed beads are NEVER scanned — forward-only, no backfill'. In the coordinator path it surfaces as a LEDGER-WRITE refusal of the whole run's ledger that names no bead of that run. The only way out is to rewrite historic receipts.",
+      "fix": "Judge only comments this commit adds. Diff the changed row's comment ids or texts against the HEAD row (head_map[rid].comments) and apply WORKER_RE to new comments only. Alternatively gate on comment created_at >= the grammar cutover date, mirroring CUTOVER. Add a test: a HEAD row with a legacy receipt plus a staged new non-WORKER comment must stay GREEN.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Off-canon status rule is board-wide in the staged lane: one agent's `br update --status pinned` blocks every other agent's ledger commit",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 167,
+      "category": "cross-agent-wedge",
+      "evidence": "Actor: any agent that uses a status br natively accepts. Verified on a disposable board: `br update <id> --status` accepted pinned, hooked, review, done and draft with rc=0 and flushed them to issues.jsonl. Rule 4 is unconditional: it is not scoped by changed_ids, unlike rules 3 and 5, which follow the 2026-09-12 scoping ruling that 'a pre-existing malformed bead untouched by this commit does not fail a commit that only stages an unrelated bead'. Once such a row is in the ledger, whether flushed by br's own writer, merged from origin, or committed from a clone without the hook chain, every later staged ledger commit by any other agent is RED naming a bead that agent never touched. That includes coordinator.sh's close-out, which then refuses LEDGER-WRITE for the whole swarm. One agent's legal br verb denies board commits to every sibling, and nothing at the br layer refuses the write that causes it.",
+      "fix": "Scope rule 4 like rules 3 and 5: in the staged lane, fire only for rid in changed_ids, and keep the whole-board sweep for the full run. Or refuse off-canon statuses where they are written (a PreToolUse leg on `br update --status` outside STATUS_CANON), so the violation is charged to the agent that causes it.",
+      "auto_fixable": true
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+[
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:167|cross-agent-wedge",
+    "reviewer": "security",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 167,
+    "category": "cross-agent-wedge",
+    "summary": "Off-canon status rule is board-wide in the staged lane: one agent's `br update --status pinned` blocks every other agent's ledger commit"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/SKILL.md:163|missing-boundary-error-handling",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/SKILL.md",
+    "line": 163,
+    "category": "missing-boundary-error-handling",
+    "summary": "`blocked` status is canonised as 'needs a human' but no human surface reads it \u2014 parked beads sink silently"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/reference/bead-conventions.md:54|pattern-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/reference/bead-conventions.md",
+    "line": 54,
+    "category": "pattern-drift",
+    "summary": "Second copies of the status canon left drifting after `blocked` was admitted"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:72|missing-edge-case",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 72,
+    "category": "missing-edge-case",
+    "summary": "WORKER_RE requires the whole comment to be one line, so a canon stamp followed by a narrative is refused"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.test.sh:138|hollow-test",
+    "reviewer": "test-quality",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.test.sh",
+    "line": 138,
+    "category": "hollow-test",
+    "summary": "WORKER fixtures don't match the real board's receipt shapes (trailing newline, spaced model ids)"
+  },
+  {
+    "round": 1,
+    "key": "skills/beads-standards/SKILL.md:292|contract-drift",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/beads-standards/SKILL.md",
+    "line": 292,
+    "category": "contract-drift",
+    "summary": "qa-blocker bullet now says 'use the blocked status' to mark a bead blocked, contradicting the canon's own blocks-edge rule and the blocked row's semantics"
+  },
+  {
+    "round": 1,
+    "key": "lint/checks/35-board-integrity.py:39|doc-mismatch",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 39,
+    "category": "doc-mismatch",
+    "summary": "Check 35 docstring still says closed beads are NEVER scanned and describes rule 4 as 'either status', but rules 4 and 5 now scan closed rows"
+  }
+]

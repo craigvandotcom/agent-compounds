@@ -1,0 +1,67 @@
+{
+  "reviewer": "correctness",
+  "round": 1,
+  "payload_read": "git diff 2e14a91..dfab85f",
+  "findings": [
+    {
+      "title": "Orphan sweep reads .issue.assignee, which br coordination status never emits, so the roster can never match and ORPHANS never fires",
+      "severity": "Critical",
+      "file": "skills/ac-implement/scripts/coordinator.sh",
+      "line": 121,
+      "category": "unproven-seam",
+      "evidence": "br 0.5.12 `coordination status --json` puts the assignee at .claims[].assessment.assignee. The .issue object's keys are dependency_count, dependent_count, id, issue_type, labels, latest_comments, priority, status and title, so it has no assignee. `.issue.assignee? // \"\"` is therefore always \"\". Live proof in a disposable worktree at dfab85f: ac-pf6n is in_progress with assessment.assignee=ac-20260916-172808-148122. `coordinator.sh --run x --actor ac-20260916-172808-148122 --dry-run` exits 0 with 'both refusals held'. The rostered actor's live claim was not flagged. The test fixture CLAIM (coordinator.test.sh:117) puts assignee inside .issue, a shape real br output cannot have, so 19/19 green proves nothing about production. The removed prefix version had the same dead read. ac-4y7l.7 rewrote exactly this selection and its AC 'a rostered actor's claim is picked up as an orphan' is green only because of the fixture.",
+      "fix": "Select on `(.assessment.assignee? // .issue.assignee? // \"\")`, or better, the assessment field alone. Rebuild the test fixture from a captured real `br coordination status --json` claim, with assignee under .assessment. Add a harness case that fails if the field path is wrong, e.g. a fixture with the assignee only under .assessment must be REFUSED.",
+      "auto_fixable": true
+    },
+    {
+      "title": "An empty --actor value passes the empty-roster guard and then matches every in_progress claim, so the sweep flags live claims it does not own",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/coordinator.sh",
+      "line": 67,
+      "category": "missing-validation",
+      "evidence": "`--actor)  ACTORS+=(\"${2:-}\")` appends \"\" when the conductor passes `--actor \"$NAME\"` with the name capture unset. The guard checks only `${#ACTORS[@]} -gt 0`, so a roster of [\"\"] passes. Combined with the always-\"\" assignee read above, `index(\"\")` matches every in_progress claim. Probe: `coordinator.sh --run x --actor \"\" --dry-run` printed 'REFUSED: ORPHANS — still in_progress under this run's actors: ac-pf6n ... Reset each to open, clear the assignee'. ac-pf6n is held by a different actor (ac-20260916-172808-148122). The refusal text tells the conductor to reset a foreign run's live claim, which is the evidence-destruction anti-pattern. Even once the field path is fixed, [\"\"] would still select genuinely unassigned in_progress rows.",
+      "fix": "Reject empty or whitespace-only --actor values as NOT-GATED at parse time (`[ -n \"${2:-}\" ] || { echo 'NOT-GATED: --actor requires a non-empty name' >&2; exit 2; }`). Add a harness case for `--actor \"\"`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "The WORKER: rule re-checks every historical comment on any changed bead, so touching a bead with an old stamp that br cannot edit makes the ledger commit permanently RED",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 171,
+      "category": "logic-error",
+      "evidence": "The rule scopes by changed bead id, then scans ALL of that bead's comments, not the comments this commit added. On the live boards, agent-compounds has 98 old four-field stamps and body-compass-app has 620 beads with off-canon stamps, 6 of them open or blocked (bd-omxxf, bd-7snt7, bd-2rb1w, bd-1538r, bd-3bcad, bd-26br6.16). Repro in a disposable worktree: add one label to closed ac-1p7j.18, stage the ledger, run check 35 -> rc=1 'malformed WORKER receipt is RED' naming a 2026-09-07 comment. `br comments` has only add/list, so the violation cannot be repaired. Any tidy label repair, reopen, dep edit or orphan reset on such a bead blocks the ledger commit, leaving --no-verify as the only way through. That contradicts the bead's own 'no backfill by doctrine' boundary and the file's 'the past is not relitigated'. No test fixture covers a pre-existing bead with an old stamp being touched. Both test cases add a brand-new bead.",
+      "fix": "Scope the rule to comments added by this commit: diff the comment ids or texts of head_map[rid] against staged_map[rid] and check only the new ones. Add a test that touches a HEAD bead carrying an old four-field stamp (GREEN) and one that adds a malformed stamp to an existing bead (RED).",
+      "auto_fixable": true
+    },
+    {
+      "title": "WORKER_RE requires the whole comment to be one line, so a canon stamp followed by a narrative is refused",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 72,
+      "category": "missing-edge-case",
+      "evidence": "`^WORKER: model=\\S+ actor=\\S+ tree=\\S+$` is applied with re.match to the whole stripped comment, without MULTILINE and without splitting off the first line. 24 existing comments in agent-compounds, e.g. ac-1p7j.18 'WORKER: model=glm-5.3-flash actor=swarm-...-GentleBeacon tree=775f88f\\n\\nTakeover from MistyCreek...', have a canon first line followed by a body. BCA bd-26br6.16 and bd-3bcad show the same shape. These are refused as 'malformed', although the bead's AC defines the rule as 'presence and shape of its three fields'. The fixtures only use single-line texts, so they do not cover the stamp shape this board actually carries.",
+      "fix": "Match the grammar against the first line only (`stripped.splitlines()[0]`). Add a GREEN fixture with a canon first line plus a narrative body.",
+      "auto_fixable": true
+    },
+    {
+      "title": "The capture guard still admits `refined` at create when a readiness label sits beside it, so the commit's 'close the last bypass' claim is false",
+      "severity": "Medium",
+      "file": "hooks/bead-capture-guard.py",
+      "line": 76,
+      "category": "missing-validation",
+      "evidence": "has_readiness (line ~354) is `any(r in all_labels(cmd) for r in READINESS)`. Dropping `refined` from the tuple only stops `refined` from satisfying readiness on its own. Probes piped through the hook both exited 0 (ALLOW): `br create \"x\" -t task -l \"origin:x,unrefined,refined\" ...` and `... -l \"origin:x,human-gate\" -l refined ...`. The bare `origin:x,refined` case exits 2. A new bead can still be born carrying `refined`, which breaks the 'stamp-refined.sh is the sole writer' invariant that the new comment claims is now closed. The single flipped test case covers only the bare shape.",
+      "fix": "Add an explicit refusal when `refined` appears in all_labels(cmd) on any `br create`, whatever other labels are present. Add BLOCK cases for `unrefined,refined` and for a separate `-l refined` flag.",
+      "auto_fixable": true
+    },
+    {
+      "title": "A trailing --actor with no value makes coordinator.sh loop forever",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/coordinator.sh",
+      "line": 57,
+      "category": "missing-error-path",
+      "evidence": "`--actor) ACTORS+=(\"${2:-}\"); shift 2 ;;`: when --actor is the last argument, $#=1, so `shift 2` fails without shifting. The while loop then re-enters forever and appends \"\" to ACTORS each pass, so memory grows without limit. Probe: `timeout 5 bash coordinator.sh --run x --actor` -> rc=124 (hung). The new repeatable-flag pattern makes a templated `--actor $NAME` with an unset, unquoted variable a realistic trigger. --run and --root share the same pre-existing pattern.",
+      "fix": "Guard every valued flag, e.g. `--actor) [ $# -ge 2 ] || { echo 'NOT-GATED: --actor needs a value' >&2; exit 2; }; ACTORS+=(\"$2\"); shift 2 ;;`, and apply the same guard to --run and --root.",
+      "auto_fixable": true
+    }
+  ]
+}
