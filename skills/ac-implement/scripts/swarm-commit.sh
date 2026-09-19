@@ -106,6 +106,28 @@ done
 [ -r "$MSGFILE" ] || refuse no-message-file "message file '$MSGFILE' is missing or unreadable"
 [ -s "$MSGFILE" ] || refuse no-message-file "message file '$MSGFILE' is empty"
 
+# --- placeholder-message ------------------------------------------------------------------
+# fcc88b3 shipped a bead's work as subject "test" / body "body" — the commit-msg hook only
+# WARNS on a missing Cause: line, and nothing in the lane ever judged the subject or body
+# shape, so the lane had no owner refusing a placeholder. Refused only when the subject
+# looks like a placeholder (no conventional type prefix, AND under four words) AND the body
+# also looks like a placeholder (under three words total) — a real short conventional
+# subject with a thin body, or an unconventional subject with a real explanatory body, is
+# left alone; only the fcc88b3 combination is refused.
+MSG_SUBJECT="$(sed -n '1p' "$MSGFILE" 2>/dev/null || true)"
+MSG_BODY="$(tail -n +2 "$MSGFILE" 2>/dev/null | grep -v '^[[:space:]]*$' || true)"
+subj_words=$(printf '%s' "$MSG_SUBJECT" | wc -w | tr -d '[:space:]')
+body_words=$(printf '%s' "$MSG_BODY" | wc -w | tr -d '[:space:]')
+subj_placeholder=0
+case "$MSG_SUBJECT" in
+  feat:*|feat\(*\):*|fix:*|fix\(*\):*|docs:*|docs\(*\):*|chore:*|chore\(*\):*|test:*|test\(*\):*|refactor:*|refactor\(*\):*)
+    ;;
+  *) [ "${subj_words:-0}" -lt 4 ] && subj_placeholder=1 ;;
+esac
+if [ "$subj_placeholder" -eq 1 ] && [ "${body_words:-0}" -lt 3 ]; then
+  refuse placeholder-message "subject '$MSG_SUBJECT' names no conventional type (feat|fix|docs|chore|test|refactor(scope)?:) and is under four words, and the body is under three words — this looks like fcc88b3's placeholder ('test' / 'body'), not a message naming the failure this commit prevents"
+fi
+
 # --- pathspec ---------------------------------------------------------------------------
 # flock serialises the lane's writers; it does NOT serialise other sessions sharing the
 # checkout. An unscoped commit still publishes whatever is sitting in the shared index

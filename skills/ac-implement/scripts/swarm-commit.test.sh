@@ -134,6 +134,31 @@ if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[outside-lock\]'; t
   pass "refuses a commit taken outside the lock, naming outside-lock"
 else fail "outside-lock: rc=$rc out=$out"; fi
 
+# --- 5b. refusal: placeholder subject/body (fcc88b3 shipped subject "test" / body "body") --
+PR="$(new_repo placeholder)"
+printf 'test\n\nbody\n' >"$PR/placeholder.txt"
+out="$(cd "$PR" && "$LANE" --identity t --message-file placeholder.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[placeholder-message\]'; then
+  pass "placeholder subject refused (fcc88b3's 'test' / 'body' shape), naming placeholder-message"
+else fail "placeholder-message: rc=$rc out=$out"; fi
+
+# A short conventional subject is never flagged, even with a thin body — its own repo, so
+# the assertion covers a real commit attempt, not just a skipped refusal.
+PR2="$(new_repo placeholder-short-conventional)"
+printf 'fix: bug\n' >"$PR2/short-conventional.txt"
+out="$(cd "$PR2" && "$LANE" --identity t --message-file short-conventional.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "a short conventional subject is never flagged as a placeholder"
+else fail "short-conventional falsely refused as placeholder: rc=$rc out=$out"; fi
+
+# An unconventional subject with a real explanatory body is never flagged either.
+PR3="$(new_repo placeholder-real-body)"
+printf 'lane docs update\n\nnames the actual failure this commit prevents in enough words\n' >"$PR3/real-body.txt"
+out="$(cd "$PR3" && "$LANE" --identity t --message-file real-body.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "an unconventional subject with a real explanatory body is never flagged as a placeholder"
+else fail "real-body falsely refused as placeholder: rc=$rc out=$out"; fi
+
 # --- 6. happy path: commits, scopes, pushes ------------------------------------------------
 R="$(new_repo happy)"
 printf 'sib v2\n' >"$R/sib.txt"
@@ -253,7 +278,7 @@ if git -C "$R" worktree add -q -b wtbranch "$WT" >/dev/null 2>&1; then
     pass "linked worktree reproduces the submodule shape (.git is a FILE)"
   else fail "worktree .git is not a file — the scar case was not reproduced"; fi
   printf 'wt v2\n' >"$WT/mine.txt"
-  printf 'wt commit\n' >"$WT/msg.txt"
+  printf 'fix: commit through the worktree lane\n\nverifies the linked worktree case\n' >"$WT/msg.txt"
   out="$(cd "$WT" && "$LANE" --identity wt-job --message-file msg.txt --path mine.txt \
           --branch wtbranch --no-push 2>&1)"; rc=$?
   if [ "$rc" -eq 0 ]; then pass "the lane works where .git is a FILE"
