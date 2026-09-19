@@ -143,6 +143,8 @@ entries: 8
 - last_seen: 2026-09-18
 - stage: ac-plan
 - status: promoted
+- control: skills/_tools/plan-approve.test.sh — the two look-alike Seams cases
+- control_landed: 2026-09-19
 - proposed_fix: anchor the `## Seams` match in `skills/_tools/plan-approve.sh` (both the
   no-seams refusal and the section reader's Seams calls). Promoted: deliverable D9 of
   `_plans/2026-09-18-seams-bead-lifecycle.md`.
