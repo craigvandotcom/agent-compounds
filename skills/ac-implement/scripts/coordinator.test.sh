@@ -68,7 +68,7 @@ SC
   printf '{"id":"a","status":"open"}\n' >.beads/issues.jsonl
   git add -A >/dev/null; git commit -qm init
   git remote add origin "$W/$1.git"; git push -q -u origin HEAD:main >/dev/null 2>&1
-  cd "$W"
+  cd "$W" || return 1
 }
 
 run() { ( cd "$1" && shift && bash skills/ac-implement/scripts/coordinator.sh "$@" 2>&1 ); }
@@ -177,8 +177,12 @@ mkrepo r7
 ( cd "$W/r7" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
 B7=$( cd "$W/r7" && git rev-parse HEAD )
 out="$(run "$W/r7" --run R --actor A)"          # no AC2_TEST_LEDGER -> flush changes nothing
-[ "$( cd "$W/r7" && git rev-parse HEAD )" = "$B7" ] && printf '%s' "$out" | grep -q 'ledger unchanged' \
-  && ok "an unchanged ledger commits NOTHING and says so" || bad "empty flush still moved HEAD: $out"
+AFTER7=$( cd "$W/r7" && git rev-parse HEAD )
+if [ "$AFTER7" = "$B7" ] && printf '%s' "$out" | grep -q 'ledger unchanged'; then
+  ok "an unchanged ledger commits NOTHING and says so"
+else
+  bad "empty flush still moved HEAD: $out"
+fi
 
 # A commit that reports success without landing is the silent-write failure this leg exists for.
 mkrepo r8
