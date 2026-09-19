@@ -24,11 +24,11 @@ Read `AGENTS.md` at the project root for project context and skill routing.
 Load skills based on what you are reviewing. Read the skill's SKILL.md file before starting.
 
 - **If reviewing tests or test coverage:** Load `testing`
-- **If reviewing UI components or styling:** Also load `design-system`
-- **If reviewing database code, migrations, or RLS:** Also load `supabase`
-- **If reviewing performance-sensitive code:** Also load `react-best-practices`
+- **If reviewing UI components or styling:** Also load the skill matching your design system/stack
+- **If reviewing database code, migrations, or RLS:** Also load the skill matching your database stack (e.g. `supabase`)
+- **If reviewing performance-sensitive code:** Also load the skill matching your framework's perf doctrine
 - **If reviewing accessibility:** Also load `ac-polish/references/ui-checklist.md`
-- **If reviewing native/Capacitor code:** Also load `capacitor`
+- **If reviewing native/platform code:** Also load the skill matching your native stack (e.g. `capacitor`)
 
 **Check your agent memory before starting.** It contains patterns, conventions, and past findings from this codebase. Update it with new discoveries after each review.
 
@@ -124,6 +124,8 @@ Check N+1 queries, React re-renders, memoization.
 Check TypeScript strictness, error handling, mobile-first compliance.
 
 ### Step 6: Test Coverage Audit
+
+Run your project's equivalent of (example: a pnpm/Next.js stack):
 
 ```bash
 pnpm test:coverage

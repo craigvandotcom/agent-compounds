@@ -1,12 +1,11 @@
 # agent-compounds — Agent Entry Point
 
-> **This registry _is_ `code-pipe`** — the software factory (the `ac-*` production line
-> + code QC + code-domain skills), one half of the agentic-factory pair alongside
-> **`content-pipe`** (the publishing house, at `~/mission/content/content-pipe/`). Both
-> consume one shared substrate (`context-engineering`/`reflect`/`dream`) so they write to
-> a single memory ledger. A literal `code-pipe` rename + any monorepo convergence are
-> deferred future-state — see `_plans/2026-06-23-factory-split-refactor.md`. Ops skills
-> (scheduler, vm-heavy-prep) live in `infrastructure/`, not here.
+> **This registry is a software factory** — the `ac-*` production line + code QC +
+> code-domain skills. It is deliberately paired with the **substrate** package
+> (`context-engineering`/`reflect`/`dream`) rather than owning memory itself, so a
+> parallel factory on another domain (content, ops) can consume the same memory
+> ledger instead of forking one. Scheduler/infra-ops skills are out of scope here —
+> this registry only ships engineering skills and agents.
 
 ## Project Overview
 
@@ -15,7 +14,7 @@
 | **Name** | agent-compounds |
 | **Stack** | Markdown skills/agents + bash (`engine/sync.sh` → `engine/deploy.sh`); no app runtime |
 | **Type** | Shared engineering tooling registry (skills, agents, prompt library, plans) |
-| **Purpose** | Canonical source of the neoMeta engineering skill/agent registry, symlink-deployed into every app |
+| **Purpose** | Canonical source of a portable engineering skill/agent registry, symlink-deployed into every consuming project |
 
 ## Project Commands
 
@@ -27,11 +26,12 @@
 | **Dry run** | `./engine/sync.sh --all -n` / `./engine/deploy.sh <target> --all -n` |
 | Dev/test/lint/build | N/A (content repo — no build pipeline) |
 
-## Distribution policy (2026-06-13, Craig-approved)
+## Distribution policy
 
-**Full set everywhere, auto-synced — no per-project exclude list.** Every INTERNAL neoMeta
-app gets the entire registry (all skills + all agents) via `engine/deploy.sh --all`. There is no
-selective per-app skill list anymore — availability is uniform.
+**Full set everywhere, auto-synced — no per-project exclude list.** Every private
+consumer project gets the entire registry (all skills + all agents) via
+`engine/deploy.sh --all`. There is no selective per-app skill list — availability is
+uniform.
 
 **Consumer requirement (2026-07-08):** every deploy target's `.claude/settings.json` must
 carry `"skillListingBudgetFraction": 0.02` — the full registry's model-invocable
@@ -42,25 +42,28 @@ settings from an existing app (the standard bootstrap). The registry's own gate:
 + the invocation-graph rule — flags derived from the files, never memory; doctrine:
 `skills/skill-builder/references/token-economics.md`).
 
-**Auto-propagation:** `infra-sync.sh` runs `harness-sync.sh --all` daily (06:30): for root +
-each app in `infrastructure/ac-deploy-targets.list` it runs `deploy.sh --all` (the `.claude/`
-layer) and then projects that layer into every other harness home — `.agents/skills`
-(Codex+Pi), `.factory/` (Droid, skills+droids+hooks+MCP), `.codex/` (generated agent TOMLs,
-hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored `harnesses.local.json`);
-hook wiring canon: `engine/hooks.wiring.json`. A newly added registry skill therefore lands in every
-app AND every harness on the next sync with **no manual re-stamp** (idempotent:
-creates/refreshes symlinks only, never clobbers a real file — so local customizations like
-art-still's `design-system` survive; generated files are stamp-gated).
+**Auto-propagation:** a recurring sync job (yours to schedule — cron, a scheduler skill,
+whatever runs jobs on your machine) runs `harness-sync.sh --all`: for root + each project
+in your own deploy-targets manifest (a plain list of project paths — this registry does not
+ship one; keep it wherever your other scheduled-job config lives) it runs `deploy.sh --all`
+(the `.claude/` layer) and then projects that layer into every other harness home —
+`.agents/skills` (Codex+Pi), `.factory/` (Droid, skills+droids+hooks+MCP), `.codex/`
+(generated agent TOMLs, hooks.json, MCP toml). Manifest: `harnesses.json` (+ gitignored
+`harnesses.local.json`); hook wiring canon: `engine/hooks.wiring.json`. A newly added
+registry skill therefore lands in every project AND every harness on the next sync with
+**no manual re-stamp** (idempotent: creates/refreshes symlinks only, never clobbers a real
+file — so a project's local customizations to a skill survive; generated files are
+stamp-gated).
 
-**Public repos (the `public` flag, 2026-07-10):** public OSS repos (e.g. `vitest-affected`)
-are synced like everyone else — the concern was never the sync, it was *committing* the
-symlinks (dangling for external cloners + internal-structure leak). Such targets carry a
-`public` flag in the list and must gitignore their harness layer (`.claude/`, `.agents/`,
+**Public repos (the `public` flag):** public OSS targets are synced like everyone else —
+the concern was never the sync, it was *committing* the symlinks (dangling for external
+cloners + internal-structure leak). Such targets carry a `public` flag in your
+deploy-targets manifest and must gitignore their harness layer (`.claude/`, `.agents/`,
 `.factory/`, `.codex/`); only AGENTS.md/CLAUDE.md and deliberately tracked project-authored
 skills stay published. harness-sync.sh verifies the ignore rules before stamping
 (`guard_public`, backed by `deploy.sh --require-ignored`) and skips the target loudly if
 they're missing — the invariant is enforced, not conventional. To add/remove a target, edit
-`infrastructure/ac-deploy-targets.list` (not deploy.sh).
+your deploy-targets manifest (not deploy.sh).
 
 ## Architecture
 
@@ -90,7 +93,7 @@ lives in `skills/ac-pipeline/references/stage-table.md`; nothing here restates i
 **Not promoted (stay per-app):** `CORE`, `brand`, `design-system` (pillar-color-coupled),
 `writing-guidelines` (brand-voice-coupled), `curate` — project/brand-specific. `app-store-screenshots`,
 `screenshot-refresh`, `seo-metadata` — app asset + marketing-SEO, owned by each app
-(reference copies in body-compass-app).
+(a consuming app may keep a reference copy of these rather than promoting them here).
 
 ## Rules
 

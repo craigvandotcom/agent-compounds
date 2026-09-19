@@ -2,24 +2,25 @@
 
 > Not a file to copy verbatim (unlike `project-AGENTS.md`) — these are two small,
 > load-bearing snippets to paste into a project's own build script and quality-gate
-> CI workflow. Both come from the BCA App Store 2.1(b) post-mortem (four rejections
-> traced to static-check-passed-but-runtime-broken layers) and generalize a fix that
-> started in one app's files into doctrine every app can lift.
+> CI workflow. Both generalize a fix that started as one app's post-mortem (a static
+> checks passed but runtime broken failure that reached production more than once)
+> into doctrine any app can lift.
 
 ## 1. Required `NEXT_PUBLIC_*` build-time assert
 
 `NEXT_PUBLIC_*` vars are build-time INLINED: an empty required var doesn't error, it
-bakes a silent no-op into the binary (a missing RevenueCat key shipped a dead Subscribe
-button through four App Store rejections). A native/critical feature's required public
-var must fail the **build**, not the user. Add near the top of the app's native/export
-build script (BCA: `scripts/cap-build.sh`), before the actual `next build` call:
+bakes a silent no-op into the binary (e.g. a missing payments SDK key can ship a dead
+Subscribe button — a static check never catches it, only a runtime tap does). A
+native/critical feature's required public var must fail the **build**, not the user.
+Add near the top of `<APP>`'s native/export build script, before the actual
+`next build` call:
 
 ```bash
 set -e
 
 REQUIRED_PUBLIC_VARS=(
   # <app>: list every NEXT_PUBLIC_* var a native/critical feature depends on —
-  # this list is app-specific, the guard mechanism below is not.
+  # this list is app-specific, the guard mechanism below is not. Example:
   NEXT_PUBLIC_SUPABASE_URL
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 )
@@ -33,13 +34,13 @@ done
 
 ## 2. Dep-removed-but-still-imported CI gate
 
-Origin: BCA bead `bd-qtz6u` (2.1(b) post-mortem, layer-1 guard) — commit `82739012`
-removed `@revenuecat/purchases-capacitor` from `package.json` while
-`lib/services/purchases.ts` still imported it; no gate caught the removal-with-live-usage.
+Origin: a real regression where a PR removed a dependency from `package.json` while a
+source file still imported it — no gate caught the removal-with-live-usage until it
+broke in production.
 
-Add a step to the app's quality-gate CI workflow (alongside format/lint/type-check —
-BCA: `.github/workflows/quality-gate.yml`) that fails when a PR removes a dependency
-but the source tree still imports it. Either satisfies the gate:
+Add a step to `<APP>`'s quality-gate CI workflow (alongside format/lint/type-check)
+that fails when a PR removes a dependency but the source tree still imports it. Either
+satisfies the gate:
 
 - **knip** — run in CI, fail on unused-export/unresolved-import findings that
   correspond to a dependency removed in the diff. Preferred once the app already
@@ -49,6 +50,6 @@ but the source tree still imports it. Either satisfies the gate:
   changed source tree for a remaining `from '<pkg>'` / `require('<pkg>')` import;
   any match fails the step.
 
-BCA (`bd-qtz6u`) is the pilot — land the step there first, then port it verbatim to
-sibling apps' quality-gate workflows. This template records the doctrine; it does not
-implement BCA's CI (that stays BCA's own bead).
+Land the step on one app first as the pilot, then port it verbatim to sibling apps'
+quality-gate workflows. This template records the doctrine; it does not implement
+any single app's CI (that stays that app's own work item).
