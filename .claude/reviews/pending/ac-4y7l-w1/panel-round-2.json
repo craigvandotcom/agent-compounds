@@ -1,7 +1,0 @@
-{
-  "round": 2,
-  "range": "2dc960b..fd2f7ca",
-  "spawned": ["security", "performance", "architecture", "correctness", "test-quality", "contracts"],
-  "skipped": {},
-  "note": "Review round 2 of epic ac-4y7l: the wave-2 commits e73190f..fd2f7ca (beads .11 .12 .13 from round 1's findings, and plan deliverables .3 .4 .5 .6 .8 .9). dfab85f..2dc960b carries no epic code (foreign friction and tidy commits, the wave-1 ledger, the round-1 review artifacts, the polish ledger). Deep panel: the diff changes close-gate.sh, check 35, the create guard, swarm-commit.sh, coordinator.sh and plan-approve.sh. Review surface scoped to this registry's product, as in round 1."
-}

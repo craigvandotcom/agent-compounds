@@ -198,9 +198,13 @@ def main():
     root = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("LINT_ROOT", os.getcwd())
     board = board_path(root)
     if not os.path.isfile(board):
-        print("NOT-GATED: no board at .beads/issues.jsonl — a check that read nothing has proved "
-              "nothing", file=sys.stderr)
-        return 2
+        # The board is adopter-local and gitignored (it is each deployment's own work
+        # ledger, not shipped registry content), so a checkout carrying none has
+        # nothing to gate. Skip, never claim a pass. A board that EXISTS but is
+        # unreadable or empty stays fail-closed below.
+        print("35-board-integrity skipped: no board at .beads/issues.jsonl — the board is "
+              "adopter-local (gitignored), nothing to gate")
+        return 0
     try:
         with open(board, encoding="utf-8", errors="replace") as fh:
             lines = fh.read().splitlines()

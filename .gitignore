@@ -34,3 +34,40 @@ tools/dcg/fixtures/
 # ("must never be committed") but never matched, so every polish run left .claude/state/
 # showing as untracked and a `git add -A` would have committed it.
 .claude/state/
+
+# ---------------------------------------------------------------------------
+# Adopter-local content (2026-09-20, agnosticism pass)
+#
+# This registry is portable engineering doctrine. The artifacts below are each
+# DEPLOYMENT's own operational record — one org's frictions, work board, retired
+# skills and past review ceremonies. They are not shipped registry content, and
+# tracking them published one deployment's specifics (names, hosts, app names,
+# absolute paths) in a public repo. Every adopter accumulates their own.
+#
+# Sensors that read these paths now SKIP when they are absent and stay
+# fail-closed when present-but-broken: scripts/ac-ledger-integrity.sh (via
+# check 22), check 25-archived-names, check 35-board-integrity.
+# ---------------------------------------------------------------------------
+
+# Friction ledgers — each deployment's own operational log
+FRICTIONS.md
+
+# The live bead board — each deployment's own work ledger
+.beads/issues.jsonl
+.beads/.br_recovery/
+
+# Retired skills — local history, not shipped doctrine
+_archive/
+
+# Past session artifacts: review ceremonies and swarm run reports
+.claude/reviews/
+.claude/reports/
+
+# Generated analysis + reports (regenerable; they bake in host and paths)
+_docs/seams/
+_reports/
+
+# Machine-written workflow run receipts. The nightly scheduler rewrites these with
+# the live host, app scope, pushed SHA and notification channel — so a tracked one
+# re-leaks on every run. scope.py already classes them as STATE, not doctrine.
+skills/*/workflows/last-run.json

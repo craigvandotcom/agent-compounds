@@ -326,13 +326,17 @@ rc=$(run_check "$t")
 [ "$rc" -eq 0 ] && ok "a new comment sorted before a legacy receipt is not misjudged (identity by id, never position)" \
   || bad "comment-identity-not-position: expected exit 0, rc=$rc out=$(cat "$OUT")"
 
-# --- NOT-GATED: empty board and missing board ----------------------------------
+# --- An EMPTY board stays NOT-GATED; a MISSING board skips ----------------------
+# The board is adopter-local (gitignored, 2026-09-20 agnosticism pass): a checkout
+# carrying none has nothing to gate, so absent -> skip. A board that EXISTS but is
+# empty is still a broken sensor and stays fail-closed.
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"
 rc=$(run_check "$WORK/f")
 [ "$rc" -eq 2 ] && grep -q 'NOT-GATED' "$OUT" && ok "empty board is NOT-GATED (exit 2)" || bad "empty board: rc=$rc out=$(cat "$OUT")"
 mkdir -p "$WORK/g"
 rc=$(run_check "$WORK/g")
-[ "$rc" -eq 2 ] && grep -q 'NOT-GATED' "$OUT" && ok "missing board is NOT-GATED (exit 2)" || bad "missing board: rc=$rc out=$(cat "$OUT")"
+[ "$rc" -eq 0 ] && grep -q 'skipped' "$OUT" && ok "missing board skips (exit 0, reported as a skip)" || bad "missing board: rc=$rc out=$(cat "$OUT")"
+grep -q 'record(s) scanned' "$OUT" && bad "missing board: claimed records scanned while gating nothing"
 
 echo
 if [ "$fails" -eq 0 ]; then

@@ -208,8 +208,11 @@ def run(root):
             print(f"  - {v}")
         return 1
     if not names:
-        print("25-archived-names NOT-CHECKED: no archived skill dir outside live/standing sets — nothing to check")
-        return 2
+        # _archive/ is adopter-local and gitignored (retired skills are each
+        # deployment's own history, not shipped registry content), so a checkout with
+        # no archive has nothing to gate. Skip, never claim a pass.
+        print("25-archived-names skipped: no archived skill dir in this checkout — _archive/ is adopter-local (gitignored), nothing to check")
+        return 0
     if not scope.LIVE_TEXT:
         print("25-archived-names NOT-CHECKED: no live text under this root — nothing scanned")
         return 2

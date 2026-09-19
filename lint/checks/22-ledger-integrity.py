@@ -80,6 +80,12 @@ def main():
     if proc.returncode == 0:
         for line in out.splitlines():
             print("  " + line)
+        # The judge skips when this checkout ships no ledger at all (they are
+        # adopter-local and gitignored). Report that as a skip, never as a pass: a
+        # check that gated nothing must not claim the contract holds.
+        if out.startswith("SKIP:"):
+            print(f"  skipped: {CHECK_ID} — no ledger in this checkout, nothing gated")
+            return 0
         print(f"  ok: {CHECK_ID} — the ledger and the constitution satisfy the contract both directions")
         return 0
     if proc.returncode == 2:

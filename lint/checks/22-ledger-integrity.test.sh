@@ -91,14 +91,34 @@ else
 fi
 rm -rf "$w"
 
-# --- RED: an empty ledger fails CLOSED ------------------------------------------
+# --- SKIP: a checkout that ships no ledger at all --------------------------------
+# Friction ledgers are adopter-local (gitignored, 2026-09-20 agnosticism pass), so a
+# checkout carrying none is the normal case, not a broken sensor. The judge skips and
+# the check must report a SKIP — never the "contract holds" pass claim, which would be
+# an assurance claim over nothing gated.
 w="$(mktemp -d)"
 build_tree "$w" EMPTY yes
 out="$(python3 "$CHECK" "$w" 2>&1)"; rc=$?
-if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "NOT-GATED"; then
-  ok "RED: absent ledger fails CLOSED (exit 1 carrying NOT-GATED)"
+if [ "$rc" = 0 ] && printf '%s' "$out" | grep -q "skipped"; then
+  ok "SKIP: no ledger in the checkout -> exit 0, reported as a skip"
 else
-  bad "fail-closed case: expected 1 carrying NOT-GATED, got $rc"; printf '%s\n' "$out"
+  bad "skip case: expected 0 carrying 'skipped', got $rc"; printf '%s\n' "$out"
+fi
+if printf '%s' "$out" | grep -q "contract holds both directions"; then
+  bad "skip case: claimed the contract holds while gating nothing"
+fi
+rm -rf "$w"
+
+# --- RED: an EXPLICITLY NAMED absent ledger still fails CLOSED -------------------
+# The skip above covers only the unshipped default path. A caller that asserts one
+# specific --ledger which does not exist is still pointing at a missing sensor.
+w="$(mktemp -d)"
+build_tree "$w" EMPTY yes
+out="$(bash "$w/scripts/ac-ledger-integrity.sh" --ledger "$w/skills/ac-pipeline/FRICTIONS.md" "$w" 2>&1)"; rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "NOT-GATED"; then
+  ok "RED: an explicitly named absent ledger still fails CLOSED (exit 1, NOT-GATED)"
+else
+  bad "explicit-ledger case: expected 1 carrying NOT-GATED, got $rc"; printf '%s\n' "$out"
 fi
 rm -rf "$w"
 

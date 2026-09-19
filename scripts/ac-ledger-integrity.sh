@@ -82,7 +82,15 @@ if [ ! -f "$ROLLUP" ]; then
   exit 2
 fi
 
-# --- Fail closed on an absent or empty ledger -----------------------------------------
+# --- Absent ledger: skip when unshipped, fail closed when explicitly named -------------
+# Friction ledgers are adopter-local and gitignored (they are each deployment's own
+# operational log, not shipped registry content), so a checkout carrying none is the
+# normal case, not a broken sensor. An explicitly named --ledger that does not exist is
+# still a hard failure: the caller asserted a sensor that is not there.
+if [ ! -f "$LEDGER" ] && [ "$LEDGER_SET" = 0 ]; then
+  echo "SKIP: no ac2 ledger in this checkout — friction ledgers are adopter-local (gitignored), so there is nothing to gate here."
+  exit 0
+fi
 if [ ! -f "$LEDGER" ]; then
   echo "FAIL: NOT-GATED — no ac2 ledger at $LEDGER. An absent sensor is not a clean one."
   exit 1
