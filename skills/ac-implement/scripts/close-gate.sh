@@ -471,17 +471,48 @@ echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $AS
 if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   command -v ubs >/dev/null 2>&1 \
     || not_checked "SCANNER" "${#SCAN_FILES[@]} file(s) were handed to --scan but ubs is not on PATH — NOT-GATED, not clean"
-  SCANNABLE=(); UNSCANNABLE=()
+  SCANNABLE=(); SHELLFILES=(); UNSCANNABLE=()
   for _sf in "${SCAN_FILES[@]}"; do
     case "$_sf" in
       *.js|*.jsx|*.mjs|*.cjs|*.ts|*.tsx|*.py|*.pyw|*.pyi|*.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp|*.hxx|\
       *.rs|*.go|*.java|*.rb|*.swift|*.cs|*.csx|*.ex|*.exs) SCANNABLE+=("$_sf") ;;
+      *.sh|*.bash) SHELLFILES+=("$_sf") ;;
       *) UNSCANNABLE+=("$_sf") ;;
     esac
   done
-  if [ "${#SCANNABLE[@]}" -eq 0 ]; then
-    not_checked "SCANNER" "none of the ${#SCAN_FILES[@]} --scan file(s) is a language ubs scans (${UNSCANNABLE[*]}) — nothing was checked, which is explicitly NOT a pass"
+  if [ "${#SCANNABLE[@]}" -eq 0 ] && [ "${#SHELLFILES[@]}" -eq 0 ]; then
+    not_checked "SCANNER" "no --scan file is a language any wired scanner covers (${UNSCANNABLE[*]}) — nothing was checked, which is explicitly NOT a pass"
   fi
+
+  # --- shell, which ubs does not scan at all -------------------------------------------
+  # Gated at -S error, and the bar is MEASURED, not chosen for comfort: across this
+  # registry's 65 shell files, `style` (shellcheck's default) flags 42, `warning` 15 and
+  # `error` 2 — and both of those two were malformed `# shellcheck` directives, now fixed,
+  # so the error tier is 0/65 at wiring time. A default-severity bar would have made two
+  # thirds of the registry's own shell unclosable on day one, which is the ubs Info trap
+  # in a new costume. Lower tiers are COUNTED and reported, never refused.
+  SC_LOWER=0
+  if [ "${#SHELLFILES[@]}" -gt 0 ]; then
+    SC_BIN="${CLOSE_GATE_SHELLCHECK:-shellcheck}"
+    command -v "$SC_BIN" >/dev/null 2>&1 \
+      || not_checked "SCANNER" "${#SHELLFILES[@]} shell file(s) were handed to --scan but shellcheck is not on PATH — NOT-GATED, not clean"
+    SC_OUT=$("$SC_BIN" -S error -f gcc "${SHELLFILES[@]}" 2>&1); SC_RC=$?
+    [ "$SC_RC" -eq 0 ] \
+      || refuse "SCANNER" "shellcheck -S error over ${#SHELLFILES[@]} shell file(s): $(printf '%s' "$SC_OUT" | head -3 | tr '\n' ' ')"
+    SC_LOWER=$("$SC_BIN" -S style -f gcc "${SHELLFILES[@]}" 2>/dev/null | grep -c ':' || true)
+  fi
+  if [ "${#SCANNABLE[@]}" -eq 0 ]; then
+    # Shell-only argv: shellcheck above is the whole verdict, and ubs has nothing to say.
+    SC_NOTE=""
+    [ "$SC_LOWER" -gt 0 ] && SC_NOTE=" ($SC_LOWER warning/info/style finding(s) below the error bar, reported not refused)"
+    if [ "${#UNSCANNABLE[@]}" -gt 0 ]; then
+      echo "close-gate[$BEAD] SCANNER ok — shellcheck -S error clean over ${#SHELLFILES[@]} shell file(s)$SC_NOTE; UNSCANNED TIER (no scanner for these, reported not passed): ${UNSCANNABLE[*]}"
+    else
+      echo "close-gate[$BEAD] SCANNER ok — shellcheck -S error clean over ${#SHELLFILES[@]} shell file(s)$SC_NOTE"
+    fi
+    SCANNER_DONE=1
+  fi
+  if [ -z "${SCANNER_DONE:-}" ]; then
   SCAN_OUT=$(ubs "${SCANNABLE[@]}" 2>&1); SCAN_RC=$?
   if printf '%s' "$SCAN_OUT" | grep -qiE 'no supported languages detected|nothing was checked'; then
     not_checked "SCANNER" "ubs ran no scanner over ${#SCANNABLE[@]} scannable file(s) — 'nothing was checked' is explicitly NOT a pass"
@@ -520,10 +551,14 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
   [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] \
     || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}) over ${#SCANNABLE[@]} scanned file(s)"
+  SC_NOTE=""
+  [ "${#SHELLFILES[@]}" -gt 0 ] && SC_NOTE="; shellcheck -S error clean over ${#SHELLFILES[@]} shell file(s)"
+  [ "$SC_LOWER" -gt 0 ] && SC_NOTE="$SC_NOTE ($SC_LOWER below the error bar, reported not refused)"
   if [ "${#UNSCANNABLE[@]}" -gt 0 ]; then
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings; UNSCANNED TIER (no ubs scanner for these, reported not passed): ${UNSCANNABLE[*]}"
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings$SC_NOTE; UNSCANNED TIER (no scanner for these, reported not passed): ${UNSCANNABLE[*]}"
   else
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings"
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings$SC_NOTE"
+  fi
   fi
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"

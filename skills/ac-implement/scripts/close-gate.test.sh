@@ -113,6 +113,21 @@ esac
 MOCKUBS
 chmod +x "$MOCK_BIN/ubs"
 
+# Mock `shellcheck` — the second scanner. -S error is the gate bar; -S style is the
+# reported-not-refused tier, so the mock answers on the flag it is given.
+cat >"$MOCK_BIN/shellcheck" <<'MOCKSC'
+#!/usr/bin/env bash
+sev=error
+for a in "$@"; do case "$prev" in -S) sev="$a" ;; esac; prev="$a"; done
+case "${AC2_TEST_SC_MODE:-clean}" in
+  clean) exit 0 ;;
+  lower) [ "$sev" = style ] && { echo "x.sh:3:1: note: Double quote [SC2086]"; exit 1; }; exit 0 ;;
+  error) [ "$sev" = error ] && { echo "x.sh:9:1: error: Couldn't parse this directive [SC1073]"; exit 1; }
+         echo "x.sh:9:1: error: Couldn't parse this directive [SC1073]"; exit 1 ;;
+esac
+MOCKSC
+chmod +x "$MOCK_BIN/shellcheck"
+
 BEAD="ac-test.1"
 
 # A fixture bead: two ACs (one already green, one RED-able), a Delivers section the
@@ -206,6 +221,8 @@ gate() { # <root> [extra args...]
       AC2_TEST_BR_CLOSE_NOOP="${AC2_TEST_BR_CLOSE_NOOP:-0}" \
       AC2_TEST_BR_SHOW_FAIL="${AC2_TEST_BR_SHOW_FAIL:-0}" \
       AC2_TEST_UBS_MODE="${AC2_TEST_UBS_MODE:-clean}" \
+      AC2_TEST_SC_MODE="${AC2_TEST_SC_MODE:-clean}" \
+      CLOSE_GATE_SHELLCHECK="${CLOSE_GATE_SHELLCHECK:-shellcheck}" \
       bash "$GATE" "$BEAD" --body-file "$root/body.md" --root "$root" "$@" 2>&1
     echo $? > "$RCFILE" )
 }
@@ -710,7 +727,7 @@ if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNSCANNED TIER' && prin
 else fail "AC4 mixed argv: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-all-unscannable)"
-out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan notes.md deploy.sh)"
+out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan notes.md README.md)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s' "$out" | grep -q 'notes.md'; then
   pass "AC4: an argv ubs cannot scan at all is NOT-CHECKED and names the files — never a pass"
@@ -722,6 +739,45 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: the partition does not soften a real finding in the scannable half"
 else fail "AC4 mixed findings: rc=$GATE_RC out=$out"; fi
+
+# --- shellcheck, the second scanner (2026-09-19) --------------------------------------
+# ubs scans no shell at all. shellcheck is gated at -S error because the bar is measured:
+# across this registry's 65 shell files, style flags 42, warning 15, error 0 (after two
+# malformed directives were fixed). Lower tiers are counted and reported, never refused.
+R="$(mk_green scan-sh-clean)"
+out="$(AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan deploy.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'shellcheck -S error clean'; then
+  pass "AC4: a shell-only argv is scanned by shellcheck, not reported unscannable"
+else fail "AC4 sh-clean: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-sh-error)"
+out="$(AC2_TEST_SC_MODE=error gate "$R" --reason "$REASON" --scan deploy.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: an error-level shellcheck finding REFUSES the close"
+else fail "AC4 sh-error: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-sh-lower)"
+out="$(AC2_TEST_SC_MODE=lower gate "$R" --reason "$REASON" --scan deploy.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'below the error bar'; then
+  pass "AC4: style/info findings are REPORTED as a tier, never refused — the measured bar"
+else fail "AC4 sh-lower: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-sh-and-ts)"
+out="$(AC2_TEST_UBS_MODE=clean AC2_TEST_SC_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts deploy.sh notes.md)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'shellcheck' && printf '%s' "$out" | grep -q 'notes.md'; then
+  pass "AC4: all three tiers in one argv — ubs scans, shellcheck scans, markdown is named unscanned"
+else fail "AC4 sh-and-ts: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-sh-nopath)"
+out="$(CLOSE_GATE_SHELLCHECK=shellcheck-not-installed gate "$R" --reason "$REASON" --scan deploy.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'shellcheck is not on PATH'; then
+  pass "AC4: shellcheck absent is NOT-GATED — an unrun scanner is never a clean bill"
+else fail "AC4 sh-nopath: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-empty-argv)"
 out="$(gate "$R" --reason "$REASON")"
