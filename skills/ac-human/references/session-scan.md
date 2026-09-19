@@ -23,12 +23,22 @@ the spine's loop boundary — this lens applies AFTER the boundary filter.
 At org level or asked "across everything", sweep ALL `.beads/` repos, not just this one. Roots come from the environment, never literals — `REPOS_ROOT` (the workspace root, e.g. `~/Repos`) and `APPS_LIST` (a file listing workspace-relative app paths, one per line):
 
 ```bash
-# br_call (skills/_tools/br-call.sh) is the ONE routed `br … --json` read — source it once,
-# before the loop; a refused read now surfaces on stderr instead of being swallowed by
-# `2>/dev/null` (that swallow was the exact failure this routes around).
-. "$(git rev-parse --show-toplevel)/skills/_tools/br-call.sh"
 for repo in "$REPOS_ROOT" $(while IFS= read -r a; do echo "$REPOS_ROOT"/$a; done < "$APPS_LIST"); do
   [ -d "$repo/.beads" ] || continue
+  # br_call (skills/_tools/br-call.sh) is the ONE routed `br … --json` read — resolve it
+  # PER REPO, consumer path first: `.claude/skills/_tools/br-call.sh` is where deploy.sh
+  # symlinks it into every app; `skills/_tools/br-call.sh` (this registry and one other app
+  # that carries it natively) is the fallback. Neither path existing is a DEGRADED repo,
+  # never a silent skip.
+  BR_CALL="$repo/.claude/skills/_tools/br-call.sh"
+  [ -f "$BR_CALL" ] || BR_CALL="$repo/skills/_tools/br-call.sh"
+  if [ ! -f "$BR_CALL" ]; then
+    echo "DEGRADED $repo — br-call.sh not found at .claude/skills/_tools/br-call.sh or skills/_tools/br-call.sh; this repo is not represented in the sweep below"
+    continue
+  fi
+  # Sourced per repo so a refused read surfaces on stderr instead of being swallowed by
+  # `2>/dev/null` (that swallow was the exact failure this routes around).
+  . "$BR_CALL"
   # A repo whose read refuses (br_call, or D3's row-shape idiom) renders DEGRADED and is
   # dropped from the sweep below it — never silently absent with no trace.
   RAW=$(cd "$repo" && br_call list --json --limit 0 \
@@ -43,9 +53,9 @@ for repo in "$REPOS_ROOT" $(while IFS= read -r a; do echo "$REPOS_ROOT"/$a; done
   # .beads/issues.jsonl reached origin. No upstream is NOT a silent zero — a different fact.
   if (cd "$repo" && git rev-parse --abbrev-ref --symbolic-full-name '@{u}') >/dev/null 2>&1; then
     N=$(cd "$repo" && git log @{u}..HEAD -- .beads/issues.jsonl | grep -c '^commit ')
-    echo "unpushed ledger: $N"
+    echo "unpushed ledger: $N ($(basename "$repo"))"
   else
-    echo "unpushed ledger: NOT-CHECKED (no upstream)"
+    echo "unpushed ledger: NOT-CHECKED (no upstream) ($(basename "$repo"))"
   fi
 done
 ```

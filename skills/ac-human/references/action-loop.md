@@ -17,7 +17,12 @@ auto-advance, Done as escape); this file carries the per-type playbook.
   ```bash
   br comments add <id> "DECISION (<human>): <choice> — <why>"
   # ...carry out consequences...
-  skills/ac-implement/scripts/close-gate.sh <id> --reason "<what was decided/done>"
+  # Resolve close-gate.sh consumer-first: `.claude/skills/...` is where deploy.sh symlinks
+  # it into every app; `skills/...` (this registry and one other app that carries it
+  # natively) is the fallback.
+  CLOSE_GATE=".claude/skills/ac-implement/scripts/close-gate.sh"
+  [ -f "$CLOSE_GATE" ] || CLOSE_GATE="skills/ac-implement/scripts/close-gate.sh"
+  "$CLOSE_GATE" <id> --reason "<what was decided/done>"
   br sync --flush-only && git add .beads/issues.jsonl \
     && git commit -m "chore(beads): human ruling on <id> [no-bead]" && git push
   ```

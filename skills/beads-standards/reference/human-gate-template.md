@@ -226,6 +226,11 @@ consequences and closes:
 br comments add bd-mf9k1 -m "DECISION (operator): option (a), OneSignal. Free tier is
 fine at this scale, revisit if we outgrow it."
 # ... agent implements the consequence, then close through the gate (the ruling idiom
-# fenced once at skills/ac-human/references/action-loop.md — never a bare `br close`):
-skills/ac-implement/scripts/close-gate.sh bd-mf9k1 --reason "shipped: OneSignal wired per the operator's decision (see comments)"
+# fenced once at skills/ac-human/references/action-loop.md — never a bare `br close`).
+# Resolve close-gate.sh consumer-first: `.claude/skills/...` is where deploy.sh symlinks
+# it into every app; `skills/...` (this registry and one other app that carries it
+# natively) is the fallback.
+CLOSE_GATE=".claude/skills/ac-implement/scripts/close-gate.sh"
+[ -f "$CLOSE_GATE" ] || CLOSE_GATE="skills/ac-implement/scripts/close-gate.sh"
+"$CLOSE_GATE" bd-mf9k1 --reason "shipped: OneSignal wired per the operator's decision (see comments)"
 ```
