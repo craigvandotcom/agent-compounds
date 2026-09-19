@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Production stance — scoped execution of approved plans/specs (code, content, config). Full write tools. DO NOT use for planning/architecture (Plan), investigation (researcher), or verification (validator). Formerly named "engineer".
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, mcp__mcp-agent-mail__macro_start_session, mcp__mcp-agent-mail__file_reservation_paths, mcp__mcp-agent-mail__release_file_reservations, mcp__mcp-agent-mail__deregister_agent
 tier: worker
 permissionMode: acceptEdits
 ---

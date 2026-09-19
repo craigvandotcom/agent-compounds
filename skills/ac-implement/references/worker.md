@@ -19,11 +19,13 @@ A hand-check beside a script is a second copy of the rule, and the two will drif
     ACTOR="ac-$(date -u +%Y%m%d-%H%M%S)-$$"   # one identity signs --actor AND the commit
     BURNED=""                                   # ids whose claim was refused THIS pass
 
-**In a swarm**, register with Agent Mail first and make `ACTOR` carry the name it returns.
-Never let the identity come from the static `AGENT_NAME` env: a static fallback shadows the
-live session name, and the guard then compares your reservation's holder against the fallback
-and rejects your OWN commit as a foreign conflict. The live name is the identity; the env
-fallback is a trap that fails in the direction of looking like someone else.
+**In a swarm**, register with Agent Mail first — `macro_start_session`, `task_description`
+naming the run id the conductor appended to this prompt, so the coordinator's roster can find
+this registration among agents registered since the run started — and make `ACTOR` carry the
+name it returns. Never let the identity come from the static `AGENT_NAME` env: a static
+fallback shadows the live session name, and the guard then compares your reservation's holder
+against the fallback and rejects your OWN commit as a foreign conflict. The live name is the
+identity; the env fallback is a trap that fails in the direction of looking like someone else.
 
 Read the epic and the constitution (`skills/ac-pipeline/SKILL.md`) once. Do not re-read them
 per bead.
