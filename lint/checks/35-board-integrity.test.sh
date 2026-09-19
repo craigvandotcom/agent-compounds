@@ -219,6 +219,57 @@ rc=$(run_check "$t")
 [ "$rc" -eq 0 ] && ok "a bead already closed at HEAD and only relabeled this commit is never a NEW close" \
   || bad "landing-precloseD-untouched: expected exit 0, rc=$rc out=$(cat "$OUT")"
 
+# --- RED: a stale landing record from an earlier close does not satisfy a new close ---
+# the bead was closed once (with a GATE: receipt), reopened (HEAD status back to open,
+# the old GATE: comment still sitting on the row), then closed again this commit with
+# NO new comment — the stale landing record must not be re-judged as covering the new close.
+t="$WORK/landing-stale"
+STALE_AT_HEAD='{"id":"ac-stale","status":"open","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual"],"title":"reopened after a prior close","comments":[{"id":8,"issue_id":"ac-stale","author":"x","text":"GATE: receipt — ac-stale — RED probe: true; reason: shipped","created_at":"2026-08-20T10:05:00Z"}]}'
+git_board "$t" "$OPEN_TAGGED" "$STALE_AT_HEAD"
+STALE_RECLOSED='{"id":"ac-stale","status":"closed","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual"],"title":"reopened after a prior close","comments":[{"id":8,"issue_id":"ac-stale","author":"x","text":"GATE: receipt — ac-stale — RED probe: true; reason: shipped","created_at":"2026-08-20T10:05:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$STALE_RECLOSED" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 1 ] && grep -q 'no landing record' "$OUT" && grep -q 'ac-stale' "$OUT" \
+  && ok "a stale landing record from an earlier close does not satisfy a new close" \
+  || bad "landing-stale: expected exit 1 naming ac-stale, rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a FRESH-VERIFY: close is a valid landing record --------------------
+t="$WORK/landing-freshverify"
+git_board "$t" "$OPEN_TAGGED"
+FRESHVERIFY_CLOSE='{"id":"ac-freshverify","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed on a fresh-verify","comments":[{"id":9,"issue_id":"ac-freshverify","author":"x","text":"FRESH-VERIFY: ac-freshverify — probes re-run green at HEAD","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$FRESHVERIFY_CLOSE" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "a fresh-verify close passes rule 6" \
+  || bad "landing-freshverify: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a TRIAGE-CLOSE: (cascade) close is a valid landing record ----------
+t="$WORK/landing-cascade"
+git_board "$t" "$OPEN_TAGGED"
+CASCADE_CLOSE='{"id":"ac-cascade","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed on the cascade leg","comments":[{"id":10,"issue_id":"ac-cascade","author":"x","text":"TRIAGE-CLOSE: ac-cascade — cascade close accepted on a consumed blocker","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$CASCADE_CLOSE" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "a cascade close passes rule 6" \
+  || bad "landing-cascade: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: identity is by id, never position — a legacy comment sorted after a new
+# --- one (a same-second created_at tie can reorder) is still recognized as legacy ---
+t="$WORK/comment-identity-not-position"
+LEGACY_REORDER_HEAD='{"id":"ac-reorder","status":"open","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual"],"title":"legacy comment reordered","comments":[{"id":11,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"},{"id":12,"issue_id":"ac-reorder","author":"x","text":"GATE: receipt — ac-reorder — RED probe: true; reason: shipped","created_at":"2026-08-20T10:02:00Z"}]}'
+git_board "$t" "$OPEN_TAGGED" "$LEGACY_REORDER_HEAD"
+# staged: the two HEAD comments come back in the OPPOSITE order (simulating a same-second
+# tie resort by br) plus one genuinely new comment appended after them
+REORDER_STAGED='{"id":"ac-reorder","status":"open","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual","touched-this-commit"],"title":"legacy comment reordered","comments":[{"id":12,"issue_id":"ac-reorder","author":"x","text":"GATE: receipt — ac-reorder — RED probe: true; reason: shipped","created_at":"2026-08-20T10:02:00Z"},{"id":11,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"},{"id":13,"issue_id":"ac-reorder","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-20T10:03:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$REORDER_STAGED" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+# id=11's malformed WORKER: text is legacy (present at HEAD, just reordered) and must
+# NEVER be re-judged — only id=13 is new, and it is canon-shaped, so this is GREEN
+[ "$rc" -eq 0 ] && ok "a legacy receipt sorted after a new comment is not re-judged (identity by id, never position)" \
+  || bad "comment-identity-not-position: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
 # --- NOT-GATED: empty board and missing board ----------------------------------
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"
 rc=$(run_check "$WORK/f")

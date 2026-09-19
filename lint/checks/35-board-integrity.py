@@ -33,19 +33,22 @@ Six FAIL rules over the committed board:
      blocked / deferred / closed / tombstone).
   5. staged lane only (skipped on a whole-board run, per Commit-scoped format rules
      below): a `WORKER:`-prefixed comment newly added to a changed id BY THIS COMMIT
-     (absent from that id's comment list at HEAD; comments are append-only, so anything
-     past HEAD's own count is new) whose FIRST LINE does not match the canon grammar's
-     three fields, `model=`/`actor=`/`tree=` (§ Worker-identity stamp) — shape only,
-     never the fields' truth. A canon first line followed by note lines is green; a
-     pre-existing (HEAD-era) receipt on an untouched comment of a changed bead is never
-     re-judged.
-  6. staged lane only, same scope as rule 5, no whole-board fallback: a changed id whose
-     staged `status` is `closed` and whose HEAD `status` was NOT `closed` — a close that
-     genuinely happened in this commit — carrying no comment in its staged `comments`
-     array whose text begins `GATE:`, `FRESH-VERIFY:`, or `TRIAGE-CLOSE:`. The close
-     sensor is board-side (every close path, prose or script, human or system); it never
-     asks WHO closed, only whether a landing record exists. Board-side per the Decisions
-     card; this is deliberately not fence lint.
+     (its identity — the comment `id`, or `(created_at, text)` when no id is present —
+     absent from that id's comment list at HEAD; identity is NEVER position, because br
+     orders same-second comments in no fixed order) whose FIRST LINE does not match the
+     canon grammar's three fields, `model=`/`actor=`/`tree=` (§ Worker-identity stamp) —
+     shape only, never the fields' truth. A canon first line followed by note lines is
+     green; a pre-existing (HEAD-era) receipt on an untouched comment of a changed bead,
+     wherever it now sorts in the staged list, is never re-judged.
+  6. staged lane only, same scope and same by-identity "new" test as rule 5, no
+     whole-board fallback: a changed id whose staged `status` is `closed` and whose HEAD
+     `status` was NOT `closed` — a close that genuinely happened in this commit —
+     carrying no comment AMONG THOSE NEW IN THIS COMMIT whose text begins `GATE:`,
+     `FRESH-VERIFY:`, or `TRIAGE-CLOSE:`. A landing record already on the row at HEAD
+     (a stale receipt from an earlier close, later reopened) does not satisfy a new
+     close. The close sensor is board-side (every close path, prose or script, human or
+     system); it never asks WHO closed, only whether a NEW landing record exists.
+     Board-side per the Decisions card; this is deliberately not fence lint.
 
 Rules 3 (origin: label, Probe: line) skip closed beads — forward-only, no backfill, per
 the origin-provenance ruling: enforcement started at the cutover and the past is not
@@ -107,6 +110,19 @@ def _git_show(root, rev_path):
     return proc.stdout if proc.returncode == 0 else None
 
 
+def _comment_key(c):
+    """Stable identity for a comment: prefer its `id`; fall back to
+    (created_at, text) when no id is present. NEVER position — br orders
+    comments by created_at with same-second ties in no fixed order
+    (measured on ac-kqpw.5, ac-gcj.8, ac-1p7j.31), so slicing by count can
+    mis-sort a legacy receipt as new or vice versa."""
+    if isinstance(c, dict) and c.get("id") is not None:
+        return ("id", c["id"])
+    if isinstance(c, dict):
+        return ("ct", str(c.get("created_at") or ""), str(c.get("text") or ""))
+    return ("raw", repr(c))
+
+
 def _by_id(text):
     out = {}
     for line in text.splitlines():
@@ -158,7 +174,8 @@ def changed_bead_data(root):
         staged_comments = staged_map[rid].get("comments") or []
         head_rec = head_map.get(rid) or {}
         head_comments = head_rec.get("comments") or []
-        new_comments[rid] = staged_comments[len(head_comments):]
+        head_keys = {_comment_key(c) for c in head_comments}
+        new_comments[rid] = [c for c in staged_comments if _comment_key(c) not in head_keys]
         head_status[rid] = head_rec.get("status")
     return changed_ids, new_comments, head_status
 
@@ -223,10 +240,11 @@ def main():
                         "actor=<id> tree=<sha>' on its first line")
             # Rule 6 — the landing record: a close that genuinely happened in this commit
             # (staged status closed, HEAD status was something else) leaves at least one
-            # comment naming the evidence it closed on. Staged lane only, same scope as
-            # rule 5 — no whole-board fallback (no backfill by doctrine).
+            # NEW comment (per the id/created_at+text key above, never a stale receipt
+            # already on the row at HEAD) naming the evidence it closed on. Staged lane
+            # only, same scope as rule 5 — no whole-board fallback (no backfill by doctrine).
             if status == "closed" and head_status.get(rid) != "closed":
-                comments = rec.get("comments") or []
+                comments = new_worker_comments.get(rid, [])
                 landed = any(
                     isinstance(c, dict) and str(c.get("text") or "").strip()
                     .startswith(("GATE:", "FRESH-VERIFY:", "TRIAGE-CLOSE:"))
