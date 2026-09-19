@@ -29,8 +29,24 @@ At org level or asked "across everything", sweep ALL `.beads/` repos, not just t
 . "$(git rev-parse --show-toplevel)/skills/_tools/br-call.sh"
 for repo in "$REPOS_ROOT" $(while IFS= read -r a; do echo "$REPOS_ROOT"/$a; done < "$APPS_LIST"); do
   [ -d "$repo/.beads" ] || continue
-  (cd "$repo" && br_call list --json --limit 0) | \
-    jq --arg repo "$(basename $repo)" '[.issues[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
+  # A repo whose read refuses (br_call, or D3's row-shape idiom) renders DEGRADED and is
+  # dropped from the sweep below it — never silently absent with no trace.
+  RAW=$(cd "$repo" && br_call list --json --limit 0 \
+    | jq -e 'if type=="object" then .issues else . end | if all(.[]; .id and .status and .created_at) then . else error("row shape") end' 2>/dev/null)
+  if [ -z "$RAW" ]; then
+    echo "DEGRADED $repo — read refused; this repo is not represented in the sweep below"
+  else
+    printf '%s' "$RAW" | jq --arg repo "$(basename "$repo")" \
+      '[.[] | select((.labels // []) | (index("human-gate") or index("pipeline-proposal") or index("dream-proposal"))) | select(.status != "closed") | . + {repo: $repo}]'
+  fi
+  # unpushed ledger: a session that died (or lost a push race) before this repo's
+  # .beads/issues.jsonl reached origin. No upstream is NOT a silent zero — a different fact.
+  if (cd "$repo" && git rev-parse --abbrev-ref --symbolic-full-name '@{u}') >/dev/null 2>&1; then
+    N=$(cd "$repo" && git log @{u}..HEAD -- .beads/issues.jsonl | grep -c '^commit ')
+    echo "unpushed ledger: $N"
+  else
+    echo "unpushed ledger: NOT-CHECKED (no upstream)"
+  fi
 done
 ```
 

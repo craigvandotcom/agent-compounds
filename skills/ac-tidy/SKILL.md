@@ -62,13 +62,10 @@ fails its row above · duplicate or mergeable items.
 
 ## 5. Land
 
-Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`:
-`AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push
-(NIGHTLY: `git push --no-verify origin HEAD:main`). NIGHTLY also: verify from the live checkout
-that `git -C "$BCA" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry;
-Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line
-of counts; write `$BCA/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts,
-pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
+Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin HEAD:main`).
+NIGHTLY also: verify from the live checkout that `git -C "$BCA" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry.
+Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
+Write `$BCA/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts, pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
 
 ---
 
