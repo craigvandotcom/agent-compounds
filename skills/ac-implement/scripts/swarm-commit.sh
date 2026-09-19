@@ -217,8 +217,9 @@ BOARD="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.beads/issues.jsonl"
 [ -n "$MSGFILE" ] && [ -r "$MSGFILE" ] || refuse no-claim-receipt "the message file is unreadable — the subject cannot be checked for a refused claim"
 SUBJECT=$(sed -n '1p' "$MSGFILE" 2>/dev/null || true)
 if [ -n "$SUBJECT" ] && [ -f "$BOARD" ] && command -v jq >/dev/null 2>&1; then
-  # every ac-* token in the subject is a candidate bead id; the board decides if it IS one
-  for tok in $(printf '%s\n' "$SUBJECT" | grep -oE 'ac-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
+  # every <prefix>-<id> token in the subject is a candidate bead id, any board prefix
+  # (not only `ac-`) — the board decides if it IS one via the exact-id lookup below.
+  for tok in $(printf '%s\n' "$SUBJECT" | grep -oE '[A-Za-z]+-[A-Za-z0-9][A-Za-z0-9._-]*' | sort -u); do
     row=$(jq -c --arg id "$tok" 'select(.id == $id)' "$BOARD" 2>/dev/null | head -1)
     [ -n "$row" ] || continue
     title=$(printf '%s' "$row" | jq -r '.title // ""')

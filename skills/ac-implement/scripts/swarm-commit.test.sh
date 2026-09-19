@@ -289,11 +289,13 @@ COMMON="$(git -C "$R" rev-parse --git-common-dir)"
 case "$COMMON" in /*) ;; *) COMMON="$(cd "$R" && cd "$COMMON" && pwd)" ;; esac
 mkdir -p "$R/.beads" "$COMMON/ac-flight"
 # a board with one bead: claimed, flight-check refused at 2026-09-07T07:00:00Z (title prefixed),
-# never re-claimed (no receipt after the refusal).
+# never re-claimed (no receipt after the refusal). A non-`ac-` prefixed id (`bd-`) going RED
+# proves the widened <prefix>-<id> grammar actually catches it (ac-4y7l.6) — not that the
+# grep merely happened to match because the id started with `ac-`.
 cat >"$R/.beads/issues.jsonl" <<'JSONL'
-{"id":"ac-refused-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
+{"id":"bd-refused-demo","title":"PREMISE-FAILED: demo bead refused at claim","status":"open","issue_type":"task","updated_at":"2026-09-07T07:00:00Z","comments":[{"created_at":"2026-09-07T07:00:00Z","text":"Premise failure: RED — no RED is recorded per the bead's named probes"}]}
 JSONL
-printf 'feat(ac-refused-demo): ship the work anyway\n' >"$R/msg.txt"
+printf 'feat(bd-refused-demo): ship the work anyway\n' >"$R/msg.txt"
 out="$(cd "$R" && AC2_FLIGHT_DIR="$COMMON/ac-flight" "$LANE" --identity t --message-file msg.txt --path mine.txt --no-push 2>&1)"; rc=$?
 if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[no-claim-receipt\]'; then
   pass "refuses a subject naming a claim-refused bead with no fresh receipt, naming no-claim-receipt"
