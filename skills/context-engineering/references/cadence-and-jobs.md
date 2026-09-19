@@ -9,10 +9,11 @@ What runs when, which lane it feeds or drains, and where its proof-of-life lives
 
 ## The wired schedule
 
-Jobs live in `infrastructure/jobs/{daily,weekly,monthly}.json` and are executed by
-`infrastructure/scheduler/`. `day_of_week` uses Python `weekday()` semantics — **0 is
-Monday, 6 is Sunday**. `enabled_on` pins a job to named machines, so a job absent from
-this machine's list simply never fires here.
+Jobs are a method, not a shipped tool — wire your own scheduler (illustrated below as
+`<your-deployment>/jobs/{daily,weekly,monthly}.json` run by
+`<your-deployment>/scheduler/`). If `day_of_week` is in the job schema, use Python
+`weekday()` semantics — **0 is Monday, 6 is Sunday**. `enabled_on` pins a job to named
+machines, so a job absent from this machine's list simply never fires here.
 
 | Job | Cadence | Lane | Role |
 |---|---|---|---|
@@ -54,10 +55,10 @@ Each lane's proof-of-life:
 
 | Marker | Tells you |
 |---|---|
-| `infrastructure/dream-cycle/last-run.json` | when CYCLE last completed, and what it read/emitted |
-| `infrastructure/dream-cycle/escalated.json` | which stale beads were bumped, and when |
-| `infrastructure/health/reports/retrieval-evals-<date>.json` | the nightly recall measurement |
-| `infrastructure/health/reports/memory-hook-health.json` | whether injection ran at all (liveness only) |
+| `<your-deployment>/dream-cycle/last-run.json` | when CYCLE last completed, and what it read/emitted |
+| `<your-deployment>/dream-cycle/escalated.json` | which stale beads were bumped, and when |
+| `<your-deployment>/health/reports/retrieval-evals-<date>.json` | the nightly recall measurement |
+| `<your-deployment>/health/reports/memory-hook-health.json` | whether injection ran at all (liveness only) |
 | a proposal's `status:` frontmatter | `pending` → `applied` / `rejected`; the terminal value means it actually landed |
 | a friction entry's `status:` | `open` → `promoted` when the skill edit ships |
 
@@ -72,7 +73,7 @@ quietly.
    an absent skill fails unattended, at 3am. (`context-engineering` § ALTITUDE.)
 2. **Pin `enabled_on`** to the machines that should run it. Unpinned jobs either
    double-run or never run.
-3. **Write a marker** — a dated artifact under `infrastructure/health/reports/` or an
+3. **Write a marker** — a dated artifact under `<your-deployment>/health/reports/` or an
    equivalent state file. If the job's only output is a Slack message, it is unverifiable.
 4. **Decide the failure surface.** A non-zero exit is the scheduler's page signal; make
    sure a real failure exits non-zero and a benign one does not. A job that always exits 0

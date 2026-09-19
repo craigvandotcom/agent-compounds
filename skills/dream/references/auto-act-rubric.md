@@ -10,9 +10,10 @@ splits the queue so the operator's attention lands only where their judgment cha
 **deterministic** hygiene only. The gate is the safe default; `auto` must be *earned* by
 every clause of a deterministic predicate. No LLM judgment decides the tier — that would
 re-introduce the very risk the gate exists for. The predicate is implemented, byte-for-byte,
-in `infrastructure/dream-cycle/classify.py` (this doc is the spec; the script is the
-enforcement — keep them in sync). The autonomy axis is **reversibility × judgment, not
-cadence** — architecture: `<org>/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
+in `<your-deployment>/dream-cycle/classify.py` (optional, write your own — this doc is the
+spec; the script is the enforcement, keep them in sync). The autonomy axis is
+**reversibility × judgment, not cadence** — architecture:
+`<org>/alignment/decisions/2026-06-26-tiered-memory-autonomy.md`.
 
 ---
 
@@ -28,7 +29,7 @@ A proposal is Tier-1 `auto` **iff ALL of these hold** (any failure → `gated`):
 1. `status: pending` (already-decided proposals route elsewhere).
 2. `category` ∈ {`fact`, `rule`} (a `lint-fix` that creates a brand-new note also qualifies).
 3. `target_repo: root`.
-4. `target_file` is **one literal `.md` path** directly under the infrastructure memory home
+4. `target_file` is **one literal `.md` path** directly under the global memory home
    (the deployment's actual home — `classify.py` pins the same path on its side, so the
    spec↔script sync is by resolution, not by a shared literal)
    **and is not `MEMORY.md`** (the always-loaded hot lane is never auto-edited beyond its one

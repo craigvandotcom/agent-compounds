@@ -2,7 +2,7 @@
 
 ## THIS PROMPT IS YOUR TASK — EXECUTE IMMEDIATELY
 
-You are invoked by `pai-scheduler` (Saturday ~06:00) to run the **REVIEW** mode of the
+You are invoked by your scheduler (Saturday ~06:00) to run the **REVIEW** mode of the
 `ac-align` skill against the app whose checkout is the scheduler cwd. Execute without user interaction.
 
 **⚠️ AUTONOMOUS MODE — no human is watching.** Run every step by actually executing the
@@ -24,7 +24,8 @@ ingest → scan → alignment audit → sequencing), then follow REVIEW-mode beh
   `main`. If it doesn't — **ABORT the entire run**: Slack `degraded` with reason
   `branch-guard: <branch> checked out`, zero writes, retry next cycle. A wave branch left
   checked out on the scheduler's cwd must never receive a weekly-align commit.
-- Verify Slack `sofi` resolves (fallback `pi`) before anything else.
+- Verify the Slack channel `$ALIGN_SLACK_CHANNEL` (fallback `$DEFAULT_SLACK_CHANNEL`)
+  resolves before anything else.
 - **No Agent-Mail reservation** (a raw scheduler `prompt_file` run isn't a self-registering
   entry point → would no-op; `agent-mail-project-keying-gotcha`).
 
@@ -55,7 +56,7 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
 
 Skip Phase 6 entirely. Apply nothing — active/ and pool/ counts are unchanged by this run.
 
-### 5. Commit + push (pathspec-scoped, BCA repo only)
+### 5. Commit + push (pathspec-scoped, this app's repo only)
 
 Re-verify the branch guard immediately before committing: `git branch --show-current` must
 still equal `main`. A concurrent session can switch the checked-out branch between preflight
@@ -72,7 +73,7 @@ git push --no-verify
 ```
 
 `AGENT_NAME` inline (`precommit-guard-needs-agent-name-in-shell`); never `git add -A`;
-`--no-verify` (backgrounded pre-push build). All commits stay inside the BCA repo.
+`--no-verify` (backgrounded pre-push build). All commits stay inside this app's repo.
 
 ### 6. Verify the push landed
 
@@ -82,13 +83,18 @@ with the stranded SHA. (No auto-apply to strand, but still confirm the proposal 
 ### 7. Notify — MANDATORY, do this last
 
 ```bash
-"$HOME/Repos/infrastructure/tools/bin/slack-send" --channel sofi --card \
-  --status <healthy|degraded> --title "Pipeline Alignment — $(date +%Y-%m-%d)" \
-  --body "<one-line: N pooled items proposed for promotion, M sequencing findings>"
+if command -v slack-send >/dev/null 2>&1; then
+  slack-send --channel "$ALIGN_SLACK_CHANNEL" --card \
+    --status <healthy|degraded> --title "Pipeline Alignment — $(date +%Y-%m-%d)" \
+    --body "<one-line: N pooled items proposed for promotion, M sequencing findings>"
+else
+  echo "slack-send not found on PATH — skipping notification" >&2
+fi
 ```
 
-Confirm exit 0; a Slack failure IS a finding — retry once. Finalize `last-run.json`
-(`{status: done, counts, mode, machine}`).
+Confirm exit 0 when `slack-send` ran; a Slack failure IS a finding — retry once. A
+missing `slack-send` degrades loudly (the message above), never silently. Finalize
+`last-run.json` (`{status: done, counts, mode, machine}`).
 
 The Slack body's one-line rollup also carries the board's docket counters, read from Scan A's
 `docket-health:` line (never recomputed): `plan-gap: N · gate-incomplete: N`.

@@ -47,13 +47,15 @@ plan: `<org>/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
    identity, conventions, and *pointers* — never accumulated learnings. Learnings go
    cold (retrieved on relevance). Bloating the hot lane is the #1 failure mode.
 5. **Deterministic enforcement, not self-report.**
-   `infrastructure/scripts/health/memory-lint.py` is the enforcement layer for
-   directives 1 and 3 — it checks MEMORY.md bijection (every fact indexed, every index
-   line real), wikilink validity, and frontmatter schema across every memory home, and
-   is wired into the nightly drift-check, `deploy.sh` (advisory banner), and
-   pre-commit. A directive without a script that verifies it is a hope, not a rule —
-   this is the closure check the taxonomy below is graded against, never a self-report
-   from the agent that did the work.
+   `<your deployment's memory-lint script>` (optional — write one; this skill
+   documents the method) is the enforcement layer for directives 1 and 3 — it checks
+   MEMORY.md bijection (every fact indexed, every index line real), wikilink
+   validity, and frontmatter schema across every memory home, and is wired into the
+   nightly drift-check, `deploy.sh` (advisory banner), and pre-commit. A directive
+   without a script that verifies it is a hope, not a rule — this is the closure
+   check the taxonomy below is graded against, never a self-report from the agent
+   that did the work. Without one, treat these directives as unverified, not
+   satisfied.
 
 ---
 
@@ -82,7 +84,7 @@ flag, never a new folder to invent.*
 | **content** | content-craft lessons: what works on which platform, editorial patterns — distinct from org strategy facts | `<org>/content/memory/` | `<org>/alignment/decisions/` |
 | **app-local** | one app's internals | the app's `factory.json` `memory.root` (each own-repo app) | app docs |
 | **personal** | life, PKM, journaling | `knowledge/` | — |
-| **global** | tooling, agents, infra, PAI | `infrastructure/memory/` | `infrastructure/memory/` |
+| **global** | tooling, agents, infra, PAI | `<global>/memory/` | `<global>/memory/` |
 
 > **Public-skill boundary:** this skill is the **method**; the example paths above are
 > illustrative. The deployment's **actual** homes, altitudes, and lobes live in the internal
@@ -103,8 +105,8 @@ one of these homes or is debris to archive/prune, never left to calcify in place
   correction) in `metadata.evidence`. Prefer grounded lessons over self-narration.
 - **Impossibility claims need evidence:** "X can't be done on Y" is a claim like any
   other — it requires an `evidence:` line (what was tried, what failed) same as a fact
-  or rule. An unevidenced impossibility claim is exactly what let BCA's "live native
-  walk still pending" survive 30+ waves unchallenged (dream lints for this — see
+  or rule. An unevidenced impossibility claim is exactly what once let a "live native
+  walk still pending" note survive 30+ waves unchallenged (dream lints for this — see
   `dream/references/lint-checks.md` check 10).
 - **Wikilink** related items (`[[slug]]`); convert relative dates to absolute.
 - **Sanitize on write:** no secrets (gitleaks-pattern scan), and no imperative
@@ -182,7 +184,7 @@ Measured floors (`agent cost ≈ model floor + tool schemas + prompt body + chai
 `haiku` ~14.7k · `opus` ~16.6k · `sonnet` ~20.0k — **model choice alone is ~5.3k/spawn**,
 a context cost independent of per-token price. `tools: "*"` adds ~15.8k over an explicit
 list (it pulls in `Skill`, hence the listing: +14.6k in an app). **MCP costs ~0** for
-tool-restricted agents. Full model + method: `infrastructure/plans/context-tokenomics.md`.
+tool-restricted agents. Full model + method: `<global>/plans/context-tokenomics.md`.
 
 ⚠️ **Measure subagents ONLY by spawning through the Task tool** and reading
 `subagent_tokens`. `claude -p --agent <name>` runs that agent as the **main thread** — a
@@ -325,7 +327,7 @@ Kept outside the five: infra agents (hook plumbing), harness built-ins (`Explore
 ## Agent-info routing (decision 2026-07-13)
 
 Per-level persistent-agent homes (`_agent-*/`) are retired (Phase 2c,
-`infrastructure/plans/memory-wiki-upgrade.md`) — agents are stances (above) + skills,
+`<global>/plans/memory-wiki-upgrade.md`) — agents are stances (above) + skills,
 not places. When a piece of surviving agent info needs a home, route by **kind**, not
 wholesale:
 

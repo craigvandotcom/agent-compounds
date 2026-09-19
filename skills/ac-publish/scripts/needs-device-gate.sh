@@ -176,7 +176,7 @@ none
   run_case "clean batch on a pathed board with no intersection" 0 'GATE PASSED: clean batch' \
     --board "$work/clean.json" --paths-file "$work/paths.txt"
 
-  OVERRIDE='craig: device pass recorded on build 52' \
+  OVERRIDE='alice: device pass recorded on build 52' \
     run_case "named override logs and passes" 0 'needs-device override' \
     --board "$work/zero.json" --paths-file "$work/paths.txt"
 

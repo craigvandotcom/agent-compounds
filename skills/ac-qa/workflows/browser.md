@@ -178,18 +178,17 @@ fi
 ```
 
 **Delete exploratory-created data rows (mandatory — you own this, not the workers)**
-(bd-wlpbk). Mutating exploratory runs create real rows (food entries, etc.) in the test
+(bd-wlpbk). Mutating exploratory runs create real rows (records, etc.) in the test
 account, and workers deliberately DO NOT self-clean them
 (`references/journey-tester-prompt.md` § Teardown: "leave cleanup to the conductor's
 sweep") — so a leftover row survives every run unless YOU delete it here. It is a "leave
-the account as found" violation and pollutes the next run's baseline (incident: `QA Smoke
-Test 20260716-w2` entry left in the test account). Concretely:
+the account as found" violation and pollutes the next run's baseline. Concretely:
 
 1. Confirm no exploratory run is still in flight (all worker sessions closed, per the
    session sweep above).
 2. Query the test account for rows created during THIS run's window — e.g. entries whose
-   title/name matches the run's QA marker, or `created_at` within `[run_start, now]` (for BCA:
-   psql via `CURATE_POSTGRES_URL`, `foods` table — memory `bca-tables-public-schema-curate-psql-access`;
+   title/name matches the run's QA marker, or `created_at` within `[run_start, now]`
+   (psql or another direct-DB path against the app's data table for this journey;
    or the app's admin/UI).
 3. Delete them by id, then re-query to confirm zero remain. Record the deleted-row count in
    the QA report.

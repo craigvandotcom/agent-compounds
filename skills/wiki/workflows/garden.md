@@ -24,7 +24,7 @@ the dream cycle.
    still traces to a real `[[wikilink]]` target. A link that no longer resolves (the
    source fact was pruned/renamed) is a dead-link finding, same severity as
    `memory-lint.py`'s wikilink check. Cross-check each page's `sources:` frontmatter and
-   `[[wikilinks]]` against `infrastructure/graph/edges.jsonl` (the extractor, 2a) —
+   `[[wikilinks]]` against `<your-deployment>/graph/edges.jsonl` (the extractor, 2a) —
    citation repair is nearly free once the edge list exists: a `sources:` entry with no
    matching edge is a stale-path finding the same class the digest flagged manually.
 4. **Staleness sweep.** Grep `updated:` dates. A page whose cited sources have since

@@ -30,7 +30,7 @@ Initialize new skill from template with proper structure and frontmatter.
 ./init-skill.sh pdf-processing "Use when..." --path /path/to/project/.claude/skills
 
 # Create for specific project
-./init-skill.sh body-compass "Use when analyzing movement patterns" --path /path/to/your-project/.claude/skills
+./init-skill.sh order-tracking "Use when analyzing order fulfillment patterns" --path /path/to/your-project/.claude/skills
 ```
 
 ### Creates

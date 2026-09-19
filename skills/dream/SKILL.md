@@ -1,6 +1,6 @@
 ---
 name: dream
-description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream dockets", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads both ranked dockets (infrastructure/dream-cycle/proposals/MEMORIES-DOCKET.md — knowledge substrate, FRICTIONS-DOCKET.md — friction ledger), rules each item with the human, and emits approved work as task beads; the mechanical sweep keeps the dockets fresh. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
+description: Run the dream session — the org's deliberate self-improvement review, human-run and unscheduled. Use when asked to "run the dream cycle", "dream", "synthesize the week's lessons", "lint the memory substrate", "review dream proposals", "review the dream dockets", or "what did the dream cycle find"; also when a docket-review bead is open. The session reads both ranked dockets (your deployment's dream-cycle proposals dir: MEMORIES-DOCKET.md — knowledge substrate, FRICTIONS-DOCKET.md — friction ledger), rules each item with the human, and emits approved work as task beads; the mechanical sweep keeps the dockets fresh. NOT for capturing one session's lessons (that is reflect) or saving a single item (that is context-engineering routing).
 ---
 
 # dream — human judgment over the ranked docket
@@ -9,9 +9,10 @@ description: Run the dream session — the org's deliberate self-improvement rev
 session. Not scheduled.
 **Constitution:** `../context-engineering/SKILL.md` (load it first — taxonomy, homes,
 hygiene rules all come from there).
-**Dockets (input):** `infrastructure/dream-cycle/proposals/MEMORIES-DOCKET.md`
+**Dockets (input):** `<your-deployment>/dream-cycle/proposals/MEMORIES-DOCKET.md`
 (knowledge substrate) + `FRICTIONS-DOCKET.md` (friction ledger) — maintained by
-the sweep (`docket-sweep.py`), never by the session. **Status:** MANUAL (2026-09-08).
+the sweep (`docket-sweep.py`, optional — write your own), never by the session.
+**Status:** MANUAL (2026-09-08).
 Only automated artifacts: the two dockets + one idempotent docket-review bead.
 
 ---
@@ -24,13 +25,13 @@ ranked docket, rules each item, and the agent captures the decisions — and min
 the sweep only flagged.
 
 Nothing in dream runs unattended. No cron invokes it. The scheduled weekly CYCLE and
-the daily review-queue job are gone — the jobs in `infrastructure/jobs/weekly.json`
+the daily review-queue job are gone — the jobs in `<your-deployment>/jobs/weekly.json`
 sit disabled (see The polish gate). A session starts because a human starts it.
 
 ## The automated leg — the sweep (findings only)
 
-The mechanical sweep (`infrastructure/dream-cycle/docket-sweep.py`) does four things,
-and nothing else:
+The mechanical sweep (`<your-deployment>/dream-cycle/docket-sweep.py`, optional —
+write your own) does four things, and nothing else:
 
 1. **Verifies premises live** — every pending proposal memo and open dream bead gets
    a verdict against HEAD: `LIVE` / `ANSWERED` / `UNJUDGED` / `STALE-EVIDENCE`.
@@ -84,7 +85,7 @@ emitted — it stays on the docket for the sweep's next pass. (Bead conventions:
 
 Automation does not scale back up — crons, filing, auto-tier — until the manual loop
 has run enough sessions to trust its output. The disabled jobs in
-`infrastructure/jobs/weekly.json` are the marker: while they sit disabled, dream stays
+`<your-deployment>/jobs/weekly.json` are the marker: while they sit disabled, dream stays
 a human session.
 
 ## Common mistakes

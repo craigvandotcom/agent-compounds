@@ -19,7 +19,7 @@ method).
 **Evidence base:** `references/research-basis.md` — distills the field research + our
 internal audit; read before seeding pages or designing a garden pass.
 **Status:** live — schema + 7 canonical pages in `<org>/wiki/` (ratified 2026-07-19
-after adversarial citation review); provenance: `infrastructure/plans/memory-wiki-upgrade.md` Phase 3
+after adversarial citation review); provenance: `<global>/plans/memory-wiki-upgrade.md` Phase 3
 
 ---
 
@@ -92,9 +92,9 @@ Every page body has two layers below the frontmatter, split by a
 Garden/distill passes update Compiled Truth prose FROM the timeline (what actually
 happened), never the reverse. Any material edit to a ratified page's Compiled Truth
 requires appending a timeline entry recording what changed and why, same session.
-memory-lint does not enforce this structure (schema/index/wikilink checks only,
-`infrastructure/scripts/health/memory-lint.py`) — this checklist is the enforcement
-layer; see Common Mistakes below.
+A memory-lint script does not enforce this structure (schema/index/wikilink checks
+only, if you have one — `<your-deployment>/scripts/health/memory-lint.py`) — this
+checklist is the enforcement layer; see Common Mistakes below.
 
 ## THE CITATION RULE
 

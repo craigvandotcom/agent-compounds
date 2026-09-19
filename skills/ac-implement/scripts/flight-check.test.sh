@@ -143,7 +143,7 @@ run "$WORK/bodies/consumes-ok.md"
 
 # 2a'' multi-hyphen blocker ids parse whole, and unique id prefixes resolve —
 # the extractor once truncated bd-epic-kb-seams-573x7.3 to 'bd-epic' and refused
-# the whole bd-epic-* family at claim (five beads burned, one BCA run).
+# the whole bd-epic-* family at claim (five beads burned, one consumer-app run).
 cat >"$WORK/bodies/consumes-hyphen.md" <<'BODY'
 ## Acceptance Criteria
 - Something.
@@ -220,7 +220,7 @@ printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: ENVIRONMENT' \
 # 2c PERISHABLE — external state re-asserted at claim, because refine-time answers decay.
 cat >"$WORK/bodies/perish.md" <<'BODY'
 ## Intent
-Perishable: the bca.entries column still exists :: false
+Perishable: the legacy_schema.entries column still exists :: false
 
 ## Acceptance Criteria
 - Something.
@@ -233,7 +233,7 @@ run "$WORK/bodies/perish.md"
 [ "$RUN_RC" -eq 1 ] && ok "PERISHABLE refusal exits 1" || bad "PERISHABLE: expected exit 1, got $RUN_RC"
 printf '%s' "$RUN_OUT" | grep -q 'PREMISE-FAILED: PERISHABLE' \
   && ok "PERISHABLE refusal names its class" || bad "PERISHABLE class not named: $RUN_OUT"
-printf '%s' "$RUN_OUT" | grep -q 'bca.entries column' \
+printf '%s' "$RUN_OUT" | grep -q 'legacy_schema.entries column' \
   && ok "PERISHABLE refusal quotes the claim that stopped holding" || bad "PERISHABLE did not quote the claim"
 
 # 2d RED — every named probe is already green, so there is no RED to record.

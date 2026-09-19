@@ -7,12 +7,12 @@
 # test (H6/L4 — gates stage 3)"), this harness must pass green before the
 # conductor-concurrency cap can be raised beyond 1.
 #
-# REPO: agent-compounds (skills/ac-pipeline/scripts/) — symlinked into every neoMeta app
-# that adopts trunk-direct claim-at-selection (ac-loop Phase 1/2, ac-implement Phase
+# REPO: agent-compounds (skills/ac-pipeline/scripts/) — symlinked into every consuming
+# app that adopts trunk-direct claim-at-selection (ac-loop Phase 1/2, ac-implement Phase
 # 1a). Lives alongside beads-closed-gate.sh, the sibling script covering the SAME
 # mechanism's closing half (assignee-scoped gate vs. this file's claiming-time race
-# test). Reused across apps, not made body-compass-app-local, even though it is
-# exercised here against BCA's live `.beads` DB (see rationale below).
+# test). Reused across apps, not made app-local, even though it is
+# exercised here against this app's live `.beads` DB (see rationale below).
 #
 # WHY REAL `br`, NOT A MOCK (documented per the bead's explicit either/or option):
 # the property under test — "does concurrent `br update <ids...> --status

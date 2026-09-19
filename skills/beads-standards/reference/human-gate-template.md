@@ -112,7 +112,7 @@ in a batch sweep. An un-wired human-gate bead is invisible to:
 - `bv --robot-next` — can't route around an undecided fork
 - the cockpit's leverage metric — reads the gate as stalling nothing, when it may be
   stalling several beads (this was the actual state of 30/31 open human-gate beads
-  before this rule: cockpit-mission-panel audit, 2026-07-15)
+  before this rule)
 
 ## Worked example
 
@@ -183,7 +183,7 @@ the plan is beadified.
 Do not file it as a task bead and do not start planning unprompted. The "this needs a
 plan" judgement belongs in the human session, not buried in a backlog nobody can pick up.
 
-### Worked example (modelled on BCA bd-l6khg.13)
+### Worked example (modelled on `bd-9x4k2.7`)
 
 ```bash
 br create -t task --labels origin:<skill>,human-gate \
@@ -207,9 +207,9 @@ best-done-when: on the next ASC version submission (the offer must ride a versio
 it cannot ship standalone).
 EOF
 )"
-# -> prints e.g. bd-l6khg.13
+# -> prints e.g. bd-9x4k2.7
 
-br dep add bd-l6khg.13 <version-submission-bead-id>   # wire it to the ride it depends on
+br dep add bd-9x4k2.7 <version-submission-bead-id>   # wire it to the ride it depends on
 ```
 
 The action rides the version-submission bead: `best-done-when` records the timing

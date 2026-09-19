@@ -163,7 +163,7 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
             # (ac-4y7l.24): LEG 6 no longer diffs against a baseline tree, so a per-line
             # rule+text generator has nothing left to feed.
             echo "UBS Meta-Runner v5.4.2  2026-09-19 23:32:28"
-            echo "Project: /home/craigvandotcom/mission/software/agent-compounds"
+            echo "Project: /repo"
             echo "Detected: python"
             echo "Scanning python..."
             echo ""
@@ -192,7 +192,7 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
             # list (ubs's own "N more not shown" quirk) and no Critical/Warning at all, so
             # LEG 6 must report it without refusing.
             echo "UBS Meta-Runner v5.4.2  2026-09-19 23:32:11"
-            echo "Project: /home/craigvandotcom/mission/software/agent-compounds"
+            echo "Project: /repo"
             echo "Detected: bash"
             echo "Scanning bash..."
             echo ""
@@ -292,7 +292,7 @@ board() { # <root> <status> <assignee>
 
 # A decision-type fixture: no harness, no extractable Probe: line at all — proving the
 # ruling path truly skips legs 1-8 rather than merely passing them. `.beads/config.yaml`'s
-# `humans:` key is the ruling matcher's live authority (ac-4y7l.25); "Craig" is this
+# `humans:` key is the ruling matcher's live authority (ac-4y7l.25); "Alice" is this
 # fixture's authorized name.
 mkcase_decision() {
   local root="$WORKDIR/$1"
@@ -300,7 +300,7 @@ mkcase_decision() {
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
-  printf 'humans: Craig, Craig van Heerden\n' >"$root/.beads/config.yaml"
+  printf 'humans: Alice, Alice Smith\n' >"$root/.beads/config.yaml"
   printf 'Pick between option A and option B.\n' >"$root/body.md"
   echo "$root"
 }
@@ -353,7 +353,7 @@ else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 # ============================================================================================
 R="$(mkcase_decision ruling-accept)"
 board_decision "$R" open ""
-add_ruling "$R" "DECISION (Craig): option A — because it is cheaper"
+add_ruling "$R" "DECISION (Alice): option A — because it is cheaper"
 out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
@@ -386,7 +386,7 @@ else fail "AC-ruling: the bead was closed despite no ruling"; fi
 R="$(mkcase_decision ruling-placeholder)"
 board_decision "$R" open ""
 add_ruling "$R" "Conductor note: still discussing.
-  DECISION (Craig): draft — not final yet
+  DECISION (Alice): draft — not final yet
 Will update after standup."
 add_ruling "$R" "See template below:
 DECISION (<human>): <choice> — <why>"
@@ -451,8 +451,8 @@ else fail "AC-ruling ac-tidy-nonmoot: rc=$GATE_RC out=$out"; fi
 R="$(mkcase_decision ruling-agent-then-human)"
 board_decision "$R" open ""
 add_ruling "$R" "DECISION (agent): option A — because it is cheaper"
-add_ruling "$R" "DECISION (Craig): option B — overriding the agent's earlier call"
-out="$(gate "$R" --reason "decided: option B, per Craig's later ruling")"
+add_ruling "$R" "DECISION (Alice): option B — overriding the agent's earlier call"
+out="$(gate "$R" --reason "decided: option B, per Alice's later ruling")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
   pass "AC-ruling: the newest authorized ruling wins — a later human ruling is not blocked by an earlier unauthorized agent line"
@@ -460,8 +460,8 @@ else fail "AC-ruling agent-then-human: rc=$GATE_RC out=$out"; fi
 
 R="$(mkcase_decision ruling-two-humans)"
 board_decision "$R" open ""
-add_ruling "$R" "DECISION (Craig): option A — the first call"
-add_ruling "$R" "DECISION (Craig): option B — changed my mind, this one"
+add_ruling "$R" "DECISION (Alice): option A — the first call"
+add_ruling "$R" "DECISION (Alice): option B — changed my mind, this one"
 out="$(gate "$R" --reason "decided: option B, the newer human ruling")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && [ -f "$R/.br/comments.log" ] && grep -q 'option B' "$R/.br/comments.log"; then
@@ -470,7 +470,7 @@ else fail "AC-ruling two-humans: rc=$GATE_RC out=$out"; fi
 
 R="$(mkcase_decision ruling-multiword-name)"
 board_decision "$R" open ""
-add_ruling "$R" "DECISION (Craig van Heerden): option A — signed with the full name on the humans: key"
+add_ruling "$R" "DECISION (Alice Smith): option A — signed with the full name on the humans: key"
 out="$(gate "$R" --reason "decided: option A, full-name ruling")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
@@ -484,7 +484,7 @@ else fail "AC-ruling multiword-name: rc=$GATE_RC out=$out"; fi
 R="$(mkcase_decision ruling-human-gate-label)"
 board_decision "$R" open "" '["human-gate"]'
 jq '.issue_type = "task"' "$R/.br/$BEAD.json" >"$R/.br/$BEAD.json.tmp" && mv "$R/.br/$BEAD.json.tmp" "$R/.br/$BEAD.json"
-add_ruling "$R" "DECISION (Craig): option A — because it is cheaper"
+add_ruling "$R" "DECISION (Alice): option A — because it is cheaper"
 out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
@@ -1000,15 +1000,15 @@ else fail "AC4: the gate never emits NOT-CHECKED"; fi
 # type-routed ruling path above uses (ac-4y7l.24, superseding ac-4y7l.23's baseline diff).
 # ============================================================================================
 mk_green_ruled() { # a legitimate-close fixture that also carries .beads/config.yaml, so a
-                    # "DECISION (Craig): ..." comment can be authorized (humans: Craig)
+                    # "DECISION (Alice): ..." comment can be authorized (humans: Alice)
   local r; r="$(mk_green "$1")"
   mkdir -p "$r/.beads"
-  printf 'humans: Craig\n' >"$r/.beads/config.yaml"
+  printf 'humans: Alice\n' >"$r/.beads/config.yaml"
   echo "$r"
 }
 
 R="$(mk_green_ruled scan-ruling-override)"
-add_ruling "$R" "DECISION (Craig): accept the scanner findings — ship now, follow-up separately"
+add_ruling "$R" "DECISION (Alice): accept the scanner findings — ship now, follow-up separately"
 out="$(AC2_TEST_UBS_MODE=captured gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then

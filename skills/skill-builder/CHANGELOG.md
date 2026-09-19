@@ -3,8 +3,8 @@
 ## 2026-07-07 - Token Economy doctrine (v2.1)
 
 Based on 2026-07 research (Anthropic docs, Matt Pocock writing-great-skills,
-obra/superpowers wording tests) + registry audit. Craig's standing rule: pipeline
-skills deliberately spend tokens on determinism — predictability first, cost second.
+obra/superpowers wording tests) + registry audit. Standing rule: pipeline skills
+deliberately spend tokens on determinism — predictability first, cost second.
 
 - **New Core Principle 5 (SKILL.md):** Token Economy — four token buckets
   (enforcement/discovery/persuasion/sediment), enforcement hierarchy, the cut rule

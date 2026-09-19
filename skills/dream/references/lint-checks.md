@@ -1,8 +1,8 @@
 # Substrate lint — the hygiene checklist (dream Phase 3)
 
 Sweep targets (resolve the actual homes from the deployment's instance-map — placeholders
-below, never literals): the infrastructure memory home, the org memory home, each app's
-memory root (its `factory.json` `memory.root`), `<org>/alignment/decisions/`, `infrastructure/eval/golden/`,
+below, never literals): the global memory home, the org memory home, each app's
+memory root (its `factory.json` `memory.root`), `<org>/alignment/decisions/`, `<global>/eval/golden/`,
 `<org>/wiki/` (check 11 below is wiki-specific; the others treat wiki pages as
 read-only citation targets, not sweep subjects — the wiki skill's own `garden.md`
 owns wiki-internal hygiene).
@@ -62,7 +62,7 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
     reconstructed. Second-order check on the same shape: an impossibility claim that
     **justified a skipped verification** (a "can't verify this on device/sim" note sitting
     upstream of a PASS or a shipped feature) — propose a **retest**, not just a citation fix;
-    BCA 2.1(b) shipped four rejections behind exactly this pattern (a stale "live walk still
+    a shipped rejection once traced back to exactly this pattern (a stale "live walk still
     pending" note nothing ever re-checked). Grep seed: `grep -rin "can't be\|cannot be\|not
     possible\|no way to" <memory homes>`, then check each hit for `evidence:` and for
     downstream skip/PASS language nearby.
@@ -101,7 +101,7 @@ Each check below is tagged `[T0 daily]` or `[T2 weekly]`.
 14. **Skill-uptake decay** `[T2 weekly, script-driven, data-gated]` — a registry skill that
     has earned no read across the trailing window is a DEMOTION candidate (retire, fold
     into a sibling, or keep-with-reason). Sibling of check 12 in every respect: it is the
-    deterministic script `infrastructure/dream-cycle/skill_uptake_lint.py` (root repo, NOT
+    deterministic script `<your-deployment>/dream-cycle/skill_uptake_lint.py` (root repo, NOT
     agent-compounds), which reads the `skill_reads` table in `~/.claude/logs/activity.db`,
     aggregated **per skill** (the `path` column is recorded but reference-file granularity
     is deliberately out of scope — its arming denominator is a different, larger corpus and
@@ -169,7 +169,7 @@ diff <(grep -oE '\(([a-zA-Z0-9_-]+\.md)\)' <home>/MEMORY.md | command tr -d '()'
 # dead wikilinks
 grep -ohrE '\[\[[a-zA-Z0-9_-]+\]\]' <homes>... | sort -u   # then check each slug exists
 # decay by reference (check 12 — self-arming, report-only, findings for the docket)
-python3 ~/infrastructure/scripts/health/memory-lint.py --check --json
+python3 <your-deployment>/scripts/health/memory-lint.py --check --json
 ```
 
 Run `memory-lint.py --check --json` in the lint phase; **tolerate absence / not-armed** — a

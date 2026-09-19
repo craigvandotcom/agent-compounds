@@ -21,6 +21,10 @@
 #   --lane  store     — BLOCKS (exit 1) on any MISSING/STALE review-critical journey
 #           testflight — never blocks (exit 0); prints WARN lines instead
 #
+#   BRAND_NPM_SCOPE (env, optional) — npm scope of your shared design-token/brand
+#   package, e.g. "@your-org/brand". Defaults to "@neometa/brand"; set it to match
+#   your own package scope so brand-token edits classify as webui surface.
+#
 # Exit codes: 0 clean (or lane=testflight, regardless of findings) · 1 lane=store
 # with ≥1 MISSING/STALE review-critical journey · 2 usage/setup error.
 #
@@ -43,7 +47,9 @@ set -euo pipefail
 #   native  | ^ios/ | ^android/ | capacitor\.config | cap-build | @capacitor
 #           | (+ content check: package.json diff mentions "capacitor")
 #   webui   | \.(tsx|jsx|css)$ AND app/|components/|features/
-#           | OR globals\.css | design\.md | tailwind\.config | @neometa/brand | tokens
+#           | OR globals\.css | design\.md | tailwind\.config | $BRAND_NPM_SCOPE | tokens
+#           | (BRAND_NPM_SCOPE — your shared design-token package's npm scope, e.g.
+#           |  "@your-org/brand"; env-overridable, see below)
 #   webrt   | app/api/ | route\.(ts|js)$ | middleware | hooks/ | lib/.*(fetch|client|store|query)
 #   logic   | lib/ | utils/ | server | supabase/ | migrations?/ | \.sql$
 #   runtime | NOT ( \.(md|mdx)$ | \.test\. | \.spec\. | __tests__/ | ^\.github/
@@ -114,7 +120,11 @@ PAT_BUILD_TOOLING='^scripts/cap-build'
 PAT_ARTIFACT_AFFECTING='^[+-][[:space:]]*export[[:space:]]+[A-Za-z_]+=|^[+-][[:space:]]*(next build|pnpm[[:space:]]+.*build|xcodebuild)|^[+-].*(npx[[:space:]]+cap|cap[[:space:]]+(sync|copy|run|add))|^[+-].*(BUILD_TARGET|NODE_ENV=|BUILD_ID)|^[+-].*>[[:space:]]*\.env'
 PAT_WEBUI_EXT='\.(tsx|jsx|css)$'
 PAT_WEBUI_DIR='app/|components/|features/'
-PAT_WEBUI_TOKENS='globals\.css|design\.md|tailwind\.config|@neometa/brand|tokens'
+# BRAND_NPM_SCOPE — the npm scope of your shared design-token/brand package (if you
+# have one), e.g. "@your-org/brand". Override via env var to match your own scope;
+# default preserves this script's original behaviour for existing deployments.
+BRAND_NPM_SCOPE="${BRAND_NPM_SCOPE:-@neometa/brand}"
+PAT_WEBUI_TOKENS="globals\\.css|design\\.md|tailwind\\.config|${BRAND_NPM_SCOPE}|tokens"
 # `^app/.*\.ts$` — app-router TypeScript that is not a route/api file (robots.ts,
 # sitemap.ts, opengraph-image.ts). Web-runtime concerns; never native.
 PAT_WEBRT='app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)|^app/.*\.ts$'

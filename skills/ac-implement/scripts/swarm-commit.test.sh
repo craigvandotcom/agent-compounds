@@ -276,8 +276,8 @@ if [ "$rc" -eq 0 ]; then pass "the lane is released and takeable again"
 else fail "lane not released: rc=$rc out=$out"; fi
 
 # --- 13. the lock is repo-global: git common dir, and .git as a FILE -------------------------
-# In a linked worktree `.git` is a FILE, not a directory — the same shape every neoMeta app
-# has as a submodule. A literal .git/<name>.lock path never opens there and the mutex
+# In a linked worktree `.git` is a FILE, not a directory — the same shape a submodule
+# has. A literal .git/<name>.lock path never opens there and the mutex
 # silently does nothing, so the lane must resolve through --git-common-dir.
 R="$(new_repo common-dir)"
 git -C "$R" add -- mine.txt >/dev/null 2>&1

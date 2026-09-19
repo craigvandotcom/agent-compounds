@@ -1,13 +1,13 @@
 ---
 name: beads-standards
-description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project in any of the three repos (~/infrastructure, ~/mission incl. its apps, ~/personal) — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Machine-wide canon for every repo with a `.beads/` directory (root, every app, agent-compounds, future personal task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-polish, to capture one use ac-backlog, to generate a wave use ac-beadify.'
+description: 'Use when creating, refining, or reviewing a bead in ANY `.beads/` project — choosing a label, deciding refined vs unrefined, writing a human-gate/DECISION bead, wiring `blocks` dependencies, setting `close_reason` or `defer_until`, or picking priority/status. Triggers: "beads standard", "bead template", "human-gate", "DECISION bead", "HUMAN bead", "create a bead", "close reason", "refined unrefined", "wire dependencies", "which label". Canon for every repo with a `.beads/` directory (root, every app, agent-compounds, any other task tracking) — not scoped to the agent-compounds `ac-*` pipeline (that pipeline''s own batch-epic + routing supplement lives in `skills/beads-standards/reference/bead-conventions.md`; read both inside an `ac2` skill). This is the STANDARD, not an executor: to actually refine a bead use ac-polish, to capture one use ac-backlog, to generate a wave use ac-beadify.'
 ---
 
 # Beads Standards
 
 **Purpose:** one canon so a bead written in one consuming app reads the same as one in
 the root repo or agent-compounds.
-**Status:** Complete (ratified 2026-07-15, cockpit-mission-panel audit — bead `ac-lv5`)
+**Status:** Complete (ratified 2026-07-15 — bead `ac-lv5`)
 
 ## Scope & adoption
 
@@ -77,7 +77,7 @@ fork — an approval, credential handoff, or go/no-go — same fields, same wiri
 
 **`ACTION:` — an action card** (a do-in-the-world task only the operator can perform — a console
 toggle, a store submission, a credential handoff). Not a fork, so **no options block**; the
-copy-paste field block + worked example (BCA `bd-l6khg.13`) live in
+copy-paste field block + worked example (`bd-9x4k2.7`) live in
 `reference/human-gate-template.md` § ACTION cards.
 
 **MANDATORY dependency wiring — not optional, not "if convenient":** every bead this
@@ -184,7 +184,7 @@ admission (pick-order drains `bug` first, so type schedules). Without a test eve
 ## Verification verdicts (structured comments)
 
 Close-status alone is a weak eval label — a bead can close green while its symptom
-survives; only the verdict chain shows it (a BCA bead once closed green while the
+survives; only the verdict chain shows it (a bead once closed green while the
 symptom it targeted lived on). So each verification ceremony (QA, review, CI,
 prod-triage) records its outcome as a **structured comment** on the bead — not prose:
 greppable, survives `br` version changes, and clusterable by the same tooling that reads
@@ -464,6 +464,6 @@ already covers that).
 Two independent writers do not merely risk a lost update — they routinely produce the SAME derived
 content, and a duplicate is what makes a commit **empty** on rebase. An automated `pull --rebase`
 then stops to ask `--skip` or `--continue` with no operator present, stranding the checkout
-detached mid-rebase; every session committing afterwards lands orphaned (BCA 2026-07-27: 8 hours,
+detached mid-rebase; every session committing afterwards lands orphaned (measured once: 8 hours,
 ~26 sessions, no data lost but main wedged). Because the DB is authoritative, the recovery is
 always cheap — discard the JSONL and re-export — but the wedge is not.

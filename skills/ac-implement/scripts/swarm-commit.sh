@@ -165,8 +165,8 @@ FLOCK="$(command -v flock || true)"
 
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "swarm-commit: not inside a git repository" >&2; exit 2; }
 
-# NEVER a literal .git/<name>.lock: `.git` is a FILE in every neoMeta app (submodule) and
-# in every linked worktree, so that path never opens and the mutex silently does nothing.
+# NEVER a literal .git/<name>.lock: `.git` is a FILE, not a directory, in a submodule
+# and in every linked worktree, so that path never opens and the mutex silently does nothing.
 # --git-common-dir resolves to the ONE shared directory behind every worktree, which is
 # what makes this lane repo-global rather than per-worktree.
 COMMON_DIR="$(git rev-parse --git-common-dir)"

@@ -127,10 +127,10 @@ checkout you claimed from.
 
 **Commit in the repo that tracks the bytes, on that repo's mainline.** Resolve
 the target: `git -C "$(realpath <edited-file>)" rev-parse --show-toplevel`.
-A BCA checkout's `.claude/skills/ac-align` is a symlink — editing it dirties
-**agent-compounds**, not BCA. `git status` in BCA staying clean is the signal
-you are about to close a bead against an empty commit. Run `git status` in the
-resolved target before committing.
+An app checkout's `.claude/skills/ac-align` is a symlink — editing it dirties
+**agent-compounds**, not the app. `git status` in the app checkout staying clean is
+the signal you are about to close a bead against an empty commit. Run `git status`
+in the resolved target before committing.
 
 **Never one commit across a repo boundary.** A bead that edits both an app file
 and a skill file is two pathspec commits (app repo, then target repo), then one
@@ -139,7 +139,7 @@ test` / `test:all` / `type-check` / the build hook) — the gate is the bead's
 own grep/diff ACs. Reserve files in **both** Agent Mail projects (board repo +
 target repo) before editing.
 
-**Do not open a BCA `wave/*` branch for these.** Doctrine and skill text go
+**Do not open the app's `wave/*` branch for these.** Doctrine and skill text go
 to the target's `main`.
 
 ---

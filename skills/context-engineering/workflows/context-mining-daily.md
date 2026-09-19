@@ -20,20 +20,21 @@ queue job can auto-apply.
 ```bash
 git log --all --since="24 hours ago" --oneline
 ```
-Collect commits from the infrastructure, org, content, and software repos.
+Collect commits from every repo in scope (global tooling, org, content, software).
 
 ### 2. Reflect-gap detection (the capture backstop)
 Some sessions do real work — or make a decision in pure conversation — and never run
 `reflect`. A no-file-touch session leaves NO git signal, so step 1 can't see it. List the
-substantive-but-unreflected sessions deterministically:
+substantive-but-unreflected sessions deterministically (your deployment's own script —
+build one against your session-transcript store; path below is a placeholder):
 ```bash
-/usr/bin/python3 infrastructure/dream-cycle/reflect_gap.py --hours 24
+python3 <your-deployment>/dream-cycle/reflect_gap.py --hours 24
 ```
 After the mining agents return, mark what you mined so tomorrow's run does not pay for it
-again — the ledger exists (`infrastructure/dream-cycle/mined-sessions.json`) but only fills
+again — the ledger exists (`<your-deployment>/dream-cycle/mined-sessions.json`) but only fills
 if you call it:
 ```bash
-/usr/bin/python3 infrastructure/dream-cycle/reflect_gap.py --hours 24 --record
+python3 <your-deployment>/dream-cycle/reflect_gap.py --hours 24 --record
 ```
 A session re-flags only if it gained new turns since (the ledger keys on `last_ts`), so this
 is safe. Use `--remine` to deliberately re-list an already-mined session.
@@ -48,7 +49,7 @@ outright — under-flagging loses a lesson.
 ### 3. Check Structured Memory
 Review recent writes in the live memory homes (resolve the actual paths from the
 deployment's instance-map — placeholders below, never literals):
-- the infrastructure memory home
+- the global memory home
 - the org memory home (`<org>/memory/`)
 - `<org>/alignment/decisions/`
 
@@ -71,9 +72,9 @@ qmd search "<pattern>"
 For genuinely new lessons:
 - Classify: {fact, rule, decision, skill-improvement, recipe} × {org, personal, global, app-local}
 - Write the note into its live memory home and add its `MEMORY.md` index line in the same
-  step: `global`/`personal` → the infrastructure home · `org` →
+  step: `global`/`personal` → the global home · `org` →
   the org home · `app-local` → the app's `factory.json` `memory.root`, committed inside that repo.
-- Never write a lesson to `infrastructure/context-mining/daily/<YYYY-MM-DD>/`. Nothing reads
+- Never write a lesson to `<your-deployment>/context-mining/daily/<YYYY-MM-DD>/`. Nothing reads
   it — retrieval queries the memory + wiki lobes, so a note left there never injects
   (memory `context-mining-staging-dir-is-write-only`). That dir holds `INDEX.md` only.
 - Include evidence and outcome grounding
@@ -86,9 +87,9 @@ mechanical** checks run daily, because they are lossless and the script can re-d
 Today's Tier-0 check: **index drift** — a `MEMORY.md` line pointing at a note file that no
 longer exists. Detect it per home:
 ```bash
-# Homes are placeholders — resolve the infrastructure home, the org home, and each
+# Homes are placeholders — resolve the global home, the org home, and each
 # app repo's home (its factory.json memory.root) from the deployment's instance-map first.
-for home in <infra-memory-home> <org-memory-home> \
+for home in <global-memory-home> <org-memory-home> \
             <org>/software/*/<app-memory-home>; do
   [ -f "$home/MEMORY.md" ] || continue
   # index slugs whose target file is absent = dangling lines
@@ -121,15 +122,15 @@ slugs=$(… the left operand … | wc -l)                 # slugs the pipeline e
 **Before pruning, prove the content is actually gone.** A dangling index line means the
 FILE is absent, not that the LESSON is lost — the prune is only lossless if no copy
 survives. Check all three, per slug:
-`infrastructure/context-mining/daily/*/<slug>.md` (staged, never promoted) · `$home/_archive/`
+`<your-deployment>/context-mining/daily/*/<slug>.md` (staged, never promoted) · `$home/_archive/`
 · `git log -- <memory-home>/auto/<slug>.md`. A slug with a surviving body is a **promotion**, not a
 prune: move it into the home (the index line is already correct) and leave it out of the
 proposal. On 2026-09-15, 5 of 17 dangling slugs still had their bodies in the 2026-08-25
 staging dir — pruning those would have destroyed five real lessons under a "lossless" label.
 
 For each home with genuinely dead lines, **emit an `index-prune` proposal** into today's dream
-queue (`infrastructure/dream-cycle/proposals/<YYYY-MM-DD>/`) so the 02:00 job auto-applies it.
-Frontmatter the classifier requires (`infrastructure/dream-cycle/classify.py` is the authority
+queue (`<your-deployment>/dream-cycle/proposals/<YYYY-MM-DD>/`) so the 02:00 job auto-applies it.
+Frontmatter the classifier requires (`<your-deployment>/dream-cycle/classify.py` is the authority
 — it re-derives and applies the prune itself, you only flag it):
 ```markdown
 ---
@@ -143,7 +144,7 @@ evidence: [dangling index lines: <slugs>]
 ## What
 <paste the FULL re-derived MEMORY.md with the dangling lines removed, inside a ``` fence>
 ```
-Only root-memory homes (the infrastructure home) auto-apply; for an app-local home with
+Only root-memory homes (the global home) auto-apply; for an app-local home with
 drift, surface it in the report for the human instead (repo-boundary + altitude rules).
 If no home has drift, skip — emit nothing.
 
@@ -154,7 +155,7 @@ backlog as if it were today's staging (memory `mtime-is-not-an-activity-timestam
 ```bash
 # NOTE: zsh's `[` rejects `>` for string compare ("condition expected: >") — use awk.
 cut=$(date -v-7d +%F)   # macOS; GNU: date -d '7 days ago' +%F
-base=infrastructure/context-mining/daily
+base=<your-deployment>/context-mining/daily
 for day in $(ls "$base" | awk -v c="$cut" '$0 >= c'); do
   find "$base/$day" -name '*.md' ! -name 'INDEX.md'
 done
@@ -168,17 +169,18 @@ Older orphans are a backlog, not daily hygiene: bulk promotion is lossy (no dedu
 today's substrate) and would swamp retrieval. Count them, report the count, promote none.
 
 ### 8. Generate Report
-Save extraction summary to `infrastructure/health/reports/context-<date>.json`:
+Save extraction summary to `<your-deployment>/health/reports/context-<date>.json`:
 - Candidates found / Lessons extracted / Duplicates skipped
 - Reflect-gaps: sessions scanned, gaps found, gaps mined
 - Tier-0 hygiene: index-prune proposals emitted (homes + dangling slug counts); staged
   orphans promoted, and the older backlog count carried for the human
 
-### 9. Notify Slack — MANDATORY, DO THIS LAST, DO NOT SKIP
-Actually run the CLI (don't describe it). `--status`: `healthy` normally; `degraded` if
-gitleaks flagged anything or extraction errored.
+### 9. Notify — MANDATORY, DO THIS LAST, DO NOT SKIP
+If you have a notification tool wired, actually run it (don't describe it) — this example
+assumes a Slack card CLI at `<your-deployment>/tools/bin/slack-send`; substitute your own.
+`--status`: `healthy` normally; `degraded` if gitleaks flagged anything or extraction errored.
 ```bash
-infrastructure/tools/bin/slack-send --channel pi --card \
+<your-deployment>/tools/bin/slack-send --channel pi --card \
   --status <healthy|degraded> \
   --title "Context Mining — $(date +%Y-%m-%d)" \
   --field "Extracted=<N>" --field "Gaps mined=<N>" \
@@ -186,7 +188,7 @@ infrastructure/tools/bin/slack-send --channel pi --card \
   --body "<one line: notable lesson + what the gap-scan caught, or 'nothing new'>" \
   --context "01:30 context mining · capture backstop + Tier-0 hygiene"
 ```
-Confirm exit 0; retry once on error. The job is NOT complete until this posts.
+If wired, confirm exit 0 and retry once on error — the job is not complete until this posts.
 
 ## Security
 - Run gitleaks check on any extracted content (transcripts are private — scrub before any

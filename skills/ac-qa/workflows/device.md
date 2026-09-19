@@ -88,12 +88,12 @@ evidence protocol.
    simulators.
    **Orphan-runner preflight (do this before `agent-device open`):** cross-check
    `agent-device session list` against live `AgentDeviceRunnerUITests-Runner`
-   PIDs bound to **this app's** sim UDID (consuming app: BCA-QA-iPhone17Pro /
-   `$BCA_QA_SIM`, session `bca`). An **orphan** is: runner live AND no registry
-   entry AND no recent non-keepalive request. `agent-device close --session bca`
+   PIDs bound to **this app's** sim UDID (consuming app: <app>-QA-<device> /
+   `$APP_QA_SIM`, session `<app>`). An **orphan** is: runner live AND no registry
+   entry AND no recent non-keepalive request. `agent-device close --session <app>`
    is insufficient for this class — it returns `SESSION_NOT_FOUND` when the
    registry is empty. Clearance is ownership-scoped: only this app's sim UDID /
-   session `bca`. Never kill a sibling app's runners — other
+   session `<app>`. Never kill a sibling app's runners — other
    apps QA on the same Mac. Remedy that works: confirm no interactive owner,
    `kill -TERM` the `xcodebuild test-without-building` parent then the runner,
    then a throwaway probe session (open, snapshot, close).
@@ -125,8 +125,8 @@ evidence protocol.
    per-run seeded finding count (qa-shared.md § Aggregation, ac-61zh.1).
 5. **Teardown sweep:** verify no `qa-<app>-*` agent-device sessions remain;
    **and** apply the SAME orphan predicate as Orient step 1 (runner live + empty
-   registry; `agent-device close --session bca` insufficient — `SESSION_NOT_FOUND`).
-   Reap only this app's sim UDID / session `bca`; never kill another app's runners. Then shut
+   registry; `agent-device close --session <app>` insufficient — `SESSION_NOT_FOUND`).
+   Reap only this app's sim UDID / session `<app>`; never kill another app's runners. Then shut
    down only sims your app owns, per the ownership rule below.
 
 Everything from **Core loop** down is **worker-side doctrine** — the

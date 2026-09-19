@@ -233,7 +233,7 @@ the bare `:root` (or only one theme) silently keeps a stale value when the theme
 flips — the `--fab-face` failure. The app's design.md already asserts the token
 sets "must be symmetric"; this makes it checkable.
 
-Concept (the app's CI ships the exact script — for BCA it's a `quality-gate`
+Concept (the app's CI ships the exact script — e.g. a `quality-gate`
 step over `app/globals.css`):
 
 ```bash

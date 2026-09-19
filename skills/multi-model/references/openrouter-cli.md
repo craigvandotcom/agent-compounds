@@ -1,7 +1,7 @@
 # The openrouter CLI
 
-One tool, every model. The CLI lives in `infrastructure/tools` and is on `PATH`
-via `tools/bin/`. Key: `OPENROUTER_API_KEY`.
+One tool, every model. The `openrouter` CLI is resolved on `PATH`.
+Key: `OPENROUTER_API_KEY`.
 
 Verify before first use: `openrouter --aliases`
 

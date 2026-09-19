@@ -70,11 +70,13 @@ Five commands answer "is it working". Run them before believing any narrative ab
 substrate — including this reference's.
 
 ```bash
-python3 infrastructure/scripts/health/memory-lint.py        # substrate integrity
-python3 infrastructure/scripts/health/wiki-metrics.py       # governance metrics, docket age
-/usr/bin/python3 infrastructure/retrieval-evals/run-evals.py # can the hook still FIND things
-/usr/bin/python3 infrastructure/dream-cycle/classify.py --dir <proposals-dir>
-/usr/bin/python3 infrastructure/dream-cycle/file-beads.py --dry-run  # is anything undocketed
+# your deployment's own scripts — placeholders below; if one doesn't exist, treat
+# that check as unverified, not passed
+python3 <your-deployment>/scripts/health/memory-lint.py        # substrate integrity
+python3 <your-deployment>/scripts/health/wiki-metrics.py       # governance metrics, docket age
+python3 <your-deployment>/retrieval-evals/run-evals.py # can the hook still FIND things
+python3 <your-deployment>/dream-cycle/classify.py --dir <proposals-dir>
+python3 <your-deployment>/dream-cycle/file-beads.py --dry-run  # is anything undocketed
 ```
 
 Interpretation, thresholds, and the traps each one hides: `references/health-surface.md`.

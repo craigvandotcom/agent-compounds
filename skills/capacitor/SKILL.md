@@ -24,7 +24,7 @@ Load at the START of any session touching:
 - Build, deployment, or App Store work
 - **Planning any feature** — load before planning (`ac-plan`) or plan refinement (`ac-polish`)
 
-**Scope — `(protected)/app/*` routes only.** This skill does not apply to web landing/marketing pages. In the BCA codebase, `app/(public)/*` routes (`about`, `blog`, `privacy`, `terms`, `foods`) are served by the full Next.js Vercel deployment — not WKWebView. For those routes: hover states are valid, `next/image` optimization is active, Server Components and middleware work, Core Web Vitals are the performance target, and `revalidateOnFocus: false` / `App.resume` patterns are irrelevant. `app/(auth)/*` is a mixed context — auth flows must work on both web and native (OAuth deep links).
+**Scope — `(protected)/app/*` routes only.** This skill does not apply to web landing/marketing pages. `app/(public)/*` routes (e.g. `about`, `blog`, `privacy`, `terms`) are served by the full Next.js Vercel deployment — not WKWebView. For those routes: hover states are valid, `next/image` optimization is active, Server Components and middleware work, Core Web Vitals are the performance target, and `revalidateOnFocus: false` / `App.resume` patterns are irrelevant. `app/(auth)/*` is a mixed context — auth flows must work on both web and native (OAuth deep links).
 
 **Not for:** Backend/API code with no native context; `(public)/*` landing/marketing pages; styling without native implications.
 

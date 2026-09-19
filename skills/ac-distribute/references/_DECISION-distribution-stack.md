@@ -101,9 +101,9 @@ brew install asc          # homebrew-core formula, MIT, zero deps, bottled
 #    already on this machine; the pilot app has used it headlessly since 2026-06-13.
 #    A team key authorizes every app in the team, so it covers the pilot app:
 asc auth login --name <app-slug> \
-  --key-id 4BDSRVV64D \
-  --issuer-id 7c951934-341a-4a7a-88b4-7714eafb1693 \
-  --private-key ~/.appstoreconnect/private_keys/AuthKey_4BDSRVV64D.p8 \
+  --key-id <ASC_KEY_ID> \
+  --issuer-id <ASC_ISSUER_ID> \
+  --private-key ~/.appstoreconnect/private_keys/AuthKey_<ASC_KEY_ID>.p8 \
   --network
 #    Stores in the system keychain by default. NEVER pass --local: that writes
 #    ./.asc/config.json into this repo, which is public. The .p8 stays outside
@@ -149,10 +149,10 @@ version conventions + build-number owner, screenshot specs, .p8 pointer.
 
 ```
 date / tooling:  2026-06-13. fastlane 2.236.1 on Homebrew Ruby 4.0 (system Ruby 2.6 too old).
-auth setup:      ASC Admin API key (key 4BDSRVV64D, issuer 7c951934-…). HEADLESS — no Apple
+auth setup:      ASC Admin API key (key <ASC_KEY_ID>, issuer <ASC_ISSUER_ID>-…). HEADLESS — no Apple
                  2FA at any point. match created the distribution cert + app-store profile
                  via the API key and stored them in a private git repo (an org-private signing repo).
-testflight push: PASS — build 2 (v1.0, App 6778303129) uploaded to closed TestFlight.
+testflight push: PASS — build 2 (v1.0, App <ASC_APP_ID>) uploaded to closed TestFlight.
 ```
 
 **MAJOR DEVIATION from the "Foundation" decision — reconcile in Phase 2:** this cycle did

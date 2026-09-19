@@ -180,7 +180,7 @@ notes: [any issues]
 
 ## QA Story Workflow
 
-QA story workflow requires the consuming app to provide `commands/browser/` and story files (BCA has these). Check they exist before invoking; otherwise spawn the implementer subagent with this skill as the lens.
+QA story workflow requires the consuming app to provide `commands/browser/` and story files. Check they exist before invoking; otherwise spawn the implementer subagent with this skill as the lens.
 
 ## App-Specific Journeys
 

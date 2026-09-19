@@ -8,13 +8,14 @@ structured reports submitted voluntarily by users via the feedback UI.
 
 ## DB Contract
 
-Table: `public.feedback_reports` (this app's Supabase project, schema `public` — moved from `bca` 2026-07-03 (BCA bd-k1b9v): `bca` is service_role-only, clients could never INSERT)
+Table: `public.feedback_reports` (this app's Supabase project, schema `public` — moved out of a
+service_role-only schema (bd-k1b9v): clients could never INSERT there)
 
 | Column            | Type                              | Notes                                                        |
 | ----------------- | --------------------------------- | ------------------------------------------------------------ |
 | `id`              | uuid PK                           | Row identity — NOT used as the dedup key (see Fingerprint)   |
 | `user_id`         | uuid NOT NULL                     | RLS anchor; part of the dedup fingerprint                    |
-| `category`        | text NULL                         | NULLable, and NULL on every row written since the category picker retired (BCA bd-43vz4.4) — the client has no honest category to send. The three literals only appear on rows created BEFORE that change. Drives the evidence-guard and bead type |
+| `category`        | text NULL                         | NULLable, and NULL on every row written since the category picker retired (bd-43vz4.4) — the client has no honest category to send. The three literals only appear on rows created BEFORE that change. Drives the evidence-guard and bead type |
 | `severity`        | text NULL                         | Bug path only                                                |
 | `message`         | text                              | Part of the dedup fingerprint (normalized)                   |
 | `context`         | jsonb                             | Route, build, platform, network, device, sentry_replay_id    |
@@ -91,7 +92,7 @@ A conservative implementation: for any `bug` **or NULL** row, if the submitted `
 includes a key whose name contains "screenshot" with a non-null value, but
 `screenshot_path` is NULL, flag it. Err on the side of flagging.
 
-**Scope (shipped in BCA bd-ghid5):** `category IS NULL` rows are IN scope — the picker is
+**Scope (shipped in bd-ghid5):** `category IS NULL` rows are IN scope — the picker is
 retired, so every new row is null, and a guard keyed only on `category = 'bug'` could never
 fire again. Only the LEGACY explicit non-bug categories are skipped: non-bug rows
 (`feature`, `other`) do not require screenshots; skip the guard for them. NULL is NOT a

@@ -1,3 +1,7 @@
+# Local override of the tracked config.yaml (e.g. your real `humans:` ruling authority) —
+# not yet read by close-gate.sh; see the comment in config.yaml.
+config.local.yaml
+
 # Database
 *.db
 *.db-shm

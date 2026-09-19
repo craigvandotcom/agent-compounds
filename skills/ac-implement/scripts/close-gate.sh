@@ -175,7 +175,7 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
 # decision bead whoever holds it. Every other `issue_type`/label combination falls through
 # to the unchanged leg 1-8 flow below.
 #
-# WHO MAY RULE (Craig's ruling on ac-4y7l.21, 2026-09-19, list location per ac-4y7l.30): every
+# WHO MAY RULE (the owner's ruling on ac-4y7l.21, list location per ac-4y7l.30): every
 # no-probe close requires a ruling signed by a name on the CLOSING BOARD's own `.beads/config.yaml`
 # `humans:` key (comma-separated; `<human>` in every template is copied VERBATIM from that
 # key — skills/beads-standards/reference/bead-conventions.md and
@@ -192,18 +192,30 @@ BEAD_LABELS=$(br_call show "$BEAD" --json </dev/null \
   || not_checked "READ" "br_call show refused for $BEAD — the gate cannot verify this close"
 has_label() { case ",$BEAD_LABELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 
-# read_humans — the closing board's own `.beads/config.yaml` `humans:` key, raw (comma-
-# separated, untrimmed). A missing file or missing key prints nothing — fail closed, never an
-# error: "no key" IS "authorizes nobody" (Craig's ruling on ac-4y7l.30), not an unverifiable
-# state.
+# read_humans — the closing board's `humans:` key, raw (comma-separated, untrimmed).
+# A missing file or missing key prints nothing — fail closed, never an error: "no key" IS
+# "authorizes nobody" (the owner's ruling on ac-4y7l.30), not an unverifiable state.
+#
+# TWO FILES, local first (2026-09-20 agnosticism pass): the TRACKED `config.yaml` is
+# published, so it ships a placeholder that deliberately matches no real actor — a public
+# registry must not name one deployment's humans, and an adopter must never silently
+# inherit someone else's ruling authority. Real names go in `.beads/config.local.yaml`,
+# which `.beads/.gitignore` excludes. The local file WINS when it carries the key; the
+# tracked file answers only when it does not. Both absent still means authorizes nobody.
 read_humans() {
+  local local_cfg="$ROOT/.beads/config.local.yaml"
   local cfg="$ROOT/.beads/config.yaml"
-  [ -f "$cfg" ] || return 0
-  grep -m1 '^humans:' "$cfg" | sed 's/^humans:[[:space:]]*//'
+  local val=""
+  [ -f "$local_cfg" ] && val=$(grep -m1 '^humans:' "$local_cfg" | sed 's/^humans:[[:space:]]*//')
+  if [ -z "$val" ] && [ -f "$cfg" ]; then
+    val=$(grep -m1 '^humans:' "$cfg" | sed 's/^humans:[[:space:]]*//')
+  fi
+  [ -n "$val" ] && printf '%s\n' "$val"
+  return 0
 }
 
 # human_is_authorized <actor> <humans-csv> — split the csv on commas; each entry is trimmed
-# of LEADING/TRAILING whitespace only, so a multi-word name ("Craig van Heerden") is compared
+# of LEADING/TRAILING whitespace only, so a multi-word name ("Alice Smith") is compared
 # as one whole entry, never split on its own inner spaces.
 human_is_authorized() {
   local actor entry
@@ -579,8 +591,8 @@ fi
 echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $ASSERT_SOURCE"
 
 # ---------------------------------------------------------------------------------------
-# LEG 6 — SCANNER. Only on non-empty argv. ubs runs ONCE at HEAD — no baseline diff (Craig's
-# way-forward ruling, 2026-09-19: a prior base-tree/scratch-tree signature match never
+# LEG 6 — SCANNER. Only on non-empty argv. ubs runs ONCE at HEAD — no baseline diff (the
+# owner's way-forward ruling: a prior base-tree/scratch-tree signature match never
 # matched on real ubs output — absolute paths, permalinks, capped detail lists, a missing
 # lint config, bash's rule-on-the-previous-line all defeated it; see
 # skills/ac-pipeline/FRICTIONS.md scanner-leg-has-no-baseline). The Combined Summary's own

@@ -1,6 +1,6 @@
 # Monthly hallucination audit
 
-**Use when:** the monthly scheduled cadence (`infrastructure/jobs/monthly.json`,
+**Use when:** the monthly scheduled cadence (`<your-deployment>/jobs/monthly.json`,
 "Wiki - Monthly Hallucination Audit") — not a manual/on-demand workflow, though it can be
 run ad hoc ("audit the wiki for hallucinations", "run the hallucination audit").
 
@@ -11,7 +11,7 @@ content — the countermeasure named for the specific failure mode in
 `references/research-basis.md`'s anti-patterns table: **hallucination laundering**
 (the same process reads and writes the KB, so a hallucination can compound into "truth"
 across successive edits). "While trust is established" (per
-`infrastructure/plans/memory-wiki-upgrade.md` Phase 4 item 3) — this cadence exists
+`<global>/plans/memory-wiki-upgrade.md` Phase 4 item 3) — this cadence exists
 because the wiki is young; it is not assumed to be a permanent need, but it does not
 retire itself either — a future decision to relax it is the operator's, made on evidence from
 several clean audits, not a default.

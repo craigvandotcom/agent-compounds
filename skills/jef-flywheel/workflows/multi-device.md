@@ -3,10 +3,10 @@
 ## Reference Architecture
 
 ```
-Repos/                          ← parent git repo (GitHub)
+your-repos-root/                ← parent git repo (GitHub)
 ├── .claude/                    ← agent system, skills, plans
 ├── knowledge/                  ← PKM vault
-├── infrastructure/             ← schedulers, notifications, etc
+├── ops/                        ← schedulers, notifications, etc
 └── software/
     ├── app-one/                ← separate git repo
     ├── app-two/                ← separate git repo
@@ -152,7 +152,7 @@ git pull --all
 
 ```bash
 # Start Agent Mail server on VM
-cd ~/Repos/infrastructure/agent-mail
+cd <your-repos-root>/ops/agent-mail
 python server.py  # or via PM2 for persistence
 ```
 

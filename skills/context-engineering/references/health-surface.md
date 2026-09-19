@@ -10,21 +10,24 @@ How to tell whether the substrate is actually working, and which green signals l
 
 ## The five checks
 
+These are your deployment's own scripts (build them; the paths below are placeholders,
+not literals) — if one doesn't exist yet, treat that check as unverified, not passed.
+
 ```bash
 # 1. Substrate integrity — orphans, dead index links, dead wikilinks, frontmatter
-python3 infrastructure/scripts/health/memory-lint.py
+python3 <your-deployment>/scripts/health/memory-lint.py
 
 # 2. Governance — docket age, staleness of the strategy/now files, hygiene rollup
-python3 infrastructure/scripts/health/wiki-metrics.py
+python3 <your-deployment>/scripts/health/wiki-metrics.py
 
 # 3. Retrieval quality — the only check that measures RELEVANCE
-/usr/bin/python3 infrastructure/retrieval-evals/run-evals.py
+python3 <your-deployment>/retrieval-evals/run-evals.py
 
 # 4. Queue composition — how much of the docket is actually human-gated
-/usr/bin/python3 infrastructure/dream-cycle/classify.py --dir infrastructure/dream-cycle/proposals/<date>
+python3 <your-deployment>/dream-cycle/classify.py --dir <your-deployment>/dream-cycle/proposals/<date>
 
 # 5. Docket completeness — is any gated proposal missing its bead
-/usr/bin/python3 infrastructure/dream-cycle/file-beads.py --dry-run
+python3 <your-deployment>/dream-cycle/file-beads.py --dry-run
 ```
 
 Checks 1, 2 and 5 are read-only. Check 3 writes a dated report and, without

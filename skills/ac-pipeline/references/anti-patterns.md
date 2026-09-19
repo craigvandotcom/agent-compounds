@@ -4,13 +4,12 @@ Shared by `ac-review` (correctness + architecture reviewers) and `ac-hygiene`
 (bug-hunter + structural lenses). Method only — zero app facts. Reference it as
 `ac-pipeline/references/anti-patterns.md`.
 
-> Origin: BCA App Store 2.1(b) post-mortem — four rejections, ~10 days, five
-> silent layers, all green under static checks (full narrative: BCA
-> `_strategy/app-store-resubmit-v1.2.0-iap-blocker.md` §13). The pipeline's gates
-> measure proxies (types, unit tests vs mocks, bundle contents, lint); a critical
-> flow can be dead under all of them. These three hunts target the failure
-> **mode**, not a specific bug — they compose with each reviewer's normal
-> evidence-with-file:line discipline, they don't replace it.
+> Origin: an anonymized App Store resubmission post-mortem — four rejections, ~10 days,
+> five silent layers, all green under static checks (full narrative kept in the
+> originating app's own strategy notes). The pipeline's gates measure proxies (types, unit
+> tests vs mocks, bundle contents, lint); a critical flow can be dead under all of them.
+> These three hunts target the failure **mode**, not a specific bug — they compose with
+> each reviewer's normal evidence-with-file:line discipline, they don't replace it.
 
 ---
 
@@ -21,8 +20,8 @@ non-peripheral journey's code path — an error the system swallows instead of
 surfacing.
 
 **Why it's dangerous:** five `catch {}`s made five distinct defects present as
-one symptom in the BCA chain. Each layer's failure was individually invisible,
-so nothing forced the chain to be diagnosed until the fourth rejection.
+one symptom in the originating chain. Each layer's failure was individually
+invisible, so nothing forced the chain to be diagnosed until the fourth rejection.
 
 **On hit:** demand a stated justification for the swallow — what specific,
 expected condition is being suppressed, and why silence is correct here. No

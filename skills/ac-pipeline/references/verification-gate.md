@@ -78,17 +78,28 @@ CLASS_NATIVE=0 CLASS_WEBUI=0 CLASS_WEBRT=0 CLASS_LOGIC=0 CLASS_RUNTIME=0
 PAT_DOC_TEST_CI='\.(md|mdx)$|\.test\.|\.spec\.|__tests__/|^\.github/|^docs/|^\.beads/|^_ci-evidence/|^scripts/ci/|ios/App/fastlane/review_notes\.txt'
 CODE_FILES=$(printf '%s\n' "$FILES" | grep -vE "$PAT_DOC_TEST_CI" || true)
 
+# Stack markers — declarable per-app (factory.json risk_classification.native_path_re /
+# .native_pkg_re / .webui_ext_re / .webui_dir_re / .webui_token_re, exported into these
+# env vars before this block runs), falling back to this registry's documented default
+# stack profile (Capacitor native shell + Tailwind/CSS web UI) so an app with no override
+# classifies identically to today.
+NATIVE_PATH_RE="${AC_RISK_NATIVE_PATH_RE:-^ios/|^android/|capacitor\.config|cap-build|@capacitor}"
+NATIVE_PKG_RE="${AC_RISK_NATIVE_PKG_RE:-@capacitor|capacitor}"
+WEBUI_EXT_RE="${AC_RISK_WEBUI_EXT_RE:-\.(tsx|jsx|css)$}"
+WEBUI_DIR_RE="${AC_RISK_WEBUI_DIR_RE:-app/|components/|features/}"
+WEBUI_TOKEN_RE="${AC_RISK_WEBUI_TOKEN_RE:-globals\.css|design\.md|tailwind\.config|@<org>/brand|tokens}"
+
 # Native shell — plugins, native projects, capacitor config/deps. The package.json content
 # check is deliberately OUTSIDE the exclusion (deps classify by content, not path).
-printf '%s\n' "$CODE_FILES" | grep -qE '^ios/|^android/|capacitor\.config|cap-build|@capacitor' && CLASS_NATIVE=1
-git diff "$RANGE" -- package.json | grep -qE '@capacitor|capacitor' && CLASS_NATIVE=1
+printf '%s\n' "$CODE_FILES" | grep -qE "$NATIVE_PATH_RE" && CLASS_NATIVE=1
+git diff "$RANGE" -- package.json | grep -qE "$NATIVE_PKG_RE" && CLASS_NATIVE=1
 
 # Web UI — visual / DOM surfaces (drives ui-elevate + browser QA)
-printf '%s\n' "$CODE_FILES" | grep -qE '\.(tsx|jsx|css)$' \
-  && printf '%s\n' "$CODE_FILES" | grep -qE 'app/|components/|features/' && CLASS_WEBUI=1
+printf '%s\n' "$CODE_FILES" | grep -qE "$WEBUI_EXT_RE" \
+  && printf '%s\n' "$CODE_FILES" | grep -qE "$WEBUI_DIR_RE" && CLASS_WEBUI=1
 # Design-token / spec changes are app-wide visual surface — THE deliberate opt-out:
 # `design.md` is markdown by design, so this probe alone reads $FILES, not $CODE_FILES.
-printf '%s\n' "$FILES" | grep -qE 'globals\.css|design\.md|tailwind\.config|@<org>/brand|tokens' && CLASS_WEBUI=1
+printf '%s\n' "$FILES" | grep -qE "$WEBUI_TOKEN_RE" && CLASS_WEBUI=1
 
 # Web runtime — non-visual but affects browser behavior (routing/data/api/hooks/middleware)
 printf '%s\n' "$CODE_FILES" | grep -qE 'app/api/|route\.(ts|js)$|middleware|hooks/|lib/.*(fetch|client|store|query)' && CLASS_WEBRT=1

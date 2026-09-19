@@ -132,8 +132,8 @@ unchanged.
 **decision** → `<domain>/…/decisions/<YYYY-MM-DD>-<slug>.md` (same frontmatter, `type: decision`;
 body = context · decision · rationale · consequences).
 
-**recipe** → the prompt-library (one canonical location, in the root monorepo:
-`<repos-root>/software/agent-compounds/skills/jef-prompts/`): add
+**recipe** → the prompt-library (one canonical location: wherever your deployment's
+`agent-compounds` registry lives, e.g. `<path-to-agent-compounds>/skills/jef-prompts/`): add
 `references/<slug>.md` (the full prompt verbatim + parameters + when-to-use) **and** a
 catalog line in its `SKILL.md`. Even when reflecting inside an app repo, recipes go
 there — never start a parallel library.
@@ -163,7 +163,7 @@ for changes a script can prove touched no enforcement.
 
 ### 6. Golden-set check (optional, rare)
 If the session produced a clearly-above-bar exemplar (a sharp plan, clean diff, good
-review), offer to save it to `infrastructure/eval/golden/` per that README's format —
+review), offer to save it to `<global>/eval/golden/` per that README's format —
 quality over volume; most sessions add nothing here.
 
 ### 7. Report

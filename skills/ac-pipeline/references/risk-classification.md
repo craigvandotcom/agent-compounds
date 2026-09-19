@@ -33,8 +33,11 @@ over-classification of inert helpers over under-classification of writers.
 
 ## §1 RISK-TOUCH globs
 
-Any path matching one of these globs is a **RISK-TOUCH** candidate (subject to
-test-path exclusion in §2). Literal list:
+**Declarable per-app** (factory.json `risk_classification.risk_touch_globs`, replacing
+the table below wholesale when set) — falling back to this registry's documented default
+stack profile (Next.js + Supabase + Capacitor) so an app with no override classifies
+identically to today. Any path matching one of the active globs is a **RISK-TOUCH**
+candidate (subject to test-path exclusion in §2). Default literal list:
 
 | Glob | Notes |
 | ---- | ----- |

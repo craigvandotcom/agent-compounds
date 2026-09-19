@@ -67,78 +67,78 @@ mk_plan() {
 # `vision:` quoting the ## Vision line on its own sub-bullet.
 SETTLED_CARD="- **A fork?**
   + options: a, b.
-  + settled: a (Craig).
+  + settled: a (Alex).
   + vision: \"$vision_line\""
 OPEN_CARD="- **A fork?**
   + options: a, b.
   + needs-human"
 NOVISION_CARD="- **A fork?**
   + options: a, b.
-  + settled: a (Craig)."
+  + settled: a (Alex)."
 # needs-human beats settled: a card carrying both the open token and a settled
 # line is refused as open — settled+needs-human never settles silently.
 BOTH_CARD="- **A fork?**
   + options: a, b.
   + needs-human
-  + settled: a (Craig).
+  + settled: a (Alex).
   + vision: \"$vision_line\""
 # The prescribed `-` sub-bullet shape (ac-zug5.13): same grammar as above with the
 # `-` sub-bullet marker decisions.md prescribes — the parser used to split every
 # `-` line into its own block and false-refuse the card as uncited-decision.
 SETTLED_DASH_CARD="- **A fork?**
   - options: a, b.
-  - settled: a (Craig).
+  - settled: a (Alex).
   - vision: \"$vision_line\""
 OPEN_DASH_CARD="- **A fork?**
   - options: a, b.
   - needs-human"
 NOVISION_DASH_CARD="- **A fork?**
   - options: a, b.
-  - settled: a (Craig)."
+  - settled: a (Alex)."
 SEAMS_OK="| object | finding | disposition |
 | --- | --- | --- |
 | \`$REAL_PATH\` | some finding | -> D1 |"
 
 # 1 — approve on a clean plan -> APPROVED (exit 0), identity keys + ledger written
 mk_plan "$W/p1.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
-cap "$SCRIPT" approve "$W/p1.md" "Craig"
+cap "$SCRIPT" approve "$W/p1.md" "Alex"
 expect "$RC" 0 "clean plan -> exit 0"
 expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "clean plan -> APPROVED"
 expect "$(grep -c '^status: approved$' "$W/p1.md")" 1 "approve writes status: approved"
-expect "$(grep -c '^approved_by: Craig$' "$W/p1.md")" 1 "approve writes approved_by"
+expect "$(grep -c '^approved_by: Alex$' "$W/p1.md")" 1 "approve writes approved_by"
 expect "$(grep -c '^approved_at:' "$W/p1.md")" 1 "approve writes approved_at"
 expect "$(grep -c '^approved_sha256:' "$W/p1.md")" 1 "approve writes approved_sha256"
 expect "$(grep -c '^approved_section_digest:' "$W/p1.md")" 1 "approve writes the internal section ledger"
 
 # 2 — approve refuses an open Decision card (exit 1)
 mk_plan "$W/p2.md" "- D1 x" "$OPEN_CARD" "a"
-cap "$SCRIPT" approve "$W/p2.md" "Craig"
+cap "$SCRIPT" approve "$W/p2.md" "Alex"
 expect "$RC" 1 "open Decision card -> exit 1"
 expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "open Decision card -> REFUSED needs-human 1"
 expect "$(grep -c '^status: draft$' "$W/p2.md")" 1 "refused plan is not re-stamped"
 
 # 3 — a card carrying both needs-human and settled: is refused as OPEN (exit 1)
 mk_plan "$W/p2b.md" "- D1 x" "$BOTH_CARD" "a"
-cap "$SCRIPT" approve "$W/p2b.md" "Craig"
+cap "$SCRIPT" approve "$W/p2b.md" "Alex"
 expect "$RC" 1 "needs-human + settled card -> exit 1"
 expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "needs-human beats settled: both-tokens card -> REFUSED needs-human 1"
 expect "$(grep -c '^status: draft$' "$W/p2b.md")" 1 "both-tokens plan is not re-stamped"
 
 # 3b — the prescribed `-` sub-bullet card approves (ac-zug5.13)
 mk_plan "$W/p1dash.md" "- D1 x" "$SETTLED_DASH_CARD" "a"
-cap "$SCRIPT" approve "$W/p1dash.md" "Craig"
+cap "$SCRIPT" approve "$W/p1dash.md" "Alex"
 expect "$RC" 0 "dash sub-bullet card -> exit 0"
 expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "dash sub-bullet card -> APPROVED"
 
 # 3c — a dash open card is still refused as open: the grouping fix must not swallow needs-human
 mk_plan "$W/p2dash.md" "- D1 x" "$OPEN_DASH_CARD" "a"
-cap "$SCRIPT" approve "$W/p2dash.md" "Craig"
+cap "$SCRIPT" approve "$W/p2dash.md" "Alex"
 expect "$RC" 1 "dash open card -> exit 1"
 expect "$(grep -c 'REFUSED needs-human 1' <<<"$OUT")" 1 "dash open card -> REFUSED needs-human 1"
 
 # 3d — a dash settled card with no vision quote is still refused as uncited
 mk_plan "$W/p6dash.md" "- D1 x" "$NOVISION_DASH_CARD" "a"
-cap "$SCRIPT" approve "$W/p6dash.md" "Craig"
+cap "$SCRIPT" approve "$W/p6dash.md" "Alex"
 expect "$RC" 1 "dash settled card with no vision quote -> exit 1"
 expect "$(grep -c 'REFUSED uncited-decision 1' <<<"$OUT")" 1 "dash settled card with no vision quote -> REFUSED uncited-decision 1"
 
@@ -146,7 +146,7 @@ expect "$(grep -c 'REFUSED uncited-decision 1' <<<"$OUT")" 1 "dash settled card 
 {
   printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\nv\n\n## Deliverables\n\n- D1 x\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success criterion\n\ns\n'
 } > "$W/p3.md"
-cap "$SCRIPT" approve "$W/p3.md" "Craig"
+cap "$SCRIPT" approve "$W/p3.md" "Alex"
 expect "$RC" 1 "no ## Decisions -> exit 1"
 expect "$(grep -c 'REFUSED no-decisions' <<<"$OUT")" 1 "no ## Decisions -> REFUSED no-decisions"
 
@@ -154,7 +154,7 @@ expect "$(grep -c 'REFUSED no-decisions' <<<"$OUT")" 1 "no ## Decisions -> REFUS
 {
   printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\nv\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Out of scope\n\nn\n\n## Success criterion\n\ns\n' "$SETTLED_CARD"
 } > "$W/p4.md"
-cap "$SCRIPT" approve "$W/p4.md" "Craig"
+cap "$SCRIPT" approve "$W/p4.md" "Alex"
 expect "$RC" 1 "no ## Seams -> exit 1"
 expect "$(grep -c 'REFUSED no-seams' <<<"$OUT")" 1 "no ## Seams -> REFUSED no-seams"
 
@@ -162,7 +162,7 @@ expect "$(grep -c 'REFUSED no-seams' <<<"$OUT")" 1 "no ## Seams -> REFUSED no-se
 mk_plan "$W/p5.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "| object | finding | disposition |
 | --- | --- | --- |
 | \`unrelated-name\` | x | -> D1 |"
-cap "$SCRIPT" approve "$W/p5.md" "Craig"
+cap "$SCRIPT" approve "$W/p5.md" "Alex"
 expect "$RC" 1 "existing path with no Seams row -> exit 1"
 expect "$(grep -c "REFUSED seams-incomplete $REAL_PATH" <<<"$OUT")" 1 "existing path with no Seams row -> REFUSED seams-incomplete"
 
@@ -172,13 +172,13 @@ expect "$(grep -c "REFUSED seams-incomplete $REAL_PATH" <<<"$OUT")" 1 "existing 
 {
   printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\nv\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams — seen by more than one lens\n\nsome reader evidence, never the real Seams table\n\n## Out of scope\n\nn\n\n## Success criterion\n\ns\n' "$SETTLED_CARD"
 } > "$W/p5b.md"
-cap "$SCRIPT" approve "$W/p5b.md" "Craig"
+cap "$SCRIPT" approve "$W/p5b.md" "Alex"
 expect "$RC" 1 "look-alike Seams header -> REFUSED no-seams exit 1"
 expect "$(grep -c 'REFUSED no-seams' <<<"$OUT")" 1 "look-alike Seams header -> REFUSED no-seams"
 
 # 7 — approve refuses a settled card with no vision: quote (exit 1)
 mk_plan "$W/p6.md" "- D1 x" "$NOVISION_CARD" "a"
-cap "$SCRIPT" approve "$W/p6.md" "Craig"
+cap "$SCRIPT" approve "$W/p6.md" "Alex"
 expect "$RC" 1 "settled card with no vision quote -> exit 1"
 expect "$(grep -c 'REFUSED uncited-decision 1' <<<"$OUT")" 1 "settled card with no vision quote -> REFUSED uncited-decision 1"
 
@@ -213,12 +213,12 @@ expect "$(grep -c '^approved_by: ci-tester$' "$W/p8c.md")" 1 "polluted env leave
 expect "$(grep -c 'env-sentinel' "$W/p8c.md")" 0 "no env value leaks into the approval record"
 
 # 11 — missing plan file -> NOT-GATED (exit 2, never a refusal)
-cap "$SCRIPT" approve "$W/absent.md" "Craig"
+cap "$SCRIPT" approve "$W/absent.md" "Alex"
 expect "$RC" 2 "missing plan -> exit 2"
 expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "missing plan -> NOT-GATED"
 
 # 12 — the bare positional form (no mode) refuses; so does an unknown mode (exit 2)
-cap "$SCRIPT" "$W/p1.md" "Craig"
+cap "$SCRIPT" "$W/p1.md" "Alex"
 expect "$RC" 2 "bare positional form (no mode) -> exit 2"
 expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "bare positional form (no mode) -> NOT-GATED"
 cap "$SCRIPT" frobnicate "$W/p1.md"
@@ -234,7 +234,7 @@ expect "$(grep -cE 'AM_SELF|BR_AGENT_NAME' "$SCRIPT")" 0 "AM_SELF/BR_AGENT_NAME 
   printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
     "$vision_line" "$SETTLED_CARD"
 } > "$W/capc.md"
-cap "$SCRIPT" approve "$W/capc.md" "Craig"
+cap "$SCRIPT" approve "$W/capc.md" "Alex"
 expect "$RC" 0 "## Success Criteria plan -> exit 0"
 expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "## Success Criteria plan -> APPROVED"
 
@@ -248,7 +248,7 @@ add_polish_keys() {
 
 # 15 — ready refuses not-polished before polish keys exist (exit 1)
 mk_plan "$W/r1.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/r1.md" "Craig"
+cap "$SCRIPT" approve "$W/r1.md" "Alex"
 expect "$RC" 0 "setup: approve r1"
 cap "$SCRIPT" ready "$W/r1.md"
 expect "$RC" 1 "ready before polish -> exit 1"
@@ -263,7 +263,7 @@ expect "$(grep -c 'REFUSED not-approved' <<<"$OUT")" 1 "ready on a never-approve
 
 # 17 — ready with a matching digest -> READY (exit 0), writes bead-ready + regate: none
 mk_plan "$W/r3.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/r3.md" "Craig"
+cap "$SCRIPT" approve "$W/r3.md" "Alex"
 expect "$RC" 0 "setup: approve r3"
 add_polish_keys "$W/r3.md"
 cap "$SCRIPT" ready "$W/r3.md"
@@ -281,7 +281,7 @@ expect "$(grep -c '^READY:' <<<"$OUT")" 1 "## Success Criteria plan with no edit
 
 # 19 — ready after an edit INSIDE ## Deliverables -> REFUSED regate Deliverables (exit 1)
 mk_plan "$W/r4.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
-cap "$SCRIPT" approve "$W/r4.md" "Craig"
+cap "$SCRIPT" approve "$W/r4.md" "Alex"
 expect "$RC" 0 "setup: approve r4"
 add_polish_keys "$W/r4.md"
 sed -i 's/a thing\./a DIFFERENT thing./' "$W/r4.md"
@@ -291,7 +291,7 @@ expect "$(grep -c '^REFUSED regate Deliverables$' <<<"$OUT")" 1 "edit inside ## 
 
 # 20 — ready after an edit INSIDE ## Vision names only that section (exit 1)
 mk_plan "$W/v.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/v.md" "Craig"
+cap "$SCRIPT" approve "$W/v.md" "Alex"
 expect "$RC" 0 "setup: approve v"
 add_polish_keys "$W/v.md"
 sed -i '/^## Vision$/,/^## / s/plain prose/plain PROSE/' "$W/v.md"
@@ -301,7 +301,7 @@ expect "$(grep -c '^REFUSED regate Vision$' <<<"$OUT")" 1 "edit inside ## Vision
 
 # 21 — ready after an edit INSIDE ## Decisions names only that section (exit 1)
 mk_plan "$W/d.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/d.md" "Craig"
+cap "$SCRIPT" approve "$W/d.md" "Alex"
 expect "$RC" 0 "setup: approve d"
 add_polish_keys "$W/d.md"
 sed -i 's/options: a, b\./options: a, b, c./' "$W/d.md"
@@ -311,7 +311,7 @@ expect "$(grep -c '^REFUSED regate Decisions$' <<<"$OUT")" 1 "edit inside ## Dec
 
 # 22 — ready after an edit INSIDE ## Out of scope names only that section (exit 1)
 mk_plan "$W/o.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/o.md" "Craig"
+cap "$SCRIPT" approve "$W/o.md" "Alex"
 expect "$RC" 0 "setup: approve o"
 add_polish_keys "$W/o.md"
 sed -i 's/^- nothing$/- everything else/' "$W/o.md"
@@ -325,7 +325,7 @@ expect "$(grep -c '^REFUSED regate OutOfScope$' <<<"$OUT")" 1 "edit inside ## Ou
   printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n- D1 x\n\n## Decisions\n\n%s\n\n## Seams\n\na\n\n## Out of scope\n\nn\n\n## Success Criteria\n\nSome criterion.\n' \
     "$vision_line" "$SETTLED_CARD"
 } > "$W/capc-reg.md"
-cap "$SCRIPT" approve "$W/capc-reg.md" "Craig"
+cap "$SCRIPT" approve "$W/capc-reg.md" "Alex"
 expect "$RC" 0 "setup: approve capc-reg"
 add_polish_keys "$W/capc-reg.md"
 sed -i 's/Some criterion\./Some amended criterion./' "$W/capc-reg.md"
@@ -335,7 +335,7 @@ expect "$(grep -c '^REFUSED regate SuccessCriterion$' <<<"$OUT")" 1 "edit inside
 
 # 24 — ready after an edit INSIDE ## Seams names only that section (exit 1)
 mk_plan "$W/s.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
-cap "$SCRIPT" approve "$W/s.md" "Craig"
+cap "$SCRIPT" approve "$W/s.md" "Alex"
 expect "$RC" 0 "setup: approve s"
 add_polish_keys "$W/s.md"
 sed -i 's/some finding/some OTHER finding/' "$W/s.md"
@@ -350,7 +350,7 @@ expect "$(grep -c '^REFUSED regate Seams$' <<<"$OUT")" 1 "edit inside ## Seams -
   printf -- '---\nstatus: draft\ncreated: 2026-09-05\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables\n\n%s\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Seams — seen by more than one lens\n\nsome reader evidence, never the real Seams table\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
     "$vision_line" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
 } > "$W/s-lookalike.md"
-cap "$SCRIPT" approve "$W/s-lookalike.md" "Craig"
+cap "$SCRIPT" approve "$W/s-lookalike.md" "Alex"
 expect "$RC" 0 "setup: approve s-lookalike"
 add_polish_keys "$W/s-lookalike.md"
 sed -i 's/some reader evidence/some OTHER reader evidence/' "$W/s-lookalike.md"
@@ -361,7 +361,7 @@ expect "$(grep -c '^READY:' <<<"$OUT")" 1 "edit inside look-alike Seams section 
 # 25 — ready after adding a Human gates: line names only that section (exit 1):
 # the line lives in frontmatter, outside every ## body, so only its own leg moves.
 mk_plan "$W/h.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/h.md" "Craig"
+cap "$SCRIPT" approve "$W/h.md" "Alex"
 expect "$RC" 0 "setup: approve h"
 add_polish_keys "$W/h.md"
 sed -i '2a Human gates: none' "$W/h.md"
@@ -371,7 +371,7 @@ expect "$(grep -c '^REFUSED regate HumanGates$' <<<"$OUT")" 1 "added Human gates
 
 # 26 — ready after an edit OUTSIDE every gated section -> READY (exit 0)
 mk_plan "$W/r5.md" "- D1 x" "$SETTLED_CARD" "a" "amended_after_stamp: an ungated frontmatter note"
-cap "$SCRIPT" approve "$W/r5.md" "Craig"
+cap "$SCRIPT" approve "$W/r5.md" "Alex"
 expect "$RC" 0 "setup: approve r5"
 add_polish_keys "$W/r5.md"
 sed -i 's/an ungated frontmatter note/a DIFFERENT ungated frontmatter note/' "$W/r5.md"
@@ -389,7 +389,7 @@ expect "$(grep -c 'REFUSED missing-keys' <<<"$OUT")" 1 "check with no approval k
 
 # 28 — check refuses status <status> when approved but not yet ready (exit 1)
 mk_plan "$W/c2.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/c2.md" "Craig"
+cap "$SCRIPT" approve "$W/c2.md" "Alex"
 expect "$RC" 0 "setup: approve c2"
 cap "$SCRIPT" check "$W/c2.md"
 expect "$RC" 1 "check on approved-but-not-ready -> exit 1"
@@ -397,7 +397,7 @@ expect "$(grep -c 'REFUSED status approved' <<<"$OUT")" 1 "check on approved-but
 
 # 29 — check passes OK on a bead-ready plan (exit 0)
 mk_plan "$W/c3.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/c3.md" "Craig"
+cap "$SCRIPT" approve "$W/c3.md" "Alex"
 expect "$RC" 0 "setup: approve c3"
 add_polish_keys "$W/c3.md"
 cap "$SCRIPT" ready "$W/c3.md"
@@ -408,7 +408,7 @@ expect "$(grep -c '^OK:' <<<"$OUT")" 1 "bead-ready plan -> check OK"
 
 # 30 — check also passes on a retired plan's shape: status: done, keys untouched (exit 0)
 mk_plan "$W/c4.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/c4.md" "Craig"
+cap "$SCRIPT" approve "$W/c4.md" "Alex"
 expect "$RC" 0 "setup: approve c4"
 add_polish_keys "$W/c4.md"
 cap "$SCRIPT" ready "$W/c4.md"
@@ -420,7 +420,7 @@ expect "$(grep -c '^OK:' <<<"$OUT")" 1 "retired (status: done) plan -> check OK"
 
 # 31 — check refuses digest-mismatch when a gated section moved after ready (exit 1)
 mk_plan "$W/c5.md" "- **D1 \`$REAL_PATH\`** — a thing." "$SETTLED_CARD" "$SEAMS_OK"
-cap "$SCRIPT" approve "$W/c5.md" "Craig"
+cap "$SCRIPT" approve "$W/c5.md" "Alex"
 expect "$RC" 0 "setup: approve c5"
 add_polish_keys "$W/c5.md"
 cap "$SCRIPT" ready "$W/c5.md"
@@ -436,7 +436,7 @@ expect "$(grep -c 'REFUSED digest-mismatch' <<<"$OUT")" 1 "gated section moved a
   printf -- '---\nstatus: draft\n---\n# Plan\n\n## Vision\n\n%s\n\n## Deliverables (artifacts)\n\n- **D1 `%s`** — a thing.\n\n## Decisions\n\n%s\n\n## Seams\n\n%s\n\n## Out of scope\n\n- nothing\n\n## Success criterion\n\nSome criterion.\n' \
     "$vision_line" "$REAL_PATH" "$SETTLED_CARD" "$SEAMS_OK"
 } > "$W/artifacts.md"
-cap "$SCRIPT" approve "$W/artifacts.md" "Craig"
+cap "$SCRIPT" approve "$W/artifacts.md" "Alex"
 expect "$RC" 0 "## Deliverables (artifacts) header -> exit 0"
 expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "## Deliverables (artifacts) header -> APPROVED"
 add_polish_keys "$W/artifacts.md"
@@ -447,18 +447,18 @@ expect "$(grep -c '^READY:' <<<"$OUT")" 1 "## Deliverables (artifacts) header wi
 # 33 — approve is re-runnable (the re-approve half of the regate flow): approving twice on
 # an unchanged plan still succeeds (exit 0) and re-stamps a fresh approved_at.
 mk_plan "$W/reapp.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/reapp.md" "Craig"
+cap "$SCRIPT" approve "$W/reapp.md" "Alex"
 expect "$RC" 0 "setup: first approve reapp"
-cap "$SCRIPT" approve "$W/reapp.md" "Craig"
+cap "$SCRIPT" approve "$W/reapp.md" "Alex"
 expect "$RC" 0 "re-approve on an unchanged plan -> exit 0"
 expect "$(grep -c '^APPROVED:' <<<"$OUT")" 1 "re-approve on an unchanged plan -> APPROVED again"
-expect "$(grep -c '^approved_by: Craig$' "$W/reapp.md")" 1 "re-approve keeps exactly one approved_by line"
+expect "$(grep -c '^approved_by: Alex$' "$W/reapp.md")" 1 "re-approve keeps exactly one approved_by line"
 
 # 34 — with no shasum or sha256sum on PATH every mode refuses closed: NOT-GATED (exit 2),
 # never a digest over empty input.
 NOSHADIR=$(mktemp -d /tmp/plan-approve-test-nosha-XXXXXX)
 mk_plan "$W/nosha.md" "- D1 x" "$SETTLED_CARD" "a"
-OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" approve "$W/nosha.md" "Craig" 2>&1); RC=$?
+OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" approve "$W/nosha.md" "Alex" 2>&1); RC=$?
 expect "$RC" 2 "approve with no sha tool -> exit 2"
 expect "$(grep -c 'NOT-GATED' <<<"$OUT")" 1 "approve with no sha tool -> NOT-GATED"
 OUT=$(PATH="$NOSHADIR" "$BASH_BIN" "$SCRIPT" ready "$W/nosha.md" 2>&1); RC=$?
@@ -472,7 +472,7 @@ rm -rf "$NOSHADIR"
 # --- gotcha: approved keys survive polish-fixpoint.sh --mode plan -----------------------
 
 mk_plan "$W/pf.md" "- D1 x" "$SETTLED_CARD" "a"
-cap "$SCRIPT" approve "$W/pf.md" "Craig"
+cap "$SCRIPT" approve "$W/pf.md" "Alex"
 expect "$RC" 0 "setup: approve pf"
 BEFORE_KEYS=$(grep '^approved_' "$W/pf.md" | sort)
 STATE=$(mktemp -d /tmp/plan-approve-test-pf-XXXXXX)

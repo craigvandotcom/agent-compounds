@@ -4,7 +4,7 @@
 
 **This file is a spec, not an active heartbeat.** Consumer (b) — idle-cron `ac-prove` — is
 **DEFERRED** per bd-pwt44.2's plan; this document ships the ready-to-wire entrypoint spec so a
-future bead can attach it to `pai-scheduler` without redesigning it. **No `daily.json` entry
+future bead can attach it to your scheduler without redesigning it. **No scheduler entry
 lands this plan** — do not register this workflow with the scheduler as part of shipping this
 file. Treat everything below as "what the cron job will do once someone wires it," not "what
 runs tonight."
@@ -13,7 +13,7 @@ runs tonight."
 
 ## THIS PROMPT IS YOUR TASK — EXECUTE IMMEDIATELY (once wired)
 
-When a future bead wires this up, `pai-scheduler` invokes the `ac-prove` skill in **`ensure`**
+When a future bead wires this up, your scheduler invokes the `ac-prove` skill in **`ensure`**
 mode, at **`ci` depth** (the base full-suite proof itself — no `+qa` layer; `+qa` is a ship-path
 concern, not an idle-cron one), against the app's current `main` HEAD. Execute without user
 interaction.
@@ -95,9 +95,13 @@ Bead creation per `beads-standards/reference/bead-conventions.md` — types, unr
    if this is a repeat of an already-open bead:
 
    ```bash
-   slack-send --channel sofi --card \
-     --title "ac-prove nightly: main is red" \
-     --body "Nightly ensure-depth proof failed for <app> at <SHA>. <bead id or 'already tracked in <existing bead id>'>. Run: <URL>."
+   if command -v slack-send >/dev/null 2>&1; then
+     slack-send --channel "$PROVE_SLACK_CHANNEL" --card \
+       --title "ac-prove nightly: main is red" \
+       --body "Nightly ensure-depth proof failed for <app> at <SHA>. <bead id or 'already tracked in <existing bead id>'>. Run: <URL>."
+   else
+     echo "slack-send not found on PATH — skipping notification" >&2
+   fi
    ```
 
 ### 4. Never `--fix-forward` from this path
@@ -112,8 +116,8 @@ job resolves itself.
 ## Remember
 
 - **UNWIRED** — this spec exists so a future bead can wire it without redesigning the shape;
-  wiring it into `pai-scheduler`'s `daily.json` is explicitly **out of scope** for the bead that
-  ships this file.
+  wiring it into your scheduler's daily job list is explicitly **out of scope** for the bead
+  that ships this file.
 - **`ensure`, `ci` depth, never `--fix-forward`** — the three non-negotiables of this entrypoint.
 - **Defer, don't queue, if busy** — never contend with another `reason=prove` dispatcher.
 - **Silent on green, one structural bug bead + one Slack nudge on red** — no per-run noise on

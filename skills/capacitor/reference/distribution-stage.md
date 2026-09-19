@@ -1,6 +1,6 @@
 # Distribution-Stage Discipline (MEDIUM-HIGH)
 
-Per `software/CLAUDE.md` and `alignment/distribution-philosophy.md`, work sequences by distribution stage. **Don't pre-build for later stages** — that's how solo-built apps die under their own complexity before getting a single user.
+Work sequences by distribution stage (see your own deployment's distribution-stage doctrine, if you have one). **Don't pre-build for later stages** — that's how solo-built apps die under their own complexity before getting a single user.
 
 The patterns below are tempting from day one but are **canonical Stage 3-4 infrastructure**. Only reach for them when cohort signal validates the pain:
 

@@ -102,21 +102,21 @@ it('should validate JPEG magic numbers', () => {
 import { render, screen, waitFor } from '@/__tests__/setup/test-utils';
 import userEvent from '@testing-library/user-event';
 
-// NOTE: FoodEntryForm / "add food" is a BCA example — substitute your app's component and labels.
+// Example — substitute your app's component and labels.
 it('should submit form without blocking', async () => {
   const user = userEvent.setup();
-  render(<FoodEntryForm onAddFood={mockOnAddFood} />);
+  render(<ItemEntryForm onAddItem={mockOnAddItem} />);
 
   // Autocomplete inputs render as role="combobox", not role="textbox"
   const input = screen.getByRole('combobox');
-  await user.type(input, 'Spinach');
+  await user.type(input, 'Widget');
   await user.keyboard('{Enter}');
 
-  const saveButton = screen.getByRole('button', { name: /add food/i });
+  const saveButton = screen.getByRole('button', { name: /add item/i });
   await user.click(saveButton);
 
   await waitFor(() => {
-    expect(mockOnAddFood).toHaveBeenCalled();
+    expect(mockOnAddItem).toHaveBeenCalled();
   });
 });
 ```
@@ -137,9 +137,9 @@ it('should submit form without blocking', async () => {
 **Standard mock patterns:**
 
 ```typescript
-// NOTE: food-submission is a BCA-specific example — substitute your app's service module.
-vi.mock('@/lib/services/food-submission', () => ({
-  processFoodSubmission: vi.fn(),
+// Example — substitute your app's service module.
+vi.mock('@/lib/services/item-submission', () => ({
+  processItemSubmission: vi.fn(),
 }));
 
 // Mock Next.js router
@@ -275,7 +275,7 @@ pnpm test:ci           # CI mode (coverage, limited workers)
 pnpm test:e2e          # Playwright E2E tests
 ```
 
-> **Check `package.json` first.** If the app has a `scripts/test.sh` wrapper (BCA does), use the `pnpm test*` aliases — they set `--max-old-space-size` to prevent Vite's transform engine from consuming unbounded heap and triggering the kernel OOM killer. If no such wrapper exists, `npx vitest run` is fine.
+> **Check `package.json` first.** If the app has a `scripts/test.sh` wrapper, use the `pnpm test*` aliases — they set `--max-old-space-size` to prevent Vite's transform engine from consuming unbounded heap and triggering the kernel OOM killer. If no such wrapper exists, `npx vitest run` is fine.
 
 ### RTL Queries (Priority Order)
 

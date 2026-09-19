@@ -8,4 +8,10 @@
 # entry matched WHOLE (a multi-word name is not split on its own inner spaces). Copy a
 # name here VERBATIM before using it as `<human>` in any DECISION comment template. A
 # missing key authorizes nobody (fail closed) — see bead-conventions.md § Decision beads.
-humans: Craig, Craig van Heerden
+#
+# This is a tracked, public file — the value below is a placeholder, not a real ruling
+# authority. Each adopter should replace it with their own name(s) locally. Prefer keeping
+# your real name out of the tracked file: use a gitignored `.beads/config.local.yaml`
+# (see `.beads/.gitignore`) once your `close-gate.sh` reads it, or edit this file directly
+# if it doesn't yet.
+humans: <repo-owner>

@@ -11,15 +11,15 @@ Apply what is provable. File a bead for what is not. Never guess.
 | Mode | When | Step 1 | Step 3 | Step 4 |
 |---|---|---|---|---|
 | **INTERACTIVE** (default) | a human asked | skip — work in the live checkout | show each change, `AskUserQuestion`, apply on approval | show findings, file on approval |
-| **NIGHTLY** (headless) | pai-scheduler in the app checkout, cadence in `ac-pipeline/references/schedule.md` | isolate | apply without asking | file as beads, no `AskUserQuestion` |
+| **NIGHTLY** (headless) | your scheduler, in the app checkout, cadence in `ac-pipeline/references/schedule.md` | isolate | apply without asking | file as beads, no `AskUserQuestion` |
 
 ## 1. Isolate (NIGHTLY)
 
-Do NOT reconcile in the live checkout. `BCA=$(git rev-parse --show-toplevel)` is the live app
-checkout. Fetch `origin/main`, `git worktree add --detach "$WT" origin/main`, `cd "$WT"`, then
+Do NOT reconcile in the live checkout. `APP_ROOT=$(git rev-parse --show-toplevel)` is the live
+app checkout. Fetch `origin/main`, `git worktree add --detach "$WT" origin/main`, `cd "$WT"`, then
 `export BEADS_DB="$WT/.beads/beads.db"` and `br sync` to rebuild the beads DB from `issues.jsonl`
 (`br` auto-discovery ignores worktree cwd, bd-6kwqo — the exported var directs every `br` call).
-Skill files resolve only through $BCA/.claude/… (relative symlinks). If the worktree cannot be
+Skill files resolve only through $APP_ROOT/.claude/… (relative symlinks). If the worktree cannot be
 created: Slack degraded, exit, nothing written.
 
 ## 2. Scan
@@ -30,7 +30,7 @@ Read the board per `ac-pipeline/references/board-scan.md` (closed beads: Scan A'
 ### 2b. Surviving-gate verify
 
 For each open `human-gate` bead: `br show`, confirm it is still blocked on a human. If
-`$BCA/.beads/issues.jsonl` and the worktree's copy disagree on its status, skip it: the
+`$APP_ROOT/.beads/issues.jsonl` and the worktree's copy disagree on its status, skip it: the
 live checkout disagrees, and a newer `updated_at` is not newer semantics. On every other bead
 Stamp a comment `verified: <date>`. Never de-gate, close, or edit the body.
 
@@ -63,9 +63,9 @@ fails its row above · duplicate or mergeable items.
 ## 5. Land
 
 Commit the exact paths touched, per `ac-pipeline/references/commit-discipline.md`: `AGENT_NAME=FoggyCreek git commit -m "chore(tidy): <what>" -- <paths>`, then push (NIGHTLY: `git push --no-verify origin HEAD:main`).
-NIGHTLY also: verify from the live checkout that `git -C "$BCA" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry.
+NIGHTLY also: verify from the live checkout that `git -C "$APP_ROOT" rev-parse origin/main` equals HEAD — rejected means degraded, do not retry.
 Slack card via `slack-send --card --status <healthy|degraded>` on the app's ops channel, one line of counts (`drift-skipped:` — § 2b gates skipped on ledger-copy disagreement — plus the since-last-run app-board counts `foreign status:` / `off-canon receipts:` / `unrecorded closes:` against D4/D1's canon grammar).
-Write `$BCA/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts, pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
+Write `$APP_ROOT/.claude/skills/ac-tidy/workflows/last-run.json` with date, counts, pushed_sha, status; remove the worktree and prune. Teardown runs on every exit path, abort included.
 
 ---
 

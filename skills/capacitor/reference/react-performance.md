@@ -271,7 +271,7 @@ function EmptyState() {
 
 ### CSS `content-visibility` for Long Lists
 
-Long food logs, history lists, or any scrollable list that regularly exceeds 20+ items:
+Long history lists, activity feeds, or any scrollable list that regularly exceeds 20+ items:
 
 ```css
 .entry-row {

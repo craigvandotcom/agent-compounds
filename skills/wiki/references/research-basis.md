@@ -6,7 +6,7 @@
   modes, ten-tool landscape, multi-model consensus)
 - `knowledge/0-inbox/research/2026-07-13-0853-memory-knowledge-system-audit.md`
   — the internal audit that graded our actual substrate against that report's rubric
-- `infrastructure/plans/memory-wiki-upgrade.md` — the canonical execution spec these
+- `<global>/plans/memory-wiki-upgrade.md` — the canonical execution spec these
   two reports were distilled into (decision log, phase closures, standing principles)
 
 This file distills the parts load-bearing for how the `wiki` skill behaves. It does not
@@ -66,7 +66,7 @@ practices — markdown-as-substrate, hybrid BM25+vector retrieval (qmd), typed a
 memory, relevance-injection hooks, reflect/dream write-and-lint loops — and named the
 actual gap as narrower than "build a wiki": (1) no synthesis layer, (2) hygiene
 enforcement was LLM-judged instead of deterministic (fixed separately —
-`infrastructure/scripts/health/memory-lint.py`, Phase 1), (3) no human-browsable
+`<your-deployment>/scripts/health/memory-lint.py`, Phase 1), (3) no human-browsable
 surface (audit gap map, items 1-5 of the "Honest gap analysis" section). This skill
 exists to close gap (1) only — it is deliberately not a rewrite of retrieval, write
 loops, or hygiene, all of which the audit found already ahead of the field.

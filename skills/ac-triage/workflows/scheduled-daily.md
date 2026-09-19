@@ -2,7 +2,7 @@
 
 ## THIS PROMPT IS YOUR TASK — EXECUTE IMMEDIATELY
 
-You are invoked by `pai-scheduler` to run the **`ac-triage`** skill against this app's
+You are invoked by your scheduler to run the **`ac-triage`** skill against this app's
 pipeline (the job's `cwd` is the app repo). Execute without user interaction.
 
 **⚠️ AUTONOMOUS MODE — no human is watching.** There is **no `AskUserQuestion`** in this
@@ -47,8 +47,12 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   # Detached at fresh origin/<default> — so whatever the live tree has checked out (main, a
   # feature branch, or a detached HEAD) is irrelevant: this run never reads or writes it.
   git -C "$APP_ROOT" worktree add --detach "$TRIAGE_WT" "origin/$DEFAULT_BRANCH" || {
-    "$HOME/Repos/infrastructure/tools/bin/slack-send" --channel <channel from CORE/triage.md> \
-      "TRIAGE DEGRADED: could not create isolated worktree — zero writes, retry next cycle"
+    if command -v slack-send >/dev/null 2>&1; then
+      slack-send --channel <channel from CORE/triage.md> \
+        "TRIAGE DEGRADED: could not create isolated worktree — zero writes, retry next cycle"
+    else
+      echo "slack-send not found on PATH — skipping notification" >&2
+    fi
     exit 0
   }
   cd "$TRIAGE_WT"
@@ -102,8 +106,10 @@ channel). This heartbeat is the *run skeleton*; the skill is the *behavior*.
   ```
 
 - **Do not probe Slack.** `slack-send` has no `--dry-run`; it exits 2. Send the real report at
-  step 5 and read its exit code. Use the absolute path — this job runs `cwd`'d into the app.
-  If the channel does not resolve, retry once against `pi`.
+  step 5 and read its exit code. Resolve `slack-send` via PATH — this job runs `cwd`'d into
+  the app. If `slack-send` is not on PATH, print "slack-send not found on PATH — skipping
+  notification" and continue (degrade loudly, never silent). If the channel does not
+  resolve, retry once against the app's fallback channel.
 - **No Agent-Mail reservation** — a raw scheduler `prompt_file` run is not a
   self-registering Agent-Mail entry point (`agent-mail-project-keying-gotcha`). The
   append-only write set (step 3) is the collision guard.

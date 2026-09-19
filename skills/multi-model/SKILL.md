@@ -1,7 +1,7 @@
 ---
 name: multi-model
 description: Use when a task needs a specific AI model or several weighing in on one question — query Claude, GPT, Gemini, Grok or DeepSeek directly, or get a multi-model panel synthesized into one answer on OpenRouter Fusion. Triggers on "query a model", "which model for", "use OpenRouter", "ask GPT/Gemini/Grok directly", "run this on <model>", "ask the experts", "model consensus", "panel of AI models", "second opinion from other AIs". NOT for UI/design options (ui-brainstorm), forensic idea critique (ac-idea-lab), or Anthropic API/model reference (claude-api).
-tools: [openrouter (infrastructure/tools)]
+tools: [openrouter (resolved on PATH)]
 ---
 
 > **Generic skill — method only, zero app facts.** This skill is symlinked from

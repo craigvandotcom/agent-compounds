@@ -16,19 +16,20 @@ already-approved backlog, posts only what genuinely needs their decision, and re
 
 Policy (read it — it is the contract): the **auto-act rubric**
 (`.claude/skills/dream/references/auto-act-rubric.md`). The split is enforced
-deterministically by `infrastructure/dream-cycle/classify.py` — you do NOT re-judge it.
+deterministically by `<your-deployment>/dream-cycle/classify.py` (optional — write
+your own; this workflow documents the method) — you do NOT re-judge it.
 
 ### 1. Sync + check the queue
 ```bash
-git -C ~/Repos pull --ff-only 2>&1 | tail -1   # another machine may have emitted overnight
-ls -la infrastructure/dream-cycle/proposals/*/
-cat infrastructure/dream-cycle/last-run.json
+git -C <repos-root> pull --ff-only 2>&1 | tail -1   # another machine may have emitted overnight
+ls -la <your-deployment>/dream-cycle/proposals/*/
+cat <your-deployment>/dream-cycle/last-run.json
 ```
 
 ### 2. Classify every pending proposal (deterministic — no judgment)
 ```bash
-for d in infrastructure/dream-cycle/proposals/*/; do
-  python3 infrastructure/dream-cycle/classify.py --dir "$d"
+for d in <your-deployment>/dream-cycle/proposals/*/; do
+  python3 <your-deployment>/dream-cycle/classify.py --dir "$d"
 done
 ```
 Each line is `<tier>\t<path>\t<reason>`. `auto` = safe to apply now; `gated` = needs the operator.
@@ -38,13 +39,13 @@ The `auto` tier has two shapes — the classifier's reason names which (`Tier-1`
 
 **Tier-1 — new memory note (the agent applies the prose):**
 - Write the new note to its `target_file` (the paste-ready content in the proposal's `## What`),
-  and add its one index line to the infrastructure home's `MEMORY.md`.
+  and add its one index line to the global home's `MEMORY.md`.
 - Set the proposal's frontmatter `status: applied`.
 - If the `target_file` somehow already exists (race with another machine), SKIP it, set
   `status: pending`, and let it fall to the gated path — never overwrite.
 
 **Tier-0 — mechanically re-derivable lint-fix (the SCRIPT applies; do NOT hand-edit):**
-- `python3 infrastructure/dream-cycle/classify.py --apply-tier0 <proposal.md>` — the script
+- `python3 <your-deployment>/dream-cycle/classify.py --apply-tier0 <proposal.md>` — the script
   re-derives the fix from the filesystem, re-verifies it matches the proposal, writes the
   target, and flips `status: applied` itself. Exit 2 = it refused (drift already gone /
   mismatch) → leave it untouched (the classifier routes it to `gated` anyway).
@@ -52,7 +53,7 @@ The `auto` tier has two shapes — the classifier's reason names which (`Tier-1`
 Both are **root-repo, revertible changes by construction** (the classifier guarantees it) —
 Git discipline: `ac-pipeline/references/commit-discipline.md` — pathspec-only commits, no wildcard adds / stash, commit=push, deletion check.
 
-commit them to root: `git add infrastructure/ && git commit -m "dream: auto-apply <N> (Tier-0/1 rubric)" && git push`.
+commit them to root: `git add <your-deployment>/ && git commit -m "dream: auto-apply <N> (Tier-0/1 rubric)" && git push`.
 
 ### 4. Apply the APPROVED backlog (legacy — pre-bead Slack approvals)
 Any proposal at `status: approved` (the operator tapped Approve on a prior Slack card, before the
@@ -68,7 +69,7 @@ items, verify valid frontmatter. Confirm inputs from earlier runs landed (contex
 01:30, knowledge triage 01:00, infra health 00:30).
 
 ### 6. Generate Report
-Save to `infrastructure/health/reports/dream-queue-<date>.json`:
+Save to `<your-deployment>/health/reports/dream-queue-<date>.json`:
 auto-applied (count + slugs), approved→applied (legacy count), filed-as-beads (count + repo:bead-id),
 open-dream-beads (count), stale warnings, Sunday input readiness.
 
@@ -82,14 +83,16 @@ queue directly and disposes of them there. Auto-tier (memory-scoped) applies as 
 Failure prevented: dream-proposal decision beads were the board's largest self-bead
 channel (13 open at the 2026-08-27 census, 38 filed lifetime).
 
-### 8. Notify Slack — MANDATORY, DO THIS LAST, DO NOT SKIP
-Actually run the CLI (don't describe it). One digest **nudge** card (Slack is no longer the
-decision surface — it just points at the docket). `--status`: `healthy` if open dream beads
-<20 and none stale >7d, else `degraded`. Get the open-bead count from the cross-repo sweep
-(REVIEW mode step 1: `br list --json` per beads repo, filter label `dream-proposal`, status
-open); if that's not cheap this run, report the filed-this-run count and say "see docket".
+### 8. Notify — MANDATORY, DO THIS LAST, DO NOT SKIP
+If you have a notification tool wired, actually run it (don't describe it) — this example
+assumes a Slack card CLI at `<your-deployment>/tools/bin/slack-send`; substitute your own.
+One digest **nudge** card (Slack is no longer the decision surface — it just points at the
+docket). `--status`: `healthy` if open dream beads <20 and none stale >7d, else `degraded`.
+Get the open-bead count from the cross-repo sweep (REVIEW mode step 1: `br list --json`
+per beads repo, filter label `dream-proposal`, status open); if that's not cheap this run,
+report the filed-this-run count and say "see docket".
 ```bash
-infrastructure/tools/bin/slack-send --channel pi --card \
+<your-deployment>/tools/bin/slack-send --channel pi --card \
   --status <healthy|degraded> \
   --title "Dream Queue — $(date +%Y-%m-%d)" \
   --field "Auto-applied=<N>" --field "Filed as beads=<N this run>" \
@@ -97,7 +100,7 @@ infrastructure/tools/bin/slack-send --channel pi --card \
   --body "<one line: what was auto-remembered + N beads filed for your decision docket, or 'all clear'>" \
   --context "02:00 dream queue · decide via ac-human (\`br ready --label dream-proposal\`) · auto-applied notes are git-revertible"
 ```
-Confirm exit 0; retry once on error. The job is NOT complete until this posts.
+If wired, confirm exit 0 and retry once on error — the job is not complete until this posts.
 
 ## Success Criteria
 - Auto-tier applied + committed + pushed (root) — or none eligible

@@ -74,7 +74,7 @@ research/retrigger pipeline, curator merge/amend, a zoning-model override, or
 any other cross-user shared record — is proven against the **local stack**
 (integration tests, or a browser drive against `pnpm dev` if a live UI walk is
 genuinely needed) and never against prod. Prod stays the **default** target for
-user-scoped journeys — the test account's own food/signal/wellness/settings
+user-scoped journeys — the test account's own records/settings
 data — plus read-only smoke. Each journey doc's `prod_unsafe:` frontmatter key
 names the concrete buttons/actions this applies to for that journey — consult it
 before picking a target environment for a given journey.
@@ -217,7 +217,7 @@ unreachable and transient, so whenever a pass produces a screenshot that needs a
 UPLOAD the actual image:
 
 ```bash
-slack-send -c C0AQ7964ZU6 "<context>" --file a.png b.png   # #sofi
+slack-send -c <channel-id> "<context>" --file a.png b.png
 ```
 
 - **Message BEFORE `--file`** — argparse is greedy, so the message becomes the
