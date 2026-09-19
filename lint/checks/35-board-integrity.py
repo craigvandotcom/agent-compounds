@@ -32,13 +32,21 @@ Five FAIL rules over the committed board:
      (`skills/beads-standards/SKILL.md` § Status & priority canon: open / in_progress /
      blocked / deferred / closed / tombstone).
   5. staged lane only (skipped on a whole-board run, per Commit-scoped format rules
-     below): a `WORKER:`-prefixed comment on a changed id that does not match the canon
-     grammar's three fields, `model=`/`actor=`/`tree=` (§ Worker-identity stamp) — shape
-     only, never the fields' truth.
+     below): a `WORKER:`-prefixed comment newly added to a changed id BY THIS COMMIT
+     (absent from that id's comment list at HEAD; comments are append-only, so anything
+     past HEAD's own count is new) whose FIRST LINE does not match the canon grammar's
+     three fields, `model=`/`actor=`/`tree=` (§ Worker-identity stamp) — shape only,
+     never the fields' truth. A canon first line followed by note lines is green; a
+     pre-existing (HEAD-era) receipt on an untouched comment of a changed bead is never
+     re-judged.
 
-Closed beads are NEVER scanned — forward-only, no backfill, per the origin-provenance
-ruling: enforcement started at the cutover and the past is not relitigated. An empty or
-unreadable board exits 2 NOT-GATED, because a check that read nothing has proved nothing.
+Rules 3 (origin: label, Probe: line) skip closed beads — forward-only, no backfill, per
+the origin-provenance ruling: enforcement started at the cutover and the past is not
+relitigated. Rules 4 (status canon) and 5 (WORKER receipt shape) scan a row regardless of
+its status: rule 4 because an off-canon status is corruption at any lifecycle stage, rule
+5 because a receipt this commit newly writes onto a closed bead (a coordinator close-out
+label, a late note) is still new content the commit is authoring. An empty or unreadable
+board exits 2 NOT-GATED, because a check that read nothing has proved nothing.
 The check REPORTS; it never repairs — mutating the board would make this a second writer
 of the origin axis (decision D-2).
 
@@ -105,11 +113,10 @@ def _by_id(text):
     return out
 
 
-def changed_bead_ids(root):
-    """Ids added or modified in the staged ledger vs HEAD's, or None when this
-    cannot be determined (no git checkout, no HEAD yet) or when the staged
-    blob equals HEAD's (no staged ledger change — a full run). None is the
-    caller's signal to apply the per-bead format rules to the whole board."""
+def _staged_head_maps(root):
+    """(staged_map, head_map) by id, or None when the diff cannot be determined
+    (no git checkout, no HEAD yet) or when the staged blob equals HEAD's (no
+    staged ledger change — a full run)."""
     staged = _git_show(root, f":{LEDGER_REL}")
     if staged is None:
         return None
@@ -118,9 +125,29 @@ def changed_bead_ids(root):
         head = ""  # no HEAD yet, or the ledger is new-to-this-commit
     if staged == head:
         return None
-    head_map, staged_map = _by_id(head), _by_id(staged)
-    return {rid for rid, rec in staged_map.items()
-            if rid not in head_map or head_map[rid] != rec}
+    return _by_id(staged), _by_id(head)
+
+
+def changed_bead_data(root):
+    """(changed_ids, new_worker_comments) — changed_ids is the set of ids added or
+    modified in the staged ledger vs HEAD's (None when undeterminable or no staged
+    change; the caller's signal to apply the per-bead format rules to the whole
+    board). new_worker_comments maps id -> the list of comments THIS COMMIT appends
+    for that id — comments are append-only, so anything past HEAD's own comment
+    count for that id is new; a pre-existing receipt on an untouched comment is
+    never in this list. Both members are None together."""
+    maps = _staged_head_maps(root)
+    if maps is None:
+        return None, None
+    staged_map, head_map = maps
+    changed_ids = {rid for rid, rec in staged_map.items()
+                   if rid not in head_map or head_map[rid] != rec}
+    new_comments = {}
+    for rid in changed_ids:
+        staged_comments = staged_map[rid].get("comments") or []
+        head_comments = (head_map.get(rid) or {}).get("comments") or []
+        new_comments[rid] = staged_comments[len(head_comments):]
+    return changed_ids, new_comments
 
 
 def main():
@@ -140,7 +167,8 @@ def main():
         print("NOT-GATED: board is empty — a check that read nothing has proved nothing", file=sys.stderr)
         return 2
 
-    changed_ids = changed_bead_ids(root)  # None -> undeterminable, apply format rules to all
+    # None, None -> undeterminable, apply format rules to all (rule 5 stays off)
+    changed_ids, new_worker_comments = changed_bead_data(root)
 
     violations = []
     seen_ids = {}
@@ -169,14 +197,17 @@ def main():
                 f"{board}:{lineno} — off-canon status is RED: bead '{rid}' has status "
                 f"'{status}', outside the canon set {sorted(STATUS_CANON)}")
         if changed_ids is not None and rid in changed_ids:
-            for comment in (rec.get("comments") or []):
+            for comment in new_worker_comments.get(rid, []):
                 text = str(comment.get("text") or "") if isinstance(comment, dict) else ""
                 stripped = text.strip()
-                if stripped.startswith("WORKER:") and not WORKER_RE.match(stripped):
+                if not stripped.startswith("WORKER:"):
+                    continue
+                first_line = stripped.splitlines()[0]
+                if not WORKER_RE.match(first_line):
                     violations.append(
                         f"{board}:{lineno} — malformed WORKER receipt is RED: bead '{rid}' comment "
                         f"{stripped!r} does not match the canon grammar 'WORKER: model=<id> "
-                        "actor=<id> tree=<sha>'")
+                        "actor=<id> tree=<sha>' on its first line")
         if status != "open":
             continue  # closed beads are NEVER scanned for origin/probe — forward-only, no backfill
         created = str(rec.get("created_at") or "")[:10]

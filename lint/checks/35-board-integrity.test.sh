@@ -162,6 +162,29 @@ rc=$(run_check "$WORK/worker-wholeboard")
 [ "$rc" -eq 0 ] && ok "malformed WORKER: receipt is skipped entirely on a whole-board run" \
   || bad "worker-wholeboard: rc=$rc out=$(cat "$OUT")"
 
+# --- GREEN: a legacy receipt on an untouched comment of a changed bead stays green -----
+# the bead already carried an old-grammar WORKER: comment at HEAD; this commit only
+# relabels it — the comment itself is unchanged, so it must never be re-judged.
+t="$WORK/worker-legacy-untouched"
+LEGACY_AT_HEAD='{"id":"ac-legacy","status":"closed","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual"],"title":"legacy receipt","comments":[{"id":3,"issue_id":"ac-legacy","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"}]}'
+git_board "$t" "$OPEN_TAGGED" "$LEGACY_AT_HEAD"
+LEGACY_RELABELED='{"id":"ac-legacy","status":"closed","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual","touched-this-commit"],"title":"legacy receipt","comments":[{"id":3,"issue_id":"ac-legacy","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-20T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$LEGACY_RELABELED" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "legacy receipt on an untouched comment of a changed bead stays green" \
+  || bad "worker-legacy-untouched: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a multi-line canon receipt (canon first line + a note line) stays green ----
+t="$WORK/worker-multiline"
+git_board "$t" "$OPEN_TAGGED"
+WORKER_MULTILINE='{"id":"ac-multiline","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"multi-line worker stamp","comments":[{"id":4,"issue_id":"ac-multiline","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234\nnote: closed after review","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$WORKER_MULTILINE" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "a multi-line canon receipt (first line + note) stays green" \
+  || bad "worker-multiline: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
 # --- NOT-GATED: empty board and missing board ----------------------------------
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"
 rc=$(run_check "$WORK/f")
