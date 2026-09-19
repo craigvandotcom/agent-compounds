@@ -52,6 +52,26 @@ run_case() {
 echo "shell: ${ZSH_VERSION:+zsh $ZSH_VERSION}${BASH_VERSION:+bash $BASH_VERSION}"
 echo "order: NATIVE,WEBUI,WEBRT,LOGIC,RUNTIME"
 
+# --- PARITY: the doc's PAT_DOC_TEST_CI literal must equal journey-stamp-check.sh's own ---
+# (ac-4y7l.9). ASSERTED equal rather than derived at runtime — the doc's fenced block runs
+# from an app cwd in the field and from the registry root under this test, so resolving
+# journey-stamp-check.sh's own path INSIDE a doc-embedded shell block costs more than one
+# literal-equality assertion made HERE, outside the block, from the test's own known path.
+JOURNEY_SH="$SELF_DIR/../../_tools/journey-stamp-check.sh"
+if [ -f "$JOURNEY_SH" ]; then
+  JOURNEY_PAT=$(grep -m1 '^PAT_DOC_TEST_CI=' "$JOURNEY_SH" | sed "s/^PAT_DOC_TEST_CI='//; s/'\$//")
+  # Read the literal straight out of $BLOCK's own text (grep/sed, no second eval) — the
+  # value is a static single-quoted assignment, not something that needs execution to read.
+  DOC_PAT=$(printf '%s\n' "$BLOCK" | grep -m1 '^PAT_DOC_TEST_CI=' | sed "s/^PAT_DOC_TEST_CI='//; s/'\$//")
+  if [ "$DOC_PAT" = "$JOURNEY_PAT" ]; then
+    PASS=$((PASS + 1)); echo "ok   PARITY: PAT_DOC_TEST_CI matches journey-stamp-check.sh's literal"
+  else
+    FAIL=$((FAIL + 1)); echo "FAIL PARITY: PAT_DOC_TEST_CI diverges from journey-stamp-check.sh: doc=$DOC_PAT journey=$JOURNEY_PAT"
+  fi
+else
+  FAIL=$((FAIL + 1)); echo "FAIL PARITY: journey-stamp-check.sh not found at $JOURNEY_SH — parity is unassertable"
+fi
+
 # --- native doc exclusion (bd-55f7a) stays fixed ---
 run_case "native README only (bd-55f7a)"        'ios/App/fastlane/README.md'                  '' '0,0,0,0,0'
 run_case "review_notes.txt alone"               'ios/App/fastlane/review_notes.txt'           '' '0,0,0,0,0'

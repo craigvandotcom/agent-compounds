@@ -23,7 +23,7 @@ ac-human — and any workflow that files beads. One principle drives all of it:
 | `bug` | CONFIRMED defect (root cause or solid repro in hand) | Fixed + verified |
 | `investigation` | Suspected issue / open question an agent can resolve (repro, research, spike) | Answered: spawned fix beads, or documented-and-closed |
 | `decision` | A fork that passes the escalation test (`reference/human-gate-template.md` § The escalation test) — taste, product, money, risk | Human decision RECORDED, consequences executed |
-| `epic` | Grouping container | `## Delivers` covered, PROPOSED by `ac-align` (probe-less only — D5) |
+| `epic` | Grouping container | `## Success Criteria` + `## Delivers` covered, PROPOSED by `ac-align` (probe-less only — D5) |
 
 **No confirm-ceremony beads.** If the finding stage already diagnosed it —
 **diagnosed = source-traced, not inferred** — file the `bug` directly.
@@ -179,7 +179,7 @@ be configured, so the schema meets it by NAMING the first section per type:
 | Type | First section header | `br lint` also wants |
 | ---- | -------------------- | -------------------- |
 | `bug` | `## Steps to Reproduce` — a bug's intent IS its repro | `## Acceptance Criteria` |
-| `epic` | `## Success Criteria` — an epic's intent IS what done looks like | — |
+| `epic` | `## Success Criteria` — an epic's intent IS what done looks like | `## Delivers` |
 | `task` / `feature` | `## Intent` | `## Acceptance Criteria` |
 | `investigation` | `## Intent` (the open question) | `## Acceptance Criteria` (exit criteria) |
 | `decision` | the pre-staged memo (context · options · recommendation — § Decision beads) | — |

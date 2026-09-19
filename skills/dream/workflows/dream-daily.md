@@ -102,7 +102,7 @@ Confirm exit 0; retry once on error. The job is NOT complete until this posts.
 ## Success Criteria
 - Auto-tier applied + committed + pushed (root) — or none eligible
 - Legacy approved backlog applied in-repo (boundaries respected) — or none waiting
-- Gated proposals filed as decision beads + bead ids recorded + root pushed — or none fileable
+- Gated + pending proposals stay queued as files (empty `bead:` slot, no filing) for the tuning session — or none pending
 - Open dream beads <20, none >7 days old
 - Report saved successfully
 - **Digest nudge card posted to #pi (confirmed exit 0)**, stating auto-applied / filed-as-beads / open-dream-beads counts
