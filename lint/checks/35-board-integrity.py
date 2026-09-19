@@ -116,11 +116,13 @@ def _comment_key(c):
     comments by created_at with same-second ties in no fixed order
     (measured on ac-kqpw.5, ac-gcj.8, ac-1p7j.31), so slicing by count can
     mis-sort a legacy receipt as new or vice versa."""
-    if isinstance(c, dict) and c.get("id") is not None:
-        return ("id", c["id"])
-    if isinstance(c, dict):
-        return ("ct", str(c.get("created_at") or ""), str(c.get("text") or ""))
-    return ("raw", repr(c))
+    if not isinstance(c, dict):
+        key = ("raw", repr(c))
+    elif c.get("id") is not None:
+        key = ("id", c["id"])
+    else:
+        key = ("ct", str(c.get("created_at") or ""), str(c.get("text") or ""))
+    return key
 
 
 def _by_id(text):
