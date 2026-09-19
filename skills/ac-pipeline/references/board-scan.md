@@ -25,6 +25,13 @@ This file owns the *read* (what to scan, how to categorize). Each consumer owns 
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
+# br_call (skills/_tools/br-call.sh) is the ONE routed `br … --json` read every fenced
+# read below sources — resolve it consumer-first, the same path session-scan uses:
+# `.claude/skills/_tools/br-call.sh` (deploy.sh's symlink target) then this registry's
+# own `skills/_tools/br-call.sh` as fallback.
+BR_CALL="$PROJECT_ROOT/.claude/skills/_tools/br-call.sh"
+[ -f "$BR_CALL" ] || BR_CALL="$PROJECT_ROOT/skills/_tools/br-call.sh"
+. "$BR_CALL"
 ```
 
 Run scans A, B, C, E **in parallel** (they're independent).
@@ -32,9 +39,11 @@ Run scans A, B, C, E **in parallel** (they're independent).
 ## Scan A — beads
 
 ```bash
-br_call list  --limit 0        # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
-br_call ready                  # unblocked + ready → a FLAT array
+br_call list --limit 0 --json  # NON-CLOSED beads only → object {issues:[...], total, has_more, limit}
+br_call ready --json           # unblocked + ready → a FLAT array
 ```
+
+Both pipe through the row-shape idiom fenced below — never read either one's raw stdout.
 
 `br_call` (`skills/_tools/br-call.sh`) is the ONE routed `br … --json` read — it refuses both
 failure envelopes (a non-zero exit and a zero-exit `.error` payload) so a dead read never
@@ -196,7 +205,7 @@ child) stays with the consumer (the conductor's batch-by-file-cluster selection)
 
 ```bash
 # Densest file clusters across the ready orphan set (drives batch selection).
-br ready --limit 0 --json | jq -r '.[] | select(
+br_call ready --limit 0 --json | jq -r '.[] | select(
   (.labels | index("refined")) and (.labels | index("human-gate") | not)
 ) | .description' \
   | grep -oE '[a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+' \
