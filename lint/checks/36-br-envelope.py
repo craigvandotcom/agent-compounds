@@ -55,6 +55,34 @@ BR_CALL_START = re.compile(r'\bbr_call\b')
 # exist (HEAD's whole finding set was this shape).
 COMMENT_LINE = re.compile(r"^\s*#")
 PRESENCE_CHECK = re.compile(r"command\s+-v\b")
+# A `br … --json` inside a QUOTED DIAGNOSTIC is prose too — the same class as a comment.
+# coordinator.sh's own NOT-GATED message names both readers it tried ("neither 'br
+# coordination status' nor 'br list --json' yielded claim state") and was reported as a raw
+# read for years; the finding survived the message being rewritten and moved line (measured
+# 2026-09-19 at :113 and :135). Strip quoted spans that CANNOT be reads — one containing a
+# command substitution still can, so `echo "$(br list --json)"` keeps its finding.
+_DQ = re.compile(r'"[^"\\]*(?:\\.[^"\\]*)*"')
+_SQ = re.compile(r"'[^']*'")
+_SUBST = re.compile(r"\$\([^)]*\)|`[^`]*`")
+
+
+def has_raw_read(stmt):
+    """True when the statement actually READS through the binary.
+
+    A `br … --json` inside a command substitution is a read however it is quoted —
+    `$("br" list --json)` is the quoted-binary evasion, so substitutions are tested
+    with quotes intact. Everything OUTSIDE a substitution is tested with inert quoted
+    spans removed, so a `br … --json` named only inside a diagnostic string is prose:
+    single quotes never interpolate, and a double-quoted span can only execute when it
+    carries a `$(` or a backtick.
+    """
+    for sub in _SUBST.findall(stmt):
+        if BR_START.search(sub) and RAW_READ.search(sub):
+            return True
+    outside = _SUBST.sub(" ", stmt)
+    outside = _SQ.sub(" ", outside)
+    outside = _DQ.sub(" ", outside)
+    return bool(BR_START.search(outside) and RAW_READ.search(outside))
 
 
 def joined_lines(text):
@@ -123,7 +151,7 @@ def main():
             stmt = f"{line} {flag_continuation(rows, i)}"
             if BR_CALL_START.search(line) and ROUTED_READ.search(stmt):
                 routed += 1
-            elif BR_START.search(line) and RAW_READ.search(stmt):
+            elif has_raw_read(stmt):
                 findings.append(f"raw br --json read in {rel}:{lineno}: {line.strip()}")
 
     # The python twin counts once toward the floor — the thirteenth call site.
