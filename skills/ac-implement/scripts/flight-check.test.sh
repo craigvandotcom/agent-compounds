@@ -486,6 +486,35 @@ RUN_RC=$?
 grep -q 'add ac-l7xt-fix refined' "$WORK/labels2.log" && ok "stale stamp: the re-gate re-stamped on the way through" \
   || bad "stale stamp: re-gate did not stamp: $(cat "$WORK/labels2.log")"
 
+# ...and the SAME staleness must NOT bounce a RE-RUN. worker.md §3 tells a bead delivering its
+# own harness to write the harness and re-run flight-check THEN — and the harness it was just
+# told to write is a new referrer, so a sibling Delivers path's touchers count moves BECAUSE
+# THE BEAD OBEYED. Measured 2026-09-19: bd-29v6.15.6 bounced twice on this, the second time
+# discarding a complete verified implementation into a stash. The stamp is a CLAIM-time
+# premise; once a receipt exists, claim time has passed and re-gating measures a tree this
+# bead has already changed.
+: >"$WORK/labels3.log"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts3" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix2.json" AC_LABEL_LOG="$WORK/labels3.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc2.md" --root "$R2" 2>&1)
+[ -e "$WORK/receipts3/ac-l7xt-fix.flight-receipt" ] \
+  && ok "stamp re-run: the claim-time pass banked a receipt" \
+  || bad "stamp re-run: no receipt from the claim-time pass: $RUN_OUT"
+: >"$WORK/labels4.log"
+RUN_OUT=$(env AC2_DRY_RUN=1 AC2_FLIGHT_DIR="$WORK/receipts3" PATH="$B2:$PATH" \
+  AC_FIXTURE_JSON="$WORK/fix1.json" AC_LABEL_LOG="$WORK/labels4.log" \
+  bash "$GATE" ac-l7xt-fix --body-file "$WORK/fix-desc1.md" --root "$R2" 2>&1)
+RUN_RC=$?
+[ "$RUN_RC" -eq 0 ] \
+  && ok "stamp re-run: a stale stamp does NOT bounce the post-harness re-run" \
+  || bad "stamp re-run: expected exit 0 with a receipt present, got $RUN_RC: $RUN_OUT"
+printf '%s' "$RUN_OUT" | grep -q 'STALE-STAMP skipped' \
+  && ok "stamp re-run: the skip is ANNOUNCED — an unreported skip reads as a pass" \
+  || bad "stamp re-run: the skip was silent: $RUN_OUT"
+grep -q 'remove ac-l7xt-fix refined' "$WORK/labels4.log" \
+  && bad "stamp re-run: the re-run downgraded the bead it had already cleared" \
+  || ok "stamp re-run: no downgrade on the re-run — the board is left alone"
+
 # ---------------------------------------------------------------------------------------
 echo "flight-check.test: case 9 — a refused resolved-blocker show is NOT-GATED, never a fabricated status"
 # ---------------------------------------------------------------------------------------

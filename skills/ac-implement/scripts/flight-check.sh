@@ -370,8 +370,29 @@ fi
 # Not run in --check-only mode (this leg MUTATES the board) and not on a bead that does not
 # currently hold `refined` (nothing to re-gate); a gate that cannot run is NOT-GATED, never
 # a pass.
+#
+# NOT RE-RUN ONCE THIS BEAD ALREADY HAS A RECEIPT. worker.md §3 tells a bead that DELIVERS ITS
+# OWN HARNESS to write the harness, see it fail, and re-run flight-check THEN, so the receipt
+# anchors the strongest RED. That re-run used to re-gate the stamp against a tree the worker
+# had already begun changing -- and the harness it was just told to write is itself a new
+# referrer, so a `touchers:` count for a sibling Delivers path moves BECAUSE THE BEAD DID WHAT
+# IT WAS TOLD. Measured 2026-09-19: bd-29v6.15.6 bounced STALE-STAMP twice on exactly this,
+# the second time discarding a complete, verified implementation into a stash.
+#
+# The stamp is a CLAIM-TIME premise: it asks whether this bead was refined under the current
+# contract, which cannot become false because the worker started working. Checking it again
+# mid-flight measures a moving target. The receipt file is the existing, reliable marker that
+# claim time has passed -- it is written further down (RECEIPT_FILE) only after this leg -- so
+# its presence means "re-run", and the leg steps aside. The skip is ANNOUNCED, never silent:
+# an unreported skipped check reads as a pass, which is the failure this file exists for.
 STAMP_GATE="${STAMP_GATE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../_tools" 2>/dev/null && pwd)/stamp-refined.sh}"
-if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ]; then
+STAMP_RERUN=0
+_fc_receipt="${AC2_FLIGHT_DIR:-$(git rev-parse --git-common-dir 2>/dev/null || echo .)/ac-flight}/${BEAD}.flight-receipt"
+if [ -s "$_fc_receipt" ]; then
+  STAMP_RERUN=1
+  echo "flight-check[$BEAD] STALE-STAMP skipped — a flight receipt already exists, so this is a re-run, not a claim. The stamp was gated at claim; re-gating it now would measure a tree this bead has already changed (worker.md §3's own harness re-run). This gate reports the skip; it never implies the stamp is fresh."
+fi
+if [ -z "$FAIL_CLASS" ] && [ "$CHECK_ONLY" -eq 0 ] && [ "$STAMP_RERUN" -eq 0 ]; then
   if [ ! -f "$STAMP_GATE" ]; then
     echo "NOT-GATED: stamp gate not found at '$STAMP_GATE' — the refined stamp cannot be re-gated; refusing rather than trusting it" >&2
     exit 2
