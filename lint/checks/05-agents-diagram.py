@@ -37,10 +37,21 @@ DIAGRAM_PATHS = ("skills", "agents", "engine", "templates", "_plans")
 
 
 def git_ignored(root, path):
+    # `check-ignore` does not support pathspec magic ("fatal: pathspec magic not
+    # supported by this command: 'literal'") and errors non-zero when
+    # GIT_LITERAL_PATHSPECS=1 is ambient in the environment — exported repo-wide by
+    # skills/ac-implement/scripts/swarm-commit.sh for the whole `git commit` (and
+    # therefore every pre-commit hook child) it drives. That non-zero read the same
+    # as "not ignored" here, false-FAILing this check on every commit through the
+    # swarm lane for the (permanently gitignored, permanently absent from any
+    # staged-index materialisation) `_plans` path. Strip it for this one call only —
+    # a plain existence-of-ignore-rule query never needs pathspec magic of any kind.
+    env = dict(os.environ)
+    env.pop("GIT_LITERAL_PATHSPECS", None)
     for form in (path, path + "/"):
         proc = subprocess.run(
             ["git", "-C", root, "check-ignore", "-q", form],
-            capture_output=True, timeout=30,
+            capture_output=True, timeout=30, env=env,
         )
         if proc.returncode == 0:
             return True

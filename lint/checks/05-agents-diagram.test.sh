@@ -41,6 +41,16 @@ else
   bad "real-tree case: expected 0, got $rc"; printf '%s\n' "$out"
 fi
 
+# --- GREEN under ambient GIT_LITERAL_PATHSPECS=1 (swarm-commit's export leaks into
+# every pre-commit hook child; `check-ignore` errors 128 on that pathspec magic, and
+# a naive returncode==0 read misreads that error as "not ignored") ----------------
+out="$(GIT_LITERAL_PATHSPECS=1 python3 "$CHECK" 2>&1)"; rc=$?
+if [ "$rc" = 0 ]; then
+  ok "GREEN: ambient GIT_LITERAL_PATHSPECS=1 does not false-FAIL the gitignored carve-out"
+else
+  bad "GIT_LITERAL_PATHSPECS case: expected 0, got $rc"; printf '%s\n' "$out"
+fi
+
 # --- NOT-GATED: a nonexistent root -----------------------------------------------
 out="$(python3 "$CHECK" /tmp/05ad-void-root-does-not-exist 2>&1)"; rc=$?
 if [ "$rc" = 2 ] && printf '%s' "$out" | grep -q "NOT-CHECKED"; then
