@@ -166,6 +166,14 @@ whatever
 - none'
 bead bd-epic-gone epic '[]' "$EPIC_GONE_DELIVERS" "$(review_comment bd-epic-gone 'REVIEW: APPROVED epicship/gone.sh at feb39cc')"
 bead bd-epic-noreview epic '[]' "$EPIC_DELIVERS"
+EPIC_OWNED_DELIVERS='## Intent
+whatever
+## Delivers
+- script: epicship/thing.sh
+  touchers: `rg -l -F "epicship/thing" .` -> 2 · owned by: bd-epic-owned.3
+## Consumes
+- none'
+bead bd-epic-owned epic '[]' "$EPIC_OWNED_DELIVERS" "$(review_comment bd-epic-owned 'REVIEW: APPROVED epicship/thing.sh at feb39cc')"
 run_epic() { # <expected exit> <label> -- <gate args...>
   local want="$1" label="$2"; shift 3
   CASES=$((CASES + 1))
@@ -190,6 +198,9 @@ run_epic 1 "epic with receipt but a promised path missing on disk -> REFUSE" -- 
 # which satisfied the pre-anchor substring grep.
 bead bd-epic-negated epic '[]' "$EPIC_DELIVERS" "$(review_comment bd-epic-negated 'No REVIEW: APPROVED receipt written: the round is clean but a P1 child is now open, so the receipt waits for the re-review.')"
 run_epic 1 "epic with negated receipt sentence containing the string -> REFUSE" -- bd-epic-negated "shipped: epic landed. Delivered: epicship/thing.sh. probe receipt: FLIGHT-RECEIPT v1 exit 0"
+# A touchers line's `owned by: <child bead id>` is path-shaped but is not a file: read as an
+# artifact it refuses every epic whose Delivers names its owner beads (measured on ac-4y7l).
+run_epic 0 "epic whose touchers name a dotted child bead id -> PASS (ids are not artifacts)" -- bd-epic-owned "shipped: probe receipt green 6/6. Delivered: epicship/thing.sh"
 
 echo "--- audit mode: --list-unverifiable names the never-verifiable population ---"
 jq -s '.' "$FIXTURE_DIR/bd-prose.json" "$FIXTURE_DIR/bd-task.json" "$FIXTURE_DIR/bd-epic.json" \
