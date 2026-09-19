@@ -142,6 +142,16 @@ if [ "$rc" -eq 3 ] && printf '%s' "$out" | grep -q 'REFUSED \[placeholder-messag
   pass "placeholder subject refused (fcc88b3's 'test' / 'body' shape), naming placeholder-message"
 else fail "placeholder-message: rc=$rc out=$out"; fi
 
+# --- 5c. a short commit of a type outside the usual set is NOT a placeholder ---------------
+PR2="$(new_repo reviewtype)"
+printf 'review(ac-4y7l): batch3 findings\n\nfiled.\n' >"$PR2/review.txt"
+out="$(cd "$PR2" && "$LANE" --identity t --message-file review.txt --path mine.txt --no-push 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then
+  pass "a short review(scope): subject with a thin body is accepted — any lowercase type prefix is conventional"
+else
+  fail "short review(scope): subject refused: rc=$rc $out"
+fi
+
 # A short conventional subject is never flagged, even with a thin body — its own repo, so
 # the assertion covers a real commit attempt, not just a skipped refusal.
 PR2="$(new_repo placeholder-short-conventional)"

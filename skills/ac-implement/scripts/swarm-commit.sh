@@ -119,13 +119,17 @@ MSG_BODY="$(tail -n +2 "$MSGFILE" 2>/dev/null | grep -v '^[[:space:]]*$' || true
 subj_words=$(printf '%s' "$MSG_SUBJECT" | wc -w | tr -d '[:space:]')
 body_words=$(printf '%s' "$MSG_BODY" | wc -w | tr -d '[:space:]')
 subj_placeholder=0
-case "$MSG_SUBJECT" in
-  feat:*|feat\(*\):*|fix:*|fix\(*\):*|docs:*|docs\(*\):*|chore:*|chore\(*\):*|test:*|test\(*\):*|refactor:*|refactor\(*\):*)
-    ;;
-  *) [ "${subj_words:-0}" -lt 4 ] && subj_placeholder=1 ;;
-esac
+# ANY lowercase `type:` or `type(scope):` prefix counts as conventional — this repo's own
+# history carries ac, beads, dream, batch, review, skills, friction and doctrine beside the
+# usual set, and an enumerated whitelist refuses a legitimate short commit the moment a new
+# type appears (found by the final review of ac-4y7l: `review(...)` was missing).
+if printf '%s' "$MSG_SUBJECT" | grep -qE '^[a-z]+(\([^)]*\))?!?: .'; then
+  :
+else
+  [ "${subj_words:-0}" -lt 4 ] && subj_placeholder=1
+fi
 if [ "$subj_placeholder" -eq 1 ] && [ "${body_words:-0}" -lt 3 ]; then
-  refuse placeholder-message "subject '$MSG_SUBJECT' names no conventional type (feat|fix|docs|chore|test|refactor(scope)?:) and is under four words, and the body is under three words — this looks like fcc88b3's placeholder ('test' / 'body'), not a message naming the failure this commit prevents"
+  refuse placeholder-message "subject '$MSG_SUBJECT' names no conventional type (a lowercase 'type:' or 'type(scope):' prefix) and is under four words, and the body is under three words — this looks like fcc88b3's placeholder ('test' / 'body'), not a message naming the failure this commit prevents"
 fi
 
 # --- pathspec ---------------------------------------------------------------------------
