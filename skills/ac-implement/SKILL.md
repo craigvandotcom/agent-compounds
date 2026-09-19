@@ -58,7 +58,13 @@ task; canon: `ac-pipeline/references/work-derivation.md`).
 when it goes wrong — script plus checklist, not prose:
 
     git fetch origin                                    # yours; the gate never fetches
-    bash <scripts>/coordinator.sh --run <run-id>
+    bash <scripts>/coordinator.sh --run <run-id> --actor <name> [--actor <name>...]
+
+**One `--actor` per worker, exactly as its hand-back's `ACTOR:` line reported** — that line
+exists for this and nothing else (worker.md §9). The sweep matches the set exactly; it no
+longer guesses a `swarm-<run-id>` prefix, which matched no Agent-Mail-named worker and so
+reported clean over a live orphan on every real run. Give none and the sweep is NOT-GATED,
+because one that can match nothing has verified nothing.
 
 It refuses `LEDGER-STALE` (origin moved — flushing would overwrite another writer's closes),
 `ORPHANS` (a claim held by a worker of this run that has returned), or `LEDGER-WRITE` (nothing

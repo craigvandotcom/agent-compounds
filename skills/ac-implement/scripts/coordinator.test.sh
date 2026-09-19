@@ -71,8 +71,13 @@ SC
   cd "$W"
 }
 
-run() { ( cd "$1" && shift && bash skills/ac-implement/scripts/coordinator.sh "$@" 2>&1 ); }
-rc_of() { ( cd "$1" && shift && bash skills/ac-implement/scripts/coordinator.sh "$@" >/dev/null 2>&1 ); echo $?; }
+# coordinator.sh now REFUSES to run the orphan sweep with no worker identity (it would match
+# nothing and print clean over a live orphan). Cases that are not about orphans still have to
+# get past that, so the helpers supply an identity matching no actor in any fixture — unless
+# the case names its own.
+_ident() { case " $* " in *" --actor "*|*" --actor-prefix "*) : ;; *) printf -- '--actor\n__no-actor-of-this-run__\n' ;; esac; }
+run() { ( cd "$1" && shift && bash skills/ac-implement/scripts/coordinator.sh "$@" $(_ident "$@") 2>&1 ); }
+rc_of() { ( cd "$1" && shift && bash skills/ac-implement/scripts/coordinator.sh "$@" $(_ident "$@") >/dev/null 2>&1 ); echo $?; }
 
 echo "coordinator.test: argument and precondition refusals"
 mkrepo r1
@@ -108,26 +113,45 @@ printf '%s' "$out" | grep -q 'LEDGER-STALE skipped' \
   && ok "with no upstream the leg SAYS it skipped rather than passing quietly" \
   || bad "no-upstream case was silent: $out"
 
-echo "coordinator.test: ORPHANS — and it must discriminate between runs"
-CLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress","assignee":"swarm-RUNA-Cave"}}]}'
+echo "coordinator.test: ORPHANS — named actors, because the server names the agent"
+# The fixture assignee is an Agent Mail name, which is what workers actually carry. The old
+# fixture used a `swarm-<run>-` prefix that NO worker this pipeline produces, so the sweep
+# matched the empty set and printed clean on every real run (easy-mode FRICTIONS.md
+# `orphan-sweep-actor-prefix-never-matches-the-worker-identity`, recurrence 3, plus 2026-09-19).
+CLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress","assignee":"CoralGorge"}}]}'
 mkrepo r5
 ( cd "$W/r5" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
-out="$(AC2_TEST_CLAIMS="$CLAIM" run "$W/r5" --run RUNA --dry-run)"
-rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --dry-run )
+out="$(AC2_TEST_CLAIMS="$CLAIM" run "$W/r5" --run RUNA --actor CoralGorge --dry-run)"
+rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor CoralGorge --dry-run )
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'ORPHANS' && printf '%s' "$out" | grep -q 'ac-1' \
-  && ok "a live claim under THIS run's actor is REFUSED and named" \
+  && ok "a live claim under a NAMED actor of this run is REFUSED and named" \
   || bad "orphan not refused (rc=$rc): $out"
 # THE DISCRIMINATING CASE: another run's worker is not this run's orphan.
-[ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNB --dry-run )" -eq 0 ] \
+[ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNB --actor BrownDesert --dry-run )" -eq 0 ] \
   && ok "a claim under a DIFFERENT run's actor is left alone" \
   || bad "the sweep stole a sibling run's live claim"
+# Several workers, one run: the sweep matches the whole set, not just the first.
+[ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor BrownDesert --actor CoralGorge --dry-run )" -eq 1 ] \
+  && ok "--actor is repeatable and every named actor is swept" \
+  || bad "a second --actor was not swept"
+# THE REGRESSION THIS FIX EXISTS FOR: no identity must never read as clean.
+out="$( AC2_TEST_CLAIMS="$CLAIM" run "$W/r5" --run RUNA --dry-run --actor-prefix '' )"
+rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --dry-run --actor-prefix '' )
+[ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-GATED' \
+  && ok "with no worker identity the sweep is NOT-GATED, never a silent clean" \
+  || bad "an unidentifiable sweep did not refuse (rc=$rc): $out"
+# Back-compat: an explicit prefix still works for a run that really does share one.
+PCLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-2","status":"in_progress","assignee":"swarm-RUNA-Cave"}}]}'
+[ "$( AC2_TEST_CLAIMS="$PCLAIM" rc_of "$W/r5" --run RUNA --actor-prefix swarm-RUNA --dry-run )" -eq 1 ] \
+  && ok "--actor-prefix still sweeps a genuinely shared prefix" \
+  || bad "explicit --actor-prefix stopped working"
 
 echo "coordinator.test: a gate that cannot verify says so"
 [ "$( AC2_TEST_CS_BROKEN=1 rc_of "$W/r5" --run RUNA --dry-run )" -eq 2 ] \
   && ok "unparseable coordination status is NOT-GATED, never a pass" || bad "broken status did not exit 2"
 out="$( AC2_TEST_CS_FAIL=1 run "$W/r5" --run RUNA --dry-run )"
 rc=$( AC2_TEST_CS_FAIL=1 rc_of "$W/r5" --run RUNA --dry-run )
-[ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q "coordination status' refused" \
+[ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q "yielded claim state" \
   && ok "a refused coordination status read is NOT-GATED, never a fabricated orphan verdict" \
   || bad "refused status did not exit 2 naming the read (rc=$rc): $out"
 ( cd "$W/r5" && rm -f .beads/issues.jsonl )

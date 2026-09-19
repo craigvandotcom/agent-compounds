@@ -28,8 +28,16 @@
 # already the repo-global lane. One committer, one lane, one place to fix.
 #
 # Usage:
-#   coordinator.sh --run <run-id> [--root <repo root>] [--actor-prefix <p>]
-#                  [--mirror-artifacts] [--dry-run]
+#   coordinator.sh --run <run-id> [--actor <name>]... [--root <repo root>]
+#                  [--actor-prefix <p>] [--mirror-artifacts] [--dry-run]
+#
+# --actor             REPEATABLE, and the identity source the orphan sweep actually wants: one
+#                     per worker, exactly as its hand-back's `ACTOR:` line reported. worker.md
+#                     §9 mandates that line for precisely this reason -- "the only way the
+#                     minted name reaches its roster and its orphan sweep" -- and until now
+#                     there was no parameter to carry it, so the sweep guessed a prefix and
+#                     matched nothing. Give every actor of this run; the sweep matches the set
+#                     exactly.
 #
 # --mirror-artifacts  OPTIONAL checkpoint (ac-28nm): after a successful ledger flush, mirror
 #                     this run's /tmp-mortal scratch into <git-common-dir>/ac-flight/<run-id>/
@@ -42,12 +50,13 @@
 
 set -uo pipefail
 
-RUN=""; ROOT=""; PREFIX=""; DRY=0; MIRROR=0; BRANCH=""
+RUN=""; ROOT=""; PREFIX=""; DRY=0; MIRROR=0; BRANCH=""; ACTORS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --run)             RUN="${2:-}"; shift 2 ;;
     --branch)          BRANCH="${2:-}"; shift 2 ;;
     --root)            ROOT="${2:-}"; shift 2 ;;
+    --actor)           ACTORS+=("${2:-}"); shift 2 ;;
     --actor-prefix)    PREFIX="${2:-}"; shift 2 ;;
     --mirror-artifacts) MIRROR=1; shift ;;
     --dry-run)         DRY=1; shift ;;
@@ -55,7 +64,20 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$RUN" ] || { echo "NOT-GATED: --run <run-id> is required; without it the orphan sweep cannot tell this run's actors from a live sibling run's" >&2; exit 2; }
-[ -n "$PREFIX" ] || PREFIX="swarm-$RUN"
+# NO SILENT DEFAULT. This used to fall back to `swarm-$RUN`, a prefix NO worker this pipeline
+# produces: worker.md mints the identity from Agent Mail, which names agents `CoralGorge`,
+# `BrownDesert`, `GentleCave`. The sweep therefore matched the empty set and printed clean, on
+# every run that did not pass --actor-prefix by hand. Measured four times (easy-mode
+# FRICTIONS.md `orphan-sweep-actor-prefix-never-matches-the-worker-identity`, recurrence 3,
+# plus 2026-09-19); once with a worker dead mid-flight still holding a claim, reported clean.
+# The entry's own conclusion: a string-prefix convention cannot work once the SERVER names the
+# agent, because the coordinator cannot predict the name. So it is given, never guessed --
+# and an absent identity source is NOT-GATED, because a sweep that can match nothing has
+# verified nothing, which is the one thing this file exists to refuse.
+if [ "${#ACTORS[@]}" -eq 0 ] && [ -z "$PREFIX" ]; then
+  echo "NOT-GATED: no worker identity given, so the orphan sweep can match nothing and would print clean over a live orphan. Pass --actor <name> once per worker (the ACTOR: line in each hand-back), or --actor-prefix <p> if this run really does use a shared prefix." >&2
+  exit 2
+fi
 
 if [ -z "$ROOT" ]; then
   # ROOT is the CONSUMER repo's root, never the script's own repo: these scripts are
@@ -116,9 +138,18 @@ if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
       || CLAIMS=""
   fi
   [ -n "$CLAIMS" ] || ungated "neither '$BR coordination status' nor '$BR list --json' yielded claim state; liveness is unknown and orphans cannot be ruled out"
-  ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --arg p "$PREFIX" \
+  # Exact set when --actor was given, prefix only when --actor-prefix was explicitly asked for.
+  # An empty array must stay EMPTY: `printf '%s\n'` with no args still emits one blank line,
+  # which became [""] and silently took the exact-match branch, disabling --actor-prefix.
+  if [ "${#ACTORS[@]}" -gt 0 ]; then
+    ACTORS_JSON=$(printf '%s\n' "${ACTORS[@]}" | jq -R . | jq -s -c .)
+  else
+    ACTORS_JSON='[]'
+  fi
+  ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --arg p "$PREFIX" --argjson a "$ACTORS_JSON" \
     '[.claims[]? | select((.issue.status? // "") == "in_progress")
-       | select(((.issue.assignee? // "") | startswith($p)))
+       | select( (($a | length) > 0 and ((.issue.assignee? // "") as $x | $a | index($x)))
+                 or (($a | length) == 0 and $p != "" and ((.issue.assignee? // "") | startswith($p))) )
        | .issue.id] | join(" ")' 2>/dev/null || echo "?")
   [ "$ORPHANS" = "?" ] && ungated "could not parse '$BR coordination status'; orphans cannot be ruled out"
   [ -z "${ORPHANS// /}" ] || refuse "ORPHANS" \
