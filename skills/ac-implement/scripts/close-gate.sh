@@ -188,34 +188,51 @@ BEAD_LABELS=$(br_call show "$BEAD" --json </dev/null \
   || not_checked "READ" "br_call show refused for $BEAD — the gate cannot verify this close"
 has_label() { case ",$BEAD_LABELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 
-if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
-  if ! COMMENTS_JSON=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null); then
-    not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
-  fi
-  # A ruling is a comment whose FIRST LINE, at column 0, names an actor that is not a bare
-  # template placeholder (`<human>`). Reading every comment's own first line (never the
-  # concatenation of every line of every comment) is what excludes both an indented draft
-  # buried inside a longer note and an unfilled template quoted on a memo's second line —
-  # neither is ever a comment's own first line at column 0.
-  RULING=$(printf '%s' "$COMMENTS_JSON" | jq -r '.[].text // empty | split("\n")[0]' 2>/dev/null \
+# find_authorized_ruling — the ONE matcher for a recorded "DECISION (<actor>): ..." comment
+# signed by an authorized human (or the literal `DECISION (ac-tidy): moot` on a
+# `pipeline-proposal` bead). Sets $RULING to the authorized line, or empty when none is
+# found/authorized. Shared by the type-routed ruling path directly below AND LEG 6's
+# scanner-refusal override, so the two never drift apart — a fix to this matcher (ac-4y7l.25)
+# lands for both callers at once. A ruling is a comment's own FIRST LINE, at column 0, naming
+# an actor that is not a bare template placeholder (`<human>`) — this excludes both an
+# indented draft buried inside a longer note and an unfilled template quoted on a memo's
+# second line.
+#   Return 0 — the comments read succeeded (RULING may still be empty: none was authorized).
+#   Return 1 — the comments read itself refused; the caller decides whether that is
+#              NOT-CHECKED (the type-routed path) or simply "no override" (LEG 6, which only
+#              ever narrows an existing refusal and never turns a refusal into a pass).
+#   Return 2 — a non-ac-tidy actor ruled but bead-conventions.md is missing, so the
+#              humans-who-rule list could not be read at all.
+find_authorized_ruling() {
+  local comments_json raw actor authorized=0 conv_file humans
+  RULING=""
+  comments_json=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null) || return 1
+  raw=$(printf '%s' "$comments_json" | jq -r '.[].text // empty | split("\n")[0]' 2>/dev/null \
     | grep -m1 -E '^DECISION \([^<)][^)]*\): \S')
-  if [ -n "$RULING" ]; then
-    RULING_ACTOR=$(printf '%s' "$RULING" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
-    AUTHORIZED=0
-    if [ "$RULING_ACTOR" = "ac-tidy" ]; then
-      has_label "pipeline-proposal" && AUTHORIZED=1
+  [ -n "$raw" ] || return 0
+  actor=$(printf '%s' "$raw" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
+  if [ "$actor" = "ac-tidy" ]; then
+    has_label "pipeline-proposal" && authorized=1
+  else
+    conv_file="$ROOT/skills/beads-standards/reference/bead-conventions.md"
+    [ -f "$conv_file" ] || conv_file="$ROOT/.agents/skills/beads-standards/reference/bead-conventions.md"
+    if [ -f "$conv_file" ]; then
+      humans=$(grep -m1 '^Humans who rule:' "$conv_file" | sed 's/^Humans who rule:[[:space:]]*//')
+      case ",${humans// /}," in *",$actor,"*) authorized=1 ;; esac
     else
-      CONV_FILE="$ROOT/skills/beads-standards/reference/bead-conventions.md"
-      [ -f "$CONV_FILE" ] || CONV_FILE="$ROOT/.agents/skills/beads-standards/reference/bead-conventions.md"
-      if [ -f "$CONV_FILE" ]; then
-        HUMANS=$(grep -m1 '^Humans who rule:' "$CONV_FILE" | sed 's/^Humans who rule:[[:space:]]*//')
-        case ",${HUMANS// /}," in *",$RULING_ACTOR,"*) AUTHORIZED=1 ;; esac
-      else
-        not_checked "DECISION" "bead-conventions.md missing — the humans-who-rule list cannot be read"
-      fi
+      return 2
     fi
-    [ "$AUTHORIZED" = 1 ] || RULING=""
   fi
+  [ "$authorized" = 1 ] && RULING="$raw"
+  return 0
+}
+
+if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
+  find_authorized_ruling; FR_RC=$?
+  case "$FR_RC" in
+    1) not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified" ;;
+    2) not_checked "DECISION" "bead-conventions.md missing — the humans-who-rule list cannot be read" ;;
+  esac
   if [ -z "$RULING" ]; then
     echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment on $BEAD is both a real ruling (first line, column 0, no placeholder actor) and signed by an authorized human — or ac-tidy on a pipeline-proposal bead — a ruling must be recorded before this bead can close" >&2
     exit 1
@@ -525,18 +542,23 @@ fi
 echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $ASSERT_SOURCE"
 
 # ---------------------------------------------------------------------------------------
-# LEG 6 — SCANNER. Only on non-empty argv, and it asserts scanned-equals-passed by reading
-# the DETAIL lines, never the summary counter: ubs's summary counts CATEGORIES CHECKED, not
-# findings, and it silently drops every language it has no scanner for.
+# LEG 6 — SCANNER. Only on non-empty argv. ubs runs ONCE at HEAD — no baseline diff (Craig's
+# way-forward ruling, 2026-09-19: a prior base-tree/scratch-tree signature match never
+# matched on real ubs output — absolute paths, permalinks, capped detail lists, a missing
+# lint config, bash's rule-on-the-previous-line all defeated it; see
+# skills/ac-pipeline/FRICTIONS.md scanner-leg-has-no-baseline). The Combined Summary's own
+# Critical/Warning/Info counters are the verdict, never the DETAIL line count: ubs's DETAIL
+# regex misses some scanners' shapes (e.g. bandit's `Location:` lines) and a summary-only
+# ubs invocation can carry counts with no DETAIL lines printed at all.
 #
-# A finding present at BOTH the flight receipt's own tree and HEAD is PRE-EXISTING — this
-# bead inherited it, did not cause it, and it does not refuse the close. Only a finding that
-# is at HEAD and absent at the base refuses (skills/ac-pipeline/FRICTIONS.md,
-# scanner-leg-has-no-baseline). Findings are matched by RULE + CODE TEXT, never by line
-# number (a line can shift for reasons unrelated to this bead's own edit). A scanned file
-# that does not exist at the base tree has no baseline at all, so every one of its findings
-# counts as new — the same rule a brand-new file gets.
+# Critical or Warning findings refuse (CLOSE-REFUSED: SCANNER, via refuse() below). Info
+# findings are reported in this leg's own output and never refuse on their own. A refused
+# close still closes when the bead carries an authorized human ruling — find_authorized_ruling(),
+# the SAME matcher the type-routed ruling path above uses — accepting the findings; the
+# landing record (LEG 8) names the ruling whenever it was the reason a scanner refusal did
+# not stand.
 # ---------------------------------------------------------------------------------------
+SCANNER_RULING=""
 if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   command -v ubs >/dev/null 2>&1 \
     || not_checked "SCANNER" "${#SCAN_FILES[@]} file(s) were handed to --scan but ubs is not on PATH — NOT-GATED, not clean"
@@ -557,100 +579,28 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   [ -n "${SCANNED:-}" ] || not_checked "SCANNER" "ubs printed no 'Files scanned' count — coverage is unassertable"
   [ "$SCANNED" -eq "${#SCAN_FILES[@]}" ] \
     || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCAN_FILES[@]} file(s) — a shortfall is NOT-GATED, not a pass"
-  FINDINGS=$(printf '%s' "$SCAN_OUT" | grep -cE '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+' || true)
-  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict
-  # is the finding count, never the exit code alone. The DETAIL regex misses python
-  # bandit Location lines, so the Combined Summary counters corroborate.
+
+  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict is the
+  # Combined Summary's severity counts, never the exit code alone.
   SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
   SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
   SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
+  CRIT="${SUM_CRIT:-0}"; WARN="${SUM_WARN:-0}"; INFO="${SUM_INFO:-0}"
 
-  if [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] && [ "${SUM_WARN:-0}" -eq 0 ] && [ "${SUM_INFO:-0}" -eq 0 ]; then
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
+  if [ "$CRIT" -eq 0 ] && [ "$WARN" -eq 0 ] && [ "$INFO" -eq 0 ]; then
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 findings"
+  elif [ "$CRIT" -eq 0 ] && [ "$WARN" -eq 0 ]; then
+    # Info findings are reported here, in the gate's own output, and never refuse the close —
+    # only Critical or Warning do.
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, $INFO Info finding(s) reported (Info never refuses), 0 Critical/Warning"
   else
-    # BASELINE — the flight receipt's own tree, read from the SAME parsed receipt LEG 1
-    # already read ($LAST/rfield). No usable tree (missing receipt, 'no-git', or a sha this
-    # repo cannot resolve) means no baseline exists AT ALL: every finding counts new, which
-    # is the pre-existing behavior this leg had before this AC — a strict superset, never a
-    # narrower refusal.
-    BASE_TREE=$(rfield 'tree')
-    BASE_USABLE=0
-    if [ -n "$BASE_TREE" ] && [ "$BASE_TREE" != "no-git" ] \
-       && git cat-file -e "${BASE_TREE}^{commit}" 2>/dev/null; then
-      BASE_USABLE=1
+    find_authorized_ruling
+    if [ -n "$RULING" ]; then
+      SCANNER_RULING="$RULING"
+      echo "close-gate[$BEAD] SCANNER ruling — $CRIT Critical, $WARN Warning, $INFO Info finding(s) over ${#SCAN_FILES[@]} scanned file(s); a human ruling overrides a scanner refusal: $RULING"
+    else
+      refuse "SCANNER" "ubs exit $SCAN_RC with $CRIT Critical, $WARN Warning finding(s) (plus $INFO Info) over ${#SCAN_FILES[@]} scanned file(s)"
     fi
-
-    # sig_of — the comparison key: RULE + CODE TEXT, never the line[:col] locator. Splits
-    # the DETAIL line's first token (path:line or path:line:col) on ':' rather than a
-    # greedy regex — a greedy `[^[:space:]]+:[0-9]+(:[0-9]+)?` mis-assigns the line number
-    # into the path group under POSIX ERE's leftmost-longest rule (measured here). The path
-    # stays IN the signature so two files cannot collide on the same message text.
-    sig_of() {
-      awk '{
-        n = split($1, a, ":")
-        if (n == 2 && a[2] ~ /^[0-9]+$/) { loc = a[1] }
-        else if (n == 3 && a[2] ~ /^[0-9]+$/ && a[3] ~ /^[0-9]+$/) { loc = a[1] }
-        else { next }
-        msg = ""
-        for (i = 2; i <= NF; i++) { msg = msg (i > 2 ? " " : "") $i }
-        if (msg != "") print loc " :: " msg
-      }'
-    }
-    HEAD_SIGS=$(printf '%s\n' "$SCAN_OUT" | sig_of)
-    HEAD_COUNT=$(printf '%s\n' "$HEAD_SIGS" | grep -c '[^[:space:]]' || true)
-
-    SCRATCH=""
-    trap 'rm -f "$BODY" "$ASSERT_OUT"; [ -n "$SCRATCH" ] && rm -rf "$SCRATCH"' EXIT
-    BASE_SIGS=""
-    if [ "$BASE_USABLE" = 1 ]; then
-      SCRATCH=$(mktemp -d "${TMPDIR:-/tmp}/ac-close-scan-base.XXXXXX") || SCRATCH=""
-      if [ -n "$SCRATCH" ]; then
-        BASE_REL_FILES=()
-        for f in "${SCAN_FILES[@]}"; do
-          d=$(dirname "$f")
-          [ "$d" = "." ] || mkdir -p "$SCRATCH/$d" 2>/dev/null
-          # A file absent at the base tree (new file, or `git show` refuses) gets no entry
-          # here — it is simply never in BASE_REL_FILES, so it has no baseline scan at all
-          # and every one of its HEAD findings falls out of the sig match below as new.
-          git show "${BASE_TREE}:${f}" >"$SCRATCH/$f" 2>/dev/null && BASE_REL_FILES+=("$f")
-        done
-        if [ "${#BASE_REL_FILES[@]}" -gt 0 ]; then
-          BASE_OUT=$(cd "$SCRATCH" && ubs "${BASE_REL_FILES[@]}" 2>&1)
-          BASE_SIGS=$(printf '%s\n' "$BASE_OUT" | sig_of)
-        fi
-      fi
-    fi
-
-    NEW_COUNT=0
-    PRE_COUNT=0
-    if [ -n "$HEAD_SIGS" ]; then
-      while IFS= read -r s; do
-        [ -n "$s" ] || continue
-        if [ -n "$BASE_SIGS" ] && printf '%s\n' "$BASE_SIGS" | grep -qxF "$s"; then
-          PRE_COUNT=$(( PRE_COUNT + 1 ))
-        else
-          NEW_COUNT=$(( NEW_COUNT + 1 ))
-        fi
-      done <<EOF
-$HEAD_SIGS
-EOF
-    fi
-    # A finding ubs reports only in its Combined Summary counters (the DETAIL regex misses
-    # some shapes, e.g. bandit's `Location:` lines) cannot be matched to any baseline
-    # signature at all — it is conservatively counted new. The pre-existing rescue is a
-    # narrow carve-out on findings this leg CAN identify, never a blind spot on the ones it
-    # cannot.
-    SUM_TOTAL=$(( ${SUM_CRIT:-0} + ${SUM_WARN:-0} + ${SUM_INFO:-0} ))
-    if [ "$SUM_TOTAL" -gt "$HEAD_COUNT" ]; then
-      NEW_COUNT=$(( NEW_COUNT + (SUM_TOTAL - HEAD_COUNT) ))
-    fi
-
-    BASE_NOTE="unusable — no resolvable receipt tree, so every finding counts new"
-    [ "$BASE_USABLE" = 1 ] && BASE_NOTE="${BASE_TREE:0:12}"
-    if [ "$NEW_COUNT" -gt 0 ]; then
-      refuse "SCANNER" "ubs exit $SCAN_RC with $NEW_COUNT new finding(s) and $PRE_COUNT pre-existing finding(s) over ${#SCAN_FILES[@]} scanned file(s) (baseline: $BASE_NOTE)"
-    fi
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, $PRE_COUNT pre-existing ubs finding(s) rescued (baseline: $BASE_NOTE), 0 new"
   fi
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
@@ -720,6 +670,10 @@ else
   LND_LABEL="GATE: receipt"
   LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
 fi
+
+# The landing record says so: a scanner refusal that a human ruling overrode is named on the
+# same comment as the rest of the evidence, never silently absorbed into an ordinary GREEN.
+[ -n "$SCANNER_RULING" ] && LND_TEXT="$LND_TEXT; scanner ruling: $SCANNER_RULING"
 
 "$BR" close "$BEAD" --reason "$REASON" --transition-comment "$LND_TEXT" </dev/null >/dev/null 2>&1 || true
 

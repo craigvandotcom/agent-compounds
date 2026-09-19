@@ -140,30 +140,59 @@ case "${AC2_TEST_UBS_MODE:-clean}" in
   exit1-summary) echo "UBS Meta-Runner"; echo "Files scanned: $n"
             echo "   Location: /tmp/x.py:2:11"
             echo "Files: $n"; echo "Critical: 2"; echo "Warning: 1"; echo "Info: 1"; exit 1 ;;
-  content)  # reads each arg file for '# UBS-FINDING: <token>' lines and emits one DETAIL
-            # line per token found, at the token's REAL line number in that invocation's
-            # copy of the file — this is what lets a baseline (base-tree) run and a HEAD
-            # run of the SAME logical finding disagree on line number while agreeing on
-            # everything else, so the scanner-leg's baseline diff has something real to
-            # match by rule+text and reject by line number.
-            echo "UBS Meta-Runner"
-            total=0
-            for f in "$@"; do
-              total=$((total+1))
-              ln=0
-              while IFS= read -r line || [ -n "$line" ]; do
-                ln=$((ln+1))
-                case "$line" in
-                  *'# UBS-FINDING:'*)
-                    tok="${line#*# UBS-FINDING:}"
-                    tok="$(printf '%s' "$tok" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-                    echo "   $f:$ln:1  finding $tok present — rule.$tok"
-                    ;;
-                esac
-              done < "$f"
-            done
-            echo "Files scanned: $total"
-            echo "Files: $total"; echo "Critical: 0"; echo "Warning: 0"; echo "Info: 0"
+  captured) # A FIXED transcript captured from a real `ubs` run in this repo (2026-09-19,
+            # /tmp/ubs_probe.py) — absolute paths, docs.astral.sh/cwe.mitre.org permalinks and
+            # bandit's `Location:` shape (which the DETAIL regex misses; only the Combined
+            # Summary counters corroborate it). Replaces the old procedural `content` mode
+            # (ac-4y7l.24): LEG 6 no longer diffs against a baseline tree, so a per-line
+            # rule+text generator has nothing left to feed.
+            echo "UBS Meta-Runner v5.4.2  2026-09-19 23:32:28"
+            echo "Project: /home/craigvandotcom/mission/software/agent-compounds"
+            echo "Detected: python"
+            echo "Scanning python..."
+            echo ""
+            echo "──────── python ────────"
+            echo ">> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue."
+            echo "   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)"
+            echo "   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html"
+            echo "   Location: /tmp/ubs_probe.py:5:4"
+            echo "6. ERROR HANDLING ANTI-PATTERNS"
+            echo "[critical] Bare except — except: (1 found) — py.error-handling.bare-except"
+            echo "    /tmp/ubs_probe.py:12  Bare except — except:"
+            echo "7. SECURITY VULNERABILITIES"
+            echo "[critical] Insecure pickle usage — return pickle.loads(data) (1 found) — py.security.pickle-usage"
+            echo "    /tmp/ubs_probe.py:8  Insecure pickle usage — return pickle.loads(data)"
+            echo "[warning] Subprocess call has no bounded timeout — subprocess.call(cmd, shell=True) (1 found) — py.security.subprocess-timeout"
+            echo "    /tmp/ubs_probe.py:5  Subprocess call has no bounded timeout — subprocess.call(cmd, shell=True)"
+            echo ""
+            echo "Summary Statistics:"
+            echo "Files scanned: $n"
+            echo "Critical issues: 5"; echo "Warning issues: 1"; echo "Info items: 3"
+            echo ""
+            echo "──────── Combined Summary ────────"
+            echo "Files: $n"; echo "Critical: 5"; echo "Warning: 1"; echo "Info: 3"
+            exit 0 ;;
+  captured-info) # A FIXED info-only transcript in the same real-ubs shape — a capped detail
+            # list (ubs's own "N more not shown" quirk) and no Critical/Warning at all, so
+            # LEG 6 must report it without refusing.
+            echo "UBS Meta-Runner v5.4.2  2026-09-19 23:32:11"
+            echo "Project: /home/craigvandotcom/mission/software/agent-compounds"
+            echo "Detected: bash"
+            echo "Scanning bash..."
+            echo ""
+            echo "──────── bash ────────"
+            echo "UBS module: Bash (contract v2) — /tmp/ubs-probe.sh"
+            echo "4. DEFENSIVE PROGRAMMING & ROBUSTNESS"
+            echo "[info] Unquoted variable expansion — rm -rf \$2 (2 found, showing 1) — sh.style.unquoted-var"
+            echo "    /tmp/ubs-probe.sh:3  Unquoted variable expansion — rm -rf \$2"
+            echo "    ... 1 more finding capped (see full report)"
+            echo ""
+            echo "Summary Statistics:"
+            echo "Files scanned: $n"
+            echo "Critical issues: 0"; echo "Warning issues: 0"; echo "Info items: 2"
+            echo ""
+            echo "──────── Combined Summary ────────"
+            echo "Files: $n"; echo "Critical: 0"; echo "Warning: 0"; echo "Info: 2"
             exit 0 ;;
 esac
 MOCKUBS
@@ -846,16 +875,23 @@ else fail "AC4 nocount: rc=$GATE_RC out=$out"; fi
 R="$(mk_green scan-findings)"
 out="$(AC2_TEST_UBS_MODE=findings gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
-  pass "AC4: DETAIL findings under a clean summary still refuse — the summary counter is not the verdict"
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: a DETAIL line with no Combined Summary Critical/Warning/Info counters defaults to 0 and passes — the summary's own severity counters are the verdict now (ac-4y7l.24 deletes the baseline diff), never a DETAIL line count"
 else fail "AC4 findings: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-clean)"
 out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
-  pass "AC4: scanned == handed with no detail findings passes the scanner leg"
+  pass "AC4: scanned == handed with 0 Critical/Warning/Info passes the scanner leg"
 else fail "AC4 clean: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-info-only)"
+out="$(AC2_TEST_UBS_MODE=captured-info gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'Info finding'; then
+  pass "AC4c: Info findings are reported in the gate's own output and never refuse the close — only Critical or Warning do"
+else fail "AC4c info-only: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-exit1-clean)"
 out="$(AC2_TEST_UBS_MODE=exit1-clean gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
@@ -878,6 +914,13 @@ if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: exit-1 with summary-only findings refuses — the Combined Summary corroborates where DETAIL misses (ac-x9dy python shape)"
 else fail "AC4 exit1-summary: rc=$GATE_RC out=$out"; fi
 
+R="$(mk_green scan-captured-critical)"
+out="$(AC2_TEST_UBS_MODE=captured gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: SCANNER'; then
+  pass "AC4: a real captured ubs transcript (absolute paths, permalinks) with Critical+Warning findings refuses with the unchanged CLOSE-REFUSED: SCANNER token"
+else fail "AC4 captured-critical: rc=$GATE_RC out=$out"; fi
+
 R="$(mk_green scan-empty-argv)"
 out="$(gate "$R" --reason "$REASON")"
 GATE_RC=$(cat "$RCFILE")
@@ -890,85 +933,51 @@ if grep -q 'NOT-CHECKED' "$GATE"; then
 else fail "AC4: the gate never emits NOT-CHECKED"; fi
 
 # ============================================================================================
-# AC 4b — the scanner leg's baseline diff (ac-4y7l.23): a pre-existing ubs finding does not
-# refuse a close, and a new one still does. A REAL git repo backs these two cases — the
-# receipt's own `tree:` field is the baseline, read by the gate exactly as flight-check
-# wrote it, never hand-forged.
+# AC-scanner-ruling — a refused SCANNER leg still closes when the bead carries an authorized
+# human ruling accepting the findings, via find_authorized_ruling(), the SAME matcher the
+# type-routed ruling path above uses (ac-4y7l.24, superseding ac-4y7l.23's baseline diff).
 # ============================================================================================
-if command -v git >/dev/null 2>&1; then
-
-mkcase_scanbase() { # <name> — a fixture whose base COMMIT carries one ubs finding (OLD1)
-  local root="$WORKDIR/$1"
-  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
-  cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
-  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
-  chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
-  ( cd "$root" && git init -q && git config user.email t@t.co && git config user.name t )
-  printf 'line1\n# UBS-FINDING: OLD1\nline3\n' >"$root/subject.txt"
-  ( cd "$root" && git add subject.txt && git commit -qm base )
-  cat >"$root/body.md" <<'BODY'
-## Acceptance Criteria
-- the subject file exists.
-  Probe: `test -f subject.txt` — tier: none
-- the harness passes.
-  Probe: `test -x harness.test.sh && bash harness.test.sh` — tier: none
-
-## Delivers
-- artifact: subject.txt
-- harness: harness.test.sh
-
-## Consumes
-- none
-BODY
-  echo "$root"
+mk_green_ruled() { # a legitimate-close fixture that also carries bead-conventions.md, so a
+                    # "DECISION (Craig): ..." comment can be authorized (Humans who rule: Craig)
+  local r; r="$(mk_green "$1")"
+  mkdir -p "$r/skills/beads-standards/reference"
+  cp "$CONVENTIONS_SRC" "$r/skills/beads-standards/reference/bead-conventions.md"
+  echo "$r"
 }
 
-# Case A: the diff moves OLD1 to a different line (proving the match ignores line number)
-# and adds no new finding. Pre-existing alone must NOT refuse the close.
-R="$(mkcase_scanbase scan-baseline-preexisting)"
-write_harness "$R"
-board "$R" in_progress worker
-fly "$R"
-printf 'shifted\nline1\nline3\n# UBS-FINDING: OLD1\nFIXED\n' >"$R/subject.txt"
-out="$(AC2_TEST_UBS_MODE=content gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+R="$(mk_green_ruled scan-ruling-override)"
+add_ruling "$R" "DECISION (Craig): accept the scanner findings — ship now, follow-up separately"
+out="$(AC2_TEST_UBS_MODE=captured gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'pre-existing ubs finding'; then
-  pass "AC4b: a pre-existing ubs finding does not refuse a close — matched by rule+text at a moved line, against the flight receipt's own tree"
-else fail "AC4b preexisting: rc=$GATE_RC out=$out"; fi
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-scanner-ruling: an authorized human ruling overrides a scanner refusal — the close lands despite Critical+Warning findings"
+else fail "AC-scanner-ruling override: rc=$GATE_RC out=$out"; fi
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
-  pass "AC4b: the pre-existing-only close landed"
-else fail "AC4b: the pre-existing-only close did not land"; fi
+  pass "AC-scanner-ruling: the ruling-overridden close landed"
+else fail "AC-scanner-ruling: the close did not land despite the ruling"; fi
+if [ -f "$R/.br/comments.log" ] && grep -qi 'scanner ruling' "$R/.br/comments.log"; then
+  pass "AC-scanner-ruling: the landing record names the ruling that overrode the scanner refusal"
+else fail "AC-scanner-ruling: the landing record does not mention the scanner ruling"; fi
 
-# Case B: same base, but the diff keeps OLD1 AND introduces NEW1 — a real new finding still
-# refuses, and the refusal names both counts.
-R="$(mkcase_scanbase scan-baseline-newfinding)"
-write_harness "$R"
-board "$R" in_progress worker
-fly "$R"
-printf 'line1\n# UBS-FINDING: OLD1\nline3\nFIXED\n# UBS-FINDING: NEW1\n' >"$R/subject.txt"
-out="$(AC2_TEST_UBS_MODE=content gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+# The same findings, but no ruling recorded at all — the refusal stands, unchanged token.
+R="$(mk_green_ruled scan-ruling-absent)"
+out="$(AC2_TEST_UBS_MODE=captured gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s' "$out" | grep -q '1 new finding' && printf '%s' "$out" | grep -q '1 pre-existing finding'; then
-  pass "AC4b: a genuinely new ubs finding still refuses, alongside the pre-existing one that does not"
-else fail "AC4b new: rc=$GATE_RC out=$out"; fi
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: SCANNER'; then
+  pass "AC-scanner-ruling: with no recorded ruling, Critical+Warning findings still refuse the close"
+else fail "AC-scanner-ruling absent: rc=$GATE_RC out=$out"; fi
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
-  pass "AC4b: the refused new-finding close leaves the bead unclosed"
-else fail "AC4b new: the bead did not stay unclosed"; fi
+  pass "AC-scanner-ruling: the unruled refusal leaves the bead unclosed"
+else fail "AC-scanner-ruling absent: the bead was closed despite no ruling"; fi
 
-# Case C: same finding, but the fixture is the plain non-git shape every other AC4 fixture
-# uses (no receipt-usable tree) — with no baseline to consult, the finding counts new and
-# refuses, exactly the pre-ac-4y7l.23 behavior. Never a narrower refusal than before.
-R="$(mk_green scan-baseline-unusable)"
-printf 'line1\n# UBS-FINDING: OLD1\nline3\nFIXED\n' >"$R/subject.txt"
-out="$(AC2_TEST_UBS_MODE=content gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+# An unauthorized ruling (an agent, not a human on Humans who rule:) does not override either.
+R="$(mk_green_ruled scan-ruling-unauthorized)"
+add_ruling "$R" "DECISION (agent): accept the findings — not a human on the list"
+out="$(AC2_TEST_UBS_MODE=captured gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
 GATE_RC=$(cat "$RCFILE")
-if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s' "$out" | grep -qi 'unusable'; then
-  pass "AC4b: with no usable baseline tree at all, every finding counts new and the close refuses (unchanged pre-ac-4y7l.23 behavior)"
-else fail "AC4b unusable baseline: rc=$GATE_RC out=$out"; fi
-
-else
-  pass "AC4b: git unavailable — baseline-diff cases skipped (the rest of the suite does not need git)"
-fi
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: SCANNER'; then
+  pass "AC-scanner-ruling: an unauthorized DECISION comment does not override a scanner refusal"
+else fail "AC-scanner-ruling unauthorized: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
