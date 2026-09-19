@@ -92,6 +92,7 @@ def _git_show(root, rev_path):
         proc = subprocess.run(
             ["git", "show", rev_path], cwd=root,
             capture_output=True, text=True, timeout=10,
+            check=False,  # non-zero (no such rev) is a normal fallback path below, not a crash
         )
     except (OSError, subprocess.SubprocessError):
         return None
