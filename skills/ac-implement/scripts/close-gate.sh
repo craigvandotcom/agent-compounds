@@ -455,13 +455,36 @@ echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $AS
 # LEG 6 — SCANNER. Only on non-empty argv, and it asserts scanned-equals-passed by reading
 # the DETAIL lines, never the summary counter: ubs's summary counts CATEGORIES CHECKED, not
 # findings, and it silently drops every language it has no scanner for.
+#
+# THE ARGV IS PARTITIONED FIRST, because that silent drop is the trap. ubs 5.3.13 scans
+# js python cpp rust golang java ruby swift csharp elixir and NOTHING else — no shell, no
+# markdown, the two commonest file types in this registry. Hand it one .ts and one .md and
+# it scans the .ts, never names the .md, and reports `Files: 1`; the scanned-equals-passed
+# assertion below then read 1 of 2 and refused the close as a SHORTFALL. Measured 2026-09-19:
+# a routine bead delivering a module plus its doc could not close, and the message blamed a
+# coverage gap rather than saying the doc was never scannable.
+#
+# So an unscannable path is a DECLARED TIER, never a shortfall and never silence: it is named
+# in the ok line, and if NOTHING in the argv is scannable the leg is NOT-CHECKED naming the
+# files. What is refused is a real finding; what is reported is the part no scanner covers.
 # ---------------------------------------------------------------------------------------
 if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   command -v ubs >/dev/null 2>&1 \
     || not_checked "SCANNER" "${#SCAN_FILES[@]} file(s) were handed to --scan but ubs is not on PATH — NOT-GATED, not clean"
-  SCAN_OUT=$(ubs "${SCAN_FILES[@]}" 2>&1); SCAN_RC=$?
+  SCANNABLE=(); UNSCANNABLE=()
+  for _sf in "${SCAN_FILES[@]}"; do
+    case "$_sf" in
+      *.js|*.jsx|*.mjs|*.cjs|*.ts|*.tsx|*.py|*.pyw|*.pyi|*.c|*.cc|*.cpp|*.cxx|*.h|*.hh|*.hpp|*.hxx|\
+      *.rs|*.go|*.java|*.rb|*.swift|*.cs|*.csx|*.ex|*.exs) SCANNABLE+=("$_sf") ;;
+      *) UNSCANNABLE+=("$_sf") ;;
+    esac
+  done
+  if [ "${#SCANNABLE[@]}" -eq 0 ]; then
+    not_checked "SCANNER" "none of the ${#SCAN_FILES[@]} --scan file(s) is a language ubs scans (${UNSCANNABLE[*]}) — nothing was checked, which is explicitly NOT a pass"
+  fi
+  SCAN_OUT=$(ubs "${SCANNABLE[@]}" 2>&1); SCAN_RC=$?
   if printf '%s' "$SCAN_OUT" | grep -qiE 'no supported languages detected|nothing was checked'; then
-    not_checked "SCANNER" "ubs ran no scanner over ${#SCAN_FILES[@]} file(s) — 'nothing was checked' is explicitly NOT a pass"
+    not_checked "SCANNER" "ubs ran no scanner over ${#SCANNABLE[@]} scannable file(s) — 'nothing was checked' is explicitly NOT a pass"
   fi
   # Read ubs's Combined Summary 'Files: N' — the authoritative total. The per-scanner
   # 'Files scanned: N' lines are NOT it: ubs runs several scanners and each prints its
@@ -474,8 +497,8 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
       | grep -oE '[0-9]+' | sort -n | tail -1)
   fi
   [ -n "${SCANNED:-}" ] || not_checked "SCANNER" "ubs printed no 'Files scanned' count — coverage is unassertable"
-  [ "$SCANNED" -eq "${#SCAN_FILES[@]}" ] \
-    || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCAN_FILES[@]} file(s) — a shortfall is NOT-GATED, not a pass"
+  [ "$SCANNED" -eq "${#SCANNABLE[@]}" ] \
+    || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCANNABLE[@]} SCANNABLE file(s) — a shortfall among files it does scan is NOT-GATED, not a pass"
   FINDINGS=$(printf '%s' "$SCAN_OUT" | grep -cE '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+' || true)
   # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict
   # is the finding count, never the exit code alone. The DETAIL regex misses python
@@ -496,8 +519,12 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   # `close-gate-cannot-tell-an-authorised-scan-skip-from-a-dropped-argument` and never built.
   SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
   [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] \
-    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}) over ${#SCAN_FILES[@]} scanned file(s)"
-  echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
+    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}) over ${#SCANNABLE[@]} scanned file(s)"
+  if [ "${#UNSCANNABLE[@]}" -gt 0 ]; then
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings; UNSCANNED TIER (no ubs scanner for these, reported not passed): ${UNSCANNABLE[*]}"
+  else
+    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCANNABLE[@]} scanned, 0 detail findings"
+  fi
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
 fi

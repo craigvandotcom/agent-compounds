@@ -642,60 +642,86 @@ mk_green() { # a fixture standing at the moment of a legitimate close
 }
 
 R="$(mk_green scan-short)"
-out="$(AC2_TEST_UBS_MODE=short gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=short gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
   pass "AC4: scanned < handed is NOT-CHECKED with exit 2, not a pass"
 else fail "AC4 shortfall: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-nolang)"
-out="$(AC2_TEST_UBS_MODE=nolang gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=nolang gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-CHECKED'; then
   pass "AC4: 'nothing was checked' is NOT-CHECKED with exit 2"
 else fail "AC4 nolang: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-nocount)"
-out="$(AC2_TEST_UBS_MODE=nocount gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=nocount gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 2 ]; then
   pass "AC4: no scanned-count printed is NOT-CHECKED — coverage is unassertable"
 else fail "AC4 nocount: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-findings)"
-out="$(AC2_TEST_UBS_MODE=findings gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=findings gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: DETAIL findings under a clean summary still refuse — the summary counter is not the verdict"
 else fail "AC4 findings: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-clean)"
-out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: scanned == handed with no detail findings passes the scanner leg"
 else fail "AC4 clean: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-exit1-clean)"
-out="$(AC2_TEST_UBS_MODE=exit1-clean gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=exit1-clean gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: finding-less exit-1 passes — the verdict is the finding count, never the exit code alone (ac-x9dy)"
 else fail "AC4 exit1-clean: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-exit1-findings)"
-out="$(AC2_TEST_UBS_MODE=exit1-findings gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=exit1-findings gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: exit-1-with-findings still refuses (ac-x9dy)"
 else fail "AC4 exit1-findings: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-exit1-summary)"
-out="$(AC2_TEST_UBS_MODE=exit1-summary gate "$R" --reason "$REASON" --scan subject.txt harness.test.sh)"
+out="$(AC2_TEST_UBS_MODE=exit1-summary gate "$R" --reason "$REASON" --scan subject.ts harness.test.ts)"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
   pass "AC4: exit-1 with summary-only findings refuses — the Combined Summary corroborates where DETAIL misses (ac-x9dy python shape)"
 else fail "AC4 exit1-summary: rc=$GATE_RC out=$out"; fi
+
+# --- the argv partition (2026-09-19) -------------------------------------------------
+# ubs scans no shell and no markdown, the two commonest file types here. Handed one .ts and
+# one .md it scans the .ts, never names the .md and reports `Files: 1` — which the
+# scanned-equals-passed assertion read as a 1-of-2 SHORTFALL and refused the close on. An
+# unscannable path is a DECLARED TIER, never a shortfall and never silence.
+R="$(mk_green scan-mixed)"
+out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan subject.ts notes.md)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNSCANNED TIER' && printf '%s' "$out" | grep -q 'notes.md'; then
+  pass "AC4: a file ubs cannot scan is a NAMED tier, not a shortfall that blocks the close"
+else fail "AC4 mixed argv: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-all-unscannable)"
+out="$(AC2_TEST_UBS_MODE=clean gate "$R" --reason "$REASON" --scan notes.md deploy.sh)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 2 ] && printf '%s' "$out" | grep -q 'SCANNER' && printf '%s' "$out" | grep -q 'notes.md'; then
+  pass "AC4: an argv ubs cannot scan at all is NOT-CHECKED and names the files — never a pass"
+else fail "AC4 all-unscannable: rc=$GATE_RC out=$out"; fi
+
+R="$(mk_green scan-mixed-findings)"
+out="$(AC2_TEST_UBS_MODE=findings gate "$R" --reason "$REASON" --scan subject.ts notes.md)"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -ne 0 ] && printf '%s' "$out" | grep -q 'SCANNER'; then
+  pass "AC4: the partition does not soften a real finding in the scannable half"
+else fail "AC4 mixed findings: rc=$GATE_RC out=$out"; fi
 
 R="$(mk_green scan-empty-argv)"
 out="$(gate "$R" --reason "$REASON")"
