@@ -479,12 +479,24 @@ if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
   FINDINGS=$(printf '%s' "$SCAN_OUT" | grep -cE '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+' || true)
   # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict
   # is the finding count, never the exit code alone. The DETAIL regex misses python
-  # bandit Location lines, so the Combined Summary counters corroborate.
+  # bandit Location lines, so the Combined Summary's CRITICAL counter corroborates.
+  #
+  # WARNING AND INFO ARE DELIBERATELY NOT CORROBORATED, measured 2026-09-19 across five
+  # workers in one easy-mode swarm. ubs's style heuristics saturate both tiers on idiomatic
+  # code: `js.async.await-no-try` alone scored 2 Warning + 29 Info on a BRAND-NEW test file
+  # its author had just written, because `await expect(...).resolves` is the house idiom in
+  # a package with 341 such tests. Requiring zero at those tiers made this leg unsatisfiable
+  # for any bead touching a real file, so every worker omitted --scan and took the documented
+  # skip -- the leg ran on NO bead all run, which reads as coverage and is not.
+  #
+  # This is a narrowing, not a cure. The leg still compares an ABSOLUTE count, so a legacy
+  # file carrying a pre-existing Critical still blocks every bead that touches it. The real
+  # fix is a baseline comparison -- assert no NEW findings against the base commit -- already
+  # specified in easy-mode's FRICTIONS.md under
+  # `close-gate-cannot-tell-an-authorised-scan-skip-from-a-dropped-argument` and never built.
   SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] && [ "${SUM_WARN:-0}" -eq 0 ] && [ "${SUM_INFO:-0}" -eq 0 ] \
-    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}/Warning ${SUM_WARN:-0}/Info ${SUM_INFO:-0}) over ${#SCAN_FILES[@]} scanned file(s)"
+  [ "${FINDINGS:-0}" -eq 0 ] && [ "${SUM_CRIT:-0}" -eq 0 ] \
+    || refuse "SCANNER" "ubs exit $SCAN_RC with ${FINDINGS:-0} detail finding(s) (Critical ${SUM_CRIT:-0}) over ${#SCAN_FILES[@]} scanned file(s)"
   echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 detail findings"
 else
   echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
