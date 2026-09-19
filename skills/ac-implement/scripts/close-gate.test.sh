@@ -21,6 +21,7 @@ FLIGHT="$SCRIPT_DIR/flight-check.sh"
 AC_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 EVIDENCE_SRC="$AC_ROOT/skills/ac-pipeline/scripts/close-evidence-check.sh"
 BR_CALL_SRC="$AC_ROOT/skills/_tools/br-call.sh"
+CONVENTIONS_SRC="$AC_ROOT/skills/beads-standards/reference/bead-conventions.md"
 CASES=0
 FAILURES=0
 
@@ -62,7 +63,22 @@ case "$cmd" in
   close)
     [ -f "$STATE/$id.json" ] || exit 1
     [ "${AC2_TEST_BR_CLOSE_NOOP:-0}" = "1" ] && exit 0
-    jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json" ;;
+    # `--transition-comment <text>` (br 0.5.12) — the landing record commits ATOMICALLY
+    # with the close: recorded into the same comments log/store a `comments add` would use,
+    # so a fixture cannot tell the two write paths apart by their output.
+    tc=""; tprev=""
+    for a in "$@"; do
+      case "$tprev" in tc) tc="$a"; tprev=""; continue ;; esac
+      case "$a" in --transition-comment) tprev=tc ;; *) tprev="" ;; esac
+    done
+    jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json"
+    if [ -n "$tc" ]; then
+      printf '%s\n' "$tc" >> "$STATE/comments.log"
+      cfile="$STATE/$id.comments.json"
+      [ -f "$cfile" ] || echo '[]' >"$cfile"
+      jq --arg t "$tc" '. + [{"author":"mock","created_at":"2026-01-01T00:00:00Z","text":$t}]' \
+        "$cfile" >"$cfile.tmp" 2>/dev/null && mv "$cfile.tmp" "$cfile"
+    fi ;;
   comments)
     sub="${1:-}"
     if [ "$sub" = "list" ]; then
@@ -208,17 +224,19 @@ board() { # <root> <status> <assignee>
 # ruling path truly skips legs 1-8 rather than merely passing them.
 mkcase_decision() {
   local root="$WORKDIR/$1"
-  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/skills/beads-standards/reference" "$root/.flight" "$root/.br"
   cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  cp "$CONVENTIONS_SRC" "$root/skills/beads-standards/reference/bead-conventions.md"
   chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
   printf 'Pick between option A and option B.\n' >"$root/body.md"
   echo "$root"
 }
 
-board_decision() { # <root> <status> <assignee>
-  jq -n --arg id "$BEAD" --arg st "$2" --arg as "$3" --rawfile d "$1/body.md" \
-    '{id:$id,title:"fixture decision",issue_type:"decision",status:$st,assignee:$as,labels:[],description:$d}' \
+board_decision() { # <root> <status> <assignee> [labels-json]
+  local labels="${4:-[]}"
+  jq -n --arg id "$BEAD" --arg st "$2" --arg as "$3" --argjson lb "$labels" --rawfile d "$1/body.md" \
+    '{id:$id,title:"fixture decision",issue_type:"decision",status:$st,assignee:$as,labels:$lb,description:$d}' \
     >"$1/.br/$BEAD.json"
 }
 
@@ -263,7 +281,7 @@ else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 # ============================================================================================
 R="$(mkcase_decision ruling-accept)"
 board_decision "$R" open ""
-add_ruling "$R" "DECISION (human): option A — because it is cheaper"
+add_ruling "$R" "DECISION (Craig): option A — because it is cheaper"
 out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
 GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
@@ -286,6 +304,76 @@ else fail "AC-ruling refuse: rc=$GATE_RC out=$out"; fi
 if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
   pass "AC-ruling: the refused decision bead stays open"
 else fail "AC-ruling: the bead was closed despite no ruling"; fi
+
+# ============================================================================================
+# AC-ruling — a placeholder ruling never counts, and a draft note does not count either: only
+# a comment's own FIRST LINE, at column 0, is ever read as a ruling. An indented draft buried
+# inside a longer conductor note, and an unfilled template quoted on a memo's second line, are
+# each a REAL comment in the fixture — neither is ever line 1 of its own comment.
+# ============================================================================================
+R="$(mkcase_decision ruling-placeholder)"
+board_decision "$R" open ""
+add_ruling "$R" "Conductor note: still discussing.
+  DECISION (Craig): draft — not final yet
+Will update after standup."
+add_ruling "$R" "See template below:
+DECISION (<human>): <choice> — <why>"
+out="$(gate "$R" --reason "decided: nothing was actually ruled")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: a placeholder ruling never counts, and a draft note does not count either"
+else fail "AC-ruling placeholder: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
+  pass "AC-ruling: the placeholder-ruling bead stays open"
+else fail "AC-ruling placeholder: the bead was closed despite no valid ruling"; fi
+
+# ============================================================================================
+# AC-ruling — WHO MAY RULE: only a human on the canon's `Humans who rule:` line, or the
+# literal `DECISION (ac-tidy): moot` on a bead labelled `pipeline-proposal`.
+# ============================================================================================
+R="$(mkcase_decision ruling-agent-refused)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (agent): option A — because it is cheaper"
+out="$(gate "$R" --reason "decided: option A")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: agent self-ruling refused — DECISION (agent) is not an authorized human"
+else fail "AC-ruling agent-refused: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
+  pass "AC-ruling: the agent-ruled bead stays open"
+else fail "AC-ruling agent-refused: the bead was closed despite an unauthorized ruling"; fi
+
+R="$(mkcase_decision ruling-ac-tidy-moot)"
+board_decision "$R" open "" '["pipeline-proposal"]'
+add_ruling "$R" "DECISION (ac-tidy): moot"
+out="$(gate "$R" --reason "decided: moot, superseded by a later proposal")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ]; then
+  pass "AC-ruling: DECISION (ac-tidy): moot is accepted on a pipeline-proposal bead"
+else fail "AC-ruling ac-tidy-moot: rc=$GATE_RC out=$out"; fi
+
+R="$(mkcase_decision ruling-ac-tidy-unlabeled)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (ac-tidy): moot"
+out="$(gate "$R" --reason "decided: moot")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: DECISION (ac-tidy): moot is refused without the pipeline-proposal label"
+else fail "AC-ruling ac-tidy-unlabeled: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
+# AC-ruling — a `human-gate`-labelled bead (not typed `decision`) also routes through the
+# ruling path.
+# ============================================================================================
+R="$(mkcase_decision ruling-human-gate-label)"
+board_decision "$R" open "" '["human-gate"]'
+jq '.issue_type = "task"' "$R/.br/$BEAD.json" >"$R/.br/$BEAD.json.tmp" && mv "$R/.br/$BEAD.json.tmp" "$R/.br/$BEAD.json"
+add_ruling "$R" "DECISION (Craig): option A — because it is cheaper"
+out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-ruling: a task typed bead labelled human-gate also routes through the ruling path"
+else fail "AC-ruling human-gate-label: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
 # AC 2 — the three refusals, each NAMING the leg that failed
@@ -822,6 +910,9 @@ GATE_RC=$(cat "$RCFILE")
 if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
   pass "AC5: the happy path re-asserts ownership, writes, and reads the close back as landed"
 else fail "AC5 happy: rc=$GATE_RC status=$(jq -r .status "$R/.br/$BEAD.json") out=$out"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q '^GATE: receipt' "$R/.br/comments.log"; then
+  pass "AC-receipt: an ordinary receipt close records GATE: receipt on landing, written atomically via --transition-comment"
+else fail "AC-receipt: no GATE: receipt landing record"; fi
 
 R="$(mk_green own-dry-run)"
 out="$(gate "$R" --reason "$REASON" --dry-run)"

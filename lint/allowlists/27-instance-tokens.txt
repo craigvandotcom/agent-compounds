@@ -1,0 +1,2 @@
+# seeded: 2026-09-19
+2026-09-19 | craig | skills/beads-standards/reference/bead-conventions.md

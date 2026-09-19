@@ -223,6 +223,14 @@ contract plus useful pointers, not prophecy dressed as fact.
 
 ## Decision beads (the human-gate contract)
 
+Humans who rule: Craig
+
+The line above, in this exact form, is the sole authority `close-gate.sh`
+(`skills/ac-implement/scripts/close-gate.sh`) reads for who may sign a
+`DECISION (<actor>): ...` ruling comment. The sole non-human exception is
+`DECISION (ac-tidy): moot` on a bead labelled `pipeline-proposal`; any other agent name is
+refused CLOSE-REFUSED DECISION.
+
 The contract that keeps autonomous sweeps safe:
 
 1. **Agent creates it PRE-STAGED** — a decision memo, not a vague flag:

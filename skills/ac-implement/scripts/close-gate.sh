@@ -168,19 +168,56 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
 }
 
 # ---------------------------------------------------------------------------------------
-# THE TYPE-ROUTED RULING PATH — a `decision`-type bead closes on a recorded ruling comment,
-# never on the probe machinery below. This is a REAL skip, not a leg-outcome change: no
-# RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE, no SCANNER, no EVIDENCE core, no
-# claim taken, and no ownership pre-check — a recorded ruling ends a decision bead whoever
-# holds it. Every other `issue_type` falls through to the unchanged leg 1-8 flow below.
+# THE TYPE-ROUTED RULING PATH — a `decision`-type bead, or one labelled `human-gate`, closes
+# on a recorded ruling comment, never on the probe machinery below. This is a REAL skip, not
+# a leg-outcome change: no RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE, no SCANNER,
+# no EVIDENCE core, no claim taken, and no ownership pre-check — a recorded ruling ends a
+# decision bead whoever holds it. Every other `issue_type`/label combination falls through
+# to the unchanged leg 1-8 flow below.
+#
+# WHO MAY RULE (Craig's ruling on ac-4y7l.21, 2026-09-19): every no-probe close requires a
+# ruling signed by a human name on the canon's `Humans who rule:` line
+# (skills/beads-standards/reference/bead-conventions.md § Decision beads). The only
+# non-human ruling accepted is `DECISION (ac-tidy): moot` on a bead labelled
+# `pipeline-proposal`. Any other agent name is refused CLOSE-REFUSED DECISION. OUT:
+# verifying that the named human actually wrote the comment (plan risk R1).
 # ---------------------------------------------------------------------------------------
 BEAD_TYPE=$(br_field "$BEAD" issue_type)
-if [ "$BEAD_TYPE" = "decision" ]; then
-  RULING=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null \
-    | jq -r '.[].text // empty' 2>/dev/null \
-    | grep -m1 -E '^[[:space:]]*DECISION \([^)]*\):')
+BEAD_LABELS=$(br_call show "$BEAD" --json </dev/null \
+  | jq -r 'if type == "array" then .[0] else . end | (.labels // []) | join(",")' 2>/dev/null) \
+  || not_checked "READ" "br_call show refused for $BEAD — the gate cannot verify this close"
+has_label() { case ",$BEAD_LABELS," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
+
+if [ "$BEAD_TYPE" = "decision" ] || has_label "human-gate"; then
+  if ! COMMENTS_JSON=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null); then
+    not_checked "DECISION" "comments list refused for $BEAD — a ruling cannot be verified"
+  fi
+  # A ruling is a comment whose FIRST LINE, at column 0, names an actor that is not a bare
+  # template placeholder (`<human>`). Reading every comment's own first line (never the
+  # concatenation of every line of every comment) is what excludes both an indented draft
+  # buried inside a longer note and an unfilled template quoted on a memo's second line —
+  # neither is ever a comment's own first line at column 0.
+  RULING=$(printf '%s' "$COMMENTS_JSON" | jq -r '.[].text // empty | split("\n")[0]' 2>/dev/null \
+    | grep -m1 -E '^DECISION \([^<)][^)]*\): \S')
+  if [ -n "$RULING" ]; then
+    RULING_ACTOR=$(printf '%s' "$RULING" | sed -n 's/^DECISION (\([^)]*\)):.*/\1/p')
+    AUTHORIZED=0
+    if [ "$RULING_ACTOR" = "ac-tidy" ]; then
+      has_label "pipeline-proposal" && AUTHORIZED=1
+    else
+      CONV_FILE="$ROOT/skills/beads-standards/reference/bead-conventions.md"
+      [ -f "$CONV_FILE" ] || CONV_FILE="$ROOT/.agents/skills/beads-standards/reference/bead-conventions.md"
+      if [ -f "$CONV_FILE" ]; then
+        HUMANS=$(grep -m1 '^Humans who rule:' "$CONV_FILE" | sed 's/^Humans who rule:[[:space:]]*//')
+        case ",${HUMANS// /}," in *",$RULING_ACTOR,"*) AUTHORIZED=1 ;; esac
+      else
+        not_checked "DECISION" "bead-conventions.md missing — the humans-who-rule list cannot be read"
+      fi
+    fi
+    [ "$AUTHORIZED" = 1 ] || RULING=""
+  fi
   if [ -z "$RULING" ]; then
-    echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment found on $BEAD — a ruling must be recorded before this bead can close" >&2
+    echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment on $BEAD is both a real ruling (first line, column 0, no placeholder actor) and signed by an authorized human — or ac-tidy on a pipeline-proposal bead — a ruling must be recorded before this bead can close" >&2
     exit 1
   fi
   if [ "$DRY" = 1 ]; then
@@ -188,18 +225,17 @@ if [ "$BEAD_TYPE" = "decision" ]; then
     exit 0
   fi
   command -v "$BR" >/dev/null 2>&1 || not_checked "OWNERSHIP" "br unavailable — the ruling close cannot be verified"
-  "$BR" close "$BEAD" --reason "$REASON" </dev/null >/dev/null 2>&1 || true
+  RULE_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+  RULE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  RULE_TEXT="GATE: decided — $BEAD — $REASON; ruling verified: $RULING (at $RULE_SHA by ${ACTOR:-<unattributed>} at $RULE_TS)"
+  # The landing record commits ATOMICALLY with the close via --transition-comment (br
+  # 0.5.12) — no separate post-close write, so no post-close RECORD-FAILED can follow a
+  # close that already landed.
+  "$BR" close "$BEAD" --reason "$REASON" --transition-comment "$RULE_TEXT" </dev/null >/dev/null 2>&1 || true
   POST_STATUS=$(br_field "$BEAD" status)
   [ "$POST_STATUS" = "closed" ] \
     || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
-  RULE_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
-  RULE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  if br_call comments add "$BEAD" "GATE: decided — $BEAD — $REASON; ruling verified: $RULING (at $RULE_SHA by ${ACTOR:-<unattributed>} at $RULE_TS)" </dev/null >/dev/null 2>&1; then
-    echo "close-gate[$BEAD] GATE: decided RECORDED on the bead"
-  else
-    echo "RECORD-FAILED: the close landed but the landing-record comment did not — $BEAD" >&2
-    exit 1
-  fi
+  echo "close-gate[$BEAD] GATE: decided RECORDED on the bead"
   echo "close-gate[$BEAD] CLOSED — ruling: a recorded DECISION comment authorized this close; no probe legs were run."
   exit 0
 fi
@@ -551,7 +587,7 @@ fi
 # ---------------------------------------------------------------------------------------
 if [ "$DRY" = 1 ]; then
   echo "close-gate[$BEAD] DRY-RUN — every leg held; would re-assert in_progress ownership, then:"
-  echo "close-gate[$BEAD]   $BR close $BEAD --reason \"$REASON\""
+  echo "close-gate[$BEAD]   $BR close $BEAD --reason \"$REASON\" --transition-comment \"<landing record>\""
   echo "close-gate[$BEAD]   then read back status == closed"
   exit 0
 fi
@@ -566,18 +602,12 @@ if [ -n "$ACTOR" ] && [ "$PRE_ASSIGNEE" != "$ACTOR" ]; then
   refuse "OWNERSHIP" "the bead is assigned to '$PRE_ASSIGNEE', not '$ACTOR' — someone else owns this close"
 fi
 
-"$BR" close "$BEAD" --reason "$REASON" </dev/null >/dev/null 2>&1 || true
-
-POST_STATUS=$(br_field "$BEAD" status)
-[ "$POST_STATUS" = "closed" ] \
-  || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
-
 # THE LANDING RECORD: every accepted close leaves exactly one comment naming the evidence
 # it ran from — the record is the difference between a verified close and a wave-through,
-# and a comment nobody wrote proves nothing to the next reader. The write is no longer
-# swallowed (`|| true`): `br_call` reports a failure, and this leg exits the literal token
-# RECORD-FAILED rather than reading a lost write as landed — the close already happened
-# by this point, so a failed record is a distinct, post-close failure mode.
+# and a comment nobody wrote proves nothing to the next reader. Computed BEFORE the write so
+# it can travel through `br close --transition-comment` (br 0.5.12), which commits the
+# comment ATOMICALLY with the close — no separate post-close write, so no RECORD-FAILED can
+# follow a close that already landed.
 LND_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 LND_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 if [ "$DISPOSITION_LEG" = "cascade" ]; then
@@ -592,17 +622,18 @@ elif [ "$FRESH_VERIFY" = 1 ]; then
   LND_TEXT="FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS — per-probe:$PER_PROBE"
 else
   # The ordinary receipt-backed close (DISPOSITION=0) and a disposition close resolved on
-  # its `green` leg with a usable receipt both wrote nothing before this bead — one write,
-  # covering both.
+  # its `green` leg with a usable receipt both write the same record — one text, covering
+  # both.
   LND_LABEL="GATE: receipt"
   LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
 fi
-if br_call comments add "$BEAD" "$LND_TEXT" </dev/null >/dev/null 2>&1; then
-  echo "close-gate[$BEAD] $LND_LABEL RECORDED on the bead"
-else
-  echo "RECORD-FAILED: the close landed but the landing-record comment did not — $BEAD" >&2
-  exit 1
-fi
+
+"$BR" close "$BEAD" --reason "$REASON" --transition-comment "$LND_TEXT" </dev/null >/dev/null 2>&1 || true
+
+POST_STATUS=$(br_field "$BEAD" status)
+[ "$POST_STATUS" = "closed" ] \
+  || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
+echo "close-gate[$BEAD] $LND_LABEL RECORDED on the bead"
 
 if [ "$DISPOSITION" = 1 ]; then
   echo "close-gate[$BEAD] CLOSED — disposition ($DISPOSITION_LEG): the state this bead aimed at is settled at HEAD; no causal flip is claimed."
