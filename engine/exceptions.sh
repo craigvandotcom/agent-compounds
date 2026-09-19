@@ -29,14 +29,19 @@ set -euo pipefail
 
 ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
-ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
 LAYOUT="$AC_ROOT/harness.config.json"
-TARGETS_LIST="$ORG_ROOT/infrastructure/ac-deploy-targets.list"
 
 MODE="--list"
 [ $# -gt 0 ] && MODE="$1"
 
 [ -f "$LAYOUT" ] || { echo "error: $LAYOUT missing" >&2; exit 2; }
+
+# The roster hangs off ORG_ROOT, so a mis-derived root silently empties the TECHNICAL
+# set — the public-target exclusions — which is the one set that must never read empty
+# by accident. One canon: engine/org-root.sh.
+. "$ENGINE_DIR/org-root.sh"
+ORG_ROOT="$(resolve_org_root)" || exit 2
+TARGETS_LIST="$ORG_ROOT/infrastructure/ac-deploy-targets.list"
 
 # --- EDITORIAL: read, never derived ------------------------------------------------
 editorial() { jq -r '.exceptions.org_only_skills[]? // empty' "$LAYOUT"; }

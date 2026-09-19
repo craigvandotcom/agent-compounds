@@ -18,6 +18,7 @@ harnesses point it at a temp consumer tree. Unset in production every path is
 identical to the legacy bash block's.
 """
 
+import json
 import os
 
 ORG_CONSUMER_SUBPATHS = (
@@ -28,14 +29,49 @@ ORG_CONSUMER_SUBPATHS = (
 EXPLICIT_APPS = ("vitest-affected",)
 
 
-def base():
-    # Derived, not spelled: this file sits at <org>/<domain>/software/agent-compounds/
-    # lint/lib/, so the org root is five parents up — ~/Repos on the Mac monorepo, ~ in
-    # the three-repo split. The old hardcoded default named one machine's layout and
-    # returned a path that does not exist anywhere else.
+def _repo_root():
+    # lint/lib/ -> lint/ -> agent-compounds. Counting is safe HERE: this file's position
+    # inside its own repo is a fact the repo controls, unlike the repo's position on a
+    # machine.
     here = os.path.dirname(os.path.abspath(__file__))
-    derived = os.path.normpath(os.path.join(here, *([os.pardir] * 5)))
-    return os.environ.get("LINT_CONSUMER_BASE") or derived
+    return os.path.normpath(os.path.join(here, os.pardir, os.pardir))
+
+
+def base():
+    """The org root: the first ancestor of this repo holding an infrastructure/ dir.
+
+    Counting parents was the old answer — "five parents up", assuming
+    <org>/<domain>/software/agent-compounds/lint/lib. On a flat layout like
+    ~/code/agent-compounds that yields /Users, and checks 07 and 12 then report
+    "no consumer dir exists under /Users": a broken derivation wearing the costume
+    of an empty machine. Marker, not arithmetic.
+
+    This is the Python twin of engine/org-root.sh — same walk, same `org_root`
+    override, and scripts/org-root-derivation.test.sh holds the two in step.
+    """
+    override = os.environ.get("LINT_CONSUMER_BASE")
+    if override:
+        return override
+
+    repo = _repo_root()
+    layout = os.path.join(repo, "harness.config.json")
+    try:
+        with open(layout, encoding="utf-8") as fh:
+            explicit = json.load(fh).get("org_root")
+        if explicit:
+            return os.path.expanduser(explicit)
+    except (OSError, ValueError):
+        pass  # a missing or malformed manifest falls through to the walk
+
+    d = repo
+    while d != os.path.dirname(d):
+        d = os.path.dirname(d)
+        if os.path.isdir(os.path.join(d, "infrastructure")):
+            return d
+    # No marker anywhere. Returning a guess is what the old code did; return the
+    # non-existent-by-construction sentinel instead, so base_present() is False and
+    # the callers SKIP with a message naming the real problem.
+    return os.path.join(repo, "__no-org-root__")
 
 
 def base_present():

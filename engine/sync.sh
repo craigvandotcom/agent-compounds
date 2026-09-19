@@ -85,17 +85,19 @@ else
   CFG="$(cat "$MANIFEST")"
 fi
 cfg() { echo "$CFG" | jq -r "$1"; }
-expand_tilde() { case "$1" in "~"|"~/"*) echo "${HOME}${1#\~}" ;; *) echo "$1" ;; esac; }
 
 # --- layout manifest (ac-9ahd) -------------------------------------------------
-# The engine SELF-LOCATES rather than reading a root key. ORG_ROOT is AC_ROOT's third
-# parent, which is correct in every supported layout:
-#   Mac monorepo  ~/Repos/<org>/software/agent-compounds  -> ~/Repos
-#   three-repo    ~/mission/software/agent-compounds        -> ~
-# This was already the idiom below for the memory-lint path; ac-9ahd generalized it and
-# deleted the `repos_root` key, which hard-failed the engine on any layout but the Mac's
-# and was the root cause of the rendered-path 404s in every deploy target.
-ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
+LAYOUT="$AC_ROOT/harness.config.json"
+[ -f "$LAYOUT" ] || { echo "error: $LAYOUT missing" >&2; exit 2; }
+lcfg() { jq -r "$1" "$LAYOUT"; }
+
+# ORG_ROOT and expand_tilde come from the one canon; see engine/org-root.sh for why the
+# old third-parent count was a spelled path in disguise, and what it silently broke.
+. "$ENGINE_DIR/org-root.sh"
+# Explicit, not leaning on set -e: an assignment whose substitution fails is exactly the
+# kind of quiet hole this derivation exists to close.
+ORG_ROOT="$(resolve_org_root)" || exit 2
+[ -n "$ORG_ROOT" ] || { echo "error: ORG_ROOT resolved empty" >&2; exit 2; }
 
 # The machine-global floor: doctrine every harness loads into EVERY session on this
 # machine, regardless of which of the three repos (infrastructure/mission/personal) it
@@ -109,10 +111,6 @@ floor_body() {
   [ -s "$FLOOR" ] || { echo "ERROR: floor missing: $FLOOR" >&2; exit 1; }
   cat "$FLOOR"
 }
-
-LAYOUT="$AC_ROOT/harness.config.json"
-[ -f "$LAYOUT" ] || { echo "error: $LAYOUT missing" >&2; exit 2; }
-lcfg() { jq -r "$1" "$LAYOUT"; }
 
 # The DOMAIN repo is AC_ROOT's second parent (<domain-repo>/software/agent-compounds),
 # which names itself differently per layout — hence derived, never spelled. Its basename
@@ -1641,7 +1639,7 @@ done
 # so once per invocation, not once per target — per-target runs timed out the
 # projection-regeneration check at target 2 of ~10). Visibility only, never blocks;
 # the nightly drift-check run is the enforcement point.
-MEMORY_LINT="$(cd "$AC_ROOT/../../.." && pwd)/infrastructure/scripts/health/memory-lint.py"
+MEMORY_LINT="$ORG_ROOT/infrastructure/scripts/health/memory-lint.py"
 if [ -f "$MEMORY_LINT" ]; then
   echo
   ML_LOG="$(mktemp)"
