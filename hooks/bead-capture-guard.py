@@ -80,6 +80,13 @@ READINESS = ("unrefined", "human-gate")
 # beads — the gate and the repair must agree on the exemption or they fight each other.
 READINESS_EXEMPT_TYPES = {"epic"}
 
+# `refined` is stamped EXCLUSIVELY by stamp-refined.sh on refine convergence — the one
+# label a create must never carry, whatever readiness label rides beside it and whatever
+# the type (including epic, and including a create with no --type at all). This is a
+# standalone axis, checked before the type-scoped readiness/probe axes below, precisely
+# because those are type-scoped and `refined` must not be.
+REFINED_LABEL = "refined"
+
 # The probe axis (born probe-bearing, ac-v5vi): an implementable bead is created with at
 # least one runnable acceptance probe. Containers, forks and unconfirmed leads own no probe
 # yet — a filer that cannot name one files `investigation`, the type that says so.
@@ -102,6 +109,20 @@ IMPACT_REQUIRED_ORIGINS = (
 # The subagent refusal (ac-wp8i.3): a PreToolUse stdin carrying `agent_id` is a subagent,
 # which may file ONLY a `human-gate` fork — everything else is proposed at the boundary.
 SUBAGENT_EXEMPT_LABEL = "human-gate"
+
+REFINED_MESSAGE = """\
+BLOCKED: `br {sub}` carries the `refined` label at creation.
+
+`refined` is stamped EXCLUSIVELY by a refine pass on convergence
+(stamp-refined.sh is its sole writer — skills/beads-standards/SKILL.md), never at
+creation — whatever readiness label rides beside it in --labels, and whatever the
+type (epic included). Drop it:
+
+    -l "origin:<skill>,unrefined"     # needs a refine pass first — the usual case
+    -l "origin:<skill>,human-gate"    # a decision/action card only Craig can close
+
+Canon: beads-standards/reference/bead-create-contract.md\
+"""
 
 READINESS_MESSAGE = """\
 BLOCKED: `br {sub}` (type `{typ}`) without a readiness label.
@@ -319,17 +340,22 @@ def flag_value(cmd, names, prefixes):
 
 
 def bead_type(cmd):
-    """The declared --type, or None when absent or still an unsubstituted placeholder.
+    """The declared --type; `task` (br's own default — no -t defaults to task) when no
+    -t/--type flag is present at all; None when it IS present but still an unsubstituted
+    placeholder.
 
-    None means "cannot know" and the readiness check is SKIPPED. A template placeholder
-    like `-t <type>` could stand for `epic`, so enforcing readiness on it would block a
-    legitimate epic template. Under-enforcing here is correct: the origin check still
-    applies, ac-tidy repairs readiness nightly, and lint Check 19 catches stale templates
-    statically anyway.
+    None means "cannot know" and the readiness/probe checks are SKIPPED — a template
+    placeholder like `-t <type>` could stand for `epic`, so enforcing readiness on it
+    would block a legitimate epic template. An ABSENT flag is not that case: `br create`
+    with no `-t` at all is created as `task` by `br` itself, so the type-scoped checks
+    apply exactly as they would to an explicit `-t task` — under-enforcing here was the
+    gap a bare `br create x -l origin:x,refined` used to walk through.
     """
     val = flag_value(cmd, {"-t", "--type"}, ("--type=",))
-    if val is None or val.startswith("<") or val.startswith("$"):
-        return None
+    if val is None:
+        return "task"  # br's own default when -t/--type is omitted entirely
+    if val.startswith("<") or val.startswith("$"):
+        return None  # present but an unsubstituted template placeholder — cannot know
     return val.strip().lower()
 
 
@@ -352,6 +378,12 @@ def all_labels(cmd):
 
 def has_readiness(cmd):
     return any(r in all_labels(cmd) for r in READINESS)
+
+
+def has_refined(cmd):
+    """True when ANY label flag carries `refined` — across every -l/--labels flag,
+    the same repeatable-flag handling all_labels() already gives every other axis."""
+    return REFINED_LABEL in all_labels(cmd)
 
 
 def has_origin(cmd):
@@ -426,6 +458,12 @@ def scan_tokens(tokens, is_subagent):
         if not has_origin(cmd):
             print(MESSAGE.format(sub=sub), file=sys.stderr)
             sys.exit(2)
+        # Standalone axis, checked before the type-scoped ones below: `refined` is
+        # refused whatever else rides beside it in --labels and whatever the type
+        # (epic and an absent -t included) — sole-writer invariant, no exemption.
+        if has_refined(cmd):
+            print(REFINED_MESSAGE.format(sub=sub), file=sys.stderr)
+            sys.exit(2)
         typ = bead_type(cmd)
         if typ is not None and typ not in READINESS_EXEMPT_TYPES and not has_readiness(cmd):
             print(READINESS_MESSAGE.format(sub=sub, typ=typ), file=sys.stderr)
@@ -445,7 +483,10 @@ def scan_tokens(tokens, is_subagent):
 
 def main():
     raw = sys.stdin.read()
-    data = json.loads(raw) if raw.strip() else {}
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+    except ValueError:
+        data = {}  # malformed stdin JSON fails open the same as no stdin at all
 
     if data.get("tool_name") not in (None, "Bash"):
         allow()
