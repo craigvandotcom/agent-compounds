@@ -230,8 +230,12 @@ The contract that keeps autonomous sweeps safe:
    the work a decision can absorb before the human arrives.
 2. **Agents may enrich, never close.** Closure requires a recorded human
    decision (`br comments add <id> "DECISION (<human>): <choice> — <why>"`),
-   after which the agent executes the consequences and closes. The decision
-   trail lives in the bead.
+   after which the agent executes the consequences and closes through
+   `skills/ac-implement/scripts/close-gate.sh`. The decision trail lives in
+   the bead. One system ruling stands beside the human one: a nightly
+   moot-proposal close records `DECISION (ac-tidy): moot — target <epic>
+   closed` the same way, before closing through the same gate — the same
+   contract, a script as the actor.
 3. **Downstream work blocks on it via normal deps**
    (`br dep add <downstream> <decision-id>`). `br ready` then excludes the
    subtree automatically — `bv --robot-next` cannot select past an undecided
@@ -285,10 +289,10 @@ rests on, so closed beads cluster cleanly for future metrics:
 Thin rules — no new template machinery, no per-type description headers, no lint schema
 change. Enforcement is **MECHANICAL at close time** (ac-on0y.2):
 `ac-pipeline/scripts/close-evidence-check.sh` refuses a close whose `close_reason` lacks
-the shape its type declares, wired at the single live `br close` call site (`ac-implement`'s
-close step) and seam-proofed — its harness greps that call site and goes RED if the
-invocation is silently reverted. `br lint` is unchanged: it checks DESCRIPTION template
-sections only (§ Body template), never `close_reason`.
+the shape its type declares, wired at the one writer, `skills/ac-implement/scripts/close-gate.sh`,
+and seam-proofed — its harness greps that call site and goes RED if the invocation is
+silently reverted. `br lint` is unchanged: it checks DESCRIPTION template sections only
+(§ Body template), never `close_reason`.
 
 Still **presence-checked, not truth-checked** — semantic verification remains review's job.
 Exit 2 = NOT-CHECKED and is never a pass. `human-gate` beads are exempt (their

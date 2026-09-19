@@ -17,7 +17,7 @@ auto-advance, Done as escape); this file carries the per-type playbook.
   ```bash
   br comments add <id> "DECISION (<human>): <choice> — <why>"
   # ...carry out consequences...
-  br close <id> --reason "<what was decided/done>"
+  skills/ac-implement/scripts/close-gate.sh <id> --reason "<what was decided/done>"
   br sync --flush-only && git add .beads/issues.jsonl \
     && git commit -m "chore(beads): human ruling on <id> [no-bead]" && git push
   ```

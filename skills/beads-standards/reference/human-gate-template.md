@@ -225,6 +225,7 @@ consequences and closes:
 ```bash
 br comments add bd-mf9k1 -m "DECISION (operator): option (a), OneSignal. Free tier is
 fine at this scale, revisit if we outgrow it."
-# ... agent implements the consequence, then:
-br close bd-mf9k1 -r "shipped: OneSignal wired per the operator's decision (see comments)"
+# ... agent implements the consequence, then close through the gate (the ruling idiom
+# fenced once at skills/ac-human/references/action-loop.md — never a bare `br close`):
+skills/ac-implement/scripts/close-gate.sh bd-mf9k1 --reason "shipped: OneSignal wired per the operator's decision (see comments)"
 ```

@@ -64,6 +64,17 @@ case "$cmd" in
     [ "${AC2_TEST_BR_CLOSE_NOOP:-0}" = "1" ] && exit 0
     jq '.status = "closed"' "$STATE/$id.json" >"$STATE/$id.json.tmp" && mv "$STATE/$id.json.tmp" "$STATE/$id.json" ;;
   comments)
+    sub="${1:-}"
+    if [ "$sub" = "list" ]; then
+      # `comments list <id> --json` — the ruling path's own read. Bare array of objects
+      # carrying the comment in a `text` key, the real br 0.5.12 shape.
+      shift 2>/dev/null || true
+      lcid=""
+      for a in "$@"; do case "$a" in --*) ;; *) [ -z "$lcid" ] && lcid="$a" ;; esac; done
+      cfile="$STATE/$lcid.comments.json"
+      [ -f "$cfile" ] && cat "$cfile" || echo '[]'
+      exit 0
+    fi
     # `comments add <id> -f <file>` (or inline text) — recorded so a fixture can assert
     # that the gate WROTE the record it claims to write (the fresh-verification receipt).
     cid=""; body=""; prev=""
@@ -82,6 +93,10 @@ case "$cmd" in
     done
     [ -f "$STATE/$cid.json" ] || exit 1
     printf '%s\n' "$body" >> "$STATE/comments.log"
+    cfile="$STATE/$cid.comments.json"
+    [ -f "$cfile" ] || echo '[]' >"$cfile"
+    jq --arg t "$body" '. + [{"author":"mock","created_at":"2026-01-01T00:00:00Z","text":$t}]' \
+      "$cfile" >"$cfile.tmp" 2>/dev/null && mv "$cfile.tmp" "$cfile"
     exit 0 ;;
   *) exit 0 ;;
 esac
@@ -189,6 +204,29 @@ board() { # <root> <status> <assignee>
     >"$1/.br/$BEAD.json"
 }
 
+# A decision-type fixture: no harness, no extractable Probe: line at all — proving the
+# ruling path truly skips legs 1-8 rather than merely passing them.
+mkcase_decision() {
+  local root="$WORKDIR/$1"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br"
+  cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  printf 'Pick between option A and option B.\n' >"$root/body.md"
+  echo "$root"
+}
+
+board_decision() { # <root> <status> <assignee>
+  jq -n --arg id "$BEAD" --arg st "$2" --arg as "$3" --rawfile d "$1/body.md" \
+    '{id:$id,title:"fixture decision",issue_type:"decision",status:$st,assignee:$as,labels:[],description:$d}' \
+    >"$1/.br/$BEAD.json"
+}
+
+add_ruling() { # <root> <text> — records a ruling comment directly via the mock, as a human
+               # or system actor would before the close is attempted.
+  ( cd "$1" && AC2_TEST_BR_STATE="$1/.br" br comments add "$BEAD" "$2" >/dev/null 2>&1 )
+}
+
 fly() { # <root> — run the REAL flight-check to bank a receipt
   ( cd "$1" && AC2_FLIGHT_DIR="$1/.flight" AC2_TEST_BR_STATE="$1/.br" AC2_DRY_RUN=1 \
       bash "$FLIGHT" "$BEAD" --body-file "$1/body.md" --root "$1" ) >/dev/null 2>&1
@@ -218,6 +256,36 @@ if ! grep -q 'Name a test-shaped harness' "$GATE"; then
   pass "AC2e'': the gate no longer prescribes a vacuous harness as the prose remedy"
 else fail "AC2e'': the vacuous-harness remedy text is still in the gate"; fi
 
+# ============================================================================================
+# AC-ruling — a decision-type bead closes on a recorded ruling comment, never through the
+# probe machinery: unclaimed (no in_progress row, no --actor), a body with no extractable
+# Probe: line at all — proving legs 1-8 truly did not run, not merely pass.
+# ============================================================================================
+R="$(mkcase_decision ruling-accept)"
+board_decision "$R" open ""
+add_ruling "$R" "DECISION (human): option A — because it is cheaper"
+out="$(gate "$R" --reason "decided: option A, per the recorded ruling")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -qi 'ruling'; then
+  pass "AC-ruling: a decision bead with a recorded DECISION comment closes via the type-routed path"
+else fail "AC-ruling accept: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC-ruling: the ruling close landed"
+else fail "AC-ruling: the ruling close did not land"; fi
+if [ -f "$R/.br/comments.log" ] && grep -q 'GATE: decided' "$R/.br/comments.log"; then
+  pass "AC-ruling: the landing record begins GATE: decided"
+else fail "AC-ruling: no GATE: decided record landed"; fi
+
+R="$(mkcase_decision ruling-refuse)"
+board_decision "$R" open ""     # unclaimed; NO ruling comment recorded at all
+out="$(gate "$R" --reason "decided: nothing was ruled")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED DECISION'; then
+  pass "AC-ruling: CLOSE-REFUSED DECISION when no ruling comment is recorded"
+else fail "AC-ruling refuse: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "open" ]; then
+  pass "AC-ruling: the refused decision bead stays open"
+else fail "AC-ruling: the bead was closed despite no ruling"; fi
 
 # ============================================================================================
 # AC 2 — the three refusals, each NAMING the leg that failed

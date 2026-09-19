@@ -19,7 +19,7 @@ door every board change already walks through: the pre-commit chain runs `lint.s
 --changed`, and `.beads/issues.jsonl` is in HOOKS scope, so the LEDGER COMMIT ITSELF is
 the gate.
 
-Five FAIL rules over the committed board:
+Six FAIL rules over the committed board:
   1. a line that is not JSON;
   2. an `id` that appears more than once;
   3. an OPEN bead created on or after the origin cutover (2026-08-23 — the date the
@@ -39,14 +39,22 @@ Five FAIL rules over the committed board:
      never the fields' truth. A canon first line followed by note lines is green; a
      pre-existing (HEAD-era) receipt on an untouched comment of a changed bead is never
      re-judged.
+  6. staged lane only, same scope as rule 5, no whole-board fallback: a changed id whose
+     staged `status` is `closed` and whose HEAD `status` was NOT `closed` — a close that
+     genuinely happened in this commit — carrying no comment in its staged `comments`
+     array whose text begins `GATE:`, `FRESH-VERIFY:`, or `TRIAGE-CLOSE:`. The close
+     sensor is board-side (every close path, prose or script, human or system); it never
+     asks WHO closed, only whether a landing record exists. Board-side per the Decisions
+     card; this is deliberately not fence lint.
 
 Rules 3 (origin: label, Probe: line) skip closed beads — forward-only, no backfill, per
 the origin-provenance ruling: enforcement started at the cutover and the past is not
 relitigated. Rules 4 (status canon) and 5 (WORKER receipt shape) scan a row regardless of
 its status: rule 4 because an off-canon status is corruption at any lifecycle stage, rule
 5 because a receipt this commit newly writes onto a closed bead (a coordinator close-out
-label, a late note) is still new content the commit is authoring. An empty or unreadable
-board exits 2 NOT-GATED, because a check that read nothing has proved nothing.
+label, a late note) is still new content the commit is authoring. Rule 6 by construction
+only ever fires on a row THIS commit closed. An empty or unreadable board exits 2
+NOT-GATED, because a check that read nothing has proved nothing.
 The check REPORTS; it never repairs — mutating the board would make this a second writer
 of the origin axis (decision D-2).
 
@@ -130,25 +138,29 @@ def _staged_head_maps(root):
 
 
 def changed_bead_data(root):
-    """(changed_ids, new_worker_comments) — changed_ids is the set of ids added or
-    modified in the staged ledger vs HEAD's (None when undeterminable or no staged
-    change; the caller's signal to apply the per-bead format rules to the whole
+    """(changed_ids, new_worker_comments, head_status) — changed_ids is the set of ids
+    added or modified in the staged ledger vs HEAD's (None when undeterminable or no
+    staged change; the caller's signal to apply the per-bead format rules to the whole
     board). new_worker_comments maps id -> the list of comments THIS COMMIT appends
     for that id — comments are append-only, so anything past HEAD's own comment
     count for that id is new; a pre-existing receipt on an untouched comment is
-    never in this list. Both members are None together."""
+    never in this list. head_status maps id -> that id's status at HEAD (absent id ->
+    None, i.e. the bead is new-to-this-commit). All three members are None together."""
     maps = _staged_head_maps(root)
     if maps is None:
-        return None, None
+        return None, None, None
     staged_map, head_map = maps
     changed_ids = {rid for rid, rec in staged_map.items()
                    if rid not in head_map or head_map[rid] != rec}
     new_comments = {}
+    head_status = {}
     for rid in changed_ids:
         staged_comments = staged_map[rid].get("comments") or []
-        head_comments = (head_map.get(rid) or {}).get("comments") or []
+        head_rec = head_map.get(rid) or {}
+        head_comments = head_rec.get("comments") or []
         new_comments[rid] = staged_comments[len(head_comments):]
-    return changed_ids, new_comments
+        head_status[rid] = head_rec.get("status")
+    return changed_ids, new_comments, head_status
 
 
 def main():
@@ -168,8 +180,8 @@ def main():
         print("NOT-GATED: board is empty — a check that read nothing has proved nothing", file=sys.stderr)
         return 2
 
-    # None, None -> undeterminable, apply format rules to all (rule 5 stays off)
-    changed_ids, new_worker_comments = changed_bead_data(root)
+    # None, None, None -> undeterminable, apply format rules to all (rules 5-6 stay off)
+    changed_ids, new_worker_comments, head_status = changed_bead_data(root)
 
     violations = []
     seen_ids = {}
@@ -209,6 +221,21 @@ def main():
                         f"{board}:{lineno} — malformed WORKER receipt is RED: bead '{rid}' comment "
                         f"{stripped!r} does not match the canon grammar 'WORKER: model=<id> "
                         "actor=<id> tree=<sha>' on its first line")
+            # Rule 6 — the landing record: a close that genuinely happened in this commit
+            # (staged status closed, HEAD status was something else) leaves at least one
+            # comment naming the evidence it closed on. Staged lane only, same scope as
+            # rule 5 — no whole-board fallback (no backfill by doctrine).
+            if status == "closed" and head_status.get(rid) != "closed":
+                comments = rec.get("comments") or []
+                landed = any(
+                    isinstance(c, dict) and str(c.get("text") or "").strip()
+                    .startswith(("GATE:", "FRESH-VERIFY:", "TRIAGE-CLOSE:"))
+                    for c in comments)
+                if not landed:
+                    violations.append(
+                        f"{board}:{lineno} — closed bead '{rid}' carries no landing record is RED: "
+                        "close through skills/ac-implement/scripts/close-gate.sh — see "
+                        "ac-human/references/action-loop.md")
         if status != "open":
             continue  # closed beads are NEVER scanned for origin/probe — forward-only, no backfill
         created = str(rec.get("created_at") or "")[:10]

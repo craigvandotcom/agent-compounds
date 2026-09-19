@@ -368,7 +368,7 @@ br list --status=open     # all open
 br show <id>              # full detail with dependencies
 br create --title="..." --type=task --priority=2 --labels=origin:<skill>,unrefined   # origin: is MANDATORY — see canon above
 br update <id> --status=in_progress
-br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above
+br close <id> --reason="shipped: ..."   # close_reason is MANDATORY — see canon above; in the ac2 pipeline, close through skills/ac-implement/scripts/close-gate.sh instead — it writes the landing record check 35 expects
 br close <id1> <id2>      # close several
 br dep add <issue> <depends-on>          # wire a blocking dependency
 br update <id> --status closed           # REFUSED rc 4 — terminal states close via `br close -r` only (0.5.12)

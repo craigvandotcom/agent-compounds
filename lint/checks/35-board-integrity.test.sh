@@ -136,7 +136,9 @@ rc=$(run_check "$t")
 
 # --- RED: a malformed WORKER: receipt on a changed id, staged lane only -------
 WORKER_BAD='{"id":"ac-workerbad","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"bad worker stamp","comments":[{"id":1,"issue_id":"ac-workerbad","author":"x","text":"WORKER: model=foo session=bar skill@version=abc duration=1m","created_at":"2026-08-25T10:01:00Z"}]}'
-WORKER_GOOD='{"id":"ac-workerok","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"good worker stamp","comments":[{"id":2,"issue_id":"ac-workerok","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-25T10:01:00Z"}]}'
+# The COMBINED-CLEAN fixture: a canon status (closed), a canon WORKER: receipt, and a
+# GATE:-prefixed landing record together — one assertion covers rules 4, 5 and 6 at once.
+WORKER_GOOD='{"id":"ac-workerok","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"good worker stamp","comments":[{"id":2,"issue_id":"ac-workerok","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234","created_at":"2026-08-25T10:01:00Z"},{"id":5,"issue_id":"ac-workerok","author":"x","text":"GATE: receipt — ac-workerok — RED probe: true; reason: shipped","created_at":"2026-08-25T10:02:00Z"}]}'
 
 t="$WORK/worker-staged-red"
 git_board "$t" "$OPEN_TAGGED"
@@ -178,12 +180,44 @@ rc=$(run_check "$t")
 # --- GREEN: a multi-line canon receipt (canon first line + a note line) stays green ----
 t="$WORK/worker-multiline"
 git_board "$t" "$OPEN_TAGGED"
-WORKER_MULTILINE='{"id":"ac-multiline","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"multi-line worker stamp","comments":[{"id":4,"issue_id":"ac-multiline","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234\nnote: closed after review","created_at":"2026-08-25T10:01:00Z"}]}'
+WORKER_MULTILINE='{"id":"ac-multiline","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"multi-line worker stamp","comments":[{"id":4,"issue_id":"ac-multiline","author":"x","text":"WORKER: model=claude-sonnet-5 actor=ac-123 tree=abc1234\nnote: closed after review","created_at":"2026-08-25T10:01:00Z"},{"id":6,"issue_id":"ac-multiline","author":"x","text":"GATE: receipt — ac-multiline — RED probe: true; reason: shipped","created_at":"2026-08-25T10:02:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$WORKER_MULTILINE" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")
 [ "$rc" -eq 0 ] && ok "a multi-line canon receipt (first line + note) stays green" \
   || bad "worker-multiline: expected exit 0, rc=$rc out=$(cat "$OUT")"
+
+# --- RED: a bead closed by this commit with no landing record ------------------
+t="$WORK/landing-red"
+git_board "$t" "$OPEN_TAGGED"
+LANDING_MISSING='{"id":"ac-landingmissing","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed with no landing record"}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_MISSING" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 1 ] && grep -q 'no landing record' "$OUT" && grep -q 'ac-landingmissing' "$OUT" \
+  && ok "a closed row with no GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: landing record is RED" \
+  || bad "landing-red: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: the same transition carrying a GATE: receipt landing record --------
+t="$WORK/landing-green"
+git_board "$t" "$OPEN_TAGGED"
+LANDING_PRESENT='{"id":"ac-landingpresent","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed with a landing record","comments":[{"id":7,"issue_id":"ac-landingpresent","author":"x","text":"GATE: receipt — ac-landingpresent — RED probe: true; reason: shipped","created_at":"2026-08-25T10:01:00Z"}]}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_PRESENT" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "a closed row carrying a GATE: receipt landing record is GREEN" \
+  || bad "landing-green: rc=$rc out=$(cat "$OUT")"
+
+# --- GREEN: a bead already closed at HEAD, relabeled this commit — not a NEW close ---
+t="$WORK/landing-precloseD-untouched"
+LANDING_ALREADY_CLOSED='{"id":"ac-alreadyclosed","status":"closed","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual"],"title":"already closed","comments":[]}'
+git_board "$t" "$OPEN_TAGGED" "$LANDING_ALREADY_CLOSED"
+LANDING_RELABELED='{"id":"ac-alreadyclosed","status":"closed","created_at":"2026-08-20T10:00:00Z","labels":["origin:manual","touched-this-commit"],"title":"already closed","comments":[]}'
+printf '%s\n' "$OPEN_TAGGED" "$LANDING_RELABELED" > "$t/.beads/issues.jsonl"
+git -C "$t" add .beads/issues.jsonl
+rc=$(run_check "$t")
+[ "$rc" -eq 0 ] && ok "a bead already closed at HEAD and only relabeled this commit is never a NEW close" \
+  || bad "landing-precloseD-untouched: expected exit 0, rc=$rc out=$(cat "$OUT")"
 
 # --- NOT-GATED: empty board and missing board ----------------------------------
 mkdir -p "$WORK/f/.beads"; : > "$WORK/f/.beads/issues.jsonl"

@@ -17,12 +17,10 @@ Apply what is provable. File a bead for what is not. Never guess.
 
 Do NOT reconcile in the live checkout. `BCA=$(git rev-parse --show-toplevel)` is the live app
 checkout. Fetch `origin/main`, `git worktree add --detach "$WT" origin/main`, `cd "$WT"`, then
-`br sync --db "$WT/.beads/beads.db"` to rebuild the beads DB from `issues.jsonl`.
-`br` auto-discovery ignores worktree cwd and resolves to the live checkout (bd-6kwqo) —
-pass `--db "$WT/.beads/beads.db"` explicitly on EVERY `br` invocation in the worktree,
-never rely on cwd. Skill files resolve only through
-$BCA/.claude/… (relative symlinks). If the worktree cannot be created: Slack degraded, exit,
-nothing written.
+`export BEADS_DB="$WT/.beads/beads.db"` and `br sync` to rebuild the beads DB from `issues.jsonl`
+(`br` auto-discovery ignores worktree cwd, bd-6kwqo — the exported var directs every `br` call).
+Skill files resolve only through $BCA/.claude/… (relative symlinks). If the worktree cannot be
+created: Slack degraded, exit, nothing written.
 
 ## 2. Scan
 
@@ -47,10 +45,11 @@ Stamp a comment `verified: <date>`. Never de-gate, close, or edit the body.
 | closed bead still labelled `unrefined` | `br label remove` |
 | open non-epic bead with none of `unrefined` / `refined` / `human-gate` | `br label add unrefined` (never `refined`) |
 | label `beads-standards` does not name | correct or remove, report it |
-| open `pipeline-proposal` bead whose target epic is closed | close: `obsolete: moot — target closed` |
+| open `pipeline-proposal` bead whose target epic is closed | record `DECISION (ac-tidy): moot — target <epic> closed`, then `close-gate.sh <id> --reason "obsolete: moot — target closed"` |
 
 Open `human-gate` and `qa-blocker` beads are untouchable except by the last row. A condition
 that needs a judgment call ("looks done", "probably a duplicate") is not provable: step 4.
+A `task`-typed proposal skips the ruling path (routed by `issue_type`) and LEG-2 NOT-CHECKs; report that exit as the skip, not a failure.
 
 ## 4. Findings — judgment, never apply
 

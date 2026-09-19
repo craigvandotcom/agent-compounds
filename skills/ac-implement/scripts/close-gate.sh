@@ -167,6 +167,43 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
   printf '%s\n' "$v"
 }
 
+# ---------------------------------------------------------------------------------------
+# THE TYPE-ROUTED RULING PATH — a `decision`-type bead closes on a recorded ruling comment,
+# never on the probe machinery below. This is a REAL skip, not a leg-outcome change: no
+# RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE, no SCANNER, no EVIDENCE core, no
+# claim taken, and no ownership pre-check — a recorded ruling ends a decision bead whoever
+# holds it. Every other `issue_type` falls through to the unchanged leg 1-8 flow below.
+# ---------------------------------------------------------------------------------------
+BEAD_TYPE=$(br_field "$BEAD" issue_type)
+if [ "$BEAD_TYPE" = "decision" ]; then
+  RULING=$(br_call comments list "$BEAD" --json </dev/null 2>/dev/null \
+    | jq -r '.[].text // empty' 2>/dev/null \
+    | grep -m1 -E '^[[:space:]]*DECISION \([^)]*\):')
+  if [ -z "$RULING" ]; then
+    echo "CLOSE-REFUSED DECISION: no 'DECISION (<actor>): ...' comment found on $BEAD — a ruling must be recorded before this bead can close" >&2
+    exit 1
+  fi
+  if [ "$DRY" = 1 ]; then
+    echo "close-gate[$BEAD] DRY-RUN — ruling path: would close on the recorded ruling: $RULING"
+    exit 0
+  fi
+  command -v "$BR" >/dev/null 2>&1 || not_checked "OWNERSHIP" "br unavailable — the ruling close cannot be verified"
+  "$BR" close "$BEAD" --reason "$REASON" </dev/null >/dev/null 2>&1 || true
+  POST_STATUS=$(br_field "$BEAD" status)
+  [ "$POST_STATUS" = "closed" ] \
+    || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
+  RULE_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+  RULE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  if br_call comments add "$BEAD" "GATE: decided — $BEAD — $REASON; ruling verified: $RULING (at $RULE_SHA by ${ACTOR:-<unattributed>} at $RULE_TS)" </dev/null >/dev/null 2>&1; then
+    echo "close-gate[$BEAD] GATE: decided RECORDED on the bead"
+  else
+    echo "RECORD-FAILED: the close landed but the landing-record comment did not — $BEAD" >&2
+    exit 1
+  fi
+  echo "close-gate[$BEAD] CLOSED — ruling: a recorded DECISION comment authorized this close; no probe legs were run."
+  exit 0
+fi
+
 # THE DISPOSITION VERB: parsed from the close reason, never from the bead's labels — the
 # reason is the caller's claim, and this gate judges claims. Leading whitespace allowed;
 # `wontfix` is deliberately absent (intent stays human).
@@ -535,27 +572,36 @@ POST_STATUS=$(br_field "$BEAD" status)
 [ "$POST_STATUS" = "closed" ] \
   || refuse "LANDING" "the close did not land — $BEAD reads '$POST_STATUS' after the write"
 
-# THE LANDING RECORD: a close accepted on fresh verification or on the cascade leg leaves
-# the evidence it ran from on the bead — the record is the difference between a verified
-# close and a wave-through, and a comment nobody wrote proves nothing to the next reader.
-if [ "$DISPOSITION_LEG" = "cascade" ] || [ "$FRESH_VERIFY" = 1 ]; then
-  FRESH_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
-  FRESH_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  if [ "$DISPOSITION_LEG" = "cascade" ]; then
-    "$BR" comments add "$BEAD" \
-      "TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS; AC probes NOT all green, and a disposition close never claims a causal flip." \
-      </dev/null >/dev/null 2>&1 || true
-    echo "close-gate[$BEAD] TRIAGE-CLOSE RECORDED on the bead"
-  else
-    PER_PROBE=""
-    for r in "${PROBE_RESULTS[@]:-}"; do
-      [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
-    done
-    "$BR" comments add "$BEAD" \
-      "FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $FRESH_SHA by ${ACTOR:-<unattributed>} at $FRESH_TS — per-probe:$PER_PROBE" \
-      </dev/null >/dev/null 2>&1 || true
-    echo "close-gate[$BEAD] fresh-verify RECORDED on the bead"
-  fi
+# THE LANDING RECORD: every accepted close leaves exactly one comment naming the evidence
+# it ran from — the record is the difference between a verified close and a wave-through,
+# and a comment nobody wrote proves nothing to the next reader. The write is no longer
+# swallowed (`|| true`): `br_call` reports a failure, and this leg exits the literal token
+# RECORD-FAILED rather than reading a lost write as landed — the close already happened
+# by this point, so a failed record is a distinct, post-close failure mode.
+LND_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
+LND_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+if [ "$DISPOSITION_LEG" = "cascade" ]; then
+  LND_LABEL="TRIAGE-CLOSE"
+  LND_TEXT="TRIAGE-CLOSE: $BEAD — ${REASON%%:*} close accepted on the cascade leg — consumed blocker(s)$CASCADE_DETAIL verified closed-with-disposition on the board at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS; AC probes NOT all green, and a disposition close never claims a causal flip."
+elif [ "$FRESH_VERIFY" = 1 ]; then
+  PER_PROBE=""
+  for r in "${PROBE_RESULTS[@]:-}"; do
+    [ -n "$r" ] && PER_PROBE="$PER_PROBE [$r]"
+  done
+  LND_LABEL="fresh-verify"
+  LND_TEXT="FRESH-VERIFY: $BEAD — ${REASON%%:*} close with no usable claim-time receipt; all $PROBE_GREEN AC probe(s) verified green at HEAD $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS — per-probe:$PER_PROBE"
+else
+  # The ordinary receipt-backed close (DISPOSITION=0) and a disposition close resolved on
+  # its `green` leg with a usable receipt both wrote nothing before this bead — one write,
+  # covering both.
+  LND_LABEL="GATE: receipt"
+  LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
+fi
+if br_call comments add "$BEAD" "$LND_TEXT" </dev/null >/dev/null 2>&1; then
+  echo "close-gate[$BEAD] $LND_LABEL RECORDED on the bead"
+else
+  echo "RECORD-FAILED: the close landed but the landing-record comment did not — $BEAD" >&2
+  exit 1
 fi
 
 if [ "$DISPOSITION" = 1 ]; then
