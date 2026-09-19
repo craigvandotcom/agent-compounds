@@ -1,0 +1,57 @@
+{
+  "reviewer": "security",
+  "round": 2,
+  "payload_read": "git diff 2dc960b..fd2f7ca",
+  "findings": [
+    {
+      "title": "Ruling path routes on a mutable issue_type: retype any task to decision and it closes with no probe legs",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 177,
+      "category": "authz-bypass",
+      "evidence": "Trust boundary: the bead's issue_type, which any agent can change, decides whether close-gate runs legs 1-8. Actor: a worker whose task close is REFUSED (red probe). Path: `br update <id> -t decision`. bead-capture-guard only inspects create/q (SUBCOMMANDS), and fed `br update ac-x -t decision` / `--type=decision` it exits 0. Then `br comments add <id> \"DECISION (agent): shipped\"` (the doctrinally sanctioned agent token, so no impersonation is needed) and `close-gate.sh <id> --reason shipped:...`. Demonstrated on a throwaway board (/tmp/tmp.RnkVpViuMP, real br 0.5.12): task tt-t1 with probe `false` was refused `CLOSE-REFUSED: GREEN`, retyped, then closed `CLOSED — ruling ... no probe legs were run`, status closed. The gate itself writes `GATE: decided`, so check 35 rule 6 passes the ledger commit. Nothing in check 35 flags a type change. This goes beyond R1: no ruling needs forging. The bead was never a decision, and the type router is self-serve.",
+      "fix": "Route on the type the bead was created with, not its live type: read the `created` event / first-seen issue_type (or the HEAD ledger row) and refuse the ruling path when issue_type changed after creation. Belt and braces: have bead-capture-guard block `br update ... -t/--type decision` (and have check 35 flag a staged issue_type transition to decision as RED).",
+      "auto_fixable": true
+    },
+    {
+      "title": "DECISION matcher is per-line over every comment: an unfilled template placeholder on line 2 of a memo closes a human-gate card",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 181,
+      "category": "parser-bypass",
+      "evidence": "Trust boundary: comment text agents write when they enrich a docket card, read as a ruling. `jq -r '.[].text'` flattens multi-line comments, and `grep -m1 -E '^[[:space:]]*DECISION \\([^)]*\\):'` matches ANY line of ANY comment. `[^)]*` also accepts the literal placeholder `<human>`. Actor: an honest agent that pre-stages or enriches a memo and quotes the action-loop idiom (skills/ac-human/references/action-loop.md:18, `DECISION (<human>): <choice> — <why>`). Demonstrated with real br: human-gate decision bead tt-d1 carrying one comment `MEMO (agent): ... To rule, record:\\nDECISION (<human>): <choice> — <why>` closed rc=0, and the gate recorded `ruling verified: DECISION (<human>): <choice> — <why>`. No ruling was ever made, so this is not R1 (authorship). The gate accepts text that is not a ruling at all.",
+      "fix": "Match only a comment whose FIRST line (the whole text, after trim) starts with `DECISION (`. Evaluate per comment with jq (`.[] | .text | split(\"\\n\")[0] | test(\"^\\\\s*DECISION \\\\([^)<>]+\\\\):\")`). Reject placeholder actors (`<...>`) and placeholder bodies (`<choice>`). Add a test with a multi-line memo that quotes the idiom.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Ruling path ignores the human-gate label: the agent-self-decision token `DECISION (agent)` closes cards only Craig may close",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 181,
+      "category": "authz-bypass",
+      "evidence": "Doctrine makes `DECISION (agent): <choice> — <why>` a legitimate agent-authored record (human-gate-template.md:60,78; disposition.md:38). The docket rule is that agents 'enrich but never close' human-gate cards (ac-human/SKILL.md), and the create guard's own message calls human-gate 'a decision/action card only Craig can close'. The ruling path never reads labels, and its actor grammar `[^)]*` accepts `agent`/`ac-tidy`. So an agent that dedupes into an existing card (the template's 'a hit takes a br comments add on the existing bead') and records its sanctioned `DECISION (agent)` note makes that human-gate card closable by any caller. Beyond R1: the comment truthfully declares itself agent-authored, and the gate could reject it syntactically but does not.",
+      "fix": "When the bead carries `human-gate`, refuse a ruling whose actor is `agent`, `ac-*`, or any non-human token (an allowlist of human actors, or at least a denylist of the agent tokens doctrine defines). Keep `DECISION (ac-tidy)` accepted only for `pipeline-proposal` moot closes.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Check 35 rule 6 accepts any pre-existing or hand-written GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: prefix as the landing record",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 230,
+      "category": "forged-record",
+      "evidence": "Trust boundary: the ledger commit gate that is meant to prove a close went through close-gate.sh. `landed` scans ALL of `rec['comments']`, not the comments this commit added (unlike rule 5, which uses new_worker_comments), and checks only a bare prefix. (a) Stale record: a reopened bead that carries a GATE: receipt from its earlier close can be hand-closed with `br close`. Demonstrated: a HEAD row `open` with an old `GATE: receipt` comment, staged `closed` with no new comment, gave rc=0 from 35-board-integrity.py (/tmp/tmp.OheZFaCLxX). (b) Forgery: any agent can run `br comments add <id> \"GATE: ok\"; br close <id>`, which bypasses every probe leg, and rule 6 is green. Nothing binds the record to the gate (no bead id, no grammar, no ordering against the close).",
+      "fix": "Judge only the comments new in this commit (reuse the new_comments slice). Require the close-gate grammar: `^(GATE: (receipt|decided) — <id> —|FRESH-VERIFY: <id> —|TRIAGE-CLOSE: <id> —)`, with the row's own id. Require created_at >= closed_at. Add fixtures for the stale-record reopen case and a bare `GATE:` string.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Rule 6 fires only on status 'closed': retiring work via tombstone (br delete) escapes the landing-record requirement",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 228,
+      "category": "fail-open-gate",
+      "evidence": "Rule 6 claims to be the board-side sensor for 'every close path', but its predicate is `status == \"closed\"`. `tombstone` is a canon status (rule 4 accepts it), so an agent that cannot pass close-gate can take the bead off the board with `br delete <id>`, and the staged transition open→tombstone commits with no record. Demonstrated: a staged row going from open to `tombstone` with no comments gave rc=0 (/tmp/tmp.OheZFaCLxX).",
+      "fix": "Treat any staged transition into a terminal status ({closed, tombstone}) from a non-terminal HEAD status as a close that needs a landing record. For tombstone, a different record token (for example `DELETED:` with a reason) is enough, but the transition must not be silent.",
+      "auto_fixable": true
+    }
+  ]
+}

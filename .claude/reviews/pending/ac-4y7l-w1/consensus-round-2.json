@@ -1,0 +1,490 @@
+{
+  "round": 2,
+  "reviewers_expected": [
+    "security",
+    "performance",
+    "architecture",
+    "correctness",
+    "test-quality",
+    "contracts"
+  ],
+  "panel_source": "manifest",
+  "panel_skipped": {},
+  "reviewers_present": [
+    "security",
+    "performance",
+    "architecture",
+    "correctness",
+    "test-quality",
+    "contracts"
+  ],
+  "reviewers_missing": [],
+  "total_findings": 30,
+  "after_dedup": 29,
+  "auto_fix": [
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:177|authz-bypass",
+      "title": "Ruling path routes on a mutable issue_type: retype any task to decision and it closes with no probe legs",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 177,
+      "category": "authz-bypass",
+      "fix": "Route on the type the bead was created with, not its live type: read the `created` event / first-seen issue_type (or the HEAD ledger row) and refuse the ruling path when issue_type changed after creation. Belt and braces: have bead-capture-guard block `br update ... -t/--type decision` (and have check 35 flag a staged issue_type transition to decision as RED).",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:181|parser-bypass",
+      "title": "DECISION matcher is per-line over every comment: an unfilled template placeholder on line 2 of a memo closes a human-gate card",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 181,
+      "category": "parser-bypass",
+      "fix": "Match only a comment whose FIRST line (the whole text, after trim) starts with `DECISION (`. Evaluate per comment with jq (`.[] | .text | split(\"\\n\")[0] | test(\"^\\\\s*DECISION \\\\([^)<>]+\\\\):\")`). Reject placeholder actors (`<...>`) and placeholder bodies (`<choice>`). Add a test with a multi-line memo that quotes the idiom.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,security"
+      ]
+    },
+    {
+      "key": "lint/checks/35-board-integrity.py:230|forged-record",
+      "title": "Check 35 rule 6 accepts any pre-existing or hand-written GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: prefix as the landing record",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 230,
+      "category": "forged-record",
+      "fix": "Judge only the comments new in this commit (reuse the new_comments slice). Require the close-gate grammar: `^(GATE: (receipt|decided) \u2014 <id> \u2014|FRESH-VERIFY: <id> \u2014|TRIAGE-CLOSE: <id> \u2014)`, with the row's own id. Require created_at >= closed_at. Add fixtures for the stale-record reopen case and a bare `GATE:` string.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:603|missing-boundary-error-handling",
+      "title": "RECORD-FAILED reuses exit 1 ('bead stays open') on a bead that is already closed; the caller's retry is refused OWNERSHIP, so check 35 rule 6 can never go green",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 603,
+      "category": "missing-boundary-error-handling",
+      "fix": "Give RECORD-FAILED its own exit code (e.g. 3) and add it to the header's exit table. Add a record-only re-entry: when the bead is already `closed` and carries no landing-record prefix, close-gate.sh <id> --record-only writes the record and exits 0. Add a worker.md line for the new code ('the close landed; re-run with --record-only, never unclaim'). Add a close-gate.test.sh case that makes `comments add` fail and asserts the exit code and the recovery.",
+      "auto_fixable": false,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts,correctness"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:181|missing-boundary-error-handling",
+      "title": "The ruling path accepts an indented draft `DECISION (\u2026):` line anywhere inside any comment, including conductor notes that say no ruling exists",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 181,
+      "category": "missing-boundary-error-handling",
+      "fix": "Match comment-level, not line-level: `jq -r '.[] | .text' | ` \u2192 `jq -r '[.[] | select(.text | test(\"^DECISION \\\\([^)]*\\\\):\"))] | last | .text // empty'`. The comment must BEGIN with `DECISION (`, with no leading whitespace. Take the newest such comment as the ruling. Add a close-gate.test.sh refusal case whose only DECISION text is an indented line inside a longer note.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,security"
+      ]
+    },
+    {
+      "key": "skills/ac-human/references/action-loop.md:20|wrong-abstraction",
+      "title": "The docket's one close idiom routes every human-gate bead to close-gate.sh, but only `decision`-typed beads have a path through it; the rest of the docket gets NOT-CHECKED",
+      "severity": "High",
+      "file": "skills/ac-human/references/action-loop.md",
+      "line": 20,
+      "category": "wrong-abstraction",
+      "fix": "Route the ruling path on the docket's own key: label `human-gate`/`pipeline-proposal`/`dream-proposal` OR `issue_type == decision`, in one predicate that the docket collector and the gate share. Alternatively, keep type routing but make the docket idiom refuse up front (retype to `decision` first) and say so in action-loop.md. Either way, add a close-gate.test.sh case for a `task`-typed human-gate bead with a recorded ruling.",
+      "auto_fixable": false,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts"
+      ]
+    },
+    {
+      "key": "skills/ac-human/references/session-scan.md:29|tight-coupling",
+      "title": "The org-wide docket sweep sources br-call.sh from `$(git rev-parse --show-toplevel)/skills/\u2026`, which does not exist at the org root or in most apps, so every repo renders DEGRADED",
+      "severity": "High",
+      "file": "skills/ac-human/references/session-scan.md",
+      "line": 29,
+      "category": "tight-coupling",
+      "fix": "Resolve helpers the way close-gate.sh resolves its own (relative to the script or skill being executed, or `${CLAUDE_SKILL_DIR}`/.claude/skills fallback), not to the caller's git toplevel. Abort the sweep with one NOT-CHECKED line when `type br_call` fails, never N DEGRADED lines. In action-loop.md, chain the ledger commit on the gate's exit 0 so a missing or refusing gate cannot be followed by a 'ruling' commit.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts,correctness"
+      ]
+    },
+    {
+      "key": "skills/ac-pipeline/references/board-scan.md:35|pattern-drift",
+      "title": "Scan A's fenced read, the 'one read shape', drops `--json` and skips its own row-shape idiom; a second raw read survives in the same file",
+      "severity": "High",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 35,
+      "category": "pattern-drift",
+      "fix": "Make the fence the idiom itself: `br_call list --limit 0 --json | jq -e '<idiom>'` and `br_call ready --limit 0 --json | jq -e '<idiom>'`. Route :199 through br_call plus the idiom. Either move the edge read into the fence as a named exception with its reason, or replace it with `br_call show --json` dependencies. Add a lint/grep probe that a `br_call (list|ready)` line in board-scan.md carries `--json`.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts"
+      ]
+    },
+    {
+      "key": "lint/checks/35-board-integrity.py:228|unproven-seam",
+      "title": "Check 35 rule 6 is red on this batch's own ledger commit; it landed only because no commit-time loop runs the rule",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 228,
+      "category": "unproven-seam",
+      "fix": "Put rule 6 on a real commit-time path: have coordinator.sh (or swarm-commit.sh's ledger leg) run lint/checks/35-board-integrity.py against the staged ledger before it commits, or install the hooks.d chain in this checkout. Add a cutover guard, like rule 3's origin cutover, so closes with closed_at before the rule's landing are never judged. Backfill a note on ac-4y7l.4/.11/.12/.13, or record that they closed pre-rule.",
+      "auto_fixable": false,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:correctness,security"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:603|missing-error-path",
+      "title": "RECORD-FAILED exits 1 after the close has landed, colliding with CLOSE-REFUSED's 'bead stays open' contract",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 603,
+      "category": "missing-error-path",
+      "fix": "Write the landing record atomically: `\"$BR\" close \"$BEAD\" --reason \"$REASON\" --transition-comment \"$LND_TEXT\"`, with LND_TEXT computed before the close. If the two-step write is kept, give RECORD-FAILED its own exit code (for example 3), document it in the header, and add a worker.md \u00a77/\u00a78 arm: 'closed; re-add the record with br comments add, never re-run the gate'.",
+      "auto_fixable": false,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts,correctness"
+      ]
+    },
+    {
+      "key": "skills/ac-human/references/session-scan.md:29|logic-error",
+      "title": "Org-wide docket sweep sources br-call.sh from the cwd repo's skills/, so from ~/mission or 3 of 4 apps every repo renders DEGRADED",
+      "severity": "High",
+      "file": "skills/ac-human/references/session-scan.md",
+      "line": 29,
+      "category": "logic-error",
+      "fix": "Resolve the helper from the skill's own install, never from the cwd repo. For example, `. \"$HOME/mission/software/agent-compounds/skills/_tools/br-call.sh\"`, or the `.claude/skills/_tools/br-call.sh` symlink every deploy target carries (verified present in all apps). Refuse once, loudly, if sourcing fails, instead of degrading per repo. Use the same resolvable path for close-gate.sh in action-loop.md and human-gate-template.md.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts,correctness"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.test.sh:797|hollow-test",
+      "title": "RECORD-FAILED exit (ac-4y7l.5) has no covering case: deleting both `exit 1`s leaves close-gate.test.sh green",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.test.sh",
+      "line": 797,
+      "category": "hollow-test",
+      "fix": "Add a mock switch such as AC2_TEST_BR_COMMENT_FAIL=1 that makes `comments add` exit 1. Add two cases, one on the ordinary receipt close and one on the decision ruling close. Each should assert rc=1, 'RECORD-FAILED' on stderr, and status=closed (the close landed and the record did not).",
+      "auto_fixable": false,
+      "reviewers": [
+        "test-quality"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "lint/checks/35-board-integrity.test.sh:200|hollow-test",
+      "title": "Rule 6 accepts FRESH-VERIFY: and TRIAGE-CLOSE: records, but only GATE: is ever fixtured; dropping both prefixes stays green",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.test.sh",
+      "line": 200,
+      "category": "hollow-test",
+      "fix": "Add two GREEN staged-lane fixtures, each a bead newly closed this commit: one with only a `FRESH-VERIFY: ...` comment and one with only a `TRIAGE-CLOSE: ...` comment. Assert rc=0 for each. Use the text shape close-gate.sh emits, not invented strings.",
+      "auto_fixable": false,
+      "reviewers": [
+        "test-quality"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:603|lying-status-code",
+      "title": "RECORD-FAILED exits 1 after the close has landed, but exit 1 is documented as 'the bead stays open', and refly.sh reopens on it",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 603,
+      "category": "lying-status-code",
+      "fix": "Give RECORD-FAILED its own exit code (for example 3) in both arms. Document it in the header's Exit block and in worker.md \u00a74b and \u00a77 as 'closed, record missing: write the landing comment by hand, never re-run the gate, never unclaim'. Make refly.sh treat that code as closed and not reopen. Add close-gate.test.sh cases where the stub br fails `comments add` on the ordinary path and on the ruling path: expect the new code, status closed and the RECORD-FAILED token. Add one case that asserts 'GATE: receipt' lands on an ordinary receipt-backed close.",
+      "auto_fixable": true,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts,correctness"
+      ]
+    },
+    {
+      "key": "lint/checks/35-board-integrity.py:19|untested-promise",
+      "title": "Rule 6's 'the ledger commit itself is the gate' is not wired: the installed pre-commit is gitleaks-only, and a460628 landed four unrecorded closes that check 35 flags RED",
+      "severity": "High",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 19,
+      "category": "untested-promise",
+      "fix": "Restore a pre-commit dispatcher that runs hooks.d/pre-commit/* (harness-sync.sh should own and verify it, and chain gitleaks as an entry rather than a replacement). Add a sensor, such as a lint check or a harness-sync --check leg, that goes RED when .git/hooks/pre-commit does not dispatch 60-ac-lint. Change rule 6's message to name a recovery that works on a closed bead, for example `br comments add <id> \"GATE: receipt \u2014 <id> \u2014 backfilled: <evidence>\"`. Repair the four beads.",
+      "auto_fixable": false,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": [
+        "severity:High"
+      ]
+    },
+    {
+      "key": "skills/ac-human/references/action-loop.md:20|contract-drift",
+      "title": "The ruling-tap idiom sends every human-gate bead through close-gate.sh, but only issue_type=decision takes the ruling path, so task/bug/feature gate beads cannot be closed by the documented tap",
+      "severity": "High",
+      "file": "skills/ac-human/references/action-loop.md",
+      "line": 20,
+      "category": "contract-drift",
+      "fix": "Route on the ruling rather than on issue_type: take the ruling path for any bead carrying `human-gate`, `pipeline-proposal` or `dream-proposal` with a DECISION comment, or for type decision. Resolve the gate path the way close-gate resolves its evidence core (`.claude/skills/...` fallback), or spell it via `$(git rev-parse --show-toplevel)/.claude/skills/ac-implement/scripts/close-gate.sh`. Add close-gate.test.sh cases: a `-t task` + human-gate bead with a DECISION comment closes with GATE: decided, and one without a DECISION comment gives CLOSE-REFUSED DECISION.",
+      "auto_fixable": true,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts"
+      ]
+    },
+    {
+      "key": "skills/ac-human/references/session-scan.md:29|contract-drift",
+      "title": "The org-wide sweep sources br-call.sh from <toplevel>/skills/_tools, which does not exist at org level or in unsit/art-still, so every repo renders a false DEGRADED",
+      "severity": "High",
+      "file": "skills/ac-human/references/session-scan.md",
+      "line": 29,
+      "category": "contract-drift",
+      "fix": "Resolve the helper from the skill's own install location (for example `${CLAUDE_SKILL_DIR:-$HOME/mission/software/agent-compounds/skills}/_tools/br-call.sh`, or try `skills/_tools` then `.claude/skills/_tools`) and abort with a single `NOT-CHECKED: br-call.sh not found` if `type br_call` fails, never DEGRADED per repo. Print `unpushed ledger ($(basename \"$repo\")): N`.",
+      "auto_fixable": true,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": [
+        "severity:High",
+        "same-location-consensus:architecture,contracts,correctness"
+      ]
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:181|authz-bypass",
+      "title": "Ruling path ignores the human-gate label: the agent-self-decision token `DECISION (agent)` closes cards only Craig may close",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 181,
+      "category": "authz-bypass",
+      "fix": "When the bead carries `human-gate`, refuse a ruling whose actor is `agent`, `ac-*`, or any non-human token (an allowlist of human actors, or at least a denylist of the agent tokens doctrine defines). Keep `DECISION (ac-tidy)` accepted only for `pipeline-proposal` moot closes.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,security"
+      ]
+    },
+    {
+      "key": "lint/checks/35-board-integrity.py:228|fail-open-gate",
+      "title": "Rule 6 fires only on status 'closed': retiring work via tombstone (br delete) escapes the landing-record requirement",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 228,
+      "category": "fail-open-gate",
+      "fix": "Treat any staged transition into a terminal status ({closed, tombstone}) from a non-terminal HEAD status as a close that needs a landing record. For tombstone, a different record token (for example `DELETED:` with a reason) is enough, but the transition must not be silent.",
+      "auto_fixable": true,
+      "reviewers": [
+        "security"
+      ],
+      "reasons": [
+        "same-location-consensus:correctness,security"
+      ]
+    },
+    {
+      "key": "skills/ac-tidy/SKILL.md:67|unproven-seam",
+      "title": "tidy's app-board close/receipt/status counts, plan A1's only sensor where check 35 cannot run, exist as a label with no implementation",
+      "severity": "Medium",
+      "file": "skills/ac-tidy/SKILL.md",
+      "line": 67,
+      "category": "unproven-seam",
+      "fix": "Reuse the one implementation. Give lint/checks/35-board-integrity.py a `--board <path> --since <date> --count` mode that applies rules 4-6 to rows updated since the date and prints the three counts, then have tidy \u00a7 5 call it. If that is out of scope, fence the three jq lines in SKILL.md with the canon set and prefixes cited from check 35 by pointer.",
+      "auto_fixable": false,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,contracts"
+      ]
+    },
+    {
+      "key": "skills/ac-pipeline/references/board-scan.md:35|doc-mismatch",
+      "title": "Scan A's two fenced reads dropped --json but still promise an {issues:[...]} object and a flat array",
+      "severity": "Medium",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 35,
+      "category": "doc-mismatch",
+      "fix": "Make Scan A `br_call list --limit 0 --json | <idiom>` and `br_call ready --json | <idiom>`, and add the one sourcing line (with the .claude/skills fallback) above it.",
+      "auto_fixable": true,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,contracts"
+      ]
+    },
+    {
+      "key": "skills/ac-tidy/SKILL.md:67|stub-in-production",
+      "title": "ac-tidy's three new app-board counts have no producer: no jq lines, no definition, and a pointer to 'D4/D1' in a gitignored plan",
+      "severity": "Medium",
+      "file": "skills/ac-tidy/SKILL.md",
+      "line": 67,
+      "category": "stub-in-production",
+      "fix": "Inline the three jq predicates next to line 67, mirroring check 35's STATUS_CANON set, WORKER_RE first-line match and the GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: prefix set, with the since-date read from last-run.json. Replace 'D4/D1' with those in-repo anchors (`lint/checks/35-board-integrity.py` rules 4-6). Add a lint or grep probe that fails if the three predicates drift from check 35's constants.",
+      "auto_fixable": true,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": [
+        "same-location-consensus:architecture,contracts"
+      ]
+    }
+  ],
+  "deferred": [
+    {
+      "key": "skills/beads-standards/SKILL.md:374|pattern-drift",
+      "title": "Second copies left behind: raw `br close` canon (and a `--force` escape the gate cannot take) in beads-standards, and filed-as-beads counts in dream after filing was deleted",
+      "severity": "Medium",
+      "file": "skills/beads-standards/SKILL.md",
+      "line": 374,
+      "category": "pattern-drift",
+      "fix": "Replace SKILL.md :372/:374/:440 with a pointer to close-gate.sh, or fence them to non-pipeline repos explicitly. Either give close-gate.sh a `--force` pass-through recorded in the landing record, or strike the `-f` escape from bead-conventions.md:131. Remove the 'filed as beads' count and the `br ready --label dream-proposal` pointer from auto-act-rubric.md step 5, and drop the dream-bead criteria from dream-daily.md Success Criteria.",
+      "auto_fixable": true,
+      "reviewers": [
+        "architecture"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/ac-beadify/references/bead-schema.md:160|missing-test-coverage",
+      "title": "touchers.test.sh Case 12 red: caused by 07c3cf5 (ac-4y7l.5) adding 5 close-gate referrers without re-deriving bead-schema.md's example count",
+      "severity": "Medium",
+      "file": "skills/ac-beadify/references/bead-schema.md",
+      "line": 160,
+      "category": "missing-test-coverage",
+      "fix": "Re-derive the example line to \u2192 13. Better, make Case 12 hermetic: run the example against a fixture tree, or only validate its shape and self-consistency, so the schema's teaching example stops being a live-repo count sensor that any unrelated doc edit can break.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "lint/checks/35-board-integrity.py:161|logic-error",
+      "title": "Rule 5 picks 'new' comments by position, but br orders comments by created_at, so a legacy receipt is still re-judged",
+      "severity": "Medium",
+      "file": "lint/checks/35-board-integrity.py",
+      "line": 161,
+      "category": "logic-error",
+      "fix": "Compute new comments as a set difference by comment id: head_ids = {c['id'] for c in head_comments}; new = [c for c in staged_comments if c.get('id') not in head_ids]. Fall back to (created_at, text) when id is absent. Add a fixture where the new comment sorts before the legacy one.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.test.sh:259|missing-test-coverage",
+      "title": "close-gate suite never asserts the GATE: receipt record or RECORD-FAILED: both survive sabotage",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/close-gate.test.sh",
+      "line": 259,
+      "category": "missing-test-coverage",
+      "fix": "In an existing receipt-backed accept case, assert that comments.log contains a line starting 'GATE: receipt \u2014 <bead>'. Add a case with a mock `comments add` that exits non-zero: assert the output contains RECORD-FAILED, the gate's exit code, and that the bead reads closed.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/ac-implement/scripts/close-gate.sh:179|swallowed-exception",
+      "title": "Ruling path swallows a refused comments read as 'no ruling found' (exit 1) instead of NOT-CHECKED (exit 2)",
+      "severity": "Medium",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 179,
+      "category": "swallowed-exception",
+      "fix": "Split the read from the match: `CMTS=$(br_call comments list \"$BEAD\" --json </dev/null) || not_checked \"READ\" \"comments list refused for $BEAD\"`, then run jq -e over the array (refuse NOT-CHECKED on a non-array shape), then grep. Add a suite case with a failing comments list that expects exit 2.",
+      "auto_fixable": true,
+      "reviewers": [
+        "correctness"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/_tools/touchers.test.sh:216|flakiness-precursor",
+      "title": "touchers Case 12 pins a live-repo referrer count (\u2192 8) in a doc example, so any unrelated edit anywhere in the registry turns it red",
+      "severity": "Medium",
+      "file": "skills/_tools/touchers.test.sh",
+      "line": 216,
+      "category": "flakiness-precursor",
+      "fix": "Separate shape from count. Run Case 12 in a fixture tree under $WORK that contains exactly the N referrer files the example declares, with the example's rg command run from that cwd. Alternatively, rewrite the example to reference a stable fixture path. Either way the test proves the example's grammar and stays independent of the live registry's referrer count.",
+      "auto_fixable": false,
+      "reviewers": [
+        "test-quality"
+      ],
+      "reasons": []
+    },
+    {
+      "key": "skills/dream/workflows/dream-daily.md:62|doc-mismatch",
+      "title": "The dream 'bead filing DISABLED' edit left the old contract standing in both files: step 4 references step 7 'filing', and the digest and status vocabulary still count filed beads",
+      "severity": "Medium",
+      "file": "skills/dream/workflows/dream-daily.md",
+      "line": 62,
+      "category": "doc-mismatch",
+      "fix": "Delete the 'filed as decision beads in Step 7' sentence (dream-daily:62-63). Drop the Filed-as-beads field and count from lines 72, 95-97 and 108 and rubric step 5 (point the nudge at the queued-file count instead). Rewrite the rubric's Status vocabulary Gated path to `pending` \u2192 (human tuning session) \u2192 `applied` | `rejected`.",
+      "auto_fixable": true,
+      "reviewers": [
+        "contracts"
+      ],
+      "reasons": []
+    }
+  ]
+}

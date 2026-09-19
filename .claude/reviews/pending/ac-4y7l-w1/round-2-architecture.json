@@ -1,0 +1,77 @@
+{
+  "reviewer": "architecture",
+  "round": 2,
+  "payload_read": "git diff 2dc960b..fd2f7ca",
+  "findings": [
+    {
+      "title": "RECORD-FAILED reuses exit 1 ('bead stays open') on a bead that is already closed; the caller's retry is refused OWNERSHIP, so check 35 rule 6 can never go green",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 603,
+      "category": "missing-boundary-error-handling",
+      "evidence": "The probe path exits 1 on RECORD-FAILED after `br close` has landed (lines 569-604). The header contract at :70 still says `Exit 1  CLOSE-REFUSED — a named leg failed; the bead stays open`, and the only consumer does what that contract says: worker.md:238 `exit 1 — CLOSE-REFUSED: <LEG>. Fix what the leg names and re-run`, and worker.md:145-147 (the §4b obsolete close) says `unclaim, §1`. A re-run hits LEG 8 at :565-567, where PRE_STATUS is now `closed`, not `in_progress`, and gets `refuse OWNERSHIP`. So the landing record can never be written through the gate. The staged ledger then carries a close with no GATE:/FRESH-VERIFY:/TRIAGE-CLOSE: comment, check 35 rule 6 goes RED, and the coordinator's single ledger commit through swarm-commit is refused. The only way out is to hand-type a `GATE:` comment, which forges the record rule 6 exists to demand. No script or prose names the RECORD-FAILED token (grep shows only close-gate.sh). The decision path recovers, because a re-run just re-reads `closed` and records, but the probe path does not. The plan's aim (D1: 'a close the gate accepted can never be refused later by check 35 as if it were a hand close') is unmet for exactly the failure the token was added for.",
+      "fix": "Give RECORD-FAILED its own exit code (e.g. 3) and add it to the header's exit table. Add a record-only re-entry: when the bead is already `closed` and carries no landing-record prefix, close-gate.sh <id> --record-only writes the record and exits 0. Add a worker.md line for the new code ('the close landed; re-run with --record-only, never unclaim'). Add a close-gate.test.sh case that makes `comments add` fail and asserts the exit code and the recovery.",
+      "auto_fixable": false
+    },
+    {
+      "title": "The ruling path accepts an indented draft `DECISION (…):` line anywhere inside any comment, including conductor notes that say no ruling exists",
+      "severity": "High",
+      "file": "skills/ac-implement/scripts/close-gate.sh",
+      "line": 181,
+      "category": "missing-boundary-error-handling",
+      "evidence": "`jq -r '.[].text' | grep -m1 -E '^[[:space:]]*DECISION \\([^)]*\\):'` splits every comment into lines and matches any line, indented or not. So the only thing this door refuses on can be met by prose that quotes the ruling format. Live board: body-compass-app bd-g70h5 has a CONDUCTOR NOTE whose first line is 'the gated write HAS EXECUTED … left OPEN for Craig'. Its body says 'The conductor will NOT write a `DECISION (Craig):` comment on his behalf', then gives a paste-ready indented draft, `    DECISION (Craig): (a)-variant — apply now …`. bd-kxcwr ('Not closed. Conductor/human adjudication required') has the same indented `    DECISION (Craig, 2026-08-11, supervised sitting): RATIFY 3 of 4`. Before Craig's real ruling, the gate would have closed either decision bead on the agent's draft and stamped `GATE: decided … ruling verified: <draft>`. The plan's R1 accepts that authorship is unverifiable. It does not accept that the record's own shape is unverified.",
+      "fix": "Match comment-level, not line-level: `jq -r '.[] | .text' | ` → `jq -r '[.[] | select(.text | test(\"^DECISION \\\\([^)]*\\\\):\"))] | last | .text // empty'`. The comment must BEGIN with `DECISION (`, with no leading whitespace. Take the newest such comment as the ruling. Add a close-gate.test.sh refusal case whose only DECISION text is an indented line inside a longer note.",
+      "auto_fixable": true
+    },
+    {
+      "title": "The docket's one close idiom routes every human-gate bead to close-gate.sh, but only `decision`-typed beads have a path through it; the rest of the docket gets NOT-CHECKED",
+      "severity": "High",
+      "file": "skills/ac-human/references/action-loop.md",
+      "line": 20,
+      "category": "wrong-abstraction",
+      "evidence": "The docket's population is keyed by LABEL (human-gate / pipeline-proposal / dream-proposal). The gate routes by TYPE (close-gate.sh:177, `issue_type == decision`). action-loop.md:20, session-scan.md:10-11, ac-human/SKILL.md:58 and human-gate-template.md:230 now send every docket close to the gate. The same file (:41, Migration duty) mandates `-t task for manual actions` human-gate beads. Across the boards, 14 of the 21 open docket beads are task/feature (art-still-app 10/10 task, none with a Probe: line; body-compass-app 3 task + 1 feature). Measured: `close-gate.sh artstill-app-rrk.2 --reason ... --dry-run` → `NOT-CHECKED: PROBE-DRIFT — names zero extractable probes`, rc=2. A probe-bearing unclaimed one would be refused OWNERSHIP. The canon now forbids a bare `br close` for these beads but offers no path through the gate, and on app boards no sensor refuses the fallback (plan A1: check 35 runs only here). This is the coordinated-workaround shape: ac-tidy/SKILL.md:52 already writes the gate's refusal on task-typed proposals into prose as 'report that exit as the skip'.",
+      "fix": "Route the ruling path on the docket's own key: label `human-gate`/`pipeline-proposal`/`dream-proposal` OR `issue_type == decision`, in one predicate that the docket collector and the gate share. Alternatively, keep type routing but make the docket idiom refuse up front (retype to `decision` first) and say so in action-loop.md. Either way, add a close-gate.test.sh case for a `task`-typed human-gate bead with a recorded ruling.",
+      "auto_fixable": false
+    },
+    {
+      "title": "The org-wide docket sweep sources br-call.sh from `$(git rev-parse --show-toplevel)/skills/…`, which does not exist at the org root or in most apps, so every repo renders DEGRADED",
+      "severity": "High",
+      "file": "skills/ac-human/references/session-scan.md",
+      "line": 29,
+      "category": "tight-coupling",
+      "evidence": "The sweep is for 'org level or asked across everything'. From ~/mission, `git rev-parse --show-toplevel` is /home/craigvandotcom/mission, and neither mission/skills/_tools/br-call.sh nor mission/.claude/skills/_tools/br-call.sh exists. Reproduced: `. \"$(git rev-parse --show-toplevel)/skills/_tools/br-call.sh\"` → 'No such file', then `br_call: command not found`, then RAW is empty. Every repo in the loop therefore prints `DEGRADED <repo> — read refused` and the docket shows zero items. The new sensor fires on its own setup, not on a refused read. The same repo-registry layout is assumed by the ruling idiom's `skills/ac-implement/scripts/close-gate.sh` (action-loop.md:20, human-gate-template.md:230): art-still-app and unsit-app have no top-level skills/ (only .claude/skills and .agents/skills). There the gate call exits 127, and the next line of the fence still commits and pushes the ledger as a 'human ruling'.",
+      "fix": "Resolve helpers the way close-gate.sh resolves its own (relative to the script or skill being executed, or `${CLAUDE_SKILL_DIR}`/.claude/skills fallback), not to the caller's git toplevel. Abort the sweep with one NOT-CHECKED line when `type br_call` fails, never N DEGRADED lines. In action-loop.md, chain the ledger commit on the gate's exit 0 so a missing or refusing gate cannot be followed by a 'ruling' commit.",
+      "auto_fixable": true
+    },
+    {
+      "title": "Scan A's fenced read, the 'one read shape', drops `--json` and skips its own row-shape idiom; a second raw read survives in the same file",
+      "severity": "High",
+      "file": "skills/ac-pipeline/references/board-scan.md",
+      "line": 35,
+      "category": "pattern-drift",
+      "evidence": "br-call.sh passes its arguments through verbatim and never adds `--json`. The new Scan A fence is `br_call list  --limit 0` and `br_call ready`, both without `--json`. Measured: `br_call list --limit 0` prints `○ ac-48vu [● P1] [bug] - …` and `br_call ready` prints `📋 Ready work (19 issues …)`, human text, while the fence's comments promise 'object {issues:[...]}' and 'a FLAT array'. Neither line pipes through the idiom fenced 20 lines below, even though :52 says 'every Scan A read pipes through it, never a second copy'. The same file keeps a raw `br ready --limit 0 --json | jq -r '.[] …'` at :199 (not br_call, no shape guard) and ':186 Edge queries read .beads/issues.jsonl directly'. The latter is a third read shape, in the file that :70-73 says every other read 'now points back here'. D3's rule, 'one read shape … never a second copy', is broken at its own fence.",
+      "fix": "Make the fence the idiom itself: `br_call list --limit 0 --json | jq -e '<idiom>'` and `br_call ready --limit 0 --json | jq -e '<idiom>'`. Route :199 through br_call plus the idiom. Either move the edge read into the fence as a named exception with its reason, or replace it with `br_call show --json` dependencies. Add a lint/grep probe that a `br_call (list|ready)` line in board-scan.md carries `--json`.",
+      "auto_fixable": true
+    },
+    {
+      "title": "tidy's app-board close/receipt/status counts, plan A1's only sensor where check 35 cannot run, exist as a label with no implementation",
+      "severity": "Medium",
+      "file": "skills/ac-tidy/SKILL.md",
+      "line": 67,
+      "category": "unproven-seam",
+      "evidence": "Plan D6/A1 says the app boards (where 'every measured drift lives') are 'watched by D6's nightly counts', computed 'with three jq lines over rows whose updated_at is on or after the previous run's date'. The diff adds only the names, `foreign status:` / `off-canon receipts:` / `unrecorded closes:` 'against D4/D1's canon grammar'. There are no jq lines, no status set, no WORKER regex, no landing-record prefix list, and no read of last-run.json's date. Each nightly agent must re-derive check 35's rules 4, 5 and 6 from prose, which makes a second, drifting copy of a rule and has no feedback loop. A count an agent invents cannot go red on the writer the plan missed, which is the only job A1 gives it. grep finds no other implementation.",
+      "fix": "Reuse the one implementation. Give lint/checks/35-board-integrity.py a `--board <path> --since <date> --count` mode that applies rules 4-6 to rows updated since the date and prints the three counts, then have tidy § 5 call it. If that is out of scope, fence the three jq lines in SKILL.md with the canon set and prefixes cited from check 35 by pointer.",
+      "auto_fixable": false
+    },
+    {
+      "title": "Second copies left behind: raw `br close` canon (and a `--force` escape the gate cannot take) in beads-standards, and filed-as-beads counts in dream after filing was deleted",
+      "severity": "Medium",
+      "file": "skills/beads-standards/SKILL.md",
+      "line": 374,
+      "category": "pattern-drift",
+      "evidence": "D1 said SKILL.md's raw `br close … -r` forms and 'the only route to closed' name the gate. Only :371 got a conditional pointer. :374 still says 'terminal states close via `br close -r` only', :372 'br close <id1> <id2> # close several' (the gate has no multi-close), and :440 Working cadence '4. Complete — `br close <id> -r \"...\"`'. bead-conventions.md:131 still canonises `br close -f/--force` as 'the documented escape' for a parent blocked by a dot-child. close-gate.sh has no force flag (:569 plain `br close`), so a blocked bead has only a sanctioned path around the owner. That path is rule-6 RED here and silent on app boards. For .9: auto-act-rubric.md:103-104 step 5 still reports '*M filed as beads · K open in the docket* — pointing at `br ready --label dream-proposal`', directly under the new step 4 'bead filing is DISABLED'. dream-daily.md:106-108 still requires 'Open dream beads <20' and a card 'stating … filed-as-beads … counts'. The contradiction the bead deleted in one line survives two lines away.",
+      "fix": "Replace SKILL.md :372/:374/:440 with a pointer to close-gate.sh, or fence them to non-pipeline repos explicitly. Either give close-gate.sh a `--force` pass-through recorded in the landing record, or strike the `-f` escape from bead-conventions.md:131. Remove the 'filed as beads' count and the `br ready --label dream-proposal` pointer from auto-act-rubric.md step 5, and drop the dream-bead criteria from dream-daily.md Success Criteria.",
+      "auto_fixable": true
+    }
+  ]
+}

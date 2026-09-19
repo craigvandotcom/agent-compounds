@@ -68,5 +68,75 @@
     "line": 39,
     "category": "doc-mismatch",
     "summary": "Check 35 docstring still says closed beads are NEVER scanned and describes rule 4 as 'either status', but rules 4 and 5 now scan closed rows"
+  },
+  {
+    "round": 2,
+    "key": "skills/beads-standards/SKILL.md:374|pattern-drift",
+    "reviewer": "architecture",
+    "severity": "Medium",
+    "file": "skills/beads-standards/SKILL.md",
+    "line": 374,
+    "category": "pattern-drift",
+    "summary": "Second copies left behind: raw `br close` canon (and a `--force` escape the gate cannot take) in beads-standards, and filed-as-beads counts in dream after filing was deleted"
+  },
+  {
+    "round": 2,
+    "key": "skills/ac-beadify/references/bead-schema.md:160|missing-test-coverage",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-beadify/references/bead-schema.md",
+    "line": 160,
+    "category": "missing-test-coverage",
+    "summary": "touchers.test.sh Case 12 red: caused by 07c3cf5 (ac-4y7l.5) adding 5 close-gate referrers without re-deriving bead-schema.md's example count"
+  },
+  {
+    "round": 2,
+    "key": "lint/checks/35-board-integrity.py:161|logic-error",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "lint/checks/35-board-integrity.py",
+    "line": 161,
+    "category": "logic-error",
+    "summary": "Rule 5 picks 'new' comments by position, but br orders comments by created_at, so a legacy receipt is still re-judged"
+  },
+  {
+    "round": 2,
+    "key": "skills/ac-implement/scripts/close-gate.test.sh:259|missing-test-coverage",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.test.sh",
+    "line": 259,
+    "category": "missing-test-coverage",
+    "summary": "close-gate suite never asserts the GATE: receipt record or RECORD-FAILED: both survive sabotage"
+  },
+  {
+    "round": 2,
+    "key": "skills/ac-implement/scripts/close-gate.sh:179|swallowed-exception",
+    "reviewer": "correctness",
+    "severity": "Medium",
+    "file": "skills/ac-implement/scripts/close-gate.sh",
+    "line": 179,
+    "category": "swallowed-exception",
+    "summary": "Ruling path swallows a refused comments read as 'no ruling found' (exit 1) instead of NOT-CHECKED (exit 2)"
+  },
+  {
+    "round": 2,
+    "key": "skills/_tools/touchers.test.sh:216|flakiness-precursor",
+    "reviewer": "test-quality",
+    "severity": "Medium",
+    "file": "skills/_tools/touchers.test.sh",
+    "line": 216,
+    "category": "flakiness-precursor",
+    "summary": "touchers Case 12 pins a live-repo referrer count (\u2192 8) in a doc example, so any unrelated edit anywhere in the registry turns it red"
+  },
+  {
+    "round": 2,
+    "key": "skills/dream/workflows/dream-daily.md:62|doc-mismatch",
+    "reviewer": "contracts",
+    "severity": "Medium",
+    "file": "skills/dream/workflows/dream-daily.md",
+    "line": 62,
+    "category": "doc-mismatch",
+    "summary": "The dream 'bead filing DISABLED' edit left the old contract standing in both files: step 4 references step 7 'filing', and the digest and status vocabulary still count filed beads"
   }
 ]
