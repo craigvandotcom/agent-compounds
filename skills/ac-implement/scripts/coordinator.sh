@@ -54,7 +54,16 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --run)             RUN="${2:-}"; shift 2 ;;
     --root)            ROOT="${2:-}"; shift 2 ;;
-    --actor)           ACTORS+=("${2:-}"); shift 2 ;;
+    --actor)
+      # A trailing bare --actor (no value follows) and an explicit empty value are both
+      # refused HERE, at parse time: `$# -lt 2` means there is no second argument to shift
+      # onto, so `shift 2` would fail silently and loop forever (measured); an empty value
+      # would otherwise sit in the roster and match any unassigned claim's blank assignee.
+      if [ $# -lt 2 ] || [ -z "$2" ]; then
+        echo "NOT-GATED: --actor requires a non-empty value" >&2
+        exit 2
+      fi
+      ACTORS+=("$2"); shift 2 ;;
     --mirror-artifacts) MIRROR=1; shift ;;
     --dry-run)         DRY=1; shift ;;
     *) echo "NOT-GATED: unknown argument '$1'" >&2; exit 2 ;;
@@ -116,9 +125,11 @@ if command -v "$BR" >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     || ungated "'$BR coordination status' refused; liveness is unknown and orphans cannot be ruled out"
   [ -n "$CLAIMS" ] || ungated "'$BR coordination status' returned nothing; liveness is unknown and orphans cannot be ruled out"
   ROSTER_JSON=$(printf '%s\n' "${ACTORS[@]}" | jq -R . | jq -s .)
+  # The holder lives at .assessment.assignee (br 0.5.12): .issue carries no assignee key at
+  # all, so selecting on .issue.assignee always reads null and the sweep never fires (ac-4y7l.11).
   ORPHANS=$(printf '%s' "$CLAIMS" | jq -r --argjson roster "$ROSTER_JSON" \
     '[.claims[]? | select((.issue.status? // "") == "in_progress")
-       | ((.issue.assignee? // "") as $a | select($roster | index($a)))
+       | ((.assessment.assignee? // "") as $a | select($roster | index($a)))
        | .issue.id] | join(" ")' 2>/dev/null || echo "?")
   [ "$ORPHANS" = "?" ] && ungated "could not parse '$BR coordination status'; orphans cannot be ruled out"
   [ -z "${ORPHANS// /}" ] || refuse "ORPHANS" \

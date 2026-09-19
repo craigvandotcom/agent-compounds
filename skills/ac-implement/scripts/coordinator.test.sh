@@ -83,6 +83,18 @@ rc=$(rc_of "$W/r1" --run x)
 [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -q 'NOT-GATED when empty' \
   && ok "no --actor roster is NOT-GATED when empty, never a silent pass — a sweep with no set to select on has not swept" \
   || bad "empty --actor roster was not refused (rc=$rc): $out"
+# A trailing bare --actor (no value follows) is refused AT ONCE instead of looping forever
+# on `shift 2` against a single remaining argument (ac-4y7l.11). Bounded by timeout so a
+# regression fails the suite instead of hanging it.
+( cd "$W/r1" && timeout 5 bash skills/ac-implement/scripts/coordinator.sh --run p --actor >/dev/null 2>&1 )
+rc=$?
+[ "$rc" -eq 2 ] && ok "a trailing bare --actor is refused at once instead of hanging" \
+  || bad "trailing bare --actor did not exit 2 (rc=$rc)"
+# An explicit empty --actor value is refused NOT-GATED rather than sitting in the roster as
+# a blank entry that would match any unassigned claim's blank assignee.
+[ "$(rc_of "$W/r1" --run p --actor "" --dry-run)" -eq 2 ] \
+  && ok "an empty --actor value is refused NOT-GATED" \
+  || bad "empty --actor value was not refused"
 
 echo "coordinator.test: LEDGER-STALE — the refusal that earns the file"
 mkrepo r2
@@ -114,18 +126,32 @@ printf '%s' "$out" | grep -q 'LEDGER-STALE skipped' \
   || bad "no-upstream case was silent: $out"
 
 echo "coordinator.test: ORPHANS — selects by actor roster, not a prefix"
-CLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress","assignee":"Cave"}}]}'
+# Real shape from a live `br coordination status --json` (br 0.5.12): the holder lives at
+# .assessment.assignee — .issue carries NO assignee key at all (ac-4y7l.11). A hand-written
+# .issue.assignee fixture would pass while the sweep never fires on a real board.
+CLAIM='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress"},"assessment":{"assignee":"Cave"}}]}'
 mkrepo r5
 ( cd "$W/r5" && git fetch -q origin && git branch -q --set-upstream-to=origin/main >/dev/null 2>&1 )
 out="$(AC2_TEST_CLAIMS="$CLAIM" run "$W/r5" --run RUNA --actor Cave --dry-run)"
 rc=$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor Cave --dry-run )
 [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'ORPHANS' && printf '%s' "$out" | grep -q 'ac-1' \
-  && ok "a rostered actor's claim is picked up as an orphan and named" \
+  && ok "a rostered actor's claim (real .assessment.assignee shape) is picked up as an orphan and named" \
   || bad "orphan not refused (rc=$rc): $out"
 # THE DISCRIMINATING CASE: an unrostered actor's claim is left alone, exact match only.
 [ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor Other --dry-run )" -eq 0 ] \
   && ok "an unrostered actor's claim is left alone" \
   || bad "the sweep selected a claim outside the roster"
+# A roster name that is a PREFIX of the real holder must not match — exact match, never a prefix.
+[ "$( AC2_TEST_CLAIMS="$CLAIM" rc_of "$W/r5" --run RUNA --actor Cav --dry-run )" -eq 0 ] \
+  && ok "a roster name that is a prefix of the holder is not matched" \
+  || bad "a prefix name incorrectly matched the holder"
+# A two-actor roster: claims held by two different actors, both rostered -> both caught.
+CLAIM2='{"summary":{},"claims":[{"issue":{"id":"ac-1","status":"in_progress"},"assessment":{"assignee":"Cave"}},{"issue":{"id":"ac-2","status":"in_progress"},"assessment":{"assignee":"Dale"}}]}'
+out="$(AC2_TEST_CLAIMS="$CLAIM2" run "$W/r5" --run RUNA --actor Cave --actor Dale --dry-run)"
+rc=$( AC2_TEST_CLAIMS="$CLAIM2" rc_of "$W/r5" --run RUNA --actor Cave --actor Dale --dry-run )
+[ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q 'ac-1' && printf '%s' "$out" | grep -q 'ac-2' \
+  && ok "a two-actor roster catches both actors' orphaned claims" \
+  || bad "two-actor roster did not catch both claims (rc=$rc): $out"
 
 echo "coordinator.test: a gate that cannot verify says so"
 [ "$( AC2_TEST_CS_BROKEN=1 rc_of "$W/r5" --run RUNA --actor Cave --dry-run )" -eq 2 ] \
