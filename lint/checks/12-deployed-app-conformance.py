@@ -30,9 +30,10 @@ scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
 this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
 window is lost, never a false pass on a bare run.
 
-Exit: 0 clean, or consumer root absent (SKIP, disclosed — the check audits
-files OUTSIDE this repo and a bare checkout has none); 1 dead names;
-2 consumer root present but no consumer dir resolves (NOT-GATED, never a pass).
+Exit: 0 clean, or no consumer dir resolves at all (SKIP, disclosed — the check
+audits files OUTSIDE this repo and a fresh/consumer-less checkout has none);
+1 dead names. A skip is reported as a skip and never prints a pass claim — it
+gated nothing, so it verified nothing.
 """
 
 import os
@@ -64,8 +65,10 @@ def disp(path):
 def scan():
     base = consumers.base()
     if not consumers.base_present():
-        print(f"12-deployed-app-conformance: SKIP — consumer root {base} absent "
-              "(a consumer-less checkout); nothing to conform", file=sys.stderr)
+        print(f"SKIP 12-deployed-app-conformance: no consumer dir resolves "
+              f"under {base} (a consumer-less checkout, e.g. a fresh clone with "
+              "no deployed harness layer); nothing to conform, nothing verified",
+              file=sys.stderr)
         return 0
     scanned = 0
     for d in consumers.consumer_dirs():
@@ -85,9 +88,13 @@ def scan():
             fail(f"C3: {disp(agents_md)} still contains dead pipeline stage name(s)")
 
     if scanned == 0:
-        print("12-deployed-app-conformance NOT-CHECKED: no consumer dir exists under "
-              f"{consumers.base()} — verified nothing", file=sys.stderr)
-        return 2
+        # base_present() found at least one consumer dir a moment ago; this branch
+        # should be unreachable outside a race (a dir removed mid-scan). Either
+        # way, a scan that touched zero dirs proved nothing — skip, never claim a
+        # pass and never NOT-GATE (exit 2 blocks a suite this check cannot fix).
+        print("SKIP 12-deployed-app-conformance: no consumer dir resolved on "
+              "scan; nothing to conform, nothing verified", file=sys.stderr)
+        return 0
     print(f"12-deployed-app-conformance: {scanned} consumer dir(s) scanned")
     if violations:
         print("FAIL 12-deployed-app-conformance: dead name(s) in every-prompt surfaces:")

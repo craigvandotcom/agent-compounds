@@ -5,8 +5,10 @@
 #   PROBE: a workflow-reminder.md carrying a dead pipeline command FAILS (C1);
 #           a delegation-reminder.md carrying a dead tool name FAILS (C2); an
 #           app-root AGENTS.md carrying a dead stage name FAILS (C3); clean or
-#           missing every-prompt files PASS; no consumer dir is NOT-GATED; an
-#           absent consumer ROOT (a bare checkout) SKIPs green.
+#           missing every-prompt files PASS; no consumer dir at all (root
+#           present, nothing under it — e.g. a fresh/adopter clone) SKIPs
+#           green, never a NOT-CHECKED/exit-2 claim; an absent consumer ROOT
+#           (a bare checkout) SKIPs green too.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/12-deployed-app-conformance.test.sh
@@ -97,14 +99,34 @@ else
   bad "GREEN-MISSING: expected exit 0, got $rc"; cat "$OUT"
 fi
 
-# --- 6 NOT-GATED: no consumer dir exists at all -> exit 2 -----------------------
+# --- 6 SKIP: no consumer dir exists at all -> exit 0 (never NOT-CHECKED/exit 2)
+# A consumer-less checkout (an adopter's fresh clone, or a root that exists but
+# carries no deployed harness layer under it) must get a green suite: exit 2
+# here used to be unfixable and unconditional in every fresh clone (ac-agnostic
+# batch B). A skip is disclosed (SKIP token), never a silent/false pass.
 t="$work/empty"
 build_base "$t"
 rc=$(run_check "$t")
-if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
-  ok "EMPTY: no consumer dir -> NOT-GATED exit 2"
+if [ "$rc" = 0 ] && grep -qi "SKIP" "$OUT" && ! grep -qi "NOT-CHECKED" "$OUT"; then
+  ok "EMPTY: no consumer dir -> SKIP exit 0, disclosed"
 else
-  bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"; cat "$OUT"
+  bad "EMPTY: expected exit 0 SKIP (disclosed, no NOT-CHECKED), got $rc"; cat "$OUT"
+fi
+
+# --- 6b FAIL-CLOSED PRESERVED: a real consumer dir exists AND is broken --------
+# Pins that "no consumer tree" (case 6, SKIP) and "a consumer tree that exists
+# but is broken" (this case) are told apart: the same build_base() root, but
+# with an actual workflow-reminder.md carrying a dead command, must still FAIL
+# — the skip fix must never widen into "always green".
+t="$work/empty-but-broken"
+build_base "$t"
+mkdir -p "$t/.claude/hooks"
+printf 'Claim beads with /ac/bead-work.\n' > "$t/.claude/hooks/workflow-reminder.md"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "C1: .*workflow-reminder.md still contains dead pipeline command" "$OUT"; then
+  ok "FAIL-CLOSED: a present-but-broken consumer tree still fails"
+else
+  bad "FAIL-CLOSED: expected exit 1 naming C1, got $rc"; cat "$OUT"
 fi
 
 # --- 7 SKIP: absent consumer root (a consumer-less checkout) -> exit 0 -----------

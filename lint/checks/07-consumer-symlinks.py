@@ -23,10 +23,10 @@ scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE
 this repo (consumer dirs), which no lib.scope set can name. A `--changed` skip
 window is lost, never a false pass on a bare run.
 
-Exit: 0 every symlink resolves, or the consumer root is absent (SKIP, disclosed
-— the audited dirs live OUTSIDE this repo and a bare checkout has none);
-1 broken symlink(s); 2 consumer root present but no consumer dir resolves
-(NOT-GATED, never a pass).
+Exit: 0 every symlink resolves, or no consumer dir resolves at all (SKIP,
+disclosed — the audited dirs live OUTSIDE this repo and a fresh/consumer-less
+checkout has none); 1 broken symlink(s). A skip is reported as a skip and
+never prints a pass claim — it gated nothing, so it verified nothing.
 """
 
 import os
@@ -45,8 +45,10 @@ def fail(msg):
 
 def scan():
     if not consumers.base_present():
-        print(f"07-consumer-symlinks: SKIP — consumer root {consumers.base()} absent "
-              "(a consumer-less checkout); nothing to walk", file=sys.stderr)
+        print(f"SKIP 07-consumer-symlinks: no consumer dir resolves under "
+              f"{consumers.base()} (a consumer-less checkout, e.g. a fresh clone "
+              "with no deployed harness layer); nothing to walk, nothing verified",
+              file=sys.stderr)
         return 0
     scanned = 0
     for d in consumers.consumer_dirs():
@@ -67,9 +69,13 @@ def scan():
                     fail(f"broken symlink: {p}")
 
     if scanned == 0:
-        print("07-consumer-symlinks NOT-CHECKED: no consumer dir exists under "
-              f"{consumers.base()} — verified nothing", file=sys.stderr)
-        return 2
+        # base_present() found at least one consumer dir a moment ago; this branch
+        # should be unreachable outside a race (a dir removed mid-scan). Either
+        # way, a scan that touched zero dirs proved nothing — skip, never claim a
+        # pass and never NOT-GATE (exit 2 blocks a suite this check cannot fix).
+        print("SKIP 07-consumer-symlinks: no consumer dir resolved on scan; "
+              "nothing to walk, nothing verified", file=sys.stderr)
+        return 0
     print(f"07-consumer-symlinks: {scanned} consumer dir(s) walked")
     if violations:
         print("FAIL 07-consumer-symlinks: broken symlink(s) in a consumer harness layer:")

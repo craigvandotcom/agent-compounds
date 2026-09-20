@@ -51,6 +51,7 @@ sys.path.insert(0, _LINT)
 
 from lib import scope  # noqa: E402
 from lib import manifest  # noqa: E402  (check-14 lists read through the manifest)
+from lib import consumers  # noqa: E402  (leg 2's consumer union — the ONE copy of this fact)
 
 violations = []
 notices = []
@@ -177,31 +178,22 @@ def scan(repo, label, base, spec, cfg, staged=False):
 
 
 def consumer_dirs(root):
-    """The union Check 7 builds: org dirs ∪ ac-deploy-targets.list ∪ vitest-affected."""
-    home = os.path.expanduser("~")
-    dirs = [
-        os.path.join(home, "Repos/.claude"),
-        os.path.join(home, "Repos/neometa/content/.claude"),
-        os.path.join(home, "Repos/neometa/books/.claude"),
-        os.path.join(home, "Repos/neometa/software/.claude"),
-    ]
-    lst = os.path.join(root, "..", "..", "infrastructure", "ac-deploy-targets.list")
-    if not os.path.isfile(lst):
-        # AC_ROOT/../../../infrastructure — resolve the same way lint.sh does
-        lst = os.path.normpath(os.path.join(root, "..", "..", "..", "infrastructure", "ac-deploy-targets.list"))
-    if os.path.isfile(lst):
-        with open(lst, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.split("#", 1)[0].strip()
-                if line:
-                    dirs.append(os.path.join(home, "Repos", "neometa", "software", line, ".claude"))
-    dirs.append(os.path.join(home, "Repos/neometa/software/vitest-affected/.claude"))
-    seen, out = set(), []
-    for d in dirs:
-        if d not in seen:
-            seen.add(d)
-            out.append(d)
-    return out
+    """The union Check 7 builds: org dirs ∪ ac-deploy-targets.list ∪ vitest-affected.
+
+    Delegates to lib.consumers (07/12's own consumer-dir union) instead of
+    carrying a second, independently-hardcoded copy of the same org/app-name
+    list — two copies of one fact is a drift risk (this copy hardcoded a
+    stale 'Repos/<domain>/...' layout that does not resolve on every
+    supported checkout layout, while lib.consumers derives the domain name
+    from this checkout's own real path). `root` is accepted for call-site
+    compatibility but not otherwise used: lib.consumers.base() derives the
+    org root from its own file location (or the LINT_CONSUMER_BASE test
+    seam), exactly as it did
+    before this delegation — the legacy copy above also never keyed its own
+    home-relative dirs off `root`, only the deploy-list lookup did.
+    """
+    del root  # kept for call-site compatibility; see docstring
+    return consumers.consumer_dirs()
 
 
 def run_full(root, cfg):

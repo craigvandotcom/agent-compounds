@@ -4,8 +4,10 @@
 #
 #   PROBE: a dangling symlink in a consumer dir FAILS with the link named; a
 #           dangling link nested deeper in the layer FAILS; a layer whose
-#           symlinks all resolve PASSES; no consumer dir is NOT-GATED; an absent
-#           consumer ROOT (a bare checkout) SKIPs green.
+#           symlinks all resolve PASSES; no consumer dir at all (root present,
+#           nothing under it — e.g. a fresh/adopter clone) SKIPs green, never a
+#           NOT-CHECKED/exit-2 claim; an absent consumer ROOT (a bare checkout)
+#           SKIPs green too.
 #
 # ASSURANCE
 #   PROBE:    bash lint/checks/07-consumer-symlinks.test.sh
@@ -72,14 +74,34 @@ else
   bad "GREEN: expected exit 0, got $rc"; cat "$OUT"
 fi
 
-# --- 4 NOT-GATED: no consumer dir exists -> exit 2 ----------------------------
+# --- 4 SKIP: no consumer dir exists -> exit 0 (never NOT-CHECKED/exit 2) -----
+# A consumer-less checkout (an adopter's fresh clone, or a root that exists but
+# carries no deployed harness layer under it) must get a green suite: exit 2
+# here used to be unfixable and unconditional in every fresh clone (ac-agnostic
+# batch B). A skip is disclosed (SKIP token), never a silent/false pass.
 t="$work/empty"
 build_base "$t"
 rc=$(run_check "$t")
-if [ "$rc" = 2 ] && grep -qi "NOT-CHECKED" "$OUT"; then
-  ok "EMPTY: no consumer dir -> NOT-GATED exit 2"
+if [ "$rc" = 0 ] && grep -qi "SKIP" "$OUT" && ! grep -qi "NOT-CHECKED" "$OUT"; then
+  ok "EMPTY: no consumer dir -> SKIP exit 0, disclosed"
 else
-  bad "EMPTY: expected exit 2 NOT-CHECKED, got $rc"; cat "$OUT"
+  bad "EMPTY: expected exit 0 SKIP (disclosed, no NOT-CHECKED), got $rc"; cat "$OUT"
+fi
+
+# --- 4b FAIL-CLOSED PRESERVED: a real consumer dir exists AND is broken -------
+# Pins that "no consumer tree" (case 4, SKIP) and "a consumer tree that exists
+# but is broken" (this case) are told apart: the same build_base() root, but
+# with an actual .claude/skills tree carrying a dangling link, must still FAIL
+# — the skip fix must never widen into "always green".
+t="$work/empty-but-broken"
+build_base "$t"
+mkdir -p "$t/.claude/skills"
+ln -s "$t/.claude/skills/gone-skill" "$t/.claude/skills/dangling-link"
+rc=$(run_check "$t")
+if [ "$rc" = 1 ] && grep -q "broken symlink: .*dangling-link" "$OUT"; then
+  ok "FAIL-CLOSED: a present-but-broken consumer tree still fails"
+else
+  bad "FAIL-CLOSED: expected exit 1 naming dangling-link, got $rc"; cat "$OUT"
 fi
 
 # --- 5 SKIP: absent consumer root (a consumer-less checkout) -> exit 0 ---------
