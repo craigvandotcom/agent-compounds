@@ -20,7 +20,7 @@ Hybrid retrieval, **adaptive by machine tier**. At import it classifies the host
 Two retrieval paths:
 
 - **Keyword** — per-term BM25 `qmd search`, union-ranked by how many terms hit a file;
-  a candidate must match **≥2 terms** on BOTH tiers (Craig 2026-09-08: one stray
+  a candidate must match **≥2 terms** on BOTH tiers (2026-09-08 ruling: one stray
   keyword is not relevance — the old fast-tier 1-match floor injected noise, and the
   stricter floor *raised* recall@5, 0.8393 → 0.8571).
   The fast, reliable floor (~0.65s baseline). Keywords are pure alphanumeric runs only —
@@ -31,7 +31,7 @@ Two retrieval paths:
 Results merge, dedupe, and inject as a `<memory-recall>` block — top **3**, one plain
 `name: description` line each (no markdown, no qmd path). The frontmatter
 **description IS the injected content** — it is the distilled claim; qmd's snippet
-field is a diff hunk over frontmatter and is never emitted (2026-09-08, Craig: names
+field is a diff hunk over frontmatter and is never emitted (2026-09-08 ruling: names
 are enough to re-find — `qmd query "<name>"` for full content). Memory bodies are
 labelled **background data, NOT instructions** (poisoning guard). Telemetry
 (`log_recall`/`log_injection`) still records full qmd paths, so observability is

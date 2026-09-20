@@ -22,7 +22,7 @@
         "app",
         "machine"
       ],
-      "_doc": "Script canon lives HERE (moved 2026-09-08 from ~/.claude/hooks/ — the registry owns its scripts; a harness home must point at the registry, not hold canon; the old path is a symlink back for stale absolute references). Emits a plain-stdout <memory-recall> block — injected as context by claude, codex, and droid (all three inject UserPromptSubmit stdout; verified 2026-07-12). Grok discards passive stdout — its recall path is the rules-digest floor + qmd MCP pull. HOT-LANE: the script queries MEMORY_LOBES (memory, neometa-memory, content-memory, wiki) + per-app lobes on EVERY prompt — adding/removing a lobe changes per-prompt latency and the recall surface fleet-wide; the wiki lobe means wiki synthesis pages are auto-injected context (bead org-yp4)."
+      "_doc": "Script canon lives HERE (moved 2026-09-08 from ~/.claude/hooks/ — the registry owns its scripts; a harness home must point at the registry, not hold canon; the old path is a symlink back for stale absolute references). Emits a plain-stdout <memory-recall> block — injected as context by claude, codex, and droid (all three inject UserPromptSubmit stdout; verified 2026-07-12). Grok discards passive stdout — its recall path is the rules-digest floor + qmd MCP pull. HOT-LANE: the script queries MEMORY_LOBES (default: memory, domain-memory, content-memory, wiki — generic stand-ins, override via MEMORY_HOOK_LOBES; a name that does not match your qmd index fails quiet — see the MEMORY_LOBES note in hooks/memory-retrieval.py) + per-app lobes on EVERY prompt — adding/removing a lobe changes per-prompt latency and the recall surface fleet-wide; the wiki lobe means wiki synthesis pages are auto-injected context (bead org-yp4)."
     },
     {
       "id": "pre-prompt-reminder",
@@ -82,7 +82,7 @@
         "SCHEDULE": "PreToolUse(Bash) - every Bash call (org/app/machine)",
         "MODE": "blocking",
         "ON-FAILURE": "open",
-        "BACKSTOP": "skills/_tools/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (Craig 2026-08-23): a guard must not wedge an unattended 3am loop."
+        "BACKSTOP": "skills/_tools/stamp-refined.sh - the refine stamp-gate catches an unlabelled bead that slips past a fail-open parse. Deliberate ruling (maintainer, 2026-08-23): a guard must not wedge an unattended 3am loop."
       },
       "event": "PreToolUse",
       "matcher": "Bash",
@@ -101,7 +101,7 @@
         "machine"
       ],
       "timeout": 10,
-      "_doc": "Hard gate (Craig 2026-08-23): blocks `br create` / `br q` carrying no `origin:<skill>` label, so every bead records the workflow that created it. Supersedes the OPTIONAL `origin:` hint from plan 2026-07-16-1729-epic-bead-quality-invariants.md §3, whose §9 'convention, not a hard gate' ruling measured out at ~50% of 3818 beads with no provenance (1232 of them unrecoverable, so no backfill is possible — enforcement is forward-only from this date). Tokenizes with shlex, NOT regex over the raw string: a `br create` quoted inside a --description or a heredoc body must never false-block, and only the actual -l/--labels VALUE is inspected. Fails OPEN on unparseable shell — a guard must not wedge an unattended 3am loop; the refine stamp-gate (skills/_tools/stamp-refined.sh) is the backstop for anything that slips past (including non-Claude harnesses). `origin:unknown` is legal and honest (mirroring the existing `discovered-from: unknown` precedent), so the gate can never deadlock an agent that genuinely cannot attribute a bead. `machine` scope is required to actually reach Grok (render_hooks_grok reads scope=machine only); explicit timeout because Grok defaults to 5s and fails open. Tests: hooks/bead-capture-guard.test.py, driven by lint.sh Check 18 (both directions — fires on an unlabelled create, silent on a `br create` quoted inside a description/heredoc, blocks an unsubstituted qa-shared twin placeholder)."
+      "_doc": "Hard gate (maintainer ruling, 2026-08-23): blocks `br create` / `br q` carrying no `origin:<skill>` label, so every bead records the workflow that created it. Supersedes the OPTIONAL `origin:` hint from plan 2026-07-16-1729-epic-bead-quality-invariants.md §3, whose §9 'convention, not a hard gate' ruling measured out at ~50% of 3818 beads with no provenance (1232 of them unrecoverable, so no backfill is possible — enforcement is forward-only from this date). Tokenizes with shlex, NOT regex over the raw string: a `br create` quoted inside a --description or a heredoc body must never false-block, and only the actual -l/--labels VALUE is inspected. Fails OPEN on unparseable shell — a guard must not wedge an unattended 3am loop; the refine stamp-gate (skills/_tools/stamp-refined.sh) is the backstop for anything that slips past (including non-Claude harnesses). `origin:unknown` is legal and honest (mirroring the existing `discovered-from: unknown` precedent), so the gate can never deadlock an agent that genuinely cannot attribute a bead. `machine` scope is required to actually reach Grok (render_hooks_grok reads scope=machine only); explicit timeout because Grok defaults to 5s and fails open. Tests: hooks/bead-capture-guard.test.py, driven by lint.sh Check 18 (both directions — fires on an unlabelled create, silent on a `br create` quoted inside a description/heredoc, blocks an unsubstituted qa-shared twin placeholder)."
     },
     {
       "id": "dcg",
@@ -221,7 +221,7 @@
       "scope": [
         "app"
       ],
-      "_doc": "App-local overlay slot for the per-prompt lane: an app MAY carry its own .claude/hooks/delegation-reminder.md and/or workflow-reminder.md (content files, tracked in the app repo); they are injected after the canon `pre-prompt-reminder`. Silent no-op when the files are absent, so the entry is safe fleet-wide. Exists because the stamped `hooks` block is re-rendered from this manifest on every sync — a cat hand-added to an app's settings.json is removed on the next sync — and body-compass-app had been carrying these two cats in untracked settings.local.json. Keep overlays small: the same hot-lane cost rule as the canon file applies. claude-only because app scope is Claude-only."
+      "_doc": "App-local overlay slot for the per-prompt lane: an app MAY carry its own .claude/hooks/delegation-reminder.md and/or workflow-reminder.md (content files, tracked in the app repo); they are injected after the canon `pre-prompt-reminder`. Silent no-op when the files are absent, so the entry is safe fleet-wide. Exists because the stamped `hooks` block is re-rendered from this manifest on every sync — a cat hand-added to an app's settings.json is removed on the next sync — and one app had been carrying these two cats in untracked settings.local.json. Keep overlays small: the same hot-lane cost rule as the canon file applies. claude-only because app scope is Claude-only."
     }
   ]
 }

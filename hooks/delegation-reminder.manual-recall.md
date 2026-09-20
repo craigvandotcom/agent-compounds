@@ -14,7 +14,7 @@ qmd search "<task keywords>" --limit 5
 
 **The full recall stack (know these cold):** `qmd query "X" --json` (knowledge +
 memory + wiki lobes) · `cass search "X" --json` (past agent-session transcripts —
-"did we discuss X?"). Full tool registry: `~/infrastructure/tools/REGISTRY.md`.
+"did we discuss X?"). If your project maintains its own tool registry, check it too.
 
 **Order of operations:** If the user prompt is a scheduled job (a pai-scheduler
 prompt_file or other automated instruction), run its first step, then this recall
@@ -76,4 +76,4 @@ execute directly."
 1. **Quick-nav table:** `~/.claude/skills/CORE/SKILL.md`
 2. **Search the knowledge base:** `qmd search "X" --json`
 3. **Search past sessions:** `cass search "X" --json`
-4. **Ask Craig** when architecture isn't clear
+4. **Ask a maintainer** when architecture isn't clear

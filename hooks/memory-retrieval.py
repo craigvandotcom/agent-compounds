@@ -16,8 +16,8 @@ for longer/conceptual prompts. Timeouts/thresholds are tuned per tier (see
 memory: qmd-cli-latency-hook-timeout-floors). Injects top-3 hits as one plain
 `name: description` line each — the frontmatter description IS the injected content;
 qmd's snippet field is a diff hunk over frontmatter and is never emitted. The name
-re-resolves via `qmd query "<name>"` (pointers-not-content). Format ruling (Craig
-2026-09-08): no markdown decoration, no qmd path, no snippet — the description is the
+re-resolves via `qmd query "<name>"` (pointers-not-content). Format ruling (2026-09-08):
+no markdown decoration, no qmd path, no snippet — the description is the
 distilled claim and everything else was noise; the stricter ≥2-term match floor (both
 tiers) raised recall@5 while cutting injected noise.
 
@@ -37,7 +37,7 @@ boost, not a filter (see PROMOTION's docstring for the exact formula and its
 displacement-cap proof). NOTE — MEMORY_LOBES is a HOT-LANE surface: every entry is
 queried on every prompt, so adding/removing a lobe changes per-prompt latency and
 the recall surface for ALL sessions. The wiki lobe means wiki-page quality
-(gardening, dedup) directly shapes injected context everywhere (bead org-yp4). DECISION (org-6ls, Craig 2026-07-19): the alignment
+(gardening, dedup) directly shapes injected context everywhere (bead org-yp4). DECISION (org-6ls, 2026-07-19): the alignment
 collection (decisions/STRATEGY) is deliberately NOT an injection lobe — decisions are
 deliberate-retrieval-only (`qmd query`); the 6 decision-shaped qrels are retired.
 
@@ -53,16 +53,40 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+# Config surface: every path below is an env-var override with a fallback default. The
+# defaults describe ONE reference deployment (a three-room machine layout); an adopter
+# with a different layout — or none at all — overrides the vars they need. Nothing here
+# is load-bearing for the fail-safe contract: every consumer already degrades to "no
+# match" (detect_level() -> "root", app_lobes() -> [], etc.) when a root doesn't exist,
+# so an adopter who sets none of these gets a hook that runs, finds nothing app/root
+# specific, and stays silent rather than erroring.
 INFRA_ROOT = os.environ.get("INFRA_ROOT", os.path.expanduser("~/infrastructure"))
 MISSION_ROOT = os.environ.get("MISSION_ROOT", os.path.expanduser("~/mission"))
 PERSONAL_ROOT = os.environ.get("PERSONAL_ROOT", os.path.expanduser("~/personal"))
-MEMORY_LOBES = ["memory", "neometa-memory", "content-memory", "wiki"]  # L3 memory homes + synthesis pages — full content
+# MEMORY_LOBES: qmd collection names treated as full-content memory homes + the wiki
+# synthesis collection. "domain-memory"/"content-memory" below are generic stand-ins for
+# a two-repo (domain + content) split organization's non-app memory homes — override
+# with MEMORY_HOOK_LOBES (comma-separated) for a different collection naming scheme.
+# Purely a candidate-selection input (see keyword_search/semantic_search); an entry with
+# no matching qmd collection on the adopter's machine is a harmless no-op, never an error.
+#
+# Names must match your qmd index exactly. A collection named like "acme-memory" is selected
+# ONLY by the qmd:// prefix built from this list — the "/memory/auto/" path fallback in
+# keyword_search()/semantic_search() does not fire for it, the hyphen is not a path
+# separator. A default that does not match fails quiet: fewer hits, no error. If your
+# collections are named differently, set MEMORY_HOOK_LOBES to their real names.
+_lobes_env = os.environ.get("MEMORY_HOOK_LOBES", "").strip()
+MEMORY_LOBES = (
+    [x.strip() for x in _lobes_env.split(",") if x.strip()]
+    if _lobes_env else ["memory", "domain-memory", "content-memory", "wiki"]
+)  # L3 memory homes + synthesis pages — full content
 # W4.6 (organic friction surfacing, skill-builder/references/friction-capture.md): per-skill
 # FRICTIONS.md sensor logs are already qmd-indexed (they fall inside each engineering-collection
 # skill's **/*.md glob) but previously never matched a memory lobe, so a related friction never
@@ -84,13 +108,40 @@ WIDER_RECALL_HINT = (
 DESC_MAX = 280      # injected description cap — descriptions are the distilled claim, snippets are noise
 
 
+def _resolve_qmd_bin():
+    """Locate the qmd binary. Explicit override (MEMORY_HOOK_QMD_BIN) wins; otherwise
+    PATH, so an adopter whose harness passes PATH through to hooks just works with no
+    config. Falls back to this reference deployment's bun-install location, because a
+    Claude Code hook inherits a stripped PATH that excludes it (`qmd` resolves to
+    nothing there — see detect_performance_tier()) and `shutil.which` finds nothing to
+    return. Every caller already treats a non-executable path as "tool absent" and
+    degrades to exit 0 with no output, so a wrong guess here is never fatal."""
+    override = os.environ.get("MEMORY_HOOK_QMD_BIN")
+    if override:
+        return os.path.expanduser(override)
+    return shutil.which("qmd") or os.path.expanduser("~/.bun/bin/qmd")
+
+
+# Path to the newline-delimited app-directory list used for per-app lobe detection.
+# This repo ships no such file — it is a reference-deployment artifact (one line per
+# app dir under MISSION_ROOT/software/) — so the default below simply won't exist on
+# most adopter machines and _app_dir_lobe_pairs() degrades to [] (no per-app lobes,
+# detect_level() falls through to "domain"/"content"/"root"), same as any other
+# missing-tool case in this file. Point MEMORY_HOOK_APPS_LIST at an equivalent file to
+# opt in, or ignore it entirely — nothing else in this hook depends on it existing.
+APPS_LIST = os.environ.get(
+    "MEMORY_HOOK_APPS_LIST", os.path.join(INFRA_ROOT, "apps.list")
+)
+
+
 def _app_dir_lobe_pairs():
-    """(app-dir, lobe-name) pairs from infrastructure/apps.list, e.g.
-    ("body-compass-app", "body-compass"), ("cv-site", "cv-site"). Single source for both
-    app_lobes() (lobe names only) and detect_level() (needs the raw app-dir name to match
-    a session's cwd against MISSION_ROOT/software/<app-dir>/)."""
+    """(app-dir, lobe-name) pairs from APPS_LIST, e.g. ("example-app-app",
+    "example-app"), ("cv-site", "cv-site"). Single source for both app_lobes() (lobe
+    names only) and detect_level() (needs the raw app-dir name to match a session's cwd
+    against MISSION_ROOT/software/<app-dir>/). Missing/unreadable file -> [] (fail-safe:
+    see APPS_LIST's docstring above)."""
     try:
-        with open(os.path.join(INFRA_ROOT, "apps.list")) as fh:
+        with open(APPS_LIST) as fh:
             dirs = [a.strip() for a in fh if a.strip()]
         return [(d, d.removesuffix("-app")) for d in dirs]
     except Exception:
@@ -98,7 +149,8 @@ def _app_dir_lobe_pairs():
 
 
 def app_lobes():
-    """Per-app lobe names from the canonical app list (body-compass-app -> body-compass).
+    """Per-app lobe names from the canonical app list (e.g. "example-app-app" ->
+    "example-app" — the "-app" suffix is stripped).
 
     Genuinely wired as of Phase 4 (org-c5f, closes org-mm9): detect_level() uses this same
     derivation to classify a session's cwd, and preferred_lobes() uses the resulting lobe
@@ -109,7 +161,7 @@ def app_lobes():
 
 
 def detect_level(cwd=None):
-    """Classify a session's cwd into one of: "root" / "neometa" / "content" / "app:<lobe>"
+    """Classify a session's cwd into one of: "root" / "domain" / "content" / "app:<lobe>"
     — feeds the Phase 4 injection rank-boost (org-c5f/org-mm9). cwd defaults to
     the hook process's own os.getcwd(): the UserPromptSubmit hook is a fresh subprocess per
     prompt that inherits the session's cwd (same convention agent-compounds/hooks/
@@ -118,17 +170,22 @@ def detect_level(cwd=None):
 
     Post-split (2026-09) the old single REPO_ROOT is three separate repos — INFRA_ROOT,
     MISSION_ROOT, PERSONAL_ROOT — so classification checks each in turn rather than one
-    set of REPO_ROOT-relative path segments. "neometa"/"content"/"app:<lobe>" keep their
-    OLD label strings (preferred_lobes() and the qmd collection names they key off —
-    neometa-memory, content-memory — are unchanged by the split, only the filesystem root
-    moved from ~/Repos/neometa to ~/mission).
+    set of REPO_ROOT-relative path segments. "domain"/"content"/"app:<lobe>" are generic
+    label strings (this reference deployment's own org name is NOT one of them — see
+    preferred_lobes() and MEMORY_LOBES for the loud note on what that means for THIS
+    machine's qmd collection names) kept stable across the split for continuity with
+    preferred_lobes() and the qmd collection names they key off (domain-memory,
+    content-memory) — only the filesystem root moved (from a nested monorepo path to
+    MISSION_ROOT directly). An adopter with a different collection taxonomy overrides
+    MEMORY_LOBES (env: MEMORY_HOOK_LOBES); these particular label strings are otherwise
+    inert unless MEMORY_HOOK_LEVEL_PROMOTION is explicitly enabled (see PROMOTION below).
 
     Mapping (first match wins):
       - under MISSION_ROOT/software/<app-dir>/ (per infrastructure/apps.list, matched via
         _app_dir_lobe_pairs()) -> "app:<lobe-name>"
       - under MISSION_ROOT/content/ -> "content"
       - under MISSION_ROOT/ (anything else, incl. software/ itself or an app dir NOT in
-        apps.list) -> "neometa"
+        apps.list) -> "domain"
       - everything else (incl. INFRA_ROOT, PERSONAL_ROOT, or outside all three repos) ->
         "root" (no preference — see preferred_lobes()). The old top-level "knowledge/"
         dir (and its qmd collection) does not exist post-split — PKM content now lives
@@ -148,10 +205,10 @@ def detect_level(cwd=None):
         for d, lobe in _app_dir_lobe_pairs():
             if d == app_dir:
                 return f"app:{lobe}"
-        return "neometa"  # mission/software/<dir not in apps.list>
+        return "domain"  # mission/software/<dir not in apps.list>
     if parts[0] == "content":
         return "content"
-    return "neometa"
+    return "domain"
 
 
 def preferred_lobes(level):
@@ -161,18 +218,17 @@ def preferred_lobes(level):
     boosted.
 
       - "app:<name>"  -> {name, "<name>-core"} — the "-core" sibling is included
-        unconditionally: if that qmd collection doesn't exist for this app (e.g.
-        move-free, neometa have none today), no candidate will ever carry that qmd://
-        prefix, so it's a harmless no-op rather than requiring a runtime index.yml read
-        on this hot-lane path.
+        unconditionally: if that qmd collection doesn't exist for this app (most apps
+        have none), no candidate will ever carry that qmd:// prefix, so it's a harmless
+        no-op rather than requiring a runtime index.yml read on this hot-lane path.
       - "content"   -> {"content-memory"}
-      - "neometa"   -> {"neometa-memory"}
+      - "domain"    -> {"domain-memory"} — a no-op where no collection carries that name.
       - "root" (or anything unrecognized, incl. a session under PERSONAL_ROOT — see
         detect_level()) -> set() — no preference, global stance."""
     if level == "content":
         return {"content-memory"}
-    if level == "neometa":
-        return {"neometa-memory"}
+    if level == "domain":
+        return {"domain-memory"}
     if level.startswith("app:"):
         name = level.split(":", 1)[1]
         return {name, f"{name}-core"}
@@ -312,20 +368,21 @@ def detect_performance_tier():
         return "fast"
 
     # Check for Metal/GPU acceleration via qmd doctor
-    # Absolute path, not bare "qmd": a hook inherits no shell PATH, so `qmd` resolves to
-    # nothing and the launcher dies with "failed to launch bun: spawn bun ENOENT" — which
-    # the bare `except` below swallowed, silently pinning every non-Mac host to "slow".
-    # Also one invocation, not two: the original ran `qmd doctor` twice to concatenate
-    # stderr and stdout.
+    # _resolve_qmd_bin(), not bare "qmd": a hook inherits no shell PATH on this reference
+    # deployment, so `qmd` resolves to nothing and the launcher dies with "failed to
+    # launch bun: spawn bun ENOENT" — which the bare `except` below swallowed, silently
+    # pinning every non-Mac host to "slow". Also one invocation, not two: the original
+    # ran `qmd doctor` twice to concatenate stderr and stdout.
     try:
         proc = subprocess.run(
-            [os.path.expanduser("~/.bun/bin/qmd"), "doctor"],
+            [_resolve_qmd_bin(), "doctor"],
             capture_output=True, text=True, timeout=4,
         )
         doctor_output = (proc.stderr or "") + (proc.stdout or "")
-        # omarchine reports "GPU vulkan; offloading enabled" on a Radeon 780M — matched
-        # none of the original three strings, so a genuinely GPU-accelerated host read as
-        # a CPU-only VM. Matched case-insensitively now, and Vulkan/ROCm are included.
+        # A Linux desktop with a Radeon 780M reports "GPU vulkan; offloading enabled" —
+        # matched none of the original three strings, so a genuinely GPU-accelerated host
+        # read as a CPU-only VM. Matched case-insensitively now, and Vulkan/ROCm are
+        # included.
         low = doctor_output.lower()
         if any(k in low for k in ("metal", "cuda", "vulkan", "rocm", "gpu acceleration")):
             return "fast"
@@ -340,8 +397,8 @@ PERF_TIER = detect_performance_tier()
 
 if PERF_TIER == "warm":
     # Resident daemon: semantic is ~0.15-0.4s, so there is nothing left to ration. This is
-    # the tier omarchine runs in, and it is why the trigger-word gate below no longer
-    # decides whether recall happens — it only ever existed to avoid a 25-46s CLI call.
+    # the tier a warm-daemon machine runs in, and it is why the trigger-word gate below no
+    # longer decides whether recall happens — it only ever existed to avoid a 25-46s CLI call.
     KEYWORD_TIMEOUT = 4.0    # BM25 via the CLI measures ~230ms; 4.0 absorbs bun startup
                              # under contention (several sessions searching at once).
     SEMANTIC_TIMEOUT = 8.0   # only binds the CLI FALLBACK path; the daemon call is bounded
@@ -426,12 +483,17 @@ def extract_keywords(text, limit=8):
 # --- Collection-overlap canonicalization (org-aga defect 2) -----------------
 # qmd collections overlap on disk (infrastructure/** and memory/** both cover
 # infrastructure/memory/**; content/** and content-memory/** both cover
-# neometa/content/memory/**). The same fact therefore arrives under two qmd://
+# mission/content/memory/**). The same fact therefore arrives under two qmd://
 # paths, splits its own match count, and can occupy two of the five slots.
 # Canonicalize every hit to ONE qmd:// path per real file, preferring a memory
 # lobe so downstream lobe-prefix checks still fire. Falls back to the two
 # hardcoded rewrites below if the index config is unreadable (fail-safe).
-_QMD_INDEX_YML = os.path.expanduser("~/.config/qmd/index.yml")
+# MEMORY_HOOK_QMD_INDEX_YML overrides qmd's own config location for an adopter running
+# a non-default XDG_CONFIG_HOME or a relocated qmd install; the default matches qmd's
+# own convention, so most adopters need not set this at all.
+_QMD_INDEX_YML = os.environ.get(
+    "MEMORY_HOOK_QMD_INDEX_YML", os.path.expanduser("~/.config/qmd/index.yml")
+)
 
 
 def _collection_roots(path=_QMD_INDEX_YML):
@@ -571,7 +633,7 @@ def keyword_search(terms, qmd_path):
             hits[f] = r
             counts[f] = counts.get(f, 0) + 1
 
-    # Require ≥2 term matches on BOTH tiers (Craig 2026-09-08: one stray keyword is not
+    # Require ≥2 term matches on BOTH tiers (2026-09-08 ruling: one stray keyword is not
     # relevance — the 1-match floor injected noise like three unrelated "capture" hits).
     # The semantic path is unaffected; the eval gate (retrieval-evals/run-evals.py) judges it.
     min_matches = 2
@@ -610,12 +672,12 @@ def memory_collections():
         global scan (collections: [])   recall@5 0.6071
         scoped to 8 memory collections  recall@5 0.3929
 
-    Scoping LOSES, and loses specifically on app sessions: art-still 0.75 -> 0.0,
-    cv-site 1.0 -> 0.0, move-free 1.0 -> 0.0, unsit 1.0 -> 0.0. The reason is coverage, not
-    ranking — most apps keep their facts at <app>/memory/auto/ INSIDE a whole-app collection
-    (art-still, cv-site, simil8...), and only body-compass has a dedicated *-memory
-    collection, so a memory-collection scope simply cannot see them. The global scan reaches
-    all of them in one pass, and is also the faster option.
+    Scoping LOSES, and loses specifically on app sessions: four separate per-app queries
+    each fell from a perfect or near-perfect recall@5 (0.75-1.0) straight to 0.0 under
+    scoping. The reason is coverage, not ranking — most apps keep their facts at
+    <app>/memory/auto/ INSIDE a whole-app collection rather than a dedicated *-memory
+    collection, so a memory-collection scope simply cannot see them. The global scan
+    reaches all of them in one pass, and is also the faster option.
 
     The crowding worry that motivated scoping (memory facts losing the top-N cut to plans and
     book chapters) is real but much smaller than the coverage loss. Scoping wins only on
@@ -902,7 +964,7 @@ def retrieve(prompt, qmd_path=None, level=None):
     explicit level for level-tagged qrels queries so scoring isn't at the mercy of whatever
     directory the eval process happens to run from. Returns a RankedResults list (see class
     docstring for the extra attributes)."""
-    qmd_path = qmd_path or os.path.expanduser("~/.bun/bin/qmd")
+    qmd_path = qmd_path or _resolve_qmd_bin()
     level = level if level is not None else detect_level()
     if not os.access(qmd_path, os.X_OK):
         return RankedResults(kw_ok=False, level=level)  # qmd binary gone → caller writes health(False, 0)

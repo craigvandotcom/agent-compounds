@@ -24,7 +24,7 @@ substitution (`$(br create …)`, backticks), a shell `-c` wrapper (`sh -c 'br c
 and command wrappers (`xargs`/`env`/`sudo` … `br create`). Only a real command-position
 `br create` is inspected — a description or heredoc that quotes the text keeps passing.
 
-WHY THIS IS A HARD GATE, not an advisory (Craig, 2026-08-23):
+WHY THIS IS A HARD GATE, not an advisory (maintainer ruling, 2026-08-23):
 `origin:` already existed as an OPTIONAL hint — plan 2026-07-16-1729-epic-bead-quality-
 invariants.md §3 specified it, and §9 chose "convention, not a hard gate". Measured outcome
 five weeks later: of 3818 beads across 7 repos, ~50% carry no origin signal at all and 1232
@@ -119,7 +119,7 @@ creation — whatever readiness label rides beside it in --labels, and whatever 
 type (epic included). Drop it:
 
     -l "origin:<skill>,unrefined"     # needs a refine pass first — the usual case
-    -l "origin:<skill>,human-gate"    # a decision/action card only Craig can close
+    -l "origin:<skill>,human-gate"    # a decision/action card only a human can close
 
 Canon: beads-standards/reference/bead-create-contract.md\
 """
@@ -132,7 +132,7 @@ unknown. Downstream pickup cannot tell the difference, so it gets implemented on
 note. Add one to --labels:
 
     -l "origin:<skill>,unrefined"     # needs a refine pass first — the usual case
-    -l "origin:<skill>,human-gate"    # a decision/action card only Craig can close
+    -l "origin:<skill>,human-gate"    # a decision/action card only a human can close
 
 Do NOT pass `refined` at creation: it is stamped exclusively by a refine pass on
 convergence. Epics are exempt — they are containers, never picked up.

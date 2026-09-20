@@ -18,7 +18,7 @@ Edit|Write is not the only way to change a skill file: a `file_path` under skill
 a Bash `command` that writes there (redirect, tee, in-place sed/perl, cp/mv). Wire the
 hook on BOTH the Edit|Write and Bash matchers — on Bash alone it never sees Edit, and on
 Edit|Write alone a one-line `perl -0pi` rewrites doctrine ungoverned.
-Scope was SKILL.md-only until 2026-08-05; broadened on Craig's call — the standards
+Scope was SKILL.md-only until 2026-08-05; broadened on the maintainer's call — the standards
 (promotion ladder, friction capture, single-home, no-provenance) bind every file in a
 skill, not just the spine, so references/ and FRICTIONS.md edits must see them too.
 Exit 2 BLOCKS this first
@@ -79,7 +79,7 @@ MAINTENANCE.md, tools/.
     `node scripts/skill-diet-conservation.mjs` when moving content, to confirm nothing
     unique is lost.
   - PROMOTION LADDER (skills/skill-builder/references/promotion-ladder.md): UP needs
-    PROOF (N green runs / probe-verified, + Craig sign-off for conductor core); DOWN
+    PROOF (N green runs / probe-verified, + maintainer sign-off for conductor core); DOWN
     needs only disuse. A NEW LESSON enters at the BOTTOM (FRICTIONS.md / references),
     never straight into core. Removed content ages in MAINTENANCE.md before git-delete.
   - FRICTION CAPTURE (skills/skill-builder/references/friction-capture.md): landing a
@@ -104,10 +104,10 @@ def session_key(target=""):
     #
     # No environment variable identifies a subagent. CLAUDE_CODE_SESSION_ID, CLAUDE_PID
     # and AGENT_NAME are all shared with the parent (PID is the session's own process;
-    # AGENT_NAME defaults to the FoggyCreek chore identity), so any agent-keyed flag
-    # collapses every child onto the conductor's. A session-only key is worse still: in
-    # a delegation-heavy pipeline the conductor's first edit disarms the guard for the
-    # children who do nearly all the editing.
+    # AGENT_NAME falls back to a shared default chore identity when unset), so any
+    # agent-keyed flag collapses every child onto the conductor's. A session-only key is
+    # worse still: in a delegation-heavy pipeline the conductor's first edit disarms the
+    # guard for the children who do nearly all the editing.
     #
     # Per-file is deterministic, needs no env, and scales with blast radius: whoever
     # first edits a given skill file this session gets the doctrine for it.
