@@ -168,7 +168,7 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
 # ---------------------------------------------------------------------------------------
 # THE TYPE-ROUTED RULING PATH — a `decision`-type bead, or one labelled `human-gate`, closes
 # on a recorded ruling comment, never on the probe machinery below. This is a REAL skip, not
-# a leg-outcome change: no RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE,
+# a leg-outcome change: no RED-receipt read, no PROBE-DRIFT, no UNCOMMITTED, no GREEN/COVERAGE,
 # no EVIDENCE core, no claim taken, and no ownership pre-check — a recorded ruling ends a
 # decision bead whoever holds it. Every other `issue_type`/label combination falls through
 # to the unchanged leg 1-8 flow below.
@@ -444,6 +444,46 @@ else
   # live AC probe must be green at HEAD, and any red probe refuses (condition d).
   FRESH_VERIFY=1
   echo "close-gate[$BEAD] PROBE-DRIFT drift — the fingerprinted RED probe is no longer among the live ACs; the receipt cannot anchor a temporal pair, so the fresh-verify leg runs"
+fi
+
+# ---------------------------------------------------------------------------------------
+# LEG 3 — UNCOMMITTED. A Delivers path the working tree carries but no commit does cannot
+# support a close: the probes below run in the working tree, so a green there can be a
+# green no commit carries. Runs before the probe legs and covers shipped/fixed and
+# disposition closes alike, so a caller that closes through this gate inherits the leg.
+# Ignored and committed-clean paths print nothing under `git status --porcelain` and pass.
+# Outside a git work tree the leg reports the skip; it never implies clean.
+#
+# The path extraction is touchers.sh's own shape (skills/_tools/touchers.sh): parens and
+# square brackets are admitted, so a Next.js route-group path like `app/(auth)/page.tsx`
+# survives intact, and the `touchers:` line is dropped — its globs and reason name paths
+# that are not deliveries.
+# ---------------------------------------------------------------------------------------
+delivers_paths() { # <body-file> — path-shaped tokens under ## Delivers, touchers: lines excluded
+  awk '/^## Delivers/{on=1; next} /^## /{on=0} on' "$1" \
+    | grep -v '^[[:space:]]*touchers:' \
+    | grep -oE '(\./)?[][A-Za-z0-9_@.()-]+(/[][A-Za-z0-9_@.()-]+)+\.[A-Za-z0-9]{1,6}' | sort -u
+}
+
+if [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = "true" ]; then
+  UNCOMMITTED=""
+  while IFS= read -r dp; do
+    [ -n "$dp" ] || continue
+    dp="${dp#./}"
+    [ -e "$dp" ] || continue
+    if [ -n "$(GIT_LITERAL_PATHSPECS=1 git status --porcelain -- "$dp" 2>/dev/null)" ]; then
+      UNCOMMITTED="$UNCOMMITTED $dp"
+    fi
+  done <<EOF
+$(delivers_paths "$BODY")
+EOF
+  if [ -n "$UNCOMMITTED" ]; then
+    echo "CLOSE-REFUSED: UNCOMMITTED — Delivers path(s) carry uncommitted changes:$UNCOMMITTED — the probes run in the working tree, so a green here can be a green no commit carries; commit them and re-run"
+    exit 1
+  fi
+  echo "close-gate[$BEAD] UNCOMMITTED ok — every existing Delivers path is committed-clean or ignored"
+else
+  echo "close-gate[$BEAD] UNCOMMITTED skipped — not inside a git work tree (this gate reports the skip; it never implies clean)"
 fi
 
 # ---------------------------------------------------------------------------------------

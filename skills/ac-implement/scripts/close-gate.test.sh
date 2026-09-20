@@ -833,6 +833,104 @@ if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'fresh-verify'; then
 else fail "AC3o: rc=$GATE_RC out=$out"; fi
 
 # ============================================================================================
+# AC 4 — the UNCOMMITTED leg: a Delivers path the working tree carries but no commit does
+# cannot support a close. Fixtures are real git work trees, so `git status --porcelain` has
+# something to judge; the non-git case proves the skip is reported, never read as clean.
+# ============================================================================================
+# mk_gitcase <name> <delivers-rel-path> — a green fixture whose one Delivers path is a
+# repo-relative slash path (touchers.sh's extractor drops slashless names). The path is NOT
+# created here: each case decides whether it is committed-clean, untracked or ignored.
+mk_gitcase() {
+  local root="$WORKDIR/$1" dp="$2"
+  mkdir -p "$root/skills/ac-pipeline/scripts" "$root/skills/_tools" "$root/.flight" "$root/.br" "$root/$(dirname "$dp")"
+  cp "$EVIDENCE_SRC" "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  cp "$BR_CALL_SRC" "$root/skills/_tools/br-call.sh"
+  chmod +x "$root/skills/ac-pipeline/scripts/close-evidence-check.sh"
+  printf 'subject v1\n' >"$root/subject.txt"
+  cat >"$root/body.md" <<BODY
+## Acceptance Criteria
+- the subject file exists.
+  Probe: \`test -f subject.txt\` — tier: none
+- the harness passes.
+  Probe: \`test -x harness.test.sh && bash harness.test.sh\` — tier: none
+
+## Delivers
+- artifact: $dp
+
+## Consumes
+- none
+BODY
+  echo "$root"
+}
+
+mk_git_green() { # <name> <delivers-rel-path> — a green fixture in a work tree, not yet committed
+  local r; r="$(mk_gitcase "$1" "$2")"
+  write_harness "$r"; board "$r" in_progress worker; fly "$r"; fix_subject "$r"
+  echo "$r"
+}
+
+git_commit_clean() { # <root> — init a work tree and commit the fixture's current state
+  ( cd "$1" && git init -q && git config user.email fixture@test && git config user.name fixture \
+      && git add -A && git commit -qm fixture )
+}
+
+# --- 4a: an untracked Delivers path refuses.
+R="$(mk_git_green uncommitted-untracked 'skills/demo/artifact.txt')"
+git_commit_clean "$R"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"       # on disk, never added -> ??
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED'; then
+  pass "AC4: an untracked Delivers path refuses with CLOSE-REFUSED: UNCOMMITTED"
+else fail "AC4 untracked: rc=$GATE_RC out=$out"; fi
+if [ "$(jq -r .status "$R/.br/$BEAD.json")" = "in_progress" ]; then
+  pass "AC4: the refused uncommitted close leaves the bead open"
+else fail "AC4 untracked: the bead was closed despite an uncommitted Delivers path"; fi
+
+# --- 4b: a Next.js route-group path (parens) is extracted intact and refuses the same way.
+# The parens are the point: close-evidence-check.sh's regex would stop at `(auth)` and leave
+# the path unchecked.
+R="$(mk_git_green uncommitted-route-group 'app/(auth)/page.tsx')"
+git_commit_clean "$R"
+mkdir -p "$R/app/(auth)"; printf 'export default function Page(){}\n' >"$R/app/(auth)/page.tsx"
+out="$(gate "$R" --reason "shipped: the page landed. Delivered: app/(auth)/page.tsx")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 1 ] && printf '%s' "$out" | grep -q 'CLOSE-REFUSED: UNCOMMITTED' \
+   && printf '%s' "$out" | grep -q 'app/(auth)/page.tsx'; then
+  pass "AC4: an untracked app/(auth) route-group Delivers path is extracted intact and refuses"
+else fail "AC4 route-group: rc=$GATE_RC out=$out"; fi
+
+# --- 4c: an ignored Delivers path prints nothing under git status and passes.
+R="$(mk_git_green uncommitted-ignored 'skills/demo/artifact.txt')"
+printf 'skills/demo/artifact.txt\n' >"$R/.gitignore"
+git_commit_clean "$R"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"       # ignored -> not reported
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED ok'; then
+  pass "AC4: an ignored Delivers path is not reported by git status and the close lands"
+else fail "AC4 ignored: rc=$GATE_RC out=$out"; fi
+
+# --- 4d: outside a git work tree the leg reports the skip; it never implies clean.
+R="$(mk_green uncommitted-non-git)"
+out="$(gate "$R" --reason "$REASON")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && printf '%s' "$out" | grep -q 'UNCOMMITTED skipped'; then
+  pass "AC4: outside a git work tree the UNCOMMITTED leg reports a skip, never a silent clean"
+else fail "AC4 non-git: rc=$GATE_RC out=$out"; fi
+
+# --- 4e: a warning-laden file no longer blocks a green close (the scanner leg is deleted).
+R="$(mk_git_green uncommitted-warn-laden 'skills/demo/artifact.txt')"
+printf 'artifact v1\n' >"$R/skills/demo/artifact.txt"
+printf 'try:\n    pass\nexcept:\n    pass\n' >"$R/legacy.py"     # the shape ubs flagged
+git_commit_clean "$R"
+out="$(gate "$R" --reason "shipped: the artifact landed. Delivered: skills/demo/artifact.txt")"
+GATE_RC=$(cat "$RCFILE")
+if [ "$GATE_RC" -eq 0 ] && [ "$(jq -r .status "$R/.br/$BEAD.json")" = "closed" ]; then
+  pass "AC4: green probes over a warning-laden file close — no scanner leg refuses them"
+else fail "AC4 warn-laden: rc=$GATE_RC out=$out"; fi
+
+# ============================================================================================
 # AC 5 — ownership immediately before the write, and the close verified as LANDED
 # ============================================================================================
 R="$(mk_green own-not-inprogress)"; board "$R" open ""
