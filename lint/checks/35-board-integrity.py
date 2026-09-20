@@ -262,7 +262,7 @@ def main():
             # already on the row at HEAD) naming the evidence it closed on. Staged lane
             # only, same scope as rule 5 — no whole-board fallback (no backfill by doctrine).
             #
-            # THE RECORD CITES ITS EVIDENCE (ac-4y7l.31, Craig's ruling on ac-4y7l.29):
+            # THE RECORD CITES ITS EVIDENCE (ac-4y7l.31, the maintainer's ruling on ac-4y7l.29):
             # a bare `br close --transition-comment "GATE: receipt"` used to satisfy this
             # rule with no evidence behind it at all — close-gate.sh skipped entirely still
             # passed. A landing record now must NAME something this check can resolve

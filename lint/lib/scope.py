@@ -16,7 +16,7 @@ Sets:
              ac-tidy's nightly `last-run.json` receipt) is likewise excluded
              (2026-09-12 lint audit, item 4): it is machine-written STATE (a
              run receipt necessarily naming real scope/notes, e.g.
-             "body-compass-app"), not doctrine a human authored, so Check 27's
+             "example-app"), not doctrine a human authored, so Check 27's
              shrink-only instance-token allowlist is the wrong fix — the
              carrier itself is out of scope. `dedup-drift-audit.js` under the
              same kind of dir stays IN LIVE_TEXT (cited by prose elsewhere);

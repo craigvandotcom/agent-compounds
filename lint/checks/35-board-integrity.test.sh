@@ -214,7 +214,7 @@ rc=$(run_check "$t")
 
 # --- RED: THE RECORD CITES ITS EVIDENCE — a bare `GATE: receipt` with no citation at all,
 # --- the exact bypass `br close --transition-comment "GATE: receipt"` used to satisfy rule 6
-# --- with zero evidence behind it, is now refused (Craig's ruling on ac-4y7l.29, ac-4y7l.31).
+# --- with zero evidence behind it, is now refused (the maintainer's ruling on ac-4y7l.29, ac-4y7l.31).
 t="$WORK/landing-bare-bypass"
 git_board "$t" "$OPEN_TAGGED"
 LANDING_BARE='{"id":"ac-bare","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed via a bare transition-comment bypass","comments":[{"id":23,"issue_id":"ac-bare","author":"x","text":"GATE: receipt","created_at":"2026-08-25T10:01:00Z"}]}'
@@ -253,7 +253,7 @@ rc=$(run_check "$t")
 # --- GREEN: a GATE: decided landing record citing the ruling comment's own id ---------
 t="$WORK/landing-decided-cited"
 git_board "$t" "$OPEN_TAGGED"
-LANDING_DECIDED='{"id":"ac-decided","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed via the ruling path","comments":[{"id":25,"issue_id":"ac-decided","author":"x","text":"DECISION (Craig): option A — because it is cheaper","created_at":"2026-08-25T09:00:00Z"},{"id":26,"issue_id":"ac-decided","author":"x","text":"GATE: decided — ac-decided — decided: option A; ruling verified: DECISION (Craig): option A — because it is cheaper (ruling-comment: #25; at abc1234)","created_at":"2026-08-25T10:01:00Z"}]}'
+LANDING_DECIDED='{"id":"ac-decided","status":"closed","created_at":"2026-08-25T10:00:00Z","labels":["origin:manual"],"title":"closed via the ruling path","comments":[{"id":25,"issue_id":"ac-decided","author":"x","text":"DECISION (Alice): option A — because it is cheaper","created_at":"2026-08-25T09:00:00Z"},{"id":26,"issue_id":"ac-decided","author":"x","text":"GATE: decided — ac-decided — decided: option A; ruling verified: DECISION (Alice): option A — because it is cheaper (ruling-comment: #25; at abc1234)","created_at":"2026-08-25T10:01:00Z"}]}'
 printf '%s\n' "$OPEN_TAGGED" "$LANDING_DECIDED" > "$t/.beads/issues.jsonl"
 git -C "$t" add .beads/issues.jsonl
 rc=$(run_check "$t")

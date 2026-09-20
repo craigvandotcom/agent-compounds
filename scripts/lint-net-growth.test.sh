@@ -20,7 +20,7 @@ CHECK="$ROOT/lint/checks/14-no-net-growth.py"
 W=/tmp/nng-proof
 rm -rf /tmp/nng-proof
 mkdir -p /tmp/nng-proof
-git init -q --bare "$W/origin.git" -b master        # default branch master, like art-still/unsit
+git init -q --bare "$W/origin.git" -b master        # default branch master, like some real repos still use
 git clone -q "$W/origin.git" "$W/app" 2>/dev/null
 cd "$W/app" || exit 1
 git config user.email t@t.t; git config user.name t

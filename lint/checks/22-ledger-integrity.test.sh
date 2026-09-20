@@ -12,7 +12,7 @@
 #           20260907-exhaust, so the ONE-friction-sensor pin now asserts the
 #           fix holds. Entry counts are read at parse time (`.ledger.entries |
 #           length`), never from a hand-kept frontmatter field — the ledgers
-#           carry no `entries:` header (2026-09-12, Craig-decided lint audit:
+#           carry no `entries:` header (2026-09-12, maintainer-decided lint audit:
 #           the header was a stale copy concurrent appends raced on).
 #
 # ASSURANCE
