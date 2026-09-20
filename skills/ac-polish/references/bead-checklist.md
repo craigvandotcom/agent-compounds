@@ -42,7 +42,7 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 
 ## 3. consumer-verification
 
-- A `## Delivers` bullet naming an EXISTING, REFERENCED path with no `touchers:` line is
+- A `## Delivers` bullet naming a GIT-TRACKED, REFERENCED path with no `touchers:` line is
   class (c) — the `refined` stamp cannot survive `stamp-refined.sh`'s touchers leg, so the
   bead is unimplementable as a refined bead. Add the line; never decline it as a format gap.
 - Was the touched surface's consumer set **grep-derived**, or hand-listed from memory?
@@ -116,9 +116,9 @@ is the reader doing its job; reaching for a finding to justify the round is not.
 
 - An epic with no open children has nothing left to polish — its beads are records. Run
   the epic's OWN `Probe:` lines at HEAD and report each exit.
-- Every red probe is a finding with a disposition, never a DECLINED item: name what blocks
-  the close — a renamed path the probe still cites (refine the probe), a sibling that never
-  landed its piece (a bead), a baseline failure outside the epic (name the owner). "Drift"
-  is not a disposition.
+- Every red probe is a finding with a disposition, never DECLINED: name what blocks the
+  close — a renamed path the probe cites (refine the probe), a sibling that never landed
+  its piece (a bead), a baseline failure outside the epic (name the owner). Never "drift".
+- Does `## Delivers` name a real path, present at HEAD? A child bead id or prose is not one.
 - Does the epic carry the review receipt its close path requires? A missing receipt is the
   first blocker, named first.

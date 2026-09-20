@@ -35,8 +35,8 @@ say which home and why, hand off, STOP — not a bead capture.
    file `investigation`.
 5. **Create.** `br create "<imperative title>" -t <type> --labels "origin:ac-backlog,<labels>" --description "<context: what/why/where, the user's words preserved>"`.
    Set `--priority` only if the user signaled urgency; default is fine. Body carries the
-   typed headers from conventions § Body template (`## Steps to Reproduce`,
-   `## Acceptance Criteria`, …) — emit them at creation. Grep any file, symbol, commit or
+   typed headers from conventions § Body template (`## Acceptance Criteria`, and on a
+   `task`/`feature` a path-shaped `## Delivers`, …) — emit them at creation. Grep any file, symbol, commit or
    bead-id before naming it in a binding header; unverified detail is advisory
    (conventions § Binding vs advisory).
 6. **Commit** `.beads/` in the target repo (own repo, own commit; discipline:

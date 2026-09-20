@@ -70,7 +70,7 @@ has yet to create keeps the guarded form `test -x <path> && bash <path>`, honest
    SILENT, so read every edge back (`br dep cycles`, then `br show` on both ends). Every
    child of the compiled epic gets ONE edge — parent-child (containment) — read back the
     same way. The no-probe refusal names epics explicitly (a probe-less epic is refused like any other bead); parity holds both ways.
-- **One path per `## Delivers` bullet, and every delivered path that ALREADY EXISTS owes a
+- **One path per `## Delivers` bullet, and every delivered path that git ALREADY TRACKS owes a
       touchers line.** `skills/_tools/touchers.sh derive <path>` prints `<stem> <N> <command>`;
       write it beneath the bullet as ``touchers: `<command>` → <N> · owned by: <sibling bead>``
       — else `out-of-scope: <why>`.

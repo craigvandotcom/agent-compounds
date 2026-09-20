@@ -5,7 +5,7 @@
 ## 1a. File Remaining Work
 
 - Check for any started-but-unclosed beads: `br list --json` — look for claimed/in-progress items
-- For each: either close it (if done) or add a comment documenting where you left off
+- For each: if done, close it through `skills/ac-implement/scripts/close-gate.sh` AFTER 1c's commit, never a bare `br close`; else comment where you left off
 - Create new beads for any loose ends discovered during the session:
   Bead creation per `beads-standards/reference/bead-conventions.md` — types, unrefined-at-creation, anchor-dedupe, body template.
 
