@@ -4,7 +4,7 @@
 # default_type: task
 
 # Who may sign a `DECISION (<actor>): ...` ruling comment (close-gate.sh's type-routed
-# ruling path and LEG 6's scanner-refusal override, ac-4y7l.25) — comma-separated, each
+# ruling path, ac-4y7l.25) — comma-separated, each
 # entry matched WHOLE (a multi-word name is not split on its own inner spaces). Copy a
 # name here VERBATIM before using it as `<human>` in any DECISION comment template. A
 # missing key authorizes nobody (fail closed) — see bead-conventions.md § Decision beads.

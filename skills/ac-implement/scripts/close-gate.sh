@@ -242,9 +242,8 @@ human_is_authorized() {
 # rulings the newer one stands, never the first `grep -m1` hit found.
 #
 #   Return 0 — the comments read succeeded (RULING may still be empty: none was authorized).
-#   Return 1 — the comments read itself refused; the caller decides whether that is
-#              NOT-CHECKED (the type-routed path) or simply "no override" (LEG 6, which only
-#              ever narrows an existing refusal and never turns a refusal into a pass).
+#   Return 1 — the comments read itself refused; the type-routed path reads that as
+#              NOT-CHECKED.
 #
 # Also sets $RULING_COMMENT_ID to the winning comment's own `id` — LEG 8's landing record
 # cites it (`ruling-comment: #<id>`) so check 35 rule 6 (ac-4y7l.31) can cross-reference the
