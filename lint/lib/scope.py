@@ -43,6 +43,11 @@ Sets:
              any change must run it. A check scoped to a narrower set instead ran
              only when a file in that set changed, leaving cross-cutting drift
              unpoliced until CI.
+  TRACKED    every file git tracks — exactly what a clone receives, which is the
+             only population that answers "what does the PUBLISHED tree say".
+             NOT the walk: the adopter-local artifacts (ledgers, the bead board,
+             _archive/) are gitignored yet present on a working machine. Check
+             27's surface. Falls back to the walk outside a git checkout.
   SCRIPTS    the runnable scripts the registry ships: .sh and .py files under
               skills/ and scripts/, tests excluded — Check 36's audit surface.
   CACHES     directory names that are build/interpreter caches — excluded from
@@ -89,6 +94,7 @@ skills; scanning them double-counts every skill file).
 """
 
 import os
+import subprocess
 
 ROOT = os.environ.get("LINT_ROOT") or os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -112,6 +118,30 @@ def _walk():
 
 
 _paths = frozenset(_walk())
+
+
+def _tracked():
+    """Every file git tracks — exactly what a clone of this repo receives.
+
+    Deliberately NOT the filesystem walk: the adopter-local artifacts (friction
+    ledgers, the bead board, _archive/, past reviews) are gitignored but still sit
+    on a working machine, and a check asking "what does the PUBLISHED tree contain"
+    must not see them. Falls back to the walk outside a git checkout, so a check
+    run against a fixture root still has a population.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "--no-optional-locks", "-C", ROOT, "ls-files", "-z"],
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return _paths
+    if proc.returncode != 0:
+        return _paths  # not a git checkout — a fixture tree or a tarball
+    return frozenset(p for p in proc.stdout.split("\0") if p)
+
+
+TRACKED = _tracked()
 
 
 def _in_dir(path, dirname):

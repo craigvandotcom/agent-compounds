@@ -1,0 +1,3 @@
+# The RED fixture's banned-word list. A synthetic word, deliberately: the fixture is
+# tracked, so a real one would be the leak the check exists to prevent.
+acme-widget

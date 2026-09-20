@@ -1,0 +1,34 @@
+# Banned words for 27-instance-tokens — copy to `instance-tokens.local.txt` and edit.
+#
+# One word per line. `#` starts a comment. Matching is case-insensitive substring,
+# so `acme` also catches `AcmeCorp` and `acme-widget`.
+#
+# List the words that would tell a stranger WHOSE deployment this clone came from.
+# The check then fails any commit that puts one in a tracked file. The list is
+# gitignored because publishing it would leak the very words it protects.
+#
+# What belongs here:
+#   - your app / product names, in every form you write them (hyphenated and prose)
+#   - your org or brand name, and any npm scope built from it
+#   - the names of people who appear in your docs
+#   - your machine hostnames
+#   - project ids that identify your accounts (a database project ref, a team id,
+#     a bundle id, a channel id)
+#   - absolute paths that only exist on your machines
+#
+# What does NOT belong here:
+#   - words a portable skill legitimately needs (a stack name, a tool name)
+#   - anything so generic it fires on ordinary prose ("app", "data", "mission")
+#
+# A file that MUST spell a banned word to do its job — a guard whose detection
+# pattern is the literal, or a LICENSE naming its copyright holder — goes in
+# EXEMPT_PATHS in lint/checks/27-instance-tokens.py, with the reason.
+
+# --- examples; delete these and add your own ---
+# acme-widget
+# acme widget
+# acmecorp
+# @acme/brand
+# ada lovelace
+# buildbox-01
+# abcdefghijklmnopqrst

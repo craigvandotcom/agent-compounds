@@ -136,7 +136,7 @@ APPS_LIST = os.environ.get(
 
 def _app_dir_lobe_pairs():
     """(app-dir, lobe-name) pairs from APPS_LIST, e.g. ("example-app-app",
-    "example-app"), ("cv-site", "cv-site"). Single source for both app_lobes() (lobe
+    "example-app"), ("example-site", "example-site"). Single source for both app_lobes() (lobe
     names only) and detect_level() (needs the raw app-dir name to match a session's cwd
     against MISSION_ROOT/software/<app-dir>/). Missing/unreadable file -> [] (fail-safe:
     see APPS_LIST's docstring above)."""
