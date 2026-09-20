@@ -112,6 +112,24 @@ else
   bad "NO-ROOT: expected exit 0 SKIP, got $rc"; cat "$OUT"
 fi
 
+# --- 6 FLAGGED-LINE: a roster line's flags are not part of the app's name ------
+# `<app> public` and `<app> packages=a,b` name the apps <app>. Read whole, the line names a
+# directory that never exists, and the app leaves the union with no notice.
+domain="$(basename "$(cd "$HERE/../../../.." && pwd)")"
+for flags in "public" "packages=a,b" "public packages=a,b  # trailing comment"; do
+  t="$work/flagged-$(printf '%s' "$flags" | tr -c 'a-z' '_')"
+  build_base "$t"
+  printf 'flagged-app %s\n' "$flags" > "$t/infrastructure/ac-deploy-targets.list"
+  mkdir -p "$t/$domain/software/flagged-app/.claude/skills"
+  ln -s gone-skill "$t/$domain/software/flagged-app/.claude/skills/flagged-dangling"
+  rc=$(run_check "$t")
+  if [ "$rc" = 1 ] && grep -q "broken symlink: .*flagged-dangling" "$OUT"; then
+    ok "FLAGGED-LINE: 'flagged-app $flags' is walked as flagged-app"
+  else
+    bad "FLAGGED-LINE: 'flagged-app $flags' — expected exit 1 naming flagged-dangling, got $rc"; cat "$OUT"
+  fi
+done
+
 echo
 if [ "$fails" -eq 0 ]; then
   echo "All 07-consumer-symlinks contract cases passed."

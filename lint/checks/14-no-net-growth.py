@@ -177,7 +177,7 @@ def scan(repo, label, base, spec, cfg, staged=False):
 
 
 def consumer_dirs(root):
-    """The union Check 7 builds: org dirs ∪ ac-deploy-targets.list ∪ vitest-affected.
+    """The union Check 7 builds: org dirs ∪ ac-deploy-targets.list.
 
     Delegates to lib.consumers (07/12's own consumer-dir union) instead of
     carrying a second, independently-hardcoded copy of the same org/app-name

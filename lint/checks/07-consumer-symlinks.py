@@ -16,7 +16,7 @@
 Ported from the legacy Check 7 bash block in lint.sh (proven by lint/parity.sh
 against the extracted legacy block before the block was removed). Same verdicts:
 walk each consumer dir in the union (lib.consumers — org-level dirs ∪ the
-ac-deploy-targets.list apps ∪ vitest-affected), flag every symlink whose target
+ac-deploy-targets.list apps), flag every symlink whose target
 does not exist, naming the link.
 
 scope: LIVE_TEXT is the nearest standing set — the audited files live OUTSIDE

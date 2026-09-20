@@ -19,10 +19,8 @@ A dir this produces that does not exist for a given adopter is silently
 skipped downstream (every caller only keeps `isdir()` hits), so guessing a
 room/app that does not apply costs nothing.
 
-vitest-affected is DELIBERATELY kept on the union by explicit append: it carries
-a `public` flag in the list (its harness layer is gitignored), and the whole-line
-parsing below reproduces the legacy block verbatim — the flagged line yields a
-nonexistent dir that is skipped, and the explicit append is what covers it.
+A roster line is `<app> [public] [packages=a,b]`: the app is the FIRST token, the rest
+are flags. A flagged app is walked like any other.
 
 LINT_CONSUMER_BASE (default: the derived org root) is a TEST-ONLY seam: the fixture
 harnesses point it at a temp consumer tree. Unset in production every path is
@@ -32,9 +30,6 @@ identical to the legacy bash block's.
 import glob
 import json
 import os
-
-# Covered before the union existed; keep explicit so coverage never regresses.
-EXPLICIT_APPS = ("vitest-affected",)
 
 
 def _ac_root():
@@ -127,10 +122,9 @@ def consumer_dirs():
             for line in fh:
                 line = line.split("#", 1)[0].strip()
                 if line:
-                    apps.append(line)
+                    apps.append(line.split()[0])
     else:
         apps = list(_fallback_apps())
     domain = _domain_name()
     dirs.update(os.path.join(root, domain, "software", app, ".claude") for app in apps)
-    dirs.update(os.path.join(root, domain, "software", app, ".claude") for app in EXPLICIT_APPS)
     return sorted(dirs)
