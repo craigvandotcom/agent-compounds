@@ -43,8 +43,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
-from lib import scope  # noqa: E402
-from lib import manifest  # noqa: E402  (per-package budgets read through the manifest)
+from lib import manifest, scope  # noqa: E402  (per-package budgets read through the manifest)
 
 CHECK_ID = "23-family-budget"
 JUDGE = "scripts/ac-budget-check.sh"

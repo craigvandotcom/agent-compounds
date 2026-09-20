@@ -49,9 +49,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _LINT = os.path.dirname(_HERE)
 sys.path.insert(0, _LINT)
 
-from lib import scope  # noqa: E402
-from lib import manifest  # noqa: E402  (check-14 lists read through the manifest)
-from lib import consumers  # noqa: E402  (leg 2's consumer union — the ONE copy of this fact)
+# consumers: leg 2's consumer union — the ONE copy of this fact. manifest: check-14 lists.
+from lib import consumers, manifest, scope  # noqa: E402
 
 violations = []
 notices = []
