@@ -49,7 +49,7 @@
 #
 # Examples:
 #   ./deploy.sh ../simil8 --skills supabase,testing,react-best-practices,planning --agents implementer,validator
-#   ./deploy.sh ../unsit-app --all
+#   ./deploy.sh ../another-app --all
 #   ./deploy.sh --list
 
 set -euo pipefail

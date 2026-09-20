@@ -31,7 +31,15 @@ ENGINE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 AC_ROOT="$(cd "$ENGINE_DIR/.." && pwd)"
 ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
 LAYOUT="$AC_ROOT/harness.config.json"
-TARGETS_LIST="$ORG_ROOT/infrastructure/ac-deploy-targets.list"
+# AC_TARGETS_LIST overrides the default sibling path — for an adopter whose org root
+# holds the deploy-targets roster under a differently named directory. Unset keeps the
+# documented default; the graceful-degradation behavior below (technical() returns 3
+# when the file is absent) is unchanged either way.
+TARGETS_LIST="${AC_TARGETS_LIST:-$ORG_ROOT/infrastructure/ac-deploy-targets.list}"
+# An override that names no file is a typo, never "no roster" (same rule as engine/sync.sh).
+if [ -n "${AC_TARGETS_LIST:-}" ] && [ ! -f "$AC_TARGETS_LIST" ]; then
+  echo "error: AC_TARGETS_LIST='$AC_TARGETS_LIST' is not a file" >&2; exit 2
+fi
 
 MODE="--list"
 [ $# -gt 0 ] && MODE="$1"

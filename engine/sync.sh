@@ -89,12 +89,12 @@ expand_tilde() { case "$1" in "~"|"~/"*) echo "${HOME}${1#\~}" ;; *) echo "$1" ;
 
 # --- layout manifest (ac-9ahd) -------------------------------------------------
 # The engine SELF-LOCATES rather than reading a root key. ORG_ROOT is AC_ROOT's third
-# parent, which is correct in every supported layout:
-#   Mac monorepo  ~/Repos/neometa/software/agent-compounds  -> ~/Repos
-#   three-repo    ~/mission/software/agent-compounds        -> ~
-# This was already the idiom below for the memory-lint path; ac-9ahd generalized it and
-# deleted the `repos_root` key, which hard-failed the engine on any layout but the Mac's
-# and was the root cause of the rendered-path 404s in every deploy target.
+# parent, which is correct in every supported layout — e.g. a repos-collection layout at
+# <collection-root>/<org>/software/agent-compounds -> <collection-root>, or a split-repo
+# layout at <home>/<org>/software/agent-compounds -> <home>. This was already the idiom
+# below for the memory-lint path; ac-9ahd generalized it and deleted the `repos_root`
+# key, which hard-failed the engine on any layout but one specific machine's and was the
+# root cause of the rendered-path 404s in every deploy target.
 ORG_ROOT="$(cd "$AC_ROOT/../../.." && pwd)"
 
 # The machine-global floor: doctrine every harness loads into EVERY session on this
@@ -1149,7 +1149,15 @@ ensure_home_link() {
 # registry unless a line says otherwise). sync_target honours it by passing
 # `deploy.sh --package <pkgs> --agents all` instead of `--all` (agents are
 # global stances, owned by no package, so they always deploy whole).
-TARGETS_LIST="$ORG_ROOT/infrastructure/ac-deploy-targets.list"
+# AC_TARGETS_LIST overrides the default sibling path (same override engine/exceptions.sh
+# honours) — for an adopter whose org root holds the roster under a differently named
+# directory. Unset keeps the documented default.
+TARGETS_LIST="${AC_TARGETS_LIST:-$ORG_ROOT/infrastructure/ac-deploy-targets.list}"
+# An override that names no file is a typo, never "no roster": falling through reads every
+# target as non-public and guard_public never runs.
+if [ -n "${AC_TARGETS_LIST:-}" ] && [ ! -f "$AC_TARGETS_LIST" ]; then
+  echo "error: AC_TARGETS_LIST='$AC_TARGETS_LIST' is not a file" >&2; exit 2
+fi
 
 is_public_target() { # <basename>
   [ -f "$TARGETS_LIST" ] || return 1
@@ -1187,7 +1195,7 @@ guard_public() { # <target-base-dir> — 0 if every stamped harness path is giti
 # runner's 50-agent-mail.py, in each repo's RESOLVED hooks dir: every repo here is
 # a submodule (`.git` is a FILE, no `.git/hooks/`), so the dir comes from
 # `git rev-parse --git-path hooks`, which also honours a target's core.hooksPath
-# (body-compass-app's husky `_`). Never clobbers the chain runner or a real
+# (a Husky `_` dir is one common example). Never clobbers the chain runner or a real
 # pre-commit file — refuses loudly, like deploy.sh does for skills.
 # Hook symlinks are RELATIVE, always. An absolute target bakes one machine's layout
 # into a link that is committed in some repos (agent-compounds tracks its own
