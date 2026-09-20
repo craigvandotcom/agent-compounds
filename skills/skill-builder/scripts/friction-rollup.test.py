@@ -234,13 +234,18 @@ def main():
     # seven ledgers, so a working parser reading 14 real files failed a stale number. The claim
     # is "every ledger on disk parses" — so count the disk and demand equality.
     on_disk = len(glob.glob(os.path.join(live_root, "skills", "*", "FRICTIONS.md")))
-    try:
-        live = json.loads(res.stdout)
-        check(res.returncode == 0 and on_disk > 0 and live["ledgers"] == on_disk,
-              "Case 14: the live registry's ledgers parse (%s found, %s on disk)" % (live.get("ledgers"), on_disk),
-              res.stderr)
-    except json.JSONDecodeError:
-        bad("Case 14: live registry run did not emit JSON — %s" % res.stderr[:400])
+    # Ledgers are adopter-local: a clone without them is an absent subject — a named skip,
+    # never a vacuous pass.
+    if on_disk == 0:
+        print("  SKIP: Case 14: no FRICTIONS.md on disk — adopter-local ledgers absent")
+    else:
+        try:
+            live = json.loads(res.stdout)
+            check(res.returncode == 0 and live["ledgers"] == on_disk,
+                  "Case 14: the live registry's ledgers parse (%s found, %s on disk)" % (live.get("ledgers"), on_disk),
+                  res.stderr)
+        except json.JSONDecodeError:
+            bad("Case 14: live registry run did not emit JSON — %s" % res.stderr[:400])
 
     # --- Case 15: the dream path and the dashboard path cannot disagree ---------------
     # The seam this bead exists to close: two consumers, one computation. Run the two

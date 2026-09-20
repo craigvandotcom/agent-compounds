@@ -11,8 +11,7 @@ session. Not scheduled.
 hygiene rules all come from there).
 **Dockets (input):** `<your-deployment>/dream-cycle/proposals/MEMORIES-DOCKET.md`
 (knowledge substrate) + `FRICTIONS-DOCKET.md` (friction ledger) — maintained by
-the sweep (`docket-sweep.py`, optional — write your own), never by the session.
-**Status:** MANUAL (2026-09-08).
+the sweep (`docket-sweep.py`), never by the session. **Status:** MANUAL (2026-09-08).
 Only automated artifacts: the two dockets + one idempotent docket-review bead.
 
 ---

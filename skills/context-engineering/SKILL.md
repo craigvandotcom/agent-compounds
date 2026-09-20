@@ -47,15 +47,13 @@ plan: `<org>/alignment/roadmaps/ai-native-org-v1.md` §1–1.5).
    identity, conventions, and *pointers* — never accumulated learnings. Learnings go
    cold (retrieved on relevance). Bloating the hot lane is the #1 failure mode.
 5. **Deterministic enforcement, not self-report.**
-   `<your deployment's memory-lint script>` (optional — write one; this skill
-   documents the method) is the enforcement layer for directives 1 and 3 — it checks
-   MEMORY.md bijection (every fact indexed, every index line real), wikilink
-   validity, and frontmatter schema across every memory home, and is wired into the
-   nightly drift-check, `deploy.sh` (advisory banner), and pre-commit. A directive
-   without a script that verifies it is a hope, not a rule — this is the closure
-   check the taxonomy below is graded against, never a self-report from the agent
-   that did the work. Without one, treat these directives as unverified, not
-   satisfied.
+   `<your deployment's memory-lint script>` (optional — write one; this skill documents
+   the method) enforces directives 1 and 3 — MEMORY.md bijection (every fact indexed,
+   every index line real), wikilink validity, and frontmatter schema across every
+   memory home — wired into the nightly drift-check, `deploy.sh` (advisory banner),
+   and pre-commit. A directive without a script that verifies it is a hope, not a
+   rule — the taxonomy below is graded against this check, never a self-report from
+   the agent that did the work. Without one, treat these directives as unverified.
 
 ---
 
