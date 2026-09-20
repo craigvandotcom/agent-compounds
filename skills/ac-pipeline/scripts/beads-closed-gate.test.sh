@@ -224,6 +224,26 @@ if [ "$RC" -eq 2 ] && echo "$OUT" | grep -qi "REJECTED"; then
 else
   fail "Case K2: expected exit 2 with REJECTED message, got $RC. Output: $OUT"
 fi
+# K3 — the RULE is "the shared fallback cannot claim", not "this name cannot claim".
+# AC_CHORE_IDENTITY names it per deployment: the override is rejected instead, and the
+# former default becomes an ordinary claimable identity. Pins that the name is
+# configuration and the refusal is doctrine — and that the override is actually READ,
+# not merely documented.
+clear_fixtures
+write_fixture "ChoreBot"   '[{"id":"bd-x","status":"open","labels":["infra"]}]'
+write_fixture "FoggyCreek" '[{"id":"bd-y","status":"closed","labels":["infra"]}]'
+OUT=$(AC_CHORE_IDENTITY="ChoreBot" GATE_AGENT="" run_gate "ChoreBot" 2>&1); RC=$?
+if [ "$RC" -eq 2 ] && echo "$OUT" | grep -qi "REJECTED" && echo "$OUT" | grep -q "ChoreBot"; then
+  pass "Case K3: AC_CHORE_IDENTITY override is the rejected name -> exit 2 naming it"
+else
+  fail "Case K3: expected exit 2 with REJECTED/ChoreBot message, got $RC. Output: $OUT"
+fi
+OUT=$(AC_CHORE_IDENTITY="ChoreBot" GATE_AGENT="" run_gate "FoggyCreek" 2>&1); RC=$?
+if [ "$RC" -ne 2 ] || ! echo "$OUT" | grep -qi "REJECTED"; then
+  pass "Case K3b: with the override set, the former default is an ordinary identity"
+else
+  fail "Case K3b: FoggyCreek still rejected though AC_CHORE_IDENTITY=ChoreBot. Output: $OUT"
+fi
 
 # --- Case F: CROSS-IDENTITY FAIL-OPEN reproduction (bd-w504y) ----------------
 # BlueLake = loop conductor (its own batch bead already closed).
