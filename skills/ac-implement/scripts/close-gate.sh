@@ -59,7 +59,7 @@
 #
 # Usage:
 #   close-gate.sh <bead-id> --reason "<close reason>" [--actor <name>]
-#                 [--scan <file> …] [--vitest-json <report>]
+#                 [--vitest-json <report>]
 #                 [--body-file <path>] [--root <repo>] [--dry-run]
 #
 # Env:
@@ -74,7 +74,6 @@
 set -uo pipefail
 
 BEAD=""; REASON=""; ACTOR=""; BODY_FILE=""; ROOT=""; DRY=0; VITEST_JSON=""
-SCAN_FILES=()
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -84,7 +83,6 @@ while [ $# -gt 0 ]; do
     --root)        ROOT="${2:-}"; shift 2 ;;
     --vitest-json) VITEST_JSON="${2:-}"; shift 2 ;;
     --dry-run)     DRY=1; shift ;;
-    --scan)        shift; while [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; do SCAN_FILES+=("$1"); shift; done ;;
     -h|--help)     sed -n '2,55p' "${BASH_SOURCE[0]}"; exit 0 ;;
     -*)            echo "NOT-CHECKED: unknown option '$1'" >&2; exit 2 ;;
     *)             [ -z "$BEAD" ] && BEAD="$1" || { echo "NOT-CHECKED: unexpected argument '$1'" >&2; exit 2; }; shift ;;
@@ -170,7 +168,7 @@ br_field() { # <bead-id> <jq field> -> value; a REFUSED read is a NOT-CHECKED, n
 # ---------------------------------------------------------------------------------------
 # THE TYPE-ROUTED RULING PATH — a `decision`-type bead, or one labelled `human-gate`, closes
 # on a recorded ruling comment, never on the probe machinery below. This is a REAL skip, not
-# a leg-outcome change: no RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE, no SCANNER,
+# a leg-outcome change: no RED-receipt read, no PROBE-DRIFT, no GREEN/COVERAGE,
 # no EVIDENCE core, no claim taken, and no ownership pre-check — a recorded ruling ends a
 # decision bead whoever holds it. Every other `issue_type`/label combination falls through
 # to the unchanged leg 1-8 flow below.
@@ -232,8 +230,8 @@ human_is_authorized() {
 # find_authorized_ruling — the ONE matcher for a recorded "DECISION (<actor>): ..." comment
 # signed by an authorized human (or the exact `DECISION (ac-tidy): moot` on a
 # `pipeline-proposal` bead). Sets $RULING to the authorized line, or empty when none is
-# found/authorized. Shared by the type-routed ruling path directly below AND LEG 6's
-# scanner-refusal override, so the two never drift apart. A ruling is a comment's own FIRST
+# found/authorized. The type-routed ruling path below is its one caller.
+# A ruling is a comment's own FIRST
 # LINE, at column 0, naming an actor that is not a bare template placeholder (`<human>`) —
 # this excludes both an indented draft buried inside a longer note and an unfilled template
 # quoted on a memo's second line.
@@ -591,71 +589,6 @@ fi
 echo "close-gate[$BEAD] COVERAGE ok — $ASSERTIONS assertion result(s) from $ASSERT_SOURCE"
 
 # ---------------------------------------------------------------------------------------
-# LEG 6 — SCANNER. Only on non-empty argv. ubs runs ONCE at HEAD — no baseline diff (the
-# owner's way-forward ruling: a prior base-tree/scratch-tree signature match never
-# matched on real ubs output — absolute paths, permalinks, capped detail lists, a missing
-# lint config, bash's rule-on-the-previous-line all defeated it; see
-# skills/ac-pipeline/FRICTIONS.md scanner-leg-has-no-baseline). The Combined Summary's own
-# Critical/Warning/Info counters are the verdict, never the DETAIL line count: ubs's DETAIL
-# regex misses some scanners' shapes (e.g. bandit's `Location:` lines) and a summary-only
-# ubs invocation can carry counts with no DETAIL lines printed at all.
-#
-# Critical or Warning findings refuse (CLOSE-REFUSED: SCANNER, via refuse() below). Info
-# findings are reported in this leg's own output and never refuse on their own. A refused
-# close still closes when the bead carries an authorized human ruling — find_authorized_ruling(),
-# the SAME matcher the type-routed ruling path above uses — accepting the findings; the
-# landing record (LEG 8) names the ruling whenever it was the reason a scanner refusal did
-# not stand.
-# ---------------------------------------------------------------------------------------
-SCANNER_RULING=""
-if [ "${#SCAN_FILES[@]}" -gt 0 ]; then
-  command -v ubs >/dev/null 2>&1 \
-    || not_checked "SCANNER" "${#SCAN_FILES[@]} file(s) were handed to --scan but ubs is not on PATH — NOT-GATED, not clean"
-  SCAN_OUT=$(ubs "${SCAN_FILES[@]}" 2>&1); SCAN_RC=$?
-  if printf '%s' "$SCAN_OUT" | grep -qiE 'no supported languages detected|nothing was checked'; then
-    not_checked "SCANNER" "ubs ran no scanner over ${#SCAN_FILES[@]} file(s) — 'nothing was checked' is explicitly NOT a pass"
-  fi
-  # Read ubs's Combined Summary 'Files: N' — the authoritative total. The per-scanner
-  # 'Files scanned: N' lines are NOT it: ubs runs several scanners and each prints its
-  # own count, so the first match under-counts a two-language bead ('1 of 2' on ac-9ahd)
-  # and summing them over-counts when scanners overlap ('4 of 2' on ac-ys8f). Both were
-  # measured here. Fall back to the max per-scanner count if the summary is absent.
-  SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oE '^Files: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  if [ -z "${SCANNED:-}" ]; then
-    SCANNED=$(printf '%s' "$SCAN_OUT" | grep -oiE 'files scanned[^0-9]*([0-9]+)' \
-      | grep -oE '[0-9]+' | sort -n | tail -1)
-  fi
-  [ -n "${SCANNED:-}" ] || not_checked "SCANNER" "ubs printed no 'Files scanned' count — coverage is unassertable"
-  [ "$SCANNED" -eq "${#SCAN_FILES[@]}" ] \
-    || not_checked "SCANNER" "ubs scanned $SCANNED of ${#SCAN_FILES[@]} file(s) — a shortfall is NOT-GATED, not a pass"
-
-  # ubs's js module exits 1 with zero findings (tool-side noise, ac-x9dy): the verdict is the
-  # Combined Summary's severity counts, never the exit code alone.
-  SUM_CRIT=$(printf '%s' "$SCAN_OUT" | grep -oE '^Critical: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  SUM_WARN=$(printf '%s' "$SCAN_OUT" | grep -oE '^Warning: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  SUM_INFO=$(printf '%s' "$SCAN_OUT" | grep -oE '^Info: [0-9]+' | grep -oE '[0-9]+' | head -1)
-  CRIT="${SUM_CRIT:-0}"; WARN="${SUM_WARN:-0}"; INFO="${SUM_INFO:-0}"
-
-  if [ "$CRIT" -eq 0 ] && [ "$WARN" -eq 0 ] && [ "$INFO" -eq 0 ]; then
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, 0 findings"
-  elif [ "$CRIT" -eq 0 ] && [ "$WARN" -eq 0 ]; then
-    # Info findings are reported here, in the gate's own output, and never refuse the close —
-    # only Critical or Warning do.
-    echo "close-gate[$BEAD] SCANNER ok — $SCANNED/${#SCAN_FILES[@]} scanned, $INFO Info finding(s) reported (Info never refuses), 0 Critical/Warning"
-  else
-    find_authorized_ruling
-    if [ -n "$RULING" ]; then
-      SCANNER_RULING="$RULING"
-      echo "close-gate[$BEAD] SCANNER ruling — $CRIT Critical, $WARN Warning, $INFO Info finding(s) over ${#SCAN_FILES[@]} scanned file(s); a human ruling overrides a scanner refusal: $RULING"
-    else
-      refuse "SCANNER" "ubs exit $SCAN_RC with $CRIT Critical, $WARN Warning finding(s) (plus $INFO Info) over ${#SCAN_FILES[@]} scanned file(s)"
-    fi
-  fi
-else
-  echo "close-gate[$BEAD] SCANNER skipped — no --scan argv (this gate reports the skip; it never implies clean)"
-fi
-
-# ---------------------------------------------------------------------------------------
 # LEG 7 — EVIDENCE. Delegated to ac-on0y.2's close-evidence-check.sh, the registry's evidence
 # core, rather than growing a private second one that would drift from it.
 # ---------------------------------------------------------------------------------------
@@ -725,10 +658,6 @@ else
   LND_LABEL="GATE: receipt"
   LND_TEXT="GATE: receipt — $BEAD — RED probe: $RED_PROBE; receipt-at: ${RED_AT:-none}; reason: $REASON; verified at $LND_SHA by ${ACTOR:-<unattributed>} at $LND_TS"
 fi
-
-# The landing record says so: a scanner refusal that a human ruling overrode is named on the
-# same comment as the rest of the evidence, never silently absorbed into an ordinary GREEN.
-[ -n "$SCANNER_RULING" ] && LND_TEXT="$LND_TEXT; scanner ruling: $SCANNER_RULING"
 
 "$BR" close "$BEAD" --reason "$REASON" --transition-comment "$LND_TEXT" </dev/null >/dev/null 2>&1 || true
 

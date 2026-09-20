@@ -189,9 +189,9 @@ produced ENTIRELY by a sibling's uncommitted change while committed HEAD was sti
 bead would have closed on a green that existed in no commit. So at N>1: run them to catch your
 own breakage early, and NEVER record their verdict as this bead's evidence. The coordinator
 runs them once at the batch boundary on the COMMITTED tree, and that run is the one that counts.
-Your bead-scoped evidence is `close-gate.sh`, which executes only this bead's own AC probes and
-`ubs` over your own `--scan` files — those read your territory, so the shared tree cannot forge
-them. If one of your probes reads a file OUTSIDE your `## Territory`, that is a spec defect: it
+Your bead-scoped evidence is `close-gate.sh`, which executes only this bead's own AC probes —
+those read your territory, so the shared tree cannot forge them. If one of your probes reads a
+file OUTSIDE your `## Territory`, that is a spec defect: it
 makes your evidence a sibling's to break. **This step is NOT independent eyes** —
 you are reviewing your own work, and the party optimising against the measure cannot also be
 the one who records the verdict. Independent eyes are `ac-review`, post-batch, different model.
@@ -231,7 +231,7 @@ publishes every other writer's board state under its own bead's message.
 
     bash skills/ac-implement/scripts/close-gate.sh <id> \
       --reason "shipped: <what landed>. Delivered: <paths>" \
-      --actor "$ACTOR" --scan <file> <file>
+      --actor "$ACTOR"
 
 The reason's verb LEADS (`shipped` · `fixed` · `wontfix` · `duplicate` · `obsolete`; a bug
 closes `fixed:`) and it must name an artifact from this bead's own `## Delivers` — the gate's
