@@ -231,7 +231,7 @@ facts) is documented per-app in `CORE/supabase.md`.
 > because it clobbers other apps' schema exposure. The host designation, symlink
 > layout, and `<timestamp>_<app-abbrev>_<name>.sql` naming convention are
 > documented per-app in `CORE/supabase.md` and in the ecosystem's
-> `software/CLAUDE.md`. This generic skill does not name a host.
+> `software/AGENTS.md`. This generic skill does not name a host.
 
 **Timestamp collisions:** If two engineers run `supabase migration new` in the
 same second, the second invocation fails loudly with a filename collision.

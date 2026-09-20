@@ -151,7 +151,7 @@ No new mechanism ships as prose: "wired" and "working" are different claims.
 
 **NOT a skill:**
 - One-off solutions
-- Project-specific conventions (put in CLAUDE.md)
+- Project-specific conventions (put in AGENTS.md)
 - Information that doesn't guide behavior
 
 ---
